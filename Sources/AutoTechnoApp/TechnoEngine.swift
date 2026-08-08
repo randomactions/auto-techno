@@ -49,38 +49,10 @@ private enum AutonomousPerformancePreparer {
             previousGraph: request.previousGraph,
             routeRecovery: request.key.routeRecovery
         )
-        let waveforms = prepared.blocks.map { waveformEnvelope(left: $0.left, right: $0.right) }
-        return PreparedPhrase(request: request, prepared: prepared, waveforms: waveforms)
-    }
-
-    /// Sixty-four RMS buckets are enough for a legible waveform. This runs
-    /// once during detached preparation, never on the main or render thread.
-    private static func waveformEnvelope(left: [Float], right: [Float], buckets: Int = 64) -> [Float] {
-        let sampleCount = min(left.count, right.count)
-        guard sampleCount > 0, buckets > 0 else { return [] }
-        let bucketSize = max(1, sampleCount / buckets)
-        var envelope: [Float] = []
-        envelope.reserveCapacity(buckets)
-
-        for bucket in 0..<buckets {
-            let start = bucket * bucketSize
-            guard start < sampleCount else {
-                envelope.append(0)
-                continue
-            }
-            let end = bucket == buckets - 1
-                ? sampleCount
-                : min(sampleCount, start + bucketSize)
-            var energy = 0.0
-            for index in start..<end {
-                let mono = Double(left[index] + right[index]) * 0.5
-                energy += mono * mono
-            }
-            envelope.append(Float(sqrt(energy / Double(max(1, end - start)))))
+        let waveforms = prepared.blocks.map {
+            WaveformEnvelope.fixedDB(left: $0.left, right: $0.right)
         }
-
-        let maximum = max(envelope.max() ?? 0, 0.000_001)
-        return envelope.map { min(1, max(0.04, sqrt($0 / maximum))) }
+        return PreparedPhrase(request: request, prepared: prepared, waveforms: waveforms)
     }
 }
 

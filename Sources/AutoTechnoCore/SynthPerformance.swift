@@ -18,6 +18,145 @@ package enum SynthRole: String, CaseIterable, Sendable {
     case transition
 }
 
+/// The one upper-voice characteristic allowed to come forward during a
+/// sixteen-bar chapter. Chapters reinterpret the same instrument; they never
+/// replace its pitch cell or timbral fingerprint.
+package enum InterlockChapter: String, CaseIterable, Sendable {
+    case home
+    case breath
+    case tone
+    case motion
+    case memory
+}
+
+package enum RelationalFollowerStage: Int, CaseIterable, Sendable {
+    case anchor
+    case inhale
+    case open
+    case spill
+    case withdraw
+}
+
+/// A true daisy-chain phase: the three-step driver advances the five-stage
+/// follower only when it wraps. The phase is intentionally reset by the
+/// global sixteen-bar macro grid rather than by adaptive phrase boundaries.
+package struct RelationalCyclePhase: Equatable, Sendable {
+    package let driverPhase: Int
+    package let followerStage: RelationalFollowerStage
+
+    package init(macroStep: Int) {
+        let bounded = ((macroStep % 256) + 256) % 256
+        driverPhase = bounded % 3
+        followerStage = RelationalFollowerStage(rawValue: (bounded / 3) % 5) ?? .anchor
+    }
+}
+
+/// Fully resolved, bounded performance scalars consumed by the authored upper
+/// voice. They scale the stable motif fingerprint instead of selecting a new
+/// instrument identity.
+package struct RelationalArticulation: Equatable, Sendable {
+    package let chapter: InterlockChapter
+    package let phase: RelationalCyclePhase
+    package let velocityScale: Double
+    package let attackScale: Double
+    package let decayScale: Double
+    package let spectralScale: Double
+    package let glideTimeScale: Double
+    package let pulseEchoSend: Double
+
+    package init(chapter: InterlockChapter, phase: RelationalCyclePhase,
+                 pulseEchoEligible: Bool) {
+        let stage = phase.followerStage.rawValue
+        let driverVelocity = [1.00, 0.94, 0.86][phase.driverPhase]
+        let followerVelocity = [1.00, 0.94, 1.04, 1.08, 0.84][stage]
+
+        self.chapter = chapter
+        self.phase = phase
+        velocityScale = driverVelocity * followerVelocity
+        attackScale = chapter == .breath
+            ? [1.00, 1.55, 0.88, 0.78, 1.12][stage] : 1
+        decayScale = chapter == .breath
+            ? [1.00, 0.90, 1.18, 1.32, 0.72][stage] : 1
+        spectralScale = chapter == .tone
+            ? [1.00, 0.92, 1.06, 1.10, 0.88][stage] : 1
+        glideTimeScale = chapter == .motion
+            ? [1.00, 1.10, 1.15, 1.35, 0.82][stage] : 1
+        pulseEchoSend = chapter == .memory && pulseEchoEligible
+            ? [0.0, 0.0, 0.10, 0.22, 0.0][stage] : 0
+    }
+
+    package static let neutral = RelationalArticulation(
+        chapter: .home,
+        phase: RelationalCyclePhase(macroStep: 0),
+        pulseEchoEligible: false
+    )
+}
+
+/// Bounded long-form memory. Only the current chapter and the two chapters
+/// before it are retained, so an indefinitely running session does not grow
+/// state.
+package struct InterlockEvolutionState: Equatable, Sendable {
+    package private(set) var currentChapter: InterlockChapter
+    package private(set) var previousChapters: [InterlockChapter]
+    package private(set) var macroIndex: Int
+    package private(set) var macrosSinceHome: Int
+
+    package init(currentChapter: InterlockChapter = .home,
+                 previousChapters: [InterlockChapter] = [],
+                 macroIndex: Int = 0, macrosSinceHome: Int = 0) {
+        self.currentChapter = currentChapter
+        self.previousChapters = Array(previousChapters.suffix(2))
+        self.macroIndex = max(0, macroIndex)
+        self.macrosSinceHome = max(0, macrosSinceHome)
+    }
+
+    package func advancing(for kind: AutonomousPhraseKind,
+                           entropy: UInt64) -> InterlockEvolutionState {
+        let forceHome = kind == .identityReturn || macrosSinceHome >= 4
+        let selected: InterlockChapter
+        if forceHome {
+            selected = .home
+        } else {
+            let preferred: [InterlockChapter]
+            switch kind {
+            case .lock: preferred = [.breath, .tone]
+            case .contrast: preferred = [.tone, .motion]
+            case .majorBreak: preferred = [.memory, .breath]
+            case .energyRelease: preferred = [.motion, .breath]
+            case .identityReturn: preferred = [.home]
+            }
+            let nonHome: [InterlockChapter] = [.breath, .tone, .motion, .memory]
+            let recent = Set(previousChapters + [currentChapter])
+            let unusedPreferred = preferred.filter { !recent.contains($0) }
+            let unusedFallback = nonHome.filter { !recent.contains($0) }
+            let choices = !unusedPreferred.isEmpty ? unusedPreferred
+                : (!unusedFallback.isEmpty ? unusedFallback : nonHome)
+            selected = choices[Int(entropy % UInt64(choices.count))]
+        }
+        return InterlockEvolutionState(
+            currentChapter: selected,
+            previousChapters: previousChapters + [currentChapter],
+            macroIndex: macroIndex + 1,
+            macrosSinceHome: selected == .home ? 0 : macrosSinceHome + 1
+        )
+    }
+}
+
+/// A seed-stable description of the dominant motif's audible identity. Phrase
+/// transformations may move or fragment the motif without replacing this
+/// envelope, modulation family, or spectral home.
+package struct MotifTimbreFingerprint: Equatable, Sendable {
+    package let envelopeFamily: Int
+    package let modulationFamily: Int
+    package let spectralRegion: Int
+
+    package init(envelopeFamily: Int, modulationFamily: Int, spectralRegion: Int) {
+        self.envelopeFamily = min(2, max(0, envelopeFamily))
+        self.modulationFamily = min(2, max(0, modulationFamily))
+        self.spectralRegion = min(2, max(0, spectralRegion))
+    }
+}
+
 /// Stable musical identity shared by every synth role in a scene.
 package struct SynthWorldDNA: Equatable, Sendable {
     package let sceneSeed: UInt64
@@ -25,19 +164,38 @@ package struct SynthWorldDNA: Equatable, Sendable {
     package let rootFrequency: Double
     package let shadowInterval: Int
     package let responseInterval: Int
-    package let shadowRotation: Int
-    package let echoRotation: Int
+    package let motifFingerprint: MotifTimbreFingerprint
 
     package init(scene: TechnoScene, dna: SceneDNA) {
         sceneSeed = scene.seed
         variation = dna.timbralFamily
         rootFrequency = 65.41 * pow(2, Double(dna.tonalCenter) / 12)
-        let shadowIntervals = [3, 5, 7, 10]
-        let responseIntervals = [7, 10, 12, 15]
+        let shadowIntervals: [Int]
+        let responseIntervals: [Int]
+        switch dna.modalIdentity {
+        case .phrygian:
+            shadowIntervals = [1, 3, 7, 12]
+            responseIntervals = [7, 12, 13, 15]
+        case .aeolian:
+            shadowIntervals = [3, 5, 7, 10]
+            responseIntervals = [7, 10, 12, 15]
+        case .dorian:
+            shadowIntervals = [3, 5, 7, 9]
+            responseIntervals = [7, 9, 12, 15]
+        }
         shadowInterval = shadowIntervals[dna.timbralFamily % shadowIntervals.count]
         responseInterval = responseIntervals[dna.timbralFamily % responseIntervals.count]
-        shadowRotation = Int(SceneDNA.derivedSeed(scene: scene.seed, domain: 0xA11E, index: 0) % 16)
-        echoRotation = Int(SceneDNA.derivedSeed(scene: scene.seed, domain: 0xEC40, index: 0) % 3)
+        motifFingerprint = MotifTimbreFingerprint(
+            envelopeFamily: Int(SceneDNA.derivedSeed(
+                scene: scene.seed, domain: 0xE17E10, index: dna.timbralFamily
+            ) % 3),
+            modulationFamily: Int(SceneDNA.derivedSeed(
+                scene: scene.seed, domain: 0xA40D, index: dna.timbralFamily
+            ) % 3),
+            spectralRegion: Int(SceneDNA.derivedSeed(
+                scene: scene.seed, domain: 0x5EEC72A1, index: dna.timbralFamily
+            ) % 3)
+        )
     }
 }
 
@@ -46,17 +204,15 @@ package struct SynthRoleEvent: Equatable, Sendable {
     package let stepIndex: Int
     package let frequencyRatio: Double
     package let velocity: Double
-    package let sevenStepAccent: Bool
-    package let echoGate: Bool
+    package let articulation: RelationalArticulation
 
     package init(role: SynthRole, stepIndex: Int, frequencyRatio: Double,
-                velocity: Double, sevenStepAccent: Bool, echoGate: Bool) {
+                velocity: Double, articulation: RelationalArticulation) {
         self.role = role
         self.stepIndex = min(15, max(0, stepIndex))
         self.frequencyRatio = max(0.125, min(8, frequencyRatio))
         self.velocity = max(0, min(1, velocity))
-        self.sevenStepAccent = sevenStepAccent
-        self.echoGate = echoGate
+        self.articulation = articulation
     }
 }
 
@@ -64,50 +220,60 @@ package struct SynthPerformanceBar: Equatable, Sendable {
     package let bar: Int
     package let gesture: SynthGesture
     package let mutationAmount: Double
-    package let sevenStepPhase: Int
-    package let echoGatePhase: Int
+    package let relationalSteps: [RelationalArticulation]
     package let interlockEvents: [SynthRoleEvent]
 
     package init(bar: Int, gesture: SynthGesture, mutationAmount: Double,
-                sevenStepPhase: Int, echoGatePhase: Int,
+                relationalSteps: [RelationalArticulation],
                 interlockEvents: [SynthRoleEvent]) {
         self.bar = bar
         self.gesture = gesture
         self.mutationAmount = min(1, max(0, mutationAmount))
-        self.sevenStepPhase = ((sevenStepPhase % 7) + 7) % 7
-        self.echoGatePhase = ((echoGatePhase % 3) + 3) % 3
+        self.relationalSteps = relationalSteps.count == 16
+            ? relationalSteps : Array(repeating: .neutral, count: 16)
         self.interlockEvents = interlockEvents
+    }
+
+    package func articulation(at step: Int) -> RelationalArticulation {
+        relationalSteps[((step % 16) + 16) % 16]
     }
 }
 
-/// A deterministic upper-voice score. Its clocks deliberately continue across
-/// bar boundaries; kick, bass, hats, and clap are not part of this plan.
+/// A deterministic upper-voice score. Its relational phase continues across
+/// phrase and bar boundaries, then deliberately realigns on the global macro
+/// grid. Foundation and percussion voices are not part of this plan.
 package struct SynthPerformancePlan: Equatable, Sendable {
     package let world: SynthWorldDNA
     package let bars: [SynthPerformanceBar]
 
-    package init(scene: TechnoScene, dna: SceneDNA, bars performanceBars: [PerformanceBar]) {
+    package init(scene: TechnoScene, dna: SceneDNA,
+                 resolvedBars: [ResolvedPerformanceBar]) {
         let synthWorld = SynthWorldDNA(scene: scene, dna: dna)
-        let synthBars = performanceBars.map { performanceBar in
+        let synthBars = resolvedBars.map { resolved in
+            let performanceBar = resolved.performance
             let gesture = SynthPerformancePlan.gesture(for: performanceBar)
             let mutation = SynthPerformancePlan.mutation(for: gesture, tension: performanceBar.tension)
-            let globalStart = performanceBar.bar * 16
-            let sevenPhase = globalStart % 7
-            let echoPhase = (globalStart + synthWorld.echoRotation) % 3
+            let macroBar = ((performanceBar.bar % 16) + 16) % 16
+            let relationalSteps = (0..<16).map { step in
+                RelationalArticulation(
+                    chapter: resolved.interlockChapter,
+                    phase: RelationalCyclePhase(macroStep: macroBar * 16 + step),
+                    pulseEchoEligible: resolved.pulseEchoEnabled
+                )
+            }
             let events = gesture != .suspend
                 ? SynthPerformancePlan.interlockEvents(
-                    bar: performanceBar.bar,
                     gesture: gesture,
                     world: synthWorld,
-                    kickSteps: Set(dna.rhythm.kickSteps)
+                    resolvedEvents: resolved.ensemble.events.filter { $0.voice == .motif },
+                    relationalSteps: relationalSteps
                 )
                 : []
             return SynthPerformanceBar(
                 bar: performanceBar.bar,
                 gesture: gesture,
                 mutationAmount: mutation,
-                sevenStepPhase: sevenPhase,
-                echoGatePhase: echoPhase,
+                relationalSteps: relationalSteps,
                 interlockEvents: events
             )
         }
@@ -136,18 +302,11 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         }
     }
 
-    private static func interlockEvents(bar: Int, gesture: SynthGesture,
-                                        world: SynthWorldDNA,
-                                        kickSteps: Set<Int>) -> [SynthRoleEvent] {
-        let rawSteps = (0..<16).filter { index in
-            ((index * 5 + world.shadowRotation) % 16) < 5
-        }
-        var used: Set<Int> = []
-        return rawSteps.enumerated().map { eventIndex, rawStep in
-            let step = relocate(rawStep, avoiding: kickSteps, used: &used)
-            let globalStep = bar * 16 + step
-            let sevenAccent = (globalStep + world.shadowRotation) % 7 == 0
-            let echoGate = (globalStep + world.echoRotation) % 3 == 0
+    private static func interlockEvents(gesture: SynthGesture, world: SynthWorldDNA,
+                                        resolvedEvents: [EnsembleResolvedEvent],
+                                        relationalSteps: [RelationalArticulation]) -> [SynthRoleEvent] {
+        resolvedEvents.enumerated().map { eventIndex, resolved in
+            let step = resolved.step
             let octave = eventIndex.isMultiple(of: 3) ? 0.5 : 1.0
             let interval = pow(2, Double(world.shadowInterval) / 12)
             let gestureLevel: Double
@@ -162,22 +321,9 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 role: .shadow,
                 stepIndex: step,
                 frequencyRatio: interval * octave,
-                velocity: min(0.72, gestureLevel + (sevenAccent ? 0.12 : 0)),
-                sevenStepAccent: sevenAccent,
-                echoGate: echoGate
+                velocity: min(0.72, gestureLevel * max(0.35, resolved.intensity)),
+                articulation: relationalSteps[step]
             )
         }.sorted { $0.stepIndex < $1.stepIndex }
-    }
-
-    private static func relocate(_ requested: Int, avoiding kickSteps: Set<Int>,
-                                 used: inout Set<Int>) -> Int {
-        for offset in 0..<16 {
-            let candidate = (requested + offset) % 16
-            if !kickSteps.contains(candidate) && !used.contains(candidate) {
-                used.insert(candidate)
-                return candidate
-            }
-        }
-        return requested
     }
 }

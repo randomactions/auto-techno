@@ -21,31 +21,54 @@ be shown read-only, but direct DSP parameters do not belong in the primary UI.
 - one accessible transport button;
 - explicit preparing, ready, live, paused, recovering, and unavailable states;
 - fixed 130 BPM;
-- deterministic default performance with seed `48291`;
-- phrase and bar position plus a lightweight waveform;
+- one canonical, indefinitely evolving performance;
+- phrase and bar position plus a lightweight waveform on a fixed decibel scale;
 - offline operation with no account or cloud dependency.
 
 ## Musical runtime
 
-`AutonomousSessionDirector` owns the session seed, fixed tempo, temporal memory,
-phrase candidates, continuation, and debt repair. Every selected phrase contains
-a non-optional musical intention, Scene DNA, performance bars, and ensemble
-context. The synth planner adds a non-optional synth world and per-bar synth
-performance.
+`AutonomousSessionDirector` owns the private canonical identity, fixed tempo,
+temporal memory, phrase candidates, continuation, and debt repair. Every
+selected phrase contains a non-optional musical intention, Scene DNA, and
+resolved performance bars that keep the arrangement gesture, foundation
+companion, arbitrated ensemble events, and long-form chapter together. A global
+sixteen-bar grid times structural punctuation without removing adaptive
+four-to-sixteen-bar phrases.
+
+Within that grid, a three-step upper-voice driver advances a five-stage follower.
+The resulting fifteen-step relationship moves against the sixteen-step groove
+without creating or relocating onsets. Bounded sixteen-bar chapters alter
+velocity, breath, tone, motion, or sparse pulse-echo emphasis while the dominant
+motif retains its fingerprint. Chapters return to `home` for identity returns
+and at least once every four macros. The kick and the scene's main foundation
+companion remain stable and outside this relational modulation.
 
 The generated DSP graph applies only to the upper-voice remainder. A private
-full/foundation rendering distinction protects kick and bass without exposing a
-runtime mode. Phrase rendering occurs before playback; the audio engine schedules
-immutable buffers at sample time.
+full/foundation rendering distinction protects the kick and its bass, mono
+rumble, or tuned-tom companion without exposing a runtime mode. Sparse
+three-sixteenth pulse echo is band-limited on the upper path. Phrase rendering
+occurs before playback; the audio engine schedules immutable buffers at sample
+time.
+
+Detached rendering also measures five private role stems: kick, foundation,
+percussion, upper tonal, and atmosphere. A bounded automatic fader uses the
+actual kick/foundation relationship to trim the audible kick slowly toward the
+authored hierarchy for the active companion. It never boosts the kick above its
+authored level, does not learn during breaks or without a valid companion, and
+does not alter the pre-fader detector that drives groove ducking. These stems and
+measurements are evidence for the autonomous performance, not mixer controls.
 
 ## Hard constraints
 
-- Same seed and controls produce the same musical decisions.
+- The same private initial and continuation state reproduces the same musical
+  decisions and prepared audio.
 - Planning remains in `AutoTechnoCore`; audio rendering remains in `AutoTechnoDSP`.
 - The audio callback performs no allocation, locking, I/O, logging, or UI work.
 - Route changes rebuild at the active sample rate and retain coherent continuation.
 - Low-end protection, finite output, bounded peaks/DC/boundaries, and masking
   checks remain release obligations.
+- Automatic balance runs only during detached preparation, has bounded gain and
+  slew, and must report the same post-fader role audio used by the mix.
 - No musical retuning is accepted without a concrete matched-loudness listening
   observation recorded in the taste ledger.
 

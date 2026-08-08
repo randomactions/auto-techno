@@ -586,7 +586,9 @@ package struct PhraseAudioPreflight: Equatable, Sendable {
         safetyValid = barEvidence.allSatisfy { $0.finite } && report.finite && report.truePeakEstimate <= 0.95 &&
             abs(report.dcOffset) < 0.05 && report.lowStereoCorrelation > 0.94 &&
             report.maxBoundaryDelta < 0.65
-        interesting = safetyValid && movementScore >= 0.30
+        // Movement is evidence for comparison, not a musicality threshold. A
+        // sparse lock or break may be the most intentional candidate.
+        interesting = safetyValid
     }
 }
 
@@ -601,7 +603,7 @@ package struct PreparedAutonomousPhrase: Sendable {
     package let usedFallback: Bool
 
     package var combinedScore: Double {
-        plan.interest.score * 0.55 + audioPreflight.movementScore * 0.45
+        plan.interest.score * 0.82 + audioPreflight.movementScore * 0.18
     }
 }
 
@@ -627,11 +629,11 @@ package struct AutonomousCandidateEvidence: Equatable, Sendable {
 }
 
 /// Pure selection policy used by preparation and by synthetic anti-stagnation
-/// tests. An interesting, valid primary is retained immediately; otherwise an
-/// alternate may compete. Equal scores always preserve the primary.
+/// tests. Safe symbolic intent retains the primary even when audio movement is
+/// deliberately low. Equal scores always preserve the primary.
 package enum AutonomousCandidateSelector {
     package static func needsAlternate(primary: AutonomousCandidateEvidence) -> Bool {
-        !(primary.symbolicValid && primary.safetyValid && primary.interesting)
+        !(primary.symbolicValid && primary.safetyValid)
     }
 
     package static func choose(primary: AutonomousCandidateEvidence,

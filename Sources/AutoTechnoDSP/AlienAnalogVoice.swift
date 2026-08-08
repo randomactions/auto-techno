@@ -8,8 +8,7 @@ struct AlienVoiceNote: Equatable, Sendable {
     let endFrequency: Double
     let velocity: Double
     let role: SynthRole
-    let sevenStepAccent: Bool
-    let echoGate: Bool
+    let articulation: RelationalArticulation
 }
 
 struct AlienVoiceState: Equatable, Sendable {
@@ -74,11 +73,15 @@ struct AlienVoiceState: Equatable, Sendable {
 /// rendered during detached preparation and never executes on AVAudioEngine's
 /// audio callback.
 enum AlienAnalogVoice {
-    static func render(_ output: inout [Float], notes: [AlienVoiceNote],
+    static func render(_ output: inout [Float], measurement: inout [Float],
+                       pulseEchoSend: inout [Float],
+                       notes: [AlienVoiceNote],
                        sampleRate: Double, level: Double,
                        world: SynthWorldDNA, bar: SynthPerformanceBar,
                        role: SynthRole, state: inout AlienVoiceState) {
         guard !output.isEmpty, sampleRate > 0 else { return }
+        guard pulseEchoSend.count == output.count else { return }
+        guard measurement.count == output.count else { return }
         state.prepare(sampleRate: sampleRate, world: world, role: role)
         let scheduled = notes
             .filter { $0.startFrame < output.count && $0.durationFrames > 0 && $0.frequency > 0 }
@@ -95,17 +98,18 @@ enum AlienAnalogVoice {
         var startFrequency = state.frequency
         var targetFrequency = state.frequency
         var velocity = 0.0
-        var sevenAccent = false
-        var echoGate = false
+        var articulation = RelationalArticulation.neutral
         let roleMutation = mutationScale(for: role)
         let mutation = min(1, bar.mutationAmount * roleMutation)
-        let attackSeconds = attack(for: role, gesture: bar.gesture)
-        let decaySeconds = decay(for: role, gesture: bar.gesture)
-        let sustain = sustain(for: role, gesture: bar.gesture)
-        let releaseSeconds = release(for: role, gesture: bar.gesture)
-        let attackFrames = max(1, Int(attackSeconds * sampleRate))
+        let fingerprint = world.motifFingerprint
+        let baseAttackSeconds = attack(for: role, gesture: bar.gesture, fingerprint: fingerprint)
+        let baseDecaySeconds = decay(for: role, gesture: bar.gesture, fingerprint: fingerprint)
+        let sustain = sustain(for: role, gesture: bar.gesture, fingerprint: fingerprint)
+        let releaseSeconds = release(for: role, gesture: bar.gesture, fingerprint: fingerprint)
+        var attackFrames = max(1, Int(baseAttackSeconds * sampleRate))
+        var decaySeconds = baseDecaySeconds
         let releaseCoefficient = exp(-1 / max(1, releaseSeconds * sampleRate))
-        let glideCoefficient = 1 - exp(-1 / max(1, sampleRate * (0.012 + mutation * 0.030)))
+        var glideCoefficient = 1 - exp(-1 / max(1, sampleRate * (0.012 + mutation * 0.030)))
         let oversampledRate = sampleRate * 2
         let roleIndex = Double(SynthRole.allCases.firstIndex(of: role) ?? 0)
         let driftRate = 0.031 + roleIndex * 0.007 + Double(world.variation) * 0.003
@@ -119,8 +123,13 @@ enum AlienAnalogVoice {
                 startFrequency = max(20, state.frequency)
                 targetFrequency = note.endFrequency
                 velocity = min(1, max(0, note.velocity))
-                sevenAccent = note.sevenStepAccent
-                echoGate = note.echoGate
+                articulation = note.articulation
+                attackFrames = max(1, Int(
+                    baseAttackSeconds * articulation.attackScale * sampleRate
+                ))
+                decaySeconds = baseDecaySeconds * articulation.decayScale
+                let glideSeconds = (0.012 + mutation * 0.030) * articulation.glideTimeScale
+                glideCoefficient = 1 - exp(-1 / max(1, sampleRate * glideSeconds))
                 triggered = true
                 nextNote += 1
             }
@@ -162,10 +171,15 @@ enum AlienAnalogVoice {
                 let driftCents = state.drift * (2.4 + mutation * 3.8)
                 let frequency = min(oversampledRate * 0.16,
                                     max(20, state.frequency * (1 + driftCents * 0.000_577_622)))
-                let ratio = 1.006 + Double(world.variation) * 0.0017 + roleIndex * 0.0009
+                let motifDetune = [0.004, 0.007, 0.011][fingerprint.modulationFamily]
+                let ratio = (role == .anchor ? 1 + motifDetune : 1.006) +
+                    Double(world.variation) * 0.0017 + roleIndex * 0.0009
                 let incrementA = frequency / oversampledRate
                 let incrementB = frequency * ratio / oversampledRate
-                let modIncrement = frequency * (1.37 + Double(world.variation) * 0.071) / oversampledRate
+                let motifModulation = [1.19, 1.37, 1.61][fingerprint.modulationFamily]
+                let modRatio = role == .anchor
+                    ? motifModulation : 1.37 + Double(world.variation) * 0.071
+                let modIncrement = frequency * modRatio / oversampledRate
                 state.phaseA = wrap(state.phaseA + incrementA)
                 state.phaseB = wrap(state.phaseB + incrementB)
                 state.modPhase = wrap(state.modPhase + modIncrement)
@@ -195,15 +209,18 @@ enum AlienAnalogVoice {
                 var altered = folded * (1 - mutation * 0.18) + folded * ringCarrier * (0.16 + mutation * 0.56)
                 altered += altered * altered * (0.08 + mutation * 0.20)
 
-                let envelopeLift = state.envelope * (0.20 + (sevenAccent ? 0.16 : 0))
-                let baseCutoff = 170 + Double(world.variation) * 55 + roleIndex * 48
+                let envelopeLift = state.envelope * 0.20
+                let spectralScale = role == .anchor
+                    ? [0.72, 1.0, 1.28][fingerprint.spectralRegion] * articulation.spectralScale
+                    : articulation.spectralScale
+                let baseCutoff = (170 + Double(world.variation) * 55 + roleIndex * 48) * spectralScale
                 let cutoff = min(oversampledRate * 0.18,
                                  baseCutoff + (1 - mutation) * 1_280 + envelopeLift * 1_850 +
                                  modulator * mutation * 310)
                 let rawCoefficient = 2 * .pi * cutoff / oversampledRate
                 let coefficient = min(0.46, max(0.004,
                     rawCoefficient / (1 + rawCoefficient * 0.5)))
-                let resonance = min(0.76, 0.22 + mutation * 0.38 + (sevenAccent ? 0.06 : 0))
+                let resonance = min(0.76, 0.22 + mutation * 0.38)
                 let feedbackInput = fastSaturate(altered * (1.35 + mutation * 1.45) - state.filter4 * resonance)
                 state.filter1 += (fastSaturate(feedbackInput) - state.filter1) * coefficient
                 state.filter2 += (fastSaturate(state.filter1 * 1.08) - state.filter2) * coefficient
@@ -219,7 +236,7 @@ enum AlienAnalogVoice {
                     oversampleSum += state.oversampleLow
                 }
 
-                let amplitude = state.envelope * velocity * level * (sevenAccent ? 1.08 : 1)
+                let amplitude = state.envelope * velocity * level
                 dryVoice = oversampleSum * 0.5 * amplitude
             } else {
                 state.filter1 *= 0.94
@@ -241,10 +258,14 @@ enum AlienAnalogVoice {
             state.allPassIndex = (state.allPassIndex + 1) % state.allPass.count
             let coloredVoice = combVoice * 0.78 + allPassVoice * 0.22
 
+            if gate, articulation.pulseEchoSend > 0 {
+                pulseEchoSend[frame] += Float(coloredVoice * articulation.pulseEchoSend)
+            }
+
             let echoRead = Double(state.echo[state.echoIndex])
             state.echoLow += (echoRead - state.echoLow) * (0.08 + (1 - mutation) * 0.05)
             let filteredEcho = state.echoLow
-            let echoSend = echoGate || bar.gesture == .suspend ? 0.26 + mutation * 0.34 : 0.035
+            let echoSend = bar.gesture == .suspend ? 0.26 + mutation * 0.34 : 0.035
             let echoFeedback = min(0.69, 0.31 + mutation * 0.31)
             state.echo[state.echoIndex] = Float(coloredVoice * echoSend + filteredEcho * echoFeedback)
             state.echoIndex = (state.echoIndex + 1) % state.echo.count
@@ -254,7 +275,9 @@ enum AlienAnalogVoice {
             state.dcInput = withMemory
             state.dcOutput = dcBlocked
             state.tailLevel = max(abs(dcBlocked), state.tailLevel * 0.9995)
-            output[frame] += Float(fastSaturate(dcBlocked * 1.08))
+            let renderedSample = Float(fastSaturate(dcBlocked * 1.08))
+            output[frame] += renderedSample
+            measurement[frame] += renderedSample
         }
     }
 
@@ -268,24 +291,32 @@ enum AlienAnalogVoice {
         }
     }
 
-    private static func attack(for role: SynthRole, gesture: SynthGesture) -> Double {
+    private static func attack(for role: SynthRole, gesture: SynthGesture,
+                               fingerprint: MotifTimbreFingerprint) -> Double {
+        if role == .anchor { return [0.004, 0.010, 0.022][fingerprint.envelopeFamily] }
         if role == .atmosphere { return gesture == .suspend ? 0.38 : 0.18 }
         if role == .transition { return 0.09 }
         return gesture == .release ? 0.004 : 0.009
     }
 
-    private static func decay(for role: SynthRole, gesture: SynthGesture) -> Double {
+    private static func decay(for role: SynthRole, gesture: SynthGesture,
+                              fingerprint: MotifTimbreFingerprint) -> Double {
+        if role == .anchor { return [0.11, 0.22, 0.38][fingerprint.envelopeFamily] }
         if role == .atmosphere { return 1.8 }
         return gesture == .corrode ? 0.12 : 0.22
     }
 
-    private static func sustain(for role: SynthRole, gesture: SynthGesture) -> Double {
+    private static func sustain(for role: SynthRole, gesture: SynthGesture,
+                                fingerprint: MotifTimbreFingerprint) -> Double {
+        if role == .anchor { return [0.16, 0.24, 0.36][fingerprint.envelopeFamily] }
         if role == .atmosphere { return 0.72 }
         if role == .transition { return 0.56 }
         return gesture == .release ? 0.34 : 0.22
     }
 
-    private static func release(for role: SynthRole, gesture: SynthGesture) -> Double {
+    private static func release(for role: SynthRole, gesture: SynthGesture,
+                                fingerprint: MotifTimbreFingerprint) -> Double {
+        if role == .anchor { return [0.08, 0.16, 0.28][fingerprint.envelopeFamily] }
         if role == .atmosphere { return gesture == .suspend ? 1.6 : 0.72 }
         if role == .transition { return 0.44 }
         return 0.10 + (gesture == .corrode ? 0.16 : 0.06)

@@ -2,11 +2,13 @@ import AutoTechnoCore
 import Foundation
 
 package enum VoiceKind: String, CaseIterable, Sendable {
-    case kick, bass, percussion, synth, lead, pad, riser
+    case kick, bass, rumble, percussion, clap, openHat, tunedTom, metallic
+    case synth, lead, pad, riser
 }
 
 package enum EffectKind: String, CaseIterable, Sendable {
-    case busEQ, maskingGuard, saturation, phaser, chorus, comb, unsyncedEcho, reverb, glue, master
+    case busEQ, maskingGuard, saturation, phaser, chorus, comb, unsyncedEcho, pulseEcho
+    case reverb, glue, master
 }
 
 package struct EffectState: Equatable, Sendable {
@@ -70,6 +72,24 @@ package struct BusState: Equatable, Sendable {
     }
 }
 
+/// Evidence from the two kick paths used during detached rendering. The
+/// detector remains pre-fader so groove ducking does not move with mix level;
+/// the audible and masking values describe the post-fader signal.
+package struct KickMixEvidence: Equatable, Sendable {
+    package let audibleGain: Double
+    package let audiblePeak: Float
+    package let audibleRMS: Float
+    package let detectorPeak: Float
+    package let detectorRMS: Float
+    package let duckingEnvelopePeak: Float
+    package let maskingInputPeak: Float
+}
+
+package struct StemReconstructionEvidence: Equatable, Sendable {
+    package let dryCenterMaximumError: Float
+    package let upperMaximumError: Float
+}
+
 /// Mutable DSP continuation owned by detached phrase preparation. The audio
 /// player receives immutable buffers and never mutates this state.
 package struct RenderState: Equatable, Sendable {
@@ -78,6 +98,10 @@ package struct RenderState: Equatable, Sendable {
     package var bassFilter = 0.0
     package var delayBuffer: [Float] = []
     package var delayWriteIndex = 0
+    package var pulseEchoBuffer: [Float] = []
+    package var pulseEchoWriteIndex = 0
+    package var pulseEchoHighPassState = 0.0
+    package var pulseEchoLowPassState = 0.0
     package var earlyReflectionBuffer: [Float] = []
     package var earlyReflectionWriteIndex = 0
     package var stereoPanPhase = 0.0
@@ -87,6 +111,7 @@ package struct RenderState: Equatable, Sendable {
     package var masterEnvelope = 0.0
     package var lowBandEnvelope = 0.0
     package var highBandEnvelope = 0.0
+    package var automaticMixState = AutomaticMixState()
     package var reverbBuffer: [Float] = []
     package var reverbWriteIndex = 0
     var alienAnchorState = AlienVoiceState()
@@ -112,9 +137,17 @@ package struct RenderedBar: Equatable, Sendable {
     package let crestFactor: Float
     package let stereoCorrelation: Float
     package let masking: [MaskingDecision]
+    package let kickMix: KickMixEvidence
+    package let stemObservations: [MixRole: StemObservation]
+    package let automaticMix: AutomaticMixPlan
+    package let stemReconstruction: StemReconstructionEvidence
 
     package init(sampleRate: Double, samples: [Float], leftSamples: [Float],
-                rightSamples: [Float], masking: [MaskingDecision] = []) {
+                rightSamples: [Float], masking: [MaskingDecision] = [],
+                kickMix: KickMixEvidence,
+                stemObservations: [MixRole: StemObservation],
+                automaticMix: AutomaticMixPlan,
+                stemReconstruction: StemReconstructionEvidence) {
         self.sampleRate = sampleRate
         self.samples = samples
         self.leftSamples = leftSamples
@@ -132,6 +165,10 @@ package struct RenderedBar: Equatable, Sendable {
         }
         stereoCorrelation = Float(cross / sqrt(max(0.0000001, leftEnergy * rightEnergy)))
         self.masking = masking
+        self.kickMix = kickMix
+        self.stemObservations = stemObservations
+        self.automaticMix = automaticMix
+        self.stemReconstruction = stemReconstruction
     }
 }
 
@@ -150,6 +187,11 @@ package struct RenderBlock: Equatable, Sendable {
     package let stereoCorrelation: Float
     package let masking: [MaskingDecision]
     package let effects: [EffectState]
+    package let kickMix: KickMixEvidence
+    package let stemObservations: [MixRole: StemObservation]
+    package let automaticMix: AutomaticMixPlan
+    package let stemReconstruction: StemReconstructionEvidence
+    package let resolvedPerformance: ResolvedPerformanceBar
     package let performance: PerformanceBar
     package let sceneDNA: SceneDNA
     package let synthWorld: SynthWorldDNA
@@ -158,7 +200,11 @@ package struct RenderBlock: Equatable, Sendable {
     package init(bar: Int, section: SectionKind, left: [Float], right: [Float],
                 events: [VoiceEvent], modulation: ModulationState,
                 busStates: [VoiceKind: BusState], masking: [MaskingDecision],
-                effects: [EffectState], performance: PerformanceBar,
+                effects: [EffectState], kickMix: KickMixEvidence,
+                stemObservations: [MixRole: StemObservation],
+                automaticMix: AutomaticMixPlan,
+                stemReconstruction: StemReconstructionEvidence,
+                resolvedPerformance: ResolvedPerformanceBar,
                 sceneDNA: SceneDNA, synthWorld: SynthWorldDNA,
                 synthPerformance: SynthPerformanceBar) {
         self.bar = bar
@@ -170,7 +216,12 @@ package struct RenderBlock: Equatable, Sendable {
         self.busStates = busStates
         self.masking = masking
         self.effects = effects
-        self.performance = performance
+        self.kickMix = kickMix
+        self.stemObservations = stemObservations
+        self.automaticMix = automaticMix
+        self.stemReconstruction = stemReconstruction
+        self.resolvedPerformance = resolvedPerformance
+        performance = resolvedPerformance.performance
         self.sceneDNA = sceneDNA
         self.synthWorld = synthWorld
         self.synthPerformance = synthPerformance
@@ -215,14 +266,28 @@ enum RenderLayer {
 struct RenderBuffers {
     var output: [Float] = []
     var kick: [Float] = []
+    var kickDetector: [Float] = []
+    var foundationStem: [Float] = []
+    var percussionStem: [Float] = []
+    var upperTonalStem: [Float] = []
+    var atmosphereStem: [Float] = []
+    var measurementScratch: [Float] = []
     var percussion: [Float] = []
     var synth: [Float] = []
+    var pulseEchoSend: [Float] = []
 
     mutating func reset(frameCount: Int) {
         reset(&output, frameCount: frameCount)
         reset(&kick, frameCount: frameCount)
+        reset(&kickDetector, frameCount: frameCount)
+        reset(&foundationStem, frameCount: frameCount)
+        reset(&percussionStem, frameCount: frameCount)
+        reset(&upperTonalStem, frameCount: frameCount)
+        reset(&atmosphereStem, frameCount: frameCount)
+        reset(&measurementScratch, frameCount: frameCount)
         reset(&percussion, frameCount: frameCount)
         reset(&synth, frameCount: frameCount)
+        reset(&pulseEchoSend, frameCount: frameCount)
     }
 
     private func reset(_ buffer: inout [Float], frameCount: Int) {
@@ -255,15 +320,17 @@ package enum AutonomousPhraseRenderer {
     package static func render(plan: AutonomousPhrasePlan, graph: DSPGraphPlan,
                               sampleRate: Double, state: inout RenderState,
                               graphState: inout GeneratedDSPContinuationState) -> [RenderBlock] {
-        let synthPlan = SynthPerformancePlan(scene: plan.scene, dna: plan.dna, bars: plan.bars)
+        let synthPlan = SynthPerformancePlan(
+            scene: plan.scene, dna: plan.dna, resolvedBars: plan.resolvedBars
+        )
         var workspace = RenderWorkspace()
         var blocks: [RenderBlock] = []
         blocks.reserveCapacity(plan.barCount)
 
-        for index in plan.bars.indices {
-            let performance = plan.bars[index]
+        for index in plan.resolvedBars.indices {
+            let resolved = plan.resolvedBars[index]
+            let performance = resolved.performance
             let synthPerformance = synthPlan.bars[index]
-            let ensemble = plan.ensemble[index]
             let modulation = modulation(performance: performance, scene: plan.scene)
             var foundationState = state
             let foundation = VoiceRenderer.renderBar(
@@ -271,7 +338,7 @@ package enum AutonomousPhraseRenderer {
                 sampleRate: sampleRate,
                 state: &foundationState,
                 dna: plan.dna,
-                performance: performance,
+                resolved: resolved,
                 synthWorld: synthPlan.world,
                 synthPerformance: synthPerformance,
                 workspace: &workspace,
@@ -282,13 +349,13 @@ package enum AutonomousPhraseRenderer {
                 sampleRate: sampleRate,
                 state: &state,
                 dna: plan.dna,
-                performance: performance,
+                resolved: resolved,
                 synthWorld: synthPlan.world,
                 synthPerformance: synthPerformance,
                 workspace: &workspace,
                 layer: .full
             )
-            let events = ensemble.events.map {
+            let events = resolved.ensemble.events.map {
                 VoiceEvent(voice: voiceKind($0.voice), bar: performance.bar,
                            step: $0.step, intensity: $0.intensity)
             }
@@ -301,9 +368,14 @@ package enum AutonomousPhraseRenderer {
             )
             let outputLeft = zip(foundation.leftSamples, generated.0).map { outputSafety($0 + $1) }
             let outputRight = zip(foundation.rightSamples, generated.1).map { outputSafety($0 + $1) }
+            let pulseEchoAmount = resolved.ensemble.events
+                .filter { $0.voice == .motif || $0.voice == .response }
+                .map { synthPerformance.articulation(at: $0.step).pulseEchoSend }
+                .max() ?? 0
             let graphEffects = graph.nodes.map {
                 EffectState(kind: effectKind($0.kind), amount: $0.amount, active: $0.mix > 0)
-            } + [
+            } + (pulseEchoAmount > 0
+                ? [EffectState(kind: .pulseEcho, amount: pulseEchoAmount)] : []) + [
                 EffectState(kind: .maskingGuard, amount: 1),
                 EffectState(kind: .glue, amount: 1),
                 EffectState(kind: .master, amount: 1),
@@ -318,7 +390,11 @@ package enum AutonomousPhraseRenderer {
                 busStates: buses,
                 masking: rendered.masking,
                 effects: graphEffects,
-                performance: performance,
+                kickMix: rendered.kickMix,
+                stemObservations: rendered.stemObservations,
+                automaticMix: rendered.automaticMix,
+                stemReconstruction: rendered.stemReconstruction,
+                resolvedPerformance: resolved,
                 sceneDNA: plan.dna,
                 synthWorld: synthPlan.world,
                 synthPerformance: synthPerformance
@@ -352,7 +428,12 @@ package enum AutonomousPhraseRenderer {
         switch voice {
         case .kick: .kick
         case .bass: .bass
+        case .rumble: .rumble
         case .percussion: .percussion
+        case .clap: .clap
+        case .openHat: .openHat
+        case .tunedTom: .tunedTom
+        case .metallic: .metallic
         case .motif: .synth
         case .response: .lead
         case .atmosphere: .pad
@@ -376,17 +457,19 @@ package enum AutonomousPhraseRenderer {
                                   events: [VoiceEvent]) -> [VoiceKind: BusState] {
         let headroom = max(0, 1 - Double(rendered.peak))
         return Dictionary(uniqueKeysWithValues: Set(events.map(\.voice)).map { voice in
-            let level: Double
+            let role: MixRole
             switch voice {
-            case .kick: level = 1
-            case .bass: level = scene.character.bassLevel
-            case .percussion: level = scene.character.percussionBrightness
-            case .synth, .lead: level = scene.synthPresence
-            case .pad, .riser: level = scene.atmosphere
+            case .kick: role = .kick
+            case .bass, .rumble, .tunedTom: role = .foundation
+            case .percussion, .clap, .openHat, .metallic:
+                role = .percussion
+            case .synth, .lead: role = .upperTonal
+            case .pad, .riser: role = .atmosphere
             }
             return (voice, BusState(
-                level: Double(rendered.rms) * level,
-                send: voice == .kick || voice == .bass ? 0 : scene.atmosphere * 0.30,
+                level: rendered.stemObservations[role]?.rms ?? 0,
+                send: voice == .kick || voice == .bass || voice == .rumble || voice == .tunedTom
+                    ? 0 : scene.atmosphere * 0.30,
                 headroom: headroom
             ))
         })

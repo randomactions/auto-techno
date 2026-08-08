@@ -20,14 +20,18 @@ struct CurrentRuntimeTests {
         let director = AutonomousSessionDirector(rootSeed: seed)
         let first = director.candidates(from: director.initialState()).primary
         let second = director.candidates(from: director.initialState()).primary
-        let firstSynth = SynthPerformancePlan(scene: first.scene, dna: first.dna, bars: first.bars)
-        let secondSynth = SynthPerformancePlan(scene: second.scene, dna: second.dna, bars: second.bars)
+        let firstSynth = SynthPerformancePlan(
+            scene: first.scene, dna: first.dna, resolvedBars: first.resolvedBars
+        )
+        let secondSynth = SynthPerformancePlan(
+            scene: second.scene, dna: second.dna, resolvedBars: second.resolvedBars
+        )
 
         #expect(first == second)
         #expect(first.scene.musicalIntent == second.scene.musicalIntent)
         #expect(first.dna == second.dna)
         #expect(firstSynth == secondSynth)
-        #expect(firstSynth.bars.count == first.bars.count)
+        #expect(firstSynth.bars.count == first.resolvedBars.count)
     }
 
     @Test("The current phrase renderer replays from continuation state")

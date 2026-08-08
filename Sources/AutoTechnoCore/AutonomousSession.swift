@@ -11,7 +11,12 @@ package enum AutonomousPhraseKind: String, CaseIterable, Sendable {
 package enum EnsembleVoice: String, CaseIterable, Sendable {
     case kick
     case bass
+    case rumble
     case percussion
+    case clap
+    case openHat
+    case tunedTom
+    case metallic
     case motif
     case response
     case atmosphere
@@ -19,8 +24,8 @@ package enum EnsembleVoice: String, CaseIterable, Sendable {
 
     package var role: PerformanceRole {
         switch self {
-        case .kick, .bass: .foundation
-        case .percussion: .percussion
+        case .kick, .bass, .rumble, .tunedTom: .foundation
+        case .percussion, .clap, .openHat, .metallic: .percussion
         case .motif: .motif
         case .response: .response
         case .atmosphere: .atmosphere
@@ -57,6 +62,13 @@ package struct EnsembleResolvedEvent: Equatable, Sendable {
     package let step: Int
     package let intensity: Double
     package let relocated: Bool
+
+    package init(voice: EnsembleVoice, step: Int, intensity: Double, relocated: Bool) {
+        self.voice = voice
+        self.step = ((step % 16) + 16) % 16
+        self.intensity = min(1, max(0, intensity))
+        self.relocated = relocated
+    }
 }
 
 package struct EnsembleContext: Equatable, Sendable {
@@ -71,6 +83,32 @@ package struct EnsembleContext: Equatable, Sendable {
         self.events = events
         self.kickAnchors = kickAnchors.sorted()
         self.intentionalPileup = intentionalPileup
+    }
+}
+
+/// The single immutable score consumed by rendering for one bar. Keeping the
+/// musical bar and its arbitrated events together prevents telemetry and PCM
+/// from describing different performances.
+package struct ResolvedPerformanceBar: Equatable, Sendable {
+    package let performance: PerformanceBar
+    package let ensemble: EnsembleContext
+    package let arrangementGesture: ArrangementGesture
+    package let percussionGear: PercussionGear
+    package let foundationCompanion: FoundationCompanion
+    package let pulseEchoEnabled: Bool
+    package let interlockChapter: InterlockChapter
+
+    package init(performance: PerformanceBar, ensemble: EnsembleContext,
+                 arrangementGesture: ArrangementGesture, percussionGear: PercussionGear,
+                 foundationCompanion: FoundationCompanion, pulseEchoEnabled: Bool,
+                 interlockChapter: InterlockChapter) {
+        self.performance = performance
+        self.ensemble = ensemble
+        self.arrangementGesture = arrangementGesture
+        self.percussionGear = percussionGear
+        self.foundationCompanion = foundationCompanion
+        self.pulseEchoEnabled = pulseEchoEnabled && foundationCompanion != .monoRumble
+        self.interlockChapter = interlockChapter
     }
 }
 
@@ -183,13 +221,15 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
     package private(set) var lastIdentityReturnBar: Int?
     package private(set) var topologyRevision: Int
     package private(set) var openDebts: [SessionDramaticDebt]
+    package private(set) var interlockEvolution: InterlockEvolutionState
 
     package init(recentBars: [MusicalMemoryBar] = [], currentPhrase: [MusicalMemoryBar] = [],
                 previousPhrase: [MusicalMemoryBar] = [], dramaticArc: [MusicalMemoryBar] = [],
                 sessionBars: [MusicalMemoryBar] = [], totalBars: Int = 0,
                 lastContrastBar: Int? = nil, lastBreakBar: Int? = nil,
                 lastReleaseBar: Int? = nil, lastIdentityReturnBar: Int? = nil,
-                topologyRevision: Int = 0, openDebts: [SessionDramaticDebt] = []) {
+                topologyRevision: Int = 0, openDebts: [SessionDramaticDebt] = [],
+                interlockEvolution: InterlockEvolutionState = InterlockEvolutionState()) {
         self.recentBars = Array(recentBars.suffix(4))
         self.currentPhrase = Array(currentPhrase.suffix(16))
         self.previousPhrase = Array(previousPhrase.suffix(16))
@@ -202,6 +242,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         self.lastIdentityReturnBar = lastIdentityReturnBar
         self.topologyRevision = max(0, topologyRevision)
         self.openDebts = openDebts
+        self.interlockEvolution = interlockEvolution
     }
 
     package var barsSinceContrast: Int { distance(since: lastContrastBar) }
@@ -215,6 +256,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         sessionBars = Array((sessionBars + plan.memoryBars).suffix(256))
         dramaticArc = Array((dramaticArc + plan.memoryBars).suffix(128))
         totalBars = plan.startBar + plan.barCount
+        interlockEvolution = plan.endingInterlockState
 
         switch plan.kind {
         case .contrast:
@@ -251,38 +293,39 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
 }
 
 package struct PhraseInterestReport: Equatable, Sendable {
-    package let repetition: Double
-    package let roleDiversity: Double
-    package let tensionMovement: Double
+    package let pulseClarity: Double
+    package let intentionalSpace: Double
     package let responseClosure: Double
     package let structuralTimeliness: Double
     package let identityContinuity: Double
+    package let overactivityPenalty: Double
     package let overdueDebtCount: Int
     package let score: Double
     package let valid: Bool
 
-    package init(repetition: Double, roleDiversity: Double, tensionMovement: Double,
+    package init(pulseClarity: Double, intentionalSpace: Double,
                 responseClosure: Double, structuralTimeliness: Double,
-                identityContinuity: Double, overdueDebtCount: Int) {
-        let repetitionValue = Self.clamp(repetition)
-        let roleDiversityValue = Self.clamp(roleDiversity)
-        let tensionMovementValue = Self.clamp(tensionMovement)
+                identityContinuity: Double, overactivityPenalty: Double,
+                overdueDebtCount: Int) {
+        let pulseValue = Self.clamp(pulseClarity)
+        let spaceValue = Self.clamp(intentionalSpace)
         let responseClosureValue = Self.clamp(responseClosure)
         let timelinessValue = Self.clamp(structuralTimeliness)
         let identityValue = Self.clamp(identityContinuity)
+        let overactivityValue = Self.clamp(overactivityPenalty)
         let overdueValue = max(0, overdueDebtCount)
         let computedScore = Self.clamp(
-            repetitionValue * 0.18 + roleDiversityValue * 0.18 +
-            tensionMovementValue * 0.16 + responseClosureValue * 0.14 +
-            timelinessValue * 0.18 + identityValue * 0.16 -
-            Double(overdueValue) * 0.18
+            pulseValue * 0.25 + spaceValue * 0.20 +
+            responseClosureValue * 0.16 + timelinessValue * 0.18 +
+            identityValue * 0.21 - overactivityValue * 0.24 -
+            Double(overdueValue) * 0.20
         )
-        self.repetition = repetitionValue
-        self.roleDiversity = roleDiversityValue
-        self.tensionMovement = tensionMovementValue
+        self.pulseClarity = pulseValue
+        self.intentionalSpace = spaceValue
         self.responseClosure = responseClosureValue
         self.structuralTimeliness = timelinessValue
         self.identityContinuity = identityValue
+        self.overactivityPenalty = overactivityValue
         self.overdueDebtCount = overdueValue
         score = computedScore
         valid = computedScore >= 0.45 && overdueValue == 0
@@ -310,17 +353,41 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let kind: AutonomousPhraseKind
     package let scene: TechnoScene
     package let dna: SceneDNA
-    package let bars: [PerformanceBar]
-    package let ensemble: [EnsembleContext]
+    package let resolvedBars: [ResolvedPerformanceBar]
     package let openedDebt: SessionDramaticDebt?
     package let paidDebtIDs: [Int]
     package let requestsTopologyMutation: Bool
     package let alternate: Bool
     package let conservative: Bool
     package let interest: PhraseInterestReport
+    package let endingInterlockState: InterlockEvolutionState
+
+    package init(phraseIndex: Int, startBar: Int, barCount: Int,
+                 kind: AutonomousPhraseKind, scene: TechnoScene, dna: SceneDNA,
+                 resolvedBars: [ResolvedPerformanceBar], openedDebt: SessionDramaticDebt?,
+                 paidDebtIDs: [Int], requestsTopologyMutation: Bool,
+                 alternate: Bool, conservative: Bool, interest: PhraseInterestReport,
+                 endingInterlockState: InterlockEvolutionState) {
+        self.phraseIndex = phraseIndex
+        self.startBar = startBar
+        self.barCount = barCount
+        self.kind = kind
+        self.scene = scene
+        self.dna = dna
+        self.resolvedBars = resolvedBars
+        self.openedDebt = openedDebt
+        self.paidDebtIDs = paidDebtIDs
+        self.requestsTopologyMutation = requestsTopologyMutation
+        self.alternate = alternate
+        self.conservative = conservative
+        self.interest = interest
+        self.endingInterlockState = endingInterlockState
+    }
 
     package var memoryBars: [MusicalMemoryBar] {
-        zip(bars, ensemble).map { bar, context in
+        resolvedBars.map { resolved in
+            let bar = resolved.performance
+            let context = resolved.ensemble
             return MusicalMemoryBar(
                 absoluteBar: bar.bar,
                 phraseIndex: phraseIndex,
@@ -374,33 +441,43 @@ package struct AutonomousSessionState: Equatable, Sendable {
 }
 
 package enum PhraseInterestEvaluator {
-    package static func evaluate(bars: [PerformanceBar], ensemble: [EnsembleContext],
+    package static func evaluate(resolvedBars: [ResolvedPerformanceBar],
                                 kind: AutonomousPhraseKind, memory: TemporalMusicalMemory,
                                 identityPreserved: Bool) -> PhraseInterestReport {
-        let priorSignatures = memory.recentBars.map(\.eventSignature)
-        let newSignatures = ensemble.map(ensembleEventSignature)
-        let repeated = zip(priorSignatures.suffix(newSignatures.count), newSignatures)
-            .filter { $0.0 == $0.1 }.count
-        let repetition = newSignatures.isEmpty ? 0 : 1 - Double(repeated) / Double(newSignatures.count)
-        let distinctRoles = Set(bars.flatMap(\.roles).map(\.rawValue)).count
-        let roleDiversity = min(1, Double(distinctRoles) / 5)
-        let tensionRange = (bars.map(\.tension).max() ?? 0) - (bars.map(\.tension).min() ?? 0)
-        let tensionMovement = min(1, tensionRange * 4 + (kind == .lock ? 0.20 : 0.48))
-        let hasMotif = bars.contains { $0.roles.contains(.motif) }
-        let hasResponse = bars.contains { $0.roles.contains(.response) }
+        let bars = resolvedBars.map(\.performance)
+        let ensemble = resolvedBars.map(\.ensemble)
+        let pulseBars = ensemble.filter { context in
+            !context.kickAnchors.isEmpty && context.kickAnchors.allSatisfy { anchor in
+                context.events.contains { $0.voice == .kick && $0.step == anchor }
+            } && context.events.filter { $0.voice == .bass }.allSatisfy {
+                !context.kickAnchors.contains($0.step)
+            }
+        }.count
+        let pulseClarity = ensemble.isEmpty ? 0 : Double(pulseBars) / Double(ensemble.count)
+        let averageEvents = ensemble.isEmpty ? 16 :
+            Double(ensemble.reduce(0) { $0 + $1.events.count }) / Double(ensemble.count)
+        let intentionalSpace = min(1, max(0, 1 - averageEvents / 16))
+        let overactivityPenalty = min(1, max(0, (averageEvents - 9) / 7))
+        let hasMotif = ensemble.contains { $0.events.contains { $0.voice == .motif } }
+        let hasResponse = ensemble.contains { $0.events.contains { $0.voice == .response } }
         let responseClosure = !hasMotif || hasResponse || kind == .majorBreak ? 1 : 0.35
-        let timely = kind == .energyRelease || kind == .majorBreak || kind == .contrast ||
-            (memory.barsSinceContrast < 24 && memory.barsSinceBreak < 96 && memory.barsSinceRelease < 128)
+        let structuralKind = kind == .energyRelease || kind == .majorBreak || kind == .identityReturn
+        let hasMacroResolution = resolvedBars.contains {
+            $0.arrangementGesture == .structuralMarker && ($0.performance.bar + 1).isMultiple(of: 16)
+        }
+        let timely = structuralKind ? hasMacroResolution :
+            (kind == .contrast ||
+             (memory.barsSinceContrast < 24 && memory.barsSinceBreak < 96 && memory.barsSinceRelease < 128))
         let structuralTimeliness = timely ? 1 : 0.20
         let phraseEnd = (bars.last?.bar ?? memory.totalBars) + 1
         let overdue = memory.openDebts.filter { $0.dueByBar < phraseEnd && kind != .energyRelease }.count
         return PhraseInterestReport(
-            repetition: repetition,
-            roleDiversity: roleDiversity,
-            tensionMovement: tensionMovement,
+            pulseClarity: pulseClarity,
+            intentionalSpace: intentionalSpace,
             responseClosure: responseClosure,
             structuralTimeliness: structuralTimeliness,
             identityContinuity: identityPreserved ? 1 : 0,
+            overactivityPenalty: overactivityPenalty,
             overdueDebtCount: overdue
         )
     }
@@ -455,7 +532,13 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         let start = state.memory.totalBars
         let rawLength = 4 + Int(seed(state: state, domain: conservative ? 0xFA11BAC : 0xF4A5E,
                                      index: alternate ? 1 : 0) % 13)
-        let length = conservative ? 8 : rawLength
+        let baseLength = conservative ? 8 : rawLength
+        let structuralKind = kind == .majorBreak || kind == .energyRelease || kind == .identityReturn
+        let barsToMacroBoundary = 16 - (start % 16)
+        // Structural phrases always contain the next global sixteen-bar
+        // resolution point while retaining the adaptive four-to-sixteen-bar
+        // phrase vocabulary.
+        let length = structuralKind ? max(baseLength, barsToMacroBoundary) : baseLength
         let mutationAmount: Double
         switch kind {
         case .lock: mutationAmount = alternate ? 0.10 : 0.035
@@ -474,10 +557,9 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         let dna = state.identityDNA
         let section = section(for: kind)
         let focusRole = focus(kind: kind, alternate: alternate, seed: phraseSeed)
-        var performanceBars: [PerformanceBar] = []
-        var ensembleBars: [EnsembleContext] = []
-        performanceBars.reserveCapacity(length)
-        ensembleBars.reserveCapacity(length)
+        var resolvedBars: [ResolvedPerformanceBar] = []
+        resolvedBars.reserveCapacity(length)
+        var interlockState = state.memory.interlockEvolution
 
         for localBar in 0..<length {
             let progress = length == 1 ? 1 : Double(localBar) / Double(length - 1)
@@ -485,10 +567,27 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             let transformations = transformations(kind: kind, localBar: localBar, length: length,
                                                    alternate: alternate, seed: phraseSeed)
             let roles = roles(kind: kind, focus: focusRole, localBar: localBar, length: length)
-            let signature: SignatureEvent? = kind == .energyRelease && localBar == 0
-                ? .displacedKickRecovery
-                : (kind == .identityReturn && localBar == length - 1 ? .alteredMotifAnswer : nil)
             let absoluteBar = start + localBar
+            if absoluteBar > 0, absoluteBar.isMultiple(of: 16) {
+                let chapterEntropy = SceneDNA.derivedSeed(
+                    scene: state.rootSeed,
+                    domain: 0x1A7E2C10 ^ UInt64(AutonomousPhraseKind.allCases.firstIndex(of: kind) ?? 0),
+                    index: absoluteBar / 16
+                )
+                interlockState = interlockState.advancing(for: kind, entropy: chapterEntropy)
+            }
+            let macroResolution = (absoluteBar + 1).isMultiple(of: 16)
+            let signature: SignatureEvent?
+            if macroResolution {
+                switch kind {
+                case .energyRelease: signature = .displacedKickRecovery
+                case .identityReturn: signature = .alteredMotifAnswer
+                case .majorBreak: signature = .harmonicShadow
+                case .lock, .contrast: signature = nil
+                }
+            } else {
+                signature = nil
+            }
             let contour = accentContour(dna: dna, absoluteBar: absoluteBar, progress: progress,
                                         release: kind == .energyRelease)
             let bar = PerformanceBar(
@@ -504,9 +603,30 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 eventSeed: SceneDNA.derivedSeed(scene: phraseSeed, domain: 0xBA2, index: localBar),
                 accentContour: contour
             )
-            performanceBars.append(bar)
-            ensembleBars.append(ensemblePlan(dna: dna, bar: bar, focus: focusRole,
-                                             release: kind == .energyRelease))
+            let gesture = arrangementGesture(kind: kind, absoluteBar: absoluteBar)
+            let gear = percussionGear(absoluteBar: absoluteBar)
+            let companion = foundationCompanion(
+                dna: dna, kind: kind, alternate: alternate,
+                localBar: localBar, length: length, gesture: gesture
+            )
+            let ensemble = ensemblePlan(
+                dna: dna, bar: bar, focus: focusRole,
+                release: kind == .energyRelease, companion: companion,
+                gear: gear, gesture: gesture
+            )
+            let echoEnabled = pulseEchoEnabled(
+                scene: scene, bar: bar, kind: kind,
+                companion: companion, gesture: gesture
+            )
+            resolvedBars.append(ResolvedPerformanceBar(
+                performance: bar,
+                ensemble: ensemble,
+                arrangementGesture: gesture,
+                percussionGear: gear,
+                foundationCompanion: companion,
+                pulseEchoEnabled: echoEnabled,
+                interlockChapter: interlockState.currentChapter
+            ))
         }
 
         let openedDebt: SessionDramaticDebt?
@@ -522,8 +642,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         }
         let paidDebtIDs = kind == .energyRelease ? state.memory.openDebts.map(\.id) : []
         let interest = PhraseInterestEvaluator.evaluate(
-            bars: performanceBars,
-            ensemble: ensembleBars,
+            resolvedBars: resolvedBars,
             kind: kind,
             memory: state.memory,
             identityPreserved: scene.seed == state.identitySeed
@@ -535,14 +654,15 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             kind: kind,
             scene: scene,
             dna: dna,
-            bars: performanceBars,
-            ensemble: ensembleBars,
+            resolvedBars: resolvedBars,
             openedDebt: openedDebt,
             paidDebtIDs: paidDebtIDs,
-            requestsTopologyMutation: state.phraseIndex > 0 && kind != .energyRelease && !conservative,
+            requestsTopologyMutation: state.phraseIndex > 0 &&
+                (kind == .contrast || kind == .majorBreak) && !conservative,
             alternate: alternate,
             conservative: conservative,
-            interest: interest
+            interest: interest,
+            endingInterlockState: interlockState
         )
     }
 
@@ -627,28 +747,87 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
     }
 
     private func ensemblePlan(dna: SceneDNA, bar: PerformanceBar,
-                              focus: PerformanceRole, release: Bool) -> EnsembleContext {
-        var proposals = dna.rhythm.kickSteps.map {
+                              focus: PerformanceRole, release: Bool,
+                              companion: FoundationCompanion,
+                              gear: PercussionGear,
+                              gesture: ArrangementGesture) -> EnsembleContext {
+        let rotation = bar.transformations.contains(.rotate) ? 2 : 0
+        let displacement = bar.transformations.contains(.displace) ? 1 : 0
+        func shifted(_ step: Int) -> Int { (step + rotation + displacement) % 16 }
+        var kickSteps = dna.rhythm.kickSteps
+        if bar.signatureEvent == .displacedKickRecovery, let last = kickSteps.last {
+            kickSteps.removeAll { $0 == last }
+            kickSteps.append(min(15, last + 1))
+            kickSteps.sort()
+        }
+        var proposals = kickSteps.map {
             EnsembleEventProposal(voice: .kick, requestedStep: $0, priority: 100,
                                   intensity: 1, essential: true)
         }
-        if bar.roles.contains(.foundation) {
+        if bar.roles.contains(.foundation), companion == .bass,
+           !bar.transformations.contains(.omit) {
             proposals += dna.rhythm.bassSteps.map {
-                EnsembleEventProposal(voice: .bass, requestedStep: $0,
-                                      alternateSteps: [$0 + 1, $0 + 3], priority: 90,
+                let step = shifted($0)
+                return EnsembleEventProposal(voice: .bass, requestedStep: step,
+                                      alternateSteps: [step + 1, step + 3], priority: 90,
                                       intensity: 0.76, essential: true)
             }
         }
-        if bar.roles.contains(.percussion) {
-            proposals += dna.rhythm.hatSteps.prefix(5).map {
-                EnsembleEventProposal(voice: .percussion, requestedStep: $0,
-                                      alternateSteps: [$0 + 1], priority: 58, intensity: 0.48)
+        if bar.roles.contains(.foundation), companion == .monoRumble {
+            proposals += kickSteps.map {
+                EnsembleEventProposal(voice: .rumble, requestedStep: $0,
+                                      priority: 88, intensity: 0.46, essential: true)
             }
         }
-        if bar.roles.contains(.motif) {
-            proposals += dna.motif.steps.map {
-                EnsembleEventProposal(voice: .motif, requestedStep: $0,
-                                      alternateSteps: [$0 + 2, $0 + 5], priority: 72, intensity: 0.62)
+        if bar.roles.contains(.foundation), companion == .tunedTom {
+            let tomSteps = dna.characteristicSyncopations.isEmpty ? [10, 14] :
+                Array(dna.characteristicSyncopations.prefix(2))
+            proposals += tomSteps.map {
+                EnsembleEventProposal(voice: .tunedTom, requestedStep: $0,
+                                      alternateSteps: [$0 + 2], priority: 86,
+                                      intensity: 0.58, essential: true)
+            }
+        }
+        if bar.roles.contains(.percussion) {
+            let hatCount: Int
+            switch (gear, gesture) {
+            case (_, .minimalize): hatCount = 1
+            case (.anchor, _): hatCount = 2
+            case (.lift, _): hatCount = 4
+            case (.contrast, _): hatCount = 3
+            case (.turnaround, _): hatCount = 2
+            }
+            proposals += dna.rhythm.hatSteps.prefix(hatCount).map {
+                let step = shifted($0)
+                return EnsembleEventProposal(voice: .percussion, requestedStep: step,
+                                      alternateSteps: [step + 1], priority: 58, intensity: 0.48)
+            }
+            if gear == .lift && gesture != .minimalize {
+                proposals += [4, 12].map {
+                    EnsembleEventProposal(voice: .clap, requestedStep: $0,
+                                          alternateSteps: [$0 + 1], priority: 62, intensity: 0.48)
+                }
+            }
+            if gear == .contrast && gesture != .minimalize {
+                proposals.append(EnsembleEventProposal(
+                    voice: .openHat, requestedStep: bar.bar.isMultiple(of: 2) ? 6 : 14,
+                    alternateSteps: [10], priority: 54, intensity: 0.42
+                ))
+            }
+            if gear == .turnaround && gesture != .minimalize {
+                proposals.append(EnsembleEventProposal(
+                    voice: .metallic, requestedStep: 11,
+                    alternateSteps: [13, 15], priority: 52, intensity: 0.38
+                ))
+            }
+        }
+        if bar.roles.contains(.motif), !bar.transformations.contains(.omit) {
+            let motifSteps = bar.transformations.contains(.fragment)
+                ? Array(dna.motif.steps.prefix(1)) : dna.motif.steps
+            proposals += motifSteps.map {
+                let step = shifted($0)
+                return EnsembleEventProposal(voice: .motif, requestedStep: step,
+                                      alternateSteps: [step + 2, step + 5], priority: 72, intensity: 0.62)
             }
         }
         if bar.roles.contains(.response), let source = dna.motif.steps.first {
@@ -669,6 +848,61 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                                                    alternateSteps: [14, 12], priority: 48, intensity: 0.44))
         }
         return EnsembleArbiter.resolve(proposals: proposals, focusRole: focus, intentionalPileup: release)
+    }
+
+    private func percussionGear(absoluteBar: Int) -> PercussionGear {
+        switch (absoluteBar % 16) / 4 {
+        case 0: .anchor
+        case 1: .lift
+        case 2: .contrast
+        default: .turnaround
+        }
+    }
+
+    private func arrangementGesture(kind: AutonomousPhraseKind,
+                                    absoluteBar: Int) -> ArrangementGesture {
+        let endPosition = (absoluteBar + 1) % 16
+        if endPosition == 0 {
+            switch kind {
+            case .majorBreak, .energyRelease, .identityReturn: return .structuralMarker
+            case .lock, .contrast: return .turnaround
+            }
+        }
+        switch endPosition {
+        case 4: return .gearShift
+        case 8: return .turnaround
+        case 12: return .minimalize
+        default: return .steady
+        }
+    }
+
+    private func foundationCompanion(dna: SceneDNA, kind: AutonomousPhraseKind,
+                                     alternate: Bool, localBar: Int, length: Int,
+                                     gesture: ArrangementGesture) -> FoundationCompanion {
+        switch kind {
+        case .majorBreak:
+            return gesture == .structuralMarker ? .tunedTom : .empty
+        case .contrast where alternate && localBar >= length / 2:
+            switch dna.foundationCompanion {
+            case .bass: return .monoRumble
+            case .monoRumble: return .tunedTom
+            case .tunedTom, .empty: return .bass
+            }
+        case .lock, .contrast, .energyRelease, .identityReturn:
+            return dna.foundationCompanion
+        }
+    }
+
+    private func pulseEchoEnabled(scene: TechnoScene, bar: PerformanceBar,
+                                  kind: AutonomousPhraseKind,
+                                  companion: FoundationCompanion,
+                                  gesture: ArrangementGesture) -> Bool {
+        let suitableMaterial = kind == .majorBreak || scene.beatShape > 0.22 ||
+            scene.syncopation > 0.48
+        guard companion != .monoRumble, suitableMaterial else { return false }
+        guard gesture == .gearShift || gesture == .turnaround else { return false }
+        return SceneDNA.derivedSeed(scene: bar.eventSeed, domain: 0x3E160EC40, index: bar.bar)
+            .isMultiple(of: 3)
     }
 
     private func accentContour(dna: SceneDNA, absoluteBar: Int,

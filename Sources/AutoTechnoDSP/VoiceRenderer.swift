@@ -1,90 +1,124 @@
 import AutoTechnoCore
 import Foundation
 
-enum VoiceRenderer {
+package enum KickMixBalance {
+    package static let attenuationDB = -1.5
+    package static let audibleGain = 0.841_395
+    package static let regularDetectorLevel = 0.72
+    package static let breakdownDetectorLevel = 0.54
+
+    package static func detectorLevel(for section: SectionKind) -> Double {
+        section == .breakdown ? breakdownDetectorLevel : regularDetectorLevel
+    }
+
+    package static func audibleLevel(for section: SectionKind) -> Double {
+        detectorLevel(for: section) * audibleGain
+    }
+}
+
+package enum VoiceRenderer {
     static func renderBar(scene: TechnoScene, sampleRate: Double, state: inout RenderState,
-                          dna: SceneDNA, performance: PerformanceBar,
+                          dna: SceneDNA, resolved: ResolvedPerformanceBar,
                           synthWorld: SynthWorldDNA, synthPerformance: SynthPerformanceBar,
                           workspace: inout RenderWorkspace, layer: RenderLayer) -> RenderedBar {
+        let performance = resolved.performance
         let section = performance.section
         let frames = max(1, Int((240.0 / scene.bpm * sampleRate).rounded()))
         let stepFrames = Double(frames) / 16.0
         var checkedOut = workspace.checkout(frameCount: frames)
         var output: [Float] = []
         var kickBus: [Float] = []
+        var kickDetectorBus: [Float] = []
+        var foundationStem: [Float] = []
+        var percussionStem: [Float] = []
+        var upperTonalStem: [Float] = []
+        var atmosphereStem: [Float] = []
+        var measurementScratch: [Float] = []
         var percussionBus: [Float] = []
         var synthBus: [Float] = []
+        var pulseEchoSendBus: [Float] = []
         swap(&output, &checkedOut.output)
         swap(&kickBus, &checkedOut.kick)
+        swap(&kickDetectorBus, &checkedOut.kickDetector)
+        swap(&foundationStem, &checkedOut.foundationStem)
+        swap(&percussionStem, &checkedOut.percussionStem)
+        swap(&upperTonalStem, &checkedOut.upperTonalStem)
+        swap(&atmosphereStem, &checkedOut.atmosphereStem)
+        swap(&measurementScratch, &checkedOut.measurementScratch)
         swap(&percussionBus, &checkedOut.percussion)
         swap(&synthBus, &checkedOut.synth)
+        swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
         var random = SeededGenerator(seed: performance.eventSeed)
 
-        let grooveEvents = performanceEvents(dna: dna, performance: performance, bar: state.barIndex)
-        for event in grooveEvents {
-            let start = Int(((Double(event.stepIndex) + event.offsetInStep) * stepFrames).rounded())
-            let accent = performance.accent(at: event.stepIndex)
-            switch event.kind {
+        let swingOffset = max(0, min(0.24, (dna.rhythm.swingPercent - 0.5) * 2.0))
+        for event in resolved.ensemble.events {
+            let swings = event.voice == .bass || event.voice == .percussion || event.voice == .openHat
+            let offset = swings && !event.step.isMultiple(of: 2) ? swingOffset : 0
+            let start = Int(((Double(event.step) + offset) * stepFrames).rounded())
+            let accent = performance.accent(at: event.step) * event.intensity
+            switch event.voice {
             case .kick:
-                let level = (section == .breakdown ? 0.54 : 0.72) * accent
-                kick(&output, start: start, sampleRate: sampleRate, level: level,
-                     seed: scene.seed, step: event.stepIndex)
-                kick(&kickBus, start: start, sampleRate: sampleRate, level: level,
-                     seed: scene.seed, step: event.stepIndex)
-            case .bass where section != .breakdown &&
-                !(performance.signatureEvent == .delayedBassEntry && event.stepIndex < 8):
+                let detectorLevel = KickMixBalance.detectorLevel(for: section) * accent
+                kick(&kickDetectorBus, start: start, sampleRate: sampleRate, level: detectorLevel,
+                     seed: scene.seed, step: event.step)
+            case .bass where !(performance.signatureEvent == .delayedBassEntry && event.step < 8):
                 let frequency = relationalBassFrequency(
-                    dna: dna, step: event.stepIndex, tension: performance.tension
+                    dna: dna, step: event.step, tension: performance.tension
                 )
-                bass(&output, start: start, sampleRate: sampleRate,
+                bass(&output, measurement: &foundationStem,
+                     start: start, sampleRate: sampleRate,
                      level: (0.11 + performance.tension * 0.035) * accent,
                      frequency: frequency, articulation: 0.3 + performance.tension * 0.5,
                      phase: &state.bassPhase, filterState: &state.bassFilter)
-            case .hat where section != .breakdown && layer == .full:
+            case .rumble:
+                rumble(&output, measurement: &foundationStem,
+                       start: start, sampleRate: sampleRate,
+                       level: 0.072 * accent, seed: scene.seed, step: event.step)
+            case .tunedTom:
+                let frequency = 49.0 * pow(2, Double(dna.tonalCenter) / 12)
+                tom(&output, measurement: &foundationStem,
+                    start: start, sampleRate: sampleRate,
+                    level: 0.085 * accent, frequency: frequency)
+            case .percussion where layer == .full:
                 let level = (section == .build ? 0.09 : 0.075) * accent
-                hat(&output, start: start, sampleRate: sampleRate, level: level, brightness: scene.character.percussionBrightness, random: &random)
-                hat(&percussionBus, start: start, sampleRate: sampleRate, level: level, brightness: scene.character.percussionBrightness, random: &random)
-            case .clap where section != .breakdown && layer == .full:
-                clap(&output, start: start, sampleRate: sampleRate, level: 0.08 * accent,
+                hat(&output, measurement: &percussionStem, start: start,
+                    sampleRate: sampleRate, level: level,
+                    brightness: scene.character.percussionBrightness, random: &random)
+                hat(&percussionBus, measurement: &measurementScratch, start: start,
+                    sampleRate: sampleRate, level: level,
+                    brightness: scene.character.percussionBrightness, random: &random)
+            case .clap where layer == .full:
+                clap(&output, measurement: &percussionStem,
+                     start: start, sampleRate: sampleRate, level: 0.08 * accent,
                      brightness: scene.character.percussionBrightness, random: &random)
-                clap(&percussionBus, start: start, sampleRate: sampleRate, level: 0.08 * accent,
+                clap(&percussionBus, measurement: &measurementScratch,
+                     start: start, sampleRate: sampleRate, level: 0.08 * accent,
                      brightness: scene.character.percussionBrightness, random: &random)
+            case .openHat where layer == .full:
+                openHat(&output, measurement: &percussionStem,
+                        start: start, sampleRate: sampleRate,
+                        level: 0.052 * accent,
+                        brightness: scene.character.percussionBrightness, random: &random)
+                openHat(&percussionBus, measurement: &measurementScratch,
+                        start: start, sampleRate: sampleRate,
+                        level: 0.052 * accent,
+                        brightness: scene.character.percussionBrightness, random: &random)
+            case .metallic where layer == .full:
+                metallicPercussion(&output, measurement: &percussionStem,
+                                   start: start, sampleRate: sampleRate,
+                                   level: 0.042 * accent,
+                                   brightness: scene.character.percussionBrightness, random: &random)
+                metallicPercussion(&percussionBus, measurement: &measurementScratch,
+                                   start: start, sampleRate: sampleRate,
+                                   level: 0.042 * accent,
+                                   brightness: scene.character.percussionBrightness, random: &random)
             default: break
             }
         }
-        if layer == .full && section != .breakdown && performance.roles.contains(.percussion) {
-            let accentStep = 10 + Int((scene.seed ^ UInt64(state.barIndex * 17)) % 5)
-            let accentLevel = 0.035 + scene.drumChaos * 0.045
-            if section == .build || section == .returnSection || scene.drumChaos > 0.28 {
-                tom(&output, start: Int((Double(accentStep) * stepFrames).rounded()), sampleRate: sampleRate,
-                    level: accentLevel, frequency: 92 + Double(scene.seed % 4) * 11)
-            }
-            if scene.drumChaos > 0.18 {
-                let metallicStep = 3 + Int((scene.seed >> 4) % 6)
-                metallicPercussion(&output, start: Int((Double(metallicStep) * stepFrames).rounded()),
-                                   sampleRate: sampleRate, level: 0.018 + scene.drumChaos * 0.028,
-                                   brightness: scene.character.percussionBrightness, random: &random)
-            }
-            if section == .build || section == .returnSection {
-                let openHatStep = section == .build ? 6 : 14
-                openHat(&output, start: Int((Double(openHatStep) * stepFrames).rounded()), sampleRate: sampleRate,
-                        level: 0.022 + scene.character.percussionBrightness * 0.018,
-                        brightness: scene.character.percussionBrightness, random: &random)
-            }
-            let phraseEnding = performance.localBar == performance.phraseLength - 1
-            if section == .returnSection && phraseEnding && scene.drumChaos > 0.16 {
-                for (offset, frequency) in zip(0..<4, stride(from: 142.0, through: 92.0, by: -16.0)) {
-                    let fillStep = 12 + offset
-                    tom(&output, start: Int((Double(fillStep) * stepFrames).rounded()), sampleRate: sampleRate,
-                        level: 0.022 + scene.drumChaos * 0.025, frequency: frequency)
-                }
-            }
-            if (section == .build || section == .returnSection) && scene.polyrhythm > 0.2 {
-                let polyStep = (state.barIndex * 3 + 5) % 16
-                metallicPercussion(&output, start: Int((Double(polyStep) * stepFrames).rounded()),
-                                   sampleRate: sampleRate, level: 0.012 + scene.polyrhythm * 0.018,
-                                   brightness: scene.character.percussionBrightness, random: &random)
-            }
+        for index in 0..<frames {
+            let audibleKick = kickDetectorBus[index] * Float(KickMixBalance.audibleGain)
+            kickBus[index] = audibleKick
+            output[index] += audibleKick
         }
         let textureCollapsed = performance.signatureEvent == .textureCollapse
         let upperRolesActive = performance.roles.contains {
@@ -93,21 +127,94 @@ enum VoiceRenderer {
         if layer == .full && !textureCollapsed && upperRolesActive {
             renderAlienWorld(
                 &synthBus,
+                pulseEchoSend: &pulseEchoSendBus,
+                upperTonalStem: &upperTonalStem,
+                atmosphereStem: &atmosphereStem,
                 scene: scene,
                 section: section,
                 sampleRate: sampleRate,
                 frames: frames,
                 stepFrames: stepFrames,
                 dna: dna,
-                performance: performance,
+                resolved: resolved,
                 world: synthWorld,
                 synthBar: synthPerformance,
                 state: &state
             )
         }
 
+        func onsetFrames(for roles: Set<EnsembleVoice>) -> [Int] {
+            resolved.ensemble.events.filter { roles.contains($0.voice) }.map { event in
+                Int((Double(event.step) * stepFrames).rounded())
+            }
+        }
+        let kickOnsets = onsetFrames(for: [.kick])
+        var stemObservations: [MixRole: StemObservation] = [
+            .kick: StemObservationAnalyzer.analyze(
+                kickBus, sampleRate: sampleRate, onsetFrames: kickOnsets
+            ),
+            .foundation: StemObservationAnalyzer.analyze(
+                foundationStem, sampleRate: sampleRate, onsetFrames: kickOnsets
+            ),
+            .percussion: StemObservationAnalyzer.analyze(
+                percussionStem, sampleRate: sampleRate,
+                onsetFrames: onsetFrames(for: [.percussion, .clap, .openHat, .metallic])
+            ),
+            .upperTonal: StemObservationAnalyzer.analyze(
+                upperTonalStem, sampleRate: sampleRate,
+                onsetFrames: onsetFrames(for: [.motif, .response])
+            ),
+            .atmosphere: StemObservationAnalyzer.analyze(
+                atmosphereStem, sampleRate: sampleRate,
+                onsetFrames: onsetFrames(for: [.atmosphere, .transition])
+            ),
+        ]
+        let automaticMix = AutomaticMixBalancer.resolve(
+            observations: stemObservations,
+            companion: resolved.foundationCompanion,
+            section: section,
+            state: &state.automaticMixState
+        )
+        let automaticKickGain = Float(automaticMix.gain(for: .kick))
+        if automaticKickGain != 1 {
+            for index in 0..<frames {
+                let originalKick = kickBus[index]
+                let balancedKick = originalKick * automaticKickGain
+                kickBus[index] = balancedKick
+                output[index] += balancedKick - originalKick
+            }
+            stemObservations[.kick] = StemObservationAnalyzer.analyze(
+                kickBus, sampleRate: sampleRate, onsetFrames: kickOnsets
+            )
+        }
+        var dryCenterMaximumError: Float = 0
+        var upperMaximumError: Float = 0
+        for index in 0..<frames {
+            let reconstructedCenter = kickBus[index] + foundationStem[index] + percussionStem[index]
+            dryCenterMaximumError = max(
+                dryCenterMaximumError, abs(output[index] - reconstructedCenter)
+            )
+            let reconstructedUpper = upperTonalStem[index] + atmosphereStem[index]
+            upperMaximumError = max(
+                upperMaximumError, abs(synthBus[index] - reconstructedUpper)
+            )
+        }
+        let stemReconstruction = StemReconstructionEvidence(
+            dryCenterMaximumError: dryCenterMaximumError,
+            upperMaximumError: upperMaximumError
+        )
+
         let delayFrames = max(1, Int((60.0 / scene.bpm * 0.5 * sampleRate).rounded()))
         if state.delayBuffer.count != delayFrames { state.delayBuffer = [Float](repeating: 0, count: delayFrames); state.delayWriteIndex = 0 }
+        // Three sixteenth notes: a pulse echo rather than a broad wash. The
+        // return is band-limited and exists only on the upper path.
+        let pulseEchoFrames = max(1, Int((60.0 / scene.bpm * 0.75 * sampleRate).rounded()))
+        if state.pulseEchoBuffer.count != pulseEchoFrames {
+            state.pulseEchoBuffer = [Float](repeating: 0, count: pulseEchoFrames)
+            state.pulseEchoWriteIndex = 0
+            state.pulseEchoHighPassState = 0
+            state.pulseEchoLowPassState = 0
+        }
         let earlyReflectionFrames = max(8, Int(sampleRate * 0.013))
         if state.earlyReflectionBuffer.count != earlyReflectionFrames {
             state.earlyReflectionBuffer = [Float](repeating: 0, count: earlyReflectionFrames)
@@ -141,6 +248,7 @@ enum VoiceRenderer {
         var left = [Float](repeating: 0, count: frames)
         var right = [Float](repeating: 0, count: frames)
         var kickEnvelope = 0.0
+        var kickEnvelopePeak = 0.0
         var low = 0.0
         var synthLow = 0.0
         var synthMidLow = 0.0
@@ -155,8 +263,9 @@ enum VoiceRenderer {
         for index in 0..<frames {
             let input = output[index]
             let rawSynthInput = synthBus[index]
-            let kickLevel = abs(Double(kickBus[index]))
+            let kickLevel = abs(Double(kickDetectorBus[index]))
             kickEnvelope = max(kickEnvelope * 0.992, kickLevel)
+            kickEnvelopePeak = max(kickEnvelopePeak, kickEnvelope)
             // Frequency-dependent sidechain: the centered kick/bass bus owns
             // the low end; the upper texture bus is filtered before spatial
             // effects and receives a stronger musical duck.
@@ -182,6 +291,19 @@ enum VoiceRenderer {
             let synthInput = Float(synthTone * 0.18 + lowMid * (1.0 - dynamicMidCut) + highBand * (1.0 - dynamicDamping))
             let delayed = state.delayBuffer[state.delayWriteIndex]
             state.delayBuffer[state.delayWriteIndex] = synthInput + delayed * feedback
+            let pulseRead = Double(state.pulseEchoBuffer[state.pulseEchoWriteIndex])
+            let highPassCoefficient = min(0.25, 1 - exp(-2 * .pi * 180 / sampleRate))
+            state.pulseEchoHighPassState +=
+                (pulseRead - state.pulseEchoHighPassState) * highPassCoefficient
+            let highPassedPulse = pulseRead - state.pulseEchoHighPassState
+            let lowPassCoefficient = min(0.45, 1 - exp(-2 * .pi * 3_200 / sampleRate))
+            state.pulseEchoLowPassState +=
+                (highPassedPulse - state.pulseEchoLowPassState) * lowPassCoefficient
+            state.pulseEchoBuffer[state.pulseEchoWriteIndex] = Float(
+                Double(pulseEchoSendBus[index]) + pulseRead * 0.28
+            )
+            state.pulseEchoWriteIndex = (state.pulseEchoWriteIndex + 1) % pulseEchoFrames
+            let pulseEcho = Float(state.pulseEchoLowPassState * 0.18)
             // A short independent reflection gives upper voices depth before
             // the longer dark reverb. It is deliberately high-passed by the
             // upper-bus source and never receives kick/bass, preserving mono-
@@ -222,8 +344,12 @@ enum VoiceRenderer {
             let reflectionLeft = earlyRead * earlyMix * Float(cos(reflectionPan * Double.pi * 0.5))
             let reflectionRight = earlyRead * earlyMix * Float(sin(reflectionPan * Double.pi * 0.5))
             let audibleReverbTail = reverbTail
-            let leftPreMaster = center + synthLeftOut + reflectionLeft + spatial * (1.0 + delayPan * 0.18) * upperDuck + audibleReverbTail * (1.0 + delayPan * 0.24)
-            let rightPreMaster = center + synthRightOut + reflectionRight + spatial * (1.0 + (1.0 - delayPan) * 0.18) * upperDuck + audibleReverbTail * (1.0 + (1.0 - delayPan) * 0.24)
+            let leftPreMaster = center + synthLeftOut + reflectionLeft +
+                (spatial + pulseEcho) * (1.0 + delayPan * 0.18) * upperDuck +
+                audibleReverbTail * (1.0 + delayPan * 0.24)
+            let rightPreMaster = center + synthRightOut + reflectionRight +
+                (spatial + pulseEcho) * (1.0 + (1.0 - delayPan) * 0.18) * upperDuck +
+                audibleReverbTail * (1.0 + (1.0 - delayPan) * 0.24)
             // Linked two-band glue: center and upper energy share detector
             // gains, so compression cannot pull the stereo image sideways.
             // This is deliberately before the master safety stage.
@@ -252,53 +378,89 @@ enum VoiceRenderer {
             state.chorusWriteIndex = (state.chorusWriteIndex + 1) % chorusFrames
             state.reverbWriteIndex = (state.reverbWriteIndex + 1) % reverbFrames
         }
+        let audibleKickPeak = kickBus.reduce(0) { max($0, abs($1)) }
+        let detectorKickPeak = kickDetectorBus.reduce(0) { max($0, abs($1)) }
+        let audibleKickRMS = Float(sqrt(
+            kickBus.reduce(0.0) { $0 + Double($1 * $1) } / Double(max(1, frames))
+        ))
+        let detectorKickRMS = Float(sqrt(
+            kickDetectorBus.reduce(0.0) { $0 + Double($1 * $1) } / Double(max(1, frames))
+        ))
+        let kickMix = KickMixEvidence(
+            audibleGain: KickMixBalance.audibleGain * Double(automaticKickGain),
+            audiblePeak: audibleKickPeak,
+            audibleRMS: audibleKickRMS,
+            detectorPeak: detectorKickPeak,
+            detectorRMS: detectorKickRMS,
+            duckingEnvelopePeak: Float(kickEnvelopePeak),
+            maskingInputPeak: audibleKickPeak
+        )
         let rendered = RenderedBar(sampleRate: sampleRate,
                                    samples: zip(left, right).map { ($0 + $1) * 0.5 },
-                                   leftSamples: left, rightSamples: right, masking: masking)
+                                   leftSamples: left, rightSamples: right,
+                                   masking: masking, kickMix: kickMix,
+                                   stemObservations: stemObservations,
+                                   automaticMix: automaticMix,
+                                   stemReconstruction: stemReconstruction)
         swap(&output, &checkedOut.output)
         swap(&kickBus, &checkedOut.kick)
+        swap(&kickDetectorBus, &checkedOut.kickDetector)
+        swap(&foundationStem, &checkedOut.foundationStem)
+        swap(&percussionStem, &checkedOut.percussionStem)
+        swap(&upperTonalStem, &checkedOut.upperTonalStem)
+        swap(&atmosphereStem, &checkedOut.atmosphereStem)
+        swap(&measurementScratch, &checkedOut.measurementScratch)
         swap(&percussionBus, &checkedOut.percussion)
         swap(&synthBus, &checkedOut.synth)
+        swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
         workspace.recycle(&checkedOut)
         return rendered
     }
 
     private static func renderAlienWorld(
         _ output: inout [Float],
+        pulseEchoSend: inout [Float],
+        upperTonalStem: inout [Float],
+        atmosphereStem: inout [Float],
         scene: TechnoScene,
         section: SectionKind,
         sampleRate: Double,
         frames: Int,
         stepFrames: Double,
         dna: SceneDNA,
-        performance: PerformanceBar,
+        resolved: ResolvedPerformanceBar,
         world: SynthWorldDNA,
         synthBar: SynthPerformanceBar,
         state: inout RenderState
     ) {
-        let motifEvents = section == .breakdown ? [] : transformedMotif(dna: dna, performance: performance)
+        let performance = resolved.performance
+        let ensembleEvents = resolved.ensemble.events
+        let motifEvents = transformedMotif(
+            dna: dna,
+            performance: performance,
+            events: ensembleEvents.filter { $0.voice == .motif }
+        )
         let baseFrequency = motifEvents.first?.frequency ?? world.rootFrequency * 2
-        let barIndex = performance.bar
 
         var anchorNotes: [AlienVoiceNote] = []
-        if performance.roles.contains(.motif) {
-            anchorNotes = motifEvents.map { event in
-                let globalStep = barIndex * 16 + event.stepIndex
+        if !motifEvents.isEmpty {
+            anchorNotes = motifEvents.enumerated().map { _, event in
                 let accent = performance.accent(at: event.stepIndex)
+                let articulation = synthBar.articulation(at: event.stepIndex)
                 return AlienVoiceNote(
                     startFrame: Int((Double(event.stepIndex) * stepFrames).rounded()),
                     durationFrames: max(1, Int((event.durationInSteps * stepFrames).rounded())),
                     frequency: event.frequency,
-                    endFrequency: event.frequency * (synthBar.gesture == .corrode ? 1.006 : 1),
-                    velocity: min(1, 0.66 + accent * 0.24),
+                    endFrequency: event.frequency,
+                    velocity: min(1, (0.66 + accent * 0.24) * articulation.velocityScale),
                     role: .anchor,
-                    sevenStepAccent: (globalStep + world.shadowRotation) % 7 == 0,
-                    echoGate: (globalStep + world.echoRotation) % 3 == 0
+                    articulation: articulation
                 )
             }
         }
         AlienAnalogVoice.render(
-            &output, notes: anchorNotes, sampleRate: sampleRate,
+            &output, measurement: &upperTonalStem, pulseEchoSend: &pulseEchoSend,
+            notes: anchorNotes, sampleRate: sampleRate,
             level: 0.090 + scene.synthPresence * 0.060,
             world: world, bar: synthBar, role: .anchor,
             state: &state.alienAnchorState
@@ -312,105 +474,96 @@ enum VoiceRenderer {
                 while frequency > 880 { frequency *= 0.5 }
                 return AlienVoiceNote(
                     startFrame: Int((Double(event.stepIndex) * stepFrames).rounded()),
-                    durationFrames: max(1, Int((stepFrames * (event.echoGate ? 0.82 : 0.52)).rounded())),
+                    durationFrames: max(1, Int((stepFrames * 0.52 *
+                        event.articulation.decayScale).rounded())),
                     frequency: frequency,
-                    endFrequency: frequency * (event.sevenStepAccent ? 1.012 : 0.997),
-                    velocity: event.velocity,
+                    endFrequency: frequency,
+                    velocity: min(1, event.velocity * event.articulation.velocityScale),
                     role: .shadow,
-                    sevenStepAccent: event.sevenStepAccent,
-                    echoGate: event.echoGate
+                    articulation: event.articulation
                 )
-            }
-            let sequencerPresence = scene.musicalIntent[.sequencerPresence]
-            if sequencerPresence > 0.04 {
-                shadowNotes += scene.sequencer.map { event in
-                    let globalStep = barIndex * 16 + event.stepIndex
-                    return AlienVoiceNote(
-                        startFrame: Int((Double(event.stepIndex) * stepFrames).rounded()),
-                        durationFrames: max(1, Int((event.durationInSteps * stepFrames).rounded())),
-                        frequency: max(92, event.frequency),
-                        endFrequency: max(92, event.frequency) * (event.kind == .texturalStepField ? 0.75 : 1.004),
-                        velocity: min(0.64, 0.24 + sequencerPresence * 0.34),
-                        role: .shadow,
-                        sevenStepAccent: (globalStep + world.shadowRotation) % 7 == 0,
-                        echoGate: (globalStep + world.echoRotation) % 3 == 0
-                    )
-                }
             }
         }
         AlienAnalogVoice.render(
-            &output, notes: shadowNotes, sampleRate: sampleRate,
+            &output, measurement: &upperTonalStem, pulseEchoSend: &pulseEchoSend,
+            notes: shadowNotes, sampleRate: sampleRate,
             level: 0.032 + scene.synthPresence * 0.034,
             world: world, bar: synthBar, role: .shadow,
             state: &state.alienShadowState
         )
 
         var atmosphereNotes: [AlienVoiceNote] = []
-        let atmosphereActive = performance.roles.contains(.atmosphere) || section == .breakdown
-        if synthBar.gesture != .suspend, atmosphereActive,
-           scene.atmosphere > 0.08 || scene.drone > 0.01 {
+        let atmosphereEvents = ensembleEvents.filter { $0.voice == .atmosphere }
+        if !atmosphereEvents.isEmpty, scene.atmosphere > 0.08 || scene.drone > 0.01 {
             let frequency = world.rootFrequency * (section == .breakdown ? 1.5 : 2)
-            atmosphereNotes = [AlienVoiceNote(
-                startFrame: 0,
-                durationFrames: frames,
-                frequency: frequency,
-                endFrequency: frequency * (synthBar.gesture == .suspend ? 1.018 : 1.003),
-                velocity: min(0.72, 0.28 + scene.atmosphere * 0.30 + scene.drone * 0.18),
-                role: .atmosphere,
-                sevenStepAccent: false,
-                echoGate: synthBar.gesture == .suspend
-            )]
+            atmosphereNotes = atmosphereEvents.map { event in
+                let start = Int((Double(event.step) * stepFrames).rounded())
+                return AlienVoiceNote(
+                    startFrame: start,
+                    durationFrames: max(1, frames - start),
+                    frequency: frequency,
+                    endFrequency: frequency * (synthBar.gesture == .suspend ? 1.018 : 1.003),
+                    velocity: min(0.72, event.intensity + scene.atmosphere * 0.22),
+                    role: .atmosphere,
+                    articulation: .neutral
+                )
+            }
         }
         AlienAnalogVoice.render(
-            &output, notes: atmosphereNotes, sampleRate: sampleRate,
+            &output, measurement: &atmosphereStem, pulseEchoSend: &pulseEchoSend,
+            notes: atmosphereNotes, sampleRate: sampleRate,
             level: 0.017 + scene.atmosphere * 0.025 + scene.drone * 0.018,
             world: world, bar: synthBar, role: .atmosphere,
             state: &state.alienAtmosphereState
         )
 
         var responseNotes: [AlienVoiceNote] = []
-        let responseActive = performance.roles.contains(.response)
-        if synthBar.gesture != .suspend, responseActive, scene.melodicity > 0.18 {
-            let motifAnchor = dna.motif.steps.last ?? (section == .build ? 6 : 14)
-            let step = (motifAnchor + (section == .build ? 5 : 7)) % 16
+        let responseEvents = ensembleEvents.filter { $0.voice == .response }
+        if synthBar.gesture != .suspend, !responseEvents.isEmpty, scene.melodicity > 0.18 {
             let interval = pow(2, Double(world.responseInterval) / 12)
             let frequency = min(1_200, max(120, baseFrequency * interval))
-            let globalStep = barIndex * 16 + step
-            responseNotes = [AlienVoiceNote(
-                startFrame: Int((Double(step) * stepFrames).rounded()),
-                durationFrames: max(1, Int((stepFrames * 1.8).rounded())),
-                frequency: frequency,
-                endFrequency: frequency * (section == .build ? 1.018 : 0.994),
-                velocity: min(0.76, 0.34 + scene.melodicity * 0.38),
-                role: .response,
-                sevenStepAccent: (globalStep + world.shadowRotation) % 7 == 0,
-                echoGate: (globalStep + world.echoRotation) % 3 == 0
-            )]
+            responseNotes = responseEvents.map { event in
+                let articulation = synthBar.articulation(at: event.step)
+                return AlienVoiceNote(
+                    startFrame: Int((Double(event.step) * stepFrames).rounded()),
+                    durationFrames: max(1, Int((stepFrames * 1.8).rounded())),
+                    frequency: frequency,
+                    endFrequency: frequency,
+                    velocity: min(0.76,
+                        (event.intensity + scene.melodicity * 0.24) * articulation.velocityScale),
+                    role: .response,
+                    articulation: articulation
+                )
+            }
         }
         AlienAnalogVoice.render(
-            &output, notes: responseNotes, sampleRate: sampleRate,
+            &output, measurement: &upperTonalStem, pulseEchoSend: &pulseEchoSend,
+            notes: responseNotes, sampleRate: sampleRate,
             level: 0.026 + scene.melodicity * 0.030,
             world: world, bar: synthBar, role: .response,
             state: &state.alienResponseState
         )
 
         var transitionNotes: [AlienVoiceNote] = []
-        let transitionActive = performance.roles.contains(.transition)
-        if synthBar.gesture != .suspend, transitionActive {
+        let transitionEvents = ensembleEvents.filter { $0.voice == .transition }
+        if synthBar.gesture != .suspend, !transitionEvents.isEmpty {
             let startFrequency = world.rootFrequency * 2
-            transitionNotes = [AlienVoiceNote(
-                startFrame: 0,
-                durationFrames: frames,
-                frequency: startFrequency,
-                endFrequency: startFrequency * (synthBar.gesture == .corrode ? 3.8 : 1.5),
-                velocity: min(0.54, 0.24 + synthBar.mutationAmount * 0.26),
-                role: .transition,
-                sevenStepAccent: false,
-                echoGate: true
-            )]
+            transitionNotes = transitionEvents.map { event in
+                let start = Int((Double(event.step) * stepFrames).rounded())
+                return AlienVoiceNote(
+                    startFrame: start,
+                    durationFrames: max(1, frames - start),
+                    frequency: startFrequency,
+                    endFrequency: startFrequency * (synthBar.gesture == .corrode ? 3.8 : 1.5),
+                    velocity: min(0.54, event.intensity + synthBar.mutationAmount * 0.18),
+                    role: .transition,
+                    articulation: .neutral
+                )
+            }
         }
         AlienAnalogVoice.render(
-            &output, notes: transitionNotes, sampleRate: sampleRate,
+            &output, measurement: &atmosphereStem, pulseEchoSend: &pulseEchoSend,
+            notes: transitionNotes, sampleRate: sampleRate,
             level: 0.008 + scene.atmosphere * 0.012,
             world: world, bar: synthBar, role: .transition,
             state: &state.alienTransitionState
@@ -421,60 +574,34 @@ enum VoiceRenderer {
         Float(tanh(Double(sample) * 1.12) * 0.78)
     }
 
-    private static func performanceEvents(dna: SceneDNA, performance: PerformanceBar, bar: Int) -> [TimedEvent] {
-        let transformations = performance.transformations
-        let rotation = transformations.contains(.rotate) ? 2 : 0
-        let displacement = transformations.contains(.displace) ? 1 : 0
-        let omit = transformations.contains(.omit)
-        func shifted(_ step: Int) -> Int { (step + rotation + displacement) % 16 }
-
-        let swingOffset = max(0, min(0.24, (dna.rhythm.swingPercent - 0.5) * 2.0))
-        func offset(for step: Int, kind: TimedEventKind) -> Double {
-            guard kind == .hat || kind == .bass else { return 0 }
-            return step.isMultiple(of: 2) ? 0 : swingOffset
-        }
-        var events = dna.rhythm.kickSteps.map { TimedEvent(stepIndex: $0, kind: .kick, bar: bar) }
-        if !omit {
-            events += dna.rhythm.bassSteps.map {
-                let step = shifted($0)
-                return TimedEvent(stepIndex: step, kind: .bass, offsetInStep: offset(for: step, kind: .bass), bar: bar)
-            }
-        }
-        if performance.section != .breakdown {
-            events += dna.rhythm.hatSteps.map {
-                let step = shifted($0)
-                return TimedEvent(stepIndex: step, kind: .hat, offsetInStep: offset(for: step, kind: .hat), bar: bar)
-            }
-            events += [4, 12].filter { !dna.rhythm.kickSteps.contains($0) }.map { TimedEvent(stepIndex: $0, kind: .clap, bar: bar) }
-        }
-        if performance.signatureEvent == .displacedKickRecovery, let lastKick = dna.rhythm.kickSteps.last {
-            events.removeAll { $0.kind == .kick && $0.stepIndex == lastKick }
-            events.append(TimedEvent(stepIndex: min(15, lastKick + 1), kind: .kick, bar: bar))
-        }
-        return events.sorted { $0.stepIndex < $1.stepIndex }
-    }
-
-    private static func transformedMotif(dna: SceneDNA, performance: PerformanceBar) -> [SynthEvent] {
-        if performance.transformations.contains(.omit) { return [] }
-        let fragment = performance.transformations.contains(.fragment)
+    package static func transformedMotif(dna: SceneDNA, performance: PerformanceBar,
+                                         events: [EnsembleResolvedEvent]) -> [SynthEvent] {
         let answer = performance.transformations.contains(.answer) || performance.signatureEvent == .alteredMotifAnswer
-        let displacement = performance.transformations.contains(.displace) ? 1 : 0
-        let count = fragment ? 1 : dna.motif.steps.count
-        return (0..<count).map { index in
+        return events.enumerated().map { index, event in
             let shadow = performance.signatureEvent == .harmonicShadow ? 1 : 0
-            let degree = dna.motif.degrees[index % dna.motif.degrees.count] + (answer ? 7 : 0) + shadow
-            let step = (dna.motif.steps[index % dna.motif.steps.count] + displacement) % 16
+            let requestedDegree = dna.motif.degrees[index % dna.motif.degrees.count] +
+                (answer ? 7 : 0) + shadow
+            let degree = dna.nearestModalDegree(to: requestedDegree)
             let frequency = 65.41 * pow(2, Double(dna.tonalCenter + degree) / 12.0)
-            return SynthEvent(stepIndex: step, offsetInStep: 0, scaleDegree: degree, frequency: frequency,
+            return SynthEvent(stepIndex: event.step, offsetInStep: 0,
+                              scaleDegree: degree, frequency: frequency,
                               durationInSteps: performance.transformations.contains(.extend) ? 2.5 : 1.5,
                               bar: performance.bar, sourceIntent: .hypnosis)
         }
     }
 
     private static func relationalBassFrequency(dna: SceneDNA, step: Int, tension: Double) -> Double {
-        let index = (dna.rhythm.bassSteps.firstIndex(of: step) ?? (step / 2)) % dna.modalDegrees.count
-        var degree = dna.modalDegrees[index]
-        if tension > 0.72 && index == dna.modalDegrees.count - 1 { degree += 1 }
+        let index = dna.rhythm.bassSteps.firstIndex(of: step) ?? (step / 2)
+        if dna.modalIdentity == .phrygian {
+            // Phrygian tension belongs to the upper voices. The protected low
+            // end remains on root, fifth, and octave relationships.
+            let foundationDegrees = [0, 7, 0, 12]
+            let degree = foundationDegrees[index % foundationDegrees.count]
+            return 43.65 * pow(2, Double(dna.tonalCenter + degree) / 12.0)
+        }
+        let modalIndex = index % dna.modalDegrees.count
+        var degree = dna.modalDegrees[modalIndex]
+        if tension > 0.72 && modalIndex == dna.modalDegrees.count - 1 { degree += 1 }
         return 43.65 * pow(2, Double(dna.tonalCenter + degree) / 12.0)
     }
 
@@ -502,7 +629,33 @@ enum VoiceRenderer {
         }
     }
 
-    private static func bass(_ output: inout [Float], start: Int, sampleRate: Double, level: Double,
+    private static func rumble(_ output: inout [Float], measurement: inout [Float],
+                               start: Int, sampleRate: Double,
+                               level: Double, seed: UInt64, step: Int) {
+        let frames = min(Int(sampleRate * 0.68), output.count - start)
+        guard frames > 0 else { return }
+        var phase = 0.0
+        var noiseLow = 0.0
+        var random = SeededGenerator(seed: seed ^ UInt64(step + 1) ^ 0x2A4B1E)
+        let frequency = 43.0 + Double(seed % 7) * 0.55
+        for index in 0..<frames {
+            let time = Double(index) / sampleRate
+            phase += 2 * .pi * frequency / sampleRate
+            let noise = random.unit() * 2 - 1
+            noiseLow += (noise - noiseLow) * 0.018
+            // The delayed attack is the kick duck: the companion cannot mask
+            // the transient that created it.
+            let duckedAttack = 1 - exp(-time * 34)
+            let envelope = duckedAttack * exp(-time * 5.6)
+            let body = sin(phase) * 0.82 + noiseLow * 0.18
+            let renderedSample = Float(tanh(body * 1.12) * envelope * level)
+            output[start + index] += renderedSample
+            measurement[start + index] += renderedSample
+        }
+    }
+
+    private static func bass(_ output: inout [Float], measurement: inout [Float],
+                             start: Int, sampleRate: Double, level: Double,
                              frequency: Double, articulation: Double, phase: inout Double, filterState: inout Double) {
         let frames = min(Int(sampleRate * (0.20 + articulation * 0.12)), output.count - start); guard frames > 0 else { return }
         for i in 0..<frames {
@@ -514,16 +667,28 @@ enum VoiceRenderer {
             let cutoff = 95 + articulation * 280 + envelope * (260 + articulation * 520)
             let coefficient = min(0.28, 1 - exp(-2 * .pi * cutoff / sampleRate))
             filterState += (tanh(source * (1.15 + articulation * 0.5)) - filterState) * coefficient
-            output[start + i] += Float(tanh(filterState * 1.35) * envelope * level)
+            let renderedSample = Float(tanh(filterState * 1.35) * envelope * level)
+            output[start + i] += renderedSample
+            measurement[start + i] += renderedSample
         }
     }
 
-    private static func hat(_ output: inout [Float], start: Int, sampleRate: Double, level: Double, brightness: Double, random: inout SeededGenerator) {
+    private static func hat(_ output: inout [Float], measurement: inout [Float],
+                            start: Int, sampleRate: Double, level: Double,
+                            brightness: Double, random: inout SeededGenerator) {
         let frames = min(Int(sampleRate * 0.05), output.count - start); guard frames > 0 else { return }; var state = 0.0
-        for i in 0..<frames { let t = Double(i) / sampleRate; let n = random.unit() * 2 - 1; state += (n - state) * (0.25 + brightness * 0.25); output[start + i] += Float((n - state * 0.7) * exp(-t * (32 - brightness * 8)) * level) }
+        for i in 0..<frames {
+            let t = Double(i) / sampleRate
+            let n = random.unit() * 2 - 1
+            state += (n - state) * (0.25 + brightness * 0.25)
+            let renderedSample = Float((n - state * 0.7) * exp(-t * (32 - brightness * 8)) * level)
+            output[start + i] += renderedSample
+            measurement[start + i] += renderedSample
+        }
     }
 
-    private static func clap(_ output: inout [Float], start: Int, sampleRate: Double, level: Double, brightness: Double,
+    private static func clap(_ output: inout [Float], measurement: inout [Float],
+                             start: Int, sampleRate: Double, level: Double, brightness: Double,
                              random: inout SeededGenerator) {
         let frames = min(Int(sampleRate * 0.16), output.count - start); guard frames > 0 else { return }
         var low = 0.0
@@ -538,11 +703,16 @@ enum VoiceRenderer {
             }
             let tail = t > 0.026 ? exp(-(t - 0.026) * 25) * 0.34 : 0
             let body = sin(2 * .pi * 185 * t) * exp(-t * 31) * 0.22
-            output[start + i] += Float(((noise - low * 0.72) * (burstEnvelope * 0.46 + tail) + body) * level)
+            let renderedSample = Float(
+                ((noise - low * 0.72) * (burstEnvelope * 0.46 + tail) + body) * level
+            )
+            output[start + i] += renderedSample
+            measurement[start + i] += renderedSample
         }
     }
 
-    private static func tom(_ output: inout [Float], start: Int, sampleRate: Double, level: Double, frequency: Double) {
+    private static func tom(_ output: inout [Float], measurement: inout [Float],
+                            start: Int, sampleRate: Double, level: Double, frequency: Double) {
         let frames = min(Int(sampleRate * 0.22), output.count - start)
         guard frames > 0 else { return }
         var phase = 0.0
@@ -552,11 +722,14 @@ enum VoiceRenderer {
             phase += 2 * Double.pi * glide / sampleRate
             let envelope = min(1.0, t / 0.004) * exp(-t * 17)
             let body = sin(phase) + sin(phase * 1.97) * 0.08
-            output[start + i] += Float(tanh(body * 1.15) * envelope * level)
+            let renderedSample = Float(tanh(body * 1.15) * envelope * level)
+            output[start + i] += renderedSample
+            measurement[start + i] += renderedSample
         }
     }
 
-    private static func metallicPercussion(_ output: inout [Float], start: Int, sampleRate: Double,
+    private static func metallicPercussion(_ output: inout [Float], measurement: inout [Float],
+                                           start: Int, sampleRate: Double,
                                            level: Double, brightness: Double,
                                            random: inout SeededGenerator) {
         let frames = min(Int(sampleRate * 0.065), output.count - start)
@@ -572,11 +745,16 @@ enum VoiceRenderer {
                 return result + sin(2 * .pi * partial.element * detune * t + Double(partial.offset) * 0.7) / Double(partial.offset + 2)
             }
             let envelope = exp(-t * (38 - brightness * 10))
-            output[start + i] += Float((resonances * 0.72 + (noise - noiseState) * 0.16) * envelope * level)
+            let renderedSample = Float(
+                (resonances * 0.72 + (noise - noiseState) * 0.16) * envelope * level
+            )
+            output[start + i] += renderedSample
+            measurement[start + i] += renderedSample
         }
     }
 
-    private static func openHat(_ output: inout [Float], start: Int, sampleRate: Double, level: Double,
+    private static func openHat(_ output: inout [Float], measurement: inout [Float],
+                                start: Int, sampleRate: Double, level: Double,
                                 brightness: Double, random: inout SeededGenerator) {
         let frames = min(Int(sampleRate * 0.19), output.count - start)
         guard frames > 0 else { return }
@@ -588,7 +766,11 @@ enum VoiceRenderer {
             let metallic = sin(2.0 * Double.pi * (3_600 + brightness * 3_800) * t)
                 + sin(2.0 * Double.pi * (5_100 + brightness * 2_200) * t) * 0.42
             let envelope = min(1.0, t / 0.0015) * exp(-t * (18.0 - brightness * 4.0))
-            output[start + i] += Float((noise - filtered * 0.55 + metallic * 0.16) * envelope * level)
+            let renderedSample = Float(
+                (noise - filtered * 0.55 + metallic * 0.16) * envelope * level
+            )
+            output[start + i] += renderedSample
+            measurement[start + i] += renderedSample
         }
     }
 
