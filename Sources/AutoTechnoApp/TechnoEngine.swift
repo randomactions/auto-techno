@@ -13,7 +13,7 @@ private struct PhrasePreparationKey: Hashable, Sendable {
 private struct PhrasePreparationRequest: Sendable {
     let key: PhrasePreparationKey
     let sourceState: AutonomousSessionState
-    let incomingRenderState: V2RenderState
+    let incomingRenderState: RenderState
     let incomingGraphState: GeneratedDSPContinuationState
     let previousGraph: DSPGraphPlan?
 }
@@ -95,7 +95,7 @@ final class TechnoEngine: ObservableObject {
         case unavailable
     }
 
-    static let bpm = AutonomousPerformanceDirector.bpm
+    static let bpm = AutonomousSessionDirector.bpm
 
     @Published private(set) var playbackState: PlaybackState = .preparing
     @Published private(set) var waveform: [Float] = Array(repeating: 0.04, count: 64)
@@ -128,7 +128,7 @@ final class TechnoEngine: ObservableObject {
         }
     }
     var positionText: String {
-        "130 BPM · PHRASE \(sceneNumber) · BAR \(barWithinScene)"
+        "\(Int(Self.bpm)) BPM · PHRASE \(sceneNumber) · BAR \(barWithinScene)"
     }
 
     private let director: AutonomousSessionDirector
@@ -188,7 +188,7 @@ final class TechnoEngine: ObservableObject {
                 routeRecovery: false
             ),
             sourceState: sessionState,
-            incomingRenderState: V2RenderState(),
+            incomingRenderState: RenderState(),
             incomingGraphState: GeneratedDSPContinuationState(),
             previousGraph: nil
         ))
@@ -491,7 +491,7 @@ final class TechnoEngine: ObservableObject {
             startSample: startSample,
             frameLength: frameLength,
             scenePosition: phrase.prepared.plan.phraseIndex,
-            bar: block.performance?.localBar ?? blockIndex,
+            bar: block.performance.localBar,
             section: block.section,
             waveform: phrase.waveforms[blockIndex]
         ))

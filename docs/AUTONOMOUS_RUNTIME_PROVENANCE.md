@@ -1,17 +1,24 @@
-# Autonomous runtime provenance
+# Autonomous Runtime Provenance
 
-The autonomous session director, temporal memory model, ensemble arbitration,
-interest preflight, generated DSP graph model, graph mutation policy, renderer,
-continuation state, and app integration in this repository were implemented
-from the repository's behavioral specification and existing repository-owned
-musical and DSP interfaces.
+This document identifies the single shipped path and the owner of each decision.
 
-No third-party implementation source, assets, identifiers, constants, tests,
-architectural expression, sample, binary, submodule, or new dependency were
-inspected or incorporated for this implementation. `Package.swift` retains its
-existing dependency set. The generated topology uses only modules implemented
-inside `AutoTechnoDSP`; it does not load plug-ins or executable graph content.
+1. `AutonomousSessionDirector` owns fixed 130 BPM, default seed `48291`, session
+   identity, temporal memory, candidate phrases, and successor selection.
+2. Each `AutonomousPhrasePlan` carries a complete musical intention, Scene DNA,
+   performance bars, ensemble decisions, and phrase-interest evidence.
+3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
+   bounded mutation from the prior graph.
+4. `AutonomousPhrasePreparer` evaluates candidates, runs render and graph
+   preflight, applies deterministic fallback when required, and returns immutable
+   scheduled blocks plus continuation state.
+5. `AutonomousPhraseRenderer` constructs the required synth world and synth
+   performance, renders full and protected-foundation layers, processes only the
+   upper-voice remainder through the generated graph, and recombines them through
+   the fixed output-safety stage.
+6. `TechnoEngine` prepares away from the callback and schedules completed buffers
+   by sample time. It owns transport, visual position, and route recovery, not
+   musical composition.
 
-The former Persistent V3 and 96-bar paths remain available to offline reference
-executables and regression tests. The shipped `AutoTechnoApp` contains no
-selection path to either runtime.
+The same root seed and incoming continuation states must reproduce the same plan,
+graph, samples, and outgoing states. There are no runtime profiles, reference
+generators, optional scene/synth inputs, or alternate executable entry points.

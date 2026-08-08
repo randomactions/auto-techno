@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Beat Shape Vocabulary
 
-public enum BeatShapeBand: Int, CaseIterable, Sendable {
+package enum BeatShapeBand: Int, CaseIterable, Sendable {
     case straight = 0    // 0.0–0.2: four-on-floor
     case garage = 1      // 0.2–0.4: garage shuffle
     case twoStep = 2     // 0.4–0.6: 2-step / broken garage
@@ -10,18 +10,18 @@ public enum BeatShapeBand: Int, CaseIterable, Sendable {
     case fullBreak = 4   // 0.8–1.0: full breakbeat
 }
 
-public struct BeatShapePattern: Equatable, Sendable {
-    public let kicks: [Int]   // step indices with kick hits
-    public let claps: [Int]   // step indices with clap hits
+package struct BeatShapePattern: Equatable, Sendable {
+    package let kicks: [Int]   // step indices with kick hits
+    package let claps: [Int]   // step indices with clap hits
 }
 
-public struct Step: Equatable, Sendable {
-    public let kick: Bool
-    public let hat: Bool
-    public let clap: Bool
-    public let bass: Bool
+package struct Step: Equatable, Sendable {
+    package let kick: Bool
+    package let hat: Bool
+    package let clap: Bool
+    package let bass: Bool
 
-    public init(kick: Bool, hat: Bool, clap: Bool, bass: Bool) {
+    package init(kick: Bool, hat: Bool, clap: Bool, bass: Bool) {
         self.kick = kick
         self.hat = hat
         self.clap = clap
@@ -29,14 +29,14 @@ public struct Step: Equatable, Sendable {
     }
 }
 
-public struct RenderCharacter: Equatable, Sendable {
-    public let kickWeight: Double
-    public let percussionBrightness: Double
-    public let bassDecay: Double
-    public let bassLevel: Double
+package struct RenderCharacter: Equatable, Sendable {
+    package let kickWeight: Double
+    package let percussionBrightness: Double
+    package let bassDecay: Double
+    package let bassLevel: Double
 }
 
-public enum TimedEventKind: String, Equatable, Sendable {
+package enum TimedEventKind: String, Equatable, Sendable {
     case kick
     case hat
     case clap
@@ -45,13 +45,13 @@ public enum TimedEventKind: String, Equatable, Sendable {
 
 /// A musical event positioned in a 16-step bar. `offsetInStep` is normalized
 /// to one step: 0 is on-grid and positive values are delayed within the step.
-public struct TimedEvent: Equatable, Sendable {
-    public let stepIndex: Int
-    public let kind: TimedEventKind
-    public let offsetInStep: Double
-    public let bar: Int
+package struct TimedEvent: Equatable, Sendable {
+    package let stepIndex: Int
+    package let kind: TimedEventKind
+    package let offsetInStep: Double
+    package let bar: Int
 
-    public init(stepIndex: Int, kind: TimedEventKind, offsetInStep: Double = 0, bar: Int = 0) {
+    package init(stepIndex: Int, kind: TimedEventKind, offsetInStep: Double = 0, bar: Int = 0) {
         self.stepIndex = stepIndex
         self.kind = kind
         self.offsetInStep = offsetInStep
@@ -59,32 +59,32 @@ public struct TimedEvent: Equatable, Sendable {
     }
 }
 
-public struct GrooveProfile: Equatable, Sendable {
-    public let swingPercent: Double
-    public let events: [TimedEvent]
+package struct GrooveProfile: Equatable, Sendable {
+    package let swingPercent: Double
+    package let events: [TimedEvent]
 
-    public init(swingPercent: Double, events: [TimedEvent]) {
+    package init(swingPercent: Double, events: [TimedEvent]) {
         self.swingPercent = swingPercent
         self.events = events
     }
 }
 
-public enum MotifSourceIntent: String, Equatable, Sendable {
+package enum MotifSourceIntent: String, Equatable, Sendable {
     case hypnosis = "Hypnosis"
     case drive = "Drive"
     case darkness = "Darkness"
 }
 
-public struct SynthEvent: Equatable, Sendable {
-    public let stepIndex: Int
-    public let offsetInStep: Double
-    public let scaleDegree: Int
-    public let frequency: Double
-    public let durationInSteps: Double
-    public let bar: Int
-    public let sourceIntent: MotifSourceIntent
+package struct SynthEvent: Equatable, Sendable {
+    package let stepIndex: Int
+    package let offsetInStep: Double
+    package let scaleDegree: Int
+    package let frequency: Double
+    package let durationInSteps: Double
+    package let bar: Int
+    package let sourceIntent: MotifSourceIntent
 
-    public init(
+    package init(
         stepIndex: Int,
         offsetInStep: Double,
         scaleDegree: Int,
@@ -103,51 +103,48 @@ public struct SynthEvent: Equatable, Sendable {
     }
 }
 
-public struct SequencerEvent: Equatable, Sendable {
-    public let stepIndex: Int
-    public let scaleDegree: Int
-    public let frequency: Double
-    public let durationInSteps: Double
-    public let bar: Int
-    public let kind: SequencerAmbientKind
+package struct SequencerEvent: Equatable, Sendable {
+    package let stepIndex: Int
+    package let scaleDegree: Int
+    package let frequency: Double
+    package let durationInSteps: Double
+    package let bar: Int
+    package let kind: SequencerAmbientKind
 
-    public init(stepIndex: Int, scaleDegree: Int, frequency: Double, durationInSteps: Double, bar: Int = 0, kind: SequencerAmbientKind) {
+    package init(stepIndex: Int, scaleDegree: Int, frequency: Double, durationInSteps: Double, bar: Int = 0, kind: SequencerAmbientKind) {
         self.stepIndex = stepIndex; self.scaleDegree = scaleDegree; self.frequency = frequency
         self.durationInSteps = durationInSteps; self.bar = bar; self.kind = kind
     }
 }
 
-public struct TechnoScene: Equatable, Sendable {
-    public let seed: UInt64
-    public let bpm: Double
-    public let drive: Double
-    public let darkness: Double
-    public let hypnosis: Double
-    public let beatShape: Double
-    /// The semantic intention that produced this scene, if constructed via the mapper.
-    /// Nil for scenes built from raw drive/darkness/hypnosis (legacy path).
-    public let musicalIntent: MusicalIntent?
+package struct TechnoScene: Equatable, Sendable {
+    package let seed: UInt64
+    package let bpm: Double
+    package let drive: Double
+    package let darkness: Double
+    package let hypnosis: Double
+    package let beatShape: Double
+    /// The semantic intention that produced this scene.
+    package let musicalIntent: MusicalIntent
     // Derived render parameters from semantic controls
-    public let aggression: Double
-    public let machineTexture: Double
-    public let drone: Double
-    public let atmosphere: Double
-    public let atmosphericDarkness: Double
-    public let drumChaos: Double
-    public let synthChaos: Double
-    public let textureChaos: Double
-    public let melodicity: Double
-    public let synthPresence: Double
-    public let noteActivity: Double
-    public let syncopation: Double
-    public let polyrhythm: Double
-    public let steps: [Step]
-    public let character: RenderCharacter
-    public let groove: GrooveProfile
-    public let motif: [SynthEvent]
-    public let sequencer: [SequencerEvent]
-
-    public static let bpmRange: ClosedRange<Double> = 118...142
+    package let aggression: Double
+    package let machineTexture: Double
+    package let drone: Double
+    package let atmosphere: Double
+    package let atmosphericDarkness: Double
+    package let drumChaos: Double
+    package let synthChaos: Double
+    package let textureChaos: Double
+    package let melodicity: Double
+    package let synthPresence: Double
+    package let noteActivity: Double
+    package let syncopation: Double
+    package let polyrhythm: Double
+    package let steps: [Step]
+    package let character: RenderCharacter
+    package let groove: GrooveProfile
+    package let motif: [SynthEvent]
+    package let sequencer: [SequencerEvent]
 
     // MARK: - Beat Shape Vocabulary
 
@@ -155,7 +152,7 @@ public struct TechnoScene: Equatable, Sendable {
     /// Kicks are step indices (0–15), claps are step indices (0–15).
     /// Step 0 always has a kick (downbeat anchor). 3–6 kicks per bar.
     /// Claps avoid kick steps to maintain rhythmic clarity.
-    public static let beatShapeVocabulary: [BeatShapeBand: [BeatShapePattern]] = [
+    package static let beatShapeVocabulary: [BeatShapeBand: [BeatShapePattern]] = [
         .straight: [
             // Classic four-on-floor with clap on 2 and 4
             BeatShapePattern(kicks: [0, 4, 8, 12], claps: [4, 12]),
@@ -205,7 +202,7 @@ public struct TechnoScene: Equatable, Sendable {
 
     /// Selects a beat-shape pattern for a given bar, deterministically varying
     /// within the band so consecutive bars feel like a drummer working the kit.
-    public static func beatShapePattern(beatShape: Double, seed: UInt64, bar: Int) -> BeatShapePattern {
+    package static func beatShapePattern(beatShape: Double, seed: UInt64, bar: Int) -> BeatShapePattern {
         let clamped = min(max(beatShape, 0), 1)
         let bandIndex = min(max(Int((clamped * 4).rounded()), 0), 4)
         guard let band = BeatShapeBand(rawValue: bandIndex),
@@ -253,7 +250,7 @@ public struct TechnoScene: Equatable, Sendable {
         return Step(kick: kick, hat: hat, clap: clap, bass: bass)
     }
 
-    public init(seed: UInt64, bpm: Double = 130, drive: Double, darkness: Double, hypnosis: Double,
+    private init(seed: UInt64, bpm: Double, drive: Double, darkness: Double, hypnosis: Double,
                 beatShape: Double = 0.0,
                 aggression: Double = 0.0,
                 machineTexture: Double = 0.0,
@@ -272,7 +269,7 @@ public struct TechnoScene: Equatable, Sendable {
                 sequencerDensity: Double = 0.0, sequencerRegister: Double = 0.0,
                 sequencerRepetition: Double = 0.0, sequencerDrift: Double = 0.0,
                 sequencerDepth: Double = 0.0,
-                musicalIntent: MusicalIntent? = nil) {
+                musicalIntent: MusicalIntent) {
         let clampedDrive = Self.clamp(drive)
         let clampedDarkness = Self.clamp(darkness)
         let clampedHypnosis = Self.clamp(hypnosis)
@@ -299,7 +296,7 @@ public struct TechnoScene: Equatable, Sendable {
         let presence = Self.clamp(sequencerPresence)
         let styleValue = Self.clamp(sequencerStyle)
         let kind: SequencerAmbientKind = styleValue < 0.34 ? .pulseNetwork : (styleValue < 0.67 ? .arpeggiatedMotif : .texturalStepField)
-        self.bpm = min(max(bpm, Self.bpmRange.lowerBound), Self.bpmRange.upperBound)
+        self.bpm = bpm
 
         var random = SeededGenerator(seed: seed)
         let clampedSyncopation = Self.clamp(syncopation)
@@ -421,41 +418,10 @@ public struct TechnoScene: Equatable, Sendable {
         }
     }
 
-    /// Creates a scene from a full `MusicalIntent` via the semantic mapper.
-    public init(intent: MusicalIntent, seed: UInt64) {
-        let mapped = MusicalIntentMapper.map(intent: intent, seed: seed)
-        self.init(
-            seed: seed,
-            bpm: mapped.bpm,
-            drive: mapped.drive,
-            darkness: mapped.darkness,
-            hypnosis: mapped.hypnosis,
-            beatShape: mapped.beatShape,
-            aggression: mapped.aggression,
-            machineTexture: mapped.machineTexture,
-            drone: mapped.drone,
-            atmosphere: mapped.atmosphere,
-            atmosphericDarkness: mapped.atmosphericDarkness,
-            drumChaos: mapped.drumChaos,
-            synthChaos: mapped.synthChaos,
-            textureChaos: mapped.textureChaos,
-            melodicity: mapped.melodicity,
-            synthPresence: mapped.synthPresence,
-            noteActivity: mapped.noteActivity,
-            syncopation: mapped.syncopation,
-            polyrhythm: mapped.polyrhythm,
-            sequencerPresence: mapped.sequencerPresence, sequencerStyle: mapped.sequencerStyle,
-            sequencerDensity: mapped.sequencerDensity, sequencerRegister: mapped.sequencerRegister,
-            sequencerRepetition: mapped.sequencerRepetition, sequencerDrift: mapped.sequencerDrift,
-            sequencerDepth: mapped.sequencerDepth,
-            musicalIntent: intent
-        )
-    }
-
     /// Creates a semantically mapped scene while preserving a tempo selected
     /// by the playback contract rather than the latent musical-intent mapper.
-    public init(intent: MusicalIntent, seed: UInt64, bpm: Double) {
-        let mapped = MusicalIntentMapper.map(intent: intent, seed: seed)
+    package init(intent: MusicalIntent, seed: UInt64, bpm: Double) {
+        let mapped = MusicalIntentMapper.map(intent: intent)
         self.init(
             seed: seed,
             bpm: bpm,
@@ -482,14 +448,6 @@ public struct TechnoScene: Equatable, Sendable {
             sequencerDepth: mapped.sequencerDepth,
             musicalIntent: intent
         )
-    }
-
-    public static func surprise(seed: UInt64, bpm: Double = 130) -> TechnoScene {
-        var random = SeededGenerator(seed: seed ^ 0xA1707EC4)
-        let hypnosis = random.value(in: 0.55...0.88)
-        let darkness = random.value(in: 0.58...0.9)
-        let drive = random.value(in: 0.42...0.82)
-        return TechnoScene(seed: seed, bpm: bpm, drive: drive, darkness: darkness, hypnosis: hypnosis)
     }
 
     private static func clamp(_ value: Double) -> Double { min(max(value, 0), 1) }
@@ -529,215 +487,18 @@ public struct TechnoScene: Equatable, Sendable {
 
 // MARK: - Arrangement
 
-public enum SectionKind: String, Equatable, Sendable, CaseIterable {
+package enum SectionKind: String, Equatable, Sendable, CaseIterable {
     case groove
     case build
     case breakdown
     case returnSection = "return"
 
-    public var displayName: String {
+    package var displayName: String {
         switch self {
         case .groove: "Groove"
         case .build: "Build"
         case .breakdown: "Breakdown"
         case .returnSection: "Return"
         }
-    }
-}
-
-public struct Phrase: Equatable, Sendable {
-    public let index: Int
-    public let section: SectionKind
-    public let barCount: Int
-    public let startBar: Int
-
-    public init(index: Int, section: SectionKind, barCount: Int, startBar: Int) {
-        self.index = index
-        self.section = section
-        self.barCount = barCount
-        self.startBar = startBar
-    }
-}
-
-public struct ArrangementPlan: Equatable, Sendable {
-    public let phrases: [Phrase]
-    public var totalBars: Int { phrases.reduce(0) { $0 + $1.barCount } }
-
-    public init(seed: UInt64, paceOfChange: Double) {
-        let clampedPace = min(max(paceOfChange, 0), 1)
-        var random = SeededGenerator(seed: seed ^ 0x4C5FDF6E8B7A2C91)
-        let baseLength = 4 + Int((1 - clampedPace) * 4)
-        let cycle: [SectionKind] = [.groove, .build, .breakdown, .returnSection]
-        let phraseCount = 8
-        var built: [Phrase] = []
-        var bar = 0
-        for index in 0..<phraseCount {
-            let section = cycle[index % cycle.count]
-            let variation = Int(random.next() % 3) - 1
-            let length = max(4, min(8, baseLength + variation))
-            built.append(Phrase(index: index, section: section, barCount: length, startBar: bar))
-            bar += length
-        }
-        phrases = built
-    }
-
-    public func phrase(atBar bar: Int) -> Phrase? {
-        guard !phrases.isEmpty else { return nil }
-        let wrapped = ((bar % totalBars) + totalBars) % totalBars
-        return phrases.first { wrapped >= $0.startBar && wrapped < $0.startBar + $0.barCount }
-    }
-
-    public func section(atBar bar: Int) -> SectionKind {
-        phrase(atBar: bar)?.section ?? .groove
-    }
-
-    public func barInPhrase(atBar bar: Int) -> Int {
-        guard let phrase = phrase(atBar: bar) else { return 0 }
-        return ((bar % totalBars) + totalBars) % totalBars - phrase.startBar
-    }
-
-    public func barsToPhraseEnd(atBar bar: Int) -> Int {
-        guard let phrase = phrase(atBar: bar) else { return 0 }
-        return phrase.barCount - barInPhrase(atBar: bar) - 1
-    }
-}
-
-public struct PhraseContext: Equatable, Sendable {
-    public let barsToPhraseEnd: Int
-    public let currentSection: SectionKind
-
-    public init(barsToPhraseEnd: Int, currentSection: SectionKind) {
-        self.barsToPhraseEnd = barsToPhraseEnd
-        self.currentSection = currentSection
-    }
-}
-
-public enum TransitionReason: String, Equatable, Sendable {
-    case drive = "Drive"
-    case darkness = "Darkness"
-    case hypnosis = "Hypnosis"
-    case surprise = "Surprise me"
-    case intent = "Intent"  // Small adjustments from slider tweaks — use subtle drift
-}
-
-public struct TransitionPlan: Equatable, Sendable {
-    public let narrative: TransitionNarrative
-    public let transitionBars: Int
-    public let reason: TransitionReason
-
-    /// Original non-phrase-aware planner. Kept for compatibility and tests.
-    public init(current: TechnoScene, target: TechnoScene, reason: TransitionReason) {
-        self.init(current: current, target: target, reason: reason, phrase: nil)
-    }
-
-    /// Per-control weights for semantic distance computation.
-    private static let semanticWeights: [MusicalControl: Double] = [
-        .groove: 1.0, .syncopation: 0.8, .beatShape: 1.2, .polyrhythm: 0.6,
-        .darkness: 1.0, .atmosphere: 0.7, .atmosphericDarkness: 0.5, .hypnosis: 1.0, .aggression: 1.1, .drone: 0.9,
-        .melodicity: 0.7, .synthPresence: 0.6, .noteActivity: 0.5,
-        .overallChaos: 0.4, .drumChaos: 0.4, .synthChaos: 0.4, .textureChaos: 0.3,
-        .paceOfChange: 0.9,
-        .sequencerPresence: 1.0, .sequencerStyle: 0.8, .sequencerDensity: 0.7,
-        .sequencerRegister: 0.4, .sequencerRepetition: 0.7, .sequencerDrift: 0.6,
-        .sequencerDepth: 0.5,
-    ]
-
-    /// Computes the distance between two scenes. Uses full 17D semantic distance
-    /// when both scenes carry a `MusicalIntent`; falls back to 3D drive/darkness/hypnosis.
-    private static func distance(between current: TechnoScene, and target: TechnoScene) -> Double {
-        guard let currentIntent = current.musicalIntent,
-              let targetIntent = target.musicalIntent else {
-            return abs(current.drive - target.drive)
-                + abs(current.darkness - target.darkness)
-                + abs(current.hypnosis - target.hypnosis)
-        }
-        var total = 0.0
-        for control in MusicalControl.allCases {
-            let weight = semanticWeights[control] ?? 1.0
-            total += abs(currentIntent[control] - targetIntent[control]) * weight
-        }
-        // Normalize to roughly the same scale as the old 3D distance (max ~3.0)
-        return total / max(1.0, Double(MusicalControl.allCases.count)) * 3.0
-    }
-
-    /// Phrase-aware planner. When `phrase` is provided, the director aligns
-    /// transitions to phrase boundaries and may choose longer narratives.
-    public init(
-        current: TechnoScene,
-        target: TechnoScene,
-        reason: TransitionReason,
-        phrase: PhraseContext?
-    ) {
-        self.reason = reason
-        let distance = Self.distance(between: current, and: target)
-
-        // Without phrase context, preserve the original binary behavior.
-        guard let phrase else {
-            if reason == .surprise || distance > 0.75 {
-                narrative = .elementExchange
-                transitionBars = 1
-            } else {
-                narrative = .subtleDrift
-                transitionBars = 0
-            }
-            return
-        }
-
-        let atPhraseEnd = phrase.barsToPhraseEnd == 0
-        let nearPhraseEnd = phrase.barsToPhraseEnd <= 1
-
-        // Crash and cut: only for surprise at a phrase boundary with a large jump.
-        if reason == .surprise && distance > 0.9 && atPhraseEnd {
-            narrative = .crashAndCut
-            transitionBars = 1
-            return
-        }
-
-        // Breakdown and return: large shifts at a phrase boundary get a two-bar
-        // breakdown-then-return journey.
-        if distance > 0.75 && atPhraseEnd {
-            narrative = .breakdownAndReturn
-            transitionBars = 2
-            return
-        }
-
-        // Fill and turn: medium shifts near a phrase boundary use a one-bar fill.
-        if distance > 0.45 && nearPhraseEnd {
-            narrative = .fillAndTurn
-            transitionBars = 1
-            return
-        }
-
-        // Long morph: medium shifts mid-phrase morph over the remaining bars.
-        if distance > 0.45 && phrase.barsToPhraseEnd >= 2 {
-            narrative = .longMorph
-            transitionBars = min(phrase.barsToPhraseEnd, 4)
-            return
-        }
-
-        // Element exchange: surprise or large jump without phrase alignment.
-        if reason == .surprise || distance > 0.75 {
-            narrative = .elementExchange
-            transitionBars = 1
-            return
-        }
-
-        // Subtle drift: small changes, next bar.
-        narrative = .subtleDrift
-        transitionBars = 0
-    }
-}
-
-// Compatibility wrapper for early callers and focused pattern tests.
-public struct TechnoPattern: Equatable, Sendable {
-    public let steps: [Step]
-
-    public init(seed: UInt64, energy: Double, mutation: Double) {
-        steps = TechnoScene(
-            seed: seed,
-            drive: energy,
-            darkness: 0.7,
-            hypnosis: 1 - min(max(mutation, 0), 1) * 0.35
-        ).steps
     }
 }

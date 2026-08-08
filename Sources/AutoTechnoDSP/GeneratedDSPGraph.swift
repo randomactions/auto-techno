@@ -1,7 +1,7 @@
 import AutoTechnoCore
 import Foundation
 
-public enum DSPGraphNodeKind: String, CaseIterable, Sendable {
+package enum DSPGraphNodeKind: String, CaseIterable, Sendable {
     case toneGuard
     case saturation
     case waveFold
@@ -21,7 +21,7 @@ public enum DSPGraphNodeKind: String, CaseIterable, Sendable {
     }
 }
 
-public enum DSPGraphMutationKind: String, CaseIterable, Sendable {
+package enum DSPGraphMutationKind: String, CaseIterable, Sendable {
     case insert
     case bypass
     case replace
@@ -29,17 +29,17 @@ public enum DSPGraphMutationKind: String, CaseIterable, Sendable {
     case rerouteSend
 }
 
-public struct DSPGraphNode: Equatable, Sendable {
-    public let id: Int
-    public let kind: DSPGraphNodeKind
-    public let branch: Int
-    public let order: Int
-    public let amount: Double
-    public let mix: Double
-    public let feedback: Double
-    public let delaySeconds: Double
+package struct DSPGraphNode: Equatable, Sendable {
+    package let id: Int
+    package let kind: DSPGraphNodeKind
+    package let branch: Int
+    package let order: Int
+    package let amount: Double
+    package let mix: Double
+    package let feedback: Double
+    package let delaySeconds: Double
 
-    public init(id: Int, kind: DSPGraphNodeKind, branch: Int, order: Int,
+    package init(id: Int, kind: DSPGraphNodeKind, branch: Int, order: Int,
                 amount: Double, mix: Double, feedback: Double = 0,
                 delaySeconds: Double = 0) {
         self.id = max(0, id)
@@ -53,32 +53,32 @@ public struct DSPGraphNode: Equatable, Sendable {
     }
 }
 
-public struct DSPGraphMutation: Equatable, Sendable {
-    public let kind: DSPGraphMutationKind
-    public let phraseIndex: Int
-    public let affectedNodeIDs: [Int]
+package struct DSPGraphMutation: Equatable, Sendable {
+    package let kind: DSPGraphMutationKind
+    package let phraseIndex: Int
+    package let affectedNodeIDs: [Int]
 
-    public init(kind: DSPGraphMutationKind, phraseIndex: Int, affectedNodeIDs: [Int]) {
+    package init(kind: DSPGraphMutationKind, phraseIndex: Int, affectedNodeIDs: [Int]) {
         self.kind = kind
         self.phraseIndex = phraseIndex
         self.affectedNodeIDs = affectedNodeIDs.sorted()
     }
 }
 
-public struct DSPProtectedRouting: Equatable, Sendable {
-    public let kick: Bool
-    public let subAndBass: Bool
-    public let maskingProtection: Bool
-    public let glue: Bool
-    public let limiter: Bool
-    public let output: Bool
+package struct DSPProtectedRouting: Equatable, Sendable {
+    package let kick: Bool
+    package let subAndBass: Bool
+    package let maskingProtection: Bool
+    package let glue: Bool
+    package let limiter: Bool
+    package let output: Bool
 
-    public static let fixed = DSPProtectedRouting(
+    package static let fixed = DSPProtectedRouting(
         kick: true, subAndBass: true, maskingProtection: true,
         glue: true, limiter: true, output: true
     )
 
-    public init(kick: Bool, subAndBass: Bool, maskingProtection: Bool,
+    package init(kick: Bool, subAndBass: Bool, maskingProtection: Bool,
                 glue: Bool, limiter: Bool, output: Bool) {
         self.kick = kick
         self.subAndBass = subAndBass
@@ -88,24 +88,24 @@ public struct DSPProtectedRouting: Equatable, Sendable {
         self.output = output
     }
 
-    public var valid: Bool {
+    package var valid: Bool {
         kick && subAndBass && maskingProtection && glue && limiter && output
     }
 }
 
-public struct DSPGraphPlan: Equatable, Sendable {
-    public static let maximumNodeCount = 24
-    public static let maximumSerialDepth = 12
-    public static let maximumBranchCount = 3
+package struct DSPGraphPlan: Equatable, Sendable {
+    package static let maximumNodeCount = 24
+    package static let maximumSerialDepth = 12
+    package static let maximumBranchCount = 3
 
-    public let sessionSeed: UInt64
-    public let revision: Int
-    public let nodes: [DSPGraphNode]
-    public let mutation: DSPGraphMutation?
-    public let lowEndProtected: Bool
-    public let protectedRouting: DSPProtectedRouting
+    package let sessionSeed: UInt64
+    package let revision: Int
+    package let nodes: [DSPGraphNode]
+    package let mutation: DSPGraphMutation?
+    package let lowEndProtected: Bool
+    package let protectedRouting: DSPProtectedRouting
 
-    public init(sessionSeed: UInt64, revision: Int, nodes: [DSPGraphNode],
+    package init(sessionSeed: UInt64, revision: Int, nodes: [DSPGraphNode],
                 mutation: DSPGraphMutation?, lowEndProtected: Bool = true,
                 protectedRouting: DSPProtectedRouting = .fixed) {
         self.sessionSeed = sessionSeed
@@ -120,24 +120,24 @@ public struct DSPGraphPlan: Equatable, Sendable {
         self.protectedRouting = protectedRouting
     }
 
-    public var branchCount: Int { (nodes.map(\.branch).max() ?? -1) + 1 }
-    public var maximumDepth: Int {
+    package var branchCount: Int { (nodes.map(\.branch).max() ?? -1) + 1 }
+    package var maximumDepth: Int {
         (0..<max(1, branchCount)).map { branch in nodes.filter { $0.branch == branch }.count }.max() ?? 0
     }
 
-    public func hasSameTopology(as other: DSPGraphPlan) -> Bool {
+    package func hasSameTopology(as other: DSPGraphPlan) -> Bool {
         revision == other.revision && nodes == other.nodes &&
             lowEndProtected == other.lowEndProtected && protectedRouting == other.protectedRouting
     }
 }
 
-public struct DSPGraphValidation: Equatable, Sendable {
-    public let valid: Bool
-    public let violations: [String]
+package struct DSPGraphValidation: Equatable, Sendable {
+    package let valid: Bool
+    package let violations: [String]
 }
 
-public enum DSPGraphValidator {
-    public static func validate(_ plan: DSPGraphPlan) -> DSPGraphValidation {
+package enum DSPGraphValidator {
+    package static func validate(_ plan: DSPGraphPlan) -> DSPGraphValidation {
         var violations: [String] = []
         if !plan.lowEndProtected { violations.append("low-end path is not protected") }
         if !plan.protectedRouting.valid { violations.append("mandatory fixed routing is incomplete") }
@@ -167,8 +167,8 @@ public enum DSPGraphValidator {
     }
 }
 
-public enum DSPGraphGenerator {
-    public static func plan(sessionSeed: UInt64, phrase: AutonomousPhrasePlan,
+package enum DSPGraphGenerator {
+    package static func plan(sessionSeed: UInt64, phrase: AutonomousPhrasePlan,
                             memory: TemporalMusicalMemory, previous: DSPGraphPlan?,
                             routeRecovery: Bool = false) -> DSPGraphPlan {
         guard let previous else {
@@ -249,7 +249,7 @@ public enum DSPGraphGenerator {
         return DSPGraphValidator.validate(candidate).valid ? candidate : previous
     }
 
-    public static func safePlan(sessionSeed: UInt64) -> DSPGraphPlan {
+    package static func safePlan(sessionSeed: UInt64) -> DSPGraphPlan {
         DSPGraphPlan(sessionSeed: sessionSeed, revision: 0, nodes: [
             DSPGraphNode(id: 0, kind: .toneGuard, branch: 0, order: 0,
                          amount: 0.42, mix: 0.34),
@@ -313,7 +313,7 @@ public enum DSPGraphGenerator {
     }
 }
 
-public struct DSPGraphNodeState: Equatable, Sendable {
+package struct DSPGraphNodeState: Equatable, Sendable {
     var memoryLeft = 0.0
     var memoryRight = 0.0
     var auxiliaryLeft = 0.0
@@ -324,20 +324,20 @@ public struct DSPGraphNodeState: Equatable, Sendable {
     var writeIndex = 0
 }
 
-public struct GeneratedDSPContinuationState: Equatable, Sendable {
-    public var graph: DSPGraphPlan?
+package struct GeneratedDSPContinuationState: Equatable, Sendable {
+    package var graph: DSPGraphPlan?
     var nodeStates: [Int: DSPGraphNodeState] = [:]
     var splitLowLeft = 0.0
     var splitLowRight = 0.0
-    public internal(set) var retiringGraph: DSPGraphPlan?
+    package internal(set) var retiringGraph: DSPGraphPlan?
     var retiringStates: [Int: DSPGraphNodeState] = [:]
-    public internal(set) var retiringBarsRemaining = 0
+    package internal(set) var retiringBarsRemaining = 0
 
-    public init() {}
+    package init() {}
 }
 
-public enum GeneratedDSPGraphRenderer {
-    public static func process(left: [Float], right: [Float], sampleRate: Double,
+package enum GeneratedDSPGraphRenderer {
+    package static func process(left: [Float], right: [Float], sampleRate: Double,
                                plan: DSPGraphPlan,
                                state: inout GeneratedDSPContinuationState) -> ([Float], [Float]) {
         let count = min(left.count, right.count)
@@ -540,26 +540,26 @@ public enum GeneratedDSPGraphRenderer {
     }
 }
 
-public struct PhraseBarAudioEvidence: Equatable, Sendable {
-    public let bar: Int
-    public let loudness: Double
-    public let spectralCentroid: Double
-    public let transientDensity: Double
-    public let crestFactor: Double
-    public let finite: Bool
+package struct PhraseBarAudioEvidence: Equatable, Sendable {
+    package let bar: Int
+    package let loudness: Double
+    package let spectralCentroid: Double
+    package let transientDensity: Double
+    package let crestFactor: Double
+    package let finite: Bool
 }
 
-public struct PhraseAudioPreflight: Equatable, Sendable {
-    public let quality: V2QualityReport
-    public let bars: [PhraseBarAudioEvidence]
-    public let movementScore: Double
-    public let safetyValid: Bool
-    public let interesting: Bool
+package struct PhraseAudioPreflight: Equatable, Sendable {
+    package let quality: AudioQualityReport
+    package let bars: [PhraseBarAudioEvidence]
+    package let movementScore: Double
+    package let safetyValid: Bool
+    package let interesting: Bool
 
-    public init(blocks: [V2RenderBlock], sampleRate: Double) {
-        let report = V2QualityReport(blocks: blocks, sampleRate: sampleRate)
+    package init(blocks: [RenderBlock], sampleRate: Double) {
+        let report = AudioQualityReport(blocks: blocks, sampleRate: sampleRate)
         let barEvidence = blocks.map { block -> PhraseBarAudioEvidence in
-            let barReport = V2QualityReport(blocks: [block], sampleRate: sampleRate)
+            let barReport = AudioQualityReport(blocks: [block], sampleRate: sampleRate)
             return PhraseBarAudioEvidence(
                 bar: block.bar,
                 loudness: Double(barReport.loudnessEstimate),
@@ -590,34 +590,34 @@ public struct PhraseAudioPreflight: Equatable, Sendable {
     }
 }
 
-public struct PreparedAutonomousPhrase: Sendable {
-    public let plan: AutonomousPhrasePlan
-    public let graph: DSPGraphPlan
-    public let blocks: [V2RenderBlock]
-    public let endingRenderState: V2RenderState
-    public let endingGraphState: GeneratedDSPContinuationState
-    public let audioPreflight: PhraseAudioPreflight
-    public let usedAlternate: Bool
-    public let usedFallback: Bool
+package struct PreparedAutonomousPhrase: Sendable {
+    package let plan: AutonomousPhrasePlan
+    package let graph: DSPGraphPlan
+    package let blocks: [RenderBlock]
+    package let endingRenderState: RenderState
+    package let endingGraphState: GeneratedDSPContinuationState
+    package let audioPreflight: PhraseAudioPreflight
+    package let usedAlternate: Bool
+    package let usedFallback: Bool
 
-    public var combinedScore: Double {
+    package var combinedScore: Double {
         plan.interest.score * 0.55 + audioPreflight.movementScore * 0.45
     }
 }
 
-public enum AutonomousPreflightChoice: Equatable, Sendable {
+package enum AutonomousPreflightChoice: Equatable, Sendable {
     case primary
     case alternate
     case fallback
 }
 
-public struct AutonomousCandidateEvidence: Equatable, Sendable {
-    public let symbolicValid: Bool
-    public let safetyValid: Bool
-    public let interesting: Bool
-    public let combinedScore: Double
+package struct AutonomousCandidateEvidence: Equatable, Sendable {
+    package let symbolicValid: Bool
+    package let safetyValid: Bool
+    package let interesting: Bool
+    package let combinedScore: Double
 
-    public init(symbolicValid: Bool, safetyValid: Bool, interesting: Bool,
+    package init(symbolicValid: Bool, safetyValid: Bool, interesting: Bool,
                 combinedScore: Double) {
         self.symbolicValid = symbolicValid
         self.safetyValid = safetyValid
@@ -629,12 +629,12 @@ public struct AutonomousCandidateEvidence: Equatable, Sendable {
 /// Pure selection policy used by preparation and by synthetic anti-stagnation
 /// tests. An interesting, valid primary is retained immediately; otherwise an
 /// alternate may compete. Equal scores always preserve the primary.
-public enum AutonomousCandidateSelector {
-    public static func needsAlternate(primary: AutonomousCandidateEvidence) -> Bool {
+package enum AutonomousCandidateSelector {
+    package static func needsAlternate(primary: AutonomousCandidateEvidence) -> Bool {
         !(primary.symbolicValid && primary.safetyValid && primary.interesting)
     }
 
-    public static func choose(primary: AutonomousCandidateEvidence,
+    package static func choose(primary: AutonomousCandidateEvidence,
                               alternate: AutonomousCandidateEvidence?) -> AutonomousPreflightChoice {
         if !needsAlternate(primary: primary) { return .primary }
         let primaryValid = primary.symbolicValid && primary.safetyValid
@@ -650,12 +650,12 @@ public enum AutonomousCandidateSelector {
     }
 }
 
-public enum AutonomousPhrasePreparer {
-    public static func prepare(candidates: AutonomousPhraseCandidates,
+package enum AutonomousPhrasePreparer {
+    package static func prepare(candidates: AutonomousPhraseCandidates,
                                sessionSeed: UInt64,
                                memory: TemporalMusicalMemory,
                                sampleRate: Double,
-                               incomingRenderState: V2RenderState,
+                               incomingRenderState: RenderState,
                                incomingGraphState: GeneratedDSPContinuationState,
                                previousGraph: DSPGraphPlan?,
                                routeRecovery: Bool = false) -> PreparedAutonomousPhrase {
@@ -695,7 +695,7 @@ public enum AutonomousPhrasePreparer {
 
     private static func render(plan: AutonomousPhrasePlan, sessionSeed: UInt64,
                                memory: TemporalMusicalMemory, sampleRate: Double,
-                               incomingRenderState: V2RenderState,
+                               incomingRenderState: RenderState,
                                incomingGraphState: GeneratedDSPContinuationState,
                                previousGraph: DSPGraphPlan?, routeRecovery: Bool,
                                forceSafeGraph: Bool = false) -> PreparedAutonomousPhrase {
@@ -713,7 +713,7 @@ public enum AutonomousPhrasePreparer {
         }
         var renderState = incomingRenderState
         var graphState = incomingGraphState
-        let blocks = V2ProceduralEngine.renderAutonomousPhrase(
+        let blocks = AutonomousPhraseRenderer.render(
             plan: plan, graph: graph, sampleRate: sampleRate,
             state: &renderState, graphState: &graphState
         )
@@ -727,173 +727,5 @@ public enum AutonomousPhrasePreparer {
             usedAlternate: plan.alternate,
             usedFallback: plan.conservative
         )
-    }
-}
-
-public extension V2ProceduralEngine {
-    static func renderAutonomousPhrase(plan: AutonomousPhrasePlan, graph: DSPGraphPlan,
-                                       sampleRate: Double, state: inout V2RenderState,
-                                       graphState: inout GeneratedDSPContinuationState,
-                                       treatment: RenderTreatment = .polished,
-                                       mastering: V2MasteringProfile = .clubPunch,
-                                       effects: V2EffectProfile = .full) -> [V2RenderBlock] {
-        let synthPlan = SynthPerformancePlan(scene: plan.scene, dna: plan.dna, bars: plan.bars,
-                                             includeInterlocks: true)
-        var workspace = V2RenderWorkspace()
-        var blocks: [V2RenderBlock] = []
-        blocks.reserveCapacity(plan.barCount)
-
-        for index in plan.bars.indices {
-            let performance = plan.bars[index]
-            let ensemble = plan.ensemble[index]
-            let modulation = autonomousModulation(performance: performance, scene: plan.scene)
-            let incomingState = state
-            var foundationState = incomingState
-            let foundation = V2VoiceRenderer.renderBar(
-                scene: plan.scene,
-                section: performance.section,
-                sampleRate: sampleRate,
-                state: &foundationState,
-                treatment: treatment,
-                mastering: mastering,
-                effects: effects,
-                dna: plan.dna,
-                performance: performance,
-                synthEngine: .alienAnalogV1,
-                synthWorld: synthPlan.world,
-                synthPerformance: synthPlan.bars[index],
-                workspace: &workspace,
-                isolatedStem: .foundation
-            )
-            let rendered = V2VoiceRenderer.renderBar(
-                scene: plan.scene,
-                section: performance.section,
-                sampleRate: sampleRate,
-                state: &state,
-                treatment: treatment,
-                mastering: mastering,
-                effects: effects,
-                dna: plan.dna,
-                performance: performance,
-                synthEngine: .alienAnalogV1,
-                synthWorld: synthPlan.world,
-                synthPerformance: synthPlan.bars[index],
-                workspace: &workspace
-            )
-            let events = ensemble.events.map { event in
-                V2VoiceEvent(voice: voiceKind(event.voice), bar: performance.bar,
-                             step: event.step, intensity: event.intensity)
-            }
-            let buses = autonomousBusStates(rendered: rendered, scene: plan.scene, events: events)
-            // Derive the non-foundation contribution from two deterministic
-            // renders that begin with identical continuation state. Generated
-            // topology can therefore reinterpret percussion, musical voices,
-            // atmosphere, and returns without ever receiving the protected
-            // kick/sub/bass path.
-            let upperLeft = zip(rendered.leftSamples, foundation.leftSamples).map { $0.0 - $0.1 }
-            let upperRight = zip(rendered.rightSamples, foundation.rightSamples).map { $0.0 - $0.1 }
-            let generated = GeneratedDSPGraphRenderer.process(
-                left: upperLeft, right: upperRight,
-                sampleRate: sampleRate, plan: graph, state: &graphState
-            )
-            let outputLeft = zip(foundation.leftSamples, generated.0).map {
-                autonomousOutputSafety($0 + $1)
-            }
-            let outputRight = zip(foundation.rightSamples, generated.1).map {
-                autonomousOutputSafety($0 + $1)
-            }
-            let graphEffects = graph.nodes.map { node in
-                V2EffectState(kind: effectKind(node.kind), amount: node.amount, active: node.mix > 0)
-            } + [
-                V2EffectState(kind: .maskingGuard, amount: 1),
-                V2EffectState(kind: .glue, amount: 1),
-                V2EffectState(kind: .master, amount: 1),
-            ]
-            blocks.append(V2RenderBlock(
-                bar: performance.bar,
-                section: performance.section,
-                left: outputLeft,
-                right: outputRight,
-                events: events,
-                modulation: modulation,
-                busStates: buses,
-                masking: rendered.masking,
-                effects: graphEffects,
-                performance: performance,
-                dramaticThesis: nil,
-                sceneDNA: plan.dna,
-                synthEngine: .alienAnalogV1,
-                synthWorld: synthPlan.world,
-                synthPerformance: synthPlan.bars[index]
-            ))
-            state.barIndex = performance.bar + 1
-            state.modulationPhase = modulation.phase
-            state.busStates = buses
-        }
-        return blocks
-    }
-
-    private static func autonomousOutputSafety(_ input: Float) -> Float {
-        let ceiling = 0.90
-        return Float(tanh(Double(input) * 1.04) / tanh(1.04) * ceiling)
-    }
-
-    private static func autonomousModulation(performance: PerformanceBar,
-                                             scene: TechnoScene) -> V2ModulationState {
-        let phraseProgress = Double(performance.localBar) / Double(max(1, performance.phraseLength - 1))
-        let phase = phraseProgress * 2 * Double.pi
-        let motion = 0.5 + 0.5 * sin(phase)
-        return V2ModulationState(
-            phase: phase,
-            brightness: min(1, (1 - scene.darkness) * 0.24 + performance.tension * 0.52),
-            density: min(1, Double(performance.roles.count) / 4 * 0.62 + performance.tension * 0.20),
-            space: min(1, scene.atmosphere * 0.68 + (performance.section == .breakdown ? 0.26 : 0)),
-            cutoff: min(1, 0.16 + performance.tension * 0.68),
-            resonance: min(1, 0.10 + scene.hypnosis * 0.36 + motion * 0.18),
-            bassArticulation: min(1, 0.24 + scene.aggression * 0.42 + performance.tension * 0.18),
-            fillIntensity: min(1, scene.drumChaos * 0.38 + phraseProgress * 0.32)
-        )
-    }
-
-    private static func voiceKind(_ voice: EnsembleVoice) -> V2VoiceKind {
-        switch voice {
-        case .kick: .kick
-        case .bass: .bass
-        case .percussion: .percussion
-        case .motif: .synth
-        case .response: .lead
-        case .atmosphere: .pad
-        case .transition: .riser
-        }
-    }
-
-    private static func effectKind(_ kind: DSPGraphNodeKind) -> V2EffectKind {
-        switch kind {
-        case .toneGuard: .busEQ
-        case .saturation, .waveFold: .saturation
-        case .phaser: .phaser
-        case .chorus, .stereoMotion: .chorus
-        case .comb, .resonator: .comb
-        case .echo: .unsyncedEcho
-        case .diffusion: .reverb
-        }
-    }
-
-    private static func autonomousBusStates(rendered: RenderedBar, scene: TechnoScene,
-                                            events: [V2VoiceEvent]) -> [V2VoiceKind: V2BusState] {
-        let headroom = max(0, 1 - Double(rendered.peak))
-        return Dictionary(uniqueKeysWithValues: Set(events.map(\.voice)).map { voice in
-            let level: Double
-            switch voice {
-            case .kick: level = 1
-            case .bass: level = scene.character.bassLevel
-            case .hats, .clap, .percussion: level = scene.character.percussionBrightness
-            case .synth, .lead: level = scene.synthPresence
-            case .pad, .sequencerAmbient, .riser, .texture: level = scene.atmosphere
-            }
-            return (voice, V2BusState(level: Double(rendered.rms) * level,
-                                      send: voice == .kick || voice == .bass ? 0 : scene.atmosphere * 0.30,
-                                      headroom: headroom))
-        })
     }
 }

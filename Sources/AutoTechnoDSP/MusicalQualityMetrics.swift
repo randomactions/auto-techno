@@ -2,18 +2,18 @@ import Foundation
 
 /// Offline-only perceptual and translation measurements. These calculations
 /// run after immutable blocks are prepared and never execute on the callback.
-public struct MusicalQualityMetrics: Equatable, Sendable {
-    public let integratedLoudness: Double
-    public let loudnessRange: Double
-    public let maximumShortTermLoudness: Double
-    public let crestFactor: Double
-    public let spectralCentroid: Double
-    public let lowEnergy: Double
-    public let midEnergy: Double
-    public let highEnergy: Double
-    public let transientDensity: Double
+package struct MusicalQualityMetrics: Equatable, Sendable {
+    package let integratedLoudness: Double
+    package let loudnessRange: Double
+    package let maximumShortTermLoudness: Double
+    package let crestFactor: Double
+    package let spectralCentroid: Double
+    package let lowEnergy: Double
+    package let midEnergy: Double
+    package let highEnergy: Double
+    package let transientDensity: Double
 
-    public init(left: [Float], right: [Float], sampleRate: Double) {
+    package init(left: [Float], right: [Float], sampleRate: Double) {
         let count = min(left.count, right.count)
         guard count > 0, sampleRate > 0 else {
             integratedLoudness = -120; loudnessRange = 0; maximumShortTermLoudness = -120
@@ -93,110 +93,5 @@ public struct MusicalQualityMetrics: Equatable, Sendable {
 
     private static func percentile(_ sorted: [Double], _ value: Double) -> Double {
         sorted[min(sorted.count - 1, max(0, Int((Double(sorted.count - 1) * value).rounded())))]
-    }
-}
-
-/// Offline-only guard against an exposed upper voice collapsing into a static,
-/// recognizable primitive oscillator. Call this with a musical-voices stem;
-/// it intentionally samples a few pressure-state windows instead of running a
-/// live FFT or adding work to the audio callback.
-public struct TimbreComplexityMetrics: Equatable, Sendable {
-    public let activeWindowCount: Int
-    public let significantNonFundamentalPartials: Int
-    public let meanSpectralCentroid: Double
-    public let spectralCentroidRange: Double
-    public let passesComplexityGuard: Bool
-
-    public init(blocks: [V2RenderBlock], sampleRate: Double) {
-        guard sampleRate > 0, !blocks.isEmpty else {
-            activeWindowCount = 0
-            significantNonFundamentalPartials = 0
-            meanSpectralCentroid = 0
-            spectralCentroidRange = 0
-            passesComplexityGuard = false
-            return
-        }
-
-        let pressure = blocks.filter { $0.synthPerformance?.gesture == .corrode }
-        let selected = Array((pressure.isEmpty ? blocks : pressure).prefix(3))
-        let windowSize = 1_024
-        var spectra: [[Double]] = []
-        for block in selected {
-            let count = min(block.left.count, block.right.count)
-            guard count >= windowSize else { continue }
-            for fraction in [0.18, 0.43, 0.68, 0.88] {
-                let center = Int(Double(count) * fraction)
-                let start = min(count - windowSize, max(0, center - windowSize / 2))
-                let mono = (0..<windowSize).map { offset in
-                    (Double(block.left[start + offset]) + Double(block.right[start + offset])) * 0.5
-                }
-                let energy = mono.reduce(0) { $0 + $1 * $1 } / Double(windowSize)
-                if energy > 0.000_000_000_1 {
-                    spectra.append(Self.spectrum(mono, sampleRate: sampleRate))
-                }
-            }
-        }
-
-        activeWindowCount = spectra.count
-        guard let first = spectra.first else {
-            significantNonFundamentalPartials = 0
-            meanSpectralCentroid = 0
-            spectralCentroidRange = 0
-            passesComplexityGuard = false
-            return
-        }
-
-        var average = [Double](repeating: 0, count: first.count)
-        var centroids: [Double] = []
-        centroids.reserveCapacity(spectra.count)
-        for spectrum in spectra {
-            var weighted = 0.0
-            var total = 0.0
-            for bin in spectrum.indices {
-                average[bin] += spectrum[bin]
-                let energy = spectrum[bin] * spectrum[bin]
-                weighted += Double(bin) * sampleRate / Double(windowSize) * energy
-                total += energy
-            }
-            centroids.append(weighted / max(total, 0.000_000_000_001))
-        }
-        for index in average.indices { average[index] /= Double(spectra.count) }
-
-        let fundamental = blocks.compactMap(\.synthWorld?.rootFrequency).first ?? 65.41
-        let fundamentalBin = min(average.count - 1, max(1, Int((fundamental * Double(windowSize) / sampleRate).rounded())))
-        let fundamentalMagnitude = Self.localPeak(average, bin: fundamentalBin)
-        let maximumMagnitude = average.max() ?? 0
-        let threshold = max(fundamentalMagnitude * 0.04, maximumMagnitude * 0.018)
-        significantNonFundamentalPartials = (2...12).reduce(into: 0) { result, harmonic in
-            let bin = Int((fundamental * Double(harmonic) * Double(windowSize) / sampleRate).rounded())
-            if bin < average.count, Self.localPeak(average, bin: bin) >= threshold { result += 1 }
-        }
-        meanSpectralCentroid = centroids.reduce(0, +) / Double(centroids.count)
-        spectralCentroidRange = (centroids.max() ?? 0) - (centroids.min() ?? 0)
-        passesComplexityGuard = activeWindowCount >= 2 &&
-            significantNonFundamentalPartials >= 3 && spectralCentroidRange >= 40
-    }
-
-    private static func spectrum(_ samples: [Double], sampleRate: Double) -> [Double] {
-        let count = samples.count
-        let upperBin = min(count / 2, Int(10_000 * Double(count) / sampleRate))
-        return (0...max(1, upperBin)).map { bin in
-            var real = 0.0
-            var imaginary = 0.0
-            for index in samples.indices {
-                let window = 0.5 - 0.5 * cos(2 * .pi * Double(index) / Double(max(1, count - 1)))
-                let angle = 2 * .pi * Double(bin * index) / Double(count)
-                let value = samples[index] * window
-                real += value * cos(angle)
-                imaginary -= value * sin(angle)
-            }
-            return sqrt(real * real + imaginary * imaginary)
-        }
-    }
-
-    private static func localPeak(_ spectrum: [Double], bin: Int) -> Double {
-        let lower = max(0, bin - 1)
-        let upper = min(spectrum.count - 1, bin + 1)
-        return spectrum[lower...upper].max() ?? 0
     }
 }

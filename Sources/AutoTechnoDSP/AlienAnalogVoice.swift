@@ -12,7 +12,7 @@ struct AlienVoiceNote: Equatable, Sendable {
     let echoGate: Bool
 }
 
-struct AlienVoiceState: Sendable {
+struct AlienVoiceState: Equatable, Sendable {
     var phaseA = 0.0
     var phaseB = 0.0
     var modPhase = 0.0

@@ -2,7 +2,7 @@ import Foundation
 
 /// Listener-scale movement of the authored synth world. The DSP layer derives
 /// oscillator, filter, distortion, and delay values from this intention.
-public enum SynthGesture: String, CaseIterable, Sendable {
+package enum SynthGesture: String, CaseIterable, Sendable {
     case reveal
     case interlock
     case corrode
@@ -10,7 +10,7 @@ public enum SynthGesture: String, CaseIterable, Sendable {
     case release
 }
 
-public enum SynthRole: String, CaseIterable, Sendable {
+package enum SynthRole: String, CaseIterable, Sendable {
     case anchor
     case shadow
     case atmosphere
@@ -19,16 +19,16 @@ public enum SynthRole: String, CaseIterable, Sendable {
 }
 
 /// Stable musical identity shared by every synth role in a scene.
-public struct SynthWorldDNA: Equatable, Sendable {
-    public let sceneSeed: UInt64
-    public let variation: Int
-    public let rootFrequency: Double
-    public let shadowInterval: Int
-    public let responseInterval: Int
-    public let shadowRotation: Int
-    public let echoRotation: Int
+package struct SynthWorldDNA: Equatable, Sendable {
+    package let sceneSeed: UInt64
+    package let variation: Int
+    package let rootFrequency: Double
+    package let shadowInterval: Int
+    package let responseInterval: Int
+    package let shadowRotation: Int
+    package let echoRotation: Int
 
-    public init(scene: TechnoScene, dna: SceneDNA) {
+    package init(scene: TechnoScene, dna: SceneDNA) {
         sceneSeed = scene.seed
         variation = dna.timbralFamily
         rootFrequency = 65.41 * pow(2, Double(dna.tonalCenter) / 12)
@@ -41,15 +41,15 @@ public struct SynthWorldDNA: Equatable, Sendable {
     }
 }
 
-public struct SynthRoleEvent: Equatable, Sendable {
-    public let role: SynthRole
-    public let stepIndex: Int
-    public let frequencyRatio: Double
-    public let velocity: Double
-    public let sevenStepAccent: Bool
-    public let echoGate: Bool
+package struct SynthRoleEvent: Equatable, Sendable {
+    package let role: SynthRole
+    package let stepIndex: Int
+    package let frequencyRatio: Double
+    package let velocity: Double
+    package let sevenStepAccent: Bool
+    package let echoGate: Bool
 
-    public init(role: SynthRole, stepIndex: Int, frequencyRatio: Double,
+    package init(role: SynthRole, stepIndex: Int, frequencyRatio: Double,
                 velocity: Double, sevenStepAccent: Bool, echoGate: Bool) {
         self.role = role
         self.stepIndex = min(15, max(0, stepIndex))
@@ -60,15 +60,15 @@ public struct SynthRoleEvent: Equatable, Sendable {
     }
 }
 
-public struct SynthPerformanceBar: Equatable, Sendable {
-    public let bar: Int
-    public let gesture: SynthGesture
-    public let mutationAmount: Double
-    public let sevenStepPhase: Int
-    public let echoGatePhase: Int
-    public let interlockEvents: [SynthRoleEvent]
+package struct SynthPerformanceBar: Equatable, Sendable {
+    package let bar: Int
+    package let gesture: SynthGesture
+    package let mutationAmount: Double
+    package let sevenStepPhase: Int
+    package let echoGatePhase: Int
+    package let interlockEvents: [SynthRoleEvent]
 
-    public init(bar: Int, gesture: SynthGesture, mutationAmount: Double,
+    package init(bar: Int, gesture: SynthGesture, mutationAmount: Double,
                 sevenStepPhase: Int, echoGatePhase: Int,
                 interlockEvents: [SynthRoleEvent]) {
         self.bar = bar
@@ -82,20 +82,11 @@ public struct SynthPerformanceBar: Equatable, Sendable {
 
 /// A deterministic upper-voice score. Its clocks deliberately continue across
 /// bar boundaries; kick, bass, hats, and clap are not part of this plan.
-public struct SynthPerformancePlan: Equatable, Sendable {
-    public static let barCount = PerformancePlan.barCount
+package struct SynthPerformancePlan: Equatable, Sendable {
+    package let world: SynthWorldDNA
+    package let bars: [SynthPerformanceBar]
 
-    public let world: SynthWorldDNA
-    public let bars: [SynthPerformanceBar]
-
-    public init(scene: TechnoScene, performance: PerformancePlan,
-                includeInterlocks: Bool = true) {
-        self.init(scene: scene, dna: performance.dna, bars: performance.bars,
-                  includeInterlocks: includeInterlocks)
-    }
-
-    public init(scene: TechnoScene, dna: SceneDNA, bars performanceBars: [PerformanceBar],
-                includeInterlocks: Bool = true) {
+    package init(scene: TechnoScene, dna: SceneDNA, bars performanceBars: [PerformanceBar]) {
         let synthWorld = SynthWorldDNA(scene: scene, dna: dna)
         let synthBars = performanceBars.map { performanceBar in
             let gesture = SynthPerformancePlan.gesture(for: performanceBar)
@@ -103,7 +94,7 @@ public struct SynthPerformancePlan: Equatable, Sendable {
             let globalStart = performanceBar.bar * 16
             let sevenPhase = globalStart % 7
             let echoPhase = (globalStart + synthWorld.echoRotation) % 3
-            let events = includeInterlocks && gesture != .suspend
+            let events = gesture != .suspend
                 ? SynthPerformancePlan.interlockEvents(
                     bar: performanceBar.bar,
                     gesture: gesture,

@@ -1,4 +1,4 @@
-public enum IntentBranch: String, CaseIterable, Sendable {
+package enum IntentBranch: String, CaseIterable, Sendable {
     case motion
     case character
     case musicality
@@ -7,13 +7,13 @@ public enum IntentBranch: String, CaseIterable, Sendable {
     case sequencerAmbient
 }
 
-public enum SequencerAmbientKind: String, CaseIterable, Codable, Sendable {
+package enum SequencerAmbientKind: String, CaseIterable, Codable, Sendable {
     case pulseNetwork = "Pulse network"
     case arpeggiatedMotif = "Arpeggiated motif"
     case texturalStepField = "Textural step field"
 }
 
-public enum MusicalControl: String, CaseIterable, Codable, Sendable {
+package enum MusicalControl: String, CaseIterable, Codable, Sendable {
     case groove
     case syncopation
     case beatShape
@@ -41,7 +41,7 @@ public enum MusicalControl: String, CaseIterable, Codable, Sendable {
     case sequencerDrift
     case sequencerDepth
 
-    public var branch: IntentBranch {
+    package var branch: IntentBranch {
         switch self {
         case .groove, .syncopation, .beatShape, .polyrhythm: .motion
         case .darkness, .atmosphere, .atmosphericDarkness, .hypnosis, .aggression, .machineTexture, .drone: .character
@@ -53,20 +53,20 @@ public enum MusicalControl: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    public var minimum: Double { self == .groove ? 0.05 : 0 }
+    package var minimum: Double { self == .groove ? 0.05 : 0 }
 }
 
-public struct MusicalIntent: Equatable, Sendable {
+package struct MusicalIntent: Equatable, Sendable {
     private var storage: [MusicalControl: Double]
 
-    public init(values: [MusicalControl: Double] = [:]) {
+    package init(values: [MusicalControl: Double] = [:]) {
         storage = [:]
         for control in MusicalControl.allCases {
             self[control] = values[control] ?? MusicalIntent.defaultValue(for: control)
         }
     }
 
-    public subscript(control: MusicalControl) -> Double {
+    package subscript(control: MusicalControl) -> Double {
         get { storage[control] ?? MusicalIntent.defaultValue(for: control) }
         set { storage[control] = min(max(newValue, control.minimum), 1) }
     }
@@ -75,7 +75,7 @@ public struct MusicalIntent: Equatable, Sendable {
     /// correlations restored. This is used after profile blending, where
     /// independent preference movement could otherwise create invalid role
     /// relationships.
-    public func preservingCorrelations() -> MusicalIntent {
+    package func preservingCorrelations() -> MusicalIntent {
         var values = storage
         let darkness = self[.darkness]
         let atmosphere = min(self[.atmosphere], darkness + 0.25, 0.85)
@@ -113,7 +113,7 @@ public struct MusicalIntent: Equatable, Sendable {
     /// - Parameter seed: Deterministic seed for reproducibility.
     /// - Returns: A `MusicalIntent` with all 17 controls sampled within
     ///   musically valid ranges, respecting cross-control invariants.
-    public static func random(seed: UInt64) -> MusicalIntent {
+    package static func random(seed: UInt64) -> MusicalIntent {
         var random = SeededGenerator(seed: seed ^ 0xC5012F7A3E9B648D)
         var values: [MusicalControl: Double] = [:]
 
@@ -189,7 +189,7 @@ public struct MusicalIntent: Equatable, Sendable {
     /// intentionally not a raw-parameter randomizer: related controls share a
     /// bounded drift and the same cross-control correlations as `random(seed:)`
     /// are restored before the result is returned.
-    public static func mutated(_ base: MusicalIntent, seed: UInt64, amount: Double = 0.14) -> MusicalIntent {
+    package static func mutated(_ base: MusicalIntent, seed: UInt64, amount: Double = 0.14) -> MusicalIntent {
         var random = SeededGenerator(seed: seed ^ 0x6A09E667F3BCC909)
         let drift = min(max(amount, 0), 0.35)
         func role(_ controls: [MusicalControl], _ shared: Double) -> [MusicalControl: Double] {
@@ -213,35 +213,5 @@ public struct MusicalIntent: Equatable, Sendable {
         values[.synthChaos] = min(1, values[.synthChaos]!, values[.overallChaos]! + 0.2)
         values[.textureChaos] = min(1, values[.textureChaos]!, values[.overallChaos]! + 0.25)
         return MusicalIntent(values: values)
-    }
-}
-
-public enum TransitionNarrative: String, CaseIterable, Sendable {
-    case subtleDrift
-    case elementExchange
-    case fillAndTurn
-    case breakdownAndReturn
-    case longMorph
-    case crashAndCut
-
-    public var displayName: String {
-        switch self {
-        case .subtleDrift: "Subtle drift"
-        case .elementExchange: "Element exchange"
-        case .fillAndTurn: "Fill and turn"
-        case .breakdownAndReturn: "Breakdown and return"
-        case .longMorph: "Long morph"
-        case .crashAndCut: "Crash and cut"
-        }
-    }
-}
-
-public struct TransitionRequest: Equatable, Sendable {
-    public let current: MusicalIntent
-    public let target: MusicalIntent
-
-    public init(current: MusicalIntent, target: MusicalIntent) {
-        self.current = current
-        self.target = target
     }
 }

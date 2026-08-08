@@ -1,31 +1,31 @@
 import Foundation
 
-public enum MaskingRole: String, CaseIterable, Sendable {
+package enum MaskingRole: String, CaseIterable, Sendable {
     case kickBass = "kick/bass"
     case percussion
     case synth
     case texture
 }
 
-public struct MaskingBand: Equatable, Sendable {
-    public let name: String
-    public let lowerHz: Double
-    public let upperHz: Double
+package struct MaskingBand: Equatable, Sendable {
+    package let name: String
+    package let lowerHz: Double
+    package let upperHz: Double
 
-    public init(name: String, lowerHz: Double, upperHz: Double) {
+    package init(name: String, lowerHz: Double, upperHz: Double) {
         self.name = name; self.lowerHz = lowerHz; self.upperHz = upperHz
     }
 }
 
-public struct MaskingDecision: Equatable, Sendable {
-    public let band: MaskingBand
-    public let protectedRole: MaskingRole
-    public let yieldingRole: MaskingRole
-    public let overlap: Double
-    public let cut: Double
-    public let reason: String
+package struct MaskingDecision: Equatable, Sendable {
+    package let band: MaskingBand
+    package let protectedRole: MaskingRole
+    package let yieldingRole: MaskingRole
+    package let overlap: Double
+    package let cut: Double
+    package let reason: String
 
-    public init(band: MaskingBand, protectedRole: MaskingRole, yieldingRole: MaskingRole,
+    package init(band: MaskingBand, protectedRole: MaskingRole, yieldingRole: MaskingRole,
                 overlap: Double, cut: Double, reason: String) {
         self.band = band; self.protectedRole = protectedRole; self.yieldingRole = yieldingRole
         self.overlap = overlap; self.cut = cut; self.reason = reason
@@ -34,15 +34,15 @@ public struct MaskingDecision: Equatable, Sendable {
 
 /// Small, deterministic spectral guard. It is intended for preparation-time
 /// analysis; it performs no realtime work and has no mutable global state.
-public enum SpectrumMaskingAnalyzer {
-    public static let bands = [
+package enum SpectrumMaskingAnalyzer {
+    package static let bands = [
         MaskingBand(name: "sub", lowerHz: 35, upperHz: 120),
         MaskingBand(name: "low-mid", lowerHz: 120, upperHz: 420),
         MaskingBand(name: "mid", lowerHz: 420, upperHz: 2_400),
         MaskingBand(name: "high", lowerHz: 2_400, upperHz: 10_000)
     ]
 
-    public static func analyze(signals: [MaskingRole: [Float]], sampleRate: Double,
+    package static func analyze(signals: [MaskingRole: [Float]], sampleRate: Double,
                                persistence: Int = 2) -> [MaskingDecision] {
         let energies = Dictionary(uniqueKeysWithValues: MaskingRole.allCases.map { role in
             (role, bandEnergies(signals[role] ?? [], sampleRate: sampleRate))

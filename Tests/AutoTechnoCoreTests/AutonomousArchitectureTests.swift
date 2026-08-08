@@ -252,6 +252,11 @@ struct AutonomousPreparationPreflightTests {
     @Test("Fixed-seed phrase audio is deterministic and satisfies safety limits",
           arguments: [UInt64(42), 48_291, 90_909])
     func fixedSeedAudio(seed: UInt64) {
+        let expectedHashes: [UInt64: String] = [
+            42: "bca565a2c3a17f31",
+            48_291: "d0e39cebdaed39d6",
+            90_909: "f6486cd179cd9c6b",
+        ]
         let first = prepare(seed: seed, sampleRate: 8_000)
         let second = prepare(seed: seed, sampleRate: 8_000)
         #expect(first.plan == second.plan)
@@ -265,6 +270,7 @@ struct AutonomousPreparationPreflightTests {
         #expect(abs(first.audioPreflight.quality.dcOffset) < 0.05)
         #expect(first.audioPreflight.quality.lowStereoCorrelation > 0.94)
         #expect(first.audioPreflight.quality.maxBoundaryDelta < 0.65)
+        #expect(first.audioPreflight.quality.sampleHash == expectedHashes[seed])
     }
 
     @Test("Continuation state reproduces successor phrases exactly")
@@ -306,18 +312,18 @@ struct AutonomousPreparationPreflightTests {
                                 amount: 0.88, mix: 0.72)],
             mutation: DSPGraphMutation(kind: .replace, phraseIndex: 0, affectedNodeIDs: [20])
         )
-        var renderA = V2RenderState(), renderB = V2RenderState()
+        var renderA = RenderState(), renderB = RenderState()
         var stateA = GeneratedDSPContinuationState(), stateB = GeneratedDSPContinuationState()
-        let blocksA = V2ProceduralEngine.renderAutonomousPhrase(
+        let blocksA = AutonomousPhraseRenderer.render(
             plan: phrase, graph: graphA, sampleRate: 8_000,
             state: &renderA, graphState: &stateA
         )
-        let blocksB = V2ProceduralEngine.renderAutonomousPhrase(
+        let blocksB = AutonomousPhraseRenderer.render(
             plan: phrase, graph: graphB, sampleRate: 8_000,
             state: &renderB, graphState: &stateB
         )
-        #expect(V2QualityReport(blocks: blocksA, sampleRate: 8_000).sampleHash !=
-                V2QualityReport(blocks: blocksB, sampleRate: 8_000).sampleHash)
+        #expect(AudioQualityReport(blocks: blocksA, sampleRate: 8_000).sampleHash !=
+                AudioQualityReport(blocks: blocksB, sampleRate: 8_000).sampleHash)
     }
 
     @Test("Representative 44.1 and 48 kHz renders remain finite and bounded")
@@ -339,7 +345,7 @@ struct AutonomousPreparationPreflightTests {
     }
 
     private func prepare(state: AutonomousSessionState, sampleRate: Double,
-                         renderState: V2RenderState = V2RenderState(),
+                         renderState: RenderState = RenderState(),
                          graphState: GeneratedDSPContinuationState = GeneratedDSPContinuationState(),
                          previousGraph: DSPGraphPlan? = nil) -> PreparedAutonomousPhrase {
         let director = AutonomousSessionDirector(rootSeed: state.rootSeed)

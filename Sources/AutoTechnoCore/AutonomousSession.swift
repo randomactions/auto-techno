@@ -1,6 +1,6 @@
 import Foundation
 
-public enum AutonomousPhraseKind: String, CaseIterable, Sendable {
+package enum AutonomousPhraseKind: String, CaseIterable, Sendable {
     case lock
     case contrast
     case majorBreak
@@ -8,7 +8,7 @@ public enum AutonomousPhraseKind: String, CaseIterable, Sendable {
     case identityReturn
 }
 
-public enum EnsembleVoice: String, CaseIterable, Sendable {
+package enum EnsembleVoice: String, CaseIterable, Sendable {
     case kick
     case bass
     case percussion
@@ -17,7 +17,7 @@ public enum EnsembleVoice: String, CaseIterable, Sendable {
     case atmosphere
     case transition
 
-    public var role: PerformanceRole {
+    package var role: PerformanceRole {
         switch self {
         case .kick, .bass: .foundation
         case .percussion: .percussion
@@ -29,15 +29,15 @@ public enum EnsembleVoice: String, CaseIterable, Sendable {
     }
 }
 
-public struct EnsembleEventProposal: Equatable, Sendable {
-    public let voice: EnsembleVoice
-    public let requestedStep: Int
-    public let alternateSteps: [Int]
-    public let priority: Int
-    public let intensity: Double
-    public let essential: Bool
+package struct EnsembleEventProposal: Equatable, Sendable {
+    package let voice: EnsembleVoice
+    package let requestedStep: Int
+    package let alternateSteps: [Int]
+    package let priority: Int
+    package let intensity: Double
+    package let essential: Bool
 
-    public init(voice: EnsembleVoice, requestedStep: Int, alternateSteps: [Int] = [],
+    package init(voice: EnsembleVoice, requestedStep: Int, alternateSteps: [Int] = [],
                 priority: Int, intensity: Double, essential: Bool = false) {
         self.voice = voice
         self.requestedStep = Self.step(requestedStep)
@@ -52,20 +52,20 @@ public struct EnsembleEventProposal: Equatable, Sendable {
     }
 }
 
-public struct EnsembleResolvedEvent: Equatable, Sendable {
-    public let voice: EnsembleVoice
-    public let step: Int
-    public let intensity: Double
-    public let relocated: Bool
+package struct EnsembleResolvedEvent: Equatable, Sendable {
+    package let voice: EnsembleVoice
+    package let step: Int
+    package let intensity: Double
+    package let relocated: Bool
 }
 
-public struct EnsembleContext: Equatable, Sendable {
-    public let focusRole: PerformanceRole
-    public let events: [EnsembleResolvedEvent]
-    public let kickAnchors: [Int]
-    public let intentionalPileup: Bool
+package struct EnsembleContext: Equatable, Sendable {
+    package let focusRole: PerformanceRole
+    package let events: [EnsembleResolvedEvent]
+    package let kickAnchors: [Int]
+    package let intentionalPileup: Bool
 
-    public init(focusRole: PerformanceRole, events: [EnsembleResolvedEvent],
+    package init(focusRole: PerformanceRole, events: [EnsembleResolvedEvent],
                 kickAnchors: [Int], intentionalPileup: Bool) {
         self.focusRole = focusRole
         self.events = events
@@ -74,10 +74,10 @@ public struct EnsembleContext: Equatable, Sendable {
     }
 }
 
-public enum EnsembleArbiter {
+package enum EnsembleArbiter {
     /// Resolves proposed events before rendering. Kick anchors are immutable,
     /// while other events may move to declared alternatives to preserve gaps.
-    public static func resolve(proposals: [EnsembleEventProposal], focusRole: PerformanceRole,
+    package static func resolve(proposals: [EnsembleEventProposal], focusRole: PerformanceRole,
                                intentionalPileup: Bool) -> EnsembleContext {
         let ordered = proposals.enumerated().sorted { lhs, rhs in
             if lhs.element.essential != rhs.element.essential {
@@ -123,21 +123,21 @@ public enum EnsembleArbiter {
     }
 }
 
-public struct MusicalMemoryBar: Equatable, Sendable {
-    public let absoluteBar: Int
-    public let phraseIndex: Int
-    public let section: SectionKind
-    public let tension: Double
-    public let roles: [PerformanceRole]
-    public let transformations: [MusicalTransformation]
-    public let eventSignature: UInt64
-    public let activity: Double
-    public let repetition: Double
-    public let density: Double
+package struct MusicalMemoryBar: Equatable, Sendable {
+    package let absoluteBar: Int
+    package let phraseIndex: Int
+    package let section: SectionKind
+    package let tension: Double
+    package let roles: [PerformanceRole]
+    package let transformations: [MusicalTransformation]
+    package let eventSignature: UInt64
+    package let activity: Double
+    package let repetition: Double
+    package let density: Double
 
-    public var roleOccupancy: [PerformanceRole] { roles }
+    package var roleOccupancy: [PerformanceRole] { roles }
 
-    public init(absoluteBar: Int, phraseIndex: Int, section: SectionKind,
+    package init(absoluteBar: Int, phraseIndex: Int, section: SectionKind,
                 tension: Double, roles: [PerformanceRole],
                 transformations: [MusicalTransformation], eventSignature: UInt64,
                 activity: Double, repetition: Double, density: Double) {
@@ -154,13 +154,13 @@ public struct MusicalMemoryBar: Equatable, Sendable {
     }
 }
 
-public struct SessionDramaticDebt: Equatable, Sendable {
-    public let id: Int
-    public let openedAtBar: Int
-    public let dueByBar: Int
-    public let source: AutonomousPhraseKind
+package struct SessionDramaticDebt: Equatable, Sendable {
+    package let id: Int
+    package let openedAtBar: Int
+    package let dueByBar: Int
+    package let source: AutonomousPhraseKind
 
-    public init(id: Int, openedAtBar: Int, dueByBar: Int, source: AutonomousPhraseKind) {
+    package init(id: Int, openedAtBar: Int, dueByBar: Int, source: AutonomousPhraseKind) {
         self.id = id
         self.openedAtBar = openedAtBar
         self.dueByBar = dueByBar
@@ -170,21 +170,21 @@ public struct SessionDramaticDebt: Equatable, Sendable {
 
 /// Bounded history at four musical timescales. The phrase and dramatic-arc
 /// windows follow actual structural boundaries instead of a fixed grid.
-public struct TemporalMusicalMemory: Equatable, Sendable {
-    public private(set) var recentBars: [MusicalMemoryBar]
-    public private(set) var currentPhrase: [MusicalMemoryBar]
-    public private(set) var previousPhrase: [MusicalMemoryBar]
-    public private(set) var dramaticArc: [MusicalMemoryBar]
-    public private(set) var sessionBars: [MusicalMemoryBar]
-    public private(set) var totalBars: Int
-    public private(set) var lastContrastBar: Int?
-    public private(set) var lastBreakBar: Int?
-    public private(set) var lastReleaseBar: Int?
-    public private(set) var lastIdentityReturnBar: Int?
-    public private(set) var topologyRevision: Int
-    public private(set) var openDebts: [SessionDramaticDebt]
+package struct TemporalMusicalMemory: Equatable, Sendable {
+    package private(set) var recentBars: [MusicalMemoryBar]
+    package private(set) var currentPhrase: [MusicalMemoryBar]
+    package private(set) var previousPhrase: [MusicalMemoryBar]
+    package private(set) var dramaticArc: [MusicalMemoryBar]
+    package private(set) var sessionBars: [MusicalMemoryBar]
+    package private(set) var totalBars: Int
+    package private(set) var lastContrastBar: Int?
+    package private(set) var lastBreakBar: Int?
+    package private(set) var lastReleaseBar: Int?
+    package private(set) var lastIdentityReturnBar: Int?
+    package private(set) var topologyRevision: Int
+    package private(set) var openDebts: [SessionDramaticDebt]
 
-    public init(recentBars: [MusicalMemoryBar] = [], currentPhrase: [MusicalMemoryBar] = [],
+    package init(recentBars: [MusicalMemoryBar] = [], currentPhrase: [MusicalMemoryBar] = [],
                 previousPhrase: [MusicalMemoryBar] = [], dramaticArc: [MusicalMemoryBar] = [],
                 sessionBars: [MusicalMemoryBar] = [], totalBars: Int = 0,
                 lastContrastBar: Int? = nil, lastBreakBar: Int? = nil,
@@ -204,11 +204,11 @@ public struct TemporalMusicalMemory: Equatable, Sendable {
         self.openDebts = openDebts
     }
 
-    public var barsSinceContrast: Int { distance(since: lastContrastBar) }
-    public var barsSinceBreak: Int { distance(since: lastBreakBar) }
-    public var barsSinceRelease: Int { distance(since: lastReleaseBar) }
+    package var barsSinceContrast: Int { distance(since: lastContrastBar) }
+    package var barsSinceBreak: Int { distance(since: lastBreakBar) }
+    package var barsSinceRelease: Int { distance(since: lastReleaseBar) }
 
-    public mutating func record(_ plan: AutonomousPhrasePlan) {
+    package mutating func record(_ plan: AutonomousPhrasePlan) {
         previousPhrase = currentPhrase
         currentPhrase = plan.memoryBars
         recentBars = Array((recentBars + plan.memoryBars).suffix(4))
@@ -250,18 +250,18 @@ public struct TemporalMusicalMemory: Equatable, Sendable {
     }
 }
 
-public struct PhraseInterestReport: Equatable, Sendable {
-    public let repetition: Double
-    public let roleDiversity: Double
-    public let tensionMovement: Double
-    public let responseClosure: Double
-    public let structuralTimeliness: Double
-    public let identityContinuity: Double
-    public let overdueDebtCount: Int
-    public let score: Double
-    public let valid: Bool
+package struct PhraseInterestReport: Equatable, Sendable {
+    package let repetition: Double
+    package let roleDiversity: Double
+    package let tensionMovement: Double
+    package let responseClosure: Double
+    package let structuralTimeliness: Double
+    package let identityContinuity: Double
+    package let overdueDebtCount: Int
+    package let score: Double
+    package let valid: Bool
 
-    public init(repetition: Double, roleDiversity: Double, tensionMovement: Double,
+    package init(repetition: Double, roleDiversity: Double, tensionMovement: Double,
                 responseClosure: Double, structuralTimeliness: Double,
                 identityContinuity: Double, overdueDebtCount: Int) {
         let repetitionValue = Self.clamp(repetition)
@@ -303,23 +303,23 @@ private func ensembleEventSignature(_ context: EnsembleContext) -> UInt64 {
     return signature
 }
 
-public struct AutonomousPhrasePlan: Equatable, Sendable {
-    public let phraseIndex: Int
-    public let startBar: Int
-    public let barCount: Int
-    public let kind: AutonomousPhraseKind
-    public let scene: TechnoScene
-    public let dna: SceneDNA
-    public let bars: [PerformanceBar]
-    public let ensemble: [EnsembleContext]
-    public let openedDebt: SessionDramaticDebt?
-    public let paidDebtIDs: [Int]
-    public let requestsTopologyMutation: Bool
-    public let alternate: Bool
-    public let conservative: Bool
-    public let interest: PhraseInterestReport
+package struct AutonomousPhrasePlan: Equatable, Sendable {
+    package let phraseIndex: Int
+    package let startBar: Int
+    package let barCount: Int
+    package let kind: AutonomousPhraseKind
+    package let scene: TechnoScene
+    package let dna: SceneDNA
+    package let bars: [PerformanceBar]
+    package let ensemble: [EnsembleContext]
+    package let openedDebt: SessionDramaticDebt?
+    package let paidDebtIDs: [Int]
+    package let requestsTopologyMutation: Bool
+    package let alternate: Bool
+    package let conservative: Bool
+    package let interest: PhraseInterestReport
 
-    public var memoryBars: [MusicalMemoryBar] {
+    package var memoryBars: [MusicalMemoryBar] {
         zip(bars, ensemble).map { bar, context in
             return MusicalMemoryBar(
                 absoluteBar: bar.bar,
@@ -338,43 +338,43 @@ public struct AutonomousPhrasePlan: Equatable, Sendable {
     }
 }
 
-public struct AutonomousPhraseCandidates: Equatable, Sendable {
-    public let primary: AutonomousPhrasePlan
-    public let alternate: AutonomousPhrasePlan
-    public let fallback: AutonomousPhrasePlan
+package struct AutonomousPhraseCandidates: Equatable, Sendable {
+    package let primary: AutonomousPhrasePlan
+    package let alternate: AutonomousPhrasePlan
+    package let fallback: AutonomousPhrasePlan
 }
 
-public struct AutonomousSessionState: Equatable, Sendable {
-    public let rootSeed: UInt64
-    public let identitySeed: UInt64
-    public let identityDNA: SceneDNA
-    public var phraseIndex: Int
-    public var intent: MusicalIntent
-    public var memory: TemporalMusicalMemory
+package struct AutonomousSessionState: Equatable, Sendable {
+    package let rootSeed: UInt64
+    package let identitySeed: UInt64
+    package let identityDNA: SceneDNA
+    package var phraseIndex: Int
+    package var intent: MusicalIntent
+    package var memory: TemporalMusicalMemory
 
-    public init(rootSeed: UInt64 = 48_291, phraseIndex: Int = 0,
+    package init(rootSeed: UInt64 = AutonomousSessionDirector.defaultSeed, phraseIndex: Int = 0,
                 intent: MusicalIntent = MusicalIntent(),
                 memory: TemporalMusicalMemory = TemporalMusicalMemory()) {
         let normalizedIntent = intent.preservingCorrelations()
         self.rootSeed = rootSeed
         identitySeed = rootSeed &+ 17
         identityDNA = SceneDNA(scene: TechnoScene(
-            intent: normalizedIntent, seed: rootSeed &+ 17, bpm: 130
+            intent: normalizedIntent, seed: rootSeed &+ 17, bpm: AutonomousSessionDirector.bpm
         ))
         self.phraseIndex = max(0, phraseIndex)
         self.intent = normalizedIntent
         self.memory = memory
     }
 
-    public mutating func advance(using plan: AutonomousPhrasePlan) {
+    package mutating func advance(using plan: AutonomousPhrasePlan) {
         memory.record(plan)
-        intent = (plan.scene.musicalIntent ?? intent).preservingCorrelations()
+        intent = plan.scene.musicalIntent.preservingCorrelations()
         phraseIndex = plan.phraseIndex + 1
     }
 }
 
-public enum PhraseInterestEvaluator {
-    public static func evaluate(bars: [PerformanceBar], ensemble: [EnsembleContext],
+package enum PhraseInterestEvaluator {
+    package static func evaluate(bars: [PerformanceBar], ensemble: [EnsembleContext],
                                 kind: AutonomousPhraseKind, memory: TemporalMusicalMemory,
                                 identityPreserved: Bool) -> PhraseInterestReport {
         let priorSignatures = memory.recentBars.map(\.eventSignature)
@@ -408,19 +408,20 @@ public enum PhraseInterestEvaluator {
 
 /// Pure, deterministic session policy. It produces complete immutable phrase
 /// candidates; rendering and candidate audio comparison live in AutoTechnoDSP.
-public struct AutonomousSessionDirector: Equatable, Sendable {
-    public static let bpm = 130.0
-    public let rootSeed: UInt64
+package struct AutonomousSessionDirector: Equatable, Sendable {
+    package static let bpm = 130.0
+    package static let defaultSeed: UInt64 = 48_291
+    package let rootSeed: UInt64
 
-    public init(rootSeed: UInt64 = 48_291) {
+    package init(rootSeed: UInt64 = Self.defaultSeed) {
         self.rootSeed = rootSeed
     }
 
-    public func initialState() -> AutonomousSessionState {
+    package func initialState() -> AutonomousSessionState {
         AutonomousSessionState(rootSeed: rootSeed)
     }
 
-    public func candidates(from state: AutonomousSessionState) -> AutonomousPhraseCandidates {
+    package func candidates(from state: AutonomousSessionState) -> AutonomousPhraseCandidates {
         let kind = nextKind(state: state)
         return AutonomousPhraseCandidates(
             primary: makePlan(state: state, kind: kind, alternate: false, conservative: false),
