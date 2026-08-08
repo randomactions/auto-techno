@@ -1,0 +1,4 @@
+interface:
+  display_name: "Protect Real-time Audio"
+  short_description: "Review audio code for real-time safety"
+  default_prompt: "Use $protect-realtime-audio to review this audio-engine change for glitches and unsafe work."

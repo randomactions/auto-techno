@@ -1,0 +1,35 @@
+name: Swift CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: swift-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  swift-test:
+    name: swift-test
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Show Swift toolchain
+        run: swift --version
+
+      - name: Run tests
+        run: swift test --build-path "$RUNNER_TEMP/auto-techno-tests"
+
+      - name: Build release app
+        run: swift build -c release --product AutoTechno --build-path "$RUNNER_TEMP/auto-techno-release"

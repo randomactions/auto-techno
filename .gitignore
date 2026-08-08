@@ -1,0 +1,8 @@
+.DS_Store
+.build/
+.swiftpm/
+xcuserdata/
+DerivedData/
+
+# Locally generated listening artifacts; keep source reports/manifests tracked.
+docs/reference/*.wav

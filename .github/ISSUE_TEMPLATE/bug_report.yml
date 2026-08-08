@@ -1,0 +1,41 @@
+name: Bug report
+description: Report a reproducible problem in Auto Techno.
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include credentials, personal information, usernames from local paths, or private crash-report data.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest reliable sequence that triggers the problem.
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "For example: macOS 15.6"
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Auto Techno revision
+      description: Commit SHA or release, without a local filesystem path.
+  - type: textarea
+    id: validation
+    attributes:
+      label: Additional evidence
+      description: Add sanitized logs or observations. Attach no secrets or personal data.

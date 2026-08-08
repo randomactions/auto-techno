@@ -1,0 +1,41 @@
+name: Musical feedback
+description: Share a concrete listening observation that can become a deterministic rule.
+title: "[Taste] "
+labels:
+  - musical-feedback
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Focus on what you heard, when it happened, and what musical change would improve it. Do not upload copyrighted reference audio or personal information.
+  - type: input
+    id: seed
+    attributes:
+      label: Seed
+      description: Use a fixed seed when the observation comes from an offline reference render.
+      placeholder: "42"
+  - type: textarea
+    id: observation
+    attributes:
+      label: Concrete listening observation
+      description: Describe the moment, role, tension state, or groove behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: direction
+    attributes:
+      label: Desired musical direction
+      description: Explain the intended change without prescribing a raw DSP control.
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Listening environment
+      options:
+        - Headphones
+        - Speakers
+        - Both
+        - Other
+    validations:
+      required: true
