@@ -41,11 +41,13 @@ package enum RelationalFollowerStage: Int, CaseIterable, Sendable {
 /// follower only when it wraps. The phase is intentionally reset by the
 /// global sixteen-bar macro grid rather than by adaptive phrase boundaries.
 package struct RelationalCyclePhase: Equatable, Sendable {
+    package let macroStep: Int
     package let driverPhase: Int
     package let followerStage: RelationalFollowerStage
 
     package init(macroStep: Int) {
         let bounded = ((macroStep % 256) + 256) % 256
+        self.macroStep = bounded
         driverPhase = bounded % 3
         followerStage = RelationalFollowerStage(rawValue: (bounded / 3) % 5) ?? .anchor
     }
@@ -61,14 +63,33 @@ package struct RelationalArticulation: Equatable, Sendable {
     package let attackScale: Double
     package let decayScale: Double
     package let spectralScale: Double
+    package let spectralAperture: Double
+    package let anchorSpectralScale: Double
+    package let complementarySpectralScale: Double
+    package let bandPassBlend: Double
     package let glideTimeScale: Double
     package let pulseEchoSend: Double
 
     package init(chapter: InterlockChapter, phase: RelationalCyclePhase,
-                 pulseEchoEligible: Bool) {
+                 pulseEchoEligible: Bool,
+                 spectralSculptureEnabled: Bool = true) {
         let stage = phase.followerStage.rawValue
         let driverVelocity = [1.00, 0.94, 0.86][phase.driverPhase]
         let followerVelocity = [1.00, 0.94, 1.04, 1.08, 0.84][stage]
+        let followerSpectralScale = [1.00, 0.92, 1.06, 1.10, 0.88][stage]
+        let toneSculptureActive = chapter == .tone && spectralSculptureEnabled
+        let aperture: Double
+        if toneSculptureActive, phase.macroStep != 0, phase.macroStep != 255 {
+            let progress = Double(phase.macroStep) / 255
+            let sine = sin(.pi * progress)
+            aperture = sine * sine
+        } else {
+            aperture = 0
+        }
+        let anchorScale = toneSculptureActive
+            ? 1 + (followerSpectralScale - 1) * aperture : 1
+        let complementaryScale = toneSculptureActive
+            ? 1 - (followerSpectralScale - 1) * aperture * 0.65 : 1
 
         self.chapter = chapter
         self.phase = phase
@@ -77,8 +98,11 @@ package struct RelationalArticulation: Equatable, Sendable {
             ? [1.00, 1.55, 0.88, 0.78, 1.12][stage] : 1
         decayScale = chapter == .breath
             ? [1.00, 0.90, 1.18, 1.32, 0.72][stage] : 1
-        spectralScale = chapter == .tone
-            ? [1.00, 0.92, 1.06, 1.10, 0.88][stage] : 1
+        spectralScale = anchorScale
+        spectralAperture = aperture
+        anchorSpectralScale = anchorScale
+        complementarySpectralScale = complementaryScale
+        bandPassBlend = toneSculptureActive ? 0.15 * aperture : 0
         glideTimeScale = chapter == .motion
             ? [1.00, 1.10, 1.15, 1.35, 0.82][stage] : 1
         pulseEchoSend = chapter == .memory && pulseEchoEligible
@@ -244,9 +268,10 @@ package struct SynthPerformanceBar: Equatable, Sendable {
 /// grid. Foundation and percussion voices are not part of this plan.
 package struct SynthPerformancePlan: Equatable, Sendable {
     package let world: SynthWorldDNA
+    package let kind: AutonomousPhraseKind
     package let bars: [SynthPerformanceBar]
 
-    package init(scene: TechnoScene, dna: SceneDNA,
+    package init(scene: TechnoScene, dna: SceneDNA, kind: AutonomousPhraseKind,
                  resolvedBars: [ResolvedPerformanceBar]) {
         let synthWorld = SynthWorldDNA(scene: scene, dna: dna)
         let synthBars = resolvedBars.map { resolved in
@@ -254,11 +279,17 @@ package struct SynthPerformancePlan: Equatable, Sendable {
             let gesture = SynthPerformancePlan.gesture(for: performanceBar)
             let mutation = SynthPerformancePlan.mutation(for: gesture, tension: performanceBar.tension)
             let macroBar = ((performanceBar.bar % 16) + 16) % 16
+            let hasRelationalUpperMaterial = resolved.ensemble.events.contains {
+                $0.voice == .motif || $0.voice == .response
+            }
+            let spectralSculptureEnabled = kind != .identityReturn &&
+                kind != .majorBreak && hasRelationalUpperMaterial
             let relationalSteps = (0..<16).map { step in
                 RelationalArticulation(
                     chapter: resolved.interlockChapter,
                     phase: RelationalCyclePhase(macroStep: macroBar * 16 + step),
-                    pulseEchoEligible: resolved.pulseEchoEnabled
+                    pulseEchoEligible: resolved.pulseEchoEnabled,
+                    spectralSculptureEnabled: spectralSculptureEnabled
                 )
             }
             let events = gesture != .suspend
@@ -278,6 +309,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
             )
         }
         world = synthWorld
+        self.kind = kind
         bars = synthBars
     }
 

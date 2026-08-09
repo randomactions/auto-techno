@@ -21,10 +21,12 @@ struct CurrentRuntimeTests {
         let first = director.candidates(from: director.initialState()).primary
         let second = director.candidates(from: director.initialState()).primary
         let firstSynth = SynthPerformancePlan(
-            scene: first.scene, dna: first.dna, resolvedBars: first.resolvedBars
+            scene: first.scene, dna: first.dna, kind: first.kind,
+            resolvedBars: first.resolvedBars
         )
         let secondSynth = SynthPerformancePlan(
-            scene: second.scene, dna: second.dna, resolvedBars: second.resolvedBars
+            scene: second.scene, dna: second.dna, kind: second.kind,
+            resolvedBars: second.resolvedBars
         )
 
         #expect(first == second)

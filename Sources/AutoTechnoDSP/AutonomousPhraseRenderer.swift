@@ -36,6 +36,11 @@ package struct VoiceEvent: Equatable, Sendable {
     package let narrativePresence: Double?
     package let narrativeGainScale: Double?
     package let narrativeSpectralScale: Double?
+    package let spectralAperture: Double?
+    package let anchorSpectralScale: Double?
+    package let complementarySpectralScale: Double?
+    package let bandPassBlend: Double?
+    package let motifSpectralMultiplier: Double?
 
     package init(voice: VoiceKind, bar: Int, step: Int, intensity: Double,
                  pulseClass: SixteenthPulseClass? = nil,
@@ -45,7 +50,12 @@ package struct VoiceEvent: Equatable, Sendable {
                  narrativeDirection: NarrativeDirection? = nil,
                  narrativePresence: Double? = nil,
                  narrativeGainScale: Double? = nil,
-                 narrativeSpectralScale: Double? = nil) {
+                 narrativeSpectralScale: Double? = nil,
+                 spectralAperture: Double? = nil,
+                 anchorSpectralScale: Double? = nil,
+                 complementarySpectralScale: Double? = nil,
+                 bandPassBlend: Double? = nil,
+                 motifSpectralMultiplier: Double? = nil) {
         self.voice = voice
         self.bar = bar
         self.step = step
@@ -58,6 +68,11 @@ package struct VoiceEvent: Equatable, Sendable {
         self.narrativePresence = narrativePresence
         self.narrativeGainScale = narrativeGainScale
         self.narrativeSpectralScale = narrativeSpectralScale
+        self.spectralAperture = spectralAperture
+        self.anchorSpectralScale = anchorSpectralScale
+        self.complementarySpectralScale = complementarySpectralScale
+        self.bandPassBlend = bandPassBlend
+        self.motifSpectralMultiplier = motifSpectralMultiplier
     }
 }
 
@@ -347,7 +362,8 @@ package enum AutonomousPhraseRenderer {
                               sampleRate: Double, state: inout RenderState,
                               graphState: inout GeneratedDSPContinuationState) -> [RenderBlock] {
         let synthPlan = SynthPerformancePlan(
-            scene: plan.scene, dna: plan.dna, resolvedBars: plan.resolvedBars
+            scene: plan.scene, dna: plan.dna, kind: plan.kind,
+            resolvedBars: plan.resolvedBars
         )
         var workspace = RenderWorkspace()
         var blocks: [RenderBlock] = []
@@ -388,7 +404,9 @@ package enum AutonomousPhraseRenderer {
                 let isSpatialCarrier = spatial.depthPosition == .distant &&
                     spatial.carrierVoice == event.voice && spatial.carrierStep == event.step
                 let isDominantMotif = event.voice == .motif
+                let isRelationalUpperVoice = isDominantMotif || event.voice == .response
                 let narrative = resolved.narrative
+                let relational = synthPerformance.articulation(at: event.step)
                 return VoiceEvent(
                     voice: voiceKind(event.voice),
                     bar: performance.bar,
@@ -407,7 +425,20 @@ package enum AutonomousPhraseRenderer {
                     narrativeGainScale: isDominantMotif
                         ? narrative.motifGainScale(atStep: event.step) : nil,
                     narrativeSpectralScale: isDominantMotif
-                        ? narrative.motifSpectralScale(atStep: event.step) : nil
+                        ? narrative.motifSpectralScale(atStep: event.step) : nil,
+                    spectralAperture: isRelationalUpperVoice
+                        ? relational.spectralAperture : nil,
+                    anchorSpectralScale: isRelationalUpperVoice
+                        ? relational.anchorSpectralScale : nil,
+                    complementarySpectralScale: isRelationalUpperVoice
+                        ? relational.complementarySpectralScale : nil,
+                    bandPassBlend: isRelationalUpperVoice
+                        ? relational.bandPassBlend : nil,
+                    motifSpectralMultiplier: isDominantMotif
+                        ? MotifSpectralSculpture.combinedMultiplier(
+                            narrativeScale: narrative.motifSpectralScale(atStep: event.step),
+                            anchorScale: relational.anchorSpectralScale
+                        ) : nil
                 )
             }
             let buses = busStates(rendered: rendered, scene: plan.scene, events: events)

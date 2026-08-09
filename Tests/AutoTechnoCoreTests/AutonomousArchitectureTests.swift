@@ -232,7 +232,8 @@ struct AdaptiveAutonomousSessionTests {
 
         for plan in result.plans {
             let synth = SynthPerformancePlan(
-                scene: plan.scene, dna: plan.dna, resolvedBars: plan.resolvedBars
+                scene: plan.scene, dna: plan.dna, kind: plan.kind,
+                resolvedBars: plan.resolvedBars
             )
             #expect(synth.bars.count == plan.resolvedBars.count)
             for (resolved, synthBar) in zip(plan.resolvedBars, synth.bars) {
@@ -259,6 +260,84 @@ struct AdaptiveAutonomousSessionTests {
             }
             #expect(macrosWithoutHome <= 4)
         }
+    }
+
+    @Test("Tone chapters use exact raised-cosine complementary spectral sculpture")
+    func toneChapterSpectralSculpture() {
+        let followerScales = [1.00, 0.92, 1.06, 1.10, 0.88]
+        for macroStep in 0..<256 {
+            let phase = RelationalCyclePhase(macroStep: macroStep)
+            let articulation = RelationalArticulation(
+                chapter: .tone,
+                phase: phase,
+                pulseEchoEligible: false
+            )
+            let progress = Double(macroStep) / 255
+            let sine = sin(.pi * progress)
+            let expectedAperture = macroStep == 0 || macroStep == 255
+                ? 0 : sine * sine
+            let follower = followerScales[phase.followerStage.rawValue]
+            let expectedAnchor = 1 + (follower - 1) * expectedAperture
+            let expectedComplement = 1 - (follower - 1) * expectedAperture * 0.65
+            #expect(abs(articulation.spectralAperture - expectedAperture) < 0.000_000_000_001)
+            #expect(abs(articulation.anchorSpectralScale - expectedAnchor) <
+                    0.000_000_000_001)
+            #expect(abs(articulation.complementarySpectralScale - expectedComplement) <
+                    0.000_000_000_001)
+            #expect(abs(articulation.bandPassBlend - 0.15 * expectedAperture) <
+                    0.000_000_000_001)
+            #expect(articulation.bandPassBlend >= 0 && articulation.bandPassBlend <= 0.15)
+        }
+
+        for chapter in InterlockChapter.allCases where chapter != .tone {
+            let neutral = RelationalArticulation(
+                chapter: chapter,
+                phase: RelationalCyclePhase(macroStep: 127),
+                pulseEchoEligible: false
+            )
+            #expect(neutral.spectralAperture == 0)
+            #expect(neutral.anchorSpectralScale == 1)
+            #expect(neutral.complementarySpectralScale == 1)
+            #expect(neutral.bandPassBlend == 0)
+        }
+        let explicitlyDisabled = RelationalArticulation(
+            chapter: .tone,
+            phase: RelationalCyclePhase(macroStep: 127),
+            pulseEchoEligible: false,
+            spectralSculptureEnabled: false
+        )
+        #expect(explicitlyDisabled.spectralAperture == 0)
+        #expect(explicitlyDisabled.anchorSpectralScale == 1)
+        #expect(explicitlyDisabled.complementarySpectralScale == 1)
+        #expect(explicitlyDisabled.bandPassBlend == 0)
+
+        let director = AutonomousSessionDirector()
+        var state = director.initialState()
+        var sawIdentityTone = false
+        var sawBreak = false
+        for _ in 0..<80 where !(sawIdentityTone && sawBreak) {
+            let plan = director.candidates(from: state).primary
+            if plan.kind == .identityReturn || plan.kind == .majorBreak {
+                let synth = SynthPerformancePlan(
+                    scene: plan.scene,
+                    dna: plan.dna,
+                    kind: plan.kind,
+                    resolvedBars: plan.resolvedBars
+                )
+                #expect(synth.bars.flatMap(\.relationalSteps).allSatisfy {
+                    $0.spectralAperture == 0 && $0.anchorSpectralScale == 1 &&
+                        $0.complementarySpectralScale == 1 && $0.bandPassBlend == 0
+                })
+                if plan.kind == .identityReturn,
+                   plan.resolvedBars.contains(where: { $0.interlockChapter == .tone }) {
+                    sawIdentityTone = true
+                }
+                if plan.kind == .majorBreak { sawBreak = true }
+            }
+            state.advance(using: plan)
+        }
+        #expect(sawIdentityTone)
+        #expect(sawBreak)
     }
 
     @Test("Bounded interlock state evolves deterministically for more than eight hours")
@@ -292,6 +371,57 @@ struct AdaptiveAutonomousSessionTests {
         #expect(first == journey())
         #expect(first.last?.macroIndex == 1_024)
         #expect(Set(first.map(\.currentChapter)) == Set(InterlockChapter.allCases))
+    }
+
+    @Test("One thousand twenty-four macros keep bounded narrative and chapter variation")
+    func indefiniteUnifiedEvolution() {
+        func journey() -> (kinds: [AutonomousPhraseKind],
+                           supports: [[PerformanceRole]],
+                           finalState: AutonomousSessionState) {
+            let director = AutonomousSessionDirector()
+            var state = director.initialState()
+            var kinds: [AutonomousPhraseKind] = []
+            var supports: [[PerformanceRole]] = []
+            var phraseCount = 0
+            while state.memory.totalBars < 16 * 1_024, phraseCount < 5_000 {
+                let plan = director.candidates(from: state).primary
+                kinds.append(plan.kind)
+                supports.append(plan.endingNarrativeState.activeSupportingRoles)
+                #expect(plan.endingNarrativeState.activeSupportingRoles.count <= 3)
+                #expect(Set(plan.endingNarrativeState.activeSupportingRoles).count ==
+                        plan.endingNarrativeState.activeSupportingRoles.count)
+                #expect(plan.endingNarrativeState.protagonistPresence.isFinite)
+                #expect((0...1).contains(plan.endingNarrativeState.protagonistPresence))
+                #expect(plan.endingInterlockState.previousChapters.count <= 2)
+                #expect(plan.endingInterlockState.macrosSinceHome <= 4)
+                if plan.kind == .majorBreak {
+                    #expect(plan.resolvedBars.allSatisfy {
+                        $0.narrative.activeSupportingRoles == [.atmosphere]
+                    })
+                }
+                state.advance(using: plan)
+                #expect(state.memory.recentBars.count <= 4)
+                #expect(state.memory.currentPhrase.count <= 16)
+                #expect(state.memory.previousPhrase.count <= 16)
+                #expect(state.memory.dramaticArc.count <= 128)
+                #expect(state.memory.sessionBars.count <= 256)
+                phraseCount += 1
+            }
+            #expect(phraseCount < 5_000)
+            #expect(state.memory.interlockEvolution.macroIndex >= 1_024)
+            return (kinds, supports, state)
+        }
+
+        let first = journey()
+        let replay = journey()
+        #expect(first.kinds == replay.kinds)
+        #expect(first.supports == replay.supports)
+        #expect(first.finalState == replay.finalState)
+        #expect(Set(first.kinds) == Set(AutonomousPhraseKind.allCases))
+        #expect(first.kinds.filter { $0 == .identityReturn }.count > 1)
+        #expect(first.supports.contains { $0.count <= 1 })
+        #expect(first.supports.contains { $0.count >= 2 })
+        #expect(zip(first.supports, first.supports.dropFirst()).contains { $0.0 != $0.1 })
     }
 
     @Test("Foundation identity returns after bounded contrast and breaks")
@@ -1470,6 +1600,144 @@ struct AutonomousPreparationPreflightTests {
         let start = motif.step * originalBlock.left.count / 16
         #expect(Array(originalBlock.left[..<start]) == Array(changedBlock.left[..<start]))
         let delta = zip(originalBlock.left[start...], changedBlock.left[start...]).reduce(0.0) {
+            $0 + abs(Double($1.0 - $1.1))
+        }
+        #expect(delta > 0.000_1)
+    }
+
+    @Test("Tone spectral sculpture reports and renders one complementary source")
+    func toneSpectralRenderingTruth() {
+        let director = AutonomousSessionDirector()
+        var state = director.initialState()
+        var matched: (AutonomousSessionState, AutonomousPhrasePlan, Int,
+                      EnsembleResolvedEvent)?
+        for _ in 0..<80 where matched == nil {
+            let plan = director.candidates(from: state).primary
+            let synth = SynthPerformancePlan(
+                scene: plan.scene,
+                dna: plan.dna,
+                kind: plan.kind,
+                resolvedBars: plan.resolvedBars
+            )
+            let candidates = plan.resolvedBars.indices.compactMap { index ->
+                (Int, EnsembleResolvedEvent, Double)? in
+                guard plan.resolvedBars[index].interlockChapter == .tone,
+                      let motif = plan.resolvedBars[index].ensemble.events.first(where: {
+                          $0.voice == .motif
+                      }) else { return nil }
+                let articulation = synth.bars[index].articulation(at: motif.step)
+                guard articulation.spectralAperture > 0.25,
+                      abs(articulation.anchorSpectralScale - 1) > 0.005 else { return nil }
+                return (index, motif, articulation.spectralAperture)
+            }
+            if let selected = candidates.max(by: { $0.2 < $1.2 }) {
+                matched = (state, plan, selected.0, selected.1)
+            } else {
+                state.advance(using: plan)
+            }
+        }
+        guard let (sourceState, original, barIndex, motif) = matched else {
+            Issue.record("Expected a tone-chapter motif inside the spectral aperture")
+            return
+        }
+
+        let source = original.resolvedBars[barIndex]
+        let neutralResolved = ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: source.ensemble,
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            foundationCompanion: source.foundationCompanion,
+            pulseEchoEnabled: source.pulseEchoEnabled,
+            interlockChapter: .home,
+            groovePulses: source.groovePulses,
+            spatialContrast: source.spatialContrast,
+            narrative: source.narrative
+        )
+        var neutralBars = original.resolvedBars
+        neutralBars[barIndex] = neutralResolved
+        let neutral = replacingResolvedBars(
+            in: original,
+            with: neutralBars,
+            memory: sourceState.memory
+        )
+        let graph = DSPGraphGenerator.safePlan(sessionSeed: sourceState.rootSeed)
+        var sculptedRender = RenderState(), neutralRender = RenderState()
+        var sculptedGraph = GeneratedDSPContinuationState()
+        var neutralGraph = GeneratedDSPContinuationState()
+        let sculptedBlocks = AutonomousPhraseRenderer.render(
+            plan: original,
+            graph: graph,
+            sampleRate: 8_000,
+            state: &sculptedRender,
+            graphState: &sculptedGraph
+        )
+        let neutralBlocks = AutonomousPhraseRenderer.render(
+            plan: neutral,
+            graph: graph,
+            sampleRate: 8_000,
+            state: &neutralRender,
+            graphState: &neutralGraph
+        )
+
+        #expect(Array(sculptedBlocks[..<barIndex]) == Array(neutralBlocks[..<barIndex]))
+        let sculptedBlock = sculptedBlocks[barIndex]
+        let neutralBlock = neutralBlocks[barIndex]
+        let articulation = sculptedBlock.synthPerformance.articulation(at: motif.step)
+        let sculptedEvent = sculptedBlock.events.first {
+            $0.step == motif.step && $0.narrativePresence != nil
+        }
+        let neutralEvent = neutralBlock.events.first {
+            $0.step == motif.step && $0.narrativePresence != nil
+        }
+        #expect(sculptedEvent?.spectralAperture == articulation.spectralAperture)
+        #expect(sculptedEvent?.anchorSpectralScale == articulation.anchorSpectralScale)
+        #expect(sculptedEvent?.complementarySpectralScale ==
+                articulation.complementarySpectralScale)
+        #expect(sculptedEvent?.bandPassBlend == articulation.bandPassBlend)
+        let narrativeScale = source.narrative.motifSpectralScale(atStep: motif.step)
+        let expectedCombined = MotifSpectralSculpture.combinedMultiplier(
+            narrativeScale: narrativeScale,
+            anchorScale: articulation.anchorSpectralScale
+        )
+        #expect(sculptedEvent?.motifSpectralMultiplier == expectedCombined)
+        #expect(neutralEvent?.spectralAperture == 0)
+        #expect(neutralEvent?.anchorSpectralScale == 1)
+        #expect(neutralEvent?.complementarySpectralScale == 1)
+        #expect(neutralEvent?.bandPassBlend == 0)
+        #expect(MotifSpectralSculpture.combinedMultiplier(
+            narrativeScale: 0.50,
+            anchorScale: 0.50
+        ) == 0.84)
+        #expect(MotifSpectralSculpture.combinedMultiplier(
+            narrativeScale: 2.0,
+            anchorScale: 2.0
+        ) == 1.16)
+        #expect(zip(sculptedBlock.events, neutralBlock.events).allSatisfy { sculpted, plain in
+            sculpted.voice == plain.voice && sculpted.step == plain.step &&
+                sculpted.intensity == plain.intensity
+        })
+        #expect(sculptedBlock.synthPerformance.interlockEvents.map(\.stepIndex) ==
+                neutralBlock.synthPerformance.interlockEvents.map(\.stepIndex))
+        #expect(sculptedBlock.synthWorld.motifFingerprint ==
+                neutralBlock.synthWorld.motifFingerprint)
+        #expect(sculptedBlock.automaticMix == neutralBlock.automaticMix)
+        #expect(sculptedBlock.stemObservations[.kick] == neutralBlock.stemObservations[.kick])
+        #expect(sculptedBlock.stemObservations[.foundation] ==
+                neutralBlock.stemObservations[.foundation])
+        #expect(sculptedBlock.stemObservations[.percussion] ==
+                neutralBlock.stemObservations[.percussion])
+        #expect(sculptedBlock.stemObservations[.atmosphere] ==
+                neutralBlock.stemObservations[.atmosphere])
+        #expect(sculptedBlock.stemObservations[.upperTonal] !=
+                neutralBlock.stemObservations[.upperTonal])
+
+        let earliestRelationalStep = source.ensemble.events
+            .filter { $0.voice == .motif || $0.voice == .response }
+            .map(\.step).min() ?? motif.step
+        let start = earliestRelationalStep * sculptedBlock.left.count / 16
+        #expect(Array(sculptedBlock.left[..<start]) == Array(neutralBlock.left[..<start]))
+        let delta = zip(sculptedBlock.left[start...], neutralBlock.left[start...]).reduce(0.0) {
             $0 + abs(Double($1.0 - $1.1))
         }
         #expect(delta > 0.000_1)
