@@ -2040,10 +2040,7 @@ struct UpperTimbreIntegrationTests {
     }
 
     private func closedHatCompanionFixture() -> ClosedHatCompanionFixtureBox? {
-        for seed in UInt64(1)...128 {
-            if let fixture = closedHatCompanionFixture(seed: seed) { return fixture }
-        }
-        return nil
+        closedHatCompanionFixture(seed: 1)
     }
 
     @inline(never)
