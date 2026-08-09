@@ -230,6 +230,9 @@ package struct RenderBlock: Equatable, Sendable {
     package let stemObservations: [MixRole: StemObservation]
     package let automaticMix: AutomaticMixPlan
     package let stemReconstruction: StemReconstructionEvidence
+    /// Bit-exact fingerprint of the detached foundation-only render used to
+    /// verify that upper-voice articulation cannot alter the protected route.
+    package let protectedFoundationSampleHash: String
     package let resolvedPerformance: ResolvedPerformanceBar
     package let performance: PerformanceBar
     package let sceneDNA: SceneDNA
@@ -243,6 +246,7 @@ package struct RenderBlock: Equatable, Sendable {
                 stemObservations: [MixRole: StemObservation],
                 automaticMix: AutomaticMixPlan,
                 stemReconstruction: StemReconstructionEvidence,
+                protectedFoundationSampleHash: String,
                 resolvedPerformance: ResolvedPerformanceBar,
                 sceneDNA: SceneDNA, synthWorld: SynthWorldDNA,
                 synthPerformance: SynthPerformanceBar) {
@@ -259,6 +263,7 @@ package struct RenderBlock: Equatable, Sendable {
         self.stemObservations = stemObservations
         self.automaticMix = automaticMix
         self.stemReconstruction = stemReconstruction
+        self.protectedFoundationSampleHash = protectedFoundationSampleHash
         self.resolvedPerformance = resolvedPerformance
         performance = resolvedPerformance.performance
         self.sceneDNA = sceneDNA
@@ -476,6 +481,9 @@ package enum AutonomousPhraseRenderer {
                 stemObservations: rendered.stemObservations,
                 automaticMix: rendered.automaticMix,
                 stemReconstruction: rendered.stemReconstruction,
+                protectedFoundationSampleHash: exactSampleHash(
+                    foundation.leftSamples, foundation.rightSamples
+                ),
                 resolvedPerformance: resolved,
                 sceneDNA: plan.dna,
                 synthWorld: synthPlan.world,
@@ -488,6 +496,27 @@ package enum AutonomousPhraseRenderer {
 
     private static func outputSafety(_ input: Float) -> Float {
         Float(tanh(Double(input) * 1.04) / tanh(1.04) * 0.90)
+    }
+
+    /// Stable FNV-1a over the exact IEEE-754 sample bits. Channel lengths and a
+    /// separator participate in the fingerprint so differently shaped buffers
+    /// cannot alias merely by sharing a byte prefix.
+    private static func exactSampleHash(_ left: [Float], _ right: [Float]) -> String {
+        var hash: UInt64 = 0xcbf29ce484222325
+        func mix(_ value: UInt32) {
+            var bits = value
+            for _ in 0..<4 {
+                hash ^= UInt64(bits & 0xff)
+                hash &*= 0x100000001b3
+                bits >>= 8
+            }
+        }
+        mix(UInt32(truncatingIfNeeded: left.count))
+        for sample in left { mix(sample.bitPattern) }
+        mix(0x9e37_79b9)
+        mix(UInt32(truncatingIfNeeded: right.count))
+        for sample in right { mix(sample.bitPattern) }
+        return String(format: "%016llx", hash)
     }
 
     private static func modulation(performance: PerformanceBar, scene: TechnoScene) -> ModulationState {

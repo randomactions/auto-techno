@@ -669,9 +669,24 @@ package enum VoiceRenderer {
 
         var transitionNotes: [AlienVoiceNote] = []
         let transitionEvents = ensembleEvents.filter { $0.voice == .transition }
-        if synthBar.gesture != .suspend, !transitionEvents.isEmpty {
+        let renderedTransitionEvents: [EnsembleResolvedEvent]
+        if synthBar.gesture != .suspend {
+            renderedTransitionEvents = transitionEvents
+        } else {
+            // Breakdowns normally suppress transitions. The one exception is a
+            // transition already chosen as the resolved spatial carrier: its
+            // metadata promises an audible distant event, so render only that
+            // event without admitting any unrelated suspended transitions.
+            let spatial = resolved.spatialContrast
+            renderedTransitionEvents = transitionEvents.filter {
+                spatial.depthPosition == .distant &&
+                    spatial.carrierVoice == .transition &&
+                    spatial.carrierStep == $0.step
+            }
+        }
+        if !renderedTransitionEvents.isEmpty {
             let startFrequency = world.rootFrequency * 2
-            transitionNotes = transitionEvents.map { event in
+            transitionNotes = renderedTransitionEvents.map { event in
                 let start = Int((Double(event.step) * stepFrames).rounded())
                 let spatial = spatialScales(for: .transition, step: event.step)
                 return AlienVoiceNote(
