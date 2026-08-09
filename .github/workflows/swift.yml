@@ -32,6 +32,12 @@ jobs:
       # one test process on the hosted macOS runner. Keep execution serial and
       # restart the process between the three PCM-heavy suites so the complete
       # test bank stays bounded without skipping or weakening any case.
+      - name: Run upper-timbre integration tests
+        run: >-
+          swift test --no-parallel
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter UpperTimbreIntegrationTests
+
       - name: Run core and evidence tests
         run: >-
           swift test --no-parallel
@@ -49,12 +55,6 @@ jobs:
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter SpatialProtectedRoutingRegressionTests
-
-      - name: Run upper-timbre integration tests
-        run: >-
-          swift test --no-parallel
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter UpperTimbreIntegrationTests
 
       - name: Build release app
         run: swift build -c release --product AutoTechno --build-path "$RUNNER_TEMP/auto-techno-release"

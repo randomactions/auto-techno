@@ -1229,7 +1229,8 @@ struct UpperTimbreIntegrationTests {
             _ result: @autoclosure () -> (PreparedAutonomousPhrase?, Int)
         ) {
             let (prepared, checkCount) = result()
-            #expect(prepared == nil && checkCount == 1)
+            #expect(prepared == nil)
+            #expect(checkCount == 1)
         }
         expectRejected(prepare(shifted))
         expectRejected(prepare(overlong))
