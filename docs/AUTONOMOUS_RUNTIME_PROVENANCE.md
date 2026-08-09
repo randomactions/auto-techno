@@ -10,9 +10,10 @@ mistaken for a completed feedback system.
 1. `AutonomousSessionDirector` owns fixed 130 BPM, the private canonical
    identity, temporal memory, candidate phrases, and successor selection.
 2. Each `AutonomousPhrasePlan` carries a complete musical intention, Scene DNA,
-   resolved performance bars, outgoing interlock state, and groove-interest
-   evidence. A resolved bar is the sole source for both audible onsets and
-   reported events.
+   resolved performance bars, outgoing interlock, spatial-contrast, and
+   protagonist-narrative state, plus groove-interest evidence. Supporting-role
+   admission is resolved before ensemble arbitration. A resolved bar is the sole
+   source for audible onsets, articulation, and reported events.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders the primary candidate, runs symbolic,
@@ -22,13 +23,15 @@ mistaken for a completed feedback system.
    back into future composition.
 5. `AutonomousPhraseRenderer` constructs the required synth world and synth
    performance. The synth planner resolves the three-step driver, five-stage
-   follower, chapter articulation, and eligible pulse-echo send without changing
-   onset positions. The renderer passes that score to the voice renderer,
-   renders full and protected-foundation layers, and mirrors the exact dry
-   samples into private kick, foundation, percussion, upper-tonal, and atmosphere
-   stems. A bounded preparation-time fader resolves only the kick/foundation
-   hierarchy from those stems. This is the current adaptive controller; it is
-   not a complete output-evaluation loop.
+   follower, chapter articulation, tone-chapter spectral aperture, and eligible
+   pulse-echo send without changing onset positions. The voice renderer applies
+   the resolved protagonist contour and may place one eligible existing event on
+   a filtered send into the existing reverb; neither operation creates another
+   onset or topology. The renderer also renders full and protected-foundation
+   layers and mirrors the exact dry samples into private kick, foundation,
+   percussion, upper-tonal, and atmosphere stems. A bounded preparation-time
+   fader resolves only the kick/foundation hierarchy from those stems. This is
+   the current adaptive controller; it is not a complete output-evaluation loop.
 6. The unchanged pre-fader kick remains the ducking detector. Only the
    upper-voice remainder enters the generated graph, after which the fixed
    output-safety stage recombines the performance.
