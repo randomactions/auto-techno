@@ -1119,6 +1119,155 @@ struct AutonomousPreparationPreflightTests {
                 originalBlock.stemObservations[.percussion]?.rms)
     }
 
+    @Test("Selective depth resolves once per macro and continues deterministically")
+    func selectiveSpatialDepthResolution() {
+        func journey() -> [SpatialContrastArticulation] {
+            let director = AutonomousSessionDirector()
+            var state = director.initialState()
+            var articulations: [SpatialContrastArticulation] = []
+            var carriersPerMacro: [Int: Int] = [:]
+            var previousCarrier: EnsembleVoice?
+            var sawContrastCarrier = false
+            var sawBreakCarrier = false
+
+            for _ in 0..<80 {
+                let plan = director.candidates(from: state).primary
+                for resolved in plan.resolvedBars {
+                    let spatial = resolved.spatialContrast
+                    articulations.append(spatial)
+                    if plan.kind == .energyRelease || plan.kind == .identityReturn {
+                        #expect(spatial == .foreground)
+                    }
+                    guard spatial.depthPosition == .distant else { continue }
+                    let macro = resolved.performance.bar / 16
+                    carriersPerMacro[macro, default: 0] += 1
+                    #expect(carriersPerMacro[macro] == 1)
+                    #expect(spatial.dryScale == 0.72)
+                    #expect(spatial.highPassHz == 300)
+                    #expect(spatial.lowPassHz == 4_200)
+                    #expect(spatial.carrierVoice != .kick)
+                    #expect(spatial.carrierVoice != .bass)
+                    #expect(spatial.carrierVoice != .percussion)
+                    #expect(spatial.carrierVoice != .groovePulse)
+                    #expect(resolved.ensemble.events.contains { spatial.applies(to: $0) })
+
+                    if plan.kind == .contrast {
+                        sawContrastCarrier = true
+                        #expect(spatial.reverbSend == 0.22)
+                        #expect(spatial.carrierVoice == .response ||
+                                spatial.carrierVoice == .transition)
+                    } else if plan.kind == .majorBreak {
+                        sawBreakCarrier = true
+                        #expect(spatial.reverbSend == 0.30)
+                        #expect(spatial.carrierVoice == .transition ||
+                                spatial.carrierVoice == .atmosphere)
+                    } else {
+                        Issue.record("Unexpected spatial carrier outside contrast or break")
+                    }
+
+                    if let previousCarrier {
+                        let hasAlternative = resolved.ensemble.events.contains {
+                            $0.voice != previousCarrier &&
+                                ((plan.kind == .contrast &&
+                                  ($0.voice == .response || $0.voice == .transition)) ||
+                                 (plan.kind == .majorBreak &&
+                                  ($0.voice == .transition || $0.voice == .atmosphere)))
+                        }
+                        if hasAlternative { #expect(spatial.carrierVoice != previousCarrier) }
+                    }
+                    previousCarrier = spatial.carrierVoice
+                }
+                state.advance(using: plan)
+            }
+            #expect(sawContrastCarrier)
+            #expect(sawBreakCarrier)
+            #expect(carriersPerMacro.values.allSatisfy { $0 == 1 })
+            return articulations
+        }
+
+        let first = journey()
+        #expect(first == journey())
+    }
+
+    @Test("Resolved spatial carrier drives matching metadata and its PCM window")
+    func selectiveSpatialDepthRendering() {
+        let director = AutonomousSessionDirector()
+        var state = director.initialState()
+        var matched: (AutonomousSessionState, AutonomousPhrasePlan, Int)?
+        for _ in 0..<80 where matched == nil {
+            let plan = director.candidates(from: state).primary
+            if let barIndex = plan.resolvedBars.firstIndex(where: {
+                $0.spatialContrast.depthPosition == .distant
+            }) {
+                matched = (state, plan, barIndex)
+            } else {
+                state.advance(using: plan)
+            }
+        }
+        guard let (sourceState, original, barIndex) = matched else {
+            Issue.record("Expected a deterministic selective spatial carrier")
+            return
+        }
+
+        let source = original.resolvedBars[barIndex]
+        guard let carrierStep = source.spatialContrast.carrierStep else {
+            Issue.record("Expected the distant carrier to retain its resolved step")
+            return
+        }
+        let dryResolved = ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: source.ensemble,
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            foundationCompanion: source.foundationCompanion,
+            pulseEchoEnabled: source.pulseEchoEnabled,
+            interlockChapter: source.interlockChapter,
+            groovePulses: source.groovePulses,
+            spatialContrast: .foreground
+        )
+        var dryBars = original.resolvedBars
+        dryBars[barIndex] = dryResolved
+        let dry = replacingResolvedBars(in: original, with: dryBars, memory: sourceState.memory)
+        let graph = DSPGraphGenerator.safePlan(sessionSeed: sourceState.rootSeed)
+        var distantRender = RenderState(), dryRender = RenderState()
+        var distantGraph = GeneratedDSPContinuationState()
+        var dryGraph = GeneratedDSPContinuationState()
+        let distantBlocks = AutonomousPhraseRenderer.render(
+            plan: original, graph: graph, sampleRate: 8_000,
+            state: &distantRender, graphState: &distantGraph
+        )
+        let dryBlocks = AutonomousPhraseRenderer.render(
+            plan: dry, graph: graph, sampleRate: 8_000,
+            state: &dryRender, graphState: &dryGraph
+        )
+
+        #expect(Array(distantBlocks[..<barIndex]) == Array(dryBlocks[..<barIndex]))
+        let distantBlock = distantBlocks[barIndex]
+        let dryBlock = dryBlocks[barIndex]
+        let distantEvent = distantBlock.events.first {
+            $0.step == carrierStep && $0.spatialDepthPosition == .distant
+        }
+        #expect(distantEvent?.spatialReverbSend == source.spatialContrast.reverbSend)
+        #expect(dryBlock.events.allSatisfy {
+            $0.spatialDepthPosition == .foreground && $0.spatialReverbSend == 0
+        })
+        #expect(zip(distantBlock.events, dryBlock.events).allSatisfy { distant, foreground in
+            distant.voice == foreground.voice && distant.step == foreground.step &&
+                distant.intensity == foreground.intensity
+        })
+        #expect(distantBlock.automaticMix == dryBlock.automaticMix)
+        #expect(distantBlock.stemObservations[.kick] == dryBlock.stemObservations[.kick])
+        #expect(distantBlock.stemObservations[.foundation] ==
+                dryBlock.stemObservations[.foundation])
+
+        let start = carrierStep * distantBlock.left.count / 16
+        #expect(Array(distantBlock.left[..<start]) == Array(dryBlock.left[..<start]))
+        let delta = zip(distantBlock.left[start...], dryBlock.left[start...]).reduce(0.0) {
+            $0 + abs(Double($1.0 - $1.1))
+        }
+        #expect(delta > 0.000_1)
+    }
+
     @Test("Groove pulse carrier is deterministic, mono, short, and low-cut")
     func groovePulseCarrierSignal() {
         let sampleRate = 44_100.0
@@ -1324,7 +1473,8 @@ struct AutonomousPreparationPreflightTests {
                 memory: memory,
                 identityPreserved: plan.scene.seed == plan.dna.sceneSeed
             ),
-            endingInterlockState: plan.endingInterlockState
+            endingInterlockState: plan.endingInterlockState,
+            endingSpatialContrastState: plan.endingSpatialContrastState
         )
     }
 

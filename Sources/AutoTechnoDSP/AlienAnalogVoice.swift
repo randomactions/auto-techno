@@ -9,6 +9,8 @@ struct AlienVoiceNote: Equatable, Sendable {
     let velocity: Double
     let role: SynthRole
     let articulation: RelationalArticulation
+    let dryScale: Double
+    let spatialReverbSend: Double
 }
 
 struct AlienVoiceState: Equatable, Sendable {
@@ -75,12 +77,14 @@ struct AlienVoiceState: Equatable, Sendable {
 enum AlienAnalogVoice {
     static func render(_ output: inout [Float], measurement: inout [Float],
                        pulseEchoSend: inout [Float],
+                       spatialReverbSend: inout [Float],
                        notes: [AlienVoiceNote],
                        sampleRate: Double, level: Double,
                        world: SynthWorldDNA, bar: SynthPerformanceBar,
                        role: SynthRole, state: inout AlienVoiceState) {
         guard !output.isEmpty, sampleRate > 0 else { return }
         guard pulseEchoSend.count == output.count else { return }
+        guard spatialReverbSend.count == output.count else { return }
         guard measurement.count == output.count else { return }
         state.prepare(sampleRate: sampleRate, world: world, role: role)
         let scheduled = notes
@@ -99,6 +103,8 @@ enum AlienAnalogVoice {
         var targetFrequency = state.frequency
         var velocity = 0.0
         var articulation = RelationalArticulation.neutral
+        var dryScale = 1.0
+        var spatialSendLevel = 0.0
         let roleMutation = mutationScale(for: role)
         let mutation = min(1, bar.mutationAmount * roleMutation)
         let fingerprint = world.motifFingerprint
@@ -124,6 +130,8 @@ enum AlienAnalogVoice {
                 targetFrequency = note.endFrequency
                 velocity = min(1, max(0, note.velocity))
                 articulation = note.articulation
+                dryScale = min(1, max(0, note.dryScale))
+                spatialSendLevel = min(1, max(0, note.spatialReverbSend))
                 attackFrames = max(1, Int(
                     baseAttackSeconds * articulation.attackScale * sampleRate
                 ))
@@ -275,9 +283,11 @@ enum AlienAnalogVoice {
             state.dcInput = withMemory
             state.dcOutput = dcBlocked
             state.tailLevel = max(abs(dcBlocked), state.tailLevel * 0.9995)
-            let renderedSample = Float(fastSaturate(dcBlocked * 1.08))
+            let unscaledSample = Float(fastSaturate(dcBlocked * 1.08))
+            let renderedSample = unscaledSample * Float(dryScale)
             output[frame] += renderedSample
             measurement[frame] += renderedSample
+            spatialReverbSend[frame] += unscaledSample * Float(spatialSendLevel)
         }
     }
 

@@ -85,6 +85,7 @@ package enum VoiceRenderer {
         var percussionBus: [Float] = []
         var synthBus: [Float] = []
         var pulseEchoSendBus: [Float] = []
+        var spatialReverbSendBus: [Float] = []
         swap(&output, &checkedOut.output)
         swap(&kickBus, &checkedOut.kick)
         swap(&kickDetectorBus, &checkedOut.kickDetector)
@@ -96,6 +97,7 @@ package enum VoiceRenderer {
         swap(&percussionBus, &checkedOut.percussion)
         swap(&synthBus, &checkedOut.synth)
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
+        swap(&spatialReverbSendBus, &checkedOut.spatialReverbSend)
         var random = SeededGenerator(seed: performance.eventSeed)
 
         for event in resolved.ensemble.events {
@@ -190,6 +192,7 @@ package enum VoiceRenderer {
             renderAlienWorld(
                 &synthBus,
                 pulseEchoSend: &pulseEchoSendBus,
+                spatialReverbSend: &spatialReverbSendBus,
                 upperTonalStem: &upperTonalStem,
                 atmosphereStem: &atmosphereStem,
                 scene: scene,
@@ -322,6 +325,16 @@ package enum VoiceRenderer {
         var synthTone = 0.0
         var highEnvelope = 0.0
         var midEnvelope = 0.0
+        var spatialHighPassState = 0.0
+        var spatialLowPassState = 0.0
+        let spatialHighPassCoefficient = min(
+            0.35,
+            1 - exp(-2 * .pi * resolved.spatialContrast.highPassHz / sampleRate)
+        )
+        let spatialLowPassCoefficient = min(
+            0.55,
+            1 - exp(-2 * .pi * resolved.spatialContrast.lowPassHz / sampleRate)
+        )
         let masking = SpectrumMaskingAnalyzer.analyze(
             signals: [.kickBass: kickBus, .percussion: percussionBus, .synth: synthBus, .texture: synthBus],
             sampleRate: sampleRate)
@@ -380,7 +393,14 @@ package enum VoiceRenderer {
             let earlyMix = Float(0.035 + dramaticDistance * 0.08)
             let reverbRead = state.reverbBuffer[state.reverbWriteIndex]
             let drumSend = percussionBus[index] * Float(scene.atmosphere * 0.08)
-            state.reverbBuffer[state.reverbWriteIndex] = synthInput * 0.42 + drumSend + reverbRead * reverbFeedback
+            let rawSpatialSend = Double(spatialReverbSendBus[index])
+            spatialHighPassState +=
+                (rawSpatialSend - spatialHighPassState) * spatialHighPassCoefficient
+            let highPassedSpatialSend = rawSpatialSend - spatialHighPassState
+            spatialLowPassState +=
+                (highPassedSpatialSend - spatialLowPassState) * spatialLowPassCoefficient
+            state.reverbBuffer[state.reverbWriteIndex] = synthInput * 0.42 + drumSend +
+                Float(spatialLowPassState) + reverbRead * reverbFeedback
             let reverbTail = reverbRead * reverbWet
             state.delayWriteIndex = (state.delayWriteIndex + 1) % delayFrames
             state.earlyReflectionWriteIndex = (state.earlyReflectionWriteIndex + 1) % earlyReflectionFrames
@@ -480,6 +500,7 @@ package enum VoiceRenderer {
         swap(&percussionBus, &checkedOut.percussion)
         swap(&synthBus, &checkedOut.synth)
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
+        swap(&spatialReverbSendBus, &checkedOut.spatialReverbSend)
         workspace.recycle(&checkedOut)
         return rendered
     }
@@ -487,6 +508,7 @@ package enum VoiceRenderer {
     private static func renderAlienWorld(
         _ output: inout [Float],
         pulseEchoSend: inout [Float],
+        spatialReverbSend: inout [Float],
         upperTonalStem: inout [Float],
         atmosphereStem: inout [Float],
         scene: TechnoScene,
@@ -509,11 +531,22 @@ package enum VoiceRenderer {
         )
         let baseFrequency = motifEvents.first?.frequency ?? world.rootFrequency * 2
 
+        func spatialScales(for voice: EnsembleVoice, step: Int) -> (dry: Double, send: Double) {
+            let spatial = resolved.spatialContrast
+            guard spatial.depthPosition == .distant,
+                  spatial.carrierVoice == voice,
+                  spatial.carrierStep == step else {
+                return (1, 0)
+            }
+            return (spatial.dryScale, spatial.reverbSend)
+        }
+
         var anchorNotes: [AlienVoiceNote] = []
         if !motifEvents.isEmpty {
             anchorNotes = motifEvents.enumerated().map { _, event in
                 let accent = performance.accent(at: event.stepIndex)
                 let articulation = synthBar.articulation(at: event.stepIndex)
+                let spatial = spatialScales(for: .motif, step: event.stepIndex)
                 return AlienVoiceNote(
                     startFrame: Int((Double(event.stepIndex) * stepFrames).rounded()),
                     durationFrames: max(1, Int((event.durationInSteps * stepFrames).rounded())),
@@ -521,12 +554,15 @@ package enum VoiceRenderer {
                     endFrequency: event.frequency,
                     velocity: min(1, (0.66 + accent * 0.24) * articulation.velocityScale),
                     role: .anchor,
-                    articulation: articulation
+                    articulation: articulation,
+                    dryScale: spatial.dry,
+                    spatialReverbSend: spatial.send
                 )
             }
         }
         AlienAnalogVoice.render(
             &output, measurement: &upperTonalStem, pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
             notes: anchorNotes, sampleRate: sampleRate,
             level: 0.090 + scene.synthPresence * 0.060,
             world: world, bar: synthBar, role: .anchor,
@@ -547,12 +583,15 @@ package enum VoiceRenderer {
                     endFrequency: frequency,
                     velocity: min(1, event.velocity * event.articulation.velocityScale),
                     role: .shadow,
-                    articulation: event.articulation
+                    articulation: event.articulation,
+                    dryScale: 1,
+                    spatialReverbSend: 0
                 )
             }
         }
         AlienAnalogVoice.render(
             &output, measurement: &upperTonalStem, pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
             notes: shadowNotes, sampleRate: sampleRate,
             level: 0.032 + scene.synthPresence * 0.034,
             world: world, bar: synthBar, role: .shadow,
@@ -565,6 +604,7 @@ package enum VoiceRenderer {
             let frequency = world.rootFrequency * (section == .breakdown ? 1.5 : 2)
             atmosphereNotes = atmosphereEvents.map { event in
                 let start = Int((Double(event.step) * stepFrames).rounded())
+                let spatial = spatialScales(for: .atmosphere, step: event.step)
                 return AlienVoiceNote(
                     startFrame: start,
                     durationFrames: max(1, frames - start),
@@ -572,12 +612,15 @@ package enum VoiceRenderer {
                     endFrequency: frequency * (synthBar.gesture == .suspend ? 1.018 : 1.003),
                     velocity: min(0.72, event.intensity + scene.atmosphere * 0.22),
                     role: .atmosphere,
-                    articulation: .neutral
+                    articulation: .neutral,
+                    dryScale: spatial.dry,
+                    spatialReverbSend: spatial.send
                 )
             }
         }
         AlienAnalogVoice.render(
             &output, measurement: &atmosphereStem, pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
             notes: atmosphereNotes, sampleRate: sampleRate,
             level: 0.017 + scene.atmosphere * 0.025 + scene.drone * 0.018,
             world: world, bar: synthBar, role: .atmosphere,
@@ -591,6 +634,7 @@ package enum VoiceRenderer {
             let frequency = min(1_200, max(120, baseFrequency * interval))
             responseNotes = responseEvents.map { event in
                 let articulation = synthBar.articulation(at: event.step)
+                let spatial = spatialScales(for: .response, step: event.step)
                 return AlienVoiceNote(
                     startFrame: Int((Double(event.step) * stepFrames).rounded()),
                     durationFrames: max(1, Int((stepFrames * 1.8).rounded())),
@@ -599,12 +643,15 @@ package enum VoiceRenderer {
                     velocity: min(0.76,
                         (event.intensity + scene.melodicity * 0.24) * articulation.velocityScale),
                     role: .response,
-                    articulation: articulation
+                    articulation: articulation,
+                    dryScale: spatial.dry,
+                    spatialReverbSend: spatial.send
                 )
             }
         }
         AlienAnalogVoice.render(
             &output, measurement: &upperTonalStem, pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
             notes: responseNotes, sampleRate: sampleRate,
             level: 0.026 + scene.melodicity * 0.030,
             world: world, bar: synthBar, role: .response,
@@ -617,6 +664,7 @@ package enum VoiceRenderer {
             let startFrequency = world.rootFrequency * 2
             transitionNotes = transitionEvents.map { event in
                 let start = Int((Double(event.step) * stepFrames).rounded())
+                let spatial = spatialScales(for: .transition, step: event.step)
                 return AlienVoiceNote(
                     startFrame: start,
                     durationFrames: max(1, frames - start),
@@ -624,12 +672,15 @@ package enum VoiceRenderer {
                     endFrequency: startFrequency * (synthBar.gesture == .corrode ? 3.8 : 1.5),
                     velocity: min(0.54, event.intensity + synthBar.mutationAmount * 0.18),
                     role: .transition,
-                    articulation: .neutral
+                    articulation: .neutral,
+                    dryScale: spatial.dry,
+                    spatialReverbSend: spatial.send
                 )
             }
         }
         AlienAnalogVoice.render(
             &output, measurement: &atmosphereStem, pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
             notes: transitionNotes, sampleRate: sampleRate,
             level: 0.008 + scene.atmosphere * 0.012,
             world: world, bar: synthBar, role: .transition,
