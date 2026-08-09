@@ -1,4 +1,10 @@
-# Taste Ledger
+# Historical Taste Experiments
+
+This file preserves the repository's pre-automation listening observations,
+candidate rules, measurements, and pending verdicts. It is non-normative
+provenance: current product policy lives in `../PRODUCT.md`, and current quality
+policy lives in `../SOUND_QUALITY.md`. Historical requirements for manual
+listening or promotion do not govern new work.
 
 ## Active direction
 
@@ -158,3 +164,46 @@ Matched-loudness comparison: pending across bars 1–4, 5–8, 9–12, and 13–
 with a carrier-only diagnostic. Keep only if the reveal is obvious in one pass,
 creates side-to-side motion, and does not merely sound like additional hats.
 Verdict: implementation candidate only; listening approval remains pending.
+
+## Multi-video curated narrative and spectral-depth study — 2026-08-09
+
+Observation sources: Underdog's lessons on
+[curated randomness](https://www.youtube.com/watch?v=e72pJqOGEbk),
+[contrast](https://www.youtube.com/watch?v=tCpF60PppEI), and
+[arrangement as story](https://www.youtube.com/watch?v=xY7vRHiSJSM);
+AWAKEND's retrospective on
+[producing 1,100 songs](https://www.youtube.com/watch?v=jQgITl0OYXQ);
+Kangding Ray's
+[quad-polymeter demonstration](https://www.youtube.com/watch?v=TAyHOFrXH2s);
+and Voltage Labs' exploration and performance of
+[hypnotic techno](https://www.youtube.com/watch?v=ri9lZVR_eRA&t=2232s).
+All six transcripts available for this study were automatic captions.
+
+Community evidence was sampled on 2026-08-09 using YouTube's top-ranked order.
+The inspected top-level comment counts, in the source order above, were
+`50/50/50/50/5/50`. Repeated technically useful reactions supported selection
+over unbounded randomness, deliberate contrast, and arrangement that makes a
+small amount of material feel consequential. These are community hypotheses,
+not listening approval. The five accessible Kangding Ray comments contained no
+meaningful collective technical evidence, so no consensus is inferred from
+that source. Separate reply-thread counts were not retained for this initial
+study and therefore cannot be cited as reply-thread evidence.
+
+The combined candidate has three smallest reproducible ideas: place at most one
+existing upper event behind the groove before a dry identity return; give the
+dominant motif a continuous cross-phrase presence contour while admitting or
+removing at most one supporting role at a structural boundary; and use the
+existing three-to-five relationship to open and close complementary spectral
+apertures during `tone` chapters without adding onsets or a new clock.
+
+In the linked hypnotic-techno performance, stable bass and overall level
+accompanied substantial upper-spectrum change. This is descriptive evidence
+only. It is not a loudness, filter, or spectral target and must not calibrate the
+engine automatically.
+
+Canonical listening checkpoints: first macro, first chapter change, contrast,
+break, release, identity return, and the beginning, middle, and end of the first
+`tone` macro. Compare each of the three ideas independently at matched loudness.
+Keep only changes that progressively reveal the same machine rather than making
+it wetter, brighter, or busier. Verdict: pending; comments and measurements do
+not promote candidate hashes.

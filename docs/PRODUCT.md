@@ -2,79 +2,97 @@
 
 ## Purpose
 
-Auto Techno is a standalone macOS instrument for starting and sustaining a
+Auto Techno is a standalone macOS instrument for starting and sustaining one
 coherent techno performance with one button. It is not a DAW, sequencer editor,
-plug-in, preset browser, or collection of render experiments.
+plug-in host, preset browser, engine selector, or collection of render
+experiments.
 
 ## Central invariant
 
-Every interaction expresses a musical intention. Both the destination and the
-transition must be coherent.
+Every autonomous decision expresses a musical intention. Its destination,
+transition, and consequence in the continuing performance must remain coherent.
 
-The current product expresses that invariant through autonomous planning rather
-than editable controls. Play asks the instrument to continue the performance;
-pause and resume preserve its position and identity. Technical render state may
-be shown read-only, but direct DSP parameters do not belong in the primary UI.
+Play asks the instrument to continue its one performance. Pause and resume
+preserve position, identity, and adaptation state. Technical evidence may be
+shown read-only, but no compositional, synthesis, mixing, mastering, or quality
+parameter belongs in the primary UI.
 
 ## Shipped experience
 
 - one accessible transport button;
 - explicit preparing, ready, live, paused, recovering, and unavailable states;
 - fixed 130 BPM;
-- one canonical, indefinitely evolving performance;
-- phrase and bar position plus a lightweight waveform on a fixed decibel scale;
+- one private canonical identity and indefinitely evolving performance;
+- phrase and bar position plus lightweight read-only visualization;
 - offline operation with no account or cloud dependency.
 
-## Musical runtime
+## One autonomous mechanism
 
-`AutonomousSessionDirector` owns the private canonical identity, fixed tempo,
-temporal memory, phrase candidates, continuation, and debt repair. Every
-selected phrase contains a non-optional musical intention, Scene DNA, and
-resolved performance bars that keep the arrangement gesture, foundation
-companion, arbitrated ensemble events, and long-form chapter together. A global
-sixteen-bar grid times structural punctuation without removing adaptive
-four-to-sixteen-bar phrases.
+`AutonomousSessionDirector` owns musical identity, intent, temporal memory,
+phrase proposals, continuation, and long-range obligations. A selected phrase
+contains the canonical resolved score consumed by synthesis, effects, mixing,
+telemetry, and future quality evaluation. `AutoTechnoCore` owns decisions;
+`AutoTechnoDSP` owns rendering and signal evidence; `AutoTechnoApp` owns
+transport, preparation, scheduling, and read-only presentation.
 
-Within that grid, a three-step upper-voice driver advances a five-stage follower.
-The resulting fifteen-step relationship moves against the sixteen-step groove
-without creating or relocating onsets. Bounded sixteen-bar chapters alter
-velocity, breath, tone, motion, or sparse pulse-echo emphasis while the dominant
-motif retains its fingerprint. Chapters return to `home` for identity returns
-and at least once every four macros. The kick and the scene's main foundation
-companion remain stable and outside this relational modulation.
+Future work extends this mechanism through shared state, evidence, and bounded
+adaptation. Specialized instruments and DSP strategies may vary internally when
+the canonical director selects them at an explicit musical boundary. They do not
+become alternative runtimes, independent performance models, or user-facing
+switches.
 
-The generated DSP graph applies only to the upper-voice remainder. A private
-full/foundation rendering distinction protects the kick and its bass, mono
-rumble, or tuned-tom companion without exposing a runtime mode. Sparse
-three-sixteenth pulse echo is band-limited on the upper path. Phrase rendering
-occurs before playback; the audio engine schedules immutable buffers at sample
-time.
+Every new internal parameter must have a demonstrated path through the resolved
+score or renderer into PCM, measurable evidence, and a bounded influence on a
+future decision. Parameters that do not reach that path are removed or connected
+before the control surface expands.
 
-Detached rendering also measures five private role stems: kick, foundation,
-percussion, upper tonal, and atmosphere. A bounded automatic fader uses the
-actual kick/foundation relationship to trim the audible kick slowly toward the
-authored hierarchy for the active companion. It never boosts the kick above its
-authored level, does not learn during breaks or without a valid companion, and
-does not alter the pre-fader detector that drives groove ducking. These stems and
-measurements are evidence for the autonomous performance, not mixer controls.
+## Professional-sound objective
+
+The long-term goal is professional release-quality sound produced by engine-owned
+synthesis, effects, mixing, and mastering. This objective is pursued iteratively;
+it does not describe the current build merely because structural or safety tests
+pass.
+
+Playback and release validation must not require a VSTi, Audio Unit instrument or
+effect, DAW, sample-library runtime, cloud model, or account. Legal reference
+recordings and external analyzers may inform local development, but only derived,
+non-reconstructable quality profiles may enter the repository. See
+`SOUND_QUALITY.md` for the qualification contract.
+
+## Automated quality and adaptation
+
+The target architecture is one bounded generate, render, evaluate, and adapt
+loop. It combines hard signal-safety limits with multidimensional evidence about
+mix translation, timbral identity, groove, and long-form behavior. Decisions are
+reason-coded and update only persistent state for unscheduled future bars or
+phrases.
+
+Quality qualification is automated. A human observation may identify an
+additional deficit or motivate a policy revision, but listening is optional and
+never the mechanism that selects runtime output or promotes an engine revision.
+Until the automated policy exists and passes, professional quality remains an
+unverified goal.
 
 ## Hard constraints
 
-- The same private initial and continuation state reproduces the same musical
-  decisions and prepared audio.
-- Planning remains in `AutoTechnoCore`; audio rendering remains in `AutoTechnoDSP`.
-- The audio callback performs no allocation, locking, I/O, logging, or UI work.
-- Route changes rebuild at the active sample rate and retain coherent continuation.
-- Low-end protection, finite output, bounded peaks/DC/boundaries, and masking
-  checks remain release obligations.
-- Automatic balance runs only during detached preparation, has bounded gain and
-  slew, and must report the same post-fader role audio used by the mix.
-- No musical retuning is accepted without a concrete matched-loudness listening
-  observation recorded in the taste ledger.
+- The same engine version, quality-policy version, initial state, continuation
+  state, route state, and captured app-owned PCM reproduce the same decisions.
+- Planning and quality-policy decisions remain outside the real-time callback.
+- The callback performs no allocation, locking, analysis, logging, file or
+  network I/O, or UI work.
+- Any future live-output capture only copies app-owned PCM into a preallocated
+  lock-free handoff; bounded analysis runs in background work.
+- Adjustments apply only to immutable snapshots for unscheduled future audio.
+- Candidate count, corrective passes, and analysis work remain explicitly
+  bounded; missed deadlines preserve coherent prepared playback.
+- Route changes rebuild at the active sample rate without silently changing the
+  musical identity or corrupting adaptation state.
+- Finite output, peak/DC/boundary limits, low-end compatibility, masking,
+  controller stability, and preparation headroom remain release obligations.
 
 ## Product boundary
 
 The package exposes only the `AutoTechno` executable. Core and DSP targets have
 no supported external consumers or source-compatibility promise. Retired
-reference engines, comparison executables, old scene APIs, and render profiles
-are intentionally outside the product.
+reference engines, comparison executables, old scene APIs, render profiles, and
+selectable performance models remain outside the product.
