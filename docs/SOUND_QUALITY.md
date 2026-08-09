@@ -8,9 +8,11 @@ measure progress, qualify revisions, and adapt its own future output without a
 manual curation gate or third-party instrument dependency.
 
 The current runtime already supplies deterministic planning, detached rendering,
-role evidence, signal-safety reports, masking analysis, and one bounded automatic
-mix correction. The broader quality policy and hybrid live-feedback loop below
-are target architecture until their implementation and validation are recorded.
+role evidence (including exact-tap onset-local anchor-expression diagnostics),
+signal-safety reports, masking analysis, and one bounded automatic mix correction.
+That expression evidence is descriptive under the uncalibrated policy; the
+broader quality policy and hybrid live-feedback loop below are target architecture
+until their implementation and validation are recorded.
 
 ## Engine ownership
 

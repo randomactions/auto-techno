@@ -31,6 +31,7 @@ struct AlienVoiceState: Equatable, Sendable {
     var timbreIntent = UpperTimbreIntent.home
     var timbreVelocity = 0.0
     var timbreTreatment = AlienTimbreTreatment.neutral
+    var velocityResponse = AlienVelocityResponse.neutral
     var previousSource = 0.0
     var filter1 = 0.0
     var filter2 = 0.0
@@ -157,6 +158,29 @@ struct AlienTimbreTreatment: Equatable, Sendable {
     }
 }
 
+/// A bounded projection of the score-owned note velocity into the authored
+/// anchor envelope. Velocity already controls level; this response lets the
+/// same performance accent also open the existing filter-envelope lift and
+/// relax the existing decay without adding another score parameter or voice.
+struct AlienVelocityResponse: Equatable, Sendable {
+    let spectralEnvelopeScale: Double
+    let decayScale: Double
+
+    static let neutral = AlienVelocityResponse(
+        spectralEnvelopeScale: 1,
+        decayScale: 1
+    )
+
+    static func resolve(velocity: Double, role: SynthRole) -> AlienVelocityResponse {
+        guard role == .anchor else { return .neutral }
+        let velocity = min(1, max(0, velocity))
+        return AlienVelocityResponse(
+            spectralEnvelopeScale: min(1.60, max(0.40, 0.40 + velocity * 1.20)),
+            decayScale: min(1.20, max(0.80, 0.80 + velocity * 0.40))
+        )
+    }
+}
+
 /// The bounded spectral coordinate shared by resolved event metadata and the
 /// authored motif renderer. Keeping the composition here makes the exact
 /// lower and upper limits directly verifiable without rendering audio.
@@ -204,6 +228,7 @@ enum AlienAnalogVoice {
         }
         if scheduled.isEmpty && state.envelope < 0.000_001 && state.tailLevel < 0.000_001 &&
             state.timbreTreatment == .neutral {
+            state.velocityResponse = .neutral
             return
         }
 
@@ -215,6 +240,7 @@ enum AlienAnalogVoice {
         var velocity = 0.0
         var legatoGate = false
         var articulation = RelationalArticulation.neutral
+        var velocityResponse = state.velocityResponse
         var dryScale = 1.0
         var spatialSendLevel = 0.0
         var narrativeGainScale = 1.0
@@ -269,6 +295,10 @@ enum AlienAnalogVoice {
                     : uncappedRequestedEnd
                 noteEnd = min(output.count, requestedGateEnd)
                 velocity = min(1, max(0, note.velocity))
+                let requestedVelocityResponse = AlienVelocityResponse.resolve(
+                    velocity: velocity,
+                    role: role
+                )
                 state.timbreIntent = note.timbreIntent
                 state.timbreVelocity = velocity
                 targetTimbreTreatment = AlienTimbreTreatment.resolve(
@@ -278,6 +308,10 @@ enum AlienAnalogVoice {
                 )
                 let requestedSlide = note.gate == .slide
                 legatoGate = requestedSlide && state.envelope > 0.000_001
+                if !legatoGate {
+                    state.velocityResponse = requestedVelocityResponse
+                }
+                velocityResponse = state.velocityResponse
                 if legatoGate {
                     startFrequency = max(20, state.frequency)
                 } else if note.timbreIntent.kind != .resonantSequence {
@@ -314,7 +348,11 @@ enum AlienAnalogVoice {
                     requestedGate: note.gate,
                     appliedGate: legatoGate ? .slide : .retrigger,
                     didRetrigger: !legatoGate,
-                    timbreIntent: note.timbreIntent
+                    timbreIntent: note.timbreIntent,
+                    requestedVelocity: note.velocity,
+                    appliedVelocity: velocity,
+                    velocitySpectralEnvelopeScale: velocityResponse.spectralEnvelopeScale,
+                    velocityDecayScale: velocityResponse.decayScale
                 ))
                 activeEvidenceIndex = noteRenderEvidence.count - 1
                 articulation = note.articulation
@@ -325,7 +363,8 @@ enum AlienAnalogVoice {
                 attackFrames = max(1, Int(
                     baseAttackSeconds * articulation.attackScale * sampleRate
                 ))
-                decaySeconds = baseDecaySeconds * articulation.decayScale
+                decaySeconds = baseDecaySeconds * articulation.decayScale *
+                    velocityResponse.decayScale
                 let glideSeconds = (0.012 + mutation * 0.030) * articulation.glideTimeScale
                 glideCoefficient = 1 - exp(-1 / max(1, sampleRate * glideSeconds))
                 nextNote += 1
@@ -422,7 +461,8 @@ enum AlienAnalogVoice {
                 var altered = folded * (1 - mutation * 0.18) + folded * ringCarrier * (0.16 + mutation * 0.56)
                 altered += altered * altered * (0.08 + mutation * 0.20)
 
-                let envelopeLift = state.envelope * 0.20
+                let envelopeLift = state.envelope * 0.20 *
+                    velocityResponse.spectralEnvelopeScale
                 let articulationSpectralScale: Double
                 switch role {
                 case .anchor:

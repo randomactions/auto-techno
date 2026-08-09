@@ -5,6 +5,25 @@ import Testing
 
 @Suite("Upper timbre DSP articulation")
 struct UpperTimbreDSPTests {
+    @Test("Anchor velocity response is bounded, monotonic, and role local")
+    func velocityResponseBoundsAndRoles() {
+        let quiet = AlienVelocityResponse.resolve(velocity: -1, role: .anchor)
+        let neutral = AlienVelocityResponse.resolve(velocity: 0.5, role: .anchor)
+        let accented = AlienVelocityResponse.resolve(velocity: 2, role: .anchor)
+
+        #expect(quiet.spectralEnvelopeScale == 0.40)
+        #expect(quiet.decayScale == 0.80)
+        #expect(neutral == .neutral)
+        #expect(accented.spectralEnvelopeScale == 1.60)
+        #expect(abs(accented.decayScale - 1.20) < 0.000_000_001)
+        #expect(accented.spectralEnvelopeScale > quiet.spectralEnvelopeScale)
+        #expect(accented.decayScale > quiet.decayScale)
+        for role in SynthRole.allCases where role != .anchor {
+            #expect(AlienVelocityResponse.resolve(velocity: 0, role: role) == .neutral)
+            #expect(AlienVelocityResponse.resolve(velocity: 1, role: role) == .neutral)
+        }
+    }
+
     @Test("Timbre projection is bounded and role specific")
     func treatmentBoundsAndRoles() {
         let quiet = AlienTimbreTreatment.resolve(
@@ -131,6 +150,245 @@ struct UpperTimbreDSPTests {
         #expect(homeAnchor.evidence[0].appliedGate == .retrigger)
     }
 
+    @Test("Anchor velocity changes normalized attack spectrum and in-gate decay")
+    func velocityExpressionPCM() throws {
+        for sampleRate in [44_100.0, 48_000.0] {
+            let onset = Int((sampleRate * 0.01).rounded())
+            let duration = Int((sampleRate * 0.16).rounded())
+            let frameCount = Int((sampleRate * 0.22).rounded())
+            let low = render(
+                role: .anchor,
+                notes: [note(
+                    startFrame: onset,
+                    durationFrames: duration,
+                    frequency: 196,
+                    velocity: 0.20,
+                    timbre: .home
+                )],
+                sampleRate: sampleRate,
+                frameCount: frameCount
+            )
+            let high = render(
+                role: .anchor,
+                notes: [note(
+                    startFrame: onset,
+                    durationFrames: duration,
+                    frequency: 196,
+                    velocity: 0.95,
+                    timbre: .home
+                )],
+                sampleRate: sampleRate,
+                frameCount: frameCount
+            )
+            let lowReplay = render(
+                role: .anchor,
+                notes: [note(
+                    startFrame: onset,
+                    durationFrames: duration,
+                    frequency: 196,
+                    velocity: 0.20,
+                    timbre: .home
+                )],
+                sampleRate: sampleRate,
+                frameCount: frameCount
+            )
+            let lowExpression = try #require(
+                velocityEvidence(low, sampleRate: sampleRate).velocityExpression.first
+            )
+            let highExpression = try #require(
+                velocityEvidence(high, sampleRate: sampleRate).velocityExpression.first
+            )
+
+            #expect(low.samples == lowReplay.samples)
+            #expect(low.state == lowReplay.state)
+            #expect(low.evidence == lowReplay.evidence)
+            #expect(low.samples[..<onset] == high.samples[..<onset])
+            #expect(low.samples[onset...] != high.samples[onset...])
+            #expect(lowExpression.complete && highExpression.complete)
+            #expect(highExpression.spectralEnvelopeScale >
+                    lowExpression.spectralEnvelopeScale)
+            #expect(highExpression.decayScale > lowExpression.decayScale)
+            #expect(highExpression.attackHighBandRatio >
+                    lowExpression.attackHighBandRatio)
+            #expect(highExpression.tailToAttackDB > lowExpression.tailToAttackDB)
+            #expect(lowExpression.appliedStartFrequency ==
+                    highExpression.appliedStartFrequency)
+            #expect(lowExpression.analyzedFrameCount ==
+                    highExpression.analyzedFrameCount)
+            #expect(low.evidence[0].requestedVelocity == 0.20)
+            #expect(low.evidence[0].appliedVelocity == 0.20)
+            #expect(high.evidence[0].requestedVelocity == 0.95)
+            #expect(high.evidence[0].appliedVelocity == 0.95)
+            #expect(low.samples.allSatisfy { $0.isFinite })
+            #expect(high.samples.allSatisfy { $0.isFinite })
+        }
+    }
+
+    @Test("Slides inherit the latched retrigger response and velocity clamps replay")
+    func velocityResponseContinuationAndClamps() {
+        let onset = 96
+        let slideFrame = 720
+        let first = note(
+            startFrame: onset,
+            durationFrames: 1_600,
+            frequency: 174.61,
+            velocity: 0.20,
+            timbre: .home
+        )
+        let slide = note(
+            startFrame: slideFrame,
+            durationFrames: 960,
+            frequency: 174.61,
+            endFrequency: 220,
+            velocity: 1,
+            gate: .slide,
+            timbre: .home
+        )
+        let rendered = render(role: .anchor, notes: [first, slide])
+        #expect(rendered.evidence.count == 2)
+        #expect(rendered.evidence[1].appliedGate == .slide)
+        #expect(rendered.evidence[1].appliedVelocity == 1)
+        #expect(rendered.evidence[1].velocitySpectralEnvelopeScale ==
+                rendered.evidence[0].velocitySpectralEnvelopeScale)
+        #expect(rendered.evidence[1].velocityDecayScale ==
+                rendered.evidence[0].velocityDecayScale)
+        #expect(rendered.state.velocityResponse == AlienVelocityResponse.resolve(
+            velocity: 0.20,
+            role: .anchor
+        ))
+
+        let below = render(role: .anchor, notes: [note(
+            startFrame: onset,
+            durationFrames: 1_200,
+            frequency: 196,
+            velocity: -1,
+            timbre: .home
+        )])
+        let zero = render(role: .anchor, notes: [note(
+            startFrame: onset,
+            durationFrames: 1_200,
+            frequency: 196,
+            velocity: 0,
+            timbre: .home
+        )])
+        let above = render(role: .anchor, notes: [note(
+            startFrame: onset,
+            durationFrames: 1_200,
+            frequency: 196,
+            velocity: 2,
+            timbre: .home
+        )])
+        let one = render(role: .anchor, notes: [note(
+            startFrame: onset,
+            durationFrames: 1_200,
+            frequency: 196,
+            velocity: 1,
+            timbre: .home
+        )])
+        #expect(below.samples == zero.samples)
+        #expect(below.state == zero.state)
+        #expect(above.samples == one.samples)
+        #expect(above.state == one.state)
+        #expect(below.evidence[0].requestedVelocity == -1)
+        #expect(below.evidence[0].appliedVelocity == 0)
+        #expect(above.evidence[0].requestedVelocity == 2)
+        #expect(above.evidence[0].appliedVelocity == 1)
+    }
+
+    @Test("Velocity evidence is gain normalized, bounded, and explicit when unavailable")
+    func velocityEvidenceAdversaries() throws {
+        let sampleRate = 48_000.0
+        let frameCount = Int((sampleRate * 0.16).rounded())
+        let source = (0..<frameCount).map { frame -> Float in
+            let time = Double(frame) / sampleRate
+            let envelope = exp(-time * 4.2)
+            return Float((sin(2 * .pi * 440 * time) +
+                          sin(2 * .pi * 5_200 * time) * 0.18) * envelope)
+        }
+        let quiet = source.map { $0 * 0.20 }
+        let window = UpperVelocityExpressionWindow(
+            onsetFrame: 0,
+            endFrame: frameCount,
+            velocity: 0.70,
+            appliedStartFrequency: 440,
+            spectralEnvelopeScale: 1.24,
+            decayScale: 1.08
+        )
+        func analyze(_ samples: [Float], window: UpperVelocityExpressionWindow)
+            -> UpperTimbreEvidence {
+            UpperTimbreEvidenceAnalyzer.analyze(UpperTimbreAnalysisInput(
+                left: samples,
+                right: samples,
+                sampleRate: sampleRate,
+                velocityExpressionWindows: [window]
+            ))
+        }
+
+        let loudEvidence = analyze(source, window: window)
+        let quietEvidence = analyze(quiet, window: window)
+        let loudEvent = try #require(loudEvidence.velocityExpression.first)
+        let quietEvent = try #require(quietEvidence.velocityExpression.first)
+        #expect(loudEvent.complete && quietEvent.complete)
+        #expect(loudEvent.sourceRMS > quietEvent.sourceRMS)
+        #expect(abs(loudEvent.attackHighBandRatio -
+                    quietEvent.attackHighBandRatio) < 0.000_001)
+        #expect(abs(loudEvent.tailToAttackDB - quietEvent.tailToAttackDB) < 0.000_001)
+
+        let short = analyze(source, window: UpperVelocityExpressionWindow(
+            onsetFrame: 0,
+            endFrame: Int((sampleRate * 0.05).rounded()),
+            velocity: 0.70,
+            appliedStartFrequency: 440,
+            spectralEnvelopeScale: 1.24,
+            decayScale: 1.08
+        ))
+        #expect(short.finite)
+        #expect(short.velocityExpression.count == 1)
+        #expect(short.velocityExpression[0].analyzedFrameCount > 0)
+        #expect(!short.velocityExpression[0].complete)
+
+        let malformed = analyze(source, window: UpperVelocityExpressionWindow(
+            onsetFrame: -1,
+            endFrame: frameCount,
+            velocity: 0.70,
+            appliedStartFrequency: 440,
+            spectralEnvelopeScale: 1.24,
+            decayScale: 1.08
+        ))
+        #expect(!malformed.finite)
+        #expect(!malformed.velocityExpression[0].complete)
+
+        let overBound = UpperTimbreEvidenceAnalyzer.analyze(UpperTimbreAnalysisInput(
+            left: source,
+            right: source,
+            sampleRate: sampleRate,
+            velocityExpressionWindows: Array(
+                repeating: window,
+                count: UpperTimbreEvidenceAnalyzer.maximumVelocityExpressionWindows + 1
+            )
+        ))
+        #expect(!overBound.finite)
+        #expect(overBound.velocityExpression.count ==
+                UpperTimbreEvidenceAnalyzer.maximumVelocityExpressionWindows)
+
+        let aggregate = UpperTimbreEvidence.aggregating([loudEvidence, quietEvidence])
+        #expect(aggregate.finite)
+        #expect(aggregate.velocityExpression.count == 2)
+        #expect(aggregate.velocityExpression[0] == loudEvent)
+        #expect(aggregate.velocityExpression[1].onsetFrame ==
+                quietEvent.onsetFrame + loudEvidence.analyzedFrameCount)
+        #expect(aggregate.velocityExpression[1].analyzedEndFrame ==
+                quietEvent.analyzedEndFrame + loudEvidence.analyzedFrameCount)
+        #expect(aggregate.velocityExpression[1].analyzedFrameCount ==
+                quietEvent.analyzedFrameCount)
+        #expect(aggregate.velocityExpression[1].velocity == quietEvent.velocity)
+        #expect(aggregate.velocityExpression[1].attackHighBandRatio ==
+                quietEvent.attackHighBandRatio)
+        #expect(aggregate.velocityExpression[1].tailToAttackDB ==
+                quietEvent.tailToAttackDB)
+        #expect(aggregate.fingerprint != loudEvidence.fingerprint)
+    }
+
     @Test("One slide changes PCM only at its boundary and does not retrigger the envelope")
     func legatoSlideLocality() {
         let first = note(
@@ -218,6 +476,7 @@ struct UpperTimbreDSPTests {
         var state = active.state
         let incomingPhaseA = state.phaseA
         let incomingPhaseB = state.phaseB
+        let incomingVelocityResponse = state.velocityResponse
         #expect(state.timbreIntent.kind == .resonantSequence)
         #expect(state.filterEnvelope > 0)
 
@@ -246,6 +505,7 @@ struct UpperTimbreDSPTests {
         #expect(state.filterEnvelope < active.state.filterEnvelope)
         #expect(state.timbreTreatment.filterEnvelopeDepth <
                 active.state.timbreTreatment.filterEnvelopeDepth)
+        #expect(state.velocityResponse == incomingVelocityResponse)
         #expect(abs(Double(output[0] - (active.samples.last ?? 0))) < 0.65)
         #expect(state.phaseA != 0 && state.phaseB != 0)
         #expect(state.phaseA != incomingPhaseA || state.phaseB != incomingPhaseB)
@@ -330,6 +590,36 @@ struct UpperTimbreDSPTests {
             spatialReverbSend: 0,
             narrativeGainScale: 1,
             narrativeSpectralScale: 1
+        )
+    }
+
+    private func velocityEvidence(
+        _ rendered: (
+            samples: [Float],
+            state: AlienVoiceState,
+            evidence: [UpperNoteRenderEvidence]
+        ),
+        sampleRate: Double
+    ) -> UpperTimbreEvidence {
+        let windows = rendered.evidence.filter {
+            $0.role == .anchor && $0.didRetrigger
+        }.map {
+            UpperVelocityExpressionWindow(
+                onsetFrame: $0.onsetFrame,
+                endFrame: $0.appliedGateEndFrame,
+                velocity: $0.appliedVelocity,
+                appliedStartFrequency: $0.appliedStartFrequency,
+                spectralEnvelopeScale: $0.velocitySpectralEnvelopeScale,
+                decayScale: $0.velocityDecayScale
+            )
+        }
+        return UpperTimbreEvidenceAnalyzer.analyze(
+            UpperTimbreAnalysisInput(
+                left: rendered.samples,
+                right: rendered.samples,
+                sampleRate: sampleRate,
+                velocityExpressionWindows: windows
+            )
         )
     }
 

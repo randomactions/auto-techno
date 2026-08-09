@@ -83,6 +83,85 @@ struct UpperTimbreIntegrationTests {
                 resonant.graphInputRemainderTimbreEvidence.unaccentedOnsetCount ==
                 appliedAnchorRetriggers
         )
+        for block in [home, resonant, detuned] {
+            let anchorRetriggers = block.upperNoteRenderEvidence.filter {
+                $0.role == .anchor && $0.didRetrigger
+            }
+            #expect(block.graphInputRemainderTimbreEvidence.velocityExpression.count ==
+                    anchorRetriggers.count)
+            #expect(block.postGraphRemainderTimbreEvidence.velocityExpression ==
+                    block.graphInputRemainderTimbreEvidence.velocityExpression)
+            #expect(zip(
+                block.graphInputRemainderTimbreEvidence.velocityExpression,
+                anchorRetriggers
+            ).allSatisfy { expression, applied in
+                expression.onsetFrame == applied.onsetFrame &&
+                    expression.velocity == applied.appliedVelocity &&
+                    expression.spectralEnvelopeScale ==
+                        applied.velocitySpectralEnvelopeScale &&
+                    expression.decayScale == applied.velocityDecayScale
+            })
+        }
+    }
+
+    @Test("Score velocity reaches the anchor while protected rhythm stays exact")
+    func scoreVelocityVerticalSlice() throws {
+        guard let fixture = velocityIsolatedFixture() else {
+            Issue.record("Expected a motif step isolated from protected rhythm")
+            return
+        }
+        let home = replacingChapter(in: fixture.resolved, with: .home)
+        let low = renderSingleBar(
+            plan: fixture.plan,
+            resolved: replacingAccent(in: home, step: fixture.step, value: 0),
+            state: fixture.state
+        )
+        let high = renderSingleBar(
+            plan: fixture.plan,
+            resolved: replacingAccent(in: home, step: fixture.step, value: 1),
+            state: fixture.state
+        )
+        let stepFrames = Double(low.left.count) / 16
+        let onsetFrame = Int((Double(fixture.step) * stepFrames).rounded())
+        let lowScore = try #require(low.resolvedUpperNotes.first {
+            $0.role == .anchor && $0.onsetStep == fixture.step
+        })
+        let highScore = try #require(high.resolvedUpperNotes.first {
+            $0.role == .anchor && $0.onsetStep == fixture.step
+        })
+        let lowApplied = try #require(low.upperNoteRenderEvidence.first {
+            $0.role == .anchor && $0.onsetFrame == onsetFrame
+        })
+        let highApplied = try #require(high.upperNoteRenderEvidence.first {
+            $0.role == .anchor && $0.onsetFrame == onsetFrame
+        })
+
+        #expect(low.resolvedUpperNotes.count == high.resolvedUpperNotes.count)
+        #expect(zip(low.resolvedUpperNotes, high.resolvedUpperNotes).allSatisfy {
+            lhs, rhs in
+            lhs.role == rhs.role && lhs.onsetStep == rhs.onsetStep &&
+                lhs.durationInSteps == rhs.durationInSteps &&
+                lhs.startFrequencyRatio == rhs.startFrequencyRatio &&
+                lhs.endFrequencyRatio == rhs.endFrequencyRatio &&
+                lhs.gate == rhs.gate && lhs.timbreIntent == rhs.timbreIntent
+        })
+        #expect(highScore.velocity > lowScore.velocity)
+        #expect(lowApplied.requestedVelocity == lowScore.velocity)
+        #expect(lowApplied.appliedVelocity == lowScore.velocity)
+        #expect(highApplied.requestedVelocity == highScore.velocity)
+        #expect(highApplied.appliedVelocity == highScore.velocity)
+        #expect(highApplied.velocitySpectralEnvelopeScale >
+                lowApplied.velocitySpectralEnvelopeScale)
+        #expect(highApplied.velocityDecayScale > lowApplied.velocityDecayScale)
+        #expect(low.left[..<onsetFrame] == high.left[..<onsetFrame])
+        #expect(low.left[onsetFrame...] != high.left[onsetFrame...])
+        #expect(low.protectedFoundationSampleHash == high.protectedFoundationSampleHash)
+        #expect(low.percussionSampleHash == high.percussionSampleHash)
+        #expect(low.protectedRhythmSampleHash == high.protectedRhythmSampleHash)
+        #expect(low.graphInputRemainderTimbreEvidence.fingerprint !=
+                high.graphInputRemainderTimbreEvidence.fingerprint)
+        assertRenderedTrajectoriesMatchScore(low)
+        assertRenderedTrajectoriesMatchScore(high)
     }
 
     @Test("Prepared phrase commits resolved notes, evidence, and quality state together")
@@ -126,6 +205,11 @@ struct UpperTimbreIntegrationTests {
             }.count)
             #expect(block.graphInputRemainderTimbreEvidence.finite)
             #expect(block.postGraphRemainderTimbreEvidence.finite)
+            let anchorRetriggers = block.upperNoteRenderEvidence.filter {
+                $0.role == .anchor && $0.didRetrigger
+            }
+            #expect(block.postGraphRemainderTimbreEvidence.velocityExpression.count ==
+                    anchorRetriggers.count)
             let activeIntents = block.resolvedUpperNotes.map(\.timbreIntent).filter {
                 $0.kind != .home
             }
@@ -139,6 +223,26 @@ struct UpperTimbreIntegrationTests {
             prepared.blocks.map(\.postGraphRemainderTimbreEvidence)
         )
         #expect(prepared.upperTimbreEvidence == aggregate)
+        var expressionIndex = 0
+        var frameOffset = 0
+        for block in prepared.blocks {
+            for local in block.postGraphRemainderTimbreEvidence.velocityExpression {
+                let phrase = prepared.upperTimbreEvidence.velocityExpression[expressionIndex]
+                #expect(phrase.onsetFrame == frameOffset + local.onsetFrame)
+                #expect(phrase.analyzedEndFrame == frameOffset + local.analyzedEndFrame)
+                #expect(phrase.analyzedFrameCount == local.analyzedFrameCount)
+                #expect(phrase.velocity == local.velocity)
+                #expect(phrase.attackHighBandRatio == local.attackHighBandRatio)
+                #expect(phrase.tailToAttackDB == local.tailToAttackDB)
+                expressionIndex += 1
+            }
+            frameOffset += block.postGraphRemainderTimbreEvidence.analyzedFrameCount
+        }
+        #expect(expressionIndex == prepared.upperTimbreEvidence.velocityExpression.count)
+        #expect(!prepared.upperTimbreEvidence.velocityExpression.isEmpty)
+        #expect(prepared.upperTimbreEvidence.velocityExpression.contains {
+            $0.complete
+        })
         #expect(prepared.qualityDecision.outcome == .qualificationUnavailable)
         #expect(prepared.qualityDecision.reasonCodes.contains(.policyUncalibratedV1))
         #expect(prepared.qualityDecision.reasonCodes.contains(.staleEvidenceV1))
@@ -528,6 +632,31 @@ struct UpperTimbreIntegrationTests {
         return nil
     }
 
+    private func velocityIsolatedFixture() ->
+        (state: AutonomousSessionState, plan: AutonomousPhrasePlan,
+         resolved: ResolvedPerformanceBar, step: Int)? {
+        for seed in UInt64(1)...256 {
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            let state = director.initialState()
+            let plan = director.candidates(from: state).primary
+            for resolved in plan.resolvedBars {
+                let motifSteps = resolved.ensemble.events.filter {
+                    $0.voice == .motif
+                }.map(\.step)
+                if let step = motifSteps.first(where: { candidate in
+                    !resolved.ensemble.events.contains { event in
+                        event.step == candidate &&
+                            (event.voice.role == .foundation ||
+                                event.voice.role == .percussion)
+                    }
+                }) {
+                    return (state, plan, resolved, step)
+                }
+            }
+        }
+        return nil
+    }
+
     private func shortenedCandidate(
         _ source: AutonomousPhrasePlan,
         interest: PhraseInterestReport
@@ -578,6 +707,38 @@ struct UpperTimbreIntegrationTests {
             foundationCompanion: resolved.foundationCompanion,
             pulseEchoEnabled: resolved.pulseEchoEnabled,
             interlockChapter: chapter,
+            groovePulses: resolved.groovePulses,
+            spatialContrast: resolved.spatialContrast,
+            narrative: resolved.narrative
+        )
+    }
+
+    private func replacingAccent(in resolved: ResolvedPerformanceBar,
+                                 step: Int, value: Double) -> ResolvedPerformanceBar {
+        let source = resolved.performance
+        var contour = source.accentContour
+        contour[((step % contour.count) + contour.count) % contour.count] = value
+        let performance = PerformanceBar(
+            bar: source.bar,
+            phrase: source.phrase,
+            localBar: source.localBar,
+            phraseLength: source.phraseLength,
+            section: source.section,
+            tension: source.tension,
+            roles: source.roles,
+            transformations: source.transformations,
+            signatureEvent: source.signatureEvent,
+            eventSeed: source.eventSeed,
+            accentContour: contour
+        )
+        return ResolvedPerformanceBar(
+            performance: performance,
+            ensemble: resolved.ensemble,
+            arrangementGesture: resolved.arrangementGesture,
+            percussionGear: resolved.percussionGear,
+            foundationCompanion: resolved.foundationCompanion,
+            pulseEchoEnabled: resolved.pulseEchoEnabled,
+            interlockChapter: resolved.interlockChapter,
             groovePulses: resolved.groovePulses,
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative
@@ -640,6 +801,8 @@ struct UpperTimbreIntegrationTests {
             #expect(trajectory.requestedGateEndFrame == requestedEnd)
             #expect(trajectory.requestedGate == note.gate)
             #expect(trajectory.timbreIntent == note.timbreIntent)
+            #expect(trajectory.requestedVelocity == note.velocity)
+            #expect(trajectory.appliedVelocity == note.velocity)
             #expect(abs(trajectory.requestedStartFrequency -
                         block.synthWorld.rootFrequency * note.startFrequencyRatio) <
                     0.000_001)

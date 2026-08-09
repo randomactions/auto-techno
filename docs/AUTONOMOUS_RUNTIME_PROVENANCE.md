@@ -49,7 +49,16 @@ mistaken for a completed feedback system.
    sixteen bar windows. It is descriptive only: uncalibrated masking evidence
    applies no cut, while the existing authored envelope, kick-linked guard,
    ducking, glue, and output-safety stages remain active. Upper-timbre evidence
-   schema 2 records protected rhythm as its masking reference.
+   schema 3 (quality-report contract schema 2) retains protected rhythm as its
+   masking reference and adds bounded onset-local anchor-velocity observations
+   from the exact dry anchor tap.
+   Score-owned anchor velocity now projects into the authored filter-envelope
+   lift (`0.40...1.60`) and in-gate decay (`0.80...1.20`) while every other role
+   stays neutral for this response. Retriggers latch the response and legato
+   slides inherit it, preserving persistent tails. The reduced evidence records
+   applied scales, gain-normalized attack high-band ratio, and tail-to-attack
+   ratio; incomplete windows remain explicit and the uncalibrated policy cannot
+   promote them.
 7. `TechnoEngine` prepares away from the callback and schedules completed buffers
    by sample time. It derives its read-only waveform on a fixed decibel scale and
    owns transport, visual position, and route recovery, not musical composition.

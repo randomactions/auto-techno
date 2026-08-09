@@ -241,3 +241,45 @@ matched-loudness listening, physical-output smoke, route/interruption test, or
 60-minute soak was performed for this candidate. Preparation latency and peak
 memory also remain unmeasured. The policy stays `uncalibrated.v1`, and quality
 qualification remains unavailable.
+
+## Anchor velocity expression and role-local evidence — 2026-08-09
+
+This candidate builds on the truthful protected-rhythm routing slice. The
+existing resolved upper-note velocity now has one bounded, anchor-only DSP
+projection: it scales only the Alien Analog voice's existing additive filter
+envelope lift and in-gate decay. The response is latched on an actual anchor
+retrigger, inherited by legato slides and an active tail, and reset after the
+voice becomes silent. Other upper roles remain neutral. Pitch, score onsets,
+gates, oscillator fingerprint, structural spectral sculpture, resonance,
+drive, send levels and routing, generated-graph plan and topology, protected
+rhythm, and the one-button runtime are unchanged; the changed anchor signal
+still flows through its existing sends and generated graph.
+
+The renderer trace records requested and applied velocity for every upper note.
+For each anchor retrigger, the reduced exact-dry-tap evidence records applied
+velocity, applied spectral and decay scales, gain-normalized attack high-band
+ratio, and in-gate tail-to-attack level. The analyzer validates a fixed input
+prefix, rejects malformed geometry and non-finite metadata, and rebases
+bar-local event coordinates into exact phrase sample coordinates. It does not
+perform a counterfactual rerender or add work to the real-time callback.
+
+Final local validation used Xcode 26.6 build 17F113 and Apple Swift 6.3.3:
+
+- The exact final full suite passed: 83 tests in 207.620 seconds.
+- The optimized release build passed in 2.27 seconds using the matched full
+  Xcode SDK, isolated module caches, and the populated offline SwiftPM scratch
+  path.
+- `git diff --check` passed on the final tree.
+- Two independent final re-reviews found no remaining P0-P2 issue after the
+  bounded-input, malformed-geometry, phrase-coordinate, and Core-to-DSP routing
+  regressions were added.
+
+The evidence and qualification schemas advance with the new observation shape,
+but policy remains `uncalibrated.v1` and qualification remains unavailable. No
+controller threshold or candidate promotion uses these metrics. Current score
+velocities sit mostly above the response's neutral midpoint, and resonant
+anchors already have other velocity-sensitive treatment; matched-loudness
+listening is therefore still required to judge the combined musical magnitude.
+No physical-output smoke, route/interruption test, preparation-latency or peak-
+memory measurement, or 60-minute recovery soak was performed for this
+candidate.

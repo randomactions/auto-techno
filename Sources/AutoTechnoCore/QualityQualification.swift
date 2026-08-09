@@ -4,7 +4,9 @@ import Foundation
 /// policy is deliberately uncalibrated: these types make evidence reproducible
 /// without claiming that professional-quality targets exist yet.
 package enum QualityQualificationContract {
-    package static let schemaVersion = 1
+    /// Version 2 identifies reports that embed upper-timbre evidence schema 3
+    /// and its onset-local anchor-expression observations.
+    package static let schemaVersion = 2
     package static let reasonCodeVersion = 1
     package static let maximumCorrectionRenders = 1
     package static let uncalibratedPolicyVersion = "autotechno-quality.uncalibrated.v1"

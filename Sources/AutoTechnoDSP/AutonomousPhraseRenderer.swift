@@ -186,6 +186,10 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
     package let appliedGate: UpperNoteGate
     package let didRetrigger: Bool
     package let timbreIntent: UpperTimbreIntent
+    package let requestedVelocity: Double
+    package let appliedVelocity: Double
+    package let velocitySpectralEnvelopeScale: Double
+    package let velocityDecayScale: Double
 
     package init(
         role: SynthRole,
@@ -199,7 +203,11 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         requestedGate: UpperNoteGate,
         appliedGate: UpperNoteGate,
         didRetrigger: Bool,
-        timbreIntent: UpperTimbreIntent
+        timbreIntent: UpperTimbreIntent,
+        requestedVelocity: Double,
+        appliedVelocity: Double,
+        velocitySpectralEnvelopeScale: Double,
+        velocityDecayScale: Double
     ) {
         self.role = role
         self.onsetFrame = max(0, onsetFrame)
@@ -213,6 +221,10 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         self.appliedGate = appliedGate
         self.didRetrigger = didRetrigger
         self.timbreIntent = timbreIntent
+        self.requestedVelocity = requestedVelocity
+        self.appliedVelocity = min(1, max(0, appliedVelocity))
+        self.velocitySpectralEnvelopeScale = velocitySpectralEnvelopeScale
+        self.velocityDecayScale = velocityDecayScale
     }
 }
 
@@ -658,21 +670,34 @@ package enum AutonomousPhraseRenderer {
                     endFrame: $0.appliedGateEndFrame
                 )
             }
+            let velocityExpressionWindows = rendered.upperNoteRenderEvidence.filter {
+                $0.role == .anchor && $0.didRetrigger
+            }.map {
+                UpperVelocityExpressionWindow(
+                    onsetFrame: $0.onsetFrame,
+                    endFrame: $0.appliedGateEndFrame,
+                    velocity: $0.appliedVelocity,
+                    appliedStartFrequency: $0.appliedStartFrequency,
+                    spectralEnvelopeScale: $0.velocitySpectralEnvelopeScale,
+                    decayScale: $0.velocityDecayScale
+                )
+            }
             let resonantEvidence = UpperTimbreEvidenceAnalyzer.analyze(
                 UpperTimbreAnalysisInput(
-                left: rendered.resonantAnchorSamples,
-                right: rendered.resonantAnchorSamples,
-                sampleRate: sampleRate,
-                accentedOnsetFrames: accentedOnsets,
-                unaccentedOnsetFrames: unaccentedOnsets,
-                slideWindows: slideWindows,
-                detectedAttackFrames: detectedAttackFrames(
                     left: rendered.resonantAnchorSamples,
                     right: rendered.resonantAnchorSamples,
-                    sampleRate: sampleRate
-                ),
-                precedingFrame: state.previousResonantAnchorEvidenceFrame
-            ))
+                    sampleRate: sampleRate,
+                    accentedOnsetFrames: accentedOnsets,
+                    unaccentedOnsetFrames: unaccentedOnsets,
+                    slideWindows: slideWindows,
+                    detectedAttackFrames: detectedAttackFrames(
+                        left: rendered.resonantAnchorSamples,
+                        right: rendered.resonantAnchorSamples,
+                        sampleRate: sampleRate
+                    ),
+                    velocityExpressionWindows: velocityExpressionWindows,
+                    precedingFrame: state.previousResonantAnchorEvidenceFrame
+                ))
             let detunedEvidence = UpperTimbreEvidenceAnalyzer.analyze(
                 UpperTimbreAnalysisInput(
                 left: rendered.detunedCompanionSamples,

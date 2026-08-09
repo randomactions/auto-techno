@@ -22,6 +22,51 @@ package struct UpperTimbreStereoFrame: Codable, Equatable, Sendable {
     }
 }
 
+/// Applied renderer metadata for one anchor retrigger. The analyzer combines
+/// it with the exact dry anchor tap; no counterfactual render or raw PCM is
+/// retained in the quality report.
+package struct UpperVelocityExpressionWindow: Equatable, Sendable {
+    package let onsetFrame: Int
+    package let endFrame: Int
+    package let velocity: Double
+    package let appliedStartFrequency: Double
+    package let spectralEnvelopeScale: Double
+    package let decayScale: Double
+
+    package init(
+        onsetFrame: Int,
+        endFrame: Int,
+        velocity: Double,
+        appliedStartFrequency: Double,
+        spectralEnvelopeScale: Double,
+        decayScale: Double
+    ) {
+        self.onsetFrame = onsetFrame
+        self.endFrame = endFrame
+        self.velocity = velocity
+        self.appliedStartFrequency = appliedStartFrequency
+        self.spectralEnvelopeScale = spectralEnvelopeScale
+        self.decayScale = decayScale
+    }
+}
+
+/// Bounded onset-local evidence that a score velocity reached both the DSP
+/// projection and the exact dry anchor signal. Ratios are descriptive until a
+/// calibrated policy supplies journey- and route-aware ranges.
+package struct UpperVelocityExpressionEvidence: Codable, Equatable, Sendable {
+    package let onsetFrame: Int
+    package let analyzedEndFrame: Int
+    package let analyzedFrameCount: Int
+    package let velocity: Double
+    package let appliedStartFrequency: Double
+    package let spectralEnvelopeScale: Double
+    package let decayScale: Double
+    package let sourceRMS: Double
+    package let attackHighBandRatio: Double
+    package let tailToAttackDB: Double
+    package let complete: Bool
+}
+
 /// Signal-domain inputs remain local to detached preparation. Only the reduced
 /// `UpperTimbreEvidence` result is serializable or eligible to cross into Core.
 package struct UpperTimbreAnalysisInput: Equatable, Sendable {
@@ -32,6 +77,7 @@ package struct UpperTimbreAnalysisInput: Equatable, Sendable {
     package let unaccentedOnsetFrames: [Int]
     package let slideWindows: [UpperTimbreSlideWindow]
     package let detectedAttackFrames: [Int]
+    package let velocityExpressionWindows: [UpperVelocityExpressionWindow]
     package let protectedReferenceMono: [Float]
     package let precedingFrame: UpperTimbreStereoFrame?
     package let followingFrame: UpperTimbreStereoFrame?
@@ -44,6 +90,7 @@ package struct UpperTimbreAnalysisInput: Equatable, Sendable {
         unaccentedOnsetFrames: [Int] = [],
         slideWindows: [UpperTimbreSlideWindow] = [],
         detectedAttackFrames: [Int] = [],
+        velocityExpressionWindows: [UpperVelocityExpressionWindow] = [],
         protectedReferenceMono: [Float] = [],
         precedingFrame: UpperTimbreStereoFrame? = nil,
         followingFrame: UpperTimbreStereoFrame? = nil
@@ -55,6 +102,7 @@ package struct UpperTimbreAnalysisInput: Equatable, Sendable {
         self.unaccentedOnsetFrames = unaccentedOnsetFrames
         self.slideWindows = slideWindows
         self.detectedAttackFrames = detectedAttackFrames
+        self.velocityExpressionWindows = velocityExpressionWindows
         self.protectedReferenceMono = protectedReferenceMono
         self.precedingFrame = precedingFrame
         self.followingFrame = followingFrame
@@ -78,6 +126,7 @@ package struct UpperTimbreEvidence: Codable, Equatable, Sendable {
     package let slideMaximumDelta: Double
     package let slideWindowCount: Int
     package let duplicateAttackCount: Int
+    package let velocityExpression: [UpperVelocityExpressionEvidence]
     package let detuneMotionDepth: Double
     package let detuneMotionPeriodSeconds: Double
     package let highBandEnergyRatio: Double
@@ -122,6 +171,7 @@ package struct UpperTimbreEvidence: Codable, Equatable, Sendable {
             slideMaximumDelta: resonantAnchor.slideMaximumDelta,
             slideWindowCount: resonantAnchor.slideWindowCount,
             duplicateAttackCount: resonantAnchor.duplicateAttackCount,
+            velocityExpression: resonantAnchor.velocityExpression,
             detuneMotionDepth: detunedCompanions.detuneMotionDepth,
             detuneMotionPeriodSeconds: detunedCompanions.detuneMotionPeriodSeconds,
             highBandEnergyRatio: mix.highBandEnergyRatio,
@@ -158,6 +208,20 @@ package struct UpperTimbreEvidence: Codable, Equatable, Sendable {
         mix(slideMaximumDelta.bitPattern)
         mix(UInt64(slideWindowCount))
         mix(UInt64(duplicateAttackCount))
+        mix(UInt64(velocityExpression.count))
+        for event in velocityExpression {
+            mix(UInt64(event.onsetFrame))
+            mix(UInt64(event.analyzedEndFrame))
+            mix(UInt64(event.analyzedFrameCount))
+            mix(event.velocity.bitPattern)
+            mix(event.appliedStartFrequency.bitPattern)
+            mix(event.spectralEnvelopeScale.bitPattern)
+            mix(event.decayScale.bitPattern)
+            mix(event.sourceRMS.bitPattern)
+            mix(event.attackHighBandRatio.bitPattern)
+            mix(event.tailToAttackDB.bitPattern)
+            mix(event.complete ? 1 : 0)
+        }
         mix(detuneMotionDepth.bitPattern)
         mix(detuneMotionPeriodSeconds.bitPattern)
         mix(highBandEnergyRatio.bitPattern)
@@ -172,9 +236,9 @@ package struct UpperTimbreEvidence: Codable, Equatable, Sendable {
 }
 
 package enum UpperTimbreEvidenceAnalyzer {
-    /// Version 2 identifies the protected reference as the exact rhythm route
-    /// rather than the earlier foundation-only rerender.
-    package static let schemaVersion = 2
+    /// Version 3 adds bounded, onset-local anchor velocity expression while
+    /// retaining version 2's exact protected-rhythm masking reference.
+    package static let schemaVersion = 3
     /// Covers one canonical 130 BPM bar through 192 kHz without truncation.
     /// Inputs beyond this detached-preparation bound are marked incomplete.
     package static let maximumFrames = 524_288
@@ -182,6 +246,8 @@ package enum UpperTimbreEvidenceAnalyzer {
     package static let maximumMetadataItems = 512
     package static let maximumSlideWindows = 64
     package static let maximumEvidenceWindows = 64
+    package static let maximumVelocityExpressionWindows = 128
+    package static let maximumVelocityExpressionEvents = 512
     private static let spectralFrameLimit = 1_024
     private static let epsilon = 0.000_000_000_001
 
@@ -191,15 +257,33 @@ package enum UpperTimbreEvidenceAnalyzer {
         let effectiveRate = max(1, sampleRate)
         let stereoCount = min(input.left.count, input.right.count)
         let frameCount = min(maximumFrames, stereoCount)
+        let boundedVelocityWindows = Array(
+            input.velocityExpressionWindows.prefix(maximumVelocityExpressionWindows)
+        )
         let metadataComplete = input.accentedOnsetFrames.count <= maximumMetadataItems &&
             input.unaccentedOnsetFrames.count <= maximumMetadataItems &&
             input.detectedAttackFrames.count <= maximumMetadataItems &&
-            input.slideWindows.count <= maximumSlideWindows
+            input.slideWindows.count <= maximumSlideWindows &&
+            input.velocityExpressionWindows.count <= maximumVelocityExpressionWindows
+        let velocityMetadataValuesValid = boundedVelocityWindows.allSatisfy {
+            $0.velocity.isFinite && $0.appliedStartFrequency.isFinite &&
+                $0.spectralEnvelopeScale.isFinite && $0.decayScale.isFinite &&
+                $0.velocity >= 0 && $0.velocity <= 1 &&
+                $0.appliedStartFrequency > 0 &&
+                $0.spectralEnvelopeScale >= 0.40 &&
+                $0.spectralEnvelopeScale <= 1.60 &&
+                $0.decayScale >= 0.80 && $0.decayScale <= 1.20
+        }
+        let velocityMetadataFramesValid = boundedVelocityWindows.allSatisfy {
+            $0.onsetFrame >= 0 && $0.onsetFrame < stereoCount &&
+                $0.endFrame >= $0.onsetFrame && $0.endFrame <= stereoCount
+        }
         let protectedComplete = input.protectedReferenceMono.isEmpty ||
             (input.protectedReferenceMono.count == stereoCount &&
                 input.protectedReferenceMono.count <= maximumFrames)
         var finite = rateIsValid && input.left.count == input.right.count &&
-            stereoCount <= maximumFrames && metadataComplete && protectedComplete
+            stereoCount <= maximumFrames && metadataComplete && protectedComplete &&
+            velocityMetadataValuesValid && velocityMetadataFramesValid
         var left = [Double]()
         var right = [Double]()
         left.reserveCapacity(frameCount)
@@ -292,6 +376,11 @@ package enum UpperTimbreEvidenceAnalyzer {
         }
 
         let detune = detuneMotion(mono: mono, sampleRate: effectiveRate)
+        let velocityExpression = velocityExpressionEvidence(
+            mono: mono,
+            windows: boundedVelocityWindows,
+            sampleRate: sampleRate
+        )
         let spectrum = spectralSummary(mono, sampleRate: effectiveRate)
         let protectedSpectrum = spectralSummary(protected, sampleRate: effectiveRate)
         let masking = maskingOverlap(spectrum.bands, protectedSpectrum.bands)
@@ -317,6 +406,7 @@ package enum UpperTimbreEvidenceAnalyzer {
             slideMaximumDelta: finiteValue(slideMaximumDelta),
             slideWindowCount: slides.count,
             duplicateAttackCount: duplicateAttackCount,
+            velocityExpression: velocityExpression,
             detuneMotionDepth: finiteValue(detune.depth),
             detuneMotionPeriodSeconds: finiteValue(detune.period),
             highBandEnergyRatio: finiteValue(spectrum.highRatio),
@@ -352,6 +442,7 @@ package enum UpperTimbreEvidenceAnalyzer {
                 slideMaximumDelta: 0,
                 slideWindowCount: 0,
                 duplicateAttackCount: 0,
+                velocityExpression: [],
                 detuneMotionDepth: 0,
                 detuneMotionPeriodSeconds: 0,
                 highBandEnergyRatio: 0,
@@ -372,7 +463,39 @@ package enum UpperTimbreEvidenceAnalyzer {
             return finiteValue(sum / Double(totalFrames))
         }
         let consistentRate = windows.allSatisfy { $0.sampleRate == first.sampleRate }
+        let totalVelocityExpressionCount = windows.reduce(0) {
+            saturatingAdd($0, $1.velocityExpression.count)
+        }
+        var velocityExpression: [UpperVelocityExpressionEvidence] = []
+        velocityExpression.reserveCapacity(min(
+            maximumVelocityExpressionEvents,
+            totalVelocityExpressionCount
+        ))
+        var frameOffset = 0
+        for window in windows {
+            for event in window.velocityExpression {
+                if velocityExpression.count == maximumVelocityExpressionEvents { break }
+                velocityExpression.append(UpperVelocityExpressionEvidence(
+                    onsetFrame: saturatingAdd(frameOffset, event.onsetFrame),
+                    analyzedEndFrame: saturatingAdd(
+                        frameOffset,
+                        event.analyzedEndFrame
+                    ),
+                    analyzedFrameCount: event.analyzedFrameCount,
+                    velocity: event.velocity,
+                    appliedStartFrequency: event.appliedStartFrequency,
+                    spectralEnvelopeScale: event.spectralEnvelopeScale,
+                    decayScale: event.decayScale,
+                    sourceRMS: event.sourceRMS,
+                    attackHighBandRatio: event.attackHighBandRatio,
+                    tailToAttackDB: event.tailToAttackDB,
+                    complete: event.complete
+                ))
+            }
+            frameOffset = saturatingAdd(frameOffset, window.analyzedFrameCount)
+        }
         let valid = evidence.count <= maximumEvidenceWindows && consistentRate &&
+            totalVelocityExpressionCount <= maximumVelocityExpressionEvents &&
             windows.allSatisfy { $0.finite && $0.schemaVersion == schemaVersion }
         return UpperTimbreEvidence(
             schemaVersion: schemaVersion,
@@ -389,6 +512,7 @@ package enum UpperTimbreEvidenceAnalyzer {
             slideMaximumDelta: windows.map(\.slideMaximumDelta).max() ?? 0,
             slideWindowCount: windows.reduce(0) { saturatingAdd($0, $1.slideWindowCount) },
             duplicateAttackCount: windows.reduce(0) { saturatingAdd($0, $1.duplicateAttackCount) },
+            velocityExpression: velocityExpression,
             detuneMotionDepth: weighted(\.detuneMotionDepth),
             detuneMotionPeriodSeconds: weighted(\.detuneMotionPeriodSeconds),
             highBandEnergyRatio: weighted(\.highBandEnergyRatio),
@@ -415,6 +539,104 @@ package enum UpperTimbreEvidenceAnalyzer {
             guard end > start else { return 0 }
             let energy = mono[start..<end].reduce(0.0) { $0 + $1 * $1 }
             return sqrt(energy / Double(end - start))
+        }
+    }
+
+    /// Reduces each exact anchor retrigger to one fixed-size diagnostic. The
+    /// high-band ratio and tail/attack ratio are gain-normalized by construction,
+    /// so the direct velocity gain cannot masquerade as spectral or decay proof.
+    private static func velocityExpressionEvidence(
+        mono: [Double],
+        windows: [UpperVelocityExpressionWindow],
+        sampleRate: Double
+    ) -> [UpperVelocityExpressionEvidence] {
+        let rateIsValid = sampleRate.isFinite && sampleRate > 0
+        let effectiveRate = max(1, sampleRate)
+        let regionFrames = max(
+            16,
+            min(2_048, Int((effectiveRate * 0.04).rounded()))
+        )
+        let maximumWindowFrames = max(
+            regionFrames * 2,
+            min(maximumFrames, Int((effectiveRate * 0.18).rounded()))
+        )
+        let highPassCutoff = min(2_400, effectiveRate * 0.22)
+        let lowPassCoefficient = 1 - exp(
+            -2 * Double.pi * highPassCutoff / effectiveRate
+        )
+
+        return windows.map { window in
+            let metadataValid = window.velocity.isFinite &&
+                window.appliedStartFrequency.isFinite &&
+                window.spectralEnvelopeScale.isFinite && window.decayScale.isFinite &&
+                window.velocity >= 0 && window.velocity <= 1 &&
+                window.appliedStartFrequency > 0 &&
+                window.spectralEnvelopeScale >= 0.40 &&
+                window.spectralEnvelopeScale <= 1.60 &&
+                window.decayScale >= 0.80 && window.decayScale <= 1.20
+            let framesValid = window.onsetFrame >= 0 &&
+                window.onsetFrame < mono.count &&
+                window.endFrame >= window.onsetFrame &&
+                window.endFrame <= mono.count
+            let start = min(mono.count, max(0, window.onsetFrame))
+            let requestedEnd = min(mono.count, max(start, window.endFrame))
+            let end = min(requestedEnd, start + maximumWindowFrames)
+            let analyzedFrames = max(0, end - start)
+            let geometryComplete = rateIsValid && metadataValid && framesValid &&
+                analyzedFrames >= regionFrames * 2
+
+            var sourceEnergy = 0.0
+            if end > start {
+                for frame in start..<end {
+                    sourceEnergy += mono[frame] * mono[frame]
+                }
+            }
+            let sourceRMS = analyzedFrames > 0
+                ? sqrt(sourceEnergy / Double(analyzedFrames)) : 0
+
+            var attackEnergy = 0.0
+            var attackHighEnergy = 0.0
+            var tailEnergy = 0.0
+            if geometryComplete {
+                let attackEnd = start + regionFrames
+                var low = mono[start]
+                for frame in start..<attackEnd {
+                    let sample = mono[frame]
+                    low += (sample - low) * lowPassCoefficient
+                    let high = sample - low
+                    attackEnergy += sample * sample
+                    attackHighEnergy += high * high
+                }
+                let tailStart = end - regionFrames
+                for frame in tailStart..<end {
+                    let sample = mono[frame]
+                    tailEnergy += sample * sample
+                }
+            }
+            let attackRMS = sqrt(attackEnergy / Double(regionFrames))
+            let tailRMS = sqrt(tailEnergy / Double(regionFrames))
+            let complete = geometryComplete && sourceRMS > epsilon &&
+                attackRMS > epsilon
+            let highRatio = complete
+                ? min(1, max(0, attackHighEnergy / max(epsilon, attackEnergy))) : 0
+            let tailToAttack = complete
+                ? min(120, max(-120, 20 * log10(max(tailRMS, epsilon) / attackRMS))) : 0
+
+            return UpperVelocityExpressionEvidence(
+                onsetFrame: start,
+                analyzedEndFrame: end,
+                analyzedFrameCount: analyzedFrames,
+                velocity: metadataValid ? window.velocity : 0,
+                appliedStartFrequency: metadataValid
+                    ? window.appliedStartFrequency : 0,
+                spectralEnvelopeScale: metadataValid
+                    ? window.spectralEnvelopeScale : 0,
+                decayScale: metadataValid ? window.decayScale : 0,
+                sourceRMS: finiteValue(sourceRMS),
+                attackHighBandRatio: finiteValue(highRatio),
+                tailToAttackDB: finiteValue(tailToAttack),
+                complete: complete
+            )
         }
     }
 
@@ -689,7 +911,7 @@ package enum CanonicalJourneyQualificationReportError: Error, Equatable, Sendabl
 
 package struct CanonicalJourneyQualificationReport: Codable, Equatable, Sendable {
     package static let currentEvidenceScope =
-        "upper-role-local-plus-post-graph-remainder.v1"
+        "upper-role-local-plus-post-graph-remainder.v2"
     package let schemaVersion: Int
     package let engineVersion: String
     package let policyVersion: String
