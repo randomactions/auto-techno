@@ -53,6 +53,154 @@ struct AdaptiveAutonomousSessionTests {
         }
     }
 
+    @Test("Weak-sixteenth classes and macro reveal use the authored hierarchy")
+    func weakSixteenthVocabularyAndPatterns() {
+        #expect((0..<4).map(SixteenthPulseClass.init(step:)) == [
+            .downbeat, .leadingWeak, .upbeat, .trailingWeak,
+        ])
+        #expect((0..<16).map(WeakSixteenthStage.init(absoluteBar:)) ==
+                Array(repeating: .skeleton, count: 4) +
+                Array(repeating: .contour, count: 4) +
+                Array(repeating: .syncopatedLean, count: 4) +
+                Array(repeating: .pullback, count: 4))
+
+        let contour = GroovePulseResolver.pattern(
+            stage: .contour, gesture: .steady, macroEnding: false
+        )
+        #expect(contour.map(\.0) == [1, 3, 5, 7, 9, 11, 13, 15])
+        #expect(contour.map(\.1) == [0.38, 0.52, 0.38, 0.52, 0.38, 0.52, 0.38, 0.52])
+        let lean = GroovePulseResolver.pattern(
+            stage: .syncopatedLean, gesture: .steady, macroEnding: false
+        )
+        #expect(lean.map(\.0) == contour.map(\.0))
+        #expect(lean.map(\.1) == [0.30, 0.72, 0.30, 0.72, 0.30, 0.72, 0.30, 0.72])
+        let minimal = GroovePulseResolver.pattern(
+            stage: .syncopatedLean, gesture: .minimalize, macroEnding: false
+        )
+        #expect(minimal.map(\.0) == [7, 15])
+        #expect(minimal.map(\.1) == [0.42, 0.42])
+        let pullback = GroovePulseResolver.pattern(
+            stage: .pullback, gesture: .turnaround, macroEnding: true
+        )
+        #expect(pullback.map(\.0) == [3, 7, 11, 15])
+        #expect(pullback.map(\.1) == [0.50, 0.50, 0.50, 0.72])
+        #expect(GroovePulseResolver.pattern(
+            stage: .pullback, gesture: .structuralMarker,
+            macroEnding: true, majorBreak: true
+        ).isEmpty)
+    }
+
+    @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
+    func weakSixteenthMacroContinuity() {
+        let result = sequence(seed: AutonomousSessionDirector.defaultSeed, phraseCount: 100)
+        let plans = result.plans
+        let firstMacro = plans.flatMap(\.resolvedBars)
+            .filter { $0.performance.bar < 16 }
+            .sorted { $0.performance.bar < $1.performance.bar }
+        #expect(firstMacro.count == 16)
+        for resolved in firstMacro {
+            let expected = GroovePulseResolver.pattern(
+                stage: WeakSixteenthStage(absoluteBar: resolved.performance.bar),
+                gesture: resolved.arrangementGesture,
+                macroEnding: (resolved.performance.bar + 1).isMultiple(of: 16)
+            )
+            #expect(resolved.groovePulses.map(\.step) == expected.map(\.0))
+            #expect(resolved.groovePulses.map(\.intensity) == expected.map(\.1))
+            #expect(resolved.groovePulses.allSatisfy {
+                $0.stage == WeakSixteenthStage(absoluteBar: resolved.performance.bar) &&
+                    ($0.pulseClass == .leadingWeak || $0.pulseClass == .trailingWeak) &&
+                    $0.timingOffsetInSteps <= 0.12
+            })
+            let resolvedEvents = resolved.ensemble.events
+                .filter { $0.voice == .groovePulse }
+            #expect(resolvedEvents.map(\.step) == resolved.groovePulses.map(\.step))
+            #expect(resolvedEvents.map(\.intensity) == resolved.groovePulses.map(\.intensity))
+        }
+        #expect(firstMacro[0...3].allSatisfy { $0.groovePulses.isEmpty })
+        #expect(firstMacro[16 - 1].groovePulses.last?.intensity == 0.72)
+
+        let midMacroBoundary = zip(plans, plans.dropFirst()).first { previous, next in
+            previous.startBar + previous.barCount == next.startBar &&
+                !next.startBar.isMultiple(of: 16)
+        }
+        guard let (_, next) = midMacroBoundary, let first = next.resolvedBars.first else {
+            Issue.record("Expected an adaptive phrase boundary inside a macro")
+            return
+        }
+        #expect(first.groovePulses.allSatisfy {
+            $0.stage == WeakSixteenthStage(absoluteBar: first.performance.bar)
+        })
+        #expect(plans.filter { $0.kind == .majorBreak }.allSatisfy { plan in
+            plan.resolvedBars.allSatisfy { $0.groovePulses.isEmpty }
+        })
+        #expect(plans.flatMap(\.resolvedBars).filter {
+            !$0.performance.roles.contains(.percussion)
+        }.allSatisfy { $0.groovePulses.isEmpty })
+    }
+
+    @Test("Ghost pulses contribute one fifth of an ordinary activity event")
+    func groovePulseActivityWeight() {
+        let director = AutonomousSessionDirector()
+        let state = director.initialState()
+        let plan = director.candidates(from: state).primary
+        guard let resolved = plan.resolvedBars.first(where: { !$0.groovePulses.isEmpty }) else {
+            Issue.record("Expected a groove-pulse bar in the first phrase")
+            return
+        }
+        let weightedEvents = resolved.ensemble.events.filter {
+            $0.voice == .kick || $0.voice == .groovePulse
+        }
+        let weighted = ResolvedPerformanceBar(
+            performance: resolved.performance,
+            ensemble: EnsembleContext(
+                focusRole: resolved.ensemble.focusRole,
+                events: weightedEvents,
+                kickAnchors: resolved.ensemble.kickAnchors,
+                intentionalPileup: resolved.ensemble.intentionalPileup
+            ),
+            arrangementGesture: resolved.arrangementGesture,
+            percussionGear: resolved.percussionGear,
+            foundationCompanion: resolved.foundationCompanion,
+            pulseEchoEnabled: resolved.pulseEchoEnabled,
+            interlockChapter: resolved.interlockChapter,
+            groovePulses: resolved.groovePulses
+        )
+        let ordinaryEvents = weightedEvents.map { event in
+            event.voice == .groovePulse
+                ? EnsembleResolvedEvent(
+                    voice: .percussion, step: event.step,
+                    intensity: event.intensity, relocated: event.relocated
+                )
+                : event
+        }
+        let ordinary = ResolvedPerformanceBar(
+            performance: resolved.performance,
+            ensemble: EnsembleContext(
+                focusRole: resolved.ensemble.focusRole,
+                events: ordinaryEvents,
+                kickAnchors: resolved.ensemble.kickAnchors,
+                intentionalPileup: resolved.ensemble.intentionalPileup
+            ),
+            arrangementGesture: resolved.arrangementGesture,
+            percussionGear: resolved.percussionGear,
+            foundationCompanion: resolved.foundationCompanion,
+            pulseEchoEnabled: resolved.pulseEchoEnabled,
+            interlockChapter: resolved.interlockChapter
+        )
+        let weightedReport = PhraseInterestEvaluator.evaluate(
+            resolvedBars: [weighted], kind: plan.kind,
+            memory: state.memory, identityPreserved: true
+        )
+        let ordinaryReport = PhraseInterestEvaluator.evaluate(
+            resolvedBars: [ordinary], kind: plan.kind,
+            memory: state.memory, identityPreserved: true
+        )
+        #expect(weightedReport.intentionalSpace > ordinaryReport.intentionalSpace)
+        #expect(weightedReport.overactivityPenalty <= ordinaryReport.overactivityPenalty)
+        #expect(weightedReport.weakPositionCoverage == 1)
+        #expect(weightedReport.trailingSideRelationship == 1)
+    }
+
     @Test("The three-step driver advances the five-stage follower and resets only on the macro grid")
     func relationalCyclePhases() {
         let phases = (0..<15).map(RelationalCyclePhase.init(macroStep:))
@@ -267,6 +415,21 @@ struct AdaptiveAutonomousSessionTests {
         #expect(result.events.filter { $0.voice == .bass }.allSatisfy { $0.step != 0 })
         #expect(occupancy.values.allSatisfy { $0 <= 3 })
         #expect(result.events.contains { $0.relocated })
+
+        let groove = GroovePulseResolver.proposals(
+            absoluteBar: 8, percussionActive: true,
+            majorBreak: false, gesture: .steady
+        )
+        let withoutPulses = EnsembleArbiter.resolve(
+            proposals: proposals, focusRole: .motif, intentionalPileup: false
+        )
+        let withPulses = EnsembleArbiter.resolve(
+            proposals: proposals + groove, focusRole: .motif, intentionalPileup: false
+        )
+        #expect(withPulses.events.filter { $0.voice != .groovePulse } == withoutPulses.events)
+        let withPulseOccupancy = Dictionary(grouping: withPulses.events, by: \.step)
+            .mapValues(\.count)
+        #expect(withPulseOccupancy.values.allSatisfy { $0 <= 3 })
     }
 
     @Test("Stale preparation epochs and late phrase policy fail coherently")
@@ -571,7 +734,7 @@ struct AutonomousPreparationPreflightTests {
                 let role: MixRole = switch event.voice {
                 case .kick: .kick
                 case .bass, .rumble, .tunedTom: .foundation
-                case .percussion, .clap, .openHat, .metallic: .percussion
+                case .percussion, .clap, .openHat, .metallic, .groovePulse: .percussion
                 case .synth, .lead: .upperTonal
                 case .pad, .riser: .atmosphere
                 }
@@ -873,6 +1036,132 @@ struct AutonomousPreparationPreflightTests {
             originalBlock.left[start..<end], changedBlock.left[start..<end]
         ).reduce(0.0) { $0 + abs(Double($1.0 - $1.1)) }
         #expect(delta > 0.000_1)
+    }
+
+    @Test("Resolved groove pulse drives metadata, PCM, percussion stem, and no mix decision")
+    func groovePulseResolvedRendering() {
+        let director = AutonomousSessionDirector()
+        let state = director.initialState()
+        let original = director.candidates(from: state).primary
+        guard let barIndex = original.resolvedBars.firstIndex(where: {
+            !$0.groovePulses.isEmpty
+        }), let target = original.resolvedBars[barIndex].groovePulses.last else {
+            Issue.record("Expected a resolved groove pulse")
+            return
+        }
+        let source = original.resolvedBars[barIndex]
+        let changedPulse = GroovePulseArticulation(
+            step: target.step,
+            pulseClass: target.pulseClass,
+            stage: target.stage,
+            intensity: target.intensity * 0.5,
+            timingOffsetInSteps: target.timingOffsetInSteps
+        )
+        let changedPulses = source.groovePulses.map {
+            $0.step == target.step ? changedPulse : $0
+        }
+        let changedResolved = ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: source.ensemble,
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            foundationCompanion: source.foundationCompanion,
+            pulseEchoEnabled: source.pulseEchoEnabled,
+            interlockChapter: source.interlockChapter,
+            groovePulses: changedPulses
+        )
+        var changedBars = original.resolvedBars
+        changedBars[barIndex] = changedResolved
+        let changed = replacingResolvedBars(in: original, with: changedBars, memory: state.memory)
+        let graph = DSPGraphGenerator.safePlan(sessionSeed: state.rootSeed)
+        var originalRender = RenderState(), changedRender = RenderState()
+        var originalGraph = GeneratedDSPContinuationState()
+        var changedGraph = GeneratedDSPContinuationState()
+        let originalBlocks = AutonomousPhraseRenderer.render(
+            plan: original, graph: graph, sampleRate: 8_000,
+            state: &originalRender, graphState: &originalGraph
+        )
+        let changedBlocks = AutonomousPhraseRenderer.render(
+            plan: changed, graph: graph, sampleRate: 8_000,
+            state: &changedRender, graphState: &changedGraph
+        )
+        let originalBlock = originalBlocks[barIndex]
+        let changedBlock = changedBlocks[barIndex]
+        let originalEvent = originalBlock.events.first {
+            $0.voice == .groovePulse && $0.step == target.step
+        }
+        let changedEvent = changedBlock.events.first {
+            $0.voice == .groovePulse && $0.step == target.step
+        }
+        #expect(originalEvent?.pulseClass == target.pulseClass)
+        #expect(originalEvent?.timingOffsetInSteps == target.timingOffsetInSteps)
+        #expect(originalEvent?.intensity == target.intensity)
+        #expect(changedEvent?.intensity == changedPulse.intensity)
+        #expect(originalBlock.events.filter {
+            !($0.voice == .groovePulse && $0.step == target.step)
+        } == changedBlock.events.filter {
+            !($0.voice == .groovePulse && $0.step == target.step)
+        })
+        let start = Int((Double(target.step) + target.timingOffsetInSteps) *
+                        Double(originalBlock.left.count) / 16.0)
+        let end = min(originalBlock.left.count, start + Int(8_000 * 0.12))
+        let windowDelta = zip(
+            originalBlock.left[start..<end], changedBlock.left[start..<end]
+        ).reduce(0.0) { $0 + abs(Double($1.0 - $1.1)) }
+        #expect(windowDelta > 0.000_1)
+        #expect(originalBlock.automaticMix == changedBlock.automaticMix)
+        #expect(originalBlock.stemObservations[.kick] == changedBlock.stemObservations[.kick])
+        #expect(originalBlock.stemObservations[.foundation] ==
+                changedBlock.stemObservations[.foundation])
+        #expect(originalBlock.stemObservations[.percussion] !=
+                changedBlock.stemObservations[.percussion])
+        #expect(originalBlock.busStates[.groovePulse]?.level ==
+                originalBlock.stemObservations[.percussion]?.rms)
+    }
+
+    @Test("Groove pulse carrier is deterministic, mono, short, and low-cut")
+    func groovePulseCarrierSignal() {
+        let sampleRate = 44_100.0
+        let start = 97
+        let count = Int(sampleRate * 0.09)
+        func render(intensity: Double) -> [Float] {
+            var output = [Float](repeating: 0, count: count)
+            var measurement = [Float](repeating: 0, count: count)
+            GroovePulseVoice.render(
+                &output, measurement: &measurement,
+                start: start, sampleRate: sampleRate,
+                intensity: intensity, seed: 48_291
+            )
+            #expect(output == measurement)
+            return output
+        }
+        let left = render(intensity: 0.72)
+        let right = render(intensity: 0.72)
+        let quieter = render(intensity: 0.36)
+        #expect(left == right)
+        #expect(left != quieter)
+        #expect(left[..<start].allSatisfy { $0 == 0 })
+        let expectedEnd = start + Int(sampleRate * GroovePulseVoice.durationSeconds)
+        #expect(left[expectedEnd...].allSatisfy { $0 == 0 })
+        #expect(left.contains { abs($0) > 0.000_001 })
+        let delta = zip(left, quieter).map { Double($0.0 - $0.1) }
+        #expect(delta[..<start].allSatisfy { $0 == 0 })
+        #expect(delta[expectedEnd...].allSatisfy { $0 == 0 })
+
+        var low = 0.0
+        let coefficient = 1 - exp(-2 * Double.pi * 300 / sampleRate)
+        var lowEnergy = 0.0
+        var totalEnergy = 0.0
+        for sample in left {
+            let value = Double(sample)
+            low += (value - low) * coefficient
+            lowEnergy += low * low
+            totalEnergy += value * value
+        }
+        #expect(lowEnergy / max(totalEnergy, 0.000_000_1) < 0.12)
+        #expect(GroovePulseVoice.baseLevel == 0.045)
+        #expect(GroovePulseVoice.highPassFrequency == 550)
+        #expect(GroovePulseVoice.lowPassFrequency == 3_200)
     }
 
     @Test("Rumble remains a protected mono-compatible foundation companion")

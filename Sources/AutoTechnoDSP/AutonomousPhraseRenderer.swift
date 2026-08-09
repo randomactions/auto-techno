@@ -2,7 +2,7 @@ import AutoTechnoCore
 import Foundation
 
 package enum VoiceKind: String, CaseIterable, Sendable {
-    case kick, bass, rumble, percussion, clap, openHat, tunedTom, metallic
+    case kick, bass, rumble, percussion, clap, openHat, tunedTom, metallic, groovePulse
     case synth, lead, pad, riser
 }
 
@@ -28,12 +28,18 @@ package struct VoiceEvent: Equatable, Sendable {
     package let bar: Int
     package let step: Int
     package let intensity: Double
+    package let pulseClass: SixteenthPulseClass?
+    package let timingOffsetInSteps: Double
 
-    package init(voice: VoiceKind, bar: Int, step: Int, intensity: Double) {
+    package init(voice: VoiceKind, bar: Int, step: Int, intensity: Double,
+                 pulseClass: SixteenthPulseClass? = nil,
+                 timingOffsetInSteps: Double = 0) {
         self.voice = voice
         self.bar = bar
         self.step = step
         self.intensity = intensity
+        self.pulseClass = pulseClass
+        self.timingOffsetInSteps = timingOffsetInSteps
     }
 }
 
@@ -355,9 +361,20 @@ package enum AutonomousPhraseRenderer {
                 workspace: &workspace,
                 layer: .full
             )
-            let events = resolved.ensemble.events.map {
-                VoiceEvent(voice: voiceKind($0.voice), bar: performance.bar,
-                           step: $0.step, intensity: $0.intensity)
+            let events = resolved.ensemble.events.map { event in
+                let pulse = event.voice == .groovePulse
+                    ? resolved.groovePulse(at: event.step) : nil
+                return VoiceEvent(
+                    voice: voiceKind(event.voice),
+                    bar: performance.bar,
+                    step: pulse?.step ?? event.step,
+                    intensity: pulse?.intensity ?? event.intensity,
+                    pulseClass: pulse?.pulseClass,
+                    timingOffsetInSteps: pulse?.timingOffsetInSteps ??
+                        VoiceRenderer.timingOffsetInSteps(
+                            for: event.voice, step: event.step, dna: plan.dna
+                        )
+                )
             }
             let buses = busStates(rendered: rendered, scene: plan.scene, events: events)
             let upperLeft = zip(rendered.leftSamples, foundation.leftSamples).map { $0.0 - $0.1 }
@@ -434,6 +451,7 @@ package enum AutonomousPhraseRenderer {
         case .openHat: .openHat
         case .tunedTom: .tunedTom
         case .metallic: .metallic
+        case .groovePulse: .groovePulse
         case .motif: .synth
         case .response: .lead
         case .atmosphere: .pad
@@ -461,7 +479,7 @@ package enum AutonomousPhraseRenderer {
             switch voice {
             case .kick: role = .kick
             case .bass, .rumble, .tunedTom: role = .foundation
-            case .percussion, .clap, .openHat, .metallic:
+            case .percussion, .clap, .openHat, .metallic, .groovePulse:
                 role = .percussion
             case .synth, .lead: role = .upperTonal
             case .pad, .riser: role = .atmosphere

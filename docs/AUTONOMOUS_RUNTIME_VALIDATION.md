@@ -177,3 +177,29 @@ accessible `transport-play-pause` control moved READY → LIVE → PAUSED → LI
 PAUSED, phrase/bar position continued across resume, and the fixed-scale waveform
 rendered while live. Route switching, interruption recovery, and the hour-long
 physical-output soak were not exercised by this smoke.
+
+## Weak-sixteenth groove reveal evidence — 2026-08-09
+
+Before changing render math, the exact `9157658` baseline passed all 34 tests and
+produced a 44.1 kHz canonical first-macro hash of `c0a8e56171793343` (RMS
+`0.09027027`, true peak `0.40203717`, loudness estimate `-21.580105`, low-band
+correlation `0.9999444`). The weak-sixteenth candidate produced hash
+`8cae318d64ba05aa` (RMS `0.09027233`, true peak `0.4020319`, loudness estimate
+`-21.579906`, low-band correlation `0.9999444`). Its resolved trace is empty for
+bars 1–4, eight alternating weak positions for bars 5–11, only steps 7 and 15 on
+bar 12, and trailing weak positions 3/7/11/15 for bars 13–16. Loudness-normalized
+bars 1–4 are bit-identical before and after.
+
+The expanded 39-test suite passes with Xcode 26.6 / Apple Swift 6.3.3, including
+macro and phrase-boundary continuity, break exclusion, priority preservation,
+weighted density, resolved metadata/PCM coupling, exact percussion-stem routing,
+automatic-mix exclusion, mono carrier output, low-frequency rejection,
+deterministic continuation, and representative 44.1/48 kHz safety renders. The
+optimized release build also passes. A native smoke verified the single enabled
+`transport-play-pause` accessibility control and LIVE → PAUSED → LIVE continuation
+from phrase 1 into phrase 2; the temporary release instance was then paused and
+closed.
+
+Temporary 44.1 kHz matched-loudness pairs exist for skeleton, contour,
+syncopated-lean, and pullback stages, plus the isolated carrier. Human listening
+approval, route/interruption testing, and the physical-output soak remain pending.

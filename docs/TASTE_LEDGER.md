@@ -125,3 +125,36 @@ but no longer crowds the rumble and surrounding groove. Expanding automatic gain
 control to percussion or upper voices remains out of scope until this first
 relationship is heard and accepted. Verdict: implementation candidate only; do
 not promote hashes.
+
+## Video-informed weak-sixteenth groove reveal candidate — 2026-08-09
+
+Observation: the automatic kick/foundation change was not clearly audible in the
+whole mix. Do not tune that mechanism further in this slice. The supplied Oscar
+[groove video](https://www.youtube.com/watch?v=7lgyDq8N1J0) instead suggests a
+more recognizable rhythmic hypothesis: downbeats, upbeats, and the two weak
+sixteenth positions need an intentional hierarchy, and favoring the trailing
+weak position should create a bodily side-to-side pull into the next beat.
+
+The smallest reproducible rule adds one dark, mono-centred mid-percussion carrier
+on the weak positions. A sixteen-bar macro reveals it in four stages: four bars
+of the existing skeleton, four bars of `0.38/0.52` contour, four bars of
+`0.30/0.72` trailing-side emphasis with a two-hit minimalisation, then four bars
+of trailing-only pullback. The carrier is a 45 ms noise/click band-limited around
+`550...3,200 Hz`, uses the existing shuffle, and counts as `0.20` of an ordinary
+event in space/overactivity evidence. It remains below kick, foundation, and
+motif arbitration priority, enters the percussion stem, and cannot affect the
+automatic kick/foundation gain decision.
+
+Exact baseline: commit `9157658`, Xcode 26.6 / Apple Swift 6.3.3, canonical first
+macro at 44.1 kHz, sample hash `c0a8e56171793343`, RMS `0.09027027`, true peak
+`0.40203717`, loudness estimate `-21.580105`, and low-band stereo correlation
+`0.9999444`. The comparison artifacts remain temporary and outside the
+repository. The candidate hash is `8cae318d64ba05aa`, with RMS `0.09027233`,
+true peak `0.4020319`, loudness estimate `-21.579906`, and unchanged low-band
+correlation `0.9999444`. Loudness-normalized bars 1–4 are bit-identical; only the
+three reveal stages differ.
+
+Matched-loudness comparison: pending across bars 1–4, 5–8, 9–12, and 13–16,
+with a carrier-only diagnostic. Keep only if the reveal is obvious in one pass,
+creates side-to-side motion, and does not merely sound like additional hats.
+Verdict: implementation candidate only; listening approval remains pending.

@@ -16,7 +16,55 @@ package enum KickMixBalance {
     }
 }
 
+package enum GroovePulseVoice {
+    package static let baseLevel = 0.045
+    package static let durationSeconds = 0.045
+    package static let highPassFrequency = 550.0
+    package static let lowPassFrequency = 3_200.0
+
+    package static func render(_ output: inout [Float], measurement: inout [Float],
+                               start: Int, sampleRate: Double,
+                               intensity: Double, seed: UInt64) {
+        let frames = min(Int(sampleRate * durationSeconds), output.count - start)
+        guard frames > 0 else { return }
+        var random = SeededGenerator(seed: seed)
+        var highPassState = 0.0
+        var lowPassState = 0.0
+        let highPassCoefficient = min(
+            0.35,
+            1 - exp(-2 * .pi * highPassFrequency / sampleRate)
+        )
+        let lowPassCoefficient = min(
+            0.55,
+            1 - exp(-2 * .pi * lowPassFrequency / sampleRate)
+        )
+        for index in 0..<frames {
+            let time = Double(index) / sampleRate
+            let noise = random.unit() * 2 - 1
+            highPassState += (noise - highPassState) * highPassCoefficient
+            let highPassed = noise - highPassState
+            let mutedClick = sin(2 * .pi * 1_180 * time) * exp(-time * 145) * 0.24
+            lowPassState += (highPassed * 0.78 + mutedClick - lowPassState) * lowPassCoefficient
+            let attack = min(1, time / 0.0008)
+            let envelope = attack * exp(-time * 72)
+            let renderedSample = Float(
+                tanh(lowPassState * 1.16) * envelope * baseLevel * intensity
+            )
+            output[start + index] += renderedSample
+            measurement[start + index] += renderedSample
+        }
+    }
+}
+
 package enum VoiceRenderer {
+    package static func timingOffsetInSteps(for voice: EnsembleVoice, step: Int,
+                                            dna: SceneDNA) -> Double {
+        let swings = voice == .bass || voice == .percussion || voice == .openHat ||
+            voice == .groovePulse
+        guard swings, !step.isMultiple(of: 2) else { return 0 }
+        return max(0, min(0.24, (dna.rhythm.swingPercent - 0.5) * 2.0))
+    }
+
     static func renderBar(scene: TechnoScene, sampleRate: Double, state: inout RenderState,
                           dna: SceneDNA, resolved: ResolvedPerformanceBar,
                           synthWorld: SynthWorldDNA, synthPerformance: SynthPerformanceBar,
@@ -50,10 +98,11 @@ package enum VoiceRenderer {
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
         var random = SeededGenerator(seed: performance.eventSeed)
 
-        let swingOffset = max(0, min(0.24, (dna.rhythm.swingPercent - 0.5) * 2.0))
         for event in resolved.ensemble.events {
-            let swings = event.voice == .bass || event.voice == .percussion || event.voice == .openHat
-            let offset = swings && !event.step.isMultiple(of: 2) ? swingOffset : 0
+            let pulseArticulation = event.voice == .groovePulse
+                ? resolved.groovePulse(at: event.step) : nil
+            let offset = pulseArticulation?.timingOffsetInSteps ??
+                timingOffsetInSteps(for: event.voice, step: event.step, dna: dna)
             let start = Int(((Double(event.step) + offset) * stepFrames).rounded())
             let accent = performance.accent(at: event.step) * event.intensity
             switch event.voice {
@@ -112,6 +161,19 @@ package enum VoiceRenderer {
                                    start: start, sampleRate: sampleRate,
                                    level: 0.042 * accent,
                                    brightness: scene.character.percussionBrightness, random: &random)
+            case .groovePulse where layer == .full:
+                guard let pulseArticulation else { break }
+                let pulseSeed = performance.eventSeed ^ UInt64(event.step + 1) ^ 0x6A20_0C15
+                GroovePulseVoice.render(
+                    &output, measurement: &percussionStem,
+                    start: start, sampleRate: sampleRate,
+                    intensity: pulseArticulation.intensity, seed: pulseSeed
+                )
+                GroovePulseVoice.render(
+                    &percussionBus, measurement: &measurementScratch,
+                    start: start, sampleRate: sampleRate,
+                    intensity: pulseArticulation.intensity, seed: pulseSeed
+                )
             default: break
             }
         }
@@ -145,7 +207,10 @@ package enum VoiceRenderer {
 
         func onsetFrames(for roles: Set<EnsembleVoice>) -> [Int] {
             resolved.ensemble.events.filter { roles.contains($0.voice) }.map { event in
-                Int((Double(event.step) * stepFrames).rounded())
+                let offset = event.voice == .groovePulse
+                    ? (resolved.groovePulse(at: event.step)?.timingOffsetInSteps ?? 0)
+                    : 0
+                return Int(((Double(event.step) + offset) * stepFrames).rounded())
             }
         }
         let kickOnsets = onsetFrames(for: [.kick])
@@ -158,7 +223,9 @@ package enum VoiceRenderer {
             ),
             .percussion: StemObservationAnalyzer.analyze(
                 percussionStem, sampleRate: sampleRate,
-                onsetFrames: onsetFrames(for: [.percussion, .clap, .openHat, .metallic])
+                onsetFrames: onsetFrames(for: [
+                    .percussion, .clap, .openHat, .metallic, .groovePulse,
+                ])
             ),
             .upperTonal: StemObservationAnalyzer.analyze(
                 upperTonalStem, sampleRate: sampleRate,

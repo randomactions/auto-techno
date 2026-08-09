@@ -8,6 +8,56 @@ package enum AutonomousPhraseKind: String, CaseIterable, Sendable {
     case identityReturn
 }
 
+package enum SixteenthPulseClass: String, CaseIterable, Sendable {
+    case downbeat
+    case leadingWeak
+    case upbeat
+    case trailingWeak
+
+    package init(step: Int) {
+        switch ((step % 4) + 4) % 4 {
+        case 0: self = .downbeat
+        case 1: self = .leadingWeak
+        case 2: self = .upbeat
+        default: self = .trailingWeak
+        }
+    }
+}
+
+package enum WeakSixteenthStage: String, CaseIterable, Sendable {
+    case skeleton
+    case contour
+    case syncopatedLean
+    case pullback
+
+    package init(absoluteBar: Int) {
+        switch (((absoluteBar % 16) + 16) % 16) / 4 {
+        case 0: self = .skeleton
+        case 1: self = .contour
+        case 2: self = .syncopatedLean
+        default: self = .pullback
+        }
+    }
+}
+
+package struct GroovePulseArticulation: Equatable, Sendable {
+    package let step: Int
+    package let pulseClass: SixteenthPulseClass
+    package let stage: WeakSixteenthStage
+    package let intensity: Double
+    package let timingOffsetInSteps: Double
+
+    package init(step: Int, pulseClass: SixteenthPulseClass,
+                 stage: WeakSixteenthStage, intensity: Double,
+                 timingOffsetInSteps: Double) {
+        self.step = ((step % 16) + 16) % 16
+        self.pulseClass = pulseClass
+        self.stage = stage
+        self.intensity = min(1, max(0, intensity))
+        self.timingOffsetInSteps = min(0.12, max(0, timingOffsetInSteps))
+    }
+}
+
 package enum EnsembleVoice: String, CaseIterable, Sendable {
     case kick
     case bass
@@ -21,11 +71,12 @@ package enum EnsembleVoice: String, CaseIterable, Sendable {
     case response
     case atmosphere
     case transition
+    case groovePulse
 
     package var role: PerformanceRole {
         switch self {
         case .kick, .bass, .rumble, .tunedTom: .foundation
-        case .percussion, .clap, .openHat, .metallic: .percussion
+        case .percussion, .clap, .openHat, .metallic, .groovePulse: .percussion
         case .motif: .motif
         case .response: .response
         case .atmosphere: .atmosphere
@@ -97,11 +148,13 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let foundationCompanion: FoundationCompanion
     package let pulseEchoEnabled: Bool
     package let interlockChapter: InterlockChapter
+    package let groovePulses: [GroovePulseArticulation]
 
     package init(performance: PerformanceBar, ensemble: EnsembleContext,
                  arrangementGesture: ArrangementGesture, percussionGear: PercussionGear,
                  foundationCompanion: FoundationCompanion, pulseEchoEnabled: Bool,
-                 interlockChapter: InterlockChapter) {
+                 interlockChapter: InterlockChapter,
+                 groovePulses: [GroovePulseArticulation] = []) {
         self.performance = performance
         self.ensemble = ensemble
         self.arrangementGesture = arrangementGesture
@@ -109,6 +162,74 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.foundationCompanion = foundationCompanion
         self.pulseEchoEnabled = pulseEchoEnabled && foundationCompanion != .monoRumble
         self.interlockChapter = interlockChapter
+        self.groovePulses = groovePulses.sorted { $0.step < $1.step }
+    }
+
+    package func groovePulse(at step: Int) -> GroovePulseArticulation? {
+        groovePulses.first { $0.step == ((step % 16) + 16) % 16 }
+    }
+}
+
+package enum GroovePulseResolver {
+    package static let eventWeight = 0.20
+
+    package static func proposals(absoluteBar: Int, percussionActive: Bool,
+                                  majorBreak: Bool,
+                                  gesture: ArrangementGesture) -> [EnsembleEventProposal] {
+        guard percussionActive, !majorBreak else { return [] }
+        let stage = WeakSixteenthStage(absoluteBar: absoluteBar)
+        return pattern(stage: stage, gesture: gesture,
+                       macroEnding: (absoluteBar + 1).isMultiple(of: 16),
+                       majorBreak: majorBreak).map { step, intensity in
+            EnsembleEventProposal(
+                voice: .groovePulse,
+                requestedStep: step,
+                priority: 40,
+                intensity: intensity
+            )
+        }
+    }
+
+    package static func articulations(from ensemble: EnsembleContext,
+                                      absoluteBar: Int,
+                                      swingPercent: Double) -> [GroovePulseArticulation] {
+        let stage = WeakSixteenthStage(absoluteBar: absoluteBar)
+        let shuffle = min(0.12, max(0, (swingPercent - 0.5) * 2.0))
+        return ensemble.events.compactMap { event in
+            guard event.voice == .groovePulse else { return nil }
+            return GroovePulseArticulation(
+                step: event.step,
+                pulseClass: SixteenthPulseClass(step: event.step),
+                stage: stage,
+                intensity: event.intensity,
+                timingOffsetInSteps: event.step.isMultiple(of: 2) ? 0 : shuffle
+            )
+        }
+    }
+
+    package static func pattern(stage: WeakSixteenthStage,
+                                gesture: ArrangementGesture,
+                                macroEnding: Bool,
+                                majorBreak: Bool = false) -> [(Int, Double)] {
+        guard !majorBreak else { return [] }
+        switch stage {
+        case .skeleton:
+            return []
+        case .contour:
+            return [1, 3, 5, 7, 9, 11, 13, 15].map { step in
+                (step, SixteenthPulseClass(step: step) == .leadingWeak ? 0.38 : 0.52)
+            }
+        case .syncopatedLean where gesture == .minimalize:
+            return [(7, 0.42), (15, 0.42)]
+        case .syncopatedLean:
+            return [1, 3, 5, 7, 9, 11, 13, 15].map { step in
+                (step, SixteenthPulseClass(step: step) == .leadingWeak ? 0.30 : 0.72)
+            }
+        case .pullback:
+            return [3, 7, 11, 15].map { step in
+                (step, macroEnding && step == 15 ? 0.72 : 0.50)
+            }
+        }
     }
 }
 
@@ -298,6 +419,8 @@ package struct PhraseInterestReport: Equatable, Sendable {
     package let responseClosure: Double
     package let structuralTimeliness: Double
     package let identityContinuity: Double
+    package let weakPositionCoverage: Double
+    package let trailingSideRelationship: Double
     package let overactivityPenalty: Double
     package let overdueDebtCount: Int
     package let score: Double
@@ -305,19 +428,23 @@ package struct PhraseInterestReport: Equatable, Sendable {
 
     package init(pulseClarity: Double, intentionalSpace: Double,
                 responseClosure: Double, structuralTimeliness: Double,
-                identityContinuity: Double, overactivityPenalty: Double,
+                identityContinuity: Double, weakPositionCoverage: Double,
+                trailingSideRelationship: Double, overactivityPenalty: Double,
                 overdueDebtCount: Int) {
         let pulseValue = Self.clamp(pulseClarity)
         let spaceValue = Self.clamp(intentionalSpace)
         let responseClosureValue = Self.clamp(responseClosure)
         let timelinessValue = Self.clamp(structuralTimeliness)
         let identityValue = Self.clamp(identityContinuity)
+        let weakCoverageValue = Self.clamp(weakPositionCoverage)
+        let trailingRelationshipValue = Self.clamp(trailingSideRelationship)
         let overactivityValue = Self.clamp(overactivityPenalty)
         let overdueValue = max(0, overdueDebtCount)
         let computedScore = Self.clamp(
-            pulseValue * 0.25 + spaceValue * 0.20 +
-            responseClosureValue * 0.16 + timelinessValue * 0.18 +
-            identityValue * 0.21 - overactivityValue * 0.24 -
+            pulseValue * 0.23 + spaceValue * 0.18 +
+            responseClosureValue * 0.15 + timelinessValue * 0.17 +
+            identityValue * 0.19 + weakCoverageValue * 0.04 +
+            trailingRelationshipValue * 0.04 - overactivityValue * 0.24 -
             Double(overdueValue) * 0.20
         )
         self.pulseClarity = pulseValue
@@ -325,6 +452,8 @@ package struct PhraseInterestReport: Equatable, Sendable {
         self.responseClosure = responseClosureValue
         self.structuralTimeliness = timelinessValue
         self.identityContinuity = identityValue
+        self.weakPositionCoverage = weakCoverageValue
+        self.trailingSideRelationship = trailingRelationshipValue
         self.overactivityPenalty = overactivityValue
         self.overdueDebtCount = overdueValue
         score = computedScore
@@ -344,6 +473,12 @@ private func ensembleEventSignature(_ context: EnsembleContext) -> UInt64 {
         )
     }
     return signature
+}
+
+private func weightedEventCount(_ context: EnsembleContext) -> Double {
+    context.events.reduce(0) { count, event in
+        count + (event.voice == .groovePulse ? GroovePulseResolver.eventWeight : 1)
+    }
 }
 
 package struct AutonomousPhrasePlan: Equatable, Sendable {
@@ -396,7 +531,7 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
                 roles: bar.roles,
                 transformations: bar.transformations,
                 eventSignature: ensembleEventSignature(context),
-                activity: Double(context.events.count) / 16,
+                activity: weightedEventCount(context) / 16,
                 repetition: bar.transformations.contains(.`repeat`) ||
                     bar.transformations.contains(.restore) ? 1 : 0,
                 density: Double(bar.roles.count) / Double(PerformanceRole.allCases.count)
@@ -455,7 +590,7 @@ package enum PhraseInterestEvaluator {
         }.count
         let pulseClarity = ensemble.isEmpty ? 0 : Double(pulseBars) / Double(ensemble.count)
         let averageEvents = ensemble.isEmpty ? 16 :
-            Double(ensemble.reduce(0) { $0 + $1.events.count }) / Double(ensemble.count)
+            ensemble.reduce(0) { $0 + weightedEventCount($1) } / Double(ensemble.count)
         let intentionalSpace = min(1, max(0, 1 - averageEvents / 16))
         let overactivityPenalty = min(1, max(0, (averageEvents - 9) / 7))
         let hasMotif = ensemble.contains { $0.events.contains { $0.voice == .motif } }
@@ -469,6 +604,59 @@ package enum PhraseInterestEvaluator {
             (kind == .contrast ||
              (memory.barsSinceContrast < 24 && memory.barsSinceBreak < 96 && memory.barsSinceRelease < 128))
         let structuralTimeliness = timely ? 1 : 0.20
+        var expectedWeakPositions = 0
+        var matchedWeakPositions = 0
+        var unexpectedWeakPositions = 0
+        var leadingStrength = 0.0
+        var trailingStrength = 0.0
+        var leadingCount = 0
+        var trailingCount = 0
+        for resolved in resolvedBars {
+            let performance = resolved.performance
+            let expectsPulses = kind != .majorBreak &&
+                performance.roles.contains(.percussion)
+            let expected = expectsPulses ? GroovePulseResolver.pattern(
+                stage: WeakSixteenthStage(absoluteBar: performance.bar),
+                gesture: resolved.arrangementGesture,
+                macroEnding: (performance.bar + 1).isMultiple(of: 16)
+            ).map(\.0) : []
+            let actual = resolved.groovePulses.map(\.step)
+            let expectedSet = Set(expected)
+            expectedWeakPositions += expectedSet.count
+            matchedWeakPositions += actual.filter(expectedSet.contains).count
+            unexpectedWeakPositions += actual.filter { !expectedSet.contains($0) }.count
+            for articulation in resolved.groovePulses {
+                switch articulation.pulseClass {
+                case .leadingWeak:
+                    leadingStrength += articulation.intensity
+                    leadingCount += 1
+                case .trailingWeak:
+                    trailingStrength += articulation.intensity
+                    trailingCount += 1
+                case .downbeat, .upbeat:
+                    break
+                }
+            }
+        }
+        let weakPositionCoverage: Double
+        if expectedWeakPositions == 0 {
+            weakPositionCoverage = unexpectedWeakPositions == 0 ? 1 : 0
+        } else {
+            weakPositionCoverage = min(1, max(0,
+                Double(matchedWeakPositions - unexpectedWeakPositions) /
+                    Double(expectedWeakPositions)
+            ))
+        }
+        let trailingSideRelationship: Double
+        if trailingCount == 0 {
+            trailingSideRelationship = leadingCount == 0 ? 1 : 0
+        } else if leadingCount == 0 {
+            trailingSideRelationship = 1
+        } else {
+            let leadingAverage = leadingStrength / Double(leadingCount)
+            let trailingAverage = trailingStrength / Double(trailingCount)
+            trailingSideRelationship = trailingAverage > leadingAverage ? 1 : 0
+        }
         let phraseEnd = (bars.last?.bar ?? memory.totalBars) + 1
         let overdue = memory.openDebts.filter { $0.dueByBar < phraseEnd && kind != .energyRelease }.count
         return PhraseInterestReport(
@@ -477,6 +665,8 @@ package enum PhraseInterestEvaluator {
             responseClosure: responseClosure,
             structuralTimeliness: structuralTimeliness,
             identityContinuity: identityPreserved ? 1 : 0,
+            weakPositionCoverage: weakPositionCoverage,
+            trailingSideRelationship: trailingSideRelationship,
             overactivityPenalty: overactivityPenalty,
             overdueDebtCount: overdue
         )
@@ -611,8 +801,13 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             )
             let ensemble = ensemblePlan(
                 dna: dna, bar: bar, focus: focusRole,
-                release: kind == .energyRelease, companion: companion,
+                release: kind == .energyRelease, kind: kind, companion: companion,
                 gear: gear, gesture: gesture
+            )
+            let groovePulses = GroovePulseResolver.articulations(
+                from: ensemble,
+                absoluteBar: absoluteBar,
+                swingPercent: dna.rhythm.swingPercent
             )
             let echoEnabled = pulseEchoEnabled(
                 scene: scene, bar: bar, kind: kind,
@@ -625,7 +820,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 percussionGear: gear,
                 foundationCompanion: companion,
                 pulseEchoEnabled: echoEnabled,
-                interlockChapter: interlockState.currentChapter
+                interlockChapter: interlockState.currentChapter,
+                groovePulses: groovePulses
             ))
         }
 
@@ -748,6 +944,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
 
     private func ensemblePlan(dna: SceneDNA, bar: PerformanceBar,
                               focus: PerformanceRole, release: Bool,
+                              kind: AutonomousPhraseKind,
                               companion: FoundationCompanion,
                               gear: PercussionGear,
                               gesture: ArrangementGesture) -> EnsembleContext {
@@ -820,6 +1017,12 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                     alternateSteps: [13, 15], priority: 52, intensity: 0.38
                 ))
             }
+            proposals += GroovePulseResolver.proposals(
+                absoluteBar: bar.bar,
+                percussionActive: true,
+                majorBreak: kind == .majorBreak,
+                gesture: gesture
+            )
         }
         if bar.roles.contains(.motif), !bar.transformations.contains(.omit) {
             let motifSteps = bar.transformations.contains(.fragment)
