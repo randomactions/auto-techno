@@ -200,6 +200,43 @@ package struct RelationalArticulation: Equatable, Sendable {
     )
 }
 
+/// Score-owned control for the existing pulse-echo return. The source remains
+/// truthful even when the gesture is ineligible, while the applied amount is
+/// forced to an exact neutral value outside its bounded musical context. A
+/// source beginning after step 12 cannot produce a 3/16 return in this bar, so
+/// late-only material remains neutral rather than changing a following tail.
+package struct PulseEchoTextureArticulation: Equatable, Sendable {
+    package static let maximumAppliedAmount = 0.55
+    package static let latestDrivenOnsetStep = 12
+
+    package let machineTexture: Double
+    package let earliestPulseEchoOnsetStep: Int?
+    package let driveEligible: Bool
+    package let appliedAmount: Double
+
+    package init(machineTexture: Double, enabled: Bool,
+                 earliestPulseEchoOnsetStep: Int?) {
+        let boundedTexture = machineTexture.isFinite
+            ? min(1, max(0, machineTexture)) : 0
+        let boundedOnset = earliestPulseEchoOnsetStep.flatMap {
+            (0..<16).contains($0) ? $0 : nil
+        }
+        self.machineTexture = boundedTexture
+        self.earliestPulseEchoOnsetStep = boundedOnset
+        driveEligible = enabled && boundedOnset.map {
+            $0 <= Self.latestDrivenOnsetStep
+        } == true
+        appliedAmount = driveEligible
+            ? min(Self.maximumAppliedAmount, boundedTexture) : 0
+    }
+
+    package static let neutral = PulseEchoTextureArticulation(
+        machineTexture: 0,
+        enabled: false,
+        earliestPulseEchoOnsetStep: nil
+    )
+}
+
 /// Bounded long-form memory. Only the current chapter and the two chapters
 /// before it are retained, so an indefinitely running session does not grow
 /// state.
@@ -314,11 +351,13 @@ package struct SynthPerformanceBar: Equatable, Sendable {
     package let foundationInstrument: InstrumentAssignment
     package let relationalSteps: [RelationalArticulation]
     package let upperNotes: [ResolvedUpperNote]
+    package let pulseEchoTextureArticulation: PulseEchoTextureArticulation
 
     package init(bar: Int, gesture: SynthGesture, mutationAmount: Double,
                 foundationInstrument: InstrumentAssignment = InstrumentPalette.safeFoundation(),
                 relationalSteps: [RelationalArticulation],
-                upperNotes: [ResolvedUpperNote]) {
+                upperNotes: [ResolvedUpperNote],
+                pulseEchoTextureArticulation: PulseEchoTextureArticulation = .neutral) {
         self.bar = bar
         self.gesture = gesture
         self.mutationAmount = min(1, max(0, mutationAmount))
@@ -327,6 +366,7 @@ package struct SynthPerformanceBar: Equatable, Sendable {
         self.relationalSteps = relationalSteps.count == 16
             ? relationalSteps : Array(repeating: .neutral, count: 16)
         self.upperNotes = upperNotes
+        self.pulseEchoTextureArticulation = pulseEchoTextureArticulation
     }
 
     package func articulation(at step: Int) -> RelationalArticulation {
@@ -382,6 +422,17 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 forceHomeUpperTimbre: forceHomeUpperTimbre,
                 relationalSteps: relationalSteps
             )
+            let earliestPulseEchoOnsetStep = upperNotes
+                .filter { $0.instrument.effects.contains(.pulseEcho) }
+                .map { $0.onsetStep }
+                .min()
+            let pulseEchoTextureEnabled = resolved.interlockChapter == .memory &&
+                resolved.pulseEchoEnabled &&
+                earliestPulseEchoOnsetStep != nil &&
+                !conservative &&
+                !forceHomeUpperTimbre &&
+                kind != .identityReturn &&
+                kind != .majorBreak
             return SynthPerformanceBar(
                 bar: performanceBar.bar,
                 gesture: gesture,
@@ -394,7 +445,12 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     conservative: conservative
                 ),
                 relationalSteps: relationalSteps,
-                upperNotes: upperNotes
+                upperNotes: upperNotes,
+                pulseEchoTextureArticulation: PulseEchoTextureArticulation(
+                    machineTexture: scene.machineTexture,
+                    enabled: pulseEchoTextureEnabled,
+                    earliestPulseEchoOnsetStep: earliestPulseEchoOnsetStep
+                )
             )
         }
         world = synthWorld

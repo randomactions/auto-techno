@@ -1089,6 +1089,47 @@ struct QualityQualificationFoundationTests {
                 events: []
             )],
             instruments: [AutonomousInstrumentBarEvidence(bar: 0, evidence: [])],
+            pulseEchoDrive: [AutonomousPulseEchoDriveBarEvidence(
+                bar: 0,
+                bpm: AutonomousSessionDirector.bpm,
+                delayFrameCount: Int((
+                    60.0 / AutonomousSessionDirector.bpm * 0.75 * evidence.sampleRate
+                ).rounded()),
+                scoreEnabled: false,
+                earliestPulseEchoOnsetStep: nil,
+                driveEligible: false,
+                machineTexture: 0.4,
+                appliedAmount: 0,
+                transitionFrameCount:
+                    PulseEchoReturnDriveContract.transitionFrameCount(
+                        sampleRate: evidence.sampleRate
+                    ),
+                renderedFrameCount: Int((
+                    240.0 / AutonomousSessionDirector.bpm * evidence.sampleRate
+                ).rounded()),
+                currentSendRMS: 0,
+                preDriveSampleHash: "0123456789abcdef",
+                postDriveSampleHash: "0123456789abcdef",
+                firstPreDriveSampleBitPattern: 0,
+                firstPostDriveSampleBitPattern: 0,
+                lastPreDriveSampleBitPattern: 0,
+                lastPostDriveSampleBitPattern: 0,
+                changedFrameIndex: -1,
+                changedPreDriveSampleBitPattern: 0,
+                preDrivePeak: 0,
+                preDrivePeakFrameIndex: 0,
+                postDrivePeak: 0,
+                postDrivePeakFrameIndex: 0,
+                postDrivePeakPreDriveSample: 0,
+                postDrivePeakEffectiveAmount: 0,
+                preDriveRMS: 0,
+                postDriveRMS: 0,
+                preDriveLowBandRMS: 0,
+                postDriveLowBandRMS: 0,
+                differenceRMS: 0,
+                interlockChapter: .home,
+                finite: true
+            )],
             graph: graph,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: evidence,
@@ -1139,6 +1180,7 @@ struct QualityQualificationFoundationTests {
                 groovePulse: source.groovePulse,
                 closedHat: source.closedHat,
                 instruments: source.instruments,
+                pulseEchoDrive: source.pulseEchoDrive,
                 graph: source.graph,
                 routeContinuation: source.routeContinuation,
                 preGraphUpperTimbreEvidence: source.preGraphUpperTimbreEvidence,

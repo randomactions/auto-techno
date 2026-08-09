@@ -222,6 +222,64 @@ package enum ClosedHatVoiceContract {
     }
 }
 
+/// Pure pointwise contract for the existing band-limited pulse-echo return.
+/// The delay line and feedback write remain outside this shaper.
+package enum PulseEchoReturnDriveContract {
+    package static let maximumAmount = PulseEchoTextureArticulation.maximumAppliedAmount
+    package static let boundaryTransitionSeconds = 0.008
+    package static let normalizationAmplitude = 0.18
+    package static let maximumLowLevelGain = 1 + maximumAmount * 4
+
+    package static func transitionFrameCount(sampleRate: Double) -> Int {
+        guard sampleRate.isFinite, sampleRate > 0 else { return 1 }
+        return max(1, Int((sampleRate * boundaryTransitionSeconds).rounded()))
+    }
+
+    /// A state-free boundary window for the drive contribution. The existing
+    /// filtered return and feedback state continue uninterrupted; only the
+    /// pointwise nonlinear delta reaches exact neutral at either bar edge.
+    package static func effectiveAmount(
+        targetAmount: Double,
+        frame: Int,
+        totalFrameCount: Int,
+        transitionFrameCount: Int
+    ) -> Double {
+        let boundedTarget = targetAmount.isFinite
+            ? min(maximumAmount, max(0, targetAmount)) : 0
+        guard boundedTarget > 0,
+              totalFrameCount > 1,
+              frame > 0,
+              frame < totalFrameCount - 1 else {
+            return 0
+        }
+        let transition = max(1, transitionFrameCount)
+        let boundaryDistance = min(frame, totalFrameCount - 1 - frame)
+        let window = min(1, Double(boundaryDistance) / Double(transition))
+        return boundedTarget * window
+    }
+
+    package static func process(preDriveSample: Float, amount: Double) -> Float {
+        let boundedAmount = amount.isFinite
+            ? min(maximumAmount, max(0, amount)) : 0
+        if boundedAmount == 0 || preDriveSample == 0 {
+            return preDriveSample
+        }
+        let filteredSample = Double(preDriveSample) / normalizationAmplitude
+        let drive = 1 + boundedAmount * 4
+        let wet = boundedAmount / maximumAmount
+        let saturated = tanh(filteredSample * drive)
+        let processed = filteredSample + (saturated - filteredSample) * wet
+        let processedSample = processed * normalizationAmplitude
+        let roundedSample = Float(processedSample)
+        if roundedSample == preDriveSample,
+           processedSample != Double(preDriveSample) {
+            return processedSample > Double(preDriveSample)
+                ? preDriveSample.nextUp : preDriveSample.nextDown
+        }
+        return roundedSample
+    }
+}
+
 package enum VoiceRenderer {
     package static func timingOffsetInSteps(for voice: EnsembleVoice, step: Int,
                                             dna: SceneDNA) -> Double {
@@ -511,6 +569,45 @@ package enum VoiceRenderer {
         }
         let reverbFeedback = Float(0.52 + scene.hypnosis * 0.16 + scene.drone * 0.08)
         let reverbWet = Float(dramaticDistance * 0.07 + scene.drone * 0.10)
+        let pulseEchoTexture = synthPerformance.pulseEchoTextureArticulation
+        let pulseEchoDriveAmount = layer == .full
+            ? pulseEchoTexture.appliedAmount : 0
+        let pulseEchoTransitionFrameCount =
+            PulseEchoReturnDriveContract.transitionFrameCount(sampleRate: sampleRate)
+        let pulseEchoEvidenceLowPassCoefficient = min(
+            0.25,
+            1 - exp(-2 * .pi * 180 / sampleRate)
+        )
+        var pulseEchoPreDriveFingerprint = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frames
+        )
+        var pulseEchoPostDriveFingerprint = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frames
+        )
+        var pulseEchoCurrentSendEnergy = 0.0
+        var pulseEchoPreDriveEnergy = 0.0
+        var pulseEchoPostDriveEnergy = 0.0
+        var pulseEchoPreDriveLowBandEnergy = 0.0
+        var pulseEchoPostDriveLowBandEnergy = 0.0
+        var pulseEchoDifferenceEnergy = 0.0
+        var pulseEchoFirstPreDriveSampleBitPattern: UInt32 = 0
+        var pulseEchoFirstPostDriveSampleBitPattern: UInt32 = 0
+        var pulseEchoLastPreDriveSampleBitPattern: UInt32 = 0
+        var pulseEchoLastPostDriveSampleBitPattern: UInt32 = 0
+        var pulseEchoChangedFrameIndex = -1
+        var pulseEchoChangedPreDriveSampleBitPattern: UInt32 = 0
+        var pulseEchoPreDrivePeak = 0.0
+        var pulseEchoPreDrivePeakFrameIndex = 0
+        var pulseEchoPostDrivePeak = 0.0
+        var pulseEchoPostDrivePeakFrameIndex = 0
+        var pulseEchoPostDrivePeakPreDriveSample = 0.0
+        var pulseEchoPostDrivePeakEffectiveAmount = 0.0
+        var pulseEchoPreDriveLowBandState = 0.0
+        var pulseEchoPostDriveLowBandState = 0.0
+        var pulseEchoReturnDriveFinite = scene.bpm.isFinite &&
+            sampleRate.isFinite &&
+            pulseEchoTexture.machineTexture.isFinite &&
+            pulseEchoDriveAmount.isFinite
         var left = [Float](repeating: 0, count: frames)
         var right = [Float](repeating: 0, count: frames)
         var kickEnvelope = 0.0
@@ -589,7 +686,71 @@ package enum VoiceRenderer {
                 Double(pulseEchoSendBus[index]) + pulseRead * 0.28
             )
             state.pulseEchoWriteIndex = (state.pulseEchoWriteIndex + 1) % pulseEchoFrames
-            let pulseEcho = Float(state.pulseEchoLowPassState * 0.18)
+            let filteredPulseEcho = state.pulseEchoLowPassState
+            let preDrivePulseEcho = Float(filteredPulseEcho * 0.18)
+            let pulseEchoEffectiveAmount = PulseEchoReturnDriveContract.effectiveAmount(
+                targetAmount: pulseEchoDriveAmount,
+                frame: index,
+                totalFrameCount: frames,
+                transitionFrameCount: pulseEchoTransitionFrameCount
+            )
+            let pulseEcho = PulseEchoReturnDriveContract.process(
+                preDriveSample: preDrivePulseEcho,
+                amount: pulseEchoEffectiveAmount
+            )
+            let currentSend = pulseEchoSendBus[index]
+            pulseEchoPreDriveFingerprint.append(preDrivePulseEcho)
+            pulseEchoPostDriveFingerprint.append(pulseEcho)
+            let currentSendValue = Double(currentSend)
+            let preDriveValue = Double(preDrivePulseEcho)
+            let postDriveValue = Double(pulseEcho)
+            if index == 0 {
+                pulseEchoFirstPreDriveSampleBitPattern = preDrivePulseEcho.bitPattern
+                pulseEchoFirstPostDriveSampleBitPattern = pulseEcho.bitPattern
+            }
+            if index == frames - 1 {
+                pulseEchoLastPreDriveSampleBitPattern = preDrivePulseEcho.bitPattern
+                pulseEchoLastPostDriveSampleBitPattern = pulseEcho.bitPattern
+            }
+            if pulseEchoChangedFrameIndex == -1,
+               pulseEcho.bitPattern != preDrivePulseEcho.bitPattern {
+                pulseEchoChangedFrameIndex = index
+                pulseEchoChangedPreDriveSampleBitPattern =
+                    preDrivePulseEcho.bitPattern
+            }
+            let difference = postDriveValue - preDriveValue
+            pulseEchoCurrentSendEnergy += currentSendValue * currentSendValue
+            pulseEchoPreDriveEnergy += preDriveValue * preDriveValue
+            pulseEchoPostDriveEnergy += postDriveValue * postDriveValue
+            pulseEchoDifferenceEnergy += difference * difference
+            if index == 0 || abs(preDriveValue) > pulseEchoPreDrivePeak {
+                pulseEchoPreDrivePeak = abs(preDriveValue)
+                pulseEchoPreDrivePeakFrameIndex = index
+            }
+            if index == 0 || abs(postDriveValue) > pulseEchoPostDrivePeak {
+                pulseEchoPostDrivePeak = abs(postDriveValue)
+                pulseEchoPostDrivePeakFrameIndex = index
+                pulseEchoPostDrivePeakPreDriveSample = preDriveValue
+                pulseEchoPostDrivePeakEffectiveAmount = pulseEchoEffectiveAmount
+            }
+            pulseEchoPreDriveLowBandState +=
+                (preDriveValue - pulseEchoPreDriveLowBandState) *
+                pulseEchoEvidenceLowPassCoefficient
+            pulseEchoPostDriveLowBandState +=
+                (postDriveValue - pulseEchoPostDriveLowBandState) *
+                pulseEchoEvidenceLowPassCoefficient
+            pulseEchoPreDriveLowBandEnergy +=
+                pulseEchoPreDriveLowBandState * pulseEchoPreDriveLowBandState
+            pulseEchoPostDriveLowBandEnergy +=
+                pulseEchoPostDriveLowBandState * pulseEchoPostDriveLowBandState
+            pulseEchoReturnDriveFinite = pulseEchoReturnDriveFinite &&
+                currentSend.isFinite &&
+                preDrivePulseEcho.isFinite &&
+                pulseEcho.isFinite &&
+                pulseEchoEffectiveAmount.isFinite &&
+                pulseEchoPreDriveLowBandState.isFinite &&
+                pulseEchoPostDriveLowBandState.isFinite &&
+                difference.isFinite
             // A short independent reflection gives upper voices depth before
             // the longer dark reverb. It is deliberately high-passed by the
             // upper-bus source and never receives kick/bass, preserving mono-
@@ -687,6 +848,78 @@ package enum VoiceRenderer {
             detectorRMS: detectorKickRMS,
             duckingEnvelopePeak: Float(kickEnvelopePeak)
         )
+        let pulseEchoEvidenceFrameCount = Double(max(1, frames))
+        let pulseEchoCurrentSendRMS = sqrt(
+            pulseEchoCurrentSendEnergy / pulseEchoEvidenceFrameCount
+        )
+        let pulseEchoPreDriveRMS = sqrt(
+            pulseEchoPreDriveEnergy / pulseEchoEvidenceFrameCount
+        )
+        let pulseEchoPostDriveRMS = sqrt(
+            pulseEchoPostDriveEnergy / pulseEchoEvidenceFrameCount
+        )
+        let pulseEchoPreDriveLowBandRMS = sqrt(
+            pulseEchoPreDriveLowBandEnergy / pulseEchoEvidenceFrameCount
+        )
+        let pulseEchoPostDriveLowBandRMS = sqrt(
+            pulseEchoPostDriveLowBandEnergy / pulseEchoEvidenceFrameCount
+        )
+        let pulseEchoDifferenceRMS = sqrt(
+            pulseEchoDifferenceEnergy / pulseEchoEvidenceFrameCount
+        )
+        pulseEchoReturnDriveFinite = pulseEchoReturnDriveFinite && [
+            pulseEchoCurrentSendRMS,
+            pulseEchoPreDrivePeak,
+            pulseEchoPostDrivePeak,
+            pulseEchoPreDriveRMS,
+            pulseEchoPostDriveRMS,
+            pulseEchoPreDriveLowBandRMS,
+            pulseEchoPostDriveLowBandRMS,
+            pulseEchoDifferenceRMS,
+            pulseEchoPostDrivePeakPreDriveSample,
+            pulseEchoPostDrivePeakEffectiveAmount,
+        ].allSatisfy { $0.isFinite }
+        let pulseEchoReturnDriveRenderEvidence = PulseEchoReturnDriveRenderEvidence(
+            bar: performance.bar,
+            bpm: scene.bpm,
+            delayFrameCount: pulseEchoFrames,
+            machineTexture: pulseEchoTexture.machineTexture,
+            scoreEnabled: resolved.pulseEchoEnabled,
+            earliestPulseEchoOnsetStep:
+                pulseEchoTexture.earliestPulseEchoOnsetStep,
+            driveEligible: pulseEchoTexture.driveEligible,
+            appliedAmount: pulseEchoDriveAmount,
+            transitionFrameCount: pulseEchoTransitionFrameCount,
+            renderedFrameCount: frames,
+            currentSendRMS: pulseEchoCurrentSendRMS,
+            preDriveSampleHash: pulseEchoPreDriveFingerprint.fingerprint,
+            postDriveSampleHash: pulseEchoPostDriveFingerprint.fingerprint,
+            firstPreDriveSampleBitPattern:
+                pulseEchoFirstPreDriveSampleBitPattern,
+            firstPostDriveSampleBitPattern:
+                pulseEchoFirstPostDriveSampleBitPattern,
+            lastPreDriveSampleBitPattern:
+                pulseEchoLastPreDriveSampleBitPattern,
+            lastPostDriveSampleBitPattern:
+                pulseEchoLastPostDriveSampleBitPattern,
+            changedFrameIndex: pulseEchoChangedFrameIndex,
+            changedPreDriveSampleBitPattern:
+                pulseEchoChangedPreDriveSampleBitPattern,
+            preDrivePeak: pulseEchoPreDrivePeak,
+            preDrivePeakFrameIndex: pulseEchoPreDrivePeakFrameIndex,
+            postDrivePeak: pulseEchoPostDrivePeak,
+            postDrivePeakFrameIndex: pulseEchoPostDrivePeakFrameIndex,
+            postDrivePeakPreDriveSample:
+                pulseEchoPostDrivePeakPreDriveSample,
+            postDrivePeakEffectiveAmount:
+                pulseEchoPostDrivePeakEffectiveAmount,
+            preDriveRMS: pulseEchoPreDriveRMS,
+            postDriveRMS: pulseEchoPostDriveRMS,
+            preDriveLowBandRMS: pulseEchoPreDriveLowBandRMS,
+            postDriveLowBandRMS: pulseEchoPostDriveLowBandRMS,
+            differenceRMS: pulseEchoDifferenceRMS,
+            finite: pulseEchoReturnDriveFinite
+        )
         let rendered = RenderedBar(sampleRate: sampleRate,
                                    samples: zip(left, right).map { ($0 + $1) * 0.5 },
                                    leftSamples: left, rightSamples: right,
@@ -710,6 +943,8 @@ package enum VoiceRenderer {
                                     tonalMotion: tonalMotionInstrumentStem,
                                     spectralTexture: spectralTextureInstrumentStem
                                     ),
+                                   pulseEchoReturnDriveRenderEvidence:
+                                    pulseEchoReturnDriveRenderEvidence,
                                    upperNoteRenderEvidence: upperNoteRenderEvidence,
                                    resonantAnchorSamples: resonantAnchorStem,
                                    detunedCompanionSamples: detunedCompanionStem)

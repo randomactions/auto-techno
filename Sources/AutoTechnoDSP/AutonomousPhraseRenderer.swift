@@ -348,6 +348,46 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
     package let finite: Bool
 }
 
+/// Same-pass reduced evidence for the existing pulse-echo return before and
+/// after the bounded texture drive. The delay line and its feedback remain
+/// outside this processor. Its undriven tail remains canonical continuation;
+/// no additional pre/post-drive diagnostic PCM survives detached preparation.
+/// Boundary geometry and the exact post-peak input/amount witness make the
+/// variable pointwise result replayable without retaining a PCM side channel.
+package struct PulseEchoReturnDriveRenderEvidence: Equatable, Sendable {
+    package let bar: Int
+    package let bpm: Double
+    package let delayFrameCount: Int
+    package let machineTexture: Double
+    package let scoreEnabled: Bool
+    package let earliestPulseEchoOnsetStep: Int?
+    package let driveEligible: Bool
+    package let appliedAmount: Double
+    package let transitionFrameCount: Int
+    package let renderedFrameCount: Int
+    package let currentSendRMS: Double
+    package let preDriveSampleHash: String
+    package let postDriveSampleHash: String
+    package let firstPreDriveSampleBitPattern: UInt32
+    package let firstPostDriveSampleBitPattern: UInt32
+    package let lastPreDriveSampleBitPattern: UInt32
+    package let lastPostDriveSampleBitPattern: UInt32
+    package let changedFrameIndex: Int
+    package let changedPreDriveSampleBitPattern: UInt32
+    package let preDrivePeak: Double
+    package let preDrivePeakFrameIndex: Int
+    package let postDrivePeak: Double
+    package let postDrivePeakFrameIndex: Int
+    package let postDrivePeakPreDriveSample: Double
+    package let postDrivePeakEffectiveAmount: Double
+    package let preDriveRMS: Double
+    package let postDriveRMS: Double
+    package let preDriveLowBandRMS: Double
+    package let postDriveLowBandRMS: Double
+    package let differenceRMS: Double
+    package let finite: Bool
+}
+
 package struct RenderedBar: Equatable, Sendable {
     package let sampleRate: Double
     package let samples: [Float]
@@ -369,6 +409,7 @@ package struct RenderedBar: Equatable, Sendable {
     package let groovePulseRenderEvidence: [GroovePulseRenderEvidence]
     package let closedHatRenderEvidence: [ClosedHatRenderEvidence]
     package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
+    package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
     package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
     /// Transient detached-preparation taps. They never cross into RenderBlock
     /// or the scheduler; only reduced evidence survives phrase preparation.
@@ -386,6 +427,7 @@ package struct RenderedBar: Equatable, Sendable {
                 groovePulseRenderEvidence: [GroovePulseRenderEvidence],
                 closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
+                pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 resonantAnchorSamples: [Float],
                 detunedCompanionSamples: [Float]) {
@@ -420,6 +462,7 @@ package struct RenderedBar: Equatable, Sendable {
             (InstrumentArchitecture.allCases.firstIndex(of: $0.architecture) ?? 0) <
                 (InstrumentArchitecture.allCases.firstIndex(of: $1.architecture) ?? 0)
         }
+        self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.resonantAnchorSamples = resonantAnchorSamples
         self.detunedCompanionSamples = detunedCompanionSamples
@@ -465,6 +508,7 @@ package struct RenderBlock: Equatable, Sendable {
     /// Same-pass reduced evidence for each ordinary closed-hat score event.
     package let closedHatRenderEvidence: [ClosedHatRenderEvidence]
     package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
+    package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
     /// Exact score-owned upper notes used for this bar. The renderer no longer
     /// invents pitch, duration, velocity, or slide decisions after resolution.
     package var resolvedUpperNotes: [ResolvedUpperNote] {
@@ -496,6 +540,7 @@ package struct RenderBlock: Equatable, Sendable {
                 groovePulseRenderEvidence: [GroovePulseRenderEvidence],
                 closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
+                pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 graphInputRemainderTimbreEvidence: UpperTimbreEvidence,
                 postGraphRemainderTimbreEvidence: UpperTimbreEvidence,
@@ -526,6 +571,7 @@ package struct RenderBlock: Equatable, Sendable {
             (InstrumentArchitecture.allCases.firstIndex(of: $0.architecture) ?? 0) <
                 (InstrumentArchitecture.allCases.firstIndex(of: $1.architecture) ?? 0)
         }
+        self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.graphInputRemainderTimbreEvidence = graphInputRemainderTimbreEvidence
         self.postGraphRemainderTimbreEvidence = postGraphRemainderTimbreEvidence
@@ -980,14 +1026,25 @@ package enum AutonomousPhraseRenderer {
                 protectedRhythm.rightSamples,
                 generated.1
             ).map { outputSafety($0 + $1) }
-            let pulseEchoAmount = resolved.ensemble.events
+            let relationalPulseEchoAmount = resolved.ensemble.events
                 .filter { $0.voice == .motif || $0.voice == .response }
                 .map { synthPerformance.articulation(at: $0.step).pulseEchoSend }
                 .max() ?? 0
+            let pulseEchoReturnEvidence = rendered.pulseEchoReturnDriveRenderEvidence
+            let pulseEchoAmount = max(
+                relationalPulseEchoAmount,
+                pulseEchoReturnEvidence.appliedAmount
+            )
+            let pulseEchoActive = pulseEchoReturnEvidence.currentSendRMS > 0 ||
+                pulseEchoReturnEvidence.postDriveRMS > 0
             let graphEffects = graph.nodes.map {
                 EffectState(kind: effectKind($0.kind), amount: $0.amount, active: $0.mix > 0)
-            } + (pulseEchoAmount > 0
-                ? [EffectState(kind: .pulseEcho, amount: pulseEchoAmount)] : []) + [
+            } + [
+                EffectState(
+                    kind: .pulseEcho,
+                    amount: pulseEchoAmount,
+                    active: pulseEchoActive
+                ),
                 EffectState(kind: .maskingGuard, amount: 1),
                 EffectState(kind: .glue, amount: 1),
                 EffectState(kind: .master, amount: 1),
@@ -1015,6 +1072,8 @@ package enum AutonomousPhraseRenderer {
                 groovePulseRenderEvidence: rendered.groovePulseRenderEvidence,
                 closedHatRenderEvidence: rendered.closedHatRenderEvidence,
                 instrumentRenderEvidence: rendered.instrumentRenderEvidence,
+                pulseEchoReturnDriveRenderEvidence:
+                    rendered.pulseEchoReturnDriveRenderEvidence,
                 upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,
                 graphInputRemainderTimbreEvidence: graphInputRemainderTimbreEvidence,
                 postGraphRemainderTimbreEvidence: postGraphRemainderTimbreEvidence,

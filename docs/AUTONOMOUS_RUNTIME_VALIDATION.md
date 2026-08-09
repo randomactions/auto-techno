@@ -55,10 +55,11 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 6 provides the current transaction-level evidence
-foundation. A complete record contains the bounded symbolic, hard-gate, full-mix,
-per-bar masking, role-stem, automatic-mix, event-local groove-pulse and
-ordinary closed-hat, score-owned instrument, graph, and pre/post upper-timbre
+Quality-contract schema 7, candidate-vector schema 6, and canonical engine v7
+provide the current transaction-level evidence foundation. A complete record
+contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
+automatic-mix, event-local groove-pulse, ordinary closed-hat, score-owned
+instrument, shared pulse-echo return-drive, graph, and pre/post upper-timbre
 vector for every retained attempt. Groove-pulse evidence must cover every bar
 explicitly, bind each score event to one exact dry-sample
 hash plus bounded level/spectral/tail consequence, and leave selection unchanged
@@ -87,6 +88,21 @@ true peak from the Annex 2 polyphase FIR rather than sample or cubic peak. Final
 commit provenance must additionally bind the selected sample hash
 and finalized quality continuation state; rejected attempts may not affect that
 state.
+
+Pulse-echo return-drive evidence must cover every full rendered bar and bind the
+bar, fixed BPM, route-derived three-sixteenth delay-frame count, rendered-frame
+count, score eligibility, drive eligibility, bounded `machineTexture`, applied
+amount, and matching instrument pulse-echo access. It must retain current-send
+RMS, exact filtered pre-drive and wet post-drive sample hashes, pre/post peak,
+RMS, and low-band RMS, difference RMS, and finite status. Neutral drive must
+preserve hashes and all pre/post metrics exactly with zero difference RMS;
+active drive must remain outside feedback, bind replayable changed-frame and
+peak witnesses, and stay within the transfer's bounded low-level lift of at
+most `3.2x` RMS plus its conservative physical peak cap.
+Conservative, forced-home, identity-return, major-break, non-memory, and
+ineligible paths must remain neutral. The implementation candidate contains
+this record, and the exact-source local structural/signal tests plus release
+build are recorded as passing in the validation snapshot.
 
 This schema is evidence infrastructure, not a passing professional-quality
 policy. The shipping evaluator is uncalibrated, renders one primary candidate on
@@ -151,7 +167,8 @@ or PCM.
 
 ## Hybrid feedback and callback isolation
 
-Schema 3 changes detached preparation evidence only. It adds no callback
+Upper-timbre evidence schema 3 and the pulse-echo evidence added by quality-
+contract schema 7 change detached preparation only. They add no callback
 capture, analysis, or live-feedback work; the requirements below remain gates
 for a future hybrid-feedback implementation.
 

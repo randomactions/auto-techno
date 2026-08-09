@@ -4,12 +4,12 @@ import Foundation
 /// policy is deliberately uncalibrated: these types make evidence reproducible
 /// without claiming that professional-quality targets exist yet.
 package enum QualityQualificationContract {
-    /// Version 6 adds bounded, event-local ordinary closed-hat decay evidence
-    /// to the selected phrase's candidate-evaluation transaction. The policy
+    /// Version 7 adds bounded, same-pass pulse-echo return-drive evidence to
+    /// the selected phrase's candidate-evaluation transaction. The policy
     /// remains uncalibrated; this version identifies evidence, not promotion.
-    package static let schemaVersion = 6
+    package static let schemaVersion = 7
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v6"
+    package static let engineVersion = "autotechno-canonical-engine.v7"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

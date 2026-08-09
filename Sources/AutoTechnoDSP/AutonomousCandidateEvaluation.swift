@@ -988,6 +988,442 @@ package struct AutonomousInstrumentBarEvidence: Codable, Equatable, Sendable {
     }
 }
 
+/// Bounded same-pass evidence for the existing shared pulse-echo return. The
+/// instrument vector already owns patch, use, automation, and effect access;
+/// this record retains only the exact delay/drive geometry and its PCM
+/// consequence so shared-return evidence is not misattributed to one voice.
+package struct AutonomousPulseEchoDriveBarEvidence: Codable, Equatable, Sendable {
+    package static let maximumAppliedAmount =
+        PulseEchoTextureArticulation.maximumAppliedAmount
+    package static let metricTolerance = 0.000_001
+
+    package let bar: Int
+    package let bpm: Double
+    package let delayFrameCount: Int
+    package let scoreEnabled: Bool
+    package let earliestPulseEchoOnsetStep: Int?
+    package let driveEligible: Bool
+    package let machineTexture: Double
+    package let appliedAmount: Double
+    package let transitionFrameCount: Int
+    package let renderedFrameCount: Int
+    package let currentSendRMS: Double
+    package let preDriveSampleHash: String
+    package let postDriveSampleHash: String
+    package let firstPreDriveSampleBitPattern: UInt32
+    package let firstPostDriveSampleBitPattern: UInt32
+    package let lastPreDriveSampleBitPattern: UInt32
+    package let lastPostDriveSampleBitPattern: UInt32
+    package let changedFrameIndex: Int
+    package let changedPreDriveSampleBitPattern: UInt32
+    package let preDrivePeak: Double
+    package let preDrivePeakFrameIndex: Int
+    package let postDrivePeak: Double
+    package let postDrivePeakFrameIndex: Int
+    package let postDrivePeakPreDriveSample: Double
+    package let postDrivePeakEffectiveAmount: Double
+    package let preDriveRMS: Double
+    package let postDriveRMS: Double
+    package let preDriveLowBandRMS: Double
+    package let postDriveLowBandRMS: Double
+    package let differenceRMS: Double
+    package let interlockChapter: String
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(
+        bar: Int,
+        bpm: Double,
+        delayFrameCount: Int,
+        scoreEnabled: Bool,
+        earliestPulseEchoOnsetStep: Int?,
+        driveEligible: Bool,
+        machineTexture: Double,
+        appliedAmount: Double,
+        transitionFrameCount: Int,
+        renderedFrameCount: Int,
+        currentSendRMS: Double,
+        preDriveSampleHash: String,
+        postDriveSampleHash: String,
+        firstPreDriveSampleBitPattern: UInt32,
+        firstPostDriveSampleBitPattern: UInt32,
+        lastPreDriveSampleBitPattern: UInt32,
+        lastPostDriveSampleBitPattern: UInt32,
+        changedFrameIndex: Int,
+        changedPreDriveSampleBitPattern: UInt32,
+        preDrivePeak: Double,
+        preDrivePeakFrameIndex: Int,
+        postDrivePeak: Double,
+        postDrivePeakFrameIndex: Int,
+        postDrivePeakPreDriveSample: Double,
+        postDrivePeakEffectiveAmount: Double,
+        preDriveRMS: Double,
+        postDriveRMS: Double,
+        preDriveLowBandRMS: Double,
+        postDriveLowBandRMS: Double,
+        differenceRMS: Double,
+        interlockChapter: InterlockChapter,
+        bindingValid: Bool = true,
+        finite: Bool
+    ) {
+        self.bar = bar
+        self.bpm = bpm
+        self.delayFrameCount = delayFrameCount
+        self.scoreEnabled = scoreEnabled
+        self.earliestPulseEchoOnsetStep = earliestPulseEchoOnsetStep
+        self.driveEligible = driveEligible
+        self.machineTexture = machineTexture
+        self.appliedAmount = appliedAmount
+        self.transitionFrameCount = transitionFrameCount
+        self.renderedFrameCount = renderedFrameCount
+        self.currentSendRMS = currentSendRMS
+        self.preDriveSampleHash = preDriveSampleHash
+        self.postDriveSampleHash = postDriveSampleHash
+        self.firstPreDriveSampleBitPattern = firstPreDriveSampleBitPattern
+        self.firstPostDriveSampleBitPattern = firstPostDriveSampleBitPattern
+        self.lastPreDriveSampleBitPattern = lastPreDriveSampleBitPattern
+        self.lastPostDriveSampleBitPattern = lastPostDriveSampleBitPattern
+        self.changedFrameIndex = changedFrameIndex
+        self.changedPreDriveSampleBitPattern = changedPreDriveSampleBitPattern
+        self.preDrivePeak = preDrivePeak
+        self.preDrivePeakFrameIndex = preDrivePeakFrameIndex
+        self.postDrivePeak = postDrivePeak
+        self.postDrivePeakFrameIndex = postDrivePeakFrameIndex
+        self.postDrivePeakPreDriveSample = postDrivePeakPreDriveSample
+        self.postDrivePeakEffectiveAmount = postDrivePeakEffectiveAmount
+        self.preDriveRMS = preDriveRMS
+        self.postDriveRMS = postDriveRMS
+        self.preDriveLowBandRMS = preDriveLowBandRMS
+        self.postDriveLowBandRMS = postDriveLowBandRMS
+        self.differenceRMS = differenceRMS
+        self.interlockChapter = interlockChapter.rawValue
+        self.bindingValid = bindingValid
+        self.finite = finite
+    }
+
+    package init(
+        _ evidence: PulseEchoReturnDriveRenderEvidence,
+        interlockChapter: InterlockChapter,
+        bindingValid: Bool
+    ) {
+        self.init(
+            bar: evidence.bar,
+            bpm: evidence.bpm,
+            delayFrameCount: evidence.delayFrameCount,
+            scoreEnabled: evidence.scoreEnabled,
+            earliestPulseEchoOnsetStep: evidence.earliestPulseEchoOnsetStep,
+            driveEligible: evidence.driveEligible,
+            machineTexture: evidence.machineTexture,
+            appliedAmount: evidence.appliedAmount,
+            transitionFrameCount: evidence.transitionFrameCount,
+            renderedFrameCount: evidence.renderedFrameCount,
+            currentSendRMS: Double(evidence.currentSendRMS),
+            preDriveSampleHash: evidence.preDriveSampleHash,
+            postDriveSampleHash: evidence.postDriveSampleHash,
+            firstPreDriveSampleBitPattern:
+                evidence.firstPreDriveSampleBitPattern,
+            firstPostDriveSampleBitPattern:
+                evidence.firstPostDriveSampleBitPattern,
+            lastPreDriveSampleBitPattern:
+                evidence.lastPreDriveSampleBitPattern,
+            lastPostDriveSampleBitPattern:
+                evidence.lastPostDriveSampleBitPattern,
+            changedFrameIndex: evidence.changedFrameIndex,
+            changedPreDriveSampleBitPattern:
+                evidence.changedPreDriveSampleBitPattern,
+            preDrivePeak: Double(evidence.preDrivePeak),
+            preDrivePeakFrameIndex: evidence.preDrivePeakFrameIndex,
+            postDrivePeak: Double(evidence.postDrivePeak),
+            postDrivePeakFrameIndex: evidence.postDrivePeakFrameIndex,
+            postDrivePeakPreDriveSample:
+                Double(evidence.postDrivePeakPreDriveSample),
+            postDrivePeakEffectiveAmount:
+                evidence.postDrivePeakEffectiveAmount,
+            preDriveRMS: Double(evidence.preDriveRMS),
+            postDriveRMS: Double(evidence.postDriveRMS),
+            preDriveLowBandRMS: Double(evidence.preDriveLowBandRMS),
+            postDriveLowBandRMS: Double(evidence.postDriveLowBandRMS),
+            differenceRMS: Double(evidence.differenceRMS),
+            interlockChapter: interlockChapter,
+            bindingValid: bindingValid,
+            finite: evidence.finite
+        )
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            bpm, machineTexture, appliedAmount, currentSendRMS,
+            preDrivePeak, postDrivePeak, preDriveRMS, postDriveRMS,
+            preDriveLowBandRMS, postDriveLowBandRMS, differenceRMS,
+            postDrivePeakPreDriveSample, postDrivePeakEffectiveAmount,
+        ].allSatisfy { $0.isFinite }
+    }
+
+    package func isComplete(
+        sampleRate: Double,
+        phraseKind: AutonomousPhraseKind,
+        conservative: Bool,
+        instruments: AutonomousInstrumentBarEvidence
+    ) -> Bool {
+        let sampleRateIsSupported = sampleRate >=
+            QualityQualificationContract.minimumSupportedSampleRate &&
+            sampleRate <= QualityQualificationContract.maximumSupportedSampleRate
+        guard isFinite,
+              bindingValid,
+              bar >= 0,
+              instruments.bar == bar,
+              bpm == AutonomousSessionDirector.bpm,
+              sampleRate.isFinite,
+              sampleRateIsSupported,
+              delayFrameCount == Self.delayFrames(
+                bpm: bpm,
+                sampleRate: sampleRate
+              ),
+              transitionFrameCount ==
+                PulseEchoReturnDriveContract.transitionFrameCount(
+                    sampleRate: sampleRate
+                ),
+              renderedFrameCount == Self.barFrames(
+                bpm: bpm,
+                sampleRate: sampleRate
+              ),
+              preDrivePeakFrameIndex >= 0,
+              preDrivePeakFrameIndex < renderedFrameCount,
+              postDrivePeakFrameIndex >= 0,
+              postDrivePeakFrameIndex < renderedFrameCount,
+              preDrivePeak == Double(Float(preDrivePeak)),
+              postDrivePeakPreDriveSample ==
+                Double(Float(postDrivePeakPreDriveSample)),
+              let chapter = InterlockChapter(rawValue: interlockChapter),
+              (0...1).contains(machineTexture),
+              (0...Self.maximumAppliedAmount).contains(appliedAmount),
+              earliestPulseEchoOnsetStep.map({ (0..<16).contains($0) }) ?? true,
+              currentSendRMS >= 0,
+              Self.isSampleHash(preDriveSampleHash),
+              Self.isSampleHash(postDriveSampleHash),
+              Float(bitPattern: firstPreDriveSampleBitPattern).isFinite,
+              Float(bitPattern: firstPostDriveSampleBitPattern).isFinite,
+              Float(bitPattern: lastPreDriveSampleBitPattern).isFinite,
+              Float(bitPattern: lastPostDriveSampleBitPattern).isFinite,
+              firstPreDriveSampleBitPattern == firstPostDriveSampleBitPattern,
+              lastPreDriveSampleBitPattern == lastPostDriveSampleBitPattern,
+              postDrivePeakEffectiveAmount == expectedPeakEffectiveAmount,
+              postDrivePeak == expectedWitnessedPostDrivePeak,
+              signalMetricsAreBounded else {
+            return false
+        }
+
+        let hasPulseEchoAccess = hasPulseEchoAccess(in: instruments)
+        guard hasPulseEchoAccess == (earliestPulseEchoOnsetStep != nil) else {
+            return false
+        }
+        guard !hasPulseEchoAccess || scoreEnabled else { return false }
+        guard currentSendRMS == 0 || (scoreEnabled && hasPulseEchoAccess) else {
+            return false
+        }
+        guard hasPulseEchoAccess || (currentSendRMS == 0 && appliedAmount == 0) else {
+            return false
+        }
+
+        let hasTimelyPulseEchoOnset = earliestPulseEchoOnsetStep.map {
+            $0 <= PulseEchoTextureArticulation.latestDrivenOnsetStep
+        } == true
+        let normallyEligible = chapter == .memory && scoreEnabled &&
+            hasPulseEchoAccess && hasTimelyPulseEchoOnset && !conservative &&
+            phraseKind != .identityReturn && phraseKind != .majorBreak
+        guard !driveEligible || normallyEligible else { return false }
+        let expectedAmount = driveEligible
+            ? min(Self.maximumAppliedAmount, machineTexture) : 0
+        guard appliedAmount == expectedAmount else { return false }
+        if driveEligible && appliedAmount > 0 {
+            guard currentSendRMS > 0,
+                  preDrivePeak > 0,
+                  preDriveRMS > 0 else {
+                return false
+            }
+        }
+
+        let inputIsZero = preDrivePeak == 0 && preDriveRMS == 0 &&
+            preDriveLowBandRMS == 0
+        let outputIsZero = postDrivePeak == 0 && postDriveRMS == 0 &&
+            postDriveLowBandRMS == 0
+        guard (preDrivePeak == 0) == (preDriveRMS == 0),
+              (postDrivePeak == 0) == (postDriveRMS == 0),
+              preDrivePeak != 0 || preDriveLowBandRMS == 0,
+              postDrivePeak != 0 || postDriveLowBandRMS == 0 else {
+            return false
+        }
+        if appliedAmount == 0 || inputIsZero {
+            guard preDriveSampleHash == postDriveSampleHash,
+                  preDrivePeak == postDrivePeak,
+                  preDriveRMS == postDriveRMS,
+                  preDriveLowBandRMS == postDriveLowBandRMS,
+                  differenceRMS == 0,
+                  !inputIsZero || outputIsZero else {
+                return false
+            }
+        }
+        if appliedAmount > 0 {
+            guard changedFrameIndex >= 0,
+                  changedFrameIndex < renderedFrameCount,
+                  Float(bitPattern: changedPreDriveSampleBitPattern).isFinite,
+                  changedWitnessPreDriveMagnitude <= preDrivePeak,
+                  changedWitnessPostDriveMagnitude <= postDrivePeak,
+                  changedWitnessChangesBitPattern,
+                  preDriveSampleHash != postDriveSampleHash,
+                  differenceRMS > 0 else {
+                return false
+            }
+        } else {
+            guard changedFrameIndex == -1,
+                  changedPreDriveSampleBitPattern == 0 else {
+                return false
+            }
+        }
+        if differenceRMS == 0 {
+            guard preDriveSampleHash == postDriveSampleHash,
+                  preDrivePeak == postDrivePeak,
+                  preDriveRMS == postDriveRMS,
+                  preDriveLowBandRMS == postDriveLowBandRMS else {
+                return false
+            }
+        }
+        if driveEligible && expectedPostDriveMagnitudeAtPreDrivePeak != preDrivePeak {
+            guard preDriveSampleHash != postDriveSampleHash,
+                  differenceRMS > 0 else {
+                return false
+            }
+        }
+        return true
+    }
+
+    private var expectedPeakEffectiveAmount: Double {
+        PulseEchoReturnDriveContract.effectiveAmount(
+            targetAmount: appliedAmount,
+            frame: postDrivePeakFrameIndex,
+            totalFrameCount: renderedFrameCount,
+            transitionFrameCount: transitionFrameCount
+        )
+    }
+
+    private var expectedWitnessedPostDrivePeak: Double {
+        abs(Double(PulseEchoReturnDriveContract.process(
+            preDriveSample: Float(postDrivePeakPreDriveSample),
+            amount: postDrivePeakEffectiveAmount
+        )))
+    }
+
+    private var changedWitnessChangesBitPattern: Bool {
+        changedWitnessPostDriveSample.bitPattern !=
+            changedPreDriveSampleBitPattern
+    }
+
+    private var changedWitnessPreDriveMagnitude: Double {
+        abs(Double(Float(bitPattern: changedPreDriveSampleBitPattern)))
+    }
+
+    private var changedWitnessPostDriveMagnitude: Double {
+        abs(Double(changedWitnessPostDriveSample))
+    }
+
+    private var changedWitnessPostDriveSample: Float {
+        let preDriveSample = Float(bitPattern: changedPreDriveSampleBitPattern)
+        let effectiveAmount = PulseEchoReturnDriveContract.effectiveAmount(
+            targetAmount: appliedAmount,
+            frame: changedFrameIndex,
+            totalFrameCount: renderedFrameCount,
+            transitionFrameCount: transitionFrameCount
+        )
+        return PulseEchoReturnDriveContract.process(
+            preDriveSample: preDriveSample,
+            amount: effectiveAmount
+        )
+    }
+
+    private var preDrivePeakEffectiveAmount: Double {
+        PulseEchoReturnDriveContract.effectiveAmount(
+            targetAmount: appliedAmount,
+            frame: preDrivePeakFrameIndex,
+            totalFrameCount: renderedFrameCount,
+            transitionFrameCount: transitionFrameCount
+        )
+    }
+
+    private var expectedPostDriveMagnitudeAtPreDrivePeak: Double {
+        abs(Double(PulseEchoReturnDriveContract.process(
+            preDriveSample: Float(preDrivePeak),
+            amount: preDrivePeakEffectiveAmount
+        )))
+    }
+
+    private var conservativePostDrivePeakCap: Double {
+        min(
+            preDrivePeak * PulseEchoReturnDriveContract.maximumLowLevelGain,
+            max(preDrivePeak, PulseEchoReturnDriveContract.normalizationAmplitude)
+        )
+    }
+
+    package func normalDriveEligibility(
+        phraseKind: AutonomousPhraseKind,
+        conservative: Bool,
+        instruments: AutonomousInstrumentBarEvidence
+    ) -> Bool {
+        interlockChapter == InterlockChapter.memory.rawValue && scoreEnabled &&
+            hasPulseEchoAccess(in: instruments) &&
+            earliestPulseEchoOnsetStep.map {
+                $0 <= PulseEchoTextureArticulation.latestDrivenOnsetStep
+            } == true && !conservative &&
+            phraseKind != .identityReturn && phraseKind != .majorBreak
+    }
+
+    private var signalMetricsAreBounded: Bool {
+        let tolerance = Self.metricTolerance
+        let maximum = Double(Float.greatestFiniteMagnitude)
+        return [
+            currentSendRMS, preDrivePeak, postDrivePeak, preDriveRMS,
+            postDriveRMS, preDriveLowBandRMS, postDriveLowBandRMS,
+            differenceRMS, abs(postDrivePeakPreDriveSample),
+            postDrivePeakEffectiveAmount,
+        ].allSatisfy { (0...maximum).contains($0) } &&
+            abs(postDrivePeakPreDriveSample) <= preDrivePeak &&
+            postDrivePeakEffectiveAmount <= appliedAmount &&
+            preDriveRMS <= preDrivePeak + tolerance &&
+            postDriveRMS <= postDrivePeak + tolerance &&
+            postDriveRMS <= preDriveRMS *
+                PulseEchoReturnDriveContract.maximumLowLevelGain + tolerance &&
+            preDriveLowBandRMS <= preDriveRMS + tolerance &&
+            postDriveLowBandRMS <= postDriveRMS + tolerance &&
+            postDrivePeak >= expectedPostDriveMagnitudeAtPreDrivePeak &&
+            postDrivePeak <= conservativePostDrivePeakCap + tolerance &&
+            differenceRMS + tolerance >= abs(preDriveRMS - postDriveRMS) &&
+            differenceRMS <= preDriveRMS + postDriveRMS + tolerance
+    }
+
+    private static func delayFrames(bpm: Double, sampleRate: Double) -> Int {
+        max(1, Int((60.0 / bpm * 0.75 * sampleRate).rounded()))
+    }
+
+    private static func barFrames(bpm: Double, sampleRate: Double) -> Int {
+        max(1, Int((240.0 / bpm * sampleRate).rounded()))
+    }
+
+    private func hasPulseEchoAccess(
+        in instruments: AutonomousInstrumentBarEvidence
+    ) -> Bool {
+        instruments.architectures.contains { architecture in
+            architecture.assignments.contains { assignment in
+                assignment.effects.contains(InstrumentEffect.pulseEcho.rawValue)
+            }
+        }
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 package struct AutonomousGraphEvidence: Codable, Equatable, Sendable {
     package static let maximumViolationCount = 64
 
@@ -1141,7 +1577,7 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 5
+    package static let schemaVersion = 6
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -1170,6 +1606,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let closedHat: [AutonomousClosedHatBarEvidence]
     package let sourceInstrumentBarCount: Int
     package let instruments: [AutonomousInstrumentBarEvidence]
+    package let sourcePulseEchoDriveBarCount: Int
+    package let pulseEchoDrive: [AutonomousPulseEchoDriveBarEvidence]
     package let graph: AutonomousGraphEvidence
     package let routeContinuation: AutonomousRouteContinuationEvidence
     /// Aggregate over the exact graph-input remainder. This diagnoses whether
@@ -1192,6 +1630,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         groovePulse: [AutonomousGroovePulseBarEvidence],
         closedHat: [AutonomousClosedHatBarEvidence] = [],
         instruments: [AutonomousInstrumentBarEvidence],
+        pulseEchoDrive: [AutonomousPulseEchoDriveBarEvidence],
         graph: AutonomousGraphEvidence,
         routeContinuation: AutonomousRouteContinuationEvidence,
         preGraphUpperTimbreEvidence: UpperTimbreEvidence,
@@ -1216,6 +1655,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.closedHat = Array(closedHat.prefix(Self.maximumBarCount))
         sourceInstrumentBarCount = instruments.count
         self.instruments = Array(instruments.prefix(Self.maximumBarCount))
+        sourcePulseEchoDriveBarCount = pulseEchoDrive.count
+        self.pulseEchoDrive = Array(pulseEchoDrive.prefix(Self.maximumBarCount))
         self.graph = graph
         self.routeContinuation = routeContinuation
         self.preGraphUpperTimbreEvidence = preGraphUpperTimbreEvidence
@@ -1530,6 +1971,33 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 evidence: block.instrumentRenderEvidence
             )
         }
+        let pulseEchoDrive = boundedBlocks.map { block in
+            let evidence = block.pulseEchoReturnDriveRenderEvidence
+            let articulation =
+                block.synthPerformance.pulseEchoTextureArticulation
+            let earliestPulseEchoOnsetStep = block.synthPerformance.upperNotes
+                .filter { $0.instrument.effects.contains(.pulseEcho) }
+                .map { $0.onsetStep }
+                .min()
+            let bindingValid = evidence.bar == block.bar &&
+                evidence.bpm == plan.scene.bpm &&
+                evidence.machineTexture == plan.scene.machineTexture &&
+                evidence.scoreEnabled ==
+                    block.resolvedPerformance.pulseEchoEnabled &&
+                evidence.earliestPulseEchoOnsetStep ==
+                    articulation.earliestPulseEchoOnsetStep &&
+                evidence.earliestPulseEchoOnsetStep ==
+                    earliestPulseEchoOnsetStep &&
+                evidence.driveEligible == articulation.driveEligible &&
+                evidence.appliedAmount == articulation.appliedAmount &&
+                evidence.renderedFrameCount == block.left.count &&
+                evidence.renderedFrameCount == block.right.count
+            return AutonomousPulseEchoDriveBarEvidence(
+                evidence,
+                interlockChapter: block.resolvedPerformance.interlockChapter,
+                bindingValid: bindingValid
+            )
+        }
         let graphEvidence = AutonomousGraphEvidence(
             graphFingerprint: graphFingerprint,
             revision: graph.revision,
@@ -1572,6 +2040,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             groovePulse: groovePulse,
             closedHat: closedHat,
             instruments: instruments,
+            pulseEchoDrive: pulseEchoDrive,
             graph: graphEvidence,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: preGraphUpperTimbreEvidence,
@@ -1586,6 +2055,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             groovePulse.allSatisfy { $0.isFinite } &&
             closedHat.allSatisfy { $0.isFinite } &&
             instruments.allSatisfy { $0.isFinite } &&
+            pulseEchoDrive.allSatisfy { $0.isFinite } &&
             routeContinuation.isFinite &&
             preGraphUpperTimbreEvidence.candidateValuesAreFinite &&
             postGraphUpperTimbreEvidence.candidateValuesAreFinite
@@ -1604,7 +2074,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             automaticMixEvidenceIsComplete(expectedBars: expectedBars) &&
             groovePulseEvidenceIsComplete(expectedBars: expectedBars) &&
             closedHatEvidenceIsComplete(expectedBars: expectedBars) &&
-            instrumentEvidenceIsComplete(expectedBars: expectedBars)
+            instrumentEvidenceIsComplete(expectedBars: expectedBars) &&
+            pulseEchoDriveEvidenceIsComplete(expectedBars: expectedBars)
     }
 
     @inline(never)
@@ -1628,6 +2099,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
               sourceInstrumentBarCount == instruments.count,
               instruments.count == fullMix.sourceBarCount,
               instruments.allSatisfy({ $0.isComplete }),
+              sourcePulseEchoDriveBarCount == pulseEchoDrive.count,
+              pulseEchoDrive.count == fullMix.sourceBarCount,
               preGraphUpperTimbreEvidence.candidateEvidenceIsComplete(
                 windowCount: fullMix.sourceBarCount
               ),
@@ -1755,12 +2228,14 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceGroovePulseBarCount == groovePulse.count &&
             sourceClosedHatBarCount == closedHat.count &&
             sourceInstrumentBarCount == instruments.count &&
+            sourcePulseEchoDriveBarCount == pulseEchoDrive.count &&
             masking.count == fullMix.sourceBarCount &&
             stems.count == fullMix.sourceBarCount &&
             automaticMix.count == fullMix.sourceBarCount &&
             groovePulse.count == fullMix.sourceBarCount &&
             closedHat.count == fullMix.sourceBarCount &&
-            instruments.count == fullMix.sourceBarCount
+            instruments.count == fullMix.sourceBarCount &&
+            pulseEchoDrive.count == fullMix.sourceBarCount
     }
 
     @inline(never)
@@ -1807,6 +2282,31 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             instruments.count == fullMix.sourceBarCount
     }
 
+    @inline(never)
+    private func pulseEchoDriveEvidenceIsComplete(
+        expectedBars: Set<Int>
+    ) -> Bool {
+        guard let phraseKind = AutonomousPhraseKind(
+            rawValue: symbolic.phraseKind
+        ),
+              Set(pulseEchoDrive.map { $0.bar }) == expectedBars,
+              pulseEchoDrive.map({ $0.bar }) == fullMix.bars.map({ $0.bar }),
+              pulseEchoDrive.count == fullMix.sourceBarCount else {
+            return false
+        }
+        for (pulse, instrument) in zip(pulseEchoDrive, instruments) {
+            guard pulse.isComplete(
+                sampleRate: routeContinuation.sampleRate,
+                phraseKind: phraseKind,
+                conservative: symbolic.conservative,
+                instruments: instrument
+            ) else {
+                return false
+            }
+        }
+        return true
+    }
+
     /// The one selector projection shared by live preparation and transaction
     /// replay validation. It deliberately retains the shipping playback gate
     /// rather than promoting the larger uncalibrated evidence vector.
@@ -1821,8 +2321,25 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     }
 
     package var hardGatesPassed: Bool {
-        isComplete && isFinite && hardGates.passed &&
-            hardGateEvidenceIsConsistent
+        let signalSafetyValid = fullMix.signalSafetyValid
+        return hardGatesPassedForTransactionValidation(
+            prevalidatedVectorIsComplete: isComplete,
+            prevalidatedVectorIsFinite: isFinite,
+            prevalidatedSignalSafetyValid: signalSafetyValid
+        )
+    }
+
+    @inline(never)
+    package func hardGatesPassedForTransactionValidation(
+        prevalidatedVectorIsComplete: Bool,
+        prevalidatedVectorIsFinite: Bool,
+        prevalidatedSignalSafetyValid: Bool
+    ) -> Bool {
+        prevalidatedVectorIsComplete && prevalidatedVectorIsFinite &&
+            hardGates.passed && symbolic.interestValid &&
+            graph.validationValid && prevalidatedSignalSafetyValid &&
+            postGraphUpperTimbreEvidence.finite &&
+            postGraphUpperTimbreEvidence.candidateValuesAreFinite
     }
 
     /// The current shipping playback gate, kept separate from completeness of
@@ -1841,8 +2358,22 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     /// Validity of the bounded record itself, independent of whether the
     /// represented candidate supplied complete/finite evidence or passed.
     package var recordIsStructurallyValid: Bool {
+        let signalSafetyValid = fullMix.signalSafetyValid
+        return recordIsStructurallyValid(
+            prevalidatedHardGateSummaryIsCanonical:
+                hardGateSummaryIsCanonicalForTransactionValidation(
+                    prevalidatedSignalSafetyValid: signalSafetyValid
+                )
+        )
+    }
+
+    @inline(never)
+    package func recordIsStructurallyValid(
+        prevalidatedHardGateSummaryIsCanonical: Bool
+    ) -> Bool {
         recordIdentityIsValid() && recordCountsAreBounded() &&
-            recordCollectionsAreBounded() && hardGateSummaryIsCanonical() &&
+            recordCollectionsAreBounded() &&
+            prevalidatedHardGateSummaryIsCanonical &&
             routeContinuation.isComplete
     }
 
@@ -1869,7 +2400,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceAutomaticMixBarCount >= automaticMix.count &&
             sourceGroovePulseBarCount >= groovePulse.count &&
             sourceClosedHatBarCount >= closedHat.count &&
-            sourceInstrumentBarCount >= instruments.count
+            sourceInstrumentBarCount >= instruments.count &&
+            sourcePulseEchoDriveBarCount >= pulseEchoDrive.count
     }
 
     @inline(never)
@@ -1901,7 +2433,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             automaticMix.count <= Self.maximumBarCount &&
             groovePulse.count <= Self.maximumBarCount &&
             closedHat.count <= Self.maximumBarCount &&
-            instruments.count <= Self.maximumBarCount
+            instruments.count <= Self.maximumBarCount &&
+            pulseEchoDrive.count <= Self.maximumBarCount
     }
 
     @inline(never)
@@ -1920,7 +2453,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     private func recordCollectionsAreBounded() -> Bool {
         maskingRecordsAreBounded() && stemRecordsAreBounded() &&
             automaticMixRecordsAreBounded() && groovePulseRecordsAreBounded() &&
-            closedHatRecordsAreBounded() && instrumentRecordsAreBounded()
+            closedHatRecordsAreBounded() && instrumentRecordsAreBounded() &&
+            pulseEchoDriveRecordsAreBounded()
     }
 
     @inline(never)
@@ -1991,10 +2525,17 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     }
 
     @inline(never)
-    private func hardGateSummaryIsCanonical() -> Bool {
+    private func pulseEchoDriveRecordsAreBounded() -> Bool {
+        pulseEchoDrive.map({ $0.bar }) == fullMix.bars.map({ $0.bar })
+    }
+
+    @inline(never)
+    package func hardGateSummaryIsCanonicalForTransactionValidation(
+        prevalidatedSignalSafetyValid: Bool
+    ) -> Bool {
         hardGates.symbolicValid == symbolic.interestValid &&
             hardGates.graphValid == graph.validationValid &&
-            hardGates.audioSafetyValid == fullMix.signalSafetyValid &&
+            hardGates.audioSafetyValid == prevalidatedSignalSafetyValid &&
             hardGates.fullMixFinite == fullMix.isFinite &&
             hardGates.upperTimbreFinite == postGraphUpperTimbreEvidence.finite &&
             hardGates.blocksPresent == (fullMix.sourceBarCount > 0) &&
@@ -2054,12 +2595,64 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
     /// Structural provenance remains valid when the represented candidate was
     /// rejected for missing/non-finite evidence or failed a hard gate.
     package var isStructurallyComplete: Bool {
+        let recordIsStructurallyValid = vector.recordIsStructurallyValid
+        guard recordIsStructurallyValid else {
+            return isStructurallyComplete(
+                prevalidatedRecordIsStructurallyValid: false,
+                prevalidatedVectorIsComplete: false,
+                prevalidatedVectorIsFinite: false,
+                prevalidatedHardGatesPassed: false
+            )
+        }
+        let vectorIsComplete = vector.isComplete
+        let vectorIsFinite = vector.isFinite
+        let signalSafetyValid = vector.fullMix.signalSafetyValid
+        return isStructurallyComplete(
+            prevalidatedRecordIsStructurallyValid:
+                recordIsStructurallyValid,
+            prevalidatedVectorIsComplete: vectorIsComplete,
+            prevalidatedVectorIsFinite: vectorIsFinite,
+            prevalidatedHardGatesPassed:
+                vector.hardGatesPassedForTransactionValidation(
+                    prevalidatedVectorIsComplete: vectorIsComplete,
+                    prevalidatedVectorIsFinite: vectorIsFinite,
+                    prevalidatedSignalSafetyValid: signalSafetyValid
+                )
+        )
+    }
+
+    @inline(never)
+    package func isStructurallyComplete(
+        prevalidatedRecordIsStructurallyValid: Bool,
+        prevalidatedVectorIsComplete: Bool,
+        prevalidatedVectorIsFinite: Bool,
+        prevalidatedHardGatesPassed: Bool
+    ) -> Bool {
         let missingReason = reasonCodes.contains(.evidenceMissingV1)
         let nonFiniteReason = reasonCodes.contains(.evidenceNonFiniteV1)
         let hardGateReason = reasonCodes.contains(.hardGateFailedV1)
+        guard let phraseKind = AutonomousPhraseKind(
+            rawValue: vector.symbolic.phraseKind
+        ) else {
+            return false
+        }
+        let pulseEchoEligibilityMatchesAttempt = zip(
+            vector.pulseEchoDrive,
+            vector.instruments
+        ).allSatisfy { pulse, instruments in
+            !pulse.bindingValid || pulse.driveEligible == (
+                pulse.normalDriveEligibility(
+                    phraseKind: phraseKind,
+                    conservative: vector.symbolic.conservative,
+                    instruments: instruments
+                ) && !forceHomeUpperTimbre
+            )
+        }
         guard schemaVersion == Self.schemaVersion,
               slot == vector.slot,
-              vector.recordIsStructurallyValid,
+              prevalidatedRecordIsStructurallyValid,
+              vector.pulseEchoDrive.count == vector.instruments.count,
+              pulseEchoEligibilityMatchesAttempt,
               sourceReasonCodeCount == reasonCodes.count,
               sourceReasonCodeCount <= Self.maximumReasonCodeCount else {
             return false
@@ -2085,9 +2678,10 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
         let safeGraphIsMutationFree = !safeGraphExpected ||
             (vector.graph.mutationKind == nil && vector.graph.mutatedNodeCount == 0)
         return forceSafeGraph == safeGraphExpected &&
-            safeGraphIsMutationFree && missingReason == !vector.isComplete &&
-            nonFiniteReason == !vector.isFinite &&
-            hardGateReason == !vector.hardGatesPassed
+            safeGraphIsMutationFree &&
+            missingReason == !prevalidatedVectorIsComplete &&
+            nonFiniteReason == !prevalidatedVectorIsFinite &&
+            hardGateReason == !prevalidatedHardGatesPassed
     }
 
     package var isComplete: Bool { isStructurallyComplete }
@@ -2239,7 +2833,15 @@ package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sen
 /// them into tuple locals made the prior monolithic getter exceed the 512 KiB
 /// cooperative preparation-thread stack before any audio could be committed.
 private final class AutonomousCandidateEvaluationTransactionValidator {
+    private struct PrevalidatedAttemptRecord {
+        let recordIsStructurallyValid: Bool
+        let vectorIsComplete: Bool
+        let vectorIsFinite: Bool
+        let hardGatesPassed: Bool
+    }
+
     private let transaction: AutonomousCandidateEvaluationTransaction
+    private var prevalidatedAttemptRecords: [PrevalidatedAttemptRecord] = []
     private var initialIndices: [Int] = []
     private var correctionIndices: [Int] = []
     private var primaryInitialIndex: Int?
@@ -2255,12 +2857,54 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
     @inline(never)
     func validate() -> Bool {
         validateHeader() &&
+            prevalidateAttemptRecords() &&
             validateAttemptLayout() &&
             validateSharedInputs() &&
             validateKnownEvaluatorHistory() &&
             validateCorrectionHistory() &&
             validateFallbackHistory() &&
             validateSelectionReplay()
+    }
+
+    /// Evaluate the large vector and full-mix gates directly from the
+    /// reference-owned transaction validator. Passing only four booleans into
+    /// attempt layout avoids nesting full-mix signal validation beneath the
+    /// attempt and vector structural getter frames on cooperative threads.
+    @inline(never)
+    private func prevalidateAttemptRecords() -> Bool {
+        prevalidatedAttemptRecords.reserveCapacity(
+            AutonomousCandidateEvaluationTransaction.maximumAttemptCount
+        )
+        for index in transaction.attempts.indices {
+            let signalSafetyValid =
+                transaction.attempts[index].vector.fullMix.signalSafetyValid
+            let hardGateSummaryIsCanonical = transaction.attempts[index]
+                .vector.hardGateSummaryIsCanonicalForTransactionValidation(
+                    prevalidatedSignalSafetyValid: signalSafetyValid
+                )
+            let recordIsStructurallyValid = transaction.attempts[index]
+                .vector.recordIsStructurallyValid(
+                    prevalidatedHardGateSummaryIsCanonical:
+                        hardGateSummaryIsCanonical
+                )
+            guard recordIsStructurallyValid else { return false }
+            let vectorIsComplete =
+                transaction.attempts[index].vector.isComplete
+            let vectorIsFinite = transaction.attempts[index].vector.isFinite
+            prevalidatedAttemptRecords.append(PrevalidatedAttemptRecord(
+                recordIsStructurallyValid: true,
+                vectorIsComplete: vectorIsComplete,
+                vectorIsFinite: vectorIsFinite,
+                hardGatesPassed:
+                    transaction.attempts[index]
+                        .vector.hardGatesPassedForTransactionValidation(
+                            prevalidatedVectorIsComplete: vectorIsComplete,
+                            prevalidatedVectorIsFinite: vectorIsFinite,
+                            prevalidatedSignalSafetyValid: signalSafetyValid
+                        )
+            ))
+        }
+        return prevalidatedAttemptRecords.count == transaction.attempts.count
     }
 
     @inline(never)
@@ -2310,7 +2954,18 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
         var previousInitialRank = -1
 
         for index in transaction.attempts.indices {
-            guard transaction.attempts[index].isStructurallyComplete,
+            guard prevalidatedAttemptRecords.indices.contains(index),
+                  transaction.attempts[index].isStructurallyComplete(
+                    prevalidatedRecordIsStructurallyValid:
+                        prevalidatedAttemptRecords[index]
+                            .recordIsStructurallyValid,
+                    prevalidatedVectorIsComplete:
+                        prevalidatedAttemptRecords[index].vectorIsComplete,
+                    prevalidatedVectorIsFinite:
+                        prevalidatedAttemptRecords[index].vectorIsFinite,
+                    prevalidatedHardGatesPassed:
+                        prevalidatedAttemptRecords[index].hardGatesPassed
+                  ),
                   transaction.attempts[index].vector.planFingerprint ==
                     transaction.planFingerprints[transaction.attempts[index].slot] else {
                 return false

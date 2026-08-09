@@ -34,6 +34,16 @@ canonical graph. It does not create a separate graph per patch. Pulse echo is
 also conditioned by the existing score-owned pulse-echo decision, so a listed
 capability can remain dry when the current bar does not authorize that send.
 
+Effect compatibility is a permission set, not an orderable plug-in chain. The
+implemented pulse-echo return-drive slice reuses the canonical renderer's one
+shared, filtered return. The score authorizes bounded drive only in a memory-
+chapter bar with pulse echo enabled and at least one assigned instrument that
+has pulse-echo access; conservative, forced-home, identity-return, major-break,
+and otherwise ineligible paths remain neutral. The drive follows return
+filtering and sits downstream of the unchanged delay feedback write, so the
+driven sample cannot recirculate. It does not create a per-patch graph, retain
+transformed PCM as a reusable source, or alter the once-rendered dry assignment.
+
 ## The three architectures
 
 ### Resonant Mono
@@ -106,6 +116,17 @@ automation, malformed hashes, and non-finite evidence make the evidence
 incomplete. The shipping evaluator remains uncalibrated, so these observations
 prove score-to-PCM truth and support future qualification; they do not by
 themselves claim professional sound or change candidate selection.
+
+The shared return is intentionally recorded beside, rather than inside, the
+architecture-local dry record. Each full bar retains bar/BPM/delay/render
+geometry, score and drive eligibility, bounded `machineTexture` and applied
+amount, current-send RMS, exact pre-drive and post-drive hashes, pre/post peak,
+RMS, and low-band RMS, difference RMS, and finite status. Candidate-vector
+schema 6 binds those observations to the matching instrument effect access and
+requires exact pre/post identity on neutral paths. The exact-source local
+structural, signal, protected-routing, and release-build matrix passed; policy
+remains uncalibrated, so neither record qualifies professional sound or changes
+candidate selection.
 
 All planning, assignment, rendering, and evidence reduction happen during
 detached preparation. No new decision, allocation, analysis, logging, file or

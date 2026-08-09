@@ -409,3 +409,41 @@ physical route/interruption smoke, preparation-latency or peak-memory budget,
 or 60-minute hardware-output soak was completed. Automated professional-quality
 qualification therefore remains unavailable, and no release-readiness or
 sound-quality promotion is claimed by this snapshot.
+
+## Pulse-echo return-drive implementation candidate — 2026-08-09
+
+The current source candidate implements one bounded relationship inside the
+canonical renderer. Score-owned `machineTexture` may drive the existing shared,
+filtered pulse-echo return after its undriven feedback state is advanced and
+before wet recombination. The driven sample cannot re-enter feedback. The slice
+adds no graph, plug-in chain, onset, event density, user control, reusable
+resample buffer, sample library, retained transformed source, or callback work.
+
+Each full bar now produces reduced same-pass evidence for the authorized send:
+bar/BPM/delay/render geometry, score and drive eligibility, bounded source and
+applied amount, current-send RMS, exact pre-drive and post-drive hashes,
+pre/post peak, RMS, and low-band RMS, difference RMS, and finite status. The
+candidate-vector contract binds it to matching instrument pulse-echo access and
+requires exact pre/post identity for a neutral path. Quality-contract schema 7,
+candidate-vector schema 6, and canonical engine identity
+`autotechno-canonical-engine.v7` identify this implementation candidate.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with serial,
+isolated SwiftPM caches on the exact source candidate rebased on instrument-
+palette base `e1e9fe99de5a3a1500b9eecf7521e172e135affb`:
+
+- upper-timbre integration: 17/17 passed in 136.833 seconds;
+- core and evidence: 84/84 passed in 67.553 seconds;
+- autonomous preparation preflight: 21/21 passed in 466.457 seconds;
+- protected-routing regressions: 7/7 passed in 59.081 seconds;
+- optimized `AutoTechno` product build: passed in 49.86 seconds;
+- independent exact-diff static audit: no remaining concrete P0-P2 finding;
+- `git diff --check`: clean.
+
+The local matrix establishes structural, signal, continuation, provenance,
+protected-routing, and build integrity for this candidate. No matched-loudness
+listening, exact-build app playback, physical route/interruption smoke,
+preparation-latency or peak-memory budget, or hardware-output soak was completed.
+Policy remains `uncalibrated.v1`, automated quality qualification remains
+unavailable, and this snapshot makes no professional-quality or release-
+readiness promotion.

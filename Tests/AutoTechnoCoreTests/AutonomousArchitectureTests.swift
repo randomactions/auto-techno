@@ -1,5 +1,5 @@
 import AutoTechnoCore
-import AutoTechnoDSP
+@testable import AutoTechnoDSP
 import Foundation
 import Testing
 
@@ -187,7 +187,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true, conservative: false
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v6")
+                "autotechno-canonical-engine.v7")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -1099,6 +1099,30 @@ struct GeneratedDSPTopologyTests {
 
 @Suite("Autonomous preparation preflight")
 struct AutonomousPreparationPreflightTests {
+    private struct PulseEchoRenderProjection: Equatable {
+        let events: [[VoiceEvent]]
+        let upperNoteEvidence: [[UpperNoteRenderEvidence]]
+        let instrumentEvidence: [[InstrumentArchitectureRenderEvidence]]
+        let protectedFoundationHashes: [String]
+        let percussionHashes: [String]
+        let protectedRhythmHashes: [String]
+        let pulseEchoEvidence: [PulseEchoReturnDriveRenderEvidence]
+        let effects: [[EffectState]]
+        let outputHashes: [String]
+    }
+
+    private struct PulseEchoRenderMaterial {
+        let projection: PulseEchoRenderProjection
+        let left: [Float]
+    }
+
+    private struct PulseEchoRenderPair {
+        let first: PulseEchoRenderProjection
+        let second: PulseEchoRenderProjection
+        let differenceEnergy: Double
+        let lowDifferenceEnergy: Double
+    }
+
     @Test("Sparse intent, health, ties, and dual failure follow the bounded selection policy")
     func selectionPolicy() {
         let healthy = AutonomousCandidateEvidence(
@@ -2533,7 +2557,28 @@ struct AutonomousPreparationPreflightTests {
 
     @Test("Three-sixteenth pulse echo is sparse, audible, and low-cut")
     func pulseEchoSignalBehavior() {
-        var matched: (AutonomousSessionState, AutonomousPhrasePlan, Int, EnsembleResolvedEvent)?
+        func replacingEcho(
+            in resolved: ResolvedPerformanceBar,
+            enabled: Bool,
+            companion: FoundationCompanion? = nil,
+            chapter: InterlockChapter = .memory
+        ) -> ResolvedPerformanceBar {
+            ResolvedPerformanceBar(
+                performance: resolved.performance,
+                ensemble: resolved.ensemble,
+                arrangementGesture: resolved.arrangementGesture,
+                percussionGear: resolved.percussionGear,
+                foundationCompanion: companion ?? resolved.foundationCompanion,
+                pulseEchoEnabled: enabled,
+                interlockChapter: chapter,
+                groovePulses: resolved.groovePulses,
+                closedHatDecayArticulations: resolved.closedHatDecayArticulations,
+                spatialContrast: resolved.spatialContrast,
+                narrative: resolved.narrative
+            )
+        }
+
+        var matched: (AutonomousSessionState, AutonomousPhrasePlan, Int)?
         for fixture in UInt64(1)...64 where matched == nil {
             let director = AutonomousSessionDirector(rootSeed: fixture)
             var state = director.initialState()
@@ -2544,48 +2589,288 @@ struct AutonomousPreparationPreflightTests {
                         ($0.arrangementGesture == .gearShift ||
                          $0.arrangementGesture == .turnaround)
                 })
+                if plan.conservative || plan.kind == .identityReturn ||
+                    plan.kind == .majorBreak {
+                    state.advance(using: plan)
+                    continue
+                }
                 for (barIndex, resolved) in plan.resolvedBars.enumerated() {
-                    guard resolved.foundationCompanion != .monoRumble else { continue }
-                    if let event = resolved.ensemble.events.first(where: { event in
+                    guard resolved.foundationCompanion != .monoRumble,
+                          barIndex + 1 < plan.resolvedBars.count else { continue }
+                    let memoryResolved = replacingEcho(in: resolved, enabled: true)
+                    let synthBar = SynthPerformancePlan(
+                        scene: plan.scene,
+                        dna: plan.dna,
+                        kind: plan.kind,
+                        resolvedBars: [memoryResolved]
+                    ).bars[0]
+                    guard synthBar.pulseEchoTextureArticulation.appliedAmount > 0 else {
+                        continue
+                    }
+                    if resolved.ensemble.events.contains(where: { event in
                         guard event.voice == .motif || event.voice == .response else { return false }
                         let macroStep = (resolved.performance.bar % 16) * 16 + event.step
                         let stage = RelationalCyclePhase(macroStep: macroStep).followerStage
-                        return stage == .open || stage == .spill
+                        return event.step <= 12 && (stage == .open || stage == .spill)
                     }) {
-                        matched = (state, plan, barIndex, event)
+                        matched = (state, plan, barIndex)
                         break
                     }
                 }
                 if matched == nil { state.advance(using: plan) }
             }
         }
-        guard let (sourceState, sourcePlan, barIndex, event) = matched else {
+        guard let (sourceState, sourcePlan, barIndex) = matched else {
             Issue.record("Expected a relationally echoable upper-voice event")
             return
         }
-
-        func replacingEcho(in resolved: ResolvedPerformanceBar, enabled: Bool,
-                           companion: FoundationCompanion? = nil) -> ResolvedPerformanceBar {
-            ResolvedPerformanceBar(
-                performance: resolved.performance,
-                ensemble: resolved.ensemble,
-                arrangementGesture: resolved.arrangementGesture,
-                percussionGear: resolved.percussionGear,
-                foundationCompanion: companion ?? resolved.foundationCompanion,
-                pulseEchoEnabled: enabled,
-                interlockChapter: .memory,
-                groovePulses: resolved.groovePulses,
-                spatialContrast: resolved.spatialContrast,
-                narrative: resolved.narrative
+        let sourceBar = sourcePlan.resolvedBars[barIndex]
+        var wetBars = sourcePlan.resolvedBars.map { resolved in
+            replacingEcho(
+                in: resolved,
+                enabled: false,
+                chapter: resolved.interlockChapter
             )
         }
-        let sourceBar = sourcePlan.resolvedBars[barIndex]
-        var wetBars = sourcePlan.resolvedBars
-        var dryBars = sourcePlan.resolvedBars
+        var dryBars = wetBars
         wetBars[barIndex] = replacingEcho(in: sourceBar, enabled: true)
         dryBars[barIndex] = replacingEcho(in: sourceBar, enabled: false)
+        wetBars[barIndex + 1] = replacingEcho(
+            in: wetBars[barIndex + 1],
+            enabled: false
+        )
+        dryBars[barIndex + 1] = replacingEcho(
+            in: dryBars[barIndex + 1],
+            enabled: false
+        )
         let protected = replacingEcho(in: sourceBar, enabled: true, companion: .monoRumble)
         #expect(!protected.pulseEchoEnabled)
+
+        func synthBar(
+            resolved: ResolvedPerformanceBar,
+            kind: AutonomousPhraseKind,
+            conservative: Bool = false,
+            forceHome: Bool = false
+        ) -> SynthPerformanceBar {
+            SynthPerformancePlan(
+                scene: sourcePlan.scene,
+                dna: sourcePlan.dna,
+                kind: kind,
+                resolvedBars: [resolved],
+                conservative: conservative,
+                forceHomeUpperTimbre: forceHome
+            ).bars[0]
+        }
+
+        let eligibleSynthBar = synthBar(
+            resolved: wetBars[barIndex],
+            kind: sourcePlan.kind
+        )
+        let eligibleTexture = eligibleSynthBar.pulseEchoTextureArticulation
+        #expect(eligibleTexture.machineTexture == sourcePlan.scene.machineTexture)
+        #expect(eligibleTexture.earliestPulseEchoOnsetStep != nil)
+        #expect((eligibleTexture.earliestPulseEchoOnsetStep ?? 16) <=
+                PulseEchoTextureArticulation.latestDrivenOnsetStep)
+        #expect(eligibleTexture.driveEligible)
+        #expect(eligibleTexture.appliedAmount == min(
+            PulseEchoTextureArticulation.maximumAppliedAmount,
+            sourcePlan.scene.machineTexture
+        ))
+        #expect(eligibleSynthBar.upperNotes.contains {
+            $0.instrument.effects.contains(.pulseEcho)
+        })
+        let scoreDisabled = synthBar(
+            resolved: dryBars[barIndex],
+            kind: sourcePlan.kind
+        ).pulseEchoTextureArticulation
+        let nonMemory = synthBar(
+            resolved: replacingEcho(in: sourceBar, enabled: true, chapter: .tone),
+            kind: sourcePlan.kind
+        ).pulseEchoTextureArticulation
+        let conservative = synthBar(
+            resolved: wetBars[barIndex],
+            kind: sourcePlan.kind,
+            conservative: true
+        ).pulseEchoTextureArticulation
+        let forceHome = synthBar(
+            resolved: wetBars[barIndex],
+            kind: sourcePlan.kind,
+            forceHome: true
+        ).pulseEchoTextureArticulation
+        let identityReturn = synthBar(
+            resolved: wetBars[barIndex],
+            kind: .identityReturn
+        ).pulseEchoTextureArticulation
+        let majorBreak = synthBar(
+            resolved: wetBars[barIndex],
+            kind: .majorBreak
+        ).pulseEchoTextureArticulation
+        let upperlessEnsemble = EnsembleContext(
+            focusRole: sourceBar.ensemble.focusRole,
+            events: sourceBar.ensemble.events.filter {
+                $0.voice != .motif && $0.voice != .response
+            },
+            kickAnchors: sourceBar.ensemble.kickAnchors,
+            intentionalPileup: sourceBar.ensemble.intentionalPileup
+        )
+        let upperlessResolved = ResolvedPerformanceBar(
+            performance: sourceBar.performance,
+            ensemble: upperlessEnsemble,
+            arrangementGesture: sourceBar.arrangementGesture,
+            percussionGear: sourceBar.percussionGear,
+            foundationCompanion: sourceBar.foundationCompanion,
+            pulseEchoEnabled: true,
+            interlockChapter: .memory,
+            groovePulses: sourceBar.groovePulses,
+            spatialContrast: sourceBar.spatialContrast,
+            narrative: sourceBar.narrative
+        )
+        let upperless = synthBar(
+            resolved: upperlessResolved,
+            kind: sourcePlan.kind
+        ).pulseEchoTextureArticulation
+        for bypassed in [
+            scoreDisabled, nonMemory, conservative, forceHome,
+            identityReturn, majorBreak, upperless,
+        ] {
+            #expect(!bypassed.driveEligible)
+            #expect(bypassed.appliedAmount == 0)
+        }
+        #expect(PulseEchoTextureArticulation.neutral.appliedAmount == 0)
+        #expect(!PulseEchoTextureArticulation.neutral.driveEligible)
+        for source in [
+            -Double.infinity, -1, 0, 0.24, 0.55, 0.82, 1, 2,
+            Double.infinity, Double.nan,
+        ] {
+            let expectedSource = source.isFinite ? min(1, max(0, source)) : 0
+            let articulation = PulseEchoTextureArticulation(
+                machineTexture: source,
+                enabled: true,
+                earliestPulseEchoOnsetStep: 0
+            )
+            #expect(articulation.machineTexture == expectedSource)
+            #expect(articulation.driveEligible)
+            #expect(articulation.appliedAmount == min(
+                PulseEchoTextureArticulation.maximumAppliedAmount,
+                expectedSource
+            ))
+            #expect((0...1).contains(articulation.machineTexture))
+            #expect((0...PulseEchoTextureArticulation.maximumAppliedAmount)
+                .contains(articulation.appliedAmount))
+        }
+        let lateOnlyTexture = PulseEchoTextureArticulation(
+            machineTexture: sourcePlan.scene.machineTexture,
+            enabled: true,
+            earliestPulseEchoOnsetStep: 13
+        )
+        #expect(lateOnlyTexture.earliestPulseEchoOnsetStep == 13)
+        #expect(!lateOnlyTexture.driveEligible)
+        #expect(lateOnlyTexture.appliedAmount == 0)
+        for filteredSample in [-2.0, -1, -0.4, -0.01, 0, 0.01, 0.4, 1, 2] {
+            let preDriveSample = Float(filteredSample * 0.18)
+            let neutralSample = PulseEchoReturnDriveContract.process(
+                preDriveSample: preDriveSample,
+                amount: 0
+            )
+            let drivenSample = PulseEchoReturnDriveContract.process(
+                preDriveSample: preDriveSample,
+                amount: eligibleTexture.appliedAmount
+            )
+            #expect(neutralSample == preDriveSample)
+            let neutralMagnitude = abs(Double(neutralSample))
+            let drivenMagnitude = abs(Double(drivenSample))
+            #expect(drivenMagnitude <= neutralMagnitude *
+                    PulseEchoReturnDriveContract.maximumLowLevelGain + 0.000_001)
+            #expect(drivenMagnitude <= max(
+                neutralMagnitude,
+                PulseEchoReturnDriveContract.normalizationAmplitude
+            ) + 0.000_001)
+            if abs(filteredSample) > 0 && abs(filteredSample) < 0.5 {
+                #expect(drivenMagnitude > neutralMagnitude)
+            }
+            #expect(Double(drivenSample) * filteredSample >= 0)
+        }
+        #expect(abs(PulseEchoReturnDriveContract.maximumLowLevelGain - 3.2) <
+                0.000_000_000_001)
+        for zero in [Float(bitPattern: 0), Float(bitPattern: 0x8000_0000)] {
+            #expect(PulseEchoReturnDriveContract.process(
+                preDriveSample: zero,
+                amount: PulseEchoReturnDriveContract.maximumAmount
+            ).bitPattern == zero.bitPattern)
+        }
+        let tinyDriveInput = Float(0.20)
+        let tinyDriveOutput = PulseEchoReturnDriveContract.process(
+            preDriveSample: tinyDriveInput,
+            amount: 0.000_000_000_001
+        )
+        #expect(tinyDriveOutput.bitPattern != tinyDriveInput.bitPattern)
+        #expect(tinyDriveOutput == PulseEchoReturnDriveContract.process(
+            preDriveSample: tinyDriveInput,
+            amount: 0.000_000_000_001
+        ))
+        let transitionFrameCount =
+            PulseEchoReturnDriveContract.transitionFrameCount(sampleRate: 8_000)
+        let transitionTotalFrameCount = max(
+            transitionFrameCount * 2 + 3,
+            1_024
+        )
+        let targetAmount = eligibleTexture.appliedAmount
+        let firstAmount = PulseEchoReturnDriveContract.effectiveAmount(
+            targetAmount: targetAmount,
+            frame: 0,
+            totalFrameCount: transitionTotalFrameCount,
+            transitionFrameCount: transitionFrameCount
+        )
+        let lastAmount = PulseEchoReturnDriveContract.effectiveAmount(
+            targetAmount: targetAmount,
+            frame: transitionTotalFrameCount - 1,
+            totalFrameCount: transitionTotalFrameCount,
+            transitionFrameCount: transitionFrameCount
+        )
+        #expect(transitionFrameCount == 64)
+        #expect(PulseEchoReturnDriveContract.transitionFrameCount(
+            sampleRate: 44_100
+        ) == 353)
+        #expect(PulseEchoReturnDriveContract.transitionFrameCount(
+            sampleRate: 48_000
+        ) == 384)
+        #expect(firstAmount == 0)
+        #expect(lastAmount == 0)
+        #expect(PulseEchoReturnDriveContract.effectiveAmount(
+            targetAmount: targetAmount,
+            frame: transitionFrameCount,
+            totalFrameCount: transitionTotalFrameCount,
+            transitionFrameCount: transitionFrameCount
+        ) == targetAmount)
+        let boundaryPreDriveSample = Float(-0.12)
+        let firstBoundaryOutput = PulseEchoReturnDriveContract.process(
+            preDriveSample: boundaryPreDriveSample,
+            amount: firstAmount
+        )
+        let lastBoundaryOutput = PulseEchoReturnDriveContract.process(
+            preDriveSample: boundaryPreDriveSample,
+            amount: lastAmount
+        )
+        #expect(firstBoundaryOutput == boundaryPreDriveSample)
+        #expect(lastBoundaryOutput == boundaryPreDriveSample)
+        #expect((firstBoundaryOutput - boundaryPreDriveSample).bitPattern == 0)
+        #expect((lastBoundaryOutput - boundaryPreDriveSample).bitPattern == 0)
+        let maximumAmountDelta = targetAmount / Double(transitionFrameCount)
+        for frame in 1..<transitionTotalFrameCount {
+            let previous = PulseEchoReturnDriveContract.effectiveAmount(
+                targetAmount: targetAmount,
+                frame: frame - 1,
+                totalFrameCount: transitionTotalFrameCount,
+                transitionFrameCount: transitionFrameCount
+            )
+            let current = PulseEchoReturnDriveContract.effectiveAmount(
+                targetAmount: targetAmount,
+                frame: frame,
+                totalFrameCount: transitionTotalFrameCount,
+                transitionFrameCount: transitionFrameCount
+            )
+            #expect(abs(current - previous) <= maximumAmountDelta + 0.000_000_000_001)
+        }
 
         let wetPlan = replacingResolvedBars(
             in: sourcePlan, with: wetBars, memory: sourceState.memory
@@ -2593,37 +2878,353 @@ struct AutonomousPreparationPreflightTests {
         let dryPlan = replacingResolvedBars(
             in: sourcePlan, with: dryBars, memory: sourceState.memory
         )
+        var zeroTextureIntent = wetPlan.scene.musicalIntent
+        zeroTextureIntent[.machineTexture] = 0
+        let zeroTextureScene = TechnoScene(
+            intent: zeroTextureIntent,
+            seed: wetPlan.scene.seed,
+            bpm: wetPlan.scene.bpm
+        )
+        #expect(zeroTextureScene.machineTexture == 0)
+        #expect(TechnoScene(
+            intent: wetPlan.scene.musicalIntent,
+            seed: wetPlan.scene.seed,
+            bpm: wetPlan.scene.bpm
+        ) == wetPlan.scene)
+        func replacingScene(
+            in plan: AutonomousPhrasePlan,
+            with scene: TechnoScene
+        ) -> AutonomousPhrasePlan {
+            AutonomousPhrasePlan(
+                phraseIndex: plan.phraseIndex,
+                startBar: plan.startBar,
+                barCount: plan.barCount,
+                kind: plan.kind,
+                scene: scene,
+                dna: plan.dna,
+                resolvedBars: plan.resolvedBars,
+                openedDebt: plan.openedDebt,
+                paidDebtIDs: plan.paidDebtIDs,
+                requestsTopologyMutation: plan.requestsTopologyMutation,
+                alternate: plan.alternate,
+                conservative: plan.conservative,
+                interest: plan.interest,
+                endingInterlockState: plan.endingInterlockState,
+                endingSpatialContrastState: plan.endingSpatialContrastState,
+                endingNarrativeState: plan.endingNarrativeState
+            )
+        }
+        let zeroDrivePlan = replacingScene(in: wetPlan, with: zeroTextureScene)
+        let dryZeroDrivePlan = replacingScene(in: dryPlan, with: zeroTextureScene)
         let graph = DSPGraphGenerator.safePlan(sessionSeed: sourceState.rootSeed)
-        var wetRender = RenderState(), dryRender = RenderState()
-        var wetGraph = GeneratedDSPContinuationState(), dryGraph = GeneratedDSPContinuationState()
-        let wet = AutonomousPhraseRenderer.render(
-            plan: wetPlan, graph: graph, sampleRate: 8_000,
-            state: &wetRender, graphState: &wetGraph
+        let sampleRate = 8_000.0
+        let drivePair = pulseEchoRenderPair(
+            firstPlan: wetPlan,
+            secondPlan: zeroDrivePlan,
+            graph: graph,
+            sampleRate: sampleRate
         )
-        let dry = AutonomousPhraseRenderer.render(
-            plan: dryPlan, graph: graph, sampleRate: 8_000,
-            state: &dryRender, graphState: &dryGraph
+        let sendPair = pulseEchoRenderPair(
+            firstPlan: zeroDrivePlan,
+            secondPlan: dryZeroDrivePlan,
+            graph: graph,
+            sampleRate: sampleRate
         )
-        let wetArticulation = wet[barIndex].synthPerformance.articulation(at: event.step)
-        let dryArticulation = dry[barIndex].synthPerformance.articulation(at: event.step)
-        #expect(wetArticulation.pulseEchoSend > 0)
-        #expect(dryArticulation.pulseEchoSend == 0)
-        #expect(wet[barIndex].events == dry[barIndex].events)
-        #expect(wet[barIndex].effects.contains { $0.kind == .pulseEcho && $0.active })
-        #expect(!dry[barIndex].effects.contains { $0.kind == .pulseEcho && $0.active })
-        let difference = zip(wet.flatMap(\.left), dry.flatMap(\.left)).map {
-            Double($0.0 - $0.1)
+        let wet = drivePair.first
+        let zeroDrive = drivePair.second
+        let replayedZeroDrive = sendPair.first
+        let dry = sendPair.second
+        #expect(zeroDrive == replayedZeroDrive)
+
+        let lateEchoBase = replacingEcho(in: sourceBar, enabled: true)
+        let nonUpperEvents = lateEchoBase.ensemble.events.filter { event in
+            switch event.voice {
+            case .motif, .response, .atmosphere, .transition:
+                return false
+            default:
+                return true
+            }
         }
-        let totalEnergy = difference.reduce(0.0) { $0 + $1 * $1 }
-        var low = 0.0
-        let coefficient = 1 - exp(-2 * Double.pi * 120 / 8_000)
-        var lowEnergy = 0.0
-        for sample in difference {
-            low += (sample - low) * coefficient
-            lowEnergy += low * low
+        let lateOnlyResolved = ResolvedPerformanceBar(
+            performance: lateEchoBase.performance,
+            ensemble: EnsembleContext(
+                focusRole: lateEchoBase.ensemble.focusRole,
+                events: nonUpperEvents + [EnsembleResolvedEvent(
+                    voice: .motif,
+                    step: 13,
+                    intensity: 0.82,
+                    relocated: true
+                )],
+                kickAnchors: lateEchoBase.ensemble.kickAnchors,
+                intentionalPileup: lateEchoBase.ensemble.intentionalPileup
+            ),
+            arrangementGesture: lateEchoBase.arrangementGesture,
+            percussionGear: lateEchoBase.percussionGear,
+            foundationCompanion: lateEchoBase.foundationCompanion,
+            pulseEchoEnabled: lateEchoBase.pulseEchoEnabled,
+            interlockChapter: lateEchoBase.interlockChapter,
+            groovePulses: lateEchoBase.groovePulses,
+            spatialContrast: lateEchoBase.spatialContrast,
+            narrative: lateEchoBase.narrative
+        )
+        let lateOnlyPlan = replacingResolvedBars(
+            in: sourcePlan,
+            with: [lateOnlyResolved, wetBars[barIndex + 1]],
+            memory: sourceState.memory
+        )
+        let lateOnlyRender = pulseEchoRenderMaterial(
+            plan: lateOnlyPlan,
+            graph: graph,
+            sampleRate: sampleRate
+        ).projection
+        let lateOnlyEvidence = lateOnlyRender.pulseEchoEvidence[0]
+        let lateOnlyTailEvidence = lateOnlyRender.pulseEchoEvidence[1]
+        #expect(lateOnlyEvidence.earliestPulseEchoOnsetStep == 13)
+        #expect(!lateOnlyEvidence.driveEligible)
+        #expect(lateOnlyEvidence.appliedAmount == 0)
+        #expect(lateOnlyEvidence.currentSendRMS > 0)
+        #expect(lateOnlyEvidence.preDriveSampleHash ==
+                lateOnlyEvidence.postDriveSampleHash)
+        #expect(lateOnlyEvidence.differenceRMS == 0)
+        #expect(!lateOnlyTailEvidence.driveEligible)
+        #expect(lateOnlyTailEvidence.appliedAmount == 0)
+        #expect(lateOnlyTailEvidence.currentSendRMS == 0)
+        #expect(lateOnlyTailEvidence.preDriveRMS > 0)
+        #expect(lateOnlyTailEvidence.preDriveSampleHash ==
+                lateOnlyTailEvidence.postDriveSampleHash)
+        #expect(lateOnlyTailEvidence.differenceRMS == 0)
+
+        #expect(wet.events == zeroDrive.events)
+        #expect(wet.upperNoteEvidence == zeroDrive.upperNoteEvidence)
+        #expect(wet.instrumentEvidence == zeroDrive.instrumentEvidence)
+        #expect(wet.protectedFoundationHashes == zeroDrive.protectedFoundationHashes)
+        #expect(wet.percussionHashes == zeroDrive.percussionHashes)
+        #expect(wet.protectedRhythmHashes.prefix(barIndex + 1) ==
+                zeroDrive.protectedRhythmHashes.prefix(barIndex + 1))
+        #expect(wet.pulseEchoEvidence.map { $0.currentSendRMS } ==
+                zeroDrive.pulseEchoEvidence.map { $0.currentSendRMS })
+        #expect(wet.pulseEchoEvidence.map { $0.preDriveSampleHash } ==
+                zeroDrive.pulseEchoEvidence.map { $0.preDriveSampleHash })
+
+        let wetEvidence = wet.pulseEchoEvidence[barIndex]
+        let zeroDriveEvidence = zeroDrive.pulseEchoEvidence[barIndex]
+        let dryEvidence = dry.pulseEchoEvidence[barIndex]
+        let expectedDelayFrameCount = max(
+            1,
+            Int((60.0 / wetPlan.scene.bpm * 0.75 * sampleRate).rounded())
+        )
+        let expectedRenderedFrameCount = max(
+            1,
+            Int((240.0 / wetPlan.scene.bpm * sampleRate).rounded())
+        )
+        for evidence in [wetEvidence, zeroDriveEvidence, dryEvidence] {
+            #expect(evidence.bar == sourceBar.performance.bar)
+            #expect(evidence.bpm == wetPlan.scene.bpm)
+            #expect(evidence.delayFrameCount == expectedDelayFrameCount)
+            #expect(evidence.transitionFrameCount == transitionFrameCount)
+            #expect(evidence.renderedFrameCount == expectedRenderedFrameCount)
+            #expect(evidence.finite)
+            #expect(evidence.preDriveSampleHash.count == 16)
+            #expect(evidence.postDriveSampleHash.count == 16)
+            #expect(evidence.firstPreDriveSampleBitPattern ==
+                    evidence.firstPostDriveSampleBitPattern)
+            #expect(evidence.lastPreDriveSampleBitPattern ==
+                    evidence.lastPostDriveSampleBitPattern)
+            if evidence.appliedAmount > 0 {
+                #expect((0..<evidence.renderedFrameCount).contains(
+                    evidence.changedFrameIndex
+                ))
+                let changedPreDriveSample = Float(
+                    bitPattern: evidence.changedPreDriveSampleBitPattern
+                )
+                let changedEffectiveAmount =
+                    PulseEchoReturnDriveContract.effectiveAmount(
+                        targetAmount: evidence.appliedAmount,
+                        frame: evidence.changedFrameIndex,
+                        totalFrameCount: evidence.renderedFrameCount,
+                        transitionFrameCount: evidence.transitionFrameCount
+                    )
+                #expect(PulseEchoReturnDriveContract.process(
+                    preDriveSample: changedPreDriveSample,
+                    amount: changedEffectiveAmount
+                ).bitPattern != evidence.changedPreDriveSampleBitPattern)
+            } else {
+                #expect(evidence.changedFrameIndex == -1)
+                #expect(evidence.changedPreDriveSampleBitPattern == 0)
+            }
+            #expect(evidence.preDrivePeak == Double(Float(evidence.preDrivePeak)))
+            #expect(evidence.preDriveRMS <= evidence.preDrivePeak + 0.000_001)
+            #expect(evidence.postDriveRMS <= evidence.postDrivePeak + 0.000_001)
+            #expect(evidence.preDriveLowBandRMS <= evidence.preDriveRMS + 0.000_001)
+            #expect(evidence.postDriveLowBandRMS <= evidence.postDriveRMS + 0.000_001)
+            #expect((0..<evidence.renderedFrameCount).contains(
+                evidence.preDrivePeakFrameIndex
+            ))
+            #expect((0..<evidence.renderedFrameCount).contains(
+                evidence.postDrivePeakFrameIndex
+            ))
+            let prePeakEffectiveAmount =
+                PulseEchoReturnDriveContract.effectiveAmount(
+                    targetAmount: evidence.appliedAmount,
+                    frame: evidence.preDrivePeakFrameIndex,
+                    totalFrameCount: evidence.renderedFrameCount,
+                    transitionFrameCount: evidence.transitionFrameCount
+                )
+            let expectedPostMagnitudeAtPrePeak = abs(Double(
+                PulseEchoReturnDriveContract.process(
+                    preDriveSample: Float(evidence.preDrivePeak),
+                    amount: prePeakEffectiveAmount
+                )
+            ))
+            #expect(evidence.postDrivePeak >= expectedPostMagnitudeAtPrePeak)
+            #expect(evidence.postDrivePeak <= min(
+                evidence.preDrivePeak *
+                    PulseEchoReturnDriveContract.maximumLowLevelGain,
+                max(
+                    evidence.preDrivePeak,
+                    PulseEchoReturnDriveContract.normalizationAmplitude
+                )
+            ) + 0.000_001)
+            #expect(evidence.postDriveRMS <= evidence.preDriveRMS *
+                    PulseEchoReturnDriveContract.maximumLowLevelGain + 0.000_001)
+            #expect(evidence.postDrivePeakEffectiveAmount ==
+                    PulseEchoReturnDriveContract.effectiveAmount(
+                        targetAmount: evidence.appliedAmount,
+                        frame: evidence.postDrivePeakFrameIndex,
+                        totalFrameCount: evidence.renderedFrameCount,
+                        transitionFrameCount: evidence.transitionFrameCount
+                    ))
+            #expect(evidence.postDrivePeak == abs(Double(
+                PulseEchoReturnDriveContract.process(
+                    preDriveSample: Float(evidence.postDrivePeakPreDriveSample),
+                    amount: evidence.postDrivePeakEffectiveAmount
+                )
+            )))
+            #expect(PulseEchoReturnDriveContract.effectiveAmount(
+                targetAmount: evidence.appliedAmount,
+                frame: 0,
+                totalFrameCount: evidence.renderedFrameCount,
+                transitionFrameCount: evidence.transitionFrameCount
+            ) == 0)
+            #expect(PulseEchoReturnDriveContract.effectiveAmount(
+                targetAmount: evidence.appliedAmount,
+                frame: evidence.renderedFrameCount - 1,
+                totalFrameCount: evidence.renderedFrameCount,
+                transitionFrameCount: evidence.transitionFrameCount
+            ) == 0)
+            #expect(evidence.differenceRMS + 0.000_001 >=
+                    abs(evidence.preDriveRMS - evidence.postDriveRMS))
+            #expect(evidence.differenceRMS <=
+                    evidence.preDriveRMS + evidence.postDriveRMS + 0.000_001)
         }
-        #expect(totalEnergy > 0.000_000_1)
-        #expect(lowEnergy / max(totalEnergy, 0.000_000_1) < 0.45)
+        #expect(wetEvidence.machineTexture == wetPlan.scene.machineTexture)
+        #expect(wetEvidence.scoreEnabled)
+        #expect(wetEvidence.earliestPulseEchoOnsetStep ==
+                eligibleTexture.earliestPulseEchoOnsetStep)
+        #expect(wetEvidence.driveEligible)
+        #expect(wetEvidence.appliedAmount == eligibleTexture.appliedAmount)
+        #expect(wetEvidence.currentSendRMS > 0)
+        #expect(wetEvidence.preDriveRMS > 0)
+        #expect(wetEvidence.preDriveSampleHash == zeroDriveEvidence.preDriveSampleHash)
+        #expect(wetEvidence.preDrivePeak == zeroDriveEvidence.preDrivePeak)
+        #expect(wetEvidence.preDriveRMS == zeroDriveEvidence.preDriveRMS)
+        #expect(wetEvidence.preDriveLowBandRMS == zeroDriveEvidence.preDriveLowBandRMS)
+        #expect(wetEvidence.postDriveSampleHash != zeroDriveEvidence.postDriveSampleHash)
+        #expect(wetEvidence.changedFrameIndex > 0)
+        #expect(wetEvidence.differenceRMS > 0)
+        #expect(wetEvidence.postDrivePeak > wetEvidence.preDrivePeak)
+        #expect(wetEvidence.postDriveRMS > wetEvidence.preDriveRMS)
+        let prePeakEffectiveAmount = PulseEchoReturnDriveContract.effectiveAmount(
+            targetAmount: wetEvidence.appliedAmount,
+            frame: wetEvidence.preDrivePeakFrameIndex,
+            totalFrameCount: wetEvidence.renderedFrameCount,
+            transitionFrameCount: wetEvidence.transitionFrameCount
+        )
+        let drivenPrePeak = abs(Double(PulseEchoReturnDriveContract.process(
+            preDriveSample: Float(wetEvidence.preDrivePeak),
+            amount: prePeakEffectiveAmount
+        )))
+        #expect(wetEvidence.postDrivePeak >= drivenPrePeak)
+
+        #expect(zeroDriveEvidence.machineTexture == 0)
+        #expect(zeroDriveEvidence.scoreEnabled)
+        #expect(zeroDriveEvidence.driveEligible)
+        #expect(zeroDriveEvidence.appliedAmount == 0)
+        #expect(zeroDriveEvidence.currentSendRMS == wetEvidence.currentSendRMS)
+        #expect(zeroDriveEvidence.preDriveSampleHash == zeroDriveEvidence.postDriveSampleHash)
+        #expect(zeroDriveEvidence.preDrivePeak == zeroDriveEvidence.postDrivePeak)
+        #expect(zeroDriveEvidence.preDriveRMS == zeroDriveEvidence.postDriveRMS)
+        #expect(zeroDriveEvidence.preDriveLowBandRMS ==
+                zeroDriveEvidence.postDriveLowBandRMS)
+        #expect(zeroDriveEvidence.changedFrameIndex == -1)
+        #expect(zeroDriveEvidence.changedPreDriveSampleBitPattern == 0)
+        #expect(zeroDriveEvidence.differenceRMS == 0)
+
+        #expect(!dryEvidence.scoreEnabled)
+        #expect(!dryEvidence.driveEligible)
+        #expect(dryEvidence.appliedAmount == 0)
+        #expect(dryEvidence.currentSendRMS == 0)
+        #expect(dryEvidence.preDriveSampleHash == dryEvidence.postDriveSampleHash)
+        #expect(dryEvidence.changedFrameIndex == -1)
+        #expect(dryEvidence.changedPreDriveSampleBitPattern == 0)
+        #expect(dryEvidence.differenceRMS == 0)
+
+        let tailEvidence = wet.pulseEchoEvidence[barIndex + 1]
+        let zeroDriveTailEvidence = zeroDrive.pulseEchoEvidence[barIndex + 1]
+        #expect(!tailEvidence.scoreEnabled)
+        #expect(!tailEvidence.driveEligible)
+        #expect(tailEvidence.appliedAmount == 0)
+        #expect(tailEvidence.currentSendRMS == 0)
+        #expect(tailEvidence.preDriveRMS > 0)
+        #expect(tailEvidence.postDriveRMS > 0)
+        #expect(tailEvidence.preDriveSampleHash == tailEvidence.postDriveSampleHash)
+        #expect(tailEvidence.preDriveRMS == tailEvidence.postDriveRMS)
+        #expect(tailEvidence.changedFrameIndex == -1)
+        #expect(tailEvidence.changedPreDriveSampleBitPattern == 0)
+        #expect(tailEvidence.differenceRMS == 0)
+        #expect(tailEvidence.postDrivePeakEffectiveAmount == 0)
+        #expect(PulseEchoReturnDriveContract.effectiveAmount(
+            targetAmount: tailEvidence.appliedAmount,
+            frame: 0,
+            totalFrameCount: tailEvidence.renderedFrameCount,
+            transitionFrameCount: tailEvidence.transitionFrameCount
+        ) == 0)
+        #expect(PulseEchoReturnDriveContract.effectiveAmount(
+            targetAmount: tailEvidence.appliedAmount,
+            frame: tailEvidence.renderedFrameCount - 1,
+            totalFrameCount: tailEvidence.renderedFrameCount,
+            transitionFrameCount: tailEvidence.transitionFrameCount
+        ) == 0)
+        #expect(tailEvidence.currentSendRMS == zeroDriveTailEvidence.currentSendRMS)
+        #expect(tailEvidence.preDriveSampleHash == zeroDriveTailEvidence.preDriveSampleHash)
+        #expect(tailEvidence.postDriveSampleHash == zeroDriveTailEvidence.postDriveSampleHash)
+        #expect(tailEvidence.preDriveRMS == zeroDriveTailEvidence.preDriveRMS)
+        #expect(tailEvidence.postDriveRMS == zeroDriveTailEvidence.postDriveRMS)
+        #expect(wet.effects[barIndex + 1].contains {
+            $0.kind == .pulseEcho && $0.active
+        })
+        #expect(wet.outputHashes[barIndex] != zeroDrive.outputHashes[barIndex])
+
+        for (evidence, effects) in [
+            (wetEvidence, wet.effects[barIndex]),
+            (zeroDriveEvidence, zeroDrive.effects[barIndex]),
+            (dryEvidence, dry.effects[barIndex]),
+        ] {
+            let effect = effects.first { $0.kind == .pulseEcho }
+            #expect(effect != nil)
+            #expect(effect?.active ==
+                    (evidence.currentSendRMS > 0 || evidence.postDriveRMS > 0))
+        }
+        #expect(wet.effects[barIndex].contains { $0.kind == .pulseEcho && $0.active })
+        #expect(zeroDrive.effects[barIndex].contains {
+            $0.kind == .pulseEcho && $0.active && $0.amount > 0
+        })
+        #expect(!dry.effects[barIndex].contains { $0.kind == .pulseEcho && $0.active })
+
+        #expect(drivePair.differenceEnergy > 0.000_000_000_001)
+        #expect(sendPair.differenceEnergy > 0.000_000_1)
+        #expect(sendPair.lowDifferenceEnergy /
+                max(sendPair.differenceEnergy, 0.000_000_1) < 0.45)
     }
 
     @Test("Representative 44.1 and 48 kHz renders remain finite and bounded")
@@ -2667,6 +3268,78 @@ struct AutonomousPreparationPreflightTests {
     private func prepare(seed: UInt64, sampleRate: Double) -> PreparedAutonomousPhrase {
         let director = AutonomousSessionDirector(rootSeed: seed)
         return prepare(state: director.initialState(), sampleRate: sampleRate)
+    }
+
+    @inline(never)
+    private func pulseEchoRenderMaterial(
+        plan: AutonomousPhrasePlan,
+        graph: DSPGraphPlan,
+        sampleRate: Double
+    ) -> PulseEchoRenderMaterial {
+        var renderState = RenderState()
+        var graphState = GeneratedDSPContinuationState()
+        let blocks = AutonomousPhraseRenderer.render(
+            plan: plan,
+            graph: graph,
+            sampleRate: sampleRate,
+            state: &renderState,
+            graphState: &graphState
+        )
+        return PulseEchoRenderMaterial(
+            projection: PulseEchoRenderProjection(
+                events: blocks.map { $0.events },
+                upperNoteEvidence: blocks.map { $0.upperNoteRenderEvidence },
+                instrumentEvidence: blocks.map { $0.instrumentRenderEvidence },
+                protectedFoundationHashes: blocks.map {
+                    $0.protectedFoundationSampleHash
+                },
+                percussionHashes: blocks.map { $0.percussionSampleHash },
+                protectedRhythmHashes: blocks.map { $0.protectedRhythmSampleHash },
+                pulseEchoEvidence: blocks.map {
+                    $0.pulseEchoReturnDriveRenderEvidence
+                },
+                effects: blocks.map { $0.effects },
+                outputHashes: blocks.map {
+                    ExactPCMFingerprint.stereo(left: $0.left, right: $0.right)
+                }
+            ),
+            left: blocks.flatMap { $0.left }
+        )
+    }
+
+    @inline(never)
+    private func pulseEchoRenderPair(
+        firstPlan: AutonomousPhrasePlan,
+        secondPlan: AutonomousPhrasePlan,
+        graph: DSPGraphPlan,
+        sampleRate: Double
+    ) -> PulseEchoRenderPair {
+        let first = pulseEchoRenderMaterial(
+            plan: firstPlan,
+            graph: graph,
+            sampleRate: sampleRate
+        )
+        let second = pulseEchoRenderMaterial(
+            plan: secondPlan,
+            graph: graph,
+            sampleRate: sampleRate
+        )
+        var differenceEnergy = 0.0
+        var lowDifferenceEnergy = 0.0
+        var low = 0.0
+        let coefficient = 1 - exp(-2 * Double.pi * 120 / sampleRate)
+        for (firstSample, secondSample) in zip(first.left, second.left) {
+            let difference = Double(firstSample - secondSample)
+            differenceEnergy += difference * difference
+            low += (difference - low) * coefficient
+            lowDifferenceEnergy += low * low
+        }
+        return PulseEchoRenderPair(
+            first: first.projection,
+            second: second.projection,
+            differenceEnergy: differenceEnergy,
+            lowDifferenceEnergy: lowDifferenceEnergy
+        )
     }
 
     private func replacingResolvedBars(in plan: AutonomousPhrasePlan,

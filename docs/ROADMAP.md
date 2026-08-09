@@ -16,10 +16,10 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   guards;
 - one bounded weak-percussion vocabulary whose existing syncopated-lean onsets
   carry score-owned physical articulation and a 3-3-2 accent/ghost relationship;
-- quality-contract schema 6 with a bounded candidate-evaluation vector and
-  atomic selected-commit provenance across symbolic, full-mix, masking, stem,
-  event-local groove-pulse, ordinary closed-hat, graph, and pre/post
-  upper-timbre evidence;
+- canonical engine v7, quality-contract schema 7, and candidate-vector schema 6
+  with atomic selected-commit provenance across symbolic, full-mix, masking,
+  stem, event-local groove-pulse, ordinary closed-hat, score-owned instrument,
+  shared pulse-echo return-drive, graph, and pre/post upper-timbre evidence;
 - phrase-wide ITU-R BS.1770-5 loudness, Annex 2 true peak, physical-time window
   counts, and a complete-checkpoint Professional Evidence v2 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
@@ -33,6 +33,11 @@ not constitute professional-quality qualification or general quality-driven
 candidate selection. Calibrated paired ranking remains disabled pending bounded
 streaming analysis and measured cancellation, latency, and peak-memory behavior;
 hybrid live feedback is also not implemented.
+
+The pulse-echo return-drive code and same-pass reduced evidence are present in
+the current implementation candidate. The exact-source local structural/signal
+suite and release build now establish its validated engineering baseline; they
+do not change the uncalibrated evaluator or claim professional quality.
 
 ## Evolution rule
 
@@ -57,12 +62,12 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 6 now binds a versioned transaction across the engine,
-quality policy, evaluator, candidate plans, route, incoming continuation,
-attempt evidence, selection, and finalized commit provenance. Its bounded
-groove-pulse and ordinary closed-hat projections prove that physical and semantic
-decay articulation reaches exact dry PCM without letting the uncalibrated policy
-rank that evidence. Professional
+Quality-contract schema 7 and candidate-vector schema 6 now bind a versioned
+transaction across canonical engine v7, quality policy, evaluator, candidate
+plans, route, incoming continuation, attempt evidence, selection, and finalized
+commit provenance. Its bounded groove-pulse, ordinary closed-hat, instrument,
+and pulse-echo return-drive projections make each score-to-PCM consequence
+explicit without letting the uncalibrated policy rank that evidence. Professional
 Evidence v2 adds standards-based phrase loudness/true peak and a bounded bank
 that requires every canonical checkpoint for each included rate, including
 complete role attribution. Next, populate private representative-rate banks,

@@ -42,10 +42,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 5)
-        #expect(QualityQualificationContract.schemaVersion == 6)
+        #expect(vector.schemaVersion == 6)
+        #expect(QualityQualificationContract.schemaVersion == 7)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v6")
+                "autotechno-canonical-engine.v7")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -386,7 +386,8 @@ struct AutonomousCandidateEvaluationTests {
                 motion: 0.78,
                 space: 0.22
             ),
-            effects: InstrumentPalette.capability(for: .acidSequence)?.compatibleEffects ?? []
+            effects: (InstrumentPalette.capability(for: .acidSequence)?.compatibleEffects ?? [])
+                .filter { $0 != .pulseEcho }
         )
         let instrumentBar = AutonomousInstrumentBarEvidence(
             bar: 0,
@@ -485,6 +486,779 @@ struct AutonomousCandidateEvaluationTests {
             from: JSONSerialization.data(withJSONObject: misplacedObject)
         )
         #expect(!misplaced.isComplete)
+    }
+
+    @Test("Pulse-echo return drive evidence is bounded, attributable, and selection-neutral")
+    func pulseEchoDriveEvidenceContract() throws {
+        let pulseInstrument = fixturePulseEchoInstrumentBar()
+        let preDrivePeak = Double(Float(0.20))
+        let activePostDrivePeak = abs(Double(
+            PulseEchoReturnDriveContract.process(
+                preDriveSample: Float(preDrivePeak),
+                amount: 0.4
+            )
+        ))
+        let cappedPostDrivePeak = abs(Double(
+            PulseEchoReturnDriveContract.process(
+                preDriveSample: Float(preDrivePeak),
+                amount: 0.55
+            )
+        ))
+        let active = fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            driveEligible: true,
+            appliedAmount: 0.4,
+            currentSendRMS: 0.02,
+            postDriveSampleHash: "fedcba9876543210",
+            preDrivePeak: preDrivePeak,
+            postDrivePeak: activePostDrivePeak,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.075,
+            preDriveLowBandRMS: 0.01,
+            postDriveLowBandRMS: 0.008,
+            differenceRMS: 0.012,
+            interlockChapter: .memory
+        )
+        let baseline = fixtureVector(
+            slot: .primary,
+            instrumentBar: pulseInstrument,
+            pulseEchoDriveBars: [fixturePulseEchoDrive(
+                scoreEnabled: true,
+                earliestPulseEchoOnsetStep: 0
+            )]
+        )
+        let vector = fixtureVector(
+            slot: .primary,
+            instrumentBar: pulseInstrument,
+            pulseEchoDriveBars: [active]
+        )
+
+        #expect(pulseInstrument.isComplete)
+        #expect(active.isFinite)
+        #expect(active.isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        #expect(vector.isComplete)
+        #expect(vector.isFinite)
+        #expect(vector.fingerprint != baseline.fingerprint)
+        #expect(vector.selectionEvidence == baseline.selectionEvidence)
+        #expect(AutonomousCandidateAttempt(
+            kind: .initialRender,
+            reasonCodes: [],
+            vector: vector
+        ).isStructurallyComplete)
+        #expect(!AutonomousCandidateAttempt(
+            kind: .correctionRender,
+            forceHomeUpperTimbre: true,
+            reasonCodes: [],
+            vector: vector
+        ).isStructurallyComplete)
+
+        let data = try vector.deterministicJSON()
+        #expect(try vector.deterministicJSON() == data)
+        let decoded = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: data
+        )
+        #expect(decoded == vector)
+        #expect(decoded.fingerprint == vector.fingerprint)
+
+        let object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let bars = try #require(object["pulseEchoDrive"] as? [[String: Any]])
+        let serialized = try #require(bars.first)
+        #expect(Set(serialized.keys) == Set([
+            "bar", "bpm", "delayFrameCount", "scoreEnabled", "driveEligible",
+            "earliestPulseEchoOnsetStep", "machineTexture",
+            "appliedAmount", "transitionFrameCount", "renderedFrameCount",
+            "currentSendRMS",
+            "preDriveSampleHash", "postDriveSampleHash", "preDrivePeak",
+            "firstPreDriveSampleBitPattern", "firstPostDriveSampleBitPattern",
+            "lastPreDriveSampleBitPattern", "lastPostDriveSampleBitPattern",
+            "changedFrameIndex", "changedPreDriveSampleBitPattern",
+            "preDrivePeakFrameIndex", "postDrivePeak", "postDrivePeakFrameIndex",
+            "postDrivePeakPreDriveSample", "postDrivePeakEffectiveAmount",
+            "preDriveRMS", "postDriveRMS",
+            "preDriveLowBandRMS", "postDriveLowBandRMS", "differenceRMS",
+            "interlockChapter", "bindingValid", "finite",
+        ]))
+
+        var forgedAmountObject = object
+        var forgedAmountBars = bars
+        forgedAmountBars[0]["appliedAmount"] = 0.39
+        forgedAmountObject["pulseEchoDrive"] = forgedAmountBars
+        let forgedAmount = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedAmountObject)
+        )
+        #expect(!forgedAmount.isComplete)
+        #expect(forgedAmount.fingerprint != vector.fingerprint)
+
+        var forgedBindingObject = object
+        var forgedBindingBars = bars
+        forgedBindingBars[0]["bindingValid"] = false
+        forgedBindingObject["pulseEchoDrive"] = forgedBindingBars
+        let forgedBinding = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedBindingObject)
+        )
+        #expect(!forgedBinding.isComplete)
+        #expect(forgedBinding.recordIsStructurallyValid)
+        #expect(AutonomousCandidateAttempt(
+            kind: .initialRender,
+            reasonCodes: [.evidenceMissingV1, .hardGateFailedV1],
+            vector: forgedBinding
+        ).isStructurallyComplete)
+
+        var forgedHashObject = object
+        var forgedHashBars = bars
+        forgedHashBars[0]["postDriveSampleHash"] = "FEDCBA9876543210"
+        forgedHashObject["pulseEchoDrive"] = forgedHashBars
+        let forgedHash = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedHashObject)
+        )
+        #expect(!forgedHash.isComplete)
+
+        var forgedPeakObject = object
+        var forgedPeakBars = bars
+        forgedPeakBars[0]["postDrivePeak"] = 0.21
+        forgedPeakObject["pulseEchoDrive"] = forgedPeakBars
+        let forgedPeak = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedPeakObject)
+        )
+        #expect(!forgedPeak.isComplete)
+
+        var forgedTransitionObject = object
+        var forgedTransitionBars = bars
+        forgedTransitionBars[0]["transitionFrameCount"] = 63
+        forgedTransitionObject["pulseEchoDrive"] = forgedTransitionBars
+        let forgedTransition = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedTransitionObject)
+        )
+        #expect(!forgedTransition.isComplete)
+
+        var forgedPrePeakFrameObject = object
+        var forgedPrePeakFrameBars = bars
+        forgedPrePeakFrameBars[0]["preDrivePeakFrameIndex"] = 0
+        forgedPrePeakFrameObject["pulseEchoDrive"] = forgedPrePeakFrameBars
+        let forgedPrePeakFrame = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedPrePeakFrameObject)
+        )
+        #expect(!forgedPrePeakFrame.isComplete)
+
+        var forgedChangedFrameObject = object
+        var forgedChangedFrameBars = bars
+        forgedChangedFrameBars[0]["changedFrameIndex"] = 0
+        forgedChangedFrameObject["pulseEchoDrive"] = forgedChangedFrameBars
+        let forgedChangedFrame = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedChangedFrameObject)
+        )
+        #expect(!forgedChangedFrame.isComplete)
+
+        var forgedChangedSampleObject = object
+        var forgedChangedSampleBars = bars
+        forgedChangedSampleBars[0]["changedPreDriveSampleBitPattern"] = 0
+        forgedChangedSampleObject["pulseEchoDrive"] = forgedChangedSampleBars
+        let forgedChangedSample = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedChangedSampleObject)
+        )
+        #expect(!forgedChangedSample.isComplete)
+
+        var forgedChangedMagnitudeObject = object
+        var forgedChangedMagnitudeBars = bars
+        forgedChangedMagnitudeBars[0]["changedPreDriveSampleBitPattern"] =
+            Float(1).bitPattern
+        forgedChangedMagnitudeObject["pulseEchoDrive"] =
+            forgedChangedMagnitudeBars
+        let forgedChangedMagnitude = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedChangedMagnitudeObject)
+        )
+        #expect(!forgedChangedMagnitude.isComplete)
+
+        var forgedWitnessObject = object
+        var forgedWitnessBars = bars
+        forgedWitnessBars[0]["postDrivePeakFrameIndex"] = 0
+        forgedWitnessObject["pulseEchoDrive"] = forgedWitnessBars
+        let forgedWitness = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedWitnessObject)
+        )
+        #expect(!forgedWitness.isComplete)
+
+        var forgedWitnessAmountObject = object
+        var forgedWitnessAmountBars = bars
+        forgedWitnessAmountBars[0]["postDrivePeakEffectiveAmount"] = 0.39
+        forgedWitnessAmountObject["pulseEchoDrive"] = forgedWitnessAmountBars
+        let forgedWitnessAmount = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedWitnessAmountObject)
+        )
+        #expect(!forgedWitnessAmount.isComplete)
+
+        var forgedWitnessSampleObject = object
+        var forgedWitnessSampleBars = bars
+        forgedWitnessSampleBars[0]["postDrivePeakPreDriveSample"] =
+            preDrivePeak + 0.000_000_000_001
+        forgedWitnessSampleObject["pulseEchoDrive"] = forgedWitnessSampleBars
+        let forgedWitnessSample = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedWitnessSampleObject)
+        )
+        #expect(!forgedWitnessSample.isComplete)
+
+        var forgedPrePeakObject = object
+        var forgedPrePeakBars = bars
+        forgedPrePeakBars[0]["preDrivePeak"] =
+            preDrivePeak + 0.000_000_000_001
+        forgedPrePeakObject["pulseEchoDrive"] = forgedPrePeakBars
+        let forgedPrePeak = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedPrePeakObject)
+        )
+        #expect(!forgedPrePeak.isComplete)
+
+        var forgedBoundaryObject = object
+        var forgedBoundaryBars = bars
+        forgedBoundaryBars[0]["lastPostDriveSampleBitPattern"] = 1
+        forgedBoundaryObject["pulseEchoDrive"] = forgedBoundaryBars
+        let forgedBoundary = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedBoundaryObject)
+        )
+        #expect(!forgedBoundary.isComplete)
+
+        var forgedLateOnsetObject = object
+        var forgedLateOnsetBars = bars
+        forgedLateOnsetBars[0]["earliestPulseEchoOnsetStep"] = 13
+        forgedLateOnsetObject["pulseEchoDrive"] = forgedLateOnsetBars
+        let forgedLateOnset = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedLateOnsetObject)
+        )
+        #expect(!forgedLateOnset.isComplete)
+
+        var forgedMuteObject = object
+        var forgedMuteBars = bars
+        forgedMuteBars[0]["postDrivePeak"] = 0
+        forgedMuteBars[0]["postDriveRMS"] = 0
+        forgedMuteBars[0]["postDriveLowBandRMS"] = 0
+        forgedMuteObject["pulseEchoDrive"] = forgedMuteBars
+        let forgedMute = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedMuteObject)
+        )
+        #expect(!forgedMute.isComplete)
+        #expect(!fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            driveEligible: true,
+            appliedAmount: 0.4,
+            currentSendRMS: 0.02,
+            postDriveSampleHash: "fedcba9876543210",
+            preDrivePeak: 0.000_000_5,
+            postDrivePeak: 0,
+            postDrivePeakFrameIndex: 0,
+            postDrivePeakPreDriveSample: 0,
+            postDrivePeakEffectiveAmount: 0,
+            preDriveRMS: 0.000_000_5,
+            postDriveRMS: 0,
+            differenceRMS: 0.000_000_5,
+            interlockChapter: .memory
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+
+        var forgedRMSObject = object
+        var forgedRMSBars = bars
+        forgedRMSBars[0]["postDriveRMS"] = 0.095
+        forgedRMSObject["pulseEchoDrive"] = forgedRMSBars
+        let forgedRMS = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedRMSObject)
+        )
+        #expect(!forgedRMS.isComplete)
+
+        var forgedLowDifferenceObject = object
+        var forgedLowDifferenceBars = bars
+        forgedLowDifferenceBars[0]["differenceRMS"] = 0.001
+        forgedLowDifferenceObject["pulseEchoDrive"] = forgedLowDifferenceBars
+        let forgedLowDifference = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedLowDifferenceObject)
+        )
+        #expect(!forgedLowDifference.isComplete)
+
+        var forgedHighDifferenceObject = object
+        var forgedHighDifferenceBars = bars
+        forgedHighDifferenceBars[0]["differenceRMS"] = 0.156
+        forgedHighDifferenceObject["pulseEchoDrive"] = forgedHighDifferenceBars
+        let forgedHighDifference = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedHighDifferenceObject)
+        )
+        #expect(!forgedHighDifference.isComplete)
+
+        var forgedLowBandObject = object
+        var forgedLowBandBars = bars
+        forgedLowBandBars[0]["postDriveLowBandRMS"] = 0.076
+        forgedLowBandObject["pulseEchoDrive"] = forgedLowBandBars
+        let forgedLowBand = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedLowBandObject)
+        )
+        #expect(!forgedLowBand.isComplete)
+
+        let noPulseAccess = fixturePulseEchoInstrumentBar(effects: [])
+        #expect(noPulseAccess.isComplete)
+        #expect(!active.isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: noPulseAccess
+        ))
+        #expect(fixturePulseEchoDrive(
+            scoreEnabled: true,
+            interlockChapter: .memory
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: noPulseAccess
+        ))
+        #expect(!fixturePulseEchoDrive(
+            interlockChapter: .memory
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        #expect(!fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            driveEligible: true,
+            appliedAmount: 0.4,
+            preDrivePeak: preDrivePeak,
+            postDrivePeak: preDrivePeak,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.08,
+            preDriveLowBandRMS: 0.01,
+            postDriveLowBandRMS: 0.01,
+            interlockChapter: .memory
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        let tinyAmount = 0.000_000_000_001
+        let tinyPostDrivePeak = abs(Double(
+            PulseEchoReturnDriveContract.process(
+                preDriveSample: Float(preDrivePeak),
+                amount: tinyAmount
+            )
+        ))
+        #expect(Float(tinyPostDrivePeak).bitPattern != Float(preDrivePeak).bitPattern)
+        #expect(fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            driveEligible: true,
+            machineTexture: tinyAmount,
+            appliedAmount: tinyAmount,
+            currentSendRMS: 0.02,
+            postDriveSampleHash: "fedcba9876543210",
+            preDrivePeak: preDrivePeak,
+            postDrivePeak: tinyPostDrivePeak,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.08,
+            preDriveLowBandRMS: 0.01,
+            postDriveLowBandRMS: 0.01,
+            differenceRMS: Double(Float.leastNonzeroMagnitude),
+            interlockChapter: .memory
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        #expect(!fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            driveEligible: true,
+            machineTexture: tinyAmount,
+            appliedAmount: tinyAmount,
+            currentSendRMS: 0.02,
+            preDrivePeak: preDrivePeak,
+            postDrivePeak: tinyPostDrivePeak,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.08,
+            preDriveLowBandRMS: 0.01,
+            postDriveLowBandRMS: 0.01,
+            differenceRMS: 0,
+            interlockChapter: .memory
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        let boundaryPeak = fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            driveEligible: true,
+            appliedAmount: 0.4,
+            currentSendRMS: 0.02,
+            postDriveSampleHash: "fedcba9876543210",
+            changedFrameIndex: 64,
+            changedPreDriveSampleBitPattern: Float(0.02).bitPattern,
+            preDrivePeak: preDrivePeak,
+            preDrivePeakFrameIndex: 0,
+            postDrivePeak: preDrivePeak,
+            postDrivePeakFrameIndex: 0,
+            postDrivePeakPreDriveSample: preDrivePeak,
+            postDrivePeakEffectiveAmount: 0,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.09,
+            preDriveLowBandRMS: 0.01,
+            postDriveLowBandRMS: 0.012,
+            differenceRMS: 0.02,
+            interlockChapter: .memory
+        )
+        #expect(boundaryPeak.isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        #expect(!fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            driveEligible: true,
+            appliedAmount: 0.4,
+            currentSendRMS: 0.02,
+            changedFrameIndex: -1,
+            changedPreDriveSampleBitPattern: 0,
+            preDrivePeak: preDrivePeak,
+            preDrivePeakFrameIndex: 0,
+            postDrivePeak: preDrivePeak,
+            postDrivePeakFrameIndex: 0,
+            postDrivePeakPreDriveSample: preDrivePeak,
+            postDrivePeakEffectiveAmount: 0,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.08,
+            preDriveLowBandRMS: 0.01,
+            postDriveLowBandRMS: 0.01,
+            differenceRMS: 0,
+            interlockChapter: .memory
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        #expect(!fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            driveEligible: true,
+            appliedAmount: 0.4,
+            interlockChapter: .memory
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        #expect(!fixturePulseEchoDrive(
+            scoreEnabled: true,
+            currentSendRMS: 0.02,
+            preDrivePeak: preDrivePeak,
+            postDrivePeak: preDrivePeak,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.08,
+            preDriveLowBandRMS: 0.01,
+            postDriveLowBandRMS: 0.01
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: noPulseAccess
+        ))
+
+        let nonMemoryBypass = fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            preDrivePeak: preDrivePeak,
+            postDrivePeak: preDrivePeak,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.08,
+            preDriveLowBandRMS: 0.01,
+            postDriveLowBandRMS: 0.01,
+            interlockChapter: .motion
+        )
+        #expect(nonMemoryBypass.isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        let forceHomeBypass = fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            preDrivePeak: preDrivePeak,
+            postDrivePeak: preDrivePeak,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.08,
+            preDriveLowBandRMS: 0.01,
+            postDriveLowBandRMS: 0.01,
+            interlockChapter: .memory
+        )
+        let forceHomeVector = fixtureVector(
+            slot: .primary,
+            instrumentBar: pulseInstrument,
+            pulseEchoDriveBars: [forceHomeBypass]
+        )
+        #expect(forceHomeVector.isComplete)
+        #expect(AutonomousCandidateAttempt(
+            kind: .correctionRender,
+            forceHomeUpperTimbre: true,
+            reasonCodes: [],
+            vector: forceHomeVector
+        ).isStructurallyComplete)
+        #expect(!AutonomousCandidateAttempt(
+            kind: .initialRender,
+            reasonCodes: [],
+            vector: forceHomeVector
+        ).isStructurallyComplete)
+        let lateOnly = fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 13,
+            currentSendRMS: 0.02,
+            preDrivePeak: preDrivePeak,
+            postDrivePeak: preDrivePeak,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.08,
+            preDriveLowBandRMS: 0.01,
+            postDriveLowBandRMS: 0.01,
+            interlockChapter: .memory
+        )
+        #expect(lateOnly.isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        #expect(!lateOnly.normalDriveEligibility(
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        let lateOnlyVector = fixtureVector(
+            slot: .primary,
+            instrumentBar: pulseInstrument,
+            pulseEchoDriveBars: [lateOnly]
+        )
+        #expect(AutonomousCandidateAttempt(
+            kind: .initialRender,
+            reasonCodes: [],
+            vector: lateOnlyVector
+        ).isStructurallyComplete)
+        #expect(!fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            driveEligible: true,
+            appliedAmount: 0.4,
+            postDriveSampleHash: "fedcba9876543210",
+            preDrivePeak: preDrivePeak,
+            postDrivePeak: activePostDrivePeak,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.075,
+            preDriveLowBandRMS: 0.01,
+            postDriveLowBandRMS: 0.008,
+            differenceRMS: 0.012,
+            interlockChapter: .motion
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+
+        for forcedPhrase in [AutonomousPhraseKind.identityReturn, .majorBreak] {
+            #expect(!active.isComplete(
+                sampleRate: 8_000,
+                phraseKind: forcedPhrase,
+                conservative: false,
+                instruments: pulseInstrument
+            ))
+        }
+        #expect(!active.isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: true,
+            instruments: pulseInstrument
+        ))
+        let lowLevelPreDrivePeak = Double(Float(0.02))
+        let lowLevelPostDrivePeak = abs(Double(
+            PulseEchoReturnDriveContract.process(
+                preDriveSample: Float(lowLevelPreDrivePeak),
+                amount: 0.4
+            )
+        ))
+        #expect(lowLevelPostDrivePeak > lowLevelPreDrivePeak)
+        #expect(fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            driveEligible: true,
+            appliedAmount: 0.4,
+            currentSendRMS: 0.02,
+            postDriveSampleHash: "fedcba9876543210",
+            preDrivePeak: lowLevelPreDrivePeak,
+            postDrivePeak: lowLevelPostDrivePeak,
+            preDriveRMS: 0.008,
+            postDriveRMS: 0.015,
+            preDriveLowBandRMS: 0.001,
+            postDriveLowBandRMS: 0.002,
+            differenceRMS: 0.008,
+            interlockChapter: .memory
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        #expect(!fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            driveEligible: true,
+            appliedAmount: 0.4,
+            currentSendRMS: 0.02,
+            postDriveSampleHash: "fedcba9876543210",
+            preDrivePeak: preDrivePeak,
+            postDrivePeak: activePostDrivePeak,
+            preDriveRMS: 0.02,
+            postDriveRMS: 0.065,
+            preDriveLowBandRMS: 0.005,
+            postDriveLowBandRMS: 0.01,
+            differenceRMS: 0.05,
+            interlockChapter: .memory
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        #expect(fixturePulseEchoDrive(
+            scoreEnabled: true,
+            earliestPulseEchoOnsetStep: 0,
+            driveEligible: true,
+            machineTexture: 0.8,
+            appliedAmount: 0.55,
+            currentSendRMS: 0.02,
+            postDriveSampleHash: "fedcba9876543210",
+            preDrivePeak: preDrivePeak,
+            postDrivePeak: cappedPostDrivePeak,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.05,
+            preDriveLowBandRMS: 0.01,
+            postDriveLowBandRMS: 0.008,
+            differenceRMS: 0.035,
+            interlockChapter: .memory
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+
+        #expect(!fixturePulseEchoDrive(delayFrameCount: 2_768).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: AutonomousInstrumentBarEvidence(bar: 0, evidence: [])
+        ))
+        #expect(!fixturePulseEchoDrive(renderedFrameCount: 14_768).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: AutonomousInstrumentBarEvidence(bar: 0, evidence: [])
+        ))
+        #expect(!fixturePulseEchoDrive(bpm: 129).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: AutonomousInstrumentBarEvidence(bar: 0, evidence: [])
+        ))
+        #expect(!fixturePulseEchoDrive(bar: 1).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: pulseInstrument
+        ))
+        #expect(!fixturePulseEchoDrive(
+            preDrivePeak: 0.08,
+            postDrivePeak: 0.08,
+            preDriveRMS: 0.08,
+            postDriveRMS: 0.08,
+            preDriveLowBandRMS: 0.081,
+            postDriveLowBandRMS: 0.081
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: AutonomousInstrumentBarEvidence(bar: 0, evidence: [])
+        ))
+        #expect(!fixturePulseEchoDrive(
+            preDriveLowBandRMS: 0.000_000_1,
+            postDriveLowBandRMS: 0.000_000_1
+        ).isComplete(
+            sampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false,
+            instruments: AutonomousInstrumentBarEvidence(bar: 0, evidence: [])
+        ))
+        #expect(!fixturePulseEchoDrive(finite: false).isFinite)
+
+        let oversizedSource = (0..<17).map { bar in
+            fixturePulseEchoDrive(bar: bar)
+        }
+        let constructorBounded = fixtureVector(
+            slot: .primary,
+            pulseEchoDriveBars: oversizedSource
+        )
+        #expect(constructorBounded.sourcePulseEchoDriveBarCount == 17)
+        #expect(constructorBounded.pulseEchoDrive.count ==
+                AutonomousCandidateEvaluationVector.maximumBarCount)
+        #expect(!constructorBounded.recordIsStructurallyValid)
+
+        var oversizedObject = object
+        let decodedOversizedBars: [[String: Any]] = (0..<17).map { bar in
+            var copy = bars[0]
+            copy["bar"] = bar
+            return copy
+        }
+        oversizedObject["sourcePulseEchoDriveBarCount"] = 17
+        oversizedObject["pulseEchoDrive"] = decodedOversizedBars
+        let decodedOversized = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: oversizedObject)
+        )
+        #expect(decodedOversized.pulseEchoDrive.count == 17)
+        #expect(!decodedOversized.recordIsStructurallyValid)
     }
 
     @Test("Masking and stem payloads are bounded and malformed vectors are incomplete")
@@ -1294,7 +2068,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "44623e03b6eebabb")
+                "4d149596fb5c12df")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -1323,6 +2097,7 @@ struct AutonomousCandidateEvaluationTests {
         groovePulseBar: AutonomousGroovePulseBarEvidence? = nil,
         closedHatBar: AutonomousClosedHatBarEvidence? = nil,
         instrumentBar: AutonomousInstrumentBarEvidence? = nil,
+        pulseEchoDriveBars: [AutonomousPulseEchoDriveBarEvidence]? = nil,
         nonFinite: Bool = false
     ) -> AutonomousCandidateEvaluationVector {
         let planFingerprint = planFingerprintOverride ?? fixturePlanFingerprints[slot]
@@ -1498,6 +2273,7 @@ struct AutonomousCandidateEvaluationTests {
                 bar: 0,
                 evidence: []
             )],
+            pulseEchoDrive: pulseEchoDriveBars ?? [fixturePulseEchoDrive()],
             graph: graph,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: upper,
@@ -1563,6 +2339,126 @@ struct AutonomousCandidateEvaluationTests {
             spectralCentroidHz: spectralCentroidHz,
             tailToAttackDB: tailToAttackDB,
             finite: finite
+        )
+    }
+
+    private func fixturePulseEchoDrive(
+        bar: Int = 0,
+        bpm: Double = 130,
+        delayFrameCount: Int = 2_769,
+        scoreEnabled: Bool = false,
+        earliestPulseEchoOnsetStep: Int? = nil,
+        driveEligible: Bool = false,
+        machineTexture: Double = 0.4,
+        appliedAmount: Double = 0,
+        transitionFrameCount: Int = 64,
+        renderedFrameCount: Int = 14_769,
+        currentSendRMS: Double = 0,
+        preDriveSampleHash: String = "0123456789abcdef",
+        postDriveSampleHash: String = "0123456789abcdef",
+        firstPreDriveSampleBitPattern: UInt32 = 0,
+        firstPostDriveSampleBitPattern: UInt32 = 0,
+        lastPreDriveSampleBitPattern: UInt32 = 0,
+        lastPostDriveSampleBitPattern: UInt32 = 0,
+        changedFrameIndex: Int? = nil,
+        changedPreDriveSampleBitPattern: UInt32? = nil,
+        preDrivePeak: Double = 0,
+        preDrivePeakFrameIndex: Int? = nil,
+        postDrivePeak: Double = 0,
+        postDrivePeakFrameIndex: Int? = nil,
+        postDrivePeakPreDriveSample: Double? = nil,
+        postDrivePeakEffectiveAmount: Double? = nil,
+        preDriveRMS: Double = 0,
+        postDriveRMS: Double = 0,
+        preDriveLowBandRMS: Double = 0,
+        postDriveLowBandRMS: Double = 0,
+        differenceRMS: Double = 0,
+        interlockChapter: InterlockChapter = .home,
+        finite: Bool = true
+    ) -> AutonomousPulseEchoDriveBarEvidence {
+        let inputPeakFrameIndex = preDrivePeakFrameIndex ??
+            (appliedAmount > 0 ? transitionFrameCount : 0)
+        let firstChangedFrameIndex = changedFrameIndex ??
+            (appliedAmount > 0 ? transitionFrameCount : -1)
+        let firstChangedPreDriveSampleBitPattern =
+            changedPreDriveSampleBitPattern ??
+            (appliedAmount > 0 ? Float(preDrivePeak).bitPattern : 0)
+        let peakFrameIndex = postDrivePeakFrameIndex ??
+            (appliedAmount > 0 ? transitionFrameCount : 0)
+        let peakPreDriveSample = postDrivePeakPreDriveSample ?? preDrivePeak
+        let peakEffectiveAmount = postDrivePeakEffectiveAmount ??
+            PulseEchoReturnDriveContract.effectiveAmount(
+                targetAmount: appliedAmount,
+                frame: peakFrameIndex,
+                totalFrameCount: renderedFrameCount,
+                transitionFrameCount: transitionFrameCount
+            )
+        return AutonomousPulseEchoDriveBarEvidence(
+            bar: bar,
+            bpm: bpm,
+            delayFrameCount: delayFrameCount,
+            scoreEnabled: scoreEnabled,
+            earliestPulseEchoOnsetStep: earliestPulseEchoOnsetStep,
+            driveEligible: driveEligible,
+            machineTexture: machineTexture,
+            appliedAmount: appliedAmount,
+            transitionFrameCount: transitionFrameCount,
+            renderedFrameCount: renderedFrameCount,
+            currentSendRMS: currentSendRMS,
+            preDriveSampleHash: preDriveSampleHash,
+            postDriveSampleHash: postDriveSampleHash,
+            firstPreDriveSampleBitPattern: firstPreDriveSampleBitPattern,
+            firstPostDriveSampleBitPattern: firstPostDriveSampleBitPattern,
+            lastPreDriveSampleBitPattern: lastPreDriveSampleBitPattern,
+            lastPostDriveSampleBitPattern: lastPostDriveSampleBitPattern,
+            changedFrameIndex: firstChangedFrameIndex,
+            changedPreDriveSampleBitPattern:
+                firstChangedPreDriveSampleBitPattern,
+            preDrivePeak: preDrivePeak,
+            preDrivePeakFrameIndex: inputPeakFrameIndex,
+            postDrivePeak: postDrivePeak,
+            postDrivePeakFrameIndex: peakFrameIndex,
+            postDrivePeakPreDriveSample: peakPreDriveSample,
+            postDrivePeakEffectiveAmount: peakEffectiveAmount,
+            preDriveRMS: preDriveRMS,
+            postDriveRMS: postDriveRMS,
+            preDriveLowBandRMS: preDriveLowBandRMS,
+            postDriveLowBandRMS: postDriveLowBandRMS,
+            differenceRMS: differenceRMS,
+            interlockChapter: interlockChapter,
+            finite: finite
+        )
+    }
+
+    private func fixturePulseEchoInstrumentBar(
+        effects: [InstrumentEffect]? = nil
+    ) -> AutonomousInstrumentBarEvidence {
+        let assignment = InstrumentAssignment(
+            use: .motif,
+            patch: .acidSequence,
+            automation: InstrumentAutomation(
+                color: 0.62,
+                shape: 0.48,
+                motion: 0.78,
+                space: 0.22
+            ),
+            effects: effects ??
+                (InstrumentPalette.capability(for: .acidSequence)?.compatibleEffects ?? [])
+        )
+        return AutonomousInstrumentBarEvidence(
+            bar: 0,
+            evidence: [InstrumentArchitectureRenderEvidence(
+                architecture: .resonantMono,
+                assignments: [assignment],
+                patches: [.acidSequence],
+                uses: [.motif],
+                effects: assignment.effects,
+                eventCount: 1,
+                sampleHash: "0123456789abcdef",
+                peak: 0.20,
+                rms: 0.08,
+                finite: true
+            )]
         )
     }
 

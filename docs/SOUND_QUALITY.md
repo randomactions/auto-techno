@@ -10,11 +10,13 @@ manual curation gate or third-party instrument dependency.
 The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
-and a versioned candidate-evaluation transaction. Quality-contract schema 6
-preserves complete symbolic, full-mix, masking, role-stem, event-local
-groove-pulse, ordinary closed-hat, score-owned instrument assignment,
-architecture-local dry-PCM, graph, and pre/post upper-timbre evidence for each
-retained attempt, then binds the selected attempt to finalized commit
+and a versioned candidate-evaluation transaction. The current implementation
+candidate uses quality-contract schema 7, candidate-vector schema 6, and
+canonical engine identity `autotechno-canonical-engine.v7`. It preserves
+complete symbolic, full-mix, masking, role-stem, event-local groove-pulse,
+ordinary closed-hat, score-owned instrument assignment, architecture-local dry-
+PCM, shared pulse-echo return-drive, graph, and pre/post upper-timbre evidence
+for each retained attempt, then binds the selected attempt to finalized commit
 provenance. Instrument evidence
 records bounded patch automation, compatible effect access, event count, exact
 PCM identity, peak, RMS, and finiteness without retaining reconstructable
@@ -96,6 +98,40 @@ Targets are section- and role-aware ranges, relationships, and obligations. They
 are not whole-track averages that encourage the engine to flatten every moment
 toward the same spectrum or loudness.
 
+### Pulse-echo return-drive evidence
+
+The implemented return-drive slice may change only the existing shared,
+180 Hz-high-passed and 3.2 kHz-low-passed pulse-echo return. The score clamps
+`machineTexture` to `0...1` and applies at most `0.55` only in the memory chapter
+when pulse echo is score-enabled, an assigned instrument has pulse-echo access,
+and the candidate is neither conservative, forced home, identity return, nor a
+major break. Every other case resolves to exact neutral drive.
+
+Each full rendered bar now retains same-pass bar, BPM, delay-frame, and
+rendered-frame geometry; score and drive eligibility; bounded source texture and
+applied amount; current-send RMS; exact filtered pre-drive and wet post-drive
+sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
+status. It also retains exact first/last sample bit patterns, the pre-drive peak
+frame, the exact input/amount witness at the post-drive peak, and a replayable
+changed-frame witness together with that frame's exact input bits.
+Candidate-vector schema 6 binds that record to the matching instrument effect
+access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
+sample-rate-normalized boundary transition. Neutral drive requires the no-change
+sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
+drive requires a replayable bit-pattern change plus changed hashes and nonzero
+difference RMS. Active drive is outside the feedback write. Its driven saturation
+may lift low-level return detail, so replayed peak witnesses, a conservative
+physical peak cap, and the transfer's at-most `3.2x` low-level RMS gain replace the
+former attenuation-only bound.
+
+The implementation preserves dry upper-source identity, score events, protected
+rhythm, persistent patch and phrase identity, and the identity-return score by
+leaving the send source and feedback write unchanged. The exact-source local
+structural, signal, protected-routing, and release-build matrix recorded in the
+validation snapshot passed. Its evidence remains descriptive under
+`uncalibrated.v1`; it cannot select or promote a candidate and does not qualify
+professional sound.
+
 ## Development qualification loop
 
 1. Render the same private canonical journey bank before and after a change at
@@ -132,9 +168,10 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 6, the versioned transaction implements the
-bounded evidence and atomic commit foundation for this loop. It can retain at
-most the primary, alternate, and conservative-fallback candidates, plus one
+Under quality-contract schema 7, candidate-vector schema 6, and canonical engine
+v7, the versioned transaction implements the bounded evidence and atomic commit
+foundation for this loop. It can retain at most the primary, alternate, and
+conservative-fallback candidates, plus one
 home-timbre correction, with no more than four render passes total. Every attempt
 starts from the same incoming state. The transaction records the incoming
 continuation fingerprint and each attempt's outgoing render-plus-generated-DSP

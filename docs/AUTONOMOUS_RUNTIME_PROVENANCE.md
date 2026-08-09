@@ -19,11 +19,13 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 6. Each
+   candidate-evaluation transaction under quality-contract schema 7, candidate-
+   vector schema 6, and canonical engine identity
+   `autotechno-canonical-engine.v7`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, event-local groove-pulse,
-   ordinary closed-hat, score-owned instrument, graph, and pre/post
-   upper-timbre evidence.
+   ordinary closed-hat, score-owned instrument, shared pulse-echo return-drive,
+   graph, and pre/post upper-timbre evidence.
    Instrument records bind each resolved architecture, patch, use, automation,
    and compatible effect set to exact architecture-local dry-PCM identity,
    peak, RMS, and event count. Closed-hat records bind every ordinary hat to
@@ -90,6 +92,14 @@ mistaken for a completed feedback system.
    hat as its companion and the renderer increases its decay rate; every other
    hat remains neutral. The conservative score is fully neutral, and bounded
    same-pass evidence makes the event-local PCM consequence attributable.
+   The synth performance also projects the existing bounded `machineTexture`
+   state into one pulse-echo return articulation. It is active only for a
+   memory-chapter bar with score-enabled pulse echo and an assigned instrument
+   that has pulse-echo access, and is neutral for conservative, forced-home,
+   identity-return, and major-break paths. The existing three-sixteenth delayed
+   sample advances its unchanged feedback write before the band-limited audible
+   return reaches a bounded pointwise drive stage. The driven sample therefore
+   cannot recirculate through feedback.
 6. The unchanged pre-fader kick remains the ducking detector. The generated
    graph receives the exact `full - protected-rhythm` remainder, and its output
    is recombined with the protected stereo rhythm route. The protected route
@@ -103,7 +113,7 @@ mistaken for a completed feedback system.
    sixteen bar windows. It is descriptive only: uncalibrated masking evidence
    applies no cut, while the existing authored envelope, kick-linked guard,
    ducking, glue, and output-safety stages remain active. Upper-timbre evidence
-   schema 3 (quality-report contract schema 6) retains protected rhythm as its
+   schema 3 (quality-report contract schema 7) retains protected rhythm as its
    masking reference and adds bounded onset-local anchor-velocity observations
    from the exact dry anchor tap.
    Score-owned anchor velocity now projects into the authored filter-envelope
@@ -118,6 +128,38 @@ mistaken for a completed feedback system.
    owns transport, visual position, and route recovery, not musical composition.
    The current app does not copy callback PCM into a background quality analyzer
    or make live quality-driven continuation decisions.
+
+## Implemented pulse-echo return slice
+
+The current implementation extends the existing score-owned pulse-echo
+eligibility and the canonical renderer's single shared, filtered return. Effect
+compatibility remains permission to send; drive additionally requires the
+score-owned memory-chapter articulation described above. The score clamps its
+`machineTexture` source to `0...1` and its applied amount to `0...0.55`. This is
+one fixed relationship in the existing renderer, not another graph, an
+orderable plug-in chain, captured audio, or a new instrument mode.
+
+Its signal order is invariant: an unchanged dry upper source feeds the existing
+pulse-echo send; the undriven delayed sample advances the bounded feedback state;
+the audible return is high-passed at 180 Hz and low-passed at 3.2 kHz; one
+return-only drive stage then acts before wet recombination. The driven result
+never enters the delay buffer or its feedback path. The slice does not change
+score events, dry voice PCM, the protected-rhythm route, persistent patch or
+phrase identity, or the identity-return score. Conservative and otherwise
+ineligible candidates resolve the drive to exact neutral and retain the prior
+return behavior.
+
+Each full bar emits same-pass bar/BPM/delay/render geometry, score and drive
+eligibility, bounded source and applied amount, current-send RMS, exact pre/post
+sample hashes, pre/post peak, RMS, and low-band RMS, difference RMS, and finite
+status. Candidate-vector schema 6 binds these observations to the score bar,
+phrase kind, route rate, and matching instrument effect access. Neutral drive
+requires exact pre/post identity and zero difference. Active drive remains
+outside feedback, binds exact changed-frame and peak witnesses, and permits only
+the transfer's bounded low-level lift up to `3.2x` RMS. The implementation is
+present, and its exact-source local structural, signal, protected-routing, and
+release-build matrix passed. Policy remains uncalibrated, so this evidence
+cannot select or promote a candidate or establish professional quality.
 
 ## Target unified loop
 
@@ -175,6 +217,13 @@ reproduce the same candidates, selection, graph, samples, controller evolution,
 and outgoing continuation state. Evaluation inputs and fallback outcomes are part
 of continuation provenance, not ambient hidden state. Route recovery must retain
 or deterministically rebuild them at the active sample rate.
+
+The selected `PreparedAutonomousPhrase` and its immutable scheduled blocks are
+the only rendered-material commitment. The runtime does not capture or resample
+its output into a reusable loop, sample library, or new score source, and it does
+not retain a transformed return beyond that prepared phrase. Repetition and
+layering are regenerated from the canonical score and continuation inside the
+same bounded transaction.
 
 There are no runtime profiles, selectable seeds, reference generators, optional
 scene/synth inputs, microphone inputs, or alternate executable entry points.

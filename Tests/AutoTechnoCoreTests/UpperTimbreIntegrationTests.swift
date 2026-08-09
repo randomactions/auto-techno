@@ -1,5 +1,5 @@
 import AutoTechnoCore
-import AutoTechnoDSP
+@testable import AutoTechnoDSP
 import Foundation
 import Testing
 
@@ -632,6 +632,11 @@ struct UpperTimbreIntegrationTests {
         try assertClosedHatRenderEvidenceTamperingIsRejected()
     }
 
+    @Test("Pulse-echo same-pass binding tampering remains retainable and incomplete")
+    func pulseEchoReturnBindingTampering() throws {
+        try assertPulseEchoReturnBindingTamperingIsRejected()
+    }
+
     @inline(never)
     private func closedHatRouteProjection(
         sampleRate: Double,
@@ -785,6 +790,78 @@ struct UpperTimbreIntegrationTests {
         #expect(!forgedVector.isComplete)
         #expect(forgedVector.closedHat[targetBlockIndex].events.count ==
                 targetBlock.closedHatRenderEvidence.count - 1)
+    }
+
+    @inline(never)
+    private func assertPulseEchoReturnBindingTamperingIsRejected() throws {
+        let fixture = try #require(closedHatCompanionFixture())
+        let state = fixture.state
+        let preparedCandidate = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            candidates: fixture.candidates,
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            routeRecovery: true,
+            routeGeneration: 4,
+            cancellationRequested: { false }
+        )
+        let prepared = try #require(preparedCandidate)
+        let targetBlock = try #require(prepared.blocks.first)
+        let sourceEvidence = targetBlock.pulseEchoReturnDriveRenderEvidence
+        let forgedTexture = sourceEvidence.machineTexture == 0 ? 0.5 : 0
+        let forgedEvidence = pulseEchoEvidence(
+            replacing: sourceEvidence,
+            machineTexture: forgedTexture
+        )
+        var forgedBlocks = prepared.blocks
+        forgedBlocks[0] = renderBlock(
+            replacing: targetBlock,
+            pulseEchoReturnDriveRenderEvidence: forgedEvidence
+        )
+        let route = prepared.selectedCandidateEvidence.routeContinuation
+        let maybeForgedVector = AutonomousCandidateEvaluationVector.make(
+            slot: prepared.selectedCandidateEvidence.slot,
+            plan: prepared.plan,
+            graph: prepared.graph,
+            planFingerprint: prepared.selectedCandidateEvidence.planFingerprint,
+            graphFingerprint: prepared.selectedCandidateEvidence.graphFingerprint,
+            blocks: forgedBlocks,
+            audioPreflight: prepared.audioPreflight,
+            upperTimbreEvidence: prepared.upperTimbreEvidence,
+            sampleRate: route.sampleRate,
+            routeChannelCount: route.channelCount,
+            routeGeneration: route.routeGeneration,
+            routeFingerprint: route.routeFingerprint,
+            incomingContinuationFingerprint: route.incomingContinuationFingerprint,
+            incomingQualityStateFingerprint: route.incomingQualityStateFingerprint,
+            incomingKickCorrectionDB: route.incomingKickCorrectionDB,
+            incomingTopologyRevision: route.incomingTopologyRevision,
+            previousGraphFingerprint: route.previousGraphFingerprint,
+            routeRecovery: route.routeRecovery,
+            outgoingRenderDSPFingerprint: route.outgoingRenderDSPFingerprint,
+            controllerStateFingerprint: route.controllerStateFingerprint,
+            cancellationRequested: { false }
+        )
+        let forgedVector = try #require(maybeForgedVector)
+        #expect(forgedVector.pulseEchoDrive.count == prepared.blocks.count)
+        #expect(!forgedVector.pulseEchoDrive[0].bindingValid)
+        #expect(!forgedVector.isComplete)
+        #expect(forgedVector.recordIsStructurallyValid)
+
+        let sourceAttempt = try #require(
+            prepared.candidateEvaluation.attempts.first
+        )
+        let retained = AutonomousCandidateAttempt(
+            kind: sourceAttempt.kind,
+            forceSafeGraph: sourceAttempt.forceSafeGraph,
+            forceHomeUpperTimbre: sourceAttempt.forceHomeUpperTimbre,
+            reasonCodes: [.evidenceMissingV1, .hardGateFailedV1],
+            vector: forgedVector
+        )
+        #expect(retained.isStructurallyComplete)
     }
 
     @Test("Paired evaluator selects one atomic alternate product and transaction")
@@ -2017,9 +2094,58 @@ struct UpperTimbreIntegrationTests {
         )
     }
 
+    private func pulseEchoEvidence(
+        replacing source: PulseEchoReturnDriveRenderEvidence,
+        machineTexture: Double
+    ) -> PulseEchoReturnDriveRenderEvidence {
+        PulseEchoReturnDriveRenderEvidence(
+            bar: source.bar,
+            bpm: source.bpm,
+            delayFrameCount: source.delayFrameCount,
+            machineTexture: machineTexture,
+            scoreEnabled: source.scoreEnabled,
+            earliestPulseEchoOnsetStep:
+                source.earliestPulseEchoOnsetStep,
+            driveEligible: source.driveEligible,
+            appliedAmount: source.appliedAmount,
+            transitionFrameCount: source.transitionFrameCount,
+            renderedFrameCount: source.renderedFrameCount,
+            currentSendRMS: source.currentSendRMS,
+            preDriveSampleHash: source.preDriveSampleHash,
+            postDriveSampleHash: source.postDriveSampleHash,
+            firstPreDriveSampleBitPattern:
+                source.firstPreDriveSampleBitPattern,
+            firstPostDriveSampleBitPattern:
+                source.firstPostDriveSampleBitPattern,
+            lastPreDriveSampleBitPattern:
+                source.lastPreDriveSampleBitPattern,
+            lastPostDriveSampleBitPattern:
+                source.lastPostDriveSampleBitPattern,
+            changedFrameIndex: source.changedFrameIndex,
+            changedPreDriveSampleBitPattern:
+                source.changedPreDriveSampleBitPattern,
+            preDrivePeak: source.preDrivePeak,
+            preDrivePeakFrameIndex: source.preDrivePeakFrameIndex,
+            postDrivePeak: source.postDrivePeak,
+            postDrivePeakFrameIndex: source.postDrivePeakFrameIndex,
+            postDrivePeakPreDriveSample:
+                source.postDrivePeakPreDriveSample,
+            postDrivePeakEffectiveAmount:
+                source.postDrivePeakEffectiveAmount,
+            preDriveRMS: source.preDriveRMS,
+            postDriveRMS: source.postDriveRMS,
+            preDriveLowBandRMS: source.preDriveLowBandRMS,
+            postDriveLowBandRMS: source.postDriveLowBandRMS,
+            differenceRMS: source.differenceRMS,
+            finite: source.finite
+        )
+    }
+
     private func renderBlock(
         replacing source: RenderBlock,
-        closedHatRenderEvidence: [ClosedHatRenderEvidence]
+        closedHatRenderEvidence: [ClosedHatRenderEvidence]? = nil,
+        pulseEchoReturnDriveRenderEvidence:
+            PulseEchoReturnDriveRenderEvidence? = nil
     ) -> RenderBlock {
         RenderBlock(
             bar: source.bar,
@@ -2039,7 +2165,12 @@ struct UpperTimbreIntegrationTests {
             percussionSampleHash: source.percussionSampleHash,
             protectedRhythmSampleHash: source.protectedRhythmSampleHash,
             groovePulseRenderEvidence: source.groovePulseRenderEvidence,
-            closedHatRenderEvidence: closedHatRenderEvidence,
+            closedHatRenderEvidence:
+                closedHatRenderEvidence ?? source.closedHatRenderEvidence,
+            instrumentRenderEvidence: source.instrumentRenderEvidence,
+            pulseEchoReturnDriveRenderEvidence:
+                pulseEchoReturnDriveRenderEvidence ??
+                    source.pulseEchoReturnDriveRenderEvidence,
             upperNoteRenderEvidence: source.upperNoteRenderEvidence,
             graphInputRemainderTimbreEvidence:
                 source.graphInputRemainderTimbreEvidence,
