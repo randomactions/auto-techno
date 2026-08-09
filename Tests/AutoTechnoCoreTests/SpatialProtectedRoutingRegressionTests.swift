@@ -4,6 +4,73 @@ import Testing
 
 @Suite("Spatial carrier and protected routing regressions")
 struct SpatialProtectedRoutingRegressionTests {
+    @Test("Groove-pulse evidence is bit-exact across full and protected layers")
+    func groovePulseEvidenceMatchesProtectedRoute() throws {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let sourcePlan = director.candidates(from: director.initialState()).primary
+        let source = try #require(sourcePlan.resolvedBars.first {
+            !$0.groovePulses.isEmpty
+        })
+        let pulseEvents = source.ensemble.events.filter { $0.voice == .groovePulse }
+        let isolated = ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: EnsembleContext(
+                focusRole: .percussion,
+                events: pulseEvents,
+                kickAnchors: [],
+                intentionalPileup: false
+            ),
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            foundationCompanion: .empty,
+            pulseEchoEnabled: false,
+            interlockChapter: .home,
+            groovePulses: source.groovePulses,
+            spatialContrast: .foreground,
+            narrative: source.narrative
+        )
+        let synthPlan = SynthPerformancePlan(
+            scene: sourcePlan.scene,
+            dna: sourcePlan.dna,
+            kind: sourcePlan.kind,
+            resolvedBars: [isolated],
+            conservative: sourcePlan.conservative,
+            forceHomeUpperTimbre: true
+        )
+        let plannedSynth = synthPlan.bars[0]
+        let noUpperNotes = SynthPerformanceBar(
+            bar: plannedSynth.bar,
+            gesture: plannedSynth.gesture,
+            mutationAmount: plannedSynth.mutationAmount,
+            relationalSteps: plannedSynth.relationalSteps,
+            upperNotes: []
+        )
+
+        func render(_ layer: RenderLayer) -> RenderedBar {
+            var state = RenderState()
+            var workspace = RenderWorkspace()
+            return VoiceRenderer.renderBar(
+                scene: sourcePlan.scene,
+                sampleRate: 48_000,
+                state: &state,
+                dna: sourcePlan.dna,
+                resolved: isolated,
+                synthWorld: synthPlan.world,
+                synthPerformance: noUpperNotes,
+                workspace: &workspace,
+                layer: layer
+            )
+        }
+
+        let full = render(.full)
+        let protected = render(.protectedRhythm)
+        #expect(!full.groovePulseRenderEvidence.isEmpty)
+        #expect(full.groovePulseRenderEvidence == protected.groovePulseRenderEvidence)
+        #expect(full.dryPercussionSampleHash == protected.dryPercussionSampleHash)
+        #expect(full.leftSamples == protected.leftSamples)
+        #expect(full.rightSamples == protected.rightSamples)
+    }
+
     @Test("Stochastic percussion is one bit-exact protected-rhythm performance")
     func stochasticPercussionProtectedRouteIsBitExact() throws {
         let director = AutonomousSessionDirector(rootSeed: 42)

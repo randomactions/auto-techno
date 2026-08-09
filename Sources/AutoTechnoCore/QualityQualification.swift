@@ -4,12 +4,12 @@ import Foundation
 /// policy is deliberately uncalibrated: these types make evidence reproducible
 /// without claiming that professional-quality targets exist yet.
 package enum QualityQualificationContract {
-    /// Version 3 identifies reports that bind the selected phrase to one
-    /// bounded candidate-evaluation transaction rather than fingerprinting a
-    /// single signal-domain observation in isolation.
-    package static let schemaVersion = 3
+    /// Version 4 adds bounded, event-local groove-pulse articulation evidence
+    /// to the selected phrase's candidate-evaluation transaction. The policy
+    /// remains uncalibrated; this version identifies evidence, not promotion.
+    package static let schemaVersion = 4
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v1"
+    package static let engineVersion = "autotechno-canonical-engine.v2"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

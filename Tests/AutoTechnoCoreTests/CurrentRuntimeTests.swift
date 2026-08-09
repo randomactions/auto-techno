@@ -83,6 +83,7 @@ struct CurrentRuntimeTests {
             protectedFoundationSampleHash: source.protectedFoundationSampleHash,
             percussionSampleHash: source.percussionSampleHash,
             protectedRhythmSampleHash: source.protectedRhythmSampleHash,
+            groovePulseRenderEvidence: source.groovePulseRenderEvidence,
             upperNoteRenderEvidence: source.upperNoteRenderEvidence,
             graphInputRemainderTimbreEvidence:
                 source.graphInputRemainderTimbreEvidence,

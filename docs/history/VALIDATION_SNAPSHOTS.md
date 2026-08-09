@@ -328,3 +328,43 @@ streamed within measured bounds and cancellation latency, preparation latency,
 and peak working memory are calibrated. Matched-loudness listening, physical-
 output smoke, route/interruption hardware QA, and the 60-minute recovery soak
 also remain pending.
+
+## Score-owned groove-pulse physical articulation — 2026-08-09
+
+This candidate builds on `7dc1008`. The existing weak-sixteenth groove-pulse
+owner now resolves a bounded physical contact model in the canonical score:
+relative strike zone, damping, and deterministic timbre microvariation. The
+existing carrier projects only those three fields into its filter, click, noise,
+and decay constants. At `middle / 0.5 / 0` the operation order and PCM remain
+bit-exact with the prior renderer. The conservative candidate is required to use
+that neutral point; onset, timing, intensity, event count, other voices, effects,
+mixing, generated topology, and the one-button runtime are unchanged.
+
+The exact rendering pass returns bounded per-event evidence, including the
+requested articulation, dry-event sample hash, source level, spectral centroid,
+and tail-to-attack relationship. The candidate vector retains a smaller versioned
+record for every score bar, including explicit empty bars, and proves a one-to-one
+match with the resolved groove-pulse events. This evidence changes provenance but
+does not enter candidate selection or enable a calibrated policy. No extra render,
+counterfactual signal, or real-time callback work was added.
+
+Final local validation used Xcode 26.6 build 17F113 and Apple Swift 6.3.3:
+
+- The exact final full suite passed: 102 tests in 213.157 seconds.
+- Eight focused groove-pulse, protected-routing, preflight, and fingerprint
+  regressions passed in 19.379 seconds, including the 192 kHz route bound and a
+  synthetic non-neutral conservative fallback rejection.
+- The optimized release build passed in 38.32 seconds using the matched full
+  Xcode SDK, isolated module caches, and the populated offline SwiftPM scratch
+  path.
+- `git diff --check` passed. Independent final correctness and real-time/audio
+  audits found no remaining P0-P2 defect in the production, evidence, tests, or
+  normative documentation.
+
+The quality-contract schema advances to 4, the candidate-vector schema to 2,
+the typed plan-fingerprint domain to v2, and the canonical engine identity to
+v2. Policy remains `uncalibrated.v1`, so qualification remains unavailable and
+the new observations cannot promote a candidate. No matched-loudness listening,
+physical-output smoke, route/interruption hardware test, preparation-latency or
+peak-memory measurement, or 60-minute recovery soak was performed for this
+candidate.

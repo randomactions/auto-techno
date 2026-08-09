@@ -46,6 +46,14 @@ score or renderer into PCM, measurable evidence, and a bounded influence on a
 future decision. Parameters that do not reach that path are removed or connected
 before the control surface expands.
 
+The current weak-percussion path demonstrates that contract without becoming a
+new instrument or mode. `PercussionGear` resolves bounded strike position,
+damping, and seeded microvariation for the existing groove-pulse carrier; the
+same render produces event-local dry-signal evidence, and the conservative
+candidate preserves the exact previous neutral carrier. These observations are
+retained for a future calibrated policy but do not affect selection while the
+shipping evaluator remains uncalibrated.
+
 ## Professional-sound objective
 
 The long-term goal is professional release-quality sound produced by engine-owned

@@ -1499,6 +1499,17 @@ package enum AutonomousPhrasePreparer {
                   guard events.count <= 16 * 6 else { return false }
                   let maximumAtOneStep = resolved.ensemble.intentionalPileup ? 6 : 3
                   let occupancy = Dictionary(grouping: events, by: \.step)
+                  let grooveEvents = events.filter { $0.voice == .groovePulse }
+                      .sorted { $0.step < $1.step }
+                  let grooveArticulations = resolved.groovePulses.sorted {
+                      $0.step < $1.step
+                  }
+                  let grooveScoreIsCanonical =
+                      grooveEvents.count == grooveArticulations.count &&
+                      Set(grooveEvents.map(\.step)).count == grooveEvents.count &&
+                      zip(grooveEvents, grooveArticulations).allSatisfy {
+                          $0.step == $1.step && $0.intensity == $1.intensity
+                      }
                   return performance.bar == plan.startBar + index &&
                       performance.phrase == plan.phraseIndex &&
                       performance.localBar == index &&
@@ -1519,7 +1530,7 @@ package enum AutonomousPhrasePreparer {
                           (0..<16).contains($0)
                       } && resolved.groovePulses.count <= 8 &&
                       Set(resolved.groovePulses.map(\.step)).count ==
-                        resolved.groovePulses.count
+                        resolved.groovePulses.count && grooveScoreIsCanonical
               }) else {
             return false
         }
@@ -1529,7 +1540,15 @@ package enum AutonomousPhrasePreparer {
         case .alternate:
             return plan.alternate && !plan.conservative
         case .fallback:
-            return !plan.alternate && plan.conservative
+            let groovePulseArticulationIsNeutral = plan.resolvedBars.allSatisfy {
+                $0.groovePulses.allSatisfy {
+                    $0.strikeZone == .middle &&
+                        $0.damping == 0.5 &&
+                        $0.timbreMicrovariation == 0
+                }
+            }
+            return !plan.alternate && plan.conservative &&
+                groovePulseArticulationIsNeutral
         }
     }
 

@@ -109,7 +109,18 @@ struct AdaptiveAutonomousSessionTests {
             #expect(resolved.groovePulses.allSatisfy {
                 $0.stage == WeakSixteenthStage(absoluteBar: resolved.performance.bar) &&
                     ($0.pulseClass == .leadingWeak || $0.pulseClass == .trailingWeak) &&
-                    $0.timingOffsetInSteps <= 0.12
+                    $0.timingOffsetInSteps <= 0.12 &&
+                    [-0.04, -0.02, 0, 0.02, 0.04].contains($0.timbreMicrovariation)
+            })
+            let expectedPhysical: (GroovePulseStrikeZone, Double)
+            switch resolved.percussionGear {
+            case .anchor: expectedPhysical = (.middle, 0.5)
+            case .lift: expectedPhysical = (.middle, 0.4)
+            case .contrast: expectedPhysical = (.edge, 0.25)
+            case .turnaround: expectedPhysical = (.center, 0.75)
+            }
+            #expect(resolved.groovePulses.allSatisfy {
+                $0.strikeZone == expectedPhysical.0 && $0.damping == expectedPhysical.1
             })
             let resolvedEvents = resolved.ensemble.events
                 .filter { $0.voice == .groovePulse }
@@ -136,6 +147,58 @@ struct AdaptiveAutonomousSessionTests {
         #expect(plans.flatMap(\.resolvedBars).filter {
             !$0.performance.roles.contains(.percussion)
         }.allSatisfy { $0.groovePulses.isEmpty })
+    }
+
+    @Test("Conservative groove-pulse articulation is the exact neutral carrier")
+    func conservativeGroovePulseArticulation() {
+        let ensemble = EnsembleContext(
+            focusRole: .percussion,
+            events: [EnsembleResolvedEvent(
+                voice: .groovePulse, step: 7, intensity: 0.52, relocated: false
+            )],
+            kickAnchors: [],
+            intentionalPileup: false
+        )
+        let authored = GroovePulseResolver.articulations(
+            from: ensemble,
+            absoluteBar: 8,
+            swingPercent: 0.54,
+            percussionGear: .contrast,
+            eventSeed: 48_291,
+            conservative: false
+        )
+        let replay = GroovePulseResolver.articulations(
+            from: ensemble,
+            absoluteBar: 8,
+            swingPercent: 0.54,
+            percussionGear: .contrast,
+            eventSeed: 48_291,
+            conservative: false
+        )
+        let neutral = GroovePulseResolver.articulations(
+            from: ensemble,
+            absoluteBar: 8,
+            swingPercent: 0.54,
+            percussionGear: .contrast,
+            eventSeed: 48_291,
+            conservative: true
+        )
+        #expect(authored == replay)
+        #expect(authored.count == 1)
+        #expect(authored[0].strikeZone == .edge)
+        #expect(authored[0].damping == 0.25)
+        #expect([-0.04, -0.02, 0, 0.02, 0.04].contains(
+            authored[0].timbreMicrovariation
+        ))
+        #expect(neutral.count == 1)
+        #expect(neutral[0].step == authored[0].step)
+        #expect(neutral[0].pulseClass == authored[0].pulseClass)
+        #expect(neutral[0].stage == authored[0].stage)
+        #expect(neutral[0].intensity == authored[0].intensity)
+        #expect(neutral[0].timingOffsetInSteps == authored[0].timingOffsetInSteps)
+        #expect(neutral[0].strikeZone == .middle)
+        #expect(neutral[0].damping == 0.5)
+        #expect(neutral[0].timbreMicrovariation == 0)
     }
 
     @Test("Ghost pulses contribute one fifth of an ordinary activity event")
@@ -1188,6 +1251,8 @@ struct AutonomousPreparationPreflightTests {
         var changedBars = original.resolvedBars
         changedBars[barIndex] = changedResolved
         let changed = replacingResolvedBars(in: original, with: changedBars, memory: state.memory)
+        #expect(AutonomousCandidateFingerprint.plan(original) !=
+                AutonomousCandidateFingerprint.plan(changed))
         let graph = DSPGraphGenerator.safePlan(sessionSeed: state.rootSeed)
         var originalRender = RenderState(), changedRender = RenderState()
         var originalGraph = GeneratedDSPContinuationState()
@@ -1269,6 +1334,8 @@ struct AutonomousPreparationPreflightTests {
         var changedBars = original.resolvedBars
         changedBars[barIndex] = changedResolved
         let changed = replacingResolvedBars(in: original, with: changedBars, memory: state.memory)
+        #expect(AutonomousCandidateFingerprint.plan(original) !=
+                AutonomousCandidateFingerprint.plan(changed))
         let graph = DSPGraphGenerator.safePlan(sessionSeed: state.rootSeed)
         var originalRender = RenderState(), changedRender = RenderState()
         var originalGraph = GeneratedDSPContinuationState()
@@ -1315,12 +1382,17 @@ struct AutonomousPreparationPreflightTests {
             return
         }
         let source = original.resolvedBars[barIndex]
+        let changedMicrovariation = target.timbreMicrovariation == 0
+            ? 0.04 : -target.timbreMicrovariation
         let changedPulse = GroovePulseArticulation(
             step: target.step,
             pulseClass: target.pulseClass,
             stage: target.stage,
-            intensity: target.intensity * 0.5,
-            timingOffsetInSteps: target.timingOffsetInSteps
+            intensity: target.intensity,
+            timingOffsetInSteps: target.timingOffsetInSteps,
+            strikeZone: target.strikeZone == .edge ? .center : .edge,
+            damping: target.damping == 0.75 ? 0.25 : 0.75,
+            timbreMicrovariation: changedMicrovariation
         )
         let changedPulses = source.groovePulses.map {
             $0.step == target.step ? changedPulse : $0
@@ -1340,6 +1412,8 @@ struct AutonomousPreparationPreflightTests {
         var changedBars = original.resolvedBars
         changedBars[barIndex] = changedResolved
         let changed = replacingResolvedBars(in: original, with: changedBars, memory: state.memory)
+        #expect(AutonomousCandidateFingerprint.plan(original) !=
+                AutonomousCandidateFingerprint.plan(changed))
         let graph = DSPGraphGenerator.safePlan(sessionSeed: state.rootSeed)
         var originalRender = RenderState(), changedRender = RenderState()
         var originalGraph = GeneratedDSPContinuationState()
@@ -1387,6 +1461,24 @@ struct AutonomousPreparationPreflightTests {
         #expect(originalBlock.percussionSampleHash != changedBlock.percussionSampleHash)
         #expect(originalBlock.protectedRhythmSampleHash !=
                 changedBlock.protectedRhythmSampleHash)
+        let originalPulseEvidence = originalBlock.groovePulseRenderEvidence.first {
+            $0.step == target.step
+        }
+        let changedPulseEvidence = changedBlock.groovePulseRenderEvidence.first {
+            $0.step == target.step
+        }
+        #expect(originalPulseEvidence?.sampleHash != changedPulseEvidence?.sampleHash)
+        #expect(originalPulseEvidence?.strikeZone == target.strikeZone)
+        #expect(changedPulseEvidence?.strikeZone == changedPulse.strikeZone)
+        #expect(originalPulseEvidence?.damping == target.damping)
+        #expect(changedPulseEvidence?.damping == changedPulse.damping)
+        #expect(originalPulseEvidence?.finite == true)
+        #expect(changedPulseEvidence?.finite == true)
+        #expect(originalBlock.groovePulseRenderEvidence.filter {
+            $0.step != target.step
+        } == changedBlock.groovePulseRenderEvidence.filter {
+            $0.step != target.step
+        })
         #expect(originalBlock.busStates[.groovePulse]?.level ==
                 originalBlock.stemObservations[.percussion]?.rms)
     }
@@ -1875,21 +1967,66 @@ struct AutonomousPreparationPreflightTests {
         let sampleRate = 44_100.0
         let start = 97
         let count = Int(sampleRate * 0.09)
-        func render(intensity: Double) -> [Float] {
+        func articulation(intensity: Double) -> GroovePulseArticulation {
+            GroovePulseArticulation(
+                step: 7,
+                pulseClass: .trailingWeak,
+                stage: .contour,
+                intensity: intensity,
+                timingOffsetInSteps: 0.08,
+                strikeZone: .middle,
+                damping: 0.5,
+                timbreMicrovariation: 0
+            )
+        }
+        func render(intensity: Double) -> ([Float], GroovePulseRenderEvidence?) {
             var output = [Float](repeating: 0, count: count)
             var measurement = [Float](repeating: 0, count: count)
-            GroovePulseVoice.render(
+            let evidence = GroovePulseVoice.render(
                 &output, measurement: &measurement,
                 start: start, sampleRate: sampleRate,
-                intensity: intensity, seed: 48_291
+                articulation: articulation(intensity: intensity), seed: 48_291
             )
             #expect(output == measurement)
+            return (output, evidence)
+        }
+        func legacyRender(intensity: Double) -> [Float] {
+            var output = [Float](repeating: 0, count: count)
+            let frames = min(Int(sampleRate * 0.045), output.count - start)
+            var random = SeededGenerator(seed: 48_291)
+            var highPassState = 0.0
+            var lowPassState = 0.0
+            let highPassCoefficient = min(
+                0.35,
+                1 - exp(-2 * .pi * 550 / sampleRate)
+            )
+            let lowPassCoefficient = min(
+                0.55,
+                1 - exp(-2 * .pi * 3_200 / sampleRate)
+            )
+            for index in 0..<frames {
+                let time = Double(index) / sampleRate
+                let noise = random.unit() * 2 - 1
+                highPassState += (noise - highPassState) * highPassCoefficient
+                let highPassed = noise - highPassState
+                let mutedClick = sin(2 * .pi * 1_180 * time) *
+                    exp(-time * 145) * 0.24
+                lowPassState += (highPassed * 0.78 + mutedClick - lowPassState) *
+                    lowPassCoefficient
+                let attack = min(1, time / 0.0008)
+                let envelope = attack * exp(-time * 72)
+                output[start + index] += Float(
+                    tanh(lowPassState * 1.16) * envelope * 0.045 * intensity
+                )
+            }
             return output
         }
-        let left = render(intensity: 0.72)
-        let right = render(intensity: 0.72)
-        let quieter = render(intensity: 0.36)
+        let (left, evidence) = render(intensity: 0.72)
+        let (right, replayEvidence) = render(intensity: 0.72)
+        let (quieter, _) = render(intensity: 0.36)
         #expect(left == right)
+        #expect(left == legacyRender(intensity: 0.72))
+        #expect(evidence == replayEvidence)
         #expect(left != quieter)
         #expect(left[..<start].allSatisfy { $0 == 0 })
         let expectedEnd = start + Int(sampleRate * GroovePulseVoice.durationSeconds)
@@ -1913,6 +2050,95 @@ struct AutonomousPreparationPreflightTests {
         #expect(GroovePulseVoice.baseLevel == 0.045)
         #expect(GroovePulseVoice.highPassFrequency == 550)
         #expect(GroovePulseVoice.lowPassFrequency == 3_200)
+        #expect(evidence?.appliedHighPassHz == 550)
+        #expect(evidence?.appliedLowPassHz == 3_200)
+        #expect(evidence?.appliedClickHz == 1_180)
+        #expect(evidence?.appliedEnvelopeDecay == 72)
+        #expect(evidence?.appliedClickDecay == 145)
+        #expect(evidence?.renderedFrameCount == Int(sampleRate * 0.045))
+        #expect(evidence?.sampleHash.isEmpty == false)
+        #expect(evidence?.finite == true)
+        #expect(abs((evidence?.lowBandEnergyRatio ?? 0) +
+                    (evidence?.midBandEnergyRatio ?? 0) +
+                    (evidence?.highBandEnergyRatio ?? 0) - 1) < 0.000_001)
+    }
+
+    @Test("Groove pulse physical articulation has bounded causal evidence across rates")
+    func groovePulsePhysicalArticulationEvidence() throws {
+        let sampleRates = [8_000.0, 44_100.0, 48_000.0, 96_000.0, 192_000.0]
+        for sampleRate in sampleRates {
+            let start = 23
+            let count = start + Int(sampleRate * 0.07)
+            func render(zone: GroovePulseStrikeZone, damping: Double,
+                        microvariation: Double) throws -> ([Float], GroovePulseRenderEvidence) {
+                let articulation = GroovePulseArticulation(
+                    step: 3,
+                    pulseClass: .trailingWeak,
+                    stage: .syncopatedLean,
+                    intensity: 0.72,
+                    timingOffsetInSteps: 0.08,
+                    strikeZone: zone,
+                    damping: damping,
+                    timbreMicrovariation: microvariation
+                )
+                var output = [Float](repeating: 0, count: count)
+                var measurement = [Float](repeating: 0, count: count)
+                let evidence = GroovePulseVoice.render(
+                    &output,
+                    measurement: &measurement,
+                    start: start,
+                    sampleRate: sampleRate,
+                    articulation: articulation,
+                    seed: 8_081
+                )
+                #expect(output == measurement)
+                return (output, try #require(evidence))
+            }
+
+            let (center, centerEvidence) = try render(
+                zone: .center, damping: 0.5, microvariation: 0
+            )
+            let (edge, edgeEvidence) = try render(
+                zone: .edge, damping: 0.5, microvariation: 0
+            )
+            let (_, openEvidence) = try render(
+                zone: .middle, damping: 0.25, microvariation: 0
+            )
+            let (_, dampedEvidence) = try render(
+                zone: .middle, damping: 0.75, microvariation: 0
+            )
+            let (_, lowerVariation) = try render(
+                zone: .middle, damping: 0.5, microvariation: -0.04
+            )
+            let (_, upperVariation) = try render(
+                zone: .middle, damping: 0.5, microvariation: 0.04
+            )
+
+            #expect(center != edge)
+            #expect(centerEvidence.sampleHash != edgeEvidence.sampleHash)
+            #expect(centerEvidence.renderedFrameCount == edgeEvidence.renderedFrameCount)
+            if sampleRate >= 44_100 {
+                #expect(edgeEvidence.highBandEnergyRatio > centerEvidence.highBandEnergyRatio)
+                #expect(edgeEvidence.spectralCentroidHz > centerEvidence.spectralCentroidHz)
+            }
+            #expect(dampedEvidence.tailToAttackRatio < openEvidence.tailToAttackRatio)
+            #expect(dampedEvidence.tailToAttackDB < openEvidence.tailToAttackDB)
+            #expect(lowerVariation.sampleHash != upperVariation.sampleHash)
+            #expect(lowerVariation.renderedFrameCount == upperVariation.renderedFrameCount)
+            for evidence in [
+                centerEvidence, edgeEvidence, openEvidence, dampedEvidence,
+                lowerVariation, upperVariation,
+            ] {
+                #expect(evidence.finite)
+                #expect(evidence.renderedFrameCount == Int(sampleRate * 0.045))
+                #expect((0...(sampleRate / 2)).contains(evidence.spectralCentroidHz))
+                #expect((0...1).contains(evidence.lowBandEnergyRatio))
+                #expect((0...1).contains(evidence.midBandEnergyRatio))
+                #expect((0...1).contains(evidence.highBandEnergyRatio))
+                #expect(abs(evidence.lowBandEnergyRatio + evidence.midBandEnergyRatio +
+                            evidence.highBandEnergyRatio - 1) < 0.000_001)
+            }
+        }
     }
 
     @Test("Rumble remains a protected mono-compatible foundation companion")

@@ -28,6 +28,146 @@ struct AutonomousCandidateEvaluationTests {
                 decoded.postGraphUpperTimbreEvidence)
     }
 
+    @Test("Groove-pulse evidence is lean, bounded, deterministic, and required per bar")
+    func groovePulseEvidenceContract() throws {
+        let event = fixtureGroovePulseEvent()
+        let bar = AutonomousGroovePulseBarEvidence(
+            bar: 0,
+            sourceScoreEventCount: 1,
+            sourceRenderEventCount: 1,
+            events: [event]
+        )
+        let vector = fixtureVector(slot: .primary, groovePulseBar: bar)
+
+        #expect(event.isComplete(sampleRate: 8_000))
+        #expect(event.isFinite)
+        #expect(bar.isComplete(sampleRate: 8_000))
+        #expect(vector.schemaVersion == 2)
+        #expect(QualityQualificationContract.schemaVersion == 4)
+        #expect(QualityQualificationContract.engineVersion ==
+                "autotechno-canonical-engine.v2")
+        #expect(vector.isComplete)
+        #expect(vector.isFinite)
+        #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
+        #expect(vector.selectionEvidence ==
+                fixtureVector(slot: .primary).selectionEvidence)
+
+        let data = try vector.deterministicJSON()
+        let decoded = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: data
+        )
+        #expect(decoded == vector)
+        #expect(decoded.fingerprint == vector.fingerprint)
+
+        let object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let grooveBars = try #require(object["groovePulse"] as? [[String: Any]])
+        let events = try #require(grooveBars.first?["events"] as? [[String: Any]])
+        let serializedEvent = try #require(events.first)
+        #expect(Set(serializedEvent.keys) == Set([
+            "step", "intensity", "strikeZone", "damping",
+            "timbreMicrovariation", "renderedFrameCount", "sampleHash",
+            "sourceRMS", "spectralCentroidHz", "tailToAttackDB", "finite",
+        ]))
+
+        var forgedObject = object
+        var forgedBars = grooveBars
+        var forgedBar = forgedBars[0]
+        var forgedEvents = events
+        var forgedEvent = serializedEvent
+        forgedEvent["sourceRMS"] = 1e300
+        forgedEvents[0] = forgedEvent
+        forgedBar["events"] = forgedEvents
+        forgedBars[0] = forgedBar
+        forgedObject["groovePulse"] = forgedBars
+        let forgedVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedObject)
+        )
+        #expect(!forgedVector.isComplete)
+        #expect(forgedVector.fingerprint != vector.fingerprint)
+
+        var oversizedEventObject = object
+        var oversizedEventBars = grooveBars
+        var oversizedEventBar = oversizedEventBars[0]
+        let decodedOversizedEvents: [[String: Any]] = (0..<9).map { step in
+            var copy = serializedEvent
+            copy["step"] = step
+            copy["sampleHash"] = String(format: "%016x", step + 1)
+            return copy
+        }
+        oversizedEventBar["sourceScoreEventCount"] = 9
+        oversizedEventBar["sourceRenderEventCount"] = 9
+        oversizedEventBar["events"] = decodedOversizedEvents
+        oversizedEventBars[0] = oversizedEventBar
+        oversizedEventObject["groovePulse"] = oversizedEventBars
+        let decodedOversizedEventVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: oversizedEventObject)
+        )
+        #expect(decodedOversizedEventVector.groovePulse[0].events.count == 9)
+        #expect(!decodedOversizedEventVector.recordIsStructurallyValid)
+
+        var oversizedBarObject = object
+        let decodedOversizedBars: [[String: Any]] = (0..<17).map { bar in
+            var copy = grooveBars[0]
+            copy["bar"] = bar
+            return copy
+        }
+        oversizedBarObject["sourceGroovePulseBarCount"] = 17
+        oversizedBarObject["groovePulse"] = decodedOversizedBars
+        let decodedOversizedBarVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: oversizedBarObject)
+        )
+        #expect(decodedOversizedBarVector.groovePulse.count == 17)
+        #expect(!decodedOversizedBarVector.recordIsStructurallyValid)
+
+        let excessiveEvents = (0..<9).map {
+            fixtureGroovePulseEvent(step: $0, sampleHash: String(format: "%016x", $0))
+        }
+        let truncated = AutonomousGroovePulseBarEvidence(
+            bar: 0,
+            sourceScoreEventCount: excessiveEvents.count,
+            sourceRenderEventCount: excessiveEvents.count,
+            events: excessiveEvents
+        )
+        #expect(truncated.events.count ==
+                AutonomousCandidateEvaluationVector.maximumGroovePulseEventsPerBar)
+        #expect(!truncated.isComplete(sampleRate: 8_000))
+
+        let mismatchedSources = AutonomousGroovePulseBarEvidence(
+            bar: 0,
+            sourceScoreEventCount: 1,
+            sourceRenderEventCount: 0,
+            events: [event]
+        )
+        #expect(!mismatchedSources.isComplete(sampleRate: 8_000))
+
+        let duplicateSteps = AutonomousGroovePulseBarEvidence(
+            bar: 0,
+            sourceScoreEventCount: 2,
+            sourceRenderEventCount: 2,
+            events: [event, event]
+        )
+        #expect(!duplicateSteps.isComplete(sampleRate: 8_000))
+
+        #expect(!fixtureGroovePulseEvent(
+            renderedFrameCount: 359
+        ).isComplete(sampleRate: 8_000))
+        #expect(!fixtureGroovePulseEvent(sampleHash: "NOT-A-PCM-HASH!!")
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureGroovePulseEvent(sourceRMS: 1e300)
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureGroovePulseEvent(spectralCentroidHz: 4_001)
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureGroovePulseEvent(tailToAttackDB: 121)
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureGroovePulseEvent(finite: false).isFinite)
+    }
+
     @Test("Masking and stem payloads are bounded and malformed vectors are incomplete")
     func malformedBoundedEvidence() throws {
         let excessiveMasking = fixtureVector(
@@ -775,7 +915,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(initialCommit.fingerprint != advancedCommit.fingerprint)
 
         #expect(AutonomousCandidateFingerprint.plan(candidates.primary) ==
-                "0dcdfb886f9e191e")
+                "ef7fa992f6c55461")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -783,7 +923,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "a1dc11b7c8ad79c7")
+                "47703fe889b3304b")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -808,6 +948,7 @@ struct AutonomousCandidateEvaluationTests {
         maskingObservationCount: Int = 12,
         stemSourceRoleCount: Int = 5,
         stemRoleCount: Int = 5,
+        groovePulseBar: AutonomousGroovePulseBarEvidence? = nil,
         nonFinite: Bool = false
     ) -> AutonomousCandidateEvaluationVector {
         let planFingerprint = fixturePlanFingerprints[slot]
@@ -959,10 +1100,44 @@ struct AutonomousCandidateEvaluationTests {
                 measuredKickOverFoundationDB: nil,
                 targetKickOverFoundationDB: nil
             )],
+            groovePulse: [groovePulseBar ?? AutonomousGroovePulseBarEvidence(
+                bar: 0,
+                sourceScoreEventCount: 0,
+                sourceRenderEventCount: 0,
+                events: []
+            )],
             graph: graph,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: upper,
             postGraphUpperTimbreEvidence: upper
+        )
+    }
+
+    private func fixtureGroovePulseEvent(
+        step: Int = 3,
+        intensity: Double = 0.52,
+        strikeZone: GroovePulseStrikeZone = .middle,
+        damping: Double = 0.5,
+        timbreMicrovariation: Double = 0.02,
+        renderedFrameCount: Int = 360,
+        sampleHash: String = "0123456789abcdef",
+        sourceRMS: Double = 0.012,
+        spectralCentroidHz: Double = 2_400,
+        tailToAttackDB: Double = -18,
+        finite: Bool = true
+    ) -> AutonomousGroovePulseEventEvidence {
+        AutonomousGroovePulseEventEvidence(
+            step: step,
+            intensity: intensity,
+            strikeZone: strikeZone.rawValue,
+            damping: damping,
+            timbreMicrovariation: timbreMicrovariation,
+            renderedFrameCount: renderedFrameCount,
+            sampleHash: sampleHash,
+            sourceRMS: sourceRMS,
+            spectralCentroidHz: spectralCentroidHz,
+            tailToAttackDB: tailToAttackDB,
+            finite: finite
         )
     }
 

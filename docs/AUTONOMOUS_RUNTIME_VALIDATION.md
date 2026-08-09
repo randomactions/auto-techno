@@ -55,10 +55,13 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 3 provides the current transaction-level evidence
+Quality-contract schema 4 provides the current transaction-level evidence
 foundation. A complete record contains the bounded symbolic, hard-gate, full-mix,
-per-bar masking, role-stem, automatic-mix, graph, and pre/post upper-timbre vector
-for every retained attempt. It binds all candidate-plan fingerprints, the
+per-bar masking, role-stem, automatic-mix, event-local groove-pulse, graph, and
+pre/post upper-timbre vector for every retained attempt. Groove-pulse evidence
+must cover every bar explicitly, bind each score event to one exact dry-sample
+hash plus bounded level/spectral/tail consequence, and leave selection unchanged
+while the evaluator is uncalibrated. The transaction binds all candidate-plan fingerprints, the
 engine/policy/evaluator versions, the selected attempt, correction count, route
 generation, incoming continuation, and the pre-decision outgoing render/DSP
 state. Final commit provenance must additionally bind the selected sample hash

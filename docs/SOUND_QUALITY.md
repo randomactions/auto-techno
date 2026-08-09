@@ -10,10 +10,14 @@ manual curation gate or third-party instrument dependency.
 The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
-and a versioned candidate-evaluation transaction. Quality-contract schema 3
-preserves complete symbolic, full-mix, masking, role-stem, graph, and pre/post
-upper-timbre evidence for each retained attempt, then binds the selected attempt
-to finalized commit provenance. The shipping evaluator remains deliberately
+and a versioned candidate-evaluation transaction. Quality-contract schema 4
+preserves complete symbolic, full-mix, masking, role-stem, event-local
+groove-pulse, graph, and pre/post upper-timbre evidence for each retained
+attempt, then binds the selected attempt to finalized commit provenance. The
+groove-pulse projection retains exact dry-sample identity plus bounded source
+level, spectral position, and tail-to-attack consequence for each already
+resolved pulse; it does not add onsets or analyze the mixed percussion stem.
+The shipping evaluator remains deliberately
 uncalibrated: a healthy preparation renders the primary once, and neither the
 transaction nor the expression evidence constitutes professional-quality
 qualification. Calibrated paired ranking and the hybrid live-feedback loop below
@@ -109,7 +113,7 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 3, the versioned transaction implements the
+Under quality-contract schema 4, the versioned transaction implements the
 bounded evidence and atomic commit foundation for this loop. It can retain at
 most the primary, alternate, and conservative-fallback candidates, plus one
 home-timbre correction, with no more than four render passes total. Every attempt

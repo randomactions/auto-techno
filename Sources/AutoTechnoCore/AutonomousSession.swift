@@ -40,21 +40,39 @@ package enum WeakSixteenthStage: String, CaseIterable, Sendable {
     }
 }
 
+/// Score-owned physical contact position for the existing delicate groove
+/// pulse. These names describe relative spectral zones, not a sampled or
+/// simulated acoustic instrument.
+package enum GroovePulseStrikeZone: String, CaseIterable, Sendable {
+    case center
+    case middle
+    case edge
+}
+
 package struct GroovePulseArticulation: Equatable, Sendable {
     package let step: Int
     package let pulseClass: SixteenthPulseClass
     package let stage: WeakSixteenthStage
     package let intensity: Double
     package let timingOffsetInSteps: Double
+    package let strikeZone: GroovePulseStrikeZone
+    package let damping: Double
+    package let timbreMicrovariation: Double
 
     package init(step: Int, pulseClass: SixteenthPulseClass,
                  stage: WeakSixteenthStage, intensity: Double,
-                 timingOffsetInSteps: Double) {
+                 timingOffsetInSteps: Double,
+                 strikeZone: GroovePulseStrikeZone,
+                 damping: Double,
+                 timbreMicrovariation: Double) {
         self.step = ((step % 16) + 16) % 16
         self.pulseClass = pulseClass
         self.stage = stage
         self.intensity = min(1, max(0, intensity))
         self.timingOffsetInSteps = min(0.12, max(0, timingOffsetInSteps))
+        self.strikeZone = strikeZone
+        self.damping = min(0.75, max(0.25, damping))
+        self.timbreMicrovariation = min(0.04, max(-0.04, timbreMicrovariation))
     }
 }
 
@@ -394,19 +412,63 @@ package enum GroovePulseResolver {
 
     package static func articulations(from ensemble: EnsembleContext,
                                       absoluteBar: Int,
-                                      swingPercent: Double) -> [GroovePulseArticulation] {
+                                      swingPercent: Double,
+                                      percussionGear: PercussionGear,
+                                      eventSeed: UInt64,
+                                      conservative: Bool) -> [GroovePulseArticulation] {
         let stage = WeakSixteenthStage(absoluteBar: absoluteBar)
         let shuffle = min(0.12, max(0, (swingPercent - 0.5) * 2.0))
         return ensemble.events.compactMap { event in
             guard event.voice == .groovePulse else { return nil }
+            let physical = physicalArticulation(
+                gear: percussionGear,
+                eventSeed: eventSeed,
+                step: event.step,
+                conservative: conservative
+            )
             return GroovePulseArticulation(
                 step: event.step,
                 pulseClass: SixteenthPulseClass(step: event.step),
                 stage: stage,
                 intensity: event.intensity,
-                timingOffsetInSteps: event.step.isMultiple(of: 2) ? 0 : shuffle
+                timingOffsetInSteps: event.step.isMultiple(of: 2) ? 0 : shuffle,
+                strikeZone: physical.zone,
+                damping: physical.damping,
+                timbreMicrovariation: physical.microvariation
             )
         }
+    }
+
+    private static func physicalArticulation(
+        gear: PercussionGear,
+        eventSeed: UInt64,
+        step: Int,
+        conservative: Bool
+    ) -> (zone: GroovePulseStrikeZone, damping: Double, microvariation: Double) {
+        guard !conservative else { return (.middle, 0.5, 0) }
+        let zone: GroovePulseStrikeZone
+        let damping: Double
+        switch gear {
+        case .anchor:
+            zone = .middle
+            damping = 0.5
+        case .lift:
+            zone = .middle
+            damping = 0.4
+        case .contrast:
+            zone = .edge
+            damping = 0.25
+        case .turnaround:
+            zone = .center
+            damping = 0.75
+        }
+        let variationIndex = Int(SceneDNA.derivedSeed(
+            scene: eventSeed,
+            domain: 0x4752_4F4F_5641_5259,
+            index: step
+        ) % 5)
+        let variation = [-0.04, -0.02, 0.0, 0.02, 0.04][variationIndex]
+        return (zone, damping, variation)
     }
 
     package static func pattern(stage: WeakSixteenthStage,
@@ -1069,7 +1131,10 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             let groovePulses = GroovePulseResolver.articulations(
                 from: ensemble,
                 absoluteBar: absoluteBar,
-                swingPercent: dna.rhythm.swingPercent
+                swingPercent: dna.rhythm.swingPercent,
+                percussionGear: gear,
+                eventSeed: bar.eventSeed,
+                conservative: conservative
             )
             let echoEnabled = pulseEchoEnabled(
                 scene: scene, bar: bar, kind: kind,

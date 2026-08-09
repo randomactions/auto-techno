@@ -14,9 +14,9 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - exact private role evidence, bounded preparation-time kick/foundation mix
   correction, descriptive role-aware masking evidence, and authored masking
   guards;
-- quality-contract schema 3 with a bounded candidate-evaluation vector and
+- quality-contract schema 4 with a bounded candidate-evaluation vector and
   atomic selected-commit provenance across symbolic, full-mix, masking, stem,
-  graph, and pre/post upper-timbre evidence;
+  event-local groove-pulse, graph, and pre/post upper-timbre evidence;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
@@ -52,9 +52,11 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 3 now binds a versioned transaction across the engine,
+Quality-contract schema 4 now binds a versioned transaction across the engine,
 quality policy, evaluator, candidate plans, route, incoming continuation,
-attempt evidence, selection, and finalized commit provenance. Extend the local
+attempt evidence, selection, and finalized commit provenance. Its bounded
+groove-pulse projection proves that physical articulation reaches exact dry PCM
+without letting the uncalibrated policy rank that evidence. Extend the local
 offline harness to render the same private canonical journeys at representative
 sample rates and calibrate its machine-readable, reason-coded ranges and any
 derived reference profile. Keep WAVs, stems, and reference recordings local and

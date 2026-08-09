@@ -663,6 +663,135 @@ struct UpperTimbreIntegrationTests {
             alternate: retimedCandidate(source.alternate, startBar: 0, barCount: 17),
             fallback: retimedCandidate(source.fallback, startBar: 0, barCount: 17)
         )
+        func replacingResolvedBars(
+            _ plan: AutonomousPhrasePlan,
+            _ bars: [ResolvedPerformanceBar]
+        ) -> AutonomousPhrasePlan {
+            AutonomousPhrasePlan(
+                phraseIndex: plan.phraseIndex,
+                startBar: plan.startBar,
+                barCount: plan.barCount,
+                kind: plan.kind,
+                scene: plan.scene,
+                dna: plan.dna,
+                resolvedBars: bars,
+                openedDebt: plan.openedDebt,
+                paidDebtIDs: plan.paidDebtIDs,
+                requestsTopologyMutation: plan.requestsTopologyMutation,
+                alternate: plan.alternate,
+                conservative: plan.conservative,
+                interest: plan.interest,
+                endingInterlockState: plan.endingInterlockState,
+                endingSpatialContrastState: plan.endingSpatialContrastState,
+                endingNarrativeState: plan.endingNarrativeState
+            )
+        }
+        func replacingGroovePulses(
+            _ resolved: ResolvedPerformanceBar,
+            _ pulses: [GroovePulseArticulation]
+        ) -> ResolvedPerformanceBar {
+            ResolvedPerformanceBar(
+                performance: resolved.performance,
+                ensemble: resolved.ensemble,
+                arrangementGesture: resolved.arrangementGesture,
+                percussionGear: resolved.percussionGear,
+                foundationCompanion: resolved.foundationCompanion,
+                pulseEchoEnabled: resolved.pulseEchoEnabled,
+                interlockChapter: resolved.interlockChapter,
+                groovePulses: pulses,
+                spatialContrast: resolved.spatialContrast,
+                narrative: resolved.narrative
+            )
+        }
+        guard let pulseBarIndex = source.primary.resolvedBars.firstIndex(where: {
+            !$0.groovePulses.isEmpty
+        }) else {
+            Issue.record("Expected a bounded-input groove-pulse fixture")
+            return
+        }
+        let pulseBar = source.primary.resolvedBars[pulseBarIndex]
+        var missingArticulationBars = source.primary.resolvedBars
+        missingArticulationBars[pulseBarIndex] = replacingGroovePulses(pulseBar, [])
+        let missingArticulation = AutonomousPhraseCandidates(
+            primary: replacingResolvedBars(source.primary, missingArticulationBars),
+            alternate: source.alternate,
+            fallback: source.fallback
+        )
+        let sourcePulse = pulseBar.groovePulses[0]
+        let mismatchedPulse = GroovePulseArticulation(
+            step: sourcePulse.step,
+            pulseClass: sourcePulse.pulseClass,
+            stage: sourcePulse.stage,
+            intensity: sourcePulse.intensity * 0.5,
+            timingOffsetInSteps: sourcePulse.timingOffsetInSteps,
+            strikeZone: sourcePulse.strikeZone,
+            damping: sourcePulse.damping,
+            timbreMicrovariation: sourcePulse.timbreMicrovariation
+        )
+        var mismatchedArticulationBars = source.primary.resolvedBars
+        mismatchedArticulationBars[pulseBarIndex] = replacingGroovePulses(
+            pulseBar,
+            [mismatchedPulse] + Array(pulseBar.groovePulses.dropFirst())
+        )
+        let mismatchedArticulation = AutonomousPhraseCandidates(
+            primary: replacingResolvedBars(source.primary, mismatchedArticulationBars),
+            alternate: source.alternate,
+            fallback: source.fallback
+        )
+        let fallbackPulseBarIndex = 0
+        let fallbackPulseBar = source.fallback.resolvedBars[fallbackPulseBarIndex]
+        let maximumAtOneStep = fallbackPulseBar.ensemble.intentionalPileup ? 6 : 3
+        let fallbackOccupancy = Dictionary(
+            grouping: fallbackPulseBar.ensemble.events,
+            by: \.step
+        )
+        guard let fallbackPulseStep = (0..<16).first(where: {
+            fallbackOccupancy[$0, default: []].count < maximumAtOneStep
+        }) else {
+            Issue.record("Expected capacity for a conservative groove-pulse fixture")
+            return
+        }
+        let fallbackPulseIntensity = 0.20
+        let nonNeutralFallbackPulse = GroovePulseArticulation(
+            step: fallbackPulseStep,
+            pulseClass: SixteenthPulseClass(step: fallbackPulseStep),
+            stage: WeakSixteenthStage(absoluteBar: fallbackPulseBar.performance.bar),
+            intensity: fallbackPulseIntensity,
+            timingOffsetInSteps: 0,
+            strikeZone: .edge,
+            damping: 0.25,
+            timbreMicrovariation: 0.04
+        )
+        let nonNeutralFallbackEnsemble = EnsembleContext(
+            focusRole: fallbackPulseBar.ensemble.focusRole,
+            events: fallbackPulseBar.ensemble.events + [EnsembleResolvedEvent(
+                voice: .groovePulse,
+                step: fallbackPulseStep,
+                intensity: fallbackPulseIntensity,
+                relocated: false
+            )],
+            kickAnchors: fallbackPulseBar.ensemble.kickAnchors,
+            intentionalPileup: fallbackPulseBar.ensemble.intentionalPileup
+        )
+        let nonNeutralFallbackBar = ResolvedPerformanceBar(
+            performance: fallbackPulseBar.performance,
+            ensemble: nonNeutralFallbackEnsemble,
+            arrangementGesture: fallbackPulseBar.arrangementGesture,
+            percussionGear: fallbackPulseBar.percussionGear,
+            foundationCompanion: fallbackPulseBar.foundationCompanion,
+            pulseEchoEnabled: fallbackPulseBar.pulseEchoEnabled,
+            interlockChapter: fallbackPulseBar.interlockChapter,
+            groovePulses: [nonNeutralFallbackPulse],
+            spatialContrast: fallbackPulseBar.spatialContrast,
+            narrative: fallbackPulseBar.narrative
+        )
+        var nonNeutralFallbackBars = source.fallback.resolvedBars
+        nonNeutralFallbackBars[fallbackPulseBarIndex] = nonNeutralFallbackBar
+        let nonNeutralFallback = AutonomousPhraseCandidates(
+            primary: source.primary,
+            alternate: source.alternate,
+            fallback: replacingResolvedBars(source.fallback, nonNeutralFallbackBars)
+        )
         var oversizedState = RenderState()
         oversizedState.delayBuffer = [Float](repeating: 0, count: 96_002)
         var staleTimelineState = RenderState()
@@ -694,6 +823,9 @@ struct UpperTimbreIntegrationTests {
         let cases = [
             prepare(shifted),
             prepare(overlong),
+            prepare(missingArticulation),
+            prepare(mismatchedArticulation),
+            prepare(nonNeutralFallback),
             prepare(sampleRate: 4_000),
             prepare(routeChannelCount: 1),
             prepare(renderState: staleTimelineState),

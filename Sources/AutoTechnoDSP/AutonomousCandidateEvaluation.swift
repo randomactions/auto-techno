@@ -560,6 +560,120 @@ package struct AutonomousAutomaticMixEvidence: Codable, Equatable, Sendable {
     }
 }
 
+/// Bounded, event-local evidence for the existing score-owned groove pulse.
+/// The record contains only reduced signal observations from the exact dry
+/// sample that was rendered into the percussion path; no PCM is retained.
+package struct AutonomousGroovePulseEventEvidence: Codable, Equatable, Sendable {
+    package static let maximumSourceRMS = 0.05
+    package static let minimumTailToAttackDB = -120.0
+    package static let maximumTailToAttackDB = 120.0
+
+    package let step: Int
+    package let intensity: Double
+    package let strikeZone: String
+    package let damping: Double
+    package let timbreMicrovariation: Double
+    package let renderedFrameCount: Int
+    package let sampleHash: String
+    package let sourceRMS: Double
+    package let spectralCentroidHz: Double
+    package let tailToAttackDB: Double
+    package let finite: Bool
+
+    package init(
+        step: Int,
+        intensity: Double,
+        strikeZone: String,
+        damping: Double,
+        timbreMicrovariation: Double,
+        renderedFrameCount: Int,
+        sampleHash: String,
+        sourceRMS: Double,
+        spectralCentroidHz: Double,
+        tailToAttackDB: Double,
+        finite: Bool
+    ) {
+        self.step = step
+        self.intensity = intensity
+        self.strikeZone = strikeZone
+        self.damping = damping
+        self.timbreMicrovariation = timbreMicrovariation
+        self.renderedFrameCount = renderedFrameCount
+        self.sampleHash = sampleHash
+        self.sourceRMS = sourceRMS
+        self.spectralCentroidHz = spectralCentroidHz
+        self.tailToAttackDB = tailToAttackDB
+        self.finite = finite
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            intensity, damping, timbreMicrovariation, sourceRMS,
+            spectralCentroidHz, tailToAttackDB,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func isComplete(sampleRate: Double) -> Bool {
+        sampleRate.isFinite &&
+            (QualityQualificationContract.minimumSupportedSampleRate...QualityQualificationContract.maximumSupportedSampleRate)
+                .contains(sampleRate) &&
+            GroovePulseStrikeZone(rawValue: strikeZone) != nil &&
+            (0..<16).contains(step) &&
+            (0...1).contains(intensity) &&
+            (0.25...0.75).contains(damping) &&
+            (-0.04...0.04).contains(timbreMicrovariation) &&
+            renderedFrameCount == Int(sampleRate * GroovePulseVoice.durationSeconds) &&
+            Self.isSampleHash(sampleHash) &&
+            (0...Self.maximumSourceRMS).contains(sourceRMS) &&
+            (0...(sampleRate / 2)).contains(spectralCentroidHz) &&
+            (Self.minimumTailToAttackDB...Self.maximumTailToAttackDB)
+                .contains(tailToAttackDB)
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
+/// Explicit evidence for every rendered bar, including bars with no groove
+/// pulses. Separate score and render-source counts prevent either side of the
+/// one-to-one attribution from being silently truncated.
+package struct AutonomousGroovePulseBarEvidence: Codable, Equatable, Sendable {
+    package let bar: Int
+    package let sourceScoreEventCount: Int
+    package let sourceRenderEventCount: Int
+    package let events: [AutonomousGroovePulseEventEvidence]
+
+    package init(
+        bar: Int,
+        sourceScoreEventCount: Int,
+        sourceRenderEventCount: Int,
+        events: [AutonomousGroovePulseEventEvidence]
+    ) {
+        self.bar = bar
+        self.sourceScoreEventCount = sourceScoreEventCount
+        self.sourceRenderEventCount = sourceRenderEventCount
+        self.events = Array(
+            events.prefix(AutonomousCandidateEvaluationVector.maximumGroovePulseEventsPerBar)
+        )
+    }
+
+    package var isFinite: Bool { events.allSatisfy(\.isFinite) }
+
+    package func isComplete(sampleRate: Double) -> Bool {
+        bar >= 0 && sourceScoreEventCount >= 0 &&
+            sourceScoreEventCount <=
+                AutonomousCandidateEvaluationVector.maximumGroovePulseEventsPerBar &&
+            sourceRenderEventCount == sourceScoreEventCount &&
+            events.count == sourceScoreEventCount &&
+            events.map(\.step) == events.map(\.step).sorted() &&
+            Set(events.map(\.step)).count == events.count &&
+            events.allSatisfy { $0.isComplete(sampleRate: sampleRate) }
+    }
+}
+
 package struct AutonomousGraphEvidence: Codable, Equatable, Sendable {
     package static let maximumViolationCount = 64
 
@@ -713,10 +827,11 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 1
+    package static let schemaVersion = 2
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
+    package static let maximumGroovePulseEventsPerBar = 8
 
     package let schemaVersion: Int
     package let slot: AutonomousCandidateSlot
@@ -731,6 +846,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let stems: [AutonomousStemBarEvidence]
     package let sourceAutomaticMixBarCount: Int
     package let automaticMix: [AutonomousAutomaticMixEvidence]
+    package let sourceGroovePulseBarCount: Int
+    package let groovePulse: [AutonomousGroovePulseBarEvidence]
     package let graph: AutonomousGraphEvidence
     package let routeContinuation: AutonomousRouteContinuationEvidence
     /// Aggregate over the exact graph-input remainder. This diagnoses whether
@@ -750,6 +867,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         masking: [AutonomousMaskingBarEvidence],
         stems: [AutonomousStemBarEvidence],
         automaticMix: [AutonomousAutomaticMixEvidence],
+        groovePulse: [AutonomousGroovePulseBarEvidence],
         graph: AutonomousGraphEvidence,
         routeContinuation: AutonomousRouteContinuationEvidence,
         preGraphUpperTimbreEvidence: UpperTimbreEvidence,
@@ -768,6 +886,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.stems = Array(stems.prefix(Self.maximumBarCount))
         sourceAutomaticMixBarCount = automaticMix.count
         self.automaticMix = Array(automaticMix.prefix(Self.maximumBarCount))
+        sourceGroovePulseBarCount = groovePulse.count
+        self.groovePulse = Array(groovePulse.prefix(Self.maximumBarCount))
         self.graph = graph
         self.routeContinuation = routeContinuation
         self.preGraphUpperTimbreEvidence = preGraphUpperTimbreEvidence
@@ -950,6 +1070,41 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 targetKickOverFoundationDB: block.automaticMix.targetKickOverFoundationDB
             )
         }
+        let groovePulse = boundedBlocks.map { block in
+            let score = block.resolvedPerformance.groovePulses
+            let rendered = block.groovePulseRenderEvidence
+            let matched = rendered.compactMap {
+                evidence -> AutonomousGroovePulseEventEvidence? in
+                let matchingScoreEvents = score.filter { $0.step == evidence.step }
+                guard matchingScoreEvents.count == 1,
+                      let articulation = matchingScoreEvents.first,
+                evidence.intensity == articulation.intensity,
+                evidence.strikeZone == articulation.strikeZone,
+                evidence.damping == articulation.damping,
+                evidence.timbreMicrovariation == articulation.timbreMicrovariation else {
+                    return nil
+                }
+                return AutonomousGroovePulseEventEvidence(
+                    step: evidence.step,
+                    intensity: evidence.intensity,
+                    strikeZone: evidence.strikeZone.rawValue,
+                    damping: evidence.damping,
+                    timbreMicrovariation: evidence.timbreMicrovariation,
+                    renderedFrameCount: evidence.renderedFrameCount,
+                    sampleHash: evidence.sampleHash,
+                    sourceRMS: evidence.rms,
+                    spectralCentroidHz: evidence.spectralCentroidHz,
+                    tailToAttackDB: evidence.tailToAttackDB,
+                    finite: evidence.finite
+                )
+            }.sorted { $0.step < $1.step }
+            return AutonomousGroovePulseBarEvidence(
+                bar: block.bar,
+                sourceScoreEventCount: score.count,
+                sourceRenderEventCount: rendered.count,
+                events: matched
+            )
+        }
         let graphEvidence = AutonomousGraphEvidence(
             graphFingerprint: graphFingerprint,
             revision: graph.revision,
@@ -989,6 +1144,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             masking: masking,
             stems: stems,
             automaticMix: automaticMix,
+            groovePulse: groovePulse,
             graph: graphEvidence,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: preGraphUpperTimbreEvidence,
@@ -999,6 +1155,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package var isFinite: Bool {
         symbolic.isFinite && fullMix.isFinite && masking.allSatisfy(\.isFinite) &&
             stems.allSatisfy(\.isFinite) && automaticMix.allSatisfy(\.isFinite) &&
+            groovePulse.allSatisfy(\.isFinite) &&
             routeContinuation.isFinite &&
             preGraphUpperTimbreEvidence.candidateValuesAreFinite &&
             postGraphUpperTimbreEvidence.candidateValuesAreFinite
@@ -1132,13 +1289,19 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceMaskingBarCount == masking.count &&
             sourceStemBarCount == stems.count &&
             sourceAutomaticMixBarCount == automaticMix.count &&
+            sourceGroovePulseBarCount == groovePulse.count &&
             masking.count == fullMix.sourceBarCount &&
             stems.count == fullMix.sourceBarCount &&
             automaticMix.count == fullMix.sourceBarCount &&
+            groovePulse.count == fullMix.sourceBarCount &&
             Set(masking.map(\.bar)) == expectedBars && masking.allSatisfy(\.isComplete) &&
             Set(stems.map(\.bar)) == expectedBars && stems.allSatisfy(\.isComplete) &&
             Set(automaticMix.map(\.bar)) == expectedBars &&
-            automaticMix.allSatisfy(\.isComplete)
+            automaticMix.allSatisfy(\.isComplete) &&
+            Set(groovePulse.map(\.bar)) == expectedBars &&
+            groovePulse.allSatisfy {
+                $0.isComplete(sampleRate: routeContinuation.sampleRate)
+            }
     }
 
     /// The one selector projection shared by live preparation and transaction
@@ -1195,6 +1358,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceMaskingBarCount >= masking.count &&
             sourceStemBarCount >= stems.count &&
             sourceAutomaticMixBarCount >= automaticMix.count &&
+            sourceGroovePulseBarCount >= groovePulse.count &&
             graph.violations.count <= AutonomousGraphEvidence.maximumViolationCount &&
             graph.sourceViolationCount >= graph.violations.count &&
             preGraphUpperTimbreEvidence.velocityExpression.count <=
@@ -1211,7 +1375,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             upperTimbreRateMatchesRoute(postGraphUpperTimbreEvidence) &&
             masking.count <= Self.maximumBarCount &&
             stems.count <= Self.maximumBarCount &&
-            automaticMix.count <= Self.maximumBarCount
+            automaticMix.count <= Self.maximumBarCount &&
+            groovePulse.count <= Self.maximumBarCount
     }
 
     @inline(never)
@@ -1242,6 +1407,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         }
         for bar in automaticMix where
             bar.gains.count > Self.maximumStemRolesPerBar {
+            return false
+        }
+        for bar in groovePulse where
+            bar.events.count > Self.maximumGroovePulseEventsPerBar {
             return false
         }
         return true

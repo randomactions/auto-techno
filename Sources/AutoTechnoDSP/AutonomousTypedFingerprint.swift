@@ -7,7 +7,7 @@ import Foundation
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
-        digest(domain: "candidate-plan.typed.v1") { sink in
+        digest(domain: "candidate-plan.typed.v2") { sink in
             encode(plan, into: &sink)
         }
     }
@@ -360,6 +360,9 @@ private extension AutonomousTypedFingerprint {
         sink.field("stage"); sink.raw(value.stage.rawValue)
         sink.field("intensity"); sink.double(value.intensity)
         sink.field("timingOffsetInSteps"); sink.double(value.timingOffsetInSteps)
+        sink.field("strikeZone"); sink.raw(value.strikeZone.rawValue)
+        sink.field("damping"); sink.double(value.damping)
+        sink.field("timbreMicrovariation"); sink.double(value.timbreMicrovariation)
     }
 
     static func encode(_ value: SpatialContrastArticulation, into sink: inout StreamingFNV1a) {

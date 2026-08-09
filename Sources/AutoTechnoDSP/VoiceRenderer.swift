@@ -22,37 +22,158 @@ package enum GroovePulseVoice {
     package static let highPassFrequency = 550.0
     package static let lowPassFrequency = 3_200.0
 
+    package struct Parameters: Equatable, Sendable {
+        package let highPassHz: Double
+        package let lowPassHz: Double
+        package let clickHz: Double
+        package let envelopeDecay: Double
+        package let clickDecay: Double
+        package let noiseWeight: Double
+        package let clickWeight: Double
+    }
+
+    package static func parameters(for articulation: GroovePulseArticulation) -> Parameters {
+        let zone: (highPass: Double, lowPass: Double, click: Double)
+        switch articulation.strikeZone {
+        case .center:
+            zone = (550, 2_600, 940)
+        case .middle:
+            zone = (highPassFrequency, lowPassFrequency, 1_180)
+        case .edge:
+            zone = (700, 3_900, 1_480)
+        }
+        let damping = min(0.75, max(0.25, articulation.damping))
+        let microvariation = min(0.04, max(-0.04, articulation.timbreMicrovariation))
+        return Parameters(
+            highPassHz: zone.highPass,
+            lowPassHz: zone.lowPass * (1 + 0.5 * microvariation),
+            clickHz: zone.click * (1 + microvariation),
+            envelopeDecay: 72 + (damping - 0.5) * 72,
+            clickDecay: 145 + (damping - 0.5) * 100,
+            noiseWeight: 0.78 * (1 - 0.5 * microvariation),
+            clickWeight: 0.24 * (1 + 0.5 * microvariation)
+        )
+    }
+
+    @discardableResult
     package static func render(_ output: inout [Float], measurement: inout [Float],
                                start: Int, sampleRate: Double,
-                               intensity: Double, seed: UInt64) {
+                               articulation: GroovePulseArticulation,
+                               seed: UInt64) -> GroovePulseRenderEvidence? {
         let frames = min(Int(sampleRate * durationSeconds), output.count - start)
-        guard frames > 0 else { return }
+        guard frames > 0 else { return nil }
+        let applied = parameters(for: articulation)
         var random = SeededGenerator(seed: seed)
         var highPassState = 0.0
         var lowPassState = 0.0
         let highPassCoefficient = min(
             0.35,
-            1 - exp(-2 * .pi * highPassFrequency / sampleRate)
+            1 - exp(-2 * .pi * applied.highPassHz / sampleRate)
         )
         let lowPassCoefficient = min(
             0.55,
-            1 - exp(-2 * .pi * lowPassFrequency / sampleRate)
+            1 - exp(-2 * .pi * applied.lowPassHz / sampleRate)
         )
+        let lowBandCoefficient = min(1, 1 - exp(-2 * .pi * 500 / sampleRate))
+        let midBandCoefficient = min(1, 1 - exp(-2 * .pi * 2_500 / sampleRate))
+        let attackFrameCount = min(frames, max(1, Int((sampleRate * 0.008).rounded())))
+        let tailStartFrame = min(frames, max(0, Int((sampleRate * 0.024).rounded())))
+        var drySamples: [Float] = []
+        drySamples.reserveCapacity(frames)
+        var peak = 0.0
+        var totalEnergy = 0.0
+        var attackEnergy = 0.0
+        var tailEnergy = 0.0
+        var lowBandState = 0.0
+        var midBandState = 0.0
+        var lowBandEnergy = 0.0
+        var middleBandEnergy = 0.0
+        var highBandEnergy = 0.0
+        var samplesFinite = true
         for index in 0..<frames {
             let time = Double(index) / sampleRate
             let noise = random.unit() * 2 - 1
             highPassState += (noise - highPassState) * highPassCoefficient
             let highPassed = noise - highPassState
-            let mutedClick = sin(2 * .pi * 1_180 * time) * exp(-time * 145) * 0.24
-            lowPassState += (highPassed * 0.78 + mutedClick - lowPassState) * lowPassCoefficient
+            let mutedClick = sin(2 * .pi * applied.clickHz * time) *
+                exp(-time * applied.clickDecay) * applied.clickWeight
+            lowPassState += (highPassed * applied.noiseWeight + mutedClick - lowPassState) *
+                lowPassCoefficient
             let attack = min(1, time / 0.0008)
-            let envelope = attack * exp(-time * 72)
+            let envelope = attack * exp(-time * applied.envelopeDecay)
             let renderedSample = Float(
-                tanh(lowPassState * 1.16) * envelope * baseLevel * intensity
+                tanh(lowPassState * 1.16) * envelope * baseLevel * articulation.intensity
             )
             output[start + index] += renderedSample
             measurement[start + index] += renderedSample
+            drySamples.append(renderedSample)
+
+            let value = Double(renderedSample)
+            let energy = value * value
+            peak = max(peak, abs(value))
+            totalEnergy += energy
+            if index < attackFrameCount { attackEnergy += energy }
+            if index >= tailStartFrame { tailEnergy += energy }
+            lowBandState += (value - lowBandState) * lowBandCoefficient
+            midBandState += (value - midBandState) * midBandCoefficient
+            let middle = midBandState - lowBandState
+            let high = value - midBandState
+            lowBandEnergy += lowBandState * lowBandState
+            middleBandEnergy += middle * middle
+            highBandEnergy += high * high
+            samplesFinite = samplesFinite && renderedSample.isFinite
         }
+        let rms = sqrt(totalEnergy / Double(frames))
+        let crest = rms > 0 ? peak / rms : 0
+        let attackRMS = sqrt(attackEnergy / Double(attackFrameCount))
+        let tailFrameCount = max(1, frames - tailStartFrame)
+        let tailRMS = sqrt(tailEnergy / Double(tailFrameCount))
+        let tailToAttack = attackRMS > 0 ? tailRMS / attackRMS : 0
+        let tailToAttackDB = attackRMS > 0
+            ? min(120, max(-120, 20 * log10(max(tailToAttack, 0.000_001))))
+            : -120
+        let bandEnergy = lowBandEnergy + middleBandEnergy + highBandEnergy
+        let lowRatio = bandEnergy > 0 ? lowBandEnergy / bandEnergy : 0
+        let middleRatio = bandEnergy > 0 ? middleBandEnergy / bandEnergy : 0
+        let highRatio = bandEnergy > 0 ? highBandEnergy / bandEnergy : 0
+        let spectralCentroid = lowRatio * min(250, sampleRate * 0.10) +
+            middleRatio * min(1_500, sampleRate * 0.30) +
+            highRatio * min(5_000, sampleRate * 0.45)
+        let scalarValues = [
+            applied.highPassHz, applied.lowPassHz, applied.clickHz,
+            applied.envelopeDecay, applied.clickDecay, peak, rms, crest,
+            attackRMS, tailRMS, tailToAttack, tailToAttackDB,
+            lowRatio, middleRatio, highRatio, spectralCentroid,
+        ]
+        return GroovePulseRenderEvidence(
+            step: articulation.step,
+            pulseClass: articulation.pulseClass,
+            stage: articulation.stage,
+            intensity: articulation.intensity,
+            timingOffsetInSteps: articulation.timingOffsetInSteps,
+            strikeZone: articulation.strikeZone,
+            damping: articulation.damping,
+            timbreMicrovariation: articulation.timbreMicrovariation,
+            appliedHighPassHz: applied.highPassHz,
+            appliedLowPassHz: applied.lowPassHz,
+            appliedClickHz: applied.clickHz,
+            appliedEnvelopeDecay: applied.envelopeDecay,
+            appliedClickDecay: applied.clickDecay,
+            renderedFrameCount: frames,
+            sampleHash: ExactPCMFingerprint.mono(drySamples),
+            peak: peak,
+            rms: rms,
+            crestFactor: crest,
+            attackRMS: attackRMS,
+            tailRMS: tailRMS,
+            tailToAttackRatio: tailToAttack,
+            tailToAttackDB: tailToAttackDB,
+            lowBandEnergyRatio: lowRatio,
+            midBandEnergyRatio: middleRatio,
+            highBandEnergyRatio: highRatio,
+            spectralCentroidHz: spectralCentroid,
+            finite: samplesFinite && scalarValues.allSatisfy(\.isFinite)
+        )
     }
 }
 
@@ -90,6 +211,8 @@ package enum VoiceRenderer {
         var synthBus: [Float] = []
         var pulseEchoSendBus: [Float] = []
         var spatialReverbSendBus: [Float] = []
+        var groovePulseRenderEvidence: [GroovePulseRenderEvidence] = []
+        groovePulseRenderEvidence.reserveCapacity(resolved.groovePulses.count)
         swap(&output, &checkedOut.output)
         swap(&kickBus, &checkedOut.kick)
         swap(&kickDetectorBus, &checkedOut.kickDetector)
@@ -157,11 +280,13 @@ package enum VoiceRenderer {
             case .groovePulse:
                 guard let pulseArticulation else { break }
                 let pulseSeed = performance.eventSeed ^ UInt64(event.step + 1) ^ 0x6A20_0C15
-                GroovePulseVoice.render(
+                if let evidence = GroovePulseVoice.render(
                     &output, measurement: &percussionStem,
                     start: start, sampleRate: sampleRate,
-                    intensity: pulseArticulation.intensity, seed: pulseSeed
-                )
+                    articulation: pulseArticulation, seed: pulseSeed
+                ) {
+                    groovePulseRenderEvidence.append(evidence)
+                }
             default: break
             }
         }
@@ -493,6 +618,7 @@ package enum VoiceRenderer {
                                    dryPercussionSampleHash: ExactPCMFingerprint.mono(
                                     percussionStem
                                    ),
+                                   groovePulseRenderEvidence: groovePulseRenderEvidence,
                                    upperNoteRenderEvidence: upperNoteRenderEvidence,
                                    resonantAnchorSamples: resonantAnchorStem,
                                    detunedCompanionSamples: detunedCompanionStem)

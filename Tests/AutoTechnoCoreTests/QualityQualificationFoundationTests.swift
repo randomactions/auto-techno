@@ -965,6 +965,12 @@ struct QualityQualificationFoundationTests {
                 measuredKickOverFoundationDB: nil,
                 targetKickOverFoundationDB: nil
             )],
+            groovePulse: [AutonomousGroovePulseBarEvidence(
+                bar: 0,
+                sourceScoreEventCount: 0,
+                sourceRenderEventCount: 0,
+                events: []
+            )],
             graph: graph,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: evidence,
@@ -1012,6 +1018,7 @@ struct QualityQualificationFoundationTests {
                 masking: source.masking,
                 stems: source.stems,
                 automaticMix: source.automaticMix,
+                groovePulse: source.groovePulse,
                 graph: source.graph,
                 routeContinuation: source.routeContinuation,
                 preGraphUpperTimbreEvidence: source.preGraphUpperTimbreEvidence,

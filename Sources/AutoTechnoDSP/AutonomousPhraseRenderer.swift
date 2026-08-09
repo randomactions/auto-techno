@@ -228,6 +228,40 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
     }
 }
 
+/// Event-local evidence produced from the exact dry groove-pulse sample while
+/// it is rendered. It binds score-owned physical articulation to its signal
+/// consequence without analyzing the aggregate percussion stem or retaining
+/// raw PCM beyond the bounded render call.
+package struct GroovePulseRenderEvidence: Equatable, Sendable {
+    package let step: Int
+    package let pulseClass: SixteenthPulseClass
+    package let stage: WeakSixteenthStage
+    package let intensity: Double
+    package let timingOffsetInSteps: Double
+    package let strikeZone: GroovePulseStrikeZone
+    package let damping: Double
+    package let timbreMicrovariation: Double
+    package let appliedHighPassHz: Double
+    package let appliedLowPassHz: Double
+    package let appliedClickHz: Double
+    package let appliedEnvelopeDecay: Double
+    package let appliedClickDecay: Double
+    package let renderedFrameCount: Int
+    package let sampleHash: String
+    package let peak: Double
+    package let rms: Double
+    package let crestFactor: Double
+    package let attackRMS: Double
+    package let tailRMS: Double
+    package let tailToAttackRatio: Double
+    package let tailToAttackDB: Double
+    package let lowBandEnergyRatio: Double
+    package let midBandEnergyRatio: Double
+    package let highBandEnergyRatio: Double
+    package let spectralCentroidHz: Double
+    package let finite: Bool
+}
+
 package struct RenderedBar: Equatable, Sendable {
     package let sampleRate: Double
     package let samples: [Float]
@@ -246,6 +280,7 @@ package struct RenderedBar: Equatable, Sendable {
     /// analysis. No stem PCM leaves detached preparation.
     package let dryFoundationSampleHash: String
     package let dryPercussionSampleHash: String
+    package let groovePulseRenderEvidence: [GroovePulseRenderEvidence]
     package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
     /// Transient detached-preparation taps. They never cross into RenderBlock
     /// or the scheduler; only reduced evidence survives phrase preparation.
@@ -260,6 +295,7 @@ package struct RenderedBar: Equatable, Sendable {
                 stemReconstruction: StemReconstructionEvidence,
                 dryFoundationSampleHash: String,
                 dryPercussionSampleHash: String,
+                groovePulseRenderEvidence: [GroovePulseRenderEvidence],
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 resonantAnchorSamples: [Float],
                 detunedCompanionSamples: [Float]) {
@@ -286,6 +322,7 @@ package struct RenderedBar: Equatable, Sendable {
         self.stemReconstruction = stemReconstruction
         self.dryFoundationSampleHash = dryFoundationSampleHash
         self.dryPercussionSampleHash = dryPercussionSampleHash
+        self.groovePulseRenderEvidence = groovePulseRenderEvidence.sorted { $0.step < $1.step }
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.resonantAnchorSamples = resonantAnchorSamples
         self.detunedCompanionSamples = detunedCompanionSamples
@@ -325,6 +362,9 @@ package struct RenderBlock: Equatable, Sendable {
     /// after the generated graph. It contains foundation and percussion while
     /// excluding newly scheduled upper voices.
     package let protectedRhythmSampleHash: String
+    /// Same-pass, event-local evidence for every score-owned groove pulse.
+    /// It is reduced into the bounded candidate transaction before scheduling.
+    package let groovePulseRenderEvidence: [GroovePulseRenderEvidence]
     /// Exact score-owned upper notes used for this bar. The renderer no longer
     /// invents pitch, duration, velocity, or slide decisions after resolution.
     package var resolvedUpperNotes: [ResolvedUpperNote] {
@@ -353,6 +393,7 @@ package struct RenderBlock: Equatable, Sendable {
                 protectedFoundationSampleHash: String,
                 percussionSampleHash: String,
                 protectedRhythmSampleHash: String,
+                groovePulseRenderEvidence: [GroovePulseRenderEvidence],
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 graphInputRemainderTimbreEvidence: UpperTimbreEvidence,
                 postGraphRemainderTimbreEvidence: UpperTimbreEvidence,
@@ -375,6 +416,7 @@ package struct RenderBlock: Equatable, Sendable {
         self.protectedFoundationSampleHash = protectedFoundationSampleHash
         self.percussionSampleHash = percussionSampleHash
         self.protectedRhythmSampleHash = protectedRhythmSampleHash
+        self.groovePulseRenderEvidence = groovePulseRenderEvidence.sorted { $0.step < $1.step }
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.graphInputRemainderTimbreEvidence = graphInputRemainderTimbreEvidence
         self.postGraphRemainderTimbreEvidence = postGraphRemainderTimbreEvidence
@@ -825,6 +867,7 @@ package enum AutonomousPhraseRenderer {
                     left: protectedRhythm.leftSamples,
                     right: protectedRhythm.rightSamples
                 ),
+                groovePulseRenderEvidence: rendered.groovePulseRenderEvidence,
                 upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,
                 graphInputRemainderTimbreEvidence: graphInputRemainderTimbreEvidence,
                 postGraphRemainderTimbreEvidence: postGraphRemainderTimbreEvidence,
