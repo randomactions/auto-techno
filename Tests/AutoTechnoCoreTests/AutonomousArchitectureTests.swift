@@ -2337,9 +2337,11 @@ struct AutonomousPreparationPreflightTests {
         #expect(evidence?.renderedFrameCount == Int(sampleRate * 0.045))
         #expect(evidence?.sampleHash.isEmpty == false)
         #expect(evidence?.finite == true)
-        #expect(abs((evidence?.lowBandEnergyRatio ?? 0) +
-                    (evidence?.midBandEnergyRatio ?? 0) +
-                    (evidence?.highBandEnergyRatio ?? 0) - 1) < 0.000_001)
+        let bandEnergyRatioSum: Double =
+            (evidence?.lowBandEnergyRatio ?? 0) +
+            (evidence?.midBandEnergyRatio ?? 0) +
+            (evidence?.highBandEnergyRatio ?? 0)
+        #expect(abs(bandEnergyRatioSum - 1) < 0.000_001)
     }
 
     @Test("Groove pulse physical articulation has bounded causal evidence across rates")
