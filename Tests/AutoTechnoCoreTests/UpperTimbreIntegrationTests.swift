@@ -36,6 +36,10 @@ struct UpperTimbreIntegrationTests {
         })
         #expect(home.protectedFoundationSampleHash == resonant.protectedFoundationSampleHash)
         #expect(home.protectedFoundationSampleHash == detuned.protectedFoundationSampleHash)
+        #expect(home.percussionSampleHash == resonant.percussionSampleHash)
+        #expect(home.percussionSampleHash == detuned.percussionSampleHash)
+        #expect(home.protectedRhythmSampleHash == resonant.protectedRhythmSampleHash)
+        #expect(home.protectedRhythmSampleHash == detuned.protectedRhythmSampleHash)
         #expect(home.resolvedUpperNotes.count == resonant.resolvedUpperNotes.count)
         #expect(home.resolvedUpperNotes.count == detuned.resolvedUpperNotes.count)
         #expect(home.resolvedUpperNotes.map(\.onsetStep) ==
@@ -114,6 +118,7 @@ struct UpperTimbreIntegrationTests {
             $0.timbreIntent == .home && $0.gate == .retrigger
         })
         for block in prepared.blocks {
+            #expect(block.masking.count == 12)
             #expect(block.resolvedUpperNotes == block.synthPerformance.upperNotes)
             #expect(block.modulation.resolvedUpperNoteCount == block.resolvedUpperNotes.count)
             #expect(block.modulation.slideCount == block.resolvedUpperNotes.filter {

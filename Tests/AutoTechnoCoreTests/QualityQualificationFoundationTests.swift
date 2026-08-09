@@ -256,7 +256,7 @@ struct QualityQualificationFoundationTests {
             left: tone,
             right: tone,
             sampleRate: 8_000,
-            protectedMono: tone
+            protectedReferenceMono: tone
         ))
         #expect(evidence.finite)
         #expect(evidence.rms > 0)

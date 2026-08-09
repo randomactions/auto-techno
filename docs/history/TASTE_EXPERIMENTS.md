@@ -41,9 +41,9 @@ acceptance criteria. Any future hash change still requires investigation and the
 listening gate. Physical-output smoke testing and soak remain separate pending
 states.
 
-## Oscar-informed groove-first candidate — 2026-08-08
+## Video-informed groove-first candidate — 2026-08-08
 
-Observation source: the supplied Underdog/Oscar production lessons repeatedly
+Observation source: the supplied production lessons repeatedly
 build authority from one coherent pulse, deliberate gaps, stable sound identity,
 and infrequent structural contrast. Repository inspection also found that the
 ensemble arbiter's events were reported as metadata while the renderer generated
@@ -61,9 +61,9 @@ Matched-loudness comparison: pending. Physical listening has not been performed.
 Verdict: implementation candidate only; do not promote new hashes or claim
 musical approval until the canonical comparison is heard and recorded here.
 
-## Oscar-informed interlocking evolution candidate — 2026-08-08
+## Video-informed interlocking evolution candidate — 2026-08-08
 
-Observation source: the supplied [Oscar video](https://www.youtube.com/watch?v=UZ41F-uI8AQ)
+Observation source: the supplied [production lesson](https://www.youtube.com/watch?v=UZ41F-uI8AQ)
 suggests that a short sequencer can drive a longer follower so simple parts reveal
 new relationships over time. Applied here as a hypothesis, not a listening
 verdict: the upper voices use a three-step driver advancing a five-stage follower
@@ -135,8 +135,8 @@ not promote hashes.
 ## Video-informed weak-sixteenth groove reveal candidate — 2026-08-09
 
 Observation: the automatic kick/foundation change was not clearly audible in the
-whole mix. Do not tune that mechanism further in this slice. The supplied Oscar
-[groove video](https://www.youtube.com/watch?v=7lgyDq8N1J0) instead suggests a
+whole mix. Do not tune that mechanism further in this slice. The supplied
+[groove lesson](https://www.youtube.com/watch?v=7lgyDq8N1J0) instead suggests a
 more recognizable rhythmic hypothesis: downbeats, upbeats, and the two weak
 sixteenth positions need an intentional hierarchy, and favoring the trailing
 weak position should create a bodily side-to-side pull into the next beat.

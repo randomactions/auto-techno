@@ -33,7 +33,7 @@ The cleanup-era compact 8 kHz hashes were `bca565a2c3a17f31`,
 `d0e39cebdaed39d6`, and `f6486cd179cd9c6b`. They remain historical baselines;
 the implementation candidate does not replace them before listening approval.
 
-## Oscar-informed candidate status — 2026-08-08
+## Video-informed candidate status — 2026-08-08
 
 The cleanup hashes above remain the immutable `942786a` baseline. The
 groove-first implementation intentionally changes render math, so its tests
@@ -148,9 +148,9 @@ approval, route/interruption testing, and the physical-output soak remain pendin
 
 ## Video-derived autonomous timbre foundation — 2026-08-09
 
-This snapshot describes an uncommitted working tree on branch
-`codex/oscar-groove-refinement`, based on `3f94aab`. It is an implementation and
-local-validation record, not a professional-quality promotion. The matched
+This snapshot describes the implementation published through merge commit
+`5038b9f`, based on the validated `853a4dc` feature commit. It is an implementation
+and local-validation record, not a professional-quality promotion. The matched
 toolchain was Xcode 26.6 build 17F113 with Apple Swift 6.3.3.
 
 The canonical score now owns resolved upper-note pitch, duration, velocity,
@@ -200,3 +200,44 @@ fault injection, independent PCM pitch estimator, preparation latency/peak
 memory budget, full-phrase 96/192 kHz preparation, exact-build app/route QA,
 matched-loudness listening verdict, or 60-minute physical-output/recovery soak
 was completed. Those remain required before any production-ready sound claim.
+
+## Truthful role routing and descriptive masking evidence — 2026-08-09
+
+This candidate is based on `5038b9f`. It replaces the ambiguous
+kick/percussion/synth/texture masking inputs with exact post-fader foundation,
+dry percussion, and combined dry-upper taps. Percussion is rendered once per
+layer, and the same exact dry tap feeds center output, drum reverb, protected
+rhythm, and masking evidence. The generated graph now receives
+`full - protected-rhythm`; the exact protected stereo rhythm is recombined after
+the graph. Stable fingerprints distinguish dry foundation, dry percussion, and
+the complete protected-rhythm route.
+
+The analyzer emits a fixed twelve-observation vector across all sixteen bar
+windows. It reports exact-pair activity, overlap count, maximum overlap, and
+the longest consecutive run. Its causal filters may retain state across
+windows, but exact source-window energy gates persistence so a filter tail after
+one active window cannot fabricate a second active window. Valid silence is a
+complete zero vector; malformed or non-finite input remains unavailable.
+
+Masking is descriptive only. No uncalibrated masking cut or candidate promotion
+is applied. Existing authored envelope, kick-linked, ducking, glue, and output
+safety behavior remains active. This slice deliberately removes the prior
+automatic cuts that were driven by aliased or stochastic-rerendered inputs.
+
+Post-review local validation used Xcode 26.6 build 17F113 and Apple Swift 6.3.3:
+
+- The full suite passed: 78 tests in 209.800 seconds.
+- The focused masking suite passed after the causal-tail regression fix.
+- The optimized release build passed in 32.49 seconds using the matched full
+  Xcode SDK, isolated module caches, and a populated offline SwiftPM scratch
+  path.
+- `git diff --check` passed.
+- An independent final diff review found no P0-P2 issue and confirmed that the
+  early single-window regression closes the causal-filter-tail false positive.
+
+The initial plain build selected mismatched Command Line Tools and failed at
+manifest/SDK setup before compilation; it was not a source failure. No
+matched-loudness listening, physical-output smoke, route/interruption test, or
+60-minute soak was performed for this candidate. Preparation latency and peak
+memory also remain unmeasured. The policy stays `uncalibrated.v1`, and quality
+qualification remains unavailable.

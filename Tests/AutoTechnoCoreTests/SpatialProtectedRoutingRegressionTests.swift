@@ -1,9 +1,93 @@
 import AutoTechnoCore
-import AutoTechnoDSP
+@testable import AutoTechnoDSP
 import Testing
 
 @Suite("Spatial carrier and protected routing regressions")
 struct SpatialProtectedRoutingRegressionTests {
+    @Test("Stochastic percussion is one bit-exact protected-rhythm performance")
+    func stochasticPercussionProtectedRouteIsBitExact() throws {
+        let director = AutonomousSessionDirector(rootSeed: 42)
+        let sourcePlan = director.candidates(from: director.initialState()).primary
+        let percussionVoices: [EnsembleVoice] = [
+            .percussion, .clap, .openHat, .metallic,
+        ]
+        let source = try #require(sourcePlan.resolvedBars.first { resolved in
+            resolved.ensemble.events.contains { percussionVoices.contains($0.voice) }
+        })
+        let isolatedEvents = source.ensemble.events.filter {
+            percussionVoices.contains($0.voice)
+        }
+        let isolated = ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: EnsembleContext(
+                focusRole: .percussion,
+                events: isolatedEvents,
+                kickAnchors: [],
+                intentionalPileup: false
+            ),
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            foundationCompanion: source.foundationCompanion,
+            pulseEchoEnabled: false,
+            interlockChapter: .home,
+            groovePulses: [],
+            spatialContrast: .foreground,
+            narrative: source.narrative
+        )
+        let synthPlan = SynthPerformancePlan(
+            scene: sourcePlan.scene,
+            dna: sourcePlan.dna,
+            kind: sourcePlan.kind,
+            resolvedBars: [isolated],
+            conservative: true,
+            forceHomeUpperTimbre: true
+        )
+        let plannedSynth = synthPlan.bars[0]
+        let noUpperNotes = SynthPerformanceBar(
+            bar: plannedSynth.bar,
+            gesture: plannedSynth.gesture,
+            mutationAmount: plannedSynth.mutationAmount,
+            relationalSteps: plannedSynth.relationalSteps,
+            upperNotes: []
+        )
+
+        func render(_ layer: RenderLayer) -> (RenderedBar, RenderState) {
+            var state = RenderState()
+            var workspace = RenderWorkspace()
+            let rendered = VoiceRenderer.renderBar(
+                scene: sourcePlan.scene,
+                sampleRate: 8_000,
+                state: &state,
+                dna: sourcePlan.dna,
+                resolved: isolated,
+                synthWorld: synthPlan.world,
+                synthPerformance: noUpperNotes,
+                workspace: &workspace,
+                layer: layer
+            )
+            return (rendered, state)
+        }
+
+        let full = render(.full)
+        let protected = render(.protectedRhythm)
+        let replay = render(.full)
+        #expect((full.0.stemObservations[.percussion]?.rms ?? 0) > 0)
+        #expect(full.0.leftSamples == protected.0.leftSamples)
+        #expect(full.0.rightSamples == protected.0.rightSamples)
+        #expect(zip(full.0.leftSamples, protected.0.leftSamples).allSatisfy {
+            ($0 - $1).bitPattern == Float.zero.bitPattern
+        })
+        #expect(zip(full.0.rightSamples, protected.0.rightSamples).allSatisfy {
+            ($0 - $1).bitPattern == Float.zero.bitPattern
+        })
+        #expect(full.0.dryFoundationSampleHash == protected.0.dryFoundationSampleHash)
+        #expect(full.0.dryPercussionSampleHash == protected.0.dryPercussionSampleHash)
+        #expect(full.0.masking.count == 12)
+        #expect(protected.0.masking.isEmpty)
+        #expect(full.0 == replay.0)
+        #expect(full.1 == replay.1)
+    }
+
     @Test("A suspended major-break transition carrier drives truthful metadata and PCM")
     func suspendedTransitionCarrierRenders() {
         guard let (plan, barIndex) = transitionCarrierFixture() else {

@@ -86,8 +86,7 @@ package enum VoiceRenderer {
         var atmosphereStem: [Float] = []
         var resonantAnchorStem: [Float] = []
         var detunedCompanionStem: [Float] = []
-        var measurementScratch: [Float] = []
-        var percussionBus: [Float] = []
+        var maskingFoundationBus: [Float] = []
         var synthBus: [Float] = []
         var pulseEchoSendBus: [Float] = []
         var spatialReverbSendBus: [Float] = []
@@ -100,8 +99,7 @@ package enum VoiceRenderer {
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
         swap(&resonantAnchorStem, &checkedOut.resonantAnchorStem)
         swap(&detunedCompanionStem, &checkedOut.detunedCompanionStem)
-        swap(&measurementScratch, &checkedOut.measurementScratch)
-        swap(&percussionBus, &checkedOut.percussion)
+        swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
         swap(&synthBus, &checkedOut.synth)
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
         swap(&spatialReverbSendBus, &checkedOut.spatialReverbSend)
@@ -137,49 +135,30 @@ package enum VoiceRenderer {
                 tom(&output, measurement: &foundationStem,
                     start: start, sampleRate: sampleRate,
                     level: 0.085 * accent, frequency: frequency)
-            case .percussion where layer == .full:
+            case .percussion:
                 let level = (section == .build ? 0.09 : 0.075) * accent
                 hat(&output, measurement: &percussionStem, start: start,
                     sampleRate: sampleRate, level: level,
                     brightness: scene.character.percussionBrightness, random: &random)
-                hat(&percussionBus, measurement: &measurementScratch, start: start,
-                    sampleRate: sampleRate, level: level,
-                    brightness: scene.character.percussionBrightness, random: &random)
-            case .clap where layer == .full:
+            case .clap:
                 clap(&output, measurement: &percussionStem,
                      start: start, sampleRate: sampleRate, level: 0.08 * accent,
                      brightness: scene.character.percussionBrightness, random: &random)
-                clap(&percussionBus, measurement: &measurementScratch,
-                     start: start, sampleRate: sampleRate, level: 0.08 * accent,
-                     brightness: scene.character.percussionBrightness, random: &random)
-            case .openHat where layer == .full:
+            case .openHat:
                 openHat(&output, measurement: &percussionStem,
                         start: start, sampleRate: sampleRate,
                         level: 0.052 * accent,
                         brightness: scene.character.percussionBrightness, random: &random)
-                openHat(&percussionBus, measurement: &measurementScratch,
-                        start: start, sampleRate: sampleRate,
-                        level: 0.052 * accent,
-                        brightness: scene.character.percussionBrightness, random: &random)
-            case .metallic where layer == .full:
+            case .metallic:
                 metallicPercussion(&output, measurement: &percussionStem,
                                    start: start, sampleRate: sampleRate,
                                    level: 0.042 * accent,
                                    brightness: scene.character.percussionBrightness, random: &random)
-                metallicPercussion(&percussionBus, measurement: &measurementScratch,
-                                   start: start, sampleRate: sampleRate,
-                                   level: 0.042 * accent,
-                                   brightness: scene.character.percussionBrightness, random: &random)
-            case .groovePulse where layer == .full:
+            case .groovePulse:
                 guard let pulseArticulation else { break }
                 let pulseSeed = performance.eventSeed ^ UInt64(event.step + 1) ^ 0x6A20_0C15
                 GroovePulseVoice.render(
                     &output, measurement: &percussionStem,
-                    start: start, sampleRate: sampleRate,
-                    intensity: pulseArticulation.intensity, seed: pulseSeed
-                )
-                GroovePulseVoice.render(
-                    &percussionBus, measurement: &measurementScratch,
                     start: start, sampleRate: sampleRate,
                     intensity: pulseArticulation.intensity, seed: pulseSeed
                 )
@@ -269,7 +248,8 @@ package enum VoiceRenderer {
         var dryCenterMaximumError: Float = 0
         var upperMaximumError: Float = 0
         for index in 0..<frames {
-            let reconstructedCenter = kickBus[index] + foundationStem[index] + percussionStem[index]
+            maskingFoundationBus[index] = kickBus[index] + foundationStem[index]
+            let reconstructedCenter = maskingFoundationBus[index] + percussionStem[index]
             dryCenterMaximumError = max(
                 dryCenterMaximumError, abs(output[index] - reconstructedCenter)
             )
@@ -344,11 +324,15 @@ package enum VoiceRenderer {
             0.55,
             1 - exp(-2 * .pi * resolved.spatialContrast.lowPassHz / sampleRate)
         )
-        let masking = SpectrumMaskingAnalyzer.analyze(
-            signals: [.kickBass: kickBus, .percussion: percussionBus, .synth: synthBus, .texture: synthBus],
-            sampleRate: sampleRate)
-        let lowMidMask = masking.filter { ($0.band.name == "low-mid" || $0.band.name == "mid") && ($0.yieldingRole == .synth || $0.yieldingRole == .texture) }.map(\.cut).max() ?? 0
-        let highMask = masking.filter { $0.band.name == "high" && ($0.yieldingRole == .synth || $0.yieldingRole == .texture) }.map(\.cut).max() ?? 0
+        let masking: [RoleMaskingObservation] = layer == .full
+            ? SpectrumMaskingAnalyzer.analyze(
+                signals: [
+                    .foundation: maskingFoundationBus,
+                    .percussion: percussionStem,
+                    .upper: synthBus,
+                ],
+                sampleRate: sampleRate
+            ) : []
         for index in 0..<frames {
             let input = output[index]
             let rawSynthInput = synthBus[index]
@@ -368,7 +352,10 @@ package enum VoiceRenderer {
             // identity of the note or the mono-compatible low end.
             midEnvelope += (abs(lowMid) - midEnvelope) * 0.014
             let kickMidMask = min(0.16, kickEnvelope * 0.22)
-            let dynamicMidCut = min(0.42, midEnvelope * (0.42 + scene.darkness * 0.24) + kickMidMask + lowMidMask)
+            let dynamicMidCut = min(
+                0.42,
+                midEnvelope * (0.42 + scene.darkness * 0.24) + kickMidMask
+            )
             // Dynamic high-band control: a short envelope on the upper band
             // gently closes the top when metallic texture accumulates energy.
             // This preserves transient definition without making the master
@@ -376,7 +363,10 @@ package enum VoiceRenderer {
             synthTone += (Double(rawSynthInput) - synthTone) * 0.11
             let highBand = upper - synthTone * 0.18
             highEnvelope += (abs(highBand) - highEnvelope) * 0.018
-            let dynamicDamping = min(0.38, highEnvelope * (0.65 + scene.darkness * 0.45) + highMask)
+            let dynamicDamping = min(
+                0.38,
+                highEnvelope * (0.65 + scene.darkness * 0.45)
+            )
             let synthInput = Float(synthTone * 0.18 + lowMid * (1.0 - dynamicMidCut) + highBand * (1.0 - dynamicDamping))
             let delayed = state.delayBuffer[state.delayWriteIndex]
             state.delayBuffer[state.delayWriteIndex] = synthInput + delayed * feedback
@@ -401,7 +391,7 @@ package enum VoiceRenderer {
             state.earlyReflectionBuffer[state.earlyReflectionWriteIndex] = synthInput * 0.30
             let earlyMix = Float(0.035 + dramaticDistance * 0.08)
             let reverbRead = state.reverbBuffer[state.reverbWriteIndex]
-            let drumSend = percussionBus[index] * Float(scene.atmosphere * 0.08)
+            let drumSend = percussionStem[index] * Float(scene.atmosphere * 0.08)
             let rawSpatialSend = Double(spatialReverbSendBus[index])
             spatialHighPassState +=
                 (rawSpatialSend - spatialHighPassState) * spatialHighPassCoefficient
@@ -488,8 +478,7 @@ package enum VoiceRenderer {
             audibleRMS: audibleKickRMS,
             detectorPeak: detectorKickPeak,
             detectorRMS: detectorKickRMS,
-            duckingEnvelopePeak: Float(kickEnvelopePeak),
-            maskingInputPeak: audibleKickPeak
+            duckingEnvelopePeak: Float(kickEnvelopePeak)
         )
         let rendered = RenderedBar(sampleRate: sampleRate,
                                    samples: zip(left, right).map { ($0 + $1) * 0.5 },
@@ -498,6 +487,12 @@ package enum VoiceRenderer {
                                    stemObservations: stemObservations,
                                    automaticMix: automaticMix,
                                    stemReconstruction: stemReconstruction,
+                                   dryFoundationSampleHash: ExactPCMFingerprint.mono(
+                                    maskingFoundationBus
+                                   ),
+                                   dryPercussionSampleHash: ExactPCMFingerprint.mono(
+                                    percussionStem
+                                   ),
                                    upperNoteRenderEvidence: upperNoteRenderEvidence,
                                    resonantAnchorSamples: resonantAnchorStem,
                                    detunedCompanionSamples: detunedCompanionStem)
@@ -510,8 +505,7 @@ package enum VoiceRenderer {
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
         swap(&resonantAnchorStem, &checkedOut.resonantAnchorStem)
         swap(&detunedCompanionStem, &checkedOut.detunedCompanionStem)
-        swap(&measurementScratch, &checkedOut.measurementScratch)
-        swap(&percussionBus, &checkedOut.percussion)
+        swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
         swap(&synthBus, &checkedOut.synth)
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
         swap(&spatialReverbSendBus, &checkedOut.spatialReverbSend)

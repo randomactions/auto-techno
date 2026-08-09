@@ -832,7 +832,6 @@ struct AutonomousPreparationPreflightTests {
             #expect(automaticTrim <= AutomaticMixBalancer.homeKickCorrectionDB)
             #expect(automaticTrim >= AutomaticMixBalancer.minimumKickCorrectionDB)
             #expect(abs(mix.duckingEnvelopePeak - mix.detectorPeak) < 0.000_001)
-            #expect(mix.maskingInputPeak == mix.audiblePeak)
             #expect(abs((block.busStates[.kick]?.level ?? -1) -
                         Double(mix.audibleRMS)) < 0.000_001)
             let renderedKickSteps = block.events.filter { $0.voice == .kick }.map(\.step)
@@ -1002,6 +1001,7 @@ struct AutonomousPreparationPreflightTests {
         #expect(nextA.plan == nextB.plan)
         #expect(nextA.graph == nextB.graph)
         #expect(nextA.blocks == nextB.blocks)
+        #expect(nextA.endingRenderState == nextB.endingRenderState)
         #expect(nextA.endingGraphState == nextB.endingGraphState)
     }
 
@@ -1262,6 +1262,11 @@ struct AutonomousPreparationPreflightTests {
                 changedBlock.stemObservations[.foundation])
         #expect(originalBlock.stemObservations[.percussion] !=
                 changedBlock.stemObservations[.percussion])
+        #expect(originalBlock.protectedFoundationSampleHash ==
+                changedBlock.protectedFoundationSampleHash)
+        #expect(originalBlock.percussionSampleHash != changedBlock.percussionSampleHash)
+        #expect(originalBlock.protectedRhythmSampleHash !=
+                changedBlock.protectedRhythmSampleHash)
         #expect(originalBlock.busStates[.groovePulse]?.level ==
                 originalBlock.stemObservations[.percussion]?.rms)
     }

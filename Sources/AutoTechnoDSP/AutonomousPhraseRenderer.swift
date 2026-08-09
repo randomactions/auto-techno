@@ -112,7 +112,7 @@ package struct BusState: Equatable, Sendable {
 
 /// Evidence from the two kick paths used during detached rendering. The
 /// detector remains pre-fader so groove ducking does not move with mix level;
-/// the audible and masking values describe the post-fader signal.
+/// audible values describe the post-fader kick contribution.
 package struct KickMixEvidence: Equatable, Sendable {
     package let audibleGain: Double
     package let audiblePeak: Float
@@ -120,7 +120,6 @@ package struct KickMixEvidence: Equatable, Sendable {
     package let detectorPeak: Float
     package let detectorRMS: Float
     package let duckingEnvelopePeak: Float
-    package let maskingInputPeak: Float
 }
 
 package struct StemReconstructionEvidence: Equatable, Sendable {
@@ -226,11 +225,15 @@ package struct RenderedBar: Equatable, Sendable {
     package let rms: Float
     package let crestFactor: Float
     package let stereoCorrelation: Float
-    package let masking: [MaskingDecision]
+    package let masking: [RoleMaskingObservation]
     package let kickMix: KickMixEvidence
     package let stemObservations: [MixRole: StemObservation]
     package let automaticMix: AutomaticMixPlan
     package let stemReconstruction: StemReconstructionEvidence
+    /// Reduced fingerprints of the exact post-fader dry taps used by role
+    /// analysis. No stem PCM leaves detached preparation.
+    package let dryFoundationSampleHash: String
+    package let dryPercussionSampleHash: String
     package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
     /// Transient detached-preparation taps. They never cross into RenderBlock
     /// or the scheduler; only reduced evidence survives phrase preparation.
@@ -238,11 +241,13 @@ package struct RenderedBar: Equatable, Sendable {
     package let detunedCompanionSamples: [Float]
 
     package init(sampleRate: Double, samples: [Float], leftSamples: [Float],
-                rightSamples: [Float], masking: [MaskingDecision] = [],
+                rightSamples: [Float], masking: [RoleMaskingObservation] = [],
                 kickMix: KickMixEvidence,
                 stemObservations: [MixRole: StemObservation],
                 automaticMix: AutomaticMixPlan,
                 stemReconstruction: StemReconstructionEvidence,
+                dryFoundationSampleHash: String,
+                dryPercussionSampleHash: String,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 resonantAnchorSamples: [Float],
                 detunedCompanionSamples: [Float]) {
@@ -267,6 +272,8 @@ package struct RenderedBar: Equatable, Sendable {
         self.stemObservations = stemObservations
         self.automaticMix = automaticMix
         self.stemReconstruction = stemReconstruction
+        self.dryFoundationSampleHash = dryFoundationSampleHash
+        self.dryPercussionSampleHash = dryPercussionSampleHash
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.resonantAnchorSamples = resonantAnchorSamples
         self.detunedCompanionSamples = detunedCompanionSamples
@@ -289,25 +296,33 @@ package struct RenderBlock: Equatable, Sendable {
     package let rms: Float
     package let loudnessEstimate: Float
     package let stereoCorrelation: Float
-    package let masking: [MaskingDecision]
+    package let masking: [RoleMaskingObservation]
     package let effects: [EffectState]
     package let kickMix: KickMixEvidence
     package let stemObservations: [MixRole: StemObservation]
     package let automaticMix: AutomaticMixPlan
     package let stemReconstruction: StemReconstructionEvidence
-    /// Bit-exact fingerprint of the detached foundation-only render used to
-    /// verify that upper-voice articulation cannot alter the protected route.
+    /// Bit-exact fingerprint of the post-fader dry kick/foundation tap. It
+    /// excludes percussion, upper voices, shared effects, and nonlinear mix
+    /// interactions.
     package let protectedFoundationSampleHash: String
+    /// Bit-exact fingerprint of the dry percussion tap used for audible output,
+    /// masking evidence, and the drum reverb send.
+    package let percussionSampleHash: String
+    /// Bit-exact fingerprint of the stereo protected-rhythm render recombined
+    /// after the generated graph. It contains foundation and percussion while
+    /// excluding newly scheduled upper voices.
+    package let protectedRhythmSampleHash: String
     /// Exact score-owned upper notes used for this bar. The renderer no longer
     /// invents pitch, duration, velocity, or slide decisions after resolution.
     package var resolvedUpperNotes: [ResolvedUpperNote] {
         synthPerformance.upperNotes
     }
     package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
-    /// The existing graph input is the full-render minus foundation-render
-    /// remainder. It includes the upper path, but can also include percussion
-    /// and shared nonlinear residual; role-local articulation fields come only
-    /// from the dedicated taps above.
+    /// The existing graph input is the full-render minus protected-rhythm
+    /// remainder. It carries the newly scheduled upper path plus any shared
+    /// continuation or nonlinear interaction; role-local articulation fields
+    /// come only from the dedicated taps above.
     package let graphInputRemainderTimbreEvidence: UpperTimbreEvidence
     package let postGraphRemainderTimbreEvidence: UpperTimbreEvidence
     package let resolvedPerformance: ResolvedPerformanceBar
@@ -318,12 +333,14 @@ package struct RenderBlock: Equatable, Sendable {
 
     package init(bar: Int, section: SectionKind, left: [Float], right: [Float],
                 events: [VoiceEvent], modulation: ModulationState,
-                busStates: [VoiceKind: BusState], masking: [MaskingDecision],
+                busStates: [VoiceKind: BusState], masking: [RoleMaskingObservation],
                 effects: [EffectState], kickMix: KickMixEvidence,
                 stemObservations: [MixRole: StemObservation],
                 automaticMix: AutomaticMixPlan,
                 stemReconstruction: StemReconstructionEvidence,
                 protectedFoundationSampleHash: String,
+                percussionSampleHash: String,
+                protectedRhythmSampleHash: String,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 graphInputRemainderTimbreEvidence: UpperTimbreEvidence,
                 postGraphRemainderTimbreEvidence: UpperTimbreEvidence,
@@ -344,6 +361,8 @@ package struct RenderBlock: Equatable, Sendable {
         self.automaticMix = automaticMix
         self.stemReconstruction = stemReconstruction
         self.protectedFoundationSampleHash = protectedFoundationSampleHash
+        self.percussionSampleHash = percussionSampleHash
+        self.protectedRhythmSampleHash = protectedRhythmSampleHash
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.graphInputRemainderTimbreEvidence = graphInputRemainderTimbreEvidence
         self.postGraphRemainderTimbreEvidence = postGraphRemainderTimbreEvidence
@@ -385,9 +404,41 @@ package struct RenderBlock: Equatable, Sendable {
     }
 }
 
+/// Stable FNV-1a fingerprints over exact IEEE-754 sample bits. Channel count,
+/// channel order, lengths, and separators participate so differently shaped
+/// detached-preparation taps cannot alias merely by sharing a byte prefix.
+enum ExactPCMFingerprint {
+    static func mono(_ samples: [Float]) -> String {
+        hash([samples])
+    }
+
+    static func stereo(left: [Float], right: [Float]) -> String {
+        hash([left, right])
+    }
+
+    private static func hash(_ channels: [[Float]]) -> String {
+        var hash: UInt64 = 0xcbf29ce484222325
+        func mix(_ value: UInt32) {
+            var bits = value
+            for _ in 0..<4 {
+                hash ^= UInt64(bits & 0xff)
+                hash &*= 0x100000001b3
+                bits >>= 8
+            }
+        }
+        mix(UInt32(truncatingIfNeeded: channels.count))
+        for (index, channel) in channels.enumerated() {
+            mix(0x9e37_79b9 ^ UInt32(truncatingIfNeeded: index))
+            mix(UInt32(truncatingIfNeeded: channel.count))
+            for sample in channel { mix(sample.bitPattern) }
+        }
+        return String(format: "%016llx", hash)
+    }
+}
+
 enum RenderLayer {
     case full
-    case foundation
+    case protectedRhythm
 }
 
 struct RenderBuffers {
@@ -400,8 +451,7 @@ struct RenderBuffers {
     var atmosphereStem: [Float] = []
     var resonantAnchorStem: [Float] = []
     var detunedCompanionStem: [Float] = []
-    var measurementScratch: [Float] = []
-    var percussion: [Float] = []
+    var maskingFoundation: [Float] = []
     var synth: [Float] = []
     var pulseEchoSend: [Float] = []
     var spatialReverbSend: [Float] = []
@@ -421,8 +471,7 @@ struct RenderBuffers {
             resonantAnchorStem.removeAll(keepingCapacity: false)
             detunedCompanionStem.removeAll(keepingCapacity: false)
         }
-        reset(&measurementScratch, frameCount: frameCount)
-        reset(&percussion, frameCount: frameCount)
+        reset(&maskingFoundation, frameCount: frameCount)
         reset(&synth, frameCount: frameCount)
         reset(&pulseEchoSend, frameCount: frameCount)
         reset(&spatialReverbSend, frameCount: frameCount)
@@ -480,17 +529,17 @@ package enum AutonomousPhraseRenderer {
                 scene: plan.scene,
                 synthPerformance: synthPerformance
             )
-            var foundationState = state
-            let foundation = VoiceRenderer.renderBar(
+            var protectedRhythmState = state
+            let protectedRhythm = VoiceRenderer.renderBar(
                 scene: plan.scene,
                 sampleRate: sampleRate,
-                state: &foundationState,
+                state: &protectedRhythmState,
                 dna: plan.dna,
                 resolved: resolved,
                 synthWorld: synthPlan.world,
                 synthPerformance: synthPerformance,
                 workspace: &workspace,
-                layer: .foundation
+                layer: .protectedRhythm
             )
             let rendered = VoiceRenderer.renderBar(
                 scene: plan.scene,
@@ -548,10 +597,16 @@ package enum AutonomousPhraseRenderer {
                 )
             }
             let buses = busStates(rendered: rendered, scene: plan.scene, events: events)
-            let graphInputLeft = zip(rendered.leftSamples, foundation.leftSamples).map {
+            let graphInputLeft = zip(
+                rendered.leftSamples,
+                protectedRhythm.leftSamples
+            ).map {
                 $0.0 - $0.1
             }
-            let graphInputRight = zip(rendered.rightSamples, foundation.rightSamples).map {
+            let graphInputRight = zip(
+                rendered.rightSamples,
+                protectedRhythm.rightSamples
+            ).map {
                 $0.0 - $0.1
             }
             let generated = GeneratedDSPGraphRenderer.process(
@@ -630,7 +685,7 @@ package enum AutonomousPhraseRenderer {
                 left: graphInputLeft,
                 right: graphInputRight,
                 sampleRate: sampleRate,
-                protectedMono: foundation.samples,
+                protectedReferenceMono: protectedRhythm.samples,
                 precedingFrame: state.previousGraphInputRemainderEvidenceFrame
             ))
             let postGraphMixEvidence = UpperTimbreEvidenceAnalyzer.analyze(
@@ -638,7 +693,7 @@ package enum AutonomousPhraseRenderer {
                 left: generated.0,
                 right: generated.1,
                 sampleRate: sampleRate,
-                protectedMono: foundation.samples,
+                protectedReferenceMono: protectedRhythm.samples,
                 precedingFrame: state.previousPostGraphRemainderEvidenceFrame
             ))
             let graphInputRemainderTimbreEvidence = UpperTimbreEvidence.attributing(
@@ -671,8 +726,14 @@ package enum AutonomousPhraseRenderer {
                     left: left, right: right
                 )
             }
-            let outputLeft = zip(foundation.leftSamples, generated.0).map { outputSafety($0 + $1) }
-            let outputRight = zip(foundation.rightSamples, generated.1).map { outputSafety($0 + $1) }
+            let outputLeft = zip(
+                protectedRhythm.leftSamples,
+                generated.0
+            ).map { outputSafety($0 + $1) }
+            let outputRight = zip(
+                protectedRhythm.rightSamples,
+                generated.1
+            ).map { outputSafety($0 + $1) }
             let pulseEchoAmount = resolved.ensemble.events
                 .filter { $0.voice == .motif || $0.voice == .response }
                 .map { synthPerformance.articulation(at: $0.step).pulseEchoSend }
@@ -699,8 +760,11 @@ package enum AutonomousPhraseRenderer {
                 stemObservations: rendered.stemObservations,
                 automaticMix: rendered.automaticMix,
                 stemReconstruction: rendered.stemReconstruction,
-                protectedFoundationSampleHash: exactSampleHash(
-                    foundation.leftSamples, foundation.rightSamples
+                protectedFoundationSampleHash: protectedRhythm.dryFoundationSampleHash,
+                percussionSampleHash: protectedRhythm.dryPercussionSampleHash,
+                protectedRhythmSampleHash: ExactPCMFingerprint.stereo(
+                    left: protectedRhythm.leftSamples,
+                    right: protectedRhythm.rightSamples
                 ),
                 upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,
                 graphInputRemainderTimbreEvidence: graphInputRemainderTimbreEvidence,
@@ -717,27 +781,6 @@ package enum AutonomousPhraseRenderer {
 
     private static func outputSafety(_ input: Float) -> Float {
         Float(tanh(Double(input) * 1.04) / tanh(1.04) * 0.90)
-    }
-
-    /// Stable FNV-1a over the exact IEEE-754 sample bits. Channel lengths and a
-    /// separator participate in the fingerprint so differently shaped buffers
-    /// cannot alias merely by sharing a byte prefix.
-    private static func exactSampleHash(_ left: [Float], _ right: [Float]) -> String {
-        var hash: UInt64 = 0xcbf29ce484222325
-        func mix(_ value: UInt32) {
-            var bits = value
-            for _ in 0..<4 {
-                hash ^= UInt64(bits & 0xff)
-                hash &*= 0x100000001b3
-                bits >>= 8
-            }
-        }
-        mix(UInt32(truncatingIfNeeded: left.count))
-        for sample in left { mix(sample.bitPattern) }
-        mix(0x9e37_79b9)
-        mix(UInt32(truncatingIfNeeded: right.count))
-        for sample in right { mix(sample.bitPattern) }
-        return String(format: "%016llx", hash)
     }
 
     private static func modulation(performance: PerformanceBar, scene: TechnoScene,

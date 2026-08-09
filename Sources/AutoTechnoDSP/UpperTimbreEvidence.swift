@@ -32,7 +32,7 @@ package struct UpperTimbreAnalysisInput: Equatable, Sendable {
     package let unaccentedOnsetFrames: [Int]
     package let slideWindows: [UpperTimbreSlideWindow]
     package let detectedAttackFrames: [Int]
-    package let protectedMono: [Float]
+    package let protectedReferenceMono: [Float]
     package let precedingFrame: UpperTimbreStereoFrame?
     package let followingFrame: UpperTimbreStereoFrame?
 
@@ -44,7 +44,7 @@ package struct UpperTimbreAnalysisInput: Equatable, Sendable {
         unaccentedOnsetFrames: [Int] = [],
         slideWindows: [UpperTimbreSlideWindow] = [],
         detectedAttackFrames: [Int] = [],
-        protectedMono: [Float] = [],
+        protectedReferenceMono: [Float] = [],
         precedingFrame: UpperTimbreStereoFrame? = nil,
         followingFrame: UpperTimbreStereoFrame? = nil
     ) {
@@ -55,7 +55,7 @@ package struct UpperTimbreAnalysisInput: Equatable, Sendable {
         self.unaccentedOnsetFrames = unaccentedOnsetFrames
         self.slideWindows = slideWindows
         self.detectedAttackFrames = detectedAttackFrames
-        self.protectedMono = protectedMono
+        self.protectedReferenceMono = protectedReferenceMono
         self.precedingFrame = precedingFrame
         self.followingFrame = followingFrame
     }
@@ -172,7 +172,9 @@ package struct UpperTimbreEvidence: Codable, Equatable, Sendable {
 }
 
 package enum UpperTimbreEvidenceAnalyzer {
-    package static let schemaVersion = 1
+    /// Version 2 identifies the protected reference as the exact rhythm route
+    /// rather than the earlier foundation-only rerender.
+    package static let schemaVersion = 2
     /// Covers one canonical 130 BPM bar through 192 kHz without truncation.
     /// Inputs beyond this detached-preparation bound are marked incomplete.
     package static let maximumFrames = 524_288
@@ -193,9 +195,9 @@ package enum UpperTimbreEvidenceAnalyzer {
             input.unaccentedOnsetFrames.count <= maximumMetadataItems &&
             input.detectedAttackFrames.count <= maximumMetadataItems &&
             input.slideWindows.count <= maximumSlideWindows
-        let protectedComplete = input.protectedMono.isEmpty ||
-            (input.protectedMono.count == stereoCount &&
-                input.protectedMono.count <= maximumFrames)
+        let protectedComplete = input.protectedReferenceMono.isEmpty ||
+            (input.protectedReferenceMono.count == stereoCount &&
+                input.protectedReferenceMono.count <= maximumFrames)
         var finite = rateIsValid && input.left.count == input.right.count &&
             stereoCount <= maximumFrames && metadataComplete && protectedComplete
         var left = [Double]()
@@ -211,8 +213,8 @@ package enum UpperTimbreEvidenceAnalyzer {
         }
 
         var protected = [Double]()
-        protected.reserveCapacity(min(maximumFrames, input.protectedMono.count))
-        for sample in input.protectedMono.prefix(maximumFrames) {
+        protected.reserveCapacity(min(maximumFrames, input.protectedReferenceMono.count))
+        for sample in input.protectedReferenceMono.prefix(maximumFrames) {
             let value = Double(sample)
             finite = finite && value.isFinite
             protected.append(value.isFinite ? value : 0)

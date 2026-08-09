@@ -6,3 +6,6 @@ DerivedData/
 
 # Locally generated listening artifacts; keep source reports/manifests tracked.
 docs/reference/*.wav
+
+# Local-only sanitized video evidence and low-confidence decisions.
+docs/reference/video-evidence/

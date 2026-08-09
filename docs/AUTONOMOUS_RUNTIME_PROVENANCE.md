@@ -29,20 +29,27 @@ mistaken for a completed feedback system.
    pulse-echo send without changing onset positions. The voice renderer applies
    the resolved protagonist contour and may place one eligible existing event on
    a filtered send into the existing reverb; neither operation creates another
-   onset or topology. The renderer also renders full and protected-foundation
-   layers and mirrors the exact dry samples into private kick, foundation,
+   onset or topology. The renderer also renders full and protected-rhythm
+   layers and mirrors exact dry samples into private kick, foundation,
    percussion, upper-tonal, and atmosphere stems. A bounded preparation-time
    fader resolves only the kick/foundation hierarchy from those stems. This is
    the current adaptive controller; it is not a complete output-evaluation loop.
+   Percussion is rendered once per layer, and the exact dry percussion tap feeds
+   audible center output, the drum reverb send, and role evidence.
 6. The unchanged pre-fader kick remains the ducking detector. The generated
-   graph receives the exact `full - protected-foundation` remainder. That
-   remainder contains the upper roles plus percussion and shared nonlinear-mix
-   residual; it is therefore named and reported as a graph-input remainder, not
-   an upper-only stem. Dedicated dry anchor and shadow/response taps provide the
-   new articulation evidence before this shared path. The fixed output-safety
-   stage then recombines the performance. Existing masking inputs remain a
-   separately documented pre-existing attribution limitation and are not used
-   to claim role-local timbre causality.
+   graph receives the exact `full - protected-rhythm` remainder, and its output
+   is recombined with the protected stereo rhythm route. The protected route
+   contains kick, foundation, exact percussion, and inherited shared
+   continuation, while excluding newly scheduled upper voices. The remainder
+   may still contain upper roles plus shared continuation and nonlinear-mix
+   interaction, so it remains named graph-input remainder rather than an
+   upper-only stem. Dedicated dry anchor and shadow/response taps retain
+   role-local articulation attribution. Masking evidence now compares exact
+   post-fader foundation, dry percussion, and combined dry-upper taps over all
+   sixteen bar windows. It is descriptive only: uncalibrated masking evidence
+   applies no cut, while the existing authored envelope, kick-linked guard,
+   ducking, glue, and output-safety stages remain active. Upper-timbre evidence
+   schema 2 records protected rhythm as its masking reference.
 7. `TechnoEngine` prepares away from the callback and schedules completed buffers
    by sample time. It derives its read-only waveform on a fixed decibel scale and
    owns transport, visual position, and route recovery, not musical composition.

@@ -11,8 +11,9 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - reproducible session planning with temporal memory and bounded fallback;
 - resolved bars authoritative for audio and telemetry;
 - engine-owned synthesis and effects with protected low-end routing;
-- exact private role evidence, bounded preparation-time mix correction, and
-  automatic masking;
+- exact private role evidence, bounded preparation-time kick/foundation mix
+  correction, descriptive role-aware masking evidence, and authored masking
+  guards;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
