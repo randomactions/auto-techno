@@ -2,9 +2,15 @@ import Foundation
 
 package struct AudioQualityReport: Equatable, Sendable {
     package static let lowStereoCorrelationCutoffHz = 140.0
+    package static let loudnessStandard = BS1770LoudnessMeasurement.standard
+    package static let truePeakStandard = BS1770AudioEvidence.truePeakStandard
+    package let analyzedFrameCount: Int
     package let peak: Float
     package let truePeakEstimate: Float
+    package let truePeakDBTP: Float
     package let rms: Float
+    /// Compatibility projection. Its value is now the BS.1770-5 integrated
+    /// programme loudness, not an RMS-derived approximation.
     package let loudnessEstimate: Float
     package let dcOffset: Float
     package let stereoCorrelation: Float
@@ -50,8 +56,10 @@ package struct AudioQualityReport: Equatable, Sendable {
         let computedFinite = leftFinite && rightFinite
         let count = min(left.count, right.count)
         guard count > 0 else {
+            analyzedFrameCount = 0
             peak = 0
             truePeakEstimate = 0
+            truePeakDBTP = -120
             rms = 0
             loudnessEstimate = -120
             dcOffset = 0
@@ -63,6 +71,7 @@ package struct AudioQualityReport: Equatable, Sendable {
             musical = MusicalQualityMetrics(left: [], right: [], sampleRate: sampleRate)
             return
         }
+        analyzedFrameCount = count
 
         var computedPeak: Float = 0
         var energy = 0.0
@@ -84,16 +93,19 @@ package struct AudioQualityReport: Equatable, Sendable {
             rightEnergy += rightSquare
         }
         peak = computedPeak
-        guard let leftTruePeak = Self.cubicPeak(
+        guard let leftTruePeak = BS1770AudioEvidence.truePeak(
             left,
             cancellationRequested: cancellationRequested
-        ), let rightTruePeak = Self.cubicPeak(
+        ), let rightTruePeak = BS1770AudioEvidence.truePeak(
             right,
             cancellationRequested: cancellationRequested
         ) else { return nil }
-        truePeakEstimate = max(leftTruePeak, rightTruePeak)
+        let computedTruePeak = max(leftTruePeak, rightTruePeak)
+        truePeakEstimate = Float(computedTruePeak)
+        truePeakDBTP = Float(
+            BS1770AudioEvidence.decibelsTruePeak(amplitude: computedTruePeak)
+        )
         rms = Float(sqrt(energy / Double(count * 2)))
-        loudnessEstimate = Float(-0.691 + 20 * log10(max(Double(rms), 0.000000001)))
         dcOffset = Float(sum / Double(count * 2))
         stereoCorrelation = Float(
             cross / sqrt(max(0.0000001, leftEnergy * rightEnergy))
@@ -131,6 +143,7 @@ package struct AudioQualityReport: Equatable, Sendable {
         ) else { return nil }
         sampleHash = computedHash
         musical = computedMusical
+        loudnessEstimate = Float(computedMusical.integratedLoudness)
     }
 
     package static func lowPassCoefficient(sampleRate: Double) -> Double {
@@ -159,30 +172,6 @@ package struct AudioQualityReport: Equatable, Sendable {
             result = max(result, leftDelta, rightDelta)
         }
         return result
-    }
-
-    private static func cubicPeak(
-        _ samples: [Float],
-        cancellationRequested: @escaping @Sendable () -> Bool
-    ) -> Float? {
-        guard samples.count > 1 else { return abs(samples.first ?? 0) }
-        var result: Float = 0
-        for index in 0..<(samples.count - 1) {
-            if index.isMultiple(of: 16_384), cancellationRequested() { return nil }
-            result = max(result, abs(samples[index]))
-            let p0 = Double(samples[max(0, index - 1)])
-            let p1 = Double(samples[index])
-            let p2 = Double(samples[index + 1])
-            let p3 = Double(samples[min(samples.count - 1, index + 2)])
-            for subdivision in 1..<4 {
-                let t = Double(subdivision) / 4
-                let value = 0.5 * ((2 * p1) + (-p0 + p2) * t +
-                    (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t +
-                    (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t)
-                result = max(result, abs(Float(value)))
-            }
-        }
-        return max(result, abs(samples.last ?? 0))
     }
 
     private static func samplesAreFinite(

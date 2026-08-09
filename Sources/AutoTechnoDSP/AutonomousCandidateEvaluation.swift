@@ -212,13 +212,27 @@ package struct AutonomousBarFullMixEvidence: Codable, Equatable, Sendable {
 }
 
 package struct AutonomousFullMixEvidence: Codable, Equatable, Sendable {
+    package let loudnessStandard: String
+    package let truePeakStandard: String
     package let sourceBarCount: Int
     package let sourceEvidenceBarCount: Int
+    package let analyzedFrameCount: Int
     package let sampleHash: String
     package let peak: Double
     package let truePeakEstimate: Double
+    package let truePeakDBTP: Double
     package let rms: Double
+    /// Compatibility wire field. It is identical to `integratedLoudness` in
+    /// Professional Evidence v2 and no longer represents an RMS estimate.
     package let loudnessEstimate: Double
+    package let integratedLoudness: Double
+    package let maximumMomentaryLoudness: Double
+    package let maximumShortTermLoudness: Double
+    package let loudnessRange: Double
+    package let momentaryBlockCount: Int
+    package let absoluteGatedBlockCount: Int
+    package let relativeGatedBlockCount: Int
+    package let shortTermBlockCount: Int
     package let dcOffset: Double
     package let stereoCorrelation: Double
     package let lowStereoCorrelation: Double
@@ -228,11 +242,19 @@ package struct AutonomousFullMixEvidence: Codable, Equatable, Sendable {
 
     package init(
         sourceBarCount: Int,
+        analyzedFrameCount: Int,
         sampleHash: String,
         peak: Double,
         truePeakEstimate: Double,
         rms: Double,
         loudnessEstimate: Double,
+        maximumMomentaryLoudness: Double,
+        maximumShortTermLoudness: Double,
+        loudnessRange: Double,
+        momentaryBlockCount: Int,
+        absoluteGatedBlockCount: Int,
+        relativeGatedBlockCount: Int,
+        shortTermBlockCount: Int,
         dcOffset: Double,
         stereoCorrelation: Double,
         lowStereoCorrelation: Double,
@@ -240,12 +262,26 @@ package struct AutonomousFullMixEvidence: Codable, Equatable, Sendable {
         movementScore: Double,
         bars: [AutonomousBarFullMixEvidence]
     ) {
+        loudnessStandard = BS1770LoudnessMeasurement.standard
+        truePeakStandard = BS1770AudioEvidence.truePeakStandard
         self.sourceBarCount = sourceBarCount
+        self.analyzedFrameCount = analyzedFrameCount
         self.sampleHash = sampleHash
         self.peak = peak
         self.truePeakEstimate = truePeakEstimate
+        truePeakDBTP = BS1770AudioEvidence.decibelsTruePeak(
+            amplitude: truePeakEstimate
+        )
         self.rms = rms
         self.loudnessEstimate = loudnessEstimate
+        integratedLoudness = loudnessEstimate
+        self.maximumMomentaryLoudness = maximumMomentaryLoudness
+        self.maximumShortTermLoudness = maximumShortTermLoudness
+        self.loudnessRange = loudnessRange
+        self.momentaryBlockCount = momentaryBlockCount
+        self.absoluteGatedBlockCount = absoluteGatedBlockCount
+        self.relativeGatedBlockCount = relativeGatedBlockCount
+        self.shortTermBlockCount = shortTermBlockCount
         self.dcOffset = dcOffset
         self.stereoCorrelation = stereoCorrelation
         self.lowStereoCorrelation = lowStereoCorrelation
@@ -259,7 +295,9 @@ package struct AutonomousFullMixEvidence: Codable, Equatable, Sendable {
 
     package var isFinite: Bool {
         [
-            peak, truePeakEstimate, rms, loudnessEstimate, dcOffset,
+            peak, truePeakEstimate, truePeakDBTP, rms, loudnessEstimate,
+            integratedLoudness, maximumMomentaryLoudness,
+            maximumShortTermLoudness, loudnessRange, dcOffset,
             stereoCorrelation, lowStereoCorrelation, maximumBoundaryDelta,
             movementScore,
         ].allSatisfy(\.isFinite) && bars.allSatisfy(\.isFinite)
@@ -281,19 +319,32 @@ package struct AutonomousFullMixEvidence: Codable, Equatable, Sendable {
                 (crestValues.min() ?? 0)) / 3) * 0.20
         let movementIsCanonical = !movementScore.isFinite ||
             abs(movementScore - derivedMovementScore) <= 1e-12
-        return !sampleHash.isEmpty &&
+        let expectedTruePeakDBTP = BS1770AudioEvidence.decibelsTruePeak(
+            amplitude: truePeakEstimate
+        )
+        return loudnessStandard == BS1770LoudnessMeasurement.standard &&
+            truePeakStandard == BS1770AudioEvidence.truePeakStandard &&
+            !sampleHash.isEmpty && analyzedFrameCount >= sourceBarCount &&
             (1...AutonomousCandidateEvaluationVector.maximumBarCount).contains(sourceBarCount) &&
             sourceEvidenceBarCount == bars.count && bars.count == sourceBarCount &&
             Set(bars.map(\.bar)).count == bars.count &&
+            momentaryBlockCount >= 0 && absoluteGatedBlockCount >= 0 &&
+            relativeGatedBlockCount >= 0 && shortTermBlockCount >= 0 &&
+            absoluteGatedBlockCount <= momentaryBlockCount &&
+            relativeGatedBlockCount <= absoluteGatedBlockCount &&
+            abs(loudnessEstimate - integratedLoudness) <= 1e-9 &&
+            abs(truePeakDBTP - expectedTruePeakDBTP) <= 1e-9 &&
             movementIsCanonical
     }
 
     package var signalSafetyValid: Bool {
-        let expectedLoudness = -0.691 + 20 * log10(max(rms, 0.000_000_001))
         return isFinite && !bars.isEmpty && bars.allSatisfy(\.finite) &&
             peak >= 0 && peak <= 0.95 && truePeakEstimate >= peak &&
             truePeakEstimate <= 0.95 && rms >= 0 && rms <= peak &&
-            abs(loudnessEstimate - expectedLoudness) <= 1e-4 &&
+            (-120...24).contains(integratedLoudness) &&
+            (-120...24).contains(maximumMomentaryLoudness) &&
+            (-120...24).contains(maximumShortTermLoudness) &&
+            (0...120).contains(loudnessRange) &&
             abs(dcOffset) <= rms + 1e-6 &&
             (-1...1).contains(stereoCorrelation) &&
             (-1...1).contains(lowStereoCorrelation) &&
@@ -827,7 +878,7 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 2
+    package static let schemaVersion = 3
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -985,11 +1036,25 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         )
         let fullMix = AutonomousFullMixEvidence(
             sourceBarCount: audioPreflight.bars.count,
+            analyzedFrameCount: audioPreflight.quality.analyzedFrameCount,
             sampleHash: audioPreflight.quality.sampleHash,
             peak: Double(audioPreflight.quality.peak),
             truePeakEstimate: Double(audioPreflight.quality.truePeakEstimate),
             rms: Double(audioPreflight.quality.rms),
             loudnessEstimate: Double(audioPreflight.quality.loudnessEstimate),
+            maximumMomentaryLoudness:
+                audioPreflight.quality.musical.maximumMomentaryLoudness,
+            maximumShortTermLoudness:
+                audioPreflight.quality.musical.maximumShortTermLoudness,
+            loudnessRange: audioPreflight.quality.musical.loudnessRange,
+            momentaryBlockCount:
+                audioPreflight.quality.musical.momentaryBlockCount,
+            absoluteGatedBlockCount:
+                audioPreflight.quality.musical.absoluteGatedBlockCount,
+            relativeGatedBlockCount:
+                audioPreflight.quality.musical.relativeGatedBlockCount,
+            shortTermBlockCount:
+                audioPreflight.quality.musical.shortTermBlockCount,
             dcOffset: Double(audioPreflight.quality.dcOffset),
             stereoCorrelation: Double(audioPreflight.quality.stereoCorrelation),
             lowStereoCorrelation: Double(audioPreflight.quality.lowStereoCorrelation),
@@ -1185,6 +1250,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 windowCount: fullMix.sourceBarCount
               ),
               preGraphUpperTimbreEvidence.analyzedFrameCount ==
+                postGraphUpperTimbreEvidence.analyzedFrameCount,
+              fullMix.analyzedFrameCount ==
                 postGraphUpperTimbreEvidence.analyzedFrameCount,
               preGraphUpperTimbreEvidence.sampleRate == routeContinuation.sampleRate,
               postGraphUpperTimbreEvidence.sampleRate == routeContinuation.sampleRate else {

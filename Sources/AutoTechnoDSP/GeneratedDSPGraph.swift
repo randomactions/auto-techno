@@ -614,20 +614,36 @@ package struct PhraseAudioPreflight: Equatable, Sendable {
         var barEvidence: [PhraseBarAudioEvidence] = []
         barEvidence.reserveCapacity(blocks.count)
         for block in blocks {
-            guard !cancellationRequested(), let barReport = AudioQualityReport(
-                blocks: [block],
+            guard !cancellationRequested(), let barMetrics = MusicalQualityMetrics(
+                left: block.left,
+                right: block.right,
                 sampleRate: sampleRate,
                 cancellationRequested: cancellationRequested
             ) else { return nil }
+            let count = min(block.left.count, block.right.count)
+            var peak = 0.0
+            var energy = 0.0
+            var finite = count > 0 && block.left.count == block.right.count
+            for index in 0..<count {
+                if index.isMultiple(of: 16_384), cancellationRequested() {
+                    return nil
+                }
+                let left = Double(block.left[index])
+                let right = Double(block.right[index])
+                finite = finite && left.isFinite && right.isFinite
+                peak = max(peak, abs(left), abs(right))
+                energy += left * left + right * right
+            }
+            let rms = sqrt(energy / Double(max(1, count * 2)))
             barEvidence.append(PhraseBarAudioEvidence(
                 bar: block.bar,
-                loudness: Double(barReport.loudnessEstimate),
-                spectralCentroid: barReport.musical.spectralCentroid,
-                transientDensity: barReport.musical.transientDensity,
-                crestFactor: barReport.rms > 0
-                    ? Double(barReport.peak / barReport.rms)
-                    : 0,
-                finite: barReport.finite
+                loudness: barMetrics.integratedLoudness,
+                spectralCentroid: barMetrics.spectralCentroid,
+                transientDensity: barMetrics.transientDensity,
+                crestFactor: rms > 0 ? peak / rms : 0,
+                finite: finite && barMetrics.integratedLoudness.isFinite &&
+                    barMetrics.spectralCentroid.isFinite &&
+                    barMetrics.transientDensity.isFinite
             ))
         }
         let loudnessValues = barEvidence.map { $0.loudness }

@@ -118,4 +118,10 @@ struct CanonicalJourneyQualificationHarness {
             correctionRenderCount: prepared.correctionRenderCount
         )
     }
+
+    func reportBank(
+        reports: [CanonicalJourneyQualificationReport]
+    ) throws -> ProfessionalEvidenceReportBank {
+        try ProfessionalEvidenceReportBank(reports: reports)
+    }
 }

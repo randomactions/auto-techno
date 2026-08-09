@@ -19,7 +19,7 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 4. Each
+   candidate-evaluation transaction under quality-contract schema 5. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, event-local groove-pulse, graph,
    and pre/post upper-timbre evidence. Groove-pulse records bind the existing
@@ -44,6 +44,15 @@ mistaken for a completed feedback system.
    and evidence boundaries; route changes cancel detached preparation and
    prevent stale route work from committing.
    This transaction does not feed observations into future composition.
+   Offline phrase preflight now measures native stereo with ITU-R BS.1770-5
+   K-weighting and two-stage 400 ms gating, and measures true peak with the
+   published Annex 2 four-phase FIR. The candidate vector retains analyzed
+   frame and gating-block counts, integrated/momentary/short-term loudness,
+   loudness spread, and dBTP evidence. A deterministic Professional Evidence v2
+   bank requires every named journey checkpoint for every included sample rate,
+   plus complete exact-role masking and stem evidence. Its policy status is
+   unconditionally unavailable pending a calibrated profile and adversarial
+   suite; it cannot promote or correct audio.
 5. `AutonomousPhraseRenderer` constructs the required synth world and synth
    performance. The synth planner resolves the three-step driver, five-stage
    follower, chapter articulation, tone-chapter spectral aperture, and eligible
@@ -79,7 +88,7 @@ mistaken for a completed feedback system.
    sixteen bar windows. It is descriptive only: uncalibrated masking evidence
    applies no cut, while the existing authored envelope, kick-linked guard,
    ducking, glue, and output-safety stages remain active. Upper-timbre evidence
-   schema 3 (quality-report contract schema 4) retains protected rhythm as its
+   schema 3 (quality-report contract schema 5) retains protected rhythm as its
    masking reference and adds bounded onset-local anchor-velocity observations
    from the exact dry anchor tap.
    Score-owned anchor velocity now projects into the authored filter-envelope

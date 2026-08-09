@@ -42,8 +42,8 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 2)
-        #expect(QualityQualificationContract.schemaVersion == 4)
+        #expect(vector.schemaVersion == 3)
+        #expect(QualityQualificationContract.schemaVersion == 5)
         #expect(QualityQualificationContract.engineVersion ==
                 "autotechno-canonical-engine.v3")
         #expect(vector.isComplete)
@@ -260,11 +260,19 @@ struct AutonomousCandidateEvaluationTests {
         )
         let oversizedFullMix = AutonomousFullMixEvidence(
             sourceBarCount: 1,
+            analyzedFrameCount: 1,
             sampleHash: "oversized-bars",
             peak: 0.5,
             truePeakEstimate: 0.55,
             rms: 0.2,
             loudnessEstimate: -0.691 + 20 * log10(0.2),
+            maximumMomentaryLoudness: -0.691 + 20 * log10(0.2),
+            maximumShortTermLoudness: -0.691 + 20 * log10(0.2),
+            loudnessRange: 0,
+            momentaryBlockCount: 1,
+            absoluteGatedBlockCount: 1,
+            relativeGatedBlockCount: 1,
+            shortTermBlockCount: 0,
             dcOffset: 0,
             stereoCorrelation: 1,
             lowStereoCorrelation: 1,
@@ -351,6 +359,50 @@ struct AutonomousCandidateEvaluationTests {
         )
         #expect(!forgedRoute.isComplete)
 
+        var forgedStandardObject = try #require(JSONSerialization.jsonObject(
+            with: sourceVector.deterministicJSON()
+        ) as? [String: Any])
+        var forgedStandardFullMix = try #require(
+            forgedStandardObject["fullMix"] as? [String: Any]
+        )
+        forgedStandardFullMix["loudnessStandard"] = "rms-estimate"
+        forgedStandardObject["fullMix"] = forgedStandardFullMix
+        let forgedStandard = try decoder.decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedStandardObject)
+        )
+        #expect(!forgedStandard.isComplete)
+
+        forgedStandardFullMix["loudnessStandard"] =
+            BS1770LoudnessMeasurement.standard
+        forgedStandardFullMix["analyzedFrameCount"] = 63
+        forgedStandardObject["fullMix"] = forgedStandardFullMix
+        let forgedFrameCoverage = try decoder.decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedStandardObject)
+        )
+        #expect(!forgedFrameCoverage.isComplete)
+
+        var forgedAttributionObject = try #require(JSONSerialization.jsonObject(
+            with: sourceVector.deterministicJSON()
+        ) as? [String: Any])
+        var forgedMaskingBars = try #require(
+            forgedAttributionObject["masking"] as? [[String: Any]]
+        )
+        var forgedMaskingBar = forgedMaskingBars[0]
+        var forgedObservations = try #require(
+            forgedMaskingBar["observations"] as? [[String: Any]]
+        )
+        forgedObservations[0]["firstRole"] = MaskingRole.upper.rawValue
+        forgedMaskingBar["observations"] = forgedObservations
+        forgedMaskingBars[0] = forgedMaskingBar
+        forgedAttributionObject["masking"] = forgedMaskingBars
+        let forgedAttribution = try decoder.decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedAttributionObject)
+        )
+        #expect(!forgedAttribution.isComplete)
+
         var unsafeObject = try #require(JSONSerialization.jsonObject(
             with: sourceVector.deterministicJSON()
         ) as? [String: Any])
@@ -363,7 +415,7 @@ struct AutonomousCandidateEvaluationTests {
             AutonomousCandidateEvaluationVector.self,
             from: JSONSerialization.data(withJSONObject: unsafeObject)
         )
-        #expect(forgedSafety.isComplete)
+        #expect(!forgedSafety.isComplete)
         #expect(!forgedSafety.hardGatesPassed)
 
         var forgedGateObject = try #require(JSONSerialization.jsonObject(
@@ -976,7 +1028,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "47703fe889b3304b")
+                "e176e5a043fe0a6f")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -1062,11 +1114,19 @@ struct AutonomousCandidateEvaluationTests {
         )
         let fullMix = AutonomousFullMixEvidence(
             sourceBarCount: 1,
+            analyzedFrameCount: upper.analyzedFrameCount,
             sampleHash: "sample-\(slot.rawValue)",
             peak: 0.5,
             truePeakEstimate: 0.55,
             rms: 0.2,
             loudnessEstimate: -0.691 + 20 * log10(0.2),
+            maximumMomentaryLoudness: -0.691 + 20 * log10(0.2),
+            maximumShortTermLoudness: -0.691 + 20 * log10(0.2),
+            loudnessRange: 0,
+            momentaryBlockCount: 1,
+            absoluteGatedBlockCount: 1,
+            relativeGatedBlockCount: 1,
+            shortTermBlockCount: 0,
             dcOffset: 0,
             stereoCorrelation: 1,
             lowStereoCorrelation: 1,

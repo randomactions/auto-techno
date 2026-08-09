@@ -1294,6 +1294,26 @@ struct UpperTimbreIntegrationTests {
         let rate44 = prepare(sampleRate: 44_100)
         let rate48 = prepare(sampleRate: 48_000)
 
+        let full44 = rate44.selectedCandidateEvidence.fullMix
+        let full48 = rate48.selectedCandidateEvidence.fullMix
+        #expect(full44.loudnessStandard == BS1770LoudnessMeasurement.standard)
+        #expect(full48.loudnessStandard == BS1770LoudnessMeasurement.standard)
+        #expect(full44.truePeakStandard == BS1770AudioEvidence.truePeakStandard)
+        #expect(full48.truePeakStandard == BS1770AudioEvidence.truePeakStandard)
+        #expect(full44.analyzedFrameCount ==
+                rate44.blocks.reduce(0) { $0 + min($1.left.count, $1.right.count) })
+        #expect(full48.analyzedFrameCount ==
+                rate48.blocks.reduce(0) { $0 + min($1.left.count, $1.right.count) })
+        #expect(full44.momentaryBlockCount == full48.momentaryBlockCount)
+        #expect(full44.shortTermBlockCount == full48.shortTermBlockCount)
+        #expect(abs(full44.integratedLoudness - full48.integratedLoudness) < 0.5)
+        #expect(abs(full44.truePeakDBTP - full48.truePeakDBTP) < 0.5)
+        #expect(full44.bars.count == full48.bars.count)
+        for (bar44, bar48) in zip(full44.bars, full48.bars) {
+            #expect(bar44.bar == bar48.bar)
+            #expect(abs(bar44.loudness - bar48.loudness) < 0.5)
+        }
+
         #expect(rate44.plan == rate48.plan)
         #expect(rate44.candidateEvaluation.engineVersion ==
                 rate48.candidateEvaluation.engineVersion)

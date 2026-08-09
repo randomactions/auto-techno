@@ -477,6 +477,97 @@ struct QualityQualificationFoundationTests {
         }
     }
 
+    @Test("Professional Evidence v2 bank requires every journey checkpoint and unavailable policy")
+    func professionalEvidenceReportBank() throws {
+        var reports: [CanonicalJourneyQualificationReport] = []
+        for sampleRate in [44_100.0, 48_000.0] {
+            let evidence = UpperTimbreEvidenceAnalyzer.analyze(
+                UpperTimbreAnalysisInput(
+                    left: [Float](repeating: 0, count: 64),
+                    right: [Float](repeating: 0, count: 64),
+                    sampleRate: sampleRate
+                )
+            )
+            for checkpoint in CanonicalJourneyCheckpoint.allCases {
+                let fixture = reportFixture(
+                    evidence: evidence,
+                    sampleHash: "bank-\(Int(sampleRate))-\(checkpoint.rawValue)",
+                    checkpoint: checkpoint
+                )
+                reports.append(try qualificationReport(
+                    fixture: fixture,
+                    checkpoint: checkpoint
+                ))
+            }
+        }
+
+        let bank = try ProfessionalEvidenceReportBank(reports: Array(reports.reversed()))
+        #expect(bank.schemaVersion == 2)
+        #expect(bank.evidenceVersion ==
+                ProfessionalEvidenceReportBank.evidenceVersion)
+        #expect(bank.sourceReportCount ==
+                CanonicalJourneyCheckpoint.allCases.count * 2)
+        #expect(bank.sampleRates == [44_100, 48_000])
+        for sampleRate in bank.sampleRates {
+            #expect(bank.reports.filter { $0.sampleRate == sampleRate }
+                .map(\.checkpoint) == CanonicalJourneyCheckpoint.allCases)
+        }
+        #expect(bank.policyAvailability ==
+                .unavailablePendingCalibratedProfileAndAdversarialSuite)
+        #expect(bank.calibrationProfileFingerprint == nil)
+        #expect(bank.adversarialSuiteFingerprint == nil)
+        #expect(!bank.policyActivationReady)
+        #expect(try bank.deterministicJSON() == bank.deterministicJSON())
+        #expect(try ProfessionalEvidenceReportBank(reports: reports) == bank)
+
+        #expect(throws: ProfessionalEvidenceReportBankError
+            .incompleteJourneyCoverage) {
+            try ProfessionalEvidenceReportBank(reports: Array(reports.dropLast()))
+        }
+        #expect(throws: ProfessionalEvidenceReportBankError.duplicateReport) {
+            try ProfessionalEvidenceReportBank(reports: reports + [reports[0]])
+        }
+
+        let evidence = UpperTimbreEvidenceAnalyzer.analyze(
+            UpperTimbreAnalysisInput(
+                left: [Float](repeating: 0, count: 64),
+                right: [Float](repeating: 0, count: 64),
+                sampleRate: 48_000
+            )
+        )
+        var calibratedReports: [CanonicalJourneyQualificationReport] = []
+        for checkpoint in CanonicalJourneyCheckpoint.allCases {
+            let fixture = reportFixture(
+                evidence: evidence,
+                sampleHash: "calibrated-bank-\(checkpoint.rawValue)",
+                policyVersion: "test-calibrated-policy.v1",
+                checkpoint: checkpoint
+            )
+            let decision = QualityDecision.qualificationUnavailable(
+                policyVersion: "test-calibrated-policy.v1",
+                candidateFingerprint: fixture.vector.fullMix.sampleHash,
+                evidenceFingerprint: fixture.transaction.fingerprint
+            )
+            let outgoing = QualityContinuationState().recording(
+                decision: decision,
+                evidenceFingerprint: fixture.transaction.fingerprint,
+                controllerStateFingerprint:
+                    fixture.vector.routeContinuation.controllerStateFingerprint
+            )
+            calibratedReports.append(try qualificationReport(
+                fixture: fixture,
+                checkpoint: checkpoint,
+                policyVersion: "test-calibrated-policy.v1",
+                decision: decision,
+                outgoingState: outgoing
+            ))
+        }
+        #expect(throws: ProfessionalEvidenceReportBankError
+            .policyMustRemainUnavailable) {
+            try ProfessionalEvidenceReportBank(reports: calibratedReports)
+        }
+    }
+
     @Test("Candidate transaction reports serialize and reject contradictory provenance")
     func boundedAndSerializable() throws {
         var left = [Float](
@@ -813,10 +904,22 @@ struct QualityQualificationFoundationTests {
     private func reportFixture(
         evidence: UpperTimbreEvidence,
         sampleHash: String,
-        policyVersion: String = QualityQualificationContract.uncalibratedPolicyVersion
+        policyVersion: String = QualityQualificationContract.uncalibratedPolicyVersion,
+        checkpoint: CanonicalJourneyCheckpoint = .establishment
     ) -> ReportFixture {
-        let planFingerprint = "plan-primary"
+        let planFingerprint = "plan-primary-\(checkpoint.rawValue)"
         let graphFingerprint = "graph-primary"
+        let phraseIndex = checkpoint == .longContinuation ? 16 :
+            (checkpoint == .establishment ? 0 : 1)
+        let phraseKind: AutonomousPhraseKind
+        switch checkpoint {
+        case .contrast: phraseKind = .contrast
+        case .majorBreak: phraseKind = .majorBreak
+        case .release: phraseKind = .energyRelease
+        case .identityReturn: phraseKind = .identityReturn
+        case .establishment, .chapterChange, .longContinuation:
+            phraseKind = .lock
+        }
         let interest = PhraseInterestReport(
             pulseClarity: 0.8,
             intentionalSpace: 0.7,
@@ -830,11 +933,11 @@ struct QualityQualificationFoundationTests {
         )
         let symbolic = AutonomousSymbolicEvidence(
             planFingerprint: planFingerprint,
-            phraseIndex: 0,
+            phraseIndex: phraseIndex,
             startBar: 0,
             declaredBarCount: 1,
             resolvedBarCount: 1,
-            phraseKind: AutonomousPhraseKind.lock.rawValue,
+            phraseKind: phraseKind.rawValue,
             pulseClarity: 0.8,
             intentionalSpace: 0.7,
             responseClosure: 0.6,
@@ -846,7 +949,7 @@ struct QualityQualificationFoundationTests {
             overdueDebtCount: 0,
             interestScore: interest.score,
             interestValid: interest.valid,
-            chapterChanged: false,
+            chapterChanged: checkpoint == .chapterChange,
             alternate: false,
             conservative: false,
             boundsValid: true
@@ -864,11 +967,19 @@ struct QualityQualificationFoundationTests {
         )
         let fullMix = AutonomousFullMixEvidence(
             sourceBarCount: 1,
+            analyzedFrameCount: evidence.analyzedFrameCount,
             sampleHash: sampleHash,
             peak: 0.5,
             truePeakEstimate: 0.55,
             rms: 0.2,
             loudnessEstimate: -0.691 + 20 * log10(0.2),
+            maximumMomentaryLoudness: -0.691 + 20 * log10(0.2),
+            maximumShortTermLoudness: -0.691 + 20 * log10(0.2),
+            loudnessRange: 0,
+            momentaryBlockCount: 1,
+            absoluteGatedBlockCount: 1,
+            relativeGatedBlockCount: 1,
+            shortTermBlockCount: 0,
             dcOffset: 0,
             stereoCorrelation: 1,
             lowStereoCorrelation: evidence.finite ? 1 : 0.9,

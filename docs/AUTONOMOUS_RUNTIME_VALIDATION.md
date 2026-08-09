@@ -55,7 +55,7 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 4 provides the current transaction-level evidence
+Quality-contract schema 5 provides the current transaction-level evidence
 foundation. A complete record contains the bounded symbolic, hard-gate, full-mix,
 per-bar masking, role-stem, automatic-mix, event-local groove-pulse, graph, and
 pre/post upper-timbre vector for every retained attempt. Groove-pulse evidence
@@ -68,15 +68,22 @@ returns to the prior alternating cell in the conservative candidate. The
 transaction binds all candidate-plan fingerprints, the
 engine/policy/evaluator versions, the selected attempt, correction count, route
 generation, incoming continuation, and the pre-decision outgoing render/DSP
-state. Final commit provenance must additionally bind the selected sample hash
+state. Full-mix evidence must identify ITU-R BS.1770-5, retain physical-time
+gating counts and phrase-wide integrated/momentary/short-term values, and derive
+true peak from the Annex 2 polyphase FIR rather than sample or cubic peak. Final
+commit provenance must additionally bind the selected sample hash
 and finalized quality continuation state; rejected attempts may not affect that
 state.
 
 This schema is evidence infrastructure, not a passing professional-quality
 policy. The shipping evaluator is uncalibrated, renders one primary candidate on
 the healthy path, and must continue to report qualification unavailable.
-Calibrated paired ranking remains disabled until streaming phrase analysis and
-measured cancellation, latency, and peak-working-memory bounds exist.
+The Professional Evidence v2 bank must contain every canonical checkpoint for
+every included rate and complete exact-role masking/stem evidence. Policy
+availability remains false until both a calibrated-profile fingerprint and a
+passing adversarial-suite fingerprint exist under a future schema. Calibrated
+paired ranking remains disabled until streaming phrase analysis and measured
+cancellation, latency, and peak-working-memory bounds exist.
 
 ## Determinism and sample-rate consistency
 

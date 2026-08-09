@@ -5,7 +5,12 @@ import Foundation
 package struct MusicalQualityMetrics: Equatable, Sendable {
     package let integratedLoudness: Double
     package let loudnessRange: Double
+    package let maximumMomentaryLoudness: Double
     package let maximumShortTermLoudness: Double
+    package let momentaryBlockCount: Int
+    package let absoluteGatedBlockCount: Int
+    package let relativeGatedBlockCount: Int
+    package let shortTermBlockCount: Int
     package let crestFactor: Double
     package let spectralCentroid: Double
     package let lowEnergy: Double
@@ -35,11 +40,30 @@ package struct MusicalQualityMetrics: Equatable, Sendable {
         let count = min(left.count, right.count)
         guard count > 0, sampleRate > 0 else {
             integratedLoudness = -120; loudnessRange = 0
-            maximumShortTermLoudness = -120; crestFactor = 0
+            maximumMomentaryLoudness = -120
+            maximumShortTermLoudness = -120
+            momentaryBlockCount = 0; absoluteGatedBlockCount = 0
+            relativeGatedBlockCount = 0; shortTermBlockCount = 0
+            crestFactor = 0
             spectralCentroid = 0; lowEnergy = 0; midEnergy = 0
             highEnergy = 0; transientDensity = 0
             return
         }
+
+        guard let loudness = BS1770LoudnessMeasurement(
+            left: left,
+            right: right,
+            sampleRate: sampleRate,
+            cancellationRequested: cancellationRequested
+        ) else { return nil }
+        integratedLoudness = loudness.integratedLoudness
+        maximumMomentaryLoudness = loudness.maximumMomentaryLoudness
+        maximumShortTermLoudness = loudness.maximumShortTermLoudness
+        loudnessRange = loudness.loudnessRange
+        momentaryBlockCount = loudness.momentaryBlockCount
+        absoluteGatedBlockCount = loudness.absoluteGatedBlockCount
+        relativeGatedBlockCount = loudness.relativeGatedBlockCount
+        shortTermBlockCount = loudness.shortTermBlockCount
 
         var mono: [Double] = []
         mono.reserveCapacity(count)
@@ -54,31 +78,6 @@ package struct MusicalQualityMetrics: Equatable, Sendable {
         }
         let meanSquare = squareSum / Double(count)
         crestFactor = peak / max(sqrt(meanSquare), 0.000_000_001)
-
-        guard let momentary = Self.blockLoudness(
-            mono,
-            frames: max(1, Int(sampleRate * 0.4)),
-            hop: max(1, Int(sampleRate * 0.1)),
-            cancellationRequested: cancellationRequested
-        ) else { return nil }
-        let absoluteGated = momentary.filter { $0 > -70 }
-        let ungatedMean = Self.energyMean(absoluteGated)
-        let relativeGate = ungatedMean - 10
-        let gated = absoluteGated.filter { $0 >= relativeGate }
-        let integrated = Self.energyMean(gated)
-        integratedLoudness = integrated
-
-        guard let shortTerm = Self.blockLoudness(
-            mono,
-            frames: max(1, Int(sampleRate * 3)),
-            hop: max(1, Int(sampleRate)),
-            cancellationRequested: cancellationRequested
-        ) else { return nil }
-        maximumShortTermLoudness = shortTerm.max() ?? integrated
-        let sorted = shortTerm.filter { $0 > integrated - 20 }.sorted()
-        loudnessRange = sorted.count > 4
-            ? Self.percentile(sorted, 0.95) - Self.percentile(sorted, 0.10)
-            : 0
 
         var lowPass = 0.0
         var midPass = 0.0
@@ -118,49 +117,4 @@ package struct MusicalQualityMetrics: Equatable, Sendable {
         transientDensity = Double(transients) / (Double(count) / sampleRate)
     }
 
-    private static func blockLoudness(
-        _ samples: [Double],
-        frames: Int,
-        hop: Int,
-        cancellationRequested: @escaping @Sendable () -> Bool
-    ) -> [Double]? {
-        guard samples.count >= frames else {
-            var sum = 0.0
-            for (index, sample) in samples.enumerated() {
-                if index.isMultiple(of: 16_384), cancellationRequested() {
-                    return nil
-                }
-                sum += sample * sample
-            }
-            let energy = sum / Double(max(1, samples.count))
-            return [-0.691 + 10 * log10(max(energy, 0.000_000_000_001))]
-        }
-        var result: [Double] = []
-        var start = 0
-        while start + frames <= samples.count {
-            guard !cancellationRequested() else { return nil }
-            var sum = 0.0
-            for index in start..<(start + frames) {
-                if (index - start).isMultiple(of: 16_384),
-                   cancellationRequested() {
-                    return nil
-                }
-                sum += samples[index] * samples[index]
-            }
-            let energy = sum / Double(frames)
-            result.append(-0.691 + 10 * log10(max(energy, 0.000_000_000_001)))
-            start += hop
-        }
-        return result
-    }
-
-    private static func energyMean(_ loudness: [Double]) -> Double {
-        guard !loudness.isEmpty else { return -120 }
-        let energy = loudness.reduce(0) { $0 + pow(10, ($1 + 0.691) / 10) } / Double(loudness.count)
-        return -0.691 + 10 * log10(max(energy, 0.000_000_000_001))
-    }
-
-    private static func percentile(_ sorted: [Double], _ value: Double) -> Double {
-        sorted[min(sorted.count - 1, max(0, Int((Double(sorted.count - 1) * value).rounded())))]
-    }
 }

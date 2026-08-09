@@ -16,9 +16,11 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   guards;
 - one bounded weak-percussion vocabulary whose existing syncopated-lean onsets
   carry score-owned physical articulation and a 3-3-2 accent/ghost relationship;
-- quality-contract schema 4 with a bounded candidate-evaluation vector and
+- quality-contract schema 5 with a bounded candidate-evaluation vector and
   atomic selected-commit provenance across symbolic, full-mix, masking, stem,
   event-local groove-pulse, graph, and pre/post upper-timbre evidence;
+- phrase-wide ITU-R BS.1770-5 loudness, Annex 2 true peak, physical-time window
+  counts, and a complete-checkpoint Professional Evidence v2 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
@@ -54,15 +56,17 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 4 now binds a versioned transaction across the engine,
+Quality-contract schema 5 now binds a versioned transaction across the engine,
 quality policy, evaluator, candidate plans, route, incoming continuation,
 attempt evidence, selection, and finalized commit provenance. Its bounded
 groove-pulse projection proves that physical articulation reaches exact dry PCM
-without letting the uncalibrated policy rank that evidence. Extend the local
-offline harness to render the same private canonical journeys at representative
-sample rates and calibrate its machine-readable, reason-coded ranges and any
-derived reference profile. Keep WAVs, stems, and reference recordings local and
-untracked.
+without letting the uncalibrated policy rank that evidence. Professional
+Evidence v2 adds standards-based phrase loudness/true peak and a bounded bank
+that requires every canonical checkpoint for each included rate, including
+complete role attribution. Next, populate private representative-rate banks,
+calibrate machine-readable reason-coded ranges and a non-reconstructable profile,
+then pass an adversarial suite before introducing any available policy. Keep
+WAVs, stems, and reference recordings local and untracked.
 
 ### 3. Generalize bounded evaluation and correction
 
