@@ -41,6 +41,12 @@ the canonical director selects them at an explicit musical boundary. They do not
 become alternative runtimes, independent performance models, or user-facing
 switches.
 
+The current internal instrument palette implements that boundary with three
+engine-owned synthesis architectures and ten score-selected home patches. The
+same four bounded semantic automation coordinates move every patch, while the
+existing ensemble score continues to own audible role density. See
+`INSTRUMENT_PALETTE.md` for the human-readable role and effect matrix.
+
 Every new internal parameter must have a demonstrated path through the resolved
 score or renderer into PCM, measurable evidence, and a bounded influence on a
 future decision. Parameters that do not reach that path are removed or connected

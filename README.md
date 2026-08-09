@@ -12,6 +12,8 @@ account.
 - reproducible musical decisions for the same initial and continuation state;
 - one resolved per-bar score shared by planning, audio, and telemetry;
 - phrase-boundary continuation with temporal memory and bounded fallback;
+- three score-selected internal synthesis architectures with bounded patch
+  automation and exact score-to-PCM evidence;
 - engine-owned synthesis, effects, mixing, and output safety;
 - detached preparation followed by sample-time scheduling of immutable buffers;
 - route recovery at the active hardware sample rate;
@@ -68,6 +70,7 @@ revision.
 ## Product documents
 
 - [`docs/PRODUCT.md`](docs/PRODUCT.md) — stable product and interaction contract
+- [`docs/INSTRUMENT_PALETTE.md`](docs/INSTRUMENT_PALETTE.md) — internal synth, patch, role, automation, and effect matrix
 - [`docs/SOUND_QUALITY.md`](docs/SOUND_QUALITY.md) — professional-sound and automated-quality contract
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — ordered engine-evolution outcomes
 - [`docs/AUTONOMOUS_RUNTIME_PROVENANCE.md`](docs/AUTONOMOUS_RUNTIME_PROVENANCE.md) — runtime ownership and feedback flow

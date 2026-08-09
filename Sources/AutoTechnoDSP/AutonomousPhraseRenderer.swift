@@ -131,8 +131,6 @@ package struct StemReconstructionEvidence: Equatable, Sendable {
 /// player receives immutable buffers and never mutates this state.
 package struct RenderState: Equatable, Sendable {
     package var barIndex = 0
-    package var bassPhase = 0.0
-    package var bassFilter = 0.0
     package var delayBuffer: [Float] = []
     package var delayWriteIndex = 0
     package var pulseEchoBuffer: [Float] = []
@@ -151,11 +149,18 @@ package struct RenderState: Equatable, Sendable {
     package var automaticMixState = AutomaticMixState()
     package var reverbBuffer: [Float] = []
     package var reverbWriteIndex = 0
+    var resonantFoundationState = ResonantMonoState()
+    var resonantAnchorState = ResonantMonoState()
+    var resonantShadowState = ResonantMonoState()
+    var resonantResponseState = ResonantMonoState()
     var alienAnchorState = AlienVoiceState()
     var alienShadowState = AlienVoiceState()
     var alienAtmosphereState = AlienVoiceState()
     var alienResponseState = AlienVoiceState()
     var alienTransitionState = AlienVoiceState()
+    var spectralResponseState = SpectralTextureState()
+    var spectralAtmosphereState = SpectralTextureState()
+    var spectralTransitionState = SpectralTextureState()
     package var previousResonantAnchorEvidenceFrame: UpperTimbreStereoFrame?
     package var previousDetunedCompanionEvidenceFrame: UpperTimbreStereoFrame?
     package var previousGraphInputRemainderEvidenceFrame: UpperTimbreStereoFrame?
@@ -190,6 +195,7 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
     package let appliedVelocity: Double
     package let velocitySpectralEnvelopeScale: Double
     package let velocityDecayScale: Double
+    package let instrument: InstrumentAssignment
 
     package init(
         role: SynthRole,
@@ -207,7 +213,8 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         requestedVelocity: Double,
         appliedVelocity: Double,
         velocitySpectralEnvelopeScale: Double,
-        velocityDecayScale: Double
+        velocityDecayScale: Double,
+        instrument: InstrumentAssignment
     ) {
         self.role = role
         self.onsetFrame = max(0, onsetFrame)
@@ -225,6 +232,7 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         self.appliedVelocity = min(1, max(0, appliedVelocity))
         self.velocitySpectralEnvelopeScale = velocitySpectralEnvelopeScale
         self.velocityDecayScale = velocityDecayScale
+        self.instrument = instrument
     }
 }
 
@@ -324,6 +332,22 @@ package struct ClosedHatRenderEvidence: Equatable, Sendable {
     }
 }
 
+/// Bounded, architecture-local evidence from exact dry samples produced during
+/// detached preparation. It proves that selected patches reached PCM without
+/// retaining reconstructable audio in the scheduled block.
+package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
+    package let architecture: InstrumentArchitecture
+    package let assignments: [InstrumentAssignment]
+    package let patches: [InstrumentPatch]
+    package let uses: [InstrumentUse]
+    package let effects: [InstrumentEffect]
+    package let eventCount: Int
+    package let sampleHash: String
+    package let peak: Float
+    package let rms: Float
+    package let finite: Bool
+}
+
 package struct RenderedBar: Equatable, Sendable {
     package let sampleRate: Double
     package let samples: [Float]
@@ -344,6 +368,7 @@ package struct RenderedBar: Equatable, Sendable {
     package let dryPercussionSampleHash: String
     package let groovePulseRenderEvidence: [GroovePulseRenderEvidence]
     package let closedHatRenderEvidence: [ClosedHatRenderEvidence]
+    package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
     package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
     /// Transient detached-preparation taps. They never cross into RenderBlock
     /// or the scheduler; only reduced evidence survives phrase preparation.
@@ -360,6 +385,7 @@ package struct RenderedBar: Equatable, Sendable {
                 dryPercussionSampleHash: String,
                 groovePulseRenderEvidence: [GroovePulseRenderEvidence],
                 closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
+                instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 resonantAnchorSamples: [Float],
                 detunedCompanionSamples: [Float]) {
@@ -389,6 +415,10 @@ package struct RenderedBar: Equatable, Sendable {
         self.groovePulseRenderEvidence = groovePulseRenderEvidence.sorted { $0.step < $1.step }
         self.closedHatRenderEvidence = closedHatRenderEvidence.sorted {
             $0.scoreEventIndex < $1.scoreEventIndex
+        }
+        self.instrumentRenderEvidence = instrumentRenderEvidence.sorted {
+            (InstrumentArchitecture.allCases.firstIndex(of: $0.architecture) ?? 0) <
+                (InstrumentArchitecture.allCases.firstIndex(of: $1.architecture) ?? 0)
         }
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.resonantAnchorSamples = resonantAnchorSamples
@@ -434,6 +464,7 @@ package struct RenderBlock: Equatable, Sendable {
     package let groovePulseRenderEvidence: [GroovePulseRenderEvidence]
     /// Same-pass reduced evidence for each ordinary closed-hat score event.
     package let closedHatRenderEvidence: [ClosedHatRenderEvidence]
+    package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
     /// Exact score-owned upper notes used for this bar. The renderer no longer
     /// invents pitch, duration, velocity, or slide decisions after resolution.
     package var resolvedUpperNotes: [ResolvedUpperNote] {
@@ -464,6 +495,7 @@ package struct RenderBlock: Equatable, Sendable {
                 protectedRhythmSampleHash: String,
                 groovePulseRenderEvidence: [GroovePulseRenderEvidence],
                 closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
+                instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 graphInputRemainderTimbreEvidence: UpperTimbreEvidence,
                 postGraphRemainderTimbreEvidence: UpperTimbreEvidence,
@@ -489,6 +521,10 @@ package struct RenderBlock: Equatable, Sendable {
         self.groovePulseRenderEvidence = groovePulseRenderEvidence.sorted { $0.step < $1.step }
         self.closedHatRenderEvidence = closedHatRenderEvidence.sorted {
             $0.scoreEventIndex < $1.scoreEventIndex
+        }
+        self.instrumentRenderEvidence = instrumentRenderEvidence.sorted {
+            (InstrumentArchitecture.allCases.firstIndex(of: $0.architecture) ?? 0) <
+                (InstrumentArchitecture.allCases.firstIndex(of: $1.architecture) ?? 0)
         }
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.graphInputRemainderTimbreEvidence = graphInputRemainderTimbreEvidence
@@ -608,6 +644,9 @@ struct RenderBuffers {
     var atmosphereStem: [Float] = []
     var resonantAnchorStem: [Float] = []
     var detunedCompanionStem: [Float] = []
+    var resonantMonoInstrumentStem: [Float] = []
+    var tonalMotionInstrumentStem: [Float] = []
+    var spectralTextureInstrumentStem: [Float] = []
     var maskingFoundation: [Float] = []
     var synth: [Float] = []
     var pulseEchoSend: [Float] = []
@@ -628,6 +667,9 @@ struct RenderBuffers {
             resonantAnchorStem.removeAll(keepingCapacity: false)
             detunedCompanionStem.removeAll(keepingCapacity: false)
         }
+        reset(&resonantMonoInstrumentStem, frameCount: frameCount)
+        reset(&tonalMotionInstrumentStem, frameCount: frameCount)
+        reset(&spectralTextureInstrumentStem, frameCount: frameCount)
         reset(&maskingFoundation, frameCount: frameCount)
         reset(&synth, frameCount: frameCount)
         reset(&pulseEchoSend, frameCount: frameCount)
@@ -972,6 +1014,7 @@ package enum AutonomousPhraseRenderer {
                 ),
                 groovePulseRenderEvidence: rendered.groovePulseRenderEvidence,
                 closedHatRenderEvidence: rendered.closedHatRenderEvidence,
+                instrumentRenderEvidence: rendered.instrumentRenderEvidence,
                 upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,
                 graphInputRemainderTimbreEvidence: graphInputRemainderTimbreEvidence,
                 postGraphRemainderTimbreEvidence: postGraphRemainderTimbreEvidence,

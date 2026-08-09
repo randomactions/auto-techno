@@ -74,11 +74,13 @@ package struct ResolvedUpperNote: Equatable, Sendable {
     package let velocity: Double
     package let gate: UpperNoteGate
     package let timbreIntent: UpperTimbreIntent
+    package let instrument: InstrumentAssignment
 
     package init(role: SynthRole, onsetStep: Int, durationInSteps: Double,
                  startFrequencyRatio: Double, endFrequencyRatio: Double,
                  velocity: Double, gate: UpperNoteGate,
-                 timbreIntent: UpperTimbreIntent) {
+                 timbreIntent: UpperTimbreIntent,
+                 instrument: InstrumentAssignment? = nil) {
         self.role = role
         self.onsetStep = min(15, max(0, onsetStep))
         self.durationInSteps = min(
@@ -96,6 +98,7 @@ package struct ResolvedUpperNote: Equatable, Sendable {
         self.velocity = min(1, max(0, velocity))
         self.gate = gate
         self.timbreIntent = timbreIntent
+        self.instrument = instrument ?? InstrumentPalette.safeUpper(role: role)
     }
 }
 
@@ -308,15 +311,19 @@ package struct SynthPerformanceBar: Equatable, Sendable {
     package let bar: Int
     package let gesture: SynthGesture
     package let mutationAmount: Double
+    package let foundationInstrument: InstrumentAssignment
     package let relationalSteps: [RelationalArticulation]
     package let upperNotes: [ResolvedUpperNote]
 
     package init(bar: Int, gesture: SynthGesture, mutationAmount: Double,
+                foundationInstrument: InstrumentAssignment = InstrumentPalette.safeFoundation(),
                 relationalSteps: [RelationalArticulation],
                 upperNotes: [ResolvedUpperNote]) {
         self.bar = bar
         self.gesture = gesture
         self.mutationAmount = min(1, max(0, mutationAmount))
+        self.foundationInstrument = foundationInstrument.isValid
+            ? foundationInstrument : InstrumentPalette.safeFoundation()
         self.relationalSteps = relationalSteps.count == 16
             ? relationalSteps : Array(repeating: .neutral, count: 16)
         self.upperNotes = upperNotes
@@ -379,6 +386,13 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 bar: performanceBar.bar,
                 gesture: gesture,
                 mutationAmount: mutation,
+                foundationInstrument: InstrumentPalette.resolveFoundation(
+                    world: synthWorld,
+                    kind: kind,
+                    gesture: gesture,
+                    mutationAmount: mutation,
+                    conservative: conservative
+                ),
                 relationalSteps: relationalSteps,
                 upperNotes: upperNotes
             )
@@ -433,6 +447,19 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         relationalSteps: [RelationalArticulation]
     ) -> [ResolvedUpperNote] {
         let performance = resolved.performance
+        let assignmentConservative = conservative || forceHomeUpperTimbre
+        func instrument(_ role: SynthRole) -> InstrumentAssignment {
+            InstrumentPalette.resolveUpper(
+                role: role,
+                world: world,
+                kind: kind,
+                gesture: gesture,
+                chapter: resolved.interlockChapter,
+                mutationAmount: mutationAmount,
+                conservative: assignmentConservative,
+                pulseEchoEnabled: resolved.pulseEchoEnabled
+            )
+        }
         let motifPitches = resolvedMotifPitches(
             dna: dna,
             performance: performance,
@@ -493,7 +520,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                         articulation.velocityScale
                 ),
                 gate: isSlide ? .slide : .retrigger,
-                timbreIntent: resonantIntent
+                timbreIntent: resonantIntent,
+                instrument: instrument(.anchor)
             )
         }
 
@@ -529,7 +557,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                             articulation.velocityScale
                     ),
                     gate: .retrigger,
-                    timbreIntent: detunedIntent
+                    timbreIntent: detunedIntent,
+                    instrument: instrument(.shadow)
                 )
             })
         }
@@ -554,7 +583,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                         (event.intensity + scene.melodicity * 0.24) * articulation.velocityScale
                     ),
                     gate: .retrigger,
-                    timbreIntent: detunedIntent
+                    timbreIntent: detunedIntent,
+                    instrument: instrument(.response)
                 )
             })
         }
@@ -575,7 +605,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     endFrequencyRatio: startRatio * endScale,
                     velocity: min(0.72, event.intensity + scene.atmosphere * 0.22),
                     gate: .retrigger,
-                    timbreIntent: .home
+                    timbreIntent: .home,
+                    instrument: instrument(.atmosphere)
                 )
             })
         }
@@ -606,7 +637,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     endFrequencyRatio: 2 * endScale,
                     velocity: min(0.54, event.intensity + mutationAmount * 0.18),
                     gate: .retrigger,
-                    timbreIntent: .home
+                    timbreIntent: .home,
+                    instrument: instrument(.transition)
                 )
             })
         }

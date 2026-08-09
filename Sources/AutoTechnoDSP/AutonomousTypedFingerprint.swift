@@ -34,7 +34,7 @@ package enum AutonomousTypedFingerprint {
     }
 
     package static func renderState(_ state: RenderState) -> String {
-        digest(domain: "render-state.typed.v1") { sink in
+        digest(domain: "render-state.typed.v2") { sink in
             encode(state, into: &sink)
         }
     }
@@ -44,7 +44,7 @@ package enum AutonomousTypedFingerprint {
         cancellationRequested: @Sendable () -> Bool
     ) -> String? {
         cancellableDigest(
-            domain: "render-state.typed.v1",
+            domain: "render-state.typed.v2",
             cancellationRequested: cancellationRequested
         ) { sink in
             encode(
@@ -101,7 +101,7 @@ package enum AutonomousTypedFingerprint {
         renderState: RenderState,
         generatedDSPState: GeneratedDSPContinuationState
     ) -> String {
-        digest(domain: "render-dsp-continuation.typed.v1") { sink in
+        digest(domain: "render-dsp-continuation.typed.v2") { sink in
             sink.field("renderState"); encode(renderState, into: &sink)
             sink.field("generatedDSPState"); encode(generatedDSPState, into: &sink)
         }
@@ -113,7 +113,7 @@ package enum AutonomousTypedFingerprint {
         cancellationRequested: @Sendable () -> Bool
     ) -> String? {
         cancellableDigest(
-            domain: "render-dsp-continuation.typed.v1",
+            domain: "render-dsp-continuation.typed.v2",
             cancellationRequested: cancellationRequested
         ) { sink in
             sink.field("renderState")
@@ -514,8 +514,6 @@ private extension AutonomousTypedFingerprint {
     static func encode(_ value: RenderState, into sink: inout StreamingFNV1a) {
         sink.aggregate("RenderState")
         sink.field("barIndex"); sink.int(value.barIndex)
-        sink.field("bassPhase"); sink.double(value.bassPhase)
-        sink.field("bassFilter"); sink.double(value.bassFilter)
         sink.field("delayBuffer"); encode(value.delayBuffer, into: &sink)
         sink.field("delayWriteIndex"); sink.int(value.delayWriteIndex)
         sink.field("pulseEchoBuffer"); encode(value.pulseEchoBuffer, into: &sink)
@@ -534,11 +532,21 @@ private extension AutonomousTypedFingerprint {
         sink.field("automaticMixState"); encode(value.automaticMixState, into: &sink)
         sink.field("reverbBuffer"); encode(value.reverbBuffer, into: &sink)
         sink.field("reverbWriteIndex"); sink.int(value.reverbWriteIndex)
+        sink.field("resonantFoundationState")
+        encode(value.resonantFoundationState, into: &sink)
+        sink.field("resonantAnchorState"); encode(value.resonantAnchorState, into: &sink)
+        sink.field("resonantShadowState"); encode(value.resonantShadowState, into: &sink)
+        sink.field("resonantResponseState"); encode(value.resonantResponseState, into: &sink)
         sink.field("alienAnchorState"); encode(value.alienAnchorState, into: &sink)
         sink.field("alienShadowState"); encode(value.alienShadowState, into: &sink)
         sink.field("alienAtmosphereState"); encode(value.alienAtmosphereState, into: &sink)
         sink.field("alienResponseState"); encode(value.alienResponseState, into: &sink)
         sink.field("alienTransitionState"); encode(value.alienTransitionState, into: &sink)
+        sink.field("spectralResponseState"); encode(value.spectralResponseState, into: &sink)
+        sink.field("spectralAtmosphereState")
+        encode(value.spectralAtmosphereState, into: &sink)
+        sink.field("spectralTransitionState")
+        encode(value.spectralTransitionState, into: &sink)
         sink.field("previousResonantAnchorEvidenceFrame")
         encode(value.previousResonantAnchorEvidenceFrame, into: &sink)
         sink.field("previousDetunedCompanionEvidenceFrame")
@@ -557,8 +565,6 @@ private extension AutonomousTypedFingerprint {
         guard !cancellationRequested() else { return false }
         sink.aggregate("RenderState")
         sink.field("barIndex"); sink.int(value.barIndex)
-        sink.field("bassPhase"); sink.double(value.bassPhase)
-        sink.field("bassFilter"); sink.double(value.bassFilter)
         sink.field("delayBuffer")
         guard encode(
             value.delayBuffer,
@@ -602,6 +608,11 @@ private extension AutonomousTypedFingerprint {
             cancellationRequested: cancellationRequested
         ) else { return false }
         sink.field("reverbWriteIndex"); sink.int(value.reverbWriteIndex)
+        sink.field("resonantFoundationState")
+        encode(value.resonantFoundationState, into: &sink)
+        sink.field("resonantAnchorState"); encode(value.resonantAnchorState, into: &sink)
+        sink.field("resonantShadowState"); encode(value.resonantShadowState, into: &sink)
+        sink.field("resonantResponseState"); encode(value.resonantResponseState, into: &sink)
         sink.field("alienAnchorState")
         guard encode(
             value.alienAnchorState,
@@ -632,6 +643,11 @@ private extension AutonomousTypedFingerprint {
             into: &sink,
             cancellationRequested: cancellationRequested
         ) else { return false }
+        sink.field("spectralResponseState"); encode(value.spectralResponseState, into: &sink)
+        sink.field("spectralAtmosphereState")
+        encode(value.spectralAtmosphereState, into: &sink)
+        sink.field("spectralTransitionState")
+        encode(value.spectralTransitionState, into: &sink)
         sink.field("previousResonantAnchorEvidenceFrame")
         encode(value.previousResonantAnchorEvidenceFrame, into: &sink)
         sink.field("previousDetunedCompanionEvidenceFrame")
@@ -673,8 +689,59 @@ private extension AutonomousTypedFingerprint {
         sink.field("kickCorrectionDB"); sink.double(value.kickCorrectionDB)
     }
 
+    static func encode(_ value: ResonantMonoState, into sink: inout StreamingFNV1a) {
+        sink.aggregate("ResonantMonoState")
+        sink.field("activePatch"); encode(value.activePatch, into: &sink)
+        sink.field("phase"); sink.double(value.phase)
+        sink.field("subPhase"); sink.double(value.subPhase)
+        sink.field("filter1"); sink.double(value.filter1)
+        sink.field("filter2"); sink.double(value.filter2)
+        sink.field("filter3"); sink.double(value.filter3)
+        sink.field("filter4"); sink.double(value.filter4)
+        sink.field("dcInput"); sink.double(value.dcInput)
+        sink.field("dcOutput"); sink.double(value.dcOutput)
+        sink.field("frequency"); sink.double(value.frequency)
+        sink.field("envelope"); sink.double(value.envelope)
+    }
+
+    static func encode(_ value: SpectralTextureState, into sink: inout StreamingFNV1a) {
+        sink.aggregate("SpectralTextureState")
+        sink.field("activePatch"); encode(value.activePatch, into: &sink)
+        sink.field("phaseA"); sink.double(value.phaseA)
+        sink.field("phaseB"); sink.double(value.phaseB)
+        sink.field("phaseC"); sink.double(value.phaseC)
+        sink.field("low"); sink.double(value.low)
+        sink.field("band"); sink.double(value.band)
+        sink.field("resonator"); sink.double(value.resonator)
+        sink.field("previousResonator"); sink.double(value.previousResonator)
+        sink.field("dcInput"); sink.double(value.dcInput)
+        sink.field("dcOutput"); sink.double(value.dcOutput)
+        sink.field("frequency"); sink.double(value.frequency)
+    }
+
+    static func encode(_ value: InstrumentPatch?, into sink: inout StreamingFNV1a) {
+        sink.presence(value != nil)
+        if let value { sink.raw(value.rawValue) }
+    }
+
+    static func encode(_ value: InstrumentAssignment?, into sink: inout StreamingFNV1a) {
+        sink.presence(value != nil)
+        guard let value else { return }
+        sink.aggregate("InstrumentAssignment")
+        sink.field("use"); sink.raw(value.use.rawValue)
+        sink.field("architecture"); sink.raw(value.architecture.rawValue)
+        sink.field("patch"); sink.raw(value.patch.rawValue)
+        sink.field("color"); sink.double(value.automation.color)
+        sink.field("shape"); sink.double(value.automation.shape)
+        sink.field("motion"); sink.double(value.automation.motion)
+        sink.field("space"); sink.double(value.automation.space)
+        sink.field("effects"); sink.collection(value.effects.count)
+        for effect in value.effects { sink.raw(effect.rawValue) }
+    }
+
     static func encode(_ value: AlienVoiceState, into sink: inout StreamingFNV1a) {
         sink.aggregate("AlienVoiceState")
+        sink.field("activeInstrument"); encode(value.activeInstrument, into: &sink)
         sink.field("phaseA"); sink.double(value.phaseA)
         sink.field("phaseB"); sink.double(value.phaseB)
         sink.field("modPhase"); sink.double(value.modPhase)
@@ -715,6 +782,7 @@ private extension AutonomousTypedFingerprint {
     ) -> Bool {
         guard !cancellationRequested() else { return false }
         sink.aggregate("AlienVoiceState")
+        sink.field("activeInstrument"); encode(value.activeInstrument, into: &sink)
         sink.field("phaseA"); sink.double(value.phaseA)
         sink.field("phaseB"); sink.double(value.phaseB)
         sink.field("modPhase"); sink.double(value.modPhase)

@@ -42,7 +42,7 @@ jobs:
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(AdaptiveAutonomousSessionTests|GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|RepositorySurfaceTests|IdentityReturnContinuationTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
+          --filter '(AdaptiveAutonomousSessionTests|GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|RepositorySurfaceTests|IdentityReturnContinuationTests|InstrumentPaletteTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
 
       - name: Run preparation preflight tests
         run: >-

@@ -9,6 +9,7 @@ struct AlienVoiceNote: Equatable, Sendable {
     let velocity: Double
     let gate: UpperNoteGate
     let timbreIntent: UpperTimbreIntent
+    let instrument: InstrumentAssignment
     let role: SynthRole
     let articulation: RelationalArticulation
     let dryScale: Double
@@ -18,6 +19,7 @@ struct AlienVoiceNote: Equatable, Sendable {
 }
 
 struct AlienVoiceState: Equatable, Sendable {
+    var activeInstrument: InstrumentAssignment?
     var phaseA = 0.0
     var phaseB = 0.0
     var modPhase = 0.0
@@ -50,7 +52,34 @@ struct AlienVoiceState: Equatable, Sendable {
     var echo: [Float] = []
     var echoIndex = 0
 
-    mutating func prepare(sampleRate: Double, world: SynthWorldDNA, role: SynthRole) {
+    mutating func prepare(sampleRate: Double, world: SynthWorldDNA, role: SynthRole,
+                          instrument: InstrumentAssignment) {
+        if let activeInstrument, activeInstrument.patch != instrument.patch {
+            envelope = 0
+            filterEnvelope = 0
+            timbreIntent = .home
+            timbreVelocity = 0
+            timbreTreatment = .neutral
+            velocityResponse = .neutral
+            filter1 = 0
+            filter2 = 0
+            filter3 = 0
+            filter4 = 0
+            mutationLow = 0
+            oversampleLow = 0
+            previousSource = 0
+            echoLow = 0
+            dcInput = 0
+            dcOutput = 0
+            tailLevel = 0
+            for index in comb.indices { comb[index] = 0 }
+            combIndex = 0
+            for index in allPass.indices { allPass[index] = 0 }
+            allPassIndex = 0
+            for index in echo.indices { echo[index] = 0 }
+            echoIndex = 0
+        }
+        activeInstrument = instrument
         let roleOffset = SynthRole.allCases.firstIndex(of: role) ?? 0
         let combSeconds = 0.0027 + Double((world.variation + roleOffset) % 5) * 0.00135
         let allPassSeconds = 0.0013 + Double((world.variation * 2 + roleOffset) % 4) * 0.00083
@@ -181,6 +210,63 @@ struct AlienVelocityResponse: Equatable, Sendable {
     }
 }
 
+/// Patch-family projection for the tonal-motion topology. The shared semantic
+/// automation coordinates remain score-owned; this type only translates them
+/// into bounded oscillator, envelope, filter, and memory behavior.
+private struct TonalPatchTreatment {
+    let attackScale: Double
+    let decayScale: Double
+    let sustainScale: Double
+    let releaseScale: Double
+    let detuneScale: Double
+    let modulationScale: Double
+    let cutoffScale: Double
+    let driveScale: Double
+    let combScale: Double
+    let echoScale: Double
+    let sawAWeight: Double
+    let sawBWeight: Double
+    let pulseWeight: Double
+    let noiseWeight: Double
+
+    static func resolve(_ assignment: InstrumentAssignment) -> TonalPatchTreatment {
+        let automation = assignment.automation
+        let patchShape: (Double, Double, Double, Double, Double, Double, Double,
+                         Double, Double, Double, Double, Double, Double, Double)
+        switch assignment.patch {
+        case .northStar:
+            patchShape = (1.0, 1.0, 1.0, 1.0, 0.90, 0.90, 1.04,
+                          1.0, 0.86, 0.78, 0.45, 0.25, 0.22, 0.08)
+        case .darkChord:
+            patchShape = (1.65, 1.72, 1.22, 1.70, 0.72, 0.62, 0.72,
+                          0.92, 1.05, 1.18, 0.50, 0.30, 0.12, 0.08)
+        case .glassRunner:
+            patchShape = (0.62, 0.68, 0.72, 0.58, 1.28, 1.42, 1.30,
+                          1.14, 1.24, 0.72, 0.34, 0.22, 0.34, 0.10)
+        case .bassPulse, .bassPluck, .acidThread, .acidSequence,
+             .alienNoise, .metalVeil, .dustCloud:
+            patchShape = (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.43, 0.24, 0.24, 0.09)
+        }
+        return TonalPatchTreatment(
+            attackScale: patchShape.0 * (1.22 - automation.shape * 0.44),
+            decayScale: patchShape.1 * (0.72 + automation.shape * 0.62),
+            sustainScale: patchShape.2,
+            releaseScale: patchShape.3 * (0.70 + automation.shape * 0.68),
+            detuneScale: patchShape.4 * (0.76 + automation.motion * 0.48),
+            modulationScale: patchShape.5 * (0.62 + automation.motion * 0.76),
+            cutoffScale: patchShape.6 * (0.70 + automation.color * 0.62),
+            driveScale: patchShape.7 * (assignment.effects.contains(.drive)
+                ? 1.04 + automation.motion * 0.34 : 1),
+            combScale: assignment.effects.contains(.comb) ? patchShape.8 : 0,
+            echoScale: assignment.effects.contains(.unsyncedEcho) ? patchShape.9 : 0,
+            sawAWeight: patchShape.10,
+            sawBWeight: patchShape.11,
+            pulseWeight: patchShape.12,
+            noiseWeight: patchShape.13
+        )
+    }
+}
+
 /// The bounded spectral coordinate shared by resolved event metadata and the
 /// authored motif renderer. Keeping the composition here makes the exact
 /// lower and upper limits directly verifiable without rendering audio.
@@ -203,16 +289,54 @@ enum AlienAnalogVoice {
                        sampleRate: Double, level: Double,
                        world: SynthWorldDNA, bar: SynthPerformanceBar,
                        role: SynthRole, state: inout AlienVoiceState) {
+        var architectureMeasurement = [Float](repeating: 0, count: output.count)
+        render(
+            &output,
+            measurement: &measurement,
+            architectureMeasurement: &architectureMeasurement,
+            pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
+            notes: notes,
+            sampleRate: sampleRate,
+            level: level,
+            world: world,
+            bar: bar,
+            role: role,
+            state: &state
+        )
+    }
+
+    static func render(_ output: inout [Float], measurement: inout [Float],
+                       architectureMeasurement: inout [Float],
+                       pulseEchoSend: inout [Float],
+                       spatialReverbSend: inout [Float],
+                       noteRenderEvidence: inout [UpperNoteRenderEvidence],
+                       notes: [AlienVoiceNote],
+                       sampleRate: Double, level: Double,
+                       world: SynthWorldDNA, bar: SynthPerformanceBar,
+                       role: SynthRole, state: inout AlienVoiceState) {
         guard !output.isEmpty, sampleRate > 0 else { return }
         guard pulseEchoSend.count == output.count else { return }
         guard spatialReverbSend.count == output.count else { return }
         guard measurement.count == output.count else { return }
-        state.prepare(sampleRate: sampleRate, world: world, role: role)
+        guard architectureMeasurement.count == output.count else { return }
         let scheduled = notes
-            .filter { $0.startFrame < output.count && $0.durationFrames > 0 && $0.frequency > 0 }
+            .filter {
+                $0.instrument.architecture == .tonalMotion &&
+                    $0.startFrame < output.count && $0.durationFrames > 0 && $0.frequency > 0
+            }
             .sorted { lhs, rhs in
                 lhs.startFrame == rhs.startFrame ? lhs.frequency < rhs.frequency : lhs.startFrame < rhs.startFrame
             }
+        let assignment = scheduled.first?.instrument ?? state.activeInstrument ??
+            InstrumentPalette.safeUpper(role: role)
+        state.prepare(
+            sampleRate: sampleRate,
+            world: world,
+            role: role,
+            instrument: assignment
+        )
         if !scheduled.contains(where: { note in
             AlienTimbreTreatment.resolve(
                 intent: note.timbreIntent,
@@ -254,12 +378,25 @@ enum AlienAnalogVoice {
         }) ? state.timbreTreatment : .neutral
         var activeEvidenceIndex: Int?
         let roleMutation = mutationScale(for: role)
-        let mutation = min(1, bar.mutationAmount * roleMutation)
+        let patchTreatment = TonalPatchTreatment.resolve(assignment)
+        let mutation = min(
+            1,
+            bar.mutationAmount * roleMutation * 0.62 +
+                assignment.automation.motion * 0.38
+        )
         let fingerprint = world.motifFingerprint
-        let baseAttackSeconds = attack(for: role, gesture: bar.gesture, fingerprint: fingerprint)
-        let baseDecaySeconds = decay(for: role, gesture: bar.gesture, fingerprint: fingerprint)
-        let sustain = sustain(for: role, gesture: bar.gesture, fingerprint: fingerprint)
-        let releaseSeconds = release(for: role, gesture: bar.gesture, fingerprint: fingerprint)
+        let baseAttackSeconds = attack(
+            for: role, gesture: bar.gesture, fingerprint: fingerprint
+        ) * patchTreatment.attackScale
+        let baseDecaySeconds = decay(
+            for: role, gesture: bar.gesture, fingerprint: fingerprint
+        ) * patchTreatment.decayScale
+        let sustain = min(0.92, sustain(
+            for: role, gesture: bar.gesture, fingerprint: fingerprint
+        ) * patchTreatment.sustainScale)
+        let releaseSeconds = release(
+            for: role, gesture: bar.gesture, fingerprint: fingerprint
+        ) * patchTreatment.releaseScale
         var attackFrames = max(1, Int(baseAttackSeconds * sampleRate))
         var decaySeconds = baseDecaySeconds
         let releaseCoefficient = exp(-1 / max(1, releaseSeconds * sampleRate))
@@ -352,7 +489,8 @@ enum AlienAnalogVoice {
                     requestedVelocity: note.velocity,
                     appliedVelocity: velocity,
                     velocitySpectralEnvelopeScale: velocityResponse.spectralEnvelopeScale,
-                    velocityDecayScale: velocityResponse.decayScale
+                    velocityDecayScale: velocityResponse.decayScale,
+                    instrument: note.instrument
                 ))
                 activeEvidenceIndex = noteRenderEvidence.count - 1
                 articulation = note.articulation
@@ -421,7 +559,9 @@ enum AlienAnalogVoice {
                 let frequency = min(oversampledRate * 0.16,
                                     max(20, state.frequency * (1 + driftCents * 0.000_577_622)))
                 let motifDetune = [0.004, 0.007, 0.011][fingerprint.modulationFamily]
-                let ratio = (role == .anchor ? 1 + motifDetune : 1.006) +
+                let ratio = (role == .anchor
+                    ? 1 + motifDetune * patchTreatment.detuneScale
+                    : 1 + 0.006 * patchTreatment.detuneScale) +
                     Double(world.variation) * 0.0017 + roleIndex * 0.0009 +
                     timbreTreatment.detuneRatioLift
                 let incrementA = frequency / oversampledRate
@@ -438,7 +578,7 @@ enum AlienAnalogVoice {
 
                 let modulator = fastSine(state.modPhase)
                 let phaseMod = modulator * (0.012 + mutation * 0.115) *
-                    (role == .anchor ? 0.72 : 1)
+                    (role == .anchor ? 0.72 : 1) * patchTreatment.modulationScale
                 let phaseA = wrap(state.phaseA + phaseMod)
                 let pulseWidth = min(0.72, max(0.22,
                     0.34 + fastSine(wrap(state.driftPhase * 0.43)) * (0.035 + mutation * 0.10)))
@@ -447,13 +587,17 @@ enum AlienAnalogVoice {
                 let pulse = bandLimitedPulse(phaseA, increment: incrementA, width: pulseWidth)
                 let noise = fastSine(wrap(state.noisePhaseA + state.modPhase * 0.059)) *
                     fastSine(wrap(state.noisePhaseB + state.phaseB * 0.037))
-                let source = sawA * 0.43 + sawB * 0.24 + pulse * 0.24 + noise * 0.09
+                let source = sawA * patchTreatment.sawAWeight +
+                    sawB * patchTreatment.sawBWeight +
+                    pulse * patchTreatment.pulseWeight +
+                    noise * patchTreatment.noiseWeight
 
                 let anchor = fastSaturate((source + sawA * sawB * 0.14) * (1.18 + mutation * 0.30))
                 let emphasized = source + (source - state.previousSource) * (0.18 + mutation * 0.34)
                 state.previousSource = source
                 let folded = waveFold(
-                    emphasized * (1.18 + mutation * 2.15) * timbreTreatment.driveScale
+                    emphasized * (1.18 + mutation * 2.15) *
+                        timbreTreatment.driveScale * patchTreatment.driveScale
                 )
                 let ringCarrier = fastSine(wrap(
                     state.phaseB * (1.5 + roleIndex * 0.083) + state.modPhase * 0.31
@@ -479,7 +623,8 @@ enum AlienAnalogVoice {
                     ? [0.72, 1.0, 1.28][fingerprint.spectralRegion] *
                         articulationSpectralScale
                     : articulationSpectralScale
-                let baseCutoff = (170 + Double(world.variation) * 55 + roleIndex * 48) * spectralScale
+                let baseCutoff = (170 + Double(world.variation) * 55 + roleIndex * 48) *
+                    spectralScale * patchTreatment.cutoffScale
                 let cutoff = min(oversampledRate * 0.18,
                                  baseCutoff + (1 - mutation) * 1_280 + envelopeLift * 1_850 +
                                  state.filterEnvelope * timbreTreatment.filterEnvelopeDepth +
@@ -525,10 +670,14 @@ enum AlienAnalogVoice {
                 state.oversampleLow *= 0.72
             }
             let combRead = Double(state.comb[state.combIndex])
-            let combFeedback = min(0.58, 0.16 + mutation * 0.34)
+            let combFeedback = min(
+                0.58,
+                (0.16 + mutation * 0.34) * patchTreatment.combScale
+            )
             state.comb[state.combIndex] = Float(dryVoice + combRead * combFeedback)
             state.combIndex = (state.combIndex + 1) % state.comb.count
-            let combVoice = dryVoice + combRead * (0.12 + mutation * 0.38)
+            let combVoice = dryVoice + combRead *
+                (0.12 + mutation * 0.38) * patchTreatment.combScale
 
             let allPassRead = Double(state.allPass[state.allPassIndex])
             let allPassGain = min(0.68, 0.34 + mutation * 0.24)
@@ -537,14 +686,19 @@ enum AlienAnalogVoice {
             state.allPassIndex = (state.allPassIndex + 1) % state.allPass.count
             let coloredVoice = combVoice * 0.78 + allPassVoice * 0.22
 
-            if gate, articulation.pulseEchoSend > 0 {
-                pulseEchoSend[frame] += Float(coloredVoice * articulation.pulseEchoSend)
+            if gate, assignment.effects.contains(.pulseEcho) {
+                let send = max(
+                    articulation.pulseEchoSend,
+                    assignment.automation.space * 0.10
+                )
+                pulseEchoSend[frame] += Float(coloredVoice * min(0.32, send))
             }
 
             let echoRead = Double(state.echo[state.echoIndex])
             state.echoLow += (echoRead - state.echoLow) * (0.08 + (1 - mutation) * 0.05)
             let filteredEcho = state.echoLow
-            let echoSend = bar.gesture == .suspend ? 0.26 + mutation * 0.34 : 0.035
+            let echoSend = (bar.gesture == .suspend
+                ? 0.26 + mutation * 0.34 : 0.035) * patchTreatment.echoScale
             let echoFeedback = min(0.69, 0.31 + mutation * 0.31)
             state.echo[state.echoIndex] = Float(coloredVoice * echoSend + filteredEcho * echoFeedback)
             state.echoIndex = (state.echoIndex + 1) % state.echo.count
@@ -558,7 +712,14 @@ enum AlienAnalogVoice {
             let renderedSample = unscaledSample * Float(dryScale)
             output[frame] += renderedSample
             measurement[frame] += renderedSample
-            spatialReverbSend[frame] += unscaledSample * Float(spatialSendLevel)
+            architectureMeasurement[frame] += renderedSample
+            if assignment.effects.contains(.filteredReverb) {
+                let send = max(
+                    spatialSendLevel,
+                    assignment.automation.space * 0.28
+                )
+                spatialReverbSend[frame] += unscaledSample * Float(min(1, send))
+            }
         }
         if let evidenceIndex = activeEvidenceIndex {
             noteRenderEvidence[evidenceIndex].appliedGateEndFrame = output.count

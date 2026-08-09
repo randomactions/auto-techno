@@ -368,3 +368,44 @@ the new observations cannot promote a candidate. No matched-loudness listening,
 physical-output smoke, route/interruption hardware test, preparation-latency or
 peak-memory measurement, or 60-minute recovery soak was performed for this
 candidate.
+
+## Score-owned internal instrument palette — 2026-08-09
+
+This candidate integrates the exact `8c11a9d` main-line CI hardening with one
+canonical, score-owned palette: three internal synthesis architectures, ten
+recognizable home patches, four bounded semantic automation coordinates, and a
+typed compatibility matrix for the existing effect stages. It adds no plug-in,
+sample library, alternate renderer, selectable profile, graph family, track
+quota, or user-facing control. The existing director resolves every assignment;
+the one renderer dispatches it; conservative fallback stays inside the same
+catalog.
+
+Detached candidate evidence now records each bar's exact assignments and the
+deterministic hash, event count, peak, RMS, and finite state of the dry
+architecture-local PCM. The candidate-vector schema advances to 5, the typed
+fingerprint domain to v6, the canonical engine identity to v6, and the quality
+contract to schema 6. The policy remains `uncalibrated.v1`, so instrument
+evidence is descriptive and cannot promote or rank a candidate.
+
+Final local validation used Xcode 26.6 build 17F113 and Apple Swift 6.3.3 with
+serialized SwiftPM execution and isolated module caches:
+
+- Core, evidence, palette, runtime, qualification, and DSP tests passed: 83/83
+  in 69.301 seconds.
+- Autonomous preparation preflight passed: 21/21 in 491.475 seconds.
+- Protected-routing regressions passed: 7/7 in 60.148 seconds.
+- Upper-timbre integration passed on the exact combined head: 16/16 in 145.163
+  seconds, including the
+  lifetime-bounded atomic and dual-rate prepared-transaction tests.
+- The exact combined-head optimized `AutoTechno` product build passed in 42.37
+  seconds using the
+  populated offline SwiftPM scratch path. A separate empty scratch path first
+  stopped at restricted DNS before compilation; it was not a source failure.
+
+The new synth and evidence work remains off the real-time callback, and the
+protected foundation and rhythm fingerprints remain bit-exact under the routing
+regressions. No matched-loudness listening session, exact-build app playback,
+physical route/interruption smoke, preparation-latency or peak-memory budget,
+or 60-minute hardware-output soak was completed. Automated professional-quality
+qualification therefore remains unavailable, and no release-readiness or
+sound-quality promotion is claimed by this snapshot.

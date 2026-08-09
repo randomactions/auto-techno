@@ -42,10 +42,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 4)
+        #expect(vector.schemaVersion == 5)
         #expect(QualityQualificationContract.schemaVersion == 6)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v5")
+                "autotechno-canonical-engine.v6")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -373,6 +373,118 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!nonFinite.isFinite)
         #expect(!nonFinite.isComplete(sampleRate: 8_000))
         #expect(!fixtureClosedHatEvent(finite: false).isFinite)
+    }
+
+    @Test("Instrument assignments and exact architecture PCM are bounded provenance")
+    func instrumentEvidenceContract() throws {
+        let assignment = InstrumentAssignment(
+            use: .motif,
+            patch: .acidSequence,
+            automation: InstrumentAutomation(
+                color: 0.62,
+                shape: 0.48,
+                motion: 0.78,
+                space: 0.22
+            ),
+            effects: InstrumentPalette.capability(for: .acidSequence)?.compatibleEffects ?? []
+        )
+        let instrumentBar = AutonomousInstrumentBarEvidence(
+            bar: 0,
+            evidence: [InstrumentArchitectureRenderEvidence(
+                architecture: .resonantMono,
+                assignments: [assignment],
+                patches: [.acidSequence],
+                uses: [.motif],
+                effects: assignment.effects,
+                eventCount: 1,
+                sampleHash: "0123456789abcdef",
+                peak: 0.20,
+                rms: 0.08,
+                finite: true
+            )]
+        )
+        let vector = fixtureVector(
+            slot: .primary,
+            instrumentBar: instrumentBar
+        )
+        let empty = fixtureVector(slot: .primary)
+
+        #expect(instrumentBar.isComplete)
+        #expect(instrumentBar.isFinite)
+        #expect(vector.isComplete)
+        #expect(vector.isFinite)
+        #expect(vector.fingerprint != empty.fingerprint)
+        #expect(vector.selectionEvidence == empty.selectionEvidence)
+
+        let data = try vector.deterministicJSON()
+        let object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let bars = try #require(object["instruments"] as? [[String: Any]])
+        let architectures = try #require(
+            bars.first?["architectures"] as? [[String: Any]]
+        )
+        let serialized = try #require(architectures.first)
+        #expect(Set(serialized.keys) == Set([
+            "architecture", "sourceAssignmentCount", "assignments", "eventCount",
+            "sampleHash", "peak", "rms", "finite",
+        ]))
+        let serializedAssignments = try #require(
+            serialized["assignments"] as? [[String: Any]]
+        )
+        let serializedAssignment = try #require(serializedAssignments.first)
+        #expect(Set(serializedAssignment.keys) == Set([
+            "use", "architecture", "patch", "color", "shape", "motion", "space",
+            "effects",
+        ]))
+
+        var forgedObject = object
+        var forgedBars = bars
+        var forgedBar = forgedBars[0]
+        var forgedArchitectures = architectures
+        var forgedArchitecture = forgedArchitectures[0]
+        var forgedAssignments = serializedAssignments
+        var forgedAssignment = forgedAssignments[0]
+        forgedAssignment["patch"] = InstrumentPatch.alienNoise.rawValue
+        forgedAssignments[0] = forgedAssignment
+        forgedArchitecture["assignments"] = forgedAssignments
+        forgedArchitectures[0] = forgedArchitecture
+        forgedBar["architectures"] = forgedArchitectures
+        forgedBars[0] = forgedBar
+        forgedObject["instruments"] = forgedBars
+        let forged = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedObject)
+        )
+        #expect(!forged.isComplete)
+        #expect(forged.fingerprint != vector.fingerprint)
+
+        var excessiveObject = object
+        var excessiveBars = bars
+        var excessiveBar = excessiveBars[0]
+        var excessiveArchitectures = architectures
+        var excessiveArchitecture = excessiveArchitectures[0]
+        excessiveArchitecture["eventCount"] =
+            AutonomousCandidateEvaluationVector.maximumInstrumentEventsPerBar + 1
+        excessiveArchitectures[0] = excessiveArchitecture
+        excessiveBar["architectures"] = excessiveArchitectures
+        excessiveBars[0] = excessiveBar
+        excessiveObject["instruments"] = excessiveBars
+        let excessive = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: excessiveObject)
+        )
+        #expect(!excessive.isComplete)
+
+        var misplacedObject = object
+        var misplacedBars = bars
+        misplacedBars[0]["bar"] = 1
+        misplacedObject["instruments"] = misplacedBars
+        let misplaced = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: misplacedObject)
+        )
+        #expect(!misplaced.isComplete)
     }
 
     @Test("Masking and stem payloads are bounded and malformed vectors are incomplete")
@@ -1178,7 +1290,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
-                "3fc1f96e4d6614b0")
+                "f26b617349191516")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
@@ -1190,7 +1302,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.renderDSPContinuation(
             renderState: positiveZeroRenderState,
             generatedDSPState: orderedGraphState
-        ) == "9ec3acd2fbc147d5")
+        ) == "66df03c53bfb6021")
     }
 
     private var fixturePlanFingerprints: AutonomousCandidatePlanFingerprints {
@@ -1210,6 +1322,7 @@ struct AutonomousCandidateEvaluationTests {
         planFingerprintOverride: String? = nil,
         groovePulseBar: AutonomousGroovePulseBarEvidence? = nil,
         closedHatBar: AutonomousClosedHatBarEvidence? = nil,
+        instrumentBar: AutonomousInstrumentBarEvidence? = nil,
         nonFinite: Bool = false
     ) -> AutonomousCandidateEvaluationVector {
         let planFingerprint = planFingerprintOverride ?? fixturePlanFingerprints[slot]
@@ -1380,6 +1493,10 @@ struct AutonomousCandidateEvaluationTests {
                 sourceScoreEventCount: 0,
                 sourceRenderEventCount: 0,
                 events: []
+            )],
+            instruments: [instrumentBar ?? AutonomousInstrumentBarEvidence(
+                bar: 0,
+                evidence: []
             )],
             graph: graph,
             routeContinuation: route,

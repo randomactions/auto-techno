@@ -252,6 +252,9 @@ package enum VoiceRenderer {
         var atmosphereStem: [Float] = []
         var resonantAnchorStem: [Float] = []
         var detunedCompanionStem: [Float] = []
+        var resonantMonoInstrumentStem: [Float] = []
+        var tonalMotionInstrumentStem: [Float] = []
+        var spectralTextureInstrumentStem: [Float] = []
         var maskingFoundationBus: [Float] = []
         var synthBus: [Float] = []
         var pulseEchoSendBus: [Float] = []
@@ -271,6 +274,9 @@ package enum VoiceRenderer {
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
         swap(&resonantAnchorStem, &checkedOut.resonantAnchorStem)
         swap(&detunedCompanionStem, &checkedOut.detunedCompanionStem)
+        swap(&resonantMonoInstrumentStem, &checkedOut.resonantMonoInstrumentStem)
+        swap(&tonalMotionInstrumentStem, &checkedOut.tonalMotionInstrumentStem)
+        swap(&spectralTextureInstrumentStem, &checkedOut.spectralTextureInstrumentStem)
         swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
         swap(&synthBus, &checkedOut.synth)
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
@@ -293,11 +299,20 @@ package enum VoiceRenderer {
                 let frequency = relationalBassFrequency(
                     dna: dna, step: event.step, tension: performance.tension
                 )
-                bass(&output, measurement: &foundationStem,
-                     start: start, sampleRate: sampleRate,
-                     level: (0.11 + performance.tension * 0.035) * accent,
-                     frequency: frequency, articulation: 0.3 + performance.tension * 0.5,
-                     phase: &state.bassPhase, filterState: &state.bassFilter)
+                ResonantMonoVoice.renderFoundation(
+                    &output,
+                    measurement: &foundationStem,
+                    architectureMeasurement: &resonantMonoInstrumentStem,
+                    pulseEchoSend: &pulseEchoSendBus,
+                    spatialReverbSend: &spatialReverbSendBus,
+                    start: start,
+                    sampleRate: sampleRate,
+                    level: 0.11 + performance.tension * 0.035,
+                    frequency: frequency,
+                    assignment: synthPerformance.foundationInstrument,
+                    velocity: accent,
+                    state: &state.resonantFoundationState
+                )
             case .rumble:
                 rumble(&output, measurement: &foundationStem,
                        start: start, sampleRate: sampleRate,
@@ -365,7 +380,7 @@ package enum VoiceRenderer {
         }
         var upperNoteRenderEvidence: [UpperNoteRenderEvidence] = []
         if layer == .full {
-            renderAlienWorld(
+            renderInstrumentWorld(
                 &synthBus,
                 pulseEchoSend: &pulseEchoSendBus,
                 spatialReverbSend: &spatialReverbSendBus,
@@ -373,6 +388,9 @@ package enum VoiceRenderer {
                 atmosphereStem: &atmosphereStem,
                 resonantAnchorStem: &resonantAnchorStem,
                 detunedCompanionStem: &detunedCompanionStem,
+                resonantMonoInstrumentStem: &resonantMonoInstrumentStem,
+                tonalMotionInstrumentStem: &tonalMotionInstrumentStem,
+                spectralTextureInstrumentStem: &spectralTextureInstrumentStem,
                 noteRenderEvidence: &upperNoteRenderEvidence,
                 renderScheduledNotes: !textureCollapsed && upperRolesActive,
                 scene: scene,
@@ -684,6 +702,14 @@ package enum VoiceRenderer {
                                    ),
                                    groovePulseRenderEvidence: groovePulseRenderEvidence,
                                    closedHatRenderEvidence: closedHatRenderEvidence,
+                                   instrumentRenderEvidence: instrumentEvidence(
+                                    resolved: resolved,
+                                    synthPerformance: synthPerformance,
+                                    upperNoteRenderEvidence: upperNoteRenderEvidence,
+                                    resonantMono: resonantMonoInstrumentStem,
+                                    tonalMotion: tonalMotionInstrumentStem,
+                                    spectralTexture: spectralTextureInstrumentStem
+                                    ),
                                    upperNoteRenderEvidence: upperNoteRenderEvidence,
                                    resonantAnchorSamples: resonantAnchorStem,
                                    detunedCompanionSamples: detunedCompanionStem)
@@ -696,6 +722,9 @@ package enum VoiceRenderer {
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
         swap(&resonantAnchorStem, &checkedOut.resonantAnchorStem)
         swap(&detunedCompanionStem, &checkedOut.detunedCompanionStem)
+        swap(&resonantMonoInstrumentStem, &checkedOut.resonantMonoInstrumentStem)
+        swap(&tonalMotionInstrumentStem, &checkedOut.tonalMotionInstrumentStem)
+        swap(&spectralTextureInstrumentStem, &checkedOut.spectralTextureInstrumentStem)
         swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
         swap(&synthBus, &checkedOut.synth)
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
@@ -704,7 +733,7 @@ package enum VoiceRenderer {
         return rendered
     }
 
-    private static func renderAlienWorld(
+    private static func renderInstrumentWorld(
         _ output: inout [Float],
         pulseEchoSend: inout [Float],
         spatialReverbSend: inout [Float],
@@ -712,6 +741,9 @@ package enum VoiceRenderer {
         atmosphereStem: inout [Float],
         resonantAnchorStem: inout [Float],
         detunedCompanionStem: inout [Float],
+        resonantMonoInstrumentStem: inout [Float],
+        tonalMotionInstrumentStem: inout [Float],
+        spectralTextureInstrumentStem: inout [Float],
         noteRenderEvidence: inout [UpperNoteRenderEvidence],
         renderScheduledNotes: Bool,
         scene: TechnoScene,
@@ -774,6 +806,7 @@ package enum VoiceRenderer {
                     velocity: note.velocity,
                     gate: note.gate,
                     timbreIntent: note.timbreIntent,
+                    instrument: note.instrument,
                     role: role,
                     articulation: relational,
                     dryScale: spatial.dry,
@@ -785,8 +818,23 @@ package enum VoiceRenderer {
         }
 
         let anchorNotes = notes(for: .anchor)
+        ResonantMonoVoice.renderUpper(
+            &output,
+            measurement: &resonantAnchorStem,
+            architectureMeasurement: &resonantMonoInstrumentStem,
+            pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
+            notes: anchorNotes,
+            sampleRate: sampleRate,
+            level: 0.090 + scene.synthPresence * 0.060,
+            state: &state.resonantAnchorState
+        )
         AlienAnalogVoice.render(
-            &output, measurement: &resonantAnchorStem, pulseEchoSend: &pulseEchoSend,
+            &output,
+            measurement: &resonantAnchorStem,
+            architectureMeasurement: &tonalMotionInstrumentStem,
+            pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
             notes: anchorNotes, sampleRate: sampleRate,
@@ -796,8 +844,23 @@ package enum VoiceRenderer {
         )
 
         let shadowNotes = notes(for: .shadow)
+        ResonantMonoVoice.renderUpper(
+            &output,
+            measurement: &detunedCompanionStem,
+            architectureMeasurement: &resonantMonoInstrumentStem,
+            pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
+            notes: shadowNotes,
+            sampleRate: sampleRate,
+            level: 0.032 + scene.synthPresence * 0.034,
+            state: &state.resonantShadowState
+        )
         AlienAnalogVoice.render(
-            &output, measurement: &detunedCompanionStem, pulseEchoSend: &pulseEchoSend,
+            &output,
+            measurement: &detunedCompanionStem,
+            architectureMeasurement: &tonalMotionInstrumentStem,
+            pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
             notes: shadowNotes, sampleRate: sampleRate,
@@ -808,7 +871,10 @@ package enum VoiceRenderer {
 
         let atmosphereNotes = notes(for: .atmosphere)
         AlienAnalogVoice.render(
-            &output, measurement: &atmosphereStem, pulseEchoSend: &pulseEchoSend,
+            &output,
+            measurement: &atmosphereStem,
+            architectureMeasurement: &tonalMotionInstrumentStem,
+            pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
             notes: atmosphereNotes, sampleRate: sampleRate,
@@ -816,10 +882,37 @@ package enum VoiceRenderer {
             world: world, bar: synthBar, role: .atmosphere,
             state: &state.alienAtmosphereState
         )
+        SpectralTextureVoice.render(
+            &output,
+            measurement: &atmosphereStem,
+            architectureMeasurement: &spectralTextureInstrumentStem,
+            pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
+            notes: atmosphereNotes,
+            sampleRate: sampleRate,
+            level: 0.017 + scene.atmosphere * 0.025 + scene.drone * 0.018,
+            state: &state.spectralAtmosphereState
+        )
 
         let responseNotes = notes(for: .response)
+        ResonantMonoVoice.renderUpper(
+            &output,
+            measurement: &detunedCompanionStem,
+            architectureMeasurement: &resonantMonoInstrumentStem,
+            pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
+            notes: responseNotes,
+            sampleRate: sampleRate,
+            level: 0.026 + scene.melodicity * 0.030,
+            state: &state.resonantResponseState
+        )
         AlienAnalogVoice.render(
-            &output, measurement: &detunedCompanionStem, pulseEchoSend: &pulseEchoSend,
+            &output,
+            measurement: &detunedCompanionStem,
+            architectureMeasurement: &tonalMotionInstrumentStem,
+            pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
             notes: responseNotes, sampleRate: sampleRate,
@@ -827,10 +920,25 @@ package enum VoiceRenderer {
             world: world, bar: synthBar, role: .response,
             state: &state.alienResponseState
         )
+        SpectralTextureVoice.render(
+            &output,
+            measurement: &detunedCompanionStem,
+            architectureMeasurement: &spectralTextureInstrumentStem,
+            pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
+            notes: responseNotes,
+            sampleRate: sampleRate,
+            level: 0.026 + scene.melodicity * 0.030,
+            state: &state.spectralResponseState
+        )
 
         let transitionNotes = notes(for: .transition)
         AlienAnalogVoice.render(
-            &output, measurement: &atmosphereStem, pulseEchoSend: &pulseEchoSend,
+            &output,
+            measurement: &atmosphereStem,
+            architectureMeasurement: &tonalMotionInstrumentStem,
+            pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
             notes: transitionNotes, sampleRate: sampleRate,
@@ -838,8 +946,73 @@ package enum VoiceRenderer {
             world: world, bar: synthBar, role: .transition,
             state: &state.alienTransitionState
         )
+        SpectralTextureVoice.render(
+            &output,
+            measurement: &atmosphereStem,
+            architectureMeasurement: &spectralTextureInstrumentStem,
+            pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
+            notes: transitionNotes,
+            sampleRate: sampleRate,
+            level: 0.008 + scene.atmosphere * 0.012,
+            state: &state.spectralTransitionState
+        )
         for frame in upperTonalStem.indices {
             upperTonalStem[frame] = resonantAnchorStem[frame] + detunedCompanionStem[frame]
+        }
+    }
+
+    private static func instrumentEvidence(
+        resolved: ResolvedPerformanceBar,
+        synthPerformance: SynthPerformanceBar,
+        upperNoteRenderEvidence: [UpperNoteRenderEvidence],
+        resonantMono: [Float],
+        tonalMotion: [Float],
+        spectralTexture: [Float]
+    ) -> [InstrumentArchitectureRenderEvidence] {
+        var assignments = upperNoteRenderEvidence.map(\.instrument)
+        let audibleBassEvents = resolved.ensemble.events.filter { event in
+            event.voice == .bass &&
+                !(resolved.performance.signatureEvent == .delayedBassEntry && event.step < 8)
+        }
+        assignments.append(contentsOf: audibleBassEvents.map { _ in
+            synthPerformance.foundationInstrument
+        })
+        let buffers: [(InstrumentArchitecture, [Float])] = [
+            (.resonantMono, resonantMono),
+            (.tonalMotion, tonalMotion),
+            (.spectralTexture, spectralTexture),
+        ]
+        return buffers.compactMap { architecture, samples in
+            let matching = assignments.filter { $0.architecture == architecture }
+            guard !matching.isEmpty else { return nil }
+            let peak = samples.reduce(Float.zero) { max($0, abs($1)) }
+            let energy = samples.reduce(0.0) { $0 + Double($1 * $1) }
+            let rms = Float(sqrt(energy / Double(max(1, samples.count))))
+            var uniqueAssignments: [InstrumentAssignment] = []
+            for assignment in matching where !uniqueAssignments.contains(assignment) {
+                uniqueAssignments.append(assignment)
+            }
+            uniqueAssignments.sort {
+                (InstrumentUse.allCases.firstIndex(of: $0.use) ?? 0) <
+                    (InstrumentUse.allCases.firstIndex(of: $1.use) ?? 0)
+            }
+            let patchSet = Set(matching.map(\.patch))
+            let useSet = Set(matching.map(\.use))
+            let effectSet = Set(matching.flatMap(\.effects))
+            return InstrumentArchitectureRenderEvidence(
+                architecture: architecture,
+                assignments: uniqueAssignments,
+                patches: InstrumentPatch.allCases.filter(patchSet.contains),
+                uses: InstrumentUse.allCases.filter(useSet.contains),
+                effects: InstrumentEffect.allCases.filter(effectSet.contains),
+                eventCount: matching.count,
+                sampleHash: ExactPCMFingerprint.mono(samples),
+                peak: peak,
+                rms: rms,
+                finite: samples.allSatisfy(\.isFinite) && peak.isFinite && rms.isFinite
+            )
         }
     }
 
@@ -908,25 +1081,6 @@ package enum VoiceRenderer {
             let renderedSample = Float(tanh(body * 1.12) * envelope * level)
             output[start + index] += renderedSample
             measurement[start + index] += renderedSample
-        }
-    }
-
-    private static func bass(_ output: inout [Float], measurement: inout [Float],
-                             start: Int, sampleRate: Double, level: Double,
-                             frequency: Double, articulation: Double, phase: inout Double, filterState: inout Double) {
-        let frames = min(Int(sampleRate * (0.20 + articulation * 0.12)), output.count - start); guard frames > 0 else { return }
-        for i in 0..<frames {
-            let t = Double(i) / sampleRate
-            phase += 2 * Double.pi * frequency / sampleRate
-            let envelope = min(1, t / 0.005) * exp(-t * (7.2 + articulation * 3.2))
-            let saw = 2 * ((phase / (2 * .pi)).truncatingRemainder(dividingBy: 1)) - 1
-            let source = sin(phase) * 0.72 + saw * 0.28
-            let cutoff = 95 + articulation * 280 + envelope * (260 + articulation * 520)
-            let coefficient = min(0.28, 1 - exp(-2 * .pi * cutoff / sampleRate))
-            filterState += (tanh(source * (1.15 + articulation * 0.5)) - filterState) * coefficient
-            let renderedSample = Float(tanh(filterState * 1.35) * envelope * level)
-            output[start + i] += renderedSample
-            measurement[start + i] += renderedSample
         }
     }
 

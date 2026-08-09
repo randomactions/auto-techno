@@ -1088,6 +1088,7 @@ struct QualityQualificationFoundationTests {
                 sourceRenderEventCount: 0,
                 events: []
             )],
+            instruments: [AutonomousInstrumentBarEvidence(bar: 0, evidence: [])],
             graph: graph,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: evidence,
@@ -1137,6 +1138,7 @@ struct QualityQualificationFoundationTests {
                 automaticMix: source.automaticMix,
                 groovePulse: source.groovePulse,
                 closedHat: source.closedHat,
+                instruments: source.instruments,
                 graph: source.graph,
                 routeContinuation: source.routeContinuation,
                 preGraphUpperTimbreEvidence: source.preGraphUpperTimbreEvidence,

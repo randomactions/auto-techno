@@ -12,9 +12,13 @@ role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. Quality-contract schema 6
 preserves complete symbolic, full-mix, masking, role-stem, event-local
-groove-pulse and ordinary closed-hat, graph, and pre/post upper-timbre evidence
-for each retained
-attempt, then binds the selected attempt to finalized commit provenance. Its
+groove-pulse, ordinary closed-hat, score-owned instrument assignment,
+architecture-local dry-PCM, graph, and pre/post upper-timbre evidence for each
+retained attempt, then binds the selected attempt to finalized commit
+provenance. Instrument evidence
+records bounded patch automation, compatible effect access, event count, exact
+PCM identity, peak, RMS, and finiteness without retaining reconstructable
+stems. Its
 phrase-wide full-mix evidence uses ITU-R BS.1770-5 K-weighting, 400 ms blocks
 with 75% overlap and two-stage gating, plus the Annex 2 four-phase FIR for
 true-peak level. Block sizes and durations are derived from the route rate. The

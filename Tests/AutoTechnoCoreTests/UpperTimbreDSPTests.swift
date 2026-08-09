@@ -584,6 +584,7 @@ struct UpperTimbreDSPTests {
             velocity: velocity,
             gate: gate,
             timbreIntent: timbre,
+            instrument: InstrumentPalette.safeUpper(role: role),
             role: role,
             articulation: .neutral,
             dryScale: 1,

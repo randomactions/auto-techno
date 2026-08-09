@@ -21,11 +21,17 @@ mistaken for a completed feedback system.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
    candidate-evaluation transaction under quality-contract schema 6. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
-   per-bar masking, role-stem, automatic-mix, event-local groove-pulse and
-   ordinary closed-hat, graph, and pre/post upper-timbre evidence. Groove-pulse
-   records bind the existing resolved onset to score-owned strike zone, damping,
-   deterministic microvariation, exact dry-sample identity, and reduced
-   envelope/spectral consequence. The transaction binds all three
+   per-bar masking, role-stem, automatic-mix, event-local groove-pulse,
+   ordinary closed-hat, score-owned instrument, graph, and pre/post
+   upper-timbre evidence.
+   Instrument records bind each resolved architecture, patch, use, automation,
+   and compatible effect set to exact architecture-local dry-PCM identity,
+   peak, RMS, and event count. Closed-hat records bind every ordinary hat to
+   its score-owned neutral or companion decay role and exact dry-sample
+   consequence. Groove-pulse records bind the existing resolved onset to
+   score-owned strike zone, damping, deterministic microvariation, exact
+   dry-sample identity, and reduced envelope/spectral consequence. The
+   transaction binds all three
    plan fingerprints, engine/policy/evaluator versions, attempt-local reasons,
    selection, comparison, and correction provenance. It permits at most the
    primary, alternate, and deterministic fallback plus one home-timbre
@@ -55,8 +61,12 @@ mistaken for a completed feedback system.
    suite; it cannot promote or correct audio.
 5. `AutonomousPhraseRenderer` constructs the required synth world and synth
    performance. The synth planner resolves the three-step driver, five-stage
-   follower, chapter articulation, tone-chapter spectral aperture, and eligible
-   pulse-echo send without changing onset positions. The voice renderer applies
+   follower, chapter articulation, internal architecture and patch, four bounded
+   automation coordinates, tone-chapter spectral aperture, and eligible effect
+   access without changing onset positions. Resonant Mono, Tonal Motion, and
+   Spectral Texture remain specialized voices inside this one renderer; they
+   are not alternative runtimes or user-selectable instruments. The voice
+   renderer applies
    the resolved protagonist contour and may place one eligible existing event on
    a filtered send into the existing reverb; neither operation creates another
    onset or topology. The renderer also renders full and protected-rhythm

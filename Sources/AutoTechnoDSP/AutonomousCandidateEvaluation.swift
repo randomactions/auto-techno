@@ -100,7 +100,7 @@ package struct AutonomousSymbolicEvidence: Codable, Equatable, Sendable {
             pulseClarity, intentionalSpace, responseClosure, structuralTimeliness,
             identityContinuity, weakPositionCoverage, trailingSideRelationship,
             overactivityPenalty, interestScore,
-        ].allSatisfy(\.isFinite)
+        ].allSatisfy { $0.isFinite }
     }
 
     package var isComplete: Bool {
@@ -300,14 +300,14 @@ package struct AutonomousFullMixEvidence: Codable, Equatable, Sendable {
             maximumShortTermLoudness, loudnessRange, dcOffset,
             stereoCorrelation, lowStereoCorrelation, maximumBoundaryDelta,
             movementScore,
-        ].allSatisfy(\.isFinite) && bars.allSatisfy(\.isFinite)
+        ].allSatisfy { $0.isFinite } && bars.allSatisfy { $0.isFinite }
     }
 
     package var isComplete: Bool {
-        let loudnessValues = bars.map(\.loudness)
-        let spectralValues = bars.map(\.spectralCentroid)
-        let transientValues = bars.map(\.transientDensity)
-        let crestValues = bars.map(\.crestFactor)
+        let loudnessValues = bars.map { $0.loudness }
+        let spectralValues = bars.map { $0.spectralCentroid }
+        let transientValues = bars.map { $0.transientDensity }
+        let crestValues = bars.map { $0.crestFactor }
         let derivedMovementScore =
             min(1, ((loudnessValues.max() ?? -120) -
                 (loudnessValues.min() ?? -120)) / 8) * 0.34 +
@@ -327,7 +327,7 @@ package struct AutonomousFullMixEvidence: Codable, Equatable, Sendable {
             !sampleHash.isEmpty && analyzedFrameCount >= sourceBarCount &&
             (1...AutonomousCandidateEvaluationVector.maximumBarCount).contains(sourceBarCount) &&
             sourceEvidenceBarCount == bars.count && bars.count == sourceBarCount &&
-            Set(bars.map(\.bar)).count == bars.count &&
+            Set(bars.map { $0.bar }).count == bars.count &&
             momentaryBlockCount >= 0 && absoluteGatedBlockCount >= 0 &&
             relativeGatedBlockCount >= 0 && shortTermBlockCount >= 0 &&
             absoluteGatedBlockCount <= momentaryBlockCount &&
@@ -338,7 +338,7 @@ package struct AutonomousFullMixEvidence: Codable, Equatable, Sendable {
     }
 
     package var signalSafetyValid: Bool {
-        return isFinite && !bars.isEmpty && bars.allSatisfy(\.finite) &&
+        return isFinite && !bars.isEmpty && bars.allSatisfy { $0.finite } &&
             peak >= 0 && peak <= 0.95 && truePeakEstimate >= peak &&
             truePeakEstimate <= 0.95 && rms >= 0 && rms <= peak &&
             (-120...24).contains(integratedLoudness) &&
@@ -439,11 +439,12 @@ package struct AutonomousMaskingBarEvidence: Codable, Equatable, Sendable {
         )
     }
 
-    package var isFinite: Bool { observations.allSatisfy(\.isFinite) }
+    package var isFinite: Bool { observations.allSatisfy { $0.isFinite } }
 
     package var isComplete: Bool {
         sourceObservationCount == AutonomousCandidateEvaluationVector.maximumMaskingObservationsPerBar &&
-            observations.count == sourceObservationCount && observations.allSatisfy(\.isComplete) &&
+            observations.count == sourceObservationCount &&
+            observations.allSatisfy { $0.isComplete } &&
             Set(observations.map {
                 "\($0.firstRole)|\($0.secondRole)|\($0.bandName)"
             }).count == observations.count
@@ -461,7 +462,7 @@ package struct AutonomousStemBandEvidence: Codable, Equatable, Sendable {
 
     package var isFinite: Bool { energy.isFinite }
     package var isComplete: Bool {
-        MixBand.allCases.map(\.rawValue).contains(band) && energy >= 0
+        MixBand.allCases.map { $0.rawValue }.contains(band) && energy >= 0
     }
 }
 
@@ -498,8 +499,8 @@ package struct AutonomousRoleStemEvidence: Codable, Equatable, Sendable {
     }
 
     package var isFinite: Bool {
-        [rms, activeRMS, onsetRMS, peak, crestFactor, occupancy].allSatisfy(\.isFinite) &&
-            bands.allSatisfy(\.isFinite)
+        [rms, activeRMS, onsetRMS, peak, crestFactor, occupancy]
+            .allSatisfy { $0.isFinite } && bands.allSatisfy { $0.isFinite }
     }
 
     package var isComplete: Bool {
@@ -512,7 +513,7 @@ package struct AutonomousRoleStemEvidence: Codable, Equatable, Sendable {
         let activeTupleIsConsistent = peak == 0 ||
             (rms > 0 && activeRMS > 0 && occupancy > 0 &&
                 bands.contains { $0.energy > 0 })
-        return MixRole.allCases.map(\.rawValue).contains(role) &&
+        return MixRole.allCases.map { $0.rawValue }.contains(role) &&
             rms >= 0 && rms <= peak && activeRMS >= rms && activeRMS <= peak &&
             onsetRMS >= 0 && onsetRMS <= peak && peak >= 0 &&
             peak <= maximumFloatMagnitude &&
@@ -520,9 +521,10 @@ package struct AutonomousRoleStemEvidence: Codable, Equatable, Sendable {
             silentTupleIsConsistent && activeTupleIsConsistent &&
             (0...1).contains(occupancy) &&
             sourceBandCount == bands.count &&
-            bands.count == MixBand.allCases.count && bands.allSatisfy(\.isComplete) &&
+            bands.count == MixBand.allCases.count &&
+            bands.allSatisfy { $0.isComplete } &&
             bands.allSatisfy { $0.energy <= 4 * peak * peak + 1e-12 } &&
-            Set(bands.map(\.band)) == Set(MixBand.allCases.map(\.rawValue))
+            Set(bands.map { $0.band }) == Set(MixBand.allCases.map { $0.rawValue })
     }
 }
 
@@ -539,12 +541,12 @@ package struct AutonomousStemBarEvidence: Codable, Equatable, Sendable {
         )
     }
 
-    package var isFinite: Bool { roles.allSatisfy(\.isFinite) }
+    package var isFinite: Bool { roles.allSatisfy { $0.isFinite } }
 
     package var isComplete: Bool {
         sourceRoleCount == AutonomousCandidateEvaluationVector.maximumStemRolesPerBar &&
-            roles.count == sourceRoleCount && roles.allSatisfy(\.isComplete) &&
-            Set(roles.map(\.role)) == Set(MixRole.allCases.map(\.rawValue))
+            roles.count == sourceRoleCount && roles.allSatisfy { $0.isComplete } &&
+            Set(roles.map { $0.role }) == Set(MixRole.allCases.map { $0.rawValue })
     }
 }
 
@@ -596,7 +598,7 @@ package struct AutonomousAutomaticMixEvidence: Codable, Equatable, Sendable {
     }
 
     package var isFinite: Bool {
-        gains.allSatisfy(\.isFinite) &&
+        gains.allSatisfy { $0.isFinite } &&
             (measuredKickOverFoundationDB?.isFinite ?? true) &&
             (targetKickOverFoundationDB?.isFinite ?? true)
     }
@@ -605,8 +607,8 @@ package struct AutonomousAutomaticMixEvidence: Codable, Equatable, Sendable {
         SectionKind(rawValue: section) != nil &&
             FoundationCompanion(rawValue: foundationCompanion) != nil &&
             sourceGainCount == gains.count && gains.count == MixRole.allCases.count &&
-            gains.allSatisfy(\.isComplete) &&
-            Set(gains.map(\.role)) == Set(MixRole.allCases.map(\.rawValue)) &&
+            gains.allSatisfy { $0.isComplete } &&
+            Set(gains.map { $0.role }) == Set(MixRole.allCases.map { $0.rawValue }) &&
             (measuredKickOverFoundationDB == nil) == (targetKickOverFoundationDB == nil)
     }
 }
@@ -661,7 +663,7 @@ package struct AutonomousGroovePulseEventEvidence: Codable, Equatable, Sendable 
         finite && [
             intensity, damping, timbreMicrovariation, sourceRMS,
             spectralCentroidHz, tailToAttackDB,
-        ].allSatisfy(\.isFinite)
+        ].allSatisfy { $0.isFinite }
     }
 
     package func isComplete(sampleRate: Double) -> Bool {
@@ -711,7 +713,7 @@ package struct AutonomousGroovePulseBarEvidence: Codable, Equatable, Sendable {
         )
     }
 
-    package var isFinite: Bool { events.allSatisfy(\.isFinite) }
+    package var isFinite: Bool { events.allSatisfy { $0.isFinite } }
 
     package func isComplete(sampleRate: Double) -> Bool {
         bar >= 0 && sourceScoreEventCount >= 0 &&
@@ -719,8 +721,8 @@ package struct AutonomousGroovePulseBarEvidence: Codable, Equatable, Sendable {
                 AutonomousCandidateEvaluationVector.maximumGroovePulseEventsPerBar &&
             sourceRenderEventCount == sourceScoreEventCount &&
             events.count == sourceScoreEventCount &&
-            events.map(\.step) == events.map(\.step).sorted() &&
-            Set(events.map(\.step)).count == events.count &&
+            events.map { $0.step } == events.map { $0.step }.sorted() &&
+            Set(events.map { $0.step }).count == events.count &&
             events.allSatisfy { $0.isComplete(sampleRate: sampleRate) }
     }
 }
@@ -781,7 +783,7 @@ package struct AutonomousClosedHatEventEvidence: Codable, Equatable, Sendable {
         finite && [
             intensity, timingOffsetInSteps, decayRateScale, sourceRMS,
             spectralCentroidHz, tailToAttackDB,
-        ].allSatisfy(\.isFinite)
+        ].allSatisfy { $0.isFinite }
     }
 
     package func isComplete(sampleRate: Double) -> Bool {
@@ -817,6 +819,103 @@ package struct AutonomousClosedHatEventEvidence: Codable, Equatable, Sendable {
     }
 }
 
+package struct AutonomousInstrumentAssignmentEvidence: Codable, Equatable, Sendable {
+    package let use: String
+    package let architecture: String
+    package let patch: String
+    package let color: Double
+    package let shape: Double
+    package let motion: Double
+    package let space: Double
+    package let effects: [String]
+
+    package init(_ assignment: InstrumentAssignment) {
+        use = assignment.use.rawValue
+        architecture = assignment.architecture.rawValue
+        patch = assignment.patch.rawValue
+        color = assignment.automation.color
+        shape = assignment.automation.shape
+        motion = assignment.automation.motion
+        space = assignment.automation.space
+        effects = assignment.effects.map { $0.rawValue }
+    }
+
+    package var isFinite: Bool {
+        [color, shape, motion, space].allSatisfy { $0.isFinite }
+    }
+
+    package var isComplete: Bool {
+        let requestedEffects = Set(effects)
+        let canonicalEffects = InstrumentEffect.allCases
+            .filter { requestedEffects.contains($0.rawValue) }
+            .map { $0.rawValue }
+        guard let use = InstrumentUse(rawValue: use),
+              let architecture = InstrumentArchitecture(rawValue: architecture),
+              let patch = InstrumentPatch(rawValue: patch),
+              let capability = InstrumentPalette.capability(for: patch),
+              patch.architecture == architecture,
+              capability.supports(use),
+              effects.count == requestedEffects.count,
+              effects == canonicalEffects,
+              Set(effects).isSubset(of: Set(capability.compatibleEffects.map { $0.rawValue })) else {
+            return false
+        }
+        return [color, shape, motion, space].allSatisfy { (0...1).contains($0) } &&
+            (use != .foundationBass || space == 0)
+    }
+}
+
+package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sendable {
+    package let architecture: String
+    package let sourceAssignmentCount: Int
+    package let assignments: [AutonomousInstrumentAssignmentEvidence]
+    package let eventCount: Int
+    package let sampleHash: String
+    package let peak: Double
+    package let rms: Double
+    package let finite: Bool
+
+    package init(_ evidence: InstrumentArchitectureRenderEvidence) {
+        architecture = evidence.architecture.rawValue
+        sourceAssignmentCount = evidence.assignments.count
+        assignments = Array(evidence.assignments.prefix(
+            AutonomousCandidateEvaluationVector.maximumInstrumentAssignmentsPerArchitecture
+        )).map(AutonomousInstrumentAssignmentEvidence.init)
+        eventCount = evidence.eventCount
+        sampleHash = evidence.sampleHash
+        peak = Double(evidence.peak)
+        rms = Double(evidence.rms)
+        finite = evidence.finite
+    }
+
+    package var isFinite: Bool {
+        finite && peak.isFinite && rms.isFinite &&
+            assignments.allSatisfy { $0.isFinite }
+    }
+
+    package var isComplete: Bool {
+        InstrumentArchitecture(rawValue: architecture) != nil &&
+            sourceAssignmentCount == assignments.count &&
+            !assignments.isEmpty &&
+            assignments.count <=
+                AutonomousCandidateEvaluationVector.maximumInstrumentAssignmentsPerArchitecture &&
+            assignments.allSatisfy {
+                $0.architecture == architecture && $0.isComplete
+            } &&
+            eventCount >= assignments.count &&
+            eventCount <= AutonomousCandidateEvaluationVector.maximumInstrumentEventsPerBar &&
+            Self.isSampleHash(sampleHash) &&
+            peak >= 0 && rms >= 0 && rms <= peak &&
+            peak <= Double(Float.greatestFiniteMagnitude)
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 /// Explicit per-bar ownership keeps empty bars truthful and prevents either
 /// the score or render side of the event bijection from being truncated away.
 package struct AutonomousClosedHatBarEvidence: Codable, Equatable, Sendable {
@@ -841,7 +940,7 @@ package struct AutonomousClosedHatBarEvidence: Codable, Equatable, Sendable {
         )
     }
 
-    package var isFinite: Bool { events.allSatisfy(\.isFinite) }
+    package var isFinite: Bool { events.allSatisfy { $0.isFinite } }
 
     package func isComplete(sampleRate: Double) -> Bool {
         bar >= 0 && sourceScoreEventCount >= 0 &&
@@ -849,10 +948,43 @@ package struct AutonomousClosedHatBarEvidence: Codable, Equatable, Sendable {
                 AutonomousCandidateEvaluationVector.maximumClosedHatEventsPerBar &&
             sourceRenderEventCount == sourceScoreEventCount &&
             events.count == sourceScoreEventCount &&
-            events.map(\.scoreEventIndex) ==
-                events.map(\.scoreEventIndex).sorted() &&
-            Set(events.map(\.scoreEventIndex)).count == events.count &&
+            events.map { $0.scoreEventIndex } ==
+                events.map { $0.scoreEventIndex }.sorted() &&
+            Set(events.map { $0.scoreEventIndex }).count == events.count &&
             events.allSatisfy { $0.isComplete(sampleRate: sampleRate) }
+    }
+}
+
+package struct AutonomousInstrumentBarEvidence: Codable, Equatable, Sendable {
+    package let bar: Int
+    package let sourceArchitectureCount: Int
+    package let architectures: [AutonomousInstrumentArchitectureEvidence]
+
+    package init(bar: Int, evidence: [InstrumentArchitectureRenderEvidence]) {
+        self.bar = bar
+        sourceArchitectureCount = evidence.count
+        architectures = Array(evidence.prefix(
+            AutonomousCandidateEvaluationVector.maximumInstrumentArchitecturesPerBar
+        )).map(AutonomousInstrumentArchitectureEvidence.init)
+    }
+
+    package var isFinite: Bool { architectures.allSatisfy { $0.isFinite } }
+
+    package var isComplete: Bool {
+        bar >= 0 && sourceArchitectureCount == architectures.count &&
+            architectures.count <=
+                AutonomousCandidateEvaluationVector.maximumInstrumentArchitecturesPerBar &&
+            architectures.allSatisfy { $0.isComplete } &&
+            architectures.map { $0.architecture } ==
+                architectures.map { $0.architecture }.sorted {
+                let lhs = InstrumentArchitecture(rawValue: $0).flatMap {
+                    InstrumentArchitecture.allCases.firstIndex(of: $0)
+                } ?? 0
+                let rhs = InstrumentArchitecture(rawValue: $1).flatMap {
+                    InstrumentArchitecture.allCases.firstIndex(of: $0)
+                } ?? 0
+                return lhs < rhs
+            } && Set(architectures.map { $0.architecture }).count == architectures.count
     }
 }
 
@@ -1009,12 +1141,15 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 4
+    package static let schemaVersion = 5
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
     package static let maximumGroovePulseEventsPerBar = 8
     package static let maximumClosedHatEventsPerBar = 4
+    package static let maximumInstrumentArchitecturesPerBar = 3
+    package static let maximumInstrumentAssignmentsPerArchitecture = 6
+    package static let maximumInstrumentEventsPerBar = 64
 
     package let schemaVersion: Int
     package let slot: AutonomousCandidateSlot
@@ -1033,6 +1168,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let groovePulse: [AutonomousGroovePulseBarEvidence]
     package let sourceClosedHatBarCount: Int
     package let closedHat: [AutonomousClosedHatBarEvidence]
+    package let sourceInstrumentBarCount: Int
+    package let instruments: [AutonomousInstrumentBarEvidence]
     package let graph: AutonomousGraphEvidence
     package let routeContinuation: AutonomousRouteContinuationEvidence
     /// Aggregate over the exact graph-input remainder. This diagnoses whether
@@ -1054,6 +1191,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         automaticMix: [AutonomousAutomaticMixEvidence],
         groovePulse: [AutonomousGroovePulseBarEvidence],
         closedHat: [AutonomousClosedHatBarEvidence] = [],
+        instruments: [AutonomousInstrumentBarEvidence],
         graph: AutonomousGraphEvidence,
         routeContinuation: AutonomousRouteContinuationEvidence,
         preGraphUpperTimbreEvidence: UpperTimbreEvidence,
@@ -1076,6 +1214,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.groovePulse = Array(groovePulse.prefix(Self.maximumBarCount))
         sourceClosedHatBarCount = closedHat.count
         self.closedHat = Array(closedHat.prefix(Self.maximumBarCount))
+        sourceInstrumentBarCount = instruments.count
+        self.instruments = Array(instruments.prefix(Self.maximumBarCount))
         self.graph = graph
         self.routeContinuation = routeContinuation
         self.preGraphUpperTimbreEvidence = preGraphUpperTimbreEvidence
@@ -1108,7 +1248,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         guard !cancellationRequested() else { return nil }
         let boundedBlocks = Array(blocks.prefix(maximumBarCount))
         let preGraphUpperTimbreEvidence = UpperTimbreEvidence.aggregating(
-            boundedBlocks.map(\.graphInputRemainderTimbreEvidence)
+            boundedBlocks.map { $0.graphInputRemainderTimbreEvidence }
         )
         let graphValidation = DSPGraphValidator.validate(graph)
         let completeInputs = !blocks.isEmpty && blocks.count <= maximumBarCount &&
@@ -1120,14 +1260,14 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         var samplesFinite = true
         for block in boundedBlocks {
             guard !cancellationRequested() else { return nil }
-            if !block.left.allSatisfy(\.isFinite) ||
-                !block.right.allSatisfy(\.isFinite) {
+            if !block.left.allSatisfy({ $0.isFinite }) ||
+                !block.right.allSatisfy({ $0.isFinite }) {
                 samplesFinite = false
                 break
             }
         }
 
-        let chapters = plan.resolvedBars.map(\.interlockChapter)
+        let chapters = plan.resolvedBars.map { $0.interlockChapter }
         let internalChapterChange = zip(chapters, chapters.dropFirst()).contains {
             $0 != $1
         }
@@ -1384,6 +1524,12 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 events: matched
             )
         }
+        let instruments = boundedBlocks.map { block in
+            AutonomousInstrumentBarEvidence(
+                bar: block.bar,
+                evidence: block.instrumentRenderEvidence
+            )
+        }
         let graphEvidence = AutonomousGraphEvidence(
             graphFingerprint: graphFingerprint,
             revision: graph.revision,
@@ -1425,6 +1571,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             automaticMix: automaticMix,
             groovePulse: groovePulse,
             closedHat: closedHat,
+            instruments: instruments,
             graph: graphEvidence,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: preGraphUpperTimbreEvidence,
@@ -1433,15 +1580,35 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     }
 
     package var isFinite: Bool {
-        symbolic.isFinite && fullMix.isFinite && masking.allSatisfy(\.isFinite) &&
-            stems.allSatisfy(\.isFinite) && automaticMix.allSatisfy(\.isFinite) &&
-            groovePulse.allSatisfy(\.isFinite) && closedHat.allSatisfy(\.isFinite) &&
+        symbolic.isFinite && fullMix.isFinite && masking.allSatisfy { $0.isFinite } &&
+            stems.allSatisfy { $0.isFinite } &&
+            automaticMix.allSatisfy { $0.isFinite } &&
+            groovePulse.allSatisfy { $0.isFinite } &&
+            closedHat.allSatisfy { $0.isFinite } &&
+            instruments.allSatisfy { $0.isFinite } &&
             routeContinuation.isFinite &&
             preGraphUpperTimbreEvidence.candidateValuesAreFinite &&
             postGraphUpperTimbreEvidence.candidateValuesAreFinite
     }
 
     package var isComplete: Bool {
+        guard identityAndPrimaryEvidenceAreComplete(),
+              symbolicBarCoverageIsComplete(),
+              automaticMixControllerTrajectoryIsComplete() else {
+            return false
+        }
+        let expectedBars = Set(fullMix.bars.map { $0.bar })
+        return sourceCountsAreComplete() &&
+            maskingEvidenceIsComplete(expectedBars: expectedBars) &&
+            stemEvidenceIsComplete(expectedBars: expectedBars) &&
+            automaticMixEvidenceIsComplete(expectedBars: expectedBars) &&
+            groovePulseEvidenceIsComplete(expectedBars: expectedBars) &&
+            closedHatEvidenceIsComplete(expectedBars: expectedBars) &&
+            instrumentEvidenceIsComplete(expectedBars: expectedBars)
+    }
+
+    @inline(never)
+    private func identityAndPrimaryEvidenceAreComplete() -> Bool {
         let slotMatchesSymbolicIntent: Bool
         switch slot {
         case .primary:
@@ -1458,6 +1625,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
               slotMatchesSymbolicIntent,
               symbolic.isComplete, hardGates.isComplete, fullMix.isComplete,
               graph.isComplete, routeContinuation.isComplete,
+              sourceInstrumentBarCount == instruments.count,
+              instruments.count == fullMix.sourceBarCount,
+              instruments.allSatisfy({ $0.isComplete }),
               preGraphUpperTimbreEvidence.candidateEvidenceIsComplete(
                 windowCount: fullMix.sourceBarCount
               ),
@@ -1472,123 +1642,169 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
               postGraphUpperTimbreEvidence.sampleRate == routeContinuation.sampleRate else {
             return false
         }
-        let expectedBars = Set(fullMix.bars.map(\.bar))
+        return true
+    }
+
+    @inline(never)
+    private func symbolicBarCoverageIsComplete() -> Bool {
+        let expectedBars = Set(fullMix.bars.map { $0.bar })
         guard symbolic.startBar <= Int.max - symbolic.declaredBarCount else {
             return false
         }
         let symbolicBars = Set(
             symbolic.startBar..<(symbolic.startBar + symbolic.declaredBarCount)
         )
+        return fullMix.sourceBarCount == symbolic.declaredBarCount &&
+            expectedBars == symbolicBars
+    }
+
+    @inline(never)
+    private func automaticMixControllerTrajectoryIsComplete() -> Bool {
         let finalBar = symbolic.startBar + symbolic.declaredBarCount - 1
         let orderedMix = automaticMix.sorted { $0.bar < $1.bar }
-        let kickGains = orderedMix.compactMap { mix in
-            mix.gains.first(where: { $0.role == MixRole.kick.rawValue })?.gainDB
-        }
         var expectedKick = routeContinuation.incomingKickCorrectionDB
-        var controllerTrajectoryIsValid = kickGains.count == automaticMix.count
         for mix in orderedMix {
-            guard let actualKick = mix.gains.first(where: {
-                $0.role == MixRole.kick.rawValue
-            })?.gainDB else {
-                controllerTrajectoryIsValid = false
-                break
-            }
-            guard let stemBar = stems.first(where: { $0.bar == mix.bar }),
-                  let kick = stemBar.roles.first(where: {
-                      $0.role == MixRole.kick.rawValue
-                  }),
-                  let foundation = stemBar.roles.first(where: {
-                      $0.role == MixRole.foundation.rawValue
-                  }),
-                  let section = SectionKind(rawValue: mix.section),
-                  let companion = FoundationCompanion(
-                    rawValue: mix.foundationCompanion
-                  ) else {
-                controllerTrajectoryIsValid = false
-                break
-            }
-            let controllerShouldMeasure = kick.activeRMS > 0 &&
-                section != .breakdown && companion != .empty &&
-                foundation.activeRMS > 0.000_001 && foundation.occupancy >= 0.02
-            if let measured = mix.measuredKickOverFoundationDB,
-               let target = mix.targetKickOverFoundationDB {
-                let expectedTarget: Double
-                switch companion {
-                case .bass: expectedTarget = 16.5
-                case .monoRumble: expectedTarget = 27.5
-                case .tunedTom: expectedTarget = 22.5
-                case .empty: expectedTarget = 0
-                }
-                guard controllerShouldMeasure else {
-                    controllerTrajectoryIsValid = false
-                    break
-                }
-                let expectedMeasured =
-                    20 * log10(max(kick.activeRMS, 0.000_000_001)) -
-                    actualKick -
-                    20 * log10(max(foundation.activeRMS, 0.000_000_001))
-                guard abs(measured - expectedMeasured) <= 1e-6,
-                      target == expectedTarget else {
-                    controllerTrajectoryIsValid = false
-                    break
-                }
-                let error = target - (measured + expectedKick)
-                if abs(error) > AutomaticMixBalancer.deadbandDB {
-                    let step = min(
-                        AutomaticMixBalancer.maximumStepDB,
-                        max(-AutomaticMixBalancer.maximumStepDB, error * 0.5)
-                    )
-                    expectedKick = min(
-                        0,
-                        max(
-                            AutomaticMixBalancer.minimumKickCorrectionDB,
-                            expectedKick + step
-                        )
-                    )
-                }
-            } else if controllerShouldMeasure {
-                controllerTrajectoryIsValid = false
-                break
-            }
-            if actualKick != expectedKick {
-                controllerTrajectoryIsValid = false
-                break
+            if !automaticMixBarIsComplete(mix, expectedKick: &expectedKick) {
+                return false
             }
         }
         guard let finalMix = automaticMix.first(where: { $0.bar == finalBar }),
               let finalKick = finalMix.gains.first(where: {
                   $0.role == MixRole.kick.rawValue
               }),
-              controllerTrajectoryIsValid,
               routeContinuation.controllerStateFingerprint ==
                 AutonomousCandidateFingerprint.automaticMixController(
                     kickCorrectionDB: finalKick.gainDB
                 ) else {
             return false
         }
-        return fullMix.sourceBarCount == symbolic.declaredBarCount &&
-            expectedBars == symbolicBars &&
-            sourceMaskingBarCount == masking.count &&
+        return true
+    }
+
+    @inline(never)
+    private func automaticMixBarIsComplete(
+        _ mix: AutonomousAutomaticMixEvidence,
+        expectedKick: inout Double
+    ) -> Bool {
+        guard let actualKick = mix.gains.first(where: {
+            $0.role == MixRole.kick.rawValue
+        })?.gainDB,
+              let stemBar = stems.first(where: { $0.bar == mix.bar }),
+              let kick = stemBar.roles.first(where: {
+                  $0.role == MixRole.kick.rawValue
+              }),
+              let foundation = stemBar.roles.first(where: {
+                  $0.role == MixRole.foundation.rawValue
+              }),
+              let section = SectionKind(rawValue: mix.section),
+              let companion = FoundationCompanion(
+                rawValue: mix.foundationCompanion
+              ) else {
+            return false
+        }
+        let controllerShouldMeasure = kick.activeRMS > 0 &&
+            section != .breakdown && companion != .empty &&
+            foundation.activeRMS > 0.000_001 && foundation.occupancy >= 0.02
+        if let measured = mix.measuredKickOverFoundationDB,
+           let target = mix.targetKickOverFoundationDB {
+            guard controllerShouldMeasure,
+                  target == expectedKickTarget(for: companion) else {
+                return false
+            }
+            let expectedMeasured =
+                20 * log10(max(kick.activeRMS, 0.000_000_001)) - actualKick -
+                20 * log10(max(foundation.activeRMS, 0.000_000_001))
+            guard abs(measured - expectedMeasured) <= 1e-6 else {
+                return false
+            }
+            let error = target - (measured + expectedKick)
+            if abs(error) > AutomaticMixBalancer.deadbandDB {
+                let step = min(
+                    AutomaticMixBalancer.maximumStepDB,
+                    max(-AutomaticMixBalancer.maximumStepDB, error * 0.5)
+                )
+                expectedKick = min(
+                    0,
+                    max(
+                        AutomaticMixBalancer.minimumKickCorrectionDB,
+                        expectedKick + step
+                    )
+                )
+            }
+        } else if controllerShouldMeasure {
+            return false
+        }
+        return actualKick == expectedKick
+    }
+
+    @inline(never)
+    private func expectedKickTarget(for companion: FoundationCompanion) -> Double {
+        switch companion {
+        case .bass: return 16.5
+        case .monoRumble: return 27.5
+        case .tunedTom: return 22.5
+        case .empty: return 0
+        }
+    }
+
+    @inline(never)
+    private func sourceCountsAreComplete() -> Bool {
+        sourceMaskingBarCount == masking.count &&
             sourceStemBarCount == stems.count &&
             sourceAutomaticMixBarCount == automaticMix.count &&
             sourceGroovePulseBarCount == groovePulse.count &&
             sourceClosedHatBarCount == closedHat.count &&
+            sourceInstrumentBarCount == instruments.count &&
             masking.count == fullMix.sourceBarCount &&
             stems.count == fullMix.sourceBarCount &&
             automaticMix.count == fullMix.sourceBarCount &&
             groovePulse.count == fullMix.sourceBarCount &&
             closedHat.count == fullMix.sourceBarCount &&
-            Set(masking.map(\.bar)) == expectedBars && masking.allSatisfy(\.isComplete) &&
-            Set(stems.map(\.bar)) == expectedBars && stems.allSatisfy(\.isComplete) &&
-            Set(automaticMix.map(\.bar)) == expectedBars &&
-            automaticMix.allSatisfy(\.isComplete) &&
-            Set(groovePulse.map(\.bar)) == expectedBars &&
+            instruments.count == fullMix.sourceBarCount
+    }
+
+    @inline(never)
+    private func maskingEvidenceIsComplete(expectedBars: Set<Int>) -> Bool {
+        Set(masking.map { $0.bar }) == expectedBars &&
+            masking.allSatisfy { $0.isComplete } &&
+            masking.count == fullMix.sourceBarCount
+    }
+
+    @inline(never)
+    private func stemEvidenceIsComplete(expectedBars: Set<Int>) -> Bool {
+        Set(stems.map { $0.bar }) == expectedBars &&
+            stems.allSatisfy { $0.isComplete } &&
+            stems.count == fullMix.sourceBarCount
+    }
+
+    @inline(never)
+    private func automaticMixEvidenceIsComplete(expectedBars: Set<Int>) -> Bool {
+        Set(automaticMix.map { $0.bar }) == expectedBars &&
+            automaticMix.allSatisfy { $0.isComplete } &&
+            automaticMix.count == fullMix.sourceBarCount
+    }
+
+    @inline(never)
+    private func groovePulseEvidenceIsComplete(expectedBars: Set<Int>) -> Bool {
+        Set(groovePulse.map { $0.bar }) == expectedBars &&
             groovePulse.allSatisfy {
                 $0.isComplete(sampleRate: routeContinuation.sampleRate)
-            } && Set(closedHat.map(\.bar)) == expectedBars &&
+            } && groovePulse.count == fullMix.sourceBarCount
+    }
+
+    @inline(never)
+    private func closedHatEvidenceIsComplete(expectedBars: Set<Int>) -> Bool {
+        Set(closedHat.map { $0.bar }) == expectedBars &&
             closedHat.allSatisfy {
                 $0.isComplete(sampleRate: routeContinuation.sampleRate)
-            }
+            } && closedHat.count == fullMix.sourceBarCount
+    }
+
+    @inline(never)
+    private func instrumentEvidenceIsComplete(expectedBars: Set<Int>) -> Bool {
+        Set(instruments.map { $0.bar }) == expectedBars &&
+            instruments.allSatisfy { $0.isComplete } &&
+            instruments.count == fullMix.sourceBarCount
     }
 
     /// The one selector projection shared by live preparation and transaction
@@ -1640,6 +1856,12 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
 
     @inline(never)
     private func recordCountsAreBounded() -> Bool {
+        sourceRecordCountsAreBounded() && retainedRecordCountsAreBounded() &&
+            graphRecordCountsAreBounded() && upperTimbreRecordCountsAreBounded()
+    }
+
+    @inline(never)
+    private func sourceRecordCountsAreBounded() -> Bool {
         fullMix.bars.count <= Self.maximumBarCount &&
             fullMix.sourceEvidenceBarCount >= fullMix.bars.count &&
             sourceMaskingBarCount >= masking.count &&
@@ -1647,10 +1869,19 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceAutomaticMixBarCount >= automaticMix.count &&
             sourceGroovePulseBarCount >= groovePulse.count &&
             sourceClosedHatBarCount >= closedHat.count &&
-            graph.violations.count <= AutonomousGraphEvidence.maximumViolationCount &&
-            graph.sourceViolationCount >= graph.violations.count &&
-            preGraphUpperTimbreEvidence.velocityExpression.count <=
-                UpperTimbreEvidenceAnalyzer.maximumVelocityExpressionEvents &&
+            sourceInstrumentBarCount >= instruments.count
+    }
+
+    @inline(never)
+    private func graphRecordCountsAreBounded() -> Bool {
+        graph.violations.count <= AutonomousGraphEvidence.maximumViolationCount &&
+            graph.sourceViolationCount >= graph.violations.count
+    }
+
+    @inline(never)
+    private func upperTimbreRecordCountsAreBounded() -> Bool {
+        preGraphUpperTimbreEvidence.velocityExpression.count <=
+            UpperTimbreEvidenceAnalyzer.maximumVelocityExpressionEvents &&
             postGraphUpperTimbreEvidence.velocityExpression.count <=
                 UpperTimbreEvidenceAnalyzer.maximumVelocityExpressionEvents &&
             preGraphUpperTimbreEvidence.schemaVersion ==
@@ -1660,12 +1891,17 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             preGraphUpperTimbreEvidence.analyzedFrameCount ==
                 postGraphUpperTimbreEvidence.analyzedFrameCount &&
             upperTimbreRateMatchesRoute(preGraphUpperTimbreEvidence) &&
-            upperTimbreRateMatchesRoute(postGraphUpperTimbreEvidence) &&
-            masking.count <= Self.maximumBarCount &&
+            upperTimbreRateMatchesRoute(postGraphUpperTimbreEvidence)
+    }
+
+    @inline(never)
+    private func retainedRecordCountsAreBounded() -> Bool {
+        masking.count <= Self.maximumBarCount &&
             stems.count <= Self.maximumBarCount &&
             automaticMix.count <= Self.maximumBarCount &&
             groovePulse.count <= Self.maximumBarCount &&
-            closedHat.count <= Self.maximumBarCount
+            closedHat.count <= Self.maximumBarCount &&
+            instruments.count <= Self.maximumBarCount
     }
 
     @inline(never)
@@ -1682,10 +1918,22 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
 
     @inline(never)
     private func recordCollectionsAreBounded() -> Bool {
+        maskingRecordsAreBounded() && stemRecordsAreBounded() &&
+            automaticMixRecordsAreBounded() && groovePulseRecordsAreBounded() &&
+            closedHatRecordsAreBounded() && instrumentRecordsAreBounded()
+    }
+
+    @inline(never)
+    private func maskingRecordsAreBounded() -> Bool {
         for bar in masking where
             bar.observations.count > Self.maximumMaskingObservationsPerBar {
             return false
         }
+        return true
+    }
+
+    @inline(never)
+    private func stemRecordsAreBounded() -> Bool {
         for bar in stems {
             guard bar.roles.count <= Self.maximumStemRolesPerBar else {
                 return false
@@ -1694,16 +1942,49 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 return false
             }
         }
+        return true
+    }
+
+    @inline(never)
+    private func automaticMixRecordsAreBounded() -> Bool {
         for bar in automaticMix where
             bar.gains.count > Self.maximumStemRolesPerBar {
             return false
         }
+        return true
+    }
+
+    @inline(never)
+    private func groovePulseRecordsAreBounded() -> Bool {
         for bar in groovePulse where
             bar.events.count > Self.maximumGroovePulseEventsPerBar {
             return false
         }
+        return true
+    }
+
+    @inline(never)
+    private func closedHatRecordsAreBounded() -> Bool {
         for bar in closedHat where
             bar.events.count > Self.maximumClosedHatEventsPerBar {
+            return false
+        }
+        return true
+    }
+
+    @inline(never)
+    private func instrumentRecordsAreBounded() -> Bool {
+        for bar in instruments {
+            guard bar.architectures.count <= Self.maximumInstrumentArchitecturesPerBar else {
+                return false
+            }
+            for architecture in bar.architectures where
+                architecture.assignments.count >
+                    Self.maximumInstrumentAssignmentsPerArchitecture {
+                return false
+            }
+        }
+        guard instruments.map({ $0.bar }) == fullMix.bars.map({ $0.bar }) else {
             return false
         }
         return true
@@ -1921,7 +2202,7 @@ package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sen
             }
         }
         retained.sort { $0.sourceIndex < $1.sourceIndex }
-        attempts = retained.map(\.attempt)
+        attempts = retained.map { $0.attempt }
         if let sourceSelectedAttemptIndex,
            let boundedIndex = retained.firstIndex(where: {
                $0.sourceIndex == sourceSelectedAttemptIndex
@@ -2597,19 +2878,24 @@ private enum AutonomousCandidateCanonicalJSON {
 
 private extension UpperTimbreEvidence {
     var candidateValuesAreFinite: Bool {
-        [
+        let scalarValues = [
             sampleRate, rms, crestFactor, filterContourRise, filterContourDecay,
             accentContrastDB, slideMaximumDelta, detuneMotionDepth,
             detuneMotionPeriodSeconds, highBandEnergyRatio, aliasBandEnergyRatio,
             stereoWidthRatio, monoLossDB, stereoCorrelation, maskingOverlap,
             maximumBoundaryDelta,
-        ].allSatisfy(\.isFinite) && finite && velocityExpression.allSatisfy {
-            [
-                $0.velocity, $0.appliedStartFrequency, $0.spectralEnvelopeScale,
-                $0.decayScale, $0.sourceRMS, $0.attackHighBandRatio,
-                $0.tailToAttackDB,
-            ].allSatisfy(\.isFinite)
+        ]
+        guard finite else { return false }
+        for value in scalarValues where !value.isFinite { return false }
+        for event in velocityExpression {
+            let eventValues = [
+                event.velocity, event.appliedStartFrequency,
+                event.spectralEnvelopeScale, event.decayScale, event.sourceRMS,
+                event.attackHighBandRatio, event.tailToAttackDB,
+            ]
+            for value in eventValues where !value.isFinite { return false }
         }
+        return true
     }
 
     var candidateSignalDomainsAreValid: Bool {
@@ -2617,34 +2903,43 @@ private extension UpperTimbreEvidence {
         let maximumBoundaryDelta = maximumFloatMagnitude * 2
         let maximumPeriod = sampleRate > 0
             ? Double(max(0, analyzedFrameCount)) / sampleRate : 0
-        return sampleRate.isFinite && sampleRate > 0 &&
-            analyzedFrameCount >= 0 && accentedOnsetCount >= 0 &&
-            unaccentedOnsetCount >= 0 && slideWindowCount >= 0 &&
-            duplicateAttackCount >= 0 &&
-            (0...maximumFloatMagnitude).contains(rms) &&
-            (0...1_000_000).contains(crestFactor) &&
-            (0...1).contains(filterContourRise) &&
-            (0...1).contains(filterContourDecay) &&
-            (-60...60).contains(accentContrastDB) &&
-            (0...maximumBoundaryDelta).contains(slideMaximumDelta) &&
-            (0...1).contains(detuneMotionDepth) &&
-            (0...maximumPeriod).contains(detuneMotionPeriodSeconds) &&
-            (0...1).contains(highBandEnergyRatio) &&
-            (0...1).contains(aliasBandEnergyRatio) &&
-            (0...120).contains(stereoWidthRatio) &&
-            (-120...0).contains(monoLossDB) &&
-            (-1...1).contains(stereoCorrelation) &&
-            (0...1).contains(maskingOverlap) &&
-            (0...maximumBoundaryDelta).contains(self.maximumBoundaryDelta) &&
-            velocityExpression.allSatisfy {
-                (0...1).contains($0.velocity) &&
-                    (0...(sampleRate * 0.5)).contains($0.appliedStartFrequency) &&
-                    (0.40...1.60).contains($0.spectralEnvelopeScale) &&
-                    (0.80...1.20).contains($0.decayScale) &&
-                    (0...maximumFloatMagnitude).contains($0.sourceRMS) &&
-                    (0...1).contains($0.attackHighBandRatio) &&
-                    (-120...120).contains($0.tailToAttackDB)
+        guard sampleRate.isFinite, sampleRate > 0,
+              analyzedFrameCount >= 0, accentedOnsetCount >= 0,
+              unaccentedOnsetCount >= 0, slideWindowCount >= 0,
+              duplicateAttackCount >= 0,
+              rms >= 0, rms <= maximumFloatMagnitude,
+              crestFactor >= 0, crestFactor <= 1_000_000,
+              filterContourRise >= 0, filterContourRise <= 1,
+              filterContourDecay >= 0, filterContourDecay <= 1,
+              accentContrastDB >= -60, accentContrastDB <= 60,
+              slideMaximumDelta >= 0, slideMaximumDelta <= maximumBoundaryDelta,
+              detuneMotionDepth >= 0, detuneMotionDepth <= 1,
+              detuneMotionPeriodSeconds >= 0,
+              detuneMotionPeriodSeconds <= maximumPeriod,
+              highBandEnergyRatio >= 0, highBandEnergyRatio <= 1,
+              aliasBandEnergyRatio >= 0, aliasBandEnergyRatio <= 1,
+              stereoWidthRatio >= 0, stereoWidthRatio <= 120,
+              monoLossDB >= -120, monoLossDB <= 0,
+              stereoCorrelation >= -1, stereoCorrelation <= 1,
+              maskingOverlap >= 0, maskingOverlap <= 1,
+              self.maximumBoundaryDelta >= 0,
+              self.maximumBoundaryDelta <= maximumBoundaryDelta else {
+            return false
+        }
+        for event in velocityExpression {
+            guard event.velocity >= 0, event.velocity <= 1,
+                  event.appliedStartFrequency >= 0,
+                  event.appliedStartFrequency <= sampleRate * 0.5,
+                  event.spectralEnvelopeScale >= 0.40,
+                  event.spectralEnvelopeScale <= 1.60,
+                  event.decayScale >= 0.80, event.decayScale <= 1.20,
+                  event.sourceRMS >= 0, event.sourceRMS <= maximumFloatMagnitude,
+                  event.attackHighBandRatio >= 0, event.attackHighBandRatio <= 1,
+                  event.tailToAttackDB >= -120, event.tailToAttackDB <= 120 else {
+                return false
             }
+        }
+        return true
     }
 
     func candidateEvidenceIsComplete(windowCount: Int) -> Bool {
@@ -2663,28 +2958,38 @@ private extension UpperTimbreEvidence {
         let maximumDuplicates = boundedProduct(
             UpperTimbreEvidenceAnalyzer.maximumMetadataItems
         )
-        return schemaVersion == UpperTimbreEvidenceAnalyzer.schemaVersion &&
-            sampleRate > 0 && analyzedFrameCount > 0 &&
-            candidateSignalDomainsAreValid &&
-            analyzedFrameCount <= maximumFrames &&
-            accentedOnsetCount >= 0 && accentedOnsetCount <= maximumOnsets &&
-            unaccentedOnsetCount >= 0 && unaccentedOnsetCount <= maximumOnsets &&
-            slideWindowCount >= 0 && slideWindowCount <= maximumSlides &&
-            duplicateAttackCount >= 0 && duplicateAttackCount <= maximumDuplicates &&
-            velocityExpression.count <=
-                UpperTimbreEvidenceAnalyzer.maximumVelocityExpressionEvents &&
-            velocityExpression.allSatisfy {
-                $0.complete && $0.onsetFrame >= 0 &&
-                    $0.analyzedEndFrame >= $0.onsetFrame &&
-                    $0.analyzedEndFrame <= analyzedFrameCount &&
-                    $0.analyzedFrameCount == $0.analyzedEndFrame - $0.onsetFrame &&
-                    (0...1).contains($0.velocity) &&
-                    $0.appliedStartFrequency > 0 &&
-                    (0.40...1.60).contains($0.spectralEnvelopeScale) &&
-                    (0.80...1.20).contains($0.decayScale) &&
-                    $0.sourceRMS > 0 &&
-                    (0...1).contains($0.attackHighBandRatio) &&
-                    (-120...120).contains($0.tailToAttackDB)
+        guard schemaVersion == UpperTimbreEvidenceAnalyzer.schemaVersion,
+              sampleRate > 0, analyzedFrameCount > 0,
+              candidateSignalDomainsAreValid,
+              analyzedFrameCount <= maximumFrames,
+              accentedOnsetCount >= 0, accentedOnsetCount <= maximumOnsets,
+              unaccentedOnsetCount >= 0, unaccentedOnsetCount <= maximumOnsets,
+              slideWindowCount >= 0, slideWindowCount <= maximumSlides,
+              duplicateAttackCount >= 0,
+              duplicateAttackCount <= maximumDuplicates,
+              velocityExpression.count <=
+                UpperTimbreEvidenceAnalyzer.maximumVelocityExpressionEvents else {
+            return false
+        }
+        for event in velocityExpression {
+            guard event.complete, event.onsetFrame >= 0,
+                  event.analyzedEndFrame >= event.onsetFrame,
+                  event.analyzedEndFrame <= analyzedFrameCount,
+                  event.analyzedFrameCount ==
+                    event.analyzedEndFrame - event.onsetFrame,
+                  event.velocity >= 0, event.velocity <= 1,
+                  event.appliedStartFrequency > 0,
+                  event.spectralEnvelopeScale >= 0.40,
+                  event.spectralEnvelopeScale <= 1.60,
+                  event.decayScale >= 0.80, event.decayScale <= 1.20,
+                  event.sourceRMS > 0,
+                  event.attackHighBandRatio >= 0,
+                  event.attackHighBandRatio <= 1,
+                  event.tailToAttackDB >= -120,
+                  event.tailToAttackDB <= 120 else {
+                return false
             }
+        }
+        return true
     }
 }

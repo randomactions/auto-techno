@@ -58,9 +58,9 @@ hashes do not waive the other checks.
 Quality-contract schema 6 provides the current transaction-level evidence
 foundation. A complete record contains the bounded symbolic, hard-gate, full-mix,
 per-bar masking, role-stem, automatic-mix, event-local groove-pulse and
-ordinary closed-hat, graph, and pre/post upper-timbre vector for every retained
-attempt. Groove-pulse evidence must cover every bar explicitly, bind each score
-event to one exact dry-sample
+ordinary closed-hat, score-owned instrument, graph, and pre/post upper-timbre
+vector for every retained attempt. Groove-pulse evidence must cover every bar
+explicitly, bind each score event to one exact dry-sample
 hash plus bounded level/spectral/tail consequence, and leave selection unchanged
 while the evaluator is uncalibrated. For the complete syncopated-lean cell, tests
 must prove that the 3-3-2 intensity relationship changes only existing pulse
@@ -70,7 +70,14 @@ closed-hat projection must cover every bar, match each surviving ordinary-hat
 score event by stable event index, and prove that only a same-onset open-hat
 companion changes the closed-hat tail. Neutral and conservative events must
 retain the legacy sample identity, with no onset, count, intensity, timing,
-brightness, level, or companion-voice change. The transaction binds all
+brightness, level, or companion-voice change. The instrument projection must
+cover every bar, bind every audible assignment to
+one catalog architecture, patch, musical use, bounded automation vector, and
+compatible canonical effect set, and retain a deterministic hash plus finite
+level evidence for the exact dry architecture-local PCM. Empty architecture
+records, unsupported role/patch/effect combinations, truncated assignments,
+out-of-range automation, or score/render ownership mismatches make the vector
+incomplete. The transaction binds all
 candidate-plan fingerprints, the
 engine/policy/evaluator versions, the selected attempt, correction count, route
 generation, incoming continuation, and the pre-decision outgoing render/DSP

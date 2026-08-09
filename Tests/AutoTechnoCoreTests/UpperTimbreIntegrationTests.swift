@@ -9,6 +9,63 @@ private struct ClosedHatRouteProjection {
     let sampleRate: Double
 }
 
+private struct PreparedRateAttemptProjection: Equatable {
+    let kind: AutonomousCandidateAttemptKind
+    let slot: AutonomousCandidateSlot
+    let forceSafeGraph: Bool
+    let forceHomeUpperTimbre: Bool
+    let reasonCodes: [QualityReasonCode]
+    let symbolic: AutonomousSymbolicEvidence
+    let graph: AutonomousGraphEvidence
+    let hardGates: AutonomousHardGateEvidence
+    let routeChannelCount: Int
+    let incomingContinuationFingerprint: String
+    let incomingQualityStateFingerprint: String
+    let incomingTopologyRevision: Int
+    let previousGraphFingerprint: String
+
+    init(_ attempt: AutonomousCandidateAttempt) {
+        kind = attempt.kind
+        slot = attempt.slot
+        forceSafeGraph = attempt.forceSafeGraph
+        forceHomeUpperTimbre = attempt.forceHomeUpperTimbre
+        reasonCodes = attempt.reasonCodes
+        symbolic = attempt.vector.symbolic
+        graph = attempt.vector.graph
+        hardGates = attempt.vector.hardGates
+        routeChannelCount = attempt.vector.routeContinuation.channelCount
+        incomingContinuationFingerprint =
+            attempt.vector.routeContinuation.incomingContinuationFingerprint
+        incomingQualityStateFingerprint =
+            attempt.vector.routeContinuation.incomingQualityStateFingerprint
+        incomingTopologyRevision =
+            attempt.vector.routeContinuation.incomingTopologyRevision
+        previousGraphFingerprint =
+            attempt.vector.routeContinuation.previousGraphFingerprint
+    }
+}
+
+private struct PreparedRateProjection {
+    let fullMix: AutonomousFullMixEvidence
+    let plan: AutonomousPhrasePlan
+    let engineVersion: String
+    let policyVersion: String
+    let evaluatorVersion: String
+    let planFingerprints: AutonomousCandidatePlanFingerprints
+    let selectedAttemptIndex: Int?
+    let selectedSlot: AutonomousCandidateSlot?
+    let comparison: AutonomousCandidateComparison
+    let correctionCount: Int
+    let attempts: [PreparedRateAttemptProjection]
+    let qualityOutcome: QualityDecisionOutcome
+    let qualityReasonCodes: [QualityReasonCode]
+    let usedAlternate: Bool
+    let usedFallback: Bool
+    let usedHomeTimbreFallback: Bool
+    let routeFingerprint: String
+    let sampleHash: String
+}
+
 @Suite("Upper timbre score, PCM evidence, and quality continuation")
 struct UpperTimbreIntegrationTests {
     @Test("Score-owned timbre changes only the declared upper path")
@@ -172,6 +229,11 @@ struct UpperTimbreIntegrationTests {
 
     @Test("Prepared phrase commits resolved notes, evidence, and quality state together")
     func atomicPreparedContinuation() throws {
+        try assertAtomicPreparedContinuation()
+    }
+
+    @inline(never)
+    private func assertAtomicPreparedContinuation() throws {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         let state = director.initialState()
         let previouslyQualified = QualityDecision(
@@ -1654,42 +1716,12 @@ struct UpperTimbreIntegrationTests {
     }
 
     @Test("Equivalent 44.1 and 48 kHz transactions preserve intention and controller direction")
-    func equivalentPreparedTransactionsAcrossRates() {
-        let director = AutonomousSessionDirector(rootSeed: 48_291)
-        let state = director.initialState()
-        let source = director.candidates(from: state)
-        let candidates = AutonomousPhraseCandidates(
-            primary: shortenedCandidate(source.primary, interest: source.primary.interest),
-            alternate: shortenedCandidate(
-                source.alternate,
-                interest: source.alternate.interest
-            ),
-            fallback: shortenedCandidate(source.fallback, interest: source.fallback.interest)
-        )
-        func prepare(sampleRate: Double) -> PreparedAutonomousPhrase {
-            AutonomousPhrasePreparer.prepare(
-                candidates: candidates,
-                sessionSeed: state.rootSeed,
-                memory: state.memory,
-                sampleRate: sampleRate,
-                incomingRenderState: RenderState(),
-                incomingGraphState: GeneratedDSPContinuationState(),
-                previousGraph: nil
-            )
-        }
-        let rate44 = prepare(sampleRate: 44_100)
-        let rate48 = prepare(sampleRate: 48_000)
+    func equivalentPreparedTransactionsAcrossRates() throws {
+        let rate44 = try preparedRateProjection(sampleRate: 44_100)
+        let rate48 = try preparedRateProjection(sampleRate: 48_000)
 
-        let full44 = rate44.selectedCandidateEvidence.fullMix
-        let full48 = rate48.selectedCandidateEvidence.fullMix
-        #expect(full44.loudnessStandard == BS1770LoudnessMeasurement.standard)
-        #expect(full48.loudnessStandard == BS1770LoudnessMeasurement.standard)
-        #expect(full44.truePeakStandard == BS1770AudioEvidence.truePeakStandard)
-        #expect(full48.truePeakStandard == BS1770AudioEvidence.truePeakStandard)
-        #expect(full44.analyzedFrameCount ==
-                rate44.blocks.reduce(0) { $0 + min($1.left.count, $1.right.count) })
-        #expect(full48.analyzedFrameCount ==
-                rate48.blocks.reduce(0) { $0 + min($1.left.count, $1.right.count) })
+        let full44 = rate44.fullMix
+        let full48 = rate48.fullMix
         #expect(full44.momentaryBlockCount == full48.momentaryBlockCount)
         #expect(full44.shortTermBlockCount == full48.shortTermBlockCount)
         #expect(abs(full44.integratedLoudness - full48.integratedLoudness) < 0.5)
@@ -1701,79 +1733,92 @@ struct UpperTimbreIntegrationTests {
         }
 
         #expect(rate44.plan == rate48.plan)
-        #expect(rate44.candidateEvaluation.engineVersion ==
-                rate48.candidateEvaluation.engineVersion)
-        #expect(rate44.candidateEvaluation.policyVersion ==
-                rate48.candidateEvaluation.policyVersion)
-        #expect(rate44.candidateEvaluation.evaluatorVersion ==
-                rate48.candidateEvaluation.evaluatorVersion)
-        #expect(rate44.candidateEvaluation.planFingerprints ==
-                rate48.candidateEvaluation.planFingerprints)
-        #expect(rate44.candidateEvaluation.selectedAttemptIndex ==
-                rate48.candidateEvaluation.selectedAttemptIndex)
-        #expect(rate44.candidateEvaluation.selectedSlot ==
-                rate48.candidateEvaluation.selectedSlot)
-        #expect(rate44.candidateEvaluation.comparison ==
-                rate48.candidateEvaluation.comparison)
-        #expect(rate44.candidateEvaluation.correctionCount ==
-                rate48.candidateEvaluation.correctionCount)
-        #expect(rate44.candidateEvaluation.attempts.count ==
-                rate48.candidateEvaluation.attempts.count)
-        for (attempt44, attempt48) in zip(
-            rate44.candidateEvaluation.attempts,
-            rate48.candidateEvaluation.attempts
-        ) {
-            #expect(attempt44.kind == attempt48.kind)
-            #expect(attempt44.slot == attempt48.slot)
-            #expect(attempt44.forceSafeGraph == attempt48.forceSafeGraph)
-            #expect(attempt44.forceHomeUpperTimbre ==
-                    attempt48.forceHomeUpperTimbre)
-            #expect(attempt44.reasonCodes == attempt48.reasonCodes)
-            #expect(attempt44.vector.symbolic == attempt48.vector.symbolic)
-            #expect(attempt44.vector.graph == attempt48.vector.graph)
-            #expect(attempt44.vector.hardGates == attempt48.vector.hardGates)
-            #expect(attempt44.vector.routeContinuation.channelCount ==
-                    attempt48.vector.routeContinuation.channelCount)
-            #expect(attempt44.vector.routeContinuation.incomingContinuationFingerprint ==
-                    attempt48.vector.routeContinuation.incomingContinuationFingerprint)
-            #expect(attempt44.vector.routeContinuation.incomingQualityStateFingerprint ==
-                    attempt48.vector.routeContinuation.incomingQualityStateFingerprint)
-            #expect(attempt44.vector.routeContinuation.incomingTopologyRevision ==
-                    attempt48.vector.routeContinuation.incomingTopologyRevision)
-            #expect(attempt44.vector.routeContinuation.previousGraphFingerprint ==
-                    attempt48.vector.routeContinuation.previousGraphFingerprint)
-        }
-        #expect(rate44.qualityDecision.outcome == rate48.qualityDecision.outcome)
-        #expect(rate44.qualityDecision.reasonCodes == rate48.qualityDecision.reasonCodes)
+        #expect(rate44.engineVersion == rate48.engineVersion)
+        #expect(rate44.policyVersion == rate48.policyVersion)
+        #expect(rate44.evaluatorVersion == rate48.evaluatorVersion)
+        #expect(rate44.planFingerprints == rate48.planFingerprints)
+        #expect(rate44.selectedAttemptIndex == rate48.selectedAttemptIndex)
+        #expect(rate44.selectedSlot == rate48.selectedSlot)
+        #expect(rate44.comparison == rate48.comparison)
+        #expect(rate44.correctionCount == rate48.correctionCount)
+        #expect(rate44.attempts.count == rate48.attempts.count)
+        #expect(rate44.attempts == rate48.attempts)
+        #expect(rate44.qualityOutcome == rate48.qualityOutcome)
+        #expect(rate44.qualityReasonCodes == rate48.qualityReasonCodes)
         #expect(rate44.usedAlternate == rate48.usedAlternate)
         #expect(rate44.usedFallback == rate48.usedFallback)
         #expect(rate44.usedHomeTimbreFallback == rate48.usedHomeTimbreFallback)
-        #expect(rate44.commitEligible && rate48.commitEligible)
+        #expect(rate44.routeFingerprint != rate48.routeFingerprint)
+        #expect(rate44.sampleHash != rate48.sampleHash)
+    }
 
-        func kickTrajectory(_ prepared: PreparedAutonomousPhrase) -> [Double] {
-            prepared.selectedCandidateEvidence.automaticMix
-                .sorted { $0.bar < $1.bar }
-                .compactMap { evidence in
-                    evidence.gains.first {
-                        $0.role == MixRole.kick.rawValue
-                    }?.gainDB
-                }
-        }
-        for trajectory in [kickTrajectory(rate44), kickTrajectory(rate48)] {
-            #expect(trajectory.count == candidates.primary.barCount)
-            guard let first = trajectory.first else {
-                Issue.record("Expected a bounded kick-controller trajectory")
-                continue
+    @inline(never)
+    private func preparedRateProjection(
+        sampleRate: Double
+    ) throws -> PreparedRateProjection {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let source = director.candidates(from: state)
+        let candidates = AutonomousPhraseCandidates(
+            primary: shortenedCandidate(source.primary, interest: source.primary.interest),
+            alternate: shortenedCandidate(
+                source.alternate,
+                interest: source.alternate.interest
+            ),
+            fallback: shortenedCandidate(source.fallback, interest: source.fallback.interest)
+        )
+        let prepared = AutonomousPhrasePreparer.prepare(
+            candidates: candidates,
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: sampleRate,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil
+        )
+        let fullMix = prepared.selectedCandidateEvidence.fullMix
+        #expect(fullMix.loudnessStandard == BS1770LoudnessMeasurement.standard)
+        #expect(fullMix.truePeakStandard == BS1770AudioEvidence.truePeakStandard)
+        #expect(fullMix.analyzedFrameCount ==
+                prepared.blocks.reduce(0) { $0 + min($1.left.count, $1.right.count) })
+        #expect(prepared.commitEligible)
+
+        let trajectory = prepared.selectedCandidateEvidence.automaticMix
+            .sorted { $0.bar < $1.bar }
+            .compactMap { evidence in
+                evidence.gains.first {
+                    $0.role == MixRole.kick.rawValue
+                }?.gainDB
             }
-            #expect(first < AutomaticMixBalancer.homeKickCorrectionDB)
-            #expect(trajectory.dropFirst().allSatisfy { $0 == first })
-        }
-        #expect(rate44.selectedCandidateEvidence.routeContinuation.sampleRate == 44_100)
-        #expect(rate48.selectedCandidateEvidence.routeContinuation.sampleRate == 48_000)
-        #expect(rate44.selectedCandidateEvidence.routeContinuation.routeFingerprint !=
-                rate48.selectedCandidateEvidence.routeContinuation.routeFingerprint)
-        #expect(rate44.audioPreflight.quality.sampleHash !=
-                rate48.audioPreflight.quality.sampleHash)
+        #expect(trajectory.count == candidates.primary.barCount)
+        let first = try #require(trajectory.first)
+        #expect(first < AutomaticMixBalancer.homeKickCorrectionDB)
+        #expect(trajectory.dropFirst().allSatisfy { $0 == first })
+        #expect(prepared.selectedCandidateEvidence.routeContinuation.sampleRate == sampleRate)
+
+        return PreparedRateProjection(
+            fullMix: fullMix,
+            plan: prepared.plan,
+            engineVersion: prepared.candidateEvaluation.engineVersion,
+            policyVersion: prepared.candidateEvaluation.policyVersion,
+            evaluatorVersion: prepared.candidateEvaluation.evaluatorVersion,
+            planFingerprints: prepared.candidateEvaluation.planFingerprints,
+            selectedAttemptIndex: prepared.candidateEvaluation.selectedAttemptIndex,
+            selectedSlot: prepared.candidateEvaluation.selectedSlot,
+            comparison: prepared.candidateEvaluation.comparison,
+            correctionCount: prepared.candidateEvaluation.correctionCount,
+            attempts: prepared.candidateEvaluation.attempts.map(
+                PreparedRateAttemptProjection.init
+            ),
+            qualityOutcome: prepared.qualityDecision.outcome,
+            qualityReasonCodes: prepared.qualityDecision.reasonCodes,
+            usedAlternate: prepared.usedAlternate,
+            usedFallback: prepared.usedFallback,
+            usedHomeTimbreFallback: prepared.usedHomeTimbreFallback,
+            routeFingerprint: prepared.selectedCandidateEvidence
+                .routeContinuation.routeFingerprint,
+            sampleHash: prepared.audioPreflight.quality.sampleHash
+        )
     }
 
     @Test("Incoming render continuation makes phrase-seam evidence deterministic")
