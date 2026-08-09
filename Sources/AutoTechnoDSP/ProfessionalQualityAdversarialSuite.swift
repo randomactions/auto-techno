@@ -1,0 +1,271 @@
+import AutoTechnoCore
+import Foundation
+
+package enum ProfessionalQualityAdversarialScenario: String, CaseIterable,
+        Codable, Sendable {
+    case hardGateCompensation = "hard-gate-compensation"
+    case truePeakCompensation = "true-peak-compensation"
+    case flattenedTrajectory = "flattened-trajectory"
+    case spectralCollapse = "spectral-collapse"
+    case maskingFlood = "masking-flood"
+    case lowEndPhaseFailure = "low-end-phase-failure"
+    case silentProxy = "silent-proxy"
+    case foreignRate = "foreign-rate"
+}
+
+package struct ProfessionalQualityAdversarialCaseResult: Codable, Equatable,
+        Sendable {
+    package let scenario: ProfessionalQualityAdversarialScenario
+    package let rejected: Bool
+    package let expectedReason: ProfessionalQualityRejection
+    package let actualReasons: [ProfessionalQualityRejection]
+    package let failedMetrics: [ProfessionalQualityMetric]
+
+    package var passed: Bool {
+        rejected && actualReasons.contains(expectedReason)
+    }
+}
+
+/// A deterministic attack on the calibrated policy surface. The suite stores
+/// only reason-coded outcomes, not the source observations or reconstructable
+/// evidence. Every scenario must be rejected independently.
+package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
+        Sendable {
+    package static let schemaVersion = 1
+    package static let suiteVersion =
+        "autotechno-professional-quality-adversarial.v1"
+
+    package let schemaVersion: Int
+    package let suiteVersion: String
+    package let profileFingerprint: String
+    package let sourceObservationCount: Int
+    package let baselineAcceptanceCount: Int
+    package let cases: [ProfessionalQualityAdversarialCaseResult]
+
+    package init(
+        profile: ProfessionalQualityCalibrationProfile,
+        sourceObservations: [ProfessionalQualityObservation]
+    ) throws {
+        guard profile.isComplete, !profile.fingerprint.isEmpty,
+              sourceObservations.count == profile.sampleRates.count *
+                CanonicalJourneyCheckpoint.allCases.count,
+              sourceObservations.allSatisfy({
+                  ProfessionalQualityProfileEvaluator.evaluate(
+                      $0, against: profile
+                  ).accepted
+              }) else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        guard let baseline = sourceObservations.first(where: {
+            $0.sampleRate == 48_000 && $0.checkpoint == .establishment
+        }) else {
+            throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
+        }
+
+        var generated: [ProfessionalQualityAdversarialCaseResult] = []
+        func append(
+            _ scenario: ProfessionalQualityAdversarialScenario,
+            observation: ProfessionalQualityObservation,
+            expected: ProfessionalQualityRejection
+        ) {
+            let verdict = ProfessionalQualityProfileEvaluator.evaluate(
+                observation, against: profile
+            )
+            generated.append(ProfessionalQualityAdversarialCaseResult(
+                scenario: scenario,
+                rejected: !verdict.accepted,
+                expectedReason: expected,
+                actualReasons: verdict.reasons,
+                failedMetrics: verdict.failedMetrics
+            ))
+        }
+        func outside(
+            _ metric: ProfessionalQualityMetric,
+            preferLower: Bool
+        ) throws -> Double {
+            guard let checkpoint = profile[baseline.checkpoint],
+                  let bounds = checkpoint[metric] else {
+                throw ProfessionalQualityCalibrationError.invalidMetricSet
+            }
+            let distance = max(1e-9, abs(bounds.upper - bounds.lower) * 0.1)
+            return preferLower ? bounds.lower - distance : bounds.upper + distance
+        }
+        func identityCopy(
+            sampleRate: Double = baseline.sampleRate,
+            hardGatesPassed: Bool = true,
+            metrics: [ProfessionalQualityMetricValue]? = nil
+        ) throws -> ProfessionalQualityObservation {
+            try ProfessionalQualityObservation(
+                engineVersion: baseline.engineVersion,
+                evidenceVersion: baseline.evidenceVersion,
+                checkpoint: baseline.checkpoint,
+                sampleRate: sampleRate,
+                hardGatesPassed: hardGatesPassed,
+                metrics: metrics ?? baseline.metrics
+            )
+        }
+
+        append(
+            .hardGateCompensation,
+            observation: try identityCopy(hardGatesPassed: false),
+            expected: .hardGateFailure
+        )
+        append(
+            .truePeakCompensation,
+            observation: try baseline.replacing(
+                .truePeakDBTP,
+                with: outside(.truePeakDBTP, preferLower: false)
+            ),
+            expected: .metricOutOfRange
+        )
+
+        let trajectoryCheckpoint = try Self.checkpointWithLargestLowerBound(
+            metric: .movementScore,
+            profile: profile
+        )
+        let trajectoryBaseline = try Self.baseline(
+            checkpoint: trajectoryCheckpoint,
+            observations: sourceObservations
+        )
+        guard let trajectoryBounds = profile[trajectoryCheckpoint]?[.movementScore],
+              trajectoryBounds.lower > 0 else {
+            throw ProfessionalQualityCalibrationError.invalidBounds
+        }
+        append(
+            .flattenedTrajectory,
+            observation: try trajectoryBaseline.replacing(
+                .movementScore,
+                with: trajectoryBounds.lower - max(1e-9,
+                    trajectoryBounds.lower * 0.1)
+            ),
+            expected: .metricOutOfRange
+        )
+
+        append(
+            .spectralCollapse,
+            observation: try baseline.replacing(
+                .spectralCentroidMeanHz,
+                with: outside(.spectralCentroidMeanHz, preferLower: true)
+            ),
+            expected: .metricOutOfRange
+        )
+        append(
+            .maskingFlood,
+            observation: try baseline.replacing(
+                .maskingMaximumOverlap,
+                with: outside(.maskingMaximumOverlap, preferLower: false)
+            ),
+            expected: .metricOutOfRange
+        )
+        append(
+            .lowEndPhaseFailure,
+            observation: try baseline.replacing(
+                .lowStereoCorrelation,
+                with: outside(.lowStereoCorrelation, preferLower: true)
+            ),
+            expected: .metricOutOfRange
+        )
+
+        var silenceMetrics = baseline.metrics
+        let silentValues: [ProfessionalQualityMetric: Double] = [
+            .integratedLoudnessLUFS: -120,
+            .maximumMomentaryLoudnessLUFS: -120,
+            .maximumShortTermLoudnessLUFS: -120,
+            .activeWindowRatio: 0,
+            .movementScore: 0,
+            .spectralCentroidMeanHz: 0,
+            .spectralCentroidSpreadHz: 0,
+            .spectralBandwidthMeanHz: 0,
+            .spectralRolloff85MeanHz: 0,
+            .positiveSpectralFluxMean: 0,
+            .positiveSpectralFluxPeak: 0,
+            .rmsTrajectoryDeltaMeanDB: 0,
+            .rmsTrajectoryDeltaPeakDB: 0,
+        ]
+        silenceMetrics = silenceMetrics.map { value in
+            silentValues[value.metric].map {
+                ProfessionalQualityMetricValue(metric: value.metric, value: $0)
+            } ?? value
+        }
+        append(
+            .silentProxy,
+            observation: try identityCopy(metrics: silenceMetrics),
+            expected: .metricOutOfRange
+        )
+        append(
+            .foreignRate,
+            observation: try identityCopy(sampleRate: 96_000),
+            expected: .profileMismatch
+        )
+
+        schemaVersion = Self.schemaVersion
+        suiteVersion = Self.suiteVersion
+        profileFingerprint = profile.fingerprint
+        sourceObservationCount = sourceObservations.count
+        baselineAcceptanceCount = sourceObservations.count
+        cases = generated.sorted { $0.scenario.rawValue < $1.scenario.rawValue }
+    }
+
+    package var passed: Bool {
+        schemaVersion == Self.schemaVersion && suiteVersion == Self.suiteVersion &&
+            !profileFingerprint.isEmpty && sourceObservationCount > 0 &&
+            baselineAcceptanceCount == sourceObservationCount &&
+            cases.count == ProfessionalQualityAdversarialScenario.allCases.count &&
+            cases.map(\.scenario) == ProfessionalQualityAdversarialScenario
+                .allCases.sorted { $0.rawValue < $1.rawValue } &&
+            cases.allSatisfy(\.passed)
+    }
+
+    package func deterministicJSON() throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        return try encoder.encode(self)
+    }
+
+    package static func decodeDeterministicJSON(
+        _ data: Data
+    ) throws -> ProfessionalQualityAdversarialSuiteReport {
+        let decoded = try JSONDecoder().decode(
+            ProfessionalQualityAdversarialSuiteReport.self,
+            from: data
+        )
+        guard decoded.passed,
+              try decoded.deterministicJSON() == data else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        return decoded
+    }
+
+    package var fingerprint: String {
+        guard let data = try? deterministicJSON(),
+              let string = String(data: data, encoding: .utf8) else { return "" }
+        var sink = StreamingFNV1a()
+        sink.domain("professional-quality-adversarial-suite-json.v1")
+        sink.string(string)
+        return fixedWidthFingerprintHex(sink.value)
+    }
+
+    private static func checkpointWithLargestLowerBound(
+        metric: ProfessionalQualityMetric,
+        profile: ProfessionalQualityCalibrationProfile
+    ) throws -> CanonicalJourneyCheckpoint {
+        guard let result = profile.checkpoints.compactMap({ checkpoint in
+            checkpoint[metric].map { (checkpoint.checkpoint, $0.lower) }
+        }).max(by: { $0.1 < $1.1 }) else {
+            throw ProfessionalQualityCalibrationError.invalidMetricSet
+        }
+        return result.0
+    }
+
+    private static func baseline(
+        checkpoint: CanonicalJourneyCheckpoint,
+        observations: [ProfessionalQualityObservation]
+    ) throws -> ProfessionalQualityObservation {
+        guard let observation = observations.first(where: {
+            $0.checkpoint == checkpoint && $0.sampleRate == 48_000
+        }) else {
+            throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
+        }
+        return observation
+    }
+}
