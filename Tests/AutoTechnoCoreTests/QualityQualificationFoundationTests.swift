@@ -477,14 +477,17 @@ struct QualityQualificationFoundationTests {
         }
     }
 
-    @Test("Professional Evidence v2 bank requires every journey checkpoint and unavailable policy")
+    @Test("Professional Evidence v3 bank requires every journey checkpoint and unavailable policy")
     func professionalEvidenceReportBank() throws {
         var reports: [CanonicalJourneyQualificationReport] = []
         for sampleRate in [44_100.0, 48_000.0] {
+            let frameCount = StreamingPerceptualEvidenceAnalyzer.fftFrameCount(
+                sampleRate: sampleRate
+            )
             let evidence = UpperTimbreEvidenceAnalyzer.analyze(
                 UpperTimbreAnalysisInput(
-                    left: [Float](repeating: 0, count: 64),
-                    right: [Float](repeating: 0, count: 64),
+                    left: [Float](repeating: 0, count: frameCount),
+                    right: [Float](repeating: 0, count: frameCount),
                     sampleRate: sampleRate
                 )
             )
@@ -502,7 +505,7 @@ struct QualityQualificationFoundationTests {
         }
 
         let bank = try ProfessionalEvidenceReportBank(reports: Array(reports.reversed()))
-        #expect(bank.schemaVersion == 2)
+        #expect(bank.schemaVersion == 3)
         #expect(bank.evidenceVersion ==
                 ProfessionalEvidenceReportBank.evidenceVersion)
         #expect(bank.sourceReportCount ==
@@ -528,10 +531,13 @@ struct QualityQualificationFoundationTests {
             try ProfessionalEvidenceReportBank(reports: reports + [reports[0]])
         }
 
+        let bankFrameCount = StreamingPerceptualEvidenceAnalyzer.fftFrameCount(
+            sampleRate: 48_000
+        )
         let evidence = UpperTimbreEvidenceAnalyzer.analyze(
             UpperTimbreAnalysisInput(
-                left: [Float](repeating: 0, count: 64),
-                right: [Float](repeating: 0, count: 64),
+                left: [Float](repeating: 0, count: bankFrameCount),
+                right: [Float](repeating: 0, count: bankFrameCount),
                 sampleRate: 48_000
             )
         )
@@ -958,12 +964,17 @@ struct QualityQualificationFoundationTests {
             symbolicValid: true,
             graphValid: true,
             audioSafetyValid: evidence.finite,
-            fullMixFinite: true,
+            fullMixFinite: evidence.finite,
             upperTimbreFinite: evidence.finite,
             blocksPresent: true,
             blockChannelsAligned: true,
-            allSamplesFinite: true,
+            allSamplesFinite: evidence.finite,
             completeInputs: true
+        )
+        let perceptual = fixturePerceptualEvidence(
+            frameCount: evidence.analyzedFrameCount,
+            sampleRate: evidence.sampleRate,
+            finite: evidence.finite
         )
         let fullMix = AutonomousFullMixEvidence(
             sourceBarCount: 1,
@@ -985,6 +996,9 @@ struct QualityQualificationFoundationTests {
             lowStereoCorrelation: evidence.finite ? 1 : 0.9,
             maximumBoundaryDelta: 0.01,
             movementScore: 0,
+            analysisPeakWorkingByteCount:
+                perceptual.peakWorkingByteCount + 1,
+            perceptual: perceptual,
             bars: [AutonomousBarFullMixEvidence(
                 bar: 0,
                 loudness: -14,
@@ -1353,6 +1367,23 @@ struct QualityQualificationFoundationTests {
             let normalized = Double((state >> 32) & 0xffff_ffff) / Double(UInt32.max)
             return Float((normalized * 2 - 1) * 0.5)
         }
+    }
+
+    private func fixturePerceptualEvidence(
+        frameCount: Int,
+        sampleRate: Double,
+        finite: Bool
+    ) -> StreamingPerceptualEvidence {
+        var samples = [Float](repeating: 0, count: frameCount)
+        if !finite, !samples.isEmpty { samples[samples.count - 1] = .nan }
+        guard let evidence = StreamingPerceptualEvidenceAnalyzer.analyze(
+            left: samples,
+            right: samples,
+            sampleRate: sampleRate
+        ) else {
+            preconditionFailure("Non-cancellable perceptual fixture stopped")
+        }
+        return evidence
     }
 
     private func deterministicJSON<T: Encodable>(_ value: T) throws -> Data {

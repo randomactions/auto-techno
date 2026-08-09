@@ -4,10 +4,11 @@ import Foundation
 /// policy is deliberately uncalibrated: these types make evidence reproducible
 /// without claiming that professional-quality targets exist yet.
 package enum QualityQualificationContract {
-    /// Version 8 adds compact, same-pass upper-role timing evidence to the
-    /// selected phrase's candidate-evaluation transaction. The policy remains
-    /// uncalibrated; this version identifies evidence, not promotion.
-    package static let schemaVersion = 8
+    /// Version 9 replaces phrase-sized analyzer copies and the former
+    /// three-band centroid proxy with bounded, physical-time perceptual
+    /// evidence. The policy remains uncalibrated; this version identifies
+    /// evidence, not promotion.
+    package static let schemaVersion = 9
     package static let reasonCodeVersion = 1
     package static let engineVersion = "autotechno-canonical-engine.v9"
     package static let uncalibratedEvaluatorVersion =

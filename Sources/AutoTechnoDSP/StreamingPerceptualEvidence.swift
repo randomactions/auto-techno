@@ -4,7 +4,7 @@ import Foundation
 /// immutable PCM incrementally and retains only one FFT window plus fixed
 /// scratch buffers; it never constructs a phrase-sized mono or spectrogram
 /// array.
-package struct StreamingPerceptualEvidence: Codable, Equatable, Sendable {
+package final class StreamingPerceptualEvidence: Codable, Equatable, Sendable {
     package static let schemaVersion = 1
     package static let analyzerVersion =
         "autotechno-streaming-perceptual-evidence.v1"
@@ -29,6 +29,73 @@ package struct StreamingPerceptualEvidence: Codable, Equatable, Sendable {
     package let rmsTrajectoryDeltaPeakDB: Double
     package let finite: Bool
 
+    package init(
+        schemaVersion: Int,
+        analyzerVersion: String,
+        sourceFrameCount: Int,
+        fftFrameCount: Int,
+        hopFrameCount: Int,
+        analyzedWindowCount: Int,
+        activeWindowCount: Int,
+        maximumBufferedFrameCount: Int,
+        peakWorkingByteCount: Int,
+        spectralCentroidMeanHz: Double,
+        spectralCentroidSpreadHz: Double,
+        spectralBandwidthMeanHz: Double,
+        spectralFlatnessMean: Double,
+        spectralRolloff85MeanHz: Double,
+        positiveSpectralFluxMean: Double,
+        positiveSpectralFluxPeak: Double,
+        rmsTrajectoryDeltaMeanDB: Double,
+        rmsTrajectoryDeltaPeakDB: Double,
+        finite: Bool
+    ) {
+        self.schemaVersion = schemaVersion
+        self.analyzerVersion = analyzerVersion
+        self.sourceFrameCount = sourceFrameCount
+        self.fftFrameCount = fftFrameCount
+        self.hopFrameCount = hopFrameCount
+        self.analyzedWindowCount = analyzedWindowCount
+        self.activeWindowCount = activeWindowCount
+        self.maximumBufferedFrameCount = maximumBufferedFrameCount
+        self.peakWorkingByteCount = peakWorkingByteCount
+        self.spectralCentroidMeanHz = spectralCentroidMeanHz
+        self.spectralCentroidSpreadHz = spectralCentroidSpreadHz
+        self.spectralBandwidthMeanHz = spectralBandwidthMeanHz
+        self.spectralFlatnessMean = spectralFlatnessMean
+        self.spectralRolloff85MeanHz = spectralRolloff85MeanHz
+        self.positiveSpectralFluxMean = positiveSpectralFluxMean
+        self.positiveSpectralFluxPeak = positiveSpectralFluxPeak
+        self.rmsTrajectoryDeltaMeanDB = rmsTrajectoryDeltaMeanDB
+        self.rmsTrajectoryDeltaPeakDB = rmsTrajectoryDeltaPeakDB
+        self.finite = finite
+    }
+
+    package static func == (
+        lhs: StreamingPerceptualEvidence,
+        rhs: StreamingPerceptualEvidence
+    ) -> Bool {
+        lhs.schemaVersion == rhs.schemaVersion &&
+            lhs.analyzerVersion == rhs.analyzerVersion &&
+            lhs.sourceFrameCount == rhs.sourceFrameCount &&
+            lhs.fftFrameCount == rhs.fftFrameCount &&
+            lhs.hopFrameCount == rhs.hopFrameCount &&
+            lhs.analyzedWindowCount == rhs.analyzedWindowCount &&
+            lhs.activeWindowCount == rhs.activeWindowCount &&
+            lhs.maximumBufferedFrameCount == rhs.maximumBufferedFrameCount &&
+            lhs.peakWorkingByteCount == rhs.peakWorkingByteCount &&
+            lhs.spectralCentroidMeanHz == rhs.spectralCentroidMeanHz &&
+            lhs.spectralCentroidSpreadHz == rhs.spectralCentroidSpreadHz &&
+            lhs.spectralBandwidthMeanHz == rhs.spectralBandwidthMeanHz &&
+            lhs.spectralFlatnessMean == rhs.spectralFlatnessMean &&
+            lhs.spectralRolloff85MeanHz == rhs.spectralRolloff85MeanHz &&
+            lhs.positiveSpectralFluxMean == rhs.positiveSpectralFluxMean &&
+            lhs.positiveSpectralFluxPeak == rhs.positiveSpectralFluxPeak &&
+            lhs.rmsTrajectoryDeltaMeanDB == rhs.rmsTrajectoryDeltaMeanDB &&
+            lhs.rmsTrajectoryDeltaPeakDB == rhs.rmsTrajectoryDeltaPeakDB &&
+            lhs.finite == rhs.finite
+    }
+
     package var isComplete: Bool {
         let expectedWindows = sourceFrameCount >= fftFrameCount
             ? 1 + (sourceFrameCount - fftFrameCount) / hopFrameCount
@@ -41,7 +108,7 @@ package struct StreamingPerceptualEvidence: Codable, Equatable, Sendable {
             analyzedWindowCount == expectedWindows &&
             (0...analyzedWindowCount).contains(activeWindowCount) &&
             maximumBufferedFrameCount == min(sourceFrameCount, fftFrameCount) &&
-            peakWorkingByteCount > 0 && finite
+            peakWorkingByteCount > 0
     }
 }
 

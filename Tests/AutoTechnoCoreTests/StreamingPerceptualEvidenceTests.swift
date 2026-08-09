@@ -256,7 +256,9 @@ struct StreamingPerceptualEvidenceTests {
             )
         )
         #expect(!invalidEvidence.finite)
-        #expect(!invalidEvidence.isComplete)
+        // Failed PCM remains a structurally complete record so a rejected
+        // candidate can retain exact analyzer provenance.
+        #expect(invalidEvidence.isComplete)
 
         invalid = signal
         invalid[invalid.count - 1] = .infinity

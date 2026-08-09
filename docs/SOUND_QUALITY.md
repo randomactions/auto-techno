@@ -11,7 +11,7 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 8, candidate-vector schema 7, and
+candidate uses quality-contract schema 9, candidate-vector schema 8, and
 canonical engine identity `autotechno-canonical-engine.v9`. It preserves
 complete symbolic, full-mix, masking, role-stem, event-local groove-pulse,
 ordinary closed-hat, score-owned instrument assignment, architecture-local dry-
@@ -28,7 +28,14 @@ variation; it remains structural evidence rather than a calibrated musical-
 quality verdict. Its
 phrase-wide full-mix evidence uses ITU-R BS.1770-5 K-weighting, 400 ms blocks
 with 75% overlap and two-stage gating, plus the Annex 2 four-phase FIR for
-true-peak level. Block sizes and durations are derived from the route rate. The
+true-peak level. It now streams directly across immutable render blocks without
+constructing phrase-sized channel, mono, energy-prefix, or spectrogram arrays.
+Rate-derived Hann windows retain actual spectral centroid, bandwidth, flatness,
+85% rolloff, positive flux, and RMS-trajectory movement. The vector records
+window geometry, source/active counts, and a conservative analyzer working-memory
+bound capped at 6 MiB; BS.1770 programme-energy storage is fixed to the product's
+32-second phrase envelope. Block sizes and durations are derived from the route
+rate. The
 groove-pulse projection retains exact dry-sample identity plus bounded source
 level, spectral position, and tail-to-attack consequence for each already
 resolved pulse. Its score intensity can therefore distinguish the bounded
@@ -194,7 +201,7 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 8, candidate-vector schema 7, and canonical engine
+Under quality-contract schema 9, candidate-vector schema 8, and canonical engine
 v9, the versioned transaction implements the bounded evidence and atomic commit
 foundation for this loop. It can retain at most the primary, alternate, and
 conservative-fallback candidates, plus one
@@ -207,9 +214,12 @@ continuation state. Rejected attempts remain attempt-local.
 
 The production evaluator does not request a paired comparison, so the healthy
 path performs one primary render and reports qualification unavailable.
-Calibrated paired ranking stays disabled until phrase analysis can stream within
-measured memory bounds and candidate cancellation, latency, and peak working
-memory have been calibrated. Preparation checks cancellation at bounded
+Phrase analysis now streams within an explicit working-memory envelope, with
+independent DFT, chunk-parity, representative-rate, cancellation, and optimized
+fixture evidence. Calibrated paired ranking stays disabled until a calibrated
+profile and adversarial suite exist and representative canonical-journey
+candidate cancellation, latency, and peak-memory budgets pass. Preparation
+checks cancellation at bounded
 bar-render and evidence-phase boundaries as well as between candidates; the
 streaming preflight and continuation fingerprints also check within their long
 array scans. A route change cancels stale detached work. This foundation adds no

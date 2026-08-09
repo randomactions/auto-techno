@@ -16,7 +16,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   guards;
 - one bounded weak-percussion vocabulary whose existing syncopated-lean onsets
   carry score-owned physical articulation and a 3-3-2 accent/ghost relationship;
-- canonical engine v9, quality-contract schema 8, and candidate-vector schema 7
+- canonical engine v9, quality-contract schema 9, and candidate-vector schema 8
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, event-local groove-pulse, ordinary closed-hat, score-owned instrument,
   shared pulse-echo return-drive, score-owned upper-role timing, graph, and
@@ -24,8 +24,9 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - six phrase-scale performance characters with bounded two-character memory and a
   tested compatibility contract across foundation behavior, canonical narrative
   roles, rhythm, and existing instrument assignments;
-- phrase-wide ITU-R BS.1770-5 loudness, Annex 2 true peak, physical-time window
-  counts, and a complete-checkpoint Professional Evidence v2 report bank;
+- phrase-wide streaming ITU-R BS.1770-5 loudness, Annex 2 true peak,
+  rate-derived spectral/trajectory evidence, explicit bounded working memory,
+  and a complete-checkpoint Professional Evidence v3 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
@@ -34,8 +35,9 @@ The shipping evaluator remains uncalibrated and renders the primary once on the
 healthy path. The transaction records up to primary, alternate, and fallback
 attempts plus one home-timbre correction within four total passes, but it does
 not constitute professional-quality qualification or general quality-driven
-candidate selection. Calibrated paired ranking remains disabled pending bounded
-streaming analysis and measured cancellation, latency, and peak-memory behavior;
+candidate selection. Calibrated paired ranking remains disabled pending a
+calibrated profile/adversarial suite and passing representative-journey
+cancellation, latency, and peak-memory budgets;
 hybrid live feedback is also not implemented.
 
 The pulse-echo return-drive code and same-pass reduced evidence are present in
@@ -66,14 +68,15 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 8 and candidate-vector schema 7 now bind a versioned
+Quality-contract schema 9 and candidate-vector schema 8 now bind a versioned
 transaction across canonical engine v9, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded groove-pulse, ordinary closed-hat, instrument,
 pulse-echo return-drive, and upper-role timing projections make each
 score-to-PCM consequence explicit without letting the uncalibrated policy rank
 that evidence. Professional
-Evidence v2 adds standards-based phrase loudness/true peak and a bounded bank
+Evidence v3 adds standards-based phrase loudness/true peak, bounded streaming
+spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
 complete role attribution. Next, populate private representative-rate banks,
 calibrate machine-readable reason-coded ranges and a non-reconstructable profile,
@@ -86,8 +89,9 @@ The runtime now enforces and records a maximum of three complete candidates, one
 home-timbre correction, and four render passes, then atomically carries the
 selected evidence, decision, and controller state into continuation. Next,
 calibrate the multidimensional policy and enable paired comparison only after
-streaming analysis, cancellation, preparation-latency, and peak-memory gates are
-measured. Continue to select a valid candidate or conservative fallback when the
+the derived profile/adversarial suite and representative-journey cancellation,
+preparation-latency, and peak-memory gates pass. Continue to select a valid
+candidate or conservative fallback when the
 calibrated policy cannot qualify an attempt.
 
 ### 4. Add safe hybrid live feedback

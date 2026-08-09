@@ -104,9 +104,10 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Until the automated policy exists and passes, professional quality remains an
-unverified goal. Professional Evidence v2 supplies standards-based phrase
-loudness/true-peak evidence and complete canonical-journey report-bank
-validation, but policy truthfully remains unavailable until a calibrated
+unverified goal. Professional Evidence v3 supplies standards-based phrase
+loudness/true-peak evidence plus bounded physical-time spectral and trajectory
+evidence, explicit analysis-memory provenance, and complete canonical-journey
+report-bank validation. Policy truthfully remains unavailable until a calibrated
 profile and passing adversarial suite are versioned.
 
 ## Hard constraints

@@ -1056,6 +1056,58 @@ package struct UncalibratedAutonomousCandidateEvaluator:
 }
 
 package enum AutonomousPhrasePreparer {
+    private final class CandidateRenderContext {
+        let sessionSeed: UInt64
+        let memory: TemporalMusicalMemory
+        let sampleRate: Double
+        let incomingRenderState: RenderState
+        let incomingGraphState: GeneratedDSPContinuationState
+        let previousGraph: DSPGraphPlan?
+        let planFingerprints: AutonomousCandidatePlanFingerprints
+        let routeFingerprint: String
+        let incomingContinuationFingerprint: String
+        let incomingQualityStateFingerprint: String
+        let previousGraphFingerprint: String
+        let routeRecovery: Bool
+        let routeChannelCount: Int
+        let routeGeneration: Int
+        let cancellationRequested: @Sendable () -> Bool
+
+        init(
+            sessionSeed: UInt64,
+            memory: TemporalMusicalMemory,
+            sampleRate: Double,
+            incomingRenderState: RenderState,
+            incomingGraphState: GeneratedDSPContinuationState,
+            previousGraph: DSPGraphPlan?,
+            planFingerprints: AutonomousCandidatePlanFingerprints,
+            routeFingerprint: String,
+            incomingContinuationFingerprint: String,
+            incomingQualityStateFingerprint: String,
+            previousGraphFingerprint: String,
+            routeRecovery: Bool,
+            routeChannelCount: Int,
+            routeGeneration: Int,
+            cancellationRequested: @escaping @Sendable () -> Bool
+        ) {
+            self.sessionSeed = sessionSeed
+            self.memory = memory
+            self.sampleRate = sampleRate
+            self.incomingRenderState = incomingRenderState
+            self.incomingGraphState = incomingGraphState
+            self.previousGraph = previousGraph
+            self.planFingerprints = planFingerprints
+            self.routeFingerprint = routeFingerprint
+            self.incomingContinuationFingerprint = incomingContinuationFingerprint
+            self.incomingQualityStateFingerprint = incomingQualityStateFingerprint
+            self.previousGraphFingerprint = previousGraphFingerprint
+            self.routeRecovery = routeRecovery
+            self.routeChannelCount = routeChannelCount
+            self.routeGeneration = routeGeneration
+            self.cancellationRequested = cancellationRequested
+        }
+    }
+
     package static func prepare(candidates: AutonomousPhraseCandidates,
                                sessionSeed: UInt64,
                                memory: TemporalMusicalMemory,
@@ -1265,6 +1317,23 @@ package enum AutonomousPhrasePreparer {
         var renderPassBudget = AutonomousRenderPassBudget()
         var attempts: [AutonomousCandidateAttempt] = []
         attempts.reserveCapacity(QualityQualificationContract.maximumRenderPasses)
+        let renderContext = CandidateRenderContext(
+            sessionSeed: sessionSeed,
+            memory: memory,
+            sampleRate: sampleRate,
+            incomingRenderState: incomingRenderState,
+            incomingGraphState: incomingGraphState,
+            previousGraph: previousGraph,
+            planFingerprints: planFingerprints,
+            routeFingerprint: routeFingerprint,
+            incomingContinuationFingerprint: incomingContinuationFingerprint,
+            incomingQualityStateFingerprint: incomingQualityStateFingerprint,
+            previousGraphFingerprint: previousGraphFingerprint,
+            routeRecovery: routeRecovery,
+            routeChannelCount: routeChannelCount,
+            routeGeneration: routeGeneration,
+            cancellationRequested: cancellationRequested
+        )
 
         func product(
             plan: AutonomousPhrasePlan,
@@ -1273,35 +1342,39 @@ package enum AutonomousPhrasePreparer {
             forceSafeGraph: Bool = false,
             forceHomeUpperTimbre: Bool = false
         ) -> CandidateRenderProduct? {
-            guard !cancellationRequested(), renderPassBudget.claim() else {
+            guard !renderContext.cancellationRequested(),
+                  renderPassBudget.claim() else {
                 return nil
             }
             guard let rendered = renderAttempt(
                 plan: plan,
                 slot: slot,
                 kind: kind,
-                sessionSeed: sessionSeed,
-                memory: memory,
-                sampleRate: sampleRate,
-                incomingRenderState: incomingRenderState,
-                incomingGraphState: incomingGraphState,
-                previousGraph: previousGraph,
-                planFingerprint: planFingerprints[slot],
-                routeFingerprint: routeFingerprint,
-                incomingContinuationFingerprint: incomingContinuationFingerprint,
-                incomingQualityStateFingerprint: incomingQualityStateFingerprint,
+                sessionSeed: renderContext.sessionSeed,
+                memory: renderContext.memory,
+                sampleRate: renderContext.sampleRate,
+                incomingRenderState: renderContext.incomingRenderState,
+                incomingGraphState: renderContext.incomingGraphState,
+                previousGraph: renderContext.previousGraph,
+                planFingerprint: renderContext.planFingerprints[slot],
+                routeFingerprint: renderContext.routeFingerprint,
+                incomingContinuationFingerprint:
+                    renderContext.incomingContinuationFingerprint,
+                incomingQualityStateFingerprint:
+                    renderContext.incomingQualityStateFingerprint,
                 incomingKickCorrectionDB:
-                    incomingRenderState.automaticMixState.kickCorrectionDB,
-                incomingTopologyRevision: memory.topologyRevision,
-                previousGraphFingerprint: previousGraphFingerprint,
-                routeRecovery: routeRecovery,
-                routeChannelCount: routeChannelCount,
-                routeGeneration: routeGeneration,
+                    renderContext.incomingRenderState.automaticMixState
+                        .kickCorrectionDB,
+                incomingTopologyRevision: renderContext.memory.topologyRevision,
+                previousGraphFingerprint: renderContext.previousGraphFingerprint,
+                routeRecovery: renderContext.routeRecovery,
+                routeChannelCount: renderContext.routeChannelCount,
+                routeGeneration: renderContext.routeGeneration,
                 forceSafeGraph: forceSafeGraph,
                 forceHomeUpperTimbre: forceHomeUpperTimbre,
-                cancellationRequested: cancellationRequested
+                cancellationRequested: renderContext.cancellationRequested
             ) else { return nil }
-            return cancellationRequested() ? nil : rendered
+            return renderContext.cancellationRequested() ? nil : rendered
         }
 
         guard let initialPrimary = product(
@@ -1508,96 +1581,16 @@ package enum AutonomousPhrasePreparer {
               dna.characteristicSyncopations.count <= 16,
               dna.foregroundPriority.count <= PerformanceRole.allCases.count,
               plan.endingInterlockState.previousChapters.count <= 2,
-              plan.endingNarrativeState.activeSupportingRoles.count <= 3,
-              plan.resolvedBars.enumerated().allSatisfy({ index, resolved in
-                  let performance = resolved.performance
-                  let expectedBar = plan.startBar + index
-                  guard performance.bar == expectedBar else { return false }
-                  let events = resolved.ensemble.events
-                  guard events.count <= 16 * 6 else { return false }
-                  let maximumAtOneStep = resolved.ensemble.intentionalPileup ? 6 : 3
-                  let occupancy = Dictionary(grouping: events, by: \.step)
-                  let grooveEvents = events.filter { $0.voice == .groovePulse }
-                      .sorted { $0.step < $1.step }
-                  let grooveArticulations = resolved.groovePulses.sorted {
-                      $0.step < $1.step
-                  }
-                  let grooveScoreIsCanonical =
-                      grooveEvents.count == grooveArticulations.count &&
-                      Set(grooveEvents.map(\.step)).count == grooveEvents.count &&
-                      zip(grooveEvents, grooveArticulations).allSatisfy {
-                          $0.step == $1.step && $0.intensity == $1.intensity
-                      }
-                  let closedHatEvents = Array(events.enumerated().filter {
-                      $0.element.voice == .percussion
-                  })
-                  let canonicalClosedHatDecay = ClosedHatDecayResolver.articulations(
-                      from: resolved.ensemble,
-                      conservative: plan.conservative
-                  )
-                  let closedHatDecayIsCanonical =
-                      closedHatEvents.count <=
-                        AutonomousCandidateEvaluationVector.maximumClosedHatEventsPerBar &&
-                      resolved.closedHatDecayArticulations == canonicalClosedHatDecay &&
-                      resolved.closedHatDecayArticulations.count == closedHatEvents.count &&
-                      Set(resolved.closedHatDecayArticulations.map {
-                          $0.scoreEventIndex
-                      }).count == resolved.closedHatDecayArticulations.count
-                  let fallbackScoreIsCanonical: Bool
-                  if slot == .fallback {
-                      let canonicalEnsemble = AutonomousSessionDirector.ensemblePlan(
-                          dna: dna,
-                          bar: performance,
-                          focus: resolved.ensemble.focusRole,
-                          release: plan.kind == .energyRelease,
-                          kind: plan.kind,
-                          character: resolved.performanceCharacter,
-                          foundationBehavior: resolved.foundationBehavior,
-                          companion: resolved.foundationCompanion,
-                          gear: resolved.percussionGear,
-                          gesture: resolved.arrangementGesture,
-                          conservative: true
-                      )
-                      let canonicalGrooveEvents = canonicalEnsemble.events.filter {
-                          $0.voice == .groovePulse
-                      }
-                      let canonicalGroovePulses = GroovePulseResolver.articulations(
-                          from: canonicalEnsemble,
-                          absoluteBar: expectedBar,
-                          swingPercent: dna.rhythm.swingPercent,
-                          percussionGear: resolved.percussionGear,
-                          eventSeed: performance.eventSeed,
-                          conservative: true
-                      )
-                      fallbackScoreIsCanonical =
-                          canonicalGrooveEvents == grooveEvents &&
-                          canonicalGroovePulses == grooveArticulations
-                  } else {
-                      fallbackScoreIsCanonical = true
-                  }
-                  return performance.phrase == plan.phraseIndex &&
-                      performance.localBar == index &&
-                      performance.phraseLength == plan.barCount &&
-                      performance.roles.count <= PerformanceRole.allCases.count &&
-                      Set(performance.roles).count == performance.roles.count &&
-                      performance.transformations.count <=
-                        MusicalTransformation.allCases.count &&
-                      Set(performance.transformations).count ==
-                        performance.transformations.count &&
-                      performance.accentContour.count == 16 &&
-                      performance.accentContour.allSatisfy(\.isFinite) &&
-                      occupancy.values.allSatisfy { $0.count <= maximumAtOneStep } &&
-                      resolved.ensemble.kickAnchors.count <= 16 &&
-                      Set(resolved.ensemble.kickAnchors).count ==
-                        resolved.ensemble.kickAnchors.count &&
-                      resolved.ensemble.kickAnchors.allSatisfy {
-                          (0..<16).contains($0)
-                      } && resolved.groovePulses.count <= 8 &&
-                      Set(resolved.groovePulses.map(\.step)).count ==
-                        resolved.groovePulses.count && grooveScoreIsCanonical &&
-                      closedHatDecayIsCanonical && fallbackScoreIsCanonical
-              }) else {
+              plan.endingNarrativeState.activeSupportingRoles.count <= 3 else {
             return false
+        }
+        for (index, resolved) in plan.resolvedBars.enumerated() {
+            guard resolvedBarIsBounded(
+                resolved,
+                index: index,
+                plan: plan,
+                slot: slot
+            ) else { return false }
         }
         guard plan.performanceCharacterEvidence.valid else { return false }
         switch slot {
@@ -1616,6 +1609,110 @@ package enum AutonomousPhrasePreparer {
             return !plan.alternate && plan.conservative &&
                 groovePulseArticulationIsNeutral
         }
+    }
+
+    @inline(never)
+    private static func resolvedBarIsBounded(
+        _ resolved: ResolvedPerformanceBar,
+        index: Int,
+        plan: AutonomousPhrasePlan,
+        slot: AutonomousCandidateSlot
+    ) -> Bool {
+        let performance = resolved.performance
+        let expectedBar = plan.startBar + index
+        guard performance.bar == expectedBar else { return false }
+        let events = resolved.ensemble.events
+        guard events.count <= 16 * 6 else { return false }
+        let maximumAtOneStep = resolved.ensemble.intentionalPileup ? 6 : 3
+        let occupancy = Dictionary(grouping: events) { event in event.step }
+        let grooveEvents = events.filter { $0.voice == .groovePulse }
+            .sorted { $0.step < $1.step }
+        let grooveArticulations = resolved.groovePulses.sorted {
+            $0.step < $1.step
+        }
+        var grooveScoreIsCanonical =
+            grooveEvents.count == grooveArticulations.count &&
+            Set(grooveEvents.map { event in event.step }).count ==
+                grooveEvents.count
+        if grooveScoreIsCanonical {
+            for eventIndex in grooveEvents.indices {
+                if grooveEvents[eventIndex].step !=
+                    grooveArticulations[eventIndex].step ||
+                    grooveEvents[eventIndex].intensity !=
+                    grooveArticulations[eventIndex].intensity {
+                    grooveScoreIsCanonical = false
+                    break
+                }
+            }
+        }
+        let closedHatEvents = Array(events.enumerated().filter {
+            $0.element.voice == .percussion
+        })
+        let canonicalClosedHatDecay = ClosedHatDecayResolver.articulations(
+            from: resolved.ensemble,
+            conservative: plan.conservative
+        )
+        let closedHatDecayIsCanonical =
+            closedHatEvents.count <=
+                AutonomousCandidateEvaluationVector.maximumClosedHatEventsPerBar &&
+            resolved.closedHatDecayArticulations == canonicalClosedHatDecay &&
+            resolved.closedHatDecayArticulations.count == closedHatEvents.count &&
+            Set(resolved.closedHatDecayArticulations.map {
+                $0.scoreEventIndex
+            }).count == resolved.closedHatDecayArticulations.count
+        let fallbackScoreIsCanonical: Bool
+        if slot == .fallback {
+            let canonicalEnsemble = AutonomousSessionDirector.ensemblePlan(
+                dna: plan.dna,
+                bar: performance,
+                focus: resolved.ensemble.focusRole,
+                release: plan.kind == .energyRelease,
+                kind: plan.kind,
+                character: resolved.performanceCharacter,
+                foundationBehavior: resolved.foundationBehavior,
+                companion: resolved.foundationCompanion,
+                gear: resolved.percussionGear,
+                gesture: resolved.arrangementGesture,
+                conservative: true
+            )
+            let canonicalGrooveEvents = canonicalEnsemble.events.filter {
+                $0.voice == .groovePulse
+            }
+            let canonicalGroovePulses = GroovePulseResolver.articulations(
+                from: canonicalEnsemble,
+                absoluteBar: expectedBar,
+                swingPercent: plan.dna.rhythm.swingPercent,
+                percussionGear: resolved.percussionGear,
+                eventSeed: performance.eventSeed,
+                conservative: true
+            )
+            fallbackScoreIsCanonical =
+                canonicalGrooveEvents == grooveEvents &&
+                canonicalGroovePulses == grooveArticulations
+        } else {
+            fallbackScoreIsCanonical = true
+        }
+        return performance.phrase == plan.phraseIndex &&
+            performance.localBar == index &&
+            performance.phraseLength == plan.barCount &&
+            performance.roles.count <= PerformanceRole.allCases.count &&
+            Set(performance.roles).count == performance.roles.count &&
+            performance.transformations.count <=
+                MusicalTransformation.allCases.count &&
+            Set(performance.transformations).count ==
+                performance.transformations.count &&
+            performance.accentContour.count == 16 &&
+            performance.accentContour.allSatisfy { value in value.isFinite } &&
+            occupancy.values.allSatisfy { $0.count <= maximumAtOneStep } &&
+            resolved.ensemble.kickAnchors.count <= 16 &&
+            Set(resolved.ensemble.kickAnchors).count ==
+                resolved.ensemble.kickAnchors.count &&
+            resolved.ensemble.kickAnchors.allSatisfy {
+                (0..<16).contains($0)
+            } && resolved.groovePulses.count <= 8 &&
+            Set(resolved.groovePulses.map { pulse in pulse.step }).count ==
+                resolved.groovePulses.count && grooveScoreIsCanonical &&
+            closedHatDecayIsCanonical && fallbackScoreIsCanonical
     }
 
     /// Every continuation collection is owned by a fixed-delay DSP primitive.
@@ -1649,7 +1746,7 @@ package enum AutonomousPhrasePreparer {
         }
         func graphPlanIsBounded(_ graph: DSPGraphPlan?) -> Bool {
             guard let graph else { return true }
-            let nodeIDs = graph.nodes.map(\.id)
+            let nodeIDs = graph.nodes.map { node in node.id }
             let affectedIDs = graph.mutation?.affectedNodeIDs ?? []
             let affectedIDsMatchTopology = graph.mutation?.kind == .bypass
                 ? Set(affectedIDs).isDisjoint(with: Set(nodeIDs))

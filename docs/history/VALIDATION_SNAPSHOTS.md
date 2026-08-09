@@ -546,3 +546,56 @@ or peak-memory budget, or hardware-output soak was completed. Policy remains
 `uncalibrated.v1`, automated professional-quality qualification remains
 unavailable, and this snapshot makes no sound-quality or release-readiness
 promotion.
+
+## Streaming Perceptual Evidence v3 — 2026-08-09
+
+This source candidate replaces phrase-sized analysis copies and the prior
+three-band centroid proxy with one bounded, rate-derived streaming evidence
+path. The canonical report now carries deterministic FFT centroid and spread,
+bandwidth, flatness, 85-percent rolloff, positive spectral flux, RMS-trajectory
+change, BS.1770-5 loudness, and Annex 2 true peak. Loudness retains fixed
+400-millisecond and 3-second rolling windows; the perceptual analyzer retains
+one Hann window plus fixed FFT scratch. A 32-second programme envelope and a
+6 MiB combined analysis-working-set ceiling fail closed instead of silently
+growing with phrase duration.
+
+Candidate-vector schema 8, quality-contract schema 9, Professional Evidence
+bank schema 3, and canonical engine identity `autotechno-canonical-engine.v9`
+identify the candidate. Non-finite evidence remains a structurally complete
+rejected record, while hard gates and the report bank require finite evidence.
+The immutable full-mix and perceptual payloads use bounded reference storage so
+the larger evidence record remains safe on Swift cooperative worker stacks.
+Score validation was split into non-inlined bounded helpers without changing
+its accepted score language. Policy remains `uncalibrated.v1`.
+
+Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+matched SDKs and isolated SwiftPM/module caches after rebasing onto the CI-
+process-split base `4845b21`:
+
+- production-identical parent full repository matrix: 145/145 passed in
+  330.685 seconds;
+- exact-head upper-timbre integration after the route-rate test split: 19/19
+  passed in 76.372 seconds;
+- pre-rebase focused candidate evaluation and qualification: 24/24 passed in
+  3.295 seconds;
+- pre-rebase focused streaming perceptual and BS.1770 reference bank: 15/15
+  passed in 7.832 seconds;
+- formerly stack-sensitive atomic prepared continuation: passed independently
+  in 16.360 seconds;
+- production-identical parent optimized `AutoTechno` product build: passed in
+  46.72 seconds;
+- optimized synthetic 8-second/96 kHz fixed-memory fixture and 4-second
+  spectral/loudness/true-peak chunk-parity fixture: 0.050 seconds each;
+- `git diff --check`: clean.
+
+The local matrix establishes deterministic chunk parity, independent DFT and
+BS.1770 reference agreement, physical-rate normalization, explicit
+cancellation and non-finite behavior, duration-independent working memory,
+cooperative-stack safety, candidate/report provenance, canonical-renderer
+integration, and optimized-build integrity. The synthetic timings are not a
+representative canonical-journey latency budget. No calibrated profile,
+adversarial promotion suite, matched-loudness listening, exact-build app
+playback, physical route/interruption smoke, representative journey peak-memory
+or cancellation budget, or hardware-output soak was completed. Automated
+professional-quality qualification therefore remains unavailable, and this
+snapshot makes no sound-quality or release-readiness promotion.

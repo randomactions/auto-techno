@@ -24,8 +24,8 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 8, candidate-
-   vector schema 7, and canonical engine identity
+   candidate-evaluation transaction under quality-contract schema 9, candidate-
+   vector schema 8, and canonical engine identity
    `autotechno-canonical-engine.v9`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, event-local groove-pulse,
@@ -51,9 +51,11 @@ mistaken for a completed feedback system.
    The shipping evaluator is uncalibrated and does not request paired rendering,
    so a healthy primary is rendered exactly once. Alternate and fallback remain
    bounded validity paths, not a general professional-quality ranking system.
-   A calibrated paired comparator stays disabled pending streaming phrase
-   analysis plus measured cancellation, preparation-latency, and peak-memory
-   bounds. Cancellation is checked within each candidate at bounded bar-render
+   Phrase analysis now streams across immutable render blocks within a recorded
+   6 MiB upper bound. A calibrated paired comparator stays disabled pending a
+   calibrated profile, adversarial suite, and passing representative-journey
+   cancellation, preparation-latency, and peak-memory budgets. Cancellation is
+   checked within each candidate at bounded bar-render
    and evidence boundaries; route changes cancel detached preparation and
    prevent stale route work from committing.
    This transaction does not feed observations into future composition.
@@ -61,7 +63,10 @@ mistaken for a completed feedback system.
    K-weighting and two-stage 400 ms gating, and measures true peak with the
    published Annex 2 four-phase FIR. The candidate vector retains analyzed
    frame and gating-block counts, integrated/momentary/short-term loudness,
-   loudness spread, and dBTP evidence. A deterministic Professional Evidence v2
+   loudness spread, and dBTP evidence. It also retains rate-derived FFT/hop
+   geometry, actual spectral centroid/bandwidth/flatness/rolloff, positive flux,
+   RMS trajectory, active-window counts, and bounded working-memory provenance.
+   A deterministic Professional Evidence v3
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. Its policy status is
    unconditionally unavailable pending a calibrated profile and adversarial

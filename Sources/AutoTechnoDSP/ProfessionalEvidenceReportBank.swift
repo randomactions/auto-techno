@@ -17,12 +17,12 @@ package enum ProfessionalQualityPolicyAvailability: String, Codable, Sendable {
 }
 
 /// A deterministic, bounded bank containing every canonical journey checkpoint
-/// for each route rate represented by the bank. Professional Evidence v2 is an
+/// for each route rate represented by the bank. Professional Evidence v3 is an
 /// observation contract only: it has no constructor for a calibrated profile
 /// or adversarial-suite identity, so it cannot claim policy availability.
 package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable {
-    package static let schemaVersion = 2
-    package static let evidenceVersion = "autotechno-professional-evidence.v2"
+    package static let schemaVersion = 3
+    package static let evidenceVersion = "autotechno-professional-evidence.v3"
     package static let maximumReports = 64
     package static let maximumEncodedBytes = 64 * 1_024 * 1_024
 
@@ -104,6 +104,13 @@ package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable {
                     BS1770AudioEvidence.truePeakStandard &&
                 vector.fullMix.analyzedFrameCount > 0 &&
                 vector.fullMix.momentaryBlockCount > 0 &&
+                vector.fullMix.perceptual.isComplete &&
+                vector.fullMix.perceptual.analyzedWindowCount > 0 &&
+                vector.fullMix.perceptual.sourceFrameCount ==
+                    vector.fullMix.analyzedFrameCount &&
+                vector.fullMix.analysisPeakWorkingByteCount <=
+                    AutonomousFullMixEvidence
+                        .maximumAnalysisPeakWorkingByteCount &&
                 vector.masking.count == vector.fullMix.sourceBarCount &&
                 vector.masking.allSatisfy(\.isComplete) &&
                 vector.stems.count == vector.fullMix.sourceBarCount &&

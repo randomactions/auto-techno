@@ -507,8 +507,8 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 7)
-        #expect(QualityQualificationContract.schemaVersion == 8)
+        #expect(vector.schemaVersion == 8)
+        #expect(QualityQualificationContract.schemaVersion == 9)
         #expect(QualityQualificationContract.engineVersion ==
                 "autotechno-canonical-engine.v9")
         #expect(vector.isComplete)
@@ -1763,6 +1763,10 @@ struct AutonomousCandidateEvaluationTests {
             crestFactor: 2.5,
             finite: true
         )
+        let oversizedPerceptual = fixturePerceptualEvidence(
+            frameCount: 1,
+            sampleRate: 8_000
+        )
         let oversizedFullMix = AutonomousFullMixEvidence(
             sourceBarCount: 1,
             analyzedFrameCount: 1,
@@ -1783,6 +1787,9 @@ struct AutonomousCandidateEvaluationTests {
             lowStereoCorrelation: 1,
             maximumBoundaryDelta: 0.01,
             movementScore: 0.5,
+            analysisPeakWorkingByteCount:
+                oversizedPerceptual.peakWorkingByteCount + 1,
+            perceptual: oversizedPerceptual,
             bars: Array(repeating: bar, count: 17)
         )
         #expect(oversizedFullMix.sourceEvidenceBarCount == 17)
@@ -1887,6 +1894,41 @@ struct AutonomousCandidateEvaluationTests {
             from: JSONSerialization.data(withJSONObject: forgedStandardObject)
         )
         #expect(!forgedFrameCoverage.isComplete)
+
+        var forgedPerceptualObject = try #require(JSONSerialization.jsonObject(
+            with: sourceVector.deterministicJSON()
+        ) as? [String: Any])
+        var forgedPerceptualFullMix = try #require(
+            forgedPerceptualObject["fullMix"] as? [String: Any]
+        )
+        var forgedPerceptual = try #require(
+            forgedPerceptualFullMix["perceptual"] as? [String: Any]
+        )
+        forgedPerceptual["analyzerVersion"] = "forged-analyzer"
+        forgedPerceptualFullMix["perceptual"] = forgedPerceptual
+        forgedPerceptualObject["fullMix"] = forgedPerceptualFullMix
+        let forgedPerceptualVector = try decoder.decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedPerceptualObject)
+        )
+        #expect(!forgedPerceptualVector.isComplete)
+        #expect(forgedPerceptualVector.recordIsStructurallyValid)
+
+        var forgedMemoryObject = try #require(JSONSerialization.jsonObject(
+            with: sourceVector.deterministicJSON()
+        ) as? [String: Any])
+        var forgedMemoryFullMix = try #require(
+            forgedMemoryObject["fullMix"] as? [String: Any]
+        )
+        forgedMemoryFullMix["analysisPeakWorkingByteCount"] =
+            AutonomousFullMixEvidence.maximumAnalysisPeakWorkingByteCount + 1
+        forgedMemoryObject["fullMix"] = forgedMemoryFullMix
+        let forgedMemoryVector = try decoder.decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedMemoryObject)
+        )
+        #expect(!forgedMemoryVector.isComplete)
+        #expect(forgedMemoryVector.recordIsStructurallyValid)
 
         var forgedAttributionObject = try #require(JSONSerialization.jsonObject(
             with: sourceVector.deterministicJSON()
@@ -2533,7 +2575,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "3a45be3c309a14bb")
+                "8a61472b4feefb27")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -2622,6 +2664,11 @@ struct AutonomousCandidateEvaluationTests {
             allSamplesFinite: !nonFinite,
             completeInputs: true
         )
+        let perceptual = fixturePerceptualEvidence(
+            frameCount: upper.analyzedFrameCount,
+            sampleRate: upper.sampleRate,
+            finite: !nonFinite
+        )
         let fullMix = AutonomousFullMixEvidence(
             sourceBarCount: 1,
             analyzedFrameCount: upper.analyzedFrameCount,
@@ -2642,6 +2689,9 @@ struct AutonomousCandidateEvaluationTests {
             lowStereoCorrelation: 1,
             maximumBoundaryDelta: 0.01,
             movementScore: movementScore,
+            analysisPeakWorkingByteCount:
+                perceptual.peakWorkingByteCount + 1,
+            perceptual: perceptual,
             bars: [AutonomousBarFullMixEvidence(
                 bar: evidenceBar,
                 loudness: -14,
@@ -3027,6 +3077,23 @@ struct AutonomousCandidateEvaluationTests {
                 finite: true
             )]
         )
+    }
+
+    private func fixturePerceptualEvidence(
+        frameCount: Int,
+        sampleRate: Double,
+        finite: Bool = true
+    ) -> StreamingPerceptualEvidence {
+        var samples = [Float](repeating: 0, count: frameCount)
+        if !finite, !samples.isEmpty { samples[samples.count - 1] = .nan }
+        guard let evidence = StreamingPerceptualEvidenceAnalyzer.analyze(
+            left: samples,
+            right: samples,
+            sampleRate: sampleRate
+        ) else {
+            preconditionFailure("Non-cancellable perceptual fixture stopped")
+        }
+        return evidence
     }
 
     private var validMaskingObservations: [AutonomousMaskingObservationEvidence] {

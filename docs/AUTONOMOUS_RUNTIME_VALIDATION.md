@@ -55,7 +55,7 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 8, candidate-vector schema 7, and canonical engine v9
+Quality-contract schema 9, candidate-vector schema 8, and canonical engine v9
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, event-local groove-pulse, ordinary closed-hat, score-owned
@@ -85,7 +85,11 @@ engine/policy/evaluator versions, the selected attempt, correction count, route
 generation, incoming continuation, and the pre-decision outgoing render/DSP
 state. Full-mix evidence must identify ITU-R BS.1770-5, retain physical-time
 gating counts and phrase-wide integrated/momentary/short-term values, and derive
-true peak from the Annex 2 polyphase FIR rather than sample or cubic peak. Final
+true peak from the Annex 2 polyphase FIR rather than sample or cubic peak. It
+must stream without phrase-sized PCM, mono, energy-prefix, or spectrogram copies;
+bind source frames to rate-derived FFT/hop geometry; retain centroid, bandwidth,
+flatness, 85% rolloff, positive flux, RMS trajectory, and active-window counts;
+and record a conservative peak analyzer-memory bound no greater than 6 MiB. Final
 commit provenance must additionally bind the selected sample hash
 and finalized quality continuation state; rejected attempts may not affect that
 state.
@@ -121,12 +125,12 @@ remain unchanged.
 This schema is evidence infrastructure, not a passing professional-quality
 policy. The shipping evaluator is uncalibrated, renders one primary candidate on
 the healthy path, and must continue to report qualification unavailable.
-The Professional Evidence v2 bank must contain every canonical checkpoint for
+The Professional Evidence v3 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. Policy
 availability remains false until both a calibrated-profile fingerprint and a
 passing adversarial-suite fingerprint exist under a future schema. Calibrated
-paired ranking remains disabled until streaming phrase analysis and measured
-cancellation, latency, and peak-working-memory bounds exist.
+paired ranking remains disabled until those identities exist and representative
+canonical-journey cancellation, latency, and peak-working-memory budgets pass.
 
 ## Determinism and sample-rate consistency
 
