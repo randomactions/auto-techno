@@ -527,6 +527,11 @@ source-12 commit `fb56950963b6639784dba0cd407edf607f3574ee`:
 - the exact spatial isolation, protected mono-rumble, conservative fallback,
   and 44.1/48 kHz transaction regressions passed independently after their
   fixtures preserved the explicit resolved character contract;
+- the first published CI run stopped with signal 10 when one upper-integration
+  test retained both 8 and 12 kHz prepared products in one test scope; the
+  lifetime-bounded follow-up keeps one product per test, preserves both route
+  and plan-fingerprint assertions, and passed the full upper suite 19/19 in
+  199.651 seconds without changing production source;
 - the optimized `AutoTechno` product build passed in 94.95 seconds;
 - `git diff --check` was clean before publication.
 

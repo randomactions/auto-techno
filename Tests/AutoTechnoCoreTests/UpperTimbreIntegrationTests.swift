@@ -4,7 +4,6 @@ import Foundation
 import Testing
 
 private struct ClosedHatRouteProjection {
-    let planFingerprints: AutonomousCandidatePlanFingerprints
     let routeFingerprint: String
     let sampleRate: Double
 }
@@ -691,19 +690,23 @@ struct UpperTimbreIntegrationTests {
         #expect(probe.checkCount == 1)
     }
 
-    @Test("Canonical closed/open-hat relation survives route-rate preparation")
-    func closedHatCompanionRouteRatePreparation() throws {
+    @Test("Canonical closed/open-hat relation survives 8 kHz route preparation")
+    func closedHatCompanion8KRoutePreparation() throws {
         let rate8 = try closedHatRouteProjection(
             sampleRate: 8_000,
             routeGeneration: 4
         )
+        #expect(!rate8.routeFingerprint.isEmpty)
+        #expect(rate8.sampleRate == 8_000)
+    }
+
+    @Test("Canonical closed/open-hat relation survives 12 kHz route preparation")
+    func closedHatCompanion12KRoutePreparation() throws {
         let rate12 = try closedHatRouteProjection(
             sampleRate: 12_000,
             routeGeneration: 5
         )
-        #expect(rate8.planFingerprints == rate12.planFingerprints)
-        #expect(rate8.routeFingerprint != rate12.routeFingerprint)
-        #expect(rate8.sampleRate == 8_000)
+        #expect(!rate12.routeFingerprint.isEmpty)
         #expect(rate12.sampleRate == 12_000)
     }
 
@@ -751,10 +754,18 @@ struct UpperTimbreIntegrationTests {
         #expect(prepared.candidateEvaluation.selectedSlot == .primary)
         #expect(prepared.candidateEvaluation.comparison == .unavailable)
         #expect(prepared.candidateEvaluation.attempts.count == 1)
+        #expect(prepared.candidateEvaluation.planFingerprints ==
+                AutonomousCandidatePlanFingerprints.make(candidates: candidates))
         #expect(prepared.qualityDecision.outcome == .qualificationUnavailable)
         #expect(prepared.qualityDecision.reasonCodes.contains(.policyUncalibratedV1))
         #expect(prepared.hardGatesPassed)
         #expect(prepared.commitEligible)
+        #expect(prepared.selectedCandidateEvidence.routeContinuation.routeFingerprint ==
+                AutonomousCandidateFingerprint.route(
+                    sampleRate: sampleRate,
+                    channelCount: 2,
+                    generation: routeGeneration
+                ))
 
         var renderedRelations: [String] = []
         for (resolved, block) in zip(candidates.primary.resolvedBars, prepared.blocks) {
@@ -794,7 +805,6 @@ struct UpperTimbreIntegrationTests {
         #expect(renderedRelations == expectedRelations)
 
         return ClosedHatRouteProjection(
-            planFingerprints: prepared.candidateEvaluation.planFingerprints,
             routeFingerprint: prepared.selectedCandidateEvidence
                 .routeContinuation.routeFingerprint,
             sampleRate: prepared.selectedCandidateEvidence.routeContinuation.sampleRate
