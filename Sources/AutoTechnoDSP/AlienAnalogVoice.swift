@@ -11,6 +11,8 @@ struct AlienVoiceNote: Equatable, Sendable {
     let articulation: RelationalArticulation
     let dryScale: Double
     let spatialReverbSend: Double
+    let narrativeGainScale: Double
+    let narrativeSpectralScale: Double
 }
 
 struct AlienVoiceState: Equatable, Sendable {
@@ -105,6 +107,8 @@ enum AlienAnalogVoice {
         var articulation = RelationalArticulation.neutral
         var dryScale = 1.0
         var spatialSendLevel = 0.0
+        var narrativeGainScale = 1.0
+        var narrativeSpectralScale = 1.0
         let roleMutation = mutationScale(for: role)
         let mutation = min(1, bar.mutationAmount * roleMutation)
         let fingerprint = world.motifFingerprint
@@ -132,6 +136,8 @@ enum AlienAnalogVoice {
                 articulation = note.articulation
                 dryScale = min(1, max(0, note.dryScale))
                 spatialSendLevel = min(1, max(0, note.spatialReverbSend))
+                narrativeGainScale = max(0, note.narrativeGainScale)
+                narrativeSpectralScale = max(0.01, note.narrativeSpectralScale)
                 attackFrames = max(1, Int(
                     baseAttackSeconds * articulation.attackScale * sampleRate
                 ))
@@ -219,7 +225,8 @@ enum AlienAnalogVoice {
 
                 let envelopeLift = state.envelope * 0.20
                 let spectralScale = role == .anchor
-                    ? [0.72, 1.0, 1.28][fingerprint.spectralRegion] * articulation.spectralScale
+                    ? [0.72, 1.0, 1.28][fingerprint.spectralRegion] *
+                        articulation.spectralScale * narrativeSpectralScale
                     : articulation.spectralScale
                 let baseCutoff = (170 + Double(world.variation) * 55 + roleIndex * 48) * spectralScale
                 let cutoff = min(oversampledRate * 0.18,
@@ -244,7 +251,8 @@ enum AlienAnalogVoice {
                     oversampleSum += state.oversampleLow
                 }
 
-                let amplitude = state.envelope * velocity * level
+                let amplitude = state.envelope * velocity * level *
+                    (role == .anchor ? narrativeGainScale : 1)
                 dryVoice = oversampleSum * 0.5 * amplitude
             } else {
                 state.filter1 *= 0.94

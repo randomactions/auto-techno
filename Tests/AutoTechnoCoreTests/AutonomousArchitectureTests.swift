@@ -163,7 +163,9 @@ struct AdaptiveAutonomousSessionTests {
             foundationCompanion: resolved.foundationCompanion,
             pulseEchoEnabled: resolved.pulseEchoEnabled,
             interlockChapter: resolved.interlockChapter,
-            groovePulses: resolved.groovePulses
+            groovePulses: resolved.groovePulses,
+            spatialContrast: resolved.spatialContrast,
+            narrative: resolved.narrative
         )
         let ordinaryEvents = weightedEvents.map { event in
             event.voice == .groovePulse
@@ -185,7 +187,9 @@ struct AdaptiveAutonomousSessionTests {
             percussionGear: resolved.percussionGear,
             foundationCompanion: resolved.foundationCompanion,
             pulseEchoEnabled: resolved.pulseEchoEnabled,
-            interlockChapter: resolved.interlockChapter
+            interlockChapter: resolved.interlockChapter,
+            spatialContrast: resolved.spatialContrast,
+            narrative: resolved.narrative
         )
         let weightedReport = PhraseInterestEvaluator.evaluate(
             resolvedBars: [weighted], kind: plan.kind,
@@ -655,7 +659,10 @@ struct AutonomousPreparationPreflightTests {
                 percussionGear: source.percussionGear,
                 foundationCompanion: source.foundationCompanion,
                 pulseEchoEnabled: source.pulseEchoEnabled,
-                interlockChapter: source.interlockChapter
+                interlockChapter: source.interlockChapter,
+                groovePulses: source.groovePulses,
+                spatialContrast: source.spatialContrast,
+                narrative: source.narrative
             )
         }
 
@@ -921,7 +928,10 @@ struct AutonomousPreparationPreflightTests {
             percussionGear: sourceResolved.percussionGear,
             foundationCompanion: sourceResolved.foundationCompanion,
             pulseEchoEnabled: sourceResolved.pulseEchoEnabled,
-            interlockChapter: sourceResolved.interlockChapter
+            interlockChapter: sourceResolved.interlockChapter,
+            groovePulses: sourceResolved.groovePulses,
+            spatialContrast: sourceResolved.spatialContrast,
+            narrative: sourceResolved.narrative
         )
         var changedBars = original.resolvedBars
         changedBars[barIndex] = changedResolved
@@ -999,7 +1009,10 @@ struct AutonomousPreparationPreflightTests {
             percussionGear: source.percussionGear,
             foundationCompanion: source.foundationCompanion,
             pulseEchoEnabled: source.pulseEchoEnabled,
-            interlockChapter: source.interlockChapter
+            interlockChapter: source.interlockChapter,
+            groovePulses: source.groovePulses,
+            spatialContrast: source.spatialContrast,
+            narrative: source.narrative
         )
         var changedBars = original.resolvedBars
         changedBars[barIndex] = changedResolved
@@ -1068,7 +1081,9 @@ struct AutonomousPreparationPreflightTests {
             foundationCompanion: source.foundationCompanion,
             pulseEchoEnabled: source.pulseEchoEnabled,
             interlockChapter: source.interlockChapter,
-            groovePulses: changedPulses
+            groovePulses: changedPulses,
+            spatialContrast: source.spatialContrast,
+            narrative: source.narrative
         )
         var changedBars = original.resolvedBars
         changedBars[barIndex] = changedResolved
@@ -1223,7 +1238,8 @@ struct AutonomousPreparationPreflightTests {
             pulseEchoEnabled: source.pulseEchoEnabled,
             interlockChapter: source.interlockChapter,
             groovePulses: source.groovePulses,
-            spatialContrast: .foreground
+            spatialContrast: .foreground,
+            narrative: source.narrative
         )
         var dryBars = original.resolvedBars
         dryBars[barIndex] = dryResolved
@@ -1263,6 +1279,197 @@ struct AutonomousPreparationPreflightTests {
         let start = carrierStep * distantBlock.left.count / 16
         #expect(Array(distantBlock.left[..<start]) == Array(dryBlock.left[..<start]))
         let delta = zip(distantBlock.left[start...], dryBlock.left[start...]).reduce(0.0) {
+            $0 + abs(Double($1.0 - $1.1))
+        }
+        #expect(delta > 0.000_1)
+    }
+
+    @Test("Narrative presence and support evolve continuously at structural boundaries")
+    func narrativeEvolutionAndSupportGating() {
+        let director = AutonomousSessionDirector()
+        var state = director.initialState()
+        var previousPresence = 0.50
+        var previousContext: (roles: [PerformanceRole], gesture: ArrangementGesture,
+                              direction: NarrativeDirection, kind: AutonomousPhraseKind)?
+        var observedKinds = Set<AutonomousPhraseKind>()
+        var sawSupportAdmission = false
+        var sawSupportRemoval = false
+
+        for _ in 0..<80 {
+            let plan = director.candidates(from: state).primary
+            observedKinds.insert(plan.kind)
+            #expect(abs((plan.resolvedBars.first?.narrative.presenceStart ?? -1) -
+                        previousPresence) < 0.000_000_1)
+
+            for resolved in plan.resolvedBars {
+                let narrative = resolved.narrative
+                #expect((0...1).contains(narrative.presenceStart))
+                #expect((0...1).contains(narrative.presenceEnd))
+                #expect(resolved.performance.roles.contains(.foundation))
+                if plan.kind != .majorBreak {
+                    #expect(resolved.performance.roles.contains(.motif))
+                } else {
+                    #expect(narrative.activeSupportingRoles == [.atmosphere])
+                    #expect(!resolved.performance.roles.contains(.percussion))
+                    #expect(!resolved.performance.roles.contains(.response))
+                }
+                #expect(narrative.activeSupportingRoles.count <= 3)
+
+                if let previousContext,
+                   previousContext.roles != narrative.activeSupportingRoles {
+                    let previousSet = Set(previousContext.roles)
+                    let currentSet = Set(narrative.activeSupportingRoles)
+                    let changedCount = previousSet.symmetricDifference(currentSet).count
+                    let breakReset = plan.kind == .majorBreak &&
+                        resolved.performance.localBar == 0
+                    if !breakReset {
+                        #expect(changedCount == 1)
+                        #expect(resolved.performance.bar.isMultiple(of: 4))
+                    }
+                    if currentSet.count > previousSet.count {
+                        sawSupportAdmission = true
+                        #expect(previousContext.gesture != .minimalize)
+                        #expect(previousContext.direction == .emerging ||
+                                previousContext.kind == .contrast ||
+                                previousContext.kind == .energyRelease ||
+                                plan.kind == .majorBreak)
+                    } else if currentSet.count < previousSet.count, !breakReset {
+                        sawSupportRemoval = true
+                        #expect(previousContext.direction == .receding)
+                        #expect(previousContext.gesture == .turnaround)
+                    }
+                }
+
+                previousPresence = narrative.presenceEnd
+                previousContext = (
+                    narrative.activeSupportingRoles,
+                    resolved.arrangementGesture,
+                    narrative.direction,
+                    plan.kind
+                )
+            }
+
+            let expectedTarget: Double = switch plan.kind {
+            case .lock: 0.56
+            case .contrast: 0.76
+            case .majorBreak: 0.20
+            case .identityReturn: 0.58
+            case .energyRelease: 0.60
+            }
+            if plan.kind == .energyRelease {
+                let peak = plan.resolvedBars.first {
+                    ($0.performance.bar + 1).isMultiple(of: 16)
+                }
+                #expect(abs((peak?.narrative.presenceEnd ?? -1) - 0.90) < 0.000_000_1)
+                if plan.resolvedBars.last?.performance.bar == peak?.performance.bar {
+                    #expect(plan.endingNarrativeState.releaseSettlementPending)
+                } else {
+                    #expect(abs((plan.resolvedBars.last?.narrative.presenceEnd ?? -1) - 0.60) <
+                            0.000_000_1)
+                    #expect(!plan.endingNarrativeState.releaseSettlementPending)
+                }
+            } else {
+                #expect(abs((plan.resolvedBars.last?.narrative.presenceEnd ?? -1) -
+                            expectedTarget) < 0.000_000_1)
+            }
+            if plan.kind == .identityReturn,
+               let finalBar = plan.resolvedBars.last?.performance.bar,
+               (finalBar + 1).isMultiple(of: 16) {
+                #expect(plan.endingNarrativeState.activeSupportingRoles.contains(.percussion))
+            }
+            #expect(abs(plan.endingNarrativeState.protagonistPresence - previousPresence) <
+                    0.000_000_1)
+            state.advance(using: plan)
+        }
+
+        #expect(observedKinds == Set(AutonomousPhraseKind.allCases))
+        #expect(sawSupportAdmission)
+        #expect(sawSupportRemoval)
+    }
+
+    @Test("Resolved narrative articulation drives motif metadata and PCM only")
+    func narrativeRenderingTruth() {
+        let director = AutonomousSessionDirector()
+        let state = director.initialState()
+        let original = director.candidates(from: state).primary
+        guard let barIndex = original.resolvedBars.firstIndex(where: { resolved in
+            resolved.ensemble.events.contains { $0.voice == .motif }
+        }), let motif = original.resolvedBars[barIndex].ensemble.events
+            .filter({ $0.voice == .motif }).min(by: { $0.step < $1.step }) else {
+            Issue.record("Expected a resolved dominant motif")
+            return
+        }
+        let source = original.resolvedBars[barIndex]
+        let changedNarrative = NarrativeArticulation(
+            presenceStart: 0.90,
+            presenceEnd: 0.90,
+            activeSupportingRoles: source.narrative.activeSupportingRoles
+        )
+        let changedResolved = ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: source.ensemble,
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            foundationCompanion: source.foundationCompanion,
+            pulseEchoEnabled: source.pulseEchoEnabled,
+            interlockChapter: source.interlockChapter,
+            groovePulses: source.groovePulses,
+            spatialContrast: source.spatialContrast,
+            narrative: changedNarrative
+        )
+        var changedBars = original.resolvedBars
+        changedBars[barIndex] = changedResolved
+        let changed = replacingResolvedBars(in: original, with: changedBars, memory: state.memory)
+        let graph = DSPGraphGenerator.safePlan(sessionSeed: state.rootSeed)
+        var originalRender = RenderState(), changedRender = RenderState()
+        var originalGraph = GeneratedDSPContinuationState()
+        var changedGraph = GeneratedDSPContinuationState()
+        let originalBlocks = AutonomousPhraseRenderer.render(
+            plan: original, graph: graph, sampleRate: 8_000,
+            state: &originalRender, graphState: &originalGraph
+        )
+        let changedBlocks = AutonomousPhraseRenderer.render(
+            plan: changed, graph: graph, sampleRate: 8_000,
+            state: &changedRender, graphState: &changedGraph
+        )
+
+        #expect(Array(originalBlocks[..<barIndex]) == Array(changedBlocks[..<barIndex]))
+        let originalBlock = originalBlocks[barIndex]
+        let changedBlock = changedBlocks[barIndex]
+        let originalEvent = originalBlock.events.first {
+            $0.step == motif.step && $0.narrativePresence != nil
+        }
+        let changedEvent = changedBlock.events.first {
+            $0.step == motif.step && $0.narrativePresence != nil
+        }
+        #expect(originalEvent?.narrativePresence == source.narrative.presence(atStep: motif.step))
+        #expect(changedEvent?.narrativeDirection == .holding)
+        #expect(changedEvent?.narrativePresence == 0.90)
+        #expect(changedEvent?.narrativeGainScale ==
+                changedNarrative.motifGainScale(atStep: motif.step))
+        #expect(changedEvent?.narrativeSpectralScale ==
+                changedNarrative.motifSpectralScale(atStep: motif.step))
+        #expect(zip(originalBlock.events, changedBlock.events).allSatisfy { original, changed in
+            original.voice == changed.voice && original.step == changed.step &&
+                original.intensity == changed.intensity
+        })
+        #expect(changedBlock.events.filter { $0.narrativePresence != nil }.allSatisfy {
+            $0.voice == .synth
+        })
+        #expect(originalBlock.synthWorld.motifFingerprint ==
+                changedBlock.synthWorld.motifFingerprint)
+        #expect(originalBlock.automaticMix == changedBlock.automaticMix)
+        #expect(originalBlock.stemObservations[.kick] == changedBlock.stemObservations[.kick])
+        #expect(originalBlock.stemObservations[.foundation] ==
+                changedBlock.stemObservations[.foundation])
+        #expect(originalBlock.stemObservations[.percussion] ==
+                changedBlock.stemObservations[.percussion])
+        #expect(originalBlock.stemObservations[.upperTonal] !=
+                changedBlock.stemObservations[.upperTonal])
+
+        let start = motif.step * originalBlock.left.count / 16
+        #expect(Array(originalBlock.left[..<start]) == Array(changedBlock.left[..<start]))
+        let delta = zip(originalBlock.left[start...], changedBlock.left[start...]).reduce(0.0) {
             $0 + abs(Double($1.0 - $1.1))
         }
         #expect(delta > 0.000_1)
@@ -1383,7 +1590,10 @@ struct AutonomousPreparationPreflightTests {
                 percussionGear: resolved.percussionGear,
                 foundationCompanion: companion ?? resolved.foundationCompanion,
                 pulseEchoEnabled: enabled,
-                interlockChapter: .memory
+                interlockChapter: .memory,
+                groovePulses: resolved.groovePulses,
+                spatialContrast: resolved.spatialContrast,
+                narrative: resolved.narrative
             )
         }
         let sourceBar = sourcePlan.resolvedBars[barIndex]
@@ -1474,7 +1684,8 @@ struct AutonomousPreparationPreflightTests {
                 identityPreserved: plan.scene.seed == plan.dna.sceneSeed
             ),
             endingInterlockState: plan.endingInterlockState,
-            endingSpatialContrastState: plan.endingSpatialContrastState
+            endingSpatialContrastState: plan.endingSpatialContrastState,
+            endingNarrativeState: plan.endingNarrativeState
         )
     }
 
