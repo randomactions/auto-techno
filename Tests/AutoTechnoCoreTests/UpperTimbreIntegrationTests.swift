@@ -167,6 +167,86 @@ struct UpperTimbreIntegrationTests {
         }
     }
 
+    @Test("Breath timing cascade reaches exact upper frames and compact role evidence")
+    func upperTimingCascadeVerticalSlice() throws {
+        let fixture = try #require(eligibleSingleBarFixture())
+        let breath = replacingChapter(in: fixture.resolved, with: .breath)
+        let alignedResolved = replacingAbsoluteBar(in: breath, with: 0)
+        let spreadResolved = replacingAbsoluteBar(in: breath, with: 7)
+        let aligned = renderSingleBar(
+            plan: fixture.plan,
+            resolved: alignedResolved,
+            state: fixture.state
+        )
+        let spread = renderSingleBar(
+            plan: fixture.plan,
+            resolved: spreadResolved,
+            state: fixture.state
+        )
+
+        #expect(!aligned.upperTimingRenderEvidence.events.isEmpty)
+        #expect(aligned.upperTimingRenderEvidence.events.count ==
+                aligned.upperNoteRenderEvidence.count)
+        #expect(aligned.upperTimingRenderEvidence.events.allSatisfy {
+            $0.requestedOffsetInSteps.bitPattern == 0
+        })
+        let alignedStepFrames = Double(aligned.left.count) / 16
+        for event in aligned.upperTimingRenderEvidence.events {
+            let legacyFrame = Int(
+                (Double(event.baseOnsetStep) * alignedStepFrames).rounded()
+            )
+            #expect(event.expectedOnsetFrame == legacyFrame)
+            #expect(event.appliedOnsetFrame == legacyFrame)
+        }
+
+        let spreadEvents = spread.upperTimingRenderEvidence.events
+        let shifted = spreadEvents.filter { $0.requestedOffsetInSteps > 0 }
+        #expect(!shifted.isEmpty)
+        #expect(shifted.allSatisfy {
+            $0.role == .shadow || $0.role == .response
+        })
+        #expect(spreadEvents.filter { $0.role == .anchor }.allSatisfy {
+            $0.requestedOffsetInSteps.bitPattern == 0
+        })
+        #expect(spreadEvents.map(\.requestedOffsetInSteps).max() ?? 0 <=
+                ResolvedUpperNote.maximumTimingOffsetInSteps)
+        #expect((spreadEvents.map(\.requestedOffsetInSteps).max() ?? 0) -
+                (spreadEvents.map(\.requestedOffsetInSteps).min() ?? 0) > 0)
+        for event in spreadEvents {
+            let actual = spread.upperNoteRenderEvidence.filter {
+                $0.role == event.role &&
+                    $0.onsetFrame == event.appliedOnsetFrame &&
+                    $0.requestedGateEndFrame == event.requestedGateEndFrame &&
+                    $0.appliedGateEndFrame == event.appliedGateEndFrame
+            }
+            #expect(actual.count == 1)
+            #expect(event.expectedOnsetFrame == event.appliedOnsetFrame)
+            #expect(event.appliedGateEndFrame >= event.appliedOnsetFrame)
+            #expect(event.appliedGateEndFrame <= min(
+                event.requestedGateEndFrame,
+                spread.left.count
+            ))
+        }
+        let shadowCount = spreadEvents.filter { $0.role == .shadow }.count
+        let responseCount = spreadEvents.filter { $0.role == .response }.count
+        #expect(spread.upperTimingRenderEvidence.shadowSignal.eventCount == shadowCount)
+        #expect(spread.upperTimingRenderEvidence.responseSignal.eventCount == responseCount)
+        #expect(spread.upperTimingRenderEvidence.shadowSignal.finite)
+        #expect(spread.upperTimingRenderEvidence.responseSignal.finite)
+        #expect(shadowCount == 0 ||
+                (spread.upperTimingRenderEvidence.shadowSignal.peak > 0 &&
+                    spread.upperTimingRenderEvidence.shadowSignal.rms > 0))
+        #expect(responseCount == 0 ||
+                (spread.upperTimingRenderEvidence.responseSignal.peak > 0 &&
+                    spread.upperTimingRenderEvidence.responseSignal.rms > 0))
+        #expect(aligned.protectedFoundationSampleHash ==
+                spread.protectedFoundationSampleHash)
+        #expect(aligned.percussionSampleHash == spread.percussionSampleHash)
+        #expect(aligned.protectedRhythmSampleHash ==
+                spread.protectedRhythmSampleHash)
+        #expect(aligned.left != spread.left)
+    }
+
     @Test("Score velocity reaches the anchor while protected rhythm stays exact")
     func scoreVelocityVerticalSlice() throws {
         guard let fixture = velocityIsolatedFixture() else {
@@ -2172,6 +2252,7 @@ struct UpperTimbreIntegrationTests {
                 pulseEchoReturnDriveRenderEvidence ??
                     source.pulseEchoReturnDriveRenderEvidence,
             upperNoteRenderEvidence: source.upperNoteRenderEvidence,
+            upperTimingRenderEvidence: source.upperTimingRenderEvidence,
             graphInputRemainderTimbreEvidence:
                 source.graphInputRemainderTimbreEvidence,
             postGraphRemainderTimbreEvidence:
@@ -2381,6 +2462,39 @@ struct UpperTimbreIntegrationTests {
         )
     }
 
+    private func replacingAbsoluteBar(
+        in resolved: ResolvedPerformanceBar,
+        with absoluteBar: Int
+    ) -> ResolvedPerformanceBar {
+        let source = resolved.performance
+        let performance = PerformanceBar(
+            bar: absoluteBar,
+            phrase: source.phrase,
+            localBar: source.localBar,
+            phraseLength: source.phraseLength,
+            section: source.section,
+            tension: source.tension,
+            roles: source.roles,
+            transformations: source.transformations,
+            signatureEvent: source.signatureEvent,
+            eventSeed: source.eventSeed,
+            accentContour: source.accentContour
+        )
+        return ResolvedPerformanceBar(
+            performance: performance,
+            ensemble: resolved.ensemble,
+            arrangementGesture: resolved.arrangementGesture,
+            percussionGear: resolved.percussionGear,
+            foundationCompanion: resolved.foundationCompanion,
+            pulseEchoEnabled: resolved.pulseEchoEnabled,
+            interlockChapter: resolved.interlockChapter,
+            groovePulses: resolved.groovePulses,
+            closedHatDecayArticulations: resolved.closedHatDecayArticulations,
+            spatialContrast: resolved.spatialContrast,
+            narrative: resolved.narrative
+        )
+    }
+
     private func replacingAccent(in resolved: ResolvedPerformanceBar,
                                  step: Int, value: Double) -> ResolvedPerformanceBar {
         let source = resolved.performance
@@ -2458,14 +2572,18 @@ struct UpperTimbreIntegrationTests {
         for trajectory in block.upperNoteRenderEvidence {
             let candidates = block.resolvedUpperNotes.filter { note in
                 note.role == trajectory.role &&
-                    Int((Double(note.onsetStep) * stepFrames).rounded()) ==
-                        trajectory.onsetFrame
+                    VoiceRenderer.upperNoteStartFrame(
+                        note: note,
+                        stepFrames: stepFrames,
+                        frameCount: block.left.count
+                    ) == trajectory.onsetFrame
             }
             #expect(candidates.count == 1)
             guard let note = candidates.first else { continue }
-            let requestedEnd = trajectory.onsetFrame + max(
-                1,
-                Int((note.durationInSteps * stepFrames).rounded())
+            let requestedEnd = trajectory.onsetFrame +
+                VoiceRenderer.upperNoteDurationFrames(
+                    note: note,
+                    stepFrames: stepFrames
             )
             #expect(trajectory.requestedGateEndFrame == requestedEnd)
             #expect(trajectory.requestedGate == note.gate)

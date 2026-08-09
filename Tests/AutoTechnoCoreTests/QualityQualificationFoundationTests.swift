@@ -1130,6 +1130,48 @@ struct QualityQualificationFoundationTests {
                 interlockChapter: .home,
                 finite: true
             )],
+            upperTiming: [AutonomousUpperTimingBarEvidence(
+                bar: 0,
+                chapter: .home,
+                bpm: AutonomousSessionDirector.bpm,
+                sampleRate: evidence.sampleRate,
+                renderedFrameCount: Int((
+                    240.0 / AutonomousSessionDirector.bpm * evidence.sampleRate
+                ).rounded()),
+                sourceScoreNoteCount: 0,
+                sourceRenderEventCount: 0,
+                anchorEventCount: 0,
+                activeOffsetCount: 0,
+                protectedRoleActiveOffsetCount: 0,
+                minimumOffsetInSteps: 0,
+                maximumOffsetInSteps: 0,
+                maximumRoleSpreadInSteps: 0,
+                shadowMinimumOffsetInSteps: 0,
+                shadowMaximumOffsetInSteps: 0,
+                responseMinimumOffsetInSteps: 0,
+                responseMaximumOffsetInSteps: 0,
+                scoreFingerprint: "0123456789abcdef",
+                renderFingerprint: "0123456789abcdef",
+                appliedGateFingerprint: "89abcdef01234567",
+                shadowSignal: AutonomousUpperTimingRoleSignalEvidence(
+                    role: .shadow,
+                    eventCount: 0,
+                    sampleHash: "1111111111111111",
+                    peak: 0,
+                    rms: 0,
+                    finite: true
+                ),
+                responseSignal: AutonomousUpperTimingRoleSignalEvidence(
+                    role: .response,
+                    eventCount: 0,
+                    sampleHash: "2222222222222222",
+                    peak: 0,
+                    rms: 0,
+                    finite: true
+                ),
+                bindingValid: true,
+                finite: true
+            )],
             graph: graph,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: evidence,
@@ -1181,6 +1223,7 @@ struct QualityQualificationFoundationTests {
                 closedHat: source.closedHat,
                 instruments: source.instruments,
                 pulseEchoDrive: source.pulseEchoDrive,
+                upperTiming: source.upperTiming,
                 graph: source.graph,
                 routeContinuation: source.routeContinuation,
                 preGraphUpperTimbreEvidence: source.preGraphUpperTimbreEvidence,

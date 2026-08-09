@@ -357,6 +357,9 @@ struct UpperTimbrePlanningTests {
             note.startFrequencyRatio <= ResolvedUpperNote.maximumFrequencyRatio &&
             note.endFrequencyRatio >= ResolvedUpperNote.minimumFrequencyRatio &&
             note.endFrequencyRatio <= ResolvedUpperNote.maximumFrequencyRatio &&
+            note.timingOffsetInSteps.isFinite &&
+            (0...ResolvedUpperNote.maximumTimingOffsetInSteps)
+                .contains(note.timingOffsetInSteps) &&
             (0...1).contains(note.velocity) &&
             (0...1).contains(note.timbreIntent.amount)
     }

@@ -248,3 +248,41 @@ nonlinear residual. The older masking model's aliased synth/texture inputs,
 foundation omission, and percussion diagnostic rerender remain deferred to an
 independent masking-attribution slice; this timbre change does not reinterpret
 those measurements as qualification evidence.
+
+## Video-derived harmonic-cascade timing study — 2026-08-09
+
+Observation source: Underdog Electronic Music School's
+[“What are 'cascade arpeggios'?”](https://www.youtube.com/watch?v=P93n6ldccwU)
+(uploaded 2023-12-12, accessed 2026-08-09). The bounded research pass used
+`yt-dlp` metadata and the available automatic English `en` and `en-orig`
+caption tracks; no manual English track was available. The two downloaded VTTs
+were identical. No listening claim is made, and music-only demonstrations were
+not treated as measured evidence.
+
+At `0:34...1:08`, the automatic captions describe chord tones repeating at
+slightly different rates, beginning together and gradually separating into a
+loose cascade. At `1:09...1:29`, the lesson frames that relationship as a way
+to reduce rigid grid alignment while feeding the notes to one synthesizer. At
+`1:54...2:18`, it preserves a favored rhythmic relationship while repitching
+the existing notes for another chord. Exact BPM values, the named effect, and
+subjective reactions are source context, not Auto Techno targets.
+
+Fifty top-ranked top-level comments were sampled through a dedicated `yt-dlp`
+top-sort capture, plus six replies from three technically relevant threads with
+no more than two replies per thread. More than three independent top-level
+comments converged on phasing/minimalist timing relationships; the remaining
+reactions were aesthetic, workflow-oriented, or non-actionable. One unrelated
+reply thread returned incomplete data after bounded retries, so no inference is
+made from missing replies. No usernames or verbatim comments are retained, and
+the comment sample does not promote the candidate.
+
+Applied hypothesis: extend existing resolved upper notes, not the transport, by
+delaying only shadow and response attacks during eligible breath-chapter bars.
+One absolute 16-bar align-spread-realign aperture reaches at most `0.12` of a
+sixteenth step; shadow uses half depth and response full depth. Anchor and
+protected roles remain aligned, and pitch, velocity, duration, gate intent,
+density, instrument assignment, fallback, and continuation ownership remain
+unchanged. Same-pass renderer timing tuples and separate role-local dry evidence
+must falsify scheduling, aperture, or role-policy drift. The uncalibrated policy
+cannot select or promote this evidence; automated structural, signal, and
+runtime validation remains distinct from listening and physical-output soak.

@@ -55,12 +55,13 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 7, candidate-vector schema 6, and canonical engine v7
+Quality-contract schema 8, candidate-vector schema 7, and canonical engine v8
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, event-local groove-pulse, ordinary closed-hat, score-owned
-instrument, shared pulse-echo return-drive, graph, and pre/post upper-timbre
-vector for every retained attempt. Groove-pulse evidence must cover every bar
+instrument, shared pulse-echo return-drive, score-owned upper-role timing,
+graph, and pre/post upper-timbre vector for every retained attempt. Groove-pulse
+evidence must cover every bar
 explicitly, bind each score event to one exact dry-sample
 hash plus bounded level/spectral/tail consequence, and leave selection unchanged
 while the evaluator is uncalibrated. For the complete syncopated-lean cell, tests
@@ -103,6 +104,19 @@ Conservative, forced-home, identity-return, major-break, non-memory, and
 ineligible paths must remain neutral. The implementation candidate contains
 this record, and the exact-source local structural/signal tests plus release
 build are recorded as passing in the validation snapshot.
+
+Upper-role timing evidence must cover every full rendered bar. Active timing is
+allowed only on a nonconservative, non-identity, non-major-break breath bar with
+an anchor, a harmonic companion, and a nonzero absolute 16-bar aperture.
+Protected roles must remain at exact zero; every shadow offset must equal half
+the aperture and every response offset the full aperture, bounded to `0.12` of
+one sixteenth step. Score and renderer tuples must agree on role, base onset,
+requested offset, expected/applied onset, and requested gate end, while the
+renderer-owned applied gate end remains bounded by onset, requested end, and bar
+end. Present companion roles must retain finite nonzero dry evidence. Macro
+endpoints, conservative, forced-home, identity-return, major-break, and otherwise
+ineligible paths must remain exactly neutral, and uncalibrated selection must
+remain unchanged.
 
 This schema is evidence infrastructure, not a passing professional-quality
 policy. The shipping evaluator is uncalibrated, renders one primary candidate on
@@ -167,9 +181,10 @@ or PCM.
 
 ## Hybrid feedback and callback isolation
 
-Upper-timbre evidence schema 3 and the pulse-echo evidence added by quality-
-contract schema 7 change detached preparation only. They add no callback
-capture, analysis, or live-feedback work; the requirements below remain gates
+Upper-timbre evidence schema 3 plus the pulse-echo and upper-role timing evidence
+carried by quality-contract schema 8 change detached preparation only. They add
+no callback capture, analysis, or live-feedback work; the requirements below
+remain gates
 for a future hybrid-feedback implementation.
 
 Feedback may analyze only PCM generated and owned by Auto Techno. It must never

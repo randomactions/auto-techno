@@ -88,6 +88,7 @@ struct CurrentRuntimeTests {
             pulseEchoReturnDriveRenderEvidence:
                 source.pulseEchoReturnDriveRenderEvidence,
             upperNoteRenderEvidence: source.upperNoteRenderEvidence,
+            upperTimingRenderEvidence: source.upperTimingRenderEvidence,
             graphInputRemainderTimbreEvidence:
                 source.graphInputRemainderTimbreEvidence,
             postGraphRemainderTimbreEvidence:
@@ -154,7 +155,8 @@ struct RepositorySurfaceTests {
         ] {
             #expect(!source.contains(forbidden), "Typed fingerprints contain \(forbidden)")
         }
-        #expect(source.contains("private struct StreamingFNV1a"))
+        #expect(source.contains("struct StreamingFNV1a"))
+        #expect(!source.contains("public struct StreamingFNV1a"))
         #expect(source.contains("let keys = value.keys.sorted()"))
     }
 

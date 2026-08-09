@@ -289,6 +289,26 @@ package enum VoiceRenderer {
         return max(0, min(0.24, (dna.rhythm.swingPercent - 0.5) * 2.0))
     }
 
+    /// Exact upper-note scheduling geometry shared by rendering and evidence.
+    /// The note's requested duration is deliberately absent: a positive onset
+    /// displacement does not subtract from the requested gate length.
+    package static func upperNoteStartFrame(note: ResolvedUpperNote,
+                                            stepFrames: Double,
+                                            frameCount: Int) -> Int {
+        guard frameCount > 0, stepFrames.isFinite, stepFrames > 0 else { return 0 }
+        let requested = (Double(note.onsetStep) + note.timingOffsetInSteps) * stepFrames
+        guard requested.isFinite else { return 0 }
+        return Int(min(Double(frameCount - 1), max(0, requested.rounded())))
+    }
+
+    package static func upperNoteDurationFrames(note: ResolvedUpperNote,
+                                                stepFrames: Double) -> Int {
+        guard stepFrames.isFinite, stepFrames > 0 else { return 1 }
+        let requested = note.durationInSteps * stepFrames
+        guard requested.isFinite else { return 1 }
+        return max(1, Int(requested.rounded()))
+    }
+
     static func renderBar(scene: TechnoScene, sampleRate: Double, state: inout RenderState,
                           dna: SceneDNA, resolved: ResolvedPerformanceBar,
                           synthWorld: SynthWorldDNA, synthPerformance: SynthPerformanceBar,
@@ -310,6 +330,8 @@ package enum VoiceRenderer {
         var atmosphereStem: [Float] = []
         var resonantAnchorStem: [Float] = []
         var detunedCompanionStem: [Float] = []
+        var shadowTimingStem: [Float] = []
+        var responseTimingStem: [Float] = []
         var resonantMonoInstrumentStem: [Float] = []
         var tonalMotionInstrumentStem: [Float] = []
         var spectralTextureInstrumentStem: [Float] = []
@@ -332,6 +354,8 @@ package enum VoiceRenderer {
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
         swap(&resonantAnchorStem, &checkedOut.resonantAnchorStem)
         swap(&detunedCompanionStem, &checkedOut.detunedCompanionStem)
+        swap(&shadowTimingStem, &checkedOut.shadowTimingStem)
+        swap(&responseTimingStem, &checkedOut.responseTimingStem)
         swap(&resonantMonoInstrumentStem, &checkedOut.resonantMonoInstrumentStem)
         swap(&tonalMotionInstrumentStem, &checkedOut.tonalMotionInstrumentStem)
         swap(&spectralTextureInstrumentStem, &checkedOut.spectralTextureInstrumentStem)
@@ -436,6 +460,7 @@ package enum VoiceRenderer {
         let upperRolesActive = performance.roles.contains {
             $0 == .motif || $0 == .response || $0 == .atmosphere || $0 == .transition
         }
+        let renderScheduledUpperNotes = !textureCollapsed && upperRolesActive
         var upperNoteRenderEvidence: [UpperNoteRenderEvidence] = []
         if layer == .full {
             renderInstrumentWorld(
@@ -446,11 +471,13 @@ package enum VoiceRenderer {
                 atmosphereStem: &atmosphereStem,
                 resonantAnchorStem: &resonantAnchorStem,
                 detunedCompanionStem: &detunedCompanionStem,
+                shadowTimingStem: &shadowTimingStem,
+                responseTimingStem: &responseTimingStem,
                 resonantMonoInstrumentStem: &resonantMonoInstrumentStem,
                 tonalMotionInstrumentStem: &tonalMotionInstrumentStem,
                 spectralTextureInstrumentStem: &spectralTextureInstrumentStem,
                 noteRenderEvidence: &upperNoteRenderEvidence,
-                renderScheduledNotes: !textureCollapsed && upperRolesActive,
+                renderScheduledNotes: renderScheduledUpperNotes,
                 scene: scene,
                 sampleRate: sampleRate,
                 stepFrames: stepFrames,
@@ -469,6 +496,14 @@ package enum VoiceRenderer {
                 return Int(((Double(event.step) + offset) * stepFrames).rounded())
             }
         }
+        let upperTonalOnsets = Array(Set(upperNoteRenderEvidence.compactMap { evidence in
+            switch evidence.role {
+            case .anchor, .shadow, .response:
+                evidence.onsetFrame
+            case .atmosphere, .transition:
+                nil
+            }
+        })).sorted()
         let kickOnsets = onsetFrames(for: [.kick])
         var stemObservations: [MixRole: StemObservation] = [
             .kick: StemObservationAnalyzer.analyze(
@@ -485,7 +520,7 @@ package enum VoiceRenderer {
             ),
             .upperTonal: StemObservationAnalyzer.analyze(
                 upperTonalStem, sampleRate: sampleRate,
-                onsetFrames: onsetFrames(for: [.motif, .response])
+                onsetFrames: upperTonalOnsets
             ),
             .atmosphere: StemObservationAnalyzer.analyze(
                 atmosphereStem, sampleRate: sampleRate,
@@ -920,6 +955,62 @@ package enum VoiceRenderer {
             differenceRMS: pulseEchoDifferenceRMS,
             finite: pulseEchoReturnDriveFinite
         )
+        let upperTimingEvents: [UpperTimingRenderEvent]
+        if layer == .full, renderScheduledUpperNotes {
+            var unmatchedNoteEvidence = upperNoteRenderEvidence
+            upperTimingEvents = synthPerformance.upperNotes.map { note in
+                let expectedStartFrame = upperNoteStartFrame(
+                    note: note,
+                    stepFrames: stepFrames,
+                    frameCount: frames
+                )
+                let requestedStartFrequency = synthWorld.rootFrequency *
+                    note.startFrequencyRatio
+                let targetEndFrequency = synthWorld.rootFrequency *
+                    note.endFrequencyRatio
+                let evidenceIndex = unmatchedNoteEvidence.firstIndex { evidence in
+                    evidence.role == note.role &&
+                        evidence.requestedStartFrequency == requestedStartFrequency &&
+                        evidence.targetEndFrequency == targetEndFrequency &&
+                        evidence.requestedGate == note.gate &&
+                        evidence.timbreIntent == note.timbreIntent &&
+                        evidence.requestedVelocity == note.velocity &&
+                        evidence.instrument == note.instrument
+                }
+                let appliedEvidence = evidenceIndex.map {
+                    unmatchedNoteEvidence.remove(at: $0)
+                }
+                return UpperTimingRenderEvent(
+                    role: note.role,
+                    baseOnsetStep: note.onsetStep,
+                    requestedOffsetInSteps: note.timingOffsetInSteps,
+                    expectedOnsetFrame: expectedStartFrame,
+                    appliedOnsetFrame: appliedEvidence?.onsetFrame ?? -1,
+                    requestedGateEndFrame:
+                        appliedEvidence?.requestedGateEndFrame ?? -1,
+                    appliedGateEndFrame:
+                        appliedEvidence?.appliedGateEndFrame ?? -1
+                )
+            }
+        } else {
+            upperTimingEvents = []
+        }
+        let upperTimingRenderEvidence = UpperTimingRenderEvidence(
+            bar: performance.bar,
+            chapter: resolved.interlockChapter,
+            bpm: scene.bpm,
+            sampleRate: sampleRate,
+            renderedFrameCount: frames,
+            events: upperTimingEvents,
+            shadowSignal: UpperTimingRoleSignalEvidence.analyze(
+                eventCount: upperTimingEvents.filter { $0.role == .shadow }.count,
+                samples: shadowTimingStem
+            ),
+            responseSignal: UpperTimingRoleSignalEvidence.analyze(
+                eventCount: upperTimingEvents.filter { $0.role == .response }.count,
+                samples: responseTimingStem
+            )
+        )
         let rendered = RenderedBar(sampleRate: sampleRate,
                                    samples: zip(left, right).map { ($0 + $1) * 0.5 },
                                    leftSamples: left, rightSamples: right,
@@ -946,6 +1037,7 @@ package enum VoiceRenderer {
                                    pulseEchoReturnDriveRenderEvidence:
                                     pulseEchoReturnDriveRenderEvidence,
                                    upperNoteRenderEvidence: upperNoteRenderEvidence,
+                                   upperTimingRenderEvidence: upperTimingRenderEvidence,
                                    resonantAnchorSamples: resonantAnchorStem,
                                    detunedCompanionSamples: detunedCompanionStem)
         swap(&output, &checkedOut.output)
@@ -957,6 +1049,8 @@ package enum VoiceRenderer {
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
         swap(&resonantAnchorStem, &checkedOut.resonantAnchorStem)
         swap(&detunedCompanionStem, &checkedOut.detunedCompanionStem)
+        swap(&shadowTimingStem, &checkedOut.shadowTimingStem)
+        swap(&responseTimingStem, &checkedOut.responseTimingStem)
         swap(&resonantMonoInstrumentStem, &checkedOut.resonantMonoInstrumentStem)
         swap(&tonalMotionInstrumentStem, &checkedOut.tonalMotionInstrumentStem)
         swap(&spectralTextureInstrumentStem, &checkedOut.spectralTextureInstrumentStem)
@@ -976,6 +1070,8 @@ package enum VoiceRenderer {
         atmosphereStem: inout [Float],
         resonantAnchorStem: inout [Float],
         detunedCompanionStem: inout [Float],
+        shadowTimingStem: inout [Float],
+        responseTimingStem: inout [Float],
         resonantMonoInstrumentStem: inout [Float],
         tonalMotionInstrumentStem: inout [Float],
         spectralTextureInstrumentStem: inout [Float],
@@ -1034,8 +1130,15 @@ package enum VoiceRenderer {
                     narrativeSpectral = 1
                 }
                 return AlienVoiceNote(
-                    startFrame: Int((Double(note.onsetStep) * stepFrames).rounded()),
-                    durationFrames: max(1, Int((note.durationInSteps * stepFrames).rounded())),
+                    startFrame: upperNoteStartFrame(
+                        note: note,
+                        stepFrames: stepFrames,
+                        frameCount: output.count
+                    ),
+                    durationFrames: upperNoteDurationFrames(
+                        note: note,
+                        stepFrames: stepFrames
+                    ),
                     frequency: world.rootFrequency * note.startFrequencyRatio,
                     endFrequency: world.rootFrequency * note.endFrequencyRatio,
                     velocity: note.velocity,
@@ -1081,7 +1184,7 @@ package enum VoiceRenderer {
         let shadowNotes = notes(for: .shadow)
         ResonantMonoVoice.renderUpper(
             &output,
-            measurement: &detunedCompanionStem,
+            measurement: &shadowTimingStem,
             architectureMeasurement: &resonantMonoInstrumentStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
@@ -1093,7 +1196,7 @@ package enum VoiceRenderer {
         )
         AlienAnalogVoice.render(
             &output,
-            measurement: &detunedCompanionStem,
+            measurement: &shadowTimingStem,
             architectureMeasurement: &tonalMotionInstrumentStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
@@ -1133,7 +1236,7 @@ package enum VoiceRenderer {
         let responseNotes = notes(for: .response)
         ResonantMonoVoice.renderUpper(
             &output,
-            measurement: &detunedCompanionStem,
+            measurement: &responseTimingStem,
             architectureMeasurement: &resonantMonoInstrumentStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
@@ -1145,7 +1248,7 @@ package enum VoiceRenderer {
         )
         AlienAnalogVoice.render(
             &output,
-            measurement: &detunedCompanionStem,
+            measurement: &responseTimingStem,
             architectureMeasurement: &tonalMotionInstrumentStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
@@ -1157,7 +1260,7 @@ package enum VoiceRenderer {
         )
         SpectralTextureVoice.render(
             &output,
-            measurement: &detunedCompanionStem,
+            measurement: &responseTimingStem,
             architectureMeasurement: &spectralTextureInstrumentStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
@@ -1194,6 +1297,8 @@ package enum VoiceRenderer {
             state: &state.spectralTransitionState
         )
         for frame in upperTonalStem.indices {
+            detunedCompanionStem[frame] =
+                shadowTimingStem[frame] + responseTimingStem[frame]
             upperTonalStem[frame] = resonantAnchorStem[frame] + detunedCompanionStem[frame]
         }
     }

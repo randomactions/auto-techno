@@ -11,11 +11,12 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 7, candidate-vector schema 6, and
-canonical engine identity `autotechno-canonical-engine.v7`. It preserves
+candidate uses quality-contract schema 8, candidate-vector schema 7, and
+canonical engine identity `autotechno-canonical-engine.v8`. It preserves
 complete symbolic, full-mix, masking, role-stem, event-local groove-pulse,
 ordinary closed-hat, score-owned instrument assignment, architecture-local dry-
-PCM, shared pulse-echo return-drive, graph, and pre/post upper-timbre evidence
+PCM, shared pulse-echo return-drive, score-owned upper-role timing, graph, and
+pre/post upper-timbre evidence
 for each retained attempt, then binds the selected attempt to finalized commit
 provenance. Instrument evidence
 records bounded patch automation, compatible effect access, event count, exact
@@ -114,7 +115,7 @@ sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
 status. It also retains exact first/last sample bit patterns, the pre-drive peak
 frame, the exact input/amount witness at the post-drive peak, and a replayable
 changed-frame witness together with that frame's exact input bits.
-Candidate-vector schema 6 binds that record to the matching instrument effect
+Candidate-vector schema 7 binds that record to the matching instrument effect
 access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
 sample-rate-normalized boundary transition. Neutral drive requires the no-change
 sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
@@ -131,6 +132,27 @@ structural, signal, protected-routing, and release-build matrix recorded in the
 validation snapshot passed. Its evidence remains descriptive under
 `uncalibrated.v1`; it cannot select or promote a candidate and does not qualify
 professional sound.
+
+### Upper-role timing evidence
+
+The implemented harmonic-timing slice delays only existing shadow and response
+notes during eligible breath-chapter bars. `ResolvedUpperNote` owns the positive
+displacement in sixteenth-note steps. The anchor, atmosphere, transition,
+conservative, forced-home, identity-return, major-break, and sixteen-bar macro
+endpoint paths remain exact zero. Between exact alignment at macro bars 0 and
+15, the deterministic aperture rises and falls on absolute bar position; shadow
+uses half depth, response uses full depth, and the full displacement is capped
+at `0.12` of one sixteenth. Note count, base step, pitch, velocity, instrument,
+requested duration, gate, and every protected-rhythm event remain unchanged.
+
+Candidate-vector schema 7 retains one compact record per full rendered bar. It
+binds route-derived frame geometry, score and actual renderer onset facts,
+requested gate end, bounded renderer-owned applied gate end, causal role counts,
+exact protected/role offset relationships, and separate shadow/response dry
+hashes with finite peak and RMS. A normal eligible attempt must contain the
+displacement; forced-home and every ineligible path must be neutral. This
+evidence remains descriptive under `uncalibrated.v1`, does not enter
+`selectionEvidence`, and adds no audio-callback work or persistent timing state.
 
 ## Development qualification loop
 
@@ -168,8 +190,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 7, candidate-vector schema 6, and canonical engine
-v7, the versioned transaction implements the bounded evidence and atomic commit
+Under quality-contract schema 8, candidate-vector schema 7, and canonical engine
+v8, the versioned transaction implements the bounded evidence and atomic commit
 foundation for this loop. It can retain at most the primary, alternate, and
 conservative-fallback candidates, plus one
 home-timbre correction, with no more than four render passes total. Every attempt

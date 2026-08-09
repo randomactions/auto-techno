@@ -236,6 +236,115 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
     }
 }
 
+/// Bounded same-pass scheduling tuple for one actually rendered upper note.
+/// Core retains the score note; this record binds its semantic displacement to
+/// the exact frame used by the canonical renderer.
+package struct UpperTimingRenderEvent: Equatable, Sendable {
+    package let role: SynthRole
+    package let baseOnsetStep: Int
+    package let requestedOffsetInSteps: Double
+    package let expectedOnsetFrame: Int
+    package let appliedOnsetFrame: Int
+    package let requestedGateEndFrame: Int
+    package let appliedGateEndFrame: Int
+
+    package init(role: SynthRole, baseOnsetStep: Int,
+                 requestedOffsetInSteps: Double,
+                 expectedOnsetFrame: Int, appliedOnsetFrame: Int,
+                 requestedGateEndFrame: Int, appliedGateEndFrame: Int) {
+        self.role = role
+        self.baseOnsetStep = baseOnsetStep
+        self.requestedOffsetInSteps = requestedOffsetInSteps
+        self.expectedOnsetFrame = expectedOnsetFrame
+        self.appliedOnsetFrame = appliedOnsetFrame
+        self.requestedGateEndFrame = requestedGateEndFrame
+        self.appliedGateEndFrame = appliedGateEndFrame
+    }
+}
+
+/// Reduced role-local consequence of an upper timing articulation. Raw tap PCM
+/// remains inside detached rendering and only this exact fingerprint plus
+/// bounded scalar evidence crosses into the immutable render block.
+package struct UpperTimingRoleSignalEvidence: Equatable, Sendable {
+    package let eventCount: Int
+    package let sampleHash: String
+    package let peak: Double
+    package let rms: Double
+    package let finite: Bool
+
+    package static func analyze(eventCount: Int,
+                                samples: [Float]) -> UpperTimingRoleSignalEvidence {
+        var peak = 0.0
+        var energy = 0.0
+        var finite = true
+        for sample in samples {
+            let value = Double(sample)
+            peak = max(peak, abs(value))
+            energy += value * value
+            finite = finite && sample.isFinite && peak.isFinite && energy.isFinite
+        }
+        let rms = sqrt(energy / Double(max(1, samples.count)))
+        return UpperTimingRoleSignalEvidence(
+            eventCount: max(0, eventCount),
+            sampleHash: ExactPCMFingerprint.mono(samples),
+            peak: peak,
+            rms: rms,
+            finite: finite && rms.isFinite
+        )
+    }
+}
+
+/// Transient per-bar render evidence for score-owned upper timing. Candidate
+/// evaluation reduces the bounded event tuples into compact fingerprints; no
+/// event collection or role PCM reaches scheduling beyond this RenderBlock.
+package struct UpperTimingRenderEvidence: Equatable, Sendable {
+    package static let maximumEventCount = 64
+
+    package let bar: Int
+    package let chapter: InterlockChapter
+    package let bpm: Double
+    package let sampleRate: Double
+    package let renderedFrameCount: Int
+    package let events: [UpperTimingRenderEvent]
+    package let shadowSignal: UpperTimingRoleSignalEvidence
+    package let responseSignal: UpperTimingRoleSignalEvidence
+
+    package init(bar: Int, chapter: InterlockChapter, bpm: Double,
+                 sampleRate: Double, renderedFrameCount: Int,
+                 events: [UpperTimingRenderEvent],
+                 shadowSignal: UpperTimingRoleSignalEvidence,
+                 responseSignal: UpperTimingRoleSignalEvidence) {
+        self.bar = bar
+        self.chapter = chapter
+        self.bpm = bpm
+        self.sampleRate = sampleRate
+        self.renderedFrameCount = max(0, renderedFrameCount)
+        self.events = Array(events.sorted { lhs, rhs in
+            if lhs.baseOnsetStep != rhs.baseOnsetStep {
+                return lhs.baseOnsetStep < rhs.baseOnsetStep
+            }
+            let lhsRole = SynthRole.allCases.firstIndex(of: lhs.role) ?? 0
+            let rhsRole = SynthRole.allCases.firstIndex(of: rhs.role) ?? 0
+            if lhsRole != rhsRole { return lhsRole < rhsRole }
+            if lhs.requestedOffsetInSteps != rhs.requestedOffsetInSteps {
+                return lhs.requestedOffsetInSteps < rhs.requestedOffsetInSteps
+            }
+            if lhs.expectedOnsetFrame != rhs.expectedOnsetFrame {
+                return lhs.expectedOnsetFrame < rhs.expectedOnsetFrame
+            }
+            if lhs.appliedOnsetFrame != rhs.appliedOnsetFrame {
+                return lhs.appliedOnsetFrame < rhs.appliedOnsetFrame
+            }
+            if lhs.requestedGateEndFrame != rhs.requestedGateEndFrame {
+                return lhs.requestedGateEndFrame < rhs.requestedGateEndFrame
+            }
+            return lhs.appliedGateEndFrame < rhs.appliedGateEndFrame
+        }.prefix(Self.maximumEventCount))
+        self.shadowSignal = shadowSignal
+        self.responseSignal = responseSignal
+    }
+}
+
 /// Event-local evidence produced from the exact dry groove-pulse sample while
 /// it is rendered. It binds score-owned physical articulation to its signal
 /// consequence without analyzing the aggregate percussion stem or retaining
@@ -411,6 +520,7 @@ package struct RenderedBar: Equatable, Sendable {
     package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
     package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
     package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
+    package let upperTimingRenderEvidence: UpperTimingRenderEvidence
     /// Transient detached-preparation taps. They never cross into RenderBlock
     /// or the scheduler; only reduced evidence survives phrase preparation.
     package let resonantAnchorSamples: [Float]
@@ -429,6 +539,7 @@ package struct RenderedBar: Equatable, Sendable {
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
                 pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
+                upperTimingRenderEvidence: UpperTimingRenderEvidence,
                 resonantAnchorSamples: [Float],
                 detunedCompanionSamples: [Float]) {
         self.sampleRate = sampleRate
@@ -464,6 +575,7 @@ package struct RenderedBar: Equatable, Sendable {
         }
         self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
+        self.upperTimingRenderEvidence = upperTimingRenderEvidence
         self.resonantAnchorSamples = resonantAnchorSamples
         self.detunedCompanionSamples = detunedCompanionSamples
     }
@@ -515,6 +627,7 @@ package struct RenderBlock: Equatable, Sendable {
         synthPerformance.upperNotes
     }
     package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
+    package let upperTimingRenderEvidence: UpperTimingRenderEvidence
     /// The existing graph input is the full-render minus protected-rhythm
     /// remainder. It carries the newly scheduled upper path plus any shared
     /// continuation or nonlinear interaction; role-local articulation fields
@@ -542,6 +655,7 @@ package struct RenderBlock: Equatable, Sendable {
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
                 pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
+                upperTimingRenderEvidence: UpperTimingRenderEvidence,
                 graphInputRemainderTimbreEvidence: UpperTimbreEvidence,
                 postGraphRemainderTimbreEvidence: UpperTimbreEvidence,
                 resolvedPerformance: ResolvedPerformanceBar,
@@ -573,6 +687,7 @@ package struct RenderBlock: Equatable, Sendable {
         }
         self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
+        self.upperTimingRenderEvidence = upperTimingRenderEvidence
         self.graphInputRemainderTimbreEvidence = graphInputRemainderTimbreEvidence
         self.postGraphRemainderTimbreEvidence = postGraphRemainderTimbreEvidence
         self.resolvedPerformance = resolvedPerformance
@@ -690,6 +805,8 @@ struct RenderBuffers {
     var atmosphereStem: [Float] = []
     var resonantAnchorStem: [Float] = []
     var detunedCompanionStem: [Float] = []
+    var shadowTimingStem: [Float] = []
+    var responseTimingStem: [Float] = []
     var resonantMonoInstrumentStem: [Float] = []
     var tonalMotionInstrumentStem: [Float] = []
     var spectralTextureInstrumentStem: [Float] = []
@@ -709,9 +826,13 @@ struct RenderBuffers {
         if includeUpperRoleTaps {
             reset(&resonantAnchorStem, frameCount: frameCount)
             reset(&detunedCompanionStem, frameCount: frameCount)
+            reset(&shadowTimingStem, frameCount: frameCount)
+            reset(&responseTimingStem, frameCount: frameCount)
         } else {
             resonantAnchorStem.removeAll(keepingCapacity: false)
             detunedCompanionStem.removeAll(keepingCapacity: false)
+            shadowTimingStem.removeAll(keepingCapacity: false)
+            responseTimingStem.removeAll(keepingCapacity: false)
         }
         reset(&resonantMonoInstrumentStem, frameCount: frameCount)
         reset(&tonalMotionInstrumentStem, frameCount: frameCount)
@@ -899,8 +1020,10 @@ package enum AutonomousPhraseRenderer {
             let anchorRetriggers = anchorNotes.compactMap { note -> (
                 note: ResolvedUpperNote, onsetFrame: Int
             )? in
-                let requestedOnsetFrame = Int(
-                    (Double(note.onsetStep) * stepFrames).rounded()
+                let requestedOnsetFrame = VoiceRenderer.upperNoteStartFrame(
+                    note: note,
+                    stepFrames: stepFrames,
+                    frameCount: min(graphInputLeft.count, graphInputRight.count)
                 )
                 guard let applied = anchorRetriggerEvidence.first(where: {
                     $0.onsetFrame == requestedOnsetFrame
@@ -1075,6 +1198,7 @@ package enum AutonomousPhraseRenderer {
                 pulseEchoReturnDriveRenderEvidence:
                     rendered.pulseEchoReturnDriveRenderEvidence,
                 upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,
+                upperTimingRenderEvidence: rendered.upperTimingRenderEvidence,
                 graphInputRemainderTimbreEvidence: graphInputRemainderTimbreEvidence,
                 postGraphRemainderTimbreEvidence: postGraphRemainderTimbreEvidence,
                 resolvedPerformance: resolved,

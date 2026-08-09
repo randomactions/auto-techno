@@ -28,6 +28,471 @@ struct AutonomousCandidateEvaluationTests {
                 decoded.postGraphUpperTimbreEvidence)
     }
 
+    @Test("Upper timing evidence is compact, score-bound, and selection-neutral")
+    func upperTimingEvidenceContract() throws {
+        let neutral = fixtureUpperTiming()
+        let active = fixtureUpperTiming(
+            bar: 7,
+            chapter: .breath,
+            sourceScoreNoteCount: 3,
+            sourceRenderEventCount: 3,
+            anchorEventCount: 1,
+            activeOffsetCount: 2,
+            minimumOffsetInSteps: 0,
+            maximumOffsetInSteps: ResolvedUpperNote.maximumTimingOffsetInSteps,
+            maximumRoleSpreadInSteps:
+                ResolvedUpperNote.maximumTimingOffsetInSteps,
+            scoreFingerprint: "abcdef0123456789",
+            renderFingerprint: "abcdef0123456789",
+            shadowEventCount: 1,
+            shadowHash: "3333333333333333",
+            shadowPeak: 0.08,
+            shadowRMS: 0.02,
+            responseEventCount: 1,
+            responseHash: "4444444444444444",
+            responsePeak: 0.06,
+            responseRMS: 0.015
+        )
+        let baseline = fixtureVector(
+            slot: .primary,
+            evidenceBar: 7,
+            upperTimingBars: [fixtureUpperTiming(bar: 7)]
+        )
+        let vector = fixtureVector(
+            slot: .primary,
+            evidenceBar: 7,
+            upperTimingBars: [active]
+        )
+
+        #expect(neutral.isFinite)
+        #expect(neutral.isComplete(
+            routeSampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false
+        ))
+        #expect(active.isFinite)
+        #expect(active.isComplete(
+            routeSampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false
+        ))
+        #expect(!fixtureUpperTiming(
+            bar: 7,
+            chapter: .breath,
+            sourceScoreNoteCount: 3,
+            sourceRenderEventCount: 3,
+            anchorEventCount: 1,
+            activeOffsetCount: 2,
+            protectedRoleActiveOffsetCount: 1,
+            maximumOffsetInSteps: ResolvedUpperNote.maximumTimingOffsetInSteps,
+            maximumRoleSpreadInSteps:
+                ResolvedUpperNote.maximumTimingOffsetInSteps,
+            shadowEventCount: 1,
+            shadowPeak: 0.04,
+            shadowRMS: 0.01,
+            responseEventCount: 1,
+            responsePeak: 0.05,
+            responseRMS: 0.012
+        ).isComplete(
+            routeSampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false
+        ))
+        for bar in [1, 7, 8, 14] {
+            let expectedDepth = ResolvedUpperNote.maximumTimingOffsetInSteps *
+                SynthPerformancePlan.upperTimingAperture(absoluteBar: bar)
+            let replay = fixtureUpperTiming(
+                bar: bar,
+                chapter: .breath,
+                sourceScoreNoteCount: 3,
+                sourceRenderEventCount: 3,
+                anchorEventCount: 1,
+                activeOffsetCount: 2,
+                maximumOffsetInSteps: expectedDepth,
+                maximumRoleSpreadInSteps: expectedDepth,
+                shadowEventCount: 1,
+                shadowPeak: 0.04,
+                shadowRMS: 0.01,
+                responseEventCount: 1,
+                responsePeak: 0.05,
+                responseRMS: 0.012
+            )
+            #expect(replay.isComplete(
+                routeSampleRate: 8_000,
+                phraseKind: .lock,
+                conservative: false
+            ))
+        }
+        for bar in [0, 15] {
+            let endpoint = fixtureUpperTiming(
+                bar: bar,
+                chapter: .breath,
+                sourceScoreNoteCount: 3,
+                sourceRenderEventCount: 3,
+                anchorEventCount: 1,
+                shadowEventCount: 1,
+                shadowPeak: 0.04,
+                shadowRMS: 0.01,
+                responseEventCount: 1,
+                responsePeak: 0.05,
+                responseRMS: 0.012
+            )
+            #expect(endpoint.isComplete(
+                routeSampleRate: 8_000,
+                phraseKind: .lock,
+                conservative: false
+            ))
+        }
+        #expect(!fixtureUpperTiming(
+            bar: 7,
+            chapter: .breath,
+            sourceScoreNoteCount: 2,
+            sourceRenderEventCount: 2,
+            anchorEventCount: 0,
+            activeOffsetCount: 2,
+            maximumOffsetInSteps: ResolvedUpperNote.maximumTimingOffsetInSteps,
+            maximumRoleSpreadInSteps:
+                ResolvedUpperNote.maximumTimingOffsetInSteps,
+            shadowEventCount: 1,
+            shadowPeak: 0.04,
+            shadowRMS: 0.01,
+            responseEventCount: 1,
+            responsePeak: 0.05,
+            responseRMS: 0.012
+        ).isComplete(
+            routeSampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false
+        ))
+        #expect(!fixtureUpperTiming(
+            sourceScoreNoteCount:
+                AutonomousCandidateEvaluationVector.maximumUpperTimingEventsPerBar + 1,
+            sourceRenderEventCount:
+                AutonomousCandidateEvaluationVector.maximumUpperTimingEventsPerBar + 1
+        ).isComplete(
+            routeSampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false
+        ))
+        #expect(vector.isComplete)
+        #expect(vector.isFinite)
+        #expect(vector.fingerprint != baseline.fingerprint)
+        #expect(vector.selectionEvidence == baseline.selectionEvidence)
+        #expect(AutonomousCandidateAttempt(
+            kind: .initialRender,
+            vector: vector
+        ).isStructurallyComplete)
+        let chapterMismatch = fixtureVector(
+            slot: .primary,
+            evidenceBar: 7,
+            pulseEchoDriveBars: [fixturePulseEchoDrive(
+                bar: 7,
+                interlockChapter: .home
+            )],
+            upperTimingBars: [fixtureUpperTiming(bar: 7, chapter: .tone)]
+        )
+        #expect(!chapterMismatch.isComplete)
+
+        let data = try vector.deterministicJSON()
+        let decoded = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: data
+        )
+        #expect(decoded == vector)
+        #expect(decoded.fingerprint == vector.fingerprint)
+        let object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let timingBars = try #require(object["upperTiming"] as? [[String: Any]])
+        let serialized = try #require(timingBars.first)
+        #expect(Set(serialized.keys) == Set([
+            "bar", "chapter", "bpm", "sampleRate", "renderedFrameCount",
+            "sourceScoreNoteCount", "sourceRenderEventCount", "anchorEventCount",
+            "activeOffsetCount", "protectedRoleActiveOffsetCount",
+            "minimumOffsetInSteps", "maximumOffsetInSteps",
+            "maximumRoleSpreadInSteps", "shadowMinimumOffsetInSteps",
+            "shadowMaximumOffsetInSteps", "responseMinimumOffsetInSteps",
+            "responseMaximumOffsetInSteps", "scoreFingerprint", "renderFingerprint",
+            "appliedGateFingerprint", "shadowSignal", "responseSignal",
+            "bindingValid", "finite",
+        ]))
+        #expect(serialized["events"] == nil)
+
+        var forgedObject = object
+        var forgedBars = timingBars
+        var forgedBar = serialized
+        forgedBar["renderFingerprint"] = "9999999999999999"
+        forgedBars[0] = forgedBar
+        forgedObject["upperTiming"] = forgedBars
+        let forgedVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedObject)
+        )
+        #expect(!forgedVector.isComplete)
+        #expect(forgedVector.isFinite)
+        #expect(forgedVector.recordIsStructurallyValid)
+        #expect(forgedVector.fingerprint != vector.fingerprint)
+        let rejectedAttempt = AutonomousCandidateAttempt(
+            kind: .initialRender,
+            reasonCodes: [.evidenceMissingV1, .hardGateFailedV1],
+            vector: forgedVector
+        )
+        #expect(rejectedAttempt.isStructurallyComplete)
+
+        var malformedGateObject = object
+        var malformedGateBars = timingBars
+        var malformedGateBar = serialized
+        malformedGateBar["appliedGateFingerprint"] = "malformed"
+        malformedGateBars[0] = malformedGateBar
+        malformedGateObject["upperTiming"] = malformedGateBars
+        let malformedGateVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: malformedGateObject)
+        )
+        #expect(!malformedGateVector.isComplete)
+        #expect(malformedGateVector.fingerprint != vector.fingerprint)
+
+        var changedGateObject = object
+        var changedGateBars = timingBars
+        var changedGateBar = serialized
+        changedGateBar["appliedGateFingerprint"] = "fedcba9876543210"
+        changedGateBars[0] = changedGateBar
+        changedGateObject["upperTiming"] = changedGateBars
+        let changedGateVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: changedGateObject)
+        )
+        #expect(changedGateVector.isComplete)
+        #expect(changedGateVector.fingerprint != vector.fingerprint)
+
+        var oversizedCountObject = object
+        var oversizedCountBars = timingBars
+        var oversizedCountBar = serialized
+        var oversizedShadow = try #require(
+            oversizedCountBar["shadowSignal"] as? [String: Any]
+        )
+        oversizedShadow["eventCount"] = Int.max
+        oversizedCountBar["shadowSignal"] = oversizedShadow
+        oversizedCountBars[0] = oversizedCountBar
+        oversizedCountObject["upperTiming"] = oversizedCountBars
+        let oversizedCountVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: oversizedCountObject)
+        )
+        #expect(!oversizedCountVector.isComplete)
+        #expect(!AutonomousCandidateAttempt(
+            kind: .initialRender,
+            reasonCodes: [.evidenceMissingV1, .hardGateFailedV1],
+            vector: oversizedCountVector
+        ).isStructurallyComplete)
+
+        var anchorForgedObject = object
+        var anchorForgedBars = timingBars
+        var anchorForgedBar = serialized
+        anchorForgedBar["anchorEventCount"] = 0
+        anchorForgedBars[0] = anchorForgedBar
+        anchorForgedObject["upperTiming"] = anchorForgedBars
+        let anchorForgedVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: anchorForgedObject)
+        )
+        #expect(!anchorForgedVector.isComplete)
+        #expect(anchorForgedVector.fingerprint != vector.fingerprint)
+
+        var roleOffsetForgedObject = object
+        var roleOffsetForgedBars = timingBars
+        var roleOffsetForgedBar = serialized
+        roleOffsetForgedBar["shadowMaximumOffsetInSteps"] =
+            ResolvedUpperNote.maximumTimingOffsetInSteps
+        roleOffsetForgedBars[0] = roleOffsetForgedBar
+        roleOffsetForgedObject["upperTiming"] = roleOffsetForgedBars
+        let roleOffsetForgedVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: roleOffsetForgedObject)
+        )
+        #expect(!roleOffsetForgedVector.isComplete)
+        #expect(roleOffsetForgedVector.fingerprint != vector.fingerprint)
+
+        var responseOffsetForgedObject = object
+        var responseOffsetForgedBars = timingBars
+        var responseOffsetForgedBar = serialized
+        responseOffsetForgedBar["responseMinimumOffsetInSteps"] =
+            ResolvedUpperNote.maximumTimingOffsetInSteps * 0.5
+        responseOffsetForgedBars[0] = responseOffsetForgedBar
+        responseOffsetForgedObject["upperTiming"] = responseOffsetForgedBars
+        let responseOffsetForgedVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: responseOffsetForgedObject)
+        )
+        #expect(!responseOffsetForgedVector.isComplete)
+        #expect(responseOffsetForgedVector.fingerprint != vector.fingerprint)
+
+        var protectedRoleForgedObject = object
+        var protectedRoleForgedBars = timingBars
+        var protectedRoleForgedBar = serialized
+        protectedRoleForgedBar["protectedRoleActiveOffsetCount"] = 1
+        protectedRoleForgedBars[0] = protectedRoleForgedBar
+        protectedRoleForgedObject["upperTiming"] = protectedRoleForgedBars
+        let protectedRoleForgedVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: protectedRoleForgedObject)
+        )
+        #expect(!protectedRoleForgedVector.isComplete)
+        #expect(protectedRoleForgedVector.fingerprint != vector.fingerprint)
+
+        let excessiveBars = (0..<17).map { fixtureUpperTiming(bar: $0) }
+        let constructorBounded = fixtureVector(
+            slot: .primary,
+            upperTimingBars: excessiveBars
+        )
+        #expect(constructorBounded.sourceUpperTimingBarCount == 17)
+        #expect(constructorBounded.upperTiming.count ==
+                AutonomousCandidateEvaluationVector.maximumBarCount)
+        #expect(!constructorBounded.recordIsStructurallyValid)
+
+        var oversizedObject = object
+        oversizedObject["sourceUpperTimingBarCount"] = 17
+        oversizedObject["upperTiming"] = (0..<17).map { bar -> [String: Any] in
+            var copy = serialized
+            copy["bar"] = bar
+            return copy
+        }
+        let oversizedVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: oversizedObject)
+        )
+        #expect(oversizedVector.upperTiming.count == 17)
+        #expect(!oversizedVector.recordIsStructurallyValid)
+
+        #expect(!fixtureUpperTiming(
+            bar: 7,
+            chapter: .breath,
+            sourceScoreNoteCount: 2,
+            sourceRenderEventCount: 2,
+            anchorEventCount: 1,
+            activeOffsetCount: 1,
+            minimumOffsetInSteps: -0.01,
+            maximumOffsetInSteps: 0.06,
+            maximumRoleSpreadInSteps: 0.07,
+            shadowEventCount: 1,
+            shadowPeak: 0.04,
+            shadowRMS: 0.01
+        ).isComplete(
+            routeSampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false
+        ))
+        #expect(!fixtureUpperTiming(
+            bar: 7,
+            chapter: .tone,
+            sourceScoreNoteCount: 2,
+            sourceRenderEventCount: 2,
+            anchorEventCount: 1,
+            activeOffsetCount: 1,
+            maximumOffsetInSteps: 0.06,
+            maximumRoleSpreadInSteps: 0.06,
+            shadowEventCount: 1,
+            shadowPeak: 0.04,
+            shadowRMS: 0.01
+        ).isComplete(
+            routeSampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false
+        ))
+        #expect(!fixtureUpperTiming(
+            chapter: .breath,
+            sourceScoreNoteCount: 2,
+            sourceRenderEventCount: 2,
+            anchorEventCount: 1,
+            activeOffsetCount: 1,
+            maximumOffsetInSteps: 0.06,
+            maximumRoleSpreadInSteps: 0.06,
+            shadowEventCount: 1,
+            shadowPeak: 0.04,
+            shadowRMS: 0.01
+        ).isComplete(
+            routeSampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false
+        ))
+        #expect(!fixtureUpperTiming(
+            bar: 7,
+            chapter: .breath,
+            sourceScoreNoteCount: 2,
+            sourceRenderEventCount: 2,
+            anchorEventCount: 1,
+            activeOffsetCount: 1,
+            maximumOffsetInSteps: 0.06,
+            maximumRoleSpreadInSteps: 0.06,
+            shadowEventCount: 1
+        ).isComplete(
+            routeSampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false
+        ))
+
+        let forcedHomeActive = AutonomousCandidateAttempt(
+            kind: .initialRender,
+            forceHomeUpperTimbre: true,
+            vector: vector
+        )
+        #expect(!forcedHomeActive.isStructurallyComplete)
+
+        let silentNeutral = fixtureUpperTiming(
+            bar: 7,
+            chapter: .breath,
+            sourceScoreNoteCount: 2,
+            sourceRenderEventCount: 2,
+            anchorEventCount: 1,
+            shadowEventCount: 1
+        )
+        #expect(!silentNeutral.isComplete(
+            routeSampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false
+        ))
+        let silentNeutralVector = fixtureVector(
+            slot: .primary,
+            evidenceBar: 7,
+            upperTimingBars: [silentNeutral]
+        )
+        #expect(!silentNeutralVector.isComplete)
+        #expect(!AutonomousCandidateAttempt(
+            kind: .initialRender,
+            forceHomeUpperTimbre: true,
+            vector: silentNeutralVector
+        ).isStructurallyComplete)
+
+        let eligibleNeutral = fixtureUpperTiming(
+            bar: 7,
+            chapter: .breath,
+            sourceScoreNoteCount: 3,
+            sourceRenderEventCount: 3,
+            anchorEventCount: 1,
+            shadowEventCount: 1,
+            shadowPeak: 0.04,
+            shadowRMS: 0.01,
+            responseEventCount: 1,
+            responsePeak: 0.05,
+            responseRMS: 0.012
+        )
+        let eligibleNeutralVector = fixtureVector(
+            slot: .primary,
+            evidenceBar: 7,
+            upperTimingBars: [eligibleNeutral]
+        )
+        #expect(eligibleNeutralVector.isComplete)
+        #expect(!AutonomousCandidateAttempt(
+            kind: .initialRender,
+            vector: eligibleNeutralVector
+        ).isStructurallyComplete)
+        #expect(AutonomousCandidateAttempt(
+            kind: .initialRender,
+            forceHomeUpperTimbre: true,
+            vector: eligibleNeutralVector
+        ).isStructurallyComplete)
+    }
+
     @Test("Groove-pulse evidence is lean, bounded, deterministic, and required per bar")
     func groovePulseEvidenceContract() throws {
         let event = fixtureGroovePulseEvent()
@@ -42,10 +507,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 6)
-        #expect(QualityQualificationContract.schemaVersion == 7)
+        #expect(vector.schemaVersion == 7)
+        #expect(QualityQualificationContract.schemaVersion == 8)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v7")
+                "autotechno-canonical-engine.v8")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -2060,7 +2525,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(initialCommit.fingerprint != advancedCommit.fingerprint)
 
         #expect(AutonomousCandidateFingerprint.plan(candidates.primary) ==
-                "34c8f9f426056406")
+                "12f6e0183bb28fd9")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -2068,7 +2533,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "4d149596fb5c12df")
+                "3a45be3c309a14bb")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -2093,11 +2558,13 @@ struct AutonomousCandidateEvaluationTests {
         maskingObservationCount: Int = 12,
         stemSourceRoleCount: Int = 5,
         stemRoleCount: Int = 5,
+        evidenceBar: Int = 0,
         planFingerprintOverride: String? = nil,
         groovePulseBar: AutonomousGroovePulseBarEvidence? = nil,
         closedHatBar: AutonomousClosedHatBarEvidence? = nil,
         instrumentBar: AutonomousInstrumentBarEvidence? = nil,
         pulseEchoDriveBars: [AutonomousPulseEchoDriveBarEvidence]? = nil,
+        upperTimingBars: [AutonomousUpperTimingBarEvidence]? = nil,
         nonFinite: Bool = false
     ) -> AutonomousCandidateEvaluationVector {
         let planFingerprint = planFingerprintOverride ?? fixturePlanFingerprints[slot]
@@ -2122,7 +2589,7 @@ struct AutonomousCandidateEvaluationTests {
         let symbolic = AutonomousSymbolicEvidence(
             planFingerprint: planFingerprint,
             phraseIndex: 0,
-            startBar: 0,
+            startBar: evidenceBar,
             declaredBarCount: 1,
             resolvedBarCount: 1,
             phraseKind: slot == .fallback
@@ -2176,7 +2643,7 @@ struct AutonomousCandidateEvaluationTests {
             maximumBoundaryDelta: 0.01,
             movementScore: movementScore,
             bars: [AutonomousBarFullMixEvidence(
-                bar: 0,
+                bar: evidenceBar,
                 loudness: -14,
                 spectralCentroid: 800,
                 transientDensity: 1.5,
@@ -2232,6 +2699,19 @@ struct AutonomousCandidateEvaluationTests {
                     kickCorrectionDB: -1
                 )
         )
+        let explicitPulseEchoChapter = pulseEchoDriveBars?.first.flatMap {
+            InterlockChapter(rawValue: $0.interlockChapter)
+        }
+        let resolvedUpperTimingBars = upperTimingBars ?? [
+            fixtureUpperTiming(
+                bar: evidenceBar,
+                chapter: explicitPulseEchoChapter ?? .home
+            ),
+        ]
+        let defaultTiming = resolvedUpperTimingBars.first
+        let defaultTimingChapter = defaultTiming.flatMap {
+            InterlockChapter(rawValue: $0.chapter)
+        } ?? .home
         return AutonomousCandidateEvaluationVector(
             slot: slot,
             planFingerprint: planFingerprint,
@@ -2240,17 +2720,17 @@ struct AutonomousCandidateEvaluationTests {
             hardGates: hardGates,
             fullMix: fullMix,
             masking: [AutonomousMaskingBarEvidence(
-                bar: 0,
+                bar: evidenceBar,
                 sourceObservationCount: maskingSourceCount,
                 observations: maskingObservations
             )],
             stems: [AutonomousStemBarEvidence(
-                bar: 0,
+                bar: evidenceBar,
                 sourceRoleCount: stemSourceRoleCount,
                 roles: roles
             )],
             automaticMix: [AutonomousAutomaticMixEvidence(
-                bar: 0,
+                bar: evidenceBar,
                 section: SectionKind.breakdown.rawValue,
                 foundationCompanion: FoundationCompanion.bass.rawValue,
                 gains: gains,
@@ -2258,26 +2738,113 @@ struct AutonomousCandidateEvaluationTests {
                 targetKickOverFoundationDB: nil
             )],
             groovePulse: [groovePulseBar ?? AutonomousGroovePulseBarEvidence(
-                bar: 0,
+                bar: evidenceBar,
                 sourceScoreEventCount: 0,
                 sourceRenderEventCount: 0,
                 events: []
             )],
             closedHat: [closedHatBar ?? AutonomousClosedHatBarEvidence(
-                bar: 0,
+                bar: evidenceBar,
                 sourceScoreEventCount: 0,
                 sourceRenderEventCount: 0,
                 events: []
             )],
             instruments: [instrumentBar ?? AutonomousInstrumentBarEvidence(
-                bar: 0,
+                bar: evidenceBar,
                 evidence: []
             )],
-            pulseEchoDrive: pulseEchoDriveBars ?? [fixturePulseEchoDrive()],
+            pulseEchoDrive: pulseEchoDriveBars ?? [fixturePulseEchoDrive(
+                bar: evidenceBar,
+                renderedFrameCount: defaultTiming?.renderedFrameCount ?? 14_769,
+                interlockChapter: defaultTimingChapter
+            )],
+            upperTiming: resolvedUpperTimingBars,
             graph: graph,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: upper,
             postGraphUpperTimbreEvidence: upper
+        )
+    }
+
+    private func fixtureUpperTiming(
+        bar: Int = 0,
+        chapter: InterlockChapter = .home,
+        renderedFrameCount: Int = 14_769,
+        sourceScoreNoteCount: Int = 0,
+        sourceRenderEventCount: Int = 0,
+        anchorEventCount: Int = 0,
+        activeOffsetCount: Int = 0,
+        protectedRoleActiveOffsetCount: Int = 0,
+        minimumOffsetInSteps: Double = 0,
+        maximumOffsetInSteps: Double = 0,
+        maximumRoleSpreadInSteps: Double = 0,
+        shadowMinimumOffsetInSteps: Double? = nil,
+        shadowMaximumOffsetInSteps: Double? = nil,
+        responseMinimumOffsetInSteps: Double? = nil,
+        responseMaximumOffsetInSteps: Double? = nil,
+        scoreFingerprint: String = "0123456789abcdef",
+        renderFingerprint: String = "0123456789abcdef",
+        appliedGateFingerprint: String = "89abcdef01234567",
+        shadowEventCount: Int = 0,
+        shadowHash: String = "1111111111111111",
+        shadowPeak: Double = 0,
+        shadowRMS: Double = 0,
+        responseEventCount: Int = 0,
+        responseHash: String = "2222222222222222",
+        responsePeak: Double = 0,
+        responseRMS: Double = 0,
+        bindingValid: Bool = true,
+        finite: Bool = true
+    ) -> AutonomousUpperTimingBarEvidence {
+        let fullDepth = ResolvedUpperNote.maximumTimingOffsetInSteps *
+            SynthPerformancePlan.upperTimingAperture(absoluteBar: bar)
+        let defaultShadowOffset = activeOffsetCount > 0 && shadowEventCount > 0
+            ? fullDepth * 0.5 : 0
+        let defaultResponseOffset = activeOffsetCount > 0 && responseEventCount > 0
+            ? fullDepth : 0
+        return AutonomousUpperTimingBarEvidence(
+            bar: bar,
+            chapter: chapter,
+            bpm: AutonomousSessionDirector.bpm,
+            sampleRate: 8_000,
+            renderedFrameCount: renderedFrameCount,
+            sourceScoreNoteCount: sourceScoreNoteCount,
+            sourceRenderEventCount: sourceRenderEventCount,
+            anchorEventCount: anchorEventCount,
+            activeOffsetCount: activeOffsetCount,
+            protectedRoleActiveOffsetCount: protectedRoleActiveOffsetCount,
+            minimumOffsetInSteps: minimumOffsetInSteps,
+            maximumOffsetInSteps: maximumOffsetInSteps,
+            maximumRoleSpreadInSteps: maximumRoleSpreadInSteps,
+            shadowMinimumOffsetInSteps:
+                shadowMinimumOffsetInSteps ?? defaultShadowOffset,
+            shadowMaximumOffsetInSteps:
+                shadowMaximumOffsetInSteps ?? defaultShadowOffset,
+            responseMinimumOffsetInSteps:
+                responseMinimumOffsetInSteps ?? defaultResponseOffset,
+            responseMaximumOffsetInSteps:
+                responseMaximumOffsetInSteps ?? defaultResponseOffset,
+            scoreFingerprint: scoreFingerprint,
+            renderFingerprint: renderFingerprint,
+            appliedGateFingerprint: appliedGateFingerprint,
+            shadowSignal: AutonomousUpperTimingRoleSignalEvidence(
+                role: .shadow,
+                eventCount: shadowEventCount,
+                sampleHash: shadowHash,
+                peak: shadowPeak,
+                rms: shadowRMS,
+                finite: finite
+            ),
+            responseSignal: AutonomousUpperTimingRoleSignalEvidence(
+                role: .response,
+                eventCount: responseEventCount,
+                sampleHash: responseHash,
+                peak: responsePeak,
+                rms: responseRMS,
+                finite: finite
+            ),
+            bindingValid: bindingValid,
+            finite: finite
         )
     }
 

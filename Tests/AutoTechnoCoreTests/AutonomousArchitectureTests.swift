@@ -187,7 +187,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true, conservative: false
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v7")
+                "autotechno-canonical-engine.v8")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -493,6 +493,7 @@ struct AdaptiveAutonomousSessionTests {
         let result = sequence(seed: AutonomousSessionDirector.defaultSeed, phraseCount: 160)
         let bars = result.plans.flatMap(\.resolvedBars)
         let grouped = Dictionary(grouping: bars) { $0.performance.bar / 16 }
+        var sawLiveBreathCascade = false
         #expect(grouped.values.allSatisfy { Set($0.map(\.interlockChapter)).count == 1 })
         #expect(bars.first?.interlockChapter == .home)
         #expect(Optional(result.state.memory.interlockEvolution) ==
@@ -501,7 +502,8 @@ struct AdaptiveAutonomousSessionTests {
         for plan in result.plans {
             let synth = SynthPerformancePlan(
                 scene: plan.scene, dna: plan.dna, kind: plan.kind,
-                resolvedBars: plan.resolvedBars
+                resolvedBars: plan.resolvedBars,
+                conservative: plan.conservative
             )
             #expect(synth.bars.count == plan.resolvedBars.count)
             for (resolved, synthBar) in zip(plan.resolvedBars, synth.bars) {
@@ -512,8 +514,26 @@ struct AdaptiveAutonomousSessionTests {
                     macroStep: (resolved.performance.bar % 16) * 16
                 )
                 #expect(synthBar.articulation(at: 0).phase == expectedStart)
+                let macroBar = ((resolved.performance.bar % 16) + 16) % 16
+                if macroBar == 0 || macroBar == 15 {
+                    #expect(synthBar.upperNotes.allSatisfy {
+                        $0.timingOffsetInSteps == 0
+                    })
+                }
+                if !plan.conservative,
+                   resolved.interlockChapter == .breath,
+                   synthBar.upperNotes.contains(where: { $0.role == .anchor }),
+                   synthBar.upperNotes.contains(where: {
+                       $0.role == .shadow || $0.role == .response
+                   }),
+                   synthBar.upperNotes.contains(where: {
+                       $0.timingOffsetInSteps > 0
+                   }) {
+                    sawLiveBreathCascade = true
+                }
             }
         }
+        #expect(sawLiveBreathCascade)
 
         let macroChapters = grouped.keys.sorted().compactMap {
             grouped[$0]?.first?.interlockChapter
@@ -606,6 +626,485 @@ struct AdaptiveAutonomousSessionTests {
         }
         #expect(sawIdentityTone)
         #expect(sawBreak)
+    }
+
+    @Test("Breath harmonics align, spread, and realign on the absolute macro grid")
+    func upperHarmonicTimingApertureAndFallbacks() throws {
+        let expectedApertures: [Double] = [
+            0.0, 1.0 / 7, 2.0 / 7, 3.0 / 7,
+            4.0 / 7, 5.0 / 7, 6.0 / 7, 1.0,
+            1.0, 6.0 / 7, 5.0 / 7, 4.0 / 7,
+            3.0 / 7, 2.0 / 7, 1.0 / 7, 0.0,
+        ]
+        #expect((0..<16).map {
+            SynthPerformancePlan.upperTimingAperture(absoluteBar: $0)
+        } == expectedApertures)
+        #expect(SynthPerformancePlan.upperTimingAperture(absoluteBar: -1) == 0)
+        #expect(SynthPerformancePlan.upperTimingAperture(absoluteBar: 16) == 0)
+        for role in [SynthRole.anchor, .atmosphere, .transition] {
+            #expect(SynthPerformancePlan.upperTimingOffsetInSteps(
+                for: role, absoluteBar: 7, enabled: true
+            ) == 0)
+        }
+        #expect(SynthPerformancePlan.upperTimingOffsetInSteps(
+            for: .shadow, absoluteBar: 7, enabled: true
+        ) == 0.06)
+        #expect(SynthPerformancePlan.upperTimingOffsetInSteps(
+            for: .response, absoluteBar: 7, enabled: true
+        ) == 0.12)
+        #expect(SynthPerformancePlan.upperTimingOffsetInSteps(
+            for: .response, absoluteBar: 15, enabled: true
+        ) == 0)
+        #expect(SynthPerformancePlan.upperTimingOffsetInSteps(
+            for: .response, absoluteBar: 7, enabled: false
+        ) == 0)
+
+        let boundedFixture = ResolvedUpperNote(
+            role: .response,
+            onsetStep: 9,
+            durationInSteps: 1.75,
+            startFrequencyRatio: 2,
+            endFrequencyRatio: 2.25,
+            velocity: 0.7,
+            gate: .retrigger,
+            timbreIntent: .home,
+            timingOffsetInSteps: 1
+        )
+        #expect(boundedFixture.timingOffsetInSteps == 0.12)
+        #expect(boundedFixture.withTimingOffsetInSteps(-1).timingOffsetInSteps == 0)
+        #expect(boundedFixture.withTimingOffsetInSteps(.nan).timingOffsetInSteps == 0)
+        #expect(boundedFixture.withTimingOffsetInSteps(.infinity).timingOffsetInSteps == 0)
+        let copiedFixture = boundedFixture.withTimingOffsetInSteps(0.04)
+        #expect(copiedFixture.role == boundedFixture.role)
+        #expect(copiedFixture.onsetStep == boundedFixture.onsetStep)
+        #expect(copiedFixture.durationInSteps == boundedFixture.durationInSteps)
+        #expect(copiedFixture.startFrequencyRatio == boundedFixture.startFrequencyRatio)
+        #expect(copiedFixture.endFrequencyRatio == boundedFixture.endFrequencyRatio)
+        #expect(copiedFixture.velocity == boundedFixture.velocity)
+        #expect(copiedFixture.gate == boundedFixture.gate)
+        #expect(copiedFixture.timbreIntent == boundedFixture.timbreIntent)
+        #expect(copiedFixture.instrument == boundedFixture.instrument)
+        let anchorFixture = ResolvedUpperNote(
+            role: .anchor,
+            onsetStep: boundedFixture.onsetStep,
+            durationInSteps: boundedFixture.durationInSteps,
+            startFrequencyRatio: boundedFixture.startFrequencyRatio,
+            endFrequencyRatio: boundedFixture.endFrequencyRatio,
+            velocity: boundedFixture.velocity,
+            gate: boundedFixture.gate,
+            timbreIntent: boundedFixture.timbreIntent
+        )
+        #expect(!SynthPerformancePlan.upperTimingEligible(
+            notes: [anchorFixture], chapter: .breath, variationEnabled: true
+        ))
+        #expect(!SynthPerformancePlan.upperTimingEligible(
+            notes: [boundedFixture], chapter: .breath, variationEnabled: true
+        ))
+        #expect(SynthPerformancePlan.upperTimingEligible(
+            notes: [anchorFixture, boundedFixture],
+            chapter: .breath,
+            variationEnabled: true
+        ))
+        #expect(!SynthPerformancePlan.upperTimingEligible(
+            notes: [anchorFixture, boundedFixture],
+            chapter: .tone,
+            variationEnabled: true
+        ))
+        #expect(!SynthPerformancePlan.upperTimingEligible(
+            notes: [anchorFixture, boundedFixture],
+            chapter: .breath,
+            variationEnabled: false
+        ))
+
+        let director = AutonomousSessionDirector()
+        var state = director.initialState()
+        var sourcePlan: AutonomousPhrasePlan?
+        var sourceBar: ResolvedPerformanceBar?
+        for _ in 0..<24 where sourceBar == nil {
+            let plan = director.candidates(from: state).primary
+            if let bar = plan.resolvedBars.first(where: {
+                $0.ensemble.events.contains { $0.voice == .motif }
+            }) {
+                sourcePlan = plan
+                sourceBar = bar
+                break
+            }
+            state.advance(using: plan)
+        }
+        let plan = try #require(sourcePlan)
+        let source = try #require(sourceBar)
+
+        func replacing(absoluteBar: Int, phrase: Int = 3,
+                       localBar: Int = 1,
+                       chapter: InterlockChapter = .breath) -> ResolvedPerformanceBar {
+            let performance = PerformanceBar(
+                bar: absoluteBar,
+                phrase: phrase,
+                localBar: localBar,
+                phraseLength: max(8, source.performance.phraseLength),
+                section: .build,
+                tension: source.performance.tension,
+                roles: source.performance.roles,
+                transformations: source.performance.transformations,
+                signatureEvent: nil,
+                eventSeed: source.performance.eventSeed,
+                accentContour: source.performance.accentContour
+            )
+            return ResolvedPerformanceBar(
+                performance: performance,
+                ensemble: source.ensemble,
+                arrangementGesture: source.arrangementGesture,
+                percussionGear: source.percussionGear,
+                foundationCompanion: source.foundationCompanion,
+                pulseEchoEnabled: source.pulseEchoEnabled,
+                interlockChapter: chapter,
+                groovePulses: source.groovePulses,
+                closedHatDecayArticulations: source.closedHatDecayArticulations,
+                spatialContrast: source.spatialContrast,
+                narrative: source.narrative
+            )
+        }
+
+        func synthBar(_ resolved: ResolvedPerformanceBar,
+                      kind: AutonomousPhraseKind = .lock,
+                      conservative: Bool = false,
+                      forceHome: Bool = false) -> SynthPerformanceBar {
+            SynthPerformancePlan(
+                scene: plan.scene,
+                dna: plan.dna,
+                kind: kind,
+                resolvedBars: [resolved],
+                conservative: conservative,
+                forceHomeUpperTimbre: forceHome
+            ).bars[0]
+        }
+
+        let spreadResolved = replacing(absoluteBar: 7)
+        let spread = synthBar(spreadResolved)
+        #expect(spread.upperNotes.contains { $0.role == .anchor })
+        #expect(spread.upperNotes.contains { $0.role == .shadow })
+        #expect(spread.upperNotes(for: .anchor).allSatisfy { $0.timingOffsetInSteps == 0 })
+        #expect(spread.upperNotes(for: .shadow).allSatisfy {
+            $0.timingOffsetInSteps == 0.06
+        })
+        #expect(spread.upperNotes(for: .response).allSatisfy {
+            $0.timingOffsetInSteps == 0.12
+        })
+        #expect(spread.upperNotes(for: .atmosphere).allSatisfy {
+            $0.timingOffsetInSteps == 0
+        })
+        #expect(spread.upperNotes(for: .transition).allSatisfy {
+            $0.timingOffsetInSteps == 0
+        })
+
+        let sameAbsoluteBarAcrossPhraseBoundary = synthBar(replacing(
+            absoluteBar: 7,
+            phrase: 91,
+            localBar: 6
+        ))
+        #expect(sameAbsoluteBarAcrossPhraseBoundary.upperNotes.map(\.timingOffsetInSteps) ==
+                spread.upperNotes.map(\.timingOffsetInSteps))
+        for endpoint in [0, 15, 16, 31] {
+            #expect(synthBar(replacing(absoluteBar: endpoint)).upperNotes.allSatisfy {
+                $0.timingOffsetInSteps == 0
+            })
+        }
+        #expect(synthBar(replacing(absoluteBar: 7, chapter: .home))
+            .upperNotes.allSatisfy { $0.timingOffsetInSteps == 0 })
+        #expect(synthBar(replacing(absoluteBar: 7), conservative: true)
+            .upperNotes.allSatisfy { $0.timingOffsetInSteps == 0 })
+        #expect(synthBar(replacing(absoluteBar: 7), forceHome: true)
+            .upperNotes.allSatisfy { $0.timingOffsetInSteps == 0 })
+        #expect(synthBar(replacing(absoluteBar: 7), kind: .identityReturn)
+            .upperNotes.allSatisfy { $0.timingOffsetInSteps == 0 })
+        #expect(synthBar(replacing(absoluteBar: 7), kind: .majorBreak)
+            .upperNotes.allSatisfy { $0.timingOffsetInSteps == 0 })
+
+        let neutralNotes = spread.upperNotes.map { $0.withTimingOffsetInSteps(0) }
+        let legacyNeutralNotes = neutralNotes.map { note in
+            ResolvedUpperNote(
+                role: note.role,
+                onsetStep: note.onsetStep,
+                durationInSteps: note.durationInSteps,
+                startFrequencyRatio: note.startFrequencyRatio,
+                endFrequencyRatio: note.endFrequencyRatio,
+                velocity: note.velocity,
+                gate: note.gate,
+                timbreIntent: note.timbreIntent,
+                instrument: note.instrument
+            )
+        }
+        let neutralSynth = SynthPerformanceBar(
+            bar: spread.bar,
+            gesture: spread.gesture,
+            mutationAmount: spread.mutationAmount,
+            foundationInstrument: spread.foundationInstrument,
+            relationalSteps: spread.relationalSteps,
+            upperNotes: neutralNotes,
+            pulseEchoTextureArticulation: spread.pulseEchoTextureArticulation
+        )
+        let legacyNeutralSynth = SynthPerformanceBar(
+            bar: spread.bar,
+            gesture: spread.gesture,
+            mutationAmount: spread.mutationAmount,
+            foundationInstrument: spread.foundationInstrument,
+            relationalSteps: spread.relationalSteps,
+            upperNotes: legacyNeutralNotes,
+            pulseEchoTextureArticulation: spread.pulseEchoTextureArticulation
+        )
+        #expect(neutralSynth == legacyNeutralSynth)
+
+        func render(_ synth: SynthPerformanceBar,
+                    layer: RenderLayer = .full) -> RenderedBar {
+            var renderState = RenderState()
+            var workspace = RenderWorkspace()
+            return VoiceRenderer.renderBar(
+                scene: plan.scene,
+                sampleRate: 8_000,
+                state: &renderState,
+                dna: plan.dna,
+                resolved: spreadResolved,
+                synthWorld: SynthWorldDNA(scene: plan.scene, dna: plan.dna),
+                synthPerformance: synth,
+                workspace: &workspace,
+                layer: layer
+            )
+        }
+
+        let legacyNeutralRender = render(legacyNeutralSynth)
+        let neutralRender = render(neutralSynth)
+        let activeRender = render(spread)
+        #expect(neutralRender.leftSamples == legacyNeutralRender.leftSamples)
+        #expect(neutralRender.rightSamples == legacyNeutralRender.rightSamples)
+        #expect(neutralRender.dryFoundationSampleHash ==
+                legacyNeutralRender.dryFoundationSampleHash)
+        #expect(neutralRender.dryPercussionSampleHash ==
+                legacyNeutralRender.dryPercussionSampleHash)
+        #expect(activeRender.leftSamples != neutralRender.leftSamples)
+        #expect(activeRender.resonantAnchorSamples == neutralRender.resonantAnchorSamples)
+        #expect(activeRender.detunedCompanionSamples != neutralRender.detunedCompanionSamples)
+        #expect(activeRender.upperTimingRenderEvidence.shadowSignal.sampleHash !=
+                neutralRender.upperTimingRenderEvidence.shadowSignal.sampleHash)
+        #expect(activeRender.dryFoundationSampleHash == neutralRender.dryFoundationSampleHash)
+        #expect(activeRender.dryPercussionSampleHash == neutralRender.dryPercussionSampleHash)
+        #expect(activeRender.groovePulseRenderEvidence ==
+                neutralRender.groovePulseRenderEvidence)
+        #expect(activeRender.closedHatRenderEvidence == neutralRender.closedHatRenderEvidence)
+        #expect(activeRender.upperTimingRenderEvidence.events.contains {
+            $0.role == .shadow && $0.requestedOffsetInSteps == 0.06 &&
+                $0.appliedOnsetFrame == $0.expectedOnsetFrame
+        })
+        #expect(neutralRender.upperTimingRenderEvidence.events.allSatisfy {
+            $0.requestedOffsetInSteps == 0 &&
+                $0.appliedOnsetFrame == $0.expectedOnsetFrame
+        })
+        let activeUpperOnsets = Array(Set(activeRender.upperNoteRenderEvidence.compactMap {
+            evidence -> Int? in
+            switch evidence.role {
+            case .anchor, .shadow, .response: evidence.onsetFrame
+            case .atmosphere, .transition: nil
+            }
+        })).sorted()
+        let activeUpperSamples = zip(
+            activeRender.resonantAnchorSamples,
+            activeRender.detunedCompanionSamples
+        ).map { $0.0 + $0.1 }
+        #expect(activeRender.stemObservations[.upperTonal] ==
+                StemObservationAnalyzer.analyze(
+                    activeUpperSamples,
+                    sampleRate: 8_000,
+                    onsetFrames: activeUpperOnsets
+                ))
+
+        let activeProtected = render(spread, layer: .protectedRhythm)
+        let neutralProtected = render(neutralSynth, layer: .protectedRhythm)
+        #expect(activeProtected.leftSamples == neutralProtected.leftSamples)
+        #expect(activeProtected.rightSamples == neutralProtected.rightSamples)
+        #expect(activeProtected.dryFoundationSampleHash ==
+                neutralProtected.dryFoundationSampleHash)
+        #expect(activeProtected.dryPercussionSampleHash ==
+                neutralProtected.dryPercussionSampleHash)
+
+        let upperless = EnsembleContext(
+            focusRole: source.ensemble.focusRole,
+            events: source.ensemble.events.filter {
+                $0.voice != .motif && $0.voice != .response
+            },
+            kickAnchors: source.ensemble.kickAnchors,
+            intentionalPileup: source.ensemble.intentionalPileup
+        )
+        let upperlessResolved = ResolvedPerformanceBar(
+            performance: replacing(absoluteBar: 7).performance,
+            ensemble: upperless,
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            foundationCompanion: source.foundationCompanion,
+            pulseEchoEnabled: source.pulseEchoEnabled,
+            interlockChapter: .breath,
+            groovePulses: source.groovePulses,
+            closedHatDecayArticulations: source.closedHatDecayArticulations,
+            spatialContrast: source.spatialContrast,
+            narrative: source.narrative
+        )
+        #expect(synthBar(upperlessResolved).upperNotes.allSatisfy {
+            $0.timingOffsetInSteps == 0
+        })
+    }
+
+    @Test("Upper-note frame geometry delays onset without consuming gate duration")
+    func upperHarmonicTimingFrameGeometry() {
+        let delayed = ResolvedUpperNote(
+            role: .response,
+            onsetStep: 14,
+            durationInSteps: 0.75,
+            startFrequencyRatio: 2,
+            endFrequencyRatio: 2,
+            velocity: 0.7,
+            gate: .retrigger,
+            timbreIntent: .home,
+            timingOffsetInSteps: 0.12
+        )
+        let neutral = delayed.withTimingOffsetInSteps(0)
+        for sampleRate in [8_000.0, 44_100.0, 48_000.0, 96_000.0, 192_000.0] {
+            let frameCount = Int((240.0 / 130 * sampleRate).rounded())
+            let stepFrames = Double(frameCount) / 16
+            let delayedStart = VoiceRenderer.upperNoteStartFrame(
+                note: delayed,
+                stepFrames: stepFrames,
+                frameCount: frameCount
+            )
+            let neutralStart = VoiceRenderer.upperNoteStartFrame(
+                note: neutral,
+                stepFrames: stepFrames,
+                frameCount: frameCount
+            )
+            #expect(delayedStart == Int(
+                ((Double(delayed.onsetStep) + delayed.timingOffsetInSteps) * stepFrames)
+                    .rounded()
+            ))
+            #expect(neutralStart == Int((Double(neutral.onsetStep) * stepFrames).rounded()))
+            #expect(delayedStart > neutralStart)
+            #expect(delayedStart < frameCount)
+            let delayedDuration = VoiceRenderer.upperNoteDurationFrames(
+                note: delayed,
+                stepFrames: stepFrames
+            )
+            let neutralDuration = VoiceRenderer.upperNoteDurationFrames(
+                note: neutral,
+                stepFrames: stepFrames
+            )
+            #expect(delayedDuration == neutralDuration)
+            #expect(delayedStart + delayedDuration < frameCount)
+        }
+
+        let director = AutonomousSessionDirector()
+        let plan = director.candidates(from: director.initialState()).primary
+        let sampleRate = 8_000.0
+        let frameCount = Int((240.0 / plan.scene.bpm * sampleRate).rounded())
+        let stepFrames = Double(frameCount) / 16
+        let firstScore = ResolvedUpperNote(
+            role: .response,
+            onsetStep: 14,
+            durationInSteps: 2,
+            startFrequencyRatio: 2,
+            endFrequencyRatio: 2,
+            velocity: 0.7,
+            gate: .retrigger,
+            timbreIntent: .home,
+            timingOffsetInSteps: 0.12
+        )
+        let secondScore = ResolvedUpperNote(
+            role: .response,
+            onsetStep: 15,
+            durationInSteps: 0.5,
+            startFrequencyRatio: 2.25,
+            endFrequencyRatio: 2.25,
+            velocity: 0.65,
+            gate: .retrigger,
+            timbreIntent: .home,
+            timingOffsetInSteps: 0.12
+        )
+        let world = SynthWorldDNA(scene: plan.scene, dna: plan.dna)
+        func alienNote(_ score: ResolvedUpperNote) -> AlienVoiceNote {
+            AlienVoiceNote(
+                startFrame: VoiceRenderer.upperNoteStartFrame(
+                    note: score,
+                    stepFrames: stepFrames,
+                    frameCount: frameCount
+                ),
+                durationFrames: VoiceRenderer.upperNoteDurationFrames(
+                    note: score,
+                    stepFrames: stepFrames
+                ),
+                frequency: world.rootFrequency * score.startFrequencyRatio,
+                endFrequency: world.rootFrequency * score.endFrequencyRatio,
+                velocity: score.velocity,
+                gate: score.gate,
+                timbreIntent: score.timbreIntent,
+                instrument: score.instrument,
+                role: score.role,
+                articulation: .neutral,
+                dryScale: 1,
+                spatialReverbSend: 0,
+                narrativeGainScale: 1,
+                narrativeSpectralScale: 1
+            )
+        }
+        let synthBar = SynthPerformanceBar(
+            bar: 7,
+            gesture: .interlock,
+            mutationAmount: 0.4,
+            relationalSteps: Array(repeating: .neutral, count: 16),
+            upperNotes: [firstScore, secondScore]
+        )
+        var output = [Float](repeating: 0, count: frameCount)
+        var measurement = output
+        var architectureMeasurement = output
+        var pulseEchoSend = output
+        var spatialReverbSend = output
+        var evidence: [UpperNoteRenderEvidence] = []
+        var voiceState = AlienVoiceState()
+        AlienAnalogVoice.render(
+            &output,
+            measurement: &measurement,
+            architectureMeasurement: &architectureMeasurement,
+            pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &evidence,
+            notes: [alienNote(firstScore), alienNote(secondScore)],
+            sampleRate: sampleRate,
+            level: 0.08,
+            world: world,
+            bar: synthBar,
+            role: .response,
+            state: &voiceState
+        )
+        #expect(evidence.count == 2)
+        let firstStart = VoiceRenderer.upperNoteStartFrame(
+            note: firstScore,
+            stepFrames: stepFrames,
+            frameCount: frameCount
+        )
+        let secondStart = VoiceRenderer.upperNoteStartFrame(
+            note: secondScore,
+            stepFrames: stepFrames,
+            frameCount: frameCount
+        )
+        #expect(evidence[0].onsetFrame == firstStart)
+        #expect(evidence[0].requestedGateEndFrame == firstStart +
+                VoiceRenderer.upperNoteDurationFrames(
+                    note: firstScore,
+                    stepFrames: stepFrames
+                ))
+        #expect(evidence[0].appliedGateEndFrame == secondStart)
+        #expect(evidence[0].appliedGateEndFrame < evidence[0].requestedGateEndFrame)
+        #expect(evidence[1].onsetFrame == secondStart)
+        #expect(evidence[1].requestedGateEndFrame == secondStart +
+                VoiceRenderer.upperNoteDurationFrames(
+                    note: secondScore,
+                    stepFrames: stepFrames
+                ))
+        #expect(evidence[1].appliedGateEndFrame <= frameCount)
     }
 
     @Test("Bounded interlock state evolves deterministically for more than eight hours")

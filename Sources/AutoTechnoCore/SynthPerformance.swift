@@ -65,6 +65,7 @@ package struct ResolvedUpperNote: Equatable, Sendable {
     package static let maximumDurationInSteps = 16.0
     package static let minimumFrequencyRatio = 0.125
     package static let maximumFrequencyRatio = 8.0
+    package static let maximumTimingOffsetInSteps = 0.12
 
     package let role: SynthRole
     package let onsetStep: Int
@@ -74,12 +75,17 @@ package struct ResolvedUpperNote: Equatable, Sendable {
     package let velocity: Double
     package let gate: UpperNoteGate
     package let timbreIntent: UpperTimbreIntent
+    /// A score-owned positive onset displacement measured in sixteenth-note
+    /// steps. Duration remains independent so delaying a note never shortens
+    /// its requested gate.
+    package let timingOffsetInSteps: Double
     package let instrument: InstrumentAssignment
 
     package init(role: SynthRole, onsetStep: Int, durationInSteps: Double,
                  startFrequencyRatio: Double, endFrequencyRatio: Double,
                  velocity: Double, gate: UpperNoteGate,
                  timbreIntent: UpperTimbreIntent,
+                 timingOffsetInSteps: Double = 0,
                  instrument: InstrumentAssignment? = nil) {
         self.role = role
         self.onsetStep = min(15, max(0, onsetStep))
@@ -98,7 +104,25 @@ package struct ResolvedUpperNote: Equatable, Sendable {
         self.velocity = min(1, max(0, velocity))
         self.gate = gate
         self.timbreIntent = timbreIntent
+        self.timingOffsetInSteps = timingOffsetInSteps.isFinite
+            ? min(Self.maximumTimingOffsetInSteps, max(0, timingOffsetInSteps))
+            : 0
         self.instrument = instrument ?? InstrumentPalette.safeUpper(role: role)
+    }
+
+    package func withTimingOffsetInSteps(_ value: Double) -> ResolvedUpperNote {
+        ResolvedUpperNote(
+            role: role,
+            onsetStep: onsetStep,
+            durationInSteps: durationInSteps,
+            startFrequencyRatio: startFrequencyRatio,
+            endFrequencyRatio: endFrequencyRatio,
+            velocity: velocity,
+            gate: gate,
+            timbreIntent: timbreIntent,
+            timingOffsetInSteps: value,
+            instrument: instrument
+        )
     }
 }
 
@@ -460,6 +484,36 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         bars = synthBars
     }
 
+    /// A deterministic sixteen-bar align-spread-realign aperture. Bars 0 and
+    /// 15 are exact zero; distance to the nearest endpoint rises linearly over
+    /// seven bars, giving bars 7 and 8 the exact unit plateau before reversal.
+    package static func upperTimingAperture(absoluteBar: Int) -> Double {
+        let macroBar = ((absoluteBar % 16) + 16) % 16
+        guard macroBar != 0, macroBar != 15 else { return 0 }
+        return min(1, Double(min(macroBar, 15 - macroBar)) / 7)
+    }
+
+    package static func upperTimingOffsetInSteps(for role: SynthRole,
+                                                 absoluteBar: Int,
+                                                 enabled: Bool) -> Double {
+        guard enabled else { return 0 }
+        let fullDepth = ResolvedUpperNote.maximumTimingOffsetInSteps *
+            upperTimingAperture(absoluteBar: absoluteBar)
+        switch role {
+        case .shadow: return fullDepth * 0.5
+        case .response: return fullDepth
+        case .anchor, .atmosphere, .transition: return 0
+        }
+    }
+
+    package static func upperTimingEligible(notes: [ResolvedUpperNote],
+                                            chapter: InterlockChapter,
+                                            variationEnabled: Bool) -> Bool {
+        variationEnabled && chapter == .breath &&
+            notes.contains { $0.role == .anchor } &&
+            notes.contains { $0.role == .shadow || $0.role == .response }
+    }
+
     private static func gesture(for bar: PerformanceBar) -> SynthGesture {
         switch bar.section {
         case .groove:
@@ -697,6 +751,23 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     instrument: instrument(.transition)
                 )
             })
+        }
+
+        let timingEnabled = upperTimingEligible(
+            notes: notes,
+            chapter: resolved.interlockChapter,
+            variationEnabled: variationEnabled
+        )
+        let aperture = timingEnabled
+            ? upperTimingAperture(absoluteBar: performance.bar) : 0
+        if aperture > 0 {
+            notes = notes.map { note in
+                note.withTimingOffsetInSteps(upperTimingOffsetInSteps(
+                    for: note.role,
+                    absoluteBar: performance.bar,
+                    enabled: timingEnabled
+                ))
+            }
         }
 
         return notes.sorted {

@@ -122,7 +122,7 @@ architecture-local dry record. Each full bar retains bar/BPM/delay/render
 geometry, score and drive eligibility, bounded `machineTexture` and applied
 amount, current-send RMS, exact pre-drive and post-drive hashes, pre/post peak,
 RMS, and low-band RMS, difference RMS, and finite status. Candidate-vector
-schema 6 binds those observations to the matching instrument effect access and
+schema 7 binds those observations to the matching instrument effect access and
 requires exact pre/post identity on neutral paths. The exact-source local
 structural, signal, protected-routing, and release-build matrix passed; policy
 remains uncalibrated, so neither record qualifies professional sound or changes

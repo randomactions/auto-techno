@@ -447,3 +447,47 @@ preparation-latency or peak-memory budget, or hardware-output soak was completed
 Policy remains `uncalibrated.v1`, automated quality qualification remains
 unavailable, and this snapshot makes no professional-quality or release-
 readiness promotion.
+
+## Score-owned breath harmonic timing cascade — 2026-08-09
+
+This source candidate extends the canonical resolved upper-note score with one
+bounded onset-timing capability. On eligible nonconservative breath bars, the
+anchor remains on the sixteenth grid while existing shadow and response notes
+delay by one-half and all of a deterministic 16-bar aperture, respectively.
+The aperture is exactly zero at macro bars 0 and 15, reaches its maximum at bars
+7 and 8, and never exceeds 0.12 sixteenth steps. Identity, major-break,
+conservative, force-home, ineligible-chapter, and missing-role paths remain
+exactly neutral. Pitch, velocity, duration, density, transport, protected
+rhythm, and the one-button surface are unchanged.
+
+The same render pass retains bounded per-bar score, render, and applied-gate
+fingerprints plus separate shadow and response signal evidence. Applied gate
+ends come from the renderer, so normal same-role voice stealing and bar-end
+truncation remain truthful rather than score-predicted. The typed streaming
+fingerprints avoid temporary JSON encoders in the cooperative preparation stack.
+The candidate-vector schema advances to 7, the quality contract to schema 8,
+the typed plan-fingerprint domain to v4, and the canonical engine identity to
+`autotechno-canonical-engine.v8`. Policy remains `uncalibrated.v1`; this evidence
+does not rank or promote a candidate.
+
+Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+serial SwiftPM execution, matched SDKs, isolated module caches, and the populated
+offline dependency scratch path:
+
+- upper-timbre integration: 18/18 passed in 144.915 seconds;
+- core, evidence, runtime, qualification, planning, and DSP: 87/87 passed in
+  70.379 seconds;
+- autonomous preparation preflight: 21/21 passed in 538.099 seconds;
+- protected-routing regressions: 7/7 passed in 63.987 seconds;
+- optimized `AutoTechno` product build: passed in 58.14 seconds;
+- the formerly stack-sensitive atomic prepared-continuation regression passed
+  independently in 16.387 seconds after the typed streaming fingerprint change.
+
+The local matrix establishes deterministic score ownership, exact frame and
+gate geometry, same-pass evidence binding, fallback and force-home neutrality,
+continuation replay, protected-routing identity, cooperative-stack safety, and
+optimized-build integrity. No matched-loudness listening, exact-build app
+playback, physical route/interruption smoke, preparation-latency or peak-memory
+budget, or hardware-output soak was completed. Automated professional-quality
+qualification therefore remains unavailable, and this snapshot makes no
+sound-quality or release-readiness promotion.

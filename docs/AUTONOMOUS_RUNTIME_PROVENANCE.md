@@ -19,13 +19,13 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 7, candidate-
-   vector schema 6, and canonical engine identity
-   `autotechno-canonical-engine.v7`. Each
+   candidate-evaluation transaction under quality-contract schema 8, candidate-
+   vector schema 7, and canonical engine identity
+   `autotechno-canonical-engine.v8`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, event-local groove-pulse,
    ordinary closed-hat, score-owned instrument, shared pulse-echo return-drive,
-   graph, and pre/post upper-timbre evidence.
+   score-owned upper-role timing, graph, and pre/post upper-timbre evidence.
    Instrument records bind each resolved architecture, patch, use, automation,
    and compatible effect set to exact architecture-local dry-PCM identity,
    peak, RMS, and event count. Closed-hat records bind every ordinary hat to
@@ -64,8 +64,9 @@ mistaken for a completed feedback system.
 5. `AutonomousPhraseRenderer` constructs the required synth world and synth
    performance. The synth planner resolves the three-step driver, five-stage
    follower, chapter articulation, internal architecture and patch, four bounded
-   automation coordinates, tone-chapter spectral aperture, and eligible effect
-   access without changing onset positions. Resonant Mono, Tonal Motion, and
+   automation coordinates, tone-chapter spectral aperture, eligible effect
+   access, and bounded breath-chapter companion timing. Resonant Mono, Tonal
+   Motion, and
    Spectral Texture remain specialized voices inside this one renderer; they
    are not alternative runtimes or user-selectable instruments. The voice
    renderer applies
@@ -100,6 +101,13 @@ mistaken for a completed feedback system.
    sample advances its unchanged feedback write before the band-limited audible
    return reaches a bounded pointwise drive stage. The driven sample therefore
    cannot recirculate through feedback.
+   On eligible breath-chapter bars, the same planner delays only existing shadow
+   and response notes through one absolute 16-bar align-spread-realign aperture:
+   shadow reaches half depth, response reaches full depth, and the maximum is
+   `0.12` of one sixteenth step. Anchor, atmosphere, and transition roles remain
+   sample-aligned; pitch, velocity, duration, gate intent, density, and
+   instrument assignment do not change. Macro endpoints, conservative,
+   forced-home, identity-return, and major-break paths resolve exact zero timing.
 6. The unchanged pre-fader kick remains the ducking detector. The generated
    graph receives the exact `full - protected-rhythm` remainder, and its output
    is recombined with the protected stereo rhythm route. The protected route
@@ -113,7 +121,7 @@ mistaken for a completed feedback system.
    sixteen bar windows. It is descriptive only: uncalibrated masking evidence
    applies no cut, while the existing authored envelope, kick-linked guard,
    ducking, glue, and output-safety stages remain active. Upper-timbre evidence
-   schema 3 (quality-report contract schema 7) retains protected rhythm as its
+   schema 3 (quality-report contract schema 8) retains protected rhythm as its
    masking reference and adds bounded onset-local anchor-velocity observations
    from the exact dry anchor tap.
    Score-owned anchor velocity now projects into the authored filter-envelope
@@ -152,7 +160,7 @@ return behavior.
 Each full bar emits same-pass bar/BPM/delay/render geometry, score and drive
 eligibility, bounded source and applied amount, current-send RMS, exact pre/post
 sample hashes, pre/post peak, RMS, and low-band RMS, difference RMS, and finite
-status. Candidate-vector schema 6 binds these observations to the score bar,
+status. Candidate-vector schema 7 binds these observations to the score bar,
 phrase kind, route rate, and matching instrument effect access. Neutral drive
 requires exact pre/post identity and zero difference. Active drive remains
 outside feedback, binds exact changed-frame and peak witnesses, and permits only
@@ -160,6 +168,25 @@ the transfer's bounded low-level lift up to `3.2x` RMS. The implementation is
 present, and its exact-source local structural, signal, protected-routing, and
 release-build matrix passed. Policy remains uncalibrated, so this evidence
 cannot select or promote a candidate or establish professional quality.
+
+## Implemented upper-role timing slice
+
+The current implementation extends the existing resolved upper-note score and
+canonical voice scheduler; it does not introduce another clock, sequencer,
+voice, renderer, or continuation state. Eligible breath-chapter bars reuse the
+absolute 16-bar macro position to delay existing shadow and response attacks by
+the bounded half/full aperture described above. Exact-zero fallback paths retain
+the prior schedule bit for bit.
+
+Each rendered bar records bounded score and actual renderer timing tuples,
+including base onset, requested offset, expected and applied onset frame,
+requested gate end, and renderer-applied gate end. Separate shadow and response
+dry taps retain finite role-local hash, peak, and RMS evidence. Candidate-vector
+schema 7 reduces those tuples into exact score/render and renderer-applied-gate
+fingerprints, role-specific offset facts, protected-role neutrality, aperture
+replay, and route-derived frame geometry. The shipping evaluator remains
+uncalibrated, so this evidence is
+descriptive and does not alter candidate selection.
 
 ## Target unified loop
 

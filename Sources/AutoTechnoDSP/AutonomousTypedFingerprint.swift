@@ -22,7 +22,7 @@ func fixedWidthFingerprintHex(_ value: UInt64) -> String {
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
-        digest(domain: "candidate-plan.typed.v3") { sink in
+        digest(domain: "candidate-plan.typed.v4") { sink in
             encode(plan, into: &sink)
         }
     }
@@ -181,6 +181,35 @@ private extension AutonomousTypedFingerprint {
         sink.field("endingSpatialContrastState")
         encode(value.endingSpatialContrastState, into: &sink)
         sink.field("endingNarrativeState"); encode(value.endingNarrativeState, into: &sink)
+        let synthPerformance = SynthPerformancePlan(
+            scene: value.scene,
+            dna: value.dna,
+            kind: value.kind,
+            resolvedBars: value.resolvedBars,
+            conservative: value.conservative
+        )
+        sink.field("resolvedUpperNotes")
+        sink.collection(synthPerformance.bars.count)
+        for bar in synthPerformance.bars {
+            sink.aggregate("SynthPerformanceBarUpperNotes")
+            sink.field("bar"); sink.int(bar.bar)
+            sink.field("notes"); sink.collection(bar.upperNotes.count)
+            for note in bar.upperNotes { encode(note, into: &sink) }
+        }
+    }
+
+    static func encode(_ value: ResolvedUpperNote, into sink: inout StreamingFNV1a) {
+        sink.aggregate("ResolvedUpperNote")
+        sink.field("role"); sink.raw(value.role.rawValue)
+        sink.field("onsetStep"); sink.int(value.onsetStep)
+        sink.field("durationInSteps"); sink.double(value.durationInSteps)
+        sink.field("startFrequencyRatio"); sink.double(value.startFrequencyRatio)
+        sink.field("endFrequencyRatio"); sink.double(value.endFrequencyRatio)
+        sink.field("velocity"); sink.double(value.velocity)
+        sink.field("gate"); sink.raw(value.gate.rawValue)
+        sink.field("timbreIntent"); encode(value.timbreIntent, into: &sink)
+        sink.field("timingOffsetInSteps"); sink.double(value.timingOffsetInSteps)
+        sink.field("instrument"); encode(Optional(value.instrument), into: &sink)
     }
 
     static func encode(_ value: TechnoScene, into sink: inout StreamingFNV1a) {
@@ -1039,7 +1068,7 @@ private extension AutonomousTypedFingerprint {
 /// Streaming FNV-1a sink. Lengths are unsigned 64-bit values and Swift `Int`
 /// values are normalized to signed 64-bit two's-complement before hashing, so
 /// fingerprints do not depend on native memory layout or host endianness.
-private struct StreamingFNV1a {
+struct StreamingFNV1a {
     private(set) var value: UInt64 = 0xcbf29ce484222325
 
     mutating func domain(_ value: String) {
