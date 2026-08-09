@@ -680,7 +680,9 @@ fileprivate struct BoundCandidateEvaluation {
     }
 }
 
-package struct PreparedAutonomousPhrase: Sendable {
+/// Immutable reference storage keeps the complete prepared product off the
+/// bounded cooperative-task stack while preserving atomic commit semantics.
+package final class PreparedAutonomousPhrase: Sendable {
     package let plan: AutonomousPhrasePlan
     package let graph: DSPGraphPlan
     package let blocks: [RenderBlock]

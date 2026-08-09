@@ -565,27 +565,28 @@ Candidate-vector schema 8, quality-contract schema 9, Professional Evidence
 bank schema 3, and canonical engine identity `autotechno-canonical-engine.v9`
 identify the candidate. Non-finite evidence remains a structurally complete
 rejected record, while hard gates and the report bank require finite evidence.
-The immutable full-mix and perceptual payloads use bounded reference storage so
-the larger evidence record remains safe on Swift cooperative worker stacks.
-Score validation was split into non-inlined bounded helpers without changing
-its accepted score language. Policy remains `uncalibrated.v1`.
+The immutable full-mix, perceptual, and complete prepared-product payloads use
+bounded reference storage so the larger evidence record remains safe on Swift
+cooperative worker stacks, including the older hosted Swift 6.1 compiler. Score
+validation was split into non-inlined bounded helpers without changing its
+accepted score language. Policy remains `uncalibrated.v1`.
 
 Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
-matched SDKs and isolated SwiftPM/module caches after rebasing onto the CI-
-process-split base `4845b21`:
+matched SDKs and isolated SwiftPM/module caches after rebasing onto the heavy-
+product process-isolation base `e9f0a29`:
 
-- production-identical parent full repository matrix: 145/145 passed in
-  330.685 seconds;
+- exact-head full repository matrix: 146/146 passed in 329.982 seconds;
 - exact-head upper-timbre integration after the route-rate test split: 19/19
   passed in 76.372 seconds;
+- exact 8 kHz prepared product after immutable prepared-product boxing: 1/1
+  passed in 2.840 seconds;
 - pre-rebase focused candidate evaluation and qualification: 24/24 passed in
   3.295 seconds;
 - pre-rebase focused streaming perceptual and BS.1770 reference bank: 15/15
   passed in 7.832 seconds;
 - formerly stack-sensitive atomic prepared continuation: passed independently
   in 16.360 seconds;
-- production-identical parent optimized `AutoTechno` product build: passed in
-  46.72 seconds;
+- exact-head optimized `AutoTechno` product build: passed in 45.43 seconds;
 - optimized synthetic 8-second/96 kHz fixed-memory fixture and 4-second
   spectral/loudness/true-peak chunk-parity fixture: 0.050 seconds each;
 - `git diff --check`: clean.
