@@ -42,10 +42,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 3)
-        #expect(QualityQualificationContract.schemaVersion == 5)
+        #expect(vector.schemaVersion == 4)
+        #expect(QualityQualificationContract.schemaVersion == 6)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v3")
+                "autotechno-canonical-engine.v5")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -219,6 +219,160 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!fixtureGroovePulseEvent(tailToAttackDB: 121)
             .isComplete(sampleRate: 8_000))
         #expect(!fixtureGroovePulseEvent(finite: false).isFinite)
+    }
+
+    @Test("Closed-hat evidence is bounded, deterministic, and required per bar")
+    func closedHatEvidenceContract() throws {
+        let emptyBar = AutonomousClosedHatBarEvidence(
+            bar: 0,
+            sourceScoreEventCount: 0,
+            sourceRenderEventCount: 0,
+            events: []
+        )
+        let neutral = fixtureClosedHatEvent()
+        let companion = fixtureClosedHatEvent(
+            scoreEventIndex: 2,
+            step: 7,
+            role: .openHatCompanion,
+            intensity: 0.64,
+            timingOffsetInSteps: 0.08,
+            relocated: true,
+            decayRateScale: ClosedHatVoiceContract.openHatCompanionDecayRateScale,
+            sampleHash: "fedcba9876543210",
+            sourceRMS: 0.015,
+            spectralCentroidHz: 2_700,
+            tailToAttackDB: -12
+        )
+        let authoredBar = AutonomousClosedHatBarEvidence(
+            bar: 0,
+            sourceScoreEventCount: 2,
+            sourceRenderEventCount: 2,
+            events: [neutral, companion]
+        )
+        let baseline = fixtureVector(slot: .primary)
+        let vector = fixtureVector(slot: .primary, closedHatBar: authoredBar)
+
+        #expect(emptyBar.isComplete(sampleRate: 8_000))
+        #expect(emptyBar.isFinite)
+        #expect(neutral.isComplete(sampleRate: 8_000))
+        #expect(neutral.isFinite)
+        #expect(companion.isComplete(sampleRate: 8_000))
+        #expect(companion.isFinite)
+        #expect(authoredBar.isComplete(sampleRate: 8_000))
+        #expect(vector.isComplete)
+        #expect(vector.isFinite)
+        #expect(vector.fingerprint != baseline.fingerprint)
+        #expect(vector.selectionEvidence == baseline.selectionEvidence)
+
+        let data = try vector.deterministicJSON()
+        let repeatedData = try vector.deterministicJSON()
+        #expect(data == repeatedData)
+        let decoded = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: data
+        )
+        #expect(decoded == vector)
+        #expect(decoded.fingerprint == vector.fingerprint)
+
+        let object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let bars = try #require(object["closedHat"] as? [[String: Any]])
+        let events = try #require(bars.first?["events"] as? [[String: Any]])
+        let serializedEvent = try #require(events.first)
+        #expect(Set(serializedEvent.keys) == Set([
+            "scoreEventIndex", "step", "role", "intensity",
+            "timingOffsetInSteps", "relocated", "decayRateScale",
+            "renderedFrameCount", "sampleHash", "sourceRMS",
+            "spectralCentroidHz", "tailToAttackDB", "finite",
+        ]))
+
+        let excessiveEvents = (0..<5).map { index in
+            fixtureClosedHatEvent(
+                scoreEventIndex: index,
+                step: index * 2 + 1,
+                sampleHash: String(format: "%016x", index + 1)
+            )
+        }
+        let truncated = AutonomousClosedHatBarEvidence(
+            bar: 0,
+            sourceScoreEventCount: excessiveEvents.count,
+            sourceRenderEventCount: excessiveEvents.count,
+            events: excessiveEvents
+        )
+        #expect(truncated.events.count ==
+                AutonomousCandidateEvaluationVector.maximumClosedHatEventsPerBar)
+        #expect(!truncated.isComplete(sampleRate: 8_000))
+
+        var oversizedEventObject = object
+        var oversizedEventBars = bars
+        var oversizedEventBar = oversizedEventBars[0]
+        let decodedOversizedEvents: [[String: Any]] = (0..<5).map { index in
+            var copy = serializedEvent
+            copy["scoreEventIndex"] = index
+            copy["step"] = index * 2 + 1
+            copy["sampleHash"] = String(format: "%016x", index + 1)
+            return copy
+        }
+        oversizedEventBar["sourceScoreEventCount"] = 5
+        oversizedEventBar["sourceRenderEventCount"] = 5
+        oversizedEventBar["events"] = decodedOversizedEvents
+        oversizedEventBars[0] = oversizedEventBar
+        oversizedEventObject["closedHat"] = oversizedEventBars
+        let decodedOversizedEventVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: oversizedEventObject)
+        )
+        #expect(decodedOversizedEventVector.closedHat[0].events.count == 5)
+        #expect(!decodedOversizedEventVector.recordIsStructurallyValid)
+
+        var oversizedBarObject = object
+        let decodedOversizedBars: [[String: Any]] = (0..<17).map { bar in
+            var copy = bars[0]
+            copy["bar"] = bar
+            return copy
+        }
+        oversizedBarObject["sourceClosedHatBarCount"] = 17
+        oversizedBarObject["closedHat"] = decodedOversizedBars
+        let decodedOversizedBarVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: oversizedBarObject)
+        )
+        #expect(decodedOversizedBarVector.closedHat.count == 17)
+        #expect(!decodedOversizedBarVector.recordIsStructurallyValid)
+
+        let duplicateEventIndex = AutonomousClosedHatBarEvidence(
+            bar: 0,
+            sourceScoreEventCount: 2,
+            sourceRenderEventCount: 2,
+            events: [
+                neutral,
+                fixtureClosedHatEvent(
+                    step: 7,
+                    sampleHash: "0000000000000002"
+                ),
+            ]
+        )
+        #expect(!duplicateEventIndex.isComplete(sampleRate: 8_000))
+
+        #expect(!fixtureClosedHatEvent(roleRawValue: "ride")
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureClosedHatEvent(decayRateScale: 1.35)
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureClosedHatEvent(renderedFrameCount: 399)
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureClosedHatEvent(sampleHash: "NOT-A-PCM-HASH!!")
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureClosedHatEvent(sourceRMS: 0.251)
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureClosedHatEvent(spectralCentroidHz: 4_001)
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureClosedHatEvent(tailToAttackDB: 121)
+            .isComplete(sampleRate: 8_000))
+        let nonFinite = fixtureClosedHatEvent(sourceRMS: .nan)
+        #expect(!nonFinite.isFinite)
+        #expect(!nonFinite.isComplete(sampleRate: 8_000))
+        #expect(!fixtureClosedHatEvent(finite: false).isFinite)
     }
 
     @Test("Masking and stem payloads are bounded and malformed vectors are incomplete")
@@ -1020,7 +1174,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(initialCommit.fingerprint != advancedCommit.fingerprint)
 
         #expect(AutonomousCandidateFingerprint.plan(candidates.primary) ==
-                "652053b3212f9dad")
+                "34c8f9f426056406")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -1028,7 +1182,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "e176e5a043fe0a6f")
+                "44623e03b6eebabb")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -1055,6 +1209,7 @@ struct AutonomousCandidateEvaluationTests {
         stemRoleCount: Int = 5,
         planFingerprintOverride: String? = nil,
         groovePulseBar: AutonomousGroovePulseBarEvidence? = nil,
+        closedHatBar: AutonomousClosedHatBarEvidence? = nil,
         nonFinite: Bool = false
     ) -> AutonomousCandidateEvaluationVector {
         let planFingerprint = planFingerprintOverride ?? fixturePlanFingerprints[slot]
@@ -1220,6 +1375,12 @@ struct AutonomousCandidateEvaluationTests {
                 sourceRenderEventCount: 0,
                 events: []
             )],
+            closedHat: [closedHatBar ?? AutonomousClosedHatBarEvidence(
+                bar: 0,
+                sourceScoreEventCount: 0,
+                sourceRenderEventCount: 0,
+                events: []
+            )],
             graph: graph,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: upper,
@@ -1246,6 +1407,39 @@ struct AutonomousCandidateEvaluationTests {
             strikeZone: strikeZone.rawValue,
             damping: damping,
             timbreMicrovariation: timbreMicrovariation,
+            renderedFrameCount: renderedFrameCount,
+            sampleHash: sampleHash,
+            sourceRMS: sourceRMS,
+            spectralCentroidHz: spectralCentroidHz,
+            tailToAttackDB: tailToAttackDB,
+            finite: finite
+        )
+    }
+
+    private func fixtureClosedHatEvent(
+        scoreEventIndex: Int = 1,
+        step: Int = 3,
+        role: ClosedHatDecayRole = .neutral,
+        roleRawValue: String? = nil,
+        intensity: Double = 0.52,
+        timingOffsetInSteps: Double = 0.06,
+        relocated: Bool = false,
+        decayRateScale: Double = 1,
+        renderedFrameCount: Int = 400,
+        sampleHash: String = "0123456789abcdef",
+        sourceRMS: Double = 0.012,
+        spectralCentroidHz: Double = 2_400,
+        tailToAttackDB: Double = -18,
+        finite: Bool = true
+    ) -> AutonomousClosedHatEventEvidence {
+        AutonomousClosedHatEventEvidence(
+            scoreEventIndex: scoreEventIndex,
+            step: step,
+            role: roleRawValue ?? role.rawValue,
+            intensity: intensity,
+            timingOffsetInSteps: timingOffsetInSteps,
+            relocated: relocated,
+            decayRateScale: decayRateScale,
             renderedFrameCount: renderedFrameCount,
             sampleHash: sampleHash,
             sourceRMS: sourceRMS,

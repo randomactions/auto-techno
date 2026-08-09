@@ -1,9 +1,300 @@
 import AutoTechnoCore
 @testable import AutoTechnoDSP
+import Foundation
 import Testing
 
 @Suite("Spatial carrier and protected routing regressions")
 struct SpatialProtectedRoutingRegressionTests {
+    @Test("Streaming mono fingerprints preserve exact PCM identity")
+    func streamingMonoFingerprintMatchesArrayFingerprint() {
+        let fixtures: [[Float]] = [
+            [],
+            [0],
+            [-0.0, 0.0, .leastNonzeroMagnitude, -1.25, 3.5],
+            [Float(bitPattern: 0x7fc0_1234), .infinity, -.infinity],
+        ]
+
+        for samples in fixtures {
+            var streaming = ExactPCMFingerprint.MonoAccumulator(
+                sampleCount: samples.count
+            )
+            for sample in samples {
+                streaming.append(sample)
+            }
+            #expect(streaming.fingerprint == ExactPCMFingerprint.mono(samples))
+        }
+    }
+
+    @Test("Neutral closed hats retain legacy PCM and bounded evidence at supported routes")
+    func closedHatEvidenceIsExactAcrossSampleRates() throws {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let plan = director.candidates(from: director.initialState()).primary
+        let source = try #require(plan.resolvedBars.first)
+        let event = EnsembleResolvedEvent(
+            voice: .percussion,
+            step: 6,
+            intensity: 0.73,
+            relocated: false
+        )
+        let ensemble = EnsembleContext(
+            focusRole: .percussion,
+            events: [event],
+            kickAnchors: [],
+            intentionalPileup: false
+        )
+        let sampleRates: [Double] = [8_000, 44_100, 48_000, 96_000, 192_000]
+        let brightness = plan.scene.character.percussionBrightness
+        let accent = source.performance.accent(at: event.step) * event.intensity
+        let level = (source.performance.section == .build ? 0.09 : 0.075) * accent
+
+        for sampleRate in sampleRates {
+            let neutral = replacing(
+                source,
+                ensemble: ensemble,
+                groovePulses: [],
+                closedHatDecayArticulations: [ClosedHatDecayArticulation(
+                    scoreEventIndex: 0,
+                    step: event.step,
+                    role: .neutral
+                )]
+            )
+            let companion = replacing(
+                source,
+                ensemble: ensemble,
+                groovePulses: [],
+                closedHatDecayArticulations: [ClosedHatDecayArticulation(
+                    scoreEventIndex: 0,
+                    step: event.step,
+                    role: .openHatCompanion
+                )]
+            )
+            let neutralRendered = renderBar(
+                plan: plan,
+                resolved: neutral,
+                sampleRate: sampleRate
+            )
+            let companionRendered = renderBar(
+                plan: plan,
+                resolved: companion,
+                sampleRate: sampleRate
+            )
+            let neutralEvidence = try #require(
+                neutralRendered.closedHatRenderEvidence.first
+            )
+            let companionEvidence = try #require(
+                companionRendered.closedHatRenderEvidence.first
+            )
+            let neutralDecay = 32 - brightness * 8
+            let companionDecay = neutralDecay *
+                ClosedHatVoiceContract.openHatCompanionDecayRateScale
+            let expectedNeutral = legacyClosedHatSamples(
+                sampleRate: sampleRate,
+                level: level,
+                brightness: brightness,
+                decayRate: neutralDecay,
+                seed: source.performance.eventSeed
+            )
+            let expectedCompanion = legacyClosedHatSamples(
+                sampleRate: sampleRate,
+                level: level,
+                brightness: brightness,
+                decayRate: companionDecay,
+                seed: source.performance.eventSeed
+            )
+
+            #expect(neutralEvidence.role == .neutral)
+            #expect(neutralEvidence.appliedDecayRate == neutralDecay)
+            #expect(neutralEvidence.renderedFrameCount ==
+                    ClosedHatVoiceContract.frameCount(sampleRate: sampleRate))
+            #expect(neutralEvidence.sampleHash ==
+                    ExactPCMFingerprint.mono(expectedNeutral))
+            #expect(companionEvidence.sampleHash ==
+                    ExactPCMFingerprint.mono(expectedCompanion))
+            #expect(companionEvidence.renderedFrameCount ==
+                    neutralEvidence.renderedFrameCount)
+            #expect(companionEvidence.tailToAttackDB < neutralEvidence.tailToAttackDB)
+            #expect(companionEvidence.sampleHash != neutralEvidence.sampleHash)
+            for evidence in [neutralEvidence, companionEvidence] {
+                #expect(ClosedHatVoiceContract.appliedParametersMatch(
+                    level: evidence.appliedLevel,
+                    decayRate: evidence.appliedDecayRate,
+                    brightness: brightness,
+                    reportedSection: source.performance.section,
+                    scoreSection: source.performance.section,
+                    combinedAccent: accent,
+                    role: evidence.role
+                ))
+                #expect(!ClosedHatVoiceContract.appliedParametersMatch(
+                    level: evidence.appliedLevel + 0.001,
+                    decayRate: evidence.appliedDecayRate,
+                    brightness: brightness,
+                    reportedSection: source.performance.section,
+                    scoreSection: source.performance.section,
+                    combinedAccent: accent,
+                    role: evidence.role
+                ))
+                #expect(!ClosedHatVoiceContract.appliedParametersMatch(
+                    level: evidence.appliedLevel,
+                    decayRate: evidence.appliedDecayRate + 1,
+                    brightness: brightness,
+                    reportedSection: source.performance.section,
+                    scoreSection: source.performance.section,
+                    combinedAccent: accent,
+                    role: evidence.role
+                ))
+                #expect(!ClosedHatVoiceContract.appliedParametersMatch(
+                    level: evidence.appliedLevel,
+                    decayRate: evidence.appliedDecayRate,
+                    brightness: brightness,
+                    reportedSection: source.performance.section == .build
+                        ? .groove : .build,
+                    scoreSection: source.performance.section,
+                    combinedAccent: accent,
+                    role: evidence.role
+                ))
+                #expect(evidence.finite)
+                #expect(evidence.scoreEventIndex == 0)
+                #expect(evidence.step == event.step)
+                #expect(evidence.eventIntensity == event.intensity)
+                #expect(evidence.timingOffsetInSteps == 0)
+                #expect(evidence.appliedLevel == level)
+                #expect(evidence.sampleHash.count == 16)
+                #expect(evidence.spectralCentroidHz.isFinite)
+                #expect((0...(sampleRate / 2)).contains(
+                    evidence.spectralCentroidHz
+                ))
+            }
+        }
+    }
+
+    @Test("Closed-hat companion decay changes only its future dry sample")
+    func closedHatCompanionPreservesUnrelatedRoutingAndRandomOrder() throws {
+        let director = AutonomousSessionDirector(rootSeed: 90_909)
+        let sourcePlan = director.candidates(from: director.initialState()).primary
+        let source = try #require(sourcePlan.resolvedBars.first)
+        let events = [
+            EnsembleResolvedEvent(
+                voice: .kick, step: 0, intensity: 0.90, relocated: false
+            ),
+            EnsembleResolvedEvent(
+                voice: .clap, step: 2, intensity: 0.64, relocated: false
+            ),
+            EnsembleResolvedEvent(
+                voice: .openHat, step: 4, intensity: 0.61, relocated: false
+            ),
+            EnsembleResolvedEvent(
+                voice: .metallic, step: 6, intensity: 0.57, relocated: false
+            ),
+            EnsembleResolvedEvent(
+                voice: .groovePulse, step: 8, intensity: 0.52, relocated: false
+            ),
+            EnsembleResolvedEvent(
+                voice: .percussion, step: 12, intensity: 0.78, relocated: false
+            ),
+            EnsembleResolvedEvent(
+                voice: .percussion, step: 14, intensity: 0.66, relocated: false
+            ),
+        ]
+        let ensemble = EnsembleContext(
+            focusRole: .percussion,
+            events: events,
+            kickAnchors: [0],
+            intentionalPileup: false
+        )
+        let groovePulses = GroovePulseResolver.articulations(
+            from: ensemble,
+            absoluteBar: source.performance.bar,
+            swingPercent: sourcePlan.dna.rhythm.swingPercent,
+            percussionGear: source.percussionGear,
+            eventSeed: source.performance.eventSeed,
+            conservative: false
+        )
+        func resolved(role: ClosedHatDecayRole) -> ResolvedPerformanceBar {
+            replacing(
+                source,
+                ensemble: ensemble,
+                groovePulses: groovePulses,
+                closedHatDecayArticulations: [
+                    ClosedHatDecayArticulation(
+                        scoreEventIndex: 5,
+                        step: 12,
+                        role: role
+                    ),
+                    ClosedHatDecayArticulation(
+                        scoreEventIndex: 6,
+                        step: 14,
+                        role: .neutral
+                    ),
+                ]
+            )
+        }
+        func render(_ role: ClosedHatDecayRole) throws -> RenderBlock {
+            let plan = replacing(sourcePlan, resolvedBars: [resolved(role: role)])
+            let graph = DSPGraphGenerator.safePlan(sessionSeed: plan.dna.sceneSeed)
+            var renderState = RenderState()
+            var graphState = GeneratedDSPContinuationState()
+            return try #require(AutonomousPhraseRenderer.render(
+                plan: plan,
+                graph: graph,
+                sampleRate: 8_000,
+                state: &renderState,
+                graphState: &graphState
+            ).first)
+        }
+
+        let neutral = try render(.neutral)
+        let companion = try render(.openHatCompanion)
+        let neutralChanged = try #require(neutral.closedHatRenderEvidence.first {
+            $0.scoreEventIndex == 5
+        })
+        let companionChanged = try #require(companion.closedHatRenderEvidence.first {
+            $0.scoreEventIndex == 5
+        })
+        let neutralFollower = try #require(neutral.closedHatRenderEvidence.first {
+            $0.scoreEventIndex == 6
+        })
+        let companionFollower = try #require(companion.closedHatRenderEvidence.first {
+            $0.scoreEventIndex == 6
+        })
+
+        #expect(neutral.events == companion.events)
+        #expect(neutralChanged.scoreEventIndex == companionChanged.scoreEventIndex)
+        #expect(neutralChanged.step == companionChanged.step)
+        #expect(neutralChanged.eventIntensity == companionChanged.eventIntensity)
+        #expect(neutralChanged.timingOffsetInSteps ==
+                companionChanged.timingOffsetInSteps)
+        #expect(neutralChanged.relocated == companionChanged.relocated)
+        #expect(neutralChanged.appliedLevel == companionChanged.appliedLevel)
+        #expect(neutralChanged.renderedFrameCount ==
+                companionChanged.renderedFrameCount)
+        #expect(companionChanged.appliedDecayRate > neutralChanged.appliedDecayRate)
+        #expect(companionChanged.tailToAttackDB < neutralChanged.tailToAttackDB)
+        #expect(companionChanged.sampleHash != neutralChanged.sampleHash)
+
+        // The later neutral hat consumes the next exact RNG segment. Its full
+        // evidence identity proves that changing decay did not change draw count.
+        #expect(neutralFollower == companionFollower)
+        #expect(neutral.groovePulseRenderEvidence ==
+                companion.groovePulseRenderEvidence)
+        #expect(neutral.protectedFoundationSampleHash ==
+                companion.protectedFoundationSampleHash)
+        for voice in [EnsembleVoice.clap, .openHat, .metallic, .groovePulse] {
+            #expect(neutral.events.contains { $0.voice.rawValue == voice.rawValue })
+        }
+
+        // Every unrelated stochastic percussion event precedes the changed
+        // closed hat, so causal full-render PCM must be bit-identical up to its
+        // score-owned onset. This covers their synthesis and downstream routing.
+        let onsetFrame = Int((
+            (Double(neutralChanged.step) + neutralChanged.timingOffsetInSteps) *
+                Double(neutral.left.count) / 16
+        ).rounded())
+        #expect(Array(neutral.left[..<onsetFrame]) ==
+                Array(companion.left[..<onsetFrame]))
+        #expect(Array(neutral.right[..<onsetFrame]) ==
+                Array(companion.right[..<onsetFrame]))
+    }
+
     @Test("Groove-pulse evidence is bit-exact across full and protected layers")
     func groovePulseEvidenceMatchesProtectedRoute() throws {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
@@ -331,20 +622,87 @@ struct SpatialProtectedRoutingRegressionTests {
         return nil
     }
 
+    private func renderBar(
+        plan: AutonomousPhrasePlan,
+        resolved: ResolvedPerformanceBar,
+        sampleRate: Double,
+        layer: RenderLayer = .full
+    ) -> RenderedBar {
+        let synthPlan = SynthPerformancePlan(
+            scene: plan.scene,
+            dna: plan.dna,
+            kind: plan.kind,
+            resolvedBars: [resolved],
+            conservative: plan.conservative,
+            forceHomeUpperTimbre: true
+        )
+        let planned = synthPlan.bars[0]
+        let noUpperNotes = SynthPerformanceBar(
+            bar: planned.bar,
+            gesture: planned.gesture,
+            mutationAmount: planned.mutationAmount,
+            relationalSteps: planned.relationalSteps,
+            upperNotes: []
+        )
+        var state = RenderState()
+        var workspace = RenderWorkspace()
+        return VoiceRenderer.renderBar(
+            scene: plan.scene,
+            sampleRate: sampleRate,
+            state: &state,
+            dna: plan.dna,
+            resolved: resolved,
+            synthWorld: synthPlan.world,
+            synthPerformance: noUpperNotes,
+            workspace: &workspace,
+            layer: layer
+        )
+    }
+
+    /// Reproduces the pre-source-10 ordinary hat expression exactly. Supplying
+    /// the new bounded decay rate makes the same helper an independent oracle
+    /// for the companion sample without depending on renderer evidence.
+    private func legacyClosedHatSamples(
+        sampleRate: Double,
+        level: Double,
+        brightness: Double,
+        decayRate: Double,
+        seed: UInt64
+    ) -> [Float] {
+        let frames = ClosedHatVoiceContract.frameCount(sampleRate: sampleRate)
+        var samples = Array(repeating: Float.zero, count: frames)
+        var state = 0.0
+        var random = SeededGenerator(seed: seed)
+        for index in 0..<frames {
+            let time = Double(index) / sampleRate
+            let noise = random.unit() * 2 - 1
+            state += (noise - state) * (0.25 + brightness * 0.25)
+            samples[index] = Float(
+                (noise - state * 0.7) * exp(-time * decayRate) * level
+            )
+        }
+        return samples
+    }
+
     private func replacing(
         _ resolved: ResolvedPerformanceBar,
+        ensemble: EnsembleContext? = nil,
         spatialContrast: SpatialContrastArticulation? = nil,
-        interlockChapter: InterlockChapter? = nil
+        interlockChapter: InterlockChapter? = nil,
+        groovePulses: [GroovePulseArticulation]? = nil,
+        closedHatDecayArticulations: [ClosedHatDecayArticulation]? = nil
     ) -> ResolvedPerformanceBar {
         ResolvedPerformanceBar(
             performance: resolved.performance,
-            ensemble: resolved.ensemble,
+            ensemble: ensemble ?? resolved.ensemble,
             arrangementGesture: resolved.arrangementGesture,
             percussionGear: resolved.percussionGear,
             foundationCompanion: resolved.foundationCompanion,
             pulseEchoEnabled: resolved.pulseEchoEnabled,
             interlockChapter: interlockChapter ?? resolved.interlockChapter,
-            groovePulses: resolved.groovePulses,
+            groovePulses: groovePulses ?? resolved.groovePulses,
+            closedHatDecayArticulations: closedHatDecayArticulations ??
+                resolved.closedHatDecayArticulations,
             spatialContrast: spatialContrast ?? resolved.spatialContrast,
             narrative: resolved.narrative
         )

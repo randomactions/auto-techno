@@ -177,6 +177,51 @@ package enum GroovePulseVoice {
     }
 }
 
+/// Fixed DSP contract for the existing ordinary closed-hat voice. The score
+/// chooses only a semantic decay role; these engine-owned values remain
+/// bounded and versioned with the canonical renderer.
+package enum ClosedHatVoiceContract {
+    package static let durationSeconds = 0.05
+    package static let openHatCompanionDecayRateScale = 1.35
+
+    package static func level(section: SectionKind,
+                              combinedAccent: Double) -> Double {
+        (section == .build ? 0.09 : 0.075) * combinedAccent
+    }
+
+    package static func frameCount(sampleRate: Double) -> Int {
+        max(0, Int(sampleRate * durationSeconds))
+    }
+
+    package static func decayRate(brightness: Double,
+                                  role: ClosedHatDecayRole) -> Double {
+        let neutral = 32 - brightness * 8
+        switch role {
+        case .neutral:
+            return neutral
+        case .openHatCompanion:
+            return neutral * openHatCompanionDecayRateScale
+        }
+    }
+
+    package static func appliedParametersMatch(
+        level: Double,
+        decayRate: Double,
+        brightness: Double,
+        reportedSection: SectionKind,
+        scoreSection: SectionKind,
+        combinedAccent: Double,
+        role: ClosedHatDecayRole
+    ) -> Bool {
+        reportedSection == scoreSection &&
+            level == self.level(
+                section: scoreSection,
+                combinedAccent: combinedAccent
+            ) &&
+            decayRate == self.decayRate(brightness: brightness, role: role)
+    }
+}
+
 package enum VoiceRenderer {
     package static func timingOffsetInSteps(for voice: EnsembleVoice, step: Int,
                                             dna: SceneDNA) -> Double {
@@ -213,6 +258,10 @@ package enum VoiceRenderer {
         var spatialReverbSendBus: [Float] = []
         var groovePulseRenderEvidence: [GroovePulseRenderEvidence] = []
         groovePulseRenderEvidence.reserveCapacity(resolved.groovePulses.count)
+        var closedHatRenderEvidence: [ClosedHatRenderEvidence] = []
+        closedHatRenderEvidence.reserveCapacity(
+            resolved.closedHatDecayArticulations.count
+        )
         swap(&output, &checkedOut.output)
         swap(&kickBus, &checkedOut.kick)
         swap(&kickDetectorBus, &checkedOut.kickDetector)
@@ -228,7 +277,7 @@ package enum VoiceRenderer {
         swap(&spatialReverbSendBus, &checkedOut.spatialReverbSend)
         var random = SeededGenerator(seed: performance.eventSeed)
 
-        for event in resolved.ensemble.events {
+        for (scoreEventIndex, event) in resolved.ensemble.events.enumerated() {
             let pulseArticulation = event.voice == .groovePulse
                 ? resolved.groovePulse(at: event.step) : nil
             let offset = pulseArticulation?.timingOffsetInSteps ??
@@ -259,10 +308,25 @@ package enum VoiceRenderer {
                     start: start, sampleRate: sampleRate,
                     level: 0.085 * accent, frequency: frequency)
             case .percussion:
-                let level = (section == .build ? 0.09 : 0.075) * accent
-                hat(&output, measurement: &percussionStem, start: start,
+                let level = ClosedHatVoiceContract.level(
+                    section: section,
+                    combinedAccent: accent
+                )
+                let role = resolved.closedHatDecay(
+                    atEventIndex: scoreEventIndex
+                )?.role ?? .neutral
+                if let evidence = hat(
+                    &output, measurement: &percussionStem, start: start,
                     sampleRate: sampleRate, level: level,
-                    brightness: scene.character.percussionBrightness, random: &random)
+                    brightness: scene.character.percussionBrightness,
+                    random: &random,
+                    scoreEventIndex: scoreEventIndex,
+                    event: event,
+                    timingOffsetInSteps: offset,
+                    role: role
+                ) {
+                    closedHatRenderEvidence.append(evidence)
+                }
             case .clap:
                 clap(&output, measurement: &percussionStem,
                      start: start, sampleRate: sampleRate, level: 0.08 * accent,
@@ -619,6 +683,7 @@ package enum VoiceRenderer {
                                     percussionStem
                                    ),
                                    groovePulseRenderEvidence: groovePulseRenderEvidence,
+                                   closedHatRenderEvidence: closedHatRenderEvidence,
                                    upperNoteRenderEvidence: upperNoteRenderEvidence,
                                    resonantAnchorSamples: resonantAnchorStem,
                                    detunedCompanionSamples: detunedCompanionStem)
@@ -867,16 +932,102 @@ package enum VoiceRenderer {
 
     private static func hat(_ output: inout [Float], measurement: inout [Float],
                             start: Int, sampleRate: Double, level: Double,
-                            brightness: Double, random: inout SeededGenerator) {
-        let frames = min(Int(sampleRate * 0.05), output.count - start); guard frames > 0 else { return }; var state = 0.0
+                            brightness: Double, random: inout SeededGenerator,
+                            scoreEventIndex: Int, event: EnsembleResolvedEvent,
+                            timingOffsetInSteps: Double,
+                            role: ClosedHatDecayRole) -> ClosedHatRenderEvidence? {
+        let frames = min(
+            ClosedHatVoiceContract.frameCount(sampleRate: sampleRate),
+            output.count - start
+        )
+        guard frames > 0 else { return nil }
+        var state = 0.0
+        let decayRate = ClosedHatVoiceContract.decayRate(
+            brightness: brightness,
+            role: role
+        )
+        let attackFrameCount = min(
+            frames,
+            max(1, Int((sampleRate * 0.008).rounded()))
+        )
+        let tailStartFrame = min(
+            frames,
+            max(0, Int((sampleRate * 0.024).rounded()))
+        )
+        let lowCoefficient = min(1, 1 - exp(-2 * .pi * 2_000 / sampleRate))
+        let midCoefficient = min(1, 1 - exp(-2 * .pi * 8_000 / sampleRate))
+        var fingerprint = ExactPCMFingerprint.MonoAccumulator(sampleCount: frames)
+        var peak = 0.0
+        var energy = 0.0
+        var attackEnergy = 0.0
+        var tailEnergy = 0.0
+        var lowState = 0.0
+        var midState = 0.0
+        var lowEnergy = 0.0
+        var middleEnergy = 0.0
+        var highEnergy = 0.0
+        var finite = decayRate.isFinite && level.isFinite
         for i in 0..<frames {
             let t = Double(i) / sampleRate
             let n = random.unit() * 2 - 1
             state += (n - state) * (0.25 + brightness * 0.25)
-            let renderedSample = Float((n - state * 0.7) * exp(-t * (32 - brightness * 8)) * level)
+            let renderedSample = Float(
+                (n - state * 0.7) * exp(-t * decayRate) * level
+            )
             output[start + i] += renderedSample
             measurement[start + i] += renderedSample
+            fingerprint.append(renderedSample)
+            let value = Double(renderedSample)
+            let sampleEnergy = value * value
+            peak = max(peak, abs(value))
+            energy += sampleEnergy
+            if i < attackFrameCount { attackEnergy += sampleEnergy }
+            if i >= tailStartFrame { tailEnergy += sampleEnergy }
+            lowState += (value - lowState) * lowCoefficient
+            midState += (value - midState) * midCoefficient
+            let middle = midState - lowState
+            let high = value - midState
+            lowEnergy += lowState * lowState
+            middleEnergy += middle * middle
+            highEnergy += high * high
+            finite = finite && renderedSample.isFinite
         }
+        let rms = sqrt(energy / Double(frames))
+        let attackRMS = sqrt(attackEnergy / Double(attackFrameCount))
+        let tailRMS = sqrt(tailEnergy / Double(max(1, frames - tailStartFrame)))
+        let tailToAttackDB = attackRMS > 0
+            ? min(120, max(-120, 20 * log10(max(tailRMS / attackRMS, 0.000_001))))
+            : -120
+        let bandEnergy = lowEnergy + middleEnergy + highEnergy
+        let lowRatio = bandEnergy > 0 ? lowEnergy / bandEnergy : 0
+        let middleRatio = bandEnergy > 0 ? middleEnergy / bandEnergy : 0
+        let highRatio = bandEnergy > 0 ? highEnergy / bandEnergy : 0
+        let spectralCentroid = lowRatio * min(1_000, sampleRate * 0.10) +
+            middleRatio * min(4_000, sampleRate * 0.30) +
+            highRatio * min(10_000, sampleRate * 0.45)
+        let scalars = [
+            decayRate, level, peak, rms, attackRMS, tailRMS,
+            tailToAttackDB, spectralCentroid,
+        ]
+        return ClosedHatRenderEvidence(
+            scoreEventIndex: scoreEventIndex,
+            step: event.step,
+            role: role,
+            eventIntensity: event.intensity,
+            timingOffsetInSteps: timingOffsetInSteps,
+            relocated: event.relocated,
+            appliedLevel: level,
+            appliedDecayRate: decayRate,
+            renderedFrameCount: frames,
+            sampleHash: fingerprint.fingerprint,
+            peak: peak,
+            rms: rms,
+            attackRMS: attackRMS,
+            tailRMS: tailRMS,
+            tailToAttackDB: tailToAttackDB,
+            spectralCentroidHz: spectralCentroid,
+            finite: finite && scalars.allSatisfy(\.isFinite)
+        )
     }
 
     private static func clap(_ output: inout [Float], measurement: inout [Float],

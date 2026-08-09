@@ -234,7 +234,7 @@ package struct UpperTimbreEvidence: Codable, Equatable, Sendable {
         mix(stereoCorrelation.bitPattern)
         mix(maskingOverlap.bitPattern)
         mix(maximumBoundaryDelta.bitPattern)
-        return String(format: "%016llx", hash)
+        return fixedWidthFingerprintHex(hash)
     }
 }
 

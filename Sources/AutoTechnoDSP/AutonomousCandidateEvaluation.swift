@@ -725,6 +725,137 @@ package struct AutonomousGroovePulseBarEvidence: Codable, Equatable, Sendable {
     }
 }
 
+/// Reduced signal evidence for one ordinary closed-hat score event. The
+/// semantic decay role is replayable from the resolved ensemble; signal
+/// observations come from the exact dry sample rendered in the same pass.
+package struct AutonomousClosedHatEventEvidence: Codable, Equatable, Sendable {
+    package static let maximumSourceRMS = 0.25
+    package static let minimumTailToAttackDB = -120.0
+    package static let maximumTailToAttackDB = 120.0
+
+    package let scoreEventIndex: Int
+    package let step: Int
+    package let role: String
+    package let intensity: Double
+    package let timingOffsetInSteps: Double
+    package let relocated: Bool
+    package let decayRateScale: Double
+    package let renderedFrameCount: Int
+    package let sampleHash: String
+    package let sourceRMS: Double
+    package let spectralCentroidHz: Double
+    package let tailToAttackDB: Double
+    package let finite: Bool
+
+    package init(
+        scoreEventIndex: Int,
+        step: Int,
+        role: String,
+        intensity: Double,
+        timingOffsetInSteps: Double,
+        relocated: Bool,
+        decayRateScale: Double,
+        renderedFrameCount: Int,
+        sampleHash: String,
+        sourceRMS: Double,
+        spectralCentroidHz: Double,
+        tailToAttackDB: Double,
+        finite: Bool
+    ) {
+        self.scoreEventIndex = scoreEventIndex
+        self.step = step
+        self.role = role
+        self.intensity = intensity
+        self.timingOffsetInSteps = timingOffsetInSteps
+        self.relocated = relocated
+        self.decayRateScale = decayRateScale
+        self.renderedFrameCount = renderedFrameCount
+        self.sampleHash = sampleHash
+        self.sourceRMS = sourceRMS
+        self.spectralCentroidHz = spectralCentroidHz
+        self.tailToAttackDB = tailToAttackDB
+        self.finite = finite
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            intensity, timingOffsetInSteps, decayRateScale, sourceRMS,
+            spectralCentroidHz, tailToAttackDB,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func isComplete(sampleRate: Double) -> Bool {
+        guard let resolvedRole = ClosedHatDecayRole(rawValue: role) else {
+            return false
+        }
+        let expectedScale = switch resolvedRole {
+        case .neutral: 1.0
+        case .openHatCompanion:
+            ClosedHatVoiceContract.openHatCompanionDecayRateScale
+        }
+        return sampleRate.isFinite &&
+            (QualityQualificationContract.minimumSupportedSampleRate...QualityQualificationContract.maximumSupportedSampleRate)
+                .contains(sampleRate) &&
+            (0..<(16 * 6)).contains(scoreEventIndex) &&
+            (0..<16).contains(step) &&
+            (0...1).contains(intensity) &&
+            (0...0.24).contains(timingOffsetInSteps) &&
+            decayRateScale == expectedScale &&
+            renderedFrameCount == ClosedHatVoiceContract.frameCount(
+                sampleRate: sampleRate
+            ) && Self.isSampleHash(sampleHash) &&
+            (0...Self.maximumSourceRMS).contains(sourceRMS) &&
+            (0...(sampleRate / 2)).contains(spectralCentroidHz) &&
+            (Self.minimumTailToAttackDB...Self.maximumTailToAttackDB)
+                .contains(tailToAttackDB)
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
+/// Explicit per-bar ownership keeps empty bars truthful and prevents either
+/// the score or render side of the event bijection from being truncated away.
+package struct AutonomousClosedHatBarEvidence: Codable, Equatable, Sendable {
+    package let bar: Int
+    package let sourceScoreEventCount: Int
+    package let sourceRenderEventCount: Int
+    package let events: [AutonomousClosedHatEventEvidence]
+
+    package init(
+        bar: Int,
+        sourceScoreEventCount: Int,
+        sourceRenderEventCount: Int,
+        events: [AutonomousClosedHatEventEvidence]
+    ) {
+        self.bar = bar
+        self.sourceScoreEventCount = sourceScoreEventCount
+        self.sourceRenderEventCount = sourceRenderEventCount
+        self.events = Array(
+            events.prefix(
+                AutonomousCandidateEvaluationVector.maximumClosedHatEventsPerBar
+            )
+        )
+    }
+
+    package var isFinite: Bool { events.allSatisfy(\.isFinite) }
+
+    package func isComplete(sampleRate: Double) -> Bool {
+        bar >= 0 && sourceScoreEventCount >= 0 &&
+            sourceScoreEventCount <=
+                AutonomousCandidateEvaluationVector.maximumClosedHatEventsPerBar &&
+            sourceRenderEventCount == sourceScoreEventCount &&
+            events.count == sourceScoreEventCount &&
+            events.map(\.scoreEventIndex) ==
+                events.map(\.scoreEventIndex).sorted() &&
+            Set(events.map(\.scoreEventIndex)).count == events.count &&
+            events.allSatisfy { $0.isComplete(sampleRate: sampleRate) }
+    }
+}
+
 package struct AutonomousGraphEvidence: Codable, Equatable, Sendable {
     package static let maximumViolationCount = 64
 
@@ -878,11 +1009,12 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 3
+    package static let schemaVersion = 4
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
     package static let maximumGroovePulseEventsPerBar = 8
+    package static let maximumClosedHatEventsPerBar = 4
 
     package let schemaVersion: Int
     package let slot: AutonomousCandidateSlot
@@ -899,6 +1031,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let automaticMix: [AutonomousAutomaticMixEvidence]
     package let sourceGroovePulseBarCount: Int
     package let groovePulse: [AutonomousGroovePulseBarEvidence]
+    package let sourceClosedHatBarCount: Int
+    package let closedHat: [AutonomousClosedHatBarEvidence]
     package let graph: AutonomousGraphEvidence
     package let routeContinuation: AutonomousRouteContinuationEvidence
     /// Aggregate over the exact graph-input remainder. This diagnoses whether
@@ -919,6 +1053,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         stems: [AutonomousStemBarEvidence],
         automaticMix: [AutonomousAutomaticMixEvidence],
         groovePulse: [AutonomousGroovePulseBarEvidence],
+        closedHat: [AutonomousClosedHatBarEvidence] = [],
         graph: AutonomousGraphEvidence,
         routeContinuation: AutonomousRouteContinuationEvidence,
         preGraphUpperTimbreEvidence: UpperTimbreEvidence,
@@ -939,6 +1074,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.automaticMix = Array(automaticMix.prefix(Self.maximumBarCount))
         sourceGroovePulseBarCount = groovePulse.count
         self.groovePulse = Array(groovePulse.prefix(Self.maximumBarCount))
+        sourceClosedHatBarCount = closedHat.count
+        self.closedHat = Array(closedHat.prefix(Self.maximumBarCount))
         self.graph = graph
         self.routeContinuation = routeContinuation
         self.preGraphUpperTimbreEvidence = preGraphUpperTimbreEvidence
@@ -1170,6 +1307,83 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 events: matched
             )
         }
+        let closedHat = boundedBlocks.map { block in
+            let score = block.resolvedPerformance.ensemble.events.enumerated()
+                .filter { $0.element.voice == .percussion }
+            let rendered = block.closedHatRenderEvidence
+            let matched = rendered.compactMap {
+                evidence -> AutonomousClosedHatEventEvidence? in
+                guard score.contains(where: {
+                    $0.offset == evidence.scoreEventIndex
+                }),
+                block.resolvedPerformance.ensemble.events.indices.contains(
+                    evidence.scoreEventIndex
+                ) else {
+                    return nil
+                }
+                let event = block.resolvedPerformance.ensemble.events[
+                    evidence.scoreEventIndex
+                ]
+                guard event.voice == .percussion,
+                      let articulation = block.resolvedPerformance.closedHatDecay(
+                        atEventIndex: evidence.scoreEventIndex
+                      ),
+                      articulation.step == event.step,
+                      articulation.role == evidence.role,
+                      evidence.step == event.step,
+                      evidence.eventIntensity == event.intensity,
+                      evidence.relocated == event.relocated else {
+                    return nil
+                }
+                let expectedTiming = VoiceRenderer.timingOffsetInSteps(
+                    for: event.voice,
+                    step: event.step,
+                    dna: block.sceneDNA
+                )
+                let combinedAccent = block.resolvedPerformance.performance.accent(
+                    at: event.step
+                ) * event.intensity
+                let scoreSection = block.resolvedPerformance.performance.section
+                guard evidence.timingOffsetInSteps == expectedTiming,
+                      ClosedHatVoiceContract.appliedParametersMatch(
+                        level: evidence.appliedLevel,
+                        decayRate: evidence.appliedDecayRate,
+                        brightness: plan.scene.character.percussionBrightness,
+                        reportedSection: block.section,
+                        scoreSection: scoreSection,
+                        combinedAccent: combinedAccent,
+                        role: evidence.role
+                      ) else {
+                    return nil
+                }
+                let decayRateScale = switch evidence.role {
+                case .neutral: 1.0
+                case .openHatCompanion:
+                    ClosedHatVoiceContract.openHatCompanionDecayRateScale
+                }
+                return AutonomousClosedHatEventEvidence(
+                    scoreEventIndex: evidence.scoreEventIndex,
+                    step: evidence.step,
+                    role: evidence.role.rawValue,
+                    intensity: evidence.eventIntensity,
+                    timingOffsetInSteps: evidence.timingOffsetInSteps,
+                    relocated: evidence.relocated,
+                    decayRateScale: decayRateScale,
+                    renderedFrameCount: evidence.renderedFrameCount,
+                    sampleHash: evidence.sampleHash,
+                    sourceRMS: evidence.rms,
+                    spectralCentroidHz: evidence.spectralCentroidHz,
+                    tailToAttackDB: evidence.tailToAttackDB,
+                    finite: evidence.finite
+                )
+            }.sorted { $0.scoreEventIndex < $1.scoreEventIndex }
+            return AutonomousClosedHatBarEvidence(
+                bar: block.bar,
+                sourceScoreEventCount: score.count,
+                sourceRenderEventCount: rendered.count,
+                events: matched
+            )
+        }
         let graphEvidence = AutonomousGraphEvidence(
             graphFingerprint: graphFingerprint,
             revision: graph.revision,
@@ -1210,6 +1424,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             stems: stems,
             automaticMix: automaticMix,
             groovePulse: groovePulse,
+            closedHat: closedHat,
             graph: graphEvidence,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: preGraphUpperTimbreEvidence,
@@ -1220,7 +1435,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package var isFinite: Bool {
         symbolic.isFinite && fullMix.isFinite && masking.allSatisfy(\.isFinite) &&
             stems.allSatisfy(\.isFinite) && automaticMix.allSatisfy(\.isFinite) &&
-            groovePulse.allSatisfy(\.isFinite) &&
+            groovePulse.allSatisfy(\.isFinite) && closedHat.allSatisfy(\.isFinite) &&
             routeContinuation.isFinite &&
             preGraphUpperTimbreEvidence.candidateValuesAreFinite &&
             postGraphUpperTimbreEvidence.candidateValuesAreFinite
@@ -1357,16 +1572,21 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceStemBarCount == stems.count &&
             sourceAutomaticMixBarCount == automaticMix.count &&
             sourceGroovePulseBarCount == groovePulse.count &&
+            sourceClosedHatBarCount == closedHat.count &&
             masking.count == fullMix.sourceBarCount &&
             stems.count == fullMix.sourceBarCount &&
             automaticMix.count == fullMix.sourceBarCount &&
             groovePulse.count == fullMix.sourceBarCount &&
+            closedHat.count == fullMix.sourceBarCount &&
             Set(masking.map(\.bar)) == expectedBars && masking.allSatisfy(\.isComplete) &&
             Set(stems.map(\.bar)) == expectedBars && stems.allSatisfy(\.isComplete) &&
             Set(automaticMix.map(\.bar)) == expectedBars &&
             automaticMix.allSatisfy(\.isComplete) &&
             Set(groovePulse.map(\.bar)) == expectedBars &&
             groovePulse.allSatisfy {
+                $0.isComplete(sampleRate: routeContinuation.sampleRate)
+            } && Set(closedHat.map(\.bar)) == expectedBars &&
+            closedHat.allSatisfy {
                 $0.isComplete(sampleRate: routeContinuation.sampleRate)
             }
     }
@@ -1426,6 +1646,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceStemBarCount >= stems.count &&
             sourceAutomaticMixBarCount >= automaticMix.count &&
             sourceGroovePulseBarCount >= groovePulse.count &&
+            sourceClosedHatBarCount >= closedHat.count &&
             graph.violations.count <= AutonomousGraphEvidence.maximumViolationCount &&
             graph.sourceViolationCount >= graph.violations.count &&
             preGraphUpperTimbreEvidence.velocityExpression.count <=
@@ -1443,7 +1664,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             masking.count <= Self.maximumBarCount &&
             stems.count <= Self.maximumBarCount &&
             automaticMix.count <= Self.maximumBarCount &&
-            groovePulse.count <= Self.maximumBarCount
+            groovePulse.count <= Self.maximumBarCount &&
+            closedHat.count <= Self.maximumBarCount
     }
 
     @inline(never)
@@ -1478,6 +1700,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         }
         for bar in groovePulse where
             bar.events.count > Self.maximumGroovePulseEventsPerBar {
+            return false
+        }
+        for bar in closedHat where
+            bar.events.count > Self.maximumClosedHatEventsPerBar {
             return false
         }
         return true
@@ -2336,8 +2562,7 @@ package enum AutonomousCandidateFingerprint {
     package static func automaticMixController(
         kickCorrectionDB: Double
     ) -> String {
-        String(
-            format: "automatic-mix.v1.%016llx",
+        "automatic-mix.v1." + fixedWidthFingerprintHex(
             kickCorrectionDB.bitPattern
         )
     }
@@ -2366,7 +2591,7 @@ private enum AutonomousCandidateCanonicalJSON {
             hash ^= UInt64(byte)
             hash &*= 0x100000001b3
         }
-        return String(format: "%016llx", hash)
+        return fixedWidthFingerprintHex(hash)
     }
 }
 

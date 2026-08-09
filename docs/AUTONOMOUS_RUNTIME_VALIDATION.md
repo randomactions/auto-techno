@@ -55,17 +55,23 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 5 provides the current transaction-level evidence
+Quality-contract schema 6 provides the current transaction-level evidence
 foundation. A complete record contains the bounded symbolic, hard-gate, full-mix,
-per-bar masking, role-stem, automatic-mix, event-local groove-pulse, graph, and
-pre/post upper-timbre vector for every retained attempt. Groove-pulse evidence
-must cover every bar explicitly, bind each score event to one exact dry-sample
+per-bar masking, role-stem, automatic-mix, event-local groove-pulse and
+ordinary closed-hat, graph, and pre/post upper-timbre vector for every retained
+attempt. Groove-pulse evidence must cover every bar explicitly, bind each score
+event to one exact dry-sample
 hash plus bounded level/spectral/tail consequence, and leave selection unchanged
 while the evaluator is uncalibrated. For the complete syncopated-lean cell, tests
 must prove that the 3-3-2 intensity relationship changes only existing pulse
 windows, retains the same event steps/count/timing/physical articulation, and
 returns to the prior alternating cell in the conservative candidate. The
-transaction binds all candidate-plan fingerprints, the
+closed-hat projection must cover every bar, match each surviving ordinary-hat
+score event by stable event index, and prove that only a same-onset open-hat
+companion changes the closed-hat tail. Neutral and conservative events must
+retain the legacy sample identity, with no onset, count, intensity, timing,
+brightness, level, or companion-voice change. The transaction binds all
+candidate-plan fingerprints, the
 engine/policy/evaluator versions, the selected attempt, correction count, route
 generation, incoming continuation, and the pre-decision outgoing render/DSP
 state. Full-mix evidence must identify ITU-R BS.1770-5, retain physical-time

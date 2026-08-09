@@ -4,12 +4,12 @@ import Foundation
 /// policy is deliberately uncalibrated: these types make evidence reproducible
 /// without claiming that professional-quality targets exist yet.
 package enum QualityQualificationContract {
-    /// Version 5 adds phrase-wide ITU-R BS.1770-5 loudness and Annex 2
-    /// true-peak evidence to the selected candidate transaction. The policy
+    /// Version 6 adds bounded, event-local ordinary closed-hat decay evidence
+    /// to the selected phrase's candidate-evaluation transaction. The policy
     /// remains uncalibrated; this version identifies evidence, not promotion.
-    package static let schemaVersion = 5
+    package static let schemaVersion = 6
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v3"
+    package static let engineVersion = "autotechno-canonical-engine.v5"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

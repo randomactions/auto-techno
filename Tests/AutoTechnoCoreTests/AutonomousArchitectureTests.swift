@@ -187,7 +187,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true, conservative: false
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v3")
+                "autotechno-canonical-engine.v5")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -323,6 +323,87 @@ struct AdaptiveAutonomousSessionTests {
         #expect(neutral[0].strikeZone == .middle)
         #expect(neutral[0].damping == 0.5)
         #expect(neutral[0].timbreMicrovariation == 0)
+    }
+
+    @Test("Closed-hat decay roles follow exact post-arbitration companions")
+    func closedHatDecayRelationships() {
+        let ensemble = EnsembleContext(
+            focusRole: .percussion,
+            events: [
+                EnsembleResolvedEvent(
+                    voice: .kick, step: 0, intensity: 1, relocated: false
+                ),
+                EnsembleResolvedEvent(
+                    voice: .percussion, step: 3, intensity: 0.48, relocated: false
+                ),
+                EnsembleResolvedEvent(
+                    voice: .openHat, step: 3, intensity: 0.42, relocated: false
+                ),
+                EnsembleResolvedEvent(
+                    voice: .percussion, step: 7, intensity: 0.48, relocated: true
+                ),
+                EnsembleResolvedEvent(
+                    voice: .openHat, step: 7, intensity: 0.42, relocated: true
+                ),
+                EnsembleResolvedEvent(
+                    voice: .percussion, step: 11, intensity: 0.48, relocated: false
+                ),
+                EnsembleResolvedEvent(
+                    voice: .percussion, step: 15, intensity: 0.48, relocated: false
+                ),
+                EnsembleResolvedEvent(
+                    voice: .percussion, step: 1, intensity: 0.48, relocated: false
+                ),
+            ],
+            kickAnchors: [0],
+            intentionalPileup: true
+        )
+
+        let authored = ClosedHatDecayResolver.articulations(
+            from: ensemble,
+            conservative: false
+        )
+        #expect(authored.count == 4)
+        #expect(authored.map(\.scoreEventIndex) == [1, 3, 5, 6])
+        #expect(authored.map(\.step) == [3, 7, 11, 15])
+        #expect(authored.map(\.role) == [
+            .openHatCompanion, .openHatCompanion, .neutral, .neutral,
+        ])
+        #expect(Set(authored.map(\.scoreEventIndex)).count == authored.count)
+
+        let conservative = ClosedHatDecayResolver.articulations(
+            from: ensemble,
+            conservative: true
+        )
+        #expect(conservative.map(\.scoreEventIndex) == authored.map(\.scoreEventIndex))
+        #expect(conservative.map(\.step) == authored.map(\.step))
+        #expect(conservative.allSatisfy { $0.role == .neutral })
+    }
+
+    @Test("Director keys every closed-hat decay role to its surviving score event")
+    func closedHatDecayDirectorIntegration() {
+        let director = AutonomousSessionDirector()
+        let candidates = director.candidates(from: director.initialState())
+        for plan in [candidates.primary, candidates.fallback] {
+            for resolved in plan.resolvedBars {
+                let expected = Array(resolved.ensemble.events.enumerated().filter {
+                    $0.element.voice == .percussion
+                }.prefix(4))
+                let articulations = resolved.closedHatDecayArticulations
+                #expect(articulations.count == expected.count)
+                #expect(articulations.map(\.scoreEventIndex) == expected.map(\.offset))
+                #expect(articulations.map(\.step) == expected.map(\.element.step))
+                #expect(Set(articulations.map(\.scoreEventIndex)).count == articulations.count)
+                for articulation in articulations {
+                    #expect(resolved.closedHatDecay(
+                        atEventIndex: articulation.scoreEventIndex
+                    ) == articulation)
+                }
+                if plan.conservative {
+                    #expect(articulations.allSatisfy { $0.role == .neutral })
+                }
+            }
+        }
     }
 
     @Test("Ghost pulses contribute one fifth of an ordinary activity event")

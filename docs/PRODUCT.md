@@ -56,6 +56,14 @@ prior alternating intensity cell and exact neutral carrier. These observations
 are retained for a future calibrated policy but do not affect selection while
 the shipping evaluator remains uncalibrated.
 
+The ordinary closed-hat path uses the same contract. After ensemble arbitration,
+an existing closed hat that shares its resolved onset with the existing open hat
+receives one semantic companion role. The renderer shortens only that closed-hat
+tail; onset, count, intensity, swing, brightness, level, and the open-hat render
+remain unchanged. Same-pass event evidence binds the score event to its exact
+dry-sample consequence, and the conservative candidate keeps the legacy neutral
+decay exactly.
+
 ## Professional-sound objective
 
 The long-term goal is professional release-quality sound produced by engine-owned

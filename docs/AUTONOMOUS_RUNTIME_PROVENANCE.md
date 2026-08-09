@@ -19,13 +19,13 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 5. Each
+   candidate-evaluation transaction under quality-contract schema 6. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
-   per-bar masking, role-stem, automatic-mix, event-local groove-pulse, graph,
-   and pre/post upper-timbre evidence. Groove-pulse records bind the existing
-   resolved onset to score-owned strike zone, damping, deterministic
-   microvariation, exact dry-sample identity, and reduced envelope/spectral
-   consequence. The transaction binds all three
+   per-bar masking, role-stem, automatic-mix, event-local groove-pulse and
+   ordinary closed-hat, graph, and pre/post upper-timbre evidence. Groove-pulse
+   records bind the existing resolved onset to score-owned strike zone, damping,
+   deterministic microvariation, exact dry-sample identity, and reduced
+   envelope/spectral consequence. The transaction binds all three
    plan fingerprints, engine/policy/evaluator versions, attempt-local reasons,
    selection, comparison, and correction provenance. It permits at most the
    primary, alternate, and deterministic fallback plus one home-timbre
@@ -75,6 +75,11 @@ mistaken for a completed feedback system.
    the prior alternating intensity cell and resolves every pulse to the
    bit-identical legacy middle/neutral contact. Same-pass event evidence is
    descriptive only; the uncalibrated evaluator does not rank it.
+   Ordinary closed hats retain the existing 50 ms source and RNG order. When a
+   resolved open hat shares the same onset, the score labels only that closed
+   hat as its companion and the renderer increases its decay rate; every other
+   hat remains neutral. The conservative score is fully neutral, and bounded
+   same-pass evidence makes the event-local PCM consequence attributable.
 6. The unchanged pre-fader kick remains the ducking detector. The generated
    graph receives the exact `full - protected-rhythm` remainder, and its output
    is recombined with the protected stereo rhythm route. The protected route
@@ -88,7 +93,7 @@ mistaken for a completed feedback system.
    sixteen bar windows. It is descriptive only: uncalibrated masking evidence
    applies no cut, while the existing authored envelope, kick-linked guard,
    ducking, glue, and output-safety stages remain active. Upper-timbre evidence
-   schema 3 (quality-report contract schema 5) retains protected rhythm as its
+   schema 3 (quality-report contract schema 6) retains protected rhythm as its
    masking reference and adds bounded onset-local anchor-velocity observations
    from the exact dry anchor tap.
    Score-owned anchor velocity now projects into the authored filter-envelope

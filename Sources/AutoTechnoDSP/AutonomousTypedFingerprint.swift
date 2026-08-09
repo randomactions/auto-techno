@@ -1,13 +1,28 @@
 import AutoTechnoCore
 import Foundation
 
+/// Canonical FNV/bit-pattern rendering without Foundation's variadic formatter.
+/// Keeping this out of line prevents deep validation on a cooperative-task
+/// stack from inheriting the formatter's comparatively large stack frame.
+@inline(never)
+func fixedWidthFingerprintHex(_ value: UInt64) -> String {
+    var remaining = value
+    var bytes = [UInt8](repeating: 48, count: 16)
+    for index in stride(from: 15, through: 0, by: -1) {
+        let nibble = UInt8(remaining & 0x0f)
+        bytes[index] = nibble < 10 ? 48 + nibble : 87 + nibble
+        remaining >>= 4
+    }
+    return String(decoding: bytes, as: UTF8.self)
+}
+
 /// Bit-exact, streaming fingerprints for the canonical candidate inputs and
 /// continuation owners. Every stored value is encoded through a typed path;
 /// no reflection, textual object descriptions, or whole-state byte buffers
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
-        digest(domain: "candidate-plan.typed.v2") { sink in
+        digest(domain: "candidate-plan.typed.v3") { sink in
             encode(plan, into: &sink)
         }
     }
@@ -127,7 +142,7 @@ private extension AutonomousTypedFingerprint {
         var sink = StreamingFNV1a()
         sink.domain(domain)
         body(&sink)
-        return String(format: "%016llx", sink.value)
+        return fixedWidthFingerprintHex(sink.value)
     }
 
     static func cancellableDigest(
@@ -139,7 +154,7 @@ private extension AutonomousTypedFingerprint {
         var sink = StreamingFNV1a()
         sink.domain(domain)
         guard body(&sink), !cancellationRequested() else { return nil }
-        return String(format: "%016llx", sink.value)
+        return fixedWidthFingerprintHex(sink.value)
     }
 
     // MARK: Autonomous phrase plan
@@ -312,6 +327,11 @@ private extension AutonomousTypedFingerprint {
         sink.field("interlockChapter"); sink.raw(value.interlockChapter.rawValue)
         sink.field("groovePulses"); sink.collection(value.groovePulses.count)
         for pulse in value.groovePulses { encode(pulse, into: &sink) }
+        sink.field("closedHatDecayArticulations")
+        sink.collection(value.closedHatDecayArticulations.count)
+        for articulation in value.closedHatDecayArticulations {
+            encode(articulation, into: &sink)
+        }
         sink.field("spatialContrast"); encode(value.spatialContrast, into: &sink)
         sink.field("narrative"); encode(value.narrative, into: &sink)
     }
@@ -363,6 +383,14 @@ private extension AutonomousTypedFingerprint {
         sink.field("strikeZone"); sink.raw(value.strikeZone.rawValue)
         sink.field("damping"); sink.double(value.damping)
         sink.field("timbreMicrovariation"); sink.double(value.timbreMicrovariation)
+    }
+
+    static func encode(_ value: ClosedHatDecayArticulation,
+                       into sink: inout StreamingFNV1a) {
+        sink.aggregate("ClosedHatDecayArticulation")
+        sink.field("scoreEventIndex"); sink.int(value.scoreEventIndex)
+        sink.field("step"); sink.int(value.step)
+        sink.field("role"); sink.raw(value.role.rawValue)
     }
 
     static func encode(_ value: SpatialContrastArticulation, into sink: inout StreamingFNV1a) {

@@ -1082,6 +1082,12 @@ struct QualityQualificationFoundationTests {
                 sourceRenderEventCount: 0,
                 events: []
             )],
+            closedHat: [AutonomousClosedHatBarEvidence(
+                bar: 0,
+                sourceScoreEventCount: 0,
+                sourceRenderEventCount: 0,
+                events: []
+            )],
             graph: graph,
             routeContinuation: route,
             preGraphUpperTimbreEvidence: evidence,
@@ -1130,6 +1136,7 @@ struct QualityQualificationFoundationTests {
                 stems: source.stems,
                 automaticMix: source.automaticMix,
                 groovePulse: source.groovePulse,
+                closedHat: source.closedHat,
                 graph: source.graph,
                 routeContinuation: source.routeContinuation,
                 preGraphUpperTimbreEvidence: source.preGraphUpperTimbreEvidence,

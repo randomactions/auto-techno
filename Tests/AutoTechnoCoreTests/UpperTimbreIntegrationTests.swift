@@ -491,6 +491,196 @@ struct UpperTimbreIntegrationTests {
         ))
     }
 
+    @Test("Closed-hat decay articulation participates in typed plan identity")
+    func closedHatDecayPlanFingerprint() throws {
+        let fixture = try #require(closedHatCompanionFixture())
+        let source = fixture.candidates.primary
+        let barIndex = try #require(source.resolvedBars.firstIndex(where: { bar in
+            bar.closedHatDecayArticulations.contains { $0.role == .openHatCompanion }
+        }))
+        let bar = source.resolvedBars[barIndex]
+        let articulationIndex = try #require(
+            bar.closedHatDecayArticulations.firstIndex {
+                $0.role == .openHatCompanion
+            }
+        )
+        let sourceArticulation = bar.closedHatDecayArticulations[articulationIndex]
+        var changedArticulations = bar.closedHatDecayArticulations
+        changedArticulations[articulationIndex] = ClosedHatDecayArticulation(
+            scoreEventIndex: sourceArticulation.scoreEventIndex,
+            step: sourceArticulation.step,
+            role: .neutral
+        )
+        var changedBars = source.resolvedBars
+        changedBars[barIndex] = barReplacingClosedHatDecayArticulations(
+            in: bar,
+            with: changedArticulations
+        )
+        let changed = planReplacingResolvedBars(in: source, with: changedBars)
+
+        #expect(source != changed)
+        #expect(AutonomousCandidateFingerprint.plan(source) !=
+                AutonomousCandidateFingerprint.plan(changed))
+
+        let forgedCandidates = AutonomousPhraseCandidates(
+            primary: changed,
+            alternate: fixture.candidates.alternate,
+            fallback: fixture.candidates.fallback
+        )
+        let probe = CandidateCancellationProbe(cancelAtCheck: .max)
+        let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            candidates: forgedCandidates,
+            sessionSeed: fixture.state.rootSeed,
+            memory: fixture.state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            routeChannelCount: 2,
+            cancellationRequested: { probe.check() }
+        )
+        #expect(prepared == nil)
+        #expect(probe.checkCount == 1)
+    }
+
+    @Test("Canonical closed/open-hat relation survives route-rate preparation")
+    func closedHatCompanionRouteRatePreparation() throws {
+        let fixture = try #require(closedHatCompanionFixture())
+        let state = fixture.state
+        let candidates = fixture.candidates
+        let expectedRelations = candidates.primary.resolvedBars.flatMap { bar in
+            bar.closedHatDecayArticulations.filter {
+                $0.role == .openHatCompanion
+            }.map {
+                "\(bar.performance.bar):\($0.scoreEventIndex):\($0.step):\($0.role.rawValue)"
+            }
+        }
+        #expect(!expectedRelations.isEmpty)
+
+        func prepare(sampleRate: Double, routeGeneration: Int) -> PreparedAutonomousPhrase? {
+            AutonomousPhrasePreparer.prepareIfNotCancelled(
+                candidates: candidates,
+                sessionSeed: state.rootSeed,
+                memory: state.memory,
+                sampleRate: sampleRate,
+                incomingRenderState: RenderState(),
+                incomingGraphState: GeneratedDSPContinuationState(),
+                previousGraph: nil,
+                routeRecovery: true,
+                routeGeneration: routeGeneration,
+                cancellationRequested: { false }
+            )
+        }
+
+        let rate8 = try #require(prepare(sampleRate: 8_000, routeGeneration: 4))
+        let rate12 = try #require(prepare(sampleRate: 12_000, routeGeneration: 5))
+        for prepared in [rate8, rate12] {
+            #expect(prepared.plan == candidates.primary)
+            #expect(prepared.candidateEvaluation.selectedSlot == .primary)
+            #expect(prepared.candidateEvaluation.comparison == .unavailable)
+            #expect(prepared.candidateEvaluation.attempts.count == 1)
+            #expect(prepared.qualityDecision.outcome == .qualificationUnavailable)
+            #expect(prepared.qualityDecision.reasonCodes.contains(.policyUncalibratedV1))
+            #expect(prepared.hardGatesPassed)
+            #expect(prepared.commitEligible)
+
+            var renderedRelations: [String] = []
+            for (resolved, block) in zip(candidates.primary.resolvedBars, prepared.blocks) {
+                #expect(block.resolvedPerformance == resolved)
+                #expect(block.closedHatRenderEvidence.count ==
+                        resolved.closedHatDecayArticulations.count)
+                for articulation in resolved.closedHatDecayArticulations where
+                    articulation.role == .openHatCompanion {
+                    let closedHat = try #require(
+                        resolved.ensemble.events.indices.contains(
+                            articulation.scoreEventIndex
+                        ) ? resolved.ensemble.events[articulation.scoreEventIndex] : nil
+                    )
+                    #expect(closedHat.voice == .percussion)
+                    #expect(closedHat.step == articulation.step)
+                    #expect(resolved.ensemble.events.contains {
+                        $0.voice == .openHat && $0.step == articulation.step
+                    })
+                    let evidence = try #require(block.closedHatRenderEvidence.first {
+                        $0.scoreEventIndex == articulation.scoreEventIndex
+                    })
+                    #expect(evidence.step == articulation.step)
+                    #expect(evidence.role == .openHatCompanion)
+                    #expect(evidence.eventIntensity == closedHat.intensity)
+                    #expect(evidence.relocated == closedHat.relocated)
+                    #expect(evidence.appliedDecayRate == ClosedHatVoiceContract.decayRate(
+                        brightness: candidates.primary.scene.character.percussionBrightness,
+                        role: .openHatCompanion
+                    ))
+                    #expect(evidence.finite)
+                    renderedRelations.append(
+                        "\(resolved.performance.bar):\(evidence.scoreEventIndex):" +
+                            "\(evidence.step):\(evidence.role.rawValue)"
+                    )
+                }
+            }
+            #expect(renderedRelations == expectedRelations)
+        }
+        #expect(rate8.candidateEvaluation.planFingerprints ==
+                rate12.candidateEvaluation.planFingerprints)
+        #expect(rate8.selectedCandidateEvidence.routeContinuation.routeFingerprint !=
+                rate12.selectedCandidateEvidence.routeContinuation.routeFingerprint)
+        #expect(rate8.selectedCandidateEvidence.routeContinuation.sampleRate == 8_000)
+        #expect(rate12.selectedCandidateEvidence.routeContinuation.sampleRate == 12_000)
+
+        let targetBlockIndex = try #require(rate8.blocks.firstIndex { block in
+            block.closedHatRenderEvidence.contains {
+                $0.role == .openHatCompanion
+            }
+        })
+        let targetBlock = rate8.blocks[targetBlockIndex]
+        let targetEvidenceIndex = try #require(
+            targetBlock.closedHatRenderEvidence.firstIndex {
+                $0.role == .openHatCompanion
+            }
+        )
+        let sourceEvidence = targetBlock.closedHatRenderEvidence[targetEvidenceIndex]
+        var forgedEvidence = targetBlock.closedHatRenderEvidence
+        forgedEvidence[targetEvidenceIndex] = closedHatEvidence(
+            replacing: sourceEvidence,
+            appliedDecayRate: sourceEvidence.appliedDecayRate + 1
+        )
+        var forgedBlocks = rate8.blocks
+        forgedBlocks[targetBlockIndex] = renderBlock(
+            replacing: targetBlock,
+            closedHatRenderEvidence: forgedEvidence
+        )
+        let route = rate8.selectedCandidateEvidence.routeContinuation
+        let noCancellation: @Sendable () -> Bool = { false }
+        let maybeForgedVector = AutonomousCandidateEvaluationVector.make(
+            slot: rate8.selectedCandidateEvidence.slot,
+            plan: rate8.plan,
+            graph: rate8.graph,
+            planFingerprint: rate8.selectedCandidateEvidence.planFingerprint,
+            graphFingerprint: rate8.selectedCandidateEvidence.graphFingerprint,
+            blocks: forgedBlocks,
+            audioPreflight: rate8.audioPreflight,
+            upperTimbreEvidence: rate8.upperTimbreEvidence,
+            sampleRate: route.sampleRate,
+            routeChannelCount: route.channelCount,
+            routeGeneration: route.routeGeneration,
+            routeFingerprint: route.routeFingerprint,
+            incomingContinuationFingerprint: route.incomingContinuationFingerprint,
+            incomingQualityStateFingerprint: route.incomingQualityStateFingerprint,
+            incomingKickCorrectionDB: route.incomingKickCorrectionDB,
+            incomingTopologyRevision: route.incomingTopologyRevision,
+            previousGraphFingerprint: route.previousGraphFingerprint,
+            routeRecovery: route.routeRecovery,
+            outgoingRenderDSPFingerprint: route.outgoingRenderDSPFingerprint,
+            controllerStateFingerprint: route.controllerStateFingerprint,
+            cancellationRequested: noCancellation
+        )
+        let forgedVector = try #require(maybeForgedVector)
+        #expect(!forgedVector.isComplete)
+        #expect(forgedVector.closedHat[targetBlockIndex].events.count ==
+                targetBlock.closedHatRenderEvidence.count - 1)
+    }
+
     @Test("Paired evaluator selects one atomic alternate product and transaction")
     func pairedEvaluatorTransaction() {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
@@ -699,10 +889,146 @@ struct UpperTimbreIntegrationTests {
                 pulseEchoEnabled: resolved.pulseEchoEnabled,
                 interlockChapter: resolved.interlockChapter,
                 groovePulses: pulses,
+                closedHatDecayArticulations: resolved.closedHatDecayArticulations,
                 spatialContrast: resolved.spatialContrast,
                 narrative: resolved.narrative
             )
         }
+        guard let closedHatBarIndex = source.primary.resolvedBars.firstIndex(where: {
+            !$0.closedHatDecayArticulations.isEmpty
+        }) else {
+            Issue.record("Expected a bounded-input closed-hat fixture")
+            return
+        }
+        let closedHatBar = source.primary.resolvedBars[closedHatBarIndex]
+        let sourceClosedHat = closedHatBar.closedHatDecayArticulations[0]
+        let closedHatIndexes = Set(
+            closedHatBar.closedHatDecayArticulations.map(\.scoreEventIndex)
+        )
+        guard let retargetIndex = closedHatBar.ensemble.events.indices.first(where: {
+            !closedHatIndexes.contains($0) &&
+                closedHatBar.ensemble.events[$0].voice != .percussion
+        }) else {
+            Issue.record("Expected a non-hat score event for retargeting")
+            return
+        }
+        let retargetEvent = closedHatBar.ensemble.events[retargetIndex]
+
+        func closedHatCandidates(
+            _ articulations: [ClosedHatDecayArticulation],
+            plan: AutonomousPhrasePlan
+        ) -> AutonomousPhraseCandidates {
+            let targetBarIndex = plan.conservative
+                ? plan.resolvedBars.firstIndex {
+                    !$0.closedHatDecayArticulations.isEmpty
+                } ?? 0
+                : closedHatBarIndex
+            var bars = plan.resolvedBars
+            bars[targetBarIndex] = barReplacingClosedHatDecayArticulations(
+                in: bars[targetBarIndex],
+                with: articulations
+            )
+            let changed = planReplacingResolvedBars(in: plan, with: bars)
+            return AutonomousPhraseCandidates(
+                primary: plan.conservative ? source.primary : changed,
+                alternate: source.alternate,
+                fallback: plan.conservative ? changed : source.fallback
+            )
+        }
+
+        let missingClosedHat = closedHatCandidates(
+            Array(closedHatBar.closedHatDecayArticulations.dropLast()),
+            plan: source.primary
+        )
+        let duplicateClosedHat = closedHatCandidates(
+            closedHatBar.closedHatDecayArticulations + [sourceClosedHat],
+            plan: source.primary
+        )
+        var retargetedClosedHats = closedHatBar.closedHatDecayArticulations
+        retargetedClosedHats[0] = ClosedHatDecayArticulation(
+            scoreEventIndex: retargetIndex,
+            step: retargetEvent.step,
+            role: sourceClosedHat.role
+        )
+        let retargetedClosedHat = closedHatCandidates(
+            retargetedClosedHats,
+            plan: source.primary
+        )
+
+        guard let conservativeBarIndex = source.fallback.resolvedBars.firstIndex(where: {
+            $0.ensemble.events.filter { $0.voice == .percussion }.count <
+                AutonomousCandidateEvaluationVector.maximumClosedHatEventsPerBar
+        }) else {
+            Issue.record("Expected capacity for a conservative closed-hat fixture")
+            return
+        }
+        let conservativeSourceBar = source.fallback.resolvedBars[conservativeBarIndex]
+        let conservativeMaximumAtOneStep = conservativeSourceBar.ensemble.intentionalPileup
+            ? 6 : 3
+        let conservativeOccupancy = Dictionary(
+            grouping: conservativeSourceBar.ensemble.events,
+            by: \.step
+        )
+        guard let conservativeStep = (0..<16).first(where: {
+            conservativeOccupancy[$0, default: []].count < conservativeMaximumAtOneStep
+        }) else {
+            Issue.record("Expected a free conservative closed-hat step")
+            return
+        }
+        let conservativeEvents = (conservativeSourceBar.ensemble.events + [
+            EnsembleResolvedEvent(
+                voice: .percussion,
+                step: conservativeStep,
+                intensity: 0.48,
+                relocated: false
+            ),
+        ]).sorted {
+            if $0.step != $1.step { return $0.step < $1.step }
+            return $0.voice.rawValue < $1.voice.rawValue
+        }
+        let conservativeEnsemble = EnsembleContext(
+            focusRole: conservativeSourceBar.ensemble.focusRole,
+            events: conservativeEvents,
+            kickAnchors: conservativeSourceBar.ensemble.kickAnchors,
+            intentionalPileup: conservativeSourceBar.ensemble.intentionalPileup
+        )
+        let conservativeBar = ResolvedPerformanceBar(
+            performance: conservativeSourceBar.performance,
+            ensemble: conservativeEnsemble,
+            arrangementGesture: conservativeSourceBar.arrangementGesture,
+            percussionGear: conservativeSourceBar.percussionGear,
+            foundationCompanion: conservativeSourceBar.foundationCompanion,
+            pulseEchoEnabled: conservativeSourceBar.pulseEchoEnabled,
+            interlockChapter: conservativeSourceBar.interlockChapter,
+            groovePulses: conservativeSourceBar.groovePulses,
+            closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
+                from: conservativeEnsemble,
+                conservative: true
+            ),
+            spatialContrast: conservativeSourceBar.spatialContrast,
+            narrative: conservativeSourceBar.narrative
+        )
+        var neutralConservativeBars = source.fallback.resolvedBars
+        neutralConservativeBars[conservativeBarIndex] = conservativeBar
+        let neutralConservativePlan = planReplacingResolvedBars(
+            in: source.fallback,
+            with: neutralConservativeBars
+        )
+        guard let conservativeHat = conservativeBar.closedHatDecayArticulations.first else {
+            Issue.record("Expected a resolved conservative closed-hat articulation")
+            return
+        }
+        var nonNeutralConservativeHats = conservativeBar.closedHatDecayArticulations
+        nonNeutralConservativeHats[0] = ClosedHatDecayArticulation(
+            scoreEventIndex: conservativeHat.scoreEventIndex,
+            step: conservativeHat.step,
+            role: .openHatCompanion
+        )
+        let nonNeutralConservativeHat = closedHatCandidates(
+            nonNeutralConservativeHats,
+            plan: neutralConservativePlan
+        )
+
         guard let pulseBarIndex = source.primary.resolvedBars.firstIndex(where: {
             !$0.groovePulses.isEmpty
         }) else {
@@ -761,6 +1087,7 @@ struct UpperTimbreIntegrationTests {
             pulseEchoEnabled: maxBarSource.pulseEchoEnabled,
             interlockChapter: maxBarSource.interlockChapter,
             groovePulses: maxBarSource.groovePulses,
+            closedHatDecayArticulations: maxBarSource.closedHatDecayArticulations,
             spatialContrast: maxBarSource.spatialContrast,
             narrative: maxBarSource.narrative
         )
@@ -815,6 +1142,7 @@ struct UpperTimbreIntegrationTests {
             pulseEchoEnabled: fallbackPulseBar.pulseEchoEnabled,
             interlockChapter: fallbackPulseBar.interlockChapter,
             groovePulses: [nonNeutralFallbackPulse],
+            closedHatDecayArticulations: fallbackPulseBar.closedHatDecayArticulations,
             spatialContrast: fallbackPulseBar.spatialContrast,
             narrative: fallbackPulseBar.narrative
         )
@@ -853,28 +1181,36 @@ struct UpperTimbreIntegrationTests {
             protectedRouting: coherentGraph.protectedRouting
         )
 
-        let cases = [
-            prepare(shifted),
-            prepare(overlong),
-            prepare(missingArticulation),
-            prepare(mismatchedArticulation),
-            prepare(maxBarInput),
-            prepare(nonNeutralFallback),
-            prepare(sampleRate: 4_000),
-            prepare(routeChannelCount: 1),
-            prepare(renderState: staleTimelineState),
-            prepare(renderState: forgedPristineControllerState),
-            prepare(renderState: oversizedState),
-            prepare(graphState: invalidGraphState, previousGraph: invalidGraph),
-            prepare(
-                graphState: incoherentRecoveryState,
-                previousGraph: incoherentRecoveryTarget,
-                routeRecovery: true
-            ),
-        ]
-        #expect(cases.allSatisfy { result, checkCount in
-            result == nil && checkCount == 1
-        })
+        func expectRejected(
+            _ result: @autoclosure () -> (PreparedAutonomousPhrase?, Int)
+        ) {
+            let (prepared, checkCount) = result()
+            #expect(prepared == nil && checkCount == 1)
+        }
+        expectRejected(prepare(shifted))
+        expectRejected(prepare(overlong))
+        expectRejected(prepare(missingClosedHat))
+        expectRejected(prepare(duplicateClosedHat))
+        expectRejected(prepare(retargetedClosedHat))
+        expectRejected(prepare(nonNeutralConservativeHat))
+        expectRejected(prepare(missingArticulation))
+        expectRejected(prepare(mismatchedArticulation))
+        expectRejected(prepare(maxBarInput))
+        expectRejected(prepare(nonNeutralFallback))
+        expectRejected(prepare(sampleRate: 4_000))
+        expectRejected(prepare(routeChannelCount: 1))
+        expectRejected(prepare(renderState: staleTimelineState))
+        expectRejected(prepare(renderState: forgedPristineControllerState))
+        expectRejected(prepare(renderState: oversizedState))
+        expectRejected(prepare(
+            graphState: invalidGraphState,
+            previousGraph: invalidGraph
+        ))
+        expectRejected(prepare(
+            graphState: incoherentRecoveryState,
+            previousGraph: incoherentRecoveryTarget,
+            routeRecovery: true
+        ))
     }
 
     @Test("Conservative fallback replays the entire canonical groove-pulse cell")
@@ -936,6 +1272,10 @@ struct UpperTimbreIntegrationTests {
             pulseEchoEnabled: false,
             interlockChapter: sourceBar.interlockChapter,
             groovePulses: pulses,
+            closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
+                from: ensemble,
+                conservative: true
+            ),
             spatialContrast: sourceBar.spatialContrast,
             narrative: sourceBar.narrative
         )
@@ -993,6 +1333,7 @@ struct UpperTimbreIntegrationTests {
                 pulseEchoEnabled: canonicalBar.pulseEchoEnabled,
                 interlockChapter: canonicalBar.interlockChapter,
                 groovePulses: pulses,
+                closedHatDecayArticulations: canonicalBar.closedHatDecayArticulations,
                 spatialContrast: canonicalBar.spatialContrast,
                 narrative: canonicalBar.narrative
             ))
@@ -1422,6 +1763,205 @@ struct UpperTimbreIntegrationTests {
         #expect(first.postGraphRemainderTimbreEvidence.maximumBoundaryDelta > 0.65)
     }
 
+    private func closedHatCompanionFixture() ->
+        (state: AutonomousSessionState, candidates: AutonomousPhraseCandidates)? {
+        for seed in UInt64(1)...128 {
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            let state = director.initialState()
+            let source = director.candidates(from: state)
+            var candidates = AutonomousPhraseCandidates(
+                primary: shortenedCandidate(
+                    source.primary,
+                    interest: source.primary.interest
+                ),
+                alternate: shortenedCandidate(
+                    source.alternate,
+                    interest: source.alternate.interest
+                ),
+                fallback: shortenedCandidate(
+                    source.fallback,
+                    interest: source.fallback.interest
+                )
+            )
+            guard source.primary.interest.valid,
+                  let target = candidates.primary.resolvedBars.enumerated().first(where: {
+                      _, bar in
+                      bar.ensemble.events.filter { $0.voice == .percussion }.count <
+                          AutonomousCandidateEvaluationVector.maximumClosedHatEventsPerBar
+                  }) else {
+                continue
+            }
+            let maximumAtOneStep = target.element.ensemble.intentionalPileup ? 6 : 3
+            let occupancy = Dictionary(
+                grouping: target.element.ensemble.events,
+                by: \.step
+            )
+            guard let companionStep = (0..<16).first(where: {
+                occupancy[$0, default: []].count <= maximumAtOneStep - 2
+            }) else { continue }
+            let resolvedEvents = (target.element.ensemble.events + [
+                EnsembleResolvedEvent(
+                    voice: .percussion,
+                    step: companionStep,
+                    intensity: 0.48,
+                    relocated: false
+                ),
+                EnsembleResolvedEvent(
+                    voice: .openHat,
+                    step: companionStep,
+                    intensity: 0.42,
+                    relocated: false
+                ),
+            ]).sorted {
+                if $0.step != $1.step { return $0.step < $1.step }
+                return $0.voice.rawValue < $1.voice.rawValue
+            }
+            let ensemble = EnsembleContext(
+                focusRole: target.element.ensemble.focusRole,
+                events: resolvedEvents,
+                kickAnchors: target.element.ensemble.kickAnchors,
+                intentionalPileup: target.element.ensemble.intentionalPileup
+            )
+            let resolved = ResolvedPerformanceBar(
+                performance: target.element.performance,
+                ensemble: ensemble,
+                arrangementGesture: target.element.arrangementGesture,
+                percussionGear: target.element.percussionGear,
+                foundationCompanion: target.element.foundationCompanion,
+                pulseEchoEnabled: target.element.pulseEchoEnabled,
+                interlockChapter: target.element.interlockChapter,
+                groovePulses: target.element.groovePulses,
+                closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
+                    from: ensemble,
+                    conservative: false
+                ),
+                spatialContrast: target.element.spatialContrast,
+                narrative: target.element.narrative
+            )
+            var bars = candidates.primary.resolvedBars
+            bars[target.offset] = resolved
+            candidates = AutonomousPhraseCandidates(
+                primary: planReplacingResolvedBars(
+                    in: candidates.primary,
+                    with: bars
+                ),
+                alternate: candidates.alternate,
+                fallback: candidates.fallback
+            )
+            if candidates.primary.resolvedBars.contains(where: { bar in
+                bar.closedHatDecayArticulations.contains {
+                    $0.role == .openHatCompanion
+                }
+            }) {
+                return (state, candidates)
+            }
+        }
+        return nil
+    }
+
+    private func planReplacingResolvedBars(
+        in source: AutonomousPhrasePlan,
+        with bars: [ResolvedPerformanceBar]
+    ) -> AutonomousPhrasePlan {
+        AutonomousPhrasePlan(
+            phraseIndex: source.phraseIndex,
+            startBar: source.startBar,
+            barCount: bars.count,
+            kind: source.kind,
+            scene: source.scene,
+            dna: source.dna,
+            resolvedBars: bars,
+            openedDebt: source.openedDebt,
+            paidDebtIDs: source.paidDebtIDs,
+            requestsTopologyMutation: source.requestsTopologyMutation,
+            alternate: source.alternate,
+            conservative: source.conservative,
+            interest: source.interest,
+            endingInterlockState: source.endingInterlockState,
+            endingSpatialContrastState: source.endingSpatialContrastState,
+            endingNarrativeState: source.endingNarrativeState
+        )
+    }
+
+    private func barReplacingClosedHatDecayArticulations(
+        in resolved: ResolvedPerformanceBar,
+        with articulations: [ClosedHatDecayArticulation]
+    ) -> ResolvedPerformanceBar {
+        ResolvedPerformanceBar(
+            performance: resolved.performance,
+            ensemble: resolved.ensemble,
+            arrangementGesture: resolved.arrangementGesture,
+            percussionGear: resolved.percussionGear,
+            foundationCompanion: resolved.foundationCompanion,
+            pulseEchoEnabled: resolved.pulseEchoEnabled,
+            interlockChapter: resolved.interlockChapter,
+            groovePulses: resolved.groovePulses,
+            closedHatDecayArticulations: articulations,
+            spatialContrast: resolved.spatialContrast,
+            narrative: resolved.narrative
+        )
+    }
+
+    private func closedHatEvidence(
+        replacing source: ClosedHatRenderEvidence,
+        appliedDecayRate: Double
+    ) -> ClosedHatRenderEvidence {
+        ClosedHatRenderEvidence(
+            scoreEventIndex: source.scoreEventIndex,
+            step: source.step,
+            role: source.role,
+            eventIntensity: source.eventIntensity,
+            timingOffsetInSteps: source.timingOffsetInSteps,
+            relocated: source.relocated,
+            appliedLevel: source.appliedLevel,
+            appliedDecayRate: appliedDecayRate,
+            renderedFrameCount: source.renderedFrameCount,
+            sampleHash: source.sampleHash,
+            peak: source.peak,
+            rms: source.rms,
+            attackRMS: source.attackRMS,
+            tailRMS: source.tailRMS,
+            tailToAttackDB: source.tailToAttackDB,
+            spectralCentroidHz: source.spectralCentroidHz,
+            finite: source.finite
+        )
+    }
+
+    private func renderBlock(
+        replacing source: RenderBlock,
+        closedHatRenderEvidence: [ClosedHatRenderEvidence]
+    ) -> RenderBlock {
+        RenderBlock(
+            bar: source.bar,
+            section: source.section,
+            left: source.left,
+            right: source.right,
+            events: source.events,
+            modulation: source.modulation,
+            busStates: source.busStates,
+            masking: source.masking,
+            effects: source.effects,
+            kickMix: source.kickMix,
+            stemObservations: source.stemObservations,
+            automaticMix: source.automaticMix,
+            stemReconstruction: source.stemReconstruction,
+            protectedFoundationSampleHash: source.protectedFoundationSampleHash,
+            percussionSampleHash: source.percussionSampleHash,
+            protectedRhythmSampleHash: source.protectedRhythmSampleHash,
+            groovePulseRenderEvidence: source.groovePulseRenderEvidence,
+            closedHatRenderEvidence: closedHatRenderEvidence,
+            upperNoteRenderEvidence: source.upperNoteRenderEvidence,
+            graphInputRemainderTimbreEvidence:
+                source.graphInputRemainderTimbreEvidence,
+            postGraphRemainderTimbreEvidence:
+                source.postGraphRemainderTimbreEvidence,
+            resolvedPerformance: source.resolvedPerformance,
+            sceneDNA: source.sceneDNA,
+            synthWorld: source.synthWorld,
+            synthPerformance: source.synthPerformance
+        )
+    }
+
     private func eligibleSingleBarFixture() ->
         (state: AutonomousSessionState, plan: AutonomousPhrasePlan,
          resolved: ResolvedPerformanceBar)? {
@@ -1507,6 +2047,7 @@ struct UpperTimbreIntegrationTests {
                 pulseEchoEnabled: resolved.pulseEchoEnabled,
                 interlockChapter: resolved.interlockChapter,
                 groovePulses: resolved.groovePulses,
+                closedHatDecayArticulations: resolved.closedHatDecayArticulations,
                 spatialContrast: resolved.spatialContrast,
                 narrative: resolved.narrative
             )
@@ -1562,6 +2103,7 @@ struct UpperTimbreIntegrationTests {
                 pulseEchoEnabled: resolved.pulseEchoEnabled,
                 interlockChapter: resolved.interlockChapter,
                 groovePulses: resolved.groovePulses,
+                closedHatDecayArticulations: resolved.closedHatDecayArticulations,
                 spatialContrast: resolved.spatialContrast,
                 narrative: resolved.narrative
             )
@@ -1612,6 +2154,7 @@ struct UpperTimbreIntegrationTests {
             pulseEchoEnabled: resolved.pulseEchoEnabled,
             interlockChapter: chapter,
             groovePulses: resolved.groovePulses,
+            closedHatDecayArticulations: resolved.closedHatDecayArticulations,
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative
         )
@@ -1644,6 +2187,7 @@ struct UpperTimbreIntegrationTests {
             pulseEchoEnabled: resolved.pulseEchoEnabled,
             interlockChapter: resolved.interlockChapter,
             groovePulses: resolved.groovePulses,
+            closedHatDecayArticulations: resolved.closedHatDecayArticulations,
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative
         )

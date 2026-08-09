@@ -262,6 +262,68 @@ package struct GroovePulseRenderEvidence: Equatable, Sendable {
     package let finite: Bool
 }
 
+/// Same-pass evidence for the ordinary closed-hat sample generated from one
+/// resolved ensemble event. The score owns the neutral/companion role; DSP
+/// owns the exact decay rate and signal consequence. No raw event PCM survives
+/// detached preparation.
+package struct ClosedHatRenderEvidence: Equatable, Sendable {
+    package let scoreEventIndex: Int
+    package let step: Int
+    package let role: ClosedHatDecayRole
+    package let eventIntensity: Double
+    package let timingOffsetInSteps: Double
+    package let relocated: Bool
+    package let appliedLevel: Double
+    package let appliedDecayRate: Double
+    package let renderedFrameCount: Int
+    package let sampleHash: String
+    package let peak: Double
+    package let rms: Double
+    package let attackRMS: Double
+    package let tailRMS: Double
+    package let tailToAttackDB: Double
+    package let spectralCentroidHz: Double
+    package let finite: Bool
+
+    package init(
+        scoreEventIndex: Int,
+        step: Int,
+        role: ClosedHatDecayRole,
+        eventIntensity: Double,
+        timingOffsetInSteps: Double,
+        relocated: Bool,
+        appliedLevel: Double,
+        appliedDecayRate: Double,
+        renderedFrameCount: Int,
+        sampleHash: String,
+        peak: Double,
+        rms: Double,
+        attackRMS: Double,
+        tailRMS: Double,
+        tailToAttackDB: Double,
+        spectralCentroidHz: Double,
+        finite: Bool
+    ) {
+        self.scoreEventIndex = scoreEventIndex
+        self.step = step
+        self.role = role
+        self.eventIntensity = eventIntensity
+        self.timingOffsetInSteps = timingOffsetInSteps
+        self.relocated = relocated
+        self.appliedLevel = appliedLevel
+        self.appliedDecayRate = appliedDecayRate
+        self.renderedFrameCount = renderedFrameCount
+        self.sampleHash = sampleHash
+        self.peak = peak
+        self.rms = rms
+        self.attackRMS = attackRMS
+        self.tailRMS = tailRMS
+        self.tailToAttackDB = tailToAttackDB
+        self.spectralCentroidHz = spectralCentroidHz
+        self.finite = finite
+    }
+}
+
 package struct RenderedBar: Equatable, Sendable {
     package let sampleRate: Double
     package let samples: [Float]
@@ -281,6 +343,7 @@ package struct RenderedBar: Equatable, Sendable {
     package let dryFoundationSampleHash: String
     package let dryPercussionSampleHash: String
     package let groovePulseRenderEvidence: [GroovePulseRenderEvidence]
+    package let closedHatRenderEvidence: [ClosedHatRenderEvidence]
     package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
     /// Transient detached-preparation taps. They never cross into RenderBlock
     /// or the scheduler; only reduced evidence survives phrase preparation.
@@ -296,6 +359,7 @@ package struct RenderedBar: Equatable, Sendable {
                 dryFoundationSampleHash: String,
                 dryPercussionSampleHash: String,
                 groovePulseRenderEvidence: [GroovePulseRenderEvidence],
+                closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 resonantAnchorSamples: [Float],
                 detunedCompanionSamples: [Float]) {
@@ -323,6 +387,9 @@ package struct RenderedBar: Equatable, Sendable {
         self.dryFoundationSampleHash = dryFoundationSampleHash
         self.dryPercussionSampleHash = dryPercussionSampleHash
         self.groovePulseRenderEvidence = groovePulseRenderEvidence.sorted { $0.step < $1.step }
+        self.closedHatRenderEvidence = closedHatRenderEvidence.sorted {
+            $0.scoreEventIndex < $1.scoreEventIndex
+        }
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.resonantAnchorSamples = resonantAnchorSamples
         self.detunedCompanionSamples = detunedCompanionSamples
@@ -365,6 +432,8 @@ package struct RenderBlock: Equatable, Sendable {
     /// Same-pass, event-local evidence for every score-owned groove pulse.
     /// It is reduced into the bounded candidate transaction before scheduling.
     package let groovePulseRenderEvidence: [GroovePulseRenderEvidence]
+    /// Same-pass reduced evidence for each ordinary closed-hat score event.
+    package let closedHatRenderEvidence: [ClosedHatRenderEvidence]
     /// Exact score-owned upper notes used for this bar. The renderer no longer
     /// invents pitch, duration, velocity, or slide decisions after resolution.
     package var resolvedUpperNotes: [ResolvedUpperNote] {
@@ -394,6 +463,7 @@ package struct RenderBlock: Equatable, Sendable {
                 percussionSampleHash: String,
                 protectedRhythmSampleHash: String,
                 groovePulseRenderEvidence: [GroovePulseRenderEvidence],
+                closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 graphInputRemainderTimbreEvidence: UpperTimbreEvidence,
                 postGraphRemainderTimbreEvidence: UpperTimbreEvidence,
@@ -417,6 +487,9 @@ package struct RenderBlock: Equatable, Sendable {
         self.percussionSampleHash = percussionSampleHash
         self.protectedRhythmSampleHash = protectedRhythmSampleHash
         self.groovePulseRenderEvidence = groovePulseRenderEvidence.sorted { $0.step < $1.step }
+        self.closedHatRenderEvidence = closedHatRenderEvidence.sorted {
+            $0.scoreEventIndex < $1.scoreEventIndex
+        }
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.graphInputRemainderTimbreEvidence = graphInputRemainderTimbreEvidence
         self.postGraphRemainderTimbreEvidence = postGraphRemainderTimbreEvidence
@@ -462,6 +535,36 @@ package struct RenderBlock: Equatable, Sendable {
 /// channel order, lengths, and separators participate so differently shaped
 /// detached-preparation taps cannot alias merely by sharing a byte prefix.
 enum ExactPCMFingerprint {
+    /// Streaming form for bounded event-local evidence. The caller supplies
+    /// the known sample count, so this produces the same mono digest as
+    /// `mono(_:)` without retaining a second PCM array.
+    struct MonoAccumulator {
+        private var value: UInt64 = 0xcbf29ce484222325
+
+        init(sampleCount: Int) {
+            mix(1)
+            mix(0x9e37_79b9)
+            mix(UInt32(truncatingIfNeeded: sampleCount))
+        }
+
+        mutating func append(_ sample: Float) {
+            mix(sample.bitPattern)
+        }
+
+        var fingerprint: String {
+            fixedWidthFingerprintHex(value)
+        }
+
+        private mutating func mix(_ input: UInt32) {
+            var bits = input
+            for _ in 0..<4 {
+                value ^= UInt64(bits & 0xff)
+                value &*= 0x100000001b3
+                bits >>= 8
+            }
+        }
+    }
+
     static func mono(_ samples: [Float]) -> String {
         hash([samples])
     }
@@ -486,7 +589,7 @@ enum ExactPCMFingerprint {
             mix(UInt32(truncatingIfNeeded: channel.count))
             for sample in channel { mix(sample.bitPattern) }
         }
-        return String(format: "%016llx", hash)
+        return fixedWidthFingerprintHex(hash)
     }
 }
 
@@ -868,6 +971,7 @@ package enum AutonomousPhraseRenderer {
                     right: protectedRhythm.rightSamples
                 ),
                 groovePulseRenderEvidence: rendered.groovePulseRenderEvidence,
+                closedHatRenderEvidence: rendered.closedHatRenderEvidence,
                 upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,
                 graphInputRemainderTimbreEvidence: graphInputRemainderTimbreEvidence,
                 postGraphRemainderTimbreEvidence: postGraphRemainderTimbreEvidence,

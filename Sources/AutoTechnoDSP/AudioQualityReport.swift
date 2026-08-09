@@ -204,6 +204,6 @@ package struct AudioQualityReport: Equatable, Sendable {
                 }
             }
         }
-        return String(format: "%016llx", hash)
+        return fixedWidthFingerprintHex(hash)
     }
 }

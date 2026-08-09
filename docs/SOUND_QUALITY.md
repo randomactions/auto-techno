@@ -10,9 +10,10 @@ manual curation gate or third-party instrument dependency.
 The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
-and a versioned candidate-evaluation transaction. Quality-contract schema 5
+and a versioned candidate-evaluation transaction. Quality-contract schema 6
 preserves complete symbolic, full-mix, masking, role-stem, event-local
-groove-pulse, graph, and pre/post upper-timbre evidence for each retained
+groove-pulse and ordinary closed-hat, graph, and pre/post upper-timbre evidence
+for each retained
 attempt, then binds the selected attempt to finalized commit provenance. Its
 phrase-wide full-mix evidence uses ITU-R BS.1770-5 K-weighting, 400 ms blocks
 with 75% overlap and two-stage gating, plus the Annex 2 four-phase FIR for
@@ -21,7 +22,11 @@ groove-pulse projection retains exact dry-sample identity plus bounded source
 level, spectral position, and tail-to-attack consequence for each already
 resolved pulse. Its score intensity can therefore distinguish the bounded
 3-3-2 accent/ghost cell from the unchanged weak-pulse onsets without analyzing
-the mixed percussion stem, adding density, or creating another onset.
+the mixed percussion stem, adding density, or creating another onset. Closed-hat
+records likewise bind every resolved ordinary-hat event to its neutral or
+same-onset open-hat-companion decay role, exact dry-sample identity, and bounded
+level, spectral, and tail consequence. They do not add events or promote a
+candidate while the evaluator is uncalibrated.
 `ProfessionalEvidenceReportBank` accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The shipping evaluator
@@ -123,7 +128,7 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 5, the versioned transaction implements the
+Under quality-contract schema 6, the versioned transaction implements the
 bounded evidence and atomic commit foundation for this loop. It can retain at
 most the primary, alternate, and conservative-fallback candidates, plus one
 home-timbre correction, with no more than four render passes total. Every attempt

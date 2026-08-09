@@ -1528,6 +1528,21 @@ package enum AutonomousPhrasePreparer {
                       zip(grooveEvents, grooveArticulations).allSatisfy {
                           $0.step == $1.step && $0.intensity == $1.intensity
                       }
+                  let closedHatEvents = Array(events.enumerated().filter {
+                      $0.element.voice == .percussion
+                  })
+                  let canonicalClosedHatDecay = ClosedHatDecayResolver.articulations(
+                      from: resolved.ensemble,
+                      conservative: plan.conservative
+                  )
+                  let closedHatDecayIsCanonical =
+                      closedHatEvents.count <=
+                        AutonomousCandidateEvaluationVector.maximumClosedHatEventsPerBar &&
+                      resolved.closedHatDecayArticulations == canonicalClosedHatDecay &&
+                      resolved.closedHatDecayArticulations.count == closedHatEvents.count &&
+                      Set(resolved.closedHatDecayArticulations.map {
+                          $0.scoreEventIndex
+                      }).count == resolved.closedHatDecayArticulations.count
                   let fallbackScoreIsCanonical: Bool
                   if slot == .fallback {
                       let canonicalEnsemble = AutonomousSessionDirector.ensemblePlan(
@@ -1578,7 +1593,7 @@ package enum AutonomousPhrasePreparer {
                       } && resolved.groovePulses.count <= 8 &&
                       Set(resolved.groovePulses.map(\.step)).count ==
                         resolved.groovePulses.count && grooveScoreIsCanonical &&
-                      fallbackScoreIsCanonical
+                      closedHatDecayIsCanonical && fallbackScoreIsCanonical
               }) else {
             return false
         }

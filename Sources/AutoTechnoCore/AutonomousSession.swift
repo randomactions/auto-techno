@@ -76,6 +76,25 @@ package struct GroovePulseArticulation: Equatable, Sendable {
     }
 }
 
+/// Semantic decay relationship for an already-resolved closed-hat score event.
+/// The renderer owns the bounded envelope value associated with each role.
+package enum ClosedHatDecayRole: String, CaseIterable, Sendable {
+    case neutral
+    case openHatCompanion
+}
+
+package struct ClosedHatDecayArticulation: Equatable, Sendable {
+    package let scoreEventIndex: Int
+    package let step: Int
+    package let role: ClosedHatDecayRole
+
+    package init(scoreEventIndex: Int, step: Int, role: ClosedHatDecayRole) {
+        self.scoreEventIndex = max(0, scoreEventIndex)
+        self.step = ((step % 16) + 16) % 16
+        self.role = role
+    }
+}
+
 package enum EnsembleVoice: String, CaseIterable, Sendable {
     case kick
     case bass
@@ -363,6 +382,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let pulseEchoEnabled: Bool
     package let interlockChapter: InterlockChapter
     package let groovePulses: [GroovePulseArticulation]
+    package let closedHatDecayArticulations: [ClosedHatDecayArticulation]
     package let spatialContrast: SpatialContrastArticulation
     package let narrative: NarrativeArticulation
 
@@ -371,6 +391,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
                  foundationCompanion: FoundationCompanion, pulseEchoEnabled: Bool,
                  interlockChapter: InterlockChapter,
                  groovePulses: [GroovePulseArticulation] = [],
+                 closedHatDecayArticulations: [ClosedHatDecayArticulation]? = nil,
                  spatialContrast: SpatialContrastArticulation = .foreground,
                  narrative: NarrativeArticulation = .initial) {
         self.performance = performance
@@ -381,12 +402,45 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.pulseEchoEnabled = pulseEchoEnabled && foundationCompanion != .monoRumble
         self.interlockChapter = interlockChapter
         self.groovePulses = groovePulses.sorted { $0.step < $1.step }
+        self.closedHatDecayArticulations = closedHatDecayArticulations ??
+            ClosedHatDecayResolver.articulations(
+                from: ensemble,
+                conservative: true
+            )
         self.spatialContrast = spatialContrast
         self.narrative = narrative
     }
 
     package func groovePulse(at step: Int) -> GroovePulseArticulation? {
         groovePulses.first { $0.step == ((step % 16) + 16) % 16 }
+    }
+
+    package func closedHatDecay(atEventIndex index: Int) -> ClosedHatDecayArticulation? {
+        closedHatDecayArticulations.first { $0.scoreEventIndex == index }
+    }
+}
+
+/// Resolves at most one semantic envelope relation for each of the bounded four
+/// closed-hat score events. Matching happens after arbitration, so relocation
+/// can create or remove a companion without leaving stale proposal metadata.
+package enum ClosedHatDecayResolver {
+    package static func articulations(from ensemble: EnsembleContext,
+                                      conservative: Bool) -> [ClosedHatDecayArticulation] {
+        var result: [ClosedHatDecayArticulation] = []
+        result.reserveCapacity(4)
+        for (scoreEventIndex, event) in ensemble.events.enumerated() {
+            guard event.voice == .percussion else { continue }
+            guard result.count < 4 else { break }
+            let sharesStepWithOpenHat = !conservative && ensemble.events.contains {
+                $0.voice == .openHat && $0.step == event.step
+            }
+            result.append(ClosedHatDecayArticulation(
+                scoreEventIndex: scoreEventIndex,
+                step: event.step,
+                role: sharesStepWithOpenHat ? .openHatCompanion : .neutral
+            ))
+        }
+        return result
     }
 }
 
@@ -1197,6 +1251,10 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 eventSeed: bar.eventSeed,
                 conservative: conservative
             )
+            let closedHatDecayArticulations = ClosedHatDecayResolver.articulations(
+                from: ensemble,
+                conservative: conservative
+            )
             let echoEnabled = pulseEchoEnabled(
                 scene: scene, bar: bar, kind: kind,
                 companion: companion, gesture: gesture
@@ -1218,6 +1276,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 pulseEchoEnabled: echoEnabled,
                 interlockChapter: interlockState.currentChapter,
                 groovePulses: groovePulses,
+                closedHatDecayArticulations: closedHatDecayArticulations,
                 spatialContrast: spatialContrast,
                 narrative: narrative
             ))
