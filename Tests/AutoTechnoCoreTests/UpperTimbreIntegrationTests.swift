@@ -3,6 +3,12 @@ import AutoTechnoDSP
 import Foundation
 import Testing
 
+private struct ClosedHatRouteProjection {
+    let planFingerprints: AutonomousCandidatePlanFingerprints
+    let routeFingerprint: String
+    let sampleRate: Double
+}
+
 @Suite("Upper timbre score, PCM evidence, and quality continuation")
 struct UpperTimbreIntegrationTests {
     @Test("Score-owned timbre changes only the declared upper path")
@@ -545,6 +551,30 @@ struct UpperTimbreIntegrationTests {
 
     @Test("Canonical closed/open-hat relation survives route-rate preparation")
     func closedHatCompanionRouteRatePreparation() throws {
+        let rate8 = try closedHatRouteProjection(
+            sampleRate: 8_000,
+            routeGeneration: 4
+        )
+        let rate12 = try closedHatRouteProjection(
+            sampleRate: 12_000,
+            routeGeneration: 5
+        )
+        #expect(rate8.planFingerprints == rate12.planFingerprints)
+        #expect(rate8.routeFingerprint != rate12.routeFingerprint)
+        #expect(rate8.sampleRate == 8_000)
+        #expect(rate12.sampleRate == 12_000)
+    }
+
+    @Test("Closed-hat renderer evidence tampering is rejected by vector reduction")
+    func closedHatCompanionRenderEvidenceTampering() throws {
+        try assertClosedHatRenderEvidenceTamperingIsRejected()
+    }
+
+    @inline(never)
+    private func closedHatRouteProjection(
+        sampleRate: Double,
+        routeGeneration: Int
+    ) throws -> ClosedHatRouteProjection {
         let fixture = try #require(closedHatCompanionFixture())
         let state = fixture.state
         let candidates = fixture.candidates
@@ -557,83 +587,97 @@ struct UpperTimbreIntegrationTests {
         }
         #expect(!expectedRelations.isEmpty)
 
-        func prepare(sampleRate: Double, routeGeneration: Int) -> PreparedAutonomousPhrase? {
-            AutonomousPhrasePreparer.prepareIfNotCancelled(
-                candidates: candidates,
-                sessionSeed: state.rootSeed,
-                memory: state.memory,
-                sampleRate: sampleRate,
-                incomingRenderState: RenderState(),
-                incomingGraphState: GeneratedDSPContinuationState(),
-                previousGraph: nil,
-                routeRecovery: true,
-                routeGeneration: routeGeneration,
-                cancellationRequested: { false }
-            )
-        }
+        let preparedCandidate = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            candidates: candidates,
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: sampleRate,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            routeRecovery: true,
+            routeGeneration: routeGeneration,
+            cancellationRequested: { false }
+        )
+        let prepared = try #require(preparedCandidate)
+        #expect(prepared.plan == candidates.primary)
+        #expect(prepared.candidateEvaluation.selectedSlot == .primary)
+        #expect(prepared.candidateEvaluation.comparison == .unavailable)
+        #expect(prepared.candidateEvaluation.attempts.count == 1)
+        #expect(prepared.qualityDecision.outcome == .qualificationUnavailable)
+        #expect(prepared.qualityDecision.reasonCodes.contains(.policyUncalibratedV1))
+        #expect(prepared.hardGatesPassed)
+        #expect(prepared.commitEligible)
 
-        let rate8 = try #require(prepare(sampleRate: 8_000, routeGeneration: 4))
-        let rate12 = try #require(prepare(sampleRate: 12_000, routeGeneration: 5))
-        for prepared in [rate8, rate12] {
-            #expect(prepared.plan == candidates.primary)
-            #expect(prepared.candidateEvaluation.selectedSlot == .primary)
-            #expect(prepared.candidateEvaluation.comparison == .unavailable)
-            #expect(prepared.candidateEvaluation.attempts.count == 1)
-            #expect(prepared.qualityDecision.outcome == .qualificationUnavailable)
-            #expect(prepared.qualityDecision.reasonCodes.contains(.policyUncalibratedV1))
-            #expect(prepared.hardGatesPassed)
-            #expect(prepared.commitEligible)
-
-            var renderedRelations: [String] = []
-            for (resolved, block) in zip(candidates.primary.resolvedBars, prepared.blocks) {
-                #expect(block.resolvedPerformance == resolved)
-                #expect(block.closedHatRenderEvidence.count ==
-                        resolved.closedHatDecayArticulations.count)
-                for articulation in resolved.closedHatDecayArticulations where
-                    articulation.role == .openHatCompanion {
-                    let closedHat = try #require(
-                        resolved.ensemble.events.indices.contains(
-                            articulation.scoreEventIndex
-                        ) ? resolved.ensemble.events[articulation.scoreEventIndex] : nil
-                    )
-                    #expect(closedHat.voice == .percussion)
-                    #expect(closedHat.step == articulation.step)
-                    #expect(resolved.ensemble.events.contains {
-                        $0.voice == .openHat && $0.step == articulation.step
-                    })
-                    let evidence = try #require(block.closedHatRenderEvidence.first {
-                        $0.scoreEventIndex == articulation.scoreEventIndex
-                    })
-                    #expect(evidence.step == articulation.step)
-                    #expect(evidence.role == .openHatCompanion)
-                    #expect(evidence.eventIntensity == closedHat.intensity)
-                    #expect(evidence.relocated == closedHat.relocated)
-                    #expect(evidence.appliedDecayRate == ClosedHatVoiceContract.decayRate(
-                        brightness: candidates.primary.scene.character.percussionBrightness,
-                        role: .openHatCompanion
-                    ))
-                    #expect(evidence.finite)
-                    renderedRelations.append(
-                        "\(resolved.performance.bar):\(evidence.scoreEventIndex):" +
-                            "\(evidence.step):\(evidence.role.rawValue)"
-                    )
-                }
+        var renderedRelations: [String] = []
+        for (resolved, block) in zip(candidates.primary.resolvedBars, prepared.blocks) {
+            #expect(block.resolvedPerformance == resolved)
+            #expect(block.closedHatRenderEvidence.count ==
+                    resolved.closedHatDecayArticulations.count)
+            for articulation in resolved.closedHatDecayArticulations where
+                articulation.role == .openHatCompanion {
+                let closedHat = try #require(
+                    resolved.ensemble.events.indices.contains(
+                        articulation.scoreEventIndex
+                    ) ? resolved.ensemble.events[articulation.scoreEventIndex] : nil
+                )
+                #expect(closedHat.voice == .percussion)
+                #expect(closedHat.step == articulation.step)
+                #expect(resolved.ensemble.events.contains {
+                    $0.voice == .openHat && $0.step == articulation.step
+                })
+                let evidence = try #require(block.closedHatRenderEvidence.first {
+                    $0.scoreEventIndex == articulation.scoreEventIndex
+                })
+                #expect(evidence.step == articulation.step)
+                #expect(evidence.role == .openHatCompanion)
+                #expect(evidence.eventIntensity == closedHat.intensity)
+                #expect(evidence.relocated == closedHat.relocated)
+                #expect(evidence.appliedDecayRate == ClosedHatVoiceContract.decayRate(
+                    brightness: candidates.primary.scene.character.percussionBrightness,
+                    role: .openHatCompanion
+                ))
+                #expect(evidence.finite)
+                renderedRelations.append(
+                    "\(resolved.performance.bar):\(evidence.scoreEventIndex):" +
+                        "\(evidence.step):\(evidence.role.rawValue)"
+                )
             }
-            #expect(renderedRelations == expectedRelations)
         }
-        #expect(rate8.candidateEvaluation.planFingerprints ==
-                rate12.candidateEvaluation.planFingerprints)
-        #expect(rate8.selectedCandidateEvidence.routeContinuation.routeFingerprint !=
-                rate12.selectedCandidateEvidence.routeContinuation.routeFingerprint)
-        #expect(rate8.selectedCandidateEvidence.routeContinuation.sampleRate == 8_000)
-        #expect(rate12.selectedCandidateEvidence.routeContinuation.sampleRate == 12_000)
+        #expect(renderedRelations == expectedRelations)
 
-        let targetBlockIndex = try #require(rate8.blocks.firstIndex { block in
+        return ClosedHatRouteProjection(
+            planFingerprints: prepared.candidateEvaluation.planFingerprints,
+            routeFingerprint: prepared.selectedCandidateEvidence
+                .routeContinuation.routeFingerprint,
+            sampleRate: prepared.selectedCandidateEvidence.routeContinuation.sampleRate
+        )
+    }
+
+    @inline(never)
+    private func assertClosedHatRenderEvidenceTamperingIsRejected() throws {
+        let fixture = try #require(closedHatCompanionFixture())
+        let state = fixture.state
+        let candidates = fixture.candidates
+        let preparedCandidate = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            candidates: candidates,
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            routeRecovery: true,
+            routeGeneration: 4,
+            cancellationRequested: { false }
+        )
+        let prepared = try #require(preparedCandidate)
+        let targetBlockIndex = try #require(prepared.blocks.firstIndex { block in
             block.closedHatRenderEvidence.contains {
                 $0.role == .openHatCompanion
             }
         })
-        let targetBlock = rate8.blocks[targetBlockIndex]
+        let targetBlock = prepared.blocks[targetBlockIndex]
         let targetEvidenceIndex = try #require(
             targetBlock.closedHatRenderEvidence.firstIndex {
                 $0.role == .openHatCompanion
@@ -645,22 +689,22 @@ struct UpperTimbreIntegrationTests {
             replacing: sourceEvidence,
             appliedDecayRate: sourceEvidence.appliedDecayRate + 1
         )
-        var forgedBlocks = rate8.blocks
+        var forgedBlocks = prepared.blocks
         forgedBlocks[targetBlockIndex] = renderBlock(
             replacing: targetBlock,
             closedHatRenderEvidence: forgedEvidence
         )
-        let route = rate8.selectedCandidateEvidence.routeContinuation
+        let route = prepared.selectedCandidateEvidence.routeContinuation
         let noCancellation: @Sendable () -> Bool = { false }
         let maybeForgedVector = AutonomousCandidateEvaluationVector.make(
-            slot: rate8.selectedCandidateEvidence.slot,
-            plan: rate8.plan,
-            graph: rate8.graph,
-            planFingerprint: rate8.selectedCandidateEvidence.planFingerprint,
-            graphFingerprint: rate8.selectedCandidateEvidence.graphFingerprint,
+            slot: prepared.selectedCandidateEvidence.slot,
+            plan: prepared.plan,
+            graph: prepared.graph,
+            planFingerprint: prepared.selectedCandidateEvidence.planFingerprint,
+            graphFingerprint: prepared.selectedCandidateEvidence.graphFingerprint,
             blocks: forgedBlocks,
-            audioPreflight: rate8.audioPreflight,
-            upperTimbreEvidence: rate8.upperTimbreEvidence,
+            audioPreflight: prepared.audioPreflight,
+            upperTimbreEvidence: prepared.upperTimbreEvidence,
             sampleRate: route.sampleRate,
             routeChannelCount: route.channelCount,
             routeGeneration: route.routeGeneration,
