@@ -77,6 +77,7 @@ struct CurrentRuntimeTests {
             masking: source.masking,
             effects: source.effects,
             kickMix: source.kickMix,
+            kickRenderPassesMatch: source.kickRenderPassesMatch,
             stemObservations: source.stemObservations,
             automaticMix: source.automaticMix,
             stemReconstruction: source.stemReconstruction,

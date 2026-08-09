@@ -1090,6 +1090,33 @@ struct QualityQualificationFoundationTests {
                 measuredKickOverFoundationDB: nil,
                 targetKickOverFoundationDB: nil
             )],
+            kickSyntax: [AutonomousKickSyntaxBarEvidence(
+                bar: 0,
+                role: .grounded,
+                scoreKickEventCount: 1,
+                scoreKickStepMask: 1,
+                renderedKickEventCount: 1,
+                renderedKickStepMask: 1,
+                renderedFrameCount: Int((
+                    240.0 / AutonomousSessionDirector.bpm * evidence.sampleRate
+                ).rounded()),
+                audibleGain: KickMixBalance.audibleGain * Double(Float(pow(
+                    10,
+                    AutomaticMixBalancer.homeKickCorrectionDB / 20
+                ))),
+                detectorPeak: 0.6,
+                detectorRMS: 0.12,
+                audiblePeak: 0.5,
+                audibleRMS: 0.1,
+                duckingEnvelopePeak: 0.4,
+                detectorSampleHash: "0123456789abcdef",
+                audibleSampleHash: "fedcba9876543210",
+                detectorNonzeroSampleCount: 1_024,
+                audibleNonzeroSampleCount: 1_024,
+                detectorToAudibleScaleMatches: true,
+                renderPassesMatch: true,
+                bindingValid: true
+            )],
             groovePulse: [AutonomousGroovePulseBarEvidence(
                 bar: 0,
                 sourceScoreEventCount: 0,
@@ -1233,6 +1260,7 @@ struct QualityQualificationFoundationTests {
                 masking: source.masking,
                 stems: source.stems,
                 automaticMix: source.automaticMix,
+                kickSyntax: source.kickSyntax,
                 groovePulse: source.groovePulse,
                 closedHat: source.closedHat,
                 instruments: source.instruments,

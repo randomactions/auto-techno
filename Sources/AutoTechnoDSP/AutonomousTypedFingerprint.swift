@@ -22,7 +22,7 @@ func fixedWidthFingerprintHex(_ value: UInt64) -> String {
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
-        digest(domain: "candidate-plan.typed.v5") { sink in
+        digest(domain: "candidate-plan.typed.v6") { sink in
             encode(plan, into: &sink)
         }
     }
@@ -351,6 +351,7 @@ private extension AutonomousTypedFingerprint {
         sink.aggregate("ResolvedPerformanceBar")
         sink.field("performance"); encode(value.performance, into: &sink)
         sink.field("ensemble"); encode(value.ensemble, into: &sink)
+        sink.field("kickSyntaxRole"); sink.raw(value.kickSyntaxRole.rawValue)
         sink.field("arrangementGesture"); sink.raw(value.arrangementGesture.rawValue)
         sink.field("percussionGear"); sink.raw(value.percussionGear.rawValue)
         sink.field("performanceCharacter"); sink.raw(value.performanceCharacter.rawValue)

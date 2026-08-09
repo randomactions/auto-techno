@@ -364,6 +364,8 @@ package enum VoiceRenderer {
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
         swap(&spatialReverbSendBus, &checkedOut.spatialReverbSend)
         var random = SeededGenerator(seed: performance.eventSeed)
+        var renderedKickEventCount = 0
+        var renderedKickStepMask: UInt16 = 0
 
         for (scoreEventIndex, event) in resolved.ensemble.events.enumerated() {
             let pulseArticulation = event.voice == .groovePulse
@@ -375,8 +377,14 @@ package enum VoiceRenderer {
             switch event.voice {
             case .kick:
                 let detectorLevel = KickMixBalance.detectorLevel(for: section) * accent
-                kick(&kickDetectorBus, start: start, sampleRate: sampleRate, level: detectorLevel,
-                     seed: scene.seed, step: event.step)
+                if (0..<16).contains(event.step),
+                   kick(&kickDetectorBus, start: start, sampleRate: sampleRate,
+                        level: detectorLevel, seed: scene.seed, step: event.step) {
+                    // Count only events that produced a bounded render window,
+                    // rather than inferring production from score membership.
+                    renderedKickEventCount += 1
+                    renderedKickStepMask |= UInt16(1) << UInt16(event.step)
+                }
             case .bass where !(performance.signatureEvent == .delayedBassEntry && event.step < 8):
                 let frequency = relationalBassFrequency(
                     dna: dna, step: event.step, tension: performance.tension
@@ -867,21 +875,62 @@ package enum VoiceRenderer {
             state.chorusWriteIndex = (state.chorusWriteIndex + 1) % chorusFrames
             state.reverbWriteIndex = (state.reverbWriteIndex + 1) % reverbFrames
         }
-        let audibleKickPeak = kickBus.reduce(0) { max($0, abs($1)) }
-        let detectorKickPeak = kickDetectorBus.reduce(0) { max($0, abs($1)) }
-        let audibleKickRMS = Float(sqrt(
-            kickBus.reduce(0.0) { $0 + Double($1 * $1) } / Double(max(1, frames))
-        ))
-        let detectorKickRMS = Float(sqrt(
-            kickDetectorBus.reduce(0.0) { $0 + Double($1 * $1) } / Double(max(1, frames))
-        ))
+        // One bounded pass reduces the exact terminal detector and audible
+        // kick buses. Fingerprints stream over sample bits without retaining
+        // another PCM buffer, and nonzero counts use the same exact bits.
+        var audibleKickPeak = 0.0
+        var detectorKickPeak = 0.0
+        var audibleKickEnergy = 0.0
+        var detectorKickEnergy = 0.0
+        var detectorKickFingerprint = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frames
+        )
+        var audibleKickFingerprint = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frames
+        )
+        var detectorNonzeroSampleCount = 0
+        var audibleNonzeroSampleCount = 0
+        var detectorToAudibleScaleMatches = true
+        for index in 0..<frames {
+            let detectorSample = kickDetectorBus[index]
+            let audibleSample = kickBus[index]
+            let detectorValue = Double(detectorSample)
+            let audibleValue = Double(audibleSample)
+            detectorKickPeak = max(detectorKickPeak, abs(detectorValue))
+            audibleKickPeak = max(audibleKickPeak, abs(audibleValue))
+            detectorKickEnergy += detectorValue * detectorValue
+            audibleKickEnergy += audibleValue * audibleValue
+            detectorKickFingerprint.append(detectorSample)
+            audibleKickFingerprint.append(audibleSample)
+            if detectorSample != 0 {
+                detectorNonzeroSampleCount += 1
+            }
+            if audibleSample != 0 {
+                audibleNonzeroSampleCount += 1
+            }
+            let expectedAudible = detectorSample *
+                Float(KickMixBalance.audibleGain) * automaticKickGain
+            detectorToAudibleScaleMatches = detectorToAudibleScaleMatches &&
+                audibleSample.bitPattern == expectedAudible.bitPattern
+        }
+        let kickEvidenceFrameCount = Double(max(1, frames))
+        let audibleKickRMS = sqrt(audibleKickEnergy / kickEvidenceFrameCount)
+        let detectorKickRMS = sqrt(detectorKickEnergy / kickEvidenceFrameCount)
         let kickMix = KickMixEvidence(
+            renderedFrameCount: frames,
+            renderedKickEventCount: renderedKickEventCount,
+            renderedKickStepMask: renderedKickStepMask,
             audibleGain: KickMixBalance.audibleGain * Double(automaticKickGain),
             audiblePeak: audibleKickPeak,
             audibleRMS: audibleKickRMS,
             detectorPeak: detectorKickPeak,
             detectorRMS: detectorKickRMS,
-            duckingEnvelopePeak: Float(kickEnvelopePeak)
+            duckingEnvelopePeak: kickEnvelopePeak,
+            detectorSampleHash: detectorKickFingerprint.fingerprint,
+            audibleSampleHash: audibleKickFingerprint.fingerprint,
+            detectorNonzeroSampleCount: detectorNonzeroSampleCount,
+            audibleNonzeroSampleCount: audibleNonzeroSampleCount,
+            detectorToAudibleScaleMatches: detectorToAudibleScaleMatches
         )
         let pulseEchoEvidenceFrameCount = Double(max(1, frames))
         let pulseEchoCurrentSendRMS = sqrt(
@@ -1375,8 +1424,13 @@ package enum VoiceRenderer {
         return 43.65 * pow(2, Double(dna.tonalCenter + degree) / 12.0)
     }
 
-    private static func kick(_ output: inout [Float], start: Int, sampleRate: Double, level: Double, seed: UInt64, step: Int) {
-        let frames = min(Int(sampleRate * 0.32), output.count - start); guard frames > 0 else { return }
+    @discardableResult
+    private static func kick(_ output: inout [Float], start: Int,
+                             sampleRate: Double, level: Double,
+                             seed: UInt64, step: Int) -> Bool {
+        guard start >= 0, start < output.count else { return false }
+        let frames = min(Int(sampleRate * 0.32), output.count - start)
+        guard frames > 0 else { return false }
         var random = SeededGenerator(seed: seed ^ UInt64(step + 1) ^ 0x9E3779B97F4A7C15)
         var bodyPhase = 0.0
         var subPhase = 0.0
@@ -1397,6 +1451,7 @@ package enum VoiceRenderer {
                 : 0
             output[start + i] += Float((body + sub + transient) * level)
         }
+        return true
     }
 
     private static func rumble(_ output: inout [Float], measurement: inout [Float],

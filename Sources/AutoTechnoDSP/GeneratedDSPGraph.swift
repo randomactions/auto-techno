@@ -1281,7 +1281,13 @@ package enum AutonomousPhrasePreparer {
               sessionSeed &+ 17 == candidates.primary.scene.seed,
               incomingQualityState.acceptanceProvenanceComplete,
               incomingControllerStateIsCoherent,
+              candidateDebtsMatchMemory(candidates, memory: memory),
               candidateInputsAreBounded(candidates),
+              candidateCharactersMatchSession(
+                  candidates,
+                  memory: memory,
+                  sessionSeed: sessionSeed
+              ),
               continuationInputsAreBounded(
                   renderState: incomingRenderState,
                   graphState: incomingGraphState,
@@ -1553,6 +1559,63 @@ package enum AutonomousPhrasePreparer {
             candidateIsBounded(candidates.fallback, for: .fallback)
     }
 
+    private static func candidateDebtsMatchMemory(
+        _ candidates: AutonomousPhraseCandidates,
+        memory: TemporalMusicalMemory
+    ) -> Bool {
+        guard memory.openDebts.count <= 128 else { return false }
+        let openDebtIDs = memory.openDebts.map(\.id)
+        func matchesIncomingDebts(_ plan: AutonomousPhrasePlan) -> Bool {
+            if plan.kind == .energyRelease {
+                return plan.paidDebtIDs == openDebtIDs
+            }
+            return plan.paidDebtIDs.isEmpty
+        }
+        return matchesIncomingDebts(candidates.primary) &&
+            matchesIncomingDebts(candidates.alternate) &&
+            candidates.fallback.paidDebtIDs.isEmpty
+    }
+
+    private static func candidateCharactersMatchSession(
+        _ candidates: AutonomousPhraseCandidates,
+        memory: TemporalMusicalMemory,
+        sessionSeed: UInt64
+    ) -> Bool {
+        func planMatches(_ plan: AutonomousPhrasePlan) -> Bool {
+            let expectedCharacter = AutonomousSessionDirector
+                .canonicalPerformanceCharacter(
+                    kind: plan.kind,
+                    rootSeed: sessionSeed,
+                    phraseIndex: plan.phraseIndex,
+                    recentPerformanceCharacters:
+                        memory.recentPerformanceCharacters,
+                    alternate: plan.alternate,
+                    conservative: plan.conservative
+                )
+            return plan.resolvedBars.allSatisfy { resolved in
+                guard resolved.performanceCharacter == expectedCharacter else {
+                    return false
+                }
+                if plan.conservative {
+                    return resolved.foundationBehavior.companion ==
+                        resolved.foundationCompanion
+                }
+                let expectedBehavior = PerformanceCharacterContract
+                    .foundationBehavior(
+                        for: expectedCharacter,
+                        gesture: resolved.arrangementGesture,
+                        localBar: resolved.performance.localBar,
+                        phraseLength: resolved.performance.phraseLength
+                    )
+                return resolved.foundationBehavior == expectedBehavior &&
+                    resolved.foundationCompanion == expectedBehavior.companion
+            }
+        }
+        return planMatches(candidates.primary) &&
+            planMatches(candidates.alternate) &&
+            planMatches(candidates.fallback)
+    }
+
     private static func candidateIsBounded(
         _ plan: AutonomousPhrasePlan,
         for slot: AutonomousCandidateSlot
@@ -1594,6 +1657,11 @@ package enum AutonomousPhrasePreparer {
                 slot: slot
             ) else { return false }
         }
+        let canonicalScoreBars = canonicalKickSyntaxBars(for: plan)
+        guard kickSyntaxScoreMatchesCanonical(
+            plan.resolvedBars,
+            canonical: canonicalScoreBars
+        ) else { return false }
         guard plan.performanceCharacterEvidence.valid else { return false }
         switch slot {
         case .primary:
@@ -1627,6 +1695,18 @@ package enum AutonomousPhrasePreparer {
         guard events.count <= 16 * 6 else { return false }
         let maximumAtOneStep = resolved.ensemble.intentionalPileup ? 6 : 3
         let occupancy = Dictionary(grouping: events) { event in event.step }
+        let kickEventSteps = events.filter { $0.voice == .kick }
+            .map(\.step)
+            .sorted()
+        let kickScoreMatchesRole: Bool
+        switch resolved.kickSyntaxRole {
+        case .withheld:
+            kickScoreMatchesRole = kickEventSteps.isEmpty &&
+                resolved.ensemble.kickAnchors.isEmpty
+        case .grounded, .recovery:
+            kickScoreMatchesRole = !kickEventSteps.isEmpty &&
+                kickEventSteps == resolved.ensemble.kickAnchors
+        }
         let grooveEvents = events.filter { $0.voice == .groovePulse }
             .sorted { $0.step < $1.step }
         let grooveArticulations = resolved.groovePulses.sorted {
@@ -1711,10 +1791,94 @@ package enum AutonomousPhrasePreparer {
                 resolved.ensemble.kickAnchors.count &&
             resolved.ensemble.kickAnchors.allSatisfy {
                 (0..<16).contains($0)
-            } && resolved.groovePulses.count <= 8 &&
+            } && kickEventSteps == resolved.ensemble.kickAnchors &&
+            kickScoreMatchesRole && resolved.groovePulses.count <= 8 &&
             Set(resolved.groovePulses.map { pulse in pulse.step }).count ==
                 resolved.groovePulses.count && grooveScoreIsCanonical &&
             closedHatDecayIsCanonical && fallbackScoreIsCanonical
+    }
+
+    /// Replays the director's baseline score and the one allowed kick-syntax
+    /// post-pass before rendering. This rejects arbitrary kick deletion, stale
+    /// anchors, forged roles, and malformed recovery arcs.
+    private static func canonicalKickSyntaxBars(
+        for plan: AutonomousPhrasePlan
+    ) -> [ResolvedPerformanceBar] {
+        let baseline = plan.resolvedBars.map { resolved in
+            let ensemble = AutonomousSessionDirector.ensemblePlan(
+                dna: plan.dna,
+                bar: resolved.performance,
+                focus: resolved.ensemble.focusRole,
+                release: plan.kind == .energyRelease,
+                kind: plan.kind,
+                character: resolved.performanceCharacter,
+                foundationBehavior: resolved.foundationBehavior,
+                companion: resolved.foundationCompanion,
+                gear: resolved.percussionGear,
+                gesture: resolved.arrangementGesture,
+                conservative: plan.conservative
+            )
+            return ResolvedPerformanceBar(
+                performance: resolved.performance,
+                ensemble: ensemble,
+                arrangementGesture: resolved.arrangementGesture,
+                percussionGear: resolved.percussionGear,
+                performanceCharacter: resolved.performanceCharacter,
+                foundationBehavior: resolved.foundationBehavior,
+                foundationCompanion: resolved.foundationCompanion,
+                pulseEchoEnabled: resolved.pulseEchoEnabled,
+                interlockChapter: resolved.interlockChapter,
+                groovePulses: GroovePulseResolver.articulations(
+                    from: ensemble,
+                    absoluteBar: resolved.performance.bar,
+                    swingPercent: plan.dna.rhythm.swingPercent,
+                    percussionGear: resolved.percussionGear,
+                    eventSeed: resolved.performance.eventSeed,
+                    conservative: plan.conservative
+                ),
+                closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
+                    from: ensemble,
+                    conservative: plan.conservative
+                ),
+                spatialContrast: resolved.spatialContrast,
+                narrative: resolved.narrative,
+                kickSyntaxRole: .grounded
+            )
+        }
+        return KickSyntaxResolver.resolve(
+            resolvedBars: baseline,
+            kind: plan.kind,
+            paidDebtIDs: plan.paidDebtIDs,
+            conservative: plan.conservative
+        )
+    }
+
+    private static func kickSyntaxScoreMatchesCanonical(
+        _ actual: [ResolvedPerformanceBar],
+        canonical: [ResolvedPerformanceBar]
+    ) -> Bool {
+        guard actual.count == canonical.count else { return false }
+        return zip(actual, canonical).allSatisfy { actualBar, canonicalBar in
+            let actualKickEvents = actualBar.ensemble.events.filter {
+                $0.voice == .kick
+            }
+            let canonicalKickEvents = canonicalBar.ensemble.events.filter {
+                $0.voice == .kick
+            }
+            let actualNonKickEvents = actualBar.ensemble.events.filter {
+                $0.voice != .kick
+            }
+            let canonicalNonKickEvents = canonicalBar.ensemble.events.filter {
+                $0.voice != .kick
+            }
+            let syntaxGroovePulsesMatch = actualBar.kickSyntaxRole == .grounded ||
+                actualBar.groovePulses == canonicalBar.groovePulses
+            return actualBar.kickSyntaxRole == canonicalBar.kickSyntaxRole &&
+                actualBar.ensemble.kickAnchors == canonicalBar.ensemble.kickAnchors &&
+                actualKickEvents == canonicalKickEvents &&
+                actualNonKickEvents == canonicalNonKickEvents &&
+                syntaxGroovePulsesMatch
+        }
     }
 
     /// Every continuation collection is owned by a fixed-delay DSP primitive.

@@ -28,6 +28,127 @@ struct AutonomousCandidateEvaluationTests {
                 decoded.postGraphUpperTimbreEvidence)
     }
 
+    @Test("Kick syntax evidence binds score, render, silence, and remains selection-neutral")
+    func kickSyntaxEvidenceContract() throws {
+        let baseline = fixtureVector(slot: .primary)
+        let grounded = try #require(baseline.kickSyntax.first)
+        let zeroHash = AutonomousKickSyntaxBarEvidence.zeroSampleHash(
+            renderedFrameCount: 14_769
+        )
+        #expect(zeroHash == ExactPCMFingerprint.mono(
+            [Float](repeating: 0, count: 14_769)
+        ))
+        let withheld = fixtureKickSyntax(
+            role: .withheld,
+            scoreKickEventCount: 0,
+            scoreKickStepMask: 0,
+            renderedKickEventCount: 0,
+            renderedKickStepMask: 0,
+            detectorPeak: 0,
+            detectorRMS: 0,
+            audiblePeak: 0,
+            audibleRMS: 0,
+            duckingEnvelopePeak: 0,
+            detectorSampleHash: zeroHash,
+            audibleSampleHash: zeroHash,
+            detectorNonzeroSampleCount: 0,
+            audibleNonzeroSampleCount: 0
+        )
+
+        #expect(grounded.isComplete(sampleRate: 8_000))
+        #expect(withheld.isComplete(sampleRate: 8_000))
+        #expect(!fixtureKickSyntax(
+            scoreKickEventCount: 2,
+            scoreKickStepMask: 1,
+            renderedKickEventCount: 2,
+            renderedKickStepMask: 1
+        ).isComplete(sampleRate: 8_000))
+        #expect(!fixtureKickSyntax(
+            role: .withheld,
+            scoreKickEventCount: 0,
+            scoreKickStepMask: 0,
+            renderedKickEventCount: 0,
+            renderedKickStepMask: 0,
+            detectorPeak: 0,
+            detectorRMS: 0,
+            audiblePeak: 0,
+            audibleRMS: 0,
+            duckingEnvelopePeak: 0,
+            detectorSampleHash: "aaaaaaaaaaaaaaaa",
+            audibleSampleHash: "aaaaaaaaaaaaaaaa",
+            detectorNonzeroSampleCount: 0,
+            audibleNonzeroSampleCount: 0
+        ).isComplete(sampleRate: 8_000))
+
+        let data = try baseline.deterministicJSON()
+        let object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        var gainForgedObject = object
+        var gainForgedBars = try #require(
+            gainForgedObject["kickSyntax"] as? [[String: Any]]
+        )
+        gainForgedBars[0]["audibleGain"] = 0.8
+        gainForgedObject["kickSyntax"] = gainForgedBars
+        let gainForged = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: gainForgedObject)
+        )
+        #expect(!gainForged.isComplete)
+        #expect(gainForged.isFinite)
+        #expect(gainForged.recordIsStructurallyValid)
+        #expect(gainForged.selectionEvidence == baseline.selectionEvidence)
+
+        var roleForgedObject = object
+        var roleForgedBars = try #require(
+            roleForgedObject["kickSyntax"] as? [[String: Any]]
+        )
+        roleForgedBars[0]["role"] = KickSyntaxRole.withheld.rawValue
+        roleForgedObject["kickSyntax"] = roleForgedBars
+        let roleForged = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: roleForgedObject)
+        )
+        #expect(!roleForged.isComplete)
+        #expect(roleForged.recordIsStructurallyValid)
+        #expect(roleForged.selectionEvidence == baseline.selectionEvidence)
+
+        var missingObject = object
+        missingObject["sourceKickSyntaxBarCount"] = 0
+        missingObject["kickSyntax"] = []
+        let missing = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: missingObject)
+        )
+        #expect(!missing.isComplete)
+        #expect(missing.isFinite)
+        #expect(missing.recordIsStructurallyValid)
+
+        let nonFinite = fixtureVector(
+            slot: .primary,
+            kickSyntaxBar: fixtureKickSyntax(detectorPeak: .nan)
+        )
+        #expect(!nonFinite.isComplete)
+        #expect(!nonFinite.isFinite)
+        #expect(nonFinite.recordIsStructurallyValid)
+        #expect(AutonomousCandidateAttempt(
+            kind: .initialRender,
+            reasonCodes: [
+                .evidenceMissingV1, .evidenceNonFiniteV1, .hardGateFailedV1,
+            ],
+            vector: nonFinite
+        ).isStructurallyComplete)
+
+        var oversizedSourceObject = object
+        oversizedSourceObject["sourceKickSyntaxBarCount"] = 17
+        let oversizedSource = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: oversizedSourceObject)
+        )
+        #expect(!oversizedSource.isComplete)
+        #expect(!oversizedSource.recordIsStructurallyValid)
+    }
+
     @Test("Upper timing evidence is compact, score-bound, and selection-neutral")
     func upperTimingEvidenceContract() throws {
         let neutral = fixtureUpperTiming()
@@ -507,10 +628,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 8)
-        #expect(QualityQualificationContract.schemaVersion == 9)
+        #expect(vector.schemaVersion == 9)
+        #expect(QualityQualificationContract.schemaVersion == 10)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v9")
+                "autotechno-canonical-engine.v10")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -2226,6 +2347,30 @@ struct AutonomousCandidateEvaluationTests {
         #expect(transaction.attempts[3].forceSafeGraph)
         #expect(transaction.planFingerprints == plans)
         #expect(transaction.fingerprint == transaction.fingerprint)
+        let kickChangedCorrection = AutonomousCandidateAttempt(
+            kind: .correctionRender,
+            forceHomeUpperTimbre: true,
+            reasonCodes: [.evidenceNonFiniteV1, .hardGateFailedV1],
+            vector: fixtureVector(
+                slot: .primary,
+                kickSyntaxBar: fixtureKickSyntax(
+                    detectorSampleHash: "aaaaaaaaaaaaaaaa"
+                ),
+                nonFinite: true
+            )
+        )
+        let kickChangedTransaction = AutonomousCandidateEvaluationTransaction(
+            engineVersion: "engine.test.v1",
+            policyVersion: "policy.test.v1",
+            evaluatorVersion: "evaluator.test.v1",
+            planFingerprints: plans,
+            attempts: [failedPrimary, alternate, kickChangedCorrection, fallback],
+            selectedAttemptIndex: 3,
+            selectedSlot: .fallback,
+            comparison: .primary,
+            correctionCount: 1
+        )
+        #expect(!kickChangedTransaction.isComplete)
         let decoder = JSONDecoder()
         decoder.nonConformingFloatDecodingStrategy = .convertFromString(
             positiveInfinity: "+Infinity",
@@ -2567,7 +2712,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(initialCommit.fingerprint != advancedCommit.fingerprint)
 
         #expect(AutonomousCandidateFingerprint.plan(candidates.primary) ==
-                "89d10f5dbbdd9b3c")
+                "0db830b9cb964368")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -2575,7 +2720,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "8a61472b4feefb27")
+                "5104efae3050354b")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -2602,6 +2747,7 @@ struct AutonomousCandidateEvaluationTests {
         stemRoleCount: Int = 5,
         evidenceBar: Int = 0,
         planFingerprintOverride: String? = nil,
+        kickSyntaxBar: AutonomousKickSyntaxBarEvidence? = nil,
         groovePulseBar: AutonomousGroovePulseBarEvidence? = nil,
         closedHatBar: AutonomousClosedHatBarEvidence? = nil,
         instrumentBar: AutonomousInstrumentBarEvidence? = nil,
@@ -2787,6 +2933,7 @@ struct AutonomousCandidateEvaluationTests {
                 measuredKickOverFoundationDB: nil,
                 targetKickOverFoundationDB: nil
             )],
+            kickSyntax: [kickSyntaxBar ?? fixtureKickSyntax(bar: evidenceBar)],
             groovePulse: [groovePulseBar ?? AutonomousGroovePulseBarEvidence(
                 bar: evidenceBar,
                 sourceScoreEventCount: 0,
@@ -2813,6 +2960,54 @@ struct AutonomousCandidateEvaluationTests {
             routeContinuation: route,
             preGraphUpperTimbreEvidence: upper,
             postGraphUpperTimbreEvidence: upper
+        )
+    }
+
+    private func fixtureKickSyntax(
+        bar: Int = 0,
+        role: KickSyntaxRole = .grounded,
+        scoreKickEventCount: Int = 1,
+        scoreKickStepMask: UInt16 = 1,
+        renderedKickEventCount: Int = 1,
+        renderedKickStepMask: UInt16 = 1,
+        renderedFrameCount: Int = 14_769,
+        audibleGain: Double = KickMixBalance.audibleGain * Double(
+            Float(pow(10, AutomaticMixBalancer.homeKickCorrectionDB / 20))
+        ),
+        detectorPeak: Double = 0.6,
+        detectorRMS: Double = 0.12,
+        audiblePeak: Double = 0.5,
+        audibleRMS: Double = 0.1,
+        duckingEnvelopePeak: Double = 0.4,
+        detectorSampleHash: String = "0123456789abcdef",
+        audibleSampleHash: String = "fedcba9876543210",
+        detectorNonzeroSampleCount: Int = 1_024,
+        audibleNonzeroSampleCount: Int = 1_024,
+        detectorToAudibleScaleMatches: Bool = true,
+        renderPassesMatch: Bool = true,
+        bindingValid: Bool = true
+    ) -> AutonomousKickSyntaxBarEvidence {
+        AutonomousKickSyntaxBarEvidence(
+            bar: bar,
+            role: role,
+            scoreKickEventCount: scoreKickEventCount,
+            scoreKickStepMask: scoreKickStepMask,
+            renderedKickEventCount: renderedKickEventCount,
+            renderedKickStepMask: renderedKickStepMask,
+            renderedFrameCount: renderedFrameCount,
+            audibleGain: audibleGain,
+            detectorPeak: detectorPeak,
+            detectorRMS: detectorRMS,
+            audiblePeak: audiblePeak,
+            audibleRMS: audibleRMS,
+            duckingEnvelopePeak: duckingEnvelopePeak,
+            detectorSampleHash: detectorSampleHash,
+            audibleSampleHash: audibleSampleHash,
+            detectorNonzeroSampleCount: detectorNonzeroSampleCount,
+            audibleNonzeroSampleCount: audibleNonzeroSampleCount,
+            detectorToAudibleScaleMatches: detectorToAudibleScaleMatches,
+            renderPassesMatch: renderPassesMatch,
+            bindingValid: bindingValid
         )
     }
 

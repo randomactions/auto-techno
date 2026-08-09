@@ -28,6 +28,14 @@ Identity return and conservative fallback resolve to Hypnotic Lock.
 | Ambient Drift | Major break | Absent, Kick Tail | The existing break atmosphere and transition use Dust Cloud interpretations | Sparse downbeat, with a bounded structural return marker |
 | Melodic Glow | Lock or contrast | Sub Pulse, Point | North Star melody, Dark Chord shadow/atmosphere, bounded response | Session-identity kick cell beneath the tonal protagonist |
 
+Energy release has one narrow score-owned exception to the otherwise per-bar
+kick requirement. When an open dramatic debt, the canonical pullback weak-pulse
+cell, motif context, foundation focus, and macro marker all agree, the director
+may keep a grounded setup, withhold only kick events and anchors for the next
+two bars, then restore the unchanged step-zero kick as recovery. The phrase
+character, foundation behavior, every non-kick event, transport grid, and
+continuation stay unchanged. No other kickless bar is character-compatible.
+
 The matrix is a compatibility contract. The score does not independently roll
 an acid patch, busy rhythm, dense pad, and peak foundation. A candidate is
 structurally invalid if any bar changes character mid-phrase, selects an
@@ -75,6 +83,12 @@ selected character, total bar count, and exact counts of bars with compatible
 foundation, role, and rhythm consequences. The plan fingerprint binds the
 record and every per-bar character/behavior value. Candidate validation rejects
 an incoherent record.
+
+The candidate vector separately retains complete per-bar kick-syntax evidence.
+It requires exact score/render kick masks, exact-zero detector, audible, and stem
+signal during both withheld bars, positive step-zero recovery evidence, and the
+unchanged weak-pulse carrier. This evidence remains a hard provenance boundary;
+the uncalibrated policy does not rank or promote the syntax.
 
 The existing instrument evidence then records the exact resolved patch,
 automation, effect access, architecture-local dry-PCM hash, event count, peak,

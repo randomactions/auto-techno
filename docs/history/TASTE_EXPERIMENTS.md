@@ -286,3 +286,117 @@ unchanged. Same-pass renderer timing tuples and separate role-local dry evidence
 must falsify scheduling, aperture, or role-policy drift. The uncalibrated policy
 cannot select or promote this evidence; automated structural, signal, and
 runtime validation remains distinct from listening and physical-output soak.
+
+## Video-derived kick-syntax ambiguity study — 2026-08-09
+
+Observation source: Underdog Electronic Music School's
+[“How to catch your audience off guard (in a good way)”](https://www.youtube.com/watch?v=j5JlAwOnEnI)
+(uploaded 2023-12-04, duration `4:49`, accessed 2026-08-09). The bounded source
+capture used `yt-dlp` `2026.03.17` without account, cookie, or authenticated
+browser state:
+
+```sh
+yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source13-research -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=j5JlAwOnEnI'
+```
+
+No manual subtitle track was available. The downloaded automatic English `en`
+and `en-orig` VTTs were byte-identical, each with SHA-256
+`4fe1d3178d6e5e856d10201d573d2e88100bd59179ece1b4e415ff693ddbe3c4`.
+The metadata and comment artifact had SHA-256
+`462f722361c84b2dab84ca9b16393a77a36a473e5ca451ad356b50a614ba5b5d`.
+Automatic-caption spellings around the background synth, label name, and a few
+music-only transitions were uncertain and were not normalized into engine
+claims. The final caption cue also extended slightly beyond the declared video
+duration, so caption timing is chapter-level provenance rather than a
+sample-accurate observation.
+
+The bounded transcript paraphrase is: `0:00...0:38` introduces a climax gesture
+that first encourages the wrong kick expectation and then restores impact;
+`0:38...1:10` contrasts the source track's steady, atmospheric presentation with
+a more direct percussion-led remix; `1:10...1:23` demonstrates its kick and
+mid-percussion cell; `1:23...2:01` identifies upbeat and weak-sixteenth accents
+whose interpretation becomes unstable when the kick reference is removed, with
+an additional synth reinforcing that uncertainty; `2:01...2:48` demonstrates
+the kickless break and the unchanged groove snapping back into focus when the
+kick returns while upper material continues; `2:48...3:02` describes a
+subjective trade from intimacy toward drive; `3:02...4:05` compares the device
+to ambiguous musical grammar across familiar four-, eight-, and sixteen-bar
+phrases; and `4:05...4:49` contains release context, promotion, and the outro.
+Music-only demonstrations and claims of physical impact remain descriptive
+source evidence, not measurements of Auto Techno.
+
+The same command captured exactly 50 top-ranked top-level comments and seven
+replies. Three technically relevant threads were inspected within the protocol's
+reply limit; the remaining replies were promotional, aesthetic, or otherwise
+non-actionable. At least five independent top-level reactions converged on the
+limited perceptual relationship that an exposed weak-beat figure can obscure
+beat one and that the returning full groove forces a surprising reorientation.
+This clears the three-independent-comment threshold for community convergence,
+but it does not establish an objective increase in impact or production quality.
+One substantive thread suggested “metric” or “metronomic” rather than
+“syntactic” ambiguity, but its reply is not an independent vote. Another proposed
+actually moving the bar line and received a DJ-mixing caution; that is a distinct
+technique, not corroboration. Likes, track recommendations, repeated replies,
+and general praise were not counted as technical evidence. No usernames or
+verbatim comment text are retained.
+
+The durable claim is relational: a stable kick establishes the metrical frame;
+temporarily withholding that existing anchor while preserving an already-owned
+weak-position carrier can make the downbeat structurally ambiguous; restoring
+the unchanged kick on its original grid can recontextualize the same material.
+The literal production actions are rejected as engine requirements: do not move
+the transport or bar line, relocate the kick, introduce a 3-3-2 clock, add an
+unbounded “chaos” layer, create another percussion carrier, depend on a DAW, or
+add a user-facing control. The source does not define a calibrated perceptual
+target and cannot prove listener confusion automatically.
+
+Implemented clean-room translation: the single resolved score now owns one
+bounded `grounded -> withheld -> withheld -> recovery` relationship at an
+eligible paid-debt energy-release boundary. The director first resolves the
+canonical phrase, then withholds only the two existing kick subsets on macro
+bars 13 and 14 while preserving the canonical pullback weak pulses, motif, and
+every other score event. Macro bar 15 restores the unchanged step-zero recovery
+kick. Conservative fallback, identity return, missing debt, early markers, and
+incomplete prerequisites remain exactly grounded. Closed-hat event indices are
+re-resolved after kick filtering; transport timing, density, instruments,
+generated graph, continuation, and callback ownership are unchanged.
+
+Preflight independently replays the session-owned performance character,
+foundation behavior, paid-debt identity, baseline kick score, and the one
+authorized syntax arc before typed hashing. Same-pass bounded evidence covers
+every rendered bar: score/render kick counts and step masks, exact detector and
+post-fader hashes, nonzero counts, peaks/RMS, kick-stem agreement, fader scaling,
+and full/protected render-pass equality. Withheld bars require exact-zero kick
+buffers and stems while their four weak pulses and motif remain positive;
+recovery requires a rendered step-zero kick and positive signal. Candidate
+vector schema 9, quality-contract schema 10, typed plan-fingerprint domain v6,
+and canonical engine `autotechno-canonical-engine.v10` identify the change.
+The selector and policy remain `uncalibrated.v1`, so this evidence cannot promote
+or rank a candidate.
+
+Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+matched SDKs, isolated module caches, serial SwiftPM, and the workflow's bounded
+prepared-product process splits:
+
+- all 150 unique workflow tests passed: core/evidence 103/103, preparation
+  preflight 21/21, protected routing 7/7, and split upper/prepared-product
+  coverage 19/19;
+- the Source 13 suite passed 3/3, including a real prepared-product assertion
+  that selects the primary and proves exact withheld hashes/stems, surviving
+  weak pulses/motif, and positive step-zero recovery;
+- exact versioned fingerprint and performance-character regressions passed;
+- the previously synthetic closed/open-hat fixture now finds a naturally
+  director-generated relation and binds its later-phrase continuation exactly;
+- the optimized `AutoTechno` product build passed in 58.19 seconds;
+- a repeated independent static audit found no remaining P0-P2, and
+  `git diff --check` was clean before publication.
+
+The matrix establishes deterministic score ownership, source-to-render
+consequence, exact evidence/fingerprint binding, bounded continuation,
+conservative fallback, protected routing, cross-rate behavior, and optimized
+build integrity. No matched-loudness listening, exact-build app playback,
+physical route/interruption smoke, representative preparation-latency or
+peak-memory budget, or hardware-output soak was completed. Automated
+professional-quality qualification therefore remains unavailable, and neither
+the source nor this structural validation makes a sound-quality or
+release-readiness promotion.

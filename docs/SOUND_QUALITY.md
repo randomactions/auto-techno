@@ -11,9 +11,10 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 9, candidate-vector schema 8, and
-canonical engine identity `autotechno-canonical-engine.v9`. It preserves
-complete symbolic, full-mix, masking, role-stem, event-local groove-pulse,
+candidate uses quality-contract schema 10, candidate-vector schema 9, and
+canonical engine identity `autotechno-canonical-engine.v10`. It preserves
+complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
+event-local groove-pulse,
 ordinary closed-hat, score-owned instrument assignment, architecture-local dry-
 PCM, shared pulse-echo return-drive, score-owned upper-role timing, graph, and
 pre/post upper-timbre evidence
@@ -45,6 +46,18 @@ records likewise bind every resolved ordinary-hat event to its neutral or
 same-onset open-hat-companion decay role, exact dry-sample identity, and bounded
 level, spectral, and tail consequence. They do not add events or promote a
 candidate while the evaluator is uncalibrated.
+
+Kick-syntax evidence retains one compact record for every bar. It binds the
+resolved grounded/withheld/recovery role, score and rendered kick count/mask,
+exact detector and audible hashes/nonzero counts, detector/audible peak and RMS,
+ducking-envelope peak, automatic-mix gain, and role-local kick-stem evidence.
+The only active relation is a paid nonconservative energy-release sequence of
+grounded setup, two adjacent withheld bars, and step-zero recovery. Withheld
+bars must be exactly silent in every kick projection while their existing
+weak-pulse cell and motif remain positive; recovery must be positive. The
+policy remains uncalibrated, so these facts can reject broken provenance but
+cannot promote the musical device.
+
 `ProfessionalEvidenceReportBank` accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The shipping evaluator
@@ -201,8 +214,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 9, candidate-vector schema 8, and canonical engine
-v9, the versioned transaction implements the bounded evidence and atomic commit
+Under quality-contract schema 10, candidate-vector schema 9, and canonical engine
+v10, the versioned transaction implements the bounded evidence and atomic commit
 foundation for this loop. It can retain at most the primary, alternate, and
 conservative-fallback candidates, plus one
 home-timbre correction, with no more than four render passes total. Every attempt

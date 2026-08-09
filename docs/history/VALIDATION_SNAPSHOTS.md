@@ -602,3 +602,48 @@ playback, physical route/interruption smoke, representative journey peak-memory
 or cancellation budget, or hardware-output soak was completed. Automated
 professional-quality qualification therefore remains unavailable, and this
 snapshot makes no sound-quality or release-readiness promotion.
+
+## Score-owned kick-syntax ambiguity — 2026-08-09
+
+This candidate is based on mainline Professional Evidence v3 commit
+`6d9841ff58c0d28db6d9c8e23c1e289b447c5f98`. It adds one canonical
+energy-release relationship: an established kick remains grounded on macro bar
+12, is withheld without moving any other event on bars 13 and 14, and returns
+unchanged at step zero on recovery bar 15. The resolver requires exact incoming
+paid debt, canonical pullback weak pulses and motif context, compatible
+performance-character/foundation behavior, and the existing recovery marker.
+Fallback and every ineligible path remain grounded.
+
+The renderer streams exact detector and post-fader kick hashes and metrics from
+detached preparation. Candidate-vector schema 9 binds those observations to the
+per-bar score/render count and step mask, kick stem, automatic gain, weak-pulse
+and instrument evidence, full/protected pass parity, and the typed plan identity.
+Quality-contract schema 10, canonical engine v10, and typed plan-fingerprint
+domain v6 identify the score, PCM, and wire-format change. Policy remains
+`uncalibrated.v1` and selection evidence is unchanged.
+
+Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+matched SDKs, isolated module caches, serial SwiftPM, and the same process
+boundaries as `.github/workflows/swift.yml`:
+
+- core and evidence: 103/103 passed in 118.913 seconds;
+- preparation preflight: 21/21 passed in 520.560 seconds;
+- protected routing: 7/7 passed in 69.724 seconds;
+- split upper/prepared-product filters: 19/19 passed across 14 fresh test
+  processes, including both closed-hat route rates, tamper rejection, paired
+  selection/correction, cancellation, rejection isolation, cross-rate intent,
+  and phrase-boundary continuation;
+- Source 13's dedicated score/preflight/prepared-product suite: 3/3 passed;
+- exact fingerprint and performance-character focused regressions passed;
+- optimized `AutoTechno` product build: passed in 58.19 seconds;
+- repeated independent static audit: no remaining P0-P2;
+- `git diff --check`: clean before publication.
+
+The local matrix establishes deterministic score ownership, exact non-kick
+preservation, audible omission/restoration, score-to-render evidence,
+continuation, bounded work, conservative fallback, and protected-route safety.
+It does not include matched-loudness listening, exact-build app playback,
+physical route/interruption smoke, representative journey latency/peak-memory
+measurement, or hardware-output soak. Automated professional-quality
+qualification remains unavailable, so this snapshot makes no sound-quality or
+release-readiness promotion.

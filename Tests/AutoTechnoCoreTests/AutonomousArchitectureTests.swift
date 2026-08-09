@@ -75,10 +75,13 @@ struct AdaptiveAutonomousSessionTests {
                             $0.performance.roles,
                             with: character
                         ) &&
-                        PerformanceCharacterContract.rhythmIsCompatible(
-                            $0.ensemble,
-                            with: character
-                        )
+                        ($0.kickSyntaxRole == .withheld
+                            ? $0.ensemble.kickAnchors.isEmpty &&
+                                !$0.ensemble.events.contains { $0.voice == .kick }
+                            : PerformanceCharacterContract.rhythmIsCompatible(
+                                $0.ensemble,
+                                with: character
+                            ))
                 })
 
                 let synth = SynthPerformancePlan(
@@ -178,6 +181,8 @@ struct AdaptiveAutonomousSessionTests {
         )
         let evidence = PerformanceCharacterEvidence(
             resolvedBars: [tampered],
+            kind: .lock,
+            paidDebtIDs: [],
             conservative: false
         )
         #expect(!evidence.valid)
@@ -318,7 +323,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true, conservative: false
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v9")
+                "autotechno-canonical-engine.v10")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")

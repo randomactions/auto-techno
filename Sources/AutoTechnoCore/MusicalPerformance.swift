@@ -22,8 +22,9 @@ package enum ModalIdentity: String, CaseIterable, Sendable {
     }
 }
 
-/// Phrase-scale low-end identity. The kick is always independent and remains
-/// the physical anchor even when its companion changes or drops out.
+/// Phrase-scale low-end identity. The companion remains independent of the
+/// canonical kick vocabulary; a bounded score-owned syntax arc may temporarily
+/// remove a resolved kick subset and its anchors without changing the companion.
 package enum FoundationCompanion: String, CaseIterable, Sendable {
     case bass
     case monoRumble

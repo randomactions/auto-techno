@@ -112,14 +112,25 @@ package struct BusState: Equatable, Sendable {
 
 /// Evidence from the two kick paths used during detached rendering. The
 /// detector remains pre-fader so groove ducking does not move with mix level;
-/// audible values describe the post-fader kick contribution.
+/// audible values describe the post-fader kick contribution. The ducking
+/// envelope peak remains an envelope metric and is not the detector peak.
 package struct KickMixEvidence: Equatable, Sendable {
+    package let renderedFrameCount: Int
+    package let renderedKickEventCount: Int
+    package let renderedKickStepMask: UInt16
     package let audibleGain: Double
-    package let audiblePeak: Float
-    package let audibleRMS: Float
-    package let detectorPeak: Float
-    package let detectorRMS: Float
-    package let duckingEnvelopePeak: Float
+    package let audiblePeak: Double
+    package let audibleRMS: Double
+    package let detectorPeak: Double
+    package let detectorRMS: Double
+    package let duckingEnvelopePeak: Double
+    package let detectorSampleHash: String
+    package let audibleSampleHash: String
+    package let detectorNonzeroSampleCount: Int
+    package let audibleNonzeroSampleCount: Int
+    /// True only when every post-fader dry kick sample is the exact two-stage
+    /// Float scaling of the detector sample used by sidechain ducking.
+    package let detectorToAudibleScaleMatches: Bool
 }
 
 package struct StemReconstructionEvidence: Equatable, Sendable {
@@ -599,7 +610,11 @@ package struct RenderBlock: Equatable, Sendable {
     package let stereoCorrelation: Float
     package let masking: [RoleMaskingObservation]
     package let effects: [EffectState]
+    /// Evidence from the protected-rhythm pass that is actually scheduled.
     package let kickMix: KickMixEvidence
+    /// Exact full-evidence equality proves the full and scheduled detached
+    /// render passes observed the same kick invocation and resulting buses.
+    package let kickRenderPassesMatch: Bool
     package let stemObservations: [MixRole: StemObservation]
     package let automaticMix: AutomaticMixPlan
     package let stemReconstruction: StemReconstructionEvidence
@@ -644,6 +659,7 @@ package struct RenderBlock: Equatable, Sendable {
                 events: [VoiceEvent], modulation: ModulationState,
                 busStates: [VoiceKind: BusState], masking: [RoleMaskingObservation],
                 effects: [EffectState], kickMix: KickMixEvidence,
+                kickRenderPassesMatch: Bool,
                 stemObservations: [MixRole: StemObservation],
                 automaticMix: AutomaticMixPlan,
                 stemReconstruction: StemReconstructionEvidence,
@@ -671,6 +687,7 @@ package struct RenderBlock: Equatable, Sendable {
         self.masking = masking
         self.effects = effects
         self.kickMix = kickMix
+        self.kickRenderPassesMatch = kickRenderPassesMatch
         self.stemObservations = stemObservations
         self.automaticMix = automaticMix
         self.stemReconstruction = stemReconstruction
@@ -1182,7 +1199,8 @@ package enum AutonomousPhraseRenderer {
                 busStates: buses,
                 masking: rendered.masking,
                 effects: graphEffects,
-                kickMix: rendered.kickMix,
+                kickMix: protectedRhythm.kickMix,
+                kickRenderPassesMatch: protectedRhythm.kickMix == rendered.kickMix,
                 stemObservations: rendered.stemObservations,
                 automaticMix: rendered.automaticMix,
                 stemReconstruction: rendered.stemReconstruction,

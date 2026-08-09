@@ -8,9 +8,9 @@ package enum QualityQualificationContract {
     /// three-band centroid proxy with bounded, physical-time perceptual
     /// evidence. The policy remains uncalibrated; this version identifies
     /// evidence, not promotion.
-    package static let schemaVersion = 9
+    package static let schemaVersion = 10
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v9"
+    package static let engineVersion = "autotechno-canonical-engine.v10"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

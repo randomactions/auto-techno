@@ -370,6 +370,15 @@ package struct EnsembleContext: Equatable, Sendable {
     }
 }
 
+/// Score-owned relationship between the existing kick grid and a bounded
+/// phrase-level ambiguity arc. Withholding removes only already-resolved kick
+/// events; it never shifts the transport, bar line, or surrounding score.
+package enum KickSyntaxRole: String, CaseIterable, Sendable {
+    case grounded
+    case withheld
+    case recovery
+}
+
 /// The single immutable score consumed by rendering for one bar. Keeping the
 /// musical bar and its arbitrated events together prevents telemetry and PCM
 /// from describing different performances.
@@ -387,6 +396,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let closedHatDecayArticulations: [ClosedHatDecayArticulation]
     package let spatialContrast: SpatialContrastArticulation
     package let narrative: NarrativeArticulation
+    package let kickSyntaxRole: KickSyntaxRole
 
     package init(performance: PerformanceBar, ensemble: EnsembleContext,
                  arrangementGesture: ArrangementGesture, percussionGear: PercussionGear,
@@ -397,7 +407,8 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
                  groovePulses: [GroovePulseArticulation] = [],
                  closedHatDecayArticulations: [ClosedHatDecayArticulation]? = nil,
                  spatialContrast: SpatialContrastArticulation = .foreground,
-                 narrative: NarrativeArticulation = .initial) {
+                 narrative: NarrativeArticulation = .initial,
+                 kickSyntaxRole: KickSyntaxRole = .grounded) {
         self.performance = performance
         self.ensemble = ensemble
         self.arrangementGesture = arrangementGesture
@@ -424,6 +435,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
             )
         self.spatialContrast = spatialContrast
         self.narrative = narrative
+        self.kickSyntaxRole = kickSyntaxRole
     }
 
     package func groovePulse(at step: Int) -> GroovePulseArticulation? {
@@ -456,6 +468,171 @@ package enum ClosedHatDecayResolver {
             ))
         }
         return result
+    }
+}
+
+/// Applies one deterministic metric-syntax arc after the complete baseline
+/// phrase has been resolved. The setup and misleading weak-pulse material stay
+/// on the original grid; only the two existing kick subsets immediately before
+/// the unchanged recovery marker are withheld.
+package enum KickSyntaxResolver {
+    package static let canonicalWeakPulseSteps = [3, 7, 11, 15]
+
+    package static func resolve(
+        resolvedBars: [ResolvedPerformanceBar],
+        kind: AutonomousPhraseKind,
+        paidDebtIDs: [Int],
+        conservative: Bool
+    ) -> [ResolvedPerformanceBar] {
+        guard resolvedBars.count <= 16,
+              kind == .energyRelease,
+              !conservative,
+              !paidDebtIDs.isEmpty,
+              resolvedBars.allSatisfy({ $0.kickSyntaxRole == .grounded }),
+              let recoveryIndex = resolvedBars.firstIndex(where: {
+                  $0.arrangementGesture == .structuralMarker
+              }),
+              recoveryIndex >= 3 else {
+            return resolvedBars
+        }
+
+        let setupIndex = recoveryIndex - 3
+        let firstWithheldIndex = recoveryIndex - 2
+        let secondWithheldIndex = recoveryIndex - 1
+        let setup = resolvedBars[setupIndex]
+        let firstWithheld = resolvedBars[firstWithheldIndex]
+        let secondWithheld = resolvedBars[secondWithheldIndex]
+        let recovery = resolvedBars[recoveryIndex]
+        let span = [setup, firstWithheld, secondWithheld, recovery]
+        let spanIndices = [
+            setupIndex, firstWithheldIndex, secondWithheldIndex, recoveryIndex,
+        ]
+        let character = setup.performanceCharacter
+
+        guard character == .peakDrive || character == .acidPressure,
+              zip(spanIndices, span).allSatisfy({ index, resolved in
+                  resolved.performance.bar >= 0 &&
+                      resolved.performance.localBar == index &&
+                      resolved.performance.phrase == recovery.performance.phrase &&
+                      resolved.performance.phraseLength == resolvedBars.count &&
+                      resolved.performanceCharacter == character &&
+                      resolved.foundationBehavior ==
+                        PerformanceCharacterContract.foundationBehavior(
+                            for: character,
+                            gesture: resolved.arrangementGesture,
+                            localBar: resolved.performance.localBar,
+                            phraseLength: resolved.performance.phraseLength
+                        ) &&
+                      resolved.foundationBehavior.companion == .bass &&
+                      resolved.foundationCompanion == .bass
+              }),
+              zip(span, span.dropFirst()).allSatisfy({ previous, next in
+                  previous.performance.bar < Int.max &&
+                      next.performance.bar == previous.performance.bar + 1
+              }),
+              span.allSatisfy({
+                  $0.ensemble.focusRole == .foundation &&
+                      $0.percussionGear == .turnaround
+              }),
+              setup.arrangementGesture == .steady,
+              firstWithheld.arrangementGesture == .steady,
+              secondWithheld.arrangementGesture == .steady,
+              recovery.arrangementGesture == .structuralMarker,
+              macroPosition(recovery.performance.bar) == 15,
+              [setup, firstWithheld, secondWithheld].allSatisfy({
+                  WeakSixteenthStage(absoluteBar: $0.performance.bar) == .pullback &&
+                      hasCanonicalKickScore($0.ensemble)
+              }),
+              setup.ensemble.events.contains(where: {
+                  $0.voice == .kick && $0.step == 0
+              }),
+              [firstWithheld, secondWithheld].allSatisfy(isEligibleWithheldBaseline),
+              recovery.performance.signatureEvent == .displacedKickRecovery,
+              hasCanonicalKickScore(recovery.ensemble),
+              recovery.ensemble.events.contains(where: {
+                  $0.voice == .kick && $0.step == 0
+              }) else {
+            return resolvedBars
+        }
+
+        var result = resolvedBars
+        result[firstWithheldIndex] = replacingKickScore(
+            in: firstWithheld,
+            role: .withheld
+        )
+        result[secondWithheldIndex] = replacingKickScore(
+            in: secondWithheld,
+            role: .withheld
+        )
+        result[recoveryIndex] = replacingKickScore(
+            in: recovery,
+            role: .recovery
+        )
+        return result
+    }
+
+    private static func isEligibleWithheldBaseline(
+        _ resolved: ResolvedPerformanceBar
+    ) -> Bool {
+        let grooveEventSteps = resolved.ensemble.events
+            .filter { $0.voice == .groovePulse }
+            .map(\.step)
+            .sorted()
+        return grooveEventSteps == canonicalWeakPulseSteps &&
+            resolved.groovePulses.map(\.step) == canonicalWeakPulseSteps &&
+            resolved.ensemble.events.contains { $0.voice == .motif } &&
+            !resolved.ensemble.events.contains {
+                $0.voice != .kick && $0.step == 0
+            }
+    }
+
+    private static func hasCanonicalKickScore(_ ensemble: EnsembleContext) -> Bool {
+        let eventSteps = ensemble.events
+            .filter { $0.voice == .kick }
+            .map(\.step)
+            .sorted()
+        return !eventSteps.isEmpty && eventSteps == ensemble.kickAnchors
+    }
+
+    private static func macroPosition(_ absoluteBar: Int) -> Int {
+        let remainder = absoluteBar % 16
+        return remainder >= 0 ? remainder : remainder + 16
+    }
+
+    private static func replacingKickScore(
+        in resolved: ResolvedPerformanceBar,
+        role: KickSyntaxRole
+    ) -> ResolvedPerformanceBar {
+        let ensemble: EnsembleContext
+        if role == .withheld {
+            ensemble = EnsembleContext(
+                focusRole: resolved.ensemble.focusRole,
+                events: resolved.ensemble.events.filter { $0.voice != .kick },
+                kickAnchors: [],
+                intentionalPileup: resolved.ensemble.intentionalPileup
+            )
+        } else {
+            ensemble = resolved.ensemble
+        }
+        return ResolvedPerformanceBar(
+            performance: resolved.performance,
+            ensemble: ensemble,
+            arrangementGesture: resolved.arrangementGesture,
+            percussionGear: resolved.percussionGear,
+            performanceCharacter: resolved.performanceCharacter,
+            foundationBehavior: resolved.foundationBehavior,
+            foundationCompanion: resolved.foundationCompanion,
+            pulseEchoEnabled: resolved.pulseEchoEnabled,
+            interlockChapter: resolved.interlockChapter,
+            groovePulses: resolved.groovePulses,
+            closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
+                from: ensemble,
+                conservative: false
+            ),
+            spatialContrast: resolved.spatialContrast,
+            narrative: resolved.narrative,
+            kickSyntaxRole: role
+        )
     }
 }
 
@@ -628,8 +805,10 @@ package enum GroovePulseResolver {
 }
 
 package enum EnsembleArbiter {
-    /// Resolves proposed events before rendering. Kick anchors are immutable,
-    /// while other events may move to declared alternatives to preserve gaps.
+    /// Resolves the baseline score before rendering. Kick anchors are immutable
+    /// during arbitration, while other events may move to declared alternatives
+    /// to preserve gaps. The phrase-level syntax resolver may subsequently
+    /// withhold an exact kick subset without moving this grid.
     package static func resolve(proposals: [EnsembleEventProposal], focusRole: PerformanceRole,
                                intentionalPileup: Bool) -> EnsembleContext {
         let ordered = proposals.enumerated().sorted { lhs, rhs in
@@ -933,6 +1112,8 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
         self.interest = interest
         performanceCharacterEvidence = PerformanceCharacterEvidence(
             resolvedBars: resolvedBars,
+            kind: kind,
+            paidDebtIDs: paidDebtIDs,
             conservative: conservative
         )
         self.endingInterlockState = endingInterlockState
@@ -1185,12 +1366,13 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         // them with an independently generated scene identity.
         let dna = state.identityDNA
         let section = section(for: kind)
-        let character = performanceCharacter(
+        let character = Self.canonicalPerformanceCharacter(
             kind: kind,
-            state: state,
+            rootSeed: state.rootSeed,
+            phraseIndex: state.phraseIndex,
+            recentPerformanceCharacters: state.memory.recentPerformanceCharacters,
             alternate: alternate,
-            conservative: conservative,
-            seed: phraseSeed
+            conservative: conservative
         )
         let focusRole = focus(kind: kind, alternate: alternate, seed: phraseSeed)
         var resolvedBars: [ResolvedPerformanceBar] = []
@@ -1349,6 +1531,12 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             openedDebt = nil
         }
         let paidDebtIDs = kind == .energyRelease ? state.memory.openDebts.map(\.id) : []
+        resolvedBars = KickSyntaxResolver.resolve(
+            resolvedBars: resolvedBars,
+            kind: kind,
+            paidDebtIDs: paidDebtIDs,
+            conservative: conservative
+        )
         let interest = PhraseInterestEvaluator.evaluate(
             resolvedBars: resolvedBars,
             kind: kind,
@@ -1391,12 +1579,13 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         }
     }
 
-    private func performanceCharacter(
+    package static func canonicalPerformanceCharacter(
         kind: AutonomousPhraseKind,
-        state: AutonomousSessionState,
+        rootSeed: UInt64,
+        phraseIndex: Int,
+        recentPerformanceCharacters: [PerformanceCharacter],
         alternate: Bool,
-        conservative: Bool,
-        seed: UInt64
+        conservative: Bool
     ) -> PerformanceCharacter {
         guard !conservative, kind != .identityReturn else { return .hypnoticLock }
         let preferred: [PerformanceCharacter] = switch kind {
@@ -1406,11 +1595,16 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         case .energyRelease: [.peakDrive, .acidPressure]
         case .identityReturn: [.hypnoticLock]
         }
-        let recent = Set(state.memory.recentPerformanceCharacters)
+        let recent = Set(recentPerformanceCharacters)
         let unrepeated = preferred.filter { !recent.contains($0) }
         let choices = unrepeated.isEmpty ? preferred : unrepeated
+        let phraseSeed = SceneDNA.derivedSeed(
+            scene: rootSeed,
+            domain: 0x51A7E ^ UInt64(phraseIndex + 1),
+            index: alternate ? 1 : 0
+        )
         let offset = alternate ? 1 : 0
-        return choices[(Int(seed % UInt64(choices.count)) + offset) % choices.count]
+        return choices[(Int(phraseSeed % UInt64(choices.count)) + offset) % choices.count]
     }
 
     private func focus(kind: AutonomousPhraseKind, alternate: Bool, seed: UInt64) -> PerformanceRole {
@@ -1854,20 +2048,12 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             )
             return (FoundationBehavior(companion: companion), companion)
         }
-        let behavior: FoundationBehavior = switch character {
-        case .hypnoticLock:
-            gesture == .minimalize ? .subPulse : .monotone
-        case .acidPressure:
-            gesture == .turnaround ? .point : .monotone
-        case .peakDrive:
-            localBar < length / 2 ? .point : .pump
-        case .brokenSuspension:
-            gesture == .structuralMarker ? .tunedPercussive : .kickTail
-        case .ambientDrift:
-            gesture == .structuralMarker ? .kickTail : .absent
-        case .melodicGlow:
-            gesture == .turnaround ? .point : .subPulse
-        }
+        let behavior = PerformanceCharacterContract.foundationBehavior(
+            for: character,
+            gesture: gesture,
+            localBar: localBar,
+            phraseLength: length
+        )
         precondition(
             PerformanceCharacterContract.foundationIsCompatible(behavior, with: character),
             "Performance character emitted an incompatible foundation"

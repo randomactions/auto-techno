@@ -55,11 +55,11 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 9, candidate-vector schema 8, and canonical engine v9
+Quality-contract schema 10, candidate-vector schema 9, and canonical engine v10
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
-automatic-mix, event-local groove-pulse, ordinary closed-hat, score-owned
-instrument, shared pulse-echo return-drive, score-owned upper-role timing,
+automatic-mix, score-owned kick-syntax, event-local groove-pulse, ordinary
+closed-hat, score-owned instrument, shared pulse-echo return-drive, score-owned upper-role timing,
 graph, and pre/post upper-timbre vector for every retained attempt. Groove-pulse
 evidence must cover every bar
 explicitly, bind each score event to one exact dry-sample
@@ -93,6 +93,20 @@ and record a conservative peak analyzer-memory bound no greater than 6 MiB. Fina
 commit provenance must additionally bind the selected sample hash
 and finalized quality continuation state; rejected attempts may not affect that
 state.
+
+Kick-syntax evidence must cover every full rendered bar and match the resolved
+score role, kick count, and sixteen-step mask to the actual kick render pass.
+Grounded and recovery bars require positive finite detector, audible, envelope,
+and kick-stem evidence; recovery additionally requires step zero. Exactly two
+adjacent withheld bars may occur only immediately before that recovery in a
+paid, nonconservative energy-release phrase. They require empty score/render
+kick sets, exact-zero detector/audible/kick-stem metrics, both nonzero counts
+equal to zero, and
+the canonical `[3, 7, 11, 15]` weak-pulse evidence plus motif context. Full and
+protected render passes, detector-to-audible scaling, automatic-mix gain, and
+all hashes must agree. Missing bars, forged roles, arbitrary kick deletion,
+nonzero withheld signal, silent recovery, or a changed non-kick score make the
+candidate incomplete; none of this evidence changes uncalibrated selection.
 
 Pulse-echo return-drive evidence must cover every full rendered bar and bind the
 bar, fixed BPM, route-derived three-sixteenth delay-frame count, rendered-frame

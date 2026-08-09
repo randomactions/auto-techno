@@ -16,9 +16,13 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   guards;
 - one bounded weak-percussion vocabulary whose existing syncopated-lean onsets
   carry score-owned physical articulation and a 3-3-2 accent/ghost relationship;
-- canonical engine v9, quality-contract schema 9, and candidate-vector schema 8
+- one bounded debt-owned energy-release syntax that withholds only the existing
+  kick on two pullback bars, preserves weak-pulse and motif context, then restores
+  the unchanged step-zero kick at the structural marker;
+- canonical engine v10, quality-contract schema 10, and candidate-vector schema 9
   with atomic selected-commit provenance across symbolic, full-mix, masking,
-  stem, event-local groove-pulse, ordinary closed-hat, score-owned instrument,
+  stem, score-owned kick-syntax, event-local groove-pulse, ordinary closed-hat,
+  score-owned instrument,
   shared pulse-echo return-drive, score-owned upper-role timing, graph, and
   pre/post upper-timbre evidence;
 - six phrase-scale performance characters with bounded two-character memory and a
@@ -68,10 +72,11 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 9 and candidate-vector schema 8 now bind a versioned
-transaction across canonical engine v9, quality policy, evaluator, candidate
+Quality-contract schema 10 and candidate-vector schema 9 now bind a versioned
+transaction across canonical engine v10, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
-commit provenance. Its bounded groove-pulse, ordinary closed-hat, instrument,
+commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
+instrument,
 pulse-echo return-drive, and upper-role timing projections make each
 score-to-PCM consequence explicit without letting the uncalibrated policy rank
 that evidence. Professional

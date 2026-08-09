@@ -66,6 +66,32 @@ package enum PerformanceCharacterContract {
         allowedFoundations(for: character).contains(behavior)
     }
 
+    /// The canonical score-owned foundation interpretation for a resolved
+    /// nonconservative phrase bar. The session director and preparation replay
+    /// share this owner so a candidate cannot self-authorize a different
+    /// companion relationship.
+    package static func foundationBehavior(
+        for character: PerformanceCharacter,
+        gesture: ArrangementGesture,
+        localBar: Int,
+        phraseLength: Int
+    ) -> FoundationBehavior {
+        switch character {
+        case .hypnoticLock:
+            gesture == .minimalize ? .subPulse : .monotone
+        case .acidPressure:
+            gesture == .turnaround ? .point : .monotone
+        case .peakDrive:
+            localBar < phraseLength / 2 ? .point : .pump
+        case .brokenSuspension:
+            gesture == .structuralMarker ? .tunedPercussive : .kickTail
+        case .ambientDrift:
+            gesture == .structuralMarker ? .kickTail : .absent
+        case .melodicGlow:
+            gesture == .turnaround ? .point : .subPulse
+        }
+    }
+
     package static func rolesAreCompatible(
         _ roles: [PerformanceRole],
         with character: PerformanceCharacter
@@ -110,7 +136,12 @@ package struct PerformanceCharacterEvidence: Equatable, Sendable {
     package let characteristicRhythmBars: Int
     package let valid: Bool
 
-    package init(resolvedBars: [ResolvedPerformanceBar], conservative: Bool) {
+    package init(
+        resolvedBars: [ResolvedPerformanceBar],
+        kind: AutonomousPhraseKind,
+        paidDebtIDs: [Int],
+        conservative: Bool
+    ) {
         let selectedCharacter = resolvedBars.first?.performanceCharacter ?? .hypnoticLock
         let barCount = resolvedBars.count
         let foundationCount: Int
@@ -129,6 +160,11 @@ package struct PerformanceCharacterEvidence: Equatable, Sendable {
                     !$0.ensemble.events.filter { $0.voice == .kick }.isEmpty
             }.count
         } else {
+            let authorizedKickSyntax = Self.kickSyntaxArcIsCanonical(
+                resolvedBars: resolvedBars,
+                kind: kind,
+                paidDebtIDs: paidDebtIDs
+            )
             foundationCount = resolvedBars.filter {
                 $0.performanceCharacter == selectedCharacter &&
                     $0.foundationBehavior.companion == $0.foundationCompanion &&
@@ -146,10 +182,10 @@ package struct PerformanceCharacterEvidence: Equatable, Sendable {
             }.count
             rhythmCount = resolvedBars.filter {
                 $0.performanceCharacter == selectedCharacter &&
-                    PerformanceCharacterContract.rhythmIsCompatible(
+                    (PerformanceCharacterContract.rhythmIsCompatible(
                         $0.ensemble,
                         with: selectedCharacter
-                    )
+                    ) || (authorizedKickSyntax && $0.kickSyntaxRole == .withheld))
             }.count
         }
         character = selectedCharacter
@@ -159,5 +195,71 @@ package struct PerformanceCharacterEvidence: Equatable, Sendable {
         characteristicRhythmBars = rhythmCount
         valid = barCount > 0 && foundationCount == barCount &&
             roleCount == barCount && rhythmCount == barCount
+    }
+
+    private static func kickSyntaxArcIsCanonical(
+        resolvedBars: [ResolvedPerformanceBar],
+        kind: AutonomousPhraseKind,
+        paidDebtIDs: [Int]
+    ) -> Bool {
+        guard kind == .energyRelease,
+              !paidDebtIDs.isEmpty,
+              resolvedBars.count <= 16 else {
+            return false
+        }
+        let recoveryIndices = resolvedBars.indices.filter {
+            resolvedBars[$0].kickSyntaxRole == .recovery
+        }
+        guard recoveryIndices.count == 1,
+              let recoveryIndex = recoveryIndices.first,
+              recoveryIndex >= 3 else {
+            return false
+        }
+        let firstWithheldIndex = recoveryIndex - 2
+        let secondWithheldIndex = recoveryIndex - 1
+        guard resolvedBars.indices.allSatisfy({ index in
+                  let expected: KickSyntaxRole
+                  if index == firstWithheldIndex || index == secondWithheldIndex {
+                      expected = .withheld
+                  } else if index == recoveryIndex {
+                      expected = .recovery
+                  } else {
+                      expected = .grounded
+                  }
+                  return resolvedBars[index].kickSyntaxRole == expected
+              }) else {
+            return false
+        }
+        let setup = resolvedBars[recoveryIndex - 3]
+        let recovery = resolvedBars[recoveryIndex]
+        guard setup.ensemble.events.contains(where: {
+                  $0.voice == .kick && $0.step == 0
+              }),
+              recovery.ensemble.events.contains(where: {
+                  $0.voice == .kick && $0.step == 0
+              }),
+              recovery.performance.signatureEvent == .displacedKickRecovery,
+              recovery.arrangementGesture == .structuralMarker else {
+            return false
+        }
+        for index in [firstWithheldIndex, secondWithheldIndex] {
+            let bar = resolvedBars[index]
+            let grooveSteps = bar.ensemble.events
+                .filter { $0.voice == .groovePulse }
+                .map(\.step)
+                .sorted()
+            guard bar.ensemble.kickAnchors.isEmpty,
+                  !bar.ensemble.events.contains(where: { $0.voice == .kick }),
+                  grooveSteps == KickSyntaxResolver.canonicalWeakPulseSteps,
+                  bar.groovePulses.map(\.step) ==
+                    KickSyntaxResolver.canonicalWeakPulseSteps,
+                  bar.ensemble.events.contains(where: { $0.voice == .motif }),
+                  !bar.ensemble.events.contains(where: {
+                      $0.voice != .kick && $0.step == 0
+                  }) else {
+                return false
+            }
+        }
+        return true
     }
 }

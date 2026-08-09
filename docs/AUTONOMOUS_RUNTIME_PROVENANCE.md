@@ -24,11 +24,12 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 9, candidate-
-   vector schema 8, and canonical engine identity
-   `autotechno-canonical-engine.v9`. Each
+   candidate-evaluation transaction under quality-contract schema 10, candidate-
+   vector schema 9, and canonical engine identity
+   `autotechno-canonical-engine.v10`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
-   per-bar masking, role-stem, automatic-mix, event-local groove-pulse,
+   per-bar masking, role-stem, automatic-mix, score-owned kick-syntax,
+   event-local groove-pulse,
    ordinary closed-hat, score-owned instrument, shared pulse-echo return-drive,
    score-owned upper-role timing, graph, and pre/post upper-timbre evidence.
    Instrument records bind each resolved architecture, patch, use, automation,
@@ -37,8 +38,13 @@ mistaken for a completed feedback system.
    its score-owned neutral or companion decay role and exact dry-sample
    consequence. Groove-pulse records bind the existing resolved onset to
    score-owned strike zone, damping, deterministic microvariation, exact
-   dry-sample identity, and reduced envelope/spectral consequence. The
-   transaction binds all three
+   dry-sample identity, and reduced envelope/spectral consequence. Kick-syntax
+   records cover every rendered bar and bind the score role and kick-step mask
+   to exact detector/audible hashes, nonzero counts, peak/RMS, ducking envelope,
+   automatic-mix gain, and kick stem. Only one debt-owned energy-release arc may
+   be grounded, withheld, withheld, then recovered; withheld bars must be silent
+   in every kick projection while their canonical weak-pulse carrier remains,
+   and recovery must restore a positive step-zero kick. The transaction binds all three
    plan fingerprints, engine/policy/evaluator versions, attempt-local reasons,
    selection, comparison, and correction provenance. It permits at most the
    primary, alternate, and deterministic fallback plus one home-timbre

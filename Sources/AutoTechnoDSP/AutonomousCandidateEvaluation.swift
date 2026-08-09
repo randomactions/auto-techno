@@ -660,6 +660,194 @@ package struct AutonomousAutomaticMixEvidence: Codable, Equatable, Sendable {
     }
 }
 
+/// One bounded record per rendered bar binds the score-owned kick syntax to the
+/// exact detector and post-fader kick consequences from detached preparation.
+/// It retains no PCM and does not participate in the shipping selector while
+/// the professional-quality policy remains uncalibrated.
+package struct AutonomousKickSyntaxBarEvidence: Codable, Equatable, Sendable {
+    package let bar: Int
+    package let role: String
+    package let scoreKickEventCount: Int
+    package let scoreKickStepMask: UInt16
+    package let renderedKickEventCount: Int
+    package let renderedKickStepMask: UInt16
+    package let renderedFrameCount: Int
+    package let audibleGain: Double
+    package let detectorPeak: Double
+    package let detectorRMS: Double
+    package let audiblePeak: Double
+    package let audibleRMS: Double
+    package let duckingEnvelopePeak: Double
+    package let detectorSampleHash: String
+    package let audibleSampleHash: String
+    package let detectorNonzeroSampleCount: Int
+    package let audibleNonzeroSampleCount: Int
+    package let detectorToAudibleScaleMatches: Bool
+    package let renderPassesMatch: Bool
+    package let bindingValid: Bool
+
+    package init(
+        bar: Int,
+        role: KickSyntaxRole,
+        scoreKickEventCount: Int,
+        scoreKickStepMask: UInt16,
+        renderedKickEventCount: Int,
+        renderedKickStepMask: UInt16,
+        renderedFrameCount: Int,
+        audibleGain: Double,
+        detectorPeak: Double,
+        detectorRMS: Double,
+        audiblePeak: Double,
+        audibleRMS: Double,
+        duckingEnvelopePeak: Double,
+        detectorSampleHash: String,
+        audibleSampleHash: String,
+        detectorNonzeroSampleCount: Int,
+        audibleNonzeroSampleCount: Int,
+        detectorToAudibleScaleMatches: Bool,
+        renderPassesMatch: Bool,
+        bindingValid: Bool
+    ) {
+        self.bar = bar
+        self.role = role.rawValue
+        self.scoreKickEventCount = scoreKickEventCount
+        self.scoreKickStepMask = scoreKickStepMask
+        self.renderedKickEventCount = renderedKickEventCount
+        self.renderedKickStepMask = renderedKickStepMask
+        self.renderedFrameCount = renderedFrameCount
+        self.audibleGain = audibleGain
+        self.detectorPeak = detectorPeak
+        self.detectorRMS = detectorRMS
+        self.audiblePeak = audiblePeak
+        self.audibleRMS = audibleRMS
+        self.duckingEnvelopePeak = duckingEnvelopePeak
+        self.detectorSampleHash = detectorSampleHash
+        self.audibleSampleHash = audibleSampleHash
+        self.detectorNonzeroSampleCount = detectorNonzeroSampleCount
+        self.audibleNonzeroSampleCount = audibleNonzeroSampleCount
+        self.detectorToAudibleScaleMatches = detectorToAudibleScaleMatches
+        self.renderPassesMatch = renderPassesMatch
+        self.bindingValid = bindingValid
+    }
+
+    package var isFinite: Bool {
+        [
+            audibleGain, detectorPeak, detectorRMS, audiblePeak, audibleRMS,
+            duckingEnvelopePeak,
+        ].allSatisfy(\.isFinite)
+    }
+
+    @inline(never)
+    package func isComplete(sampleRate: Double) -> Bool {
+        let supportedRateRange = QualityQualificationContract.minimumSupportedSampleRate...QualityQualificationContract.maximumSupportedSampleRate
+        guard let resolvedRole = KickSyntaxRole(rawValue: role),
+              sampleRate.isFinite,
+              supportedRateRange.contains(sampleRate),
+              bar >= 0,
+              renderedFrameCount == Self.barFrameCount(sampleRate: sampleRate),
+              (0...16).contains(scoreKickEventCount),
+              (0...16).contains(renderedKickEventCount),
+              scoreKickStepMask.nonzeroBitCount == scoreKickEventCount,
+              renderedKickStepMask.nonzeroBitCount == renderedKickEventCount,
+              scoreKickEventCount == renderedKickEventCount,
+              scoreKickStepMask == renderedKickStepMask,
+              Self.isSampleHash(detectorSampleHash),
+              Self.isSampleHash(audibleSampleHash),
+              (0...renderedFrameCount).contains(detectorNonzeroSampleCount),
+              (0...renderedFrameCount).contains(audibleNonzeroSampleCount),
+              isFinite,
+              (Self.minimumAudibleGain...KickMixBalance.audibleGain)
+                .contains(audibleGain),
+              detectorPeak >= 0,
+              detectorPeak <= Double(Float.greatestFiniteMagnitude),
+              detectorRMS >= 0,
+              detectorRMS <= detectorPeak,
+              audiblePeak >= 0,
+              audiblePeak <= detectorPeak,
+              audibleRMS >= 0,
+              audibleRMS <= audiblePeak,
+              audibleRMS <= detectorRMS,
+              duckingEnvelopePeak >= 0,
+              duckingEnvelopePeak <= detectorPeak,
+              detectorNonzeroSampleCount == audibleNonzeroSampleCount,
+              detectorToAudibleScaleMatches,
+              renderPassesMatch,
+              bindingValid else {
+            return false
+        }
+
+        switch resolvedRole {
+        case .grounded, .recovery:
+            return scoreKickEventCount > 0 && scoreKickStepMask != 0 &&
+                (scoreKickStepMask & 1) == 1 &&
+                detectorNonzeroSampleCount > 0 && audibleNonzeroSampleCount > 0 &&
+                detectorPeak > 0 && detectorRMS > 0 &&
+                audiblePeak > 0 && audibleRMS > 0 && duckingEnvelopePeak > 0
+        case .withheld:
+            let expectedZeroHash = Self.zeroSampleHash(
+                renderedFrameCount: renderedFrameCount
+            )
+            return scoreKickEventCount == 0 && scoreKickStepMask == 0 &&
+                detectorNonzeroSampleCount == 0 && audibleNonzeroSampleCount == 0 &&
+                detectorPeak.bitPattern == 0 && detectorRMS.bitPattern == 0 &&
+                audiblePeak.bitPattern == 0 && audibleRMS.bitPattern == 0 &&
+                duckingEnvelopePeak.bitPattern == 0 &&
+                detectorSampleHash == expectedZeroHash &&
+                audibleSampleHash == expectedZeroHash
+        }
+    }
+
+    package static func zeroSampleHash(renderedFrameCount: Int) -> String {
+        guard renderedFrameCount >= 0,
+              renderedFrameCount <= Int.max / 4 else { return "" }
+        var value: UInt64 = 0xcbf29ce484222325
+        let prime: UInt64 = 0x100000001b3
+        func mixing(_ input: UInt32, into hash: inout UInt64) {
+            var bits = input
+            for _ in 0..<4 {
+                hash ^= UInt64(bits & 0xff)
+                hash &*= prime
+                bits >>= 8
+            }
+        }
+        mixing(1, into: &value)
+        mixing(0x9e37_79b9, into: &value)
+        mixing(UInt32(truncatingIfNeeded: renderedFrameCount), into: &value)
+        value &*= power(prime, exponent: renderedFrameCount * 4)
+        return fixedWidthFingerprintHex(value)
+    }
+
+    private static var minimumAudibleGain: Double {
+        let minimumAutomaticGain = Float(pow(
+            10,
+            AutomaticMixBalancer.minimumKickCorrectionDB / 20
+        ))
+        return KickMixBalance.audibleGain * Double(minimumAutomaticGain)
+    }
+
+    private static func barFrameCount(sampleRate: Double) -> Int {
+        Int((240.0 / AutonomousSessionDirector.bpm * sampleRate).rounded())
+    }
+
+    private static func power(_ base: UInt64, exponent: Int) -> UInt64 {
+        var base = base
+        var exponent = exponent
+        var result: UInt64 = 1
+        while exponent > 0 {
+            if exponent & 1 == 1 { result &*= base }
+            base &*= base
+            exponent >>= 1
+        }
+        return result
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 /// Bounded, event-local evidence for the existing score-owned groove pulse.
 /// The record contains only reduced signal observations from the exact dry
 /// sample that was rendered into the percussion path; no PCM is retained.
@@ -1908,7 +2096,7 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 8
+    package static let schemaVersion = 9
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -1932,6 +2120,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let stems: [AutonomousStemBarEvidence]
     package let sourceAutomaticMixBarCount: Int
     package let automaticMix: [AutonomousAutomaticMixEvidence]
+    package let sourceKickSyntaxBarCount: Int
+    package let kickSyntax: [AutonomousKickSyntaxBarEvidence]
     package let sourceGroovePulseBarCount: Int
     package let groovePulse: [AutonomousGroovePulseBarEvidence]
     package let sourceClosedHatBarCount: Int
@@ -1961,6 +2151,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         masking: [AutonomousMaskingBarEvidence],
         stems: [AutonomousStemBarEvidence],
         automaticMix: [AutonomousAutomaticMixEvidence],
+        kickSyntax: [AutonomousKickSyntaxBarEvidence],
         groovePulse: [AutonomousGroovePulseBarEvidence],
         closedHat: [AutonomousClosedHatBarEvidence] = [],
         instruments: [AutonomousInstrumentBarEvidence],
@@ -1984,6 +2175,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.stems = Array(stems.prefix(Self.maximumBarCount))
         sourceAutomaticMixBarCount = automaticMix.count
         self.automaticMix = Array(automaticMix.prefix(Self.maximumBarCount))
+        sourceKickSyntaxBarCount = kickSyntax.count
+        self.kickSyntax = Array(kickSyntax.prefix(Self.maximumBarCount))
         sourceGroovePulseBarCount = groovePulse.count
         self.groovePulse = Array(groovePulse.prefix(Self.maximumBarCount))
         sourceClosedHatBarCount = closedHat.count
@@ -2193,6 +2386,90 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 targetKickOverFoundationDB: block.automaticMix.targetKickOverFoundationDB
             )
         }
+        var kickSyntax: [AutonomousKickSyntaxBarEvidence] = []
+        kickSyntax.reserveCapacity(boundedBlocks.count)
+        for (index, block) in boundedBlocks.enumerated() {
+            guard !cancellationRequested() else { return nil }
+            let scoreKickSteps = block.resolvedPerformance.ensemble.events
+                .filter { $0.voice == .kick }
+                .map(\.step)
+                .sorted()
+            let scoreKickStepMask = kickStepMask(scoreKickSteps)
+            let resolvedPlanBar = plan.resolvedBars.indices.contains(index)
+                ? plan.resolvedBars[index] : nil
+            let role = block.resolvedPerformance.kickSyntaxRole
+            let mix = block.kickMix
+            let expectedAudibleGain = KickMixBalance.audibleGain * Double(
+                Float(block.automaticMix.gain(for: .kick))
+            )
+            let kickStem = block.stemObservations[.kick]
+            let scoreRoleMatches: Bool = switch role {
+            case .withheld:
+                scoreKickSteps.isEmpty &&
+                    block.resolvedPerformance.ensemble.kickAnchors.isEmpty
+            case .grounded, .recovery:
+                !scoreKickSteps.isEmpty &&
+                    scoreKickSteps == block.resolvedPerformance.ensemble.kickAnchors
+            }
+            let kickStemMatches = kickStem.map {
+                $0.peak == mix.audiblePeak && $0.rms == mix.audibleRMS
+            } ?? false
+            let withheldContextMatches = role != .withheld || (
+                block.resolvedPerformance.groovePulses.map(\.step) ==
+                    KickSyntaxResolver.canonicalWeakPulseSteps &&
+                block.resolvedPerformance.ensemble.events.contains {
+                    $0.voice == .motif
+                } &&
+                block.instrumentRenderEvidence.contains { architecture in
+                    architecture.assignments.contains { $0.use == .motif }
+                }
+            )
+            let syntaxAuthorizationMatches = role == .grounded || (
+                plan.kind == .energyRelease && !plan.conservative &&
+                    !plan.paidDebtIDs.isEmpty
+            )
+            let planBarMatches = resolvedPlanBar.map {
+                $0 == block.resolvedPerformance && $0.performance.bar == block.bar
+            } ?? false
+            let kickMaskMatches = scoreKickStepMask.map {
+                $0 == mix.renderedKickStepMask
+            } ?? false
+            let bindingValid = planBarMatches &&
+                block.section == block.resolvedPerformance.performance.section &&
+                block.left.count == block.right.count &&
+                mix.renderedFrameCount == block.left.count &&
+                scoreKickSteps == block.resolvedPerformance.ensemble.kickAnchors &&
+                scoreRoleMatches &&
+                mix.renderedKickEventCount == scoreKickSteps.count &&
+                kickMaskMatches &&
+                mix.audibleGain == expectedAudibleGain &&
+                mix.detectorToAudibleScaleMatches &&
+                block.kickRenderPassesMatch && kickStemMatches &&
+                withheldContextMatches && syntaxAuthorizationMatches
+            kickSyntax.append(AutonomousKickSyntaxBarEvidence(
+                bar: block.bar,
+                role: role,
+                scoreKickEventCount: scoreKickSteps.count,
+                scoreKickStepMask: scoreKickStepMask ?? 0,
+                renderedKickEventCount: mix.renderedKickEventCount,
+                renderedKickStepMask: mix.renderedKickStepMask,
+                renderedFrameCount: mix.renderedFrameCount,
+                audibleGain: mix.audibleGain,
+                detectorPeak: mix.detectorPeak,
+                detectorRMS: mix.detectorRMS,
+                audiblePeak: mix.audiblePeak,
+                audibleRMS: mix.audibleRMS,
+                duckingEnvelopePeak: mix.duckingEnvelopePeak,
+                detectorSampleHash: mix.detectorSampleHash,
+                audibleSampleHash: mix.audibleSampleHash,
+                detectorNonzeroSampleCount: mix.detectorNonzeroSampleCount,
+                audibleNonzeroSampleCount: mix.audibleNonzeroSampleCount,
+                detectorToAudibleScaleMatches:
+                    mix.detectorToAudibleScaleMatches,
+                renderPassesMatch: block.kickRenderPassesMatch,
+                bindingValid: bindingValid
+            ))
+        }
         let groovePulse = boundedBlocks.map { block in
             let score = block.resolvedPerformance.groovePulses
             let rendered = block.groovePulseRenderEvidence
@@ -2384,6 +2661,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             masking: masking,
             stems: stems,
             automaticMix: automaticMix,
+            kickSyntax: kickSyntax,
             groovePulse: groovePulse,
             closedHat: closedHat,
             instruments: instruments,
@@ -2394,6 +2672,17 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             preGraphUpperTimbreEvidence: preGraphUpperTimbreEvidence,
             postGraphUpperTimbreEvidence: upperTimbreEvidence
         )
+    }
+
+    private static func kickStepMask(_ steps: [Int]) -> UInt16? {
+        var result: UInt16 = 0
+        for step in steps {
+            guard (0..<16).contains(step) else { return nil }
+            let bit = UInt16(1) << UInt16(step)
+            guard result & bit == 0 else { return nil }
+            result |= bit
+        }
+        return result
     }
 
     private struct UpperTimingFingerprintTuple: Equatable {
@@ -2660,6 +2949,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         symbolic.isFinite && fullMix.isFinite && masking.allSatisfy { $0.isFinite } &&
             stems.allSatisfy { $0.isFinite } &&
             automaticMix.allSatisfy { $0.isFinite } &&
+            kickSyntax.allSatisfy { $0.isFinite } &&
             groovePulse.allSatisfy { $0.isFinite } &&
             closedHat.allSatisfy { $0.isFinite } &&
             instruments.allSatisfy { $0.isFinite } &&
@@ -2681,6 +2971,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             maskingEvidenceIsComplete(expectedBars: expectedBars) &&
             stemEvidenceIsComplete(expectedBars: expectedBars) &&
             automaticMixEvidenceIsComplete(expectedBars: expectedBars) &&
+            kickSyntaxEvidenceIsComplete(expectedBars: expectedBars) &&
             groovePulseEvidenceIsComplete(expectedBars: expectedBars) &&
             closedHatEvidenceIsComplete(expectedBars: expectedBars) &&
             instrumentEvidenceIsComplete(expectedBars: expectedBars) &&
@@ -2841,6 +3132,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         sourceMaskingBarCount == masking.count &&
             sourceStemBarCount == stems.count &&
             sourceAutomaticMixBarCount == automaticMix.count &&
+            sourceKickSyntaxBarCount == kickSyntax.count &&
             sourceGroovePulseBarCount == groovePulse.count &&
             sourceClosedHatBarCount == closedHat.count &&
             sourceInstrumentBarCount == instruments.count &&
@@ -2849,6 +3141,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             masking.count == fullMix.sourceBarCount &&
             stems.count == fullMix.sourceBarCount &&
             automaticMix.count == fullMix.sourceBarCount &&
+            kickSyntax.count == fullMix.sourceBarCount &&
             groovePulse.count == fullMix.sourceBarCount &&
             closedHat.count == fullMix.sourceBarCount &&
             instruments.count == fullMix.sourceBarCount &&
@@ -2875,6 +3168,116 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         Set(automaticMix.map { $0.bar }) == expectedBars &&
             automaticMix.allSatisfy { $0.isComplete } &&
             automaticMix.count == fullMix.sourceBarCount
+    }
+
+    @inline(never)
+    private func kickSyntaxEvidenceIsComplete(expectedBars: Set<Int>) -> Bool {
+        guard let phraseKind = AutonomousPhraseKind(rawValue: symbolic.phraseKind),
+              Set(kickSyntax.map { $0.bar }) == expectedBars,
+              kickSyntax.map({ $0.bar }) == fullMix.bars.map({ $0.bar }),
+              kickSyntax.map({ $0.bar }) == Array(
+                symbolic.startBar..<(symbolic.startBar + symbolic.declaredBarCount)
+              ),
+              kickSyntax.count == fullMix.sourceBarCount else {
+            return false
+        }
+        for index in kickSyntax.indices {
+            let syntax = kickSyntax[index]
+            let mix = automaticMix[index]
+            let stem = stems[index]
+            let pulse = groovePulse[index]
+            let instrument = instruments[index]
+            guard syntax.bar == mix.bar, syntax.bar == stem.bar,
+                  syntax.bar == pulse.bar, syntax.bar == instrument.bar,
+                  syntax.isComplete(sampleRate: routeContinuation.sampleRate),
+                  let kickGainDB = mix.gains.first(where: {
+                      $0.role == MixRole.kick.rawValue
+                  })?.gainDB,
+                  syntax.audibleGain == KickMixBalance.audibleGain * Double(
+                    Float(pow(10, kickGainDB / 20))
+                  ),
+                  let kickStem = stem.roles.first(where: {
+                      $0.role == MixRole.kick.rawValue
+                  }),
+                  kickStem.peak == syntax.audiblePeak,
+                  kickStem.rms == syntax.audibleRMS else {
+                return false
+            }
+            guard let role = KickSyntaxRole(rawValue: syntax.role) else {
+                return false
+            }
+            switch role {
+            case .grounded, .recovery:
+                guard kickStem.peak > 0, kickStem.rms > 0,
+                      kickStem.activeRMS > 0, kickStem.occupancy > 0 else {
+                    return false
+                }
+            case .withheld:
+                let stemIsSilent = kickStem.rms.bitPattern == 0 &&
+                    kickStem.activeRMS.bitPattern == 0 &&
+                    kickStem.onsetRMS.bitPattern == 0 &&
+                    kickStem.peak.bitPattern == 0 &&
+                    kickStem.crestFactor.bitPattern == 0 &&
+                    kickStem.occupancy.bitPattern == 0 &&
+                    kickStem.bands.allSatisfy { $0.energy.bitPattern == 0 }
+                let weakPulsesAreAudible =
+                    pulse.sourceScoreEventCount ==
+                        KickSyntaxResolver.canonicalWeakPulseSteps.count &&
+                    pulse.sourceRenderEventCount == pulse.sourceScoreEventCount &&
+                    pulse.events.map(\.step) ==
+                        KickSyntaxResolver.canonicalWeakPulseSteps &&
+                    pulse.events.allSatisfy {
+                        $0.intensity > 0 && $0.sourceRMS > 0 && $0.finite
+                    }
+                let motifAssignmentIsPresent = instrument.architectures.contains {
+                    $0.assignments.contains { $0.use == InstrumentUse.motif.rawValue }
+                }
+                guard stemIsSilent, weakPulsesAreAudible,
+                      motifAssignmentIsPresent else {
+                    return false
+                }
+            }
+        }
+        return kickSyntaxRoleArcIsCanonical(phraseKind: phraseKind)
+    }
+
+    @inline(never)
+    private func kickSyntaxRoleArcIsCanonical(
+        phraseKind: AutonomousPhraseKind
+    ) -> Bool {
+        let roles = kickSyntax.compactMap { KickSyntaxRole(rawValue: $0.role) }
+        guard roles.count == kickSyntax.count else { return false }
+        if roles.allSatisfy({ $0 == .grounded }) { return true }
+
+        let withheldIndices = roles.indices.filter { roles[$0] == .withheld }
+        let recoveryIndices = roles.indices.filter { roles[$0] == .recovery }
+        guard phraseKind == .energyRelease, !symbolic.conservative,
+              withheldIndices.count == 2, recoveryIndices.count == 1,
+              let firstWithheld = withheldIndices.first,
+              let recovery = recoveryIndices.first,
+              firstWithheld >= 1,
+              withheldIndices[1] == firstWithheld + 1,
+              recovery == firstWithheld + 2,
+              roles[firstWithheld - 1] == .grounded,
+              roles.indices.allSatisfy({ index in
+                  index == firstWithheld || index == firstWithheld + 1 ||
+                      index == recovery || roles[index] == .grounded
+              }),
+              Self.macroPosition(kickSyntax[recovery].bar) == 15 else {
+            return false
+        }
+        for index in (firstWithheld - 1)...recovery {
+            guard automaticMix[index].foundationCompanion ==
+                FoundationCompanion.bass.rawValue else {
+                return false
+            }
+        }
+        return true
+    }
+
+    private static func macroPosition(_ bar: Int) -> Int {
+        let remainder = bar % 16
+        return remainder >= 0 ? remainder : remainder + 16
     }
 
     @inline(never)
@@ -3041,6 +3444,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceMaskingBarCount >= masking.count &&
             sourceStemBarCount >= stems.count &&
             sourceAutomaticMixBarCount >= automaticMix.count &&
+            sourceKickSyntaxBarCount >= kickSyntax.count &&
+            sourceKickSyntaxBarCount <= Self.maximumBarCount &&
             sourceGroovePulseBarCount >= groovePulse.count &&
             sourceClosedHatBarCount >= closedHat.count &&
             sourceInstrumentBarCount >= instruments.count &&
@@ -3075,6 +3480,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         masking.count <= Self.maximumBarCount &&
             stems.count <= Self.maximumBarCount &&
             automaticMix.count <= Self.maximumBarCount &&
+            kickSyntax.count <= Self.maximumBarCount &&
             groovePulse.count <= Self.maximumBarCount &&
             closedHat.count <= Self.maximumBarCount &&
             instruments.count <= Self.maximumBarCount &&
@@ -3097,7 +3503,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     @inline(never)
     private func recordCollectionsAreBounded() -> Bool {
         maskingRecordsAreBounded() && stemRecordsAreBounded() &&
-            automaticMixRecordsAreBounded() && groovePulseRecordsAreBounded() &&
+            automaticMixRecordsAreBounded() && kickSyntaxRecordsAreBounded() &&
+            groovePulseRecordsAreBounded() &&
             closedHatRecordsAreBounded() && instrumentRecordsAreBounded() &&
             pulseEchoDriveRecordsAreBounded() && upperTimingRecordsAreBounded()
     }
@@ -3131,6 +3538,19 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             return false
         }
         return true
+    }
+
+    @inline(never)
+    private func kickSyntaxRecordsAreBounded() -> Bool {
+        kickSyntax.allSatisfy {
+            (0...16).contains($0.scoreKickEventCount) &&
+                (0...16).contains($0.renderedKickEventCount) &&
+                $0.renderedFrameCount >= 0 &&
+                $0.detectorNonzeroSampleCount >= 0 &&
+                $0.detectorNonzeroSampleCount <= $0.renderedFrameCount &&
+                $0.audibleNonzeroSampleCount >= 0 &&
+                $0.audibleNonzeroSampleCount <= $0.renderedFrameCount
+        }
     }
 
     @inline(never)
@@ -3865,7 +4285,9 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
         transaction.attempts[correctionIndex].vector.symbolic ==
             transaction.attempts[initialIndex].vector.symbolic &&
             transaction.attempts[correctionIndex].vector.graph ==
-            transaction.attempts[initialIndex].vector.graph
+            transaction.attempts[initialIndex].vector.graph &&
+            transaction.attempts[correctionIndex].vector.kickSyntax ==
+            transaction.attempts[initialIndex].vector.kickSyntax
     }
 
     @inline(never)
