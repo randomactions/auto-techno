@@ -8,6 +8,10 @@ private struct PhrasePreparationKey: Hashable, Sendable {
     let phraseIndex: Int
     let sampleRate: Int
     let routeRecovery: Bool
+    let qualityRevision: Int
+    let qualityPolicyVersion: String
+    let qualityControllerFingerprint: String?
+    let routeGeneration: Int
 }
 
 private struct PhrasePreparationRequest: Sendable {
@@ -47,6 +51,7 @@ private enum AutonomousPerformancePreparer {
             incomingRenderState: request.incomingRenderState,
             incomingGraphState: request.incomingGraphState,
             previousGraph: request.previousGraph,
+            incomingQualityState: request.sourceState.quality,
             routeRecovery: request.key.routeRecovery
         )
         let waveforms = prepared.blocks.map {
@@ -157,7 +162,13 @@ final class TechnoEngine: ObservableObject {
             key: PhrasePreparationKey(
                 phraseIndex: sessionState.phraseIndex,
                 sampleRate: Int(format.sampleRate.rounded()),
-                routeRecovery: false
+                routeRecovery: false,
+                qualityRevision: sessionState.quality.revision,
+                qualityPolicyVersion: sessionState.quality.policyVersion,
+                qualityControllerFingerprint:
+                    sessionState.quality.observedControllerStateFingerprint ??
+                    sessionState.quality.acceptedControllerStateFingerprint,
+                routeGeneration: preparationEpoch.value
             ),
             sourceState: sessionState,
             incomingRenderState: RenderState(),
@@ -236,6 +247,10 @@ final class TechnoEngine: ObservableObject {
 
     private func acceptPreparedPhrase(_ phrase: PreparedPhrase) {
         guard phrase.request.key.phraseIndex == phrase.request.sourceState.phraseIndex else { return }
+        guard phrase.prepared.commitEligible else {
+            if currentPhrase == nil { playbackState = .unavailable }
+            return
+        }
         guard currentPhrase == nil else {
             if phrase.request.sourceState.phraseIndex == sessionState.phraseIndex {
                 preparedCache[phrase.request.key] = phrase
@@ -247,7 +262,10 @@ final class TechnoEngine: ObservableObject {
 
         currentPhrase = phrase
         sessionState = phrase.request.sourceState
-        sessionState.advance(using: phrase.prepared.plan)
+        sessionState.advance(
+            using: phrase.prepared.plan,
+            quality: phrase.prepared.qualityContinuationState
+        )
         nextBlockIndex = 0
         if let firstWaveform = phrase.waveforms.first {
             waveform = firstWaveform
@@ -266,7 +284,13 @@ final class TechnoEngine: ObservableObject {
             key: PhrasePreparationKey(
                 phraseIndex: sessionState.phraseIndex,
                 sampleRate: phrase.request.key.sampleRate,
-                routeRecovery: false
+                routeRecovery: false,
+                qualityRevision: sessionState.quality.revision,
+                qualityPolicyVersion: sessionState.quality.policyVersion,
+                qualityControllerFingerprint:
+                    sessionState.quality.observedControllerStateFingerprint ??
+                    sessionState.quality.acceptedControllerStateFingerprint,
+                routeGeneration: preparationEpoch.value
             ),
             sourceState: sessionState,
             incomingRenderState: phrase.prepared.endingRenderState,
@@ -392,7 +416,13 @@ final class TechnoEngine: ObservableObject {
             key: PhrasePreparationKey(
                 phraseIndex: sessionState.phraseIndex,
                 sampleRate: Int(format.sampleRate.rounded()),
-                routeRecovery: true
+                routeRecovery: true,
+                qualityRevision: sessionState.quality.revision,
+                qualityPolicyVersion: sessionState.quality.policyVersion,
+                qualityControllerFingerprint:
+                    sessionState.quality.observedControllerStateFingerprint ??
+                    sessionState.quality.acceptedControllerStateFingerprint,
+                routeGeneration: preparationEpoch.value
             ),
             sourceState: sessionState,
             incomingRenderState: rebuildingRequest.incomingRenderState,
@@ -418,7 +448,13 @@ final class TechnoEngine: ObservableObject {
             let nextKey = PhrasePreparationKey(
                 phraseIndex: sessionState.phraseIndex,
                 sampleRate: phrase.request.key.sampleRate,
-                routeRecovery: false
+                routeRecovery: false,
+                qualityRevision: sessionState.quality.revision,
+                qualityPolicyVersion: sessionState.quality.policyVersion,
+                qualityControllerFingerprint:
+                    sessionState.quality.observedControllerStateFingerprint ??
+                    sessionState.quality.acceptedControllerStateFingerprint,
+                routeGeneration: preparationEpoch.value
             )
             let cachedSuccessor = preparedCache.removeValue(forKey: nextKey)
             switch AutonomousPhraseBoundaryPolicy.decide(successorPrepared: cachedSuccessor != nil) {
@@ -427,7 +463,10 @@ final class TechnoEngine: ObservableObject {
                 currentPhrase = next
                 phrase = next
                 sessionState = next.request.sourceState
-                sessionState.advance(using: next.prepared.plan)
+                sessionState.advance(
+                    using: next.prepared.plan,
+                    quality: next.prepared.qualityContinuationState
+                )
                 nextBlockIndex = 0
                 requestSuccessor(after: next)
             case .repeatCurrentWithFrozenTopology:

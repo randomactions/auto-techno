@@ -81,21 +81,20 @@ package struct ModulationState: Equatable, Sendable {
     package let brightness: Double
     package let density: Double
     package let space: Double
-    package let cutoff: Double
-    package let resonance: Double
-    package let bassArticulation: Double
-    package let fillIntensity: Double
+    package let upperTimbreIntent: UpperTimbreIntent
+    package let resolvedUpperNoteCount: Int
+    package let slideCount: Int
 
     package init(phase: Double, brightness: Double, density: Double, space: Double,
-                cutoff: Double, resonance: Double, bassArticulation: Double, fillIntensity: Double) {
+                upperTimbreIntent: UpperTimbreIntent,
+                resolvedUpperNoteCount: Int, slideCount: Int) {
         self.phase = phase
         self.brightness = brightness
         self.density = density
         self.space = space
-        self.cutoff = cutoff
-        self.resonance = resonance
-        self.bassArticulation = bassArticulation
-        self.fillIntensity = fillIntensity
+        self.upperTimbreIntent = upperTimbreIntent
+        self.resolvedUpperNoteCount = max(0, resolvedUpperNoteCount)
+        self.slideCount = max(0, slideCount)
     }
 }
 
@@ -158,11 +157,63 @@ package struct RenderState: Equatable, Sendable {
     var alienAtmosphereState = AlienVoiceState()
     var alienResponseState = AlienVoiceState()
     var alienTransitionState = AlienVoiceState()
+    package var previousResonantAnchorEvidenceFrame: UpperTimbreStereoFrame?
+    package var previousDetunedCompanionEvidenceFrame: UpperTimbreStereoFrame?
+    package var previousGraphInputRemainderEvidenceFrame: UpperTimbreStereoFrame?
+    package var previousPostGraphRemainderEvidenceFrame: UpperTimbreStereoFrame?
 
     package init() {}
 
     package mutating func reset() {
         self = RenderState()
+    }
+}
+
+/// Renderer-owned observation of the trajectory actually applied to one
+/// score note. Requested anchors remain in Core; continuation-dependent home
+/// glide and the applied gate outcome are recorded here for the gate window.
+/// Release, comb, all-pass, and echo tails deliberately are not mislabeled as
+/// a per-note audible end because they may continue across later notes/bars.
+package struct UpperNoteRenderEvidence: Equatable, Sendable {
+    package let role: SynthRole
+    package let onsetFrame: Int
+    package let requestedGateEndFrame: Int
+    package var appliedGateEndFrame: Int
+    package let requestedStartFrequency: Double
+    package let appliedStartFrequency: Double
+    package let targetEndFrequency: Double
+    package var frequencyAtAppliedGateEnd: Double
+    package let requestedGate: UpperNoteGate
+    package let appliedGate: UpperNoteGate
+    package let didRetrigger: Bool
+    package let timbreIntent: UpperTimbreIntent
+
+    package init(
+        role: SynthRole,
+        onsetFrame: Int,
+        requestedGateEndFrame: Int,
+        appliedGateEndFrame: Int,
+        requestedStartFrequency: Double,
+        appliedStartFrequency: Double,
+        targetEndFrequency: Double,
+        frequencyAtAppliedGateEnd: Double,
+        requestedGate: UpperNoteGate,
+        appliedGate: UpperNoteGate,
+        didRetrigger: Bool,
+        timbreIntent: UpperTimbreIntent
+    ) {
+        self.role = role
+        self.onsetFrame = max(0, onsetFrame)
+        self.requestedGateEndFrame = max(self.onsetFrame, requestedGateEndFrame)
+        self.appliedGateEndFrame = max(self.onsetFrame, appliedGateEndFrame)
+        self.requestedStartFrequency = requestedStartFrequency
+        self.appliedStartFrequency = appliedStartFrequency
+        self.targetEndFrequency = targetEndFrequency
+        self.frequencyAtAppliedGateEnd = frequencyAtAppliedGateEnd
+        self.requestedGate = requestedGate
+        self.appliedGate = appliedGate
+        self.didRetrigger = didRetrigger
+        self.timbreIntent = timbreIntent
     }
 }
 
@@ -180,13 +231,21 @@ package struct RenderedBar: Equatable, Sendable {
     package let stemObservations: [MixRole: StemObservation]
     package let automaticMix: AutomaticMixPlan
     package let stemReconstruction: StemReconstructionEvidence
+    package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
+    /// Transient detached-preparation taps. They never cross into RenderBlock
+    /// or the scheduler; only reduced evidence survives phrase preparation.
+    package let resonantAnchorSamples: [Float]
+    package let detunedCompanionSamples: [Float]
 
     package init(sampleRate: Double, samples: [Float], leftSamples: [Float],
                 rightSamples: [Float], masking: [MaskingDecision] = [],
                 kickMix: KickMixEvidence,
                 stemObservations: [MixRole: StemObservation],
                 automaticMix: AutomaticMixPlan,
-                stemReconstruction: StemReconstructionEvidence) {
+                stemReconstruction: StemReconstructionEvidence,
+                upperNoteRenderEvidence: [UpperNoteRenderEvidence],
+                resonantAnchorSamples: [Float],
+                detunedCompanionSamples: [Float]) {
         self.sampleRate = sampleRate
         self.samples = samples
         self.leftSamples = leftSamples
@@ -208,6 +267,9 @@ package struct RenderedBar: Equatable, Sendable {
         self.stemObservations = stemObservations
         self.automaticMix = automaticMix
         self.stemReconstruction = stemReconstruction
+        self.upperNoteRenderEvidence = upperNoteRenderEvidence
+        self.resonantAnchorSamples = resonantAnchorSamples
+        self.detunedCompanionSamples = detunedCompanionSamples
     }
 }
 
@@ -216,6 +278,9 @@ package struct RenderBlock: Equatable, Sendable {
     package let section: SectionKind
     package let left: [Float]
     package let right: [Float]
+    /// Resolved score-event projection used by structural telemetry. It can
+    /// contain deliberately suppressed upper events; audible upper onsets and
+    /// gates are described only by `upperNoteRenderEvidence`.
     package let events: [VoiceEvent]
     package let modulation: ModulationState
     package let busStates: [VoiceKind: BusState]
@@ -233,6 +298,18 @@ package struct RenderBlock: Equatable, Sendable {
     /// Bit-exact fingerprint of the detached foundation-only render used to
     /// verify that upper-voice articulation cannot alter the protected route.
     package let protectedFoundationSampleHash: String
+    /// Exact score-owned upper notes used for this bar. The renderer no longer
+    /// invents pitch, duration, velocity, or slide decisions after resolution.
+    package var resolvedUpperNotes: [ResolvedUpperNote] {
+        synthPerformance.upperNotes
+    }
+    package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
+    /// The existing graph input is the full-render minus foundation-render
+    /// remainder. It includes the upper path, but can also include percussion
+    /// and shared nonlinear residual; role-local articulation fields come only
+    /// from the dedicated taps above.
+    package let graphInputRemainderTimbreEvidence: UpperTimbreEvidence
+    package let postGraphRemainderTimbreEvidence: UpperTimbreEvidence
     package let resolvedPerformance: ResolvedPerformanceBar
     package let performance: PerformanceBar
     package let sceneDNA: SceneDNA
@@ -247,6 +324,9 @@ package struct RenderBlock: Equatable, Sendable {
                 automaticMix: AutomaticMixPlan,
                 stemReconstruction: StemReconstructionEvidence,
                 protectedFoundationSampleHash: String,
+                upperNoteRenderEvidence: [UpperNoteRenderEvidence],
+                graphInputRemainderTimbreEvidence: UpperTimbreEvidence,
+                postGraphRemainderTimbreEvidence: UpperTimbreEvidence,
                 resolvedPerformance: ResolvedPerformanceBar,
                 sceneDNA: SceneDNA, synthWorld: SynthWorldDNA,
                 synthPerformance: SynthPerformanceBar) {
@@ -264,6 +344,9 @@ package struct RenderBlock: Equatable, Sendable {
         self.automaticMix = automaticMix
         self.stemReconstruction = stemReconstruction
         self.protectedFoundationSampleHash = protectedFoundationSampleHash
+        self.upperNoteRenderEvidence = upperNoteRenderEvidence
+        self.graphInputRemainderTimbreEvidence = graphInputRemainderTimbreEvidence
+        self.postGraphRemainderTimbreEvidence = postGraphRemainderTimbreEvidence
         self.resolvedPerformance = resolvedPerformance
         performance = resolvedPerformance.performance
         self.sceneDNA = sceneDNA
@@ -315,13 +398,15 @@ struct RenderBuffers {
     var percussionStem: [Float] = []
     var upperTonalStem: [Float] = []
     var atmosphereStem: [Float] = []
+    var resonantAnchorStem: [Float] = []
+    var detunedCompanionStem: [Float] = []
     var measurementScratch: [Float] = []
     var percussion: [Float] = []
     var synth: [Float] = []
     var pulseEchoSend: [Float] = []
     var spatialReverbSend: [Float] = []
 
-    mutating func reset(frameCount: Int) {
+    mutating func reset(frameCount: Int, includeUpperRoleTaps: Bool) {
         reset(&output, frameCount: frameCount)
         reset(&kick, frameCount: frameCount)
         reset(&kickDetector, frameCount: frameCount)
@@ -329,6 +414,13 @@ struct RenderBuffers {
         reset(&percussionStem, frameCount: frameCount)
         reset(&upperTonalStem, frameCount: frameCount)
         reset(&atmosphereStem, frameCount: frameCount)
+        if includeUpperRoleTaps {
+            reset(&resonantAnchorStem, frameCount: frameCount)
+            reset(&detunedCompanionStem, frameCount: frameCount)
+        } else {
+            resonantAnchorStem.removeAll(keepingCapacity: false)
+            detunedCompanionStem.removeAll(keepingCapacity: false)
+        }
         reset(&measurementScratch, frameCount: frameCount)
         reset(&percussion, frameCount: frameCount)
         reset(&synth, frameCount: frameCount)
@@ -348,10 +440,13 @@ struct RenderBuffers {
 struct RenderWorkspace {
     var buffers = RenderBuffers()
 
-    mutating func checkout(frameCount: Int) -> RenderBuffers {
+    mutating func checkout(frameCount: Int, includeUpperRoleTaps: Bool) -> RenderBuffers {
         var checkedOut = RenderBuffers()
         swap(&checkedOut, &buffers)
-        checkedOut.reset(frameCount: frameCount)
+        checkedOut.reset(
+            frameCount: frameCount,
+            includeUpperRoleTaps: includeUpperRoleTaps
+        )
         return checkedOut
     }
 
@@ -365,20 +460,26 @@ struct RenderWorkspace {
 package enum AutonomousPhraseRenderer {
     package static func render(plan: AutonomousPhrasePlan, graph: DSPGraphPlan,
                               sampleRate: Double, state: inout RenderState,
-                              graphState: inout GeneratedDSPContinuationState) -> [RenderBlock] {
+                              graphState: inout GeneratedDSPContinuationState,
+                              forceHomeUpperTimbre: Bool = false) -> [RenderBlock] {
         let synthPlan = SynthPerformancePlan(
             scene: plan.scene, dna: plan.dna, kind: plan.kind,
-            resolvedBars: plan.resolvedBars
+            resolvedBars: plan.resolvedBars,
+            conservative: plan.conservative,
+            forceHomeUpperTimbre: forceHomeUpperTimbre
         )
         var workspace = RenderWorkspace()
         var blocks: [RenderBlock] = []
         blocks.reserveCapacity(plan.barCount)
-
         for index in plan.resolvedBars.indices {
             let resolved = plan.resolvedBars[index]
             let performance = resolved.performance
             let synthPerformance = synthPlan.bars[index]
-            let modulation = modulation(performance: performance, scene: plan.scene)
+            let modulation = modulation(
+                performance: performance,
+                scene: plan.scene,
+                synthPerformance: synthPerformance
+            )
             var foundationState = state
             let foundation = VoiceRenderer.renderBar(
                 scene: plan.scene,
@@ -447,12 +548,129 @@ package enum AutonomousPhraseRenderer {
                 )
             }
             let buses = busStates(rendered: rendered, scene: plan.scene, events: events)
-            let upperLeft = zip(rendered.leftSamples, foundation.leftSamples).map { $0.0 - $0.1 }
-            let upperRight = zip(rendered.rightSamples, foundation.rightSamples).map { $0.0 - $0.1 }
+            let graphInputLeft = zip(rendered.leftSamples, foundation.leftSamples).map {
+                $0.0 - $0.1
+            }
+            let graphInputRight = zip(rendered.rightSamples, foundation.rightSamples).map {
+                $0.0 - $0.1
+            }
             let generated = GeneratedDSPGraphRenderer.process(
-                left: upperLeft, right: upperRight,
+                left: graphInputLeft, right: graphInputRight,
                 sampleRate: sampleRate, plan: graph, state: &graphState
             )
+            let stepFrames = Double(
+                max(1, min(graphInputLeft.count, graphInputRight.count))
+            ) / 16
+            let notes = synthPerformance.upperNotes
+            let anchorNotes = notes.filter { $0.role == .anchor }
+            let anchorRetriggerEvidence = rendered.upperNoteRenderEvidence.filter {
+                $0.role == .anchor && $0.didRetrigger
+            }
+            let anchorRetriggers = anchorNotes.compactMap { note -> (
+                note: ResolvedUpperNote, onsetFrame: Int
+            )? in
+                let requestedOnsetFrame = Int(
+                    (Double(note.onsetStep) * stepFrames).rounded()
+                )
+                guard let applied = anchorRetriggerEvidence.first(where: {
+                    $0.onsetFrame == requestedOnsetFrame
+                }) else { return nil }
+                return (note, applied.onsetFrame)
+            }
+            let anchorAccents = anchorRetriggers.map {
+                performance.accent(at: $0.note.onsetStep)
+            }
+            let minimumAccent = anchorAccents.min() ?? 0
+            let maximumAccent = anchorAccents.max() ?? 0
+            let accentMidpoint = (minimumAccent + maximumAccent) * 0.5
+            let accentedOnsets = anchorRetriggers.filter {
+                maximumAccent > minimumAccent &&
+                    performance.accent(at: $0.note.onsetStep) > accentMidpoint
+            }.map {
+                $0.onsetFrame
+            }
+            let unaccentedOnsets = anchorRetriggers.filter {
+                maximumAccent == minimumAccent ||
+                    performance.accent(at: $0.note.onsetStep) <= accentMidpoint
+            }.map {
+                $0.onsetFrame
+            }
+            let slideWindows = rendered.upperNoteRenderEvidence.filter {
+                $0.role == .anchor && $0.appliedGate == .slide
+            }.map {
+                UpperTimbreSlideWindow(
+                    startFrame: $0.onsetFrame,
+                    endFrame: $0.appliedGateEndFrame
+                )
+            }
+            let resonantEvidence = UpperTimbreEvidenceAnalyzer.analyze(
+                UpperTimbreAnalysisInput(
+                left: rendered.resonantAnchorSamples,
+                right: rendered.resonantAnchorSamples,
+                sampleRate: sampleRate,
+                accentedOnsetFrames: accentedOnsets,
+                unaccentedOnsetFrames: unaccentedOnsets,
+                slideWindows: slideWindows,
+                detectedAttackFrames: detectedAttackFrames(
+                    left: rendered.resonantAnchorSamples,
+                    right: rendered.resonantAnchorSamples,
+                    sampleRate: sampleRate
+                ),
+                precedingFrame: state.previousResonantAnchorEvidenceFrame
+            ))
+            let detunedEvidence = UpperTimbreEvidenceAnalyzer.analyze(
+                UpperTimbreAnalysisInput(
+                left: rendered.detunedCompanionSamples,
+                right: rendered.detunedCompanionSamples,
+                sampleRate: sampleRate,
+                precedingFrame: state.previousDetunedCompanionEvidenceFrame
+            ))
+            let preGraphMixEvidence = UpperTimbreEvidenceAnalyzer.analyze(
+                UpperTimbreAnalysisInput(
+                left: graphInputLeft,
+                right: graphInputRight,
+                sampleRate: sampleRate,
+                protectedMono: foundation.samples,
+                precedingFrame: state.previousGraphInputRemainderEvidenceFrame
+            ))
+            let postGraphMixEvidence = UpperTimbreEvidenceAnalyzer.analyze(
+                UpperTimbreAnalysisInput(
+                left: generated.0,
+                right: generated.1,
+                sampleRate: sampleRate,
+                protectedMono: foundation.samples,
+                precedingFrame: state.previousPostGraphRemainderEvidenceFrame
+            ))
+            let graphInputRemainderTimbreEvidence = UpperTimbreEvidence.attributing(
+                resonantAnchor: resonantEvidence,
+                detunedCompanions: detunedEvidence,
+                mix: preGraphMixEvidence
+            )
+            let postGraphRemainderTimbreEvidence = UpperTimbreEvidence.attributing(
+                resonantAnchor: resonantEvidence,
+                detunedCompanions: detunedEvidence,
+                mix: postGraphMixEvidence
+            )
+            if let sample = rendered.resonantAnchorSamples.last {
+                state.previousResonantAnchorEvidenceFrame = UpperTimbreStereoFrame(
+                    left: sample, right: sample
+                )
+            }
+            if let sample = rendered.detunedCompanionSamples.last {
+                state.previousDetunedCompanionEvidenceFrame = UpperTimbreStereoFrame(
+                    left: sample, right: sample
+                )
+            }
+            if let left = graphInputLeft.last, let right = graphInputRight.last {
+                state.previousGraphInputRemainderEvidenceFrame = UpperTimbreStereoFrame(
+                    left: left, right: right
+                )
+            }
+            if let left = generated.0.last, let right = generated.1.last {
+                state.previousPostGraphRemainderEvidenceFrame = UpperTimbreStereoFrame(
+                    left: left, right: right
+                )
+            }
             let outputLeft = zip(foundation.leftSamples, generated.0).map { outputSafety($0 + $1) }
             let outputRight = zip(foundation.rightSamples, generated.1).map { outputSafety($0 + $1) }
             let pulseEchoAmount = resolved.ensemble.events
@@ -484,6 +702,9 @@ package enum AutonomousPhraseRenderer {
                 protectedFoundationSampleHash: exactSampleHash(
                     foundation.leftSamples, foundation.rightSamples
                 ),
+                upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,
+                graphInputRemainderTimbreEvidence: graphInputRemainderTimbreEvidence,
+                postGraphRemainderTimbreEvidence: postGraphRemainderTimbreEvidence,
                 resolvedPerformance: resolved,
                 sceneDNA: plan.dna,
                 synthWorld: synthPlan.world,
@@ -519,20 +740,59 @@ package enum AutonomousPhraseRenderer {
         return String(format: "%016llx", hash)
     }
 
-    private static func modulation(performance: PerformanceBar, scene: TechnoScene) -> ModulationState {
+    private static func modulation(performance: PerformanceBar, scene: TechnoScene,
+                                   synthPerformance: SynthPerformanceBar) -> ModulationState {
         let progress = Double(performance.localBar) / Double(max(1, performance.phraseLength - 1))
         let phase = progress * 2 * Double.pi
-        let motion = 0.5 + 0.5 * sin(phase)
+        let activeTimbre = synthPerformance.upperNotes
+            .map(\.timbreIntent)
+            .filter { $0.kind != .home }
+            .max { lhs, rhs in
+                if lhs.amount == rhs.amount { return lhs.kind.rawValue > rhs.kind.rawValue }
+                return lhs.amount < rhs.amount
+            } ?? .home
         return ModulationState(
             phase: phase,
             brightness: min(1, (1 - scene.darkness) * 0.24 + performance.tension * 0.52),
             density: min(1, Double(performance.roles.count) / 4 * 0.62 + performance.tension * 0.20),
             space: min(1, scene.atmosphere * 0.68 + (performance.section == .breakdown ? 0.26 : 0)),
-            cutoff: min(1, 0.16 + performance.tension * 0.68),
-            resonance: min(1, 0.10 + scene.hypnosis * 0.36 + motion * 0.18),
-            bassArticulation: min(1, 0.24 + scene.aggression * 0.42 + performance.tension * 0.18),
-            fillIntensity: min(1, scene.drumChaos * 0.38 + progress * 0.32)
+            upperTimbreIntent: activeTimbre,
+            resolvedUpperNoteCount: synthPerformance.upperNotes.count,
+            slideCount: synthPerformance.upperNotes.filter { $0.gate == .slide }.count
         )
+    }
+
+    /// Bounded PCM-derived attack detector for duplicate-onset evidence. It is
+    /// intentionally simple and deterministic; calibrated policy may replace
+    /// its thresholds only with a versioned analyzer revision.
+    private static func detectedAttackFrames(left: [Float], right: [Float],
+                                             sampleRate: Double) -> [Int] {
+        let count = min(
+            UpperTimbreEvidenceAnalyzer.maximumFrames,
+            min(left.count, right.count)
+        )
+        guard count > 1, sampleRate.isFinite, sampleRate > 0 else { return [] }
+        let coefficient = 1 - exp(-1 / max(1, sampleRate * 0.0035))
+        let refractory = max(1, Int((sampleRate * 0.018).rounded()))
+        let maximumAttacks = UpperTimbreEvidenceAnalyzer.maximumOnsets
+        var envelope = 0.0
+        var priorEnvelope = 0.0
+        var lastAttack = -refractory
+        var attacks: [Int] = []
+        attacks.reserveCapacity(min(maximumAttacks, 32))
+        for frame in 0..<count {
+            let mono = abs((Double(left[frame]) + Double(right[frame])) * 0.5)
+            envelope += (mono - envelope) * coefficient
+            let rise = envelope - priorEnvelope
+            if envelope > 0.0015, rise > 0.00012,
+               frame - lastAttack >= refractory {
+                attacks.append(frame)
+                lastAttack = frame
+                if attacks.count == maximumAttacks { break }
+            }
+            priorEnvelope = envelope
+        }
+        return attacks
     }
 
     private static func voiceKind(_ voice: EnsembleVoice) -> VoiceKind {

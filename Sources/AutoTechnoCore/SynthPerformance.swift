@@ -18,6 +18,87 @@ package enum SynthRole: String, CaseIterable, Sendable {
     case transition
 }
 
+/// A score-owned request for one bounded reinterpretation of the authored
+/// upper voice. The kind is semantic; DSP remains responsible for translating
+/// it into a stable oscillator, filter, and modulation implementation.
+package struct UpperTimbreIntent: Equatable, Sendable {
+    package enum Kind: String, CaseIterable, Sendable {
+        case home
+        case resonantSequence
+        case detunedMotion
+    }
+
+    package let kind: Kind
+    package let amount: Double
+
+    package init(kind: Kind, amount: Double) {
+        self.kind = kind
+        self.amount = kind == .home ? 0 : min(1, max(0, amount))
+    }
+
+    package static let home = UpperTimbreIntent(kind: .home, amount: 0)
+
+    package static func resonantSequence(amount: Double) -> UpperTimbreIntent {
+        UpperTimbreIntent(kind: .resonantSequence, amount: amount)
+    }
+
+    package static func detunedMotion(amount: Double) -> UpperTimbreIntent {
+        UpperTimbreIntent(kind: .detunedMotion, amount: amount)
+    }
+}
+
+/// Envelope behavior at a resolved note boundary. A slide continues the
+/// previous note's pitch and envelope into this note; every other note starts a
+/// fresh envelope.
+package enum UpperNoteGate: String, CaseIterable, Sendable {
+    case retrigger
+    case slide
+}
+
+/// The complete score-owned pitch and articulation request for one upper note.
+/// Start and end ratios are requested trajectory anchors relative to
+/// `SynthWorldDNA.rootFrequency`. DSP records the continuation-dependent
+/// audible start/end frequencies separately, so legacy home glide remains
+/// observable instead of being misrepresented as a score decision.
+package struct ResolvedUpperNote: Equatable, Sendable {
+    package static let minimumDurationInSteps = 1.0 / 16.0
+    package static let maximumDurationInSteps = 16.0
+    package static let minimumFrequencyRatio = 0.125
+    package static let maximumFrequencyRatio = 8.0
+
+    package let role: SynthRole
+    package let onsetStep: Int
+    package let durationInSteps: Double
+    package let startFrequencyRatio: Double
+    package let endFrequencyRatio: Double
+    package let velocity: Double
+    package let gate: UpperNoteGate
+    package let timbreIntent: UpperTimbreIntent
+
+    package init(role: SynthRole, onsetStep: Int, durationInSteps: Double,
+                 startFrequencyRatio: Double, endFrequencyRatio: Double,
+                 velocity: Double, gate: UpperNoteGate,
+                 timbreIntent: UpperTimbreIntent) {
+        self.role = role
+        self.onsetStep = min(15, max(0, onsetStep))
+        self.durationInSteps = min(
+            Self.maximumDurationInSteps,
+            max(Self.minimumDurationInSteps, durationInSteps)
+        )
+        self.startFrequencyRatio = min(
+            Self.maximumFrequencyRatio,
+            max(Self.minimumFrequencyRatio, startFrequencyRatio)
+        )
+        self.endFrequencyRatio = min(
+            Self.maximumFrequencyRatio,
+            max(Self.minimumFrequencyRatio, endFrequencyRatio)
+        )
+        self.velocity = min(1, max(0, velocity))
+        self.gate = gate
+        self.timbreIntent = timbreIntent
+    }
+}
+
 /// The one upper-voice characteristic allowed to come forward during a
 /// sixteen-bar chapter. Chapters reinterpret the same instrument; they never
 /// replace its pitch cell or timbral fingerprint.
@@ -223,43 +304,30 @@ package struct SynthWorldDNA: Equatable, Sendable {
     }
 }
 
-package struct SynthRoleEvent: Equatable, Sendable {
-    package let role: SynthRole
-    package let stepIndex: Int
-    package let frequencyRatio: Double
-    package let velocity: Double
-    package let articulation: RelationalArticulation
-
-    package init(role: SynthRole, stepIndex: Int, frequencyRatio: Double,
-                velocity: Double, articulation: RelationalArticulation) {
-        self.role = role
-        self.stepIndex = min(15, max(0, stepIndex))
-        self.frequencyRatio = max(0.125, min(8, frequencyRatio))
-        self.velocity = max(0, min(1, velocity))
-        self.articulation = articulation
-    }
-}
-
 package struct SynthPerformanceBar: Equatable, Sendable {
     package let bar: Int
     package let gesture: SynthGesture
     package let mutationAmount: Double
     package let relationalSteps: [RelationalArticulation]
-    package let interlockEvents: [SynthRoleEvent]
+    package let upperNotes: [ResolvedUpperNote]
 
     package init(bar: Int, gesture: SynthGesture, mutationAmount: Double,
                 relationalSteps: [RelationalArticulation],
-                interlockEvents: [SynthRoleEvent]) {
+                upperNotes: [ResolvedUpperNote]) {
         self.bar = bar
         self.gesture = gesture
         self.mutationAmount = min(1, max(0, mutationAmount))
         self.relationalSteps = relationalSteps.count == 16
             ? relationalSteps : Array(repeating: .neutral, count: 16)
-        self.interlockEvents = interlockEvents
+        self.upperNotes = upperNotes
     }
 
     package func articulation(at step: Int) -> RelationalArticulation {
         relationalSteps[((step % 16) + 16) % 16]
+    }
+
+    package func upperNotes(for role: SynthRole) -> [ResolvedUpperNote] {
+        upperNotes.filter { $0.role == role }
     }
 }
 
@@ -269,10 +337,13 @@ package struct SynthPerformanceBar: Equatable, Sendable {
 package struct SynthPerformancePlan: Equatable, Sendable {
     package let world: SynthWorldDNA
     package let kind: AutonomousPhraseKind
+    package let conservative: Bool
+    package let upperTimbreFallback: Bool
     package let bars: [SynthPerformanceBar]
 
     package init(scene: TechnoScene, dna: SceneDNA, kind: AutonomousPhraseKind,
-                 resolvedBars: [ResolvedPerformanceBar]) {
+                 resolvedBars: [ResolvedPerformanceBar], conservative: Bool = false,
+                 forceHomeUpperTimbre: Bool = false) {
         let synthWorld = SynthWorldDNA(scene: scene, dna: dna)
         let synthBars = resolvedBars.map { resolved in
             let performanceBar = resolved.performance
@@ -282,7 +353,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
             let hasRelationalUpperMaterial = resolved.ensemble.events.contains {
                 $0.voice == .motif || $0.voice == .response
             }
-            let spectralSculptureEnabled = kind != .identityReturn &&
+            let spectralSculptureEnabled = !conservative && kind != .identityReturn &&
                 kind != .majorBreak && hasRelationalUpperMaterial
             let relationalSteps = (0..<16).map { step in
                 RelationalArticulation(
@@ -292,24 +363,30 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     spectralSculptureEnabled: spectralSculptureEnabled
                 )
             }
-            let events = gesture != .suspend
-                ? SynthPerformancePlan.interlockEvents(
-                    gesture: gesture,
-                    world: synthWorld,
-                    resolvedEvents: resolved.ensemble.events.filter { $0.voice == .motif },
-                    relationalSteps: relationalSteps
-                )
-                : []
+            let upperNotes = SynthPerformancePlan.resolvedUpperNotes(
+                scene: scene,
+                dna: dna,
+                kind: kind,
+                world: synthWorld,
+                resolved: resolved,
+                gesture: gesture,
+                mutationAmount: mutation,
+                conservative: conservative,
+                forceHomeUpperTimbre: forceHomeUpperTimbre,
+                relationalSteps: relationalSteps
+            )
             return SynthPerformanceBar(
                 bar: performanceBar.bar,
                 gesture: gesture,
                 mutationAmount: mutation,
                 relationalSteps: relationalSteps,
-                interlockEvents: events
+                upperNotes: upperNotes
             )
         }
         world = synthWorld
         self.kind = kind
+        self.conservative = conservative
+        upperTimbreFallback = forceHomeUpperTimbre
         bars = synthBars
     }
 
@@ -334,28 +411,232 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         }
     }
 
-    private static func interlockEvents(gesture: SynthGesture, world: SynthWorldDNA,
-                                        resolvedEvents: [EnsembleResolvedEvent],
-                                        relationalSteps: [RelationalArticulation]) -> [SynthRoleEvent] {
-        resolvedEvents.enumerated().map { eventIndex, resolved in
-            let step = resolved.step
-            let octave = eventIndex.isMultiple(of: 3) ? 0.5 : 1.0
-            let interval = pow(2, Double(world.shadowInterval) / 12)
-            let gestureLevel: Double
-            switch gesture {
-            case .reveal: gestureLevel = 0.34
-            case .interlock: gestureLevel = 0.46
-            case .corrode: gestureLevel = 0.58
-            case .release: gestureLevel = 0.38
-            case .suspend: gestureLevel = 0
-            }
-            return SynthRoleEvent(
-                role: .shadow,
-                stepIndex: step,
-                frequencyRatio: interval * octave,
-                velocity: min(0.72, gestureLevel * max(0.35, resolved.intensity)),
-                articulation: relationalSteps[step]
-            )
-        }.sorted { $0.stepIndex < $1.stepIndex }
+    private struct MotifPitch {
+        let sourceIndex: Int
+        let event: EnsembleResolvedEvent
+        let frequencyRatio: Double
     }
+
+    /// Resolves every upper note before DSP preparation. The renderer consumes
+    /// `upperNotes`; pitch, duration, velocity, gate, and timbre selection have
+    /// one canonical Core owner.
+    private static func resolvedUpperNotes(
+        scene: TechnoScene,
+        dna: SceneDNA,
+        kind: AutonomousPhraseKind,
+        world: SynthWorldDNA,
+        resolved: ResolvedPerformanceBar,
+        gesture: SynthGesture,
+        mutationAmount: Double,
+        conservative: Bool,
+        forceHomeUpperTimbre: Bool,
+        relationalSteps: [RelationalArticulation]
+    ) -> [ResolvedUpperNote] {
+        let performance = resolved.performance
+        let motifPitches = resolvedMotifPitches(
+            dna: dna,
+            performance: performance,
+            events: resolved.ensemble.events.filter { $0.voice == .motif }
+        )
+        let orderedMotif = motifPitches.sorted {
+            if $0.event.step != $1.event.step { return $0.event.step < $1.event.step }
+            return $0.sourceIndex < $1.sourceIndex
+        }
+        let variationEnabled = !conservative && !forceHomeUpperTimbre &&
+            kind != .identityReturn && kind != .majorBreak
+        let resonantEligible = variationEnabled &&
+            resolved.interlockChapter == .motion &&
+            (kind == .contrast || kind == .energyRelease) &&
+            orderedMotif.count >= 2
+        let resonantIntent: UpperTimbreIntent = resonantEligible
+            ? .resonantSequence(amount: mutationAmount)
+            : .home
+        let slideCandidates = resonantEligible
+            ? orderedMotif.indices.dropFirst().filter {
+                orderedMotif[$0].event.step > orderedMotif[$0 - 1].event.step &&
+                abs(orderedMotif[$0].frequencyRatio - orderedMotif[$0 - 1].frequencyRatio) >
+                    0.000_000_001
+            }
+            : []
+        let slideIndex: Int?
+        if slideCandidates.isEmpty {
+            slideIndex = nil
+        } else {
+            let selection = SceneDNA.derivedSeed(
+                scene: performance.eventSeed,
+                domain: 0x51DE_6A7E,
+                index: performance.bar
+            )
+            slideIndex = slideCandidates[Int(selection % UInt64(slideCandidates.count))]
+        }
+
+        let baseMotifDuration = performance.transformations.contains(.extend) ? 2.5 : 1.5
+        var notes = orderedMotif.enumerated().map { index, pitch in
+            let articulation = relationalSteps[pitch.event.step]
+            let isSlide = index == slideIndex
+            let leadsIntoSlide = slideIndex.map { index + 1 == $0 } ?? false
+            let legatoDuration = leadsIntoSlide
+                ? Double(orderedMotif[index + 1].event.step - pitch.event.step)
+                : baseMotifDuration
+            let startRatio = isSlide
+                ? orderedMotif[index - 1].frequencyRatio
+                : pitch.frequencyRatio
+            return ResolvedUpperNote(
+                role: .anchor,
+                onsetStep: pitch.event.step,
+                durationInSteps: max(baseMotifDuration, legatoDuration),
+                startFrequencyRatio: startRatio,
+                endFrequencyRatio: pitch.frequencyRatio,
+                velocity: min(
+                    1,
+                    (0.66 + performance.accent(at: pitch.event.step) * 0.24) *
+                        articulation.velocityScale
+                ),
+                gate: isSlide ? .slide : .retrigger,
+                timbreIntent: resonantIntent
+            )
+        }
+
+        let detunedEligible = variationEnabled && resolved.interlockChapter == .tone
+        let detunedIntent: UpperTimbreIntent = detunedEligible
+            ? .detunedMotion(amount: mutationAmount)
+            : .home
+        let baseFrequencyRatio = motifPitches.first?.frequencyRatio ?? 2
+        let shadowGestureLevel: Double = switch gesture {
+        case .reveal: 0.34
+        case .interlock: 0.46
+        case .corrode: 0.58
+        case .release: 0.38
+        case .suspend: 0
+        }
+        if gesture != .suspend {
+            notes.append(contentsOf: motifPitches.map { pitch in
+                let octave = pitch.sourceIndex.isMultiple(of: 3) ? 0.5 : 1.0
+                let interval = pow(2, Double(world.shadowInterval) / 12)
+                var frequency = world.rootFrequency * baseFrequencyRatio * interval * octave
+                while frequency < 92 { frequency *= 2 }
+                while frequency > 880 { frequency *= 0.5 }
+                let articulation = relationalSteps[pitch.event.step]
+                return ResolvedUpperNote(
+                    role: .shadow,
+                    onsetStep: pitch.event.step,
+                    durationInSteps: 0.52 * articulation.decayScale,
+                    startFrequencyRatio: frequency / world.rootFrequency,
+                    endFrequencyRatio: frequency / world.rootFrequency,
+                    velocity: min(
+                        1,
+                        min(0.72, shadowGestureLevel * max(0.35, pitch.event.intensity)) *
+                            articulation.velocityScale
+                    ),
+                    gate: .retrigger,
+                    timbreIntent: detunedIntent
+                )
+            })
+        }
+
+        let responseEvents = resolved.ensemble.events.filter { $0.voice == .response }
+        if gesture != .suspend, !responseEvents.isEmpty, scene.melodicity > 0.18 {
+            let responseInterval = pow(2, Double(world.responseInterval) / 12)
+            let frequency = min(
+                1_200,
+                max(120, world.rootFrequency * baseFrequencyRatio * responseInterval)
+            )
+            notes.append(contentsOf: responseEvents.map { event in
+                let articulation = relationalSteps[event.step]
+                return ResolvedUpperNote(
+                    role: .response,
+                    onsetStep: event.step,
+                    durationInSteps: 1.8,
+                    startFrequencyRatio: frequency / world.rootFrequency,
+                    endFrequencyRatio: frequency / world.rootFrequency,
+                    velocity: min(
+                        0.76,
+                        (event.intensity + scene.melodicity * 0.24) * articulation.velocityScale
+                    ),
+                    gate: .retrigger,
+                    timbreIntent: detunedIntent
+                )
+            })
+        }
+
+        let atmosphereEvents = resolved.ensemble.events.filter { $0.voice == .atmosphere }
+        if !atmosphereEvents.isEmpty, scene.atmosphere > 0.08 || scene.drone > 0.01 {
+            let startRatio = resolved.performance.section == .breakdown ? 1.5 : 2.0
+            let endScale = gesture == .suspend ? 1.018 : 1.003
+            notes.append(contentsOf: atmosphereEvents.map { event in
+                ResolvedUpperNote(
+                    role: .atmosphere,
+                    onsetStep: event.step,
+                    durationInSteps: max(
+                        ResolvedUpperNote.minimumDurationInSteps,
+                        16 - Double(event.step)
+                    ),
+                    startFrequencyRatio: startRatio,
+                    endFrequencyRatio: startRatio * endScale,
+                    velocity: min(0.72, event.intensity + scene.atmosphere * 0.22),
+                    gate: .retrigger,
+                    timbreIntent: .home
+                )
+            })
+        }
+
+        let transitionEvents = resolved.ensemble.events.filter { $0.voice == .transition }
+        let renderedTransitionEvents: [EnsembleResolvedEvent]
+        if gesture != .suspend {
+            renderedTransitionEvents = transitionEvents
+        } else {
+            let spatial = resolved.spatialContrast
+            renderedTransitionEvents = transitionEvents.filter {
+                spatial.depthPosition == .distant &&
+                    spatial.carrierVoice == .transition &&
+                    spatial.carrierStep == $0.step
+            }
+        }
+        if !renderedTransitionEvents.isEmpty {
+            let endScale = gesture == .corrode ? 3.8 : 1.5
+            notes.append(contentsOf: renderedTransitionEvents.map { event in
+                ResolvedUpperNote(
+                    role: .transition,
+                    onsetStep: event.step,
+                    durationInSteps: max(
+                        ResolvedUpperNote.minimumDurationInSteps,
+                        16 - Double(event.step)
+                    ),
+                    startFrequencyRatio: 2,
+                    endFrequencyRatio: 2 * endScale,
+                    velocity: min(0.54, event.intensity + mutationAmount * 0.18),
+                    gate: .retrigger,
+                    timbreIntent: .home
+                )
+            })
+        }
+
+        return notes.sorted {
+            if $0.onsetStep != $1.onsetStep { return $0.onsetStep < $1.onsetStep }
+            let lhsRole = SynthRole.allCases.firstIndex(of: $0.role) ?? 0
+            let rhsRole = SynthRole.allCases.firstIndex(of: $1.role) ?? 0
+            return lhsRole < rhsRole
+        }
+    }
+
+    private static func resolvedMotifPitches(
+        dna: SceneDNA,
+        performance: PerformanceBar,
+        events: [EnsembleResolvedEvent]
+    ) -> [MotifPitch] {
+        let answer = performance.transformations.contains(.answer) ||
+            performance.signatureEvent == .alteredMotifAnswer
+        let shadow = performance.signatureEvent == .harmonicShadow ? 1 : 0
+        return events.enumerated().map { index, event in
+            let requestedDegree = dna.motif.degrees[index % dna.motif.degrees.count] +
+                (answer ? 7 : 0) + shadow
+            let degree = dna.nearestModalDegree(to: requestedDegree)
+            return MotifPitch(
+                sourceIndex: index,
+                event: event,
+                frequencyRatio: pow(2, Double(degree) / 12)
+            )
+        }
+    }
+
 }

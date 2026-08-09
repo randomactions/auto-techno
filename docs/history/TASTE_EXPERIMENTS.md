@@ -207,3 +207,44 @@ break, release, identity return, and the beginning, middle, and end of the first
 Keep only changes that progressively reveal the same machine rather than making
 it wetter, brighter, or busier. Verdict: pending; comments and measurements do
 not promote candidate hashes.
+
+## Video-derived resonant-sequence and detuned-motion study — 2026-08-09
+
+Observation source: Underdog Electronic Music School's
+[“The two first techno sounds you should learn”](https://www.youtube.com/watch?v=-N8RPZaH3_Y)
+(uploaded 2025-05-19, accessed 2026-08-09). The study used automatic English
+captions and timestamped visual inspection; it did not treat the creator's
+perceptual adjectives as measured properties of Auto Techno output.
+
+The transferable hypotheses are relationships, not genre presets. At
+`1:26...7:21`, the lesson combines a monophonic saw or square source with a short
+resonant filter contour, register, accents, and slides. At `7:21...15:24`, it
+demonstrates same-pitch detuned oscillators creating phase motion, followed by
+restrained filtering and optional spatial depth. A sample of 50 top-level
+comments and six replies in YouTube's top-ranked order produced no three-comment
+technical convergence. One useful but uncorroborated suggestion was to evolve a
+short repeated sequence through bounded note-length and accent changes.
+
+Applied hypothesis: express `resonantSequence` and `detunedMotion` as bounded
+score-owned articulations of the existing authored upper voice. Resonant
+sequence may affect only eligible dominant-motif material, with at most one
+legato slide per bar and no added onset. Detuned motion may affect only eligible
+shadow or response material and must preserve the protected foundation, phase
+continuation, and existing stereo-stage ownership. Identity return, major break,
+conservative fallback, missing evidence, and stale evidence return home.
+
+Qualification status: unavailable until the versioned role- and section-aware
+guardrails are calibrated. Deterministic structural and signal tests can prove
+score-to-PCM ownership, bounds, continuation, and safety, but cannot by
+themselves establish production-ready sound. Reference audio is not a runtime
+dependency, and neither the video nor its comments promote an engine revision.
+
+Evidence scope is deliberately explicit. Filter/accent/slide observations use
+an anchor-only tap, and detune-motion observations use a shadow/response-only
+tap before the shared mix path. Width, masking, spectrum, and boundary context
+come from the existing GeneratedDSPGraph remainder (`full - foundation`), which
+is not claimed to be upper-only: it may also contain percussion and shared
+nonlinear residual. The older masking model's aliased synth/texture inputs,
+foundation omission, and percussion diagnostic rerender remain deferred to an
+independent masking-attribution slice; this timbre change does not reinterpret
+those measurements as qualification evidence.

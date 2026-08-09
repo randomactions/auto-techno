@@ -760,6 +760,16 @@ package struct AutonomousPhraseCandidates: Equatable, Sendable {
     package let primary: AutonomousPhrasePlan
     package let alternate: AutonomousPhrasePlan
     package let fallback: AutonomousPhrasePlan
+
+    package init(
+        primary: AutonomousPhrasePlan,
+        alternate: AutonomousPhrasePlan,
+        fallback: AutonomousPhrasePlan
+    ) {
+        self.primary = primary
+        self.alternate = alternate
+        self.fallback = fallback
+    }
 }
 
 package struct AutonomousSessionState: Equatable, Sendable {
@@ -769,10 +779,15 @@ package struct AutonomousSessionState: Equatable, Sendable {
     package var phraseIndex: Int
     package var intent: MusicalIntent
     package var memory: TemporalMusicalMemory
+    /// Reduced, versioned evidence/decision continuation. Signal-domain
+    /// observations remain in AutoTechnoDSP; only the selected preparation's
+    /// reduced provenance crosses the phrase boundary with the musical state.
+    package var quality: QualityContinuationState
 
     package init(rootSeed: UInt64 = AutonomousSessionDirector.defaultSeed, phraseIndex: Int = 0,
                 intent: MusicalIntent = MusicalIntent(),
-                memory: TemporalMusicalMemory = TemporalMusicalMemory()) {
+                memory: TemporalMusicalMemory = TemporalMusicalMemory(),
+                quality: QualityContinuationState = QualityContinuationState()) {
         let normalizedIntent = intent.preservingCorrelations()
         self.rootSeed = rootSeed
         identitySeed = rootSeed &+ 17
@@ -782,12 +797,15 @@ package struct AutonomousSessionState: Equatable, Sendable {
         self.phraseIndex = max(0, phraseIndex)
         self.intent = normalizedIntent
         self.memory = memory
+        self.quality = quality
     }
 
-    package mutating func advance(using plan: AutonomousPhrasePlan) {
+    package mutating func advance(using plan: AutonomousPhrasePlan,
+                                  quality acceptedQuality: QualityContinuationState? = nil) {
         memory.record(plan)
         intent = plan.scene.musicalIntent.preservingCorrelations()
         phraseIndex = plan.phraseIndex + 1
+        if let acceptedQuality { quality = acceptedQuality }
     }
 }
 

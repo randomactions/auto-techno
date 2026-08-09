@@ -57,8 +57,20 @@ struct SpatialProtectedRoutingRegressionTests {
         #expect(distantEvent?.spatialReverbSend == 0.30)
         #expect(foregroundEvent?.spatialDepthPosition == .foreground)
         #expect(foregroundEvent?.spatialReverbSend == 0)
+        let distantCarrierFrame = Int((
+            Double(carrierStep) * Double(distantBlock.left.count) / 16
+        ).rounded())
+        let foregroundCarrierFrame = Int((
+            Double(carrierStep) * Double(foregroundBlock.left.count) / 16
+        ).rounded())
+        #expect(distantBlock.upperNoteRenderEvidence.contains {
+            $0.role == .transition && $0.onsetFrame == distantCarrierFrame
+        })
+        #expect(!foregroundBlock.upperNoteRenderEvidence.contains {
+            $0.role == .transition && $0.onsetFrame == foregroundCarrierFrame
+        })
 
-        let start = carrierStep * distantBlock.left.count / 16
+        let start = distantCarrierFrame
         #expect(Array(distantBlock.left[..<start]) == Array(foregroundBlock.left[..<start]))
         let pcmDelta = zip(
             distantBlock.left[start...],

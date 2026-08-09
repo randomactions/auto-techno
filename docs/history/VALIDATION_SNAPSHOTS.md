@@ -145,3 +145,58 @@ closed.
 Temporary 44.1 kHz matched-loudness pairs exist for skeleton, contour,
 syncopated-lean, and pullback stages, plus the isolated carrier. Human listening
 approval, route/interruption testing, and the physical-output soak remain pending.
+
+## Video-derived autonomous timbre foundation — 2026-08-09
+
+This snapshot describes an uncommitted working tree on branch
+`codex/oscar-groove-refinement`, based on `3f94aab`. It is an implementation and
+local-validation record, not a professional-quality promotion. The matched
+toolchain was Xcode 26.6 build 17F113 with Apple Swift 6.3.3.
+
+The canonical score now owns resolved upper-note pitch, duration, velocity,
+gate, slide destination, and bounded timbre intent. The existing Alien Analog
+voice renders occasional resonant-sequence anchor articulation in eligible
+motion chapters and existing two-oscillator detuned motion for eligible
+tone-chapter shadow/response roles. Home, protected foundation, event density,
+graph topology, clocks, and UI remain the fallback identity. Applied renderer
+evidence distinguishes retriggers from legato slides, uncapped requested gate
+duration from bar-capped application, and role-local resonant-anchor from
+detuned-companion PCM.
+
+The evidence/report foundation remains deliberately
+`qualification-unavailable`. Versioned decisions, reason codes, observed and
+accepted fingerprints, controller provenance, route generation, future sample
+boundaries, one transaction-wide correction budget, and deterministic JSON are
+present. Acceptance requires internally consistent outcome/reason codes and an
+atomic candidate/evidence/controller snapshot. The test harness discovers all
+canonical journey checkpoint plans from an exact starting continuation, but
+only the establishment checkpoint is currently rendered into a qualification
+report.
+
+Final local validation used serialized SwiftPM builds:
+
+- `swift test --disable-sandbox --jobs 1`: 77 tests passed in 200.854 seconds.
+- `swift test --disable-sandbox --jobs 1 --filter UpperTimbre`: 18 tests passed
+  in 14.677 seconds before the final broad run.
+- `swift test --disable-sandbox --jobs 1 --filter QualityQualificationFoundationTests`:
+  10 tests passed in 1.806 seconds before the final broad run.
+- `swift build --disable-sandbox -c release --jobs 1`: optimized release build
+  passed in 28.09 seconds.
+- The final adversarial diff audit found no remaining P0/P1 blocker, and
+  `git diff --check` passed.
+
+The generated graph still receives the exact `full - foundation` remainder.
+That remainder includes percussion and shared nonlinear-mix residual, so it is
+not described as an upper-only stem. Resonant and detuned articulation metrics
+use dedicated dry role-local taps instead. The pre-existing masking inputs still
+alias synth/texture context, omit foundation from their kick/bass grouping, and
+rerender percussion with advanced RNG; full-window masking attribution is
+therefore explicitly deferred.
+
+No calibrated quality guardrails, coupled tone relationship, standards-aligned
+loudness/true-peak promotion, spectral correction controller, dynamics/final
+output promotion, complete multi-checkpoint report bank, end-to-end corrective
+fault injection, independent PCM pitch estimator, preparation latency/peak
+memory budget, full-phrase 96/192 kHz preparation, exact-build app/route QA,
+matched-loudness listening verdict, or 60-minute physical-output/recovery soak
+was completed. Those remain required before any production-ready sound claim.

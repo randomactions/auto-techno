@@ -239,7 +239,7 @@ struct AdaptiveAutonomousSessionTests {
             for (resolved, synthBar) in zip(plan.resolvedBars, synth.bars) {
                 let motifSteps = resolved.ensemble.events
                     .filter { $0.voice == .motif }.map(\.step).sorted()
-                #expect(synthBar.interlockEvents.map(\.stepIndex).sorted() == motifSteps)
+                #expect(synthBar.upperNotes(for: .shadow).map(\.onsetStep).sorted() == motifSteps)
                 let expectedStart = RelationalCyclePhase(
                     macroStep: (resolved.performance.bar % 16) * 16
                 )
@@ -479,16 +479,18 @@ struct AdaptiveAutonomousSessionTests {
         for _ in 0..<20 {
             let plan = director.candidates(from: state).primary
             let world = SynthWorldDNA(scene: plan.scene, dna: plan.dna)
+            let synth = SynthPerformancePlan(
+                scene: plan.scene,
+                dna: plan.dna,
+                kind: plan.kind,
+                resolvedBars: plan.resolvedBars
+            )
             #expect([1, 3, 7, 12].contains(world.shadowInterval))
             fingerprints.append(world.motifFingerprint)
-            for resolved in plan.resolvedBars {
-                let motif = VoiceRenderer.transformedMotif(
-                    dna: plan.dna,
-                    performance: resolved.performance,
-                    events: resolved.ensemble.events.filter { $0.voice == .motif }
-                )
-                #expect(motif.allSatisfy { event in
-                    let pitchClass = ((event.scaleDegree % 12) + 12) % 12
+            for bar in synth.bars {
+                #expect(bar.upperNotes(for: .anchor).allSatisfy { note in
+                    let scaleDegree = Int((12 * log2(note.endFrequencyRatio)).rounded())
+                    let pitchClass = ((scaleDegree % 12) + 12) % 12
                     return [0, 1, 3, 5, 7, 8, 10].contains(pitchClass)
                 })
             }
@@ -1717,8 +1719,8 @@ struct AutonomousPreparationPreflightTests {
             sculpted.voice == plain.voice && sculpted.step == plain.step &&
                 sculpted.intensity == plain.intensity
         })
-        #expect(sculptedBlock.synthPerformance.interlockEvents.map(\.stepIndex) ==
-                neutralBlock.synthPerformance.interlockEvents.map(\.stepIndex))
+        #expect(sculptedBlock.synthPerformance.upperNotes(for: .shadow).map(\.onsetStep) ==
+                neutralBlock.synthPerformance.upperNotes(for: .shadow).map(\.onsetStep))
         #expect(sculptedBlock.synthWorld.motifFingerprint ==
                 neutralBlock.synthWorld.motifFingerprint)
         #expect(sculptedBlock.automaticMix == neutralBlock.automaticMix)

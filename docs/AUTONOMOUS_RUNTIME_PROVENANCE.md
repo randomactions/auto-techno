@@ -13,7 +13,9 @@ mistaken for a completed feedback system.
    resolved performance bars, outgoing interlock, spatial-contrast, and
    protagonist-narrative state, plus groove-interest evidence. Supporting-role
    admission is resolved before ensemble arbitration. A resolved bar is the sole
-   source for audible onsets, articulation, and reported events.
+   score source for requested onsets, pitches, durations, gates, and articulation.
+   Renderer-owned trajectory evidence records the continuation-dependent applied
+   start frequency and gate outcome without creating a second score.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders the primary candidate, runs symbolic,
@@ -32,9 +34,15 @@ mistaken for a completed feedback system.
    percussion, upper-tonal, and atmosphere stems. A bounded preparation-time
    fader resolves only the kick/foundation hierarchy from those stems. This is
    the current adaptive controller; it is not a complete output-evaluation loop.
-6. The unchanged pre-fader kick remains the ducking detector. Only the
-   upper-voice remainder enters the generated graph, after which the fixed
-   output-safety stage recombines the performance.
+6. The unchanged pre-fader kick remains the ducking detector. The generated
+   graph receives the exact `full - protected-foundation` remainder. That
+   remainder contains the upper roles plus percussion and shared nonlinear-mix
+   residual; it is therefore named and reported as a graph-input remainder, not
+   an upper-only stem. Dedicated dry anchor and shadow/response taps provide the
+   new articulation evidence before this shared path. The fixed output-safety
+   stage then recombines the performance. Existing masking inputs remain a
+   separately documented pre-existing attribution limitation and are not used
+   to claim role-local timbre causality.
 7. `TechnoEngine` prepares away from the callback and schedules completed buffers
    by sample time. It derives its read-only waveform on a fixed decibel scale and
    owns transport, visual position, and route recovery, not musical composition.

@@ -7,6 +7,8 @@ struct AlienVoiceNote: Equatable, Sendable {
     let frequency: Double
     let endFrequency: Double
     let velocity: Double
+    let gate: UpperNoteGate
+    let timbreIntent: UpperTimbreIntent
     let role: SynthRole
     let articulation: RelationalArticulation
     let dryScale: Double
@@ -25,6 +27,10 @@ struct AlienVoiceState: Equatable, Sendable {
     var drift = 0.0
     var frequency = 65.41
     var envelope = 0.0
+    var filterEnvelope = 0.0
+    var timbreIntent = UpperTimbreIntent.home
+    var timbreVelocity = 0.0
+    var timbreTreatment = AlienTimbreTreatment.neutral
     var previousSource = 0.0
     var filter1 = 0.0
     var filter2 = 0.0
@@ -73,6 +79,84 @@ struct AlienVoiceState: Equatable, Sendable {
     }
 }
 
+/// A bounded DSP projection of the score-owned timbre request. It reuses the
+/// authored oscillator and filter topology; it does not select another voice
+/// or add an effect path.
+struct AlienTimbreTreatment: Equatable, Sendable {
+    let amplitudeScale: Double
+    let filterEnvelopeDepth: Double
+    let filterEnvelopeDecaySeconds: Double
+    let driveScale: Double
+    let resonanceLift: Double
+    let detuneRatioLift: Double
+
+    static let neutral = AlienTimbreTreatment(
+        amplitudeScale: 1,
+        filterEnvelopeDepth: 0,
+        filterEnvelopeDecaySeconds: 0.08,
+        driveScale: 1,
+        resonanceLift: 0,
+        detuneRatioLift: 0
+    )
+
+    static func resolve(intent: UpperTimbreIntent, velocity: Double,
+                        role: SynthRole) -> AlienTimbreTreatment {
+        let amount = min(1, max(0, intent.amount))
+        let accent = min(1, max(0, velocity))
+        guard amount > 0 else { return .neutral }
+        switch intent.kind {
+        case .resonantSequence where role == .anchor:
+            return AlienTimbreTreatment(
+                amplitudeScale: min(1.14, 1 + amount * (0.04 + accent * 0.10)),
+                filterEnvelopeDepth: amount * (480 + accent * 720),
+                filterEnvelopeDecaySeconds: 0.055 + (1 - accent) * 0.055,
+                driveScale: 1 + amount * (0.08 + accent * 0.18),
+                resonanceLift: amount * (0.035 + accent * 0.075),
+                detuneRatioLift: 0
+            )
+        case .detunedMotion where role == .shadow || role == .response:
+            return AlienTimbreTreatment(
+                amplitudeScale: 1,
+                filterEnvelopeDepth: 0,
+                filterEnvelopeDecaySeconds: 0.08,
+                driveScale: 1,
+                resonanceLift: 0,
+                detuneRatioLift: amount * (0.002 + accent * 0.004)
+            )
+        case .home, .resonantSequence, .detunedMotion:
+            return .neutral
+        }
+    }
+
+    func interpolated(toward target: AlienTimbreTreatment,
+                      amount: Double) -> AlienTimbreTreatment {
+        let amount = min(1, max(0, amount))
+        func value(_ current: Double, _ destination: Double) -> Double {
+            current + (destination - current) * amount
+        }
+        let result = AlienTimbreTreatment(
+            amplitudeScale: value(amplitudeScale, target.amplitudeScale),
+            filterEnvelopeDepth: value(filterEnvelopeDepth, target.filterEnvelopeDepth),
+            filterEnvelopeDecaySeconds: value(
+                filterEnvelopeDecaySeconds,
+                target.filterEnvelopeDecaySeconds
+            ),
+            driveScale: value(driveScale, target.driveScale),
+            resonanceLift: value(resonanceLift, target.resonanceLift),
+            detuneRatioLift: value(detuneRatioLift, target.detuneRatioLift)
+        )
+        let maximumDelta = [
+            abs(result.amplitudeScale - target.amplitudeScale),
+            abs(result.filterEnvelopeDepth - target.filterEnvelopeDepth),
+            abs(result.filterEnvelopeDecaySeconds - target.filterEnvelopeDecaySeconds),
+            abs(result.driveScale - target.driveScale),
+            abs(result.resonanceLift - target.resonanceLift),
+            abs(result.detuneRatioLift - target.detuneRatioLift),
+        ].max() ?? 0
+        return maximumDelta < 0.000_000_001 ? target : result
+    }
+}
+
 /// The bounded spectral coordinate shared by resolved event metadata and the
 /// authored motif renderer. Keeping the composition here makes the exact
 /// lower and upper limits directly verifiable without rendering audio.
@@ -90,6 +174,7 @@ enum AlienAnalogVoice {
     static func render(_ output: inout [Float], measurement: inout [Float],
                        pulseEchoSend: inout [Float],
                        spatialReverbSend: inout [Float],
+                       noteRenderEvidence: inout [UpperNoteRenderEvidence],
                        notes: [AlienVoiceNote],
                        sampleRate: Double, level: Double,
                        world: SynthWorldDNA, bar: SynthPerformanceBar,
@@ -104,7 +189,21 @@ enum AlienAnalogVoice {
             .sorted { lhs, rhs in
                 lhs.startFrame == rhs.startFrame ? lhs.frequency < rhs.frequency : lhs.startFrame < rhs.startFrame
             }
-        if scheduled.isEmpty && state.envelope < 0.000_001 && state.tailLevel < 0.000_001 {
+        if !scheduled.contains(where: { note in
+            AlienTimbreTreatment.resolve(
+                intent: note.timbreIntent,
+                velocity: note.velocity,
+                role: role
+            ) != .neutral
+        }) {
+            // Returning home neutralizes prior chapter treatment immediately,
+            // even when this role's next onset is late or absent. Oscillator
+            // and delay phases remain untouched.
+            state.timbreIntent = .home
+            state.timbreVelocity = 0
+        }
+        if scheduled.isEmpty && state.envelope < 0.000_001 && state.tailLevel < 0.000_001 &&
+            state.timbreTreatment == .neutral {
             return
         }
 
@@ -114,11 +213,20 @@ enum AlienAnalogVoice {
         var startFrequency = state.frequency
         var targetFrequency = state.frequency
         var velocity = 0.0
+        var legatoGate = false
         var articulation = RelationalArticulation.neutral
         var dryScale = 1.0
         var spatialSendLevel = 0.0
         var narrativeGainScale = 1.0
         var narrativeSpectralScale = 1.0
+        var targetTimbreTreatment = scheduled.contains(where: { note in
+            AlienTimbreTreatment.resolve(
+                intent: note.timbreIntent,
+                velocity: note.velocity,
+                role: role
+            ) != .neutral
+        }) ? state.timbreTreatment : .neutral
+        var activeEvidenceIndex: Int?
         let roleMutation = mutationScale(for: role)
         let mutation = min(1, bar.mutationAmount * roleMutation)
         let fingerprint = world.motifFingerprint
@@ -130,19 +238,85 @@ enum AlienAnalogVoice {
         var decaySeconds = baseDecaySeconds
         let releaseCoefficient = exp(-1 / max(1, releaseSeconds * sampleRate))
         var glideCoefficient = 1 - exp(-1 / max(1, sampleRate * (0.012 + mutation * 0.030)))
+        var filterEnvelopeDecay = exp(-1 / max(
+            1,
+            sampleRate * state.timbreTreatment.filterEnvelopeDecaySeconds
+        ))
         let oversampledRate = sampleRate * 2
+        let treatmentSmoothing = 1 - exp(-1 / max(1, sampleRate * 0.012))
         let roleIndex = Double(SynthRole.allCases.firstIndex(of: role) ?? 0)
         let driftRate = 0.031 + roleIndex * 0.007 + Double(world.variation) * 0.003
 
         for frame in output.indices {
-            var triggered = false
+            if frame == noteEnd, let evidenceIndex = activeEvidenceIndex {
+                noteRenderEvidence[evidenceIndex].appliedGateEndFrame = frame
+                noteRenderEvidence[evidenceIndex].frequencyAtAppliedGateEnd = state.frequency
+                activeEvidenceIndex = nil
+            }
+            var retriggered = false
             while nextNote < scheduled.count && scheduled[nextNote].startFrame == frame {
                 let note = scheduled[nextNote]
+                if let evidenceIndex = activeEvidenceIndex {
+                    noteRenderEvidence[evidenceIndex].appliedGateEndFrame = frame
+                    noteRenderEvidence[evidenceIndex].frequencyAtAppliedGateEnd = state.frequency
+                    activeEvidenceIndex = nil
+                }
                 noteStart = frame
-                noteEnd = min(output.count, frame + note.durationFrames)
-                startFrequency = max(20, state.frequency)
-                targetFrequency = note.endFrequency
+                let (uncappedRequestedEnd, requestedEndOverflowed) =
+                    frame.addingReportingOverflow(note.durationFrames)
+                let requestedGateEnd = requestedEndOverflowed
+                    ? Int.max
+                    : uncappedRequestedEnd
+                noteEnd = min(output.count, requestedGateEnd)
                 velocity = min(1, max(0, note.velocity))
+                state.timbreIntent = note.timbreIntent
+                state.timbreVelocity = velocity
+                targetTimbreTreatment = AlienTimbreTreatment.resolve(
+                    intent: note.timbreIntent,
+                    velocity: velocity,
+                    role: role
+                )
+                let requestedSlide = note.gate == .slide
+                legatoGate = requestedSlide && state.envelope > 0.000_001
+                if legatoGate {
+                    startFrequency = max(20, state.frequency)
+                } else if note.timbreIntent.kind != .resonantSequence {
+                    // Home and detuned-motion notes share the legacy pitch
+                    // trajectory. Detuned motion may change only oscillator
+                    // beating; it must not smuggle in a retrigger pitch jump.
+                    startFrequency = max(20, state.frequency)
+                    retriggered = true
+                } else {
+                    startFrequency = max(20, note.frequency)
+                    state.frequency = startFrequency
+                    retriggered = true
+                }
+                targetFrequency = max(20, note.endFrequency)
+                filterEnvelopeDecay = exp(-1 / max(
+                    1,
+                    sampleRate * targetTimbreTreatment.filterEnvelopeDecaySeconds
+                ))
+                if !legatoGate {
+                    state.filterEnvelope = note.timbreIntent.kind == .resonantSequence ? 1 : 0
+                }
+                if targetTimbreTreatment != .neutral {
+                    state.timbreTreatment = targetTimbreTreatment
+                }
+                noteRenderEvidence.append(UpperNoteRenderEvidence(
+                    role: role,
+                    onsetFrame: frame,
+                    requestedGateEndFrame: requestedGateEnd,
+                    appliedGateEndFrame: noteEnd,
+                    requestedStartFrequency: note.frequency,
+                    appliedStartFrequency: startFrequency,
+                    targetEndFrequency: targetFrequency,
+                    frequencyAtAppliedGateEnd: startFrequency,
+                    requestedGate: note.gate,
+                    appliedGate: legatoGate ? .slide : .retrigger,
+                    didRetrigger: !legatoGate,
+                    timbreIntent: note.timbreIntent
+                ))
+                activeEvidenceIndex = noteRenderEvidence.count - 1
                 articulation = note.articulation
                 dryScale = min(1, max(0, note.dryScale))
                 spatialSendLevel = min(1, max(0, note.spatialReverbSend))
@@ -154,25 +328,37 @@ enum AlienAnalogVoice {
                 decaySeconds = baseDecaySeconds * articulation.decayScale
                 let glideSeconds = (0.012 + mutation * 0.030) * articulation.glideTimeScale
                 glideCoefficient = 1 - exp(-1 / max(1, sampleRate * glideSeconds))
-                triggered = true
                 nextNote += 1
             }
 
+            state.timbreTreatment = state.timbreTreatment.interpolated(
+                toward: targetTimbreTreatment,
+                amount: treatmentSmoothing
+            )
+            let timbreTreatment = state.timbreTreatment
+
             let gate = frame < noteEnd
             if gate {
-                let age = max(0, frame - noteStart)
-                let attackProgress = min(1, Double(age) / Double(attackFrames))
-                let shapedAttack = attackProgress * attackProgress * (3 - 2 * attackProgress)
-                let decayTime = max(0, Double(age - attackFrames)) / sampleRate
-                let decayEnvelope = sustain + (1 - sustain) * exp(-decayTime / max(0.02, decaySeconds))
-                let targetEnvelope = age < attackFrames ? shapedAttack : decayEnvelope
-                if triggered && role != .atmosphere {
+                if retriggered && role != .atmosphere {
                     state.envelope = min(state.envelope, 0.14)
                 }
-                state.envelope += (targetEnvelope - state.envelope) * 0.24
+                if legatoGate {
+                    let decayCoefficient = 1 - exp(-1 / max(1, decaySeconds * sampleRate))
+                    state.envelope += (sustain - state.envelope) * decayCoefficient
+                } else {
+                    let age = max(0, frame - noteStart)
+                    let attackProgress = min(1, Double(age) / Double(attackFrames))
+                    let shapedAttack = attackProgress * attackProgress * (3 - 2 * attackProgress)
+                    let decayTime = max(0, Double(age - attackFrames)) / sampleRate
+                    let decayEnvelope = sustain +
+                        (1 - sustain) * exp(-decayTime / max(0.02, decaySeconds))
+                    let targetEnvelope = age < attackFrames ? shapedAttack : decayEnvelope
+                    state.envelope += (targetEnvelope - state.envelope) * 0.24
+                }
             } else {
                 state.envelope *= releaseCoefficient
             }
+            state.filterEnvelope *= filterEnvelopeDecay
 
             let noteProgress: Double
             if noteStart >= 0 && noteEnd > noteStart {
@@ -197,7 +383,8 @@ enum AlienAnalogVoice {
                                     max(20, state.frequency * (1 + driftCents * 0.000_577_622)))
                 let motifDetune = [0.004, 0.007, 0.011][fingerprint.modulationFamily]
                 let ratio = (role == .anchor ? 1 + motifDetune : 1.006) +
-                    Double(world.variation) * 0.0017 + roleIndex * 0.0009
+                    Double(world.variation) * 0.0017 + roleIndex * 0.0009 +
+                    timbreTreatment.detuneRatioLift
                 let incrementA = frequency / oversampledRate
                 let incrementB = frequency * ratio / oversampledRate
                 let motifModulation = [1.19, 1.37, 1.61][fingerprint.modulationFamily]
@@ -226,7 +413,9 @@ enum AlienAnalogVoice {
                 let anchor = fastSaturate((source + sawA * sawB * 0.14) * (1.18 + mutation * 0.30))
                 let emphasized = source + (source - state.previousSource) * (0.18 + mutation * 0.34)
                 state.previousSource = source
-                let folded = waveFold(emphasized * (1.18 + mutation * 2.15))
+                let folded = waveFold(
+                    emphasized * (1.18 + mutation * 2.15) * timbreTreatment.driveScale
+                )
                 let ringCarrier = fastSine(wrap(
                     state.phaseB * (1.5 + roleIndex * 0.083) + state.modPhase * 0.31
                 ))
@@ -253,11 +442,15 @@ enum AlienAnalogVoice {
                 let baseCutoff = (170 + Double(world.variation) * 55 + roleIndex * 48) * spectralScale
                 let cutoff = min(oversampledRate * 0.18,
                                  baseCutoff + (1 - mutation) * 1_280 + envelopeLift * 1_850 +
+                                 state.filterEnvelope * timbreTreatment.filterEnvelopeDepth +
                                  modulator * mutation * 310)
                 let rawCoefficient = 2 * .pi * cutoff / oversampledRate
                 let coefficient = min(0.46, max(0.004,
                     rawCoefficient / (1 + rawCoefficient * 0.5)))
-                let resonance = min(0.76, 0.22 + mutation * 0.38)
+                let resonance = min(
+                    0.84,
+                    0.22 + mutation * 0.38 + timbreTreatment.resonanceLift
+                )
                 let feedbackInput = fastSaturate(altered * (1.35 + mutation * 1.45) - state.filter4 * resonance)
                 state.filter1 += (fastSaturate(feedbackInput) - state.filter1) * coefficient
                 state.filter2 += (fastSaturate(state.filter1 * 1.08) - state.filter2) * coefficient
@@ -281,7 +474,8 @@ enum AlienAnalogVoice {
                 }
 
                 let amplitude = state.envelope * velocity * level *
-                    (role == .anchor ? narrativeGainScale : 1)
+                    (role == .anchor ? narrativeGainScale : 1) *
+                    timbreTreatment.amplitudeScale
                 dryVoice = oversampleSum * 0.5 * amplitude
             } else {
                 state.filter1 *= 0.94
@@ -325,6 +519,10 @@ enum AlienAnalogVoice {
             output[frame] += renderedSample
             measurement[frame] += renderedSample
             spatialReverbSend[frame] += unscaledSample * Float(spatialSendLevel)
+        }
+        if let evidenceIndex = activeEvidenceIndex {
+            noteRenderEvidence[evidenceIndex].appliedGateEndFrame = output.count
+            noteRenderEvidence[evidenceIndex].frequencyAtAppliedGateEnd = state.frequency
         }
     }
 

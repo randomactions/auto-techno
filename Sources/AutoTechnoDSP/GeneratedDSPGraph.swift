@@ -583,7 +583,8 @@ package struct PhraseAudioPreflight: Equatable, Sendable {
         bars = barEvidence
         movementScore = loudnessMovement * 0.34 + spectralMovement * 0.24 +
             transientMovement * 0.22 + dynamicMovement * 0.20
-        safetyValid = barEvidence.allSatisfy { $0.finite } && report.finite && report.truePeakEstimate <= 0.95 &&
+        safetyValid = !barEvidence.isEmpty && barEvidence.allSatisfy { $0.finite } &&
+            report.finite && report.truePeakEstimate <= 0.95 &&
             abs(report.dcOffset) < 0.05 && report.lowStereoCorrelation > 0.94 &&
             report.maxBoundaryDelta < 0.65
         // Movement is evidence for comparison, not a musicality threshold. A
@@ -599,11 +600,84 @@ package struct PreparedAutonomousPhrase: Sendable {
     package let endingRenderState: RenderState
     package let endingGraphState: GeneratedDSPContinuationState
     package let audioPreflight: PhraseAudioPreflight
+    package let upperTimbreEvidence: UpperTimbreEvidence
+    package let qualityDecision: QualityDecision
+    package let qualityContinuationState: QualityContinuationState
+    package let correctionRenderCount: Int
     package let usedAlternate: Bool
     package let usedFallback: Bool
+    package let usedHomeTimbreFallback: Bool
 
     package var combinedScore: Double {
         plan.interest.score * 0.82 + audioPreflight.movementScore * 0.18
+    }
+
+    package var hardGatesPassed: Bool {
+        !blocks.isEmpty && plan.interest.valid && audioPreflight.safetyValid &&
+            upperTimbreEvidence.finite
+    }
+
+    /// The uncalibrated foundation remains playable while clearly reporting
+    /// qualification unavailable. Once a calibrated policy is installed, only
+    /// qualified/adjusted material may cross the atomic commit boundary.
+    package var commitEligible: Bool {
+        return AutonomousCommitPolicy.isEligible(
+            hardGatesPassed: hardGatesPassed,
+            decision: qualityDecision,
+            continuationState: qualityContinuationState,
+            candidateFingerprint: audioPreflight.quality.sampleHash,
+            evidenceFingerprint: upperTimbreEvidence.fingerprint
+        )
+    }
+}
+
+package enum AutonomousCommitPolicy {
+    package static func isEligible(
+        hardGatesPassed: Bool,
+        decision: QualityDecision,
+        continuationState: QualityContinuationState,
+        candidateFingerprint: String,
+        evidenceFingerprint: String
+    ) -> Bool {
+        guard hardGatesPassed,
+              !decision.policyVersion.trimmingCharacters(
+                in: .whitespacesAndNewlines
+              ).isEmpty,
+              decision.hasOutcomeConsistentReasonCodes,
+              continuationState.lastDecision == decision,
+              continuationState.acceptanceProvenanceComplete,
+              decision.candidateFingerprint == candidateFingerprint,
+              decision.evidenceFingerprint == evidenceFingerprint,
+              continuationState.observedCandidateFingerprint == candidateFingerprint,
+              continuationState.observedEvidenceFingerprint == evidenceFingerprint else {
+            return false
+        }
+        if decision.policyVersion == QualityQualificationContract.uncalibratedPolicyVersion {
+            return decision.outcome == .qualificationUnavailable
+        }
+        return decision.outcome == .qualified || decision.outcome == .adjusted
+    }
+}
+
+/// One preparation transaction owns one corrective rerender budget across its
+/// primary, alternate, and fallback candidates. This keeps detached work
+/// bounded even when every candidate fails its evidence hard gate.
+package struct AutonomousCorrectionBudget: Equatable, Sendable {
+    package let maximum: Int
+    package private(set) var used: Int
+
+    package init(
+        maximum: Int = QualityQualificationContract.maximumCorrectionRenders,
+        used: Int = 0
+    ) {
+        self.maximum = max(0, maximum)
+        self.used = min(max(0, used), self.maximum)
+    }
+
+    package mutating func claim() -> Bool {
+        guard used < maximum else { return false }
+        used += 1
+        return true
     }
 }
 
@@ -611,6 +685,16 @@ package enum AutonomousPreflightChoice: Equatable, Sendable {
     case primary
     case alternate
     case fallback
+}
+
+/// The calibrated evaluator owns this comparison after inspecting the complete
+/// evidence vectors. Until calibration exists, preparation passes `.unavailable`
+/// and preserves a hard-valid primary rather than inventing taste thresholds.
+package enum AutonomousQualityComparison: Equatable, Sendable {
+    case unavailable
+    case primary
+    case alternate
+    case tie
 }
 
 package struct AutonomousCandidateEvidence: Equatable, Sendable {
@@ -628,23 +712,32 @@ package struct AutonomousCandidateEvidence: Equatable, Sendable {
     }
 }
 
-/// Pure selection policy used by preparation and by synthetic anti-stagnation
-/// tests. Safe symbolic intent retains the primary even when audio movement is
-/// deliberately low. Equal scores always preserve the primary.
+/// Pure selection policy used by preparation and synthetic policy tests. Hard
+/// gates are non-compensable. An unavailable or exact-tie quality comparison
+/// preserves a hard-valid primary; a calibrated evaluator may explicitly order
+/// the complete evidence vectors without teaching this selector DSP thresholds.
 package enum AutonomousCandidateSelector {
-    package static func needsAlternate(primary: AutonomousCandidateEvidence) -> Bool {
-        !(primary.symbolicValid && primary.safetyValid)
+    package static func needsAlternate(primary: AutonomousCandidateEvidence,
+                                       qualityComparisonAvailable: Bool = false) -> Bool {
+        !(primary.symbolicValid && primary.safetyValid) || qualityComparisonAvailable
     }
 
     package static func choose(primary: AutonomousCandidateEvidence,
-                              alternate: AutonomousCandidateEvidence?) -> AutonomousPreflightChoice {
-        if !needsAlternate(primary: primary) { return .primary }
+                              alternate: AutonomousCandidateEvidence?,
+                              qualityComparison: AutonomousQualityComparison = .unavailable)
+        -> AutonomousPreflightChoice {
+        if !needsAlternate(
+            primary: primary,
+            qualityComparisonAvailable: qualityComparison != .unavailable
+        ) { return .primary }
         let primaryValid = primary.symbolicValid && primary.safetyValid
         let alternateValid = alternate.map { $0.symbolicValid && $0.safetyValid } ?? false
         switch (primaryValid, alternateValid) {
         case (true, true):
-            guard let alternate else { return .primary }
-            return alternate.combinedScore > primary.combinedScore ? .alternate : .primary
+            switch qualityComparison {
+            case .alternate: return .alternate
+            case .unavailable, .primary, .tie: return .primary
+            }
         case (true, false): return .primary
         case (false, true): return .alternate
         case (false, false): return .fallback
@@ -660,36 +753,52 @@ package enum AutonomousPhrasePreparer {
                                incomingRenderState: RenderState,
                                incomingGraphState: GeneratedDSPContinuationState,
                                previousGraph: DSPGraphPlan?,
+                               incomingQualityState: QualityContinuationState = QualityContinuationState(),
                                routeRecovery: Bool = false) -> PreparedAutonomousPhrase {
+        var correctionBudget = AutonomousCorrectionBudget()
         let primary = render(plan: candidates.primary, sessionSeed: sessionSeed, memory: memory,
                            sampleRate: sampleRate, incomingRenderState: incomingRenderState,
                            incomingGraphState: incomingGraphState, previousGraph: previousGraph,
-                           routeRecovery: routeRecovery)
+                           incomingQualityState: incomingQualityState,
+                           routeRecovery: routeRecovery,
+                           correctionBudget: &correctionBudget)
         let primaryEvidence = evidence(for: primary)
-        guard AutonomousCandidateSelector.needsAlternate(primary: primaryEvidence) else { return primary }
+        guard AutonomousCandidateSelector.needsAlternate(primary: primaryEvidence) else {
+            return recordingTransactionCorrectionCount(primary, count: correctionBudget.used)
+        }
 
         let alternate = render(plan: candidates.alternate, sessionSeed: sessionSeed, memory: memory,
                                sampleRate: sampleRate, incomingRenderState: incomingRenderState,
                                incomingGraphState: incomingGraphState, previousGraph: previousGraph,
-                               routeRecovery: routeRecovery)
+                               incomingQualityState: incomingQualityState,
+                               routeRecovery: routeRecovery,
+                               correctionBudget: &correctionBudget)
         switch AutonomousCandidateSelector.choose(
             primary: primaryEvidence,
             alternate: evidence(for: alternate)
         ) {
-        case .primary: return primary
-        case .alternate: return alternate
+        case .primary:
+            return recordingTransactionCorrectionCount(primary, count: correctionBudget.used)
+        case .alternate:
+            return recordingTransactionCorrectionCount(alternate, count: correctionBudget.used)
         case .fallback: break
         }
-        return render(plan: candidates.fallback, sessionSeed: sessionSeed, memory: memory,
-                      sampleRate: sampleRate, incomingRenderState: incomingRenderState,
-                      incomingGraphState: incomingGraphState, previousGraph: previousGraph,
-                      routeRecovery: routeRecovery, forceSafeGraph: true)
+        let fallback = render(
+            plan: candidates.fallback, sessionSeed: sessionSeed, memory: memory,
+            sampleRate: sampleRate, incomingRenderState: incomingRenderState,
+            incomingGraphState: incomingGraphState, previousGraph: previousGraph,
+            incomingQualityState: incomingQualityState,
+            routeRecovery: routeRecovery, correctionBudget: &correctionBudget,
+            forceSafeGraph: true
+        )
+        return recordingTransactionCorrectionCount(fallback, count: correctionBudget.used)
     }
 
     private static func evidence(for phrase: PreparedAutonomousPhrase) -> AutonomousCandidateEvidence {
         AutonomousCandidateEvidence(
             symbolicValid: phrase.plan.interest.valid,
-            safetyValid: phrase.audioPreflight.safetyValid,
+            safetyValid: phrase.audioPreflight.safetyValid &&
+                !phrase.blocks.isEmpty && phrase.upperTimbreEvidence.finite,
             interesting: phrase.audioPreflight.interesting,
             combinedScore: phrase.combinedScore
         )
@@ -699,8 +808,14 @@ package enum AutonomousPhrasePreparer {
                                memory: TemporalMusicalMemory, sampleRate: Double,
                                incomingRenderState: RenderState,
                                incomingGraphState: GeneratedDSPContinuationState,
-                               previousGraph: DSPGraphPlan?, routeRecovery: Bool,
-                               forceSafeGraph: Bool = false) -> PreparedAutonomousPhrase {
+                               previousGraph: DSPGraphPlan?,
+                               incomingQualityState: QualityContinuationState,
+                               routeRecovery: Bool,
+                               correctionBudget: inout AutonomousCorrectionBudget,
+                               forceSafeGraph: Bool = false,
+                               forceHomeUpperTimbre: Bool = false,
+                               inheritedReasonCodes: [QualityReasonCode] = [])
+        -> PreparedAutonomousPhrase {
         let proposedGraph = forceSafeGraph
             ? (previousGraph ?? DSPGraphGenerator.safePlan(sessionSeed: sessionSeed))
             : DSPGraphGenerator.plan(sessionSeed: sessionSeed, phrase: plan, memory: memory,
@@ -715,19 +830,103 @@ package enum AutonomousPhrasePreparer {
         }
         var renderState = incomingRenderState
         var graphState = incomingGraphState
+        let homeTimbreFallback = routeRecovery || forceHomeUpperTimbre
         let blocks = AutonomousPhraseRenderer.render(
             plan: plan, graph: graph, sampleRate: sampleRate,
-            state: &renderState, graphState: &graphState
+            state: &renderState, graphState: &graphState,
+            forceHomeUpperTimbre: homeTimbreFallback
         )
+        let audioPreflight = PhraseAudioPreflight(blocks: blocks, sampleRate: sampleRate)
+        let timbreEvidence = UpperTimbreEvidence.aggregating(
+            blocks.map(\.postGraphRemainderTimbreEvidence)
+        )
+        var currentEvidenceReasons: [QualityReasonCode] = []
+        if blocks.isEmpty { currentEvidenceReasons.append(.evidenceMissingV1) }
+        if !timbreEvidence.finite { currentEvidenceReasons.append(.evidenceNonFiniteV1) }
+        if !plan.conservative, !homeTimbreFallback, !currentEvidenceReasons.isEmpty,
+           correctionBudget.claim() {
+            return render(
+                plan: plan,
+                sessionSeed: sessionSeed,
+                memory: memory,
+                sampleRate: sampleRate,
+                incomingRenderState: incomingRenderState,
+                incomingGraphState: incomingGraphState,
+                previousGraph: previousGraph,
+                incomingQualityState: incomingQualityState,
+                routeRecovery: routeRecovery,
+                correctionBudget: &correctionBudget,
+                forceSafeGraph: forceSafeGraph,
+                forceHomeUpperTimbre: true,
+                inheritedReasonCodes: inheritedReasonCodes + currentEvidenceReasons
+            )
+        }
+        var reasonCodes: [QualityReasonCode] = [.policyUncalibratedV1] +
+            inheritedReasonCodes + currentEvidenceReasons
+        if blocks.isEmpty || !plan.interest.valid || !audioPreflight.safetyValid ||
+            !timbreEvidence.finite {
+            reasonCodes.append(.hardGateFailedV1)
+        }
+        if routeRecovery { reasonCodes.append(.staleEvidenceV1) }
+        if plan.conservative { reasonCodes.append(.conservativeFallbackV1) }
+        // Evidence is descriptive until calibrated guardrails exist. A safe
+        // fallback is still useful provenance, but it must not masquerade as a
+        // qualification outcome merely because preparation completed.
+        let proposedDecision = QualityDecision(
+            outcome: .qualificationUnavailable,
+            reasonCodes: reasonCodes,
+            candidateFingerprint: audioPreflight.quality.sampleHash,
+            evidenceFingerprint: timbreEvidence.fingerprint
+        )
+        let controllerFingerprint = String(
+            format: "automatic-mix.v1.%016llx",
+            renderState.automaticMixState.kickCorrectionDB.bitPattern
+        )
+        let outgoingQuality = incomingQualityState.recording(
+            decision: proposedDecision,
+            evidenceFingerprint: timbreEvidence.fingerprint,
+            controllerStateFingerprint: controllerFingerprint
+        )
+        let decision = outgoingQuality.lastDecision
         return PreparedAutonomousPhrase(
             plan: plan,
             graph: graph,
             blocks: blocks,
             endingRenderState: renderState,
             endingGraphState: graphState,
-            audioPreflight: PhraseAudioPreflight(blocks: blocks, sampleRate: sampleRate),
+            audioPreflight: audioPreflight,
+            upperTimbreEvidence: timbreEvidence,
+            qualityDecision: decision,
+            qualityContinuationState: outgoingQuality,
+            correctionRenderCount: correctionBudget.used,
             usedAlternate: plan.alternate,
-            usedFallback: plan.conservative
+            usedFallback: plan.conservative,
+            usedHomeTimbreFallback: homeTimbreFallback
         )
     }
+
+    private static func recordingTransactionCorrectionCount(
+        _ phrase: PreparedAutonomousPhrase,
+        count: Int
+    ) -> PreparedAutonomousPhrase {
+        PreparedAutonomousPhrase(
+            plan: phrase.plan,
+            graph: phrase.graph,
+            blocks: phrase.blocks,
+            endingRenderState: phrase.endingRenderState,
+            endingGraphState: phrase.endingGraphState,
+            audioPreflight: phrase.audioPreflight,
+            upperTimbreEvidence: phrase.upperTimbreEvidence,
+            qualityDecision: phrase.qualityDecision,
+            qualityContinuationState: phrase.qualityContinuationState,
+            correctionRenderCount: min(
+                QualityQualificationContract.maximumCorrectionRenders,
+                max(0, count)
+            ),
+            usedAlternate: phrase.usedAlternate,
+            usedFallback: phrase.usedFallback,
+            usedHomeTimbreFallback: phrase.usedHomeTimbreFallback
+        )
+    }
+
 }

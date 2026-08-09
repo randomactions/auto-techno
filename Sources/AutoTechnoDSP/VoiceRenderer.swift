@@ -73,7 +73,10 @@ package enum VoiceRenderer {
         let section = performance.section
         let frames = max(1, Int((240.0 / scene.bpm * sampleRate).rounded()))
         let stepFrames = Double(frames) / 16.0
-        var checkedOut = workspace.checkout(frameCount: frames)
+        var checkedOut = workspace.checkout(
+            frameCount: frames,
+            includeUpperRoleTaps: layer == .full
+        )
         var output: [Float] = []
         var kickBus: [Float] = []
         var kickDetectorBus: [Float] = []
@@ -81,6 +84,8 @@ package enum VoiceRenderer {
         var percussionStem: [Float] = []
         var upperTonalStem: [Float] = []
         var atmosphereStem: [Float] = []
+        var resonantAnchorStem: [Float] = []
+        var detunedCompanionStem: [Float] = []
         var measurementScratch: [Float] = []
         var percussionBus: [Float] = []
         var synthBus: [Float] = []
@@ -93,6 +98,8 @@ package enum VoiceRenderer {
         swap(&percussionStem, &checkedOut.percussionStem)
         swap(&upperTonalStem, &checkedOut.upperTonalStem)
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
+        swap(&resonantAnchorStem, &checkedOut.resonantAnchorStem)
+        swap(&detunedCompanionStem, &checkedOut.detunedCompanionStem)
         swap(&measurementScratch, &checkedOut.measurementScratch)
         swap(&percussionBus, &checkedOut.percussion)
         swap(&synthBus, &checkedOut.synth)
@@ -188,19 +195,21 @@ package enum VoiceRenderer {
         let upperRolesActive = performance.roles.contains {
             $0 == .motif || $0 == .response || $0 == .atmosphere || $0 == .transition
         }
-        if layer == .full && !textureCollapsed && upperRolesActive {
+        var upperNoteRenderEvidence: [UpperNoteRenderEvidence] = []
+        if layer == .full {
             renderAlienWorld(
                 &synthBus,
                 pulseEchoSend: &pulseEchoSendBus,
                 spatialReverbSend: &spatialReverbSendBus,
                 upperTonalStem: &upperTonalStem,
                 atmosphereStem: &atmosphereStem,
+                resonantAnchorStem: &resonantAnchorStem,
+                detunedCompanionStem: &detunedCompanionStem,
+                noteRenderEvidence: &upperNoteRenderEvidence,
+                renderScheduledNotes: !textureCollapsed && upperRolesActive,
                 scene: scene,
-                section: section,
                 sampleRate: sampleRate,
-                frames: frames,
                 stepFrames: stepFrames,
-                dna: dna,
                 resolved: resolved,
                 world: synthWorld,
                 synthBar: synthPerformance,
@@ -488,7 +497,10 @@ package enum VoiceRenderer {
                                    masking: masking, kickMix: kickMix,
                                    stemObservations: stemObservations,
                                    automaticMix: automaticMix,
-                                   stemReconstruction: stemReconstruction)
+                                   stemReconstruction: stemReconstruction,
+                                   upperNoteRenderEvidence: upperNoteRenderEvidence,
+                                   resonantAnchorSamples: resonantAnchorStem,
+                                   detunedCompanionSamples: detunedCompanionStem)
         swap(&output, &checkedOut.output)
         swap(&kickBus, &checkedOut.kick)
         swap(&kickDetectorBus, &checkedOut.kickDetector)
@@ -496,6 +508,8 @@ package enum VoiceRenderer {
         swap(&percussionStem, &checkedOut.percussionStem)
         swap(&upperTonalStem, &checkedOut.upperTonalStem)
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
+        swap(&resonantAnchorStem, &checkedOut.resonantAnchorStem)
+        swap(&detunedCompanionStem, &checkedOut.detunedCompanionStem)
         swap(&measurementScratch, &checkedOut.measurementScratch)
         swap(&percussionBus, &checkedOut.percussion)
         swap(&synthBus, &checkedOut.synth)
@@ -511,26 +525,18 @@ package enum VoiceRenderer {
         spatialReverbSend: inout [Float],
         upperTonalStem: inout [Float],
         atmosphereStem: inout [Float],
+        resonantAnchorStem: inout [Float],
+        detunedCompanionStem: inout [Float],
+        noteRenderEvidence: inout [UpperNoteRenderEvidence],
+        renderScheduledNotes: Bool,
         scene: TechnoScene,
-        section: SectionKind,
         sampleRate: Double,
-        frames: Int,
         stepFrames: Double,
-        dna: SceneDNA,
         resolved: ResolvedPerformanceBar,
         world: SynthWorldDNA,
         synthBar: SynthPerformanceBar,
         state: inout RenderState
     ) {
-        let performance = resolved.performance
-        let ensembleEvents = resolved.ensemble.events
-        let motifEvents = transformedMotif(
-            dna: dna,
-            performance: performance,
-            events: ensembleEvents.filter { $0.voice == .motif }
-        )
-        let baseFrequency = motifEvents.first?.frequency ?? world.rootFrequency * 2
-
         func spatialScales(for voice: EnsembleVoice, step: Int) -> (dry: Double, send: Double) {
             let spatial = resolved.spatialContrast
             guard spatial.depthPosition == .distant,
@@ -541,197 +547,119 @@ package enum VoiceRenderer {
             return (spatial.dryScale, spatial.reverbSend)
         }
 
-        var anchorNotes: [AlienVoiceNote] = []
-        if !motifEvents.isEmpty {
-            anchorNotes = motifEvents.enumerated().map { _, event in
-                let accent = performance.accent(at: event.stepIndex)
-                let articulation = synthBar.articulation(at: event.stepIndex)
-                let spatial = spatialScales(for: .motif, step: event.stepIndex)
-                let narrative = resolved.narrative
+        func ensembleVoice(for role: SynthRole) -> EnsembleVoice? {
+            switch role {
+            case .anchor: .motif
+            case .response: .response
+            case .atmosphere: .atmosphere
+            case .transition: .transition
+            case .shadow: nil
+            }
+        }
+
+        func notes(for role: SynthRole) -> [AlienVoiceNote] {
+            guard renderScheduledNotes else { return [] }
+            return synthBar.upperNotes(for: role).map { note in
+                let spatial: (dry: Double, send: Double)
+                if let voice = ensembleVoice(for: role) {
+                    spatial = spatialScales(for: voice, step: note.onsetStep)
+                } else {
+                    spatial = (1, 0)
+                }
+                let relational: RelationalArticulation = switch role {
+                case .anchor, .shadow, .response:
+                    synthBar.articulation(at: note.onsetStep)
+                case .atmosphere, .transition:
+                    .neutral
+                }
+                let narrativeGain: Double
+                let narrativeSpectral: Double
+                if role == .anchor {
+                    narrativeGain = resolved.narrative.motifGainScale(atStep: note.onsetStep)
+                    narrativeSpectral = resolved.narrative.motifSpectralScale(atStep: note.onsetStep)
+                } else {
+                    narrativeGain = 1
+                    narrativeSpectral = 1
+                }
                 return AlienVoiceNote(
-                    startFrame: Int((Double(event.stepIndex) * stepFrames).rounded()),
-                    durationFrames: max(1, Int((event.durationInSteps * stepFrames).rounded())),
-                    frequency: event.frequency,
-                    endFrequency: event.frequency,
-                    velocity: min(1, (0.66 + accent * 0.24) * articulation.velocityScale),
-                    role: .anchor,
-                    articulation: articulation,
+                    startFrame: Int((Double(note.onsetStep) * stepFrames).rounded()),
+                    durationFrames: max(1, Int((note.durationInSteps * stepFrames).rounded())),
+                    frequency: world.rootFrequency * note.startFrequencyRatio,
+                    endFrequency: world.rootFrequency * note.endFrequencyRatio,
+                    velocity: note.velocity,
+                    gate: note.gate,
+                    timbreIntent: note.timbreIntent,
+                    role: role,
+                    articulation: relational,
                     dryScale: spatial.dry,
                     spatialReverbSend: spatial.send,
-                    narrativeGainScale: narrative.motifGainScale(atStep: event.stepIndex),
-                    narrativeSpectralScale: narrative.motifSpectralScale(atStep: event.stepIndex)
+                    narrativeGainScale: narrativeGain,
+                    narrativeSpectralScale: narrativeSpectral
                 )
             }
         }
+
+        let anchorNotes = notes(for: .anchor)
         AlienAnalogVoice.render(
-            &output, measurement: &upperTonalStem, pulseEchoSend: &pulseEchoSend,
+            &output, measurement: &resonantAnchorStem, pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
             notes: anchorNotes, sampleRate: sampleRate,
             level: 0.090 + scene.synthPresence * 0.060,
             world: world, bar: synthBar, role: .anchor,
             state: &state.alienAnchorState
         )
 
-        var shadowNotes: [AlienVoiceNote] = []
-        if section != .breakdown {
-            shadowNotes = synthBar.interlockEvents.map { event in
-                var frequency = baseFrequency * event.frequencyRatio
-                while frequency < 92 { frequency *= 2 }
-                while frequency > 880 { frequency *= 0.5 }
-                return AlienVoiceNote(
-                    startFrame: Int((Double(event.stepIndex) * stepFrames).rounded()),
-                    durationFrames: max(1, Int((stepFrames * 0.52 *
-                        event.articulation.decayScale).rounded())),
-                    frequency: frequency,
-                    endFrequency: frequency,
-                    velocity: min(1, event.velocity * event.articulation.velocityScale),
-                    role: .shadow,
-                    articulation: event.articulation,
-                    dryScale: 1,
-                    spatialReverbSend: 0,
-                    narrativeGainScale: 1,
-                    narrativeSpectralScale: 1
-                )
-            }
-        }
+        let shadowNotes = notes(for: .shadow)
         AlienAnalogVoice.render(
-            &output, measurement: &upperTonalStem, pulseEchoSend: &pulseEchoSend,
+            &output, measurement: &detunedCompanionStem, pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
             notes: shadowNotes, sampleRate: sampleRate,
             level: 0.032 + scene.synthPresence * 0.034,
             world: world, bar: synthBar, role: .shadow,
             state: &state.alienShadowState
         )
 
-        var atmosphereNotes: [AlienVoiceNote] = []
-        let atmosphereEvents = ensembleEvents.filter { $0.voice == .atmosphere }
-        if !atmosphereEvents.isEmpty, scene.atmosphere > 0.08 || scene.drone > 0.01 {
-            let frequency = world.rootFrequency * (section == .breakdown ? 1.5 : 2)
-            atmosphereNotes = atmosphereEvents.map { event in
-                let start = Int((Double(event.step) * stepFrames).rounded())
-                let spatial = spatialScales(for: .atmosphere, step: event.step)
-                return AlienVoiceNote(
-                    startFrame: start,
-                    durationFrames: max(1, frames - start),
-                    frequency: frequency,
-                    endFrequency: frequency * (synthBar.gesture == .suspend ? 1.018 : 1.003),
-                    velocity: min(0.72, event.intensity + scene.atmosphere * 0.22),
-                    role: .atmosphere,
-                    articulation: .neutral,
-                    dryScale: spatial.dry,
-                    spatialReverbSend: spatial.send,
-                    narrativeGainScale: 1,
-                    narrativeSpectralScale: 1
-                )
-            }
-        }
+        let atmosphereNotes = notes(for: .atmosphere)
         AlienAnalogVoice.render(
             &output, measurement: &atmosphereStem, pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
             notes: atmosphereNotes, sampleRate: sampleRate,
             level: 0.017 + scene.atmosphere * 0.025 + scene.drone * 0.018,
             world: world, bar: synthBar, role: .atmosphere,
             state: &state.alienAtmosphereState
         )
 
-        var responseNotes: [AlienVoiceNote] = []
-        let responseEvents = ensembleEvents.filter { $0.voice == .response }
-        if synthBar.gesture != .suspend, !responseEvents.isEmpty, scene.melodicity > 0.18 {
-            let interval = pow(2, Double(world.responseInterval) / 12)
-            let frequency = min(1_200, max(120, baseFrequency * interval))
-            responseNotes = responseEvents.map { event in
-                let articulation = synthBar.articulation(at: event.step)
-                let spatial = spatialScales(for: .response, step: event.step)
-                return AlienVoiceNote(
-                    startFrame: Int((Double(event.step) * stepFrames).rounded()),
-                    durationFrames: max(1, Int((stepFrames * 1.8).rounded())),
-                    frequency: frequency,
-                    endFrequency: frequency,
-                    velocity: min(0.76,
-                        (event.intensity + scene.melodicity * 0.24) * articulation.velocityScale),
-                    role: .response,
-                    articulation: articulation,
-                    dryScale: spatial.dry,
-                    spatialReverbSend: spatial.send,
-                    narrativeGainScale: 1,
-                    narrativeSpectralScale: 1
-                )
-            }
-        }
+        let responseNotes = notes(for: .response)
         AlienAnalogVoice.render(
-            &output, measurement: &upperTonalStem, pulseEchoSend: &pulseEchoSend,
+            &output, measurement: &detunedCompanionStem, pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
             notes: responseNotes, sampleRate: sampleRate,
             level: 0.026 + scene.melodicity * 0.030,
             world: world, bar: synthBar, role: .response,
             state: &state.alienResponseState
         )
 
-        var transitionNotes: [AlienVoiceNote] = []
-        let transitionEvents = ensembleEvents.filter { $0.voice == .transition }
-        let renderedTransitionEvents: [EnsembleResolvedEvent]
-        if synthBar.gesture != .suspend {
-            renderedTransitionEvents = transitionEvents
-        } else {
-            // Breakdowns normally suppress transitions. The one exception is a
-            // transition already chosen as the resolved spatial carrier: its
-            // metadata promises an audible distant event, so render only that
-            // event without admitting any unrelated suspended transitions.
-            let spatial = resolved.spatialContrast
-            renderedTransitionEvents = transitionEvents.filter {
-                spatial.depthPosition == .distant &&
-                    spatial.carrierVoice == .transition &&
-                    spatial.carrierStep == $0.step
-            }
-        }
-        if !renderedTransitionEvents.isEmpty {
-            let startFrequency = world.rootFrequency * 2
-            transitionNotes = renderedTransitionEvents.map { event in
-                let start = Int((Double(event.step) * stepFrames).rounded())
-                let spatial = spatialScales(for: .transition, step: event.step)
-                return AlienVoiceNote(
-                    startFrame: start,
-                    durationFrames: max(1, frames - start),
-                    frequency: startFrequency,
-                    endFrequency: startFrequency * (synthBar.gesture == .corrode ? 3.8 : 1.5),
-                    velocity: min(0.54, event.intensity + synthBar.mutationAmount * 0.18),
-                    role: .transition,
-                    articulation: .neutral,
-                    dryScale: spatial.dry,
-                    spatialReverbSend: spatial.send,
-                    narrativeGainScale: 1,
-                    narrativeSpectralScale: 1
-                )
-            }
-        }
+        let transitionNotes = notes(for: .transition)
         AlienAnalogVoice.render(
             &output, measurement: &atmosphereStem, pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
             notes: transitionNotes, sampleRate: sampleRate,
             level: 0.008 + scene.atmosphere * 0.012,
             world: world, bar: synthBar, role: .transition,
             state: &state.alienTransitionState
         )
+        for frame in upperTonalStem.indices {
+            upperTonalStem[frame] = resonantAnchorStem[frame] + detunedCompanionStem[frame]
+        }
     }
 
     private static func safeMaster(_ sample: Float) -> Float {
         Float(tanh(Double(sample) * 1.12) * 0.78)
-    }
-
-    package static func transformedMotif(dna: SceneDNA, performance: PerformanceBar,
-                                         events: [EnsembleResolvedEvent]) -> [SynthEvent] {
-        let answer = performance.transformations.contains(.answer) || performance.signatureEvent == .alteredMotifAnswer
-        return events.enumerated().map { index, event in
-            let shadow = performance.signatureEvent == .harmonicShadow ? 1 : 0
-            let requestedDegree = dna.motif.degrees[index % dna.motif.degrees.count] +
-                (answer ? 7 : 0) + shadow
-            let degree = dna.nearestModalDegree(to: requestedDegree)
-            let frequency = 65.41 * pow(2, Double(dna.tonalCenter + degree) / 12.0)
-            return SynthEvent(stepIndex: event.step, offsetInStep: 0,
-                              scaleDegree: degree, frequency: frequency,
-                              durationInSteps: performance.transformations.contains(.extend) ? 2.5 : 1.5,
-                              bar: performance.bar, sourceIntent: .hypnosis)
-        }
     }
 
     private static func relationalBassFrequency(dna: SceneDNA, step: Int, tension: Double) -> Double {
