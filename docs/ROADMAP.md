@@ -14,13 +14,20 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - exact private role evidence, bounded preparation-time kick/foundation mix
   correction, descriptive role-aware masking evidence, and authored masking
   guards;
+- quality-contract schema 3 with a bounded candidate-evaluation vector and
+  atomic selected-commit provenance across symbolic, full-mix, masking, stem,
+  graph, and pre/post upper-timbre evidence;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
 
-The current evaluator primarily proves structure and signal safety. It does not
-yet constitute professional-quality qualification, general quality-driven
-candidate selection, or hybrid live feedback.
+The shipping evaluator remains uncalibrated and renders the primary once on the
+healthy path. The transaction records up to primary, alternate, and fallback
+attempts plus one home-timbre correction within four total passes, but it does
+not constitute professional-quality qualification or general quality-driven
+candidate selection. Calibrated paired ranking remains disabled pending bounded
+streaming analysis and measured cancellation, latency, and peak-memory behavior;
+hybrid live feedback is also not implemented.
 
 ## Evolution rule
 
@@ -45,18 +52,23 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Build a local offline harness that renders the same private canonical journeys at
-representative sample rates and emits a machine-readable, reason-coded report.
-Version the engine, quality policy, fixture state, continuation state, route, and
+Quality-contract schema 3 now binds a versioned transaction across the engine,
+quality policy, evaluator, candidate plans, route, incoming continuation,
+attempt evidence, selection, and finalized commit provenance. Extend the local
+offline harness to render the same private canonical journeys at representative
+sample rates and calibrate its machine-readable, reason-coded ranges and any
 derived reference profile. Keep WAVs, stems, and reference recordings local and
 untracked.
 
 ### 3. Generalize bounded evaluation and correction
 
-Evaluate a fixed number of complete candidates against hard safety constraints
-and a multidimensional quality vector. Permit a fixed number of deterministic
-correction passes, then select a valid candidate or conservative fallback. Carry
-the selected evidence, decision, and controller state into the next phrase.
+The runtime now enforces and records a maximum of three complete candidates, one
+home-timbre correction, and four render passes, then atomically carries the
+selected evidence, decision, and controller state into continuation. Next,
+calibrate the multidimensional policy and enable paired comparison only after
+streaming analysis, cancellation, preparation-latency, and peak-memory gates are
+measured. Continue to select a valid candidate or conservative fallback when the
+calibrated policy cannot qualify an attempt.
 
 ### 4. Add safe hybrid live feedback
 

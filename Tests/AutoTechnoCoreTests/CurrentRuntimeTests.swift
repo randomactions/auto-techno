@@ -64,6 +64,39 @@ struct CurrentRuntimeTests {
         #expect(abs(report.dcOffset) < 0.05)
         #expect(report.lowStereoCorrelation > 0.94)
         #expect(report.maxBoundaryDelta < 0.65)
+
+        let source = first[0]
+        let asymmetricNonFinite = RenderBlock(
+            bar: source.bar,
+            section: source.section,
+            left: [0],
+            right: [0, .nan],
+            events: source.events,
+            modulation: source.modulation,
+            busStates: source.busStates,
+            masking: source.masking,
+            effects: source.effects,
+            kickMix: source.kickMix,
+            stemObservations: source.stemObservations,
+            automaticMix: source.automaticMix,
+            stemReconstruction: source.stemReconstruction,
+            protectedFoundationSampleHash: source.protectedFoundationSampleHash,
+            percussionSampleHash: source.percussionSampleHash,
+            protectedRhythmSampleHash: source.protectedRhythmSampleHash,
+            upperNoteRenderEvidence: source.upperNoteRenderEvidence,
+            graphInputRemainderTimbreEvidence:
+                source.graphInputRemainderTimbreEvidence,
+            postGraphRemainderTimbreEvidence:
+                source.postGraphRemainderTimbreEvidence,
+            resolvedPerformance: source.resolvedPerformance,
+            sceneDNA: source.sceneDNA,
+            synthWorld: source.synthWorld,
+            synthPerformance: source.synthPerformance
+        )
+        #expect(!AudioQualityReport(
+            blocks: [asymmetricNonFinite],
+            sampleRate: 8_000
+        ).finite)
     }
 }
 
@@ -101,6 +134,24 @@ struct RepositorySurfaceTests {
                 )
             }
         }
+    }
+
+    @Test("Candidate state fingerprints use an explicit typed streaming format")
+    func candidateFingerprintsAvoidReflectionAndWholeStateData() throws {
+        let source = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(
+                "Sources/AutoTechnoDSP/AutonomousTypedFingerprint.swift"
+            ),
+            encoding: .utf8
+        )
+        for forbidden in [
+            "Mirror(", "String(describing:", "String(reflecting:",
+            "JSONEncoder", "PropertyListEncoder", "Data(",
+        ] {
+            #expect(!source.contains(forbidden), "Typed fingerprints contain \(forbidden)")
+        }
+        #expect(source.contains("private struct StreamingFNV1a"))
+        #expect(source.contains("let keys = value.keys.sorted()"))
     }
 
     private var repositoryRoot: URL {

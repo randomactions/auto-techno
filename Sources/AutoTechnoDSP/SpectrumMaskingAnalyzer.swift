@@ -70,11 +70,11 @@ package enum SpectrumMaskingAnalyzer {
     package static let analyzedWindowCount = 16
     package static let maximumFrames = 524_288
     package static let minimumPersistentWindows = 2
+    package static let overlapThreshold = 0.38
 
     private static let activeMeanSquareThreshold = 0.000_000_000_1
-    private static let overlapThreshold = 0.38
     private static let cutoffs = [35.0, 120.0, 420.0, 2_400.0, 10_000.0]
-    private static let rolePairs: [(MaskingRole, MaskingRole)] = [
+    package static let rolePairs: [(MaskingRole, MaskingRole)] = [
         (.foundation, .percussion),
         (.foundation, .upper),
         (.percussion, .upper),

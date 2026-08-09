@@ -4,11 +4,26 @@ import Foundation
 /// policy is deliberately uncalibrated: these types make evidence reproducible
 /// without claiming that professional-quality targets exist yet.
 package enum QualityQualificationContract {
-    /// Version 2 identifies reports that embed upper-timbre evidence schema 3
-    /// and its onset-local anchor-expression observations.
-    package static let schemaVersion = 2
+    /// Version 3 identifies reports that bind the selected phrase to one
+    /// bounded candidate-evaluation transaction rather than fingerprinting a
+    /// single signal-domain observation in isolation.
+    package static let schemaVersion = 3
     package static let reasonCodeVersion = 1
+    package static let engineVersion = "autotechno-canonical-engine.v1"
+    package static let uncalibratedEvaluatorVersion =
+        "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1
+    package static let maximumComparedCandidates = 2
+    package static let maximumDistinctCandidates = 3
+    package static let maximumRenderPasses = 4
+    package static let maximumPhraseBars = 16
+    package static let minimumSupportedSampleRate = 8_000.0
+    package static let maximumSupportedSampleRate = 192_000.0
+    /// The current emitted/audio-qualified topology is native stereo only.
+    package static let requiredRouteChannelCount = 2
+    package static let maximumRouteChannelCount = requiredRouteChannelCount
+    package static let maskingObservationsPerBar = 12
+    package static let stemRolesPerBar = 5
     package static let uncalibratedPolicyVersion = "autotechno-quality.uncalibrated.v1"
 }
 
@@ -45,6 +60,7 @@ package enum QualityReasonCode: String, CaseIterable, Codable, Hashable, Sendabl
     case candidateAdjustedV1 = "quality.candidate-adjusted.v1"
     case conservativeFallbackV1 = "quality.conservative-fallback.v1"
     case staleEvidenceV1 = "quality.stale-evidence.v1"
+    case routeRecoveryV1 = "quality.route-recovery.v1"
     case deterministicHoldV1 = "quality.deterministic-hold.v1"
     case acceptanceProvenanceMissingV1 = "quality.acceptance-provenance-missing.v1"
     case evidenceMismatchV1 = "quality.evidence-mismatch.v1"
@@ -121,6 +137,17 @@ package struct QualityDecision: Codable, Equatable, Sendable {
         outcome == .qualified || outcome == .adjusted
     }
 
+    package var isStructurallyValid: Bool {
+        let canonicalReasons = Array(Set(reasonCodes)).sorted {
+            $0.rawValue < $1.rawValue
+        }
+        return schemaVersion == QualityQualificationContract.schemaVersion &&
+            reasonCodeVersion == QualityQualificationContract.reasonCodeVersion &&
+            !policyVersion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            reasonCodes == canonicalReasons &&
+            (eligibleFutureSample.map { $0 >= 0 } ?? true)
+    }
+
     package var hasNonCompensableFailureReason: Bool {
         reasonCodes.contains(.hardGateFailedV1) ||
             reasonCodes.contains(.evidenceMissingV1) ||
@@ -144,7 +171,9 @@ package struct QualityDecision: Codable, Equatable, Sendable {
         let isUncalibrated = policyVersion ==
             QualityQualificationContract.uncalibratedPolicyVersion
         guard !policyVersion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              reportsUncalibrated == isUncalibrated else {
+              reportsUncalibrated == isUncalibrated,
+              !isUncalibrated || outcome == .qualificationUnavailable,
+              !(fallback && hold) else {
             return false
         }
         switch outcome {
@@ -305,6 +334,7 @@ package struct QualityContinuationState: Codable, Equatable, Sendable {
     }
 
     package var acceptanceProvenanceComplete: Bool {
+        guard isStructurallyValid else { return false }
         let accepts = lastDecision.isAcceptanceOutcome
         guard accepts else { return true }
         guard lastDecision.hasOutcomeConsistentReasonCodes,
@@ -322,11 +352,77 @@ package struct QualityContinuationState: Codable, Equatable, Sendable {
               !observedControllerStateFingerprint.isEmpty else {
             return false
         }
+        if let declaredBoundary = lastDecision.eligibleFutureSample {
+            guard let retainedBoundary = earliestEligibleFutureSample,
+                  retainedBoundary >= declaredBoundary else {
+                return false
+            }
+        }
         return acceptedPolicyVersion == lastDecision.policyVersion &&
             acceptedCandidateFingerprint == candidate &&
             acceptedEvidenceFingerprint == evidence &&
             acceptedControllerStateFingerprint == observedControllerStateFingerprint &&
             observedCandidateFingerprint == candidate &&
             observedEvidenceFingerprint == evidence
+    }
+
+    package var isStructurallyValid: Bool {
+        let acceptedSnapshot = [
+            acceptedPolicyVersion,
+            acceptedCandidateFingerprint,
+            acceptedEvidenceFingerprint,
+            acceptedControllerStateFingerprint,
+        ]
+        let acceptedValueCount = acceptedSnapshot.compactMap { $0 }.count
+        let acceptedSnapshotIsAtomic = acceptedValueCount == 0 ||
+            acceptedValueCount == acceptedSnapshot.count
+        let acceptingDecisionHasSnapshot = !lastDecision.isAcceptanceOutcome ||
+            acceptedValueCount == acceptedSnapshot.count
+        let acceptedPolicyIsCalibrated = acceptedPolicyVersion.map {
+            $0 != QualityQualificationContract.uncalibratedPolicyVersion
+        } ?? true
+        let acceptedBoundaryHasOwner = earliestEligibleFutureSample == nil ||
+            acceptedValueCount == acceptedSnapshot.count
+        let revisionZeroHasNoAcceptedHistory = revision != 0 ||
+            (acceptedValueCount == 0 && earliestEligibleFutureSample == nil)
+        let revisionZeroHasNoObservedHistory = revision != 0 ||
+            (observedCandidateFingerprint == nil &&
+                observedEvidenceFingerprint == nil &&
+                observedControllerStateFingerprint == nil)
+        let optionalFingerprints = [
+            acceptedPolicyVersion,
+            acceptedCandidateFingerprint,
+            acceptedEvidenceFingerprint,
+            acceptedControllerStateFingerprint,
+            observedCandidateFingerprint,
+            observedEvidenceFingerprint,
+            observedControllerStateFingerprint,
+        ]
+        let observedCandidateMatches = observedCandidateFingerprint ==
+            lastDecision.candidateFingerprint
+        let evidenceMayBeMissing = lastDecision.reasonCodes.contains(
+            .acceptanceProvenanceMissingV1
+        ) || lastDecision.reasonCodes.contains(.evidenceMissingV1)
+        let observedEvidenceMatches: Bool
+        if observedEvidenceFingerprint == lastDecision.evidenceFingerprint {
+            observedEvidenceMatches = true
+        } else {
+            observedEvidenceMatches = observedEvidenceFingerprint == nil &&
+                lastDecision.evidenceFingerprint != nil && evidenceMayBeMissing
+        }
+        return schemaVersion == QualityQualificationContract.schemaVersion &&
+            revision >= 0 && policyVersion == lastDecision.policyVersion &&
+            lastDecision.isStructurallyValid &&
+            lastDecision.hasOutcomeConsistentReasonCodes &&
+            acceptedSnapshotIsAtomic && acceptedPolicyIsCalibrated &&
+            acceptingDecisionHasSnapshot && acceptedBoundaryHasOwner &&
+            revisionZeroHasNoAcceptedHistory && revisionZeroHasNoObservedHistory &&
+            observedCandidateMatches && observedEvidenceMatches &&
+            (earliestEligibleFutureSample.map { $0 >= 0 } ?? true) &&
+            optionalFingerprints.allSatisfy {
+                $0.map {
+                    !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                } ?? true
+            }
     }
 }

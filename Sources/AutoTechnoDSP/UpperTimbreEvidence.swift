@@ -194,25 +194,28 @@ package struct UpperTimbreEvidence: Codable, Equatable, Sendable {
                 remaining >>= 8
             }
         }
-        mix(UInt64(schemaVersion))
+        func signed(_ value: Int) -> UInt64 {
+            UInt64(bitPattern: Int64(value))
+        }
+        mix(signed(schemaVersion))
         mix(sampleRate.bitPattern)
-        mix(UInt64(analyzedFrameCount))
+        mix(signed(analyzedFrameCount))
         mix(finite ? 1 : 0)
         mix(rms.bitPattern)
         mix(crestFactor.bitPattern)
         mix(filterContourRise.bitPattern)
         mix(filterContourDecay.bitPattern)
         mix(accentContrastDB.bitPattern)
-        mix(UInt64(accentedOnsetCount))
-        mix(UInt64(unaccentedOnsetCount))
+        mix(signed(accentedOnsetCount))
+        mix(signed(unaccentedOnsetCount))
         mix(slideMaximumDelta.bitPattern)
-        mix(UInt64(slideWindowCount))
-        mix(UInt64(duplicateAttackCount))
+        mix(signed(slideWindowCount))
+        mix(signed(duplicateAttackCount))
         mix(UInt64(velocityExpression.count))
         for event in velocityExpression {
-            mix(UInt64(event.onsetFrame))
-            mix(UInt64(event.analyzedEndFrame))
-            mix(UInt64(event.analyzedFrameCount))
+            mix(signed(event.onsetFrame))
+            mix(signed(event.analyzedEndFrame))
+            mix(signed(event.analyzedFrameCount))
             mix(event.velocity.bitPattern)
             mix(event.appliedStartFrequency.bitPattern)
             mix(event.spectralEnvelopeScale.bitPattern)
@@ -907,11 +910,16 @@ package enum CanonicalJourneyQualificationReportError: Error, Equatable, Sendabl
     case acceptanceProvenanceMismatch
     case outgoingObservationMismatch
     case candidateFingerprintMismatch
+    case candidateEvaluationMismatch
+    case selectedCandidateEvidenceMismatch
+    case routeMismatch
+    case checkpointMismatch
 }
 
-package struct CanonicalJourneyQualificationReport: Codable, Equatable, Sendable {
+package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendable {
     package static let currentEvidenceScope =
-        "upper-role-local-plus-post-graph-remainder.v2"
+        "candidate-structural-signal-role-upper-commit.v1"
+    package static let maximumEncodedBytes = 4 * 1_024 * 1_024
     package let schemaVersion: Int
     package let engineVersion: String
     package let policyVersion: String
@@ -921,17 +929,53 @@ package struct CanonicalJourneyQualificationReport: Codable, Equatable, Sendable
     package let sampleRate: Double
     package let routeFingerprint: String
     package let routeGeneration: Int
+    package let selectedCandidateEvidence: AutonomousCandidateEvaluationVector
+    package let candidateEvaluation: AutonomousCandidateEvaluationTransaction
+    package let commitProvenance: AutonomousPreparedCommitProvenance
+    package let selectedCandidateEvidenceFingerprint: String
     package let evidence: UpperTimbreEvidence
     package let evidenceScope: String
     package let evidenceFingerprint: String
     package let sampleHash: String
     package let reasonCodes: [QualityReasonCode]
     package let decision: QualityDecision
+    package let incomingState: QualityContinuationState
     package let outgoingState: QualityContinuationState
     package let usedAlternate: Bool
     package let usedFallback: Bool
     package let usedHomeTimbreFallback: Bool
     package let correctionRenderCount: Int
+
+    /// Decode-only wire value. Keeping `Decodable` off the validated report
+    /// prevents package callers from bypassing the size, causality, and
+    /// canonical-byte checks with a plain `JSONDecoder`.
+    private struct DecodedWire: Codable {
+        let schemaVersion: Int
+        let engineVersion: String
+        let policyVersion: String
+        let fixtureFingerprint: String
+        let continuationFingerprint: String
+        let checkpoint: CanonicalJourneyCheckpoint
+        let sampleRate: Double
+        let routeFingerprint: String
+        let routeGeneration: Int
+        let selectedCandidateEvidence: AutonomousCandidateEvaluationVector
+        let candidateEvaluation: AutonomousCandidateEvaluationTransaction
+        let commitProvenance: AutonomousPreparedCommitProvenance
+        let selectedCandidateEvidenceFingerprint: String
+        let evidence: UpperTimbreEvidence
+        let evidenceScope: String
+        let evidenceFingerprint: String
+        let sampleHash: String
+        let reasonCodes: [QualityReasonCode]
+        let decision: QualityDecision
+        let incomingState: QualityContinuationState
+        let outgoingState: QualityContinuationState
+        let usedAlternate: Bool
+        let usedFallback: Bool
+        let usedHomeTimbreFallback: Bool
+        let correctionRenderCount: Int
+    }
 
     package init(
         engineVersion: String,
@@ -941,15 +985,27 @@ package struct CanonicalJourneyQualificationReport: Codable, Equatable, Sendable
         checkpoint: CanonicalJourneyCheckpoint,
         routeFingerprint: String,
         routeGeneration: Int,
-        evidence: UpperTimbreEvidence,
+        selectedCandidateEvidence: AutonomousCandidateEvaluationVector,
+        candidateEvaluation: AutonomousCandidateEvaluationTransaction,
+        commitProvenance: AutonomousPreparedCommitProvenance? = nil,
         sampleHash: String,
         decision: QualityDecision? = nil,
+        incomingState: QualityContinuationState = QualityContinuationState(),
         outgoingState: QualityContinuationState? = nil,
         usedAlternate: Bool = false,
         usedFallback: Bool = false,
         usedHomeTimbreFallback: Bool = false,
         correctionRenderCount: Int = 0
     ) throws {
+        let evidence = selectedCandidateEvidence.postGraphUpperTimbreEvidence
+        guard selectedCandidateEvidence.recordIsStructurallyValid,
+              candidateEvaluation.attempts.count <=
+                AutonomousCandidateEvaluationTransaction.maximumAttemptCount,
+              candidateEvaluation.sourceAttemptCount ==
+                candidateEvaluation.attempts.count else {
+            throw CanonicalJourneyQualificationReportError.invalidBounds
+        }
+        let transactionFingerprint = candidateEvaluation.fingerprint
         guard !policyVersion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw CanonicalJourneyQualificationReportError.emptyIdentity
         }
@@ -957,27 +1013,41 @@ package struct CanonicalJourneyQualificationReport: Codable, Equatable, Sendable
                 decision != nil else {
             throw CanonicalJourneyQualificationReportError.missingCalibratedDecision
         }
-        var defaultReasons: [QualityReasonCode] = [.policyUncalibratedV1]
-        if evidence.analyzedFrameCount == 0 {
-            defaultReasons.append(.evidenceMissingV1)
+        let retainedSelectedAttempt = candidateEvaluation.selectedAttemptIndex.flatMap {
+            candidateEvaluation.attempts.indices.contains($0)
+                ? candidateEvaluation.attempts[$0] : nil
         }
-        if !evidence.finite {
-            defaultReasons.append(.evidenceNonFiniteV1)
+        var defaultReasons: [QualityReasonCode] = [.policyUncalibratedV1] +
+            (retainedSelectedAttempt?.reasonCodes ?? [])
+        if candidateEvaluation.selectedSlot == .fallback {
+            defaultReasons.append(.conservativeFallbackV1)
         }
-        if evidence.analyzedFrameCount == 0 || !evidence.finite {
-            defaultReasons.append(.hardGateFailedV1)
+        if selectedCandidateEvidence.routeContinuation.routeRecovery {
+            defaultReasons.append(.routeRecoveryV1)
         }
         let selectedDecision = decision ?? QualityDecision(
             policyVersion: policyVersion,
             outcome: .qualificationUnavailable,
             reasonCodes: defaultReasons,
             candidateFingerprint: sampleHash,
-            evidenceFingerprint: evidence.fingerprint
+            evidenceFingerprint: transactionFingerprint
         )
-        let selectedOutgoing = outgoingState ?? QualityContinuationState().recording(
+        let selectedOutgoing = outgoingState ?? incomingState.recording(
             decision: selectedDecision,
-            evidenceFingerprint: evidence.fingerprint
+            evidenceFingerprint: transactionFingerprint,
+            controllerStateFingerprint:
+                selectedCandidateEvidence.routeContinuation
+                    .controllerStateFingerprint
         )
+        let selectedCommitProvenance = commitProvenance ??
+            AutonomousPreparedCommitProvenance(
+                candidateEvaluationFingerprint: transactionFingerprint,
+                selectedSampleHash: sampleHash,
+                outgoingRenderDSPFingerprint:
+                    selectedCandidateEvidence.routeContinuation
+                        .outgoingRenderDSPFingerprint,
+                qualityState: selectedOutgoing
+            )
         guard !engineVersion.isEmpty, !fixtureFingerprint.isEmpty,
               !continuationFingerprint.isEmpty, !routeFingerprint.isEmpty,
               !sampleHash.isEmpty,
@@ -987,21 +1057,110 @@ package struct CanonicalJourneyQualificationReport: Codable, Equatable, Sendable
             throw CanonicalJourneyQualificationReportError.emptyIdentity
         }
         guard evidence.schemaVersion == UpperTimbreEvidenceAnalyzer.schemaVersion,
+              selectedCandidateEvidence.schemaVersion ==
+                AutonomousCandidateEvaluationVector.schemaVersion,
+              candidateEvaluation.schemaVersion ==
+                AutonomousCandidateEvaluationTransaction.schemaVersion,
               selectedDecision.schemaVersion == QualityQualificationContract.schemaVersion,
               selectedDecision.reasonCodeVersion ==
                 QualityQualificationContract.reasonCodeVersion,
+              incomingState.schemaVersion ==
+                QualityQualificationContract.schemaVersion,
               selectedOutgoing.schemaVersion ==
-                QualityQualificationContract.schemaVersion else {
+                QualityQualificationContract.schemaVersion,
+              selectedDecision.isStructurallyValid,
+              incomingState.acceptanceProvenanceComplete,
+              selectedOutgoing.isStructurallyValid else {
             throw CanonicalJourneyQualificationReportError.schemaMismatch
+        }
+        guard candidateEvaluation.isComplete,
+              let selectedIndex = candidateEvaluation.selectedAttemptIndex,
+              candidateEvaluation.attempts.indices.contains(selectedIndex),
+              candidateEvaluation.attempts[selectedIndex].vector ==
+                selectedCandidateEvidence,
+              candidateEvaluation.engineVersion == engineVersion else {
+            throw CanonicalJourneyQualificationReportError.candidateEvaluationMismatch
+        }
+        let symbolic = selectedCandidateEvidence.symbolic
+        let checkpointMatches: Bool
+        switch checkpoint {
+        case .establishment:
+            checkpointMatches = symbolic.phraseIndex == 0
+        case .chapterChange:
+            checkpointMatches = symbolic.chapterChanged
+        case .contrast:
+            checkpointMatches = symbolic.phraseKind ==
+                AutonomousPhraseKind.contrast.rawValue
+        case .majorBreak:
+            checkpointMatches = symbolic.phraseKind ==
+                AutonomousPhraseKind.majorBreak.rawValue
+        case .release:
+            checkpointMatches = symbolic.phraseKind ==
+                AutonomousPhraseKind.energyRelease.rawValue
+        case .identityReturn:
+            checkpointMatches = symbolic.phraseKind ==
+                AutonomousPhraseKind.identityReturn.rawValue
+        case .longContinuation:
+            checkpointMatches = symbolic.phraseIndex >= 16
+        }
+        guard checkpointMatches else {
+            throw CanonicalJourneyQualificationReportError.checkpointMismatch
+        }
+        let selectedAttempt = candidateEvaluation.attempts[selectedIndex]
+        var requiredAttemptReasons = Set(selectedAttempt.reasonCodes)
+        if candidateEvaluation.selectedSlot == .fallback {
+            requiredAttemptReasons.insert(.conservativeFallbackV1)
+        }
+        guard requiredAttemptReasons.isSubset(of: Set(selectedDecision.reasonCodes)) else {
+            throw CanonicalJourneyQualificationReportError.reasonCodeMismatch
+        }
+        if candidateEvaluation.evaluatorVersion ==
+            QualityQualificationContract.uncalibratedEvaluatorVersion {
+            var exactReasons = Set(selectedAttempt.reasonCodes)
+            exactReasons.insert(.policyUncalibratedV1)
+            if candidateEvaluation.selectedSlot == .fallback {
+                exactReasons.insert(.conservativeFallbackV1)
+            }
+            if selectedCandidateEvidence.routeContinuation.routeRecovery {
+                exactReasons.insert(.routeRecoveryV1)
+            }
+            guard Set(selectedDecision.reasonCodes) == exactReasons else {
+                throw CanonicalJourneyQualificationReportError.reasonCodeMismatch
+            }
+        }
+        let reportsFallback = selectedDecision.reasonCodes.contains(
+            .conservativeFallbackV1
+        )
+        let reportsHold = selectedDecision.reasonCodes.contains(.deterministicHoldV1)
+        let reportsRouteRecovery = selectedDecision.reasonCodes.contains(
+            .routeRecoveryV1
+        )
+        let reportsHardGateFailure = selectedDecision.reasonCodes.contains(
+            .hardGateFailedV1
+        )
+        let reportsStaleEvidence = selectedDecision.reasonCodes.contains(
+            .staleEvidenceV1
+        )
+        guard reportsFallback == (candidateEvaluation.selectedSlot == .fallback),
+              reportsRouteRecovery == selectedCandidateEvidence
+                .routeContinuation.routeRecovery,
+              !reportsRouteRecovery || !reportsStaleEvidence,
+              reportsHardGateFailure == !selectedCandidateEvidence.hardGatesPassed,
+              !reportsHold else {
+            throw CanonicalJourneyQualificationReportError.reasonCodeMismatch
         }
         guard selectedDecision.policyVersion !=
                 QualityQualificationContract.uncalibratedPolicyVersion ||
                 selectedDecision.outcome == .qualificationUnavailable,
               policyVersion == selectedDecision.policyVersion,
-              selectedOutgoing.policyVersion == selectedDecision.policyVersion else {
+              selectedOutgoing.policyVersion == selectedDecision.policyVersion,
+              candidateEvaluation.policyVersion == selectedDecision.policyVersion else {
             throw CanonicalJourneyQualificationReportError.policyMismatch
         }
-        guard selectedDecision.evidenceFingerprint == evidence.fingerprint else {
+        guard selectedCandidateEvidence.fullMix.sampleHash == sampleHash else {
+            throw CanonicalJourneyQualificationReportError.selectedCandidateEvidenceMismatch
+        }
+        guard selectedDecision.evidenceFingerprint == transactionFingerprint else {
             throw CanonicalJourneyQualificationReportError.evidenceFingerprintMismatch
         }
         guard selectedDecision.candidateFingerprint == sampleHash else {
@@ -1012,8 +1171,7 @@ package struct CanonicalJourneyQualificationReport: Codable, Equatable, Sendable
         }
         let acceptanceOutcome = selectedDecision.isAcceptanceOutcome
         guard !acceptanceOutcome || (!selectedDecision.hasNonCompensableFailureReason &&
-            evidence.finite &&
-            evidence.analyzedFrameCount > 0) else {
+            selectedCandidateEvidence.hardGatesPassed) else {
             throw CanonicalJourneyQualificationReportError.reasonCodeMismatch
         }
         let reportsNonFiniteEvidence = selectedDecision.reasonCodes.contains(
@@ -1022,13 +1180,16 @@ package struct CanonicalJourneyQualificationReport: Codable, Equatable, Sendable
         let reportsMissingEvidence = selectedDecision.reasonCodes.contains(
             .evidenceMissingV1
         )
-        let knownInvalidEvidenceIsReasoned = evidence.finite
+        let evidenceFinite = evidence.finite && selectedCandidateEvidence.isFinite
+        let evidencePresent = evidence.analyzedFrameCount > 0 &&
+            selectedCandidateEvidence.isComplete
+        let knownInvalidEvidenceIsReasoned = evidenceFinite
             ? !reportsNonFiniteEvidence
             : (reportsNonFiniteEvidence &&
                 selectedDecision.reasonCodes.contains(.hardGateFailedV1) &&
                 selectedDecision.outcome != .qualified &&
                 selectedDecision.outcome != .adjusted)
-        let knownMissingEvidenceIsReasoned = evidence.analyzedFrameCount > 0
+        let knownMissingEvidenceIsReasoned = evidencePresent
             ? !reportsMissingEvidence
             : (reportsMissingEvidence &&
                 selectedDecision.reasonCodes.contains(.hardGateFailedV1) &&
@@ -1042,8 +1203,55 @@ package struct CanonicalJourneyQualificationReport: Codable, Equatable, Sendable
         }
         guard selectedOutgoing.observedCandidateFingerprint ==
                 selectedDecision.candidateFingerprint,
-              selectedOutgoing.observedEvidenceFingerprint == evidence.fingerprint else {
+              selectedOutgoing.observedEvidenceFingerprint ==
+                transactionFingerprint,
+              selectedOutgoing.observedControllerStateFingerprint ==
+                selectedCandidateEvidence.routeContinuation
+                    .controllerStateFingerprint,
+              !acceptanceOutcome ||
+                selectedOutgoing.acceptedControllerStateFingerprint ==
+                    selectedCandidateEvidence.routeContinuation
+                        .controllerStateFingerprint else {
             throw CanonicalJourneyQualificationReportError.outgoingObservationMismatch
+        }
+        let incomingControllerFingerprint =
+            AutonomousCandidateFingerprint.automaticMixController(
+                kickCorrectionDB: selectedCandidateEvidence.routeContinuation
+                    .incomingKickCorrectionDB
+            )
+        let incomingStateHasNoObservation = incomingState.revision == 0 &&
+            incomingState.observedCandidateFingerprint == nil &&
+            incomingState.observedEvidenceFingerprint == nil &&
+            incomingState.observedControllerStateFingerprint == nil
+        let incomingControllerIsCoherent = incomingStateHasNoObservation
+            ? selectedCandidateEvidence.routeContinuation.incomingKickCorrectionDB ==
+                AutomaticMixBalancer.homeKickCorrectionDB
+            : incomingState.observedControllerStateFingerprint ==
+                incomingControllerFingerprint
+        guard incomingControllerIsCoherent else {
+            throw CanonicalJourneyQualificationReportError.outgoingObservationMismatch
+        }
+        guard selectedCandidateEvidence.routeContinuation
+                .incomingQualityStateFingerprint ==
+                AutonomousCandidateFingerprint.qualityState(incomingState),
+              selectedOutgoing == incomingState.recording(
+                decision: selectedDecision,
+                evidenceFingerprint: transactionFingerprint,
+                controllerStateFingerprint:
+                    selectedCandidateEvidence.routeContinuation
+                        .controllerStateFingerprint
+              ) else {
+            throw CanonicalJourneyQualificationReportError.outgoingDecisionMismatch
+        }
+        guard selectedCommitProvenance.matches(
+            candidateEvaluationFingerprint: transactionFingerprint,
+            selectedSampleHash: sampleHash,
+            outgoingRenderDSPFingerprint:
+                selectedCandidateEvidence.routeContinuation
+                    .outgoingRenderDSPFingerprint,
+            qualityState: selectedOutgoing
+        ) else {
+            throw CanonicalJourneyQualificationReportError.candidateEvaluationMismatch
         }
         guard !acceptanceOutcome || selectedOutgoing.acceptanceProvenanceComplete else {
             throw CanonicalJourneyQualificationReportError.acceptanceProvenanceMismatch
@@ -1054,6 +1262,26 @@ package struct CanonicalJourneyQualificationReport: Codable, Equatable, Sendable
                 QualityQualificationContract.maximumCorrectionRenders else {
             throw CanonicalJourneyQualificationReportError.invalidBounds
         }
+        guard routeGeneration ==
+                selectedCandidateEvidence.routeContinuation.routeGeneration,
+              routeFingerprint ==
+                selectedCandidateEvidence.routeContinuation.routeFingerprint,
+              selectedCandidateEvidence.routeContinuation.sampleRate ==
+                evidence.sampleRate else {
+            throw CanonicalJourneyQualificationReportError.routeMismatch
+        }
+        guard correctionRenderCount == candidateEvaluation.correctionCount,
+              usedAlternate ==
+                (candidateEvaluation.selectedSlot == .alternate),
+              usedFallback ==
+                (candidateEvaluation.selectedSlot == .fallback),
+              let selectedAttempt = candidateEvaluation.selectedAttemptIndex.map({
+                  candidateEvaluation.attempts[$0]
+              }),
+              usedHomeTimbreFallback ==
+                selectedAttempt.forceHomeUpperTimbre else {
+            throw CanonicalJourneyQualificationReportError.candidateEvaluationMismatch
+        }
         schemaVersion = QualityQualificationContract.schemaVersion
         self.engineVersion = engineVersion
         self.policyVersion = selectedDecision.policyVersion
@@ -1063,12 +1291,17 @@ package struct CanonicalJourneyQualificationReport: Codable, Equatable, Sendable
         sampleRate = evidence.sampleRate
         self.routeFingerprint = routeFingerprint
         self.routeGeneration = routeGeneration
+        self.selectedCandidateEvidence = selectedCandidateEvidence
+        self.candidateEvaluation = candidateEvaluation
+        self.commitProvenance = selectedCommitProvenance
+        selectedCandidateEvidenceFingerprint = selectedCandidateEvidence.fingerprint
         self.evidence = evidence
         evidenceScope = Self.currentEvidenceScope
-        evidenceFingerprint = evidence.fingerprint
+        evidenceFingerprint = transactionFingerprint
         self.sampleHash = sampleHash
         reasonCodes = selectedDecision.reasonCodes
         self.decision = selectedDecision
+        self.incomingState = incomingState
         self.outgoingState = selectedOutgoing
         self.usedAlternate = usedAlternate
         self.usedFallback = usedFallback
@@ -1077,8 +1310,60 @@ package struct CanonicalJourneyQualificationReport: Codable, Equatable, Sendable
     }
 
     package func deterministicJSON() throws -> Data {
+        let data = try Self.canonicalJSON(self)
+        guard data.count <= Self.maximumEncodedBytes else {
+            throw CanonicalJourneyQualificationReportError.invalidBounds
+        }
+        return data
+    }
+
+    private static func canonicalJSON<T: Encodable>(_ value: T) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        return try encoder.encode(self)
+        encoder.nonConformingFloatEncodingStrategy = .convertToString(
+            positiveInfinity: "+Infinity",
+            negativeInfinity: "-Infinity",
+            nan: "NaN"
+        )
+        return try encoder.encode(value)
+    }
+
+    package static func decodeDeterministicJSON(
+        _ data: Data
+    ) throws -> CanonicalJourneyQualificationReport {
+        guard data.count <= Self.maximumEncodedBytes else {
+            throw CanonicalJourneyQualificationReportError.invalidBounds
+        }
+        let decoder = JSONDecoder()
+        decoder.nonConformingFloatDecodingStrategy = .convertFromString(
+            positiveInfinity: "+Infinity",
+            negativeInfinity: "-Infinity",
+            nan: "NaN"
+        )
+        let decoded = try decoder.decode(DecodedWire.self, from: data)
+        let validated = try Self(
+            engineVersion: decoded.engineVersion,
+            policyVersion: decoded.policyVersion,
+            fixtureFingerprint: decoded.fixtureFingerprint,
+            continuationFingerprint: decoded.continuationFingerprint,
+            checkpoint: decoded.checkpoint,
+            routeFingerprint: decoded.routeFingerprint,
+            routeGeneration: decoded.routeGeneration,
+            selectedCandidateEvidence: decoded.selectedCandidateEvidence,
+            candidateEvaluation: decoded.candidateEvaluation,
+            commitProvenance: decoded.commitProvenance,
+            sampleHash: decoded.sampleHash,
+            decision: decoded.decision,
+            incomingState: decoded.incomingState,
+            outgoingState: decoded.outgoingState,
+            usedAlternate: decoded.usedAlternate,
+            usedFallback: decoded.usedFallback,
+            usedHomeTimbreFallback: decoded.usedHomeTimbreFallback,
+            correctionRenderCount: decoded.correctionRenderCount
+        )
+        guard try validated.deterministicJSON() == data else {
+            throw CanonicalJourneyQualificationReportError.candidateEvaluationMismatch
+        }
+        return validated
     }
 }

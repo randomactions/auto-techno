@@ -55,6 +55,22 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
+Quality-contract schema 3 provides the current transaction-level evidence
+foundation. A complete record contains the bounded symbolic, hard-gate, full-mix,
+per-bar masking, role-stem, automatic-mix, graph, and pre/post upper-timbre vector
+for every retained attempt. It binds all candidate-plan fingerprints, the
+engine/policy/evaluator versions, the selected attempt, correction count, route
+generation, incoming continuation, and the pre-decision outgoing render/DSP
+state. Final commit provenance must additionally bind the selected sample hash
+and finalized quality continuation state; rejected attempts may not affect that
+state.
+
+This schema is evidence infrastructure, not a passing professional-quality
+policy. The shipping evaluator is uncalibrated, renders one primary candidate on
+the healthy path, and must continue to report qualification unavailable.
+Calibrated paired ranking remains disabled until streaming phrase analysis and
+measured cancellation, latency, and peak-working-memory bounds exist.
+
 ## Determinism and sample-rate consistency
 
 Tests must prove that the same initial state plus the same accepted,
@@ -80,6 +96,13 @@ unbounded search. The runtime must always end in one of three states: a qualifie
 candidate, a deterministic conservative fallback, or a coherent repeat/hold of
 the last qualified material.
 
+The current transaction permits at most three distinct candidate renders
+(primary, alternate, and fallback), one home-timbre correction, and four render
+passes total. Cancellation is checked before and after bounded bar-render and
+evidence phases as well as between candidates. Route changes cancel detached
+preparation, advance the route generation, and reject stale results before they
+can commit.
+
 Controller tests must cover:
 
 - gain and parameter bounds, slew limits, deadbands, hysteresis, and coupled-role
@@ -100,6 +123,10 @@ requests must distinguish every state or revision capable of changing selection
 or PCM.
 
 ## Hybrid feedback and callback isolation
+
+Schema 3 changes detached preparation evidence only. It adds no callback
+capture, analysis, or live-feedback work; the requirements below remain gates
+for a future hybrid-feedback implementation.
 
 Feedback may analyze only PCM generated and owned by Auto Techno. It must never
 open a microphone, request recording permission, capture ambient/system audio, or
@@ -127,6 +154,11 @@ Measure detached preparation and background analysis for the minimum and maximum
 phrase lengths, maximum candidate/rerender path, conservative fallback, and route
 rebuild at representative 44.1 and 48 kHz devices. Record median, high-percentile,
 and worst observed times plus peak working memory.
+
+Before enabling calibrated paired ranking, establish bounded streaming phrase
+analysis and measure cancellation latency, preparation latency, and peak working
+memory across the full four-pass limit. A test-only comparator does not satisfy
+this release gate.
 
 The declared budget must leave enough lookahead to schedule the future boundary
 without callback work or silence. A late successor may repeat the current

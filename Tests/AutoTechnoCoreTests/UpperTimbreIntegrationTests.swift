@@ -175,12 +175,17 @@ struct UpperTimbreIntegrationTests {
             candidateFingerprint: "previous-candidate",
             evidenceFingerprint: "previous-evidence"
         )
+        let previousControllerFingerprint =
+            AutonomousCandidateFingerprint.automaticMixController(
+                kickCorrectionDB: -1
+            )
         let incomingQuality = QualityContinuationState().recording(
             decision: previouslyQualified,
             evidenceFingerprint: "previous-evidence",
-            controllerStateFingerprint: "previous-controller"
+            controllerStateFingerprint: previousControllerFingerprint
         )
-        let prepared = AutonomousPhrasePreparer.prepare(
+        let neverCancelled: @Sendable () -> Bool = { false }
+        let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
             candidates: director.candidates(from: state),
             sessionSeed: state.rootSeed,
             memory: state.memory,
@@ -189,8 +194,10 @@ struct UpperTimbreIntegrationTests {
             incomingGraphState: GeneratedDSPContinuationState(),
             previousGraph: nil,
             incomingQualityState: incomingQuality,
-            routeRecovery: true
+            routeRecovery: true,
+            cancellationRequested: neverCancelled
         )
+        let prepared = try #require(preparedResult)
 
         #expect(!prepared.blocks.isEmpty)
         #expect(prepared.blocks.flatMap(\.resolvedUpperNotes).allSatisfy {
@@ -245,8 +252,16 @@ struct UpperTimbreIntegrationTests {
         })
         #expect(prepared.qualityDecision.outcome == .qualificationUnavailable)
         #expect(prepared.qualityDecision.reasonCodes.contains(.policyUncalibratedV1))
-        #expect(prepared.qualityDecision.reasonCodes.contains(.staleEvidenceV1))
-        #expect(prepared.qualityDecision.evidenceFingerprint == aggregate.fingerprint)
+        #expect(prepared.qualityDecision.reasonCodes.contains(.routeRecoveryV1))
+        #expect(!prepared.qualityDecision.reasonCodes.contains(.staleEvidenceV1))
+        #expect(prepared.selectedCandidateEvidence.postGraphUpperTimbreEvidence ==
+                aggregate)
+        #expect(prepared.candidateEvaluation.isComplete)
+        #expect(prepared.candidateEvaluation.attempts.count == 1)
+        #expect(prepared.qualityDecision.evidenceFingerprint ==
+                prepared.candidateEvaluation.fingerprint)
+        #expect(prepared.candidateEvaluationFingerprint ==
+                prepared.candidateEvaluation.fingerprint)
         #expect(prepared.qualityContinuationState.revision == incomingQuality.revision + 1)
         #expect(prepared.qualityContinuationState.lastDecision == prepared.qualityDecision)
         #expect(prepared.qualityContinuationState.acceptedPolicyVersion ==
@@ -255,7 +270,7 @@ struct UpperTimbreIntegrationTests {
                 "previous-candidate")
         #expect(prepared.qualityContinuationState.acceptedEvidenceFingerprint == "previous-evidence")
         #expect(prepared.qualityContinuationState.acceptedControllerStateFingerprint ==
-                "previous-controller")
+                previousControllerFingerprint)
         let selectedControllerFingerprint = String(
             format: "automatic-mix.v1.%016llx",
             prepared.endingRenderState.automaticMixState.kickCorrectionDB.bitPattern
@@ -263,7 +278,7 @@ struct UpperTimbreIntegrationTests {
         #expect(prepared.qualityContinuationState.observedCandidateFingerprint ==
                 prepared.qualityDecision.candidateFingerprint)
         #expect(prepared.qualityContinuationState.observedEvidenceFingerprint ==
-                aggregate.fingerprint)
+                prepared.candidateEvaluation.fingerprint)
         #expect(prepared.qualityContinuationState.observedControllerStateFingerprint ==
                 selectedControllerFingerprint)
         #expect(prepared.correctionRenderCount == 0)
@@ -283,9 +298,11 @@ struct UpperTimbreIntegrationTests {
         #expect(advanced.phraseIndex == prepared.plan.phraseIndex + 1)
 
         let harness = CanonicalJourneyQualificationHarness(
-            engineVersion: "autonomous-runtime.v1",
-            routeFingerprint: "offline-route-8000",
-            routeGeneration: 1
+            engineVersion: QualityQualificationContract.engineVersion,
+            routeFingerprint:
+                prepared.selectedCandidateEvidence.routeContinuation.routeFingerprint,
+            routeGeneration:
+                prepared.selectedCandidateEvidence.routeContinuation.routeGeneration
         )
         var exactJourneyStart = state
         exactJourneyStart.quality = incomingQuality
@@ -315,10 +332,8 @@ struct UpperTimbreIntegrationTests {
         #expect(report.checkpoint == .establishment)
         let firstJSON = try report.deterministicJSON()
         let secondJSON = try report.deterministicJSON()
-        let decoded = try JSONDecoder().decode(
-            CanonicalJourneyQualificationReport.self,
-            from: firstJSON
-        )
+        let decoded = try CanonicalJourneyQualificationReport
+            .decodeDeterministicJSON(firstJSON)
         #expect(firstJSON == secondJSON)
         #expect(decoded == report)
         #expect(report.usedAlternate == prepared.usedAlternate)
@@ -366,6 +381,16 @@ struct UpperTimbreIntegrationTests {
         #expect(!alternateCorrectionClaim)
         #expect(!fallbackCorrectionClaim)
         #expect(sharedCorrectionBudget.used == 1)
+        #expect(AutonomousCandidateCorrectionPolicy.choose(
+            selectedSlot: nil,
+            primaryRepairable: false,
+            alternateRepairable: true
+        ) == .alternate)
+        #expect(AutonomousCandidateCorrectionPolicy.choose(
+            selectedSlot: nil,
+            primaryRepairable: true,
+            alternateRepairable: false
+        ) == .primary)
         let playableDecision = QualityDecision(
             outcome: .qualificationUnavailable,
             reasonCodes: [.policyUncalibratedV1],
@@ -374,14 +399,17 @@ struct UpperTimbreIntegrationTests {
         )
         let playableState = QualityContinuationState().recording(
             decision: playableDecision,
-            evidenceFingerprint: "evidence-playable"
+            evidenceFingerprint: "evidence-playable",
+            controllerStateFingerprint: "controller-playable"
         )
         #expect(AutonomousCommitPolicy.isEligible(
-            hardGatesPassed: true,
+            playbackHardGatesPassed: true,
+            evaluationHardGatesPassed: true,
             decision: playableDecision,
             continuationState: playableState,
             candidateFingerprint: "candidate-playable",
-            evidenceFingerprint: "evidence-playable"
+            evidenceFingerprint: "evidence-playable",
+            controllerStateFingerprint: "controller-playable"
         ))
         let calibratedUnavailable = QualityDecision(
             policyVersion: "test-calibrated-policy.v1",
@@ -392,14 +420,17 @@ struct UpperTimbreIntegrationTests {
         )
         let unavailableState = QualityContinuationState().recording(
             decision: calibratedUnavailable,
-            evidenceFingerprint: "evidence-unavailable"
+            evidenceFingerprint: "evidence-unavailable",
+            controllerStateFingerprint: "controller-unavailable"
         )
         #expect(!AutonomousCommitPolicy.isEligible(
-            hardGatesPassed: true,
+            playbackHardGatesPassed: true,
+            evaluationHardGatesPassed: true,
             decision: calibratedUnavailable,
             continuationState: unavailableState,
             candidateFingerprint: "candidate-unavailable",
-            evidenceFingerprint: "evidence-unavailable"
+            evidenceFingerprint: "evidence-unavailable",
+            controllerStateFingerprint: "controller-unavailable"
         ))
         let qualified = QualityDecision(
             policyVersion: "test-calibrated-policy.v1",
@@ -414,26 +445,307 @@ struct UpperTimbreIntegrationTests {
             controllerStateFingerprint: "controller-qualified"
         )
         #expect(AutonomousCommitPolicy.isEligible(
-            hardGatesPassed: true,
+            playbackHardGatesPassed: true,
+            evaluationHardGatesPassed: true,
             decision: qualified,
             continuationState: qualifiedState,
             candidateFingerprint: "candidate-qualified",
-            evidenceFingerprint: "evidence-qualified"
+            evidenceFingerprint: "evidence-qualified",
+            controllerStateFingerprint: "controller-qualified"
         ))
         #expect(!AutonomousCommitPolicy.isEligible(
-            hardGatesPassed: true,
+            playbackHardGatesPassed: true,
+            evaluationHardGatesPassed: false,
+            decision: qualified,
+            continuationState: qualifiedState,
+            candidateFingerprint: "candidate-qualified",
+            evidenceFingerprint: "evidence-qualified",
+            controllerStateFingerprint: "controller-qualified"
+        ))
+        #expect(!AutonomousCommitPolicy.isEligible(
+            playbackHardGatesPassed: true,
+            evaluationHardGatesPassed: true,
             decision: qualified,
             continuationState: qualifiedState,
             candidateFingerprint: "foreign-candidate",
-            evidenceFingerprint: "foreign-evidence"
+            evidenceFingerprint: "foreign-evidence",
+            controllerStateFingerprint: "controller-qualified"
         ))
         #expect(!AutonomousCommitPolicy.isEligible(
-            hardGatesPassed: false,
+            playbackHardGatesPassed: false,
+            evaluationHardGatesPassed: true,
             decision: qualified,
             continuationState: qualifiedState,
             candidateFingerprint: "candidate-qualified",
-            evidenceFingerprint: "evidence-qualified"
+            evidenceFingerprint: "evidence-qualified",
+            controllerStateFingerprint: "controller-qualified"
         ))
+        #expect(!AutonomousCommitPolicy.isEligible(
+            playbackHardGatesPassed: true,
+            evaluationHardGatesPassed: true,
+            decision: qualified,
+            continuationState: qualifiedState,
+            candidateFingerprint: "candidate-qualified",
+            evidenceFingerprint: "evidence-qualified",
+            controllerStateFingerprint: "foreign-controller"
+        ))
+    }
+
+    @Test("Paired evaluator selects one atomic alternate product and transaction")
+    func pairedEvaluatorTransaction() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let candidates = director.candidates(from: state)
+        let prepared = AutonomousPhrasePreparer.prepare(
+            candidates: candidates,
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            routeGeneration: 7,
+            evaluator: PairedAlternateTestEvaluator()
+        )
+        let direct = AutonomousPhrasePreparer.prepare(
+            candidates: candidates,
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            routeGeneration: 7,
+            evaluator: PairedAlternateTestEvaluator()
+        )
+
+        #expect(prepared.plan == candidates.alternate)
+        #expect(prepared.blocks == direct.blocks)
+        #expect(prepared.endingRenderState == direct.endingRenderState)
+        #expect(prepared.endingGraphState == direct.endingGraphState)
+        #expect(prepared.candidateEvaluation.isComplete)
+        #expect(prepared.candidateEvaluation.attempts.count == 2)
+        #expect(Set(prepared.candidateEvaluation.attempts.map {
+            $0.vector.routeContinuation.incomingContinuationFingerprint
+        }).count == 1)
+        #expect(prepared.candidateEvaluation.attempts.allSatisfy {
+            $0.vector.planFingerprint ==
+                prepared.candidateEvaluation.planFingerprints[$0.slot]
+        })
+        #expect(prepared.candidateEvaluation.selectedSlot == .alternate)
+        #expect(prepared.candidateEvaluation.comparison == .alternate)
+        #expect(prepared.selectedCandidateEvidence.slot == .alternate)
+        #expect(prepared.selectedCandidateEvidence.routeContinuation.routeGeneration == 7)
+        #expect(prepared.qualityDecision.outcome == .qualified)
+        #expect(prepared.qualityDecision.evidenceFingerprint ==
+                prepared.candidateEvaluation.fingerprint)
+        #expect(prepared.qualityContinuationState.observedEvidenceFingerprint ==
+                prepared.candidateEvaluation.fingerprint)
+        #expect(prepared.commitProvenance.candidateEvaluationFingerprint ==
+                prepared.qualityDecision.evidenceFingerprint)
+        #expect(prepared.commitProvenance.outgoingRenderDSPFingerprint ==
+                prepared.selectedCandidateEvidence.routeContinuation
+                    .outgoingRenderDSPFingerprint)
+        #expect(prepared.commitProvenance.isInternallyConsistent)
+        #expect(prepared.commitEligible)
+    }
+
+    @Test("Cancellation after paired evidence prevents correction and fallback renders")
+    func candidateBoundaryCancellation() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let source = director.candidates(from: state)
+        let candidates = AutonomousPhraseCandidates(
+            primary: shortenedCandidate(source.primary, interest: source.primary.interest),
+            alternate: shortenedCandidate(
+                source.alternate,
+                interest: source.alternate.interest
+            ),
+            fallback: shortenedCandidate(source.fallback, interest: source.fallback.interest)
+        )
+        let gate = CandidateCancellationGate()
+        let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            candidates: candidates,
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            evaluator: CancellationAfterComparisonEvaluator(gate: gate),
+            cancellationRequested: { gate.check() }
+        )
+
+        #expect(prepared == nil)
+        #expect(gate.comparisonCount == 1)
+        #expect(gate.checkCount > 0)
+
+        var fingerprintState = RenderState()
+        fingerprintState.delayBuffer = [Float](repeating: 0.125, count: 8_192)
+        let fingerprintProbe = CandidateCancellationProbe(cancelAtCheck: 5)
+        let cancelledFingerprint = AutonomousTypedFingerprint.renderState(
+            fingerprintState,
+            cancellationRequested: { fingerprintProbe.check() }
+        )
+        #expect(cancelledFingerprint == nil)
+        #expect(fingerprintProbe.checkCount == 5)
+
+        var renderState = RenderState()
+        var graphState = GeneratedDSPContinuationState()
+        let blocks = AutonomousPhraseRenderer.render(
+            plan: candidates.primary,
+            graph: DSPGraphGenerator.safePlan(sessionSeed: state.rootSeed),
+            sampleRate: 8_000,
+            state: &renderState,
+            graphState: &graphState
+        )
+        #expect(blocks.count == 2)
+        #expect(blocks.reduce(0) { $0 + $1.left.count } > 16_384)
+        // Checks 1...3 cover entry and the two block copies; check 5 is the
+        // second chunk checkpoint inside the flattened left-channel scan.
+        let analysisProbe = CandidateCancellationProbe(cancelAtCheck: 5)
+        let cancelledReport = AudioQualityReport(
+            blocks: blocks,
+            sampleRate: 8_000,
+            cancellationRequested: { analysisProbe.check() }
+        )
+        #expect(cancelledReport == nil)
+        #expect(analysisProbe.checkCount == 5)
+
+        var renderBudget = AutonomousRenderPassBudget()
+        #expect((0..<QualityQualificationContract.maximumRenderPasses).allSatisfy { _ in
+            renderBudget.claim()
+        })
+        let overBudgetClaim = renderBudget.claim()
+        #expect(!overBudgetClaim)
+    }
+
+    @Test("Malformed route, score, graph, and continuation inputs stop before hashing")
+    func boundedPreparationInputs() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let source = director.candidates(from: state)
+
+        func prepare(
+            _ candidates: AutonomousPhraseCandidates = source,
+            sampleRate: Double = 8_000,
+            routeChannelCount: Int = 2,
+            renderState: RenderState = RenderState(),
+            graphState: GeneratedDSPContinuationState = GeneratedDSPContinuationState(),
+            previousGraph: DSPGraphPlan? = nil,
+            qualityState: QualityContinuationState = QualityContinuationState(),
+            routeRecovery: Bool = false
+        ) -> (PreparedAutonomousPhrase?, Int) {
+            let probe = CandidateCancellationProbe(cancelAtCheck: .max)
+            let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
+                candidates: candidates,
+                sessionSeed: state.rootSeed,
+                memory: state.memory,
+                sampleRate: sampleRate,
+                incomingRenderState: renderState,
+                incomingGraphState: graphState,
+                previousGraph: previousGraph,
+                incomingQualityState: qualityState,
+                routeRecovery: routeRecovery,
+                routeChannelCount: routeChannelCount,
+                cancellationRequested: { probe.check() }
+            )
+            return (prepared, probe.checkCount)
+        }
+
+        let shifted = AutonomousPhraseCandidates(
+            primary: retimedCandidate(source.primary, startBar: 1),
+            alternate: retimedCandidate(source.alternate, startBar: 1),
+            fallback: retimedCandidate(source.fallback, startBar: 1)
+        )
+        let overlong = AutonomousPhraseCandidates(
+            primary: retimedCandidate(source.primary, startBar: 0, barCount: 17),
+            alternate: retimedCandidate(source.alternate, startBar: 0, barCount: 17),
+            fallback: retimedCandidate(source.fallback, startBar: 0, barCount: 17)
+        )
+        var oversizedState = RenderState()
+        oversizedState.delayBuffer = [Float](repeating: 0, count: 96_002)
+        var staleTimelineState = RenderState()
+        staleTimelineState.barIndex = 1
+        var forgedPristineControllerState = RenderState()
+        forgedPristineControllerState.automaticMixState = AutomaticMixState(
+            kickCorrectionDB: 0
+        )
+        let invalidGraph = DSPGraphPlan(
+            sessionSeed: state.rootSeed,
+            revision: 0,
+            nodes: [],
+            mutation: nil
+        )
+        var invalidGraphState = GeneratedDSPContinuationState()
+        invalidGraphState.graph = invalidGraph
+        let coherentGraph = DSPGraphGenerator.safePlan(sessionSeed: state.rootSeed)
+        var incoherentRecoveryState = GeneratedDSPContinuationState()
+        incoherentRecoveryState.graph = coherentGraph
+        let incoherentRecoveryTarget = DSPGraphPlan(
+            sessionSeed: state.rootSeed,
+            revision: coherentGraph.revision + 2,
+            nodes: coherentGraph.nodes,
+            mutation: nil,
+            lowEndProtected: coherentGraph.lowEndProtected,
+            protectedRouting: coherentGraph.protectedRouting
+        )
+
+        let cases = [
+            prepare(shifted),
+            prepare(overlong),
+            prepare(sampleRate: 4_000),
+            prepare(routeChannelCount: 1),
+            prepare(renderState: staleTimelineState),
+            prepare(renderState: forgedPristineControllerState),
+            prepare(renderState: oversizedState),
+            prepare(graphState: invalidGraphState, previousGraph: invalidGraph),
+            prepare(
+                graphState: incoherentRecoveryState,
+                previousGraph: incoherentRecoveryTarget,
+                routeRecovery: true
+            ),
+        ]
+        #expect(cases.allSatisfy { result, checkCount in
+            result == nil && checkCount == 1
+        })
+    }
+
+    @Test("Paired candidates are both evaluated before the single correction")
+    func pairedCorrectionOrder() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let source = director.candidates(from: state)
+        let candidates = AutonomousPhraseCandidates(
+            primary: shortenedCandidate(source.primary, interest: source.primary.interest),
+            alternate: shortenedCandidate(
+                source.alternate,
+                interest: source.alternate.interest
+            ),
+            fallback: shortenedCandidate(source.fallback, interest: source.fallback.interest)
+        )
+        let prepared = AutonomousPhrasePreparer.prepare(
+            candidates: candidates,
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            evaluator: PairedPrimaryCorrectionTestEvaluator()
+        )
+
+        #expect(prepared.candidateEvaluation.attempts.map(\.kind) == [
+            .initialRender, .initialRender, .correctionRender,
+        ])
+        #expect(prepared.candidateEvaluation.attempts.map(\.slot) == [
+            .primary, .alternate, .primary,
+        ])
+        #expect(prepared.candidateEvaluation.selectedAttemptIndex == 2)
+        #expect(prepared.candidateEvaluation.selectedSlot == .primary)
+        #expect(prepared.correctionRenderCount == 1)
+        #expect(!prepared.usedFallback)
+        #expect(prepared.commitEligible)
     }
 
     @Test("Rejected candidate renders leak no state into alternate or fallback")
@@ -469,26 +781,38 @@ struct UpperTimbreIntegrationTests {
             ),
             state: state
         )
-        let alternateDirect = prepareCandidates(
-            AutonomousPhraseCandidates(
-                primary: alternate,
-                alternate: alternate,
-                fallback: fallback
-            ),
-            state: state
+        let expectedAlternateGraph = DSPGraphGenerator.plan(
+            sessionSeed: state.rootSeed,
+            phrase: alternate,
+            memory: state.memory,
+            previous: nil
+        )
+        var expectedAlternateRenderState = RenderState()
+        var expectedAlternateGraphState = GeneratedDSPContinuationState()
+        let expectedAlternateBlocks = AutonomousPhraseRenderer.render(
+            plan: alternate,
+            graph: expectedAlternateGraph,
+            sampleRate: 8_000,
+            state: &expectedAlternateRenderState,
+            graphState: &expectedAlternateGraphState
         )
         #expect(alternateTransaction.plan == alternate)
-        let alternateBlocksMatch = alternateTransaction.blocks == alternateDirect.blocks
+        let alternateBlocksMatch = alternateTransaction.blocks == expectedAlternateBlocks
         let alternateRenderStateMatches = alternateTransaction.endingRenderState ==
-            alternateDirect.endingRenderState
+            expectedAlternateRenderState
         let alternateGraphStateMatches = alternateTransaction.endingGraphState ==
-            alternateDirect.endingGraphState
+            expectedAlternateGraphState
         #expect(alternateBlocksMatch)
         #expect(alternateRenderStateMatches)
         #expect(alternateGraphStateMatches)
-        #expect(alternateTransaction.qualityDecision == alternateDirect.qualityDecision)
-        #expect(alternateTransaction.qualityContinuationState ==
-                alternateDirect.qualityContinuationState)
+        let alternateEvidence = alternateTransaction.selectedCandidateEvidence
+        #expect(alternateEvidence.slot == .alternate)
+        #expect(alternateTransaction.graph == expectedAlternateGraph)
+        #expect(alternateEvidence.fullMix.sampleHash == PhraseAudioPreflight(
+            blocks: expectedAlternateBlocks,
+            sampleRate: 8_000
+        ).quality.sampleHash)
+        #expect(alternateTransaction.candidateEvaluation.attempts.count == 2)
 
         let fallbackTransaction = prepareCandidates(
             AutonomousPhraseCandidates(
@@ -521,8 +845,12 @@ struct UpperTimbreIntegrationTests {
         let expectedFallbackEvidence = UpperTimbreEvidence.aggregating(
             expectedFallbackBlocks.map(\.postGraphRemainderTimbreEvidence)
         )
+        #expect(fallbackTransaction.selectedCandidateEvidence.postGraphUpperTimbreEvidence ==
+                expectedFallbackEvidence)
         #expect(fallbackTransaction.qualityDecision.evidenceFingerprint ==
-                expectedFallbackEvidence.fingerprint)
+                fallbackTransaction.candidateEvaluation.fingerprint)
+        #expect(fallbackTransaction.candidateEvaluation.attempts.count == 3)
+        #expect(fallbackTransaction.candidateEvaluation.selectedSlot == .fallback)
         #expect(fallbackTransaction.qualityDecision.candidateFingerprint ==
                 PhraseAudioPreflight(
                     blocks: expectedFallbackBlocks,
@@ -567,6 +895,109 @@ struct UpperTimbreIntegrationTests {
         )
         #expect(decision44.outcome == decision48.outcome)
         #expect(decision44.reasonCodes == decision48.reasonCodes)
+    }
+
+    @Test("Equivalent 44.1 and 48 kHz transactions preserve intention and controller direction")
+    func equivalentPreparedTransactionsAcrossRates() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let source = director.candidates(from: state)
+        let candidates = AutonomousPhraseCandidates(
+            primary: shortenedCandidate(source.primary, interest: source.primary.interest),
+            alternate: shortenedCandidate(
+                source.alternate,
+                interest: source.alternate.interest
+            ),
+            fallback: shortenedCandidate(source.fallback, interest: source.fallback.interest)
+        )
+        func prepare(sampleRate: Double) -> PreparedAutonomousPhrase {
+            AutonomousPhrasePreparer.prepare(
+                candidates: candidates,
+                sessionSeed: state.rootSeed,
+                memory: state.memory,
+                sampleRate: sampleRate,
+                incomingRenderState: RenderState(),
+                incomingGraphState: GeneratedDSPContinuationState(),
+                previousGraph: nil
+            )
+        }
+        let rate44 = prepare(sampleRate: 44_100)
+        let rate48 = prepare(sampleRate: 48_000)
+
+        #expect(rate44.plan == rate48.plan)
+        #expect(rate44.candidateEvaluation.engineVersion ==
+                rate48.candidateEvaluation.engineVersion)
+        #expect(rate44.candidateEvaluation.policyVersion ==
+                rate48.candidateEvaluation.policyVersion)
+        #expect(rate44.candidateEvaluation.evaluatorVersion ==
+                rate48.candidateEvaluation.evaluatorVersion)
+        #expect(rate44.candidateEvaluation.planFingerprints ==
+                rate48.candidateEvaluation.planFingerprints)
+        #expect(rate44.candidateEvaluation.selectedAttemptIndex ==
+                rate48.candidateEvaluation.selectedAttemptIndex)
+        #expect(rate44.candidateEvaluation.selectedSlot ==
+                rate48.candidateEvaluation.selectedSlot)
+        #expect(rate44.candidateEvaluation.comparison ==
+                rate48.candidateEvaluation.comparison)
+        #expect(rate44.candidateEvaluation.correctionCount ==
+                rate48.candidateEvaluation.correctionCount)
+        #expect(rate44.candidateEvaluation.attempts.count ==
+                rate48.candidateEvaluation.attempts.count)
+        for (attempt44, attempt48) in zip(
+            rate44.candidateEvaluation.attempts,
+            rate48.candidateEvaluation.attempts
+        ) {
+            #expect(attempt44.kind == attempt48.kind)
+            #expect(attempt44.slot == attempt48.slot)
+            #expect(attempt44.forceSafeGraph == attempt48.forceSafeGraph)
+            #expect(attempt44.forceHomeUpperTimbre ==
+                    attempt48.forceHomeUpperTimbre)
+            #expect(attempt44.reasonCodes == attempt48.reasonCodes)
+            #expect(attempt44.vector.symbolic == attempt48.vector.symbolic)
+            #expect(attempt44.vector.graph == attempt48.vector.graph)
+            #expect(attempt44.vector.hardGates == attempt48.vector.hardGates)
+            #expect(attempt44.vector.routeContinuation.channelCount ==
+                    attempt48.vector.routeContinuation.channelCount)
+            #expect(attempt44.vector.routeContinuation.incomingContinuationFingerprint ==
+                    attempt48.vector.routeContinuation.incomingContinuationFingerprint)
+            #expect(attempt44.vector.routeContinuation.incomingQualityStateFingerprint ==
+                    attempt48.vector.routeContinuation.incomingQualityStateFingerprint)
+            #expect(attempt44.vector.routeContinuation.incomingTopologyRevision ==
+                    attempt48.vector.routeContinuation.incomingTopologyRevision)
+            #expect(attempt44.vector.routeContinuation.previousGraphFingerprint ==
+                    attempt48.vector.routeContinuation.previousGraphFingerprint)
+        }
+        #expect(rate44.qualityDecision.outcome == rate48.qualityDecision.outcome)
+        #expect(rate44.qualityDecision.reasonCodes == rate48.qualityDecision.reasonCodes)
+        #expect(rate44.usedAlternate == rate48.usedAlternate)
+        #expect(rate44.usedFallback == rate48.usedFallback)
+        #expect(rate44.usedHomeTimbreFallback == rate48.usedHomeTimbreFallback)
+        #expect(rate44.commitEligible && rate48.commitEligible)
+
+        func kickTrajectory(_ prepared: PreparedAutonomousPhrase) -> [Double] {
+            prepared.selectedCandidateEvidence.automaticMix
+                .sorted { $0.bar < $1.bar }
+                .compactMap { evidence in
+                    evidence.gains.first {
+                        $0.role == MixRole.kick.rawValue
+                    }?.gainDB
+                }
+        }
+        for trajectory in [kickTrajectory(rate44), kickTrajectory(rate48)] {
+            #expect(trajectory.count == candidates.primary.barCount)
+            guard let first = trajectory.first else {
+                Issue.record("Expected a bounded kick-controller trajectory")
+                continue
+            }
+            #expect(first < AutomaticMixBalancer.homeKickCorrectionDB)
+            #expect(trajectory.dropFirst().allSatisfy { $0 == first })
+        }
+        #expect(rate44.selectedCandidateEvidence.routeContinuation.sampleRate == 44_100)
+        #expect(rate48.selectedCandidateEvidence.routeContinuation.sampleRate == 48_000)
+        #expect(rate44.selectedCandidateEvidence.routeContinuation.routeFingerprint !=
+                rate48.selectedCandidateEvidence.routeContinuation.routeFingerprint)
+        #expect(rate44.audioPreflight.quality.sampleHash !=
+                rate48.audioPreflight.quality.sampleHash)
     }
 
     @Test("Incoming render continuation makes phrase-seam evidence deterministic")
@@ -661,7 +1092,35 @@ struct UpperTimbreIntegrationTests {
         _ source: AutonomousPhrasePlan,
         interest: PhraseInterestReport
     ) -> AutonomousPhrasePlan {
-        let bars = Array(source.resolvedBars.prefix(2))
+        let selected = Array(source.resolvedBars.prefix(2))
+        let bars = selected.map { resolved in
+            let performance = resolved.performance
+            let shortenedPerformance = PerformanceBar(
+                bar: performance.bar,
+                phrase: performance.phrase,
+                localBar: performance.localBar,
+                phraseLength: selected.count,
+                section: performance.section,
+                tension: performance.tension,
+                roles: performance.roles,
+                transformations: performance.transformations,
+                signatureEvent: performance.signatureEvent,
+                eventSeed: performance.eventSeed,
+                accentContour: performance.accentContour
+            )
+            return ResolvedPerformanceBar(
+                performance: shortenedPerformance,
+                ensemble: resolved.ensemble,
+                arrangementGesture: resolved.arrangementGesture,
+                percussionGear: resolved.percussionGear,
+                foundationCompanion: resolved.foundationCompanion,
+                pulseEchoEnabled: resolved.pulseEchoEnabled,
+                interlockChapter: resolved.interlockChapter,
+                groovePulses: resolved.groovePulses,
+                spatialContrast: resolved.spatialContrast,
+                narrative: resolved.narrative
+            )
+        }
         return AutonomousPhrasePlan(
             phraseIndex: source.phraseIndex,
             startBar: source.startBar,
@@ -676,6 +1135,61 @@ struct UpperTimbreIntegrationTests {
             alternate: source.alternate,
             conservative: source.conservative,
             interest: interest,
+            endingInterlockState: source.endingInterlockState,
+            endingSpatialContrastState: source.endingSpatialContrastState,
+            endingNarrativeState: source.endingNarrativeState
+        )
+    }
+
+    private func retimedCandidate(
+        _ source: AutonomousPhrasePlan,
+        startBar: Int,
+        barCount: Int? = nil
+    ) -> AutonomousPhrasePlan {
+        let count = barCount ?? source.barCount
+        let bars = (0..<count).map { index in
+            let resolved = source.resolvedBars[index % source.resolvedBars.count]
+            let performance = resolved.performance
+            let retimedPerformance = PerformanceBar(
+                bar: startBar + index,
+                phrase: source.phraseIndex,
+                localBar: index,
+                phraseLength: count,
+                section: performance.section,
+                tension: performance.tension,
+                roles: performance.roles,
+                transformations: performance.transformations,
+                signatureEvent: performance.signatureEvent,
+                eventSeed: performance.eventSeed,
+                accentContour: performance.accentContour
+            )
+            return ResolvedPerformanceBar(
+                performance: retimedPerformance,
+                ensemble: resolved.ensemble,
+                arrangementGesture: resolved.arrangementGesture,
+                percussionGear: resolved.percussionGear,
+                foundationCompanion: resolved.foundationCompanion,
+                pulseEchoEnabled: resolved.pulseEchoEnabled,
+                interlockChapter: resolved.interlockChapter,
+                groovePulses: resolved.groovePulses,
+                spatialContrast: resolved.spatialContrast,
+                narrative: resolved.narrative
+            )
+        }
+        return AutonomousPhrasePlan(
+            phraseIndex: source.phraseIndex,
+            startBar: startBar,
+            barCount: count,
+            kind: source.kind,
+            scene: source.scene,
+            dna: source.dna,
+            resolvedBars: bars,
+            openedDebt: source.openedDebt,
+            paidDebtIDs: source.paidDebtIDs,
+            requestsTopologyMutation: source.requestsTopologyMutation,
+            alternate: source.alternate,
+            conservative: source.conservative,
+            interest: source.interest,
             endingInterlockState: source.endingInterlockState,
             endingSpatialContrastState: source.endingSpatialContrastState,
             endingNarrativeState: source.endingNarrativeState
@@ -815,6 +1329,151 @@ struct UpperTimbreIntegrationTests {
             #expect(trajectory.frequencyAtAppliedGateEnd > 0)
             #expect(trajectory.appliedGateEndFrame >= trajectory.onsetFrame)
             #expect(trajectory.appliedGateEndFrame <= block.left.count)
+        }
+    }
+}
+
+package struct PairedAlternateTestEvaluator: AutonomousCandidateEvaluating {
+    package let policyVersion = "test-calibrated-policy.v1"
+    package let evaluatorVersion = "test-paired-alternate.v1"
+    package let requiresPairedCandidates = true
+
+    package init() {}
+
+    package func compare(
+        primary: AutonomousCandidateEvaluationVector,
+        alternate: AutonomousCandidateEvaluationVector
+    ) -> AutonomousQualityComparison {
+        .alternate
+    }
+
+    package func requestsHomeUpperTimbreCorrection(
+        for candidate: AutonomousCandidateEvaluationVector,
+        slot: AutonomousCandidateSlot
+    ) -> Bool {
+        false
+    }
+
+    package func terminalVerdict(
+        selected: AutonomousCandidateEvaluationVector,
+        transaction: AutonomousCandidateEvaluationTransaction
+    ) -> AutonomousCandidatePolicyVerdict {
+        AutonomousCandidatePolicyVerdict(
+            outcome: .qualified,
+            reasonCodes: [.candidateQualifiedV1]
+        )
+    }
+}
+
+package struct PairedPrimaryCorrectionTestEvaluator: AutonomousCandidateEvaluating {
+    package let policyVersion = "test-calibrated-correction.v1"
+    package let evaluatorVersion = "test-paired-primary-correction.v1"
+    package let requiresPairedCandidates = true
+
+    package init() {}
+
+    package func compare(
+        primary: AutonomousCandidateEvaluationVector,
+        alternate: AutonomousCandidateEvaluationVector
+    ) -> AutonomousQualityComparison {
+        .primary
+    }
+
+    package func requestsHomeUpperTimbreCorrection(
+        for candidate: AutonomousCandidateEvaluationVector,
+        slot: AutonomousCandidateSlot
+    ) -> Bool {
+        slot == .primary && !candidate.symbolic.conservative
+    }
+
+    package func terminalVerdict(
+        selected: AutonomousCandidateEvaluationVector,
+        transaction: AutonomousCandidateEvaluationTransaction
+    ) -> AutonomousCandidatePolicyVerdict {
+        AutonomousCandidatePolicyVerdict(
+            outcome: .qualified,
+            reasonCodes: [.candidateQualifiedV1]
+        )
+    }
+}
+
+private final class CandidateCancellationGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+    private var comparisons = 0
+    private var checks = 0
+
+    var comparisonCount: Int { lock.withLock { comparisons } }
+    var checkCount: Int { lock.withLock { checks } }
+
+    func cancelAfterComparison() {
+        lock.withLock {
+            comparisons += 1
+            cancelled = true
+        }
+    }
+
+    func check() -> Bool {
+        lock.withLock {
+            checks += 1
+            return cancelled
+        }
+    }
+}
+
+package struct CancellationAfterComparisonEvaluator: AutonomousCandidateEvaluating {
+    package let policyVersion = "test-cancel-after-comparison.v1"
+    package let evaluatorVersion = "test-cancel-after-comparison.v1"
+    package let requiresPairedCandidates = true
+    private let gate: CandidateCancellationGate
+
+    fileprivate init(gate: CandidateCancellationGate) {
+        self.gate = gate
+    }
+
+    package func compare(
+        primary: AutonomousCandidateEvaluationVector,
+        alternate: AutonomousCandidateEvaluationVector
+    ) -> AutonomousQualityComparison {
+        gate.cancelAfterComparison()
+        return .primary
+    }
+
+    package func requestsHomeUpperTimbreCorrection(
+        for candidate: AutonomousCandidateEvaluationVector,
+        slot: AutonomousCandidateSlot
+    ) -> Bool {
+        slot == .primary && !candidate.symbolic.conservative
+    }
+
+    package func terminalVerdict(
+        selected: AutonomousCandidateEvaluationVector,
+        transaction: AutonomousCandidateEvaluationTransaction
+    ) -> AutonomousCandidatePolicyVerdict {
+        AutonomousCandidatePolicyVerdict(
+            outcome: .qualified,
+            reasonCodes: [.candidateQualifiedV1]
+        )
+    }
+}
+
+private final class CandidateCancellationProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private let cancelAtCheck: Int
+    private var count = 0
+
+    init(cancelAtCheck: Int) {
+        self.cancelAtCheck = max(1, cancelAtCheck)
+    }
+
+    var checkCount: Int {
+        lock.withLock { count }
+    }
+
+    func check() -> Bool {
+        lock.withLock {
+            count += 1
+            return count >= cancelAtCheck
         }
     }
 }

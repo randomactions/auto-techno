@@ -6,7 +6,11 @@ import Foundation
 
 private struct PhrasePreparationKey: Hashable, Sendable {
     let phraseIndex: Int
-    let sampleRate: Int
+    /// Exact AVAudioFormat route rate. Rounding here would let nearby
+    /// fractional hardware rates share provenance while playing at different
+    /// speeds.
+    let sampleRate: Double
+    let channelCount: Int
     let routeRecovery: Bool
     let qualityRevision: Int
     let qualityPolicyVersion: String
@@ -41,22 +45,31 @@ private struct ScheduledVisual {
 /// immutable blocks and cheap waveform envelopes consumed by the scheduler.
 private enum AutonomousPerformancePreparer {
     static func prepare(request: PhrasePreparationRequest,
-                        director: AutonomousSessionDirector) -> PreparedPhrase {
+                        director: AutonomousSessionDirector) -> PreparedPhrase? {
         let candidates = director.candidates(from: request.sourceState)
-        let prepared = AutonomousPhrasePreparer.prepare(
+        guard let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
             candidates: candidates,
             sessionSeed: request.sourceState.rootSeed,
             memory: request.sourceState.memory,
-            sampleRate: Double(request.key.sampleRate),
+            sampleRate: request.key.sampleRate,
             incomingRenderState: request.incomingRenderState,
             incomingGraphState: request.incomingGraphState,
             previousGraph: request.previousGraph,
             incomingQualityState: request.sourceState.quality,
-            routeRecovery: request.key.routeRecovery
-        )
-        let waveforms = prepared.blocks.map {
-            WaveformEnvelope.fixedDB(left: $0.left, right: $0.right)
+            routeRecovery: request.key.routeRecovery,
+            routeChannelCount: request.key.channelCount,
+            routeGeneration: request.key.routeGeneration
+        ), !Task.isCancelled else { return nil }
+        var waveforms: [[Float]] = []
+        waveforms.reserveCapacity(prepared.blocks.count)
+        for block in prepared.blocks {
+            guard !Task.isCancelled else { return nil }
+            waveforms.append(WaveformEnvelope.fixedDB(
+                left: block.left,
+                right: block.right
+            ))
         }
+        guard !Task.isCancelled else { return nil }
         return PreparedPhrase(request: request, prepared: prepared, waveforms: waveforms)
     }
 }
@@ -118,18 +131,26 @@ final class TechnoEngine: ObservableObject {
 
     private var currentPhrase: PreparedPhrase?
     private var preparedCache: [PhrasePreparationKey: PreparedPhrase] = [:]
-    private var preparationTask: Task<PreparedPhrase, Never>?
+    private var preparationTask: Task<PreparedPhrase?, Never>?
+    private var preparationTaskSerial: UInt64 = 0
+    private var activePreparationTaskSerial: UInt64?
     private var preparingKey: PhrasePreparationKey?
     private var activePreparationRequest: PhrasePreparationRequest?
     private var queuedPreparationRequest: PhrasePreparationRequest?
     private var preparationEpoch = AutonomousPreparationEpoch()
     private var requestedPlaybackAfterPreparation = false
+    /// Survives repeated configuration notifications while the prior detached
+    /// task is cancelling, so the interrupted phrase remains the recovery
+    /// source instead of being replaced by a stale successor request.
+    private var routeRecoveryRequest: PhrasePreparationRequest?
 
     private var nextBlockIndex = 0
     private var nextScheduleSample: AVAudioFramePosition = 0
     private var currentBarFrames: AVAudioFramePosition = 1
     private var scheduledVisuals: [ScheduledVisual] = []
     private var activeVisualStart: AVAudioFramePosition = -1
+    private var isShutDown = false
+    private var lifecycleGeneration: UInt64 = 0
 
     init() {
         let director = AutonomousSessionDirector()
@@ -137,23 +158,46 @@ final class TechnoEngine: ObservableObject {
         sessionState = director.initialState()
         audioEngine.attach(player)
         audioEngine.connect(player, to: audioEngine.mainMixerNode, format: nil)
+        installConfigurationObserverIfNeeded()
+    }
+
+    private func installConfigurationObserverIfNeeded() {
+        guard configurationObserver == nil else { return }
+        let observerGeneration = lifecycleGeneration
         configurationObserver = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange,
             object: audioEngine,
             queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.handleAudioConfigurationChange() }
+            Task { @MainActor [weak self] in
+                guard let self,
+                      self.lifecycleGeneration == observerGeneration else { return }
+                self.handleAudioConfigurationChange()
+            }
         }
     }
 
     func prepare() {
+        if isShutDown {
+            isShutDown = false
+            installConfigurationObserverIfNeeded()
+        }
+        if routeRecoveryRequest != nil {
+            handleAudioConfigurationChange()
+            return
+        }
         guard currentPhrase == nil else {
             if playbackState == .preparing { playbackState = .ready }
             return
         }
         audioEngine.prepare()
         let format = audioEngine.mainMixerNode.outputFormat(forBus: 0)
-        guard format.sampleRate > 0, format.channelCount > 0 else {
+        guard format.sampleRate >=
+                QualityQualificationContract.minimumSupportedSampleRate,
+              format.sampleRate <=
+                QualityQualificationContract.maximumSupportedSampleRate,
+              Int(format.channelCount) ==
+                QualityQualificationContract.requiredRouteChannelCount else {
             playbackState = .unavailable
             return
         }
@@ -161,7 +205,8 @@ final class TechnoEngine: ObservableObject {
         requestPreparation(PhrasePreparationRequest(
             key: PhrasePreparationKey(
                 phraseIndex: sessionState.phraseIndex,
-                sampleRate: Int(format.sampleRate.rounded()),
+                sampleRate: format.sampleRate,
+                channelCount: Int(format.channelCount),
                 routeRecovery: false,
                 qualityRevision: sessionState.quality.revision,
                 qualityPolicyVersion: sessionState.quality.policyVersion,
@@ -178,6 +223,7 @@ final class TechnoEngine: ObservableObject {
     }
 
     func togglePlayback() {
+        guard !isShutDown else { return }
         switch playbackState {
         case .playing:
             pause()
@@ -197,9 +243,30 @@ final class TechnoEngine: ObservableObject {
     }
 
     func shutdown() {
+        guard !isShutDown else { return }
+        isShutDown = true
+        lifecycleGeneration &+= 1
+        requestedPlaybackAfterPreparation = false
+        routeRecoveryRequest = nil
         recoveryTask?.cancel()
         recoveryTask = nil
         preparationTask?.cancel()
+        preparationTask = nil
+        activePreparationTaskSerial = nil
+        preparationEpoch.invalidate()
+        preparingKey = nil
+        queuedPreparationRequest = nil
+        activePreparationRequest = nil
+        preparedCache.removeAll(keepingCapacity: false)
+        currentPhrase = nil
+        // View disappearance is a complete transport boundary. A later
+        // appearance restarts one coherent session instead of pairing an
+        // advanced musical memory with reset render/DSP continuation.
+        sessionState = director.initialState()
+        resetSchedule()
+        sceneNumber = 1
+        currentSection = .groove
+        playbackState = .unavailable
         displayTimer?.invalidate()
         displayTimer = nil
         player.stop()
@@ -211,6 +278,7 @@ final class TechnoEngine: ObservableObject {
     }
 
     private func requestPreparation(_ request: PhrasePreparationRequest) {
+        guard !isShutDown else { return }
         if let prepared = preparedCache.removeValue(forKey: request.key) {
             acceptPreparedPhrase(prepared)
             return
@@ -224,6 +292,9 @@ final class TechnoEngine: ObservableObject {
         preparingKey = request.key
         activePreparationRequest = request
         let generation = preparationEpoch.value
+        preparationTaskSerial &+= 1
+        let taskSerial = preparationTaskSerial
+        activePreparationTaskSerial = taskSerial
         let director = director
         let task = Task.detached(priority: .userInitiated) {
             AutonomousPerformancePreparer.prepare(request: request, director: director)
@@ -232,11 +303,18 @@ final class TechnoEngine: ObservableObject {
         Task { @MainActor [weak self] in
             let prepared = await task.value
             guard let self else { return }
+            guard self.activePreparationTaskSerial == taskSerial else { return }
             self.preparationTask = nil
+            self.activePreparationTaskSerial = nil
             self.preparingKey = nil
             self.activePreparationRequest = nil
             if self.preparationEpoch.accepts(generation) {
-                self.acceptPreparedPhrase(prepared)
+                if let prepared {
+                    self.acceptPreparedPhrase(prepared)
+                } else if self.queuedPreparationRequest == nil,
+                          self.currentPhrase == nil {
+                    self.playbackState = .unavailable
+                }
             }
             if let queued = self.queuedPreparationRequest {
                 self.queuedPreparationRequest = nil
@@ -246,6 +324,7 @@ final class TechnoEngine: ObservableObject {
     }
 
     private func acceptPreparedPhrase(_ phrase: PreparedPhrase) {
+        guard !isShutDown else { return }
         guard phrase.request.key.phraseIndex == phrase.request.sourceState.phraseIndex else { return }
         guard phrase.prepared.commitEligible else {
             if currentPhrase == nil { playbackState = .unavailable }
@@ -261,6 +340,9 @@ final class TechnoEngine: ObservableObject {
         guard phrase.request.sourceState.phraseIndex == sessionState.phraseIndex else { return }
 
         currentPhrase = phrase
+        if phrase.request.key.routeRecovery {
+            routeRecoveryRequest = nil
+        }
         sessionState = phrase.request.sourceState
         sessionState.advance(
             using: phrase.prepared.plan,
@@ -284,6 +366,7 @@ final class TechnoEngine: ObservableObject {
             key: PhrasePreparationKey(
                 phraseIndex: sessionState.phraseIndex,
                 sampleRate: phrase.request.key.sampleRate,
+                channelCount: phrase.request.key.channelCount,
                 routeRecovery: false,
                 qualityRevision: sessionState.quality.revision,
                 qualityPolicyVersion: sessionState.quality.policyVersion,
@@ -316,7 +399,14 @@ final class TechnoEngine: ObservableObject {
         audioEngine.stop()
         resetSchedule()
         guard scheduleNextBar(first: true) else {
-            playbackState = .unavailable
+            if playbackState == .preparing || playbackState == .recovering {
+                // A synchronous route mismatch was discovered while honoring
+                // this explicit PLAY action. Resume once the replacement-route
+                // phrase is ready even if the notification arrives later.
+                requestedPlaybackAfterPreparation = true
+            } else {
+                playbackState = .unavailable
+            }
             return
         }
         do {
@@ -351,6 +441,7 @@ final class TechnoEngine: ObservableObject {
     }
 
     private func beginRecovery() {
+        guard !isShutDown else { return }
         displayTimer?.invalidate()
         displayTimer = nil
         player.stop()
@@ -364,6 +455,7 @@ final class TechnoEngine: ObservableObject {
                     do { try await Task.sleep(for: .milliseconds(250 * attempt)) }
                     catch { return }
                 }
+                guard !Task.isCancelled, !self.isShutDown else { return }
                 self.resetSchedule()
                 guard self.scheduleNextBar(first: true) else { continue }
                 do {
@@ -384,16 +476,30 @@ final class TechnoEngine: ObservableObject {
     }
 
     private func handleAudioConfigurationChange() {
+        guard !isShutDown else { return }
         let shouldResume = playbackState == .playing || playbackState == .recovering
         let rebuildingPhrase = currentPhrase
-        let rebuildingRequest = rebuildingPhrase?.request ?? activePreparationRequest
-        requestedPlaybackAfterPreparation = shouldResume
+        let rebuildingRequest = rebuildingPhrase.map { phrase in
+            PhrasePreparationRequest(
+                key: phrase.request.key,
+                sourceState: phrase.request.sourceState,
+                incomingRenderState: phrase.request.incomingRenderState,
+                incomingGraphState: phrase.request.incomingGraphState,
+                previousGraph: phrase.prepared.graph
+            )
+        } ?? routeRecoveryRequest ?? activePreparationRequest
+        if let rebuildingRequest {
+            routeRecoveryRequest = rebuildingRequest
+        }
+        requestedPlaybackAfterPreparation =
+            requestedPlaybackAfterPreparation || shouldResume
         recoveryTask?.cancel()
         recoveryTask = nil
         displayTimer?.invalidate()
         displayTimer = nil
         player.stop()
         audioEngine.stop()
+        preparationTask?.cancel()
         preparationEpoch.invalidate()
         preparedCache.removeAll(keepingCapacity: false)
         currentPhrase = nil
@@ -401,21 +507,28 @@ final class TechnoEngine: ObservableObject {
         resetSchedule()
         playbackState = .preparing
         guard let rebuildingRequest else {
+            routeRecoveryRequest = nil
             prepare()
             return
         }
 
         audioEngine.prepare()
         let format = audioEngine.mainMixerNode.outputFormat(forBus: 0)
-        guard format.sampleRate > 0, format.channelCount > 0 else {
+        guard format.sampleRate >=
+                QualityQualificationContract.minimumSupportedSampleRate,
+              format.sampleRate <=
+                QualityQualificationContract.maximumSupportedSampleRate,
+              Int(format.channelCount) ==
+                QualityQualificationContract.requiredRouteChannelCount else {
             playbackState = .unavailable
             return
         }
         sessionState = rebuildingRequest.sourceState
-        requestPreparation(PhrasePreparationRequest(
+        let recoveryRequest = PhrasePreparationRequest(
             key: PhrasePreparationKey(
                 phraseIndex: sessionState.phraseIndex,
-                sampleRate: Int(format.sampleRate.rounded()),
+                sampleRate: format.sampleRate,
+                channelCount: Int(format.channelCount),
                 routeRecovery: true,
                 qualityRevision: sessionState.quality.revision,
                 qualityPolicyVersion: sessionState.quality.policyVersion,
@@ -427,8 +540,10 @@ final class TechnoEngine: ObservableObject {
             sourceState: sessionState,
             incomingRenderState: rebuildingRequest.incomingRenderState,
             incomingGraphState: rebuildingRequest.incomingGraphState,
-            previousGraph: rebuildingPhrase?.prepared.graph ?? rebuildingRequest.previousGraph
-        ))
+            previousGraph: rebuildingRequest.previousGraph
+        )
+        routeRecoveryRequest = recoveryRequest
+        requestPreparation(recoveryRequest)
     }
 
     private func resetSchedule() {
@@ -448,6 +563,7 @@ final class TechnoEngine: ObservableObject {
             let nextKey = PhrasePreparationKey(
                 phraseIndex: sessionState.phraseIndex,
                 sampleRate: phrase.request.key.sampleRate,
+                channelCount: phrase.request.key.channelCount,
                 routeRecovery: false,
                 qualityRevision: sessionState.quality.revision,
                 qualityPolicyVersion: sessionState.quality.policyVersion,
@@ -483,6 +599,11 @@ final class TechnoEngine: ObservableObject {
         let blockIndex = nextBlockIndex
         let block = phrase.prepared.blocks[blockIndex]
         let format = audioEngine.mainMixerNode.outputFormat(forBus: 0)
+        guard format.sampleRate == phrase.request.key.sampleRate,
+              Int(format.channelCount) == phrase.request.key.channelCount else {
+            handleAudioConfigurationChange()
+            return false
+        }
         guard format.sampleRate > 0, format.channelCount > 0,
               let buffer = makeBuffer(left: block.left, right: block.right, format: format) else { return false }
 

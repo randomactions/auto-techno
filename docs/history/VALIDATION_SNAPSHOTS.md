@@ -283,3 +283,48 @@ listening is therefore still required to judge the combined musical magnitude.
 No physical-output smoke, route/interruption test, preparation-latency or peak-
 memory measurement, or 60-minute recovery soak was performed for this
 candidate.
+
+## Versioned candidate-evaluation transaction — 2026-08-09
+
+This candidate builds on `17984fd`. Quality-contract schema 3 now records one
+bounded transaction across primary, alternate, conservative fallback, and the
+single permitted home-timbre correction. Every retained attempt binds its
+symbolic, hard-gate, full-mix, masking, stem, automatic-mix, graph, route,
+incoming continuation, and pre/post upper-timbre evidence. Final commit
+provenance separately binds the chosen transaction, selected sample hash,
+outgoing render/DSP continuation, and finalized quality state. Typed streaming
+fingerprints avoid materializing the large continuation buffers and check
+cancellation at fixed chunks.
+
+The shipping evaluator remains `uncalibrated.v1`: a healthy path renders the
+primary exactly once, reports qualification unavailable, and performs no
+general quality ranking. Test-only paired comparison proves the fixed attempt,
+correction, selection, and fallback contracts without enabling that behavior in
+the app. Route recovery carries exact stereo channel count, exact unrounded
+sample rate, route generation, graph-transition ownership, and controller/
+quality continuation. No analyzer, ranking, allocation, lock, logging, file or
+network work was added to the audio callback.
+
+Final local validation used Xcode 26.6 build 17F113 and Apple Swift 6.3.3:
+
+- The exact final full suite passed: 98 tests in 227.953 seconds.
+- The same-intention two-bar 44.1/48 kHz transaction regression passed in
+  20.935 seconds. It preserved plan, selected slot, decision semantics, graph,
+  attempt shape, and kick-controller direction while allowing route-dependent
+  PCM hashes and exact measurements to differ.
+- The corrected continuation-owner replay passed in 32.761 seconds, and the
+  inner-scan cancellation regression passed in 4.910 seconds.
+- The optimized release build passed in 42.49 seconds using the matched full
+  Xcode SDK, isolated module caches, and the populated offline SwiftPM scratch
+  path. A separate empty scratch path first attempted a dependency fetch and
+  stopped at restricted DNS before compilation; it was not a source failure.
+- `git diff --check` passed. Two independent final production audits found no
+  remaining P0-P2 defect after the route, graph, continuation, decoder, and
+  adversarial-provenance closures.
+
+The transaction is evidence infrastructure, not professional-quality
+promotion. Calibrated paired ranking remains disabled until phrase analysis is
+streamed within measured bounds and cancellation latency, preparation latency,
+and peak working memory are calibrated. Matched-loudness listening, physical-
+output smoke, route/interruption hardware QA, and the 60-minute recovery soak
+also remain pending.

@@ -523,6 +523,32 @@ package enum AutonomousPhraseRenderer {
                               sampleRate: Double, state: inout RenderState,
                               graphState: inout GeneratedDSPContinuationState,
                               forceHomeUpperTimbre: Bool = false) -> [RenderBlock] {
+        guard let blocks = renderIfNotCancelled(
+            plan: plan,
+            graph: graph,
+            sampleRate: sampleRate,
+            state: &state,
+            graphState: &graphState,
+            forceHomeUpperTimbre: forceHomeUpperTimbre,
+            cancellationRequested: { false }
+        ) else {
+            preconditionFailure("Non-cancellable phrase render stopped unexpectedly")
+        }
+        return blocks
+    }
+
+    /// Detached-preparation entry point. A cancelled partial render never
+    /// escapes to scheduling; its caller owns disposable state copies.
+    package static func renderIfNotCancelled(
+        plan: AutonomousPhrasePlan,
+        graph: DSPGraphPlan,
+        sampleRate: Double,
+        state: inout RenderState,
+        graphState: inout GeneratedDSPContinuationState,
+        forceHomeUpperTimbre: Bool = false,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> [RenderBlock]? {
+        guard !cancellationRequested() else { return nil }
         let synthPlan = SynthPerformancePlan(
             scene: plan.scene, dna: plan.dna, kind: plan.kind,
             resolvedBars: plan.resolvedBars,
@@ -533,6 +559,7 @@ package enum AutonomousPhraseRenderer {
         var blocks: [RenderBlock] = []
         blocks.reserveCapacity(plan.barCount)
         for index in plan.resolvedBars.indices {
+            guard !cancellationRequested() else { return nil }
             let resolved = plan.resolvedBars[index]
             let performance = resolved.performance
             let synthPerformance = synthPlan.bars[index]
@@ -553,6 +580,7 @@ package enum AutonomousPhraseRenderer {
                 workspace: &workspace,
                 layer: .protectedRhythm
             )
+            guard !cancellationRequested() else { return nil }
             let rendered = VoiceRenderer.renderBar(
                 scene: plan.scene,
                 sampleRate: sampleRate,
@@ -564,6 +592,7 @@ package enum AutonomousPhraseRenderer {
                 workspace: &workspace,
                 layer: .full
             )
+            guard !cancellationRequested() else { return nil }
             let events = resolved.ensemble.events.map { event in
                 let pulse = event.voice == .groovePulse
                     ? resolved.groovePulse(at: event.step) : nil
@@ -625,6 +654,7 @@ package enum AutonomousPhraseRenderer {
                 left: graphInputLeft, right: graphInputRight,
                 sampleRate: sampleRate, plan: graph, state: &graphState
             )
+            guard !cancellationRequested() else { return nil }
             let stepFrames = Double(
                 max(1, min(graphInputLeft.count, graphInputRight.count))
             ) / 16
@@ -698,29 +728,33 @@ package enum AutonomousPhraseRenderer {
                     velocityExpressionWindows: velocityExpressionWindows,
                     precedingFrame: state.previousResonantAnchorEvidenceFrame
                 ))
+            guard !cancellationRequested() else { return nil }
             let detunedEvidence = UpperTimbreEvidenceAnalyzer.analyze(
                 UpperTimbreAnalysisInput(
                 left: rendered.detunedCompanionSamples,
                 right: rendered.detunedCompanionSamples,
                 sampleRate: sampleRate,
-                precedingFrame: state.previousDetunedCompanionEvidenceFrame
+                    precedingFrame: state.previousDetunedCompanionEvidenceFrame
             ))
+            guard !cancellationRequested() else { return nil }
             let preGraphMixEvidence = UpperTimbreEvidenceAnalyzer.analyze(
                 UpperTimbreAnalysisInput(
                 left: graphInputLeft,
                 right: graphInputRight,
                 sampleRate: sampleRate,
                 protectedReferenceMono: protectedRhythm.samples,
-                precedingFrame: state.previousGraphInputRemainderEvidenceFrame
+                    precedingFrame: state.previousGraphInputRemainderEvidenceFrame
             ))
+            guard !cancellationRequested() else { return nil }
             let postGraphMixEvidence = UpperTimbreEvidenceAnalyzer.analyze(
                 UpperTimbreAnalysisInput(
                 left: generated.0,
                 right: generated.1,
                 sampleRate: sampleRate,
                 protectedReferenceMono: protectedRhythm.samples,
-                precedingFrame: state.previousPostGraphRemainderEvidenceFrame
+                    precedingFrame: state.previousPostGraphRemainderEvidenceFrame
             ))
+            guard !cancellationRequested() else { return nil }
             let graphInputRemainderTimbreEvidence = UpperTimbreEvidence.attributing(
                 resonantAnchor: resonantEvidence,
                 detunedCompanions: detunedEvidence,
@@ -801,7 +835,7 @@ package enum AutonomousPhraseRenderer {
             ))
             state.barIndex = performance.bar + 1
         }
-        return blocks
+        return cancellationRequested() ? nil : blocks
     }
 
     private static func outputSafety(_ input: Float) -> Float {

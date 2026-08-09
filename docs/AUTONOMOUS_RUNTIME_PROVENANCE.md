@@ -18,11 +18,29 @@ mistaken for a completed feedback system.
    start frequency and gate outcome without creating a second score.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
-4. `AutonomousPhrasePreparer` renders the primary candidate, runs symbolic,
-   graph, and audio-safety preflight, and uses the alternate or deterministic
-   fallback only when required by the current validity policy. It does not yet
-   perform general professional-quality ranking or feed rendered observations
-   back into future composition.
+4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
+   candidate-evaluation transaction under quality-contract schema 3. Each
+   attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
+   per-bar masking, role-stem, automatic-mix, graph, and pre/post upper-timbre
+   evidence. The transaction binds all three
+   plan fingerprints, engine/policy/evaluator versions, attempt-local reasons,
+   selection, comparison, and correction provenance. It permits at most the
+   primary, alternate, and deterministic fallback plus one home-timbre
+   correction, with four render passes total. All attempts begin from the same
+   incoming state. Their evidence records the incoming continuation and the
+   outgoing render-plus-generated-DSP state before the quality decision; outer
+   commit provenance then binds the chosen transaction, selected sample hash,
+   outgoing render/DSP state, and finalized quality continuation state.
+
+   The shipping evaluator is uncalibrated and does not request paired rendering,
+   so a healthy primary is rendered exactly once. Alternate and fallback remain
+   bounded validity paths, not a general professional-quality ranking system.
+   A calibrated paired comparator stays disabled pending streaming phrase
+   analysis plus measured cancellation, preparation-latency, and peak-memory
+   bounds. Cancellation is checked within each candidate at bounded bar-render
+   and evidence boundaries; route changes cancel detached preparation and
+   prevent stale route work from committing.
+   This transaction does not feed observations into future composition.
 5. `AutonomousPhraseRenderer` constructs the required synth world and synth
    performance. The synth planner resolves the three-step driver, five-stage
    follower, chapter articulation, tone-chapter spectral aperture, and eligible
@@ -49,7 +67,7 @@ mistaken for a completed feedback system.
    sixteen bar windows. It is descriptive only: uncalibrated masking evidence
    applies no cut, while the existing authored envelope, kick-linked guard,
    ducking, glue, and output-safety stages remain active. Upper-timbre evidence
-   schema 3 (quality-report contract schema 2) retains protected rhythm as its
+   schema 3 (quality-report contract schema 3) retains protected rhythm as its
    masking reference and adds bounded onset-local anchor-velocity observations
    from the exact dry anchor tap.
    Score-owned anchor velocity now projects into the authored filter-envelope

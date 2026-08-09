@@ -9,10 +9,16 @@ manual curation gate or third-party instrument dependency.
 
 The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
-signal-safety reports, masking analysis, and one bounded automatic mix correction.
-That expression evidence is descriptive under the uncalibrated policy; the
-broader quality policy and hybrid live-feedback loop below are target architecture
-until their implementation and validation are recorded.
+signal-safety reports, masking analysis, one bounded automatic mix correction,
+and a versioned candidate-evaluation transaction. Quality-contract schema 3
+preserves complete symbolic, full-mix, masking, role-stem, graph, and pre/post
+upper-timbre evidence for each retained attempt, then binds the selected attempt
+to finalized commit provenance. The shipping evaluator remains deliberately
+uncalibrated: a healthy preparation renders the primary once, and neither the
+transaction nor the expression evidence constitutes professional-quality
+qualification. Calibrated paired ranking and the hybrid live-feedback loop below
+remain target architecture until their implementation and validation are
+recorded.
 
 ## Engine ownership
 
@@ -102,6 +108,26 @@ The target loop is bounded and persistent:
 The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
+
+Under quality-contract schema 3, the versioned transaction implements the
+bounded evidence and atomic commit foundation for this loop. It can retain at
+most the primary, alternate, and conservative-fallback candidates, plus one
+home-timbre correction, with no more than four render passes total. Every attempt
+starts from the same incoming state. The transaction records the incoming
+continuation fingerprint and each attempt's outgoing render-plus-generated-DSP
+fingerprint before a quality decision exists; outer commit provenance then binds
+the chosen transaction, sample hash, render/DSP state, and finalized quality
+continuation state. Rejected attempts remain attempt-local.
+
+The production evaluator does not request a paired comparison, so the healthy
+path performs one primary render and reports qualification unavailable.
+Calibrated paired ranking stays disabled until phrase analysis can stream within
+measured memory bounds and candidate cancellation, latency, and peak working
+memory have been calibrated. Preparation checks cancellation at bounded
+bar-render and evidence-phase boundaries as well as between candidates; the
+streaming preflight and continuation fingerprints also check within their long
+array scans. A route change cancels stale detached work. This foundation adds no
+audio-callback analysis or feedback work.
 
 ## Hybrid live feedback boundary
 

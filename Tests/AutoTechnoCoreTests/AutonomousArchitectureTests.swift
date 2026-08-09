@@ -642,7 +642,7 @@ struct GeneratedDSPTopologyTests {
         }
     }
 
-    @Test("Release and route recovery suppress topology mutation")
+    @Test("Release suppresses new mutation and recovery preserves the selected target")
     func mutationSuppression() {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
@@ -674,6 +674,120 @@ struct GeneratedDSPTopologyTests {
         #expect(recoveryGraph.mutation == nil)
         #expect(releaseGraph.hasSameTopology(as: graph))
         #expect(recoveryGraph.hasSameTopology(as: graph))
+
+        var replacementNodes = graph.nodes
+        let replaced = replacementNodes[0]
+        replacementNodes[0] = DSPGraphNode(
+            id: replaced.id,
+            kind: replaced.kind == .waveFold ? .saturation : .waveFold,
+            branch: replaced.branch,
+            order: replaced.order,
+            amount: replaced.amount,
+            mix: replaced.mix,
+            feedback: 0,
+            delaySeconds: 0
+        )
+        let selectedTarget = DSPGraphPlan(
+            sessionSeed: graph.sessionSeed,
+            revision: graph.revision + 1,
+            nodes: replacementNodes,
+            mutation: DSPGraphMutation(
+                kind: .replace,
+                phraseIndex: releasePlan.phraseIndex,
+                affectedNodeIDs: [replaced.id]
+            )
+        )
+        let recoveredSelectedTarget = DSPGraphGenerator.plan(
+            sessionSeed: state.rootSeed,
+            phrase: releasePlan,
+            memory: state.memory,
+            previous: selectedTarget,
+            routeRecovery: true
+        )
+        #expect(recoveredSelectedTarget == selectedTarget)
+        #expect(recoveredSelectedTarget.mutation?.affectedNodeIDs == [replaced.id])
+    }
+
+    @Test("Rejected mutation freezes topology without retaining stale ownership")
+    func rejectedMutationClearsPriorMetadata() throws {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var state = director.initialState()
+        var mutationPlan: AutonomousPhrasePlan?
+        var mutationMemory: TemporalMusicalMemory?
+        for _ in 0..<64 {
+            let plan = director.candidates(from: state).primary
+            if plan.requestsTopologyMutation && plan.kind != .energyRelease {
+                mutationPlan = plan
+                mutationMemory = state.memory
+                break
+            }
+            state.advance(using: plan)
+        }
+        let plan = try #require(mutationPlan)
+        let memory = try #require(mutationMemory)
+
+        var selectedSeed: UInt64?
+        var selectedIndex = 0
+        for seed in UInt64(1)...UInt64(10_000) {
+            let mutationSeed = SceneDNA.derivedSeed(
+                scene: seed,
+                domain: UInt64(plan.phraseIndex + memory.topologyRevision + 1),
+                index: plan.alternate ? 1 : 0
+            )
+            let kind = DSPGraphMutationKind.allCases[
+                Int(mutationSeed % UInt64(DSPGraphMutationKind.allCases.count))
+            ]
+            let index = Int((mutationSeed >> 11) % 5)
+            if kind == .bypass && (1...3).contains(index) {
+                selectedSeed = seed
+                selectedIndex = index
+                break
+            }
+        }
+        let sessionSeed = try #require(selectedSeed)
+        var nodes: [DSPGraphNode] = []
+        for index in 0..<5 {
+            let branch: Int
+            let order: Int
+            if index < selectedIndex {
+                branch = 0
+                order = index
+            } else if index == selectedIndex {
+                branch = 1
+                order = 0
+            } else {
+                branch = 2
+                order = index - selectedIndex - 1
+            }
+            nodes.append(DSPGraphNode(
+                id: index,
+                kind: .saturation,
+                branch: branch,
+                order: order,
+                amount: 0.25,
+                mix: 0.2
+            ))
+        }
+        let previous = DSPGraphPlan(
+            sessionSeed: sessionSeed,
+            revision: 1,
+            nodes: nodes,
+            mutation: DSPGraphMutation(
+                kind: .replace,
+                phraseIndex: max(0, plan.phraseIndex - 1),
+                affectedNodeIDs: [0]
+            )
+        )
+        #expect(DSPGraphValidator.validate(previous).valid)
+
+        let frozen = DSPGraphGenerator.plan(
+            sessionSeed: sessionSeed,
+            phrase: plan,
+            memory: memory,
+            previous: previous
+        )
+        #expect(frozen.hasSameTopology(as: previous))
+        #expect(frozen.mutation == nil)
     }
 
     @Test("Topology transitions crossfade for one bar and retire tails after two")
@@ -984,8 +1098,14 @@ struct AutonomousPreparationPreflightTests {
         var sessionB = director.initialState()
         let firstA = prepare(state: sessionA, sampleRate: 8_000)
         let firstB = prepare(state: sessionB, sampleRate: 8_000)
-        sessionA.advance(using: firstA.plan)
-        sessionB.advance(using: firstB.plan)
+        sessionA.advance(
+            using: firstA.plan,
+            quality: firstA.qualityContinuationState
+        )
+        sessionB.advance(
+            using: firstB.plan,
+            quality: firstB.qualityContinuationState
+        )
         let nextA = prepare(
             state: sessionA, sampleRate: 8_000,
             renderState: firstA.endingRenderState,
@@ -1919,7 +2039,7 @@ struct AutonomousPreparationPreflightTests {
     }
 
     @Test("Representative 44.1 and 48 kHz renders remain finite and bounded")
-    func deviceSampleRates() {
+    func deviceSampleRates() throws {
         for (seed, sampleRate) in [(UInt64(42), 44_100.0), (UInt64(90_909), 48_000.0)] {
             let prepared = prepare(seed: seed, sampleRate: sampleRate)
             let report = prepared.audioPreflight.quality
@@ -1928,6 +2048,31 @@ struct AutonomousPreparationPreflightTests {
             #expect(abs(report.dcOffset) < 0.05)
             #expect(report.lowStereoCorrelation > 0.94)
             #expect(report.maxBoundaryDelta < 0.65)
+            #expect(prepared.selectedCandidateEvidence.isComplete)
+            #expect(prepared.selectedCandidateEvidence.hardGatesPassed)
+            #expect(prepared.hardGatesPassed)
+            let qualification = try CanonicalJourneyQualificationReport(
+                engineVersion: QualityQualificationContract.engineVersion,
+                fixtureFingerprint: "device-rate-\(Int(sampleRate))",
+                continuationFingerprint: "device-rate-continuation-\(seed)",
+                checkpoint: .establishment,
+                routeFingerprint: prepared.selectedCandidateEvidence
+                    .routeContinuation.routeFingerprint,
+                routeGeneration: prepared.selectedCandidateEvidence
+                    .routeContinuation.routeGeneration,
+                selectedCandidateEvidence: prepared.selectedCandidateEvidence,
+                candidateEvaluation: prepared.candidateEvaluation,
+                commitProvenance: prepared.commitProvenance,
+                sampleHash: report.sampleHash,
+                decision: prepared.qualityDecision,
+                incomingState: prepared.incomingQualityState,
+                outgoingState: prepared.qualityContinuationState,
+                usedAlternate: prepared.usedAlternate,
+                usedFallback: prepared.usedFallback,
+                usedHomeTimbreFallback: prepared.usedHomeTimbreFallback,
+                correctionRenderCount: prepared.correctionRenderCount
+            )
+            #expect(qualification.commitProvenance == prepared.commitProvenance)
         }
     }
 
@@ -1976,7 +2121,8 @@ struct AutonomousPreparationPreflightTests {
             sampleRate: sampleRate,
             incomingRenderState: renderState,
             incomingGraphState: graphState,
-            previousGraph: previousGraph
+            previousGraph: previousGraph,
+            incomingQualityState: state.quality
         )
     }
 }
