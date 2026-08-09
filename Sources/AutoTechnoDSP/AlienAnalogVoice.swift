@@ -73,6 +73,16 @@ struct AlienVoiceState: Equatable, Sendable {
     }
 }
 
+/// The bounded spectral coordinate shared by resolved event metadata and the
+/// authored motif renderer. Keeping the composition here makes the exact
+/// lower and upper limits directly verifiable without rendering audio.
+package enum MotifSpectralSculpture {
+    package static func combinedMultiplier(narrativeScale: Double,
+                                           anchorScale: Double) -> Double {
+        min(1.16, max(0.84, narrativeScale * anchorScale))
+    }
+}
+
 /// One authored instrument topology shared by every upper musical role. It is
 /// rendered during detached preparation and never executes on AVAudioEngine's
 /// audio callback.
@@ -224,10 +234,22 @@ enum AlienAnalogVoice {
                 altered += altered * altered * (0.08 + mutation * 0.20)
 
                 let envelopeLift = state.envelope * 0.20
+                let articulationSpectralScale: Double
+                switch role {
+                case .anchor:
+                    articulationSpectralScale = MotifSpectralSculpture.combinedMultiplier(
+                        narrativeScale: narrativeSpectralScale,
+                        anchorScale: articulation.anchorSpectralScale
+                    )
+                case .shadow, .response:
+                    articulationSpectralScale = articulation.complementarySpectralScale
+                case .atmosphere, .transition:
+                    articulationSpectralScale = 1
+                }
                 let spectralScale = role == .anchor
                     ? [0.72, 1.0, 1.28][fingerprint.spectralRegion] *
-                        articulation.spectralScale * narrativeSpectralScale
-                    : articulation.spectralScale
+                        articulationSpectralScale
+                    : articulationSpectralScale
                 let baseCutoff = (170 + Double(world.variation) * 55 + roleIndex * 48) * spectralScale
                 let cutoff = min(oversampledRate * 0.18,
                                  baseCutoff + (1 - mutation) * 1_280 + envelopeLift * 1_850 +
@@ -246,7 +268,14 @@ enum AlienAnalogVoice {
                 state.mutationLow += (state.filter4 - state.mutationLow) * 0.013
                 let mutationHigh = state.filter4 - state.mutationLow
                 let blend = min(0.94, 0.24 + mutation * 0.70)
-                let voice = anchorBody * (1 - blend) + mutationHigh * blend
+                let unsculptedVoice = anchorBody * (1 - blend) + mutationHigh * blend
+                let bandPassVoice = state.filter2 - state.filter4
+                let eligibleForSpectralSculpture = role == .anchor ||
+                    role == .shadow || role == .response
+                let bandPassBlend = eligibleForSpectralSculpture
+                    ? min(0.15, max(0, articulation.bandPassBlend)) : 0
+                let voice = unsculptedVoice * (1 - bandPassBlend) +
+                    bandPassVoice * bandPassBlend
                 state.oversampleLow += (voice - state.oversampleLow) * 0.58
                     oversampleSum += state.oversampleLow
                 }
