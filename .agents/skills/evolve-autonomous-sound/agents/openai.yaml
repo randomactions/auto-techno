@@ -1,0 +1,4 @@
+interface:
+  display_name: "Evolve Autonomous Sound"
+  short_description: "Build unified automated sound improvements"
+  default_prompt: "Use $evolve-autonomous-sound to turn this sound-quality deficit into a unified, automatically qualified engine change."

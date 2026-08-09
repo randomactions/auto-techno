@@ -1,4 +1,0 @@
-interface:
-  display_name: "Evolve Techno Taste"
-  short_description: "Turn listening notes into testable music rules"
-  default_prompt: "Use $evolve-techno-taste to turn this listening feedback into a small, testable engine change."

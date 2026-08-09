@@ -1,41 +1,79 @@
-name: Musical feedback
-description: Share a concrete listening observation that can become a deterministic rule.
-title: "[Taste] "
+name: Sound-quality feedback
+description: Share an optional concrete observation that can become a measurable engine hypothesis.
+title: "[Quality] "
 labels:
   - musical-feedback
 body:
   - type: markdown
     attributes:
       value: |
-        Focus on what you heard, when it happened, and what musical change would improve it. Do not upload copyrighted reference audio or personal information.
+        Describe what you heard and where it occurred. Feedback is hypothesis input, not an approval vote. Do not upload copyrighted reference audio, private fixture state, personal information, or unsanitized logs.
   - type: input
-    id: seed
+    id: revision
     attributes:
-      label: Seed
-      description: Use a fixed seed when the observation comes from an offline reference render.
-      placeholder: "42"
-  - type: textarea
-    id: observation
-    attributes:
-      label: Concrete listening observation
-      description: Describe the moment, role, tension state, or groove behavior.
+      label: Auto Techno revision
+      description: Enter the commit SHA or release without a local filesystem path.
+      placeholder: "For example: d63a04a"
     validations:
       required: true
-  - type: textarea
-    id: direction
+  - type: input
+    id: quality_policy
     attributes:
-      label: Desired musical direction
-      description: Explain the intended change without prescribing a raw DSP control.
+      label: Quality-policy version
+      description: Include the report or policy version when visible; otherwise write "Unknown".
+      placeholder: "Unknown"
+    validations:
+      required: true
+  - type: input
+    id: checkpoint
+    attributes:
+      label: Structural checkpoint
+      description: Name the phrase/bar region or state, such as establishment, contrast, break, release, or identity return.
+      placeholder: "For example: first contrast, phrase 3 bar 7"
     validations:
       required: true
   - type: dropdown
+    id: dimension
+    attributes:
+      label: Affected quality dimension
+      options:
+        - Groove or intentional space
+        - Timbral identity or sound design
+        - Low end or role hierarchy
+        - Transients or dynamics
+        - Spectrum or masking
+        - Stereo depth or mono translation
+        - Tension or long-form structure
+        - Artifact, click, tail, or instability
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: observation
+    attributes:
+      label: Concrete observation
+      description: Describe the audible deficit without prescribing a raw DSP control.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected perceptible result
+      description: State what should become observably different and what should remain unchanged.
+    validations:
+      required: true
+  - type: textarea
+    id: automated_evidence
+    attributes:
+      label: Existing automated evidence
+      description: Add sanitized reason codes or report summaries when available. Do not include local paths or private fixture values.
+  - type: dropdown
     id: environment
     attributes:
-      label: Listening environment
+      label: Optional listening environment
       options:
+        - Not provided
         - Headphones
         - Speakers
         - Both
         - Other
-    validations:
-      required: true
