@@ -29,7 +29,7 @@ jobs:
         run: swift --version
 
       - name: Run tests
-        run: swift test --build-path "$RUNNER_TEMP/auto-techno-tests"
+        run: swift test --no-parallel --build-path "$RUNNER_TEMP/auto-techno-tests"
 
       - name: Build release app
         run: swift build -c release --product AutoTechno --build-path "$RUNNER_TEMP/auto-techno-release"
