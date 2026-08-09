@@ -19,6 +19,9 @@ package struct AudioQualityReport: Equatable, Sendable {
     package let finite: Bool
     package let sampleHash: String
     package let musical: MusicalQualityMetrics
+    /// Conservative sum of each streaming analyzer's peak scratch storage,
+    /// excluding the immutable source RenderBlocks required for playback.
+    package let analysisPeakWorkingByteCount: Int
 
     package init(blocks: [RenderBlock], sampleRate: Double) {
         guard let report = Self(
@@ -37,24 +40,26 @@ package struct AudioQualityReport: Equatable, Sendable {
         cancellationRequested: @escaping @Sendable () -> Bool
     ) {
         guard !cancellationRequested() else { return nil }
-        var left: [Float] = []
-        var right: [Float] = []
-        left.reserveCapacity(blocks.reduce(0) { $0 + $1.left.count })
-        right.reserveCapacity(blocks.reduce(0) { $0 + $1.right.count })
+        var computedFinite = true
+        var count = 0
         for block in blocks {
             guard !cancellationRequested() else { return nil }
-            left.append(contentsOf: block.left)
-            right.append(contentsOf: block.right)
+            computedFinite = computedFinite &&
+                block.left.count == block.right.count
+            for (index, sample) in block.left.enumerated() {
+                if index.isMultiple(of: 16_384), cancellationRequested() {
+                    return nil
+                }
+                computedFinite = computedFinite && sample.isFinite
+            }
+            for (index, sample) in block.right.enumerated() {
+                if index.isMultiple(of: 16_384), cancellationRequested() {
+                    return nil
+                }
+                computedFinite = computedFinite && sample.isFinite
+            }
+            count += min(block.left.count, block.right.count)
         }
-        guard let leftFinite = Self.samplesAreFinite(
-            left,
-            cancellationRequested: cancellationRequested
-        ), let rightFinite = Self.samplesAreFinite(
-            right,
-            cancellationRequested: cancellationRequested
-        ) else { return nil }
-        let computedFinite = leftFinite && rightFinite
-        let count = min(left.count, right.count)
         guard count > 0 else {
             analyzedFrameCount = 0
             peak = 0
@@ -69,6 +74,10 @@ package struct AudioQualityReport: Equatable, Sendable {
             finite = computedFinite
             sampleHash = "0000000000000000"
             musical = MusicalQualityMetrics(left: [], right: [], sampleRate: sampleRate)
+            analysisPeakWorkingByteCount =
+                musical.perceptualEvidence.peakWorkingByteCount +
+                musical.loudnessPeakWorkingByteCount +
+                2 * 12 * MemoryLayout<Double>.stride
             return
         }
         analyzedFrameCount = count
@@ -79,28 +88,43 @@ package struct AudioQualityReport: Equatable, Sendable {
         var cross = 0.0
         var leftEnergy = 0.0
         var rightEnergy = 0.0
-        for index in 0..<count {
-            if index.isMultiple(of: 16_384), cancellationRequested() { return nil }
-            let leftSample = left[index]
-            let rightSample = right[index]
-            computedPeak = max(computedPeak, abs(leftSample), abs(rightSample))
-            let leftSquare = Double(leftSample * leftSample)
-            let rightSquare = Double(rightSample * rightSample)
-            energy += leftSquare + rightSquare
-            sum += Double(leftSample + rightSample)
-            cross += Double(leftSample * rightSample)
-            leftEnergy += leftSquare
-            rightEnergy += rightSquare
+        var lowLeft = 0.0
+        var lowRight = 0.0
+        var lowCross = 0.0
+        var lowLeftEnergy = 0.0
+        var lowRightEnergy = 0.0
+        let lowPassCoefficient = Self.lowPassCoefficient(sampleRate: sampleRate)
+        var analyzed = 0
+        for block in blocks {
+            let blockCount = min(block.left.count, block.right.count)
+            for index in 0..<blockCount {
+                if analyzed.isMultiple(of: 16_384), cancellationRequested() {
+                    return nil
+                }
+                let leftSample = block.left[index]
+                let rightSample = block.right[index]
+                computedPeak = max(computedPeak, abs(leftSample), abs(rightSample))
+                let leftSquare = Double(leftSample * leftSample)
+                let rightSquare = Double(rightSample * rightSample)
+                energy += leftSquare + rightSquare
+                sum += Double(leftSample + rightSample)
+                cross += Double(leftSample * rightSample)
+                leftEnergy += leftSquare
+                rightEnergy += rightSquare
+                lowLeft += (Double(leftSample) - lowLeft) * lowPassCoefficient
+                lowRight += (Double(rightSample) - lowRight) * lowPassCoefficient
+                lowCross += lowLeft * lowRight
+                lowLeftEnergy += lowLeft * lowLeft
+                lowRightEnergy += lowRight * lowRight
+                analyzed += 1
+            }
         }
         peak = computedPeak
-        guard let leftTruePeak = BS1770AudioEvidence.truePeak(
-            left,
-            cancellationRequested: cancellationRequested
-        ), let rightTruePeak = BS1770AudioEvidence.truePeak(
-            right,
+        guard let stereoTruePeak = BS1770AudioEvidence.stereoTruePeak(
+            blocks: blocks,
             cancellationRequested: cancellationRequested
         ) else { return nil }
-        let computedTruePeak = max(leftTruePeak, rightTruePeak)
+        let computedTruePeak = max(stereoTruePeak.left, stereoTruePeak.right)
         truePeakEstimate = Float(computedTruePeak)
         truePeakDBTP = Float(
             BS1770AudioEvidence.decibelsTruePeak(amplitude: computedTruePeak)
@@ -110,20 +134,6 @@ package struct AudioQualityReport: Equatable, Sendable {
         stereoCorrelation = Float(
             cross / sqrt(max(0.0000001, leftEnergy * rightEnergy))
         )
-        var lowLeft = 0.0
-        var lowRight = 0.0
-        var lowCross = 0.0
-        var lowLeftEnergy = 0.0
-        var lowRightEnergy = 0.0
-        let lowPassCoefficient = Self.lowPassCoefficient(sampleRate: sampleRate)
-        for index in 0..<count {
-            if index.isMultiple(of: 16_384), cancellationRequested() { return nil }
-            lowLeft += (Double(left[index]) - lowLeft) * lowPassCoefficient
-            lowRight += (Double(right[index]) - lowRight) * lowPassCoefficient
-            lowCross += lowLeft * lowRight
-            lowLeftEnergy += lowLeft * lowLeft
-            lowRightEnergy += lowRight * lowRight
-        }
         lowStereoCorrelation = Float(
             lowCross / sqrt(max(0.0000001, lowLeftEnergy * lowRightEnergy))
         )
@@ -133,16 +143,19 @@ package struct AudioQualityReport: Equatable, Sendable {
         )
         finite = computedFinite
         guard let computedHash = Self.hash(
-            [left, right],
+            blocks: blocks,
             cancellationRequested: cancellationRequested
         ), let computedMusical = MusicalQualityMetrics(
-            left: left,
-            right: right,
+            blocks: blocks,
             sampleRate: sampleRate,
             cancellationRequested: cancellationRequested
         ) else { return nil }
         sampleHash = computedHash
         musical = computedMusical
+        analysisPeakWorkingByteCount =
+            computedMusical.perceptualEvidence.peakWorkingByteCount +
+            computedMusical.loudnessPeakWorkingByteCount +
+            2 * 12 * MemoryLayout<Double>.stride
         loudnessEstimate = Float(computedMusical.integratedLoudness)
     }
 
@@ -174,33 +187,24 @@ package struct AudioQualityReport: Equatable, Sendable {
         return result
     }
 
-    private static func samplesAreFinite(
-        _ samples: [Float],
-        cancellationRequested: @escaping @Sendable () -> Bool
-    ) -> Bool? {
-        var result = true
-        for index in samples.indices {
-            if index.isMultiple(of: 16_384), cancellationRequested() { return nil }
-            result = result && samples[index].isFinite
-        }
-        return result
-    }
-
     private static func hash(
-        _ channels: [[Float]],
+        blocks: [RenderBlock],
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> String? {
         var hash: UInt64 = 0xcbf29ce484222325
-        for channel in channels {
-            for (index, sample) in channel.enumerated() {
-                if index.isMultiple(of: 16_384), cancellationRequested() {
-                    return nil
-                }
-                var bits = sample.bitPattern
-                for _ in 0..<4 {
-                    hash ^= UInt64(bits & 0xff)
-                    hash &*= 0x100000001b3
-                    bits >>= 8
+        for channel in 0..<2 {
+            for block in blocks {
+                let samples = channel == 0 ? block.left : block.right
+                for (index, sample) in samples.enumerated() {
+                    if index.isMultiple(of: 16_384), cancellationRequested() {
+                        return nil
+                    }
+                    var bits = sample.bitPattern
+                    for _ in 0..<4 {
+                        hash ^= UInt64(bits & 0xff)
+                        hash &*= 0x100000001b3
+                        bits >>= 8
+                    }
                 }
             }
         }

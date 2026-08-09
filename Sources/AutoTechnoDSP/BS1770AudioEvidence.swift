@@ -8,6 +8,14 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
     package static let silenceFloorLKFS = -120.0
     package static let absoluteGateLKFS = -70.0
     package static let relativeGateOffsetLU = -10.0
+    /// A 16-bar phrase at the fixed 130 BPM lasts 29.54 seconds. The rounded
+    /// 32-second envelope leaves route-rounding headroom without allowing an
+    /// unbounded programme-energy collection.
+    package static let maximumProgrammeSeconds = 32.0
+    package static let maximumMomentaryBlockCount = 320
+    package static let maximumShortTermBlockCount = 32
+    private static let boundedAggregationScratchScalarCount =
+        maximumMomentaryBlockCount * 4 + maximumShortTermBlockCount * 3
 
     package let integratedLoudness: Double
     package let maximumMomentaryLoudness: Double
@@ -19,6 +27,8 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
     package let absoluteGatedBlockCount: Int
     package let relativeGatedBlockCount: Int
     package let shortTermBlockCount: Int
+    package let maximumBufferedFrameCount: Int
+    package let peakWorkingByteCount: Int
 
     package init(left: [Float], right: [Float], sampleRate: Double) {
         guard let measurement = Self(
@@ -38,45 +48,175 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
         sampleRate: Double,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) {
-        guard !cancellationRequested() else { return nil }
-        let count = min(left.count, right.count)
-        guard count > 0, sampleRate.isFinite, sampleRate > 0 else {
-            integratedLoudness = Self.silenceFloorLKFS
-            maximumMomentaryLoudness = Self.silenceFloorLKFS
-            maximumShortTermLoudness = Self.silenceFloorLKFS
-            loudnessRange = 0
-            momentaryBlockCount = 0
-            absoluteGatedBlockCount = 0
-            relativeGatedBlockCount = 0
-            shortTermBlockCount = 0
-            return
-        }
-
-        guard let energyPrefix = BS1770AudioEvidence.kWeightedStereoEnergyPrefix(
-            left: left,
-            right: right,
-            count: count,
+        guard let result = Self.streamingMeasurement(
+            chunks: [(left, right)],
             sampleRate: sampleRate,
             cancellationRequested: cancellationRequested
         ) else { return nil }
-        guard energyPrefix.last?.isFinite == true else {
-            integratedLoudness = .nan
-            maximumMomentaryLoudness = .nan
-            maximumShortTermLoudness = .nan
-            loudnessRange = .nan
-            momentaryBlockCount = 0
-            absoluteGatedBlockCount = 0
-            relativeGatedBlockCount = 0
-            shortTermBlockCount = 0
-            return
+        self = result
+    }
+
+    package init?(
+        blocks: [RenderBlock],
+        sampleRate: Double,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) {
+        guard let result = Self.streamingMeasurement(
+            chunks: blocks.map { ($0.left, $0.right) },
+            sampleRate: sampleRate,
+            cancellationRequested: cancellationRequested
+        ) else { return nil }
+        self = result
+    }
+
+    package init?(
+        leftChunks: [[Float]],
+        rightChunks: [[Float]],
+        sampleRate: Double,
+        cancellationRequested: @escaping @Sendable () -> Bool = { false }
+    ) {
+        guard leftChunks.count == rightChunks.count,
+              let result = Self.streamingMeasurement(
+                  chunks: zip(leftChunks, rightChunks).map { ($0, $1) },
+                  sampleRate: sampleRate,
+                  cancellationRequested: cancellationRequested
+              ) else { return nil }
+        self = result
+    }
+
+    private init(
+        integratedLoudness: Double,
+        maximumMomentaryLoudness: Double,
+        maximumShortTermLoudness: Double,
+        loudnessRange: Double,
+        momentaryBlockCount: Int,
+        absoluteGatedBlockCount: Int,
+        relativeGatedBlockCount: Int,
+        shortTermBlockCount: Int,
+        maximumBufferedFrameCount: Int,
+        peakWorkingByteCount: Int
+    ) {
+        self.integratedLoudness = integratedLoudness
+        self.maximumMomentaryLoudness = maximumMomentaryLoudness
+        self.maximumShortTermLoudness = maximumShortTermLoudness
+        self.loudnessRange = loudnessRange
+        self.momentaryBlockCount = momentaryBlockCount
+        self.absoluteGatedBlockCount = absoluteGatedBlockCount
+        self.relativeGatedBlockCount = relativeGatedBlockCount
+        self.shortTermBlockCount = shortTermBlockCount
+        self.maximumBufferedFrameCount = maximumBufferedFrameCount
+        self.peakWorkingByteCount = peakWorkingByteCount
+    }
+
+    private static func streamingMeasurement(
+        chunks: [([Float], [Float])],
+        sampleRate: Double,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> BS1770LoudnessMeasurement? {
+        guard !cancellationRequested() else { return nil }
+        let sourceFrameCount = chunks.reduce(0) {
+            $0 + min($1.0.count, $1.1.count)
+        }
+        guard sourceFrameCount > 0, sampleRate.isFinite, sampleRate > 0 else {
+            return BS1770LoudnessMeasurement(
+                integratedLoudness: silenceFloorLKFS,
+                maximumMomentaryLoudness: silenceFloorLKFS,
+                maximumShortTermLoudness: silenceFloorLKFS,
+                loudnessRange: 0,
+                momentaryBlockCount: 0,
+                absoluteGatedBlockCount: 0,
+                relativeGatedBlockCount: 0,
+                shortTermBlockCount: 0,
+                maximumBufferedFrameCount: 0,
+                peakWorkingByteCount: 0
+            )
+        }
+        guard let coefficients = BS1770AudioEvidence.kWeightingCoefficients(
+            sampleRate: sampleRate
+        ) else {
+            return BS1770LoudnessMeasurement(
+                integratedLoudness: .nan,
+                maximumMomentaryLoudness: .nan,
+                maximumShortTermLoudness: .nan,
+                loudnessRange: .nan,
+                momentaryBlockCount: 0,
+                absoluteGatedBlockCount: 0,
+                relativeGatedBlockCount: 0,
+                shortTermBlockCount: 0,
+                maximumBufferedFrameCount: 0,
+                peakWorkingByteCount: 0
+            )
+        }
+        var leftShelf = StreamingBiquadState()
+        var leftHighPass = StreamingBiquadState()
+        var rightShelf = StreamingBiquadState()
+        var rightHighPass = StreamingBiquadState()
+        var momentary = RollingEnergyWindow(
+            blockFrames: max(1, Int((sampleRate * 0.4).rounded())),
+            hopFrames: max(1, Int((sampleRate * 0.1).rounded())),
+            maximumEmissionCount: maximumMomentaryBlockCount
+        )
+        var shortTerm = RollingEnergyWindow(
+            blockFrames: max(1, Int((sampleRate * 3).rounded())),
+            hopFrames: max(1, Int(sampleRate.rounded())),
+            maximumEmissionCount: maximumShortTermBlockCount
+        )
+        let maximumBufferedFrameCount = momentary.blockFrames +
+            shortTerm.blockFrames
+        let peakWorkingByteCount = (
+            maximumBufferedFrameCount + boundedAggregationScratchScalarCount
+        ) * MemoryLayout<Double>.stride
+        var consumed = 0
+        var finite = true
+        for (left, right) in chunks {
+            let count = min(left.count, right.count)
+            for index in 0..<count {
+                if consumed.isMultiple(of: 16_384), cancellationRequested() {
+                    return nil
+                }
+                let leftSample = Double(left[index])
+                let rightSample = Double(right[index])
+                finite = finite && leftSample.isFinite && rightSample.isFinite
+                let filteredLeft = leftHighPass.process(
+                    leftShelf.process(
+                        leftSample,
+                        coefficients: coefficients.shelf
+                    ),
+                    coefficients: coefficients.highPass
+                )
+                let filteredRight = rightHighPass.process(
+                    rightShelf.process(
+                        rightSample,
+                        coefficients: coefficients.shelf
+                    ),
+                    coefficients: coefficients.highPass
+                )
+                let energy = filteredLeft * filteredLeft +
+                    filteredRight * filteredRight
+                momentary.consume(energy)
+                shortTerm.consume(energy)
+                consumed += 1
+            }
+        }
+        let momentaryEnergies = momentary.values
+        let shortTermEnergies = shortTerm.values
+        guard finite, !momentary.overflowed, !shortTerm.overflowed,
+              momentaryEnergies.allSatisfy(\.isFinite),
+              shortTermEnergies.allSatisfy(\.isFinite) else {
+            return BS1770LoudnessMeasurement(
+                integratedLoudness: .nan,
+                maximumMomentaryLoudness: .nan,
+                maximumShortTermLoudness: .nan,
+                loudnessRange: .nan,
+                momentaryBlockCount: 0,
+                absoluteGatedBlockCount: 0,
+                relativeGatedBlockCount: 0,
+                shortTermBlockCount: 0,
+                maximumBufferedFrameCount: maximumBufferedFrameCount,
+                peakWorkingByteCount: peakWorkingByteCount
+            )
         }
 
-        let momentaryEnergies = Self.blockEnergies(
-            prefix: energyPrefix,
-            frameCount: count,
-            blockFrames: max(1, Int((sampleRate * 0.4).rounded())),
-            hopFrames: max(1, Int((sampleRate * 0.1).rounded()))
-        )
         let momentaryLoudness = momentaryEnergies.map(Self.loudness(energy:))
         let absoluteGated = momentaryEnergies.filter {
             Self.loudness(energy: $0) > Self.absoluteGateLKFS
@@ -89,53 +229,99 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
             let value = Self.loudness(energy: $0)
             return value > Self.absoluteGateLKFS && value > relativeGate
         }
-        integratedLoudness = Self.loudness(
+        let integratedLoudness = Self.loudness(
             energy: Self.meanEnergy(relativeGated)
         )
-        maximumMomentaryLoudness = momentaryLoudness.max() ??
+        let maximumMomentaryLoudness = momentaryLoudness.max() ??
             Self.silenceFloorLKFS
-        momentaryBlockCount = momentaryEnergies.count
-        absoluteGatedBlockCount = absoluteGated.count
-        relativeGatedBlockCount = relativeGated.count
-
-        let shortTermEnergies = Self.blockEnergies(
-            prefix: energyPrefix,
-            frameCount: count,
-            blockFrames: max(1, Int((sampleRate * 3).rounded())),
-            hopFrames: max(1, Int(sampleRate.rounded()))
-        )
-        let shortTerm = shortTermEnergies.map(Self.loudness(energy:))
-        maximumShortTermLoudness = shortTerm.max() ?? integratedLoudness
-        shortTermBlockCount = shortTerm.count
+        let shortTermLoudness = shortTermEnergies.map(Self.loudness(energy:))
+        let maximumShortTermLoudness = shortTermLoudness.max() ?? integratedLoudness
         let loudnessRangeGate = max(
             Self.absoluteGateLKFS,
             integratedLoudness - 20
         )
-        let loudnessRangePopulation = shortTerm.filter {
+        let loudnessRangePopulation = shortTermLoudness.filter {
             $0 > loudnessRangeGate
         }.sorted()
-        loudnessRange = loudnessRangePopulation.count > 1
+        let loudnessRange = loudnessRangePopulation.count > 1
             ? Self.percentile(loudnessRangePopulation, 0.95) -
                 Self.percentile(loudnessRangePopulation, 0.10)
             : 0
+        return BS1770LoudnessMeasurement(
+            integratedLoudness: integratedLoudness,
+            maximumMomentaryLoudness: maximumMomentaryLoudness,
+            maximumShortTermLoudness: maximumShortTermLoudness,
+            loudnessRange: loudnessRange,
+            momentaryBlockCount: momentaryEnergies.count,
+            absoluteGatedBlockCount: absoluteGated.count,
+            relativeGatedBlockCount: relativeGated.count,
+            shortTermBlockCount: shortTermLoudness.count,
+            maximumBufferedFrameCount: maximumBufferedFrameCount,
+            peakWorkingByteCount: peakWorkingByteCount
+        )
     }
 
-    private static func blockEnergies(
-        prefix: [Double],
-        frameCount: Int,
-        blockFrames: Int,
-        hopFrames: Int
-    ) -> [Double] {
-        guard frameCount >= blockFrames else { return [] }
-        var result: [Double] = []
-        result.reserveCapacity(1 + (frameCount - blockFrames) / hopFrames)
-        var start = 0
-        while start + blockFrames <= frameCount {
-            let end = start + blockFrames
-            result.append((prefix[end] - prefix[start]) / Double(blockFrames))
-            start += hopFrames
+    private struct StreamingBiquadState {
+        var z1 = 0.0
+        var z2 = 0.0
+
+        mutating func process(
+            _ sample: Double,
+            coefficients: BS1770BiquadCoefficients
+        ) -> Double {
+            let output = coefficients.b0 * sample + z1
+            z1 = coefficients.b1 * sample - coefficients.a1 * output + z2
+            z2 = coefficients.b2 * sample - coefficients.a2 * output
+            return output
         }
-        return result
+    }
+
+    private struct RollingEnergyWindow {
+        let blockFrames: Int
+        let hopFrames: Int
+        let maximumEmissionCount: Int
+        var ring: [Double]
+        var writeIndex = 0
+        var consumedFrameCount = 0
+        var rollingSum = 0.0
+        var emittedEnergies: [Double]
+        var emittedCount = 0
+        var overflowed = false
+
+        init(blockFrames: Int, hopFrames: Int, maximumEmissionCount: Int) {
+            self.blockFrames = blockFrames
+            self.hopFrames = hopFrames
+            self.maximumEmissionCount = maximumEmissionCount
+            ring = [Double](repeating: 0, count: blockFrames)
+            emittedEnergies = [Double](
+                repeating: 0,
+                count: maximumEmissionCount
+            )
+        }
+
+        mutating func consume(_ energy: Double) {
+            if consumedFrameCount >= blockFrames {
+                rollingSum -= ring[writeIndex]
+            }
+            ring[writeIndex] = energy
+            rollingSum += energy
+            writeIndex = (writeIndex + 1) % blockFrames
+            consumedFrameCount += 1
+            if consumedFrameCount >= blockFrames,
+               (consumedFrameCount - blockFrames).isMultiple(of: hopFrames) {
+                if emittedCount < maximumEmissionCount {
+                    emittedEnergies[emittedCount] =
+                        rollingSum / Double(blockFrames)
+                    emittedCount += 1
+                } else {
+                    overflowed = true
+                }
+            }
+        }
+
+        var values: [Double] {
+            Array(emittedEnergies.prefix(emittedCount))
+        }
     }
 
     private static func loudness(energy: Double) -> Double {
@@ -248,65 +434,98 @@ package enum BS1770AudioEvidence {
         return max(samplePeak, filteredPeak)
     }
 
+    /// Fixed-memory stereo Annex 2 analysis over immutable render blocks. The
+    /// 12-sample FIR history is preserved across block boundaries, so results
+    /// are independent of render chunking and no phrase-sized channel copy is
+    /// required.
+    package static func stereoTruePeak(
+        blocks: [RenderBlock],
+        cancellationRequested: @escaping @Sendable () -> Bool = { false }
+    ) -> (left: Double, right: Double)? {
+        stereoTruePeak(
+            leftChunks: blocks.map(\.left),
+            rightChunks: blocks.map(\.right),
+            cancellationRequested: cancellationRequested
+        )
+    }
+
+    package static func stereoTruePeak(
+        leftChunks: [[Float]],
+        rightChunks: [[Float]],
+        cancellationRequested: @escaping @Sendable () -> Bool = { false }
+    ) -> (left: Double, right: Double)? {
+        guard !cancellationRequested() else { return nil }
+        guard leftChunks.count == rightChunks.count else {
+            return (.nan, .nan)
+        }
+        var leftAccumulator = StreamingTruePeakAccumulator()
+        var rightAccumulator = StreamingTruePeakAccumulator()
+        var consumed = 0
+        for (left, right) in zip(leftChunks, rightChunks) {
+            let count = min(left.count, right.count)
+            for index in 0..<count {
+                if consumed.isMultiple(of: 4_096), cancellationRequested() {
+                    return nil
+                }
+                leftAccumulator.consume(Double(left[index]))
+                rightAccumulator.consume(Double(right[index]))
+                consumed += 1
+            }
+        }
+        leftAccumulator.flush()
+        rightAccumulator.flush()
+        return (leftAccumulator.peak, rightAccumulator.peak)
+    }
+
     package static func decibelsTruePeak(amplitude: Double) -> Double {
         guard amplitude.isFinite else { return .nan }
         guard amplitude > 0 else { return -120 }
         return 20 * log10(amplitude)
     }
 
-    private struct BiquadState {
-        var z1 = 0.0
-        var z2 = 0.0
+    private struct StreamingTruePeakAccumulator {
+        private let tapCount = annex2PolyphaseCoefficients[0].count
+        private var history = [Double](
+            repeating: 0,
+            count: annex2PolyphaseCoefficients[0].count
+        )
+        private var writeIndex = 0
+        private var samplePeak = 0.0
+        private var filteredPeak = 0.0
+        private var finite = true
 
-        mutating func process(
-            _ sample: Double,
-            coefficients: BS1770BiquadCoefficients
-        ) -> Double {
-            let output = coefficients.b0 * sample + z1
-            z1 = coefficients.b1 * sample - coefficients.a1 * output + z2
-            z2 = coefficients.b2 * sample - coefficients.a2 * output
-            return output
+        mutating func consume(_ sample: Double) {
+            guard sample.isFinite else {
+                finite = false
+                return
+            }
+            samplePeak = max(samplePeak, abs(sample))
+            convolve(sample)
         }
-    }
 
-    fileprivate static func kWeightedStereoEnergyPrefix(
-        left: [Float],
-        right: [Float],
-        count: Int,
-        sampleRate: Double,
-        cancellationRequested: @escaping @Sendable () -> Bool
-    ) -> [Double]? {
-        guard let coefficients = kWeightingCoefficients(sampleRate: sampleRate) else {
-            return [Double](repeating: .nan, count: count + 1)
+        mutating func flush() {
+            guard finite else { return }
+            for _ in 0..<(tapCount - 1) { convolve(0) }
         }
-        var leftShelf = BiquadState()
-        var leftHighPass = BiquadState()
-        var rightShelf = BiquadState()
-        var rightHighPass = BiquadState()
-        var prefix: [Double] = [0]
-        prefix.reserveCapacity(count + 1)
-        var accumulatedEnergy = 0.0
-        for index in 0..<count {
-            if index.isMultiple(of: 16_384), cancellationRequested() { return nil }
-            let filteredLeft = leftHighPass.process(
-                leftShelf.process(
-                    Double(left[index]),
-                    coefficients: coefficients.shelf
-                ),
-                coefficients: coefficients.highPass
-            )
-            let filteredRight = rightHighPass.process(
-                rightShelf.process(
-                    Double(right[index]),
-                    coefficients: coefficients.shelf
-                ),
-                coefficients: coefficients.highPass
-            )
-            accumulatedEnergy += filteredLeft * filteredLeft +
-                filteredRight * filteredRight
-            prefix.append(accumulatedEnergy)
+
+        var peak: Double {
+            finite ? max(samplePeak, filteredPeak) : .nan
         }
-        return prefix
+
+        private mutating func convolve(_ sample: Double) {
+            history[writeIndex] = sample
+            let newest = writeIndex
+            writeIndex = (writeIndex + 1) % tapCount
+            for phase in annex2PolyphaseCoefficients.indices {
+                var value = 0.0
+                for tap in 0..<tapCount {
+                    let historyIndex = (newest - tap + tapCount) % tapCount
+                    value += annex2PolyphaseCoefficients[phase][tap] *
+                        history[historyIndex]
+                }
+                filteredPeak = max(filteredPeak, abs(value))
+            }
+        }
     }
 
     /// Columns from the Recommendation's order-48, four-phase FIR table.
