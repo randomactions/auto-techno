@@ -202,6 +202,85 @@ package struct SpatialContrastState: Equatable, Sendable {
     }
 }
 
+/// Phrase-scale movement of the dominant motif. The direction is derived from
+/// the resolved presence endpoints and coordinates additive support without
+/// changing the motif's pitch, rhythm, or timbral identity.
+package enum NarrativeDirection: String, CaseIterable, Sendable {
+    case emerging
+    case holding
+    case receding
+}
+
+/// Fully resolved protagonist contour and supporting-role state for one bar.
+/// Renderers consume the same interpolation that metadata reports.
+package struct NarrativeArticulation: Equatable, Sendable {
+    package let direction: NarrativeDirection
+    package let presenceStart: Double
+    package let presenceEnd: Double
+    package let activeSupportingRoles: [PerformanceRole]
+
+    package init(presenceStart: Double, presenceEnd: Double,
+                 activeSupportingRoles: [PerformanceRole]) {
+        self.presenceStart = Self.clamp(presenceStart)
+        self.presenceEnd = Self.clamp(presenceEnd)
+        if self.presenceEnd > self.presenceStart + 0.000_001 {
+            direction = .emerging
+        } else if self.presenceEnd < self.presenceStart - 0.000_001 {
+            direction = .receding
+        } else {
+            direction = .holding
+        }
+        self.activeSupportingRoles = Self.supportingRoles(activeSupportingRoles)
+    }
+
+    package static let initial = NarrativeArticulation(
+        presenceStart: 0.50,
+        presenceEnd: 0.50,
+        activeSupportingRoles: [.percussion]
+    )
+
+    package func presence(atStep step: Int) -> Double {
+        let boundedStep = min(15, max(0, step))
+        let progress = Double(boundedStep) / 15
+        return presenceStart + (presenceEnd - presenceStart) * progress
+    }
+
+    package func motifGainScale(atStep step: Int) -> Double {
+        0.82 + 0.28 * presence(atStep: step)
+    }
+
+    package func motifSpectralScale(atStep step: Int) -> Double {
+        0.94 + 0.12 * presence(atStep: step)
+    }
+
+    fileprivate static func supportingRoles(_ roles: [PerformanceRole]) -> [PerformanceRole] {
+        let allowed: [PerformanceRole] = [.percussion, .response, .atmosphere]
+        let requested = Set(roles)
+        return allowed.filter(requested.contains)
+    }
+
+    private static func clamp(_ value: Double) -> Double {
+        min(1, max(0, value))
+    }
+}
+
+/// Bounded cross-phrase state for the narrative protagonist and its three
+/// possible supporting roles. A pending release settlement preserves the
+/// exact 0.90 macro peak when that peak lands on a phrase's final boundary.
+package struct NarrativeEvolutionState: Equatable, Sendable {
+    package private(set) var protagonistPresence: Double
+    package private(set) var activeSupportingRoles: [PerformanceRole]
+    package private(set) var releaseSettlementPending: Bool
+
+    package init(protagonistPresence: Double = 0.50,
+                 activeSupportingRoles: [PerformanceRole] = [.percussion],
+                 releaseSettlementPending: Bool = false) {
+        self.protagonistPresence = min(1, max(0, protagonistPresence))
+        self.activeSupportingRoles = NarrativeArticulation.supportingRoles(activeSupportingRoles)
+        self.releaseSettlementPending = releaseSettlementPending
+    }
+}
+
 package struct EnsembleEventProposal: Equatable, Sendable {
     package let voice: EnsembleVoice
     package let requestedStep: Int
@@ -267,13 +346,15 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let interlockChapter: InterlockChapter
     package let groovePulses: [GroovePulseArticulation]
     package let spatialContrast: SpatialContrastArticulation
+    package let narrative: NarrativeArticulation
 
     package init(performance: PerformanceBar, ensemble: EnsembleContext,
                  arrangementGesture: ArrangementGesture, percussionGear: PercussionGear,
                  foundationCompanion: FoundationCompanion, pulseEchoEnabled: Bool,
                  interlockChapter: InterlockChapter,
                  groovePulses: [GroovePulseArticulation] = [],
-                 spatialContrast: SpatialContrastArticulation = .foreground) {
+                 spatialContrast: SpatialContrastArticulation = .foreground,
+                 narrative: NarrativeArticulation = .initial) {
         self.performance = performance
         self.ensemble = ensemble
         self.arrangementGesture = arrangementGesture
@@ -283,6 +364,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.interlockChapter = interlockChapter
         self.groovePulses = groovePulses.sorted { $0.step < $1.step }
         self.spatialContrast = spatialContrast
+        self.narrative = narrative
     }
 
     package func groovePulse(at step: Int) -> GroovePulseArticulation? {
@@ -464,6 +546,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
     package private(set) var openDebts: [SessionDramaticDebt]
     package private(set) var interlockEvolution: InterlockEvolutionState
     package private(set) var spatialContrast: SpatialContrastState
+    package private(set) var narrativeEvolution: NarrativeEvolutionState
 
     package init(recentBars: [MusicalMemoryBar] = [], currentPhrase: [MusicalMemoryBar] = [],
                 previousPhrase: [MusicalMemoryBar] = [], dramaticArc: [MusicalMemoryBar] = [],
@@ -472,7 +555,8 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
                 lastReleaseBar: Int? = nil, lastIdentityReturnBar: Int? = nil,
                 topologyRevision: Int = 0, openDebts: [SessionDramaticDebt] = [],
                 interlockEvolution: InterlockEvolutionState = InterlockEvolutionState(),
-                spatialContrast: SpatialContrastState = SpatialContrastState()) {
+                spatialContrast: SpatialContrastState = SpatialContrastState(),
+                narrativeEvolution: NarrativeEvolutionState = NarrativeEvolutionState()) {
         self.recentBars = Array(recentBars.suffix(4))
         self.currentPhrase = Array(currentPhrase.suffix(16))
         self.previousPhrase = Array(previousPhrase.suffix(16))
@@ -487,6 +571,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         self.openDebts = openDebts
         self.interlockEvolution = interlockEvolution
         self.spatialContrast = spatialContrast
+        self.narrativeEvolution = narrativeEvolution
     }
 
     package var barsSinceContrast: Int { distance(since: lastContrastBar) }
@@ -502,6 +587,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         totalBars = plan.startBar + plan.barCount
         interlockEvolution = plan.endingInterlockState
         spatialContrast = plan.endingSpatialContrastState
+        narrativeEvolution = plan.endingNarrativeState
 
         switch plan.kind {
         case .contrast:
@@ -621,6 +707,7 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let interest: PhraseInterestReport
     package let endingInterlockState: InterlockEvolutionState
     package let endingSpatialContrastState: SpatialContrastState
+    package let endingNarrativeState: NarrativeEvolutionState
 
     package init(phraseIndex: Int, startBar: Int, barCount: Int,
                  kind: AutonomousPhraseKind, scene: TechnoScene, dna: SceneDNA,
@@ -628,7 +715,8 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
                  paidDebtIDs: [Int], requestsTopologyMutation: Bool,
                  alternate: Bool, conservative: Bool, interest: PhraseInterestReport,
                  endingInterlockState: InterlockEvolutionState,
-                 endingSpatialContrastState: SpatialContrastState = SpatialContrastState()) {
+                 endingSpatialContrastState: SpatialContrastState = SpatialContrastState(),
+                 endingNarrativeState: NarrativeEvolutionState = NarrativeEvolutionState()) {
         self.phraseIndex = phraseIndex
         self.startBar = startBar
         self.barCount = barCount
@@ -644,6 +732,7 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
         self.interest = interest
         self.endingInterlockState = endingInterlockState
         self.endingSpatialContrastState = endingSpatialContrastState
+        self.endingNarrativeState = endingNarrativeState
     }
 
     package var memoryBars: [MusicalMemoryBar] {
@@ -878,14 +967,41 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         resolvedBars.reserveCapacity(length)
         var interlockState = state.memory.interlockEvolution
         var spatialContrastState = state.memory.spatialContrast
+        let narrativeTrajectory = narrativePresenceTrajectory(
+            initialPresence: state.memory.narrativeEvolution.protagonistPresence,
+            settlementPending: state.memory.narrativeEvolution.releaseSettlementPending,
+            kind: kind,
+            startBar: start,
+            length: length
+        )
+        var activeSupportingRoles = kind == .majorBreak
+            ? [PerformanceRole.atmosphere]
+            : state.memory.narrativeEvolution.activeSupportingRoles
 
         for localBar in 0..<length {
             let progress = length == 1 ? 1 : Double(localBar) / Double(length - 1)
             let tension = tension(kind: kind, progress: progress, prior: state.memory.currentPhrase.last?.tension ?? 0.42)
             let transformations = transformations(kind: kind, localBar: localBar, length: length,
                                                    alternate: alternate, seed: phraseSeed)
-            let roles = roles(kind: kind, focus: focusRole, localBar: localBar, length: length)
             let absoluteBar = start + localBar
+            let proposedRoles = roles(
+                kind: kind,
+                focus: focusRole,
+                localBar: localBar,
+                length: length
+            )
+            let narrativeStart = localBar == 0
+                ? state.memory.narrativeEvolution.protagonistPresence
+                : narrativeTrajectory.endpoints[localBar - 1]
+            let narrative = NarrativeArticulation(
+                presenceStart: narrativeStart,
+                presenceEnd: narrativeTrajectory.endpoints[localBar],
+                activeSupportingRoles: activeSupportingRoles
+            )
+            let resolvedRoles = narrativeResolvedRoles(
+                proposed: proposedRoles,
+                activeSupportingRoles: activeSupportingRoles
+            )
             if absoluteBar > 0, absoluteBar.isMultiple(of: 16) {
                 let chapterEntropy = SceneDNA.derivedSeed(
                     scene: state.rootSeed,
@@ -915,7 +1031,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 phraseLength: length,
                 section: section,
                 tension: tension,
-                roles: roles,
+                roles: resolvedRoles,
                 transformations: transformations,
                 signatureEvent: signature,
                 eventSeed: SceneDNA.derivedSeed(scene: phraseSeed, domain: 0xBA2, index: localBar),
@@ -958,8 +1074,18 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 pulseEchoEnabled: echoEnabled,
                 interlockChapter: interlockState.currentChapter,
                 groovePulses: groovePulses,
-                spatialContrast: spatialContrast
+                spatialContrast: spatialContrast,
+                narrative: narrative
             ))
+            activeSupportingRoles = narrativeSupportingRolesAfterBoundary(
+                current: activeSupportingRoles,
+                proposed: proposedRoles,
+                focus: focusRole,
+                kind: kind,
+                gesture: gesture,
+                direction: narrative.direction,
+                absoluteBar: absoluteBar
+            )
         }
 
         let openedDebt: SessionDramaticDebt?
@@ -980,6 +1106,12 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             memory: state.memory,
             identityPreserved: scene.seed == state.identitySeed
         )
+        let endingNarrativeState = NarrativeEvolutionState(
+            protagonistPresence: narrativeTrajectory.endpoints.last ??
+                state.memory.narrativeEvolution.protagonistPresence,
+            activeSupportingRoles: activeSupportingRoles,
+            releaseSettlementPending: narrativeTrajectory.settlementPending
+        )
         return AutonomousPhrasePlan(
             phraseIndex: state.phraseIndex,
             startBar: start,
@@ -996,7 +1128,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             conservative: conservative,
             interest: interest,
             endingInterlockState: interlockState,
-            endingSpatialContrastState: spatialContrastState
+            endingSpatialContrastState: spatialContrastState,
+            endingNarrativeState: endingNarrativeState
         )
     }
 
@@ -1019,6 +1152,114 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             let palette: [PerformanceRole] = [.foundation, .percussion, .motif, .atmosphere]
             return palette[Int(seed % UInt64(palette.count))]
         }
+    }
+
+    private func narrativePresenceTrajectory(initialPresence: Double,
+                                             settlementPending: Bool,
+                                             kind: AutonomousPhraseKind,
+                                             startBar: Int,
+                                             length: Int) ->
+        (endpoints: [Double], settlementPending: Bool) {
+        guard length > 0 else { return ([], settlementPending) }
+
+        if kind == .energyRelease {
+            let peakIndex = (0..<length).first {
+                (startBar + $0 + 1).isMultiple(of: 16)
+            } ?? (length - 1)
+            var endpoints: [Double] = []
+            endpoints.reserveCapacity(length)
+            for index in 0...peakIndex {
+                let progress = Double(index + 1) / Double(peakIndex + 1)
+                endpoints.append(initialPresence + (0.90 - initialPresence) * progress)
+            }
+            let settlingBars = length - peakIndex - 1
+            if settlingBars > 0 {
+                for settlingIndex in 1...settlingBars {
+                    let progress = Double(settlingIndex) / Double(settlingBars)
+                    endpoints.append(0.90 + (0.60 - 0.90) * progress)
+                }
+            }
+            return (endpoints, settlingBars == 0)
+        }
+
+        let target: Double
+        switch kind {
+        case .lock: target = 0.56
+        case .contrast: target = 0.76
+        case .majorBreak: target = 0.20
+        case .identityReturn: target = 0.58
+        case .energyRelease: target = 0.60
+        }
+
+        var endpoints: [Double] = []
+        endpoints.reserveCapacity(length)
+        if settlementPending {
+            endpoints.append(0.60)
+            let remainingBars = length - 1
+            if remainingBars > 0 {
+                for index in 1..<length {
+                    let progress = Double(index) / Double(remainingBars)
+                    endpoints.append(0.60 + (target - 0.60) * progress)
+                }
+            }
+        } else {
+            for index in 0..<length {
+                let progress = Double(index + 1) / Double(length)
+                endpoints.append(initialPresence + (target - initialPresence) * progress)
+            }
+        }
+        return (endpoints, false)
+    }
+
+    private func narrativeResolvedRoles(proposed: [PerformanceRole],
+                                        activeSupportingRoles: [PerformanceRole])
+        -> [PerformanceRole] {
+        proposed.filter { role in
+            switch role {
+            case .foundation, .motif, .transition:
+                return true
+            case .percussion, .response, .atmosphere:
+                return activeSupportingRoles.contains(role)
+            }
+        }
+    }
+
+    private func narrativeSupportingRolesAfterBoundary(
+        current: [PerformanceRole], proposed: [PerformanceRole],
+        focus: PerformanceRole, kind: AutonomousPhraseKind,
+        gesture: ArrangementGesture, direction: NarrativeDirection,
+        absoluteBar: Int
+    ) -> [PerformanceRole] {
+        if kind == .majorBreak {
+            return proposed.contains(.atmosphere) ? [.atmosphere] : []
+        }
+        guard (absoluteBar + 1).isMultiple(of: 4) else { return current }
+
+        if kind == .identityReturn, (absoluteBar + 1).isMultiple(of: 16) {
+            return NarrativeArticulation.supportingRoles(current + [.percussion])
+        }
+
+        if direction == .receding, gesture == .turnaround, !current.isEmpty {
+            let removalPriority: [PerformanceRole] = [.atmosphere, .response, .percussion]
+            let selected = removalPriority.first {
+                current.contains($0) && $0 != focus
+            } ?? removalPriority.first(where: current.contains)
+            guard let selected else { return current }
+            return NarrativeArticulation.supportingRoles(
+                current.filter { $0 != selected }
+            )
+        }
+
+        let mayAdd = direction == .emerging || kind == .contrast || kind == .energyRelease
+        guard mayAdd, gesture != .minimalize else { return current }
+        let supportRoles: [PerformanceRole] = [.percussion, .response, .atmosphere]
+        var admissionPriority: [PerformanceRole] = []
+        if supportRoles.contains(focus) { admissionPriority.append(focus) }
+        admissionPriority += supportRoles.filter { $0 != focus }
+        guard let selected = admissionPriority.first(where: {
+            proposed.contains($0) && !current.contains($0)
+        }) else { return current }
+        return NarrativeArticulation.supportingRoles(current + [selected])
     }
 
     private func roles(kind: AutonomousPhraseKind, focus: PerformanceRole,

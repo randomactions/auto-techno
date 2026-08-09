@@ -32,12 +32,20 @@ package struct VoiceEvent: Equatable, Sendable {
     package let timingOffsetInSteps: Double
     package let spatialDepthPosition: SpatialDepthPosition
     package let spatialReverbSend: Double
+    package let narrativeDirection: NarrativeDirection?
+    package let narrativePresence: Double?
+    package let narrativeGainScale: Double?
+    package let narrativeSpectralScale: Double?
 
     package init(voice: VoiceKind, bar: Int, step: Int, intensity: Double,
                  pulseClass: SixteenthPulseClass? = nil,
                  timingOffsetInSteps: Double = 0,
                  spatialDepthPosition: SpatialDepthPosition = .foreground,
-                 spatialReverbSend: Double = 0) {
+                 spatialReverbSend: Double = 0,
+                 narrativeDirection: NarrativeDirection? = nil,
+                 narrativePresence: Double? = nil,
+                 narrativeGainScale: Double? = nil,
+                 narrativeSpectralScale: Double? = nil) {
         self.voice = voice
         self.bar = bar
         self.step = step
@@ -46,6 +54,10 @@ package struct VoiceEvent: Equatable, Sendable {
         self.timingOffsetInSteps = timingOffsetInSteps
         self.spatialDepthPosition = spatialDepthPosition
         self.spatialReverbSend = min(1, max(0, spatialReverbSend))
+        self.narrativeDirection = narrativeDirection
+        self.narrativePresence = narrativePresence
+        self.narrativeGainScale = narrativeGainScale
+        self.narrativeSpectralScale = narrativeSpectralScale
     }
 }
 
@@ -375,6 +387,8 @@ package enum AutonomousPhraseRenderer {
                 let spatial = resolved.spatialContrast
                 let isSpatialCarrier = spatial.depthPosition == .distant &&
                     spatial.carrierVoice == event.voice && spatial.carrierStep == event.step
+                let isDominantMotif = event.voice == .motif
+                let narrative = resolved.narrative
                 return VoiceEvent(
                     voice: voiceKind(event.voice),
                     bar: performance.bar,
@@ -386,7 +400,14 @@ package enum AutonomousPhraseRenderer {
                             for: event.voice, step: event.step, dna: plan.dna
                         ),
                     spatialDepthPosition: isSpatialCarrier ? .distant : .foreground,
-                    spatialReverbSend: isSpatialCarrier ? spatial.reverbSend : 0
+                    spatialReverbSend: isSpatialCarrier ? spatial.reverbSend : 0,
+                    narrativeDirection: isDominantMotif ? narrative.direction : nil,
+                    narrativePresence: isDominantMotif
+                        ? narrative.presence(atStep: event.step) : nil,
+                    narrativeGainScale: isDominantMotif
+                        ? narrative.motifGainScale(atStep: event.step) : nil,
+                    narrativeSpectralScale: isDominantMotif
+                        ? narrative.motifSpectralScale(atStep: event.step) : nil
                 )
             }
             let buses = busStates(rendered: rendered, scene: plan.scene, events: events)

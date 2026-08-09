@@ -547,6 +547,7 @@ package enum VoiceRenderer {
                 let accent = performance.accent(at: event.stepIndex)
                 let articulation = synthBar.articulation(at: event.stepIndex)
                 let spatial = spatialScales(for: .motif, step: event.stepIndex)
+                let narrative = resolved.narrative
                 return AlienVoiceNote(
                     startFrame: Int((Double(event.stepIndex) * stepFrames).rounded()),
                     durationFrames: max(1, Int((event.durationInSteps * stepFrames).rounded())),
@@ -556,7 +557,9 @@ package enum VoiceRenderer {
                     role: .anchor,
                     articulation: articulation,
                     dryScale: spatial.dry,
-                    spatialReverbSend: spatial.send
+                    spatialReverbSend: spatial.send,
+                    narrativeGainScale: narrative.motifGainScale(atStep: event.stepIndex),
+                    narrativeSpectralScale: narrative.motifSpectralScale(atStep: event.stepIndex)
                 )
             }
         }
@@ -585,7 +588,9 @@ package enum VoiceRenderer {
                     role: .shadow,
                     articulation: event.articulation,
                     dryScale: 1,
-                    spatialReverbSend: 0
+                    spatialReverbSend: 0,
+                    narrativeGainScale: 1,
+                    narrativeSpectralScale: 1
                 )
             }
         }
@@ -614,7 +619,9 @@ package enum VoiceRenderer {
                     role: .atmosphere,
                     articulation: .neutral,
                     dryScale: spatial.dry,
-                    spatialReverbSend: spatial.send
+                    spatialReverbSend: spatial.send,
+                    narrativeGainScale: 1,
+                    narrativeSpectralScale: 1
                 )
             }
         }
@@ -645,7 +652,9 @@ package enum VoiceRenderer {
                     role: .response,
                     articulation: articulation,
                     dryScale: spatial.dry,
-                    spatialReverbSend: spatial.send
+                    spatialReverbSend: spatial.send,
+                    narrativeGainScale: 1,
+                    narrativeSpectralScale: 1
                 )
             }
         }
@@ -674,7 +683,9 @@ package enum VoiceRenderer {
                     role: .transition,
                     articulation: .neutral,
                     dryScale: spatial.dry,
-                    spatialReverbSend: spatial.send
+                    spatialReverbSend: spatial.send,
+                    narrativeGainScale: 1,
+                    narrativeSpectralScale: 1
                 )
             }
         }
