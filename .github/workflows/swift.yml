@@ -31,14 +31,31 @@ jobs:
       # Swift Testing retains substantial render fixtures for the lifetime of
       # one test process on the hosted macOS runner. Keep execution serial and
       # restart the process between PCM-heavy groups so the complete test bank
-      # stays bounded without skipping or weakening any case. The two route-rate
-      # products each receive their own process while reusing the compiled tests.
-      - name: Run upper-timbre integration tests
+      # stays bounded without skipping or weakening any case. Each bounded group
+      # reuses the same compiled test bundle in a fresh process.
+      - name: Run upper vertical-slice integration tests
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter UpperTimbreIntegrationTests
-          --skip 'closedHatCompanion(8K|12K)RoutePreparation'
+          --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice|closedHatDecayPlanFingerprint|closedHatCompanionRenderEvidenceTampering|boundedPreparationInputs)'
+
+      - name: Run upper transaction integration tests A
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(atomicPreparedContinuation|boundedCandidateSelection|candidateBoundaryCancellation|equivalentPreparedTransactionsAcrossRates)'
+
+      - name: Run pulse-echo binding integration test
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter pulseEchoReturnBindingTampering
+
+      - name: Run upper transaction integration tests B
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(conservativeFallbackGrooveCellIsCanonical|pairedCorrectionOrder|pairedEvaluatorTransaction|phraseBoundaryEvidence|rejectedCandidateIsolation|representativeRateIntent)'
 
       - name: Run 8 kHz closed-hat route preparation
         run: >-
@@ -56,7 +73,7 @@ jobs:
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(AdaptiveAutonomousSessionTests|GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|RepositorySurfaceTests|IdentityReturnContinuationTests|InstrumentPaletteTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
+          --filter '(AdaptiveAutonomousSessionTests|GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|RepositorySurfaceTests|IdentityReturnContinuationTests|InstrumentPaletteTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
 
       - name: Run preparation preflight tests
         run: >-
