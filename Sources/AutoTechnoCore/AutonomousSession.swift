@@ -85,6 +85,123 @@ package enum EnsembleVoice: String, CaseIterable, Sendable {
     }
 }
 
+/// A relational depth intention for an already-resolved event. Foreground is
+/// the neutral, fully dry position; distant events retain their onset and
+/// identity while a filtered send places them behind the groove.
+package enum SpatialDepthPosition: String, CaseIterable, Sendable {
+    case foreground
+    case distant
+}
+
+/// Immutable spatial values shared by event metadata and detached rendering.
+/// The optional carrier identity makes a foreground bar explicit without
+/// inventing a placeholder event that could diverge from the ensemble score.
+package struct SpatialContrastArticulation: Equatable, Sendable {
+    package let depthPosition: SpatialDepthPosition
+    package let carrierVoice: EnsembleVoice?
+    package let carrierStep: Int?
+    package let dryScale: Double
+    package let reverbSend: Double
+    package let highPassHz: Double
+    package let lowPassHz: Double
+
+    package init(depthPosition: SpatialDepthPosition,
+                 carrierVoice: EnsembleVoice?, carrierStep: Int?,
+                 dryScale: Double, reverbSend: Double,
+                 highPassHz: Double, lowPassHz: Double) {
+        let normalizedStep = carrierStep.map(Self.step)
+        let hasCarrier = carrierVoice != nil && normalizedStep != nil
+        self.depthPosition = hasCarrier ? depthPosition : .foreground
+        self.carrierVoice = hasCarrier ? carrierVoice : nil
+        self.carrierStep = hasCarrier ? normalizedStep : nil
+        self.dryScale = hasCarrier ? min(1, max(0, dryScale)) : 1
+        self.reverbSend = hasCarrier ? min(1, max(0, reverbSend)) : 0
+        self.highPassHz = min(20_000, max(20, highPassHz))
+        self.lowPassHz = min(20_000, max(self.highPassHz, lowPassHz))
+    }
+
+    package static let foreground = SpatialContrastArticulation(
+        depthPosition: .foreground,
+        carrierVoice: nil,
+        carrierStep: nil,
+        dryScale: 1,
+        reverbSend: 0,
+        highPassHz: 300,
+        lowPassHz: 4_200
+    )
+
+    package func applies(to event: EnsembleResolvedEvent) -> Bool {
+        carrierVoice == event.voice && carrierStep == event.step
+    }
+
+    private static func step(_ value: Int) -> Int {
+        ((value % 16) + 16) % 16
+    }
+}
+
+/// Bounded cross-phrase memory for the selective depth gesture. Retaining the
+/// last macro prevents adaptive phrase boundaries from selecting two distant
+/// carriers inside one global sixteen-bar macro.
+package struct SpatialContrastState: Equatable, Sendable {
+    package private(set) var previousCarrierVoice: EnsembleVoice?
+    package private(set) var lastCarrierMacroIndex: Int?
+
+    package init(previousCarrierVoice: EnsembleVoice? = nil,
+                 lastCarrierMacroIndex: Int? = nil) {
+        self.previousCarrierVoice = previousCarrierVoice
+        self.lastCarrierMacroIndex = lastCarrierMacroIndex.map { max(0, $0) }
+    }
+
+    package func resolving(ensemble: EnsembleContext,
+                           kind: AutonomousPhraseKind,
+                           gesture: ArrangementGesture,
+                           absoluteBar: Int) -> (SpatialContrastArticulation, SpatialContrastState) {
+        let eligibleVoices: [EnsembleVoice]
+        let send: Double
+        switch (kind, gesture) {
+        case (.contrast, .turnaround):
+            eligibleVoices = [.response, .transition]
+            send = 0.22
+        case (.majorBreak, .structuralMarker):
+            eligibleVoices = [.transition, .atmosphere]
+            send = 0.30
+        default:
+            // Releases and identity returns are therefore explicitly dry, as
+            // are bars that do not carry an authored spatial contrast.
+            return (.foreground, self)
+        }
+
+        let macroIndex = max(0, absoluteBar) / 16
+        guard lastCarrierMacroIndex != macroIndex else {
+            return (.foreground, self)
+        }
+
+        let candidates = eligibleVoices.flatMap { voice in
+            ensemble.events.filter { $0.voice == voice }
+        }
+        guard !candidates.isEmpty else { return (.foreground, self) }
+        let selected = candidates.first { candidate in
+            candidates.count == 1 || candidate.voice != previousCarrierVoice
+        } ?? candidates[0]
+        let articulation = SpatialContrastArticulation(
+            depthPosition: .distant,
+            carrierVoice: selected.voice,
+            carrierStep: selected.step,
+            dryScale: 0.72,
+            reverbSend: send,
+            highPassHz: 300,
+            lowPassHz: 4_200
+        )
+        return (
+            articulation,
+            SpatialContrastState(
+                previousCarrierVoice: selected.voice,
+                lastCarrierMacroIndex: macroIndex
+            )
+        )
+    }
+}
+
 package struct EnsembleEventProposal: Equatable, Sendable {
     package let voice: EnsembleVoice
     package let requestedStep: Int
@@ -149,12 +266,14 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let pulseEchoEnabled: Bool
     package let interlockChapter: InterlockChapter
     package let groovePulses: [GroovePulseArticulation]
+    package let spatialContrast: SpatialContrastArticulation
 
     package init(performance: PerformanceBar, ensemble: EnsembleContext,
                  arrangementGesture: ArrangementGesture, percussionGear: PercussionGear,
                  foundationCompanion: FoundationCompanion, pulseEchoEnabled: Bool,
                  interlockChapter: InterlockChapter,
-                 groovePulses: [GroovePulseArticulation] = []) {
+                 groovePulses: [GroovePulseArticulation] = [],
+                 spatialContrast: SpatialContrastArticulation = .foreground) {
         self.performance = performance
         self.ensemble = ensemble
         self.arrangementGesture = arrangementGesture
@@ -163,6 +282,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.pulseEchoEnabled = pulseEchoEnabled && foundationCompanion != .monoRumble
         self.interlockChapter = interlockChapter
         self.groovePulses = groovePulses.sorted { $0.step < $1.step }
+        self.spatialContrast = spatialContrast
     }
 
     package func groovePulse(at step: Int) -> GroovePulseArticulation? {
@@ -343,6 +463,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
     package private(set) var topologyRevision: Int
     package private(set) var openDebts: [SessionDramaticDebt]
     package private(set) var interlockEvolution: InterlockEvolutionState
+    package private(set) var spatialContrast: SpatialContrastState
 
     package init(recentBars: [MusicalMemoryBar] = [], currentPhrase: [MusicalMemoryBar] = [],
                 previousPhrase: [MusicalMemoryBar] = [], dramaticArc: [MusicalMemoryBar] = [],
@@ -350,7 +471,8 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
                 lastContrastBar: Int? = nil, lastBreakBar: Int? = nil,
                 lastReleaseBar: Int? = nil, lastIdentityReturnBar: Int? = nil,
                 topologyRevision: Int = 0, openDebts: [SessionDramaticDebt] = [],
-                interlockEvolution: InterlockEvolutionState = InterlockEvolutionState()) {
+                interlockEvolution: InterlockEvolutionState = InterlockEvolutionState(),
+                spatialContrast: SpatialContrastState = SpatialContrastState()) {
         self.recentBars = Array(recentBars.suffix(4))
         self.currentPhrase = Array(currentPhrase.suffix(16))
         self.previousPhrase = Array(previousPhrase.suffix(16))
@@ -364,6 +486,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         self.topologyRevision = max(0, topologyRevision)
         self.openDebts = openDebts
         self.interlockEvolution = interlockEvolution
+        self.spatialContrast = spatialContrast
     }
 
     package var barsSinceContrast: Int { distance(since: lastContrastBar) }
@@ -378,6 +501,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         dramaticArc = Array((dramaticArc + plan.memoryBars).suffix(128))
         totalBars = plan.startBar + plan.barCount
         interlockEvolution = plan.endingInterlockState
+        spatialContrast = plan.endingSpatialContrastState
 
         switch plan.kind {
         case .contrast:
@@ -496,13 +620,15 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let conservative: Bool
     package let interest: PhraseInterestReport
     package let endingInterlockState: InterlockEvolutionState
+    package let endingSpatialContrastState: SpatialContrastState
 
     package init(phraseIndex: Int, startBar: Int, barCount: Int,
                  kind: AutonomousPhraseKind, scene: TechnoScene, dna: SceneDNA,
                  resolvedBars: [ResolvedPerformanceBar], openedDebt: SessionDramaticDebt?,
                  paidDebtIDs: [Int], requestsTopologyMutation: Bool,
                  alternate: Bool, conservative: Bool, interest: PhraseInterestReport,
-                 endingInterlockState: InterlockEvolutionState) {
+                 endingInterlockState: InterlockEvolutionState,
+                 endingSpatialContrastState: SpatialContrastState = SpatialContrastState()) {
         self.phraseIndex = phraseIndex
         self.startBar = startBar
         self.barCount = barCount
@@ -517,6 +643,7 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
         self.conservative = conservative
         self.interest = interest
         self.endingInterlockState = endingInterlockState
+        self.endingSpatialContrastState = endingSpatialContrastState
     }
 
     package var memoryBars: [MusicalMemoryBar] {
@@ -750,6 +877,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         var resolvedBars: [ResolvedPerformanceBar] = []
         resolvedBars.reserveCapacity(length)
         var interlockState = state.memory.interlockEvolution
+        var spatialContrastState = state.memory.spatialContrast
 
         for localBar in 0..<length {
             let progress = length == 1 ? 1 : Double(localBar) / Double(length - 1)
@@ -813,6 +941,14 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 scene: scene, bar: bar, kind: kind,
                 companion: companion, gesture: gesture
             )
+            let spatialResolution = spatialContrastState.resolving(
+                ensemble: ensemble,
+                kind: kind,
+                gesture: gesture,
+                absoluteBar: absoluteBar
+            )
+            let spatialContrast = spatialResolution.0
+            spatialContrastState = spatialResolution.1
             resolvedBars.append(ResolvedPerformanceBar(
                 performance: bar,
                 ensemble: ensemble,
@@ -821,7 +957,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 foundationCompanion: companion,
                 pulseEchoEnabled: echoEnabled,
                 interlockChapter: interlockState.currentChapter,
-                groovePulses: groovePulses
+                groovePulses: groovePulses,
+                spatialContrast: spatialContrast
             ))
         }
 
@@ -858,7 +995,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             alternate: alternate,
             conservative: conservative,
             interest: interest,
-            endingInterlockState: interlockState
+            endingInterlockState: interlockState,
+            endingSpatialContrastState: spatialContrastState
         )
     }
 
