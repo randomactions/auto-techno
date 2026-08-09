@@ -61,7 +61,11 @@ per-bar masking, role-stem, automatic-mix, event-local groove-pulse, graph, and
 pre/post upper-timbre vector for every retained attempt. Groove-pulse evidence
 must cover every bar explicitly, bind each score event to one exact dry-sample
 hash plus bounded level/spectral/tail consequence, and leave selection unchanged
-while the evaluator is uncalibrated. The transaction binds all candidate-plan fingerprints, the
+while the evaluator is uncalibrated. For the complete syncopated-lean cell, tests
+must prove that the 3-3-2 intensity relationship changes only existing pulse
+windows, retains the same event steps/count/timing/physical articulation, and
+returns to the prior alternating cell in the conservative candidate. The
+transaction binds all candidate-plan fingerprints, the
 engine/policy/evaluator versions, the selected attempt, correction count, route
 generation, incoming continuation, and the pre-decision outgoing render/DSP
 state. Final commit provenance must additionally bind the selected sample hash

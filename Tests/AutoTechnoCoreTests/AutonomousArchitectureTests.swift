@@ -65,29 +65,129 @@ struct AdaptiveAutonomousSessionTests {
                 Array(repeating: .pullback, count: 4))
 
         let contour = GroovePulseResolver.pattern(
-            stage: .contour, gesture: .steady, macroEnding: false
+            stage: .contour, gesture: .steady, macroEnding: false,
+            conservative: false
         )
         #expect(contour.map(\.0) == [1, 3, 5, 7, 9, 11, 13, 15])
         #expect(contour.map(\.1) == [0.38, 0.52, 0.38, 0.52, 0.38, 0.52, 0.38, 0.52])
         let lean = GroovePulseResolver.pattern(
-            stage: .syncopatedLean, gesture: .steady, macroEnding: false
+            stage: .syncopatedLean, gesture: .steady, macroEnding: false,
+            conservative: false
         )
         #expect(lean.map(\.0) == contour.map(\.0))
-        #expect(lean.map(\.1) == [0.30, 0.72, 0.30, 0.72, 0.30, 0.72, 0.30, 0.72])
+        #expect(lean.map(\.1) == [0.30, 0.72, 0.30, 0.30, 0.72, 0.30, 0.30, 0.72])
+        let leanReplay = GroovePulseResolver.pattern(
+            stage: .syncopatedLean, gesture: .steady, macroEnding: false,
+            conservative: false
+        )
+        #expect(leanReplay.map(\.0) == lean.map(\.0))
+        #expect(leanReplay.map(\.1) == lean.map(\.1))
+        let accentIndices = lean.indices.filter { lean[$0].1 == 0.72 }
+        #expect(accentIndices == [1, 4, 7])
+        guard let firstAccent = accentIndices.first else {
+            Issue.record("Expected the bounded 3-3-2 accent cycle")
+            return
+        }
+        let followingAccents = Array(accentIndices.dropFirst()) + [firstAccent + lean.count]
+        #expect(zip(accentIndices, followingAccents).map { pair in
+            pair.1 - pair.0
+        } == [3, 3, 2])
+
+        let conservativeLean = GroovePulseResolver.pattern(
+            stage: .syncopatedLean, gesture: .steady, macroEnding: false,
+            conservative: true
+        )
+        #expect(conservativeLean.map(\.0) == lean.map(\.0))
+        #expect(conservativeLean.map(\.1) == [
+            0.30, 0.72, 0.30, 0.72, 0.30, 0.72, 0.30, 0.72,
+        ])
+        let fullResolved = EnsembleContext(
+            focusRole: .percussion,
+            events: lean.map { step, intensity in
+                EnsembleResolvedEvent(
+                    voice: .groovePulse,
+                    step: step,
+                    intensity: intensity,
+                    relocated: false
+                )
+            },
+            kickAnchors: [],
+            intentionalPileup: false
+        )
+        let groupedResolved = GroovePulseResolver.resolvingAccentGrouping(
+            in: fullResolved,
+            absoluteBar: 8,
+            gesture: .steady,
+            majorBreak: false,
+            conservative: false
+        )
+        #expect(groupedResolved.events.map(\.intensity) == lean.map(\.1))
+        let collisionProposals = [
+            EnsembleEventProposal(
+                voice: .percussion, requestedStep: 7,
+                priority: 70, intensity: 0.5
+            ),
+            EnsembleEventProposal(
+                voice: .clap, requestedStep: 7,
+                priority: 69, intensity: 0.5
+            ),
+            EnsembleEventProposal(
+                voice: .openHat, requestedStep: 7,
+                priority: 68, intensity: 0.5
+            ),
+        ]
+        let partialResolved = EnsembleArbiter.resolve(
+            proposals: collisionProposals + GroovePulseResolver.proposals(
+                absoluteBar: 8,
+                percussionActive: true,
+                majorBreak: false,
+                gesture: .steady,
+                conservative: false
+            ),
+            focusRole: .percussion,
+            intentionalPileup: false
+        )
+        #expect(partialResolved.events.filter {
+            $0.voice == .groovePulse
+        }.map(\.step) == [1, 3, 5, 9, 11, 13, 15])
+        let legacyPartial = GroovePulseResolver.resolvingAccentGrouping(
+            in: partialResolved,
+            absoluteBar: 8,
+            gesture: .steady,
+            majorBreak: false,
+            conservative: false
+        )
+        let legacyPartialGroove = legacyPartial.events.filter {
+            $0.voice == .groovePulse
+        }
+        #expect(legacyPartialGroove.map(\.step) == [1, 3, 5, 9, 11, 13, 15])
+        #expect(legacyPartialGroove.map(\.intensity) == [
+            0.30, 0.72, 0.30, 0.30, 0.72, 0.30, 0.72,
+        ])
         let minimal = GroovePulseResolver.pattern(
-            stage: .syncopatedLean, gesture: .minimalize, macroEnding: false
+            stage: .syncopatedLean, gesture: .minimalize, macroEnding: false,
+            conservative: false
         )
         #expect(minimal.map(\.0) == [7, 15])
         #expect(minimal.map(\.1) == [0.42, 0.42])
+        let conservativeMinimal = GroovePulseResolver.pattern(
+            stage: .syncopatedLean, gesture: .minimalize, macroEnding: false,
+            conservative: true
+        )
+        #expect(conservativeMinimal.map(\.0) == minimal.map(\.0))
+        #expect(conservativeMinimal.map(\.1) == minimal.map(\.1))
         let pullback = GroovePulseResolver.pattern(
-            stage: .pullback, gesture: .turnaround, macroEnding: true
+            stage: .pullback, gesture: .turnaround, macroEnding: true,
+            conservative: false
         )
         #expect(pullback.map(\.0) == [3, 7, 11, 15])
         #expect(pullback.map(\.1) == [0.50, 0.50, 0.50, 0.72])
         #expect(GroovePulseResolver.pattern(
             stage: .pullback, gesture: .structuralMarker,
-            macroEnding: true, majorBreak: true
+            macroEnding: true, majorBreak: true, conservative: false
         ).isEmpty)
+        #expect(QualityQualificationContract.engineVersion ==
+                "autotechno-canonical-engine.v3")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -102,7 +202,8 @@ struct AdaptiveAutonomousSessionTests {
             let expected = GroovePulseResolver.pattern(
                 stage: WeakSixteenthStage(absoluteBar: resolved.performance.bar),
                 gesture: resolved.arrangementGesture,
-                macroEnding: (resolved.performance.bar + 1).isMultiple(of: 16)
+                macroEnding: (resolved.performance.bar + 1).isMultiple(of: 16),
+                conservative: false
             )
             #expect(resolved.groovePulses.map(\.step) == expected.map(\.0))
             #expect(resolved.groovePulses.map(\.intensity) == expected.map(\.1))
@@ -128,6 +229,17 @@ struct AdaptiveAutonomousSessionTests {
             #expect(resolvedEvents.map(\.intensity) == resolved.groovePulses.map(\.intensity))
         }
         #expect(firstMacro[0...3].allSatisfy { $0.groovePulses.isEmpty })
+        let completeLeanBars = firstMacro.filter {
+            WeakSixteenthStage(absoluteBar: $0.performance.bar) == .syncopatedLean &&
+                $0.arrangementGesture != .minimalize
+        }
+        #expect(completeLeanBars.count == 3)
+        #expect(completeLeanBars.allSatisfy {
+            $0.groovePulses.map(\.step) == [1, 3, 5, 7, 9, 11, 13, 15] &&
+                $0.groovePulses.map(\.intensity) == [
+                    0.30, 0.72, 0.30, 0.30, 0.72, 0.30, 0.30, 0.72,
+                ]
+        })
         #expect(firstMacro[16 - 1].groovePulses.last?.intensity == 0.72)
 
         let midMacroBoundary = zip(plans, plans.dropFirst()).first { previous, next in
@@ -149,8 +261,20 @@ struct AdaptiveAutonomousSessionTests {
         }.allSatisfy { $0.groovePulses.isEmpty })
     }
 
-    @Test("Conservative groove-pulse articulation is the exact neutral carrier")
+    @Test("Conservative groove-pulse score keeps legacy accents and the neutral carrier")
     func conservativeGroovePulseArticulation() {
+        let conservativeProposals = GroovePulseResolver.proposals(
+            absoluteBar: 8,
+            percussionActive: true,
+            majorBreak: false,
+            gesture: .steady,
+            conservative: true
+        )
+        #expect(conservativeProposals.map(\.requestedStep) == [1, 3, 5, 7, 9, 11, 13, 15])
+        #expect(conservativeProposals.map(\.intensity) == [
+            0.30, 0.72, 0.30, 0.72, 0.30, 0.72, 0.30, 0.72,
+        ])
+
         let ensemble = EnsembleContext(
             focusRole: .percussion,
             events: [EnsembleResolvedEvent(
@@ -617,7 +741,7 @@ struct AdaptiveAutonomousSessionTests {
 
         let groove = GroovePulseResolver.proposals(
             absoluteBar: 8, percussionActive: true,
-            majorBreak: false, gesture: .steady
+            majorBreak: false, gesture: .steady, conservative: false
         )
         let withoutPulses = EnsembleArbiter.resolve(
             proposals: proposals, focusRole: .motif, intentionalPileup: false
@@ -1253,6 +1377,7 @@ struct AutonomousPreparationPreflightTests {
         let changed = replacingResolvedBars(in: original, with: changedBars, memory: state.memory)
         #expect(AutonomousCandidateFingerprint.plan(original) !=
                 AutonomousCandidateFingerprint.plan(changed))
+
         let graph = DSPGraphGenerator.safePlan(sessionSeed: state.rootSeed)
         var originalRender = RenderState(), changedRender = RenderState()
         var originalGraph = GeneratedDSPContinuationState()
@@ -1376,12 +1501,28 @@ struct AutonomousPreparationPreflightTests {
         let state = director.initialState()
         let original = director.candidates(from: state).primary
         guard let barIndex = original.resolvedBars.firstIndex(where: {
-            !$0.groovePulses.isEmpty
-        }), let target = original.resolvedBars[barIndex].groovePulses.last else {
-            Issue.record("Expected a resolved groove pulse")
+            WeakSixteenthStage(absoluteBar: $0.performance.bar) == .syncopatedLean &&
+                $0.arrangementGesture != .minimalize &&
+                $0.groovePulses.count == 8
+        }) else {
+            Issue.record("Expected a complete resolved syncopated-lean cell")
             return
         }
         let source = original.resolvedBars[barIndex]
+        let legacyIntensity = Dictionary(uniqueKeysWithValues:
+            GroovePulseResolver.pattern(
+                stage: .syncopatedLean,
+                gesture: source.arrangementGesture,
+                macroEnding: false,
+                conservative: true
+            )
+        )
+        guard let target = source.groovePulses.first(where: {
+            legacyIntensity[$0.step] != $0.intensity
+        }) else {
+            Issue.record("Expected grouped and legacy cells to differ")
+            return
+        }
         let changedMicrovariation = target.timbreMicrovariation == 0
             ? 0.04 : -target.timbreMicrovariation
         let changedPulse = GroovePulseArticulation(
@@ -1414,10 +1555,70 @@ struct AutonomousPreparationPreflightTests {
         let changed = replacingResolvedBars(in: original, with: changedBars, memory: state.memory)
         #expect(AutonomousCandidateFingerprint.plan(original) !=
                 AutonomousCandidateFingerprint.plan(changed))
+
+        let intensity = legacyIntensity[target.step] ?? target.intensity
+        let intensityEvents = source.ensemble.events.map { event in
+            guard event.voice == .groovePulse,
+                  let legacy = legacyIntensity[event.step] else {
+                return event
+            }
+            return EnsembleResolvedEvent(
+                voice: event.voice,
+                step: event.step,
+                intensity: legacy,
+                relocated: event.relocated
+            )
+        }
+        let intensityPulses = source.groovePulses.map { pulse in
+            GroovePulseArticulation(
+                step: pulse.step,
+                pulseClass: pulse.pulseClass,
+                stage: pulse.stage,
+                intensity: legacyIntensity[pulse.step] ?? pulse.intensity,
+                timingOffsetInSteps: pulse.timingOffsetInSteps,
+                strikeZone: pulse.strikeZone,
+                damping: pulse.damping,
+                timbreMicrovariation: pulse.timbreMicrovariation
+            )
+        }
+        let intensityPulse = intensityPulses.first { $0.step == target.step }
+        let intensityResolved = ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: EnsembleContext(
+                focusRole: source.ensemble.focusRole,
+                events: intensityEvents,
+                kickAnchors: source.ensemble.kickAnchors,
+                intentionalPileup: source.ensemble.intentionalPileup
+            ),
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            foundationCompanion: source.foundationCompanion,
+            pulseEchoEnabled: source.pulseEchoEnabled,
+            interlockChapter: source.interlockChapter,
+            groovePulses: intensityPulses,
+            spatialContrast: source.spatialContrast,
+            narrative: source.narrative
+        )
+        var intensityBars = original.resolvedBars
+        intensityBars[barIndex] = intensityResolved
+        let intensityChanged = replacingResolvedBars(
+            in: original,
+            with: intensityBars,
+            memory: state.memory
+        )
+        #expect(AutonomousCandidateFingerprint.plan(original) !=
+                AutonomousCandidateFingerprint.plan(intensityChanged))
+        #expect(target.step == intensityPulse?.step)
+        #expect(target.timingOffsetInSteps == intensityPulse?.timingOffsetInSteps)
+        #expect(target.strikeZone == intensityPulse?.strikeZone)
+        #expect(target.damping == intensityPulse?.damping)
+        #expect(target.timbreMicrovariation == intensityPulse?.timbreMicrovariation)
         let graph = DSPGraphGenerator.safePlan(sessionSeed: state.rootSeed)
         var originalRender = RenderState(), changedRender = RenderState()
+        var intensityRender = RenderState()
         var originalGraph = GeneratedDSPContinuationState()
         var changedGraph = GeneratedDSPContinuationState()
+        var intensityGraph = GeneratedDSPContinuationState()
         let originalBlocks = AutonomousPhraseRenderer.render(
             plan: original, graph: graph, sampleRate: 8_000,
             state: &originalRender, graphState: &originalGraph
@@ -1426,8 +1627,13 @@ struct AutonomousPreparationPreflightTests {
             plan: changed, graph: graph, sampleRate: 8_000,
             state: &changedRender, graphState: &changedGraph
         )
+        let intensityBlocks = AutonomousPhraseRenderer.render(
+            plan: intensityChanged, graph: graph, sampleRate: 8_000,
+            state: &intensityRender, graphState: &intensityGraph
+        )
         let originalBlock = originalBlocks[barIndex]
         let changedBlock = changedBlocks[barIndex]
+        let intensityBlock = intensityBlocks[barIndex]
         let originalEvent = originalBlock.events.first {
             $0.voice == .groovePulse && $0.step == target.step
         }
@@ -1481,6 +1687,73 @@ struct AutonomousPreparationPreflightTests {
         })
         #expect(originalBlock.busStates[.groovePulse]?.level ==
                 originalBlock.stemObservations[.percussion]?.rms)
+
+        let intensityEvent = intensityBlock.events.first {
+            $0.voice == .groovePulse && $0.step == target.step
+        }
+        let intensityEvidence = intensityBlock.groovePulseRenderEvidence.first {
+            $0.step == target.step
+        }
+        #expect(intensityEvent?.intensity == intensity)
+        #expect(Array(originalBlocks[..<barIndex]) ==
+                Array(intensityBlocks[..<barIndex]))
+        #expect(originalBlock.events.filter {
+            $0.voice != .groovePulse
+        } == intensityBlock.events.filter {
+            $0.voice != .groovePulse
+        })
+        let originalGrooveEvents = originalBlock.events.filter {
+            $0.voice == .groovePulse
+        }
+        let legacyGrooveEvents = intensityBlock.events.filter {
+            $0.voice == .groovePulse
+        }
+        #expect(originalGrooveEvents.map(\.step) == legacyGrooveEvents.map(\.step))
+        #expect(legacyGrooveEvents.map(\.intensity) == [
+            0.30, 0.72, 0.30, 0.72, 0.30, 0.72, 0.30, 0.72,
+        ])
+        #expect(zip(originalGrooveEvents, legacyGrooveEvents).allSatisfy {
+            $0.pulseClass == $1.pulseClass &&
+                $0.timingOffsetInSteps == $1.timingOffsetInSteps
+        })
+        #expect(originalBlock.automaticMix == intensityBlock.automaticMix)
+        #expect(originalBlock.stemObservations[.kick] ==
+                intensityBlock.stemObservations[.kick])
+        #expect(originalBlock.stemObservations[.foundation] ==
+                intensityBlock.stemObservations[.foundation])
+        #expect(originalBlock.protectedFoundationSampleHash ==
+                intensityBlock.protectedFoundationSampleHash)
+        #expect(originalBlock.percussionSampleHash != intensityBlock.percussionSampleHash)
+        #expect(originalBlock.protectedRhythmSampleHash !=
+                intensityBlock.protectedRhythmSampleHash)
+        #expect(originalPulseEvidence?.sampleHash != intensityEvidence?.sampleHash)
+        #expect(originalPulseEvidence?.rms != intensityEvidence?.rms)
+        #expect(originalPulseEvidence?.strikeZone == intensityEvidence?.strikeZone)
+        #expect(originalPulseEvidence?.damping == intensityEvidence?.damping)
+        #expect(originalPulseEvidence?.timbreMicrovariation ==
+                intensityEvidence?.timbreMicrovariation)
+        let originalCellEvidence = originalBlock.groovePulseRenderEvidence
+        let legacyCellEvidence = intensityBlock.groovePulseRenderEvidence
+        #expect(originalCellEvidence.map(\.step) == legacyCellEvidence.map(\.step))
+        let changedIntensitySteps = zip(
+            originalCellEvidence, legacyCellEvidence
+        ).compactMap { original, legacy in
+            original.intensity == legacy.intensity ? nil : original.step
+        }
+        #expect(changedIntensitySteps == [7, 9, 11])
+        #expect(zip(originalCellEvidence, legacyCellEvidence).allSatisfy {
+            $0.pulseClass == $1.pulseClass &&
+                $0.stage == $1.stage &&
+                $0.timingOffsetInSteps == $1.timingOffsetInSteps &&
+                $0.strikeZone == $1.strikeZone &&
+                $0.damping == $1.damping &&
+                $0.timbreMicrovariation == $1.timbreMicrovariation
+        })
+        #expect(zip(originalCellEvidence, legacyCellEvidence).allSatisfy {
+            let intensityChanged = $0.intensity != $1.intensity
+            return ($0.sampleHash != $1.sampleHash) == intensityChanged &&
+                ($0.rms != $1.rms) == intensityChanged
+        })
     }
 
     @Test("Selective depth resolves once per macro and continues deterministically")
@@ -2023,11 +2296,17 @@ struct AutonomousPreparationPreflightTests {
         }
         let (left, evidence) = render(intensity: 0.72)
         let (right, replayEvidence) = render(intensity: 0.72)
-        let (quieter, _) = render(intensity: 0.36)
+        let (quieter, quieterEvidence) = render(intensity: 0.30)
         #expect(left == right)
         #expect(left == legacyRender(intensity: 0.72))
         #expect(evidence == replayEvidence)
         #expect(left != quieter)
+        #expect((evidence?.rms ?? 0) > (quieterEvidence?.rms ?? 0))
+        #expect(evidence?.sampleHash != quieterEvidence?.sampleHash)
+        #expect(abs((evidence?.spectralCentroidHz ?? 0) -
+                    (quieterEvidence?.spectralCentroidHz ?? 0)) < 0.001)
+        #expect(abs((evidence?.tailToAttackDB ?? 0) -
+                    (quieterEvidence?.tailToAttackDB ?? 0)) < 0.001)
         #expect(left[..<start].allSatisfy { $0 == 0 })
         let expectedEnd = start + Int(sampleRate * GroovePulseVoice.durationSeconds)
         #expect(left[expectedEnd...].allSatisfy { $0 == 0 })

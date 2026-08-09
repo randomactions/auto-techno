@@ -1495,6 +1495,8 @@ package enum AutonomousPhrasePreparer {
               plan.endingNarrativeState.activeSupportingRoles.count <= 3,
               plan.resolvedBars.enumerated().allSatisfy({ index, resolved in
                   let performance = resolved.performance
+                  let expectedBar = plan.startBar + index
+                  guard performance.bar == expectedBar else { return false }
                   let events = resolved.ensemble.events
                   guard events.count <= 16 * 6 else { return false }
                   let maximumAtOneStep = resolved.ensemble.intentionalPileup ? 6 : 3
@@ -1510,8 +1512,37 @@ package enum AutonomousPhrasePreparer {
                       zip(grooveEvents, grooveArticulations).allSatisfy {
                           $0.step == $1.step && $0.intensity == $1.intensity
                       }
-                  return performance.bar == plan.startBar + index &&
-                      performance.phrase == plan.phraseIndex &&
+                  let fallbackScoreIsCanonical: Bool
+                  if slot == .fallback {
+                      let canonicalEnsemble = AutonomousSessionDirector.ensemblePlan(
+                          dna: dna,
+                          bar: performance,
+                          focus: resolved.ensemble.focusRole,
+                          release: plan.kind == .energyRelease,
+                          kind: plan.kind,
+                          companion: resolved.foundationCompanion,
+                          gear: resolved.percussionGear,
+                          gesture: resolved.arrangementGesture,
+                          conservative: true
+                      )
+                      let canonicalGrooveEvents = canonicalEnsemble.events.filter {
+                          $0.voice == .groovePulse
+                      }
+                      let canonicalGroovePulses = GroovePulseResolver.articulations(
+                          from: canonicalEnsemble,
+                          absoluteBar: expectedBar,
+                          swingPercent: dna.rhythm.swingPercent,
+                          percussionGear: resolved.percussionGear,
+                          eventSeed: performance.eventSeed,
+                          conservative: true
+                      )
+                      fallbackScoreIsCanonical =
+                          canonicalGrooveEvents == grooveEvents &&
+                          canonicalGroovePulses == grooveArticulations
+                  } else {
+                      fallbackScoreIsCanonical = true
+                  }
+                  return performance.phrase == plan.phraseIndex &&
                       performance.localBar == index &&
                       performance.phraseLength == plan.barCount &&
                       performance.roles.count <= PerformanceRole.allCases.count &&
@@ -1530,7 +1561,8 @@ package enum AutonomousPhrasePreparer {
                           (0..<16).contains($0)
                       } && resolved.groovePulses.count <= 8 &&
                       Set(resolved.groovePulses.map(\.step)).count ==
-                        resolved.groovePulses.count && grooveScoreIsCanonical
+                        resolved.groovePulses.count && grooveScoreIsCanonical &&
+                      fallbackScoreIsCanonical
               }) else {
             return false
         }

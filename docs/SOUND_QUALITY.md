@@ -16,7 +16,9 @@ groove-pulse, graph, and pre/post upper-timbre evidence for each retained
 attempt, then binds the selected attempt to finalized commit provenance. The
 groove-pulse projection retains exact dry-sample identity plus bounded source
 level, spectral position, and tail-to-attack consequence for each already
-resolved pulse; it does not add onsets or analyze the mixed percussion stem.
+resolved pulse. Its score intensity can therefore distinguish the bounded
+3-3-2 accent/ghost cell from the unchanged weak-pulse onsets without analyzing
+the mixed percussion stem or adding density.
 The shipping evaluator remains deliberately
 uncalibrated: a healthy preparation renders the primary once, and neither the
 transaction nor the expression evidence constitutes professional-quality
@@ -68,6 +70,7 @@ A hard-gate failure cannot be offset by strength in another dimension.
 ### Musical dimensions
 
 - pulse clarity, groove hierarchy, deliberate space, and controlled density;
+- score/render agreement for accent/ghost grouping without onset proliferation;
 - persistent identity across variation and internal strategy changes;
 - motivated tension, contrast, release, subtraction, and return;
 - useful repetition without stagnation and variation without random replacement;

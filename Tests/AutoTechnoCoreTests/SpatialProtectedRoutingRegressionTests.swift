@@ -9,8 +9,13 @@ struct SpatialProtectedRoutingRegressionTests {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         let sourcePlan = director.candidates(from: director.initialState()).primary
         let source = try #require(sourcePlan.resolvedBars.first {
-            !$0.groovePulses.isEmpty
+            WeakSixteenthStage(absoluteBar: $0.performance.bar) == .syncopatedLean &&
+                $0.arrangementGesture != .minimalize &&
+                $0.groovePulses.count == 8
         })
+        #expect(source.groovePulses.map(\.intensity) == [
+            0.30, 0.72, 0.30, 0.30, 0.72, 0.30, 0.30, 0.72,
+        ])
         let pulseEvents = source.ensemble.events.filter { $0.voice == .groovePulse }
         let isolated = ResolvedPerformanceBar(
             performance: source.performance,

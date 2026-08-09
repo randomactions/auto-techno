@@ -14,6 +14,8 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - exact private role evidence, bounded preparation-time kick/foundation mix
   correction, descriptive role-aware masking evidence, and authored masking
   guards;
+- one bounded weak-percussion vocabulary whose existing syncopated-lean onsets
+  carry score-owned physical articulation and a 3-3-2 accent/ghost relationship;
 - quality-contract schema 4 with a bounded candidate-evaluation vector and
   atomic selected-commit provenance across symbolic, full-mix, masking, stem,
   event-local groove-pulse, graph, and pre/post upper-timbre evidence;

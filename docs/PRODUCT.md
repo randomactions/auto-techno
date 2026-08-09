@@ -49,10 +49,12 @@ before the control surface expands.
 The current weak-percussion path demonstrates that contract without becoming a
 new instrument or mode. `PercussionGear` resolves bounded strike position,
 damping, and seeded microvariation for the existing groove-pulse carrier; the
-same render produces event-local dry-signal evidence, and the conservative
-candidate preserves the exact previous neutral carrier. These observations are
-retained for a future calibrated policy but do not affect selection while the
-shipping evaluator remains uncalibrated.
+complete eight-pulse syncopated-lean state groups only those existing
+intensities into one cyclic 3-3-2 accent/ghost relation. The same render produces
+event-local dry-signal evidence, while the conservative candidate preserves the
+prior alternating intensity cell and exact neutral carrier. These observations
+are retained for a future calibrated policy but do not affect selection while
+the shipping evaluator remains uncalibrated.
 
 ## Professional-sound objective
 

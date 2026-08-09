@@ -738,6 +738,39 @@ struct UpperTimbreIntegrationTests {
             alternate: source.alternate,
             fallback: source.fallback
         )
+        let maxBarSource = source.primary.resolvedBars[0]
+        let maxBarPerformance = PerformanceBar(
+            bar: Int.max,
+            phrase: maxBarSource.performance.phrase,
+            localBar: maxBarSource.performance.localBar,
+            phraseLength: maxBarSource.performance.phraseLength,
+            section: maxBarSource.performance.section,
+            tension: maxBarSource.performance.tension,
+            roles: maxBarSource.performance.roles,
+            transformations: maxBarSource.performance.transformations,
+            signatureEvent: maxBarSource.performance.signatureEvent,
+            eventSeed: maxBarSource.performance.eventSeed,
+            accentContour: maxBarSource.performance.accentContour
+        )
+        let maxBarResolved = ResolvedPerformanceBar(
+            performance: maxBarPerformance,
+            ensemble: maxBarSource.ensemble,
+            arrangementGesture: maxBarSource.arrangementGesture,
+            percussionGear: maxBarSource.percussionGear,
+            foundationCompanion: maxBarSource.foundationCompanion,
+            pulseEchoEnabled: maxBarSource.pulseEchoEnabled,
+            interlockChapter: maxBarSource.interlockChapter,
+            groovePulses: maxBarSource.groovePulses,
+            spatialContrast: maxBarSource.spatialContrast,
+            narrative: maxBarSource.narrative
+        )
+        var maxBarResolvedBars = source.primary.resolvedBars
+        maxBarResolvedBars[0] = maxBarResolved
+        let maxBarInput = AutonomousPhraseCandidates(
+            primary: replacingResolvedBars(source.primary, maxBarResolvedBars),
+            alternate: source.alternate,
+            fallback: source.fallback
+        )
         let fallbackPulseBarIndex = 0
         let fallbackPulseBar = source.fallback.resolvedBars[fallbackPulseBarIndex]
         let maximumAtOneStep = fallbackPulseBar.ensemble.intentionalPileup ? 6 : 3
@@ -825,6 +858,7 @@ struct UpperTimbreIntegrationTests {
             prepare(overlong),
             prepare(missingArticulation),
             prepare(mismatchedArticulation),
+            prepare(maxBarInput),
             prepare(nonNeutralFallback),
             prepare(sampleRate: 4_000),
             prepare(routeChannelCount: 1),
@@ -839,6 +873,210 @@ struct UpperTimbreIntegrationTests {
             ),
         ]
         #expect(cases.allSatisfy { result, checkCount in
+            result == nil && checkCount == 1
+        })
+    }
+
+    @Test("Conservative fallback replays the entire canonical groove-pulse cell")
+    func conservativeFallbackGrooveCellIsCanonical() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let source = director.candidates(from: state)
+        let barIndex = 8
+        guard source.fallback.resolvedBars.indices.contains(barIndex) else {
+            Issue.record("Expected a fallback long enough to hold the lean fixture")
+            return
+        }
+        let sourceBar = source.fallback.resolvedBars[barIndex]
+        let performance = PerformanceBar(
+            bar: source.fallback.startBar + barIndex,
+            phrase: source.fallback.phraseIndex,
+            localBar: barIndex,
+            phraseLength: source.fallback.barCount,
+            section: sourceBar.performance.section,
+            tension: sourceBar.performance.tension,
+            roles: [.percussion],
+            transformations: sourceBar.performance.transformations,
+            signatureEvent: sourceBar.performance.signatureEvent,
+            eventSeed: sourceBar.performance.eventSeed,
+            accentContour: sourceBar.performance.accentContour
+        )
+        let ensemble = AutonomousSessionDirector.ensemblePlan(
+            dna: source.fallback.dna,
+            bar: performance,
+            focus: .percussion,
+            release: false,
+            kind: source.fallback.kind,
+            companion: .empty,
+            gear: .anchor,
+            gesture: .steady,
+            conservative: true
+        )
+        let pulses = GroovePulseResolver.articulations(
+            from: ensemble,
+            absoluteBar: performance.bar,
+            swingPercent: source.fallback.dna.rhythm.swingPercent,
+            percussionGear: .anchor,
+            eventSeed: performance.eventSeed,
+            conservative: true
+        )
+        guard pulses.count == 8 else {
+            Issue.record("Expected a complete conservative syncopated-lean cell")
+            return
+        }
+        #expect(pulses.map(\.intensity) == [
+            0.30, 0.72, 0.30, 0.72, 0.30, 0.72, 0.30, 0.72,
+        ])
+        let canonicalBar = ResolvedPerformanceBar(
+            performance: performance,
+            ensemble: ensemble,
+            arrangementGesture: .steady,
+            percussionGear: .anchor,
+            foundationCompanion: .empty,
+            pulseEchoEnabled: false,
+            interlockChapter: sourceBar.interlockChapter,
+            groovePulses: pulses,
+            spatialContrast: sourceBar.spatialContrast,
+            narrative: sourceBar.narrative
+        )
+
+        func replacingFallbackBar(
+            _ bar: ResolvedPerformanceBar
+        ) -> AutonomousPhraseCandidates {
+            var bars = source.fallback.resolvedBars
+            bars[barIndex] = bar
+            let fallback = AutonomousPhrasePlan(
+                phraseIndex: source.fallback.phraseIndex,
+                startBar: source.fallback.startBar,
+                barCount: source.fallback.barCount,
+                kind: source.fallback.kind,
+                scene: source.fallback.scene,
+                dna: source.fallback.dna,
+                resolvedBars: bars,
+                openedDebt: source.fallback.openedDebt,
+                paidDebtIDs: source.fallback.paidDebtIDs,
+                requestsTopologyMutation: source.fallback.requestsTopologyMutation,
+                alternate: source.fallback.alternate,
+                conservative: source.fallback.conservative,
+                interest: source.fallback.interest,
+                endingInterlockState: source.fallback.endingInterlockState,
+                endingSpatialContrastState: source.fallback.endingSpatialContrastState,
+                endingNarrativeState: source.fallback.endingNarrativeState
+            )
+            return AutonomousPhraseCandidates(
+                primary: source.primary,
+                alternate: source.alternate,
+                fallback: fallback
+            )
+        }
+        func replacingGroove(
+            events: [EnsembleResolvedEvent],
+            pulses: [GroovePulseArticulation]
+        ) -> AutonomousPhraseCandidates {
+            let byStep = Dictionary(uniqueKeysWithValues: events.map {
+                ($0.step, $0)
+            })
+            let resolvedEvents = ensemble.events.compactMap { event in
+                event.voice == .groovePulse ? byStep[event.step] : event
+            }
+            return replacingFallbackBar(ResolvedPerformanceBar(
+                performance: canonicalBar.performance,
+                ensemble: EnsembleContext(
+                    focusRole: ensemble.focusRole,
+                    events: resolvedEvents,
+                    kickAnchors: ensemble.kickAnchors,
+                    intentionalPileup: ensemble.intentionalPileup
+                ),
+                arrangementGesture: canonicalBar.arrangementGesture,
+                percussionGear: canonicalBar.percussionGear,
+                foundationCompanion: canonicalBar.foundationCompanion,
+                pulseEchoEnabled: canonicalBar.pulseEchoEnabled,
+                interlockChapter: canonicalBar.interlockChapter,
+                groovePulses: pulses,
+                spatialContrast: canonicalBar.spatialContrast,
+                narrative: canonicalBar.narrative
+            ))
+        }
+        func prepare(
+            _ candidates: AutonomousPhraseCandidates,
+            cancelAtCheck: Int
+        ) -> (PreparedAutonomousPhrase?, Int) {
+            let probe = CandidateCancellationProbe(cancelAtCheck: cancelAtCheck)
+            let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
+                candidates: candidates,
+                sessionSeed: state.rootSeed,
+                memory: state.memory,
+                sampleRate: 8_000,
+                incomingRenderState: RenderState(),
+                incomingGraphState: GeneratedDSPContinuationState(),
+                previousGraph: nil,
+                routeChannelCount: 2,
+                cancellationRequested: { probe.check() }
+            )
+            return (prepared, probe.checkCount)
+        }
+
+        let canonical = prepare(
+            replacingFallbackBar(canonicalBar),
+            cancelAtCheck: 2
+        )
+        #expect(canonical.0 == nil && canonical.1 == 2)
+
+        let grooveEvents = ensemble.events.filter { $0.voice == .groovePulse }
+        let groupedIntensity = Dictionary(uniqueKeysWithValues:
+            GroovePulseResolver.pattern(
+                stage: .syncopatedLean,
+                gesture: .steady,
+                macroEnding: false,
+                conservative: false
+            )
+        )
+        let groupedEvents = grooveEvents.map { event in
+            EnsembleResolvedEvent(
+                voice: event.voice,
+                step: event.step,
+                intensity: groupedIntensity[event.step] ?? event.intensity,
+                relocated: event.relocated
+            )
+        }
+        let groupedPulses = pulses.map { pulse in
+            GroovePulseArticulation(
+                step: pulse.step,
+                pulseClass: pulse.pulseClass,
+                stage: pulse.stage,
+                intensity: groupedIntensity[pulse.step] ?? pulse.intensity,
+                timingOffsetInSteps: pulse.timingOffsetInSteps,
+                strikeZone: pulse.strikeZone,
+                damping: pulse.damping,
+                timbreMicrovariation: pulse.timbreMicrovariation
+            )
+        }
+        let deletedStep = pulses[0].step
+        let timingSource = pulses[0]
+        let forgedTiming = timingSource.timingOffsetInSteps == 0
+            ? 0.01 : timingSource.timingOffsetInSteps / 2
+        let timingPulses = pulses.map { pulse in
+            guard pulse.step == timingSource.step else { return pulse }
+            return GroovePulseArticulation(
+                step: pulse.step,
+                pulseClass: pulse.pulseClass,
+                stage: pulse.stage,
+                intensity: pulse.intensity,
+                timingOffsetInSteps: forgedTiming,
+                strikeZone: pulse.strikeZone,
+                damping: pulse.damping,
+                timbreMicrovariation: pulse.timbreMicrovariation
+            )
+        }
+        let forged = [
+            replacingGroove(events: groupedEvents, pulses: groupedPulses),
+            replacingGroove(
+                events: grooveEvents.filter { $0.step != deletedStep },
+                pulses: pulses.filter { $0.step != deletedStep }
+            ),
+            replacingGroove(events: grooveEvents, pulses: timingPulses),
+        ].map { prepare($0, cancelAtCheck: .max) }
+        #expect(forged.allSatisfy { result, checkCount in
             result == nil && checkCount == 1
         })
     }

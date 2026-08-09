@@ -57,12 +57,15 @@ mistaken for a completed feedback system.
    the current adaptive controller; it is not a complete output-evaluation loop.
    Percussion is rendered once per layer, and the exact dry percussion tap feeds
    audible center output, the drum reverb send, and role evidence. The existing
-   delicate groove-pulse voice now varies only under `PercussionGear`: center,
-   middle, or edge contact, bounded damping, and seeded microvariation alter its
-   fixed 45 ms carrier without changing onset, count, intensity, or timing. The
-   conservative candidate resolves every pulse to the bit-identical legacy
-   middle/neutral contact. Same-pass event evidence is descriptive only; the
-   uncalibrated evaluator does not rank it.
+   delicate groove-pulse voice remains under one `GroovePulseResolver` contract.
+   `PercussionGear` selects center, middle, or edge contact plus bounded damping
+   and seeded microvariation for its fixed 45 ms carrier. On a complete
+   eight-pulse syncopated-lean bar, the resolver changes only the existing event
+   intensities into a cyclic 3-3-2 accent/ghost relation; onset, count, timing,
+   and every other voice remain unchanged. The conservative candidate preserves
+   the prior alternating intensity cell and resolves every pulse to the
+   bit-identical legacy middle/neutral contact. Same-pass event evidence is
+   descriptive only; the uncalibrated evaluator does not rank it.
 6. The unchanged pre-fader kick remains the ducking detector. The generated
    graph receives the exact `full - protected-rhythm` remainder, and its output
    is recombined with the protected stereo rhythm route. The protected route

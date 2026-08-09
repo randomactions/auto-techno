@@ -395,12 +395,14 @@ package enum GroovePulseResolver {
 
     package static func proposals(absoluteBar: Int, percussionActive: Bool,
                                   majorBreak: Bool,
-                                  gesture: ArrangementGesture) -> [EnsembleEventProposal] {
+                                  gesture: ArrangementGesture,
+                                  conservative: Bool = false) -> [EnsembleEventProposal] {
         guard percussionActive, !majorBreak else { return [] }
         let stage = WeakSixteenthStage(absoluteBar: absoluteBar)
         return pattern(stage: stage, gesture: gesture,
                        macroEnding: (absoluteBar + 1).isMultiple(of: 16),
-                       majorBreak: majorBreak).map { step, intensity in
+                       majorBreak: majorBreak,
+                       conservative: conservative).map { step, intensity in
             EnsembleEventProposal(
                 voice: .groovePulse,
                 requestedStep: step,
@@ -439,6 +441,60 @@ package enum GroovePulseResolver {
         }
     }
 
+    /// Accent grouping is a property of the complete resolved cell, not of
+    /// proposals that may later be removed by ensemble arbitration. A partial
+    /// cell keeps the legacy alternating intensities without reflowing steps.
+    package static func resolvingAccentGrouping(
+        in ensemble: EnsembleContext,
+        absoluteBar: Int,
+        gesture: ArrangementGesture,
+        majorBreak: Bool,
+        conservative: Bool
+    ) -> EnsembleContext {
+        guard !majorBreak,
+              WeakSixteenthStage(absoluteBar: absoluteBar) == .syncopatedLean,
+              gesture != .minimalize else {
+            return ensemble
+        }
+        let grouped = pattern(
+            stage: .syncopatedLean,
+            gesture: gesture,
+            macroEnding: absoluteBar % 16 == 15,
+            conservative: false
+        )
+        let legacy = pattern(
+            stage: .syncopatedLean,
+            gesture: gesture,
+            macroEnding: absoluteBar % 16 == 15,
+            conservative: true
+        )
+        let grooveEvents = ensemble.events.filter { $0.voice == .groovePulse }
+            .sorted { $0.step < $1.step }
+        let completeCell = grooveEvents.count == grouped.count &&
+            zip(grooveEvents, grouped).allSatisfy { $0.step == $1.0 }
+        let selected = Dictionary(uniqueKeysWithValues:
+            conservative || !completeCell ? legacy : grouped
+        )
+        let events = ensemble.events.map { event in
+            guard event.voice == .groovePulse,
+                  let intensity = selected[event.step] else {
+                return event
+            }
+            return EnsembleResolvedEvent(
+                voice: event.voice,
+                step: event.step,
+                intensity: intensity,
+                relocated: event.relocated
+            )
+        }
+        return EnsembleContext(
+            focusRole: ensemble.focusRole,
+            events: events,
+            kickAnchors: ensemble.kickAnchors,
+            intentionalPileup: ensemble.intentionalPileup
+        )
+    }
+
     private static func physicalArticulation(
         gear: PercussionGear,
         eventSeed: UInt64,
@@ -474,7 +530,8 @@ package enum GroovePulseResolver {
     package static func pattern(stage: WeakSixteenthStage,
                                 gesture: ArrangementGesture,
                                 macroEnding: Bool,
-                                majorBreak: Bool = false) -> [(Int, Double)] {
+                                majorBreak: Bool = false,
+                                conservative: Bool = false) -> [(Int, Double)] {
         guard !majorBreak else { return [] }
         switch stage {
         case .skeleton:
@@ -486,8 +543,12 @@ package enum GroovePulseResolver {
         case .syncopatedLean where gesture == .minimalize:
             return [(7, 0.42), (15, 0.42)]
         case .syncopatedLean:
-            return [1, 3, 5, 7, 9, 11, 13, 15].map { step in
-                (step, SixteenthPulseClass(step: step) == .leadingWeak ? 0.30 : 0.72)
+            let steps = [1, 3, 5, 7, 9, 11, 13, 15]
+            let intensities = conservative
+                ? [0.30, 0.72, 0.30, 0.72, 0.30, 0.72, 0.30, 0.72]
+                : [0.30, 0.72, 0.30, 0.30, 0.72, 0.30, 0.30, 0.72]
+            return zip(steps, intensities).map { step, intensity in
+                (step, intensity)
             }
         case .pullback:
             return [3, 7, 11, 15].map { step in
@@ -1123,10 +1184,10 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 dna: dna, kind: kind, alternate: alternate,
                 localBar: localBar, length: length, gesture: gesture
             )
-            let ensemble = ensemblePlan(
+            let ensemble = Self.ensemblePlan(
                 dna: dna, bar: bar, focus: focusRole,
                 release: kind == .energyRelease, kind: kind, companion: companion,
-                gear: gear, gesture: gesture
+                gear: gear, gesture: gesture, conservative: conservative
             )
             let groovePulses = GroovePulseResolver.articulations(
                 from: ensemble,
@@ -1404,12 +1465,13 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         }
     }
 
-    private func ensemblePlan(dna: SceneDNA, bar: PerformanceBar,
-                              focus: PerformanceRole, release: Bool,
-                              kind: AutonomousPhraseKind,
-                              companion: FoundationCompanion,
-                              gear: PercussionGear,
-                              gesture: ArrangementGesture) -> EnsembleContext {
+    package static func ensemblePlan(dna: SceneDNA, bar: PerformanceBar,
+                                     focus: PerformanceRole, release: Bool,
+                                     kind: AutonomousPhraseKind,
+                                     companion: FoundationCompanion,
+                                     gear: PercussionGear,
+                                     gesture: ArrangementGesture,
+                                     conservative: Bool) -> EnsembleContext {
         let rotation = bar.transformations.contains(.rotate) ? 2 : 0
         let displacement = bar.transformations.contains(.displace) ? 1 : 0
         func shifted(_ step: Int) -> Int { (step + rotation + displacement) % 16 }
@@ -1483,7 +1545,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 absoluteBar: bar.bar,
                 percussionActive: true,
                 majorBreak: kind == .majorBreak,
-                gesture: gesture
+                gesture: gesture,
+                conservative: conservative
             )
         }
         if bar.roles.contains(.motif), !bar.transformations.contains(.omit) {
@@ -1512,7 +1575,18 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             proposals.append(EnsembleEventProposal(voice: .transition, requestedStep: 15,
                                                    alternateSteps: [14, 12], priority: 48, intensity: 0.44))
         }
-        return EnsembleArbiter.resolve(proposals: proposals, focusRole: focus, intentionalPileup: release)
+        let resolved = EnsembleArbiter.resolve(
+            proposals: proposals,
+            focusRole: focus,
+            intentionalPileup: release
+        )
+        return GroovePulseResolver.resolvingAccentGrouping(
+            in: resolved,
+            absoluteBar: bar.bar,
+            gesture: gesture,
+            majorBreak: kind == .majorBreak,
+            conservative: conservative
+        )
     }
 
     private func percussionGear(absoluteBar: Int) -> PercussionGear {

@@ -45,12 +45,65 @@ struct AutonomousCandidateEvaluationTests {
         #expect(vector.schemaVersion == 2)
         #expect(QualityQualificationContract.schemaVersion == 4)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v2")
+                "autotechno-canonical-engine.v3")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
         #expect(vector.selectionEvidence ==
                 fixtureVector(slot: .primary).selectionEvidence)
+
+        let ghostVector = fixtureVector(
+            slot: .primary,
+            planFingerprintOverride: "plan-primary-ghost",
+            groovePulseBar: AutonomousGroovePulseBarEvidence(
+                bar: 0,
+                sourceScoreEventCount: 1,
+                sourceRenderEventCount: 1,
+                events: [fixtureGroovePulseEvent(
+                    intensity: 0.30,
+                    sampleHash: "0000000000000030",
+                    sourceRMS: 0.007
+                )]
+            )
+        )
+        let accentVector = fixtureVector(
+            slot: .primary,
+            planFingerprintOverride: "plan-primary-accent",
+            groovePulseBar: AutonomousGroovePulseBarEvidence(
+                bar: 0,
+                sourceScoreEventCount: 1,
+                sourceRenderEventCount: 1,
+                events: [fixtureGroovePulseEvent(
+                    intensity: 0.72,
+                    sampleHash: "0000000000000072",
+                    sourceRMS: 0.017
+                )]
+            )
+        )
+        #expect(ghostVector.isComplete && accentVector.isComplete)
+        #expect(ghostVector.fingerprint != accentVector.fingerprint)
+        let ghostSelection = ghostVector.selectionEvidence
+        let accentSelectionWithMaximumMovement = AutonomousCandidateEvidence(
+            symbolicValid: accentVector.selectionEvidence.symbolicValid,
+            safetyValid: accentVector.selectionEvidence.safetyValid,
+            interesting: accentVector.selectionEvidence.interesting,
+            combinedScore: accentVector.selectionEvidence.combinedScore + 0.18
+        )
+        #expect(ghostSelection != accentSelectionWithMaximumMovement)
+        #expect(!AutonomousCandidateSelector.needsAlternate(primary: ghostSelection))
+        #expect(!AutonomousCandidateSelector.needsAlternate(
+            primary: accentSelectionWithMaximumMovement
+        ))
+        #expect(AutonomousCandidateSelector.choose(
+            primary: ghostSelection,
+            alternate: nil,
+            qualityComparison: .unavailable
+        ) == .primary)
+        #expect(AutonomousCandidateSelector.choose(
+            primary: accentSelectionWithMaximumMovement,
+            alternate: nil,
+            qualityComparison: .unavailable
+        ) == .primary)
 
         let data = try vector.deterministicJSON()
         let decoded = try JSONDecoder().decode(
@@ -915,7 +968,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(initialCommit.fingerprint != advancedCommit.fingerprint)
 
         #expect(AutonomousCandidateFingerprint.plan(candidates.primary) ==
-                "ef7fa992f6c55461")
+                "652053b3212f9dad")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -948,10 +1001,11 @@ struct AutonomousCandidateEvaluationTests {
         maskingObservationCount: Int = 12,
         stemSourceRoleCount: Int = 5,
         stemRoleCount: Int = 5,
+        planFingerprintOverride: String? = nil,
         groovePulseBar: AutonomousGroovePulseBarEvidence? = nil,
         nonFinite: Bool = false
     ) -> AutonomousCandidateEvaluationVector {
-        let planFingerprint = fixturePlanFingerprints[slot]
+        let planFingerprint = planFingerprintOverride ?? fixturePlanFingerprints[slot]
         let graphFingerprint = "graph-\(slot.rawValue)"
         let movementScore = nonFinite ? Double.nan : 0
         let interest = PhraseInterestReport(
