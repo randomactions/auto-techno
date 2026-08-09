@@ -532,7 +532,10 @@ source-12 commit `fb56950963b6639784dba0cd407edf607f3574ee`:
   workflow now preserves every assertion but starts a fresh test process at
   each heavy upper boundary while reusing one compiled build. On combined
   Professional Evidence v3 head `ffd8802`, all 19 upper tests passed locally
-  across 14 processes without changing production source;
+  across 14 processes without changing production source. The closed-hat
+  fixture now also heap-boxes its large state/candidate payload and isolates
+  each seed search in a non-inlined helper; its 8 kHz, 12 kHz, and tamper cases
+  all passed with a deliberately reduced 2 MB process stack;
 - the optimized `AutoTechno` product build passed in 94.95 seconds;
 - `git diff --check` was clean before publication.
 

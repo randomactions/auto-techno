@@ -8,6 +8,16 @@ private struct ClosedHatRouteProjection {
     let sampleRate: Double
 }
 
+private final class ClosedHatCompanionFixtureBox {
+    let state: AutonomousSessionState
+    let candidates: AutonomousPhraseCandidates
+
+    init(state: AutonomousSessionState, candidates: AutonomousPhraseCandidates) {
+        self.state = state
+        self.candidates = candidates
+    }
+}
+
 private struct PreparedRateAttemptProjection: Equatable {
     let kind: AutonomousCandidateAttemptKind
     let slot: AutonomousCandidateSlot
@@ -2029,100 +2039,90 @@ struct UpperTimbreIntegrationTests {
         #expect(first.postGraphRemainderTimbreEvidence.maximumBoundaryDelta > 0.65)
     }
 
-    private func closedHatCompanionFixture() ->
-        (state: AutonomousSessionState, candidates: AutonomousPhraseCandidates)? {
+    private func closedHatCompanionFixture() -> ClosedHatCompanionFixtureBox? {
         for seed in UInt64(1)...128 {
-            let director = AutonomousSessionDirector(rootSeed: seed)
-            let state = director.initialState()
-            let source = director.candidates(from: state)
-            var candidates = AutonomousPhraseCandidates(
-                primary: shortenedCandidate(
-                    source.primary,
-                    interest: source.primary.interest
-                ),
-                alternate: shortenedCandidate(
-                    source.alternate,
-                    interest: source.alternate.interest
-                ),
-                fallback: shortenedCandidate(
-                    source.fallback,
-                    interest: source.fallback.interest
-                )
-            )
-            guard source.primary.interest.valid,
-                  let target = candidates.primary.resolvedBars.enumerated().first(where: {
-                      _, bar in
-                      bar.ensemble.events.filter { $0.voice == .percussion }.count <
-                          AutonomousCandidateEvaluationVector.maximumClosedHatEventsPerBar
-                  }) else {
-                continue
-            }
-            let maximumAtOneStep = target.element.ensemble.intentionalPileup ? 6 : 3
-            let occupancy = Dictionary(
-                grouping: target.element.ensemble.events,
-                by: \.step
-            )
-            guard let companionStep = (0..<16).first(where: {
-                occupancy[$0, default: []].count <= maximumAtOneStep - 2
-            }) else { continue }
-            let resolvedEvents = (target.element.ensemble.events + [
-                EnsembleResolvedEvent(
-                    voice: .percussion,
-                    step: companionStep,
-                    intensity: 0.48,
-                    relocated: false
-                ),
-                EnsembleResolvedEvent(
-                    voice: .openHat,
-                    step: companionStep,
-                    intensity: 0.42,
-                    relocated: false
-                ),
-            ]).sorted {
-                if $0.step != $1.step { return $0.step < $1.step }
-                return $0.voice.rawValue < $1.voice.rawValue
-            }
-            let ensemble = EnsembleContext(
-                focusRole: target.element.ensemble.focusRole,
-                events: resolvedEvents,
-                kickAnchors: target.element.ensemble.kickAnchors,
-                intentionalPileup: target.element.ensemble.intentionalPileup
-            )
-            let resolved = ResolvedPerformanceBar(
-                performance: target.element.performance,
-                ensemble: ensemble,
-                arrangementGesture: target.element.arrangementGesture,
-                percussionGear: target.element.percussionGear,
-                foundationCompanion: target.element.foundationCompanion,
-                pulseEchoEnabled: target.element.pulseEchoEnabled,
-                interlockChapter: target.element.interlockChapter,
-                groovePulses: target.element.groovePulses,
-                closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
-                    from: ensemble,
-                    conservative: false
-                ),
-                spatialContrast: target.element.spatialContrast,
-                narrative: target.element.narrative
-            )
-            var bars = candidates.primary.resolvedBars
-            bars[target.offset] = resolved
-            candidates = AutonomousPhraseCandidates(
-                primary: planReplacingResolvedBars(
-                    in: candidates.primary,
-                    with: bars
-                ),
-                alternate: candidates.alternate,
-                fallback: candidates.fallback
-            )
-            if candidates.primary.resolvedBars.contains(where: { bar in
-                bar.closedHatDecayArticulations.contains {
-                    $0.role == .openHatCompanion
-                }
-            }) {
-                return (state, candidates)
-            }
+            if let fixture = closedHatCompanionFixture(seed: seed) { return fixture }
         }
         return nil
+    }
+
+    @inline(never)
+    private func closedHatCompanionFixture(seed: UInt64) ->
+        ClosedHatCompanionFixtureBox? {
+        let director = AutonomousSessionDirector(rootSeed: seed)
+        let state = director.initialState()
+        let source = director.candidates(from: state)
+        var candidates = AutonomousPhraseCandidates(
+            primary: shortenedCandidate(source.primary, interest: source.primary.interest),
+            alternate: shortenedCandidate(
+                source.alternate,
+                interest: source.alternate.interest
+            ),
+            fallback: shortenedCandidate(source.fallback, interest: source.fallback.interest)
+        )
+        guard source.primary.interest.valid,
+              let target = candidates.primary.resolvedBars.enumerated().first(where: {
+                  _, bar in
+                  bar.ensemble.events.filter { $0.voice == .percussion }.count <
+                      AutonomousCandidateEvaluationVector.maximumClosedHatEventsPerBar
+              }) else { return nil }
+        let maximumAtOneStep = target.element.ensemble.intentionalPileup ? 6 : 3
+        let occupancy = Dictionary(grouping: target.element.ensemble.events, by: \.step)
+        guard let companionStep = (0..<16).first(where: {
+            occupancy[$0, default: []].count <= maximumAtOneStep - 2
+        }) else { return nil }
+        let resolvedEvents = (target.element.ensemble.events + [
+            EnsembleResolvedEvent(
+                voice: .percussion,
+                step: companionStep,
+                intensity: 0.48,
+                relocated: false
+            ),
+            EnsembleResolvedEvent(
+                voice: .openHat,
+                step: companionStep,
+                intensity: 0.42,
+                relocated: false
+            ),
+        ]).sorted {
+            if $0.step != $1.step { return $0.step < $1.step }
+            return $0.voice.rawValue < $1.voice.rawValue
+        }
+        let ensemble = EnsembleContext(
+            focusRole: target.element.ensemble.focusRole,
+            events: resolvedEvents,
+            kickAnchors: target.element.ensemble.kickAnchors,
+            intentionalPileup: target.element.ensemble.intentionalPileup
+        )
+        let resolved = ResolvedPerformanceBar(
+            performance: target.element.performance,
+            ensemble: ensemble,
+            arrangementGesture: target.element.arrangementGesture,
+            percussionGear: target.element.percussionGear,
+            performanceCharacter: target.element.performanceCharacter,
+            foundationBehavior: target.element.foundationBehavior,
+            foundationCompanion: target.element.foundationCompanion,
+            pulseEchoEnabled: target.element.pulseEchoEnabled,
+            interlockChapter: target.element.interlockChapter,
+            groovePulses: target.element.groovePulses,
+            closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
+                from: ensemble,
+                conservative: false
+            ),
+            spatialContrast: target.element.spatialContrast,
+            narrative: target.element.narrative
+        )
+        var bars = candidates.primary.resolvedBars
+        bars[target.offset] = resolved
+        candidates = AutonomousPhraseCandidates(
+            primary: planReplacingResolvedBars(in: candidates.primary, with: bars),
+            alternate: candidates.alternate,
+            fallback: candidates.fallback
+        )
+        guard candidates.primary.resolvedBars.contains(where: { bar in
+            bar.closedHatDecayArticulations.contains { $0.role == .openHatCompanion }
+        }) else { return nil }
+        return ClosedHatCompanionFixtureBox(state: state, candidates: candidates)
     }
 
     private func planReplacingResolvedBars(
