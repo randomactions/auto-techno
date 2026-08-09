@@ -527,13 +527,12 @@ source-12 commit `fb56950963b6639784dba0cd407edf607f3574ee`:
 - the exact spatial isolation, protected mono-rumble, conservative fallback,
   and 44.1/48 kHz transaction regressions passed independently after their
   fixtures preserved the explicit resolved character contract;
-- the first two published CI runs stopped with signal 10 when the upper test
-  process reached route-rate prepared products after earlier large fixtures;
-  the lifetime-bounded workflow preserves every assertion but runs the 17-test
-  upper batch, 8 kHz product, and 12 kHz product in separate processes while
-  reusing one compiled build. The exact commands passed locally 17/17 in
-  148.615 seconds, 1/1 in 2.780 seconds, and 1/1 in 4.044 seconds without
-  changing production source;
+- hosted CI runs stopped with signal 10 at successively later prepared-product
+  boundaries as the combined evidence payload grew; the lifetime-bounded
+  workflow now preserves every assertion but starts a fresh test process at
+  each heavy upper boundary while reusing one compiled build. On combined
+  Professional Evidence v3 head `ffd8802`, all 19 upper tests passed locally
+  across 14 processes without changing production source;
 - the optimized `AutoTechno` product build passed in 94.95 seconds;
 - `git diff --check` was clean before publication.
 

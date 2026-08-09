@@ -30,32 +30,26 @@ jobs:
 
       # Swift Testing retains substantial render fixtures for the lifetime of
       # one test process on the hosted macOS runner. Keep execution serial and
-      # restart the process between PCM-heavy groups so the complete test bank
-      # stays bounded without skipping or weakening any case. Each bounded group
-      # reuses the same compiled test bundle in a fresh process.
-      - name: Run upper vertical-slice integration tests
+      # restart the process at every prepared-product boundary so the complete
+      # upper bank stays bounded without skipping or weakening any case. The
+      # first group compiles the test binary; every later group reuses it.
+      - name: Build tests and run upper score slices
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice|closedHatDecayPlanFingerprint|closedHatCompanionRenderEvidenceTampering|boundedPreparationInputs)'
+          --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
 
-      - name: Run upper transaction integration tests A
+      - name: Run atomic prepared continuation
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(atomicPreparedContinuation|boundedCandidateSelection|candidateBoundaryCancellation|equivalentPreparedTransactionsAcrossRates)'
+          --filter atomicPreparedContinuation
 
-      - name: Run pulse-echo binding integration test
+      - name: Run lightweight upper contracts
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter pulseEchoReturnBindingTampering
-
-      - name: Run upper transaction integration tests B
-        run: >-
-          swift test --no-parallel --skip-build
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(conservativeFallbackGrooveCellIsCanonical|pairedCorrectionOrder|pairedEvaluatorTransaction|phraseBoundaryEvidence|rejectedCandidateIsolation|representativeRateIntent)'
+          --filter '(boundedCandidateSelection|closedHatDecayPlanFingerprint|boundedPreparationInputs|conservativeFallbackGrooveCellIsCanonical)'
 
       - name: Run 8 kHz closed-hat route preparation
         run: >-
@@ -68,6 +62,60 @@ jobs:
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter closedHatCompanion12KRoutePreparation
+
+      - name: Run closed-hat evidence tampering
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter closedHatCompanionRenderEvidenceTampering
+
+      - name: Run pulse-echo evidence tampering
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter pulseEchoReturnBindingTampering
+
+      - name: Run paired evaluator transaction
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter pairedEvaluatorTransaction
+
+      - name: Run candidate-boundary cancellation
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter candidateBoundaryCancellation
+
+      - name: Run paired correction order
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter pairedCorrectionOrder
+
+      - name: Run rejected-candidate isolation
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter rejectedCandidateIsolation
+
+      - name: Run representative-rate intent
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter representativeRateIntent
+
+      - name: Run equivalent prepared transactions across rates
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter equivalentPreparedTransactionsAcrossRates
+
+      - name: Run phrase-boundary evidence
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter phraseBoundaryEvidence
 
       - name: Run core and evidence tests
         run: >-
