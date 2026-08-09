@@ -378,6 +378,8 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let ensemble: EnsembleContext
     package let arrangementGesture: ArrangementGesture
     package let percussionGear: PercussionGear
+    package let performanceCharacter: PerformanceCharacter
+    package let foundationBehavior: FoundationBehavior
     package let foundationCompanion: FoundationCompanion
     package let pulseEchoEnabled: Bool
     package let interlockChapter: InterlockChapter
@@ -388,6 +390,8 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
 
     package init(performance: PerformanceBar, ensemble: EnsembleContext,
                  arrangementGesture: ArrangementGesture, percussionGear: PercussionGear,
+                 performanceCharacter: PerformanceCharacter? = nil,
+                 foundationBehavior: FoundationBehavior? = nil,
                  foundationCompanion: FoundationCompanion, pulseEchoEnabled: Bool,
                  interlockChapter: InterlockChapter,
                  groovePulses: [GroovePulseArticulation] = [],
@@ -398,6 +402,17 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.ensemble = ensemble
         self.arrangementGesture = arrangementGesture
         self.percussionGear = percussionGear
+        let resolvedFoundationBehavior = foundationBehavior ?? FoundationBehavior(
+            companion: foundationCompanion
+        )
+        let derivedPerformanceCharacter: PerformanceCharacter = switch resolvedFoundationBehavior {
+        case .subPulse, .monotone: .hypnoticLock
+        case .point, .pump: .peakDrive
+        case .kickTail, .tunedPercussive: .brokenSuspension
+        case .absent: .ambientDrift
+        }
+        self.performanceCharacter = performanceCharacter ?? derivedPerformanceCharacter
+        self.foundationBehavior = resolvedFoundationBehavior
         self.foundationCompanion = foundationCompanion
         self.pulseEchoEnabled = pulseEchoEnabled && foundationCompanion != .monoRumble
         self.interlockChapter = interlockChapter
@@ -724,6 +739,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
     package private(set) var interlockEvolution: InterlockEvolutionState
     package private(set) var spatialContrast: SpatialContrastState
     package private(set) var narrativeEvolution: NarrativeEvolutionState
+    package private(set) var recentPerformanceCharacters: [PerformanceCharacter]
 
     package init(recentBars: [MusicalMemoryBar] = [], currentPhrase: [MusicalMemoryBar] = [],
                 previousPhrase: [MusicalMemoryBar] = [], dramaticArc: [MusicalMemoryBar] = [],
@@ -733,7 +749,8 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
                 topologyRevision: Int = 0, openDebts: [SessionDramaticDebt] = [],
                 interlockEvolution: InterlockEvolutionState = InterlockEvolutionState(),
                 spatialContrast: SpatialContrastState = SpatialContrastState(),
-                narrativeEvolution: NarrativeEvolutionState = NarrativeEvolutionState()) {
+                narrativeEvolution: NarrativeEvolutionState = NarrativeEvolutionState(),
+                recentPerformanceCharacters: [PerformanceCharacter] = []) {
         self.recentBars = Array(recentBars.suffix(4))
         self.currentPhrase = Array(currentPhrase.suffix(16))
         self.previousPhrase = Array(previousPhrase.suffix(16))
@@ -749,6 +766,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         self.interlockEvolution = interlockEvolution
         self.spatialContrast = spatialContrast
         self.narrativeEvolution = narrativeEvolution
+        self.recentPerformanceCharacters = Array(recentPerformanceCharacters.suffix(2))
     }
 
     package var barsSinceContrast: Int { distance(since: lastContrastBar) }
@@ -765,6 +783,11 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         interlockEvolution = plan.endingInterlockState
         spatialContrast = plan.endingSpatialContrastState
         narrativeEvolution = plan.endingNarrativeState
+        if let character = plan.resolvedBars.first?.performanceCharacter {
+            recentPerformanceCharacters = Array(
+                (recentPerformanceCharacters + [character]).suffix(2)
+            )
+        }
 
         switch plan.kind {
         case .contrast:
@@ -882,6 +905,7 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let alternate: Bool
     package let conservative: Bool
     package let interest: PhraseInterestReport
+    package let performanceCharacterEvidence: PerformanceCharacterEvidence
     package let endingInterlockState: InterlockEvolutionState
     package let endingSpatialContrastState: SpatialContrastState
     package let endingNarrativeState: NarrativeEvolutionState
@@ -907,6 +931,10 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
         self.alternate = alternate
         self.conservative = conservative
         self.interest = interest
+        performanceCharacterEvidence = PerformanceCharacterEvidence(
+            resolvedBars: resolvedBars,
+            conservative: conservative
+        )
         self.endingInterlockState = endingInterlockState
         self.endingSpatialContrastState = endingSpatialContrastState
         self.endingNarrativeState = endingNarrativeState
@@ -1157,6 +1185,13 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         // them with an independently generated scene identity.
         let dna = state.identityDNA
         let section = section(for: kind)
+        let character = performanceCharacter(
+            kind: kind,
+            state: state,
+            alternate: alternate,
+            conservative: conservative,
+            seed: phraseSeed
+        )
         let focusRole = focus(kind: kind, alternate: alternate, seed: phraseSeed)
         var resolvedBars: [ResolvedPerformanceBar] = []
         resolvedBars.reserveCapacity(length)
@@ -1234,13 +1269,22 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             )
             let gesture = arrangementGesture(kind: kind, absoluteBar: absoluteBar)
             let gear = percussionGear(absoluteBar: absoluteBar)
-            let companion = foundationCompanion(
-                dna: dna, kind: kind, alternate: alternate,
-                localBar: localBar, length: length, gesture: gesture
+            let foundation = foundationResolution(
+                character: character,
+                dna: dna,
+                kind: kind,
+                alternate: alternate,
+                conservative: conservative,
+                localBar: localBar,
+                length: length,
+                gesture: gesture
             )
             let ensemble = Self.ensemblePlan(
                 dna: dna, bar: bar, focus: focusRole,
-                release: kind == .energyRelease, kind: kind, companion: companion,
+                release: kind == .energyRelease, kind: kind,
+                character: character,
+                foundationBehavior: foundation.behavior,
+                companion: foundation.companion,
                 gear: gear, gesture: gesture, conservative: conservative
             )
             let groovePulses = GroovePulseResolver.articulations(
@@ -1257,7 +1301,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             )
             let echoEnabled = pulseEchoEnabled(
                 scene: scene, bar: bar, kind: kind,
-                companion: companion, gesture: gesture
+                companion: foundation.companion, gesture: gesture
             )
             let spatialResolution = spatialContrastState.resolving(
                 ensemble: ensemble,
@@ -1272,7 +1316,9 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 ensemble: ensemble,
                 arrangementGesture: gesture,
                 percussionGear: gear,
-                foundationCompanion: companion,
+                performanceCharacter: character,
+                foundationBehavior: foundation.behavior,
+                foundationCompanion: foundation.companion,
                 pulseEchoEnabled: echoEnabled,
                 interlockChapter: interlockState.currentChapter,
                 groovePulses: groovePulses,
@@ -1343,6 +1389,28 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         case .majorBreak: .breakdown
         case .energyRelease, .identityReturn: .returnSection
         }
+    }
+
+    private func performanceCharacter(
+        kind: AutonomousPhraseKind,
+        state: AutonomousSessionState,
+        alternate: Bool,
+        conservative: Bool,
+        seed: UInt64
+    ) -> PerformanceCharacter {
+        guard !conservative, kind != .identityReturn else { return .hypnoticLock }
+        let preferred: [PerformanceCharacter] = switch kind {
+        case .lock: [.hypnoticLock, .melodicGlow]
+        case .contrast: [.acidPressure, .brokenSuspension, .melodicGlow]
+        case .majorBreak: [.brokenSuspension, .ambientDrift]
+        case .energyRelease: [.peakDrive, .acidPressure]
+        case .identityReturn: [.hypnoticLock]
+        }
+        let recent = Set(state.memory.recentPerformanceCharacters)
+        let unrepeated = preferred.filter { !recent.contains($0) }
+        let choices = unrepeated.isEmpty ? preferred : unrepeated
+        let offset = alternate ? 1 : 0
+        return choices[(Int(seed % UInt64(choices.count)) + offset) % choices.count]
     }
 
     private func focus(kind: AutonomousPhraseKind, alternate: Bool, seed: UInt64) -> PerformanceRole {
@@ -1527,6 +1595,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
     package static func ensemblePlan(dna: SceneDNA, bar: PerformanceBar,
                                      focus: PerformanceRole, release: Bool,
                                      kind: AutonomousPhraseKind,
+                                     character: PerformanceCharacter = .hypnoticLock,
+                                     foundationBehavior: FoundationBehavior? = nil,
                                      companion: FoundationCompanion,
                                      gear: PercussionGear,
                                      gesture: ArrangementGesture,
@@ -1534,7 +1604,17 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         let rotation = bar.transformations.contains(.rotate) ? 2 : 0
         let displacement = bar.transformations.contains(.displace) ? 1 : 0
         func shifted(_ step: Int) -> Int { (step + rotation + displacement) % 16 }
-        var kickSteps = dna.rhythm.kickSteps
+        let resolvedFoundationBehavior = foundationBehavior ?? FoundationBehavior(
+            companion: companion
+        )
+        var kickSteps = conservative ? dna.rhythm.kickSteps : characterKickSteps(
+            dna: dna,
+            bar: bar,
+            character: character,
+            kind: kind,
+            gear: gear,
+            gesture: gesture
+        )
         if bar.signatureEvent == .displacedKickRecovery, let last = kickSteps.last {
             kickSteps.removeAll { $0 == last }
             kickSteps.append(min(15, last + 1))
@@ -1546,11 +1626,23 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         }
         if bar.roles.contains(.foundation), companion == .bass,
            !bar.transformations.contains(.omit) {
-            proposals += dna.rhythm.bassSteps.map {
+            let bassSteps = conservative ? dna.rhythm.bassSteps : foundationBassSteps(
+                dna: dna,
+                kickSteps: kickSteps,
+                behavior: resolvedFoundationBehavior
+            )
+            let bassIntensity: Double = switch resolvedFoundationBehavior {
+            case .subPulse: 0.70
+            case .monotone: 0.74
+            case .point: 0.84
+            case .pump: 0.78
+            case .kickTail, .tunedPercussive, .absent: 0.76
+            }
+            proposals += bassSteps.map {
                 let step = shifted($0)
                 return EnsembleEventProposal(voice: .bass, requestedStep: step,
                                       alternateSteps: [step + 1, step + 3], priority: 90,
-                                      intensity: 0.76, essential: true)
+                                      intensity: bassIntensity, essential: true)
             }
         }
         if bar.roles.contains(.foundation), companion == .monoRumble {
@@ -1648,6 +1740,73 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         )
     }
 
+    private static func characterKickSteps(
+        dna: SceneDNA,
+        bar: PerformanceBar,
+        character: PerformanceCharacter,
+        kind: AutonomousPhraseKind,
+        gear: PercussionGear,
+        gesture: ArrangementGesture
+    ) -> [Int] {
+        switch character {
+        case .hypnoticLock, .melodicGlow:
+            return dna.rhythm.kickSteps
+        case .acidPressure:
+            return [0, 4, 8, 12]
+        case .peakDrive:
+            return gesture == .turnaround ? [0, 4, 8, 12, 15] : [0, 4, 8, 12]
+        case .brokenSuspension:
+            let shape = kind == .majorBreak ? 0.78 : 0.58
+            let pattern = TechnoScene.beatShapePattern(
+                beatShape: shape,
+                seed: bar.eventSeed,
+                bar: bar.bar
+            ).kicks
+            if kind == .majorBreak, gesture != .structuralMarker {
+                let displaced = pattern.first { !$0.isMultiple(of: 4) } ?? 7
+                let secondDisplaced = pattern.dropFirst().first {
+                    !$0.isMultiple(of: 4) && $0 != displaced
+                }
+                if gear == .turnaround, let secondDisplaced {
+                    return [0, displaced, secondDisplaced].sorted()
+                }
+                return [0, displaced].sorted()
+            }
+            return pattern
+        case .ambientDrift:
+            return gesture == .structuralMarker ? [0, 8] : [0]
+        }
+    }
+
+    private static func foundationBassSteps(
+        dna: SceneDNA,
+        kickSteps: [Int],
+        behavior: FoundationBehavior
+    ) -> [Int] {
+        let kickSet = Set(kickSteps)
+        func available(_ values: [Int]) -> [Int] {
+            var seen = Set<Int>()
+            return values.map { (($0 % 16) + 16) % 16 }.filter {
+                !kickSet.contains($0) && seen.insert($0).inserted
+            }
+        }
+        let identity = available(dna.rhythm.bassSteps)
+        switch behavior {
+        case .subPulse:
+            return Array((identity.isEmpty ? available([10, 14, 6]) : identity).prefix(1))
+        case .monotone:
+            return Array((identity.isEmpty ? available([6, 10, 14]) : identity).prefix(2))
+        case .point:
+            return Array(available(
+                dna.characteristicSyncopations + dna.rhythm.bassSteps + [3, 10, 14]
+            ).prefix(3))
+        case .pump:
+            return Array(available(kickSteps.map { $0 + 1 }).prefix(4))
+        case .kickTail, .tunedPercussive, .absent:
+            return []
+        }
+    }
+
     private func percussionGear(absoluteBar: Int) -> PercussionGear {
         switch (absoluteBar % 16) / 4 {
         case 0: .anchor
@@ -1674,9 +1833,56 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         }
     }
 
-    private func foundationCompanion(dna: SceneDNA, kind: AutonomousPhraseKind,
-                                     alternate: Bool, localBar: Int, length: Int,
-                                     gesture: ArrangementGesture) -> FoundationCompanion {
+    private func foundationResolution(
+        character: PerformanceCharacter,
+        dna: SceneDNA,
+        kind: AutonomousPhraseKind,
+        alternate: Bool,
+        conservative: Bool,
+        localBar: Int,
+        length: Int,
+        gesture: ArrangementGesture
+    ) -> (behavior: FoundationBehavior, companion: FoundationCompanion) {
+        if conservative {
+            let companion = legacyFoundationCompanion(
+                dna: dna,
+                kind: kind,
+                alternate: alternate,
+                localBar: localBar,
+                length: length,
+                gesture: gesture
+            )
+            return (FoundationBehavior(companion: companion), companion)
+        }
+        let behavior: FoundationBehavior = switch character {
+        case .hypnoticLock:
+            gesture == .minimalize ? .subPulse : .monotone
+        case .acidPressure:
+            gesture == .turnaround ? .point : .monotone
+        case .peakDrive:
+            localBar < length / 2 ? .point : .pump
+        case .brokenSuspension:
+            gesture == .structuralMarker ? .tunedPercussive : .kickTail
+        case .ambientDrift:
+            gesture == .structuralMarker ? .kickTail : .absent
+        case .melodicGlow:
+            gesture == .turnaround ? .point : .subPulse
+        }
+        precondition(
+            PerformanceCharacterContract.foundationIsCompatible(behavior, with: character),
+            "Performance character emitted an incompatible foundation"
+        )
+        return (behavior, behavior.companion)
+    }
+
+    private func legacyFoundationCompanion(
+        dna: SceneDNA,
+        kind: AutonomousPhraseKind,
+        alternate: Bool,
+        localBar: Int,
+        length: Int,
+        gesture: ArrangementGesture
+    ) -> FoundationCompanion {
         switch kind {
         case .majorBreak:
             return gesture == .structuralMarker ? .tunedTom : .empty

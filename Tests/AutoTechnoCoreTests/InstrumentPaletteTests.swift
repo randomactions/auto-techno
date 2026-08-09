@@ -124,6 +124,38 @@ struct InstrumentPaletteTests {
         }
     }
 
+    @Test("Foundation behaviors resolve to distinct bounded instrument consequences")
+    func foundationBehaviorPCM() {
+        let world = fixtureWorld(seed: 48_291)
+        let audible: [FoundationBehavior] = [.subPulse, .monotone, .point, .pump]
+        let assignments = audible.map { behavior in
+            InstrumentPalette.resolveFoundation(
+                world: world,
+                kind: .energyRelease,
+                gesture: .release,
+                mutationAmount: 0.72,
+                foundationBehavior: behavior,
+                conservative: false
+            )
+        }
+        for index in assignments.indices {
+            for comparison in assignments.indices where comparison > index {
+                #expect(assignments[index].automation != assignments[comparison].automation)
+            }
+        }
+        #expect(assignments.allSatisfy {
+            $0.isValid && $0.use == .foundationBass && $0.automation.space == 0
+        })
+
+        let renders = assignments.map { render(assignment: $0, role: .anchor).samples }
+        for index in renders.indices {
+            #expect(renders[index].contains { $0 != 0 && $0.isFinite })
+            for comparison in renders.indices where comparison > index {
+                #expect(renders[index] != renders[comparison])
+            }
+        }
+    }
+
     @Test("Each architecture turns semantic automation into deterministic audible PCM")
     func architectureAutomationPCM() {
         let fixtures: [(InstrumentPatch, InstrumentUse, SynthRole)] = [
@@ -306,9 +338,12 @@ struct InstrumentPaletteTests {
                 resolvedBars: plan.resolvedBars,
                 conservative: plan.conservative
             )
-            let plannedArchitectures = Set(synth.bars.flatMap { bar in
-                [bar.foundationInstrument.architecture] +
-                    bar.upperNotes.map { $0.instrument.architecture }
+            let plannedArchitectures = Set(zip(plan.resolvedBars, synth.bars).flatMap {
+                resolved, bar in
+                let audibleFoundation = resolved.ensemble.events.contains {
+                    $0.voice == .bass
+                } ? [bar.foundationInstrument.architecture] : []
+                return audibleFoundation + bar.upperNotes.map { $0.instrument.architecture }
             })
             if plannedArchitectures == Set(InstrumentArchitecture.allCases) {
                 selectedPlan = plan

@@ -53,6 +53,137 @@ struct AdaptiveAutonomousSessionTests {
         }
     }
 
+    @Test("Performance characters remain coherent and all authored behaviors are reachable")
+    func performanceCharacterConductor() {
+        var observed = Set<PerformanceCharacter>()
+        for rawSeed in 1...24 {
+            let result = sequence(seed: UInt64(rawSeed), phraseCount: 32)
+            #expect(result.state.memory.recentPerformanceCharacters.count <= 2)
+            for plan in result.plans {
+                let character = plan.performanceCharacterEvidence.character
+                observed.insert(character)
+                #expect(plan.performanceCharacterEvidence.valid)
+                #expect(plan.performanceCharacterEvidence.totalBars == plan.barCount)
+                #expect(plan.resolvedBars.allSatisfy {
+                    $0.performanceCharacter == character &&
+                        PerformanceCharacterContract.foundationIsCompatible(
+                            $0.foundationBehavior,
+                            with: character
+                        ) &&
+                        $0.foundationCompanion == $0.foundationBehavior.companion &&
+                        PerformanceCharacterContract.rolesAreCompatible(
+                            $0.performance.roles,
+                            with: character
+                        ) &&
+                        PerformanceCharacterContract.rhythmIsCompatible(
+                            $0.ensemble,
+                            with: character
+                        )
+                })
+
+                let synth = SynthPerformancePlan(
+                    scene: plan.scene,
+                    dna: plan.dna,
+                    kind: plan.kind,
+                    resolvedBars: plan.resolvedBars,
+                    conservative: plan.conservative
+                )
+                for (resolved, synthBar) in zip(plan.resolvedBars, synth.bars) {
+                    switch resolved.foundationBehavior {
+                    case .point:
+                        #expect(synthBar.foundationInstrument.patch == .bassPluck)
+                    case .subPulse, .monotone, .pump:
+                        #expect(synthBar.foundationInstrument.patch == .bassPulse)
+                    case .kickTail, .tunedPercussive, .absent:
+                        #expect(!resolved.ensemble.events.contains { $0.voice == .bass })
+                    }
+                    if character == .acidPressure {
+                        #expect(synthBar.upperNotes.filter {
+                            $0.role == .anchor || $0.role == .response
+                        }.allSatisfy {
+                            $0.instrument.patch == .acidSequence
+                        })
+                    }
+                    if character == .ambientDrift {
+                        #expect(!resolved.performance.roles.contains(.percussion))
+                        #expect(synthBar.upperNotes.filter {
+                            $0.role == .atmosphere || $0.role == .transition
+                        }.allSatisfy {
+                            $0.instrument.patch == .dustCloud
+                        })
+                    }
+                }
+            }
+        }
+        #expect(observed == Set(PerformanceCharacter.allCases))
+    }
+
+    @Test("Conservative fallback retains the legacy ensemble while reporting bounded evidence")
+    func performanceCharacterFallback() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let fallback = director.candidates(from: state).fallback
+        #expect(fallback.conservative)
+        #expect(fallback.performanceCharacterEvidence.valid)
+        #expect(fallback.performanceCharacterEvidence.character == .hypnoticLock)
+        for resolved in fallback.resolvedBars {
+            let canonical = AutonomousSessionDirector.ensemblePlan(
+                dna: fallback.dna,
+                bar: resolved.performance,
+                focus: resolved.ensemble.focusRole,
+                release: fallback.kind == .energyRelease,
+                kind: fallback.kind,
+                character: resolved.performanceCharacter,
+                foundationBehavior: resolved.foundationBehavior,
+                companion: resolved.foundationCompanion,
+                gear: resolved.percussionGear,
+                gesture: resolved.arrangementGesture,
+                conservative: true
+            )
+            #expect(canonical == resolved.ensemble)
+        }
+    }
+
+    @Test("Character evidence rejects an incompatible foundation and rhythm")
+    func performanceCharacterEvidenceRejectsTampering() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var state = director.initialState()
+        var source: ResolvedPerformanceBar?
+        for _ in 0..<24 {
+            let plan = director.candidates(from: state).primary
+            if plan.performanceCharacterEvidence.character == .peakDrive {
+                source = plan.resolvedBars.first
+                break
+            }
+            state.advance(using: plan)
+        }
+        guard let source else {
+            Issue.record("Expected a reachable Peak Drive phrase")
+            return
+        }
+        let tampered = ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: source.ensemble,
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            performanceCharacter: .peakDrive,
+            foundationBehavior: .absent,
+            foundationCompanion: .empty,
+            pulseEchoEnabled: source.pulseEchoEnabled,
+            interlockChapter: source.interlockChapter,
+            groovePulses: source.groovePulses,
+            closedHatDecayArticulations: source.closedHatDecayArticulations,
+            spatialContrast: source.spatialContrast,
+            narrative: source.narrative
+        )
+        let evidence = PerformanceCharacterEvidence(
+            resolvedBars: [tampered],
+            conservative: false
+        )
+        #expect(!evidence.valid)
+        #expect(evidence.compatibleFoundationBars == 0)
+    }
+
     @Test("Weak-sixteenth classes and macro reveal use the authored hierarchy")
     func weakSixteenthVocabularyAndPatterns() {
         #expect((0..<4).map(SixteenthPulseClass.init(step:)) == [
@@ -187,7 +318,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true, conservative: false
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v8")
+                "autotechno-canonical-engine.v9")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -1191,7 +1322,7 @@ struct AdaptiveAutonomousSessionTests {
         #expect(zip(first.supports, first.supports.dropFirst()).contains { $0.0 != $0.1 })
     }
 
-    @Test("Foundation identity returns after bounded contrast and breaks")
+    @Test("Foundation behaviors vary, leave space, and return to the hypnotic home")
     func foundationCompanionContinuity() {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
@@ -1202,17 +1333,21 @@ struct AdaptiveAutonomousSessionTests {
             let plan = candidates.primary
             if plan.kind == .contrast {
                 sawContrastDeparture = sawContrastDeparture || candidates.alternate.resolvedBars.contains {
-                    $0.foundationCompanion != state.identityDNA.foundationCompanion
+                    $0.foundationBehavior == .point || $0.foundationBehavior == .kickTail
                 }
             }
             if plan.kind == .majorBreak {
                 sawBreakSpace = sawBreakSpace || plan.resolvedBars.contains {
-                    $0.foundationCompanion == .empty
+                    $0.foundationBehavior == .absent || $0.foundationBehavior == .kickTail
                 }
             }
-            if plan.kind == .lock || plan.kind == .energyRelease || plan.kind == .identityReturn {
+            if plan.kind == .identityReturn {
                 #expect(plan.resolvedBars.allSatisfy {
-                    $0.foundationCompanion == state.identityDNA.foundationCompanion
+                    $0.performanceCharacter == .hypnoticLock &&
+                        PerformanceCharacterContract.foundationIsCompatible(
+                            $0.foundationBehavior,
+                            with: .hypnoticLock
+                        ) && $0.foundationCompanion == .bass
                 })
             }
             state.advance(using: plan)
@@ -2460,6 +2595,8 @@ struct AutonomousPreparationPreflightTests {
             ensemble: source.ensemble,
             arrangementGesture: source.arrangementGesture,
             percussionGear: source.percussionGear,
+            performanceCharacter: source.performanceCharacter,
+            foundationBehavior: source.foundationBehavior,
             foundationCompanion: source.foundationCompanion,
             pulseEchoEnabled: source.pulseEchoEnabled,
             interlockChapter: source.interlockChapter,
@@ -3029,13 +3166,18 @@ struct AutonomousPreparationPreflightTests {
     @Test("Rumble remains a protected mono-compatible foundation companion")
     func monoRumbleProtection() {
         var matched: (UInt64, AutonomousPhrasePlan)?
-        for seed in UInt64(1)...256 {
+        for seed in UInt64(1)...16 where matched == nil {
             let director = AutonomousSessionDirector(rootSeed: seed)
-            let state = director.initialState()
-            let plan = director.candidates(from: state).primary
-            if plan.resolvedBars.contains(where: { $0.foundationCompanion == .monoRumble }) {
-                matched = (seed, plan)
-                break
+            var state = director.initialState()
+            for _ in 0..<32 {
+                let plan = director.candidates(from: state).primary
+                if plan.resolvedBars.contains(where: {
+                    $0.foundationCompanion == .monoRumble
+                }) {
+                    matched = (seed, plan)
+                    break
+                }
+                state.advance(using: plan)
             }
         }
         guard let (seed, plan) = matched else {

@@ -510,7 +510,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(vector.schemaVersion == 7)
         #expect(QualityQualificationContract.schemaVersion == 8)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v8")
+                "autotechno-canonical-engine.v9")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -2525,7 +2525,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(initialCommit.fingerprint != advancedCommit.fingerprint)
 
         #expect(AutonomousCandidateFingerprint.plan(candidates.primary) ==
-                "12f6e0183bb28fd9")
+                "89d10f5dbbdd9b3c")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==

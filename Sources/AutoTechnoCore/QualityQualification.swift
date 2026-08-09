@@ -9,7 +9,7 @@ package enum QualityQualificationContract {
     /// uncalibrated; this version identifies evidence, not promotion.
     package static let schemaVersion = 8
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v8"
+    package static let engineVersion = "autotechno-canonical-engine.v9"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

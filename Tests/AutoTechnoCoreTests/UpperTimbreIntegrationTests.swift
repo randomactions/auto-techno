@@ -1532,6 +1532,8 @@ struct UpperTimbreIntegrationTests {
             ensemble: ensemble,
             arrangementGesture: .steady,
             percussionGear: .anchor,
+            performanceCharacter: .hypnoticLock,
+            foundationBehavior: .absent,
             foundationCompanion: .empty,
             pulseEchoEnabled: false,
             interlockChapter: sourceBar.interlockChapter,
@@ -1593,6 +1595,8 @@ struct UpperTimbreIntegrationTests {
                 ),
                 arrangementGesture: canonicalBar.arrangementGesture,
                 percussionGear: canonicalBar.percussionGear,
+                performanceCharacter: canonicalBar.performanceCharacter,
+                foundationBehavior: canonicalBar.foundationBehavior,
                 foundationCompanion: canonicalBar.foundationCompanion,
                 pulseEchoEnabled: canonicalBar.pulseEchoEnabled,
                 interlockChapter: canonicalBar.interlockChapter,
@@ -1950,7 +1954,12 @@ struct UpperTimbreIntegrationTests {
         #expect(trajectory.count == candidates.primary.barCount)
         let first = try #require(trajectory.first)
         #expect(first < AutomaticMixBalancer.homeKickCorrectionDB)
-        #expect(trajectory.dropFirst().allSatisfy { $0 == first })
+        #expect(trajectory.allSatisfy {
+            $0.isFinite && (AutomaticMixBalancer.minimumKickCorrectionDB...0).contains($0)
+        })
+        #expect(zip(trajectory, trajectory.dropFirst()).allSatisfy {
+            abs($0.1 - $0.0) <= AutomaticMixBalancer.maximumStepDB + 0.000_000_1
+        })
         #expect(prepared.selectedCandidateEvidence.routeContinuation.sampleRate == sampleRate)
 
         return PreparedRateProjection(

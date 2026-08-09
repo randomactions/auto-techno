@@ -86,9 +86,11 @@ behavior remain deterministic.
 ## Selection, density, and fallback
 
 The existing `SynthPerformancePlan` resolves assignments from the phrase kind,
-gesture, interlock chapter, scene DNA, mutation amount, musical role, and
-pulse-echo eligibility. DSP consumes those resolved assignments and never
-chooses a patch on its own.
+performance character, foundation behavior, gesture, interlock chapter, scene
+DNA, mutation amount, musical role, and pulse-echo eligibility. DSP consumes
+those resolved assignments and never chooses a patch on its own. See
+`PERFORMANCE_GRAMMAR.md` for the compatibility matrix that coordinates these
+choices across a phrase.
 
 The ensemble score still decides which roles and events exist. One architecture
 may therefore serve several simultaneous musical jobs, while another can be

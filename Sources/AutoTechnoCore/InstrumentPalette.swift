@@ -239,9 +239,56 @@ package enum InstrumentPalette {
         kind: AutonomousPhraseKind,
         gesture: SynthGesture,
         mutationAmount: Double,
+        foundationBehavior: FoundationBehavior? = nil,
         conservative: Bool
     ) -> InstrumentAssignment {
         guard !conservative else { return safeFoundation() }
+        if let foundationBehavior {
+            let patch: InstrumentPatch
+            let automation: InstrumentAutomation
+            switch foundationBehavior {
+            case .subPulse:
+                patch = .bassPulse
+                automation = InstrumentAutomation(
+                    color: 0.16 + mutationAmount * 0.12,
+                    shape: 0.70,
+                    motion: 0.10 + mutationAmount * 0.10,
+                    space: 0
+                )
+            case .monotone:
+                patch = .bassPulse
+                automation = InstrumentAutomation(
+                    color: 0.22 + mutationAmount * 0.18,
+                    shape: 0.54,
+                    motion: 0.18 + mutationAmount * 0.18,
+                    space: 0
+                )
+            case .point:
+                patch = .bassPluck
+                automation = InstrumentAutomation(
+                    color: 0.44 + mutationAmount * 0.22,
+                    shape: 0.84,
+                    motion: 0.24 + mutationAmount * 0.16,
+                    space: 0
+                )
+            case .pump:
+                patch = .bassPulse
+                automation = InstrumentAutomation(
+                    color: 0.30 + mutationAmount * 0.18,
+                    shape: 0.76,
+                    motion: 0.30 + mutationAmount * 0.16,
+                    space: 0
+                )
+            case .kickTail, .tunedPercussive, .absent:
+                return safeFoundation()
+            }
+            return assignment(
+                use: .foundationBass,
+                patch: patch,
+                automation: automation,
+                pulseEchoEnabled: false
+            )
+        }
         let energetic = kind == .contrast || kind == .energyRelease
         let patch: InstrumentPatch = energetic && (world.variation + gestureIndex(gesture)).isMultiple(of: 2)
             ? .bassPluck : .bassPulse
@@ -267,34 +314,77 @@ package enum InstrumentPalette {
         chapter: InterlockChapter,
         mutationAmount: Double,
         conservative: Bool,
-        pulseEchoEnabled: Bool
+        pulseEchoEnabled: Bool,
+        performanceCharacter: PerformanceCharacter = .hypnoticLock
     ) -> InstrumentAssignment {
         guard !conservative else { return safeUpper(role: role) }
         let patch: InstrumentPatch
-        switch role {
-        case .anchor:
-            if chapter == .motion && (kind == .contrast || kind == .energyRelease) {
-                patch = .acidSequence
-            } else if gesture == .corrode {
-                patch = .acidThread
-            } else {
-                patch = [.northStar, .darkChord, .glassRunner][world.variation % 3]
+        switch (performanceCharacter, role) {
+        case (.acidPressure, .anchor):
+            patch = .acidSequence
+        case (.acidPressure, .shadow):
+            patch = .acidThread
+        case (.acidPressure, .response):
+            patch = .acidSequence
+        case (.acidPressure, .atmosphere):
+            patch = .alienNoise
+        case (.acidPressure, .transition):
+            patch = .metalVeil
+        case (.peakDrive, .anchor):
+            patch = .glassRunner
+        case (.peakDrive, .shadow):
+            patch = .acidThread
+        case (.peakDrive, .response):
+            patch = .northStar
+        case (.peakDrive, .atmosphere):
+            patch = .alienNoise
+        case (.peakDrive, .transition):
+            patch = .metalVeil
+        case (.brokenSuspension, .anchor), (.brokenSuspension, .shadow):
+            patch = .glassRunner
+        case (.brokenSuspension, .response):
+            patch = .alienNoise
+        case (.brokenSuspension, .atmosphere):
+            patch = .dustCloud
+        case (.brokenSuspension, .transition):
+            patch = .metalVeil
+        case (.ambientDrift, .anchor), (.ambientDrift, .shadow):
+            patch = .darkChord
+        case (.ambientDrift, .response):
+            patch = .alienNoise
+        case (.ambientDrift, .atmosphere), (.ambientDrift, .transition):
+            patch = .dustCloud
+        case (.melodicGlow, .anchor), (.melodicGlow, .response):
+            patch = .northStar
+        case (.melodicGlow, .shadow), (.melodicGlow, .atmosphere),
+             (.melodicGlow, .transition):
+            patch = .darkChord
+        case (.hypnoticLock, let role):
+            switch role {
+            case .anchor:
+                if chapter == .motion && (kind == .contrast || kind == .energyRelease) {
+                    patch = .acidSequence
+                } else if gesture == .corrode {
+                    patch = .acidThread
+                } else {
+                    patch = [.northStar, .darkChord, .glassRunner][world.variation % 3]
+                }
+            case .shadow:
+                patch = chapter == .motion ? .acidThread :
+                    ([.glassRunner, .darkChord][world.variation % 2])
+            case .response:
+                if chapter == .motion {
+                    patch = .acidSequence
+                } else if chapter == .tone && kind != .majorBreak {
+                    patch = .alienNoise
+                } else {
+                    patch = .northStar
+                }
+            case .atmosphere:
+                patch = chapter == .breath || kind == .majorBreak ? .dustCloud : .alienNoise
+            case .transition:
+                patch = chapter == .memory ? .dustCloud : .metalVeil
             }
-        case .shadow:
-            patch = chapter == .motion ? .acidThread :
-                ([.glassRunner, .darkChord][world.variation % 2])
-        case .response:
-            if chapter == .motion {
-                patch = .acidSequence
-            } else if chapter == .tone && kind != .majorBreak {
-                patch = .alienNoise
-            } else {
-                patch = .northStar
-            }
-        case .atmosphere:
-            patch = chapter == .breath || kind == .majorBreak ? .dustCloud : .alienNoise
-        case .transition:
-            patch = chapter == .memory ? .dustCloud : .metalVeil
         }
 
         let base = automationBase(for: patch)

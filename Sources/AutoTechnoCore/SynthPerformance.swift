@@ -466,6 +466,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     kind: kind,
                     gesture: gesture,
                     mutationAmount: mutation,
+                    foundationBehavior: resolved.foundationBehavior,
                     conservative: conservative
                 ),
                 relationalSteps: relationalSteps,
@@ -567,7 +568,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 chapter: resolved.interlockChapter,
                 mutationAmount: mutationAmount,
                 conservative: assignmentConservative,
-                pulseEchoEnabled: resolved.pulseEchoEnabled
+                pulseEchoEnabled: resolved.pulseEchoEnabled,
+                performanceCharacter: resolved.performanceCharacter
             )
         }
         let motifPitches = resolvedMotifPitches(

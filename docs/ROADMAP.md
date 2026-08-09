@@ -16,11 +16,14 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   guards;
 - one bounded weak-percussion vocabulary whose existing syncopated-lean onsets
   carry score-owned physical articulation and a 3-3-2 accent/ghost relationship;
-- canonical engine v8, quality-contract schema 8, and candidate-vector schema 7
+- canonical engine v9, quality-contract schema 8, and candidate-vector schema 7
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, event-local groove-pulse, ordinary closed-hat, score-owned instrument,
   shared pulse-echo return-drive, score-owned upper-role timing, graph, and
   pre/post upper-timbre evidence;
+- six phrase-scale performance characters with bounded two-character memory and a
+  tested compatibility contract across foundation behavior, canonical narrative
+  roles, rhythm, and existing instrument assignments;
 - phrase-wide ITU-R BS.1770-5 loudness, Annex 2 true peak, physical-time window
   counts, and a complete-checkpoint Professional Evidence v2 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
@@ -64,7 +67,7 @@ that prevents disconnected parameters from appearing integrated.
 ### 2. Establish versioned quality evidence
 
 Quality-contract schema 8 and candidate-vector schema 7 now bind a versioned
-transaction across canonical engine v8, quality policy, evaluator, candidate
+transaction across canonical engine v9, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded groove-pulse, ordinary closed-hat, instrument,
 pulse-echo return-drive, and upper-role timing projections make each

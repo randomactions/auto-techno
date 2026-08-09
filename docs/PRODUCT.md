@@ -47,6 +47,15 @@ same four bounded semantic automation coordinates move every patch, while the
 existing ensemble score continues to own audible role density. See
 `INSTRUMENT_PALETTE.md` for the human-readable role and effect matrix.
 
+The phrase-scale performance grammar coordinates that palette instead of
+randomizing layers independently. Six internal characters bind compatible
+foundation behavior, kick grammar, role-compatible patches, and automation
+while the session DNA and narrative-owned role admission remain stable.
+Character selection retains the last two
+committed choices, applies only at a future phrase boundary, and returns to the
+hypnotic home for identity return and conservative fallback. See
+`PERFORMANCE_GRAMMAR.md` for the human-readable compatibility matrix.
+
 Every new internal parameter must have a demonstrated path through the resolved
 score or renderer into PCM, measurable evidence, and a bounded influence on a
 future decision. Parameters that do not reach that path are removed or connected

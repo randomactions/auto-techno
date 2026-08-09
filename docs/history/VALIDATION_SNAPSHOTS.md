@@ -491,3 +491,51 @@ playback, physical route/interruption smoke, preparation-latency or peak-memory
 budget, or hardware-output soak was completed. Automated professional-quality
 qualification therefore remains unavailable, and this snapshot makes no
 sound-quality or release-readiness promotion.
+
+## Phrase-scale performance character grammar — 2026-08-09
+
+This source candidate adds one score-owned conductor above the existing
+instrument palette. Six deterministic phrase-scale characters coordinate the
+existing narrative roles with bounded foundation behavior, kick grammar,
+role-compatible patch assignment, and semantic automation. The character is
+retained in two-entry continuation memory and may change only at a future phrase
+boundary. Identity return and conservative fallback use Hypnotic Lock. The
+pre-existing macro narrative remains the sole owner of supporting-role admission
+and removal.
+
+Seven foundation behaviors distinguish sparse Sub Pulse, repeating Monotone,
+syncopated Point, post-kick Pump, Kick Tail, Tuned Percussive, and Absent
+relationships. They resolve through the existing three synthesis architectures
+and protected low-end route; no engine, renderer, graph, plug-in, user selector,
+callback decision, sample capture, or resample buffer was added. Per-phrase
+compatibility evidence binds the selected character and exact counts of
+foundation-, role-, and rhythm-compatible bars. The typed plan-fingerprint
+domain advances to v5 and the canonical engine identity to
+`autotechno-canonical-engine.v9`; quality-contract schema 8 and candidate-vector
+schema 7 remain current.
+
+Final local validation used Xcode 26.6 (`17F113`) with matched SDKs, isolated
+module caches, and serial SwiftPM execution on the source candidate rebased onto
+source-12 commit `fb56950963b6639784dba0cd407edf607f3574ee`:
+
+- the complete package matrix passed 137/137 tests in 837.801 seconds;
+- the character-aware candidate provenance suite passed 13/13;
+- the complete adaptive-session suite passed 23/23, including all six reachable
+  characters and a deterministic 1,024-macro continuation journey;
+- the canonical instrument-palette suite passed 7/7, including distinct finite
+  PCM for Sub Pulse, Monotone, Point, and Pump;
+- the exact spatial isolation, protected mono-rumble, conservative fallback,
+  and 44.1/48 kHz transaction regressions passed independently after their
+  fixtures preserved the explicit resolved character contract;
+- the optimized `AutoTechno` product build passed in 94.95 seconds;
+- `git diff --check` was clean before publication.
+
+The local matrix establishes deterministic structural ownership,
+score-to-render consequence, exact evidence/fingerprint binding, bounded
+continuation, conservative fallback, protected routing, cross-rate controller
+behavior, and optimized-build integrity. No matched-loudness listening,
+exact-build app playback, physical route/interruption smoke, preparation-latency
+or peak-memory budget, or hardware-output soak was completed. Policy remains
+`uncalibrated.v1`, automated professional-quality qualification remains
+unavailable, and this snapshot makes no sound-quality or release-readiness
+promotion.

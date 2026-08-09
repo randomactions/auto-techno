@@ -1551,6 +1551,8 @@ package enum AutonomousPhrasePreparer {
                           focus: resolved.ensemble.focusRole,
                           release: plan.kind == .energyRelease,
                           kind: plan.kind,
+                          character: resolved.performanceCharacter,
+                          foundationBehavior: resolved.foundationBehavior,
                           companion: resolved.foundationCompanion,
                           gear: resolved.percussionGear,
                           gesture: resolved.arrangementGesture,
@@ -1597,6 +1599,7 @@ package enum AutonomousPhrasePreparer {
               }) else {
             return false
         }
+        guard plan.performanceCharacterEvidence.valid else { return false }
         switch slot {
         case .primary:
             return !plan.alternate && !plan.conservative

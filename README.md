@@ -14,6 +14,8 @@ account.
 - phrase-boundary continuation with temporal memory and bounded fallback;
 - three score-selected internal synthesis architectures with bounded patch
   automation and exact score-to-PCM evidence;
+- six phrase-scale performance characters coordinating foundation, rhythm,
+  role-compatible patches, and automation under one persistent identity;
 - engine-owned synthesis, effects, mixing, and output safety;
 - detached preparation followed by sample-time scheduling of immutable buffers;
 - route recovery at the active hardware sample rate;
@@ -71,6 +73,7 @@ revision.
 
 - [`docs/PRODUCT.md`](docs/PRODUCT.md) — stable product and interaction contract
 - [`docs/INSTRUMENT_PALETTE.md`](docs/INSTRUMENT_PALETTE.md) — internal synth, patch, role, automation, and effect matrix
+- [`docs/PERFORMANCE_GRAMMAR.md`](docs/PERFORMANCE_GRAMMAR.md) — phrase character, foundation behavior, compatibility, and evidence matrix
 - [`docs/SOUND_QUALITY.md`](docs/SOUND_QUALITY.md) — professional-sound and automated-quality contract
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — ordered engine-evolution outcomes
 - [`docs/AUTONOMOUS_RUNTIME_PROVENANCE.md`](docs/AUTONOMOUS_RUNTIME_PROVENANCE.md) — runtime ownership and feedback flow

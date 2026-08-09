@@ -12,7 +12,7 @@ role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
 candidate uses quality-contract schema 8, candidate-vector schema 7, and
-canonical engine identity `autotechno-canonical-engine.v8`. It preserves
+canonical engine identity `autotechno-canonical-engine.v9`. It preserves
 complete symbolic, full-mix, masking, role-stem, event-local groove-pulse,
 ordinary closed-hat, score-owned instrument assignment, architecture-local dry-
 PCM, shared pulse-echo return-drive, score-owned upper-role timing, graph, and
@@ -21,7 +21,11 @@ for each retained attempt, then binds the selected attempt to finalized commit
 provenance. Instrument evidence
 records bounded patch automation, compatible effect access, event count, exact
 PCM identity, peak, RMS, and finiteness without retaining reconstructable
-stems. Its
+stems. Typed plan evidence also binds one phrase-scale performance character
+and every bar's compatible foundation behavior, role set, and kick relationship.
+This prevents independent style randomization from being mistaken for coherent
+variation; it remains structural evidence rather than a calibrated musical-
+quality verdict. Its
 phrase-wide full-mix evidence uses ITU-R BS.1770-5 K-weighting, 400 ms blocks
 with 75% overlap and two-stage gating, plus the Annex 2 four-phase FIR for
 true-peak level. Block sizes and durations are derived from the route rate. The
@@ -191,7 +195,7 @@ canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
 Under quality-contract schema 8, candidate-vector schema 7, and canonical engine
-v8, the versioned transaction implements the bounded evidence and atomic commit
+v9, the versioned transaction implements the bounded evidence and atomic commit
 foundation for this loop. It can retain at most the primary, alternate, and
 conservative-fallback candidates, plus one
 home-timbre correction, with no more than four render passes total. Every attempt

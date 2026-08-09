@@ -22,7 +22,7 @@ func fixedWidthFingerprintHex(_ value: UInt64) -> String {
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
-        digest(domain: "candidate-plan.typed.v4") { sink in
+        digest(domain: "candidate-plan.typed.v5") { sink in
             encode(plan, into: &sink)
         }
     }
@@ -177,6 +177,8 @@ private extension AutonomousTypedFingerprint {
         sink.field("alternate"); sink.bool(value.alternate)
         sink.field("conservative"); sink.bool(value.conservative)
         sink.field("interest"); encode(value.interest, into: &sink)
+        sink.field("performanceCharacterEvidence")
+        encode(value.performanceCharacterEvidence, into: &sink)
         sink.field("endingInterlockState"); encode(value.endingInterlockState, into: &sink)
         sink.field("endingSpatialContrastState")
         encode(value.endingSpatialContrastState, into: &sink)
@@ -351,6 +353,8 @@ private extension AutonomousTypedFingerprint {
         sink.field("ensemble"); encode(value.ensemble, into: &sink)
         sink.field("arrangementGesture"); sink.raw(value.arrangementGesture.rawValue)
         sink.field("percussionGear"); sink.raw(value.percussionGear.rawValue)
+        sink.field("performanceCharacter"); sink.raw(value.performanceCharacter.rawValue)
+        sink.field("foundationBehavior"); sink.raw(value.foundationBehavior.rawValue)
         sink.field("foundationCompanion"); sink.raw(value.foundationCompanion.rawValue)
         sink.field("pulseEchoEnabled"); sink.bool(value.pulseEchoEnabled)
         sink.field("interlockChapter"); sink.raw(value.interlockChapter.rawValue)
@@ -465,6 +469,17 @@ private extension AutonomousTypedFingerprint {
         sink.field("overactivityPenalty"); sink.double(value.overactivityPenalty)
         sink.field("overdueDebtCount"); sink.int(value.overdueDebtCount)
         sink.field("score"); sink.double(value.score)
+        sink.field("valid"); sink.bool(value.valid)
+    }
+
+    static func encode(_ value: PerformanceCharacterEvidence,
+                       into sink: inout StreamingFNV1a) {
+        sink.aggregate("PerformanceCharacterEvidence")
+        sink.field("character"); sink.raw(value.character.rawValue)
+        sink.field("totalBars"); sink.int(value.totalBars)
+        sink.field("compatibleFoundationBars"); sink.int(value.compatibleFoundationBars)
+        sink.field("compatibleRoleBars"); sink.int(value.compatibleRoleBars)
+        sink.field("characteristicRhythmBars"); sink.int(value.characteristicRhythmBars)
         sink.field("valid"); sink.bool(value.valid)
     }
 

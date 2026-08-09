@@ -16,12 +16,17 @@ mistaken for a completed feedback system.
    score source for requested onsets, pitches, durations, gates, and articulation.
    Renderer-owned trajectory evidence records the continuation-dependent applied
    start frequency and gate outcome without creating a second score.
+   Each future phrase also carries one director-owned performance character.
+   Bounded two-character memory avoids immediate character repetition when another
+   compatible interpretation exists. Per-bar foundation behavior, role set, and
+   kick grammar must remain compatible with that phrase character; identity
+   return and conservative fallback resolve to the hypnotic home.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
    candidate-evaluation transaction under quality-contract schema 8, candidate-
    vector schema 7, and canonical engine identity
-   `autotechno-canonical-engine.v8`. Each
+   `autotechno-canonical-engine.v9`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, event-local groove-pulse,
    ordinary closed-hat, score-owned instrument, shared pulse-echo return-drive,
@@ -68,7 +73,12 @@ mistaken for a completed feedback system.
    access, and bounded breath-chapter companion timing. Resonant Mono, Tonal
    Motion, and
    Spectral Texture remain specialized voices inside this one renderer; they
-   are not alternative runtimes or user-selectable instruments. The voice
+   are not alternative runtimes or user-selectable instruments. The planner
+   also consumes the resolved performance character and foundation behavior.
+   Sub Pulse, Monotone, Point, and Pump become distinct bounded Resonant Mono
+   assignments, while Kick Tail, Tuned Percussive, and Absent reuse the existing
+   rumble, tuned-tom, or empty companion. Upper characters select compatible
+   existing patches without creating another renderer. The voice
    renderer applies
    the resolved protagonist contour and may place one eligible existing event on
    a filtered send into the existing reverb; neither operation creates another
