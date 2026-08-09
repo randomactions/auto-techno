@@ -313,6 +313,81 @@ package struct ProfessionalQualityMetricBounds: Codable, Equatable, Sendable {
     }
 }
 
+package enum ProfessionalQualityTrajectory: String, CaseIterable, Codable,
+        Sendable {
+    case establishmentToChapterChange = "establishment-to-chapter-change"
+    case establishmentToContrast = "establishment-to-contrast"
+    case establishmentToMajorBreak = "establishment-to-major-break"
+    case majorBreakToRelease = "major-break-to-release"
+    case establishmentToIdentityReturn = "establishment-to-identity-return"
+    case establishmentToLongContinuation =
+        "establishment-to-long-continuation"
+
+    package var checkpoints: (
+        from: CanonicalJourneyCheckpoint,
+        to: CanonicalJourneyCheckpoint
+    ) {
+        switch self {
+        case .establishmentToChapterChange:
+            return (.establishment, .chapterChange)
+        case .establishmentToContrast:
+            return (.establishment, .contrast)
+        case .establishmentToMajorBreak:
+            return (.establishment, .majorBreak)
+        case .majorBreakToRelease:
+            return (.majorBreak, .release)
+        case .establishmentToIdentityReturn:
+            return (.establishment, .identityReturn)
+        case .establishmentToLongContinuation:
+            return (.establishment, .longContinuation)
+        }
+    }
+}
+
+package struct ProfessionalQualityTrajectoryBounds: Codable, Equatable,
+        Sendable {
+    package let trajectory: ProfessionalQualityTrajectory
+    package let metric: ProfessionalQualityMetric
+    package let lowerDelta: Double
+    package let upperDelta: Double
+
+    package init(
+        trajectory: ProfessionalQualityTrajectory,
+        metric: ProfessionalQualityMetric,
+        lowerDelta: Double,
+        upperDelta: Double
+    ) throws {
+        guard lowerDelta.isFinite, upperDelta.isFinite,
+              lowerDelta <= upperDelta else {
+            throw ProfessionalQualityCalibrationError.invalidBounds
+        }
+        self.trajectory = trajectory
+        self.metric = metric
+        self.lowerDelta = lowerDelta
+        self.upperDelta = upperDelta
+    }
+}
+
+package struct ProfessionalQualityRateConsistencyBounds: Codable, Equatable,
+        Sendable {
+    package let checkpoint: CanonicalJourneyCheckpoint
+    package let metric: ProfessionalQualityMetric
+    package let maximumAbsoluteDelta: Double
+
+    package init(
+        checkpoint: CanonicalJourneyCheckpoint,
+        metric: ProfessionalQualityMetric,
+        maximumAbsoluteDelta: Double
+    ) throws {
+        guard maximumAbsoluteDelta.isFinite, maximumAbsoluteDelta >= 0 else {
+            throw ProfessionalQualityCalibrationError.invalidBounds
+        }
+        self.checkpoint = checkpoint
+        self.metric = metric
+        self.maximumAbsoluteDelta = maximumAbsoluteDelta
+    }
+}
+
 package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendable {
     package let checkpoint: CanonicalJourneyCheckpoint
     package let sourceObservationCount: Int
@@ -363,6 +438,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
     package let sourceBankFingerprint: String
     package let sampleRates: [Double]
     package let checkpoints: [ProfessionalQualityCheckpointProfile]
+    package let trajectories: [ProfessionalQualityTrajectoryBounds]
+    package let rateConsistency: [ProfessionalQualityRateConsistencyBounds]
 
     package init(bank: ProfessionalEvidenceReportBank) throws {
         guard bank.evidenceVersion == ProfessionalEvidenceReportBank.evidenceVersion,
@@ -445,6 +522,63 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 bounds: metricBounds
             ))
         }
+        var trajectoryBounds: [ProfessionalQualityTrajectoryBounds] = []
+        for trajectory in ProfessionalQualityTrajectory.allCases {
+            let pair = trajectory.checkpoints
+            for metric in ProfessionalQualityMetric.allCases {
+                let deltas = try sampleRates.map { sampleRate -> Double in
+                    guard let from = observations.first(where: {
+                        $0.sampleRate == sampleRate &&
+                            $0.checkpoint == pair.from
+                    })?[metric],
+                          let to = observations.first(where: {
+                              $0.sampleRate == sampleRate &&
+                                  $0.checkpoint == pair.to
+                          })?[metric] else {
+                        throw ProfessionalQualityCalibrationError
+                            .incompleteCheckpointCoverage
+                    }
+                    return to - from
+                }
+                guard let minimum = deltas.min(), let maximum = deltas.max() else {
+                    throw ProfessionalQualityCalibrationError.invalidMetricSet
+                }
+                let guardBand = Self.guardBand(
+                    metric: metric,
+                    values: deltas,
+                    minimum: minimum,
+                    maximum: maximum
+                )
+                trajectoryBounds.append(try ProfessionalQualityTrajectoryBounds(
+                    trajectory: trajectory,
+                    metric: metric,
+                    lowerDelta: minimum - guardBand,
+                    upperDelta: maximum + guardBand
+                ))
+            }
+        }
+        var rateBounds: [ProfessionalQualityRateConsistencyBounds] = []
+        for checkpoint in CanonicalJourneyCheckpoint.allCases {
+            let sources = observations.filter { $0.checkpoint == checkpoint }
+            for metric in ProfessionalQualityMetric.allCases {
+                let values = sources.compactMap { $0[metric] }
+                guard values.count == sampleRates.count,
+                      let minimum = values.min(), let maximum = values.max() else {
+                    throw ProfessionalQualityCalibrationError.invalidMetricSet
+                }
+                let guardBand = Self.guardBand(
+                    metric: metric,
+                    values: values,
+                    minimum: minimum,
+                    maximum: maximum
+                )
+                rateBounds.append(try ProfessionalQualityRateConsistencyBounds(
+                    checkpoint: checkpoint,
+                    metric: metric,
+                    maximumAbsoluteDelta: maximum - minimum + guardBand
+                ))
+            }
+        }
         schemaVersion = Self.schemaVersion
         profileVersion = Self.profileVersion
         observationVersion = ProfessionalQualityObservation.observationVersion
@@ -453,6 +587,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         self.sourceBankFingerprint = sourceBankFingerprint
         self.sampleRates = sampleRates
         checkpoints = profiles
+        trajectories = trajectoryBounds
+        rateConsistency = rateBounds
     }
 
     package var isComplete: Bool {
@@ -475,6 +611,38 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                         return bounds.lower >= domain.lowerBound &&
                             bounds.upper <= domain.upperBound
                     }
+            } &&
+            trajectories.count == ProfessionalQualityTrajectory.allCases.count *
+                ProfessionalQualityMetric.allCases.count &&
+            trajectories.map {
+                "\($0.trajectory.rawValue):\($0.metric.rawValue)"
+            } == ProfessionalQualityTrajectory.allCases.flatMap { trajectory in
+                ProfessionalQualityMetric.allCases.map {
+                    "\(trajectory.rawValue):\($0.rawValue)"
+                }
+            } &&
+            Set(trajectories.map {
+                "\($0.trajectory.rawValue):\($0.metric.rawValue)"
+            }).count == trajectories.count &&
+            trajectories.allSatisfy {
+                $0.lowerDelta.isFinite && $0.upperDelta.isFinite &&
+                    $0.lowerDelta <= $0.upperDelta
+            } &&
+            rateConsistency.count == CanonicalJourneyCheckpoint.allCases.count *
+                ProfessionalQualityMetric.allCases.count &&
+            rateConsistency.map {
+                "\($0.checkpoint.rawValue):\($0.metric.rawValue)"
+            } == CanonicalJourneyCheckpoint.allCases.flatMap { checkpoint in
+                ProfessionalQualityMetric.allCases.map {
+                    "\(checkpoint.rawValue):\($0.rawValue)"
+                }
+            } &&
+            Set(rateConsistency.map {
+                "\($0.checkpoint.rawValue):\($0.metric.rawValue)"
+            }).count == rateConsistency.count &&
+            rateConsistency.allSatisfy {
+                $0.maximumAbsoluteDelta.isFinite &&
+                    $0.maximumAbsoluteDelta >= 0
             }
     }
 
@@ -584,12 +752,103 @@ package enum ProfessionalQualityRejection: String, Codable, Hashable, Sendable {
     case hardGateFailure = "hard-gate-failure"
     case incompleteObservation = "incomplete-observation"
     case metricOutOfRange = "metric-out-of-range"
+    case trajectoryRelationshipFailed = "trajectory-relationship-failed"
+    case rateConsistencyFailed = "rate-consistency-failed"
 }
 
 package struct ProfessionalQualityVerdict: Codable, Equatable, Sendable {
     package let accepted: Bool
     package let reasons: [ProfessionalQualityRejection]
     package let failedMetrics: [ProfessionalQualityMetric]
+}
+
+package enum ProfessionalQualityRelationshipFailureKind: String, Codable,
+        Sendable {
+    case trajectory = "trajectory"
+    case rateConsistency = "rate-consistency"
+}
+
+package struct ProfessionalQualityRelationshipFailure: Codable, Equatable,
+        Sendable {
+    package let kind: ProfessionalQualityRelationshipFailureKind
+    package let trajectory: ProfessionalQualityTrajectory?
+    package let checkpoint: CanonicalJourneyCheckpoint?
+    package let metric: ProfessionalQualityMetric
+    package let observedDelta: Double
+    package let lowerBound: Double
+    package let upperBound: Double
+}
+
+package enum ProfessionalQualityRelationshipEvaluator {
+    package static func evaluate(
+        observations: [ProfessionalQualityObservation],
+        against profile: ProfessionalQualityCalibrationProfile
+    ) -> [ProfessionalQualityRelationshipFailure] {
+        guard profile.isComplete else { return [] }
+        var failures: [ProfessionalQualityRelationshipFailure] = []
+        for bounds in profile.trajectories {
+            let pair = bounds.trajectory.checkpoints
+            for sampleRate in profile.sampleRates {
+                guard let from = observations.first(where: {
+                    $0.sampleRate == sampleRate && $0.checkpoint == pair.from
+                })?[bounds.metric],
+                      let to = observations.first(where: {
+                          $0.sampleRate == sampleRate && $0.checkpoint == pair.to
+                      })?[bounds.metric] else { continue }
+                let delta = to - from
+                if !(bounds.lowerDelta...bounds.upperDelta).contains(delta) {
+                    failures.append(ProfessionalQualityRelationshipFailure(
+                        kind: .trajectory,
+                        trajectory: bounds.trajectory,
+                        checkpoint: nil,
+                        metric: bounds.metric,
+                        observedDelta: delta,
+                        lowerBound: bounds.lowerDelta,
+                        upperBound: bounds.upperDelta
+                    ))
+                }
+            }
+        }
+        for bounds in profile.rateConsistency {
+            let values = profile.sampleRates.compactMap { sampleRate in
+                observations.first {
+                    $0.sampleRate == sampleRate &&
+                        $0.checkpoint == bounds.checkpoint
+                }?[bounds.metric]
+            }
+            guard let minimum = values.min(), let maximum = values.max(),
+                  values.count == profile.sampleRates.count else { continue }
+            let delta = maximum - minimum
+            if delta > bounds.maximumAbsoluteDelta {
+                failures.append(ProfessionalQualityRelationshipFailure(
+                    kind: .rateConsistency,
+                    trajectory: nil,
+                    checkpoint: bounds.checkpoint,
+                    metric: bounds.metric,
+                    observedDelta: delta,
+                    lowerBound: 0,
+                    upperBound: bounds.maximumAbsoluteDelta
+                ))
+            }
+        }
+        return failures.sorted { left, right in
+            let leftKey = [
+                left.kind.rawValue,
+                left.trajectory?.rawValue ?? "",
+                left.checkpoint?.rawValue ?? "",
+                left.metric.rawValue,
+                String(left.observedDelta.bitPattern),
+            ].joined(separator: ":")
+            let rightKey = [
+                right.kind.rawValue,
+                right.trajectory?.rawValue ?? "",
+                right.checkpoint?.rawValue ?? "",
+                right.metric.rawValue,
+                String(right.observedDelta.bitPattern),
+            ].joined(separator: ":")
+            return leftKey < rightKey
+        }
+    }
 }
 
 package enum ProfessionalQualityProfileEvaluator {

@@ -26,12 +26,13 @@ package struct ProfessionalQualityDevelopmentQualification: Codable, Equatable,
     package let sourceObservationCount: Int
     package let acceptedObservationCount: Int
     package let verdicts: [ProfessionalQualityReportVerdict]
+    package let relationshipFailures: [ProfessionalQualityRelationshipFailure]
 
     package var qualified: Bool {
         schemaVersion == Self.schemaVersion && sourceObservationCount > 0 &&
             acceptedObservationCount == sourceObservationCount &&
             verdicts.count == sourceObservationCount &&
-            verdicts.allSatisfy(\.accepted)
+            verdicts.allSatisfy(\.accepted) && relationshipFailures.isEmpty
     }
 
     package func deterministicJSON() throws -> Data {
@@ -136,6 +137,8 @@ package struct ProfessionalQualityDevelopmentPolicy: Sendable {
                 failedMetrics: verdict.failedMetrics
             )
         }
+        let relationshipFailures = ProfessionalQualityRelationshipEvaluator
+            .evaluate(observations: sorted, against: profile)
         return ProfessionalQualityDevelopmentQualification(
             schemaVersion: ProfessionalQualityDevelopmentQualification
                 .schemaVersion,
@@ -147,7 +150,8 @@ package struct ProfessionalQualityDevelopmentPolicy: Sendable {
             adversarialSuiteFingerprint: adversarialSuite.fingerprint,
             sourceObservationCount: observations.count,
             acceptedObservationCount: verdicts.filter(\.accepted).count,
-            verdicts: verdicts
+            verdicts: verdicts,
+            relationshipFailures: relationshipFailures
         )
     }
 }

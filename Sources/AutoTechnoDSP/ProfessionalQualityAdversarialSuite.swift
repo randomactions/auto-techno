@@ -11,6 +11,8 @@ package enum ProfessionalQualityAdversarialScenario: String, CaseIterable,
     case lowEndPhaseFailure = "low-end-phase-failure"
     case silentProxy = "silent-proxy"
     case foreignRate = "foreign-rate"
+    case trajectoryFlattening = "trajectory-flattening"
+    case rateDrift = "rate-drift"
 }
 
 package struct ProfessionalQualityAdversarialCaseResult: Codable, Equatable,
@@ -197,6 +199,38 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             observation: try identityCopy(sampleRate: 96_000),
             expected: .profileMismatch
         )
+        let trajectoryAttack = try Self.trajectoryAttack(
+            profile: profile,
+            observations: sourceObservations
+        )
+        let trajectoryFailures = ProfessionalQualityRelationshipEvaluator
+            .evaluate(observations: trajectoryAttack, against: profile)
+            .filter { $0.kind == .trajectory }
+        generated.append(ProfessionalQualityAdversarialCaseResult(
+            scenario: .trajectoryFlattening,
+            rejected: !trajectoryFailures.isEmpty,
+            expectedReason: .trajectoryRelationshipFailed,
+            actualReasons: trajectoryFailures.isEmpty
+                ? [] : [.trajectoryRelationshipFailed],
+            failedMetrics: Array(Set(trajectoryFailures.map(\.metric)))
+                .sorted { $0.rawValue < $1.rawValue }
+        ))
+
+        let rateAttack = try Self.rateAttack(
+            profile: profile,
+            observations: sourceObservations
+        )
+        let rateFailures = ProfessionalQualityRelationshipEvaluator
+            .evaluate(observations: rateAttack, against: profile)
+            .filter { $0.kind == .rateConsistency }
+        generated.append(ProfessionalQualityAdversarialCaseResult(
+            scenario: .rateDrift,
+            rejected: !rateFailures.isEmpty,
+            expectedReason: .rateConsistencyFailed,
+            actualReasons: rateFailures.isEmpty ? [] : [.rateConsistencyFailed],
+            failedMetrics: Array(Set(rateFailures.map(\.metric)))
+                .sorted { $0.rawValue < $1.rawValue }
+        ))
 
         schemaVersion = Self.schemaVersion
         suiteVersion = Self.suiteVersion
@@ -267,5 +301,86 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
         }
         return observation
+    }
+
+    private static func trajectoryAttack(
+        profile: ProfessionalQualityCalibrationProfile,
+        observations: [ProfessionalQualityObservation]
+    ) throws -> [ProfessionalQualityObservation] {
+        for relation in profile.trajectories {
+            let pair = relation.trajectory.checkpoints
+            guard let fromIndex = observations.firstIndex(where: {
+                $0.sampleRate == 48_000 && $0.checkpoint == pair.from
+            }), let toIndex = observations.firstIndex(where: {
+                $0.sampleRate == 48_000 && $0.checkpoint == pair.to
+            }), let fromBounds = profile[pair.from]?[relation.metric],
+                  let toBounds = profile[pair.to]?[relation.metric] else {
+                continue
+            }
+            let candidatePairs = [
+                (fromBounds.lower, toBounds.upper),
+                (fromBounds.upper, toBounds.lower),
+            ]
+            for (fromValue, toValue) in candidatePairs {
+                var mutated = observations
+                mutated[fromIndex] = try mutated[fromIndex].replacing(
+                    relation.metric, with: fromValue
+                )
+                mutated[toIndex] = try mutated[toIndex].replacing(
+                    relation.metric, with: toValue
+                )
+                let locallyAccepted = [fromIndex, toIndex].allSatisfy {
+                    ProfessionalQualityProfileEvaluator.evaluate(
+                        mutated[$0], against: profile
+                    ).accepted
+                }
+                let relationshipFailed = ProfessionalQualityRelationshipEvaluator
+                    .evaluate(observations: mutated, against: profile)
+                    .contains {
+                        $0.kind == .trajectory &&
+                            $0.trajectory == relation.trajectory &&
+                            $0.metric == relation.metric
+                    }
+                if locallyAccepted && relationshipFailed { return mutated }
+            }
+        }
+        throw ProfessionalQualityCalibrationError.invalidBounds
+    }
+
+    private static func rateAttack(
+        profile: ProfessionalQualityCalibrationProfile,
+        observations: [ProfessionalQualityObservation]
+    ) throws -> [ProfessionalQualityObservation] {
+        for rateBound in profile.rateConsistency {
+            guard let lowIndex = observations.firstIndex(where: {
+                $0.sampleRate == profile.sampleRates[0] &&
+                    $0.checkpoint == rateBound.checkpoint
+            }), let highIndex = observations.firstIndex(where: {
+                $0.sampleRate == profile.sampleRates[1] &&
+                    $0.checkpoint == rateBound.checkpoint
+            }), let metricBounds = profile[rateBound.checkpoint]?[rateBound.metric]
+            else { continue }
+            var mutated = observations
+            mutated[lowIndex] = try mutated[lowIndex].replacing(
+                rateBound.metric, with: metricBounds.lower
+            )
+            mutated[highIndex] = try mutated[highIndex].replacing(
+                rateBound.metric, with: metricBounds.upper
+            )
+            let locallyAccepted = [lowIndex, highIndex].allSatisfy {
+                ProfessionalQualityProfileEvaluator.evaluate(
+                    mutated[$0], against: profile
+                ).accepted
+            }
+            let relationshipFailed = ProfessionalQualityRelationshipEvaluator
+                .evaluate(observations: mutated, against: profile)
+                .contains {
+                    $0.kind == .rateConsistency &&
+                        $0.checkpoint == rateBound.checkpoint &&
+                        $0.metric == rateBound.metric
+                }
+            if locallyAccepted && relationshipFailed { return mutated }
+        }
+        throw ProfessionalQualityCalibrationError.invalidBounds
     }
 }
