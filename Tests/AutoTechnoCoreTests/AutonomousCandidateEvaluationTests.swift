@@ -2180,6 +2180,8 @@ struct AutonomousCandidateEvaluationTests {
             }
         )
         #expect(!impossibleStem.isComplete)
+        #expect(impossibleStem.completenessFailures == [.levelBounds])
+        #expect(sourceVector.completenessFailures.isEmpty)
 
         let impossibleGraph = AutonomousGraphEvidence(
             graphFingerprint: "impossible-graph",

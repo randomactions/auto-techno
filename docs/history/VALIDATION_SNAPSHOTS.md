@@ -647,3 +647,27 @@ physical route/interruption smoke, representative journey latency/peak-memory
 measurement, or hardware-output soak. Automated professional-quality
 qualification remains unavailable, so this snapshot makes no sound-quality or
 release-readiness promotion.
+
+## Frozen professional-quality development calibration — 2026-08-10
+
+The complete canonical journey was rendered sequentially at 44.1 and 48 kHz
+from root seed 48,291. All seven checkpoints at both rates produced complete
+Professional Evidence v3 observations. The frozen aggregate profile fingerprint
+is `c52545b5641e6cfb`; its ten-case adversarial-suite fingerprint is
+`2340017ec6c59440`. All 14 baseline observations passed independent metric,
+rate-consistency, and trajectory bounds with no relationship failures; all ten
+hard-gate, level, spectral, masking, phase, silence, foreign-rate, trajectory,
+and rate-drift attacks were rejected.
+
+The representative run exposed one truthful evidence defect before calibration:
+a sub-`1e-5` but non-silent upper-tonal stem in 44.1 kHz major break reported
+nonzero RMS/peak with zero active RMS/occupancy because the activity threshold
+exceeded its peak. The detached analyzer now caps its threshold at the observed
+peak, preserving PCM while making the aggregate stem tuple internally
+consistent. The explicit two-rate harness then passed in 2,954.363 seconds.
+
+This establishes an offline development regression policy, not professional
+release readiness. The shipping evaluator remains `uncalibrated.v1`, paired
+selection remains disabled, and matched-loudness listening, exact-build app
+playback, physical route/interruption smoke, representative latency/peak-memory
+budgets, and hardware-output soak remain separate gates.

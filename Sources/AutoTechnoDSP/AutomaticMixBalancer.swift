@@ -150,7 +150,10 @@ package enum StemObservationAnalyzer {
         let peak = samples.reduce(0.0) { max($0, abs(Double($1))) }
         guard peak > 0.000_000_001 else { return .silent }
 
-        let gate = max(0.000_01, peak * 0.04)
+        // The activity threshold must never exceed a stem that already passed
+        // the explicit silence floor. Otherwise a very quiet but truthful stem
+        // reports nonzero RMS/peak with zero active RMS and occupancy.
+        let gate = min(peak, max(0.000_01, peak * 0.04))
         var totalEnergy = 0.0
         var activeEnergy = 0.0
         var activeCount = 0

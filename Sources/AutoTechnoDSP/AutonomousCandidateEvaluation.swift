@@ -513,6 +513,20 @@ package struct AutonomousStemBandEvidence: Codable, Equatable, Sendable {
     }
 }
 
+package enum AutonomousRoleStemCompletenessFailure: String, Codable,
+        Equatable, Sendable {
+    case invalidRole = "invalid-role"
+    case levelBounds = "level-bounds"
+    case crestMismatch = "crest-mismatch"
+    case silentTuple = "silent-tuple"
+    case activeTuple = "active-tuple"
+    case occupancyBounds = "occupancy-bounds"
+    case bandCount = "band-count"
+    case bandValue = "band-value"
+    case bandEnergyBounds = "band-energy-bounds"
+    case bandIdentity = "band-identity"
+}
+
 package struct AutonomousRoleStemEvidence: Codable, Equatable, Sendable {
     package let role: String
     package let rms: Double
@@ -551,6 +565,10 @@ package struct AutonomousRoleStemEvidence: Codable, Equatable, Sendable {
     }
 
     package var isComplete: Bool {
+        completenessFailures.isEmpty
+    }
+
+    package var completenessFailures: [AutonomousRoleStemCompletenessFailure] {
         let maximumFloatMagnitude = Double(Float.greatestFiniteMagnitude)
         let expectedCrest = peak == 0 ? 0 : peak / max(rms, 0.000_000_001)
         let silentTupleIsConsistent = peak != 0 ||
@@ -560,18 +578,38 @@ package struct AutonomousRoleStemEvidence: Codable, Equatable, Sendable {
         let activeTupleIsConsistent = peak == 0 ||
             (rms > 0 && activeRMS > 0 && occupancy > 0 &&
                 bands.contains { $0.energy > 0 })
-        return MixRole.allCases.map { $0.rawValue }.contains(role) &&
-            rms >= 0 && rms <= peak && activeRMS >= rms && activeRMS <= peak &&
-            onsetRMS >= 0 && onsetRMS <= peak && peak >= 0 &&
-            peak <= maximumFloatMagnitude &&
-            abs(crestFactor - expectedCrest) <= 1e-9 &&
-            silentTupleIsConsistent && activeTupleIsConsistent &&
-            (0...1).contains(occupancy) &&
-            sourceBandCount == bands.count &&
-            bands.count == MixBand.allCases.count &&
-            bands.allSatisfy { $0.isComplete } &&
-            bands.allSatisfy { $0.energy <= 4 * peak * peak + 1e-12 } &&
-            Set(bands.map { $0.band }) == Set(MixBand.allCases.map { $0.rawValue })
+        var failures: [AutonomousRoleStemCompletenessFailure] = []
+        if !MixRole.allCases.map({ $0.rawValue }).contains(role) {
+            failures.append(.invalidRole)
+        }
+        if !(rms >= 0 && rms <= peak && activeRMS >= rms &&
+                activeRMS <= peak && onsetRMS >= 0 && onsetRMS <= peak &&
+                peak >= 0 && peak <= maximumFloatMagnitude) {
+            failures.append(.levelBounds)
+        }
+        if abs(crestFactor - expectedCrest) > 1e-9 {
+            failures.append(.crestMismatch)
+        }
+        if !silentTupleIsConsistent { failures.append(.silentTuple) }
+        if !activeTupleIsConsistent { failures.append(.activeTuple) }
+        if !(0...1).contains(occupancy) {
+            failures.append(.occupancyBounds)
+        }
+        if sourceBandCount != bands.count ||
+                bands.count != MixBand.allCases.count {
+            failures.append(.bandCount)
+        }
+        if !bands.allSatisfy({ $0.isComplete }) {
+            failures.append(.bandValue)
+        }
+        if !bands.allSatisfy({ $0.energy <= 4 * peak * peak + 1e-12 }) {
+            failures.append(.bandEnergyBounds)
+        }
+        if Set(bands.map({ $0.band })) !=
+                Set(MixBand.allCases.map({ $0.rawValue })) {
+            failures.append(.bandIdentity)
+        }
+        return failures
     }
 }
 
@@ -2093,6 +2131,24 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
     }
 }
 
+package enum AutonomousCandidateCompletenessFailure: String, Codable,
+        Equatable, Sendable {
+    case identityAndPrimaryEvidence = "identity-and-primary-evidence"
+    case symbolicBarCoverage = "symbolic-bar-coverage"
+    case automaticMixControllerTrajectory =
+        "automatic-mix-controller-trajectory"
+    case sourceCounts = "source-counts"
+    case maskingEvidence = "masking-evidence"
+    case stemEvidence = "stem-evidence"
+    case automaticMixEvidence = "automatic-mix-evidence"
+    case kickSyntaxEvidence = "kick-syntax-evidence"
+    case groovePulseEvidence = "groove-pulse-evidence"
+    case closedHatEvidence = "closed-hat-evidence"
+    case instrumentEvidence = "instrument-evidence"
+    case pulseEchoDriveEvidence = "pulse-echo-drive-evidence"
+    case upperTimingEvidence = "upper-timing-evidence"
+}
+
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
@@ -2961,22 +3017,52 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     }
 
     package var isComplete: Bool {
-        guard identityAndPrimaryEvidenceAreComplete(),
-              symbolicBarCoverageIsComplete(),
-              automaticMixControllerTrajectoryIsComplete() else {
-            return false
-        }
+        completenessFailures.isEmpty
+    }
+
+    /// Deterministic, bounded diagnostics for an otherwise opaque completeness
+    /// rejection. These codes carry no PCM, hashes, events, or metric values.
+    package var completenessFailures: [AutonomousCandidateCompletenessFailure] {
         let expectedBars = Set(fullMix.bars.map { $0.bar })
-        return sourceCountsAreComplete() &&
-            maskingEvidenceIsComplete(expectedBars: expectedBars) &&
-            stemEvidenceIsComplete(expectedBars: expectedBars) &&
-            automaticMixEvidenceIsComplete(expectedBars: expectedBars) &&
-            kickSyntaxEvidenceIsComplete(expectedBars: expectedBars) &&
-            groovePulseEvidenceIsComplete(expectedBars: expectedBars) &&
-            closedHatEvidenceIsComplete(expectedBars: expectedBars) &&
-            instrumentEvidenceIsComplete(expectedBars: expectedBars) &&
-            pulseEchoDriveEvidenceIsComplete(expectedBars: expectedBars) &&
-            upperTimingEvidenceIsComplete(expectedBars: expectedBars)
+        var failures: [AutonomousCandidateCompletenessFailure] = []
+        if !identityAndPrimaryEvidenceAreComplete() {
+            failures.append(.identityAndPrimaryEvidence)
+        }
+        if !symbolicBarCoverageIsComplete() {
+            failures.append(.symbolicBarCoverage)
+        }
+        if !automaticMixControllerTrajectoryIsComplete() {
+            failures.append(.automaticMixControllerTrajectory)
+        }
+        if !sourceCountsAreComplete() { failures.append(.sourceCounts) }
+        if !maskingEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.maskingEvidence)
+        }
+        if !stemEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.stemEvidence)
+        }
+        if !automaticMixEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.automaticMixEvidence)
+        }
+        if !kickSyntaxEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.kickSyntaxEvidence)
+        }
+        if !groovePulseEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.groovePulseEvidence)
+        }
+        if !closedHatEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.closedHatEvidence)
+        }
+        if !instrumentEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.instrumentEvidence)
+        }
+        if !pulseEchoDriveEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.pulseEchoDriveEvidence)
+        }
+        if !upperTimingEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.upperTimingEvidence)
+        }
+        return failures
     }
 
     @inline(never)

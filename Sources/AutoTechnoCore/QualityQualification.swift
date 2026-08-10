@@ -4,10 +4,10 @@ import Foundation
 /// policy is deliberately uncalibrated: these types make evidence reproducible
 /// without claiming that professional-quality targets exist yet.
 package enum QualityQualificationContract {
-    /// Version 9 replaces phrase-sized analyzer copies and the former
-    /// three-band centroid proxy with bounded, physical-time perceptual
-    /// evidence. The policy remains uncalibrated; this version identifies
-    /// evidence, not promotion.
+    /// Version 10 adds score-owned kick-syntax evidence to the bounded,
+    /// physical-time perceptual and role evidence introduced in version 9.
+    /// The shipping policy remains uncalibrated; this version identifies
+    /// evidence, not runtime promotion.
     package static let schemaVersion = 10
     package static let reasonCodeVersion = 1
     package static let engineVersion = "autotechno-canonical-engine.v10"

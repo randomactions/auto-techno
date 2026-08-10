@@ -12,7 +12,11 @@ let package = Package(
     ],
     targets: [
         .target(name: "AutoTechnoCore"),
-        .target(name: "AutoTechnoDSP", dependencies: ["AutoTechnoCore"]),
+        .target(
+            name: "AutoTechnoDSP",
+            dependencies: ["AutoTechnoCore"],
+            resources: [.process("Resources")]
+        ),
         .executableTarget(name: "AutoTechnoApp", dependencies: ["AutoTechnoCore", "AutoTechnoDSP"]),
         .testTarget(
             name: "AutoTechnoCoreTests",

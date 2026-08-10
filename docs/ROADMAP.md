@@ -36,12 +36,13 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   boundaries, and continuation.
 
 The shipping evaluator remains uncalibrated and renders the primary once on the
-healthy path. The transaction records up to primary, alternate, and fallback
+healthy path. A frozen offline development profile and adversarial suite now
+qualify complete 44.1/48 kHz engine banks, but do not participate in runtime
+selection. The transaction records up to primary, alternate, and fallback
 attempts plus one home-timbre correction within four total passes, but it does
 not constitute professional-quality qualification or general quality-driven
-candidate selection. Calibrated paired ranking remains disabled pending a
-calibrated profile/adversarial suite and passing representative-journey
-cancellation, latency, and peak-memory budgets;
+candidate selection. Calibrated paired ranking remains disabled pending passing
+representative-journey cancellation, latency, and peak-memory budgets;
 hybrid live feedback is also not implemented.
 
 The pulse-echo return-drive code and same-pass reduced evidence are present in
@@ -83,18 +84,19 @@ that evidence. Professional
 Evidence v3 adds standards-based phrase loudness/true peak, bounded streaming
 spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
-complete role attribution. Next, populate private representative-rate banks,
-calibrate machine-readable reason-coded ranges and a non-reconstructable profile,
-then pass an adversarial suite before introducing any available policy. Keep
-WAVs, stems, and reference recordings local and untracked.
+complete role attribution. The repository now carries a deterministic,
+non-reconstructable 44.1/48 kHz development profile, relational rate/trajectory
+guardrails, and a passing ten-case adversarial suite. The development policy is
+available only for offline engine-bank qualification; the shipping policy and
+selection evidence remain unchanged. Keep WAVs, stems, and reference recordings
+local and untracked.
 
 ### 3. Generalize bounded evaluation and correction
 
 The runtime now enforces and records a maximum of three complete candidates, one
 home-timbre correction, and four render passes, then atomically carries the
 selected evidence, decision, and controller state into continuation. Next,
-calibrate the multidimensional policy and enable paired comparison only after
-the derived profile/adversarial suite and representative-journey cancellation,
+enable paired comparison only after representative-journey cancellation,
 preparation-latency, and peak-memory gates pass. Continue to select a valid
 candidate or conservative fallback when the
 calibrated policy cannot qualify an attempt.

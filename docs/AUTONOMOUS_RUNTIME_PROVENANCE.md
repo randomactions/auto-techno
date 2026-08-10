@@ -58,9 +58,10 @@ mistaken for a completed feedback system.
    so a healthy primary is rendered exactly once. Alternate and fallback remain
    bounded validity paths, not a general professional-quality ranking system.
    Phrase analysis now streams across immutable render blocks within a recorded
-   6 MiB upper bound. A calibrated paired comparator stays disabled pending a
-   calibrated profile, adversarial suite, and passing representative-journey
-   cancellation, preparation-latency, and peak-memory budgets. Cancellation is
+   6 MiB upper bound. A frozen offline profile and passing adversarial suite now
+   qualify complete representative-rate engine banks, but a calibrated paired
+   comparator stays disabled pending representative-journey cancellation,
+   preparation-latency, and peak-memory budgets. Cancellation is
    checked within each candidate at bounded bar-render
    and evidence boundaries; route changes cancel detached preparation and
    prevent stale route work from committing.
@@ -75,8 +76,10 @@ mistaken for a completed feedback system.
    A deterministic Professional Evidence v3
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. Its policy status is
-   unconditionally unavailable pending a calibrated profile and adversarial
-   suite; it cannot promote or correct audio.
+   unconditionally unavailable because the bank is observation-only; it cannot
+   promote or correct audio. `ProfessionalQualityFrozenArtifacts` separately
+   validates the non-reconstructable development profile and adversarial suite
+   by pinned fingerprints without activating the shipping evaluator.
 5. `AutonomousPhraseRenderer` constructs the required synth world and synth
    performance. The synth planner resolves the three-step driver, five-stage
    follower, chapter articulation, internal architecture and patch, four bounded

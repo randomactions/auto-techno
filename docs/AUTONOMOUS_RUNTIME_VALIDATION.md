@@ -136,15 +136,17 @@ endpoints, conservative, forced-home, identity-return, major-break, and otherwis
 ineligible paths must remain exactly neutral, and uncalibrated selection must
 remain unchanged.
 
-This schema is evidence infrastructure, not a passing professional-quality
-policy. The shipping evaluator is uncalibrated, renders one primary candidate on
-the healthy path, and must continue to report qualification unavailable.
+This schema is evidence infrastructure, not a passing shipping professional-
+quality policy. The shipping evaluator is uncalibrated, renders one primary
+candidate on the healthy path, and must continue to report qualification
+unavailable. The frozen offline development policy must load pinned profile and
+adversarial-suite identities and accept all fourteen representative
+checkpoint/rate observations with no relationship failures.
 The Professional Evidence v3 bank must contain every canonical checkpoint for
-every included rate and complete exact-role masking/stem evidence. Policy
-availability remains false until both a calibrated-profile fingerprint and a
-passing adversarial-suite fingerprint exist under a future schema. Calibrated
-paired ranking remains disabled until those identities exist and representative
-canonical-journey cancellation, latency, and peak-working-memory budgets pass.
+every included rate and complete exact-role masking/stem evidence. Its own policy
+availability remains false by design. Calibrated paired ranking remains disabled
+until representative canonical-journey cancellation, latency, and peak-working-
+memory budgets pass.
 
 ## Determinism and sample-rate consistency
 

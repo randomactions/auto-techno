@@ -1927,6 +1927,20 @@ struct AutonomousPreparationPreflightTests {
         }
     }
 
+    @Test("Sub-gate stems retain internally consistent active evidence")
+    func subGateStemEvidence() {
+        let observation = StemObservationAnalyzer.analyze(
+            [0, 0.000_000_001_1, 0, 0],
+            sampleRate: 44_100
+        )
+
+        #expect(observation.peak > 0)
+        #expect(observation.rms > 0)
+        #expect(observation.activeRMS >= observation.rms)
+        #expect(observation.activeRMS <= observation.peak)
+        #expect(observation.occupancy > 0)
+    }
+
     @Test("Automatic mix trims excessive kick hierarchy without gain drift")
     func automaticMixBounds() {
         func observation(activeRMS: Double, occupancy: Double = 0.5) -> StemObservation {

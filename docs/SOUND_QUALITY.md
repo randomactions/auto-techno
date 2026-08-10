@@ -62,12 +62,14 @@ cannot promote the musical device.
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The shipping evaluator
 remains deliberately uncalibrated: a healthy preparation renders the primary
-once, and neither the transaction nor the report bank constitutes
-professional-quality qualification. Policy availability remains impossible
-until a calibrated profile and a passing adversarial-suite identity exist in a
-future versioned contract. Calibrated paired ranking and the hybrid
-live-feedback loop below remain target architecture until their implementation
-and validation are recorded.
+once, and neither the transaction nor the report bank constitutes runtime
+professional-quality qualification. The separate frozen development contract
+now loads profile `c52545b5641e6cfb` and passing adversarial suite
+`2340017ec6c59440`. It evaluates complete representative-rate engine banks
+without PCM, stems, or event lists and rejects every dimension and relationship
+independently. Calibrated paired ranking and the hybrid live-feedback loop below
+remain target architecture until their implementation and validation are
+recorded.
 
 ## Engine ownership
 
@@ -229,9 +231,9 @@ The production evaluator does not request a paired comparison, so the healthy
 path performs one primary render and reports qualification unavailable.
 Phrase analysis now streams within an explicit working-memory envelope, with
 independent DFT, chunk-parity, representative-rate, cancellation, and optimized
-fixture evidence. Calibrated paired ranking stays disabled until a calibrated
-profile and adversarial suite exist and representative canonical-journey
-candidate cancellation, latency, and peak-memory budgets pass. Preparation
+fixture evidence. Calibrated paired ranking stays disabled until representative
+canonical-journey candidate cancellation, latency, and peak-memory budgets pass
+under the frozen profile and adversarial suite. Preparation
 checks cancellation at bounded
 bar-render and evidence-phase boundaries as well as between candidates; the
 streaming preflight and continuation fingerprints also check within their long

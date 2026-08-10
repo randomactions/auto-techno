@@ -174,6 +174,24 @@ struct ProfessionalQualityCalibrationTests {
         })
     }
 
+    @Test("Frozen aggregate resources load with their pinned identities")
+    func frozenArtifacts() throws {
+        let artifacts = try ProfessionalQualityFrozenArtifacts.load()
+
+        #expect(artifacts.profile.isComplete)
+        #expect(artifacts.adversarialSuite.passed)
+        #expect(artifacts.policy.isAvailable)
+        #expect(artifacts.profile.fingerprint ==
+                ProfessionalQualityFrozenArtifacts.expectedProfileFingerprint)
+        #expect(artifacts.adversarialSuite.fingerprint ==
+                ProfessionalQualityFrozenArtifacts
+                    .expectedAdversarialSuiteFingerprint)
+        #expect(artifacts.profile.engineVersion ==
+                QualityQualificationContract.engineVersion)
+        #expect(artifacts.profile.sampleRates ==
+                ProfessionalQualityCalibrationProfile.requiredSampleRates)
+    }
+
     @Test("Incomplete rate matrices and non-finite metrics cannot calibrate")
     func invalidCalibrationInputs() throws {
         let observations = try representativeObservations()
@@ -192,7 +210,9 @@ struct ProfessionalQualityCalibrationTests {
             metric: metrics[0].metric,
             value: .nan
         )
-        #expect(throws: ProfessionalQualityCalibrationError.incompleteEvidence) {
+        #expect(throws: ProfessionalQualityCalibrationError.nonFiniteMetric(
+            metrics[0].metric
+        )) {
             try ProfessionalQualityObservation(
                 engineVersion: QualityQualificationContract.engineVersion,
                 checkpoint: .establishment,
@@ -263,6 +283,13 @@ struct ProfessionalQualityCalibrationTests {
             .maskingLongestRunRatio: 0.15,
             .activeKickFoundationBarRatio: 0.80,
             .kickOverFoundationActiveDBMean: 15,
+            .kickGroundedBarRatio: 0.75,
+            .kickWithheldBarRatio: 0.125,
+            .kickRecoveryBarRatio: 0.125,
+            .kickEventCountMean: 4,
+            .kickAudibleToDetectorDBMean: -9,
+            .kickDuckingEnvelopeRatioMean: 0.90,
+            .kickAudibleGainMean: 0.35,
         ]
         return ProfessionalQualityMetric.allCases.map { metric in
             ProfessionalQualityMetricValue(

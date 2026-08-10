@@ -51,6 +51,10 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         let qualificationJSON = try #require(String(
             data: qualification.deterministicJSON(), encoding: .utf8
         ))
+        try writeFrozenArtifacts(
+            profile: profile,
+            adversarial: adversarial
+        )
         print("AUTOTECHNO_CALIBRATION_PROFILE_JSON_BEGIN")
         print(profileJSON)
         print("AUTOTECHNO_CALIBRATION_PROFILE_JSON_END")
@@ -105,7 +109,12 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                     .routeContinuation.routeGeneration
             )
             for checkpoint in checkpoints {
-                reports.append(try harness.report(
+                progress(
+                    "begin rate=\(Int(sampleRate)) " +
+                    "checkpoint=\(checkpoint.rawValue) " +
+                    "phrase=\(plan.phraseIndex)"
+                )
+                let report = try harness.report(
                     checkpoint: checkpoint,
                     prepared: prepared,
                     fixtureFingerprint: [
@@ -119,8 +128,14 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                         "bars-\(state.memory.totalBars)",
                         "quality-r\(state.quality.revision)",
                     ].joined(separator: ".")
-                ))
+                )
+                _ = try ProfessionalQualityObservation(report: report)
+                reports.append(report)
                 seen.insert(checkpoint)
+                progress(
+                    "rate=\(Int(sampleRate)) checkpoint=\(checkpoint.rawValue) " +
+                    "phrase=\(plan.phraseIndex)"
+                )
             }
 
             previousChapter = plan.resolvedBars.last?.interlockChapter ??
@@ -136,6 +151,39 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         }
         #expect(seen == Set(CanonicalJourneyCheckpoint.allCases))
         return reports
+    }
+
+    private func progress(_ message: String) {
+        guard let data = "AUTOTECHNO_CALIBRATION_PROGRESS \(message)\n"
+            .data(using: .utf8) else { return }
+        FileHandle.standardError.write(data)
+    }
+
+    private func writeFrozenArtifacts(
+        profile: ProfessionalQualityCalibrationProfile,
+        adversarial: ProfessionalQualityAdversarialSuiteReport
+    ) throws {
+        guard let outputDirectory = ProcessInfo.processInfo.environment[
+            "AUTOTECHNO_CALIBRATION_RESOURCE_DIRECTORY"
+        ], !outputDirectory.isEmpty else { return }
+        let directory = URL(fileURLWithPath: outputDirectory,
+                            isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        try profile.deterministicJSON().write(
+            to: directory.appendingPathComponent(
+                ProfessionalQualityFrozenArtifacts.profileResource + ".json"
+            ),
+            options: .atomic
+        )
+        try adversarial.deterministicJSON().write(
+            to: directory.appendingPathComponent(
+                ProfessionalQualityFrozenArtifacts.adversarialResource + ".json"
+            ),
+            options: .atomic
+        )
     }
 
     private func checkpoints(

@@ -3,13 +3,33 @@ import Foundation
 
 package enum ProfessionalQualityCalibrationError: Error, Equatable, Sendable {
     case invalidIdentity
-    case incompleteEvidence
     case incompleteRepresentativeRates
     case incompleteCheckpointCoverage
     case duplicateMetric
     case invalidMetricSet
+    case nonFiniteMetric(ProfessionalQualityMetric)
+    case incompleteKickSyntaxEvidence(CanonicalJourneyCheckpoint)
+    case incompleteStemBarCoverage(
+        CanonicalJourneyCheckpoint,
+        [Int],
+        [Int]
+    )
+    case incompleteStemRoleEvidence(
+        CanonicalJourneyCheckpoint,
+        [AutonomousStemRoleFailure]
+    )
+    case incompleteCandidateEvidence(
+        CanonicalJourneyCheckpoint,
+        [AutonomousCandidateCompletenessFailure]
+    )
     case invalidBounds
     case profileMismatch
+}
+
+package struct AutonomousStemRoleFailure: Equatable, Sendable {
+    package let bar: Int
+    package let role: String
+    package let failures: [AutonomousRoleStemCompletenessFailure]
 }
 
 /// Stable, independently evaluated dimensions retained from a complete
@@ -48,6 +68,13 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
     case maskingLongestRunRatio = "masking-longest-run-ratio"
     case activeKickFoundationBarRatio = "active-kick-foundation-bar-ratio"
     case kickOverFoundationActiveDBMean = "kick-over-foundation-active-db-mean"
+    case kickGroundedBarRatio = "kick-grounded-bar-ratio"
+    case kickWithheldBarRatio = "kick-withheld-bar-ratio"
+    case kickRecoveryBarRatio = "kick-recovery-bar-ratio"
+    case kickEventCountMean = "kick-event-count-mean"
+    case kickAudibleToDetectorDBMean = "kick-audible-to-detector-db-mean"
+    case kickDuckingEnvelopeRatioMean = "kick-ducking-envelope-ratio-mean"
+    case kickAudibleGainMean = "kick-audible-gain-mean"
 }
 
 package struct ProfessionalQualityMetricValue: Codable, Equatable, Sendable {
@@ -99,8 +126,10 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
               Set(sorted.map(\.metric)).count == sorted.count else {
             throw ProfessionalQualityCalibrationError.invalidMetricSet
         }
-        guard sorted.allSatisfy({ $0.value.isFinite }) else {
-            throw ProfessionalQualityCalibrationError.incompleteEvidence
+        if let invalid = sorted.first(where: { !$0.value.isFinite }) {
+            throw ProfessionalQualityCalibrationError.nonFiniteMetric(
+                invalid.metric
+            )
         }
         schemaVersion = Self.schemaVersion
         observationVersion = Self.observationVersion
@@ -115,10 +144,49 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
 
     package init(report: CanonicalJourneyQualificationReport) throws {
         let vector = report.selectedCandidateEvidence
+        let expectedStemBars = vector.fullMix.bars.map(\.bar).sorted()
+        let actualStemBars = vector.stems.map(\.bar).sorted()
+        guard actualStemBars == expectedStemBars,
+              vector.stems.count == vector.fullMix.sourceBarCount else {
+            throw ProfessionalQualityCalibrationError
+                .incompleteStemBarCoverage(
+                    report.checkpoint,
+                    expectedStemBars,
+                    actualStemBars
+                )
+        }
+        let stemRoleFailures = vector.stems.flatMap { stem in
+            stem.roles.compactMap { role -> AutonomousStemRoleFailure? in
+                let failures = role.completenessFailures
+                return failures.isEmpty ? nil : AutonomousStemRoleFailure(
+                    bar: stem.bar,
+                    role: role.role,
+                    failures: failures
+                )
+            }
+        }
+        guard stemRoleFailures.isEmpty else {
+            throw ProfessionalQualityCalibrationError
+                .incompleteStemRoleEvidence(
+                    report.checkpoint,
+                    stemRoleFailures
+                )
+        }
+        guard vector.kickSyntax.count == vector.fullMix.sourceBarCount,
+              vector.kickSyntax.allSatisfy({
+                  $0.isComplete(sampleRate: report.sampleRate)
+              }) else {
+            throw ProfessionalQualityCalibrationError
+                .incompleteKickSyntaxEvidence(report.checkpoint)
+        }
         guard vector.isComplete, vector.isFinite,
               report.evidenceScope ==
                 CanonicalJourneyQualificationReport.currentEvidenceScope else {
-            throw ProfessionalQualityCalibrationError.incompleteEvidence
+            throw ProfessionalQualityCalibrationError
+                .incompleteCandidateEvidence(
+                    report.checkpoint,
+                    vector.completenessFailures
+                )
         }
         let fullMix = vector.fullMix
         let perceptual = fullMix.perceptual
@@ -135,7 +203,11 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         }
         func decibels(_ numerator: Double, _ denominator: Double) -> Double {
             guard numerator > 0, denominator > 0 else { return -120 }
-            return 20 * log10(numerator / denominator)
+            // Subtracting logarithms avoids an intermediate ratio that can
+            // underflow to zero even when both bounded inputs are finite.
+            return min(120, max(-120,
+                20 * (log10(numerator) - log10(denominator))
+            ))
         }
 
         let masking = vector.masking.flatMap(\.observations)
@@ -146,6 +218,15 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             $0 + $1.overlapWindowCount
         }
         let maskingLongestRun = masking.map(\.longestOverlapRun).max() ?? 0
+
+        let kickSyntax = vector.kickSyntax
+        let kickRoles = kickSyntax.compactMap {
+            KickSyntaxRole(rawValue: $0.role)
+        }
+        let activeKickSyntax = kickSyntax.filter {
+            $0.detectorRMS > 0 && $0.audibleRMS > 0
+        }
+        let kickDivisor = Double(max(1, kickSyntax.count))
 
         var kickFoundationDifferences: [Double] = []
         for stemBar in vector.stems {
@@ -239,6 +320,27 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                         Double(vector.stems.count)),
             ProfessionalQualityMetricValue(metric: .kickOverFoundationActiveDBMean,
                 value: mean(kickFoundationDifferences)),
+            ProfessionalQualityMetricValue(metric: .kickGroundedBarRatio,
+                value: Double(kickRoles.filter { $0 == .grounded }.count) /
+                    kickDivisor),
+            ProfessionalQualityMetricValue(metric: .kickWithheldBarRatio,
+                value: Double(kickRoles.filter { $0 == .withheld }.count) /
+                    kickDivisor),
+            ProfessionalQualityMetricValue(metric: .kickRecoveryBarRatio,
+                value: Double(kickRoles.filter { $0 == .recovery }.count) /
+                    kickDivisor),
+            ProfessionalQualityMetricValue(metric: .kickEventCountMean,
+                value: mean(kickSyntax.map { Double($0.scoreKickEventCount) })),
+            ProfessionalQualityMetricValue(metric: .kickAudibleToDetectorDBMean,
+                value: mean(activeKickSyntax.map {
+                    decibels($0.audibleRMS, $0.detectorRMS)
+                })),
+            ProfessionalQualityMetricValue(metric: .kickDuckingEnvelopeRatioMean,
+                value: mean(activeKickSyntax.map {
+                    $0.duckingEnvelopePeak / max($0.detectorPeak, 1e-12)
+                })),
+            ProfessionalQualityMetricValue(metric: .kickAudibleGainMean,
+                value: mean(kickSyntax.map(\.audibleGain))),
         ]
         try self.init(
             engineVersion: report.engineVersion,
@@ -690,7 +792,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .maximumShortTermLoudnessLUFS, .loudnessRangeLU,
                 .truePeakDBTP, .crestFactorDB, .rmsTrajectoryDeltaMeanDB,
                 .rmsTrajectoryDeltaPeakDB, .barLoudnessSpanLU,
-                .kickOverFoundationActiveDBMean:
+                .kickOverFoundationActiveDBMean,
+                .kickAudibleToDetectorDBMean:
             absoluteFloor = 0.75
         case .spectralCentroidMeanHz, .spectralCentroidSpreadHz,
                 .spectralBandwidthMeanHz, .spectralRolloff85MeanHz,
@@ -698,6 +801,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             absoluteFloor = 120
         case .maximumBoundaryDelta, .absoluteDCOffset:
             absoluteFloor = 0.002
+        case .kickEventCountMean:
+            absoluteFloor = 0.25
         default:
             absoluteFloor = 0.04
         }
@@ -717,7 +822,10 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .movementScore, .activeWindowRatio, .spectralFlatnessMean,
                 .positiveSpectralFluxMean, .positiveSpectralFluxPeak,
                 .maskingMaximumOverlap, .maskingOverlapWindowRatio,
-                .maskingLongestRunRatio, .activeKickFoundationBarRatio:
+                .maskingLongestRunRatio, .activeKickFoundationBarRatio,
+                .kickGroundedBarRatio, .kickWithheldBarRatio,
+                .kickRecoveryBarRatio, .kickDuckingEnvelopeRatioMean,
+                .kickAudibleGainMean:
             return 0...1
         case .stereoCorrelation, .lowStereoCorrelation:
             return -1...1
@@ -733,6 +841,10 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             return 0...120
         case .kickOverFoundationActiveDBMean:
             return -120...120
+        case .kickAudibleToDetectorDBMean:
+            return -120...0
+        case .kickEventCountMean:
+            return 0...16
         }
     }
 
