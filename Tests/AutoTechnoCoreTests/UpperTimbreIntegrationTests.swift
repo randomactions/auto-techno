@@ -2234,6 +2234,10 @@ struct UpperTimbreIntegrationTests {
             closedHatRenderEvidence:
                 closedHatRenderEvidence ?? source.closedHatRenderEvidence,
             instrumentRenderEvidence: source.instrumentRenderEvidence,
+            percussionEchoTextureRenderEvidence:
+                source.percussionEchoTextureRenderEvidence,
+            percussionEchoTextureRenderPassesMatch:
+                source.percussionEchoTextureRenderPassesMatch,
             pulseEchoReturnDriveRenderEvidence:
                 pulseEchoReturnDriveRenderEvidence ??
                     source.pulseEchoReturnDriveRenderEvidence,

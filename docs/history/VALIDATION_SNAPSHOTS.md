@@ -671,3 +671,50 @@ release readiness. The shipping evaluator remains `uncalibrated.v1`, paired
 selection remains disabled, and matched-loudness listening, exact-build app
 playback, physical route/interruption smoke, representative latency/peak-memory
 budgets, and hardware-output soak remain separate gates.
+
+## Score-owned gated percussion texture — 2026-08-12
+
+This candidate is based on frozen-development-calibration mainline commit
+`621127928dbcafeff9343e954bb62e7726c7ce23`. It adds one score-owned relation to
+the existing percussion role: an eligible early event admits one sixteenth of
+dry percussion into a bar-local delay, while a later four-sixteenth output gate
+reveals only the bounded return. The score adds no event, the renderer captures
+no reusable loop, and no delay state crosses the bar. Conservative fallback and
+every ineligible bar remain exact neutral.
+
+Same-pass evidence binds every bar's canonical source-step mask, input/output
+gate geometry, route-derived frame counts, exact source/return hashes, peak/RMS,
+nonzero counts, exact-zero endpoints, and full/protected pass parity. Candidate-
+vector schema 10, quality-contract schema 11, canonical engine v11, and typed
+plan-fingerprint domain v7 identify the score, PCM, and wire-format change.
+Shipping policy remains `uncalibrated.v1` and selection evidence is unchanged.
+
+Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+matched SDKs, serial SwiftPM, and the process boundaries in the workflow:
+
+- core and evidence: 115/115 passed in 138.116 seconds;
+- preparation preflight: 22/22 passed in 510.545 seconds;
+- protected routing: 7/7 passed in 70.987 seconds;
+- split upper/prepared-product filters: 19/19 passed across fresh processes;
+- Source 14's dedicated score/render/preflight/prepared-product suite: 4/4
+  passed;
+- after static review hardened decoded step and mask totality, the focused
+  compact-evidence regression passed 1/1 after a 33.62-second incremental build;
+- the complete representative engine-v11 journey at 44.1 and 48 kHz produced
+  14/14 accepted observations. The frozen engine-v10 development policy
+  accepted that bank, the regenerated profile fingerprint was
+  `6b197f480e0a48e7`, and all ten regenerated adversarial cases were rejected
+  under suite fingerprint `2383c240556fa4c7`. The explicit run passed in
+  3,037.339 seconds;
+- the final optimized `AutoTechno` product build passed in 38.60 seconds;
+- `git diff --check` was clean before publication.
+
+The stable musical concept and provisional renderer are recorded separately.
+Future DSP may replace interpolation, filter topology, feedback colour, stereo
+placement, diffusion, and smoothing under a new version, but must preserve the
+same score-owned gates, bounded tail, block-partition-independent replay,
+neutral fallback, protected routing, and truthful evidence. This snapshot does
+not include matched-loudness listening, exact-build app playback, physical
+route/interruption smoke, representative latency/peak-memory measurement, or
+hardware-output soak. It makes no shipping professional-quality or release-
+readiness promotion.

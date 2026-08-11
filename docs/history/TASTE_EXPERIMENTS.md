@@ -400,3 +400,99 @@ peak-memory budget, or hardware-output soak was completed. Automated
 professional-quality qualification therefore remains unavailable, and neither
 the source nor this structural validation makes a sound-quality or
 release-readiness promotion.
+
+## Video-derived gated percussion texture study — 2026-08-11
+
+Observation source: Underdog Electronic Music School's
+[“Two James Blake-ish drum techniques”](https://www.youtube.com/watch?v=wDlWkea0Q7Q)
+(uploaded 2023-10-02, duration `12:18`, accessed 2026-08-11). The bounded source
+capture used unauthenticated `yt-dlp` without account, cookies, or browser state:
+
+```sh
+yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source14-research -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=wDlWkea0Q7Q'
+```
+
+No manual subtitle track was available. The downloaded automatic English `en`
+and `en-orig` VTTs were byte-identical, each with SHA-256
+`acb7b325e62b1810cef1bb2c49c3337d4239e4a9bb60704e7693f7c37c545bbb`.
+The metadata and comment artifact had SHA-256
+`de9838747e9ecc06e4d468c65d5dc3e5c71a9347e222421e281bb9042067ce48`.
+Representative frames and bounded waveform-only excerpts were inspected
+locally to distinguish continuous from gated regions; the video, audio,
+screenshots, comments, and transcripts remain temporary and untracked. No
+subjective listening or production-quality claim is made.
+
+The bounded transcript paraphrase is: `0:00...1:00` introduces two separate
+ideas, one about groove as a relationship between timing and velocity and one
+about an input-utility, delay, output-utility chain; `1:00...3:20` explains
+auditioning a dense sixteenth-note grid before identifying the useful timing
+and velocity relation; `3:20...6:48` applies that relation to sparse drum roles
+and removes the audition grid; `7:32...8:45` introduces the utility-delay-
+utility device, admits only selected slices into an otherwise overwhelming
+delay, and opens the output only where the return should arrive;
+`8:45...11:17` demonstrates input-only, ungated, and output-gated states; and
+`11:17...12:18` recommends resampling the result and closes the lesson. Exact
+plug-in controls, delay settings, swing percentages, source samples, and the
+resampling workflow are tutorial context, not engine targets.
+
+The capture returned 26 top-ranked top-level comments and five replies. Three
+independent top-level comments converged on the subtractive/gated send-return
+relationship around delay; three others independently corrected the historical
+attribution of the drum-programming technique. The attribution correction is a
+provenance caution, not a musical requirement. A numeric timing suggestion was
+single-source and was rejected. Likes, praise, named tracks, product discussion,
+and repeated replies were not counted as technical convergence. No usernames
+or verbatim comment text are retained.
+
+Repository reconciliation rejected the first half as a new mechanism: shared
+weak-sixteenth timing, velocity, sparse admission, physical pulse articulation,
+and 3-3-2 accent/ghost grouping already have canonical score and evidence
+owners. It also rejected captured resampling, another upper-voice pulse echo,
+a user-facing effect chain, and any dependency on the named workstation or
+plug-ins. The genuinely uncovered relation was a bounded percussion source
+slice whose delayed return becomes audible only inside a later score-owned
+output window.
+
+Implemented clean-room translation: after ensemble arbitration, an eligible
+nonconservative contrast bar with the broken-suspension character and gear-shift
+gesture selects its earliest existing percussion event at or before step seven.
+That event opens a one-step input window. The renderer begins a protected
+percussion return four steps later and closes it after four more steps. It adds
+no event, changes no dry score, captures no reusable loop, and carries no
+cross-bar delay state. Conservative fallback and all ineligible bars are exact
+neutral. The combined dry-plus-return percussion tap enters existing role and
+masking evidence, while the original dry hashes and reverb source remain
+separately attributable.
+
+Same-pass compact evidence covers every bar and binds the score context, eligible
+source-step mask, input/output steps, route-derived frame geometry, exact source
+and return hashes, finite peak/RMS, nonzero counts, zero out-of-window samples,
+exact-zero return endpoints, and full/protected pass equality. Candidate-vector
+schema 10, quality-contract schema 11, typed plan-fingerprint domain v7, and
+canonical engine `autotechno-canonical-engine.v11` identify the change. Shipping
+selection remains `uncalibrated.v1`; the frozen engine-v10 profile remains the
+development comparison source rather than being relabelled for engine v11.
+
+Future maturation is intentionally recorded rather than implied. The score
+semantics are the durable concept: select an existing percussion slice, admit it
+briefly, then reveal only a bounded later return. The current integer one-step
+delay, `0.72` feedback, `0.42` return gain, 650 Hz high-pass, 4.2 kHz low-pass,
+mono image, and 8 ms endpoint window are provisional implementation v1. A later
+serious DSP revision may use fractional or multi-tap stereo delay, higher-order
+or nonlinear filters, diffusion, controlled saturation, frequency-dependent
+feedback, and perceptually calibrated gates, provided it preserves deterministic
+score ownership, neutral fallback, protected routing, realtime safety, and
+truthful score-to-PCM evidence under a new versioned contract. Any stateful
+replacement must finish or fade its residual energy inside the same score-owned
+return window, remain independent of render-buffer partitioning, and avoid
+optimizing the physical evidence proxies before a calibrated policy owns that
+decision.
+
+Local validation proved the isolated score, protected-render differential,
+forged-score rejection, compact evidence tamper rejection, and a real prepared
+primary transaction at 8 kHz. The complete workflow matrix passed 163/163; the
+optimized product build passed; and the complete 44.1/48 kHz engine-v11 journey
+passed both the frozen engine-v10 development policy and a newly generated
+ten-case adversarial suite. A post-review decoded-`Int.max` step and out-of-domain
+step-mask regression also passed. Publication, remote exact-head CI, listening,
+app/route validation, and hardware soak remain separate gates.

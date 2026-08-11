@@ -149,6 +149,107 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!oversizedSource.recordIsStructurallyValid)
     }
 
+    @Test("Gated percussion texture evidence is compact, causal, and selection-neutral")
+    func percussionEchoTextureEvidenceContract() throws {
+        let neutral = fixtureVector(
+            slot: .primary,
+            phraseKind: .contrast
+        )
+        let activeRecord = fixturePercussionEchoTexture()
+        let active = fixtureVector(
+            slot: .primary,
+            phraseKind: .contrast,
+            percussionEchoTextureBar: activeRecord
+        )
+
+        #expect(activeRecord.isComplete(
+            sampleRate: 8_000,
+            phraseKind: .contrast,
+            conservative: false
+        ))
+        #expect(active.isComplete)
+        #expect(active.isFinite)
+        #expect(active.fingerprint != neutral.fingerprint)
+        #expect(active.selectionEvidence == neutral.selectionEvidence)
+
+        let data = try active.deterministicJSON()
+        let object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let bars = try #require(
+            object["percussionEchoTexture"] as? [[String: Any]]
+        )
+        let serialized = try #require(bars.first)
+        #expect(Set(serialized.keys) == Set([
+            "bar", "performanceCharacter", "arrangementGesture", "active",
+            "eligibleSourceStepMask", "inputStep", "outputStartStep",
+            "outputEndStep", "renderedFrameCount", "inputWindowFrameCount",
+            "outputWindowFrameCount", "delayFrameCount",
+            "transitionFrameCount", "inputSampleHash", "returnSampleHash",
+            "inputPeak", "inputRMS", "returnPeak", "returnRMS",
+            "inputNonzeroSampleCount", "returnNonzeroSampleCount",
+            "outOfWindowNonzeroSampleCount", "firstOutputSampleBitPattern",
+            "lastOutputSampleBitPattern", "renderPassesMatch", "bindingValid",
+            "finite",
+        ]))
+
+        var forgedObject = object
+        var forgedBars = bars
+        forgedBars[0]["outOfWindowNonzeroSampleCount"] = 1
+        forgedObject["percussionEchoTexture"] = forgedBars
+        let forged = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedObject)
+        )
+        #expect(!forged.isComplete)
+        #expect(forged.isFinite)
+        #expect(forged.recordIsStructurallyValid)
+        #expect(forged.selectionEvidence == active.selectionEvidence)
+
+        var unboundObject = object
+        var unboundBars = bars
+        unboundBars[0]["bindingValid"] = false
+        unboundObject["percussionEchoTexture"] = unboundBars
+        let unbound = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: unboundObject)
+        )
+        #expect(!unbound.isComplete)
+        #expect(unbound.recordIsStructurallyValid)
+
+        var impossibleStepObject = object
+        var impossibleStepBars = bars
+        impossibleStepBars[0]["inputStep"] = Int.max
+        impossibleStepObject["percussionEchoTexture"] = impossibleStepBars
+        let impossibleStep = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: impossibleStepObject)
+        )
+        #expect(!impossibleStep.isComplete)
+        #expect(impossibleStep.recordIsStructurallyValid)
+
+        var outOfDomainMaskObject = object
+        var outOfDomainMaskBars = bars
+        outOfDomainMaskBars[0]["eligibleSourceStepMask"] =
+            Int(UInt16(1 << 15) | UInt16(1 << activeRecord.inputStep))
+        outOfDomainMaskObject["percussionEchoTexture"] = outOfDomainMaskBars
+        let outOfDomainMask = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: outOfDomainMaskObject)
+        )
+        #expect(!outOfDomainMask.isComplete)
+        #expect(outOfDomainMask.recordIsStructurallyValid)
+
+        var oversizedObject = object
+        oversizedObject["sourcePercussionEchoTextureBarCount"] = 17
+        let oversized = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: oversizedObject)
+        )
+        #expect(!oversized.isComplete)
+        #expect(!oversized.recordIsStructurallyValid)
+    }
+
     @Test("Upper timing evidence is compact, score-bound, and selection-neutral")
     func upperTimingEvidenceContract() throws {
         let neutral = fixtureUpperTiming()
@@ -628,10 +729,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 9)
-        #expect(QualityQualificationContract.schemaVersion == 10)
+        #expect(vector.schemaVersion == 10)
+        #expect(QualityQualificationContract.schemaVersion == 11)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v10")
+                "autotechno-canonical-engine.v11")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -2714,7 +2815,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(initialCommit.fingerprint != advancedCommit.fingerprint)
 
         #expect(AutonomousCandidateFingerprint.plan(candidates.primary) ==
-                "0db830b9cb964368")
+                "d74f91b0086bc02d")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -2722,7 +2823,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "5104efae3050354b")
+                "b64d1a0005a427b7")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -2748,11 +2849,14 @@ struct AutonomousCandidateEvaluationTests {
         stemSourceRoleCount: Int = 5,
         stemRoleCount: Int = 5,
         evidenceBar: Int = 0,
+        phraseKind: AutonomousPhraseKind? = nil,
         planFingerprintOverride: String? = nil,
         kickSyntaxBar: AutonomousKickSyntaxBarEvidence? = nil,
         groovePulseBar: AutonomousGroovePulseBarEvidence? = nil,
         closedHatBar: AutonomousClosedHatBarEvidence? = nil,
         instrumentBar: AutonomousInstrumentBarEvidence? = nil,
+        percussionEchoTextureBar:
+            AutonomousPercussionEchoTextureBarEvidence? = nil,
         pulseEchoDriveBars: [AutonomousPulseEchoDriveBarEvidence]? = nil,
         upperTimingBars: [AutonomousUpperTimingBarEvidence]? = nil,
         nonFinite: Bool = false
@@ -2782,9 +2886,9 @@ struct AutonomousCandidateEvaluationTests {
             startBar: evidenceBar,
             declaredBarCount: 1,
             resolvedBarCount: 1,
-            phraseKind: slot == .fallback
-                ? AutonomousPhraseKind.identityReturn.rawValue
-                : AutonomousPhraseKind.lock.rawValue,
+            phraseKind: (phraseKind ?? (slot == .fallback
+                ? AutonomousPhraseKind.identityReturn
+                : AutonomousPhraseKind.lock)).rawValue,
             pulseClarity: 0.8,
             intentionalSpace: 0.7,
             responseClosure: 0.6,
@@ -2952,6 +3056,12 @@ struct AutonomousCandidateEvaluationTests {
                 bar: evidenceBar,
                 evidence: []
             )],
+            percussionEchoTexture: [
+                percussionEchoTextureBar ?? .neutral(
+                    bar: evidenceBar,
+                    sampleRate: 8_000
+                ),
+            ],
             pulseEchoDrive: pulseEchoDriveBars ?? [fixturePulseEchoDrive(
                 bar: evidenceBar,
                 renderedFrameCount: defaultTiming?.renderedFrameCount ?? 14_769,
@@ -3010,6 +3120,66 @@ struct AutonomousCandidateEvaluationTests {
             detectorToAudibleScaleMatches: detectorToAudibleScaleMatches,
             renderPassesMatch: renderPassesMatch,
             bindingValid: bindingValid
+        )
+    }
+
+    private func fixturePercussionEchoTexture(
+        bar: Int = 0
+    ) -> AutonomousPercussionEchoTextureBarEvidence {
+        let sampleRate = 8_000.0
+        let renderedFrameCount = Int((
+            240.0 / AutonomousSessionDirector.bpm * sampleRate
+        ).rounded())
+        let inputStep = 3
+        let outputStartStep = inputStep +
+            PercussionEchoTextureResolver.outputDelayInSteps
+        let outputEndStep = outputStartStep +
+            PercussionEchoTextureResolver.outputWindowLengthInSteps
+        func frame(_ step: Int) -> Int {
+            Int((Double(step) * Double(renderedFrameCount) / 16.0).rounded())
+        }
+        let inputWindowFrameCount = frame(inputStep + 1) - frame(inputStep)
+        let outputWindowFrameCount = frame(outputEndStep) -
+            frame(outputStartStep)
+        let evidence = PercussionEchoTextureRenderEvidence(
+            active: true,
+            bpm: AutonomousSessionDirector.bpm,
+            sampleRate: sampleRate,
+            inputStep: inputStep,
+            outputStartStep: outputStartStep,
+            outputEndStep: outputEndStep,
+            renderedFrameCount: renderedFrameCount,
+            inputWindowFrameCount: inputWindowFrameCount,
+            outputWindowFrameCount: outputWindowFrameCount,
+            delayFrameCount: max(
+                1,
+                Int((Double(renderedFrameCount) / 16.0).rounded())
+            ),
+            transitionFrameCount:
+                PercussionEchoTextureVoice.transitionFrameCount(
+                    sampleRate: sampleRate
+                ),
+            inputSampleHash: "1111111111111111",
+            returnSampleHash: "2222222222222222",
+            inputPeak: 0.08,
+            inputRMS: 0.02,
+            returnPeak: 0.04,
+            returnRMS: 0.01,
+            inputNonzeroSampleCount: 100,
+            returnNonzeroSampleCount: 300,
+            outOfWindowNonzeroSampleCount: 0,
+            firstOutputSampleBitPattern: 0,
+            lastOutputSampleBitPattern: 0,
+            finite: true
+        )
+        return AutonomousPercussionEchoTextureBarEvidence(
+            evidence,
+            bar: bar,
+            performanceCharacter: .brokenSuspension,
+            arrangementGesture: .gearShift,
+            eligibleSourceStepMask: UInt16(1 << inputStep),
+            renderPassesMatch: true,
+            bindingValid: true
         )
     }
 

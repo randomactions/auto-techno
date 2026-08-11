@@ -79,6 +79,14 @@ remain unchanged. Same-pass event evidence binds the score event to its exact
 dry-sample consequence, and the conservative candidate keeps the legacy neutral
 decay exactly.
 
+The gated-percussion-texture path keeps the same ownership boundary. One
+eligible existing percussion event opens a bounded score-owned input slice and
+a later bounded return window; it does not create an onset, capture a reusable
+loop, add cross-bar effect state, or expose a control. Same-pass protected-return
+evidence binds the timing and PCM consequence. The musical gate relationship is
+durable, while its current delay, filtering, feedback, gain, stereo placement,
+and smoothing remain replaceable internal DSP details for future maturation.
+
 ## Professional-sound objective
 
 The long-term goal is professional release-quality sound produced by engine-owned

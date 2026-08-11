@@ -11,12 +11,13 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 10, candidate-vector schema 9, and
-canonical engine identity `autotechno-canonical-engine.v10`. It preserves
+candidate uses quality-contract schema 11, candidate-vector schema 10, and
+canonical engine identity `autotechno-canonical-engine.v11`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, score-owned instrument assignment, architecture-local dry-
-PCM, shared pulse-echo return-drive, score-owned upper-role timing, graph, and
+PCM, score-owned gated percussion texture, shared pulse-echo return-drive,
+score-owned upper-role timing, graph, and
 pre/post upper-timbre evidence
 for each retained attempt, then binds the selected attempt to finalized commit
 provenance. Instrument evidence
@@ -58,14 +59,28 @@ weak-pulse cell and motif remain positive; recovery must be positive. The
 policy remains uncalibrated, so these facts can reject broken provenance but
 cannot promote the musical device.
 
+Gated-percussion-texture evidence also retains one compact record for every
+bar. An active record binds an eligible existing percussion event to one-step
+input admission, a four-step delayed output start, a four-step output window,
+exact protected-return hashes, finite peak/RMS, nonzero counts, exact-zero
+window endpoints, and full/protected render-pass agreement. The score adds no
+onset and the renderer retains no captured loop: conservative and ineligible
+bars are exact neutral, and delay/filter work remains detached from the
+callback. The current feedback, filter corners, return level, mono placement,
+and boundary window are engineering realization v1, not the durable musical
+concept. A later DSP maturation may replace them with higher-order filtering,
+fractional or stereo delay, controlled nonlinear colour, and perceptually
+calibrated bounds only if the same input/output-gate semantics, fallback,
+deterministic score, and score-to-PCM evidence remain intact.
+
 `ProfessionalEvidenceReportBank` accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The shipping evaluator
 remains deliberately uncalibrated: a healthy preparation renders the primary
 once, and neither the transaction nor the report bank constitutes runtime
 professional-quality qualification. The separate frozen development contract
-now loads profile `c52545b5641e6cfb` and passing adversarial suite
-`2340017ec6c59440`. It evaluates complete representative-rate engine banks
+now loads the engine-v10 source profile `c52545b5641e6cfb` and passing
+adversarial suite `2340017ec6c59440`. It evaluates complete representative-rate engine banks
 without PCM, stems, or event lists and rejects every dimension and relationship
 independently. Calibrated paired ranking and the hybrid live-feedback loop below
 remain target architecture until their implementation and validation are
@@ -216,8 +231,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 10, candidate-vector schema 9, and canonical engine
-v10, the versioned transaction implements the bounded evidence and atomic commit
+Under quality-contract schema 11, candidate-vector schema 10, and canonical engine
+v11, the versioned transaction implements the bounded evidence and atomic commit
 foundation for this loop. It can retain at most the primary, alternate, and
 conservative-fallback candidates, plus one
 home-timbre correction, with no more than four render passes total. Every attempt

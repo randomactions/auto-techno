@@ -55,11 +55,12 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 10, candidate-vector schema 9, and canonical engine v10
+Quality-contract schema 11, candidate-vector schema 10, and canonical engine v11
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, event-local groove-pulse, ordinary
-closed-hat, score-owned instrument, shared pulse-echo return-drive, score-owned upper-role timing,
+closed-hat, score-owned instrument, score-owned gated percussion texture,
+shared pulse-echo return-drive, score-owned upper-role timing,
 graph, and pre/post upper-timbre vector for every retained attempt. Groove-pulse
 evidence must cover every bar
 explicitly, bind each score event to one exact dry-sample
@@ -107,6 +108,19 @@ protected render passes, detector-to-audible scaling, automatic-mix gain, and
 all hashes must agree. Missing bars, forged roles, arbitrary kick deletion,
 nonzero withheld signal, silent recovery, or a changed non-kick score make the
 candidate incomplete; none of this evidence changes uncalibrated selection.
+
+Gated-percussion-texture evidence must cover every rendered bar. Active records
+must bind the canonical eligible source-step mask and earliest admitted step to
+the exact one-step input window, four-step delayed output start, four-step
+output window, route-derived frame geometry, finite source/return hashes and
+metrics, zero out-of-window samples, exact-zero output endpoints, and identical
+full/protected render passes. Ineligible and conservative records must be exact
+neutral. Tests must hold the resolved bar, synth plan, dry percussion hash,
+foundation, kick, groove-pulse, and ordinary-hat evidence fixed while proving
+the return changes protected PCM only after its requested output gate. These
+tests establish the current realization, not a permanent filter/delay recipe;
+future DSP upgrades must preserve the score contract and requalify the
+evidence.
 
 Pulse-echo return-drive evidence must cover every full rendered bar and bind the
 bar, fixed BPM, route-derived three-sixteenth delay-frame count, rendered-frame

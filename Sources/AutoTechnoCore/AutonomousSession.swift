@@ -379,6 +379,77 @@ package enum KickSyntaxRole: String, CaseIterable, Sendable {
     case recovery
 }
 
+/// One bounded input-window -> delay -> output-window relationship on the
+/// existing percussion role. The score chooses only geometry; renderer-owned
+/// filter, feedback, gain, and boundary fades remain one canonical contract.
+package struct PercussionEchoTextureArticulation: Equatable, Sendable {
+    package let inputStep: Int
+    package let outputStartStep: Int
+    package let outputEndStep: Int
+
+    package init(inputStep: Int, outputStartStep: Int, outputEndStep: Int) {
+        self.inputStep = inputStep
+        self.outputStartStep = outputStartStep
+        self.outputEndStep = outputEndStep
+    }
+}
+
+/// Resolves the gated percussion return after ensemble arbitration so the
+/// input window always owns an audible, already-resolved percussion event.
+/// It adds no onset and never captures or resamples PCM for later reuse.
+package enum PercussionEchoTextureResolver {
+    package static let inputWindowLengthInSteps = 1
+    package static let outputDelayInSteps = 4
+    package static let outputWindowLengthInSteps = 4
+    package static let latestInputStep = 7
+
+    package static func articulation(
+        ensemble: EnsembleContext,
+        kind: AutonomousPhraseKind,
+        character: PerformanceCharacter,
+        gesture: ArrangementGesture,
+        conservative: Bool
+    ) -> PercussionEchoTextureArticulation? {
+        guard !conservative, kind == .contrast,
+              character == .brokenSuspension,
+              gesture == .gearShift,
+              let source = eligibleSourceEvents(in: ensemble).first else {
+            return nil
+        }
+        return PercussionEchoTextureArticulation(
+            inputStep: source.step,
+            outputStartStep: source.step + outputDelayInSteps,
+            outputEndStep: source.step + outputDelayInSteps +
+                outputWindowLengthInSteps
+        )
+    }
+
+    package static func eligibleSourceEvents(
+        in ensemble: EnsembleContext
+    ) -> [EnsembleResolvedEvent] {
+        ensemble.events.filter { event in
+            event.step <= latestInputStep && isPercussionTextureVoice(event.voice)
+        }.sorted { lhs, rhs in
+            if lhs.step != rhs.step { return lhs.step < rhs.step }
+            return voiceOrder(lhs.voice) < voiceOrder(rhs.voice)
+        }
+    }
+
+    private static func isPercussionTextureVoice(_ voice: EnsembleVoice) -> Bool {
+        switch voice {
+        case .percussion, .clap, .openHat, .metallic, .groovePulse:
+            true
+        case .kick, .bass, .rumble, .tunedTom, .motif, .response,
+                .atmosphere, .transition:
+            false
+        }
+    }
+
+    private static func voiceOrder(_ voice: EnsembleVoice) -> Int {
+        EnsembleVoice.allCases.firstIndex(of: voice) ?? Int.max
+    }
+}
+
 /// The single immutable score consumed by rendering for one bar. Keeping the
 /// musical bar and its arbitrated events together prevents telemetry and PCM
 /// from describing different performances.
@@ -397,6 +468,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let spatialContrast: SpatialContrastArticulation
     package let narrative: NarrativeArticulation
     package let kickSyntaxRole: KickSyntaxRole
+    package let percussionEchoTexture: PercussionEchoTextureArticulation?
 
     package init(performance: PerformanceBar, ensemble: EnsembleContext,
                  arrangementGesture: ArrangementGesture, percussionGear: PercussionGear,
@@ -408,7 +480,8 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
                  closedHatDecayArticulations: [ClosedHatDecayArticulation]? = nil,
                  spatialContrast: SpatialContrastArticulation = .foreground,
                  narrative: NarrativeArticulation = .initial,
-                 kickSyntaxRole: KickSyntaxRole = .grounded) {
+                 kickSyntaxRole: KickSyntaxRole = .grounded,
+                 percussionEchoTexture: PercussionEchoTextureArticulation? = nil) {
         self.performance = performance
         self.ensemble = ensemble
         self.arrangementGesture = arrangementGesture
@@ -436,6 +509,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.spatialContrast = spatialContrast
         self.narrative = narrative
         self.kickSyntaxRole = kickSyntaxRole
+        self.percussionEchoTexture = percussionEchoTexture
     }
 
     package func groovePulse(at step: Int) -> GroovePulseArticulation? {
@@ -631,7 +705,8 @@ package enum KickSyntaxResolver {
             ),
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative,
-            kickSyntaxRole: role
+            kickSyntaxRole: role,
+            percussionEchoTexture: resolved.percussionEchoTexture
         )
     }
 }
@@ -1481,6 +1556,13 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 from: ensemble,
                 conservative: conservative
             )
+            let percussionEchoTexture = PercussionEchoTextureResolver.articulation(
+                ensemble: ensemble,
+                kind: kind,
+                character: character,
+                gesture: gesture,
+                conservative: conservative
+            )
             let echoEnabled = pulseEchoEnabled(
                 scene: scene, bar: bar, kind: kind,
                 companion: foundation.companion, gesture: gesture
@@ -1506,7 +1588,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 groovePulses: groovePulses,
                 closedHatDecayArticulations: closedHatDecayArticulations,
                 spatialContrast: spatialContrast,
-                narrative: narrative
+                narrative: narrative,
+                percussionEchoTexture: percussionEchoTexture
             ))
             activeSupportingRoles = narrativeSupportingRolesAfterBoundary(
                 current: activeSupportingRoles,

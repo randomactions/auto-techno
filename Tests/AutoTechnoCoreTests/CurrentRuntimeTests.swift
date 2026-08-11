@@ -86,6 +86,10 @@ struct CurrentRuntimeTests {
             protectedRhythmSampleHash: source.protectedRhythmSampleHash,
             groovePulseRenderEvidence: source.groovePulseRenderEvidence,
             instrumentRenderEvidence: source.instrumentRenderEvidence,
+            percussionEchoTextureRenderEvidence:
+                source.percussionEchoTextureRenderEvidence,
+            percussionEchoTextureRenderPassesMatch:
+                source.percussionEchoTextureRenderPassesMatch,
             pulseEchoReturnDriveRenderEvidence:
                 source.pulseEchoReturnDriveRenderEvidence,
             upperNoteRenderEvidence: source.upperNoteRenderEvidence,

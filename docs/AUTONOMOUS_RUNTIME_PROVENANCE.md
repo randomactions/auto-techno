@@ -24,13 +24,14 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 10, candidate-
-   vector schema 9, and canonical engine identity
-   `autotechno-canonical-engine.v10`. Each
+   candidate-evaluation transaction under quality-contract schema 11, candidate-
+   vector schema 10, and canonical engine identity
+   `autotechno-canonical-engine.v11`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax,
    event-local groove-pulse,
-   ordinary closed-hat, score-owned instrument, shared pulse-echo return-drive,
+   ordinary closed-hat, score-owned instrument, score-owned gated percussion
+   texture, shared pulse-echo return-drive,
    score-owned upper-role timing, graph, and pre/post upper-timbre evidence.
    Instrument records bind each resolved architecture, patch, use, automation,
    and compatible effect set to exact architecture-local dry-PCM identity,
@@ -78,8 +79,10 @@ mistaken for a completed feedback system.
    plus complete exact-role masking and stem evidence. Its policy status is
    unconditionally unavailable because the bank is observation-only; it cannot
    promote or correct audio. `ProfessionalQualityFrozenArtifacts` separately
-   validates the non-reconstructable development profile and adversarial suite
-   by pinned fingerprints without activating the shipping evaluator.
+   validates the non-reconstructable engine-v10 development profile and
+   adversarial suite by pinned fingerprints without activating the shipping
+   evaluator. Later engine versions are evaluated against that frozen source;
+   they do not relabel it as current-runtime evidence.
 5. `AutonomousPhraseRenderer` constructs the required synth world and synth
    performance. The synth planner resolves the three-step driver, five-stage
    follower, chapter articulation, internal architecture and patch, four bounded
@@ -160,6 +163,37 @@ mistaken for a completed feedback system.
    owns transport, visual position, and route recovery, not musical composition.
    The current app does not copy callback PCM into a background quality analyzer
    or make live quality-driven continuation decisions.
+
+## Implemented gated-percussion-texture slice
+
+The canonical director now resolves one optional articulation after ensemble
+arbitration. Only a nonconservative contrast bar with the broken-suspension
+character, gear-shift gesture, and an existing eligible percussion event at or
+before step seven may activate it. The articulation identifies the earliest
+eligible event, admits one score step of its dry percussion role window, begins
+the delayed return four steps later, and closes that output gate after four
+more steps. It adds no event, does not alter the dry percussion score, and has
+no cross-bar delay continuation. Conservative fallback and every ineligible
+bar are exact neutral.
+
+Detached rendering reduces the admitted source and bounded return to exact
+hashes, peak/RMS, frame geometry, nonzero counts, exact-zero output endpoints,
+and full/protected pass agreement. The effect is part of the protected rhythm
+path; its combined dry-plus-return signal enters percussion role analysis and
+masking, while the dry percussion hash and reverb source remain attributable to
+the original events. No PCM loop or reusable sample survives preparation.
+
+The fixed one-sixteenth delay, feedback, filter corners, gain, mono image, and
+transition curve are explicitly provisional renderer architecture. A mature DSP
+revision may improve interpolation, stereo placement, filtering, diffusion,
+nonlinear colour, and perceptual calibration without changing the score-owned
+input/output gates, deterministic fallback, evidence owner, or one-runtime
+contract. Stateful replacements must decay or fade all residual energy inside
+the same bounded output gate and remain sample-indexed and block-partition
+independent. Physical metrics remain descriptive while shipping selection is
+uncalibrated; they are not optimization targets. Such a revision requires a new
+engine/schema identity and exact-head qualification against the frozen
+development profile.
 
 ## Implemented pulse-echo return slice
 

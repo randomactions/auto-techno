@@ -1261,6 +1261,252 @@ package struct AutonomousInstrumentBarEvidence: Codable, Equatable, Sendable {
     }
 }
 
+/// One compact record per rendered bar binds the score-owned percussion input
+/// and output gates to the exact protected-rhythm return. The gated source and
+/// return PCM are reduced to hashes and scalars before scheduling.
+package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
+        Sendable {
+    package let bar: Int
+    package let performanceCharacter: String
+    package let arrangementGesture: String
+    package let active: Bool
+    package let eligibleSourceStepMask: UInt16
+    package let inputStep: Int
+    package let outputStartStep: Int
+    package let outputEndStep: Int
+    package let renderedFrameCount: Int
+    package let inputWindowFrameCount: Int
+    package let outputWindowFrameCount: Int
+    package let delayFrameCount: Int
+    package let transitionFrameCount: Int
+    package let inputSampleHash: String
+    package let returnSampleHash: String
+    package let inputPeak: Double
+    package let inputRMS: Double
+    package let returnPeak: Double
+    package let returnRMS: Double
+    package let inputNonzeroSampleCount: Int
+    package let returnNonzeroSampleCount: Int
+    package let outOfWindowNonzeroSampleCount: Int
+    package let firstOutputSampleBitPattern: UInt32
+    package let lastOutputSampleBitPattern: UInt32
+    package let renderPassesMatch: Bool
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(
+        _ evidence: PercussionEchoTextureRenderEvidence,
+        bar: Int,
+        performanceCharacter: PerformanceCharacter,
+        arrangementGesture: ArrangementGesture,
+        eligibleSourceStepMask: UInt16,
+        renderPassesMatch: Bool,
+        bindingValid: Bool
+    ) {
+        self.bar = bar
+        self.performanceCharacter = performanceCharacter.rawValue
+        self.arrangementGesture = arrangementGesture.rawValue
+        active = evidence.active
+        self.eligibleSourceStepMask = eligibleSourceStepMask
+        inputStep = evidence.inputStep
+        outputStartStep = evidence.outputStartStep
+        outputEndStep = evidence.outputEndStep
+        renderedFrameCount = evidence.renderedFrameCount
+        inputWindowFrameCount = evidence.inputWindowFrameCount
+        outputWindowFrameCount = evidence.outputWindowFrameCount
+        delayFrameCount = evidence.delayFrameCount
+        transitionFrameCount = evidence.transitionFrameCount
+        inputSampleHash = evidence.inputSampleHash
+        returnSampleHash = evidence.returnSampleHash
+        inputPeak = evidence.inputPeak
+        inputRMS = evidence.inputRMS
+        returnPeak = evidence.returnPeak
+        returnRMS = evidence.returnRMS
+        inputNonzeroSampleCount = evidence.inputNonzeroSampleCount
+        returnNonzeroSampleCount = evidence.returnNonzeroSampleCount
+        outOfWindowNonzeroSampleCount = evidence.outOfWindowNonzeroSampleCount
+        firstOutputSampleBitPattern = evidence.firstOutputSampleBitPattern
+        lastOutputSampleBitPattern = evidence.lastOutputSampleBitPattern
+        self.renderPassesMatch = renderPassesMatch
+        self.bindingValid = bindingValid
+        finite = evidence.finite
+    }
+
+    package static func neutral(
+        bar: Int,
+        sampleRate: Double,
+        performanceCharacter: PerformanceCharacter = .hypnoticLock,
+        arrangementGesture: ArrangementGesture = .steady
+    ) -> Self {
+        let frameCount = barFrameCount(sampleRate: sampleRate)
+        let evidence = PercussionEchoTextureRenderEvidence(
+            active: false,
+            bpm: AutonomousSessionDirector.bpm,
+            sampleRate: sampleRate,
+            inputStep: -1,
+            outputStartStep: -1,
+            outputEndStep: -1,
+            renderedFrameCount: frameCount,
+            inputWindowFrameCount: 0,
+            outputWindowFrameCount: 0,
+            delayFrameCount: 0,
+            transitionFrameCount: 0,
+            inputSampleHash: AutonomousKickSyntaxBarEvidence.zeroSampleHash(
+                renderedFrameCount: 0
+            ),
+            returnSampleHash: AutonomousKickSyntaxBarEvidence.zeroSampleHash(
+                renderedFrameCount: frameCount
+            ),
+            inputPeak: 0,
+            inputRMS: 0,
+            returnPeak: 0,
+            returnRMS: 0,
+            inputNonzeroSampleCount: 0,
+            returnNonzeroSampleCount: 0,
+            outOfWindowNonzeroSampleCount: 0,
+            firstOutputSampleBitPattern: 0,
+            lastOutputSampleBitPattern: 0,
+            finite: sampleRate.isFinite && frameCount > 0
+        )
+        return Self(
+            evidence,
+            bar: bar,
+            performanceCharacter: performanceCharacter,
+            arrangementGesture: arrangementGesture,
+            eligibleSourceStepMask: 0,
+            renderPassesMatch: true,
+            bindingValid: true
+        )
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            inputPeak, inputRMS, returnPeak, returnRMS,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func normalEligibility(
+        phraseKind: AutonomousPhraseKind,
+        conservative: Bool
+    ) -> Bool {
+        phraseKind == .contrast && !conservative &&
+            performanceCharacter == PerformanceCharacter.brokenSuspension.rawValue &&
+            arrangementGesture == ArrangementGesture.gearShift.rawValue &&
+            eligibleSourceStepMask != 0
+    }
+
+    package func isComplete(
+        sampleRate: Double,
+        phraseKind: AutonomousPhraseKind,
+        conservative: Bool
+    ) -> Bool {
+        guard bar >= 0,
+              PerformanceCharacter(rawValue: performanceCharacter) != nil,
+              ArrangementGesture(rawValue: arrangementGesture) != nil,
+              sampleRate.isFinite,
+              sampleRate >= QualityQualificationContract.minimumSupportedSampleRate,
+              sampleRate <= QualityQualificationContract.maximumSupportedSampleRate,
+              renderedFrameCount == Self.barFrameCount(sampleRate: sampleRate),
+              eligibleSourceStepMask.nonzeroBitCount <= 8,
+              eligibleSourceStepMask & 0xff00 == 0,
+              Self.isSampleHash(inputSampleHash),
+              Self.isSampleHash(returnSampleHash),
+              inputPeak >= 0, inputRMS >= 0, inputRMS <= inputPeak,
+              returnPeak >= 0, returnRMS >= 0, returnRMS <= returnPeak,
+              inputPeak <= Double(Float.greatestFiniteMagnitude),
+              returnPeak <= Double(Float.greatestFiniteMagnitude),
+              (0...renderedFrameCount).contains(inputNonzeroSampleCount),
+              (0...renderedFrameCount).contains(returnNonzeroSampleCount),
+              (0...renderedFrameCount).contains(outOfWindowNonzeroSampleCount),
+              renderPassesMatch, bindingValid, isFinite,
+              active == normalEligibility(
+                phraseKind: phraseKind,
+                conservative: conservative
+              ) else {
+            return false
+        }
+
+        if !active {
+            return inputStep == -1 && outputStartStep == -1 &&
+                outputEndStep == -1 && inputWindowFrameCount == 0 &&
+                outputWindowFrameCount == 0 && delayFrameCount == 0 &&
+                transitionFrameCount == 0 && inputPeak.bitPattern == 0 &&
+                inputRMS.bitPattern == 0 && returnPeak.bitPattern == 0 &&
+                returnRMS.bitPattern == 0 && inputNonzeroSampleCount == 0 &&
+                returnNonzeroSampleCount == 0 &&
+                outOfWindowNonzeroSampleCount == 0 &&
+                firstOutputSampleBitPattern & 0x7fff_ffff == 0 &&
+                lastOutputSampleBitPattern & 0x7fff_ffff == 0 &&
+                inputSampleHash == AutonomousKickSyntaxBarEvidence.zeroSampleHash(
+                    renderedFrameCount: 0
+                ) && returnSampleHash ==
+                    AutonomousKickSyntaxBarEvidence.zeroSampleHash(
+                        renderedFrameCount: renderedFrameCount
+                    )
+        }
+
+        let expectedInputStep = eligibleSourceStepMask.trailingZeroBitCount
+        guard inputStep == expectedInputStep,
+              inputStep <= PercussionEchoTextureResolver.latestInputStep,
+              outputStartStep == inputStep +
+                PercussionEchoTextureResolver.outputDelayInSteps,
+              outputEndStep == outputStartStep +
+                PercussionEchoTextureResolver.outputWindowLengthInSteps,
+              outputEndStep < 16 else {
+            return false
+        }
+        let expectedInputStart = Self.frame(
+            step: inputStep,
+            renderedFrameCount: renderedFrameCount
+        )
+        let expectedInputEnd = Self.frame(
+            step: inputStep + PercussionEchoTextureResolver.inputWindowLengthInSteps,
+            renderedFrameCount: renderedFrameCount
+        )
+        let expectedOutputStart = Self.frame(
+            step: outputStartStep,
+            renderedFrameCount: renderedFrameCount
+        )
+        let expectedOutputEnd = Self.frame(
+            step: outputEndStep,
+            renderedFrameCount: renderedFrameCount
+        )
+        let zeroReturnHash = AutonomousKickSyntaxBarEvidence.zeroSampleHash(
+            renderedFrameCount: renderedFrameCount
+        )
+        return inputWindowFrameCount == expectedInputEnd - expectedInputStart &&
+            outputWindowFrameCount == expectedOutputEnd - expectedOutputStart &&
+            delayFrameCount == max(
+                1,
+                Int((Double(renderedFrameCount) / 16).rounded())
+            ) && transitionFrameCount ==
+                PercussionEchoTextureVoice.transitionFrameCount(
+                    sampleRate: sampleRate
+                ) && inputPeak > 0 && inputRMS > 0 && returnPeak > 0 &&
+            returnRMS > 0 && inputNonzeroSampleCount > 0 &&
+            returnNonzeroSampleCount > 0 && outOfWindowNonzeroSampleCount == 0 &&
+            firstOutputSampleBitPattern & 0x7fff_ffff == 0 &&
+            lastOutputSampleBitPattern & 0x7fff_ffff == 0 &&
+            inputSampleHash != AutonomousKickSyntaxBarEvidence.zeroSampleHash(
+                renderedFrameCount: inputWindowFrameCount
+            ) && returnSampleHash != zeroReturnHash
+    }
+
+    private static func barFrameCount(sampleRate: Double) -> Int {
+        Int((240.0 / AutonomousSessionDirector.bpm * sampleRate).rounded())
+    }
+
+    private static func frame(step: Int, renderedFrameCount: Int) -> Int {
+        Int((Double(step) * Double(renderedFrameCount) / 16).rounded())
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 /// Fixed role-local PCM identity for one upper companion role. This remains a
 /// compact consequence record: the transient dry tap never leaves detached
 /// preparation and no per-event PCM or crest duplicate enters the candidate.
@@ -2145,6 +2391,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
     case groovePulseEvidence = "groove-pulse-evidence"
     case closedHatEvidence = "closed-hat-evidence"
     case instrumentEvidence = "instrument-evidence"
+    case percussionEchoTextureEvidence = "percussion-echo-texture-evidence"
     case pulseEchoDriveEvidence = "pulse-echo-drive-evidence"
     case upperTimingEvidence = "upper-timing-evidence"
 }
@@ -2152,7 +2399,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 9
+    package static let schemaVersion = 10
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -2184,6 +2431,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let closedHat: [AutonomousClosedHatBarEvidence]
     package let sourceInstrumentBarCount: Int
     package let instruments: [AutonomousInstrumentBarEvidence]
+    package let sourcePercussionEchoTextureBarCount: Int
+    package let percussionEchoTexture:
+        [AutonomousPercussionEchoTextureBarEvidence]
     package let sourcePulseEchoDriveBarCount: Int
     package let pulseEchoDrive: [AutonomousPulseEchoDriveBarEvidence]
     package let sourceUpperTimingBarCount: Int
@@ -2211,6 +2461,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         groovePulse: [AutonomousGroovePulseBarEvidence],
         closedHat: [AutonomousClosedHatBarEvidence] = [],
         instruments: [AutonomousInstrumentBarEvidence],
+        percussionEchoTexture: [AutonomousPercussionEchoTextureBarEvidence],
         pulseEchoDrive: [AutonomousPulseEchoDriveBarEvidence],
         upperTiming: [AutonomousUpperTimingBarEvidence],
         graph: AutonomousGraphEvidence,
@@ -2239,6 +2490,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.closedHat = Array(closedHat.prefix(Self.maximumBarCount))
         sourceInstrumentBarCount = instruments.count
         self.instruments = Array(instruments.prefix(Self.maximumBarCount))
+        sourcePercussionEchoTextureBarCount = percussionEchoTexture.count
+        self.percussionEchoTexture = Array(
+            percussionEchoTexture.prefix(Self.maximumBarCount)
+        )
         sourcePulseEchoDriveBarCount = pulseEchoDrive.count
         self.pulseEchoDrive = Array(pulseEchoDrive.prefix(Self.maximumBarCount))
         sourceUpperTimingBarCount = upperTiming.count
@@ -2644,6 +2899,43 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 evidence: block.instrumentRenderEvidence
             )
         }
+        let percussionEchoTexture = boundedBlocks.map { block in
+            let evidence = block.percussionEchoTextureRenderEvidence
+            let resolved = block.resolvedPerformance
+            let articulation = resolved.percussionEchoTexture
+            let eligibleSteps = Array(Set(
+                PercussionEchoTextureResolver.eligibleSourceEvents(
+                    in: resolved.ensemble
+                ).map(\.step)
+            )).sorted()
+            let eligibleMask = kickStepMask(eligibleSteps)
+            let planBarMatches = plan.resolvedBars.first {
+                $0.performance.bar == block.bar
+            } == resolved
+            let bindingValid = eligibleMask != nil && planBarMatches &&
+                block.section == resolved.performance.section &&
+                evidence.active == (articulation != nil) &&
+                evidence.bpm == plan.scene.bpm &&
+                evidence.sampleRate == sampleRate &&
+                evidence.renderedFrameCount == block.left.count &&
+                evidence.renderedFrameCount == block.right.count &&
+                evidence.inputStep == (articulation?.inputStep ?? -1) &&
+                evidence.outputStartStep ==
+                    (articulation?.outputStartStep ?? -1) &&
+                evidence.outputEndStep ==
+                    (articulation?.outputEndStep ?? -1) &&
+                block.percussionEchoTextureRenderPassesMatch
+            return AutonomousPercussionEchoTextureBarEvidence(
+                evidence,
+                bar: block.bar,
+                performanceCharacter: resolved.performanceCharacter,
+                arrangementGesture: resolved.arrangementGesture,
+                eligibleSourceStepMask: eligibleMask ?? 0,
+                renderPassesMatch:
+                    block.percussionEchoTextureRenderPassesMatch,
+                bindingValid: bindingValid
+            )
+        }
         let pulseEchoDrive = boundedBlocks.map { block in
             let evidence = block.pulseEchoReturnDriveRenderEvidence
             let articulation =
@@ -2721,6 +3013,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             groovePulse: groovePulse,
             closedHat: closedHat,
             instruments: instruments,
+            percussionEchoTexture: percussionEchoTexture,
             pulseEchoDrive: pulseEchoDrive,
             upperTiming: upperTiming,
             graph: graphEvidence,
@@ -3009,6 +3302,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             groovePulse.allSatisfy { $0.isFinite } &&
             closedHat.allSatisfy { $0.isFinite } &&
             instruments.allSatisfy { $0.isFinite } &&
+            percussionEchoTexture.allSatisfy { $0.isFinite } &&
             pulseEchoDrive.allSatisfy { $0.isFinite } &&
             upperTiming.allSatisfy { $0.isFinite } &&
             routeContinuation.isFinite &&
@@ -3056,6 +3350,11 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         if !instrumentEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.instrumentEvidence)
         }
+        if !percussionEchoTextureEvidenceIsComplete(
+            expectedBars: expectedBars
+        ) {
+            failures.append(.percussionEchoTextureEvidence)
+        }
         if !pulseEchoDriveEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.pulseEchoDriveEvidence)
         }
@@ -3086,6 +3385,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
               sourceInstrumentBarCount == instruments.count,
               instruments.count == fullMix.sourceBarCount,
               instruments.allSatisfy({ $0.isComplete }),
+              sourcePercussionEchoTextureBarCount ==
+                percussionEchoTexture.count,
+              percussionEchoTexture.count == fullMix.sourceBarCount,
               sourcePulseEchoDriveBarCount == pulseEchoDrive.count,
               pulseEchoDrive.count == fullMix.sourceBarCount,
               sourceUpperTimingBarCount == upperTiming.count,
@@ -3222,6 +3524,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceGroovePulseBarCount == groovePulse.count &&
             sourceClosedHatBarCount == closedHat.count &&
             sourceInstrumentBarCount == instruments.count &&
+            sourcePercussionEchoTextureBarCount ==
+                percussionEchoTexture.count &&
             sourcePulseEchoDriveBarCount == pulseEchoDrive.count &&
             sourceUpperTimingBarCount == upperTiming.count &&
             masking.count == fullMix.sourceBarCount &&
@@ -3231,6 +3535,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             groovePulse.count == fullMix.sourceBarCount &&
             closedHat.count == fullMix.sourceBarCount &&
             instruments.count == fullMix.sourceBarCount &&
+            percussionEchoTexture.count == fullMix.sourceBarCount &&
             pulseEchoDrive.count == fullMix.sourceBarCount &&
             upperTiming.count == fullMix.sourceBarCount
     }
@@ -3390,6 +3695,27 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     }
 
     @inline(never)
+    private func percussionEchoTextureEvidenceIsComplete(
+        expectedBars: Set<Int>
+    ) -> Bool {
+        guard let phraseKind = AutonomousPhraseKind(
+            rawValue: symbolic.phraseKind
+        ), Set(percussionEchoTexture.map { $0.bar }) == expectedBars,
+           percussionEchoTexture.map({ $0.bar }) ==
+            fullMix.bars.map({ $0.bar }),
+           percussionEchoTexture.count == fullMix.sourceBarCount else {
+            return false
+        }
+        return percussionEchoTexture.allSatisfy {
+            $0.isComplete(
+                sampleRate: routeContinuation.sampleRate,
+                phraseKind: phraseKind,
+                conservative: symbolic.conservative
+            )
+        }
+    }
+
+    @inline(never)
     private func pulseEchoDriveEvidenceIsComplete(
         expectedBars: Set<Int>
     ) -> Bool {
@@ -3535,6 +3861,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceGroovePulseBarCount >= groovePulse.count &&
             sourceClosedHatBarCount >= closedHat.count &&
             sourceInstrumentBarCount >= instruments.count &&
+            sourcePercussionEchoTextureBarCount >=
+                percussionEchoTexture.count &&
+            sourcePercussionEchoTextureBarCount <= Self.maximumBarCount &&
             sourcePulseEchoDriveBarCount >= pulseEchoDrive.count &&
             sourceUpperTimingBarCount >= upperTiming.count
     }
@@ -3570,6 +3899,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             groovePulse.count <= Self.maximumBarCount &&
             closedHat.count <= Self.maximumBarCount &&
             instruments.count <= Self.maximumBarCount &&
+            percussionEchoTexture.count <= Self.maximumBarCount &&
             pulseEchoDrive.count <= Self.maximumBarCount &&
             upperTiming.count <= Self.maximumBarCount
     }
@@ -3592,6 +3922,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             automaticMixRecordsAreBounded() && kickSyntaxRecordsAreBounded() &&
             groovePulseRecordsAreBounded() &&
             closedHatRecordsAreBounded() && instrumentRecordsAreBounded() &&
+            percussionEchoTextureRecordsAreBounded() &&
             pulseEchoDriveRecordsAreBounded() && upperTimingRecordsAreBounded()
     }
 
@@ -3678,6 +4009,25 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     @inline(never)
     private func pulseEchoDriveRecordsAreBounded() -> Bool {
         pulseEchoDrive.map({ $0.bar }) == fullMix.bars.map({ $0.bar })
+    }
+
+    @inline(never)
+    private func percussionEchoTextureRecordsAreBounded() -> Bool {
+        percussionEchoTexture.map({ $0.bar }) == fullMix.bars.map({ $0.bar }) &&
+            percussionEchoTexture.allSatisfy {
+                (0...8).contains($0.eligibleSourceStepMask.nonzeroBitCount) &&
+                    $0.renderedFrameCount >= 0 &&
+                    $0.inputWindowFrameCount >= 0 &&
+                    $0.outputWindowFrameCount >= 0 &&
+                    $0.delayFrameCount >= 0 &&
+                    $0.transitionFrameCount >= 0 &&
+                    $0.inputNonzeroSampleCount >= 0 &&
+                    $0.inputNonzeroSampleCount <= $0.renderedFrameCount &&
+                    $0.returnNonzeroSampleCount >= 0 &&
+                    $0.returnNonzeroSampleCount <= $0.renderedFrameCount &&
+                    $0.outOfWindowNonzeroSampleCount >= 0 &&
+                    $0.outOfWindowNonzeroSampleCount <= $0.renderedFrameCount
+            }
     }
 
     @inline(never)
@@ -4373,7 +4723,11 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
             transaction.attempts[correctionIndex].vector.graph ==
             transaction.attempts[initialIndex].vector.graph &&
             transaction.attempts[correctionIndex].vector.kickSyntax ==
-            transaction.attempts[initialIndex].vector.kickSyntax
+            transaction.attempts[initialIndex].vector.kickSyntax &&
+            transaction.attempts[correctionIndex].vector
+                .percussionEchoTexture ==
+            transaction.attempts[initialIndex].vector
+                .percussionEchoTexture
     }
 
     @inline(never)

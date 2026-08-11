@@ -21,6 +21,8 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             reports.append(contentsOf: try renderJourney(sampleRate: sampleRate))
         }
         let bank = try ProfessionalEvidenceReportBank(reports: reports)
+        let frozen = try ProfessionalQualityFrozenArtifacts.load()
+        let frozenQualification = try frozen.policy.evaluate(bank: bank)
         let profile = try ProfessionalQualityCalibrationProfile(bank: bank)
         let observations = try bank.reports.map(ProfessionalQualityObservation.init)
         let adversarial = try ProfessionalQualityAdversarialSuiteReport(
@@ -36,6 +38,11 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         #expect(bank.sourceReportCount ==
                 CanonicalJourneyCheckpoint.allCases.count *
                     ProfessionalQualityCalibrationProfile.requiredSampleRates.count)
+        #expect(frozenQualification.qualified)
+        #expect(frozenQualification.calibrationSourceEngineVersion ==
+                "autotechno-canonical-engine.v10")
+        #expect(frozenQualification.evaluatedEngineVersion ==
+                QualityQualificationContract.engineVersion)
         #expect(profile.isComplete)
         #expect(adversarial.passed)
         #expect(qualification.qualified)

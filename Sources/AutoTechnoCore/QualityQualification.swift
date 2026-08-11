@@ -4,13 +4,13 @@ import Foundation
 /// policy is deliberately uncalibrated: these types make evidence reproducible
 /// without claiming that professional-quality targets exist yet.
 package enum QualityQualificationContract {
-    /// Version 10 adds score-owned kick-syntax evidence to the bounded,
-    /// physical-time perceptual and role evidence introduced in version 9.
+    /// Version 11 adds score-owned gated-percussion-return evidence to the
+    /// bounded physical-time, role, and kick-syntax evidence in version 10.
     /// The shipping policy remains uncalibrated; this version identifies
     /// evidence, not runtime promotion.
-    package static let schemaVersion = 10
+    package static let schemaVersion = 11
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v10"
+    package static let engineVersion = "autotechno-canonical-engine.v11"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

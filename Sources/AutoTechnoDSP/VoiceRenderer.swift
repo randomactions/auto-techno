@@ -177,6 +177,198 @@ package enum GroovePulseVoice {
     }
 }
 
+/// Fixed renderer for the score-owned percussion input/output gate relation.
+/// The delay line is bar-local, the return is band-limited, and exact-zero
+/// window endpoints prevent a discontinuity without adding continuation state.
+package enum PercussionEchoTextureVoice {
+    package static let feedback = 0.72
+    package static let returnGain = 0.42
+    package static let highPassHz = 650.0
+    package static let lowPassHz = 4_200.0
+    package static let transitionSeconds = 0.008
+
+    package static func transitionFrameCount(sampleRate: Double) -> Int {
+        max(1, Int((sampleRate * transitionSeconds).rounded()))
+    }
+
+    package static func render(
+        source: [Float],
+        returnStem: inout [Float],
+        articulation: PercussionEchoTextureArticulation?,
+        bpm: Double,
+        sampleRate: Double
+    ) -> PercussionEchoTextureRenderEvidence {
+        let frameCount = min(source.count, returnStem.count)
+        let neutralInputHash = ExactPCMFingerprint.mono([])
+        guard let articulation else {
+            var returnFingerprint = ExactPCMFingerprint.MonoAccumulator(
+                sampleCount: frameCount
+            )
+            for _ in 0..<frameCount { returnFingerprint.append(0) }
+            return PercussionEchoTextureRenderEvidence(
+                active: false,
+                bpm: bpm,
+                sampleRate: sampleRate,
+                inputStep: -1,
+                outputStartStep: -1,
+                outputEndStep: -1,
+                renderedFrameCount: frameCount,
+                inputWindowFrameCount: 0,
+                outputWindowFrameCount: 0,
+                delayFrameCount: 0,
+                transitionFrameCount: 0,
+                inputSampleHash: neutralInputHash,
+                returnSampleHash: returnFingerprint.fingerprint,
+                inputPeak: 0,
+                inputRMS: 0,
+                returnPeak: 0,
+                returnRMS: 0,
+                inputNonzeroSampleCount: 0,
+                returnNonzeroSampleCount: 0,
+                outOfWindowNonzeroSampleCount: 0,
+                firstOutputSampleBitPattern: 0,
+                lastOutputSampleBitPattern: 0,
+                finite: bpm.isFinite && sampleRate.isFinite && frameCount > 0
+            )
+        }
+
+        let stepFrames = Double(frameCount) / 16
+        func frame(for step: Int) -> Int {
+            guard step >= 0, step <= 16 else { return -1 }
+            return min(frameCount, max(0, Int((Double(step) * stepFrames).rounded())))
+        }
+        let inputStartFrame = frame(for: articulation.inputStep)
+        let inputEndFrame = frame(
+            for: articulation.inputStep +
+                PercussionEchoTextureResolver.inputWindowLengthInSteps
+        )
+        let outputStartFrame = frame(for: articulation.outputStartStep)
+        let outputEndFrame = frame(for: articulation.outputEndStep)
+        let geometryValid = inputStartFrame >= 0 && inputEndFrame > inputStartFrame &&
+            outputStartFrame >= inputEndFrame && outputEndFrame > outputStartFrame &&
+            outputEndFrame <= frameCount
+        let inputWindowFrameCount = geometryValid
+            ? inputEndFrame - inputStartFrame : 0
+        let outputWindowFrameCount = geometryValid
+            ? outputEndFrame - outputStartFrame : 0
+        let delayFrameCount = max(1, Int(stepFrames.rounded()))
+        let transitionFrames = transitionFrameCount(sampleRate: sampleRate)
+        var delay = [Float](repeating: 0, count: delayFrameCount)
+        var delayIndex = 0
+        var highPassState = 0.0
+        var lowPassState = 0.0
+        let highPassCoefficient = min(
+            0.35,
+            1 - exp(-2 * .pi * highPassHz / sampleRate)
+        )
+        let lowPassCoefficient = min(
+            0.55,
+            1 - exp(-2 * .pi * lowPassHz / sampleRate)
+        )
+        var inputFingerprint = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: inputWindowFrameCount
+        )
+        var returnFingerprint = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frameCount
+        )
+        var inputPeak = 0.0
+        var inputEnergy = 0.0
+        var returnPeak = 0.0
+        var returnEnergy = 0.0
+        var inputNonzeroSampleCount = 0
+        var returnNonzeroSampleCount = 0
+        var outOfWindowNonzeroSampleCount = 0
+        var finite = geometryValid && bpm.isFinite && sampleRate.isFinite &&
+            feedback.isFinite && returnGain.isFinite &&
+            highPassCoefficient.isFinite && lowPassCoefficient.isFinite
+
+        for index in 0..<frameCount {
+            let read = delay[delayIndex]
+            let admittedInput = geometryValid &&
+                index >= inputStartFrame && index < inputEndFrame
+                ? source[index] : 0
+            delay[delayIndex] = admittedInput + read * Float(feedback)
+            delayIndex = (delayIndex + 1) % delayFrameCount
+
+            let readValue = Double(read)
+            highPassState += (readValue - highPassState) * highPassCoefficient
+            let highPassed = readValue - highPassState
+            lowPassState += (highPassed - lowPassState) * lowPassCoefficient
+            let insideOutput = geometryValid &&
+                index >= outputStartFrame && index < outputEndFrame
+            let gate: Double
+            if insideOutput {
+                let fadeIn = Double(index - outputStartFrame) /
+                    Double(transitionFrames)
+                let fadeOut = Double(outputEndFrame - 1 - index) /
+                    Double(transitionFrames)
+                gate = min(1, max(0, min(fadeIn, fadeOut)))
+            } else {
+                gate = 0
+            }
+            let renderedSample = Float(lowPassState * returnGain * gate)
+            returnStem[index] = renderedSample
+            returnFingerprint.append(renderedSample)
+
+            if geometryValid && index >= inputStartFrame && index < inputEndFrame {
+                inputFingerprint.append(source[index])
+                let value = Double(source[index])
+                inputPeak = max(inputPeak, abs(value))
+                inputEnergy += value * value
+                if source[index].bitPattern & 0x7fff_ffff != 0 {
+                    inputNonzeroSampleCount += 1
+                }
+            }
+            let outputValue = Double(renderedSample)
+            if insideOutput {
+                returnPeak = max(returnPeak, abs(outputValue))
+                returnEnergy += outputValue * outputValue
+            }
+            if renderedSample.bitPattern & 0x7fff_ffff != 0 {
+                returnNonzeroSampleCount += 1
+                if !insideOutput { outOfWindowNonzeroSampleCount += 1 }
+            }
+            finite = finite && admittedInput.isFinite && read.isFinite &&
+                renderedSample.isFinite && highPassState.isFinite &&
+                lowPassState.isFinite
+        }
+        let inputRMS = inputWindowFrameCount > 0
+            ? sqrt(inputEnergy / Double(inputWindowFrameCount)) : 0
+        let returnRMS = outputWindowFrameCount > 0
+            ? sqrt(returnEnergy / Double(outputWindowFrameCount)) : 0
+        let firstOutputBits = geometryValid
+            ? returnStem[outputStartFrame].bitPattern : 0
+        let lastOutputBits = geometryValid
+            ? returnStem[outputEndFrame - 1].bitPattern : 0
+        return PercussionEchoTextureRenderEvidence(
+            active: true,
+            bpm: bpm,
+            sampleRate: sampleRate,
+            inputStep: articulation.inputStep,
+            outputStartStep: articulation.outputStartStep,
+            outputEndStep: articulation.outputEndStep,
+            renderedFrameCount: frameCount,
+            inputWindowFrameCount: inputWindowFrameCount,
+            outputWindowFrameCount: outputWindowFrameCount,
+            delayFrameCount: delayFrameCount,
+            transitionFrameCount: transitionFrames,
+            inputSampleHash: inputFingerprint.fingerprint,
+            returnSampleHash: returnFingerprint.fingerprint,
+            inputPeak: inputPeak,
+            inputRMS: inputRMS,
+            returnPeak: returnPeak,
+            returnRMS: returnRMS,
+            inputNonzeroSampleCount: inputNonzeroSampleCount,
+            returnNonzeroSampleCount: returnNonzeroSampleCount,
+            outOfWindowNonzeroSampleCount: outOfWindowNonzeroSampleCount,
+            firstOutputSampleBitPattern: firstOutputBits,
+            lastOutputSampleBitPattern: lastOutputBits,
+            finite: finite && inputPeak.isFinite && inputRMS.isFinite &&
+                returnPeak.isFinite && returnRMS.isFinite
+        )
+    }
+}
+
 /// Fixed DSP contract for the existing ordinary closed-hat voice. The score
 /// chooses only a semantic decay role; these engine-owned values remain
 /// bounded and versioned with the canonical renderer.
@@ -326,6 +518,7 @@ package enum VoiceRenderer {
         var kickDetectorBus: [Float] = []
         var foundationStem: [Float] = []
         var percussionStem: [Float] = []
+        var percussionTextureStem: [Float] = []
         var upperTonalStem: [Float] = []
         var atmosphereStem: [Float] = []
         var resonantAnchorStem: [Float] = []
@@ -350,6 +543,7 @@ package enum VoiceRenderer {
         swap(&kickDetectorBus, &checkedOut.kickDetector)
         swap(&foundationStem, &checkedOut.foundationStem)
         swap(&percussionStem, &checkedOut.percussionStem)
+        swap(&percussionTextureStem, &checkedOut.percussionTextureStem)
         swap(&upperTonalStem, &checkedOut.upperTonalStem)
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
         swap(&resonantAnchorStem, &checkedOut.resonantAnchorStem)
@@ -459,6 +653,21 @@ package enum VoiceRenderer {
             default: break
             }
         }
+        let percussionEchoTextureRenderEvidence =
+            PercussionEchoTextureVoice.render(
+                source: percussionStem,
+                returnStem: &percussionTextureStem,
+                articulation: resolved.percussionEchoTexture,
+                bpm: scene.bpm,
+                sampleRate: sampleRate
+            )
+        // Preserve the dry tap for its existing fingerprint and reverb send;
+        // the reused texture buffer becomes the complete audible percussion
+        // role for reconstruction, masking, and automatic-mix observation.
+        for index in 0..<frames {
+            output[index] += percussionTextureStem[index]
+            percussionTextureStem[index] += percussionStem[index]
+        }
         for index in 0..<frames {
             let audibleKick = kickDetectorBus[index] * Float(KickMixBalance.audibleGain)
             kickBus[index] = audibleKick
@@ -521,7 +730,7 @@ package enum VoiceRenderer {
                 foundationStem, sampleRate: sampleRate, onsetFrames: kickOnsets
             ),
             .percussion: StemObservationAnalyzer.analyze(
-                percussionStem, sampleRate: sampleRate,
+                percussionTextureStem, sampleRate: sampleRate,
                 onsetFrames: onsetFrames(for: [
                     .percussion, .clap, .openHat, .metallic, .groovePulse,
                 ])
@@ -557,7 +766,8 @@ package enum VoiceRenderer {
         var upperMaximumError: Float = 0
         for index in 0..<frames {
             maskingFoundationBus[index] = kickBus[index] + foundationStem[index]
-            let reconstructedCenter = maskingFoundationBus[index] + percussionStem[index]
+            let reconstructedCenter = maskingFoundationBus[index] +
+                percussionTextureStem[index]
             dryCenterMaximumError = max(
                 dryCenterMaximumError, abs(output[index] - reconstructedCenter)
             )
@@ -675,7 +885,7 @@ package enum VoiceRenderer {
             ? SpectrumMaskingAnalyzer.analyze(
                 signals: [
                     .foundation: maskingFoundationBus,
-                    .percussion: percussionStem,
+                    .percussion: percussionTextureStem,
                     .upper: synthBus,
                 ],
                 sampleRate: sampleRate
@@ -1083,6 +1293,8 @@ package enum VoiceRenderer {
                                     tonalMotion: tonalMotionInstrumentStem,
                                     spectralTexture: spectralTextureInstrumentStem
                                     ),
+                                   percussionEchoTextureRenderEvidence:
+                                    percussionEchoTextureRenderEvidence,
                                    pulseEchoReturnDriveRenderEvidence:
                                     pulseEchoReturnDriveRenderEvidence,
                                    upperNoteRenderEvidence: upperNoteRenderEvidence,
@@ -1094,6 +1306,7 @@ package enum VoiceRenderer {
         swap(&kickDetectorBus, &checkedOut.kickDetector)
         swap(&foundationStem, &checkedOut.foundationStem)
         swap(&percussionStem, &checkedOut.percussionStem)
+        swap(&percussionTextureStem, &checkedOut.percussionTextureStem)
         swap(&upperTonalStem, &checkedOut.upperTonalStem)
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
         swap(&resonantAnchorStem, &checkedOut.resonantAnchorStem)

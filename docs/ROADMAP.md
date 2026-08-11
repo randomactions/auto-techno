@@ -19,11 +19,15 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one bounded debt-owned energy-release syntax that withholds only the existing
   kick on two pullback bars, preserves weak-pulse and motif context, then restores
   the unchanged step-zero kick at the structural marker;
-- canonical engine v10, quality-contract schema 10, and candidate-vector schema 9
+- one score-owned gated percussion texture that admits an existing early
+  percussion slice and exposes only a bounded delayed return window, without
+  resampling, new events, or cross-bar delay state;
+- canonical engine v11, quality-contract schema 11, and candidate-vector schema 10
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax, event-local groove-pulse, ordinary closed-hat,
   score-owned instrument,
-  shared pulse-echo return-drive, score-owned upper-role timing, graph, and
+  score-owned gated percussion texture, shared pulse-echo return-drive,
+  score-owned upper-role timing, graph, and
   pre/post upper-timbre evidence;
 - six phrase-scale performance characters with bounded two-character memory and a
   tested compatibility contract across foundation behavior, canonical narrative
@@ -73,12 +77,13 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 10 and candidate-vector schema 9 now bind a versioned
-transaction across canonical engine v10, quality policy, evaluator, candidate
+Quality-contract schema 11 and candidate-vector schema 10 now bind a versioned
+transaction across canonical engine v11, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 instrument,
-pulse-echo return-drive, and upper-role timing projections make each
+gated percussion texture, pulse-echo return-drive, and upper-role timing
+projections make each
 score-to-PCM consequence explicit without letting the uncalibrated policy rank
 that evidence. Professional
 Evidence v3 adds standards-based phrase loudness/true peak, bounded streaming

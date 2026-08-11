@@ -1742,6 +1742,16 @@ package enum AutonomousPhrasePreparer {
             Set(resolved.closedHatDecayArticulations.map {
                 $0.scoreEventIndex
             }).count == resolved.closedHatDecayArticulations.count
+        let canonicalPercussionEchoTexture =
+            PercussionEchoTextureResolver.articulation(
+                ensemble: resolved.ensemble,
+                kind: plan.kind,
+                character: resolved.performanceCharacter,
+                gesture: resolved.arrangementGesture,
+                conservative: plan.conservative
+            )
+        let percussionEchoTextureIsCanonical =
+            resolved.percussionEchoTexture == canonicalPercussionEchoTexture
         let fallbackScoreIsCanonical: Bool
         if slot == .fallback {
             let canonicalEnsemble = AutonomousSessionDirector.ensemblePlan(
@@ -1795,7 +1805,8 @@ package enum AutonomousPhrasePreparer {
             kickScoreMatchesRole && resolved.groovePulses.count <= 8 &&
             Set(resolved.groovePulses.map { pulse in pulse.step }).count ==
                 resolved.groovePulses.count && grooveScoreIsCanonical &&
-            closedHatDecayIsCanonical && fallbackScoreIsCanonical
+            closedHatDecayIsCanonical && percussionEchoTextureIsCanonical &&
+            fallbackScoreIsCanonical
     }
 
     /// Replays the director's baseline score and the one allowed kick-syntax
@@ -1842,7 +1853,15 @@ package enum AutonomousPhrasePreparer {
                 ),
                 spatialContrast: resolved.spatialContrast,
                 narrative: resolved.narrative,
-                kickSyntaxRole: .grounded
+                kickSyntaxRole: .grounded,
+                percussionEchoTexture:
+                    PercussionEchoTextureResolver.articulation(
+                        ensemble: ensemble,
+                        kind: plan.kind,
+                        character: resolved.performanceCharacter,
+                        gesture: resolved.arrangementGesture,
+                        conservative: plan.conservative
+                    )
             )
         }
         return KickSyntaxResolver.resolve(

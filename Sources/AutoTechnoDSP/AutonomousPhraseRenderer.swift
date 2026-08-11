@@ -8,7 +8,7 @@ package enum VoiceKind: String, CaseIterable, Sendable {
 
 package enum EffectKind: String, CaseIterable, Sendable {
     case busEQ, maskingGuard, saturation, phaser, chorus, comb, unsyncedEcho, pulseEcho
-    case reverb, glue, master
+    case gatedPercussionEcho, reverb, glue, master
 }
 
 package struct EffectState: Equatable, Sendable {
@@ -468,6 +468,35 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
     package let finite: Bool
 }
 
+/// Same-pass evidence for the bounded score-owned percussion input gate,
+/// delayed return, and later output gate. Only reduced geometry, hashes, and
+/// scalar signal facts survive detached preparation; no captured slice does.
+package struct PercussionEchoTextureRenderEvidence: Equatable, Sendable {
+    package let active: Bool
+    package let bpm: Double
+    package let sampleRate: Double
+    package let inputStep: Int
+    package let outputStartStep: Int
+    package let outputEndStep: Int
+    package let renderedFrameCount: Int
+    package let inputWindowFrameCount: Int
+    package let outputWindowFrameCount: Int
+    package let delayFrameCount: Int
+    package let transitionFrameCount: Int
+    package let inputSampleHash: String
+    package let returnSampleHash: String
+    package let inputPeak: Double
+    package let inputRMS: Double
+    package let returnPeak: Double
+    package let returnRMS: Double
+    package let inputNonzeroSampleCount: Int
+    package let returnNonzeroSampleCount: Int
+    package let outOfWindowNonzeroSampleCount: Int
+    package let firstOutputSampleBitPattern: UInt32
+    package let lastOutputSampleBitPattern: UInt32
+    package let finite: Bool
+}
+
 /// Same-pass reduced evidence for the existing pulse-echo return before and
 /// after the bounded texture drive. The delay line and its feedback remain
 /// outside this processor. Its undriven tail remains canonical continuation;
@@ -529,6 +558,8 @@ package struct RenderedBar: Equatable, Sendable {
     package let groovePulseRenderEvidence: [GroovePulseRenderEvidence]
     package let closedHatRenderEvidence: [ClosedHatRenderEvidence]
     package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
+    package let percussionEchoTextureRenderEvidence:
+        PercussionEchoTextureRenderEvidence
     package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
     package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
     package let upperTimingRenderEvidence: UpperTimingRenderEvidence
@@ -548,6 +579,8 @@ package struct RenderedBar: Equatable, Sendable {
                 groovePulseRenderEvidence: [GroovePulseRenderEvidence],
                 closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
+                percussionEchoTextureRenderEvidence:
+                    PercussionEchoTextureRenderEvidence,
                 pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 upperTimingRenderEvidence: UpperTimingRenderEvidence,
@@ -584,6 +617,8 @@ package struct RenderedBar: Equatable, Sendable {
             (InstrumentArchitecture.allCases.firstIndex(of: $0.architecture) ?? 0) <
                 (InstrumentArchitecture.allCases.firstIndex(of: $1.architecture) ?? 0)
         }
+        self.percussionEchoTextureRenderEvidence =
+            percussionEchoTextureRenderEvidence
         self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.upperTimingRenderEvidence = upperTimingRenderEvidence
@@ -635,6 +670,9 @@ package struct RenderBlock: Equatable, Sendable {
     /// Same-pass reduced evidence for each ordinary closed-hat score event.
     package let closedHatRenderEvidence: [ClosedHatRenderEvidence]
     package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
+    package let percussionEchoTextureRenderEvidence:
+        PercussionEchoTextureRenderEvidence
+    package let percussionEchoTextureRenderPassesMatch: Bool
     package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
     /// Exact score-owned upper notes used for this bar. The renderer no longer
     /// invents pitch, duration, velocity, or slide decisions after resolution.
@@ -669,6 +707,9 @@ package struct RenderBlock: Equatable, Sendable {
                 groovePulseRenderEvidence: [GroovePulseRenderEvidence],
                 closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
+                percussionEchoTextureRenderEvidence:
+                    PercussionEchoTextureRenderEvidence,
+                percussionEchoTextureRenderPassesMatch: Bool,
                 pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 upperTimingRenderEvidence: UpperTimingRenderEvidence,
@@ -702,6 +743,10 @@ package struct RenderBlock: Equatable, Sendable {
             (InstrumentArchitecture.allCases.firstIndex(of: $0.architecture) ?? 0) <
                 (InstrumentArchitecture.allCases.firstIndex(of: $1.architecture) ?? 0)
         }
+        self.percussionEchoTextureRenderEvidence =
+            percussionEchoTextureRenderEvidence
+        self.percussionEchoTextureRenderPassesMatch =
+            percussionEchoTextureRenderPassesMatch
         self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.upperTimingRenderEvidence = upperTimingRenderEvidence
@@ -818,6 +863,7 @@ struct RenderBuffers {
     var kickDetector: [Float] = []
     var foundationStem: [Float] = []
     var percussionStem: [Float] = []
+    var percussionTextureStem: [Float] = []
     var upperTonalStem: [Float] = []
     var atmosphereStem: [Float] = []
     var resonantAnchorStem: [Float] = []
@@ -838,6 +884,7 @@ struct RenderBuffers {
         reset(&kickDetector, frameCount: frameCount)
         reset(&foundationStem, frameCount: frameCount)
         reset(&percussionStem, frameCount: frameCount)
+        reset(&percussionTextureStem, frameCount: frameCount)
         reset(&upperTonalStem, frameCount: frameCount)
         reset(&atmosphereStem, frameCount: frameCount)
         if includeUpperRoleTaps {
@@ -1181,6 +1228,12 @@ package enum AutonomousPhraseRenderer {
                 EffectState(kind: effectKind($0.kind), amount: $0.amount, active: $0.mix > 0)
             } + [
                 EffectState(
+                    kind: .gatedPercussionEcho,
+                    amount: PercussionEchoTextureVoice.returnGain,
+                    active: protectedRhythm
+                        .percussionEchoTextureRenderEvidence.active
+                ),
+                EffectState(
                     kind: .pulseEcho,
                     amount: pulseEchoAmount,
                     active: pulseEchoActive
@@ -1213,6 +1266,11 @@ package enum AutonomousPhraseRenderer {
                 groovePulseRenderEvidence: rendered.groovePulseRenderEvidence,
                 closedHatRenderEvidence: rendered.closedHatRenderEvidence,
                 instrumentRenderEvidence: rendered.instrumentRenderEvidence,
+                percussionEchoTextureRenderEvidence:
+                    protectedRhythm.percussionEchoTextureRenderEvidence,
+                percussionEchoTextureRenderPassesMatch:
+                    protectedRhythm.percussionEchoTextureRenderEvidence ==
+                        rendered.percussionEchoTextureRenderEvidence,
                 pulseEchoReturnDriveRenderEvidence:
                     rendered.pulseEchoReturnDriveRenderEvidence,
                 upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,

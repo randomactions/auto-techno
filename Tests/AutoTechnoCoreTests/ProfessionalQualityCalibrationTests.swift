@@ -187,6 +187,8 @@ struct ProfessionalQualityCalibrationTests {
                 ProfessionalQualityFrozenArtifacts
                     .expectedAdversarialSuiteFingerprint)
         #expect(artifacts.profile.engineVersion ==
+                "autotechno-canonical-engine.v10")
+        #expect(artifacts.profile.engineVersion !=
                 QualityQualificationContract.engineVersion)
         #expect(artifacts.profile.sampleRates ==
                 ProfessionalQualityCalibrationProfile.requiredSampleRates)
