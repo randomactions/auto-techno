@@ -729,10 +729,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 11)
-        #expect(QualityQualificationContract.schemaVersion == 12)
+        #expect(vector.schemaVersion == 12)
+        #expect(QualityQualificationContract.schemaVersion == 13)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v12")
+                "autotechno-canonical-engine.v13")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -1099,7 +1099,7 @@ struct AutonomousCandidateEvaluationTests {
         )
         let empty = fixtureVector(slot: .primary)
 
-        #expect(instrumentBar.isComplete)
+        #expect(instrumentBar.isComplete(sampleRate: 8_000))
         #expect(instrumentBar.isFinite)
         #expect(vector.isComplete)
         #expect(vector.isFinite)
@@ -1227,6 +1227,127 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!misplaced.isComplete)
     }
 
+    @Test("Rising spectral cluster evidence is bounded and selection-neutral")
+    func spectralTextureClusterEvidenceContract() throws {
+        let assignment = InstrumentAssignment(
+            use: .transition,
+            patch: .metalVeil,
+            automation: InstrumentAutomation(
+                color: 0.78, shape: 0.32, motion: 0.68, space: 0.52
+            ),
+            effects: InstrumentPalette.capability(for: .metalVeil)?
+                .compatibleEffects ?? []
+        )
+        let cluster = SpectralTextureClusterRenderEvidence(
+            sourceAssignmentCount: 1,
+            eventCount: 1,
+            relation: .risingAdjacentCluster,
+            adjacentRatio: SpectralTextureClusterContract.adjacentSemitoneRatio,
+            maximumComponentRatio:
+                SpectralTextureClusterContract.maximumComponentRatio,
+            minimumStartFrequency: 174.61,
+            maximumAppliedEndFrequency: 438,
+            eventFingerprint: "fedcba9876543210",
+            clusterSampleHash: "0123456789abcdef",
+            clusterPeak: 0.20,
+            clusterRMS: 0.08,
+            clusterCrestFactor: 2.5,
+            bindingValid: true,
+            finite: true
+        )
+        let bar = AutonomousInstrumentBarEvidence(
+            bar: 0,
+            evidence: [InstrumentArchitectureRenderEvidence(
+                architecture: .spectralTexture,
+                assignments: [assignment],
+                patches: [.metalVeil],
+                uses: [.transition],
+                effects: assignment.effects,
+                eventCount: 1,
+                sampleHash: "89abcdef01234567",
+                peak: 0.20,
+                rms: 0.08,
+                finite: true,
+                spectralTextureCluster: cluster
+            )]
+        )
+        let vector = fixtureVector(slot: .primary, instrumentBar: bar)
+        let baseline = fixtureVector(slot: .primary)
+        #expect(bar.isComplete(sampleRate: 8_000))
+        #expect(vector.isComplete)
+        #expect(vector.fingerprint != baseline.fingerprint)
+        #expect(vector.selectionEvidence == baseline.selectionEvidence)
+
+        let data = try vector.deterministicJSON()
+        var object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        var bars = try #require(object["instruments"] as? [[String: Any]])
+        var architecture = try #require(
+            (bars[0]["architectures"] as? [[String: Any]])?.first
+        )
+        let serialized = try #require(
+            architecture["spectralTextureCluster"] as? [String: Any]
+        )
+        #expect(Set(serialized.keys) == Set([
+            "sourceAssignmentCount", "eventCount", "relation",
+            "adjacentRatio", "maximumComponentRatio", "minimumStartFrequency",
+            "maximumAppliedEndFrequency", "eventFingerprint", "clusterSampleHash",
+            "clusterPeak", "clusterRMS", "clusterCrestFactor", "bindingValid",
+            "finite",
+        ]))
+
+        architecture["spectralTextureCluster"] = nil
+        var architectures = try #require(
+            bars[0]["architectures"] as? [[String: Any]]
+        )
+        architectures[0] = architecture
+        bars[0]["architectures"] = architectures
+        object["instruments"] = bars
+        let disconnected = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        #expect(!disconnected.isComplete)
+
+        var forgedObject = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        var forgedBars = try #require(
+            forgedObject["instruments"] as? [[String: Any]]
+        )
+        var forgedArchitectures = try #require(
+            forgedBars[0]["architectures"] as? [[String: Any]]
+        )
+        var forgedArchitecture = forgedArchitectures[0]
+        var forgedCluster = try #require(
+            forgedArchitecture["spectralTextureCluster"] as? [String: Any]
+        )
+        forgedCluster["adjacentRatio"] = 1.25
+        forgedArchitecture["spectralTextureCluster"] = forgedCluster
+        forgedArchitectures[0] = forgedArchitecture
+        forgedBars[0]["architectures"] = forgedArchitectures
+        forgedObject["instruments"] = forgedBars
+        let wrongRatio = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedObject)
+        )
+        #expect(!wrongRatio.isComplete)
+
+        forgedCluster["adjacentRatio"] =
+            SpectralTextureClusterContract.adjacentSemitoneRatio
+        forgedCluster["maximumAppliedEndFrequency"] = 1_000
+        forgedArchitecture["spectralTextureCluster"] = forgedCluster
+        forgedArchitectures[0] = forgedArchitecture
+        forgedBars[0]["architectures"] = forgedArchitectures
+        forgedObject["instruments"] = forgedBars
+        let outOfRoute = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedObject)
+        )
+        #expect(!outOfRoute.isComplete)
+    }
+
     @Test("Pulse-echo return drive evidence is bounded, attributable, and selection-neutral")
     func pulseEchoDriveEvidenceContract() throws {
         let pulseInstrument = fixturePulseEchoInstrumentBar()
@@ -1273,7 +1394,7 @@ struct AutonomousCandidateEvaluationTests {
             pulseEchoDriveBars: [active]
         )
 
-        #expect(pulseInstrument.isComplete)
+        #expect(pulseInstrument.isComplete(sampleRate: 8_000))
         #expect(active.isFinite)
         #expect(active.isComplete(
             sampleRate: 8_000,
@@ -1563,7 +1684,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!forgedLowBand.isComplete)
 
         let noPulseAccess = fixturePulseEchoInstrumentBar(effects: [])
-        #expect(noPulseAccess.isComplete)
+        #expect(noPulseAccess.isComplete(sampleRate: 8_000))
         #expect(!active.isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
@@ -2875,7 +2996,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "e3ec1ab8459c16ab")
+                "45375e2b599b6b6f")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7

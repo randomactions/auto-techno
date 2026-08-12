@@ -801,3 +801,43 @@ Since no production source or PCM changes, the frozen professional-quality
 profile was not regenerated. No listening, app/route validation, interruption
 smoke, latency/peak-memory run, or hardware soak is claimed, and shipping
 selection remains `uncalibrated.v1`.
+
+## Rising adjacent-cluster transition — 2026-08-12
+
+This candidate is based on source-16 concept-register mainline commit
+`164f325c83eb7a5df2db5dde7b4d37c3b40a0b79`. It gives only the existing
+Metal Veil transition one durable rising adjacent-cluster relation. The
+existing transition onset, duration, trajectory, patch, effects, and density
+remain score-owned; response and atmosphere uses stay on their legacy path and
+the conservative Dark Chord transition remains neutral.
+
+Detached rendering binds each eligible transition to exact component ratios,
+applied upward-frequency geometry, event identity, and an isolated dry cluster
+hash/peak/RMS/crest record. Candidate-vector schema 12, quality-contract schema
+13, and canonical engine v13 identify the PCM and wire-format change. Typed
+plan-fingerprint domain v7 remains unchanged because the resolved plan shape is
+unchanged; shipping policy remains `uncalibrated.v1` and selection evidence is
+unchanged.
+
+Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+matched SDKs, isolated module caches, serial SwiftPM, and workflow process
+boundaries:
+
+- focused source-17 DSP/evidence/reachability and exact fingerprints: 4/4;
+- core and evidence: 122/122 passed in 159.697 seconds;
+- split upper/prepared-product filters: 19/19 passed across fresh processes;
+- preparation preflight: 22/22 passed in 501.640 seconds;
+- protected routing: 7/7 passed in 68.933 seconds;
+- optimized `AutoTechno` product build: passed in 39.16 seconds;
+- complete representative 44.1/48 kHz journey: 14/14 observations accepted
+  under the unchanged frozen engine-v10 policy, regenerated engine-v13 profile
+  fingerprint `2b884831d682f6d9`, and all ten adversarial attacks rejected under
+  suite fingerprint `cc753a8f5161fbb3`; the explicit run passed in 2,957.112
+  seconds;
+- `git diff --check`: clean before publication.
+
+The durable concept and provisional realization are recorded separately in
+`docs/SOUND_CONCEPT_MATURITY.md`. This snapshot does not include matched-
+loudness listening, exact-build app playback, physical route/interruption
+smoke, representative latency/peak-memory measurement, or hardware-output
+soak. It makes no shipping professional-quality or release-readiness promotion.

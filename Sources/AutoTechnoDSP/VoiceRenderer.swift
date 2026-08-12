@@ -529,6 +529,7 @@ package enum VoiceRenderer {
         var resonantMonoModulationStem: [Float] = []
         var tonalMotionInstrumentStem: [Float] = []
         var spectralTextureInstrumentStem: [Float] = []
+        var spectralTextureClusterStem: [Float] = []
         var maskingFoundationBus: [Float] = []
         var synthBus: [Float] = []
         var pulseEchoSendBus: [Float] = []
@@ -555,6 +556,7 @@ package enum VoiceRenderer {
         swap(&resonantMonoModulationStem, &checkedOut.resonantMonoModulationStem)
         swap(&tonalMotionInstrumentStem, &checkedOut.tonalMotionInstrumentStem)
         swap(&spectralTextureInstrumentStem, &checkedOut.spectralTextureInstrumentStem)
+        swap(&spectralTextureClusterStem, &checkedOut.spectralTextureClusterStem)
         swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
         swap(&synthBus, &checkedOut.synth)
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
@@ -696,6 +698,7 @@ package enum VoiceRenderer {
                 resonantMonoModulationStem: &resonantMonoModulationStem,
                 tonalMotionInstrumentStem: &tonalMotionInstrumentStem,
                 spectralTextureInstrumentStem: &spectralTextureInstrumentStem,
+                spectralTextureClusterStem: &spectralTextureClusterStem,
                 noteRenderEvidence: &upperNoteRenderEvidence,
                 renderScheduledNotes: renderScheduledUpperNotes,
                 scene: scene,
@@ -1296,7 +1299,8 @@ package enum VoiceRenderer {
                                     resonantMonoModulation: resonantMonoModulationStem,
                                     sampleRate: sampleRate,
                                     tonalMotion: tonalMotionInstrumentStem,
-                                    spectralTexture: spectralTextureInstrumentStem
+                                    spectralTexture: spectralTextureInstrumentStem,
+                                    spectralTextureCluster: spectralTextureClusterStem
                                     ),
                                    percussionEchoTextureRenderEvidence:
                                     percussionEchoTextureRenderEvidence,
@@ -1322,6 +1326,7 @@ package enum VoiceRenderer {
         swap(&resonantMonoModulationStem, &checkedOut.resonantMonoModulationStem)
         swap(&tonalMotionInstrumentStem, &checkedOut.tonalMotionInstrumentStem)
         swap(&spectralTextureInstrumentStem, &checkedOut.spectralTextureInstrumentStem)
+        swap(&spectralTextureClusterStem, &checkedOut.spectralTextureClusterStem)
         swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
         swap(&synthBus, &checkedOut.synth)
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
@@ -1344,6 +1349,7 @@ package enum VoiceRenderer {
         resonantMonoModulationStem: inout [Float],
         tonalMotionInstrumentStem: inout [Float],
         spectralTextureInstrumentStem: inout [Float],
+        spectralTextureClusterStem: inout [Float],
         noteRenderEvidence: inout [UpperNoteRenderEvidence],
         renderScheduledNotes: Bool,
         scene: TechnoScene,
@@ -1495,6 +1501,7 @@ package enum VoiceRenderer {
             &output,
             measurement: &atmosphereStem,
             architectureMeasurement: &spectralTextureInstrumentStem,
+            clusterMeasurement: &spectralTextureClusterStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
@@ -1534,6 +1541,7 @@ package enum VoiceRenderer {
             &output,
             measurement: &responseTimingStem,
             architectureMeasurement: &spectralTextureInstrumentStem,
+            clusterMeasurement: &spectralTextureClusterStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
@@ -1560,6 +1568,7 @@ package enum VoiceRenderer {
             &output,
             measurement: &atmosphereStem,
             architectureMeasurement: &spectralTextureInstrumentStem,
+            clusterMeasurement: &spectralTextureClusterStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
@@ -1583,7 +1592,8 @@ package enum VoiceRenderer {
         resonantMonoModulation: [Float],
         sampleRate: Double,
         tonalMotion: [Float],
-        spectralTexture: [Float]
+        spectralTexture: [Float],
+        spectralTextureCluster: [Float]
     ) -> [InstrumentArchitectureRenderEvidence] {
         var assignments = upperNoteRenderEvidence.map(\.instrument)
         let audibleBassEvents = resolved.ensemble.events.filter { event in
@@ -1622,6 +1632,12 @@ package enum VoiceRenderer {
                     samples: resonantMonoModulation,
                     sampleRate: sampleRate
                 ) : nil
+            let cluster = architecture == .spectralTexture
+                ? spectralTextureClusterEvidence(
+                    noteEvidence: upperNoteRenderEvidence,
+                    uniqueAssignments: uniqueAssignments,
+                    samples: spectralTextureCluster
+                ) : nil
             return InstrumentArchitectureRenderEvidence(
                 architecture: architecture,
                 assignments: uniqueAssignments,
@@ -1633,9 +1649,127 @@ package enum VoiceRenderer {
                 peak: peak,
                 rms: rms,
                 finite: samples.allSatisfy(\.isFinite) && peak.isFinite && rms.isFinite,
-                resonantMonoModulation: modulation
+                resonantMonoModulation: modulation,
+                spectralTextureCluster: cluster
             )
         }
+    }
+
+    private struct SpectralTextureClusterFact {
+        let role: SynthRole
+        let onsetFrame: Int
+        let patch: InstrumentPatch
+        let relation: SpectralTextureClusterRelation
+        let componentRatios: [Double]
+        let startFrequency: Double
+        let appliedEndFrequency: Double
+        let renderedFrameCount: Int
+    }
+
+    @inline(never)
+    private static func spectralTextureClusterEvidence(
+        noteEvidence: [UpperNoteRenderEvidence],
+        uniqueAssignments: [InstrumentAssignment],
+        samples: [Float]
+    ) -> SpectralTextureClusterRenderEvidence? {
+        let clusterAssignments = uniqueAssignments.filter {
+            $0.spectralTextureClusterRelation != nil
+        }
+        let clusterEvents = noteEvidence.filter {
+            $0.instrument.spectralTextureClusterRelation != nil
+        }
+        guard !clusterAssignments.isEmpty || !clusterEvents.isEmpty else {
+            return nil
+        }
+
+        var facts: [SpectralTextureClusterFact] = []
+        facts.reserveCapacity(clusterEvents.count)
+        var bindingValid = !clusterAssignments.isEmpty && !clusterEvents.isEmpty
+        for evidence in noteEvidence where
+            evidence.instrument.architecture == .spectralTexture {
+            let expected = SpectralTextureClusterContract.treatment(
+                for: evidence.instrument
+            )
+            if let expected {
+                guard let actual = evidence.spectralTextureCluster else {
+                    bindingValid = false
+                    continue
+                }
+                let renderedFrames = evidence.appliedGateEndFrame - evidence.onsetFrame
+                bindingValid = bindingValid &&
+                    evidence.role == .transition &&
+                    evidence.targetEndFrequency > evidence.appliedStartFrequency &&
+                    evidence.frequencyAtAppliedGateEnd >
+                        evidence.appliedStartFrequency &&
+                    actual.relation == expected.relation &&
+                    actual.componentRatios == expected.componentRatios &&
+                    actual.renderedFrameCount == renderedFrames
+                facts.append(SpectralTextureClusterFact(
+                    role: evidence.role,
+                    onsetFrame: evidence.onsetFrame,
+                    patch: evidence.instrument.patch,
+                    relation: actual.relation,
+                    componentRatios: actual.componentRatios,
+                    startFrequency: evidence.appliedStartFrequency,
+                    appliedEndFrequency: evidence.frequencyAtAppliedGateEnd,
+                    renderedFrameCount: actual.renderedFrameCount
+                ))
+            } else if evidence.spectralTextureCluster != nil {
+                bindingValid = false
+            }
+        }
+        facts.sort { lhs, rhs in
+            if lhs.onsetFrame != rhs.onsetFrame {
+                return lhs.onsetFrame < rhs.onsetFrame
+            }
+            return lhs.patch.rawValue < rhs.patch.rawValue
+        }
+        var sink = StreamingFNV1a()
+        sink.domain("spectral-texture-cluster-events.typed.v1")
+        sink.collection(facts.count)
+        for fact in facts {
+            sink.aggregate("SpectralTextureClusterFact")
+            sink.field("role"); sink.raw(fact.role.rawValue)
+            sink.field("onsetFrame"); sink.int(fact.onsetFrame)
+            sink.field("patch"); sink.raw(fact.patch.rawValue)
+            sink.field("relation"); sink.raw(fact.relation.rawValue)
+            sink.field("componentRatios"); sink.collection(fact.componentRatios.count)
+            for ratio in fact.componentRatios { sink.double(ratio) }
+            sink.field("startFrequency"); sink.double(fact.startFrequency)
+            sink.field("appliedEndFrequency"); sink.double(fact.appliedEndFrequency)
+            sink.field("renderedFrameCount"); sink.int(fact.renderedFrameCount)
+        }
+        var peak = 0.0
+        var energy = 0.0
+        var finite = true
+        for sample in samples {
+            let value = Double(sample)
+            peak = max(peak, abs(value))
+            energy += value * value
+            finite = finite && sample.isFinite && peak.isFinite && energy.isFinite
+        }
+        let rms = sqrt(energy / Double(max(1, samples.count)))
+        let crest = rms > 0 ? peak / rms : 0
+        finite = finite && rms.isFinite && crest.isFinite
+        bindingValid = bindingValid && facts.count == clusterEvents.count
+        return SpectralTextureClusterRenderEvidence(
+            sourceAssignmentCount: clusterAssignments.count,
+            eventCount: facts.count,
+            relation: .risingAdjacentCluster,
+            adjacentRatio: SpectralTextureClusterContract.adjacentSemitoneRatio,
+            maximumComponentRatio:
+                SpectralTextureClusterContract.maximumComponentRatio,
+            minimumStartFrequency: facts.map(\.startFrequency).min() ?? 0,
+            maximumAppliedEndFrequency:
+                facts.map(\.appliedEndFrequency).max() ?? 0,
+            eventFingerprint: fixedWidthFingerprintHex(sink.value),
+            clusterSampleHash: ExactPCMFingerprint.mono(samples),
+            clusterPeak: peak,
+            clusterRMS: rms,
+            clusterCrestFactor: crest,
+            bindingValid: bindingValid,
+            finite: finite
+        )
     }
 
     private struct ResonantMonoModulationFact {

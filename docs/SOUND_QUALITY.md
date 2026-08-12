@@ -11,12 +11,13 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 12, candidate-vector schema 11, and
-canonical engine identity `autotechno-canonical-engine.v12`. It preserves
+candidate uses quality-contract schema 13, candidate-vector schema 12, and
+canonical engine identity `autotechno-canonical-engine.v13`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, score-owned instrument assignment, architecture-local dry-
-PCM and acid-operator evidence, score-owned gated percussion texture,
+PCM, acid-operator, and rising spectral-cluster evidence, score-owned gated
+percussion texture,
 shared pulse-echo return-drive,
 score-owned upper-role timing, graph, and
 pre/post upper-timbre evidence
@@ -246,8 +247,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 12, candidate-vector schema 11, and canonical engine
-v12, the versioned transaction implements the bounded evidence and atomic commit
+Under quality-contract schema 13, candidate-vector schema 12, and canonical engine
+v13, the versioned transaction implements the bounded evidence and atomic commit
 foundation for this loop. It can retain at most the primary, alternate, and
 conservative-fallback candidates, plus one
 home-timbre correction, with no more than four render passes total. Every attempt

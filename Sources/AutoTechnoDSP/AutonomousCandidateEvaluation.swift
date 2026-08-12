@@ -1242,6 +1242,94 @@ package struct AutonomousResonantMonoModulationEvidence: Codable, Equatable,
     }
 }
 
+package struct AutonomousSpectralTextureClusterEvidence: Codable, Equatable, Sendable {
+    package let sourceAssignmentCount: Int
+    package let eventCount: Int
+    package let relation: String
+    package let adjacentRatio: Double
+    package let maximumComponentRatio: Double
+    package let minimumStartFrequency: Double
+    package let maximumAppliedEndFrequency: Double
+    package let eventFingerprint: String
+    package let clusterSampleHash: String
+    package let clusterPeak: Double
+    package let clusterRMS: Double
+    package let clusterCrestFactor: Double
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(_ evidence: SpectralTextureClusterRenderEvidence) {
+        sourceAssignmentCount = evidence.sourceAssignmentCount
+        eventCount = evidence.eventCount
+        relation = evidence.relation.rawValue
+        adjacentRatio = evidence.adjacentRatio
+        maximumComponentRatio = evidence.maximumComponentRatio
+        minimumStartFrequency = evidence.minimumStartFrequency
+        maximumAppliedEndFrequency = evidence.maximumAppliedEndFrequency
+        eventFingerprint = evidence.eventFingerprint
+        clusterSampleHash = evidence.clusterSampleHash
+        clusterPeak = evidence.clusterPeak
+        clusterRMS = evidence.clusterRMS
+        clusterCrestFactor = evidence.clusterCrestFactor
+        bindingValid = evidence.bindingValid
+        finite = evidence.finite
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            adjacentRatio, maximumComponentRatio, minimumStartFrequency,
+            maximumAppliedEndFrequency, clusterPeak, clusterRMS,
+            clusterCrestFactor,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func isComplete(
+        assignments: [AutonomousInstrumentAssignmentEvidence],
+        architectureEventCount: Int,
+        sampleRate: Double
+    ) -> Bool {
+        let clusterAssignments = assignments.filter {
+            $0.patch == InstrumentPatch.metalVeil.rawValue &&
+                $0.use == InstrumentUse.transition.rawValue
+        }
+        guard bindingValid, isFinite,
+              sourceAssignmentCount == clusterAssignments.count,
+              sourceAssignmentCount > 0,
+              eventCount >= sourceAssignmentCount,
+              eventCount <=
+                AutonomousCandidateEvaluationVector.maximumInstrumentEventsPerBar,
+              architectureEventCount >= eventCount,
+              relation ==
+                SpectralTextureClusterRelation.risingAdjacentCluster.rawValue,
+              adjacentRatio ==
+                SpectralTextureClusterContract.adjacentSemitoneRatio,
+              maximumComponentRatio ==
+                SpectralTextureClusterContract.maximumComponentRatio,
+              sampleRate >=
+                QualityQualificationContract.minimumSupportedSampleRate,
+              sampleRate <=
+                QualityQualificationContract.maximumSupportedSampleRate,
+              minimumStartFrequency > 0,
+              maximumAppliedEndFrequency > minimumStartFrequency,
+              maximumAppliedEndFrequency * maximumComponentRatio <=
+                sampleRate * 0.12,
+              Self.isSampleHash(eventFingerprint),
+              Self.isSampleHash(clusterSampleHash),
+              clusterPeak > 0, clusterRMS > 0, clusterRMS <= clusterPeak,
+              clusterCrestFactor == clusterPeak / clusterRMS,
+              clusterPeak <= Double(Float.greatestFiniteMagnitude) else {
+            return false
+        }
+        return true
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sendable {
     package let architecture: String
     package let sourceAssignmentCount: Int
@@ -1253,6 +1341,8 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
     package let finite: Bool
     package let resonantMonoModulation:
         AutonomousResonantMonoModulationEvidence?
+    package let spectralTextureCluster:
+        AutonomousSpectralTextureClusterEvidence?
 
     package init(_ evidence: InstrumentArchitectureRenderEvidence) {
         architecture = evidence.architecture.rawValue
@@ -1268,15 +1358,19 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         resonantMonoModulation = evidence.resonantMonoModulation.map(
             AutonomousResonantMonoModulationEvidence.init
         )
+        spectralTextureCluster = evidence.spectralTextureCluster.map(
+            AutonomousSpectralTextureClusterEvidence.init
+        )
     }
 
     package var isFinite: Bool {
         finite && peak.isFinite && rms.isFinite &&
             (resonantMonoModulation?.isFinite ?? true) &&
+            (spectralTextureCluster?.isFinite ?? true) &&
             assignments.allSatisfy { $0.isFinite }
     }
 
-    package var isComplete: Bool {
+    package func isComplete(sampleRate: Double) -> Bool {
         let baseComplete = InstrumentArchitecture(rawValue: architecture) != nil &&
             sourceAssignmentCount == assignments.count &&
             !assignments.isEmpty &&
@@ -1298,12 +1392,27 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         if hasAcidAssignment {
             guard architecture == InstrumentArchitecture.resonantMono.rawValue,
                   let resonantMonoModulation else { return false }
-            return resonantMonoModulation.isComplete(
+            guard resonantMonoModulation.isComplete(
                 assignments: assignments,
                 architectureEventCount: eventCount
+            ) else { return false }
+        } else if resonantMonoModulation != nil {
+            return false
+        }
+        let hasClusterAssignment = assignments.contains {
+            $0.patch == InstrumentPatch.metalVeil.rawValue &&
+                $0.use == InstrumentUse.transition.rawValue
+        }
+        if hasClusterAssignment {
+            guard architecture == InstrumentArchitecture.spectralTexture.rawValue,
+                  let spectralTextureCluster else { return false }
+            return spectralTextureCluster.isComplete(
+                assignments: assignments,
+                architectureEventCount: eventCount,
+                sampleRate: sampleRate
             )
         }
-        return resonantMonoModulation == nil
+        return spectralTextureCluster == nil
     }
 
     private static func isSampleHash(_ value: String) -> Bool {
@@ -1367,11 +1476,11 @@ package struct AutonomousInstrumentBarEvidence: Codable, Equatable, Sendable {
 
     package var isFinite: Bool { architectures.allSatisfy { $0.isFinite } }
 
-    package var isComplete: Bool {
+    package func isComplete(sampleRate: Double) -> Bool {
         bar >= 0 && sourceArchitectureCount == architectures.count &&
             architectures.count <=
                 AutonomousCandidateEvaluationVector.maximumInstrumentArchitecturesPerBar &&
-            architectures.allSatisfy { $0.isComplete } &&
+            architectures.allSatisfy { $0.isComplete(sampleRate: sampleRate) } &&
             architectures.map { $0.architecture } ==
                 architectures.map { $0.architecture }.sorted {
                 let lhs = InstrumentArchitecture(rawValue: $0).flatMap {
@@ -2523,7 +2632,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 11
+    package static let schemaVersion = 12
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -3508,7 +3617,6 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
               graph.isComplete, routeContinuation.isComplete,
               sourceInstrumentBarCount == instruments.count,
               instruments.count == fullMix.sourceBarCount,
-              instruments.allSatisfy({ $0.isComplete }),
               sourcePercussionEchoTextureBarCount ==
                 percussionEchoTexture.count,
               percussionEchoTexture.count == fullMix.sourceBarCount,
@@ -3814,7 +3922,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     @inline(never)
     private func instrumentEvidenceIsComplete(expectedBars: Set<Int>) -> Bool {
         Set(instruments.map { $0.bar }) == expectedBars &&
-            instruments.allSatisfy { $0.isComplete } &&
+            instruments.allSatisfy {
+                $0.isComplete(sampleRate: routeContinuation.sampleRate)
+            } &&
             instruments.count == fullMix.sourceBarCount
     }
 

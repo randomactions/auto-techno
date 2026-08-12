@@ -209,6 +209,8 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
     package let instrument: InstrumentAssignment
     package let resonantMonoModulation:
         ResonantMonoModulationEventRenderEvidence?
+    package let spectralTextureCluster:
+        SpectralTextureClusterEventRenderEvidence?
 
     package init(
         role: SynthRole,
@@ -229,7 +231,9 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         velocityDecayScale: Double,
         instrument: InstrumentAssignment,
         resonantMonoModulation:
-            ResonantMonoModulationEventRenderEvidence? = nil
+            ResonantMonoModulationEventRenderEvidence? = nil,
+        spectralTextureCluster:
+            SpectralTextureClusterEventRenderEvidence? = nil
     ) {
         self.role = role
         self.onsetFrame = max(0, onsetFrame)
@@ -249,6 +253,7 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         self.velocityDecayScale = velocityDecayScale
         self.instrument = instrument
         self.resonantMonoModulation = resonantMonoModulation
+        self.spectralTextureCluster = spectralTextureCluster
     }
 }
 
@@ -480,6 +485,26 @@ package struct ResonantMonoModulationRenderEvidence: Equatable, Sendable {
     package let finite: Bool
 }
 
+/// Reduced same-pass proof that the score-owned transition relation reached an
+/// isolated dry cluster signal. No reconstructable samples survive detached
+/// preparation.
+package struct SpectralTextureClusterRenderEvidence: Equatable, Sendable {
+    package let sourceAssignmentCount: Int
+    package let eventCount: Int
+    package let relation: SpectralTextureClusterRelation
+    package let adjacentRatio: Double
+    package let maximumComponentRatio: Double
+    package let minimumStartFrequency: Double
+    package let maximumAppliedEndFrequency: Double
+    package let eventFingerprint: String
+    package let clusterSampleHash: String
+    package let clusterPeak: Double
+    package let clusterRMS: Double
+    package let clusterCrestFactor: Double
+    package let bindingValid: Bool
+    package let finite: Bool
+}
+
 package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
     package let architecture: InstrumentArchitecture
     package let assignments: [InstrumentAssignment]
@@ -493,6 +518,8 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
     package let finite: Bool
     package let resonantMonoModulation:
         ResonantMonoModulationRenderEvidence?
+    package let spectralTextureCluster:
+        SpectralTextureClusterRenderEvidence?
 
     package init(
         architecture: InstrumentArchitecture,
@@ -506,7 +533,9 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         rms: Float,
         finite: Bool,
         resonantMonoModulation:
-            ResonantMonoModulationRenderEvidence? = nil
+            ResonantMonoModulationRenderEvidence? = nil,
+        spectralTextureCluster:
+            SpectralTextureClusterRenderEvidence? = nil
     ) {
         self.architecture = architecture
         self.assignments = assignments
@@ -519,6 +548,7 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         self.rms = rms
         self.finite = finite
         self.resonantMonoModulation = resonantMonoModulation
+        self.spectralTextureCluster = spectralTextureCluster
     }
 }
 
@@ -928,6 +958,7 @@ struct RenderBuffers {
     var resonantMonoModulationStem: [Float] = []
     var tonalMotionInstrumentStem: [Float] = []
     var spectralTextureInstrumentStem: [Float] = []
+    var spectralTextureClusterStem: [Float] = []
     var maskingFoundation: [Float] = []
     var synth: [Float] = []
     var pulseEchoSend: [Float] = []
@@ -958,6 +989,11 @@ struct RenderBuffers {
         reset(&resonantMonoInstrumentStem, frameCount: frameCount)
         reset(&tonalMotionInstrumentStem, frameCount: frameCount)
         reset(&spectralTextureInstrumentStem, frameCount: frameCount)
+        if includeUpperRoleTaps {
+            reset(&spectralTextureClusterStem, frameCount: frameCount)
+        } else {
+            spectralTextureClusterStem.removeAll(keepingCapacity: false)
+        }
         reset(&maskingFoundation, frameCount: frameCount)
         reset(&synth, frameCount: frameCount)
         reset(&pulseEchoSend, frameCount: frameCount)

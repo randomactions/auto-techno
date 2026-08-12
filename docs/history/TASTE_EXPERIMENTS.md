@@ -680,3 +680,111 @@ might expose private workspace context. The guard was respected without retry
 or workaround. Local validation for this documentation-only consolidation is
 recorded separately; no listening, app/route test, hardware soak, or
 professional-quality promotion is implied.
+
+## Video-derived rising cluster transition study — 2026-08-12
+
+Observation source: Underdog Electronic Music School's
+[“What's the opposite of harmony?”](https://www.youtube.com/watch?v=Rc4VBxUb97A)
+(uploaded 2023-05-08, duration `4:17`, accessed 2026-08-12). The bounded source
+capture used unauthenticated `yt-dlp` without an account, cookies, or browser
+state:
+
+```sh
+yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source17-research -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=Rc4VBxUb97A'
+```
+
+No manual subtitle track was available. The automatic English `en` and
+`en-orig` VTTs were byte-identical, each with SHA-256
+`89ca02cc3dd6af08c0f04027d86552903ce660fd1615a86a620bd2768c653860`.
+The metadata and comment artifact had SHA-256
+`8227b847e82c81febe9c59aa9c0ffcc79516f43d67e570c5e21e184d4d00adf9`.
+A temporary 48 kHz stereo PCM demonstration capture had SHA-256
+`f21059671b1b2489b24ad082e1fb30240ed7880dff7f7302708189a427ae4de4`;
+media, comments, captions, and local inspection files remain untracked. The
+mixed voice/tutorial window measured `-19.3 LUFS` / `4.4 LU` / `-4.9 dBTP`
+over `0:45...1:22`, and the later sound-design/continuous-rise window measured
+`-22.7 LUFS` / `10.3 LU` / `-5.1 dBTP` over `2:36...3:25`. These inseparable
+tutorial mixes are contextual provenance, not engine targets or proof of a
+cluster's quality.
+
+The bounded transcript paraphrase is: `0:00...0:45` rhetorically contrasts
+stable mathematical pitch relationships with dissonance; `0:45...1:20`
+demonstrates adjacent tones as one tension-producing cluster; `1:20...2:02`
+extends that object over several bars and raises it as a group; `2:02...2:33`
+shows one workstation-specific pitch-bend recipe; `2:36...3:12` transfers the
+idea to string-like material and lengthens the phrase when a shorter loop feels
+overexposed; and `3:12...3:24` mentions overlapping rising layers. Literal
+device settings, random note copying, the named pitch-bend range, string
+emulation, and an endless auditory illusion are context rather than autonomous
+engine requirements.
+
+The capture returned exactly 50 top-ranked top-level comments and eight replies.
+Multiple independent technical suggestions converged only on the broader
+principle of beginning from a stable relationship and gradually bending,
+detuning, or spectrally warping components apart. They did not converge on one
+interval, oscillator count, device, or numeric target. One correction noted
+that dissonance remains a relationship inside harmony rather than a literal
+opposite; the implementation therefore names a rising adjacent cluster and not
+an “anti-harmony” mode. Named tracks, artists, devices, plug-ins, personal names,
+praise, and whole comment text were excluded.
+
+Repository reconciliation rejected another sequencer, random pitch selection,
+a user-facing dissonance control, a separate string engine, and an infinite
+Shepard process. The canonical score already owns a transition event and its
+upward frequency trajectory, while the existing Metal Veil patch already owns
+spectral-texture transition PCM. The missing reusable capability was a durable
+close-cluster relation inside that assignment plus exact evidence that the
+transition alone reached the intended signal.
+
+Implemented clean-room translation: a Metal Veil assignment derives
+`risingAdjacentCluster` only when its canonical use is `transition`. The existing
+three spectral-texture phases then use one provisional root/one-semitone/
+two-semitone component bank and the already resolved transition glide. Component
+frequency remains below the existing `0.12 * sampleRate` ceiling. The existing
+onset, duration, trajectory, filters, drive, spatial effects, score density,
+continuation, and transport do not change. Metal Veil response and atmosphere
+assignments remain on their bit-identical legacy path, and the conservative
+transition remains the existing Dark Chord assignment with no cluster tap.
+
+Detached full rendering adds one pooled isolated cluster buffer and retains only
+reduced evidence: cluster assignment/event counts, durable relation, exact
+component ratios, applied start/end-frequency range, event fingerprint, exact
+dry-cluster hash, peak/RMS/crest, binding validity, and finiteness. Candidate-
+vector schema 12, quality-contract schema 13, and canonical engine
+`autotechno-canonical-engine.v13` identify the PCM and wire-format change. The
+typed plan fingerprint stays at v7 because the resolved score shape is unchanged.
+Shipping selection remains `uncalibrated.v1`; the new evidence can reject broken
+provenance but does not rank or promote this timbre.
+
+The maturation boundary is recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). Durable concepts
+are transition ownership, one coherent rising close cluster, unchanged density,
+neutral conservative fallback, deterministic continuation, and isolated
+same-pass evidence. Provisional v1 details are the exact three ratios, weights,
+phase bank, and current spectral-texture filtering. A serious later renderer may
+replace them with oversampled or band-limited oscillators, microtonal spreading,
+physical string/resonator models, controlled divergence/reconvergence, or
+perceptually calibrated tension and harshness evidence. It must replace rather
+than duplicate this path, preserve the durable score contract, advance affected
+versions, and pass automated qualification.
+
+Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+matched SDKs, isolated module caches, serial SwiftPM, and the process boundaries
+from `.github/workflows/swift.yml`. The source-17 DSP, compact evidence, real
+prepared reachability, and exact-fingerprint filters passed 4/4. The complete
+core/evidence partition passed 122/122 in 159.697 seconds; split upper and
+prepared-product filters passed 19/19; preparation preflight passed 22/22 in
+501.640 seconds; protected routing passed 7/7 in 68.933 seconds; and the
+optimized `AutoTechno` product build passed in 39.16 seconds. The full
+representative 44.1/48 kHz journey then accepted all 14 observations under the
+unchanged frozen engine-v10 development policy. The regenerated engine-v13
+profile fingerprint was `2b884831d682f6d9`; all ten adversarial cases were
+rejected under suite fingerprint `cc753a8f5161fbb3`; the explicit run passed in
+2,957.112 seconds.
+
+This validates deterministic development evidence, not subjective sound or
+release readiness. No matched-loudness listening, exact-build app playback,
+physical route/interruption smoke, representative latency/peak-memory budget,
+or hardware-output soak was performed. Shipping selection remains
+`uncalibrated.v1`, paired selection remains disabled, and no professional-
+quality promotion is claimed.

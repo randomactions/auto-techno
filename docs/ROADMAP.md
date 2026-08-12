@@ -25,10 +25,12 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one score-owned acid spectral relation whose existing thread/sequence patches
   express ordered-hollow or metallic-tension intent through bounded operator
   DSP, while non-acid and protected-foundation assignments remain neutral;
-- canonical engine v12, quality-contract schema 12, and candidate-vector schema 11
+- one transition-only rising adjacent-cluster relation inside the existing
+  Metal Veil spectral texture, with no new onset, patch, or sequencer;
+- canonical engine v13, quality-contract schema 13, and candidate-vector schema 12
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax, event-local groove-pulse, ordinary closed-hat,
-  score-owned instrument and acid-operator consequence,
+  score-owned instrument, acid-operator, and spectral-cluster consequence,
   score-owned gated percussion texture, shared pulse-echo return-drive,
   score-owned upper-role timing, graph, and
   pre/post upper-timbre evidence;
@@ -87,11 +89,11 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 12 and candidate-vector schema 11 now bind a versioned
-transaction across canonical engine v12, quality policy, evaluator, candidate
+Quality-contract schema 13 and candidate-vector schema 12 now bind a versioned
+transaction across canonical engine v13, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
-instrument and acid-operator,
+instrument, acid-operator, and spectral-cluster,
 gated percussion texture, pulse-echo return-drive, and upper-role timing
 projections make each
 score-to-PCM consequence explicit without letting the uncalibrated policy rank

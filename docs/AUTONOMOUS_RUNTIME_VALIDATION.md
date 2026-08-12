@@ -55,11 +55,12 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 12, candidate-vector schema 11, and canonical engine v12
+Quality-contract schema 13, candidate-vector schema 12, and canonical engine v13
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, event-local groove-pulse, ordinary
-closed-hat, score-owned instrument, score-owned gated percussion texture,
+closed-hat, score-owned instrument and its acid/cluster consequence,
+score-owned gated percussion texture,
 shared pulse-echo return-drive, score-owned upper-role timing,
 graph, and pre/post upper-timbre vector for every retained attempt. Groove-pulse
 evidence must cover every bar

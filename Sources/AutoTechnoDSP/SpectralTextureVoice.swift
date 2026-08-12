@@ -1,6 +1,41 @@
 import AutoTechnoCore
 import Foundation
 
+/// Current renderer-owned realization of the durable close-cluster relation.
+/// A later oversampled or physical model may replace these exact ratios and
+/// weights after advancing the evidence and engine identities.
+package struct SpectralTextureClusterTreatment: Equatable, Sendable {
+    package let relation: SpectralTextureClusterRelation
+    package let componentRatios: [Double]
+}
+
+package struct SpectralTextureClusterEventRenderEvidence: Equatable, Sendable {
+    package let relation: SpectralTextureClusterRelation
+    package let componentRatios: [Double]
+    package let renderedFrameCount: Int
+}
+
+package enum SpectralTextureClusterContract {
+    package static let adjacentSemitoneRatio = 1.059_463_094_359_295_3
+    package static let maximumComponentRatio = 1.122_462_048_309_373
+
+    package static func treatment(
+        for assignment: InstrumentAssignment
+    ) -> SpectralTextureClusterTreatment? {
+        guard let relation = assignment.spectralTextureClusterRelation else {
+            return nil
+        }
+        return SpectralTextureClusterTreatment(
+            relation: relation,
+            componentRatios: [
+                1,
+                adjacentSemitoneRatio,
+                maximumComponentRatio,
+            ]
+        )
+    }
+}
+
 struct SpectralTextureState: Equatable, Sendable {
     var activePatch: InstrumentPatch?
     var phaseA = 0.0
@@ -36,6 +71,7 @@ enum SpectralTextureVoice {
         _ output: inout [Float],
         measurement: inout [Float],
         architectureMeasurement: inout [Float],
+        clusterMeasurement: inout [Float],
         pulseEchoSend: inout [Float],
         spatialReverbSend: inout [Float],
         noteRenderEvidence: inout [UpperNoteRenderEvidence],
@@ -47,6 +83,8 @@ enum SpectralTextureVoice {
         guard sampleRate > 0,
               output.count == measurement.count,
               output.count == architectureMeasurement.count,
+              clusterMeasurement.isEmpty ||
+                output.count == clusterMeasurement.count,
               output.count == pulseEchoSend.count,
               output.count == spatialReverbSend.count else { return }
         let scheduled = notes.filter {
@@ -69,36 +107,57 @@ enum SpectralTextureVoice {
             let requestedStart = max(45, note.frequency)
             state.frequency = requestedStart
             let glide = 1 - exp(-1 / max(1, sampleRate * (0.04 + automation.motion * 0.22)))
-            let patchRatios: (Double, Double, Double) = switch note.instrument.patch {
-            case .alienNoise: (1.71, 2.43, 3.19)
-            case .metalVeil: (2.01, 3.97, 5.03)
-            case .dustCloud: (0.51, 1.13, 1.91)
-            case .bassPulse, .bassPluck, .acidThread, .acidSequence,
-                 .northStar, .darkChord, .glassRunner:
-                (1, 1.5, 2)
+            let clusterTreatment = SpectralTextureClusterContract.treatment(
+                for: note.instrument
+            )
+            let maximumRatio = clusterTreatment == nil ? 1 :
+                SpectralTextureClusterContract.maximumComponentRatio
+            var appliedFrequencyAtEnd = min(
+                sampleRate * 0.12 / maximumRatio,
+                requestedStart
+            )
+            let patchRatios: (Double, Double, Double)
+            if let ratios = clusterTreatment?.componentRatios,
+               ratios.count == 3 {
+                patchRatios = (ratios[0], ratios[1], ratios[2])
+            } else {
+                patchRatios = switch note.instrument.patch {
+                case .alienNoise: (1.71, 2.43, 3.19)
+                case .metalVeil: (2.01, 3.97, 5.03)
+                case .dustCloud: (0.51, 1.13, 1.91)
+                case .bassPulse, .bassPluck, .acidThread, .acidSequence,
+                     .northStar, .darkChord, .glassRunner:
+                    (1, 1.5, 2)
+                }
             }
             for index in 0..<frames {
                 let progress = frames > 1 ? Double(index) / Double(frames - 1) : 1
                 let desiredFrequency = requestedStart +
                     (targetFrequency - requestedStart) * progress
                 state.frequency += (desiredFrequency - state.frequency) * glide
-                let frequency = min(sampleRate * 0.12, state.frequency)
+                let frequency = min(sampleRate * 0.12 / maximumRatio, state.frequency)
+                appliedFrequencyAtEnd = frequency
                 state.phaseA = wrap(state.phaseA + frequency * patchRatios.0 / sampleRate)
                 state.phaseB = wrap(state.phaseB + frequency * patchRatios.1 / sampleRate)
                 state.phaseC = wrap(state.phaseC + frequency * patchRatios.2 / sampleRate)
                 let a = fastSine(state.phaseA)
                 let b = fastSine(state.phaseB)
                 let c = fastSine(state.phaseC)
-                let source: Double = switch note.instrument.patch {
-                case .alienNoise:
-                    a * b * 0.62 + b * c * 0.24 + a * 0.14
-                case .metalVeil:
-                    (a * b) * 0.50 + (b * c) * 0.34 + c * 0.16
-                case .dustCloud:
-                    a * 0.42 + a * b * 0.26 + b * c * 0.18 + c * 0.14
-                case .bassPulse, .bassPluck, .acidThread, .acidSequence,
-                     .northStar, .darkChord, .glassRunner:
-                    a
+                let source: Double
+                if clusterTreatment != nil {
+                    source = a * 0.38 + b * 0.34 + c * 0.28
+                } else {
+                    source = switch note.instrument.patch {
+                    case .alienNoise:
+                        a * b * 0.62 + b * c * 0.24 + a * 0.14
+                    case .metalVeil:
+                        (a * b) * 0.50 + (b * c) * 0.34 + c * 0.16
+                    case .dustCloud:
+                        a * 0.42 + a * b * 0.26 + b * c * 0.18 + c * 0.14
+                    case .bassPulse, .bassPluck, .acidThread, .acidSequence,
+                         .northStar, .darkChord, .glassRunner:
+                        a
+                    }
                 }
                 let cutoff = min(
                     sampleRate * 0.16,
@@ -143,6 +202,9 @@ enum SpectralTextureVoice {
                 output[frame] += sample
                 measurement[frame] += sample
                 architectureMeasurement[frame] += sample
+                if clusterTreatment != nil && !clusterMeasurement.isEmpty {
+                    clusterMeasurement[frame] += sample
+                }
                 if note.instrument.effects.contains(.pulseEcho) {
                     pulseEchoSend[frame] += unscaled * Float(0.06 + automation.space * 0.18)
                 }
@@ -161,7 +223,7 @@ enum SpectralTextureVoice {
                 requestedStartFrequency: note.frequency,
                 appliedStartFrequency: requestedStart,
                 targetEndFrequency: targetFrequency,
-                frequencyAtAppliedGateEnd: state.frequency,
+                frequencyAtAppliedGateEnd: appliedFrequencyAtEnd,
                 requestedGate: note.gate,
                 appliedGate: .retrigger,
                 didRetrigger: true,
@@ -170,7 +232,14 @@ enum SpectralTextureVoice {
                 appliedVelocity: velocity,
                 velocitySpectralEnvelopeScale: 0.82 + velocity * 0.36,
                 velocityDecayScale: 0.90 + velocity * 0.18,
-                instrument: note.instrument
+                instrument: note.instrument,
+                spectralTextureCluster: clusterTreatment.map {
+                    SpectralTextureClusterEventRenderEvidence(
+                        relation: $0.relation,
+                        componentRatios: $0.componentRatios,
+                        renderedFrameCount: frames
+                    )
+                }
             ))
         }
     }

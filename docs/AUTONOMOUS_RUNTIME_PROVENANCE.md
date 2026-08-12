@@ -24,9 +24,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 12, candidate-
-   vector schema 11, and canonical engine identity
-   `autotechno-canonical-engine.v12`. Each
+   candidate-evaluation transaction under quality-contract schema 13, candidate-
+   vector schema 12, and canonical engine identity
+   `autotechno-canonical-engine.v13`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax,
    event-local groove-pulse,
@@ -38,8 +38,11 @@ mistaken for a completed feedback system.
    peak, RMS, and event count. Acid assignments additionally bind their durable
    ordered-hollow or metallic-tension relation to same-pass operator-event
    counts, current ratio/index realization, event and operator hashes,
-   peak/RMS/crest, low-band energy ratio, and finiteness. Closed-hat records
-   bind every ordinary hat to
+   peak/RMS/crest, low-band energy ratio, and finiteness. Eligible Metal Veil
+   transitions additionally bind one
+   rising adjacent-cluster relation to exact component ratios, upward frequency
+   geometry, an isolated dry-signal hash, peak/RMS/crest, and finiteness.
+   Closed-hat records bind every ordinary hat to
    its score-owned neutral or companion decay role and exact dry-sample
    consequence. Groove-pulse records bind the existing resolved onset to
    score-owned strike zone, damping, deterministic microvariation, exact

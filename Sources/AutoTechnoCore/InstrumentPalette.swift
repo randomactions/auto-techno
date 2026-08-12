@@ -65,6 +65,13 @@ package enum ResonantMonoSpectralRelation: String, CaseIterable, Sendable {
     case metallicTension
 }
 
+/// Durable harmonic tension owned by the existing spectral-texture transition.
+/// The renderer may later replace the provisional oscillator bank while this
+/// score meaning, its bounded rise, and its exact neutral fallback remain.
+package enum SpectralTextureClusterRelation: String, CaseIterable, Sendable {
+    case risingAdjacentCluster
+}
+
 /// Effect stages an assignment is allowed to reach in the existing canonical
 /// signal path. The list describes routing truth, not a second graph planner.
 package enum InstrumentEffect: String, CaseIterable, Sendable {
@@ -166,6 +173,16 @@ package struct InstrumentAssignment: Equatable, Sendable {
         case .bassPulse, .bassPluck, .northStar, .darkChord, .glassRunner,
              .alienNoise, .metalVeil, .dustCloud: nil
         }
+    }
+
+    /// A close rising cluster is a transition-only interpretation of the
+    /// existing Metal Veil patch. Response and atmosphere uses retain their
+    /// previous texture exactly, so this adds no second selector or free DSP
+    /// parameter.
+    package var spectralTextureClusterRelation:
+        SpectralTextureClusterRelation? {
+        guard patch == .metalVeil, use == .transition else { return nil }
+        return .risingAdjacentCluster
     }
 }
 

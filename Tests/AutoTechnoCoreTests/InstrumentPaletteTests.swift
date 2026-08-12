@@ -265,6 +265,65 @@ struct InstrumentPaletteTests {
         }
     }
 
+    @Test("Metal Veil transition renders one bounded rising adjacent cluster")
+    func spectralTextureRisingCluster() {
+        let automation = InstrumentAutomation(
+            color: 0.78, shape: 0.32, motion: 0.68, space: 0.52
+        )
+        let transition = assignment(
+            patch: .metalVeil,
+            use: .transition,
+            automation: automation
+        )
+        let response = assignment(
+            patch: .metalVeil,
+            use: .response,
+            automation: automation
+        )
+        #expect(transition.spectralTextureClusterRelation ==
+                .risingAdjacentCluster)
+        #expect(response.spectralTextureClusterRelation == nil)
+
+        for sampleRate in [8_000.0, 44_100.0, 48_000.0, 192_000.0] {
+            let active = render(
+                assignment: transition,
+                role: .transition,
+                sampleRate: sampleRate
+            )
+            let replay = render(
+                assignment: transition,
+                role: .transition,
+                sampleRate: sampleRate
+            )
+            let neutral = render(
+                assignment: response,
+                role: .response,
+                sampleRate: sampleRate
+            )
+            let evidence = active.evidence.first?.spectralTextureCluster
+
+            #expect(active.samples == replay.samples)
+            #expect(active.modulation == replay.modulation)
+            #expect(active.evidence == replay.evidence)
+            #expect(evidence?.relation == .risingAdjacentCluster)
+            #expect(evidence?.componentRatios == [
+                1,
+                SpectralTextureClusterContract.adjacentSemitoneRatio,
+                SpectralTextureClusterContract.maximumComponentRatio,
+            ])
+            #expect((evidence?.renderedFrameCount ?? 0) > 0)
+            #expect((active.evidence.first?.frequencyAtAppliedGateEnd ?? .infinity) *
+                    SpectralTextureClusterContract.maximumComponentRatio <=
+                    sampleRate * 0.12)
+            #expect(active.modulation == active.samples)
+            #expect(active.modulation.contains { $0 != 0 })
+            #expect(active.modulation.allSatisfy { $0.isFinite })
+            #expect(active.samples != neutral.samples)
+            #expect(neutral.evidence.first?.spectralTextureCluster == nil)
+            #expect(neutral.modulation.allSatisfy { $0.bitPattern == 0 })
+        }
+    }
+
     @Test("A tonal tail retains its resolved patch automation across a silent bar")
     func tonalTailContinuation() {
         let active = assignment(
@@ -442,7 +501,7 @@ struct InstrumentPaletteTests {
                 bar: block.bar,
                 evidence: evidence
             )
-            #expect(reduced.isComplete)
+            #expect(reduced.isComplete(sampleRate: 8_000))
             #expect(reduced.isFinite)
             for architecture in evidence {
                 observedArchitectures.insert(architecture.architecture)
@@ -532,7 +591,7 @@ struct InstrumentPaletteTests {
                 bar: block.bar,
                 evidence: block.instrumentRenderEvidence
             )
-            #expect(reduced.isComplete)
+            #expect(reduced.isComplete(sampleRate: 8_000))
             #expect(reduced.isFinite)
             for architecture in block.instrumentRenderEvidence {
                 guard let modulation = architecture.resonantMonoModulation else {
@@ -578,6 +637,50 @@ struct InstrumentPaletteTests {
         #expect(graphState == replayGraphState)
     }
 
+    @Test("Canonical journey reaches a prepared rising-cluster transition")
+    func preparedSpectralClusterEvidence() throws {
+        let fixture = try #require(activeSpectralClusterPrimaryFixture())
+        var incomingRenderState = RenderState()
+        incomingRenderState.barIndex = fixture.state.memory.totalBars
+        let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            candidates: fixture.candidates,
+            sessionSeed: fixture.state.rootSeed,
+            memory: fixture.state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: incomingRenderState,
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            incomingQualityState: fixture.state.quality,
+            cancellationRequested: { false }
+        )
+        let prepared = try #require(preparedResult)
+        #expect(prepared.candidateEvaluation.isComplete)
+        #expect(prepared.candidateEvaluation.selectedSlot == .primary)
+        #expect(prepared.selectedCandidateEvidence.isComplete)
+        #expect(!prepared.usedAlternate)
+        #expect(!prepared.usedFallback)
+        #expect(prepared.commitEligible)
+
+        let clusters = prepared.selectedCandidateEvidence.instruments
+            .flatMap(\.architectures)
+            .compactMap(\.spectralTextureCluster)
+        #expect(!clusters.isEmpty)
+        #expect(clusters.allSatisfy { cluster in
+            cluster.isComplete(
+                assignments: prepared.selectedCandidateEvidence.instruments
+                    .flatMap(\.architectures)
+                    .first { $0.spectralTextureCluster == cluster }?
+                    .assignments ?? [],
+                architectureEventCount:
+                    prepared.selectedCandidateEvidence.instruments
+                    .flatMap(\.architectures)
+                    .first { $0.spectralTextureCluster == cluster }?
+                    .eventCount ?? -1,
+                sampleRate: 8_000
+            )
+        })
+    }
+
     @Test("Prepared evidence binds the selected acid score to its operator consequence")
     func preparedAcidRelationEvidence() throws {
         let fixture = try #require(activeAcidPrimaryFixture())
@@ -618,10 +721,11 @@ struct InstrumentPaletteTests {
                   let modulation = architecture.resonantMonoModulation else {
                 return false
             }
-            return architecture.isComplete && modulation.isComplete(
-                assignments: architecture.assignments,
-                architectureEventCount: architecture.eventCount
-            )
+            return architecture.isComplete(sampleRate: 8_000) &&
+                modulation.isComplete(
+                    assignments: architecture.assignments,
+                    architectureEventCount: architecture.eventCount
+                )
         })
     }
 
@@ -642,6 +746,31 @@ struct InstrumentPaletteTests {
             )
             if synth.bars.flatMap(\.upperNotes).contains(where: {
                 $0.instrument.resonantMonoSpectralRelation != nil
+            }) {
+                return (state, candidates)
+            }
+            state.advance(using: candidates.primary)
+        }
+        return nil
+    }
+
+    private func activeSpectralClusterPrimaryFixture() -> (
+        state: AutonomousSessionState,
+        candidates: AutonomousPhraseCandidates
+    )? {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var state = director.initialState()
+        for _ in 0..<96 {
+            let candidates = director.candidates(from: state)
+            let synth = SynthPerformancePlan(
+                scene: candidates.primary.scene,
+                dna: candidates.primary.dna,
+                kind: candidates.primary.kind,
+                resolvedBars: candidates.primary.resolvedBars,
+                conservative: candidates.primary.conservative
+            )
+            if synth.bars.flatMap(\.upperNotes).contains(where: {
+                $0.instrument.spectralTextureClusterRelation != nil
             }) {
                 return (state, candidates)
             }
@@ -735,6 +864,7 @@ struct InstrumentPaletteTests {
                 &output,
                 measurement: &roleMeasurement,
                 architectureMeasurement: &architectureMeasurement,
+                clusterMeasurement: &modulationMeasurement,
                 pulseEchoSend: &pulseEcho,
                 spatialReverbSend: &reverb,
                 noteRenderEvidence: &evidence,
