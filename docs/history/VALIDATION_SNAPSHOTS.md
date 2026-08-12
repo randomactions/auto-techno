@@ -768,3 +768,36 @@ matched-loudness listening, exact-build app playback, physical route or
 interruption smoke, representative latency/peak-memory measurement, or hardware
 output soak. It makes no shipping professional-quality or release-readiness
 promotion.
+
+## Source 16 effect-sentence consolidation — 2026-08-12
+
+Source 16 produced no PCM, schema, engine, plan-fingerprint, continuation, graph,
+or policy change. Static reconciliation found that the single canonical runtime
+already owns its durable call/response/turnaround idea through motif, response,
+transition, narrative, echo, reverb, pulse-return, gated-return, and structural
+gesture contracts. Adding another phrase state or effect chain would duplicate
+those owners without a new objective deficit.
+
+The repository instead adds `docs/SOUND_CONCEPT_MATURITY.md`, a concise register
+that separates durable musical intentions from current replaceable DSP, names
+the existing evidence/fallback boundary, and records the richer serious-DSP
+direction that may later replace each implementation. `RepositorySurfaceTests`
+requires the register's four-part contract and roadmap link so this maturation
+boundary cannot disappear silently.
+
+Validation for this documentation-and-contract slice used Xcode 26.6 (`17F113`)
+and Apple Swift 6.3.3 with matched SDKs, the existing isolated Source 15 caches,
+serial SwiftPM, and the workflow's core/evidence filter:
+
+- the focused maturity-register contract passed 1/1;
+- the complete core/evidence partition passed 119/119 in 152.176 seconds,
+  including the canonical session, existing effect-return/gated-delay owners,
+  candidate transactions, calibration fixtures, and repository surface;
+- the optimized `AutoTechno` product build passed in 48.24 seconds;
+- all new relative Markdown links resolved, no retained source/test/doc text
+  contains the excluded personal creator name, and `git diff --check` passed.
+
+Since no production source or PCM changes, the frozen professional-quality
+profile was not regenerated. No listening, app/route validation, interruption
+smoke, latency/peak-memory run, or hardware soak is claimed, and shipping
+selection remains `uncalibrated.v1`.

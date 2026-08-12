@@ -57,6 +57,13 @@ the current implementation candidate. The exact-source local structural/signal
 suite and release build now establish its validated engineering baseline; they
 do not change the uncalibrated evaluator or claim professional quality.
 
+[`SOUND_CONCEPT_MATURITY.md`](SOUND_CONCEPT_MATURITY.md) separately records the
+durable musical intentions behind these slices, the versioned DSP that currently
+expresses them, their evidence and fallback owners, and the richer renderer work
+that may replace provisional implementations later. That register prevents a
+tutorial-derived coefficient or first implementation from becoming the
+permanent definition of the concept.
+
 ## Evolution rule
 
 Build unified vertical slices through the same persistent performance and quality

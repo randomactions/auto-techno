@@ -601,3 +601,82 @@ profile, generated complete engine-v12 profile fingerprint
 `374bf5cdfe333f89`, and rejected all ten adversarial cases under suite
 fingerprint `665feb5625ad608f` in 3,043.276 seconds. Publication, exact-head CI,
 listening, app/route validation, and hardware soak remain separate gates.
+
+## Video-derived effect-sentence consolidation study — 2026-08-12
+
+Observation source: Underdog Electronic Music School's
+[“What are ‘techno phrases’?”](https://www.youtube.com/watch?v=mLhpTlGOmCE)
+(uploaded 2023-05-01, duration `6:35`, accessed 2026-08-12). The bounded source
+capture used unauthenticated `yt-dlp` without account, cookies, or browser state:
+
+```sh
+yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source16-research -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=mLhpTlGOmCE'
+```
+
+No manual subtitle track was available. The downloaded automatic English `en`
+and `en-orig` VTTs were byte-identical, each with SHA-256
+`6b043318c276c987e65beb27b0d7d8870be449447020593849b0d544bcea334f`.
+The metadata and comment artifact had SHA-256
+`b1cdac46ce897508ea748ec7b4819141645b84cc6991af39b3ab9f8dc79a9846`.
+A temporary audio-only capture had SHA-256
+`0c3c8195eab88b11f7150549a0602dec978eedd293c809d9eaf4e34bc9663728`;
+bounded excerpts around the phrase demonstration and dynamics chapter were
+inspected locally, and no media or reconstructable audio entered the repository.
+The mixed tutorial audio measured `-19.0 LUFS` / `6.7 LU` / `-5.2 dBTP` over
+`1:59...2:28` and `-20.1 LUFS` / `9.5 LU` / `-5.4 dBTP` over
+`3:48...5:07`. Voice, music, edits, and demonstrations are inseparable in those
+windows, so the measurements are contextual provenance rather than engine
+targets or proof of an upward-compression benefit.
+
+The bounded transcript paraphrase is: `0:10...1:08` proposes timbre and effects
+as foreground speech when a note-changing melody would compete with a
+drum-focused track; `1:08...1:52` describes a phrase as a call, delayed response,
+and end turnaround across a short section; `1:59...2:27` demonstrates that
+relationship; `2:30...3:42` says the source may be any sound and demonstrates
+manually duplicating, processing, and selecting effect layers; `3:50...5:06`
+uses upward compression to expose quiet effect body while retaining the louder
+attack; and `5:06...5:50` returns to the speech analogy and the cost of diverting
+attention from the drums. Literal workstation duplication, random effect
+selection, presets, device settings, and manual curation are tutorial context,
+not autonomous-engine requirements.
+
+The capture returned exactly 50 top-ranked top-level comments and five replies.
+Independent comments repeatedly supported the broader non-melodic framing:
+sound as moving sculpture, phrase thinking without conventional melody, and
+deeper conceptual understanding over another recipe. That is convergence on a
+way of hearing, not on a DSP topology or number. One top-level comment named a
+specific upward/downward dynamics device; it is single-source workflow advice
+and was rejected. Praise, creator names, tracks, courses, gear requests, and
+algorithm comments were excluded. No usernames or verbatim comment text are
+retained.
+
+Repository reconciliation produced a deliberate no-new-DSP result. The
+canonical score already owns motif, response, and transition roles; narrative
+presence and supporting-role admission already coordinate phrase speech;
+unsynced echo, pulse echo, filtered long reverb, and the bounded gated
+percussion return already supply delayed consequences; structural gestures own
+turnaround and closure; and the pulse-echo return-drive already provides a
+score-owned, evidenced low-level body lift outside feedback. Adding an
+`EffectPhrase` state, another delay/compressor, random duplicated layers, or a
+parallel effect renderer would split those owners without exposing a new
+measurable deficit. Source 16 therefore consolidates the concept instead of
+changing PCM, schemas, policy, graph, continuation, or callback work.
+
+The durable concept is now indexed in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md): timbre and effects
+may form a call/response/turnaround sentence while the drums retain attention
+priority. The current implementation is explicitly provisional and distributed
+across the existing canonical owners above. A later serious DSP revision may
+add true upward or parallel dynamics, denser diffusion, spectral morphing, or a
+shared-return orchestration only after phrase-level effect-body and role-causal
+evidence expose a repeatable deficit. It must replace or consolidate current DSP,
+preserve deterministic score ownership, protected rhythm, continuation, exact
+fallback, and the one-runtime contract, and advance the relevant identities
+before qualification.
+
+The user-authorized Antigravity advisory could not run: the managed execution
+environment rejected sending the design prompt to an external CLI because it
+might expose private workspace context. The guard was respected without retry
+or workaround. Local validation for this documentation-only consolidation is
+recorded separately; no listening, app/route test, hardware soak, or
+professional-quality promotion is implied.

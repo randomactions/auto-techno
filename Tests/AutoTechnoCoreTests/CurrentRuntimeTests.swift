@@ -165,6 +165,35 @@ struct RepositorySurfaceTests {
         #expect(source.contains("let keys = value.keys.sorted()"))
     }
 
+    @Test("Durable sound concepts remain separate from replaceable DSP")
+    func soundConceptMaturityRegisterIsExplicitAndLinked() throws {
+        let maturity = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(
+                "docs/SOUND_CONCEPT_MATURITY.md"
+            ),
+            encoding: .utf8
+        )
+        let roadmap = try String(
+            contentsOf: repositoryRoot.appendingPathComponent("docs/ROADMAP.md"),
+            encoding: .utf8
+        )
+
+        for required in [
+            "## Maturity contract",
+            "## Current concept register",
+            "## Revisit triggers",
+            "Durable intention",
+            "Current realization",
+            "Truth boundary",
+            "Later serious DSP direction",
+            "call, delayed response, and turnaround",
+            "canonical director/score/renderer path",
+        ] {
+            #expect(maturity.contains(required), "Maturity register omits \(required)")
+        }
+        #expect(roadmap.contains("SOUND_CONCEPT_MATURITY.md"))
+    }
+
     private var repositoryRoot: URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
