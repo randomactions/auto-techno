@@ -1117,6 +1117,7 @@ struct QualityQualificationFoundationTests {
                 renderPassesMatch: true,
                 bindingValid: true
             )],
+            climaxArc: .inactive(releaseStartBar: 0),
             groovePulse: [AutonomousGroovePulseBarEvidence(
                 bar: 0,
                 sourceScoreEventCount: 0,
@@ -1274,6 +1275,7 @@ struct QualityQualificationFoundationTests {
                 stems: source.stems,
                 automaticMix: source.automaticMix,
                 kickSyntax: source.kickSyntax,
+                climaxArc: source.climaxArc,
                 groovePulse: source.groovePulse,
                 closedHat: source.closedHat,
                 instruments: source.instruments,

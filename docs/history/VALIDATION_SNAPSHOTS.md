@@ -917,3 +917,35 @@ the pinned SwiftPM dependencies resolved and the release product built. No
 listening, app/route smoke, latency/peak-memory measurement, hardware soak,
 professional-quality promotion, or release-readiness claim is made. Exact-head
 remote CI remains a separate publication gate.
+
+## Dramatic-debt climax provenance — 2026-08-12
+
+Source 20 adds one compact long-form causal record to the existing kick-syntax
+transaction. It fingerprints the exact contrast or major-break debts paid by a
+nonconservative energy release and cross-checks their grounded setup, two
+withheld bars, and macro-marker recovery. It adds no score event, PCM, renderer,
+transport, controller, or callback work; debt-free, conservative, fallback, and
+non-release candidates remain inactive.
+
+Candidate-vector schema 15, quality-contract schema 16, and canonical engine v16
+identify the wire-format change. Focused tests passed for deterministic debt
+fingerprints, source accounting, geometry/identity tamper rejection, unchanged
+selection evidence, and a real complete prepared primary recovery transaction.
+
+Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+matched SDKs, isolated caches, serial execution, and the workflow's exact
+process boundaries:
+
+- focused climax-arc contract and natural prepared-product checks: 2/2;
+- split upper/prepared-product/transaction filters: 19/19;
+- core and evidence: 126/126 passed in 181.859 seconds;
+- preparation preflight: 22/22 passed in 502.048 seconds;
+- protected routing: 7/7 passed in 69.592 seconds;
+- complete CI-selected matrix: 174/174;
+- optimized `AutoTechno` product build: passed in 51.72 seconds;
+- `git diff --check`: clean before publication.
+
+Shipping selection remains `uncalibrated.v1`; no listening, app/route smoke,
+latency or peak-memory measurement, hardware soak, professional-quality
+promotion, or release-readiness claim is made. Publication and exact-head
+remote CI remain separate gates.

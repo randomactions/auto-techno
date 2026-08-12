@@ -887,6 +887,202 @@ package struct AutonomousKickSyntaxBarEvidence: Codable, Equatable, Sendable {
 
 }
 
+package enum AutonomousClimaxArcRelation: String, Codable, Equatable, Sendable {
+    case none
+    case dramaticDebtRelease = "dramatic-debt-release"
+    case dramaticDebtRecovery = "dramatic-debt-recovery"
+}
+
+/// Compact proof that a committed release pays a previously opened dramatic
+/// obligation and, when present, resolves through the existing kick-syntax
+/// recovery. The record owns no new score or PCM; it binds long-form cause to
+/// the already attributable release and optional grounded/withheld/recovery
+/// consequence.
+package struct AutonomousClimaxArcEvidence: Codable, Equatable, Sendable {
+    package static let maximumDebtCount = 128
+
+    package let relation: String
+    package let paidDebtCount: Int
+    package let contrastDebtCount: Int
+    package let majorBreakDebtCount: Int
+    package let sourceDebtFingerprint: String
+    package let earliestOpenedAtBar: Int?
+    package let latestOpenedAtBar: Int?
+    package let latestDueByBar: Int?
+    package let releaseStartBar: Int
+    package let setupBar: Int?
+    package let firstWithheldBar: Int?
+    package let secondWithheldBar: Int?
+    package let recoveryBar: Int?
+    package let bindingValid: Bool
+
+    package init(
+        relation: AutonomousClimaxArcRelation,
+        paidDebtCount: Int,
+        contrastDebtCount: Int,
+        majorBreakDebtCount: Int,
+        sourceDebtFingerprint: String,
+        earliestOpenedAtBar: Int?,
+        latestOpenedAtBar: Int?,
+        latestDueByBar: Int?,
+        releaseStartBar: Int,
+        setupBar: Int?,
+        firstWithheldBar: Int?,
+        secondWithheldBar: Int?,
+        recoveryBar: Int?,
+        bindingValid: Bool
+    ) {
+        self.relation = relation.rawValue
+        self.paidDebtCount = paidDebtCount
+        self.contrastDebtCount = contrastDebtCount
+        self.majorBreakDebtCount = majorBreakDebtCount
+        self.sourceDebtFingerprint = sourceDebtFingerprint
+        self.earliestOpenedAtBar = earliestOpenedAtBar
+        self.latestOpenedAtBar = latestOpenedAtBar
+        self.latestDueByBar = latestDueByBar
+        self.releaseStartBar = releaseStartBar
+        self.setupBar = setupBar
+        self.firstWithheldBar = firstWithheldBar
+        self.secondWithheldBar = secondWithheldBar
+        self.recoveryBar = recoveryBar
+        self.bindingValid = bindingValid
+    }
+
+    package static func inactive(releaseStartBar: Int) -> Self {
+        Self(
+            relation: .none,
+            paidDebtCount: 0,
+            contrastDebtCount: 0,
+            majorBreakDebtCount: 0,
+            sourceDebtFingerprint: debtFingerprint([]),
+            earliestOpenedAtBar: nil,
+            latestOpenedAtBar: nil,
+            latestDueByBar: nil,
+            releaseStartBar: releaseStartBar,
+            setupBar: nil,
+            firstWithheldBar: nil,
+            secondWithheldBar: nil,
+            recoveryBar: nil,
+            bindingValid: true
+        )
+    }
+
+    package var recordIsStructurallyValid: Bool {
+        let optionalBars = [
+            earliestOpenedAtBar, latestOpenedAtBar, latestDueByBar, setupBar,
+            firstWithheldBar, secondWithheldBar, recoveryBar,
+        ].compactMap { $0 }
+        return AutonomousClimaxArcRelation(rawValue: relation) != nil &&
+            (0...Self.maximumDebtCount).contains(paidDebtCount) &&
+            (0...Self.maximumDebtCount).contains(contrastDebtCount) &&
+            (0...Self.maximumDebtCount).contains(majorBreakDebtCount) &&
+            contrastDebtCount <= paidDebtCount &&
+            majorBreakDebtCount <= paidDebtCount &&
+            contrastDebtCount <= paidDebtCount - majorBreakDebtCount &&
+            Self.isFingerprint(sourceDebtFingerprint) && releaseStartBar >= 0 &&
+            optionalBars.allSatisfy { $0 >= 0 }
+    }
+
+    package func isComplete(
+        phraseKind: String,
+        conservative: Bool,
+        startBar: Int,
+        declaredBarCount: Int,
+        kickSyntax: [AutonomousKickSyntaxBarEvidence]
+    ) -> Bool {
+        guard recordIsStructurallyValid, bindingValid,
+              releaseStartBar == startBar,
+              declaredBarCount > 0,
+              startBar <= Int.max - declaredBarCount,
+              let relation = AutonomousClimaxArcRelation(rawValue: relation),
+              let kind = AutonomousPhraseKind(rawValue: phraseKind) else {
+            return false
+        }
+        let roles = kickSyntax.compactMap { KickSyntaxRole(rawValue: $0.role) }
+        guard roles.count == kickSyntax.count else { return false }
+
+        switch relation {
+        case .none:
+            return paidDebtCount == 0 && contrastDebtCount == 0 &&
+                majorBreakDebtCount == 0 &&
+                sourceDebtFingerprint == Self.debtFingerprint([]) &&
+                earliestOpenedAtBar == nil && latestOpenedAtBar == nil &&
+                latestDueByBar == nil && setupBar == nil &&
+                firstWithheldBar == nil && secondWithheldBar == nil &&
+                recoveryBar == nil && roles.allSatisfy { $0 == .grounded }
+        case .dramaticDebtRelease, .dramaticDebtRecovery:
+            guard kind == .energyRelease, !conservative,
+                  paidDebtCount > 0,
+                  contrastDebtCount + majorBreakDebtCount == paidDebtCount,
+                  let earliestOpenedAtBar,
+                  let latestOpenedAtBar,
+                  let latestDueByBar,
+                  earliestOpenedAtBar <= latestOpenedAtBar,
+                  latestOpenedAtBar < releaseStartBar,
+                  latestDueByBar >= latestOpenedAtBar else {
+                return false
+            }
+            if relation == .dramaticDebtRelease {
+                return setupBar == nil && firstWithheldBar == nil &&
+                    secondWithheldBar == nil && recoveryBar == nil &&
+                    roles.allSatisfy { $0 == .grounded }
+            }
+            guard let setupBar,
+                  let firstWithheldBar,
+                  let secondWithheldBar,
+                  let recoveryBar,
+                  setupBar >= startBar,
+                  recoveryBar < startBar + declaredBarCount,
+                  setupBar <= Int.max - 3,
+                  firstWithheldBar == setupBar + 1,
+                  secondWithheldBar == setupBar + 2,
+                  recoveryBar == setupBar + 3,
+                  Self.macroPosition(recoveryBar) == 15 else {
+                return false
+            }
+            guard let setupIndex = kickSyntax.firstIndex(where: {
+                $0.bar == setupBar
+            }), setupIndex <= kickSyntax.count - 4 else {
+                return false
+            }
+            return kickSyntax[setupIndex].role == KickSyntaxRole.grounded.rawValue &&
+                kickSyntax[setupIndex + 1].bar == firstWithheldBar &&
+                kickSyntax[setupIndex + 1].role == KickSyntaxRole.withheld.rawValue &&
+                kickSyntax[setupIndex + 2].bar == secondWithheldBar &&
+                kickSyntax[setupIndex + 2].role == KickSyntaxRole.withheld.rawValue &&
+                kickSyntax[setupIndex + 3].bar == recoveryBar &&
+                kickSyntax[setupIndex + 3].role == KickSyntaxRole.recovery.rawValue
+        }
+    }
+
+    package static func debtFingerprint(
+        _ debts: [SessionDramaticDebt]
+    ) -> String {
+        var sink = StreamingFNV1a()
+        sink.domain("climax-arc-dramatic-debts.typed.v1")
+        sink.collection(debts.count)
+        for debt in debts {
+            sink.aggregate("SessionDramaticDebt")
+            sink.field("id"); sink.int(debt.id)
+            sink.field("openedAtBar"); sink.int(debt.openedAtBar)
+            sink.field("dueByBar"); sink.int(debt.dueByBar)
+            sink.field("source"); sink.raw(debt.source.rawValue)
+        }
+        return fixedWidthFingerprintHex(sink.value)
+    }
+
+    private static func macroPosition(_ bar: Int) -> Int {
+        let remainder = bar % 16
+        return remainder >= 0 ? remainder : remainder + 16
+    }
+
+    private static func isFingerprint(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 /// Bounded, event-local evidence for the existing score-owned groove pulse.
 /// The record contains only reduced signal observations from the exact dry
 /// sample that was rendered into the percussion path; no PCM is retained.
@@ -2865,6 +3061,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
     case stemEvidence = "stem-evidence"
     case automaticMixEvidence = "automatic-mix-evidence"
     case kickSyntaxEvidence = "kick-syntax-evidence"
+    case climaxArcEvidence = "climax-arc-evidence"
     case groovePulseEvidence = "groove-pulse-evidence"
     case closedHatEvidence = "closed-hat-evidence"
     case instrumentEvidence = "instrument-evidence"
@@ -2876,7 +3073,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 14
+    package static let schemaVersion = 15
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -2902,6 +3099,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let automaticMix: [AutonomousAutomaticMixEvidence]
     package let sourceKickSyntaxBarCount: Int
     package let kickSyntax: [AutonomousKickSyntaxBarEvidence]
+    package let climaxArc: AutonomousClimaxArcEvidence
     package let sourceGroovePulseBarCount: Int
     package let groovePulse: [AutonomousGroovePulseBarEvidence]
     package let sourceClosedHatBarCount: Int
@@ -2935,6 +3133,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         stems: [AutonomousStemBarEvidence],
         automaticMix: [AutonomousAutomaticMixEvidence],
         kickSyntax: [AutonomousKickSyntaxBarEvidence],
+        climaxArc: AutonomousClimaxArcEvidence,
         groovePulse: [AutonomousGroovePulseBarEvidence],
         closedHat: [AutonomousClosedHatBarEvidence] = [],
         instruments: [AutonomousInstrumentBarEvidence],
@@ -2961,6 +3160,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.automaticMix = Array(automaticMix.prefix(Self.maximumBarCount))
         sourceKickSyntaxBarCount = kickSyntax.count
         self.kickSyntax = Array(kickSyntax.prefix(Self.maximumBarCount))
+        self.climaxArc = climaxArc
         sourceGroovePulseBarCount = groovePulse.count
         self.groovePulse = Array(groovePulse.prefix(Self.maximumBarCount))
         sourceClosedHatBarCount = closedHat.count
@@ -3002,6 +3202,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         routeRecovery: Bool,
         outgoingRenderDSPFingerprint: String,
         controllerStateFingerprint: String,
+        incomingDramaticDebts: [SessionDramaticDebt],
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousCandidateEvaluationVector? {
         guard !cancellationRequested() else { return nil }
@@ -3258,6 +3459,11 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 bindingValid: bindingValid
             ))
         }
+        let climaxArc = makeClimaxArcEvidence(
+            plan: plan,
+            incomingDramaticDebts: incomingDramaticDebts,
+            kickSyntax: kickSyntax
+        )
         let groovePulse = boundedBlocks.map { block in
             let score = block.resolvedPerformance.groovePulses
             let rendered = block.groovePulseRenderEvidence
@@ -3487,6 +3693,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             stems: stems,
             automaticMix: automaticMix,
             kickSyntax: kickSyntax,
+            climaxArc: climaxArc,
             groovePulse: groovePulse,
             closedHat: closedHat,
             instruments: instruments,
@@ -3497,6 +3704,65 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             routeContinuation: route,
             preGraphUpperTimbreEvidence: preGraphUpperTimbreEvidence,
             postGraphUpperTimbreEvidence: upperTimbreEvidence
+        )
+    }
+
+    @inline(never)
+    private static func makeClimaxArcEvidence(
+        plan: AutonomousPhrasePlan,
+        incomingDramaticDebts: [SessionDramaticDebt],
+        kickSyntax: [AutonomousKickSyntaxBarEvidence]
+    ) -> AutonomousClimaxArcEvidence {
+        let active = plan.kind == .energyRelease && !plan.conservative &&
+            !plan.paidDebtIDs.isEmpty
+        guard active else {
+            return .inactive(releaseStartBar: plan.startBar)
+        }
+        let sourceDebtsAreBounded = incomingDramaticDebts.count <=
+            AutonomousClimaxArcEvidence.maximumDebtCount
+        let boundedIncomingDebts = Array(incomingDramaticDebts.prefix(
+            AutonomousClimaxArcEvidence.maximumDebtCount + 1
+        ))
+        let paidDebts = boundedIncomingDebts.filter {
+            plan.paidDebtIDs.contains($0.id)
+        }
+        let setupIndex = kickSyntax.indices.first { index in
+            index <= kickSyntax.count - 4 &&
+                kickSyntax[index].role == KickSyntaxRole.grounded.rawValue &&
+                kickSyntax[index + 1].role == KickSyntaxRole.withheld.rawValue &&
+                kickSyntax[index + 2].role == KickSyntaxRole.withheld.rawValue &&
+                kickSyntax[index + 3].role == KickSyntaxRole.recovery.rawValue
+        }
+        let sourcesAreSupported = paidDebts.allSatisfy {
+            $0.source == .contrast || $0.source == .majorBreak
+        }
+        let debtGeometryIsValid = paidDebts.allSatisfy {
+            $0.id >= 0 && $0.openedAtBar >= 0 &&
+                $0.openedAtBar < plan.startBar &&
+                $0.dueByBar >= $0.openedAtBar
+        }
+        let exactDebtsMatch = sourceDebtsAreBounded &&
+            paidDebts.map(\.id) == plan.paidDebtIDs &&
+            paidDebts.count == incomingDramaticDebts.count
+        let setupBar = setupIndex.map { kickSyntax[$0].bar }
+        return AutonomousClimaxArcEvidence(
+            relation: setupIndex == nil
+                ? .dramaticDebtRelease : .dramaticDebtRecovery,
+            paidDebtCount: paidDebts.count,
+            contrastDebtCount: paidDebts.filter { $0.source == .contrast }.count,
+            majorBreakDebtCount: paidDebts.filter { $0.source == .majorBreak }.count,
+            sourceDebtFingerprint:
+                AutonomousClimaxArcEvidence.debtFingerprint(paidDebts),
+            earliestOpenedAtBar: paidDebts.map(\.openedAtBar).min(),
+            latestOpenedAtBar: paidDebts.map(\.openedAtBar).max(),
+            latestDueByBar: paidDebts.map(\.dueByBar).max(),
+            releaseStartBar: plan.startBar,
+            setupBar: setupBar,
+            firstWithheldBar: setupIndex.map { kickSyntax[$0 + 1].bar },
+            secondWithheldBar: setupIndex.map { kickSyntax[$0 + 2].bar },
+            recoveryBar: setupIndex.map { kickSyntax[$0 + 3].bar },
+            bindingValid: sourcesAreSupported && debtGeometryIsValid &&
+                exactDebtsMatch
         )
     }
 
@@ -3845,6 +4111,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         if !kickSyntaxEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.kickSyntaxEvidence)
         }
+        if !climaxArcEvidenceIsComplete() {
+            failures.append(.climaxArcEvidence)
+        }
         if !groovePulseEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.groovePulseEvidence)
         }
@@ -4169,6 +4438,17 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         return true
     }
 
+    @inline(never)
+    private func climaxArcEvidenceIsComplete() -> Bool {
+        climaxArc.isComplete(
+            phraseKind: symbolic.phraseKind,
+            conservative: symbolic.conservative,
+            startBar: symbolic.startBar,
+            declaredBarCount: symbolic.declaredBarCount,
+            kickSyntax: kickSyntax
+        )
+    }
+
     private static func macroPosition(_ bar: Int) -> Int {
         let remainder = bar % 16
         return remainder >= 0 ? remainder : remainder + 16
@@ -4336,6 +4616,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     ) -> Bool {
         recordIdentityIsValid() && recordCountsAreBounded() &&
             recordCollectionsAreBounded() &&
+            climaxArc.recordIsStructurallyValid &&
             prevalidatedHardGateSummaryIsCanonical &&
             routeContinuation.isComplete
     }
@@ -5239,6 +5520,8 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
             transaction.attempts[initialIndex].vector.graph &&
             transaction.attempts[correctionIndex].vector.kickSyntax ==
             transaction.attempts[initialIndex].vector.kickSyntax &&
+            transaction.attempts[correctionIndex].vector.climaxArc ==
+            transaction.attempts[initialIndex].vector.climaxArc &&
             zip(
                 transaction.attempts[correctionIndex].vector.instruments,
                 transaction.attempts[initialIndex].vector.instruments

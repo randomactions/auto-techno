@@ -2217,6 +2217,7 @@ package enum AutonomousPhrasePreparer {
             routeRecovery: routeRecovery,
             outgoingRenderDSPFingerprint: outgoingRenderDSPFingerprint,
             controllerStateFingerprint: controllerFingerprint,
+            incomingDramaticDebts: memory.openDebts,
             cancellationRequested: cancellationRequested
         ) else { return nil }
         guard !cancellationRequested() else { return nil }

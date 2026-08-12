@@ -949,3 +949,80 @@ pattern rejection, and unchanged uncalibrated selection evidence. Final matrix,
 release-build, publication, and exact-head CI results are recorded separately
 after completion; no listening, app/route smoke, hardware soak, or professional-
 quality promotion is claimed by this source pass.
+
+## Source 20: dramatic-debt climax provenance — 2026-08-12
+
+Source ID `20` used YouTube video `dGGMbqe4QYQ`, *How to climax in electronic
+music*, from Underdog Electronic Music School, published 2023-01-30 with a
+10:31 duration. The clean-room capture used unauthenticated `yt-dlp` with
+automatic English captions, metadata, top-ranked comments, and temporary audio:
+
+```sh
+yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source20-research.uYD2a8 -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=dGGMbqe4QYQ'
+yt-dlp -f bestaudio -x --audio-format wav --audio-quality 0 --postprocessor-args 'ffmpeg:-ar 48000 -ac 2' -P /private/tmp/auto-techno-source20-research.uYD2a8 -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=dGGMbqe4QYQ'
+```
+
+No manual subtitle track was available. Automatic `en` and `en-orig` VTTs
+were byte-identical with SHA-256
+`f1919b6a86400d7d18bf16e055f99ca51d6681543e357c98e0ec57195b524fac`.
+The metadata/comment artifact had SHA-256
+`a1dc24a5f0d58bcece7a702e154d2825f695afea2a6c8982b3952c55b31ad33c`;
+the temporary 48 kHz stereo PCM capture had SHA-256
+`6931dd63f42ce01f9c4707f3429b48cd25bbb42be41bf565102b5e510ca87028`.
+All source media, captions, comments, and inspection files remain untracked.
+The tool warned that its build was older than 90 days and lacked a JavaScript
+runtime, but extraction succeeded.
+
+The bounded caption paraphrase is: `0:33...2:28` distinguishes a small loop
+ending from a committed turnaround that removes/adds material before restart;
+`2:30...4:05` describes section-scale subtraction followed by a gradual energy
+rise; `4:05...6:22` names fall, rise, and a short withheld-drop hang before the
+return; `6:22...8:30` repeats that trajectory with a shorter second cycle; and
+`8:30...9:52` warns that literal off-grid time insertion creates structural
+complexity. The source's workstation operations, vocals, samples, exact effects,
+and time-signature manipulation are not portable engine requirements.
+
+The capture returned exactly 50 top-ranked top-level comments and seven replies.
+No three independent technical comments converged on a portable target. One
+comment suggested resetting the grid through a time-signature change after an
+off-grid hang; that is a single workflow proposal and was rejected because the
+product owns fixed sample-indexed transport. Another noted the difficulty of
+returning from high to low energy; it remains a single dissent/deficit cue, not
+a calibrated rule. Praise, jokes, gear discussion, names, and whole comments
+were excluded.
+
+Repository reconciliation found that the canonical director already owns the
+durable musical behavior: contrast and major-break phrases open bounded dramatic
+debts; energy release pays them; and the existing kick syntax expresses a
+grounded setup, two withheld bars, and recovery without moving the grid. Adding
+another break sequencer, another effect chain, a sample/vocal lane, or off-grid
+transport would duplicate or violate those owners. The missing capability was
+machine-readable long-form causality.
+
+Candidate-vector schema 15 therefore adds one compact climax-arc record. It
+fingerprints every exact incoming dramatic debt paid by a nonconservative
+release, counts contrast and major-break sources separately, retains bounded
+opening/due geometry, and cross-checks the existing four-bar kick consequence
+when that score relation is present.
+Debt-free, conservative, fallback, and non-release phrases remain exactly
+inactive. Quality-contract schema 16 and canonical engine v16 identify the
+wire-format change; score, PCM, transport, renderer, continuation, and shipping
+selection remain unchanged and `uncalibrated.v1`.
+
+The maturation boundary is recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). The durable
+concept is that a climax pays an earlier musical obligation. A serious later
+renderer may replace the coarse phrase/debt and optional fixed recovery
+realization with a calibrated multi-stage energy trajectory, higher-resolution
+score envelopes, or role-aware payoff orchestration. It must preserve debt
+ownership, future-boundary application, fallback, and causal evidence, and
+replace rather than layer another climax mechanism.
+
+Focused validation proved deterministic JSON/fingerprint round-trip, contrast
+and major-break accounting, wrong-geometry and forged-debt rejection, unchanged
+uncalibrated selection evidence, and a naturally prepared complete primary
+energy-release transaction. The final local CI-selected matrix passed 174/174,
+and the optimized `AutoTechno` product built successfully. Publication and exact-
+head CI are recorded after completion. No listening, app/route smoke, latency or
+peak-memory measurement, hardware soak, or professional-quality promotion is
+claimed.

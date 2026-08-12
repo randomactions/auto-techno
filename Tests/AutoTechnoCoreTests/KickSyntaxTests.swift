@@ -250,6 +250,31 @@ struct KickSyntaxTests {
             $0.detectorToAudibleScaleMatches && $0.renderPassesMatch &&
                 $0.bindingValid
         })
+        #expect(evidence.climaxArc.relation ==
+                AutonomousClimaxArcRelation.dramaticDebtRecovery.rawValue)
+        #expect(evidence.climaxArc.paidDebtCount ==
+                fixture.state.memory.openDebts.count)
+        #expect(evidence.climaxArc.contrastDebtCount == 1)
+        #expect(evidence.climaxArc.majorBreakDebtCount == 0)
+        #expect(evidence.climaxArc.earliestOpenedAtBar == 96)
+        #expect(evidence.climaxArc.latestOpenedAtBar == 96)
+        #expect(evidence.climaxArc.latestDueByBar == 224)
+        #expect(evidence.climaxArc.setupBar ==
+                source.resolvedBars[indexes.setup].performance.bar)
+        #expect(evidence.climaxArc.firstWithheldBar ==
+                source.resolvedBars[indexes.firstWithheld].performance.bar)
+        #expect(evidence.climaxArc.secondWithheldBar ==
+                source.resolvedBars[indexes.secondWithheld].performance.bar)
+        #expect(evidence.climaxArc.recoveryBar ==
+                source.resolvedBars[indexes.recovery].performance.bar)
+        #expect(evidence.climaxArc.bindingValid)
+        #expect(evidence.climaxArc.isComplete(
+            phraseKind: evidence.symbolic.phraseKind,
+            conservative: evidence.symbolic.conservative,
+            startBar: evidence.symbolic.startBar,
+            declaredBarCount: evidence.symbolic.declaredBarCount,
+            kickSyntax: evidence.kickSyntax
+        ))
 
         for index in [indexes.firstWithheld, indexes.secondWithheld] {
             let syntax = evidence.kickSyntax[index]

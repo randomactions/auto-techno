@@ -4,13 +4,13 @@ import Foundation
 /// policy is deliberately uncalibrated: these types make evidence reproducible
 /// without claiming that professional-quality targets exist yet.
 package enum QualityQualificationContract {
-    /// Version 15 adds score-owned lead-performance microtiming to the existing
-    /// upper scheduling evidence in version 14.
+    /// Version 16 binds paid dramatic-debt provenance to the existing
+    /// score-owned kick recovery evidence from version 15.
     /// The shipping policy remains uncalibrated; this version identifies
     /// evidence, not runtime promotion.
-    package static let schemaVersion = 15
+    package static let schemaVersion = 16
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v15"
+    package static let engineVersion = "autotechno-canonical-engine.v16"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

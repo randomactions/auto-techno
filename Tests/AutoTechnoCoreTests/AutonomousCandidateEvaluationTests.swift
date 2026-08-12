@@ -149,6 +149,115 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!oversizedSource.recordIsStructurallyValid)
     }
 
+    @Test("Climax-arc evidence binds dramatic debt to committed kick recovery")
+    func climaxArcEvidenceContract() throws {
+        let debts = [
+            SessionDramaticDebt(
+                id: 7, openedAtBar: 64, dueByBar: 192, source: .contrast
+            ),
+            SessionDramaticDebt(
+                id: 8, openedAtBar: 96, dueByBar: 224, source: .majorBreak
+            ),
+        ]
+        let syntax = [
+            fixtureKickSyntax(bar: 140, role: .grounded),
+            fixtureKickSyntax(bar: 141, role: .withheld),
+            fixtureKickSyntax(bar: 142, role: .withheld),
+            fixtureKickSyntax(bar: 143, role: .recovery),
+        ]
+        let evidence = AutonomousClimaxArcEvidence(
+            relation: .dramaticDebtRecovery,
+            paidDebtCount: 2,
+            contrastDebtCount: 1,
+            majorBreakDebtCount: 1,
+            sourceDebtFingerprint:
+                AutonomousClimaxArcEvidence.debtFingerprint(debts),
+            earliestOpenedAtBar: 64,
+            latestOpenedAtBar: 96,
+            latestDueByBar: 224,
+            releaseStartBar: 128,
+            setupBar: 140,
+            firstWithheldBar: 141,
+            secondWithheldBar: 142,
+            recoveryBar: 143,
+            bindingValid: true
+        )
+        #expect(evidence.recordIsStructurallyValid)
+        #expect(evidence.isComplete(
+            phraseKind: AutonomousPhraseKind.energyRelease.rawValue,
+            conservative: false,
+            startBar: 128,
+            declaredBarCount: 16,
+            kickSyntax: syntax
+        ))
+        let releaseOnly = AutonomousClimaxArcEvidence(
+            relation: .dramaticDebtRelease,
+            paidDebtCount: 2,
+            contrastDebtCount: 1,
+            majorBreakDebtCount: 1,
+            sourceDebtFingerprint: evidence.sourceDebtFingerprint,
+            earliestOpenedAtBar: 64,
+            latestOpenedAtBar: 96,
+            latestDueByBar: 224,
+            releaseStartBar: 128,
+            setupBar: nil,
+            firstWithheldBar: nil,
+            secondWithheldBar: nil,
+            recoveryBar: nil,
+            bindingValid: true
+        )
+        #expect(releaseOnly.isComplete(
+            phraseKind: AutonomousPhraseKind.energyRelease.rawValue,
+            conservative: false,
+            startBar: 128,
+            declaredBarCount: 16,
+            kickSyntax: (128..<144).map {
+                fixtureKickSyntax(bar: $0, role: .grounded)
+            }
+        ))
+
+        let wrongGeometry = AutonomousClimaxArcEvidence(
+            relation: .dramaticDebtRecovery,
+            paidDebtCount: 2,
+            contrastDebtCount: 1,
+            majorBreakDebtCount: 1,
+            sourceDebtFingerprint: evidence.sourceDebtFingerprint,
+            earliestOpenedAtBar: 64,
+            latestOpenedAtBar: 96,
+            latestDueByBar: 224,
+            releaseStartBar: 128,
+            setupBar: 140,
+            firstWithheldBar: 141,
+            secondWithheldBar: 143,
+            recoveryBar: 143,
+            bindingValid: true
+        )
+        #expect(!wrongGeometry.isComplete(
+            phraseKind: AutonomousPhraseKind.energyRelease.rawValue,
+            conservative: false,
+            startBar: 128,
+            declaredBarCount: 16,
+            kickSyntax: syntax
+        ))
+
+        let baseline = fixtureVector(slot: .primary)
+        let data = try baseline.deterministicJSON()
+        var object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        var climax = try #require(object["climaxArc"] as? [String: Any])
+        climax["sourceDebtFingerprint"] = "aaaaaaaaaaaaaaaa"
+        object["climaxArc"] = climax
+        let forged = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        #expect(!forged.isComplete)
+        #expect(forged.recordIsStructurallyValid)
+        #expect(forged.fingerprint != baseline.fingerprint)
+        #expect(forged.selectionEvidence == baseline.selectionEvidence)
+    }
+
     @Test("Gated percussion texture evidence is compact, causal, and selection-neutral")
     func percussionEchoTextureEvidenceContract() throws {
         let neutral = fixtureVector(
@@ -794,10 +903,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 14)
-        #expect(QualityQualificationContract.schemaVersion == 15)
+        #expect(vector.schemaVersion == 15)
+        #expect(QualityQualificationContract.schemaVersion == 16)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v15")
+                "autotechno-canonical-engine.v16")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -3160,7 +3269,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "e3dc336272d8387f")
+                "fdb5871fe732a8db")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3189,6 +3298,7 @@ struct AutonomousCandidateEvaluationTests {
         phraseKind: AutonomousPhraseKind? = nil,
         planFingerprintOverride: String? = nil,
         kickSyntaxBar: AutonomousKickSyntaxBarEvidence? = nil,
+        climaxArc: AutonomousClimaxArcEvidence? = nil,
         groovePulseBar: AutonomousGroovePulseBarEvidence? = nil,
         closedHatBar: AutonomousClosedHatBarEvidence? = nil,
         instrumentBar: AutonomousInstrumentBarEvidence? = nil,
@@ -3377,6 +3487,7 @@ struct AutonomousCandidateEvaluationTests {
                 targetKickOverFoundationDB: nil
             )],
             kickSyntax: [kickSyntaxBar ?? fixtureKickSyntax(bar: evidenceBar)],
+            climaxArc: climaxArc ?? .inactive(releaseStartBar: evidenceBar),
             groovePulse: [groovePulseBar ?? AutonomousGroovePulseBarEvidence(
                 bar: evidenceBar,
                 sourceScoreEventCount: 0,

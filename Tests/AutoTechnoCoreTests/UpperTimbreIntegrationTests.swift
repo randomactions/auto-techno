@@ -888,6 +888,7 @@ struct UpperTimbreIntegrationTests {
             routeRecovery: route.routeRecovery,
             outgoingRenderDSPFingerprint: route.outgoingRenderDSPFingerprint,
             controllerStateFingerprint: route.controllerStateFingerprint,
+            incomingDramaticDebts: state.memory.openDebts,
             cancellationRequested: noCancellation
         )
         let forgedVector = try #require(maybeForgedVector)
@@ -949,6 +950,7 @@ struct UpperTimbreIntegrationTests {
             routeRecovery: route.routeRecovery,
             outgoingRenderDSPFingerprint: route.outgoingRenderDSPFingerprint,
             controllerStateFingerprint: route.controllerStateFingerprint,
+            incomingDramaticDebts: state.memory.openDebts,
             cancellationRequested: { false }
         )
         let forgedVector = try #require(maybeForgedVector)

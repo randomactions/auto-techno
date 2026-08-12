@@ -19,6 +19,9 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one bounded debt-owned energy-release syntax that withholds only the existing
   kick on two pullback bars, preserves weak-pulse and motif context, then restores
   the unchanged step-zero kick at the structural marker;
+- one compact climax-arc record that fingerprints the exact earlier contrast or
+  major-break obligations paid by that energy release and cross-checks their
+  existing grounded/withheld/recovery consequence;
 - one score-owned gated percussion texture that admits an existing early
   percussion slice and exposes only a bounded delayed return window, without
   resampling, new events, or cross-bar delay state;
@@ -33,9 +36,10 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one score-owned foreground lead-performance timing relation that delays only
   later retriggered anchors inside an eligible melodic lock while the first
   anchor, companions, drums, and transport retain their existing score;
-- canonical engine v15, quality-contract schema 15, and candidate-vector schema 14
+- canonical engine v16, quality-contract schema 16, and candidate-vector schema 15
   with atomic selected-commit provenance across symbolic, full-mix, masking,
-  stem, score-owned kick-syntax, event-local groove-pulse, ordinary closed-hat,
+  stem, score-owned kick-syntax and debt-to-recovery climax arc,
+  event-local groove-pulse, ordinary closed-hat,
   score-owned instrument, acid-operator, spectral-cluster, and tonal-envelope
   consequence,
   score-owned gated percussion texture, shared pulse-echo return-drive,
@@ -96,14 +100,14 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 15 and candidate-vector schema 14 now bind a versioned
-transaction across canonical engine v15, quality policy, evaluator, candidate
+Quality-contract schema 16 and candidate-vector schema 15 now bind a versioned
+transaction across canonical engine v16, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 instrument, acid-operator, spectral-cluster, and tonal-envelope,
 gated percussion texture, pulse-echo return-drive, and upper-role timing,
 including foreground lead performance,
-projections make each
+projections, plus exact paid-debt-to-release climax provenance, make each
 score-to-PCM consequence explicit without letting the uncalibrated policy rank
 that evidence. Professional
 Evidence v3 adds standards-based phrase loudness/true peak, bounded streaming

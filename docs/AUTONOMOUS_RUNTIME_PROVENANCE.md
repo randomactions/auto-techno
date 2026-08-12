@@ -24,11 +24,12 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 15, candidate-
-   vector schema 14, and canonical engine identity
-   `autotechno-canonical-engine.v15`. Each
+   candidate-evaluation transaction under quality-contract schema 16, candidate-
+   vector schema 15, and canonical engine identity
+   `autotechno-canonical-engine.v16`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
-   per-bar masking, role-stem, automatic-mix, score-owned kick-syntax,
+   per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
+   paid-debt climax-arc,
    event-local groove-pulse,
    ordinary closed-hat, score-owned instrument, score-owned gated percussion
    texture, shared pulse-echo return-drive,
@@ -56,7 +57,13 @@ mistaken for a completed feedback system.
    automatic-mix gain, and kick stem. Only one debt-owned energy-release arc may
    be grounded, withheld, withheld, then recovered; withheld bars must be silent
    in every kick projection while their canonical weak-pulse carrier remains,
-   and recovery must restore a positive step-zero kick. The transaction binds all three
+   and recovery must restore a positive step-zero kick. The climax-arc projection
+   fingerprints the exact incoming
+   dramatic debts paid by an energy release, retains their source classes and
+   temporal bounds and, when present, cross-checks the rendered four-bar kick
+   recovery.
+   It adds no score event, PCM, controller, or callback work. The transaction
+   binds all three
    plan fingerprints, engine/policy/evaluator versions, attempt-local reasons,
    selection, comparison, and correction provenance. It permits at most the
    primary, alternate, and deterministic fallback plus one home-timbre

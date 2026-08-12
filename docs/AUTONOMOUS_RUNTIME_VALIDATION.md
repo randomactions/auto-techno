@@ -55,10 +55,11 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 15, candidate-vector schema 14, and canonical engine v15
+Quality-contract schema 16, candidate-vector schema 15, and canonical engine v16
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
-automatic-mix, score-owned kick-syntax, event-local groove-pulse, ordinary
+automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
+event-local groove-pulse, ordinary
 closed-hat, score-owned instrument and its acid/cluster/envelope consequence,
 score-owned gated percussion texture,
 shared pulse-echo return-drive, score-owned upper-role timing,
@@ -119,6 +120,14 @@ protected render passes, detector-to-audible scaling, automatic-mix gain, and
 all hashes must agree. Missing bars, forged roles, arbitrary kick deletion,
 nonzero withheld signal, silent recovery, or a changed non-kick score make the
 candidate incomplete; none of this evidence changes uncalibrated selection.
+
+Climax-arc evidence must remain inactive for debt-free, conservative, and
+non-release phrases. An active record must fingerprint the exact incoming debt
+set paid by the release, distinguish contrast and major-break sources, retain
+bounded open/due bars, and, when the existing kick recovery is present,
+cross-check one grounded setup, two adjacent withheld bars, and its macro marker.
+It may reject broken long-form
+provenance but may not rank the phrase while shipping policy is uncalibrated.
 
 Gated-percussion-texture evidence must cover every rendered bar. Active records
 must bind the canonical eligible source-step mask and earliest admitted step to
