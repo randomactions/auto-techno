@@ -526,6 +526,7 @@ package enum VoiceRenderer {
         var shadowTimingStem: [Float] = []
         var responseTimingStem: [Float] = []
         var resonantMonoInstrumentStem: [Float] = []
+        var resonantMonoModulationStem: [Float] = []
         var tonalMotionInstrumentStem: [Float] = []
         var spectralTextureInstrumentStem: [Float] = []
         var maskingFoundationBus: [Float] = []
@@ -551,6 +552,7 @@ package enum VoiceRenderer {
         swap(&shadowTimingStem, &checkedOut.shadowTimingStem)
         swap(&responseTimingStem, &checkedOut.responseTimingStem)
         swap(&resonantMonoInstrumentStem, &checkedOut.resonantMonoInstrumentStem)
+        swap(&resonantMonoModulationStem, &checkedOut.resonantMonoModulationStem)
         swap(&tonalMotionInstrumentStem, &checkedOut.tonalMotionInstrumentStem)
         swap(&spectralTextureInstrumentStem, &checkedOut.spectralTextureInstrumentStem)
         swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
@@ -691,6 +693,7 @@ package enum VoiceRenderer {
                 shadowTimingStem: &shadowTimingStem,
                 responseTimingStem: &responseTimingStem,
                 resonantMonoInstrumentStem: &resonantMonoInstrumentStem,
+                resonantMonoModulationStem: &resonantMonoModulationStem,
                 tonalMotionInstrumentStem: &tonalMotionInstrumentStem,
                 spectralTextureInstrumentStem: &spectralTextureInstrumentStem,
                 noteRenderEvidence: &upperNoteRenderEvidence,
@@ -1290,6 +1293,8 @@ package enum VoiceRenderer {
                                     synthPerformance: synthPerformance,
                                     upperNoteRenderEvidence: upperNoteRenderEvidence,
                                     resonantMono: resonantMonoInstrumentStem,
+                                    resonantMonoModulation: resonantMonoModulationStem,
+                                    sampleRate: sampleRate,
                                     tonalMotion: tonalMotionInstrumentStem,
                                     spectralTexture: spectralTextureInstrumentStem
                                     ),
@@ -1314,6 +1319,7 @@ package enum VoiceRenderer {
         swap(&shadowTimingStem, &checkedOut.shadowTimingStem)
         swap(&responseTimingStem, &checkedOut.responseTimingStem)
         swap(&resonantMonoInstrumentStem, &checkedOut.resonantMonoInstrumentStem)
+        swap(&resonantMonoModulationStem, &checkedOut.resonantMonoModulationStem)
         swap(&tonalMotionInstrumentStem, &checkedOut.tonalMotionInstrumentStem)
         swap(&spectralTextureInstrumentStem, &checkedOut.spectralTextureInstrumentStem)
         swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
@@ -1335,6 +1341,7 @@ package enum VoiceRenderer {
         shadowTimingStem: inout [Float],
         responseTimingStem: inout [Float],
         resonantMonoInstrumentStem: inout [Float],
+        resonantMonoModulationStem: inout [Float],
         tonalMotionInstrumentStem: inout [Float],
         spectralTextureInstrumentStem: inout [Float],
         noteRenderEvidence: inout [UpperNoteRenderEvidence],
@@ -1424,6 +1431,7 @@ package enum VoiceRenderer {
             architectureMeasurement: &resonantMonoInstrumentStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
+            modulationMeasurement: &resonantMonoModulationStem,
             noteRenderEvidence: &noteRenderEvidence,
             notes: anchorNotes,
             sampleRate: sampleRate,
@@ -1450,6 +1458,7 @@ package enum VoiceRenderer {
             architectureMeasurement: &resonantMonoInstrumentStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
+            modulationMeasurement: &resonantMonoModulationStem,
             noteRenderEvidence: &noteRenderEvidence,
             notes: shadowNotes,
             sampleRate: sampleRate,
@@ -1502,6 +1511,7 @@ package enum VoiceRenderer {
             architectureMeasurement: &resonantMonoInstrumentStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
+            modulationMeasurement: &resonantMonoModulationStem,
             noteRenderEvidence: &noteRenderEvidence,
             notes: responseNotes,
             sampleRate: sampleRate,
@@ -1570,6 +1580,8 @@ package enum VoiceRenderer {
         synthPerformance: SynthPerformanceBar,
         upperNoteRenderEvidence: [UpperNoteRenderEvidence],
         resonantMono: [Float],
+        resonantMonoModulation: [Float],
+        sampleRate: Double,
         tonalMotion: [Float],
         spectralTexture: [Float]
     ) -> [InstrumentArchitectureRenderEvidence] {
@@ -1603,6 +1615,13 @@ package enum VoiceRenderer {
             let patchSet = Set(matching.map(\.patch))
             let useSet = Set(matching.map(\.use))
             let effectSet = Set(matching.flatMap(\.effects))
+            let modulation = architecture == .resonantMono
+                ? resonantMonoModulationEvidence(
+                    noteEvidence: upperNoteRenderEvidence,
+                    uniqueAssignments: uniqueAssignments,
+                    samples: resonantMonoModulation,
+                    sampleRate: sampleRate
+                ) : nil
             return InstrumentArchitectureRenderEvidence(
                 architecture: architecture,
                 assignments: uniqueAssignments,
@@ -1613,9 +1632,155 @@ package enum VoiceRenderer {
                 sampleHash: ExactPCMFingerprint.mono(samples),
                 peak: peak,
                 rms: rms,
-                finite: samples.allSatisfy(\.isFinite) && peak.isFinite && rms.isFinite
+                finite: samples.allSatisfy(\.isFinite) && peak.isFinite && rms.isFinite,
+                resonantMonoModulation: modulation
             )
         }
+    }
+
+    private struct ResonantMonoModulationFact {
+        let role: SynthRole
+        let onsetFrame: Int
+        let patch: InstrumentPatch
+        let relation: ResonantMonoSpectralRelation
+        let modulatorRatio: Double
+        let requestedPeakIndex: Double
+        let appliedPeakIndex: Double
+        let renderedFrameCount: Int
+    }
+
+    @inline(never)
+    private static func resonantMonoModulationEvidence(
+        noteEvidence: [UpperNoteRenderEvidence],
+        uniqueAssignments: [InstrumentAssignment],
+        samples: [Float],
+        sampleRate: Double
+    ) -> ResonantMonoModulationRenderEvidence? {
+        let acidAssignments = uniqueAssignments.filter {
+            $0.resonantMonoSpectralRelation != nil
+        }
+        let acidEvents = noteEvidence.filter {
+            $0.instrument.architecture == .resonantMono &&
+                $0.instrument.resonantMonoSpectralRelation != nil
+        }
+        guard !acidAssignments.isEmpty || !acidEvents.isEmpty else { return nil }
+
+        var facts: [ResonantMonoModulationFact] = []
+        facts.reserveCapacity(acidEvents.count)
+        var bindingValid = !acidAssignments.isEmpty && !acidEvents.isEmpty
+        for evidence in noteEvidence where
+            evidence.instrument.architecture == .resonantMono {
+            let expected = ResonantMonoModulationContract.treatment(
+                for: evidence.instrument
+            )
+            if let expected {
+                guard let actual = evidence.resonantMonoModulation else {
+                    bindingValid = false
+                    continue
+                }
+                let renderedFrames = evidence.appliedGateEndFrame - evidence.onsetFrame
+                bindingValid = bindingValid &&
+                    actual.relation == expected.relation &&
+                    actual.modulatorRatio == expected.modulatorRatio &&
+                    actual.requestedPeakIndex == expected.requestedPeakIndex &&
+                    actual.appliedPeakIndex > 0 &&
+                    actual.appliedPeakIndex <= actual.requestedPeakIndex &&
+                    actual.renderedFrameCount == renderedFrames
+                facts.append(ResonantMonoModulationFact(
+                    role: evidence.role,
+                    onsetFrame: evidence.onsetFrame,
+                    patch: evidence.instrument.patch,
+                    relation: actual.relation,
+                    modulatorRatio: actual.modulatorRatio,
+                    requestedPeakIndex: actual.requestedPeakIndex,
+                    appliedPeakIndex: actual.appliedPeakIndex,
+                    renderedFrameCount: actual.renderedFrameCount
+                ))
+            } else if evidence.resonantMonoModulation != nil {
+                bindingValid = false
+            }
+        }
+        facts.sort { lhs, rhs in
+            if lhs.onsetFrame != rhs.onsetFrame {
+                return lhs.onsetFrame < rhs.onsetFrame
+            }
+            let lhsRole = SynthRole.allCases.firstIndex(of: lhs.role) ?? 0
+            let rhsRole = SynthRole.allCases.firstIndex(of: rhs.role) ?? 0
+            if lhsRole != rhsRole { return lhsRole < rhsRole }
+            return lhs.patch.rawValue < rhs.patch.rawValue
+        }
+        var sink = StreamingFNV1a()
+        sink.domain("resonant-mono-modulation-events.typed.v1")
+        sink.collection(facts.count)
+        for fact in facts {
+            sink.aggregate("ResonantMonoModulationFact")
+            sink.field("role"); sink.raw(fact.role.rawValue)
+            sink.field("onsetFrame"); sink.int(fact.onsetFrame)
+            sink.field("patch"); sink.raw(fact.patch.rawValue)
+            sink.field("relation"); sink.raw(fact.relation.rawValue)
+            sink.field("modulatorRatio"); sink.double(fact.modulatorRatio)
+            sink.field("requestedPeakIndex"); sink.double(fact.requestedPeakIndex)
+            sink.field("appliedPeakIndex"); sink.double(fact.appliedPeakIndex)
+            sink.field("renderedFrameCount"); sink.int(fact.renderedFrameCount)
+        }
+
+        var peak = 0.0
+        var energy = 0.0
+        var lowEnergy = 0.0
+        var low1 = 0.0
+        var low2 = 0.0
+        let lowCoefficient = 1 - exp(
+            -2 * .pi * ResonantMonoModulationContract.highPassHz / sampleRate
+        )
+        var finite = sampleRate.isFinite && sampleRate > 0
+        for sample in samples {
+            let value = Double(sample)
+            low1 += (value - low1) * lowCoefficient
+            low2 += (low1 - low2) * lowCoefficient
+            peak = max(peak, abs(value))
+            energy += value * value
+            lowEnergy += low2 * low2
+            finite = finite && sample.isFinite && low1.isFinite && low2.isFinite &&
+                peak.isFinite && energy.isFinite && lowEnergy.isFinite
+        }
+        let rms = sqrt(energy / Double(max(1, samples.count)))
+        let crestFactor = rms > 0 ? peak / rms : 0
+        let lowBandEnergyRatio = energy > 0 ? lowEnergy / energy : 0
+        finite = finite && rms.isFinite && crestFactor.isFinite &&
+            lowBandEnergyRatio.isFinite
+        bindingValid = bindingValid && facts.count == acidEvents.count &&
+            samples.count > 1 && samples.first?.bitPattern == 0 &&
+            samples.last?.bitPattern == 0
+        return ResonantMonoModulationRenderEvidence(
+            sourceAssignmentCount: acidAssignments.count,
+            eventCount: facts.count,
+            orderedEventCount: facts.filter {
+                $0.relation == .orderedHollow
+            }.count,
+            metallicEventCount: facts.filter {
+                $0.relation == .metallicTension
+            }.count,
+            orderedModulatorRatio: facts.contains {
+                $0.relation == .orderedHollow
+            } ? 2.0 : 0,
+            metallicModulatorRatio: facts.contains {
+                $0.relation == .metallicTension
+            } ? 1.414_213_562_373_095_1 : 0,
+            maximumRequestedPeakIndex:
+                facts.map(\.requestedPeakIndex).max() ?? 0,
+            minimumAppliedPeakIndex:
+                facts.map(\.appliedPeakIndex).min() ?? 0,
+            maximumAppliedPeakIndex:
+                facts.map(\.appliedPeakIndex).max() ?? 0,
+            eventFingerprint: fixedWidthFingerprintHex(sink.value),
+            operatorSampleHash: ExactPCMFingerprint.mono(samples),
+            operatorPeak: peak,
+            operatorRMS: rms,
+            operatorCrestFactor: crestFactor,
+            lowBandEnergyRatio: lowBandEnergyRatio,
+            bindingValid: bindingValid,
+            finite: finite
+        )
     }
 
     private static func safeMaster(_ sample: Float) -> Float {

@@ -1138,6 +1138,110 @@ package struct AutonomousInstrumentAssignmentEvidence: Codable, Equatable, Senda
     }
 }
 
+/// Compact, versioned proof that the score-owned acid relation reached the
+/// current two-operator renderer. Semantic relation counts survive future DSP
+/// replacement; the numeric ratio/index facts identify this implementation.
+package struct AutonomousResonantMonoModulationEvidence: Codable, Equatable,
+        Sendable {
+    package let sourceAssignmentCount: Int
+    package let eventCount: Int
+    package let orderedEventCount: Int
+    package let metallicEventCount: Int
+    package let orderedModulatorRatio: Double
+    package let metallicModulatorRatio: Double
+    package let maximumRequestedPeakIndex: Double
+    package let minimumAppliedPeakIndex: Double
+    package let maximumAppliedPeakIndex: Double
+    package let eventFingerprint: String
+    package let operatorSampleHash: String
+    package let operatorPeak: Double
+    package let operatorRMS: Double
+    package let operatorCrestFactor: Double
+    package let lowBandEnergyRatio: Double
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(_ evidence: ResonantMonoModulationRenderEvidence) {
+        sourceAssignmentCount = evidence.sourceAssignmentCount
+        eventCount = evidence.eventCount
+        orderedEventCount = evidence.orderedEventCount
+        metallicEventCount = evidence.metallicEventCount
+        orderedModulatorRatio = evidence.orderedModulatorRatio
+        metallicModulatorRatio = evidence.metallicModulatorRatio
+        maximumRequestedPeakIndex = evidence.maximumRequestedPeakIndex
+        minimumAppliedPeakIndex = evidence.minimumAppliedPeakIndex
+        maximumAppliedPeakIndex = evidence.maximumAppliedPeakIndex
+        eventFingerprint = evidence.eventFingerprint
+        operatorSampleHash = evidence.operatorSampleHash
+        operatorPeak = evidence.operatorPeak
+        operatorRMS = evidence.operatorRMS
+        operatorCrestFactor = evidence.operatorCrestFactor
+        lowBandEnergyRatio = evidence.lowBandEnergyRatio
+        bindingValid = evidence.bindingValid
+        finite = evidence.finite
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            orderedModulatorRatio, metallicModulatorRatio,
+            maximumRequestedPeakIndex, minimumAppliedPeakIndex,
+            maximumAppliedPeakIndex, operatorPeak, operatorRMS,
+            operatorCrestFactor, lowBandEnergyRatio,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func isComplete(
+        assignments: [AutonomousInstrumentAssignmentEvidence],
+        architectureEventCount: Int
+    ) -> Bool {
+        let acid = assignments.filter {
+            $0.patch == InstrumentPatch.acidThread.rawValue ||
+                $0.patch == InstrumentPatch.acidSequence.rawValue
+        }
+        guard bindingValid, isFinite,
+              sourceAssignmentCount == acid.count,
+              sourceAssignmentCount > 0,
+              eventCount >= sourceAssignmentCount,
+              eventCount <=
+                AutonomousCandidateEvaluationVector.maximumInstrumentEventsPerBar,
+              architectureEventCount >= eventCount,
+              orderedEventCount >= 0, orderedEventCount <= eventCount,
+              metallicEventCount >= 0, metallicEventCount <= eventCount,
+              orderedEventCount == eventCount - metallicEventCount,
+              Self.isSampleHash(eventFingerprint),
+              Self.isSampleHash(operatorSampleHash),
+              operatorPeak > 0, operatorRMS > 0, operatorRMS <= operatorPeak,
+              operatorCrestFactor == operatorPeak / operatorRMS,
+              (0...ResonantMonoModulationContract.maximumLowBandEnergyRatio)
+                .contains(lowBandEnergyRatio),
+              maximumRequestedPeakIndex > 0,
+              maximumRequestedPeakIndex <=
+                ResonantMonoModulationContract.maximumRequestedPeakIndex,
+              minimumAppliedPeakIndex > 0,
+              minimumAppliedPeakIndex <= maximumAppliedPeakIndex,
+              maximumAppliedPeakIndex <= maximumRequestedPeakIndex else {
+            return false
+        }
+        let hasOrderedAssignment = acid.contains {
+            $0.patch == InstrumentPatch.acidThread.rawValue
+        }
+        let hasMetallicAssignment = acid.contains {
+            $0.patch == InstrumentPatch.acidSequence.rawValue
+        }
+        return (orderedEventCount > 0) == hasOrderedAssignment &&
+            (metallicEventCount > 0) == hasMetallicAssignment &&
+            orderedModulatorRatio == (hasOrderedAssignment ? 2.0 : 0) &&
+            metallicModulatorRatio == (hasMetallicAssignment
+                ? 1.414_213_562_373_095_1 : 0)
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sendable {
     package let architecture: String
     package let sourceAssignmentCount: Int
@@ -1147,6 +1251,8 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
     package let peak: Double
     package let rms: Double
     package let finite: Bool
+    package let resonantMonoModulation:
+        AutonomousResonantMonoModulationEvidence?
 
     package init(_ evidence: InstrumentArchitectureRenderEvidence) {
         architecture = evidence.architecture.rawValue
@@ -1159,15 +1265,19 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         peak = Double(evidence.peak)
         rms = Double(evidence.rms)
         finite = evidence.finite
+        resonantMonoModulation = evidence.resonantMonoModulation.map(
+            AutonomousResonantMonoModulationEvidence.init
+        )
     }
 
     package var isFinite: Bool {
         finite && peak.isFinite && rms.isFinite &&
+            (resonantMonoModulation?.isFinite ?? true) &&
             assignments.allSatisfy { $0.isFinite }
     }
 
     package var isComplete: Bool {
-        InstrumentArchitecture(rawValue: architecture) != nil &&
+        let baseComplete = InstrumentArchitecture(rawValue: architecture) != nil &&
             sourceAssignmentCount == assignments.count &&
             !assignments.isEmpty &&
             assignments.count <=
@@ -1180,6 +1290,20 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
             Self.isSampleHash(sampleHash) &&
             peak >= 0 && rms >= 0 && rms <= peak &&
             peak <= Double(Float.greatestFiniteMagnitude)
+        guard baseComplete else { return false }
+        let hasAcidAssignment = assignments.contains {
+            $0.patch == InstrumentPatch.acidThread.rawValue ||
+                $0.patch == InstrumentPatch.acidSequence.rawValue
+        }
+        if hasAcidAssignment {
+            guard architecture == InstrumentArchitecture.resonantMono.rawValue,
+                  let resonantMonoModulation else { return false }
+            return resonantMonoModulation.isComplete(
+                assignments: assignments,
+                architectureEventCount: eventCount
+            )
+        }
+        return resonantMonoModulation == nil
     }
 
     private static func isSampleHash(_ value: String) -> Bool {
@@ -2399,7 +2523,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 10
+    package static let schemaVersion = 11
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5

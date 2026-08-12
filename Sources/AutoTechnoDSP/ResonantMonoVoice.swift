@@ -1,6 +1,77 @@
 import AutoTechnoCore
 import Foundation
 
+/// Current bounded rendering parameters for the durable score-owned acid
+/// relation. These values are deliberately renderer-owned: a later serious
+/// DSP implementation may replace them while preserving the relation and its
+/// evidence contract.
+package struct ResonantMonoModulationTreatment: Equatable, Sendable {
+    package let relation: ResonantMonoSpectralRelation
+    package let modulatorRatio: Double
+    package let requestedPeakIndex: Double
+    package let operatorWeight: Double
+}
+
+/// Same-pass event fact produced by the exact resonant-mono render call. It is
+/// reduced with the operator tap before the immutable RenderBlock is formed.
+package struct ResonantMonoModulationEventRenderEvidence: Equatable, Sendable {
+    package let relation: ResonantMonoSpectralRelation
+    package let modulatorRatio: Double
+    package let requestedPeakIndex: Double
+    package let appliedPeakIndex: Double
+    package let renderedFrameCount: Int
+}
+
+package enum ResonantMonoModulationContract {
+    package static let highPassHz = 120.0
+    package static let maximumLowBandEnergyRatio = 0.36
+    package static let maximumRequestedPeakIndex = 2.10
+
+    package static func treatment(
+        for assignment: InstrumentAssignment
+    ) -> ResonantMonoModulationTreatment? {
+        guard let relation = assignment.resonantMonoSpectralRelation else {
+            return nil
+        }
+        switch relation {
+        case .orderedHollow:
+            return ResonantMonoModulationTreatment(
+                relation: relation,
+                modulatorRatio: 2.0,
+                requestedPeakIndex: min(
+                    maximumRequestedPeakIndex,
+                    0.45 + assignment.automation.color * 0.55 +
+                        assignment.automation.motion * 0.25
+                ),
+                operatorWeight: 0.05
+            )
+        case .metallicTension:
+            return ResonantMonoModulationTreatment(
+                relation: relation,
+                modulatorRatio: 1.414_213_562_373_095_1,
+                requestedPeakIndex: min(
+                    maximumRequestedPeakIndex,
+                    0.65 + assignment.automation.color * 0.75 +
+                        assignment.automation.motion * 0.65
+                ),
+                operatorWeight: 0.065
+            )
+        }
+    }
+
+    /// A conservative four-sideband budget limits the current non-oversampled
+    /// operator before it can fold substantial energy across Nyquist.
+    package static func maximumSafePeakIndex(
+        modulatorRatio: Double,
+        carrierHz: Double,
+        sampleRate: Double
+    ) -> Double {
+        guard modulatorRatio > 0, carrierHz > 0, sampleRate > 0 else { return 0 }
+        let sidebandBudget = sampleRate * 0.42 / carrierHz - 1
+        return max(0, sidebandBudget / (modulatorRatio * 4))
+    }
+}
+
 struct ResonantMonoState: Equatable, Sendable {
     var activePatch: InstrumentPatch?
     var phase = 0.0
@@ -50,6 +121,7 @@ enum ResonantMonoVoice {
         guard assignment.architecture == .resonantMono,
               assignment.use == .foundationBass else { return }
         let duration = 0.16 + assignment.automation.shape * 0.18
+        var noModulationMeasurement: [Float] = []
         _ = renderEvent(
             output: &output,
             roleMeasurement: &measurement,
@@ -65,7 +137,8 @@ enum ResonantMonoVoice {
             velocity: velocity,
             gate: .retrigger,
             assignment: assignment,
-            state: &state
+            state: &state,
+            modulationMeasurement: &noModulationMeasurement
         )
     }
 
@@ -75,6 +148,7 @@ enum ResonantMonoVoice {
         architectureMeasurement: inout [Float],
         pulseEchoSend: inout [Float],
         spatialReverbSend: inout [Float],
+        modulationMeasurement: inout [Float],
         noteRenderEvidence: inout [UpperNoteRenderEvidence],
         notes: [AlienVoiceNote],
         sampleRate: Double,
@@ -94,7 +168,7 @@ enum ResonantMonoVoice {
             let appliedGate: UpperNoteGate = note.gate == .slide && hadCompatibleContinuation
                 ? .slide : .retrigger
             let appliedStart = appliedGate == .slide ? state.frequency : note.frequency
-            let renderedFrames = renderEvent(
+            let result = renderEvent(
                 output: &output,
                 roleMeasurement: &measurement,
                 architectureMeasurement: &architectureMeasurement,
@@ -109,11 +183,15 @@ enum ResonantMonoVoice {
                 velocity: note.velocity,
                 gate: appliedGate,
                 assignment: note.instrument,
-                state: &state
+                state: &state,
+                modulationMeasurement: &modulationMeasurement
             )
             let requestedEnd = note.startFrame.addingReportingOverflow(note.durationFrames)
             let requestedGateEnd = requestedEnd.overflow ? Int.max : requestedEnd.partialValue
-            let appliedEnd = min(output.count, note.startFrame + renderedFrames)
+            let appliedEnd = min(
+                output.count,
+                note.startFrame + result.renderedFrameCount
+            )
             noteRenderEvidence.append(UpperNoteRenderEvidence(
                 role: note.role,
                 onsetFrame: note.startFrame,
@@ -131,7 +209,8 @@ enum ResonantMonoVoice {
                 appliedVelocity: min(1, max(0, note.velocity)),
                 velocitySpectralEnvelopeScale: 0.72 + min(1, max(0, note.velocity)) * 0.72,
                 velocityDecayScale: 0.86 + min(1, max(0, note.velocity)) * 0.22,
-                instrument: note.instrument
+                instrument: note.instrument,
+                resonantMonoModulation: result.modulation
             ))
         }
     }
@@ -152,15 +231,19 @@ enum ResonantMonoVoice {
         velocity: Double,
         gate: UpperNoteGate,
         assignment: InstrumentAssignment,
-        state: inout ResonantMonoState
-    ) -> Int {
+        state: inout ResonantMonoState,
+        modulationMeasurement: inout [Float]
+    ) -> (renderedFrameCount: Int,
+          modulation: ResonantMonoModulationEventRenderEvidence?) {
         guard sampleRate > 0, start >= 0, start < output.count,
               roleMeasurement.count == output.count,
               architectureMeasurement.count == output.count,
               pulseEchoSend.count == output.count,
-              spatialReverbSend.count == output.count else { return 0 }
+              spatialReverbSend.count == output.count,
+              modulationMeasurement.isEmpty ||
+                modulationMeasurement.count == output.count else { return (0, nil) }
         let frames = min(durationFrames, output.count - start)
-        guard frames > 0 else { return 0 }
+        guard frames > 0 else { return (0, nil) }
         state.prepare(patch: assignment.patch)
         let automation = assignment.automation
         let boundedVelocity = min(1, max(0, velocity))
@@ -190,6 +273,18 @@ enum ResonantMonoVoice {
         let targetFrequency = max(20, endFrequency)
         let glideSeconds = 0.004 + automation.motion * 0.075
         let glideCoefficient = 1 - exp(-1 / max(1, sampleRate * glideSeconds))
+        let modulationTreatment = ResonantMonoModulationContract.treatment(
+            for: assignment
+        )
+        let highPassCoefficient = exp(
+            -2 * .pi * ResonantMonoModulationContract.highPassHz / sampleRate
+        )
+        var modulatorPhase = 0.0
+        var firstHighPassInput = 0.0
+        var firstHighPassOutput = 0.0
+        var secondHighPassInput = 0.0
+        var secondHighPassOutput = 0.0
+        var appliedPeakIndex = 0.0
         var renderedCount = 0
         for index in 0..<frames {
             let age = Double(index) / sampleRate
@@ -211,8 +306,49 @@ enum ResonantMonoVoice {
                 increment: increment,
                 width: pulseWidth
             )
-            let source = sin(2 * .pi * state.subPhase) * sineWeight +
+            let legacySource = sin(2 * .pi * state.subPhase) * sineWeight +
                 saw * sawWeight + pulse * pulseWeight
+            let modulationDelta: Double
+            if let treatment = modulationTreatment {
+                modulatorPhase = wrap(
+                    modulatorPhase + increment * treatment.modulatorRatio
+                )
+                let progress = frames > 1
+                    ? Double(index) / Double(frames - 1) : 1
+                let aperture = index == 0 || index == frames - 1
+                    ? 0 : sin(.pi * progress)
+                let safePeak = min(
+                    treatment.requestedPeakIndex,
+                    ResonantMonoModulationContract.maximumSafePeakIndex(
+                        modulatorRatio: treatment.modulatorRatio,
+                        carrierHz: frequency,
+                        sampleRate: sampleRate
+                    )
+                )
+                let appliedIndex = max(0, safePeak * aperture)
+                appliedPeakIndex = max(appliedPeakIndex, appliedIndex)
+                let phaseOffset = appliedIndex * sin(2 * .pi * modulatorPhase) /
+                    (2 * .pi)
+                let modulatedCarrier = sin(2 * .pi * wrap(state.phase + phaseOffset))
+                let unmodulatedCarrier = sin(2 * .pi * state.phase)
+                let rawDelta = modulatedCarrier - unmodulatedCarrier
+                let firstHighPassed = rawDelta - firstHighPassInput +
+                    highPassCoefficient * firstHighPassOutput
+                firstHighPassInput = rawDelta
+                firstHighPassOutput = firstHighPassed
+                let secondHighPassed = firstHighPassed - secondHighPassInput +
+                    highPassCoefficient * secondHighPassOutput
+                secondHighPassInput = firstHighPassed
+                secondHighPassOutput = secondHighPassed
+                modulationDelta = secondHighPassed * aperture *
+                    treatment.operatorWeight
+                if !modulationMeasurement.isEmpty {
+                    modulationMeasurement[start + index] += Float(modulationDelta)
+                }
+            } else {
+                modulationDelta = 0
+            }
+            let source = legacySource + modulationDelta
             let accentLift = boundedVelocity * (0.42 + automation.motion * 0.42)
             let cutoff = min(
                 sampleRate * 0.16,
@@ -246,7 +382,16 @@ enum ResonantMonoVoice {
             }
             renderedCount += 1
         }
-        return renderedCount
+        let modulationEvidence = modulationTreatment.map {
+            ResonantMonoModulationEventRenderEvidence(
+                relation: $0.relation,
+                modulatorRatio: $0.modulatorRatio,
+                requestedPeakIndex: $0.requestedPeakIndex,
+                appliedPeakIndex: appliedPeakIndex,
+                renderedFrameCount: renderedCount
+            )
+        }
+        return (renderedCount, modulationEvidence)
     }
 
     private static func saturate(_ value: Double) -> Double {

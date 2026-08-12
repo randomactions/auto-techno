@@ -729,10 +729,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 10)
-        #expect(QualityQualificationContract.schemaVersion == 11)
+        #expect(vector.schemaVersion == 11)
+        #expect(QualityQualificationContract.schemaVersion == 12)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v11")
+                "autotechno-canonical-engine.v12")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -1088,7 +1088,9 @@ struct AutonomousCandidateEvaluationTests {
                 sampleHash: "0123456789abcdef",
                 peak: 0.20,
                 rms: 0.08,
-                finite: true
+                finite: true,
+                resonantMonoModulation:
+                    fixtureResonantMonoModulationRenderEvidence()
             )]
         )
         let vector = fixtureVector(
@@ -1115,7 +1117,7 @@ struct AutonomousCandidateEvaluationTests {
         let serialized = try #require(architectures.first)
         #expect(Set(serialized.keys) == Set([
             "architecture", "sourceAssignmentCount", "assignments", "eventCount",
-            "sampleHash", "peak", "rms", "finite",
+            "sampleHash", "peak", "rms", "finite", "resonantMonoModulation",
         ]))
         let serializedAssignments = try #require(
             serialized["assignments"] as? [[String: Any]]
@@ -1124,6 +1126,18 @@ struct AutonomousCandidateEvaluationTests {
         #expect(Set(serializedAssignment.keys) == Set([
             "use", "architecture", "patch", "color", "shape", "motion", "space",
             "effects",
+        ]))
+        let serializedModulation = try #require(
+            serialized["resonantMonoModulation"] as? [String: Any]
+        )
+        #expect(Set(serializedModulation.keys) == Set([
+            "sourceAssignmentCount", "eventCount", "orderedEventCount",
+            "metallicEventCount", "orderedModulatorRatio",
+            "metallicModulatorRatio", "maximumRequestedPeakIndex",
+            "minimumAppliedPeakIndex", "maximumAppliedPeakIndex",
+            "eventFingerprint", "operatorSampleHash", "operatorPeak",
+            "operatorRMS", "operatorCrestFactor", "lowBandEnergyRatio",
+            "bindingValid", "finite",
         ]))
 
         var forgedObject = object
@@ -1163,6 +1177,44 @@ struct AutonomousCandidateEvaluationTests {
             from: JSONSerialization.data(withJSONObject: excessiveObject)
         )
         #expect(!excessive.isComplete)
+
+        var lowLeakageObject = object
+        var lowLeakageBars = bars
+        var lowLeakageBar = lowLeakageBars[0]
+        var lowLeakageArchitectures = architectures
+        var lowLeakageArchitecture = lowLeakageArchitectures[0]
+        var lowLeakageModulation = serializedModulation
+        lowLeakageModulation["lowBandEnergyRatio"] = 0.9
+        lowLeakageArchitecture["resonantMonoModulation"] =
+            lowLeakageModulation
+        lowLeakageArchitectures[0] = lowLeakageArchitecture
+        lowLeakageBar["architectures"] = lowLeakageArchitectures
+        lowLeakageBars[0] = lowLeakageBar
+        lowLeakageObject["instruments"] = lowLeakageBars
+        let excessiveLowLeakage = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: lowLeakageObject)
+        )
+        #expect(!excessiveLowLeakage.isComplete)
+
+        var disconnectedObject = object
+        var disconnectedBars = bars
+        var disconnectedBar = disconnectedBars[0]
+        var disconnectedArchitectures = architectures
+        var disconnectedArchitecture = disconnectedArchitectures[0]
+        var disconnectedModulation = serializedModulation
+        disconnectedModulation["bindingValid"] = false
+        disconnectedArchitecture["resonantMonoModulation"] =
+            disconnectedModulation
+        disconnectedArchitectures[0] = disconnectedArchitecture
+        disconnectedBar["architectures"] = disconnectedArchitectures
+        disconnectedBars[0] = disconnectedBar
+        disconnectedObject["instruments"] = disconnectedBars
+        let disconnected = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: disconnectedObject)
+        )
+        #expect(!disconnected.isComplete)
 
         var misplacedObject = object
         var misplacedBars = bars
@@ -2823,7 +2875,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "b64d1a0005a427b7")
+                "e3ec1ab8459c16ab")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3441,8 +3493,35 @@ struct AutonomousCandidateEvaluationTests {
                 sampleHash: "0123456789abcdef",
                 peak: 0.20,
                 rms: 0.08,
-                finite: true
+                finite: true,
+                resonantMonoModulation:
+                    fixtureResonantMonoModulationRenderEvidence()
             )]
+        )
+    }
+
+    private func fixtureResonantMonoModulationRenderEvidence(
+        bindingValid: Bool = true,
+        lowBandEnergyRatio: Double = 0.12
+    ) -> ResonantMonoModulationRenderEvidence {
+        ResonantMonoModulationRenderEvidence(
+            sourceAssignmentCount: 1,
+            eventCount: 1,
+            orderedEventCount: 0,
+            metallicEventCount: 1,
+            orderedModulatorRatio: 0,
+            metallicModulatorRatio: 1.414_213_562_373_095_1,
+            maximumRequestedPeakIndex: 1.62,
+            minimumAppliedPeakIndex: 1.20,
+            maximumAppliedPeakIndex: 1.20,
+            eventFingerprint: "fedcba9876543210",
+            operatorSampleHash: "0123456789abcdef",
+            operatorPeak: 0.20,
+            operatorRMS: 0.08,
+            operatorCrestFactor: 2.5,
+            lowBandEnergyRatio: lowBandEnergyRatio,
+            bindingValid: bindingValid,
+            finite: true
         )
     }
 

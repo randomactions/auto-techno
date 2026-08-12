@@ -11,12 +11,13 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 11, candidate-vector schema 10, and
-canonical engine identity `autotechno-canonical-engine.v11`. It preserves
+candidate uses quality-contract schema 12, candidate-vector schema 11, and
+canonical engine identity `autotechno-canonical-engine.v12`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, score-owned instrument assignment, architecture-local dry-
-PCM, score-owned gated percussion texture, shared pulse-echo return-drive,
+PCM and acid-operator evidence, score-owned gated percussion texture,
+shared pulse-echo return-drive,
 score-owned upper-role timing, graph, and
 pre/post upper-timbre evidence
 for each retained attempt, then binds the selected attempt to finalized commit
@@ -47,6 +48,20 @@ records likewise bind every resolved ordinary-hat event to its neutral or
 same-onset open-hat-companion decay role, exact dry-sample identity, and bounded
 level, spectral, and tail consequence. They do not add events or promote a
 candidate while the evaluator is uncalibrated.
+
+The existing acid-thread and acid-sequence patches now carry durable ordered-
+hollow and metallic-tension spectral intentions. The current Resonant Mono
+renderer realizes them with one bounded two-operator dark-to-bright-to-dark
+aperture while protected-foundation and non-acid patches remain on the exact
+neutral operator path. Same-pass evidence binds patch assignments and event
+counts to ordered/metallic ratios, requested and applied index bounds, an exact
+event fingerprint, the operator-tap hash, peak/RMS/crest, low-band energy ratio,
+and finiteness. Those semantics and evidence ownership are the long-lived
+contract; the present ratios, index mapping, anti-alias budget, high-pass
+treatment, and operator blend are implementation v1. A future oversampled,
+higher-order, or differently band-limited DSP may replace them only under a new
+engine/schema identity while preserving deterministic score ownership, neutral
+fallback, protected low end, and truthful consequence evidence.
 
 Kick-syntax evidence retains one compact record for every bar. It binds the
 resolved grounded/withheld/recovery role, score and rendered kick count/mask,
@@ -231,8 +246,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 11, candidate-vector schema 10, and canonical engine
-v11, the versioned transaction implements the bounded evidence and atomic commit
+Under quality-contract schema 12, candidate-vector schema 11, and canonical engine
+v12, the versioned transaction implements the bounded evidence and atomic commit
 foundation for this loop. It can retain at most the primary, alternate, and
 conservative-fallback candidates, plus one
 home-timbre correction, with no more than four render passes total. Every attempt

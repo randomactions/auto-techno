@@ -718,3 +718,53 @@ not include matched-loudness listening, exact-build app playback, physical
 route/interruption smoke, representative latency/peak-memory measurement, or
 hardware-output soak. It makes no shipping professional-quality or release-
 readiness promotion.
+
+## Score-owned Resonant Mono spectral relation — 2026-08-12
+
+This source candidate is based on score-owned gated-percussion mainline commit
+`6276c1514acf27c58e976fefb39ad5329b93f299`. It gives the existing Resonant
+Mono acid patches one durable spectral relation: `acidThread` requests an
+ordered-hollow operator relation and `acidSequence` requests metallic tension.
+The renderer applies one bounded dark-to-bright-to-dark phase-modulation delta
+inside the existing notes. It adds no sequencer, note, transport state, graph,
+plug-in dependency, user control, or callback work; non-acid and protected
+foundation assignments retain the exact zero-operator path.
+
+Same-pass evidence binds every acid assignment and rendered event to its
+relation, ratio, requested/applied peak index, event fingerprint, exact operator
+hash, peak/RMS/crest, low-band ratio, and finite/binding facts. Candidate-vector
+schema 11, quality-contract schema 12, and canonical engine v12 identify the
+wire-format and PCM change. Typed plan-fingerprint domain v7 is unchanged
+because the resolved score shape is unchanged. Shipping policy remains
+`uncalibrated.v1` and selection evidence is unchanged.
+
+Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+matched SDKs, isolated caches, serial SwiftPM, and workflow process boundaries:
+
+- core and evidence, preparation preflight, protected routing, and split
+  upper/prepared-product groups passed 166/166 tests;
+- the focused physical operator contract passed at 8, 44.1, 48, and 192 kHz;
+- the optimized `AutoTechno` product build passed;
+- the first representative qualification rejected the stronger provisional
+  `0.20`/`0.26` blend. All 14 new engine-v12 observations and all ten new
+  adversarial cases were internally valid, but the frozen engine-v10 policy
+  rejected establishment-to-long-continuation RMS-trajectory peak deltas of
+  `-0.7283363585980993` at 44.1 kHz and `0.27771743820419914` at 48 kHz against
+  its required `0.7080972110974386...6.921980443312073` interval;
+- after reducing only the renderer-owned operator blend to `0.05`/`0.065`, the
+  complete two-rate rerun accepted all 14 observations under the unchanged
+  frozen policy. The regenerated engine-v12 profile fingerprint was
+  `374bf5cdfe333f89`, all ten adversarial attacks were rejected under suite
+  fingerprint `665feb5625ad608f`, and the exact test passed in 3,043.276 seconds;
+- `git diff --check` was clean before publication.
+
+The durable concept and provisional realization are deliberately separate.
+Later serious DSP may replace the exact ratio table, index mapping, anti-alias
+strategy, high-pass topology, wet blend, operator count, envelope, nonlinear
+feedback, or stereo realization, but it must preserve the score-owned semantic
+relation, neutral protected fallback, deterministic replay, truthful replacement
+evidence, and explicit version advancement. This snapshot does not include
+matched-loudness listening, exact-build app playback, physical route or
+interruption smoke, representative latency/peak-memory measurement, or hardware
+output soak. It makes no shipping professional-quality or release-readiness
+promotion.

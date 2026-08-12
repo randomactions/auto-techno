@@ -56,6 +56,15 @@ package enum InstrumentPatch: String, CaseIterable, Sendable {
     }
 }
 
+/// Durable musical meaning for the two-operator color available to the
+/// existing acid patches. The renderer owns the current oscillator math; this
+/// enum preserves the score intention if that DSP is later replaced by a
+/// higher-order, oversampled, or otherwise more capable implementation.
+package enum ResonantMonoSpectralRelation: String, CaseIterable, Sendable {
+    case orderedHollow
+    case metallicTension
+}
+
 /// Effect stages an assignment is allowed to reach in the existing canonical
 /// signal path. The list describes routing truth, not a second graph planner.
 package enum InstrumentEffect: String, CaseIterable, Sendable {
@@ -146,6 +155,17 @@ package struct InstrumentAssignment: Equatable, Sendable {
             return false
         }
         return use != .foundationBass || automation.space == 0
+    }
+
+    /// Acid spectral intent is derived from the canonical patch assignment,
+    /// so it introduces no second selector or disconnected automation value.
+    package var resonantMonoSpectralRelation: ResonantMonoSpectralRelation? {
+        switch patch {
+        case .acidThread: .orderedHollow
+        case .acidSequence: .metallicTension
+        case .bassPulse, .bassPluck, .northStar, .darkChord, .glassRunner,
+             .alienNoise, .metalVeil, .dustCloud: nil
+        }
     }
 }
 

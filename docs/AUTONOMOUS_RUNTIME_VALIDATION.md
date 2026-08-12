@@ -55,7 +55,7 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 11, candidate-vector schema 10, and canonical engine v11
+Quality-contract schema 12, candidate-vector schema 11, and canonical engine v12
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, event-local groove-pulse, ordinary
@@ -80,7 +80,17 @@ compatible canonical effect set, and retain a deterministic hash plus finite
 level evidence for the exact dry architecture-local PCM. Empty architecture
 records, unsupported role/patch/effect combinations, truncated assignments,
 out-of-range automation, or score/render ownership mismatches make the vector
-incomplete. The transaction binds all
+incomplete. Acid-thread and acid-sequence assignments must additionally retain
+one complete bounded Resonant Mono modulation record. It must match every acid
+assignment and rendered event to its ordered-hollow or metallic-tension
+relation, exact current ratio, requested/applied index bounds, deterministic
+event and operator hashes, positive finite operator peak/RMS/crest, and bounded
+low-band energy. A non-acid architecture may not carry that record; the
+protected foundation must retain exact neutral operator evidence and PCM.
+Cross-rate tests must cover the minimum and maximum supported routes, exact-zero
+event endpoints, deterministic replay, live canonical-session reachability,
+and a complete selected primary transaction. Current numeric DSP values are a
+versioned realization, not permanent musical targets. The transaction binds all
 candidate-plan fingerprints, the
 engine/policy/evaluator versions, the selected attempt, correction count, route
 generation, incoming continuation, and the pre-decision outgoing render/DSP

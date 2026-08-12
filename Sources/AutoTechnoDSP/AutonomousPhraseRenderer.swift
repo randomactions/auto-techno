@@ -207,6 +207,8 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
     package let velocitySpectralEnvelopeScale: Double
     package let velocityDecayScale: Double
     package let instrument: InstrumentAssignment
+    package let resonantMonoModulation:
+        ResonantMonoModulationEventRenderEvidence?
 
     package init(
         role: SynthRole,
@@ -225,7 +227,9 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         appliedVelocity: Double,
         velocitySpectralEnvelopeScale: Double,
         velocityDecayScale: Double,
-        instrument: InstrumentAssignment
+        instrument: InstrumentAssignment,
+        resonantMonoModulation:
+            ResonantMonoModulationEventRenderEvidence? = nil
     ) {
         self.role = role
         self.onsetFrame = max(0, onsetFrame)
@@ -244,6 +248,7 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         self.velocitySpectralEnvelopeScale = velocitySpectralEnvelopeScale
         self.velocityDecayScale = velocityDecayScale
         self.instrument = instrument
+        self.resonantMonoModulation = resonantMonoModulation
     }
 }
 
@@ -455,6 +460,26 @@ package struct ClosedHatRenderEvidence: Equatable, Sendable {
 /// Bounded, architecture-local evidence from exact dry samples produced during
 /// detached preparation. It proves that selected patches reached PCM without
 /// retaining reconstructable audio in the scheduled block.
+package struct ResonantMonoModulationRenderEvidence: Equatable, Sendable {
+    package let sourceAssignmentCount: Int
+    package let eventCount: Int
+    package let orderedEventCount: Int
+    package let metallicEventCount: Int
+    package let orderedModulatorRatio: Double
+    package let metallicModulatorRatio: Double
+    package let maximumRequestedPeakIndex: Double
+    package let minimumAppliedPeakIndex: Double
+    package let maximumAppliedPeakIndex: Double
+    package let eventFingerprint: String
+    package let operatorSampleHash: String
+    package let operatorPeak: Double
+    package let operatorRMS: Double
+    package let operatorCrestFactor: Double
+    package let lowBandEnergyRatio: Double
+    package let bindingValid: Bool
+    package let finite: Bool
+}
+
 package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
     package let architecture: InstrumentArchitecture
     package let assignments: [InstrumentAssignment]
@@ -466,6 +491,35 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
     package let peak: Float
     package let rms: Float
     package let finite: Bool
+    package let resonantMonoModulation:
+        ResonantMonoModulationRenderEvidence?
+
+    package init(
+        architecture: InstrumentArchitecture,
+        assignments: [InstrumentAssignment],
+        patches: [InstrumentPatch],
+        uses: [InstrumentUse],
+        effects: [InstrumentEffect],
+        eventCount: Int,
+        sampleHash: String,
+        peak: Float,
+        rms: Float,
+        finite: Bool,
+        resonantMonoModulation:
+            ResonantMonoModulationRenderEvidence? = nil
+    ) {
+        self.architecture = architecture
+        self.assignments = assignments
+        self.patches = patches
+        self.uses = uses
+        self.effects = effects
+        self.eventCount = eventCount
+        self.sampleHash = sampleHash
+        self.peak = peak
+        self.rms = rms
+        self.finite = finite
+        self.resonantMonoModulation = resonantMonoModulation
+    }
 }
 
 /// Same-pass evidence for the bounded score-owned percussion input gate,
@@ -871,6 +925,7 @@ struct RenderBuffers {
     var shadowTimingStem: [Float] = []
     var responseTimingStem: [Float] = []
     var resonantMonoInstrumentStem: [Float] = []
+    var resonantMonoModulationStem: [Float] = []
     var tonalMotionInstrumentStem: [Float] = []
     var spectralTextureInstrumentStem: [Float] = []
     var maskingFoundation: [Float] = []
@@ -892,11 +947,13 @@ struct RenderBuffers {
             reset(&detunedCompanionStem, frameCount: frameCount)
             reset(&shadowTimingStem, frameCount: frameCount)
             reset(&responseTimingStem, frameCount: frameCount)
+            reset(&resonantMonoModulationStem, frameCount: frameCount)
         } else {
             resonantAnchorStem.removeAll(keepingCapacity: false)
             detunedCompanionStem.removeAll(keepingCapacity: false)
             shadowTimingStem.removeAll(keepingCapacity: false)
             responseTimingStem.removeAll(keepingCapacity: false)
+            resonantMonoModulationStem.removeAll(keepingCapacity: false)
         }
         reset(&resonantMonoInstrumentStem, frameCount: frameCount)
         reset(&tonalMotionInstrumentStem, frameCount: frameCount)

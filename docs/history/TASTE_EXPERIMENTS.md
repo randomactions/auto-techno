@@ -496,3 +496,108 @@ passed both the frozen engine-v10 development policy and a newly generated
 ten-case adversarial suite. A post-review decoded-`Int.max` step and out-of-domain
 step-mask regression also passed. Publication, remote exact-head CI, listening,
 app/route validation, and hardware soak remain separate gates.
+
+## Video-derived FM acid spectral-relation study — 2026-08-12
+
+Observation source: Underdog Electronic Music School's
+[“An intro to FM acid (like Daniel Avery & Kris Wadsworth)”](https://www.youtube.com/watch?v=uYVsS_X17bM)
+(uploaded 2023-08-28, duration `11:52`, accessed 2026-08-12). The bounded
+source capture used unauthenticated `yt-dlp` without an account, cookies, or
+browser state:
+
+```sh
+yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source15-research -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=uYVsS_X17bM'
+```
+
+No manual subtitle track was available. The automatic English `en` and
+`en-orig` VTTs were byte-identical, each with SHA-256
+`cb5e5d874273c57638f677e53b9c4f28ecbceed0dba3cc2bbeff0e40ccb1c112`.
+The metadata and comment artifact had SHA-256
+`cb4afe734598916cd2ddd036662bd856170eb3007fdcd09f04116914f6c9955f`.
+Bounded demonstration audio and local spectrograms were inspected only to
+separate the envelope and ratio examples; media, images, comments, captions,
+and derived inspection files remain temporary and untracked. Automatic-caption
+wording and exact numeric claims remain uncertain, and no subjective listening
+or production-quality claim is made.
+
+The bounded transcript paraphrase is: `2:31...3:25` introduces a sine carrier
+whose second oscillator increases partial density as modulation amount rises,
+creating a dark-to-bright-to-dark spectral gesture without requiring a filter
+move; `3:37...4:00` contrasts ordered frequency relationships with increasingly
+metallic or dissonant off-ratio colour; `4:46...5:10` shapes that brightness
+gesture with a pluck-like envelope; `5:31...6:42` applies the modulation envelope
+to a two-oscillator acid voice and cautions against excessive brightness;
+`7:02...8:00` compares hollow ordered and metallic off-ratio outcomes; and
+`9:42...10:27` varies the existing note pattern while retaining the same sound
+relationship. Exact workstation routing, device names, note patterns, and knob
+positions are tutorial context, not engine requirements.
+
+The capture returned exactly 50 top-ranked top-level comments and twelve
+replies. The protocol's bounded reply fetch left one thread without its complete
+reply context. There was no three-independent-comment convergence on an exact
+ratio, modulation amount, envelope, or production target. One technically
+relevant reaction cautioned that the result could accumulate low-frequency mud;
+it is retained only as a risk hypothesis, not as a numeric rule. Praise, named
+tracks and artists, device requests, and repeated replies were excluded. No
+usernames or verbatim comment text are retained.
+
+Repository reconciliation rejected a second sequencer, a new synth engine,
+literal tutorial patch settings, a user-facing FM control, and any DAW or plug-in
+dependency. The canonical palette already assigned `acidThread` and
+`acidSequence` to Resonant Mono, but their renderer remained subtractive-only.
+The missing reusable capability was therefore a score-owned spectral relation
+inside that existing voice, with explicit evidence and exact neutral behavior
+for the protected foundation.
+
+Implemented clean-room translation: `acidThread` now expresses durable
+`orderedHollow` intent and `acidSequence` expresses durable `metallicTension`
+intent. The current renderer realizes those two semantics with one local
+two-operator phase-modulation delta, respectively using an ordered `2:1` ratio
+or an off-ratio square-root-of-two relationship. Existing bounded color and
+motion automation derive the requested peak index. A literal-zero-endpoint sine
+aperture opens and closes the index within each existing note, so no onset,
+pitch, duration, density, transport, graph, continuation state, or user control
+is added. A conservative four-sideband budget caps the applied index against
+route rate and carrier frequency; two local 120 Hz high-pass stages constrain
+the modulation delta before it joins the existing subtractive source. Non-acid
+patches and both protected foundation patches take the exact zero-operator path.
+
+Detached full rendering uses one pooled operator-measurement buffer and retains
+only reduced evidence: acid assignment and event counts, ordered/metallic event
+counts and ratios, requested/applied index extrema, a deterministic event
+fingerprint, exact operator-tap hash, peak/RMS/crest, low-band energy ratio,
+binding validity, and finiteness. Candidate-vector schema 11, quality-contract
+schema 12, and canonical engine `autotechno-canonical-engine.v12` identify this
+implementation. The typed plan-fingerprint domain remains v7 because the
+resolved score shape did not change. Shipping selection remains
+`uncalibrated.v1`; physical operator metrics can reject broken provenance but
+cannot rank or promote the sound.
+
+The future-maturation boundary is explicit. Durable concepts are the existing
+patch ownership, ordered-hollow versus metallic-tension intention, bounded
+dark-to-bright-to-dark gesture, neutral foundation fallback, deterministic
+continuation, and same-pass evidence owner. Provisional implementation v1 is
+the exact `2.0`/square-root-of-two ratio table, automation-to-index formula,
+four-sideband cap, 120 Hz two-stage high-pass, `0.05`/`0.065` blend, and local
+operator phase. A serious later DSP may introduce oversampling, higher-order or
+multi-operator structures, improved anti-aliasing, richer envelopes, nonlinear
+feedback, stereo-safe upper harmonics, or perceptually calibrated low-band and
+crest bounds. It must preserve the durable score semantics and fallback, remain
+off the real-time callback, emit truthful replacement evidence, and advance the
+engine/schema identity before qualification.
+
+Validation proved the ordered and metallic relations at 8, 44.1, 48, and
+192 kHz; exact-zero event endpoints; finite, distinct PCM; neutral non-acid
+operator taps; canonical-session reachability; deterministic render replay;
+complete reduced bar evidence; compact JSON/fingerprint/tamper rejection; and
+one real selected-primary prepared transaction. The complete 166-test local
+workflow matrix and optimized release build passed. The first two-rate offline
+qualification correctly rejected the provisional `0.20`/`0.26` blend because
+the establishment-to-long-continuation RMS-trajectory peak delta fell outside
+the frozen engine-v10 relationship at both rates. The renderer-owned blend was
+reduced without changing the score semantics or requested operator relation.
+The exact 44.1/48 kHz rerun then accepted all 14 observations under the frozen
+profile, generated complete engine-v12 profile fingerprint
+`374bf5cdfe333f89`, and rejected all ten adversarial cases under suite
+fingerprint `665feb5625ad608f` in 3,043.276 seconds. Publication, exact-head CI,
+listening, app/route validation, and hardware soak remain separate gates.

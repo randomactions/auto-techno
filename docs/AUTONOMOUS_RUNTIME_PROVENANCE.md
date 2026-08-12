@@ -24,9 +24,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 11, candidate-
-   vector schema 10, and canonical engine identity
-   `autotechno-canonical-engine.v11`. Each
+   candidate-evaluation transaction under quality-contract schema 12, candidate-
+   vector schema 11, and canonical engine identity
+   `autotechno-canonical-engine.v12`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax,
    event-local groove-pulse,
@@ -35,7 +35,11 @@ mistaken for a completed feedback system.
    score-owned upper-role timing, graph, and pre/post upper-timbre evidence.
    Instrument records bind each resolved architecture, patch, use, automation,
    and compatible effect set to exact architecture-local dry-PCM identity,
-   peak, RMS, and event count. Closed-hat records bind every ordinary hat to
+   peak, RMS, and event count. Acid assignments additionally bind their durable
+   ordered-hollow or metallic-tension relation to same-pass operator-event
+   counts, current ratio/index realization, event and operator hashes,
+   peak/RMS/crest, low-band energy ratio, and finiteness. Closed-hat records
+   bind every ordinary hat to
    its score-owned neutral or companion decay role and exact dry-sample
    consequence. Groove-pulse records bind the existing resolved onset to
    score-owned strike zone, damping, deterministic microvariation, exact
@@ -91,7 +95,15 @@ mistaken for a completed feedback system.
    Motion, and
    Spectral Texture remain specialized voices inside this one renderer; they
    are not alternative runtimes or user-selectable instruments. The planner
-   also consumes the resolved performance character and foundation behavior.
+   maps the existing acid-thread and acid-sequence patches to ordered-hollow
+   and metallic-tension spectral intentions. Resonant Mono currently realizes
+   those intentions as a bounded two-operator, dark-to-bright-to-dark aperture
+   with a renderer-owned anti-alias budget and low-band-protected modulation
+   delta. Non-acid and protected-foundation assignments retain the neutral
+   operator path. The semantic relation is durable; current oscillator ratios,
+   index curve, high-pass treatment, and blend are replaceable DSP details that
+   require a new versioned evidence contract when changed. The planner also
+   consumes the resolved performance character and foundation behavior.
    Sub Pulse, Monotone, Point, and Pump become distinct bounded Resonant Mono
    assignments, while Kick Tail, Tuned Percussive, and Absent reuse the existing
    rumble, tuned-tom, or empty companion. Upper characters select compatible

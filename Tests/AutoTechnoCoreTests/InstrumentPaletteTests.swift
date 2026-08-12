@@ -195,6 +195,76 @@ struct InstrumentPaletteTests {
         }
     }
 
+    @Test("Acid patches apply bounded ordered and metallic operator relations")
+    func resonantMonoAcidRelations() {
+        let automation = InstrumentAutomation(
+            color: 0.64, shape: 0.56, motion: 0.74, space: 0.16
+        )
+        let ordered = assignment(
+            patch: .acidThread,
+            use: .shadow,
+            automation: automation
+        )
+        let metallic = assignment(
+            patch: .acidSequence,
+            use: .motif,
+            automation: automation
+        )
+        #expect(ordered.resonantMonoSpectralRelation == .orderedHollow)
+        #expect(metallic.resonantMonoSpectralRelation == .metallicTension)
+
+        for sampleRate in [8_000.0, 44_100.0, 48_000.0, 192_000.0] {
+            let orderedRender = render(
+                assignment: ordered,
+                role: .shadow,
+                sampleRate: sampleRate
+            )
+            let metallicRender = render(
+                assignment: metallic,
+                role: .anchor,
+                sampleRate: sampleRate
+            )
+            let orderedEvidence = orderedRender.evidence.first?
+                .resonantMonoModulation
+            let metallicEvidence = metallicRender.evidence.first?
+                .resonantMonoModulation
+            #expect(orderedEvidence?.relation == .orderedHollow)
+            #expect(orderedEvidence?.modulatorRatio == 2.0)
+            #expect(metallicEvidence?.relation == .metallicTension)
+            #expect(metallicEvidence?.modulatorRatio ==
+                    1.414_213_562_373_095_1)
+            #expect((orderedEvidence?.appliedPeakIndex ?? 0) > 0)
+            #expect((metallicEvidence?.appliedPeakIndex ?? 0) > 0)
+            #expect((orderedEvidence?.appliedPeakIndex ?? .infinity) <=
+                    (orderedEvidence?.requestedPeakIndex ?? 0))
+            #expect((metallicEvidence?.appliedPeakIndex ?? .infinity) <=
+                    (metallicEvidence?.requestedPeakIndex ?? 0))
+            #expect(orderedRender.modulation.first?.bitPattern == 0)
+            #expect(orderedRender.modulation.last?.bitPattern == 0)
+            #expect(metallicRender.modulation.first?.bitPattern == 0)
+            #expect(metallicRender.modulation.last?.bitPattern == 0)
+            #expect(orderedRender.modulation.contains { $0 != 0 })
+            #expect(metallicRender.modulation.contains { $0 != 0 })
+            #expect(orderedRender.samples != metallicRender.samples)
+            #expect(orderedRender.samples.allSatisfy { $0.isFinite })
+            #expect(metallicRender.samples.allSatisfy { $0.isFinite })
+        }
+
+        for patch in [InstrumentPatch.bassPulse, .bassPluck] {
+            let foundation = assignment(
+                patch: patch,
+                use: .foundationBass,
+                automation: .neutral
+            )
+            #expect(foundation.resonantMonoSpectralRelation == nil)
+            let rendered = render(assignment: foundation, role: .anchor)
+            #expect(rendered.evidence.count == 1)
+            #expect(rendered.evidence[0].resonantMonoModulation == nil)
+            #expect(rendered.modulation.allSatisfy { $0.bitPattern == 0 })
+            #expect(rendered.samples.contains { $0 != 0 })
+        }
+    }
+
     @Test("A tonal tail retains its resolved patch automation across a silent bar")
     func tonalTailContinuation() {
         let active = assignment(
@@ -382,6 +452,14 @@ struct InstrumentPaletteTests {
                 #expect(architecture.eventCount >= architecture.assignments.count)
                 #expect(architecture.assignments.allSatisfy { $0.isValid })
                 #expect(architecture.sampleHash.count == 16)
+                if let modulation = architecture.resonantMonoModulation {
+                    #expect(architecture.architecture == .resonantMono)
+                    #expect(modulation.bindingValid)
+                    #expect(modulation.operatorPeak > 0)
+                    #expect(modulation.operatorRMS > 0)
+                    #expect(modulation.lowBandEnergyRatio <=
+                            ResonantMonoModulationContract.maximumLowBandEnergyRatio)
+                }
             }
             for renderedNote in block.upperNoteRenderEvidence {
                 #expect(evidence.contains { architecture in
@@ -407,6 +485,171 @@ struct InstrumentPaletteTests {
         #expect(graphState == replayGraphState)
     }
 
+    @Test("The canonical journey reaches acid relations with truthful operator evidence")
+    func canonicalAcidRelationEvidence() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var session = director.initialState()
+        var selectedPlan: AutonomousPhrasePlan?
+        var plannedRelations = Set<String>()
+        for _ in 0..<64 {
+            let plan = director.candidates(from: session).primary
+            let synth = SynthPerformancePlan(
+                scene: plan.scene,
+                dna: plan.dna,
+                kind: plan.kind,
+                resolvedBars: plan.resolvedBars,
+                conservative: plan.conservative
+            )
+            let relations = Set(synth.bars.flatMap(\.upperNotes).compactMap {
+                $0.instrument.resonantMonoSpectralRelation?.rawValue
+            })
+            if !relations.isEmpty {
+                selectedPlan = plan
+                plannedRelations = relations
+                break
+            }
+            session.advance(using: plan)
+        }
+        guard let plan = selectedPlan else {
+            Issue.record("Expected the canonical session to schedule an acid relation")
+            return
+        }
+
+        let graph = DSPGraphGenerator.safePlan(sessionSeed: session.rootSeed)
+        var renderState = RenderState()
+        var graphState = GeneratedDSPContinuationState()
+        let blocks = AutonomousPhraseRenderer.render(
+            plan: plan,
+            graph: graph,
+            sampleRate: 8_000,
+            state: &renderState,
+            graphState: &graphState
+        )
+        var observedRelations = Set<String>()
+        var sawCompleteReducedBar = false
+        for block in blocks {
+            let reduced = AutonomousInstrumentBarEvidence(
+                bar: block.bar,
+                evidence: block.instrumentRenderEvidence
+            )
+            #expect(reduced.isComplete)
+            #expect(reduced.isFinite)
+            for architecture in block.instrumentRenderEvidence {
+                guard let modulation = architecture.resonantMonoModulation else {
+                    continue
+                }
+                sawCompleteReducedBar = true
+                #expect(architecture.architecture == .resonantMono)
+                #expect(modulation.bindingValid)
+                #expect(modulation.finite)
+                #expect(modulation.operatorPeak > 0)
+                #expect(modulation.operatorRMS > 0)
+                #expect(modulation.operatorCrestFactor ==
+                        modulation.operatorPeak / modulation.operatorRMS)
+                #expect(modulation.lowBandEnergyRatio <=
+                        ResonantMonoModulationContract.maximumLowBandEnergyRatio)
+                if modulation.orderedEventCount > 0 {
+                    observedRelations.insert(
+                        ResonantMonoSpectralRelation.orderedHollow.rawValue
+                    )
+                }
+                if modulation.metallicEventCount > 0 {
+                    observedRelations.insert(
+                        ResonantMonoSpectralRelation.metallicTension.rawValue
+                    )
+                }
+            }
+        }
+        #expect(sawCompleteReducedBar)
+        #expect(observedRelations == plannedRelations)
+
+        var replayRenderState = RenderState()
+        var replayGraphState = GeneratedDSPContinuationState()
+        let replay = AutonomousPhraseRenderer.render(
+            plan: plan,
+            graph: graph,
+            sampleRate: 8_000,
+            state: &replayRenderState,
+            graphState: &replayGraphState
+        )
+        #expect(blocks.map(\.instrumentRenderEvidence) ==
+                replay.map(\.instrumentRenderEvidence))
+        #expect(renderState == replayRenderState)
+        #expect(graphState == replayGraphState)
+    }
+
+    @Test("Prepared evidence binds the selected acid score to its operator consequence")
+    func preparedAcidRelationEvidence() throws {
+        let fixture = try #require(activeAcidPrimaryFixture())
+        var incomingRenderState = RenderState()
+        incomingRenderState.barIndex = fixture.state.memory.totalBars
+        let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            candidates: fixture.candidates,
+            sessionSeed: fixture.state.rootSeed,
+            memory: fixture.state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: incomingRenderState,
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            incomingQualityState: fixture.state.quality,
+            cancellationRequested: { false }
+        )
+        let prepared = try #require(preparedResult)
+
+        #expect(prepared.candidateEvaluation.isComplete)
+        #expect(prepared.candidateEvaluation.selectedSlot == .primary)
+        #expect(prepared.selectedCandidateEvidence.slot == .primary)
+        #expect(prepared.selectedCandidateEvidence.isComplete)
+        #expect(!prepared.usedAlternate)
+        #expect(!prepared.usedFallback)
+        #expect(prepared.commitEligible)
+
+        let evidence = prepared.selectedCandidateEvidence
+        #expect(evidence.sourceInstrumentBarCount ==
+                fixture.candidates.primary.resolvedBars.count)
+        #expect(evidence.instruments.count == evidence.sourceInstrumentBarCount)
+        let acidArchitectures = evidence.instruments.flatMap(\.architectures).filter {
+            $0.resonantMonoModulation != nil
+        }
+        #expect(!acidArchitectures.isEmpty)
+        #expect(acidArchitectures.allSatisfy { architecture in
+            guard architecture.architecture ==
+                    InstrumentArchitecture.resonantMono.rawValue,
+                  let modulation = architecture.resonantMonoModulation else {
+                return false
+            }
+            return architecture.isComplete && modulation.isComplete(
+                assignments: architecture.assignments,
+                architectureEventCount: architecture.eventCount
+            )
+        })
+    }
+
+    private func activeAcidPrimaryFixture() -> (
+        state: AutonomousSessionState,
+        candidates: AutonomousPhraseCandidates
+    )? {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var state = director.initialState()
+        for _ in 0..<64 {
+            let candidates = director.candidates(from: state)
+            let synth = SynthPerformancePlan(
+                scene: candidates.primary.scene,
+                dna: candidates.primary.dna,
+                kind: candidates.primary.kind,
+                resolvedBars: candidates.primary.resolvedBars,
+                conservative: candidates.primary.conservative
+            )
+            if synth.bars.flatMap(\.upperNotes).contains(where: {
+                $0.instrument.resonantMonoSpectralRelation != nil
+            }) {
+                return (state, candidates)
+            }
+            state.advance(using: candidates.primary)
+        }
+        return nil
+    }
+
     private func assignment(
         patch: InstrumentPatch,
         use: InstrumentUse,
@@ -423,12 +666,17 @@ struct InstrumentPaletteTests {
 
     private func render(
         assignment: InstrumentAssignment,
-        role: SynthRole
-    ) -> (samples: [Float], evidence: [UpperNoteRenderEvidence]) {
-        let sampleRate = 16_000.0
-        var output = [Float](repeating: 0, count: 3_200)
+        role: SynthRole,
+        sampleRate: Double = 16_000.0
+    ) -> (samples: [Float], evidence: [UpperNoteRenderEvidence],
+          modulation: [Float]) {
+        var output = [Float](
+            repeating: 0,
+            count: max(3_200, Int((sampleRate * 0.2).rounded()))
+        )
         var roleMeasurement = [Float](repeating: 0, count: output.count)
         var architectureMeasurement = [Float](repeating: 0, count: output.count)
+        var modulationMeasurement = [Float](repeating: 0, count: output.count)
         var pulseEcho = [Float](repeating: 0, count: output.count)
         var reverb = [Float](repeating: 0, count: output.count)
         var evidence: [UpperNoteRenderEvidence] = []
@@ -457,6 +705,7 @@ struct InstrumentPaletteTests {
                 architectureMeasurement: &architectureMeasurement,
                 pulseEchoSend: &pulseEcho,
                 spatialReverbSend: &reverb,
+                modulationMeasurement: &modulationMeasurement,
                 noteRenderEvidence: &evidence,
                 notes: [note],
                 sampleRate: sampleRate,
@@ -497,7 +746,7 @@ struct InstrumentPaletteTests {
         }
         #expect(output == roleMeasurement)
         #expect(output == architectureMeasurement)
-        return (output, evidence)
+        return (output, evidence, modulationMeasurement)
     }
 
     private func fixtureWorld(seed: UInt64) -> SynthWorldDNA {
