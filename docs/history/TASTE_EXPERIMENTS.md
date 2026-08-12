@@ -874,3 +874,78 @@ not run and no artifact was regenerated. No listening, exact-build app
 playback, physical route/interruption smoke, representative latency/peak-memory
 budget, hardware-output soak, or professional-quality promotion is claimed
 here. Exact-head remote CI remains a separate publication gate.
+
+## Source 19: foreground lead-performance timing — 2026-08-12
+
+Source ID `19` used YouTube video `WZVd_JQMNfY`, *Bring your stale sounds to
+life (in three steps)*, from Underdog Electronic Music School, published
+2023-03-06 with an 8:18 duration. The clean-room capture used unauthenticated
+`yt-dlp` with automatic English captions, metadata, top-ranked comments, and a
+temporary audio extraction:
+
+```sh
+yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source19-research.KHkADu -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=WZVd_JQMNfY'
+yt-dlp -f bestaudio -x --audio-format wav --audio-quality 0 --postprocessor-args 'ffmpeg:-ar 48000 -ac 2' -P /private/tmp/auto-techno-source19-research.KHkADu -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=WZVd_JQMNfY'
+```
+
+No manual subtitle track was available. The automatic English `en` and
+`en-orig` VTTs were byte-identical, each with SHA-256
+`2fe2c32ad068c8b0bf120a0adfc6a34a2fc85d68175997a3d19a07d71dbb24a7`.
+The metadata/comment artifact had SHA-256
+`bf53a49de11e16b0aa06f956e00d2f988289f2fa07d18b007b39eaea5415c49f`;
+the temporary 48 kHz stereo PCM capture had SHA-256
+`61848c94c524a915abe4c7020b33ab74c1b2d312ae3ad9632d540d088197eec9`.
+All media, captions, comments, and inspection files remain untracked. The
+capture returned exactly 50 top-ranked top-level comments and seven replies.
+No three independent technical comments converged on a portable numeric timing
+or DSP target, so community discussion supplied no coefficient.
+
+The bounded caption paraphrase is: `0:25...2:24` contrasts the stable electronic
+frame with recorded organic percussion; `2:24...5:08` recommends collaboration
+and external feedback; `5:08...6:44` demonstrates a grid-based electronic
+substructure complemented by one strongly played lead whose minor timing
+inconsistencies carry intention, with partial quantization available when the
+performance loses clarity; and `7:18...7:50` emphasizes intuition and jamming.
+Literal recordings, user samples, collaborators, accounts, external reference
+audio, and free-form human performance are outside the standalone autonomous
+runtime and were not imported.
+
+Repository reconciliation rejected another sequencer, random per-note jitter,
+a background humanization LFO, recorded samples, another instrument, and timing
+changes to drums or harmonic companions. The existing score and evidence already
+own a 16-bar shadow/response harmonic cascade. The genuinely missing capability
+was one mutually exclusive foreground relation: in a nonconservative melodic
+lock during the home interlock chapter, the first retriggered anchor remains
+exactly on-grid and later anchors alternate deterministic `0.018` and `0.036`
+sixteenth-step delays. At 130 BPM these are about 2.1 ms and 4.2 ms. Note count,
+base steps, pitch trajectory, gate duration, velocity, assignment, effects,
+companions, drums, density, transport, and all protected-role offsets remain
+unchanged. Conservative fallback and force-home correction are exact aligned.
+
+The existing upper-timing transaction was extended rather than duplicated.
+Its score/render/applied-gate fingerprints now also bind the timing relation and
+performance character; an exact compact anchor-offset-pattern fingerprint
+rejects arbitrary jitter; and the renderer supplies an isolated anchor dry hash,
+peak, RMS, event count, and actual onset/gate outcome. Candidate-vector schema
+14, quality-contract schema 15, canonical engine
+`autotechno-canonical-engine.v15`, and typed plan domain v9 identify the score,
+PCM, and wire-format change. Shipping selection remains `uncalibrated.v1`.
+
+The maturation boundary is recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). The durable
+concept is a performed foreground line against an exact electronic frame. The
+current two-tier rounded-frame delays are provisional. A serious later renderer
+may replace them with fractional-delay scheduling and a higher-resolution
+score-owned performance curve only after calibrated timing/attack evidence
+exposes a repeatable deficit. That work must replace this realization, preserve
+the relation, fallback, continuation, and evidence, and must not add free-running
+jitter or another timing owner.
+
+Focused validation before the final matrix proved natural canonical reachability,
+an actual complete prepared primary transaction, exact offset replay, active-
+versus-neutral anchor PCM change, companion/protected-rhythm identity, actual
+scheduled frame/gate binding at representative rates, JSON round-trip, forged
+pattern rejection, and unchanged uncalibrated selection evidence. Final matrix,
+release-build, publication, and exact-head CI results are recorded separately
+after completion; no listening, app/route smoke, hardware soak, or professional-
+quality promotion is claimed by this source pass.

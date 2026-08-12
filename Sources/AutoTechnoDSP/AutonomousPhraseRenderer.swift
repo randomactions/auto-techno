@@ -338,20 +338,29 @@ package struct UpperTimingRenderEvidence: Equatable, Sendable {
 
     package let bar: Int
     package let chapter: InterlockChapter
+    package let relation: UpperTimingRelation
+    package let performanceCharacter: PerformanceCharacter
     package let bpm: Double
     package let sampleRate: Double
     package let renderedFrameCount: Int
     package let events: [UpperTimingRenderEvent]
+    package let anchorSignal: UpperTimingRoleSignalEvidence
     package let shadowSignal: UpperTimingRoleSignalEvidence
     package let responseSignal: UpperTimingRoleSignalEvidence
 
-    package init(bar: Int, chapter: InterlockChapter, bpm: Double,
+    package init(bar: Int, chapter: InterlockChapter,
+                 relation: UpperTimingRelation,
+                 performanceCharacter: PerformanceCharacter,
+                 bpm: Double,
                  sampleRate: Double, renderedFrameCount: Int,
                  events: [UpperTimingRenderEvent],
+                 anchorSignal: UpperTimingRoleSignalEvidence,
                  shadowSignal: UpperTimingRoleSignalEvidence,
                  responseSignal: UpperTimingRoleSignalEvidence) {
         self.bar = bar
         self.chapter = chapter
+        self.relation = relation
+        self.performanceCharacter = performanceCharacter
         self.bpm = bpm
         self.sampleRate = sampleRate
         self.renderedFrameCount = max(0, renderedFrameCount)
@@ -376,6 +385,7 @@ package struct UpperTimingRenderEvidence: Equatable, Sendable {
             }
             return lhs.appliedGateEndFrame < rhs.appliedGateEndFrame
         }.prefix(Self.maximumEventCount))
+        self.anchorSignal = anchorSignal
         self.shadowSignal = shadowSignal
         self.responseSignal = responseSignal
     }

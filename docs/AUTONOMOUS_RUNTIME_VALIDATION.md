@@ -55,7 +55,7 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 14, candidate-vector schema 13, and canonical engine v14
+Quality-contract schema 15, candidate-vector schema 14, and canonical engine v15
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, event-local groove-pulse, ordinary

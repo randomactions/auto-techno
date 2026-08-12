@@ -150,6 +150,14 @@ package enum InterlockChapter: String, CaseIterable, Sendable {
     case memory
 }
 
+/// One canonical owner for deliberate upper-note placement. Relations describe
+/// musical intent; exact frame scheduling remains renderer-owned.
+package enum UpperTimingRelation: String, CaseIterable, Sendable {
+    case aligned
+    case harmonicCascade
+    case leadPerformance
+}
+
 package enum RelationalFollowerStage: Int, CaseIterable, Sendable {
     case anchor
     case inhale
@@ -388,6 +396,7 @@ package struct SynthPerformanceBar: Equatable, Sendable {
     package let foundationInstrument: InstrumentAssignment
     package let relationalSteps: [RelationalArticulation]
     package let upperNotes: [ResolvedUpperNote]
+    package let upperTimingRelation: UpperTimingRelation
     package let pulseEchoTextureArticulation: PulseEchoTextureArticulation
     /// Eligibility before an attempt-local home-timbre correction. The
     /// selected note carries the active relation; a correction retains this
@@ -403,6 +412,7 @@ package struct SynthPerformanceBar: Equatable, Sendable {
                 foundationInstrument: InstrumentAssignment = InstrumentPalette.safeFoundation(),
                 relationalSteps: [RelationalArticulation],
                 upperNotes: [ResolvedUpperNote],
+                upperTimingRelation: UpperTimingRelation = .aligned,
                 pulseEchoTextureArticulation: PulseEchoTextureArticulation = .neutral,
                 tonalEnvelopeExpansionEligible: Bool = false,
                 forceHomeUpperTimbre: Bool = false) {
@@ -414,6 +424,7 @@ package struct SynthPerformanceBar: Equatable, Sendable {
         self.relationalSteps = relationalSteps.count == 16
             ? relationalSteps : Array(repeating: .neutral, count: 16)
         self.upperNotes = upperNotes
+        self.upperTimingRelation = upperTimingRelation
         self.pulseEchoTextureArticulation = pulseEchoTextureArticulation
         self.tonalEnvelopeExpansionEligible = tonalEnvelopeExpansionEligible
         self.forceHomeUpperTimbre = forceHomeUpperTimbre
@@ -498,6 +509,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 ),
                 relationalSteps: relationalSteps,
                 upperNotes: upperNotes,
+                upperTimingRelation: upperResolution.timingRelation,
                 pulseEchoTextureArticulation: PulseEchoTextureArticulation(
                     machineTexture: scene.machineTexture,
                     enabled: pulseEchoTextureEnabled,
@@ -586,7 +598,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         conservative: Bool,
         forceHomeUpperTimbre: Bool,
         relationalSteps: [RelationalArticulation]
-    ) -> (notes: [ResolvedUpperNote], tonalEnvelopeExpansionEligible: Bool) {
+    ) -> (notes: [ResolvedUpperNote], tonalEnvelopeExpansionEligible: Bool,
+          timingRelation: UpperTimingRelation) {
         let performance = resolved.performance
         let assignmentConservative = conservative || forceHomeUpperTimbre
         func instrument(_ role: SynthRole) -> InstrumentAssignment {
@@ -815,7 +828,13 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         )
         let aperture = timingEnabled
             ? upperTimingAperture(absoluteBar: performance.bar) : 0
+        let leadPerformanceEnabled = !timingEnabled && variationEnabled &&
+            kind == .lock && resolved.interlockChapter == .home &&
+            resolved.performanceCharacter == .melodicGlow &&
+            notes.filter { $0.role == .anchor && $0.gate == .retrigger }.count >= 2
+        let timingRelation: UpperTimingRelation
         if aperture > 0 {
+            timingRelation = .harmonicCascade
             notes = notes.map { note in
                 note.withTimingOffsetInSteps(upperTimingOffsetInSteps(
                     for: note.role,
@@ -823,6 +842,21 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     enabled: timingEnabled
                 ))
             }
+        } else if leadPerformanceEnabled {
+            timingRelation = .leadPerformance
+            let orderedAnchorIndices = notes.indices.filter {
+                notes[$0].role == .anchor && notes[$0].gate == .retrigger
+            }.sorted { notes[$0].onsetStep < notes[$1].onsetStep }
+            for (performanceIndex, noteIndex) in orderedAnchorIndices.enumerated()
+                where performanceIndex > 0 {
+                notes[noteIndex] = notes[noteIndex].withTimingOffsetInSteps(
+                    leadPerformanceOffsetInSteps(
+                        performanceIndex: performanceIndex
+                    )
+                )
+            }
+        } else {
+            timingRelation = .aligned
         }
 
         return (notes.sorted {
@@ -830,7 +864,19 @@ package struct SynthPerformancePlan: Equatable, Sendable {
             let lhsRole = SynthRole.allCases.firstIndex(of: $0.role) ?? 0
             let rhsRole = SynthRole.allCases.firstIndex(of: $1.role) ?? 0
             return lhsRole < rhsRole
-        }, tonalEnvelopeExpansionEligible)
+        }, tonalEnvelopeExpansionEligible, timingRelation)
+    }
+
+    package static let minimumLeadPerformanceOffsetInSteps = 0.018
+    package static let maximumLeadPerformanceOffsetInSteps = 0.036
+
+    package static func leadPerformanceOffsetInSteps(
+        performanceIndex: Int
+    ) -> Double {
+        guard performanceIndex > 0 else { return 0 }
+        return performanceIndex.isMultiple(of: 2)
+            ? maximumLeadPerformanceOffsetInSteps
+            : minimumLeadPerformanceOffsetInSteps
     }
 
     private static func resolvedMotifPitches(

@@ -30,7 +30,10 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one score-owned sustained-wash envelope relation that enlarges only the final
   eligible Tonal Motion anchor at an energy-release marker, with no new note,
   pitch, gate, instrument, or effect route;
-- canonical engine v14, quality-contract schema 14, and candidate-vector schema 13
+- one score-owned foreground lead-performance timing relation that delays only
+  later retriggered anchors inside an eligible melodic lock while the first
+  anchor, companions, drums, and transport retain their existing score;
+- canonical engine v15, quality-contract schema 15, and candidate-vector schema 14
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax, event-local groove-pulse, ordinary closed-hat,
   score-owned instrument, acid-operator, spectral-cluster, and tonal-envelope
@@ -93,12 +96,13 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 14 and candidate-vector schema 13 now bind a versioned
-transaction across canonical engine v14, quality policy, evaluator, candidate
+Quality-contract schema 15 and candidate-vector schema 14 now bind a versioned
+transaction across canonical engine v15, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 instrument, acid-operator, spectral-cluster, and tonal-envelope,
-gated percussion texture, pulse-echo return-drive, and upper-role timing
+gated percussion texture, pulse-echo return-drive, and upper-role timing,
+including foreground lead performance,
 projections make each
 score-to-PCM consequence explicit without letting the uncalibrated policy rank
 that evidence. Professional

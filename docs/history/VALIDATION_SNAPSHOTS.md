@@ -879,3 +879,41 @@ claim matched-loudness listening, exact-build app playback, route/interruption
 smoke, representative latency or peak memory, hardware soak, shipping
 professional-quality qualification, or release readiness. Exact-head remote CI
 remains a separate publication gate.
+
+## Foreground lead-performance timing — 2026-08-12
+
+Source 19 adds one explicit `leadPerformance` relation to the existing
+score-owned upper-timing mechanism. Only a naturally eligible nonconservative
+melodic lock can delay later retriggered anchors; the first anchor, all harmonic
+companions, atmosphere/transition protection, drums, transport, pitch, gate
+duration, velocity, assignment, and effects remain unchanged. Conservative and
+force-home paths are exact aligned.
+
+Candidate-vector schema 14, quality-contract schema 15, canonical engine v15,
+and typed plan-fingerprint domain v9 bind the relation, character, exact anchor
+offset-pattern fingerprint, actual onset/applied-gate outcomes, and isolated
+anchor signal consequence. Shipping policy remains `uncalibrated.v1`.
+
+Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+matched SDKs, isolated caches, serial execution, and the workflow's exact
+process boundaries:
+
+- focused score/DSP/evidence, natural prepared-product, and exact-fingerprint
+  checks: 4/4;
+- split upper/prepared-product/transaction filters: 19/19;
+- core and evidence: 125/125 passed in 183.735 seconds;
+- preparation preflight: 22/22 passed in 506.160 seconds;
+- protected routing: 7/7 passed in 70.710 seconds;
+- complete CI-selected matrix: 173/173;
+- fresh optimized `AutoTechno` product build: passed in 61.82 seconds;
+- `git diff --check`: clean before publication.
+
+This proves natural director reachability, a real complete prepared primary
+transaction, same-bar active-versus-neutral causal locality, representative-
+rate frame geometry, deterministic JSON round-trip, and forged-pattern
+rejection. The first fresh release-build invocation could not resolve GitHub
+inside the restricted sandbox; after explicitly authorized dependency access,
+the pinned SwiftPM dependencies resolved and the release product built. No
+listening, app/route smoke, latency/peak-memory measurement, hardware soak,
+professional-quality promotion, or release-readiness claim is made. Exact-head
+remote CI remains a separate publication gate.

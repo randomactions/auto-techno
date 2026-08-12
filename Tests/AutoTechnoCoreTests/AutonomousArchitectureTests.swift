@@ -323,7 +323,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true, conservative: false
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v14")
+                "autotechno-canonical-engine.v15")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -651,7 +651,8 @@ struct AdaptiveAutonomousSessionTests {
                 )
                 #expect(synthBar.articulation(at: 0).phase == expectedStart)
                 let macroBar = ((resolved.performance.bar % 16) + 16) % 16
-                if macroBar == 0 || macroBar == 15 {
+                if synthBar.upperTimingRelation == .harmonicCascade,
+                   macroBar == 0 || macroBar == 15 {
                     #expect(synthBar.upperNotes.allSatisfy {
                         $0.timingOffsetInSteps == 0
                     })
@@ -859,7 +860,7 @@ struct AdaptiveAutonomousSessionTests {
         for _ in 0..<24 where sourceBar == nil {
             let plan = director.candidates(from: state).primary
             if let bar = plan.resolvedBars.first(where: {
-                $0.ensemble.events.contains { $0.voice == .motif }
+                $0.ensemble.events.filter { $0.voice == .motif }.count >= 2
             }) {
                 sourcePlan = plan
                 sourceBar = bar
@@ -872,7 +873,9 @@ struct AdaptiveAutonomousSessionTests {
 
         func replacing(absoluteBar: Int, phrase: Int = 3,
                        localBar: Int = 1,
-                       chapter: InterlockChapter = .breath) -> ResolvedPerformanceBar {
+                       chapter: InterlockChapter = .breath,
+                       performanceCharacter: PerformanceCharacter? = nil)
+            -> ResolvedPerformanceBar {
             let performance = PerformanceBar(
                 bar: absoluteBar,
                 phrase: phrase,
@@ -891,7 +894,11 @@ struct AdaptiveAutonomousSessionTests {
                 ensemble: source.ensemble,
                 arrangementGesture: source.arrangementGesture,
                 percussionGear: source.percussionGear,
-                foundationCompanion: source.foundationCompanion,
+                performanceCharacter: performanceCharacter,
+                foundationBehavior: performanceCharacter == .melodicGlow
+                    ? .subPulse : source.foundationBehavior,
+                foundationCompanion: performanceCharacter == .melodicGlow
+                    ? .bass : source.foundationCompanion,
                 pulseEchoEnabled: source.pulseEchoEnabled,
                 interlockChapter: chapter,
                 groovePulses: source.groovePulses,
@@ -956,6 +963,31 @@ struct AdaptiveAutonomousSessionTests {
         #expect(synthBar(replacing(absoluteBar: 7), kind: .majorBreak)
             .upperNotes.allSatisfy { $0.timingOffsetInSteps == 0 })
 
+        let performedResolved = replacing(
+            absoluteBar: 7,
+            chapter: .home,
+            performanceCharacter: .melodicGlow
+        )
+        let performed = synthBar(performedResolved)
+        let performedAnchors = performed.upperNotes(for: .anchor).sorted {
+            $0.onsetStep < $1.onsetStep
+        }
+        #expect(performed.upperTimingRelation == .leadPerformance)
+        #expect(performedAnchors.count >= 2)
+        #expect(performedAnchors.enumerated().allSatisfy { index, note in
+            note.timingOffsetInSteps ==
+                SynthPerformancePlan.leadPerformanceOffsetInSteps(
+                    performanceIndex: index
+                )
+        })
+        #expect(performed.upperNotes.filter { $0.role != .anchor }.allSatisfy {
+            $0.timingOffsetInSteps == 0
+        })
+        #expect(synthBar(performedResolved, conservative: true)
+            .upperTimingRelation == .aligned)
+        #expect(synthBar(performedResolved, forceHome: true)
+            .upperTimingRelation == .aligned)
+
         let neutralNotes = spread.upperNotes.map { $0.withTimingOffsetInSteps(0) }
         let legacyNeutralNotes = neutralNotes.map { note in
             ResolvedUpperNote(
@@ -991,6 +1023,7 @@ struct AdaptiveAutonomousSessionTests {
         #expect(neutralSynth == legacyNeutralSynth)
 
         func render(_ synth: SynthPerformanceBar,
+                    resolved: ResolvedPerformanceBar? = nil,
                     layer: RenderLayer = .full) -> RenderedBar {
             var renderState = RenderState()
             var workspace = RenderWorkspace()
@@ -999,7 +1032,7 @@ struct AdaptiveAutonomousSessionTests {
                 sampleRate: 8_000,
                 state: &renderState,
                 dna: plan.dna,
-                resolved: spreadResolved,
+                resolved: resolved ?? spreadResolved,
                 synthWorld: SynthWorldDNA(scene: plan.scene, dna: plan.dna),
                 synthPerformance: synth,
                 workspace: &workspace,
@@ -1052,6 +1085,45 @@ struct AdaptiveAutonomousSessionTests {
                     onsetFrames: activeUpperOnsets
                 ))
 
+        let performedNeutral = SynthPerformanceBar(
+            bar: performed.bar,
+            gesture: performed.gesture,
+            mutationAmount: performed.mutationAmount,
+            foundationInstrument: performed.foundationInstrument,
+            relationalSteps: performed.relationalSteps,
+            upperNotes: performed.upperNotes.map { $0.withTimingOffsetInSteps(0) },
+            upperTimingRelation: .aligned,
+            pulseEchoTextureArticulation: performed.pulseEchoTextureArticulation,
+            tonalEnvelopeExpansionEligible:
+                performed.tonalEnvelopeExpansionEligible,
+            forceHomeUpperTimbre: performed.forceHomeUpperTimbre
+        )
+        let performedRender = render(performed, resolved: performedResolved)
+        let performedNeutralRender = render(
+            performedNeutral,
+            resolved: performedResolved
+        )
+        #expect(performedRender.resonantAnchorSamples !=
+                performedNeutralRender.resonantAnchorSamples)
+        #expect(performedRender.detunedCompanionSamples ==
+                performedNeutralRender.detunedCompanionSamples)
+        #expect(performedRender.dryFoundationSampleHash ==
+                performedNeutralRender.dryFoundationSampleHash)
+        #expect(performedRender.dryPercussionSampleHash ==
+                performedNeutralRender.dryPercussionSampleHash)
+        #expect(performedRender.upperTimingRenderEvidence.relation ==
+                .leadPerformance)
+        #expect(performedRender.upperTimingRenderEvidence.anchorSignal.sampleHash !=
+                performedNeutralRender.upperTimingRenderEvidence.anchorSignal.sampleHash)
+        #expect(performedRender.upperTimingRenderEvidence.events.filter {
+            $0.role == .anchor
+        }.enumerated().allSatisfy { index, event in
+            event.requestedOffsetInSteps ==
+                SynthPerformancePlan.leadPerformanceOffsetInSteps(
+                    performanceIndex: index
+                ) && event.appliedOnsetFrame == event.expectedOnsetFrame
+        })
+
         let activeProtected = render(spread, layer: .protectedRhythm)
         let neutralProtected = render(neutralSynth, layer: .protectedRhythm)
         #expect(activeProtected.leftSamples == neutralProtected.leftSamples)
@@ -1084,6 +1156,66 @@ struct AdaptiveAutonomousSessionTests {
         )
         #expect(synthBar(upperlessResolved).upperNotes.allSatisfy {
             $0.timingOffsetInSteps == 0
+        })
+
+        var liveState = director.initialState()
+        var liveLeadPerformance: SynthPerformanceBar?
+        var liveLeadCandidates: AutonomousPhraseCandidates?
+        var liveLeadIncomingState: AutonomousSessionState?
+        for _ in 0..<160 where liveLeadPerformance == nil {
+            let candidates = director.candidates(from: liveState)
+            let candidateSynth = SynthPerformancePlan(
+                scene: candidates.primary.scene,
+                dna: candidates.primary.dna,
+                kind: candidates.primary.kind,
+                resolvedBars: candidates.primary.resolvedBars,
+                conservative: candidates.primary.conservative
+            )
+            liveLeadPerformance = candidateSynth.bars.first {
+                $0.upperTimingRelation == .leadPerformance
+            }
+            if liveLeadPerformance != nil {
+                liveLeadCandidates = candidates
+                liveLeadIncomingState = liveState
+            } else {
+                liveState.advance(using: candidates.primary)
+            }
+        }
+        let livePerformance = try #require(liveLeadPerformance)
+        #expect(livePerformance.upperNotes(for: .anchor).filter {
+            $0.timingOffsetInSteps > 0
+        }.count == max(0, livePerformance.upperNotes(for: .anchor).count - 1))
+        let liveCandidates = try #require(liveLeadCandidates)
+        let liveIncoming = try #require(liveLeadIncomingState)
+        var liveRenderState = RenderState()
+        liveRenderState.barIndex = liveIncoming.memory.totalBars
+        let neverCancelled: @Sendable () -> Bool = { false }
+        let livePrepared = try #require(
+            AutonomousPhrasePreparer.prepareIfNotCancelled(
+                candidates: liveCandidates,
+                sessionSeed: liveIncoming.rootSeed,
+                memory: liveIncoming.memory,
+                sampleRate: 8_000,
+                incomingRenderState: liveRenderState,
+                incomingGraphState: GeneratedDSPContinuationState(),
+                previousGraph: nil,
+                incomingQualityState: liveIncoming.quality,
+                cancellationRequested: neverCancelled
+            )
+        )
+        #expect(livePrepared.candidateEvaluation.isComplete)
+        #expect(livePrepared.candidateEvaluation.selectedSlot == .primary)
+        #expect(livePrepared.selectedCandidateEvidence.upperTiming.contains {
+            $0.relation == UpperTimingRelation.leadPerformance.rawValue &&
+                $0.isComplete(
+                    routeSampleRate: 8_000,
+                    phraseKind: .lock,
+                    conservative: false
+                )
+        })
+        #expect(livePrepared.blocks.contains {
+            $0.upperTimingRenderEvidence.relation == .leadPerformance &&
+                $0.upperTimingRenderEvidence.anchorSignal.peak > 0
         })
     }
 

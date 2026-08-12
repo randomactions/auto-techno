@@ -1190,6 +1190,8 @@ struct QualityQualificationFoundationTests {
                 minimumOffsetInSteps: 0,
                 maximumOffsetInSteps: 0,
                 maximumRoleSpreadInSteps: 0,
+                anchorOffsetPatternFingerprint:
+                    AutonomousUpperTimingBarEvidence.offsetPatternFingerprint([]),
                 shadowMinimumOffsetInSteps: 0,
                 shadowMaximumOffsetInSteps: 0,
                 responseMinimumOffsetInSteps: 0,
@@ -1197,6 +1199,14 @@ struct QualityQualificationFoundationTests {
                 scoreFingerprint: "0123456789abcdef",
                 renderFingerprint: "0123456789abcdef",
                 appliedGateFingerprint: "89abcdef01234567",
+                anchorSignal: AutonomousUpperTimingRoleSignalEvidence(
+                    role: .anchor,
+                    eventCount: 0,
+                    sampleHash: "0000000000000000",
+                    peak: 0,
+                    rms: 0,
+                    finite: true
+                ),
                 shadowSignal: AutonomousUpperTimingRoleSignalEvidence(
                     role: .shadow,
                     eventCount: 0,

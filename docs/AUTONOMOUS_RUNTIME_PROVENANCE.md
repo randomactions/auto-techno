@@ -24,15 +24,16 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 14, candidate-
-   vector schema 13, and canonical engine identity
-   `autotechno-canonical-engine.v14`. Each
+   candidate-evaluation transaction under quality-contract schema 15, candidate-
+   vector schema 14, and canonical engine identity
+   `autotechno-canonical-engine.v15`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax,
    event-local groove-pulse,
    ordinary closed-hat, score-owned instrument, score-owned gated percussion
    texture, shared pulse-echo return-drive,
-   score-owned upper-role timing, graph, and pre/post upper-timbre evidence.
+   score-owned upper-role timing—including a bounded foreground lead-performance
+   relation—graph, and pre/post upper-timbre evidence.
    Instrument records bind each resolved architecture, patch, use, automation,
    and compatible effect set to exact architecture-local dry-PCM identity,
    peak, RMS, and event count. Acid assignments additionally bind their durable
@@ -285,11 +286,12 @@ the prior schedule bit for bit.
 
 Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
-requested gate end, and renderer-applied gate end. Separate shadow and response
-dry taps retain finite role-local hash, peak, and RMS evidence. Candidate-vector
-schema 7 reduces those tuples into exact score/render and renderer-applied-gate
-fingerprints, role-specific offset facts, protected-role neutrality, aperture
-replay, and route-derived frame geometry. The shipping evaluator remains
+requested gate end, and renderer-applied gate end. Separate anchor, shadow, and
+response dry taps retain finite role-local hash, peak, and RMS evidence. Current
+candidate-vector schema 14 reduces those tuples into exact score/render and
+renderer-applied-gate fingerprints, relation-specific offset facts, protected-
+role neutrality, cascade-aperture or lead-pattern replay, and route-derived
+frame geometry. The shipping evaluator remains
 uncalibrated, so this evidence is
 descriptive and does not alter candidate selection.
 

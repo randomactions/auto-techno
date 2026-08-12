@@ -298,6 +298,53 @@ struct AutonomousCandidateEvaluationTests {
             phraseKind: .lock,
             conservative: false
         ))
+        let performed = fixtureUpperTiming(
+            bar: 7,
+            chapter: .home,
+            relation: .leadPerformance,
+            performanceCharacter: .melodicGlow,
+            sourceScoreNoteCount: 3,
+            sourceRenderEventCount: 3,
+            anchorEventCount: 3,
+            activeOffsetCount: 2,
+            anchorActiveOffsetCount: 2,
+            maximumOffsetInSteps:
+                SynthPerformancePlan.maximumLeadPerformanceOffsetInSteps,
+            maximumRoleSpreadInSteps:
+                SynthPerformancePlan.maximumLeadPerformanceOffsetInSteps,
+            anchorMaximumOffsetInSteps:
+                SynthPerformancePlan.maximumLeadPerformanceOffsetInSteps
+        )
+        #expect(performed.isComplete(
+            routeSampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false
+        ))
+        #expect(performed.normalTimingEligibility(
+            phraseKind: .lock,
+            conservative: false
+        ))
+        #expect(!fixtureUpperTiming(
+            bar: 7,
+            chapter: .home,
+            relation: .leadPerformance,
+            performanceCharacter: .hypnoticLock,
+            sourceScoreNoteCount: 3,
+            sourceRenderEventCount: 3,
+            anchorEventCount: 3,
+            activeOffsetCount: 2,
+            anchorActiveOffsetCount: 2,
+            maximumOffsetInSteps:
+                SynthPerformancePlan.maximumLeadPerformanceOffsetInSteps,
+            maximumRoleSpreadInSteps:
+                SynthPerformancePlan.maximumLeadPerformanceOffsetInSteps,
+            anchorMaximumOffsetInSteps:
+                SynthPerformancePlan.maximumLeadPerformanceOffsetInSteps
+        ).isComplete(
+            routeSampleRate: 8_000,
+            phraseKind: .lock,
+            conservative: false
+        ))
         #expect(!fixtureUpperTiming(
             bar: 7,
             chapter: .breath,
@@ -428,14 +475,18 @@ struct AutonomousCandidateEvaluationTests {
         let timingBars = try #require(object["upperTiming"] as? [[String: Any]])
         let serialized = try #require(timingBars.first)
         #expect(Set(serialized.keys) == Set([
-            "bar", "chapter", "bpm", "sampleRate", "renderedFrameCount",
+            "bar", "chapter", "relation", "performanceCharacter", "bpm",
+            "sampleRate", "renderedFrameCount",
             "sourceScoreNoteCount", "sourceRenderEventCount", "anchorEventCount",
             "activeOffsetCount", "protectedRoleActiveOffsetCount",
+            "anchorActiveOffsetCount",
             "minimumOffsetInSteps", "maximumOffsetInSteps",
-            "maximumRoleSpreadInSteps", "shadowMinimumOffsetInSteps",
+            "maximumRoleSpreadInSteps", "anchorMinimumOffsetInSteps",
+            "anchorMaximumOffsetInSteps", "anchorOffsetPatternFingerprint",
+            "shadowMinimumOffsetInSteps",
             "shadowMaximumOffsetInSteps", "responseMinimumOffsetInSteps",
             "responseMaximumOffsetInSteps", "scoreFingerprint", "renderFingerprint",
-            "appliedGateFingerprint", "shadowSignal", "responseSignal",
+            "appliedGateFingerprint", "anchorSignal", "shadowSignal", "responseSignal",
             "bindingValid", "finite",
         ]))
         #expect(serialized["events"] == nil)
@@ -486,6 +537,20 @@ struct AutonomousCandidateEvaluationTests {
         )
         #expect(changedGateVector.isComplete)
         #expect(changedGateVector.fingerprint != vector.fingerprint)
+
+        var changedAnchorPatternObject = object
+        var changedAnchorPatternBars = timingBars
+        var changedAnchorPatternBar = serialized
+        changedAnchorPatternBar["anchorOffsetPatternFingerprint"] =
+            AutonomousUpperTimingBarEvidence.offsetPatternFingerprint([0.018])
+        changedAnchorPatternBars[0] = changedAnchorPatternBar
+        changedAnchorPatternObject["upperTiming"] = changedAnchorPatternBars
+        let changedAnchorPatternVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: changedAnchorPatternObject)
+        )
+        #expect(!changedAnchorPatternVector.isComplete)
+        #expect(changedAnchorPatternVector.fingerprint != vector.fingerprint)
 
         var oversizedCountObject = object
         var oversizedCountBars = timingBars
@@ -729,10 +794,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 13)
-        #expect(QualityQualificationContract.schemaVersion == 14)
+        #expect(vector.schemaVersion == 14)
+        #expect(QualityQualificationContract.schemaVersion == 15)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v14")
+                "autotechno-canonical-engine.v15")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -3087,7 +3152,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(initialCommit.fingerprint != advancedCommit.fingerprint)
 
         #expect(AutonomousCandidateFingerprint.plan(candidates.primary) ==
-                "3e515b4f73020537")
+                "7319cf2f4d46ae1c")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -3095,7 +3160,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "517bac139e60ea9b")
+                "e3dc336272d8387f")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3458,15 +3523,20 @@ struct AutonomousCandidateEvaluationTests {
     private func fixtureUpperTiming(
         bar: Int = 0,
         chapter: InterlockChapter = .home,
+        relation: UpperTimingRelation? = nil,
+        performanceCharacter: PerformanceCharacter = .hypnoticLock,
         renderedFrameCount: Int = 14_769,
         sourceScoreNoteCount: Int = 0,
         sourceRenderEventCount: Int = 0,
         anchorEventCount: Int = 0,
         activeOffsetCount: Int = 0,
         protectedRoleActiveOffsetCount: Int = 0,
+        anchorActiveOffsetCount: Int = 0,
         minimumOffsetInSteps: Double = 0,
         maximumOffsetInSteps: Double = 0,
         maximumRoleSpreadInSteps: Double = 0,
+        anchorMinimumOffsetInSteps: Double = 0,
+        anchorMaximumOffsetInSteps: Double = 0,
         shadowMinimumOffsetInSteps: Double? = nil,
         shadowMaximumOffsetInSteps: Double? = nil,
         responseMinimumOffsetInSteps: Double? = nil,
@@ -3482,6 +3552,9 @@ struct AutonomousCandidateEvaluationTests {
         responseHash: String = "2222222222222222",
         responsePeak: Double = 0,
         responseRMS: Double = 0,
+        anchorHash: String = "3333333333333333",
+        anchorPeak: Double? = nil,
+        anchorRMS: Double? = nil,
         bindingValid: Bool = true,
         finite: Bool = true
     ) -> AutonomousUpperTimingBarEvidence {
@@ -3494,6 +3567,9 @@ struct AutonomousCandidateEvaluationTests {
         return AutonomousUpperTimingBarEvidence(
             bar: bar,
             chapter: chapter,
+            relation: relation ?? (activeOffsetCount > 0
+                ? .harmonicCascade : .aligned),
+            performanceCharacter: performanceCharacter,
             bpm: AutonomousSessionDirector.bpm,
             sampleRate: 8_000,
             renderedFrameCount: renderedFrameCount,
@@ -3502,9 +3578,22 @@ struct AutonomousCandidateEvaluationTests {
             anchorEventCount: anchorEventCount,
             activeOffsetCount: activeOffsetCount,
             protectedRoleActiveOffsetCount: protectedRoleActiveOffsetCount,
+            anchorActiveOffsetCount: anchorActiveOffsetCount,
             minimumOffsetInSteps: minimumOffsetInSteps,
             maximumOffsetInSteps: maximumOffsetInSteps,
             maximumRoleSpreadInSteps: maximumRoleSpreadInSteps,
+            anchorMinimumOffsetInSteps: anchorMinimumOffsetInSteps,
+            anchorMaximumOffsetInSteps: anchorMaximumOffsetInSteps,
+            anchorOffsetPatternFingerprint:
+                AutonomousUpperTimingBarEvidence.offsetPatternFingerprint(
+                    (0..<anchorEventCount).map { index in
+                        relation == .leadPerformance
+                            ? SynthPerformancePlan.leadPerformanceOffsetInSteps(
+                                performanceIndex: index
+                            )
+                            : 0
+                    }
+                ),
             shadowMinimumOffsetInSteps:
                 shadowMinimumOffsetInSteps ?? defaultShadowOffset,
             shadowMaximumOffsetInSteps:
@@ -3516,6 +3605,14 @@ struct AutonomousCandidateEvaluationTests {
             scoreFingerprint: scoreFingerprint,
             renderFingerprint: renderFingerprint,
             appliedGateFingerprint: appliedGateFingerprint,
+            anchorSignal: AutonomousUpperTimingRoleSignalEvidence(
+                role: .anchor,
+                eventCount: anchorEventCount,
+                sampleHash: anchorHash,
+                peak: anchorPeak ?? (anchorEventCount > 0 ? 0.05 : 0),
+                rms: anchorRMS ?? (anchorEventCount > 0 ? 0.012 : 0),
+                finite: finite
+            ),
             shadowSignal: AutonomousUpperTimingRoleSignalEvidence(
                 role: .shadow,
                 eventCount: shadowEventCount,

@@ -4,13 +4,13 @@ import Foundation
 /// policy is deliberately uncalibrated: these types make evidence reproducible
 /// without claiming that professional-quality targets exist yet.
 package enum QualityQualificationContract {
-    /// Version 14 adds release-boundary tonal-envelope expansion and its
-    /// isolated score-to-render evidence to the bounded evidence in version 13.
+    /// Version 15 adds score-owned lead-performance microtiming to the existing
+    /// upper scheduling evidence in version 14.
     /// The shipping policy remains uncalibrated; this version identifies
     /// evidence, not runtime promotion.
-    package static let schemaVersion = 14
+    package static let schemaVersion = 15
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v14"
+    package static let engineVersion = "autotechno-canonical-engine.v15"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

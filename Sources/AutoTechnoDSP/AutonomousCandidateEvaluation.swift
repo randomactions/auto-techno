@@ -1942,6 +1942,8 @@ package struct AutonomousUpperTimingRoleSignalEvidence: Codable, Equatable, Send
 package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
     package let bar: Int
     package let chapter: String
+    package let relation: String
+    package let performanceCharacter: String
     package let bpm: Double
     package let sampleRate: Double
     package let renderedFrameCount: Int
@@ -1950,9 +1952,13 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
     package let anchorEventCount: Int
     package let activeOffsetCount: Int
     package let protectedRoleActiveOffsetCount: Int
+    package let anchorActiveOffsetCount: Int
     package let minimumOffsetInSteps: Double
     package let maximumOffsetInSteps: Double
     package let maximumRoleSpreadInSteps: Double
+    package let anchorMinimumOffsetInSteps: Double
+    package let anchorMaximumOffsetInSteps: Double
+    package let anchorOffsetPatternFingerprint: String
     package let shadowMinimumOffsetInSteps: Double
     package let shadowMaximumOffsetInSteps: Double
     package let responseMinimumOffsetInSteps: Double
@@ -1960,6 +1966,7 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
     package let scoreFingerprint: String
     package let renderFingerprint: String
     package let appliedGateFingerprint: String
+    package let anchorSignal: AutonomousUpperTimingRoleSignalEvidence
     package let shadowSignal: AutonomousUpperTimingRoleSignalEvidence
     package let responseSignal: AutonomousUpperTimingRoleSignalEvidence
     package let bindingValid: Bool
@@ -1968,6 +1975,8 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
     package init(
         bar: Int,
         chapter: InterlockChapter,
+        relation: UpperTimingRelation = .aligned,
+        performanceCharacter: PerformanceCharacter = .hypnoticLock,
         bpm: Double,
         sampleRate: Double,
         renderedFrameCount: Int,
@@ -1976,9 +1985,13 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
         anchorEventCount: Int,
         activeOffsetCount: Int,
         protectedRoleActiveOffsetCount: Int,
+        anchorActiveOffsetCount: Int = 0,
         minimumOffsetInSteps: Double,
         maximumOffsetInSteps: Double,
         maximumRoleSpreadInSteps: Double,
+        anchorMinimumOffsetInSteps: Double = 0,
+        anchorMaximumOffsetInSteps: Double = 0,
+        anchorOffsetPatternFingerprint: String,
         shadowMinimumOffsetInSteps: Double,
         shadowMaximumOffsetInSteps: Double,
         responseMinimumOffsetInSteps: Double,
@@ -1986,6 +1999,7 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
         scoreFingerprint: String,
         renderFingerprint: String,
         appliedGateFingerprint: String,
+        anchorSignal: AutonomousUpperTimingRoleSignalEvidence,
         shadowSignal: AutonomousUpperTimingRoleSignalEvidence,
         responseSignal: AutonomousUpperTimingRoleSignalEvidence,
         bindingValid: Bool,
@@ -1993,6 +2007,8 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
     ) {
         self.bar = bar
         self.chapter = chapter.rawValue
+        self.relation = relation.rawValue
+        self.performanceCharacter = performanceCharacter.rawValue
         self.bpm = bpm
         self.sampleRate = sampleRate
         self.renderedFrameCount = renderedFrameCount
@@ -2001,9 +2017,13 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
         self.anchorEventCount = anchorEventCount
         self.activeOffsetCount = activeOffsetCount
         self.protectedRoleActiveOffsetCount = protectedRoleActiveOffsetCount
+        self.anchorActiveOffsetCount = anchorActiveOffsetCount
         self.minimumOffsetInSteps = minimumOffsetInSteps
         self.maximumOffsetInSteps = maximumOffsetInSteps
         self.maximumRoleSpreadInSteps = maximumRoleSpreadInSteps
+        self.anchorMinimumOffsetInSteps = anchorMinimumOffsetInSteps
+        self.anchorMaximumOffsetInSteps = anchorMaximumOffsetInSteps
+        self.anchorOffsetPatternFingerprint = anchorOffsetPatternFingerprint
         self.shadowMinimumOffsetInSteps = shadowMinimumOffsetInSteps
         self.shadowMaximumOffsetInSteps = shadowMaximumOffsetInSteps
         self.responseMinimumOffsetInSteps = responseMinimumOffsetInSteps
@@ -2011,6 +2031,7 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
         self.scoreFingerprint = scoreFingerprint
         self.renderFingerprint = renderFingerprint
         self.appliedGateFingerprint = appliedGateFingerprint
+        self.anchorSignal = anchorSignal
         self.shadowSignal = shadowSignal
         self.responseSignal = responseSignal
         self.bindingValid = bindingValid
@@ -2021,21 +2042,28 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
         finite && [
             bpm, sampleRate, minimumOffsetInSteps, maximumOffsetInSteps,
             maximumRoleSpreadInSteps, shadowMinimumOffsetInSteps,
+            anchorMinimumOffsetInSteps, anchorMaximumOffsetInSteps,
             shadowMaximumOffsetInSteps, responseMinimumOffsetInSteps,
             responseMaximumOffsetInSteps,
-        ].allSatisfy(\.isFinite) && shadowSignal.isFinite && responseSignal.isFinite
+        ].allSatisfy(\.isFinite) && anchorSignal.isFinite &&
+            shadowSignal.isFinite && responseSignal.isFinite
     }
 
     package func normalTimingEligibility(
         phraseKind: AutonomousPhraseKind,
         conservative: Bool
     ) -> Bool {
-        chapter == InterlockChapter.breath.rawValue &&
+        guard !conservative else { return false }
+        let cascadeEligible = chapter == InterlockChapter.breath.rawValue &&
             SynthPerformancePlan.upperTimingAperture(absoluteBar: bar) > 0 &&
             anchorEventCount > 0 &&
             (shadowSignal.eventCount > 0 || responseSignal.eventCount > 0) &&
-            !conservative && phraseKind != .identityReturn &&
-            phraseKind != .majorBreak
+            phraseKind != .identityReturn && phraseKind != .majorBreak
+        let leadPerformanceEligible =
+            chapter == InterlockChapter.home.rawValue &&
+            performanceCharacter == PerformanceCharacter.melodicGlow.rawValue &&
+            phraseKind == .lock && anchorEventCount >= 2
+        return cascadeEligible || leadPerformanceEligible
     }
 
     package func isComplete(
@@ -2052,6 +2080,8 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
             companionCountResult.partialValue
         )
         guard bar >= 0, InterlockChapter(rawValue: chapter) != nil,
+              let timingRelation = UpperTimingRelation(rawValue: relation),
+              PerformanceCharacter(rawValue: performanceCharacter) != nil,
               bpm == AutonomousSessionDirector.bpm,
               sampleRate == routeSampleRate,
               sampleRate >= QualityQualificationContract.minimumSupportedSampleRate,
@@ -2061,7 +2091,10 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
               sourceRenderEventCount == sourceScoreNoteCount,
               anchorEventCount >= 0, anchorEventCount <= sourceRenderEventCount,
               activeOffsetCount >= 0, activeOffsetCount <= sourceScoreNoteCount,
+              protectedRoleActiveOffsetCount >= 0,
               protectedRoleActiveOffsetCount == 0,
+              anchorActiveOffsetCount >= 0,
+              anchorActiveOffsetCount <= anchorEventCount,
               (0...ResolvedUpperNote.maximumTimingOffsetInSteps).contains(
                 minimumOffsetInSteps
               ),
@@ -2071,6 +2104,14 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
               minimumOffsetInSteps <= maximumOffsetInSteps,
               maximumRoleSpreadInSteps ==
                 maximumOffsetInSteps - minimumOffsetInSteps,
+              (0...ResolvedUpperNote.maximumTimingOffsetInSteps).contains(
+                anchorMinimumOffsetInSteps
+              ),
+              (0...ResolvedUpperNote.maximumTimingOffsetInSteps).contains(
+                anchorMaximumOffsetInSteps
+              ),
+              anchorMinimumOffsetInSteps <= anchorMaximumOffsetInSteps,
+              Self.isFingerprint(anchorOffsetPatternFingerprint),
               (0...ResolvedUpperNote.maximumTimingOffsetInSteps).contains(
                 maximumRoleSpreadInSteps
               ),
@@ -2091,6 +2132,10 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
               Self.isFingerprint(scoreFingerprint),
               scoreFingerprint == renderFingerprint,
               Self.isFingerprint(appliedGateFingerprint),
+              anchorSignal.isComplete(
+                expectedRole: .anchor,
+                maximumEventCount: sourceScoreNoteCount
+              ),
               shadowSignal.isComplete(
                 expectedRole: .shadow,
                 maximumEventCount: sourceScoreNoteCount
@@ -2110,26 +2155,76 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
                 (shadowSignal.peak > 0 && shadowSignal.rms > 0)) &&
             (responseSignal.eventCount == 0 ||
                 (responseSignal.peak > 0 && responseSignal.rms > 0))
-        guard companionRoleSignalsAreAudible else { return false }
+        let anchorSignalIsAudible = anchorSignal.eventCount == 0 ||
+            (anchorSignal.peak > 0 && anchorSignal.rms > 0)
+        guard companionRoleSignalsAreAudible, anchorSignalIsAudible,
+              anchorSignal.eventCount == anchorEventCount else { return false }
 
-        let isMacroEndpoint = bar.isMultiple(of: 16) ||
-            ((bar % 16) + 16) % 16 == 15
-        if activeOffsetCount == 0 || isMacroEndpoint {
-            return activeOffsetCount == 0 &&
+        let expectedAnchorOffsets: [Double]
+        if timingRelation == .leadPerformance {
+            expectedAnchorOffsets = (0..<anchorEventCount).map {
+                SynthPerformancePlan.leadPerformanceOffsetInSteps(
+                    performanceIndex: $0
+                )
+            }
+        } else {
+            expectedAnchorOffsets = Array(repeating: 0, count: anchorEventCount)
+        }
+        guard anchorOffsetPatternFingerprint ==
+                Self.offsetPatternFingerprint(expectedAnchorOffsets),
+              anchorMinimumOffsetInSteps == (expectedAnchorOffsets.min() ?? 0),
+              anchorMaximumOffsetInSteps == (expectedAnchorOffsets.max() ?? 0) else {
+            return false
+        }
+
+        if timingRelation == .leadPerformance {
+            let expectedActive = max(0, anchorEventCount - 1)
+            return chapter == InterlockChapter.home.rawValue &&
+                performanceCharacter == PerformanceCharacter.melodicGlow.rawValue &&
+                phraseKind == .lock && !conservative &&
+                anchorEventCount >= 2 &&
+                activeOffsetCount == expectedActive &&
+                anchorActiveOffsetCount == expectedActive &&
+                protectedRoleActiveOffsetCount == 0 &&
                 minimumOffsetInSteps.bitPattern == 0 &&
-                maximumOffsetInSteps.bitPattern == 0 &&
-                maximumRoleSpreadInSteps.bitPattern == 0 &&
+                anchorMinimumOffsetInSteps.bitPattern == 0 &&
+                anchorMaximumOffsetInSteps >=
+                    SynthPerformancePlan.minimumLeadPerformanceOffsetInSteps &&
+                anchorMaximumOffsetInSteps <=
+                    SynthPerformancePlan.maximumLeadPerformanceOffsetInSteps &&
+                maximumOffsetInSteps == anchorMaximumOffsetInSteps &&
+                maximumRoleSpreadInSteps == anchorMaximumOffsetInSteps &&
                 shadowMinimumOffsetInSteps.bitPattern == 0 &&
                 shadowMaximumOffsetInSteps.bitPattern == 0 &&
                 responseMinimumOffsetInSteps.bitPattern == 0 &&
                 responseMaximumOffsetInSteps.bitPattern == 0
         }
 
-        guard chapter == InterlockChapter.breath.rawValue,
+        let isMacroEndpoint = bar.isMultiple(of: 16) ||
+            ((bar % 16) + 16) % 16 == 15
+        if activeOffsetCount == 0 || isMacroEndpoint {
+            return timingRelation == .aligned && activeOffsetCount == 0 &&
+                anchorActiveOffsetCount == 0 &&
+                minimumOffsetInSteps.bitPattern == 0 &&
+                maximumOffsetInSteps.bitPattern == 0 &&
+                maximumRoleSpreadInSteps.bitPattern == 0 &&
+                anchorMinimumOffsetInSteps.bitPattern == 0 &&
+                anchorMaximumOffsetInSteps.bitPattern == 0 &&
+                shadowMinimumOffsetInSteps.bitPattern == 0 &&
+                shadowMaximumOffsetInSteps.bitPattern == 0 &&
+                responseMinimumOffsetInSteps.bitPattern == 0 &&
+                responseMaximumOffsetInSteps.bitPattern == 0
+        }
+
+        guard timingRelation == .harmonicCascade,
+              chapter == InterlockChapter.breath.rawValue,
               !conservative,
               phraseKind != .identityReturn,
               phraseKind != .majorBreak,
               anchorEventCount > 0,
+              anchorActiveOffsetCount == 0,
+              anchorMinimumOffsetInSteps.bitPattern == 0,
+              anchorMaximumOffsetInSteps.bitPattern == 0,
               companionCountResult.partialValue > 0,
               minimumOffsetInSteps.bitPattern == 0,
               activeOffsetCount == companionCountResult.partialValue else {
@@ -2160,6 +2255,16 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
         value.count == 16 && value.utf8.allSatisfy { byte in
             (48...57).contains(byte) || (97...102).contains(byte)
         }
+    }
+
+    package static func offsetPatternFingerprint(_ offsets: [Double]) -> String {
+        var sink = StreamingFNV1a()
+        sink.domain("upper-timing-anchor-offsets.typed.v1")
+        sink.collection(offsets.count)
+        for offset in offsets {
+            sink.double(offset)
+        }
+        return fixedWidthFingerprintHex(sink.value)
     }
 }
 
@@ -2771,7 +2876,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 13
+    package static let schemaVersion = 14
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -3506,10 +3611,15 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         let minimumOffset = offsets.min() ?? 0
         let maximumOffset = offsets.max() ?? 0
         let activeOffsetCount = offsets.filter { $0.bitPattern != 0 }.count
+        let anchorOffsets = renderEvents.filter {
+            $0.role == .anchor
+        }.map(\.requestedOffsetInSteps)
         let protectedRoleActiveOffsetCount = renderEvents.filter { event in
-            (event.role == .anchor || event.role == .atmosphere ||
-                event.role == .transition) &&
+            (event.role == .atmosphere || event.role == .transition) &&
                 event.requestedOffsetInSteps.bitPattern != 0
+        }.count
+        let anchorActiveOffsetCount = anchorOffsets.filter {
+            $0.bitPattern != 0
         }.count
         let shadowOffsets = renderEvents.filter {
             $0.role == .shadow
@@ -3517,6 +3627,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         let responseOffsets = renderEvents.filter {
             $0.role == .response
         }.map(\.requestedOffsetInSteps)
+        let anchorSignal = AutonomousUpperTimingRoleSignalEvidence(
+            role: .anchor,
+            evidence: renderEvidence.anchorSignal
+        )
         let shadowSignal = AutonomousUpperTimingRoleSignalEvidence(
             role: .shadow,
             evidence: renderEvidence.shadowSignal
@@ -3527,6 +3641,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         )
         let bindingValid = renderEvidence.bar == block.bar &&
             renderEvidence.chapter == block.resolvedPerformance.interlockChapter &&
+            renderEvidence.relation == block.synthPerformance.upperTimingRelation &&
+            renderEvidence.performanceCharacter ==
+                block.resolvedPerformance.performanceCharacter &&
             renderEvidence.bpm == planBPM &&
             renderEvidence.sampleRate == routeSampleRate &&
             renderEvidence.renderedFrameCount == block.left.count &&
@@ -3548,6 +3665,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                         renderEvidence.renderedFrameCount
                     )
             } &&
+            anchorSignal.eventCount == renderEvents.filter {
+                $0.role == .anchor
+            }.count &&
             shadowSignal.eventCount == renderEvents.filter {
                 $0.role == .shadow
             }.count &&
@@ -3558,10 +3678,14 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             offsets.allSatisfy(\.isFinite) &&
             renderEvents.allSatisfy { event in
                 event.requestedOffsetInSteps.isFinite
-            } && shadowSignal.isFinite && responseSignal.isFinite
+            } && anchorSignal.isFinite && shadowSignal.isFinite &&
+            responseSignal.isFinite
         return AutonomousUpperTimingBarEvidence(
             bar: block.bar,
             chapter: block.resolvedPerformance.interlockChapter,
+            relation: block.synthPerformance.upperTimingRelation,
+            performanceCharacter:
+                block.resolvedPerformance.performanceCharacter,
             bpm: planBPM,
             sampleRate: routeSampleRate,
             renderedFrameCount: renderEvidence.renderedFrameCount,
@@ -3572,9 +3696,16 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             }.count,
             activeOffsetCount: activeOffsetCount,
             protectedRoleActiveOffsetCount: protectedRoleActiveOffsetCount,
+            anchorActiveOffsetCount: anchorActiveOffsetCount,
             minimumOffsetInSteps: minimumOffset,
             maximumOffsetInSteps: maximumOffset,
             maximumRoleSpreadInSteps: maximumOffset - minimumOffset,
+            anchorMinimumOffsetInSteps: anchorOffsets.min() ?? 0,
+            anchorMaximumOffsetInSteps: anchorOffsets.max() ?? 0,
+            anchorOffsetPatternFingerprint:
+                AutonomousUpperTimingBarEvidence.offsetPatternFingerprint(
+                    anchorOffsets
+                ),
             shadowMinimumOffsetInSteps: shadowOffsets.min() ?? 0,
             shadowMaximumOffsetInSteps: shadowOffsets.max() ?? 0,
             responseMinimumOffsetInSteps: responseOffsets.min() ?? 0,
@@ -3582,6 +3713,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             scoreFingerprint: scoreFingerprint,
             renderFingerprint: renderFingerprint,
             appliedGateFingerprint: appliedGateFingerprint,
+            anchorSignal: anchorSignal,
             shadowSignal: shadowSignal,
             responseSignal: responseSignal,
             bindingValid: bindingValid,
@@ -4417,6 +4549,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                     $0.activeOffsetCount <= Self.maximumUpperTimingEventsPerBar &&
                     $0.protectedRoleActiveOffsetCount >= 0 &&
                     $0.protectedRoleActiveOffsetCount <=
+                        Self.maximumUpperTimingEventsPerBar &&
+                    $0.anchorActiveOffsetCount >= 0 &&
+                    $0.anchorActiveOffsetCount <=
                         Self.maximumUpperTimingEventsPerBar &&
                     $0.shadowSignal.eventCount >= 0 &&
                     $0.shadowSignal.eventCount <= Self.maximumUpperTimingEventsPerBar &&

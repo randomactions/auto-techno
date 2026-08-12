@@ -1266,10 +1266,16 @@ package enum VoiceRenderer {
         let upperTimingRenderEvidence = UpperTimingRenderEvidence(
             bar: performance.bar,
             chapter: resolved.interlockChapter,
+            relation: synthPerformance.upperTimingRelation,
+            performanceCharacter: resolved.performanceCharacter,
             bpm: scene.bpm,
             sampleRate: sampleRate,
             renderedFrameCount: frames,
             events: upperTimingEvents,
+            anchorSignal: UpperTimingRoleSignalEvidence.analyze(
+                eventCount: upperTimingEvents.filter { $0.role == .anchor }.count,
+                samples: resonantAnchorStem
+            ),
             shadowSignal: UpperTimingRoleSignalEvidence.analyze(
                 eventCount: upperTimingEvents.filter { $0.role == .shadow }.count,
                 samples: shadowTimingStem
