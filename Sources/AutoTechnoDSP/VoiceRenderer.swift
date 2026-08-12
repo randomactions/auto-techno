@@ -519,6 +519,8 @@ package enum VoiceRenderer {
         var foundationStem: [Float] = []
         var percussionStem: [Float] = []
         var percussionTextureStem: [Float] = []
+        var audioSliceStem = [Float](repeating: 0, count: frames)
+        var polyphonicPadStem = [Float](repeating: 0, count: frames)
         var upperTonalStem: [Float] = []
         var atmosphereStem: [Float] = []
         var resonantAnchorStem: [Float] = []
@@ -667,12 +669,32 @@ package enum VoiceRenderer {
                 bpm: scene.bpm,
                 sampleRate: sampleRate
             )
+        let audioSlicePlan = synthPerformance.composition.audioSlice
+        let audioSliceRenderEvidence: AudioSliceRenderEvidence
+        if audioSlicePlan?.sourceKind == .kick {
+            audioSliceRenderEvidence = AudioSliceRenderer.render(
+                source: kickDetectorBus,
+                output: &audioSliceStem,
+                plan: audioSlicePlan,
+                stepFrames: stepFrames,
+                sampleRate: sampleRate
+            )
+        } else {
+            audioSliceRenderEvidence = AudioSliceRenderer.render(
+                source: percussionStem,
+                output: &audioSliceStem,
+                plan: audioSlicePlan,
+                stepFrames: stepFrames,
+                sampleRate: sampleRate
+            )
+        }
         // Preserve the dry tap for its existing fingerprint and reverb send;
         // the reused texture buffer becomes the complete audible percussion
         // role for reconstruction, masking, and automatic-mix observation.
         for index in 0..<frames {
-            output[index] += percussionTextureStem[index]
-            percussionTextureStem[index] += percussionStem[index]
+            output[index] += percussionTextureStem[index] + audioSliceStem[index]
+            percussionTextureStem[index] +=
+                percussionStem[index] + audioSliceStem[index]
         }
         for index in 0..<frames {
             let audibleKick = kickDetectorBus[index] * Float(KickMixBalance.audibleGain)
@@ -685,6 +707,7 @@ package enum VoiceRenderer {
         }
         let renderScheduledUpperNotes = !textureCollapsed && upperRolesActive
         var upperNoteRenderEvidence: [UpperNoteRenderEvidence] = []
+        var polyphonicPadRenderEvidence = PolyphonicPadRenderEvidence.neutral
         if layer == .full {
             renderInstrumentWorld(
                 &synthBus,
@@ -702,6 +725,8 @@ package enum VoiceRenderer {
                 tonalEnvelopeExpansionStem: &tonalEnvelopeExpansionStem,
                 spectralTextureInstrumentStem: &spectralTextureInstrumentStem,
                 spectralTextureClusterStem: &spectralTextureClusterStem,
+                polyphonicPadStem: &polyphonicPadStem,
+                polyphonicPadRenderEvidence: &polyphonicPadRenderEvidence,
                 noteRenderEvidence: &upperNoteRenderEvidence,
                 renderScheduledNotes: renderScheduledUpperNotes,
                 scene: scene,
@@ -1315,6 +1340,10 @@ package enum VoiceRenderer {
                                     ),
                                    percussionEchoTextureRenderEvidence:
                                     percussionEchoTextureRenderEvidence,
+                                   audioSliceRenderEvidence:
+                                    audioSliceRenderEvidence,
+                                   polyphonicPadRenderEvidence:
+                                    polyphonicPadRenderEvidence,
                                    pulseEchoReturnDriveRenderEvidence:
                                     pulseEchoReturnDriveRenderEvidence,
                                    upperNoteRenderEvidence: upperNoteRenderEvidence,
@@ -1363,6 +1392,8 @@ package enum VoiceRenderer {
         tonalEnvelopeExpansionStem: inout [Float],
         spectralTextureInstrumentStem: inout [Float],
         spectralTextureClusterStem: inout [Float],
+        polyphonicPadStem: inout [Float],
+        polyphonicPadRenderEvidence: inout PolyphonicPadRenderEvidence,
         noteRenderEvidence: inout [UpperNoteRenderEvidence],
         renderScheduledNotes: Bool,
         scene: TechnoScene,
@@ -1501,6 +1532,22 @@ package enum VoiceRenderer {
         )
 
         let atmosphereNotes = notes(for: .atmosphere)
+        polyphonicPadRenderEvidence = PolyphonicPadVoice.render(
+            &output,
+            measurement: &polyphonicPadStem,
+            spatialReverbSend: &spatialReverbSend,
+            voicing: renderScheduledNotes ? synthBar.composition.padVoicing : nil,
+            rootFrequency: world.rootFrequency,
+            sampleRate: sampleRate,
+            stepFrames: stepFrames,
+            level: 0.014 + scene.atmosphere * 0.022 + scene.drone * 0.014,
+            state: &state.polyphonicPadState
+        )
+        if polyphonicPadRenderEvidence.active {
+            for index in atmosphereStem.indices {
+                atmosphereStem[index] += polyphonicPadStem[index]
+            }
+        }
         AlienAnalogVoice.render(
             &output,
             measurement: &atmosphereStem,

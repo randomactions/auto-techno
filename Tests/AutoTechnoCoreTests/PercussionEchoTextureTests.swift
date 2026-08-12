@@ -304,7 +304,8 @@ struct PercussionEchoTextureTests {
             interest: source.interest,
             endingInterlockState: source.endingInterlockState,
             endingSpatialContrastState: source.endingSpatialContrastState,
-            endingNarrativeState: source.endingNarrativeState
+            endingNarrativeState: source.endingNarrativeState,
+            harmonicContinuation: source.incomingHarmonicContinuation
         )
     }
 }

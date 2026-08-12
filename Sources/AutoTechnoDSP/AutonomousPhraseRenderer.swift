@@ -172,6 +172,7 @@ package struct RenderState: Equatable, Sendable {
     var spectralResponseState = SpectralTextureState()
     var spectralAtmosphereState = SpectralTextureState()
     var spectralTransitionState = SpectralTextureState()
+    var polyphonicPadState = PolyphonicPadState()
     package var previousResonantAnchorEvidenceFrame: UpperTimbreStereoFrame?
     package var previousDetunedCompanionEvidenceFrame: UpperTimbreStereoFrame?
     package var previousGraphInputRemainderEvidenceFrame: UpperTimbreStereoFrame?
@@ -698,6 +699,8 @@ package struct RenderedBar: Equatable, Sendable {
     package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
     package let percussionEchoTextureRenderEvidence:
         PercussionEchoTextureRenderEvidence
+    package let audioSliceRenderEvidence: AudioSliceRenderEvidence
+    package let polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence
     package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
     package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
     package let upperTimingRenderEvidence: UpperTimingRenderEvidence
@@ -719,6 +722,8 @@ package struct RenderedBar: Equatable, Sendable {
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
                 percussionEchoTextureRenderEvidence:
                     PercussionEchoTextureRenderEvidence,
+                audioSliceRenderEvidence: AudioSliceRenderEvidence = .neutral,
+                polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence = .neutral,
                 pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 upperTimingRenderEvidence: UpperTimingRenderEvidence,
@@ -757,6 +762,8 @@ package struct RenderedBar: Equatable, Sendable {
         }
         self.percussionEchoTextureRenderEvidence =
             percussionEchoTextureRenderEvidence
+        self.audioSliceRenderEvidence = audioSliceRenderEvidence
+        self.polyphonicPadRenderEvidence = polyphonicPadRenderEvidence
         self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.upperTimingRenderEvidence = upperTimingRenderEvidence
@@ -811,6 +818,9 @@ package struct RenderBlock: Equatable, Sendable {
     package let percussionEchoTextureRenderEvidence:
         PercussionEchoTextureRenderEvidence
     package let percussionEchoTextureRenderPassesMatch: Bool
+    package let audioSliceRenderEvidence: AudioSliceRenderEvidence
+    package let audioSliceRenderPassesMatch: Bool
+    package let polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence
     package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
     /// Exact score-owned upper notes used for this bar. The renderer no longer
     /// invents pitch, duration, velocity, or slide decisions after resolution.
@@ -848,6 +858,9 @@ package struct RenderBlock: Equatable, Sendable {
                 percussionEchoTextureRenderEvidence:
                     PercussionEchoTextureRenderEvidence,
                 percussionEchoTextureRenderPassesMatch: Bool,
+                audioSliceRenderEvidence: AudioSliceRenderEvidence = .neutral,
+                audioSliceRenderPassesMatch: Bool = true,
+                polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence = .neutral,
                 pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 upperTimingRenderEvidence: UpperTimingRenderEvidence,
@@ -885,6 +898,9 @@ package struct RenderBlock: Equatable, Sendable {
             percussionEchoTextureRenderEvidence
         self.percussionEchoTextureRenderPassesMatch =
             percussionEchoTextureRenderPassesMatch
+        self.audioSliceRenderEvidence = audioSliceRenderEvidence
+        self.audioSliceRenderPassesMatch = audioSliceRenderPassesMatch
+        self.polyphonicPadRenderEvidence = polyphonicPadRenderEvidence
         self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.upperTimingRenderEvidence = upperTimingRenderEvidence
@@ -1124,7 +1140,8 @@ package enum AutonomousPhraseRenderer {
             scene: plan.scene, dna: plan.dna, kind: plan.kind,
             resolvedBars: plan.resolvedBars,
             conservative: plan.conservative,
-            forceHomeUpperTimbre: forceHomeUpperTimbre
+            forceHomeUpperTimbre: forceHomeUpperTimbre,
+            compositionBars: plan.phraseComposition
         )
         var workspace = RenderWorkspace()
         var blocks: [RenderBlock] = []
@@ -1424,6 +1441,13 @@ package enum AutonomousPhraseRenderer {
                 percussionEchoTextureRenderPassesMatch:
                     protectedRhythm.percussionEchoTextureRenderEvidence ==
                         rendered.percussionEchoTextureRenderEvidence,
+                audioSliceRenderEvidence:
+                    protectedRhythm.audioSliceRenderEvidence,
+                audioSliceRenderPassesMatch:
+                    protectedRhythm.audioSliceRenderEvidence ==
+                        rendered.audioSliceRenderEvidence,
+                polyphonicPadRenderEvidence:
+                    rendered.polyphonicPadRenderEvidence,
                 pulseEchoReturnDriveRenderEvidence:
                     rendered.pulseEchoReturnDriveRenderEvidence,
                 upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,

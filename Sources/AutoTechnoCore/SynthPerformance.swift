@@ -396,6 +396,7 @@ package struct SynthPerformanceBar: Equatable, Sendable {
     package let foundationInstrument: InstrumentAssignment
     package let relationalSteps: [RelationalArticulation]
     package let upperNotes: [ResolvedUpperNote]
+    package let composition: PhraseCompositionBar
     package let upperTimingRelation: UpperTimingRelation
     package let pulseEchoTextureArticulation: PulseEchoTextureArticulation
     /// Eligibility before an attempt-local home-timbre correction. The
@@ -412,6 +413,7 @@ package struct SynthPerformanceBar: Equatable, Sendable {
                 foundationInstrument: InstrumentAssignment = InstrumentPalette.safeFoundation(),
                 relationalSteps: [RelationalArticulation],
                 upperNotes: [ResolvedUpperNote],
+                composition: PhraseCompositionBar? = nil,
                 upperTimingRelation: UpperTimingRelation = .aligned,
                 pulseEchoTextureArticulation: PulseEchoTextureArticulation = .neutral,
                 tonalEnvelopeExpansionEligible: Bool = false,
@@ -424,6 +426,7 @@ package struct SynthPerformanceBar: Equatable, Sendable {
         self.relationalSteps = relationalSteps.count == 16
             ? relationalSteps : Array(repeating: .neutral, count: 16)
         self.upperNotes = upperNotes
+        self.composition = composition ?? .neutral(bar: bar)
         self.upperTimingRelation = upperTimingRelation
         self.pulseEchoTextureArticulation = pulseEchoTextureArticulation
         self.tonalEnvelopeExpansionEligible = tonalEnvelopeExpansionEligible
@@ -451,10 +454,22 @@ package struct SynthPerformancePlan: Equatable, Sendable {
 
     package init(scene: TechnoScene, dna: SceneDNA, kind: AutonomousPhraseKind,
                  resolvedBars: [ResolvedPerformanceBar], conservative: Bool = false,
-                 forceHomeUpperTimbre: Bool = false) {
+                 forceHomeUpperTimbre: Bool = false,
+                 compositionBars suppliedComposition: [PhraseCompositionBar]? = nil) {
         let synthWorld = SynthWorldDNA(scene: scene, dna: dna)
-        let synthBars = resolvedBars.map { resolved in
+        let compositionBars = conservative || forceHomeUpperTimbre
+            ? resolvedBars.map { PhraseCompositionBar.neutral(bar: $0.performance.bar) }
+            : suppliedComposition ?? PhraseCompositionResolver.resolve(
+                scene: scene,
+                dna: dna,
+                kind: kind,
+                resolvedBars: resolvedBars,
+                conservative: false
+            )
+        let synthBars = resolvedBars.enumerated().map { index, resolved in
             let performanceBar = resolved.performance
+            let composition = compositionBars.indices.contains(index)
+                ? compositionBars[index] : .neutral(bar: performanceBar.bar)
             let gesture = SynthPerformancePlan.gesture(for: performanceBar)
             let mutation = SynthPerformancePlan.mutation(for: gesture, tension: performanceBar.tension)
             let macroBar = ((performanceBar.bar % 16) + 16) % 16
@@ -481,7 +496,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 mutationAmount: mutation,
                 conservative: conservative,
                 forceHomeUpperTimbre: forceHomeUpperTimbre,
-                relationalSteps: relationalSteps
+                relationalSteps: relationalSteps,
+                composition: composition
             )
             let upperNotes = upperResolution.notes
             let earliestPulseEchoOnsetStep = upperNotes
@@ -509,6 +525,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 ),
                 relationalSteps: relationalSteps,
                 upperNotes: upperNotes,
+                composition: composition,
                 upperTimingRelation: upperResolution.timingRelation,
                 pulseEchoTextureArticulation: PulseEchoTextureArticulation(
                     machineTexture: scene.machineTexture,
@@ -597,7 +614,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         mutationAmount: Double,
         conservative: Bool,
         forceHomeUpperTimbre: Bool,
-        relationalSteps: [RelationalArticulation]
+        relationalSteps: [RelationalArticulation],
+        composition: PhraseCompositionBar
     ) -> (notes: [ResolvedUpperNote], tonalEnvelopeExpansionEligible: Bool,
           timingRelation: UpperTimingRelation) {
         let performance = resolved.performance
@@ -701,6 +719,23 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     !forceHomeUpperTimbre ? .sustainedWash : .home,
                 instrument: anchorInstrument
             )
+        }
+
+        if let arpeggiator = composition.arpeggiator {
+            notes.removeAll { $0.role == .anchor }
+            notes.append(contentsOf: arpeggiator.steps.map { step in
+                ResolvedUpperNote(
+                    role: .anchor,
+                    onsetStep: step.onsetStep,
+                    durationInSteps: step.durationInSteps,
+                    startFrequencyRatio: step.frequencyRatio,
+                    endFrequencyRatio: step.frequencyRatio,
+                    velocity: step.velocity,
+                    gate: .retrigger,
+                    timbreIntent: resonantIntent,
+                    instrument: anchorInstrument
+                )
+            })
         }
 
         let detunedEligible = variationEnabled && resolved.interlockChapter == .tone

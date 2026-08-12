@@ -87,6 +87,17 @@ evidence binds the timing and PCM consequence. The musical gate relationship is
 durable, while its current delay, filtering, feedback, gain, stereo placement,
 and smoothing remain replaceable internal DSP details for future maturation.
 
+The phrase-composition path adds four coordinated capabilities without adding a
+second engine. In eligible broken or ambient major breaks, immutable trigger data resamples
+an exact already-rendered percussion or kick window at bounded forward or reverse rates.
+Eligible motif bars resolve a complete 8- or 16-step modal arpeggio in the score,
+not from a free-running DSP clock. Atmosphere bars may render one four-voice pad
+whose inversion is chosen against the last accepted voicing; that compact
+harmonic state continues across phrase boundaries. One per-bar evidence record
+binds those intentions to their exact slice and pad PCM, arpeggiator geometry,
+and voice-leading movement. Conservative and identity-return paths remain
+exactly neutral.
+
 ## Professional-sound objective
 
 The long-term goal is professional release-quality sound produced by engine-owned

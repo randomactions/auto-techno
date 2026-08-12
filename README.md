@@ -16,6 +16,9 @@ account.
   automation and exact score-to-PCM evidence;
 - six phrase-scale performance characters coordinating foundation, rhythm,
   role-compatible patches, and automation under one persistent identity;
+- one score-owned phrase-composition layer with bounded true percussion
+  resampling, 8–16-step modal arpeggiation, four-voice pads, and cross-bar
+  minimal-motion voice-leading;
 - engine-owned synthesis, effects, mixing, and output safety;
 - detached preparation followed by sample-time scheduling of immutable buffers;
 - route recovery at the active hardware sample rate;

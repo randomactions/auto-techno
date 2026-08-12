@@ -25,6 +25,10 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one score-owned gated percussion texture that admits an existing early
   percussion slice and exposes only a bounded delayed return window, without
   resampling, new events, or cross-bar delay state;
+- one unified phrase-composition layer that can resample an exact app-owned
+  percussion source, resolve every step of an 8/16-note arpeggio, render four
+  simultaneous pad voices, and carry the accepted pad voicing across phrase
+  boundaries for minimal-motion harmonic continuation;
 - one score-owned acid spectral relation whose existing thread/sequence patches
   express ordered-hollow or metallic-tension intent through bounded operator
   DSP, while non-acid and protected-foundation assignments remain neutral;
@@ -36,7 +40,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one score-owned foreground lead-performance timing relation that delays only
   later retriggered anchors inside an eligible melodic lock while the first
   anchor, companions, drums, and transport retain their existing score;
-- canonical engine v16, quality-contract schema 16, and candidate-vector schema 15
+- canonical engine v17, quality-contract schema 17, and candidate-vector schema 16
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax and debt-to-recovery climax arc,
   event-local groove-pulse, ordinary closed-hat,
@@ -100,14 +104,15 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 16 and candidate-vector schema 15 now bind a versioned
-transaction across canonical engine v16, quality policy, evaluator, candidate
+Quality-contract schema 17 and candidate-vector schema 16 now bind a versioned
+transaction across canonical engine v17, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 instrument, acid-operator, spectral-cluster, and tonal-envelope,
 gated percussion texture, pulse-echo return-drive, and upper-role timing,
 including foreground lead performance,
-projections, plus exact paid-debt-to-release climax provenance, make each
+projections, unified phrase composition, plus exact paid-debt-to-release climax
+provenance, make each
 score-to-PCM consequence explicit without letting the uncalibrated policy rank
 that evidence. Professional
 Evidence v3 adds standards-based phrase loudness/true peak, bounded streaming

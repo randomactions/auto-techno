@@ -21,18 +21,23 @@ mistaken for a completed feedback system.
    compatible interpretation exists. Per-bar foundation behavior, role set, and
    kick grammar must remain compatible with that phrase character; identity
    return and conservative fallback resolve to the hypnotic home.
+   A derived `PhraseCompositionBar` then coordinates phrase-local slice
+   triggers, arpeggiator notes, pad voicing, and voice-leading from that same
+   score and modal identity; it never admits a role independently.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 16, candidate-
-   vector schema 15, and canonical engine identity
-   `autotechno-canonical-engine.v16`. Each
+   candidate-evaluation transaction under quality-contract schema 17, candidate-
+   vector schema 16, and canonical engine identity
+   `autotechno-canonical-engine.v17`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
    event-local groove-pulse,
    ordinary closed-hat, score-owned instrument, score-owned gated percussion
    texture, shared pulse-echo return-drive,
+   phrase-local slice source/output PCM, arpeggiator geometry, polyphonic pad
+   PCM, and voice-leading movement,
    score-owned upper-role timing—including a bounded foreground lead-performance
    relation—graph, and pre/post upper-timbre evidence.
    Instrument records bind each resolved architecture, patch, use, automation,

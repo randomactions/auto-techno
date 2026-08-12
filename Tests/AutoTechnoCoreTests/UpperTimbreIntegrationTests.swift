@@ -1164,7 +1164,8 @@ struct UpperTimbreIntegrationTests {
                 interest: plan.interest,
                 endingInterlockState: plan.endingInterlockState,
                 endingSpatialContrastState: plan.endingSpatialContrastState,
-                endingNarrativeState: plan.endingNarrativeState
+                endingNarrativeState: plan.endingNarrativeState,
+                harmonicContinuation: plan.incomingHarmonicContinuation
             )
         }
         func replacingGroovePulses(
@@ -1595,7 +1596,8 @@ struct UpperTimbreIntegrationTests {
                 interest: source.fallback.interest,
                 endingInterlockState: source.fallback.endingInterlockState,
                 endingSpatialContrastState: source.fallback.endingSpatialContrastState,
-                endingNarrativeState: source.fallback.endingNarrativeState
+                endingNarrativeState: source.fallback.endingNarrativeState,
+                harmonicContinuation: source.fallback.incomingHarmonicContinuation
             )
             return AutonomousPhraseCandidates(
                 primary: source.primary,
@@ -2113,7 +2115,8 @@ struct UpperTimbreIntegrationTests {
             interest: source.interest,
             endingInterlockState: source.endingInterlockState,
             endingSpatialContrastState: source.endingSpatialContrastState,
-            endingNarrativeState: source.endingNarrativeState
+            endingNarrativeState: source.endingNarrativeState,
+            harmonicContinuation: source.incomingHarmonicContinuation
         )
     }
 
@@ -2365,7 +2368,8 @@ struct UpperTimbreIntegrationTests {
             interest: interest,
             endingInterlockState: source.endingInterlockState,
             endingSpatialContrastState: source.endingSpatialContrastState,
-            endingNarrativeState: source.endingNarrativeState
+            endingNarrativeState: source.endingNarrativeState,
+            harmonicContinuation: source.incomingHarmonicContinuation
         )
     }
 
@@ -2421,7 +2425,8 @@ struct UpperTimbreIntegrationTests {
             interest: source.interest,
             endingInterlockState: source.endingInterlockState,
             endingSpatialContrastState: source.endingSpatialContrastState,
-            endingNarrativeState: source.endingNarrativeState
+            endingNarrativeState: source.endingNarrativeState,
+            harmonicContinuation: source.incomingHarmonicContinuation
         )
     }
 
@@ -2548,7 +2553,8 @@ struct UpperTimbreIntegrationTests {
             ),
             endingInterlockState: source.endingInterlockState,
             endingSpatialContrastState: source.endingSpatialContrastState,
-            endingNarrativeState: source.endingNarrativeState
+            endingNarrativeState: source.endingNarrativeState,
+            harmonicContinuation: source.incomingHarmonicContinuation
         )
         var renderState = incomingRenderState
         var graphState = GeneratedDSPContinuationState()

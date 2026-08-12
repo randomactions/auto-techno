@@ -55,7 +55,7 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 16, candidate-vector schema 15, and canonical engine v16
+Quality-contract schema 17, candidate-vector schema 16, and canonical engine v17
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
@@ -63,6 +63,8 @@ event-local groove-pulse, ordinary
 closed-hat, score-owned instrument and its acid/cluster/envelope consequence,
 score-owned gated percussion texture,
 shared pulse-echo return-drive, score-owned upper-role timing,
+score-owned phrase slicing, arpeggiator geometry, polyphonic pad signal, and
+voice-leading continuation,
 graph, and pre/post upper-timbre vector for every retained attempt. Groove-pulse
 evidence must cover every bar
 explicitly, bind each score event to one exact dry-sample
@@ -235,8 +237,9 @@ or PCM.
 
 ## Hybrid feedback and callback isolation
 
-Upper-timbre evidence schema 3 plus the pulse-echo and upper-role timing evidence
-carried by quality-contract schema 8 change detached preparation only. They add
+Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, and phrase-
+composition evidence carried by quality-contract schema 17 change detached
+preparation only. They add
 no callback capture, analysis, or live-feedback work; the requirements below
 remain gates
 for a future hybrid-feedback implementation.

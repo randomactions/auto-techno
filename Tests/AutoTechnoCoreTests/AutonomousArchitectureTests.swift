@@ -323,7 +323,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true, conservative: false
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v16")
+                "autotechno-canonical-engine.v17")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -3703,7 +3703,8 @@ struct AutonomousPreparationPreflightTests {
                 interest: plan.interest,
                 endingInterlockState: plan.endingInterlockState,
                 endingSpatialContrastState: plan.endingSpatialContrastState,
-                endingNarrativeState: plan.endingNarrativeState
+                endingNarrativeState: plan.endingNarrativeState,
+                harmonicContinuation: plan.incomingHarmonicContinuation
             )
         }
         let zeroDrivePlan = replacingScene(in: wetPlan, with: zeroTextureScene)
@@ -4158,7 +4159,8 @@ struct AutonomousPreparationPreflightTests {
             ),
             endingInterlockState: plan.endingInterlockState,
             endingSpatialContrastState: plan.endingSpatialContrastState,
-            endingNarrativeState: plan.endingNarrativeState
+            endingNarrativeState: plan.endingNarrativeState,
+            harmonicContinuation: plan.incomingHarmonicContinuation
         )
     }
 

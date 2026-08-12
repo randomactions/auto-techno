@@ -22,7 +22,7 @@ func fixedWidthFingerprintHex(_ value: UInt64) -> String {
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
-        digest(domain: "candidate-plan.typed.v9") { sink in
+        digest(domain: "candidate-plan.typed.v10") { sink in
             encode(plan, into: &sink)
         }
     }
@@ -34,7 +34,7 @@ package enum AutonomousTypedFingerprint {
     }
 
     package static func renderState(_ state: RenderState) -> String {
-        digest(domain: "render-state.typed.v2") { sink in
+        digest(domain: "render-state.typed.v3") { sink in
             encode(state, into: &sink)
         }
     }
@@ -44,7 +44,7 @@ package enum AutonomousTypedFingerprint {
         cancellationRequested: @Sendable () -> Bool
     ) -> String? {
         cancellableDigest(
-            domain: "render-state.typed.v2",
+            domain: "render-state.typed.v3",
             cancellationRequested: cancellationRequested
         ) { sink in
             encode(
@@ -101,7 +101,7 @@ package enum AutonomousTypedFingerprint {
         renderState: RenderState,
         generatedDSPState: GeneratedDSPContinuationState
     ) -> String {
-        digest(domain: "render-dsp-continuation.typed.v2") { sink in
+        digest(domain: "render-dsp-continuation.typed.v3") { sink in
             sink.field("renderState"); encode(renderState, into: &sink)
             sink.field("generatedDSPState"); encode(generatedDSPState, into: &sink)
         }
@@ -113,7 +113,7 @@ package enum AutonomousTypedFingerprint {
         cancellationRequested: @Sendable () -> Bool
     ) -> String? {
         cancellableDigest(
-            domain: "render-dsp-continuation.typed.v2",
+            domain: "render-dsp-continuation.typed.v3",
             cancellationRequested: cancellationRequested
         ) { sink in
             sink.field("renderState")
@@ -179,6 +179,14 @@ private extension AutonomousTypedFingerprint {
         sink.field("interest"); encode(value.interest, into: &sink)
         sink.field("performanceCharacterEvidence")
         encode(value.performanceCharacterEvidence, into: &sink)
+        sink.field("incomingHarmonicContinuation")
+        sink.collection(value.incomingHarmonicContinuation.voices.count)
+        for voice in value.incomingHarmonicContinuation.voices {
+            sink.aggregate("PadVoice")
+            sink.field("modalDegree"); sink.int(voice.modalDegree)
+            sink.field("semitone"); sink.int(voice.semitone)
+            sink.field("frequencyRatio"); sink.double(voice.frequencyRatio)
+        }
         sink.field("endingInterlockState"); encode(value.endingInterlockState, into: &sink)
         sink.field("endingSpatialContrastState")
         encode(value.endingSpatialContrastState, into: &sink)
@@ -188,7 +196,8 @@ private extension AutonomousTypedFingerprint {
             dna: value.dna,
             kind: value.kind,
             resolvedBars: value.resolvedBars,
-            conservative: value.conservative
+            conservative: value.conservative,
+            compositionBars: value.phraseComposition
         )
         sink.field("resolvedUpperNotes")
         sink.collection(synthPerformance.bars.count)
@@ -199,8 +208,68 @@ private extension AutonomousTypedFingerprint {
             sink.bool(bar.tonalEnvelopeExpansionEligible)
             sink.field("upperTimingRelation")
             sink.raw(bar.upperTimingRelation.rawValue)
+            sink.field("composition")
+            encode(bar.composition, into: &sink)
             sink.field("notes"); sink.collection(bar.upperNotes.count)
             for note in bar.upperNotes { encode(note, into: &sink) }
+        }
+    }
+
+    static func encode(_ value: PhraseCompositionBar, into sink: inout StreamingFNV1a) {
+        sink.aggregate("PhraseCompositionBar")
+        sink.field("bar"); sink.int(value.bar)
+        sink.field("audioSlice"); sink.presence(value.audioSlice != nil)
+        if let slice = value.audioSlice {
+            sink.aggregate("AudioSlicePlan")
+            sink.field("sourceStartStep"); sink.int(slice.sourceStartStep)
+            sink.field("sourceLengthInSteps"); sink.double(slice.sourceLengthInSteps)
+            sink.field("sourceKind"); sink.raw(slice.sourceKind.rawValue)
+            sink.field("triggers"); sink.collection(slice.triggers.count)
+            for trigger in slice.triggers {
+                sink.aggregate("AudioSliceTrigger")
+                sink.field("onsetStep"); sink.int(trigger.onsetStep)
+                sink.field("playbackRate"); sink.double(trigger.playbackRate)
+                sink.field("direction"); sink.raw(trigger.direction.rawValue)
+                sink.field("gain"); sink.double(trigger.gain)
+            }
+        }
+        sink.field("arpeggiator"); sink.presence(value.arpeggiator != nil)
+        if let arpeggiator = value.arpeggiator {
+            sink.aggregate("ArpeggiatorPlan")
+            sink.field("direction"); sink.raw(arpeggiator.direction.rawValue)
+            sink.field("rateInSteps"); sink.int(arpeggiator.rateInSteps)
+            sink.field("octaveSpan"); sink.int(arpeggiator.octaveSpan)
+            sink.field("rotation"); sink.int(arpeggiator.rotation)
+            sink.field("steps"); sink.collection(arpeggiator.steps.count)
+            for step in arpeggiator.steps {
+                sink.aggregate("ArpeggiatorStep")
+                sink.field("onsetStep"); sink.int(step.onsetStep)
+                sink.field("durationInSteps"); sink.double(step.durationInSteps)
+                sink.field("frequencyRatio"); sink.double(step.frequencyRatio)
+                sink.field("velocity"); sink.double(step.velocity)
+                sink.field("octave"); sink.int(step.octave)
+            }
+        }
+        sink.field("padVoicing"); sink.presence(value.padVoicing != nil)
+        if let pad = value.padVoicing {
+            sink.aggregate("PadVoicing")
+            sink.field("function"); sink.raw(pad.function.rawValue)
+            sink.field("onsetStep"); sink.int(pad.onsetStep)
+            sink.field("durationInSteps"); sink.double(pad.durationInSteps)
+            sink.field("voices"); sink.collection(pad.voices.count)
+            for voice in pad.voices {
+                sink.aggregate("PadVoice")
+                sink.field("modalDegree"); sink.int(voice.modalDegree)
+                sink.field("semitone"); sink.int(voice.semitone)
+                sink.field("frequencyRatio"); sink.double(voice.frequencyRatio)
+            }
+            sink.field("commonToneCount"); sink.int(pad.commonToneCount)
+            sink.field("totalMovementInSemitones")
+            sink.int(pad.totalMovementInSemitones)
+            sink.field("maximumLeapInSemitones")
+            sink.int(pad.maximumLeapInSemitones)
+            sink.field("contraryOuterMotion"); sink.bool(pad.contraryOuterMotion)
+            sink.field("instrument"); encode(Optional(pad.instrument), into: &sink)
         }
     }
 
@@ -605,6 +674,8 @@ private extension AutonomousTypedFingerprint {
         encode(value.spectralAtmosphereState, into: &sink)
         sink.field("spectralTransitionState")
         encode(value.spectralTransitionState, into: &sink)
+        sink.field("polyphonicPadState")
+        encode(value.polyphonicPadState, into: &sink)
         sink.field("previousResonantAnchorEvidenceFrame")
         encode(value.previousResonantAnchorEvidenceFrame, into: &sink)
         sink.field("previousDetunedCompanionEvidenceFrame")
@@ -706,6 +777,8 @@ private extension AutonomousTypedFingerprint {
         encode(value.spectralAtmosphereState, into: &sink)
         sink.field("spectralTransitionState")
         encode(value.spectralTransitionState, into: &sink)
+        sink.field("polyphonicPadState")
+        encode(value.polyphonicPadState, into: &sink)
         sink.field("previousResonantAnchorEvidenceFrame")
         encode(value.previousResonantAnchorEvidenceFrame, into: &sink)
         sink.field("previousDetunedCompanionEvidenceFrame")
@@ -745,6 +818,16 @@ private extension AutonomousTypedFingerprint {
     static func encode(_ value: AutomaticMixState, into sink: inout StreamingFNV1a) {
         sink.aggregate("AutomaticMixState")
         sink.field("kickCorrectionDB"); sink.double(value.kickCorrectionDB)
+    }
+
+    static func encode(_ value: PolyphonicPadState, into sink: inout StreamingFNV1a) {
+        sink.aggregate("PolyphonicPadState")
+        sink.field("phases"); sink.collection(value.phases.count)
+        for phase in value.phases { sink.double(phase) }
+        sink.field("lowPass"); sink.collection(value.lowPass.count)
+        for sample in value.lowPass { sink.double(sample) }
+        sink.field("envelope"); sink.collection(value.envelope.count)
+        for sample in value.envelope { sink.double(sample) }
     }
 
     static func encode(_ value: ResonantMonoState, into sink: inout StreamingFNV1a) {

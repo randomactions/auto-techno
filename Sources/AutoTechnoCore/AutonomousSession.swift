@@ -994,6 +994,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
     package private(set) var spatialContrast: SpatialContrastState
     package private(set) var narrativeEvolution: NarrativeEvolutionState
     package private(set) var recentPerformanceCharacters: [PerformanceCharacter]
+    package private(set) var harmonicContinuation: HarmonicContinuationState
 
     package init(recentBars: [MusicalMemoryBar] = [], currentPhrase: [MusicalMemoryBar] = [],
                 previousPhrase: [MusicalMemoryBar] = [], dramaticArc: [MusicalMemoryBar] = [],
@@ -1004,7 +1005,8 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
                 interlockEvolution: InterlockEvolutionState = InterlockEvolutionState(),
                 spatialContrast: SpatialContrastState = SpatialContrastState(),
                 narrativeEvolution: NarrativeEvolutionState = NarrativeEvolutionState(),
-                recentPerformanceCharacters: [PerformanceCharacter] = []) {
+                recentPerformanceCharacters: [PerformanceCharacter] = [],
+                harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState()) {
         self.recentBars = Array(recentBars.suffix(4))
         self.currentPhrase = Array(currentPhrase.suffix(16))
         self.previousPhrase = Array(previousPhrase.suffix(16))
@@ -1021,6 +1023,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         self.spatialContrast = spatialContrast
         self.narrativeEvolution = narrativeEvolution
         self.recentPerformanceCharacters = Array(recentPerformanceCharacters.suffix(2))
+        self.harmonicContinuation = harmonicContinuation
     }
 
     package var barsSinceContrast: Int { distance(since: lastContrastBar) }
@@ -1037,6 +1040,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         interlockEvolution = plan.endingInterlockState
         spatialContrast = plan.endingSpatialContrastState
         narrativeEvolution = plan.endingNarrativeState
+        harmonicContinuation = plan.endingHarmonicContinuation
         if let character = plan.resolvedBars.first?.performanceCharacter {
             recentPerformanceCharacters = Array(
                 (recentPerformanceCharacters + [character]).suffix(2)
@@ -1163,6 +1167,9 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let endingInterlockState: InterlockEvolutionState
     package let endingSpatialContrastState: SpatialContrastState
     package let endingNarrativeState: NarrativeEvolutionState
+    package let incomingHarmonicContinuation: HarmonicContinuationState
+    package let phraseComposition: [PhraseCompositionBar]
+    package let endingHarmonicContinuation: HarmonicContinuationState
 
     package init(phraseIndex: Int, startBar: Int, barCount: Int,
                  kind: AutonomousPhraseKind, scene: TechnoScene, dna: SceneDNA,
@@ -1171,7 +1178,8 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
                  alternate: Bool, conservative: Bool, interest: PhraseInterestReport,
                  endingInterlockState: InterlockEvolutionState,
                  endingSpatialContrastState: SpatialContrastState = SpatialContrastState(),
-                 endingNarrativeState: NarrativeEvolutionState = NarrativeEvolutionState()) {
+                 endingNarrativeState: NarrativeEvolutionState = NarrativeEvolutionState(),
+                 harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState()) {
         self.phraseIndex = phraseIndex
         self.startBar = startBar
         self.barCount = barCount
@@ -1194,6 +1202,19 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
         self.endingInterlockState = endingInterlockState
         self.endingSpatialContrastState = endingSpatialContrastState
         self.endingNarrativeState = endingNarrativeState
+        incomingHarmonicContinuation = harmonicContinuation
+        phraseComposition = PhraseCompositionResolver.resolve(
+            scene: scene,
+            dna: dna,
+            kind: kind,
+            resolvedBars: resolvedBars,
+            conservative: conservative,
+            harmonicContinuation: harmonicContinuation
+        )
+        endingHarmonicContinuation = HarmonicContinuationState(
+            voices: phraseComposition.compactMap(\.padVoicing).last?.voices ??
+                harmonicContinuation.voices
+        )
     }
 
     package var memoryBars: [MusicalMemoryBar] {
@@ -1649,7 +1670,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             interest: interest,
             endingInterlockState: interlockState,
             endingSpatialContrastState: spatialContrastState,
-            endingNarrativeState: endingNarrativeState
+            endingNarrativeState: endingNarrativeState,
+            harmonicContinuation: state.memory.harmonicContinuation
         )
     }
 

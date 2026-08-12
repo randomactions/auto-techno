@@ -2075,6 +2075,218 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
     }
 }
 
+/// One bounded score-to-PCM record for the unified phrase-composition layer.
+/// Harmonic planning stays in Core; only reduced renderer consequences cross
+/// the preparation boundary.
+package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
+        Sendable {
+    package let bar: Int
+    package let sliceActive: Bool
+    package let sliceTriggerCount: Int
+    package let sliceReverseTriggerCount: Int
+    package let sliceMinimumRate: Double
+    package let sliceMaximumRate: Double
+    package let sliceSourceKind: String
+    package let sliceSourceHash: String
+    package let sliceOutputHash: String
+    package let sliceOutputRMS: Double
+    package let arpeggiatorActive: Bool
+    package let arpeggiatorDirection: String
+    package let arpeggiatorRateInSteps: Int
+    package let arpeggiatorOctaveSpan: Int
+    package let arpeggiatorStepCount: Int
+    package let padActive: Bool
+    package let padFunction: String
+    package let padVoiceCount: Int
+    package let padCommonToneCount: Int
+    package let padTotalMovement: Int
+    package let padMaximumLeap: Int
+    package let padSampleHash: String
+    package let padRMS: Double
+    package let padPeak: Double
+    package let renderPassesMatch: Bool
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(block: RenderBlock) {
+        let composition = block.synthPerformance.composition
+        let slice = block.audioSliceRenderEvidence
+        let arpeggiator = composition.arpeggiator
+        let pad = composition.padVoicing
+        let padRender = block.polyphonicPadRenderEvidence
+        bar = block.bar
+        sliceActive = slice.active
+        sliceTriggerCount = slice.triggerCount
+        sliceReverseTriggerCount = slice.reverseTriggerCount
+        sliceMinimumRate = slice.minimumPlaybackRate
+        sliceMaximumRate = slice.maximumPlaybackRate
+        sliceSourceKind = slice.sourceKind?.rawValue ?? ""
+        sliceSourceHash = slice.sourceSampleHash
+        sliceOutputHash = slice.outputSampleHash
+        sliceOutputRMS = slice.outputRMS
+        arpeggiatorActive = arpeggiator != nil
+        arpeggiatorDirection = arpeggiator?.direction.rawValue ?? ""
+        arpeggiatorRateInSteps = arpeggiator?.rateInSteps ?? 0
+        arpeggiatorOctaveSpan = arpeggiator?.octaveSpan ?? 0
+        arpeggiatorStepCount = arpeggiator?.steps.count ?? 0
+        padActive = padRender.active
+        padFunction = pad?.function.rawValue ?? ""
+        padVoiceCount = padRender.voiceCount
+        padCommonToneCount = pad?.commonToneCount ?? 0
+        padTotalMovement = pad?.totalMovementInSemitones ?? 0
+        padMaximumLeap = pad?.maximumLeapInSemitones ?? 0
+        padSampleHash = padRender.outputSampleHash
+        padRMS = padRender.outputRMS
+        padPeak = padRender.outputPeak
+        renderPassesMatch = block.audioSliceRenderPassesMatch
+        bindingValid = composition.bar == block.bar &&
+            slice.active == (composition.audioSlice != nil) &&
+            slice.triggerCount == (composition.audioSlice?.triggers.count ?? 0) &&
+            slice.sourceKind == composition.audioSlice?.sourceKind &&
+            arpeggiatorStepCount == (arpeggiator?.steps.count ?? 0) &&
+            padRender.active == (pad != nil) &&
+            padRender.voiceCount == (pad?.voices.count ?? 0) &&
+            padRender.requestedFrequencyRatios ==
+                (pad?.voices.map(\.frequencyRatio) ?? [])
+        finite = slice.finite && padRender.finite &&
+            sliceMinimumRate.isFinite && sliceMaximumRate.isFinite &&
+            sliceOutputRMS.isFinite && padRMS.isFinite && padPeak.isFinite
+    }
+
+    package static func neutral(bar: Int) -> Self {
+        Self(
+            bar: bar,
+            sliceActive: false,
+            sliceTriggerCount: 0,
+            sliceReverseTriggerCount: 0,
+            sliceMinimumRate: 1,
+            sliceMaximumRate: 1,
+            sliceSourceKind: "",
+            sliceSourceHash: "",
+            sliceOutputHash: "",
+            sliceOutputRMS: 0,
+            arpeggiatorActive: false,
+            arpeggiatorDirection: "",
+            arpeggiatorRateInSteps: 0,
+            arpeggiatorOctaveSpan: 0,
+            arpeggiatorStepCount: 0,
+            padActive: false,
+            padFunction: "",
+            padVoiceCount: 0,
+            padCommonToneCount: 0,
+            padTotalMovement: 0,
+            padMaximumLeap: 0,
+            padSampleHash: "",
+            padRMS: 0,
+            padPeak: 0,
+            renderPassesMatch: true,
+            bindingValid: true,
+            finite: true
+        )
+    }
+
+    private init(
+        bar: Int, sliceActive: Bool, sliceTriggerCount: Int,
+        sliceReverseTriggerCount: Int, sliceMinimumRate: Double,
+        sliceMaximumRate: Double, sliceSourceKind: String, sliceSourceHash: String,
+        sliceOutputHash: String, sliceOutputRMS: Double,
+        arpeggiatorActive: Bool, arpeggiatorDirection: String,
+        arpeggiatorRateInSteps: Int, arpeggiatorOctaveSpan: Int,
+        arpeggiatorStepCount: Int, padActive: Bool, padFunction: String,
+        padVoiceCount: Int, padCommonToneCount: Int, padTotalMovement: Int,
+        padMaximumLeap: Int, padSampleHash: String, padRMS: Double,
+        padPeak: Double, renderPassesMatch: Bool, bindingValid: Bool,
+        finite: Bool
+    ) {
+        self.bar = bar
+        self.sliceActive = sliceActive
+        self.sliceTriggerCount = sliceTriggerCount
+        self.sliceReverseTriggerCount = sliceReverseTriggerCount
+        self.sliceMinimumRate = sliceMinimumRate
+        self.sliceMaximumRate = sliceMaximumRate
+        self.sliceSourceKind = sliceSourceKind
+        self.sliceSourceHash = sliceSourceHash
+        self.sliceOutputHash = sliceOutputHash
+        self.sliceOutputRMS = sliceOutputRMS
+        self.arpeggiatorActive = arpeggiatorActive
+        self.arpeggiatorDirection = arpeggiatorDirection
+        self.arpeggiatorRateInSteps = arpeggiatorRateInSteps
+        self.arpeggiatorOctaveSpan = arpeggiatorOctaveSpan
+        self.arpeggiatorStepCount = arpeggiatorStepCount
+        self.padActive = padActive
+        self.padFunction = padFunction
+        self.padVoiceCount = padVoiceCount
+        self.padCommonToneCount = padCommonToneCount
+        self.padTotalMovement = padTotalMovement
+        self.padMaximumLeap = padMaximumLeap
+        self.padSampleHash = padSampleHash
+        self.padRMS = padRMS
+        self.padPeak = padPeak
+        self.renderPassesMatch = renderPassesMatch
+        self.bindingValid = bindingValid
+        self.finite = finite
+    }
+
+    package func isComplete() -> Bool {
+        guard bar >= 0, renderPassesMatch, bindingValid, finite,
+              sliceTriggerCount >= 0,
+              sliceTriggerCount <= AudioSlicePlan.maximumTriggerCount,
+              sliceReverseTriggerCount >= 0,
+              sliceReverseTriggerCount <= sliceTriggerCount,
+              arpeggiatorStepCount >= 0,
+              arpeggiatorStepCount <= ArpeggiatorPlan.maximumStepCount,
+              padVoiceCount >= 0,
+              padVoiceCount <= PadVoicing.voiceCount,
+              padCommonToneCount >= 0,
+              padCommonToneCount <= PadVoicing.voiceCount,
+              padTotalMovement >= 0, padMaximumLeap >= 0,
+              sliceOutputRMS >= 0, padRMS >= 0, padRMS <= padPeak else {
+            return false
+        }
+        if sliceActive {
+            guard sliceTriggerCount > 0, sliceOutputRMS > 0,
+                  AudioSliceSourceKind(rawValue: sliceSourceKind) != nil,
+                  isHash(sliceSourceHash), isHash(sliceOutputHash),
+                  (0.5...2).contains(sliceMinimumRate),
+                  (0.5...2).contains(sliceMaximumRate),
+                  sliceMinimumRate <= sliceMaximumRate else { return false }
+        } else if sliceTriggerCount != 0 || sliceReverseTriggerCount != 0 ||
+                    sliceMinimumRate != 1 || sliceMaximumRate != 1 ||
+                    !sliceSourceKind.isEmpty ||
+                    !sliceSourceHash.isEmpty || !sliceOutputHash.isEmpty ||
+                    sliceOutputRMS.bitPattern != 0 {
+            return false
+        }
+        if arpeggiatorActive {
+            guard ArpeggiatorDirection(rawValue: arpeggiatorDirection) != nil,
+                  (1...4).contains(arpeggiatorRateInSteps),
+                  (1...2).contains(arpeggiatorOctaveSpan),
+                  arpeggiatorStepCount >= 4 else { return false }
+        } else if !arpeggiatorDirection.isEmpty || arpeggiatorRateInSteps != 0 ||
+                    arpeggiatorOctaveSpan != 0 || arpeggiatorStepCount != 0 {
+            return false
+        }
+        if padActive {
+            guard PadHarmonicFunction(rawValue: padFunction) != nil,
+                  padVoiceCount == PadVoicing.voiceCount,
+                  padRMS > 0, padPeak > 0, isHash(padSampleHash),
+                  padMaximumLeap <= 12 else { return false }
+        } else if !padFunction.isEmpty || padVoiceCount != 0 ||
+                    padCommonToneCount != 0 || padTotalMovement != 0 ||
+                    padMaximumLeap != 0 || !padSampleHash.isEmpty ||
+                    padRMS.bitPattern != 0 || padPeak.bitPattern != 0 {
+            return false
+        }
+        return true
+    }
+
+    private func isHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 /// Fixed role-local PCM identity for one upper companion role. This remains a
 /// compact consequence record: the transient dry tap never leaves detached
 /// preparation and no per-event PCM or crest duplicate enters the candidate.
@@ -3066,6 +3278,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
     case closedHatEvidence = "closed-hat-evidence"
     case instrumentEvidence = "instrument-evidence"
     case percussionEchoTextureEvidence = "percussion-echo-texture-evidence"
+    case phraseCompositionEvidence = "phrase-composition-evidence"
     case pulseEchoDriveEvidence = "pulse-echo-drive-evidence"
     case upperTimingEvidence = "upper-timing-evidence"
 }
@@ -3073,7 +3286,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 15
+    package static let schemaVersion = 16
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -3109,6 +3322,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let sourcePercussionEchoTextureBarCount: Int
     package let percussionEchoTexture:
         [AutonomousPercussionEchoTextureBarEvidence]
+    package let sourcePhraseCompositionBarCount: Int
+    package let phraseComposition: [AutonomousPhraseCompositionBarEvidence]
     package let sourcePulseEchoDriveBarCount: Int
     package let pulseEchoDrive: [AutonomousPulseEchoDriveBarEvidence]
     package let sourceUpperTimingBarCount: Int
@@ -3138,6 +3353,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         closedHat: [AutonomousClosedHatBarEvidence] = [],
         instruments: [AutonomousInstrumentBarEvidence],
         percussionEchoTexture: [AutonomousPercussionEchoTextureBarEvidence],
+        phraseComposition: [AutonomousPhraseCompositionBarEvidence],
         pulseEchoDrive: [AutonomousPulseEchoDriveBarEvidence],
         upperTiming: [AutonomousUpperTimingBarEvidence],
         graph: AutonomousGraphEvidence,
@@ -3170,6 +3386,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         sourcePercussionEchoTextureBarCount = percussionEchoTexture.count
         self.percussionEchoTexture = Array(
             percussionEchoTexture.prefix(Self.maximumBarCount)
+        )
+        sourcePhraseCompositionBarCount = phraseComposition.count
+        self.phraseComposition = Array(
+            phraseComposition.prefix(Self.maximumBarCount)
         )
         sourcePulseEchoDriveBarCount = pulseEchoDrive.count
         self.pulseEchoDrive = Array(pulseEchoDrive.prefix(Self.maximumBarCount))
@@ -3646,6 +3866,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 bindingValid: bindingValid
             )
         }
+        let phraseComposition = boundedBlocks.map {
+            AutonomousPhraseCompositionBarEvidence(block: $0)
+        }
         let upperTiming = boundedBlocks.map { block in
             makeUpperTimingEvidence(
                 block: block,
@@ -3698,6 +3921,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             closedHat: closedHat,
             instruments: instruments,
             percussionEchoTexture: percussionEchoTexture,
+            phraseComposition: phraseComposition,
             pulseEchoDrive: pulseEchoDrive,
             upperTiming: upperTiming,
             graph: graphEvidence,
@@ -4073,6 +4297,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             closedHat.allSatisfy { $0.isFinite } &&
             instruments.allSatisfy { $0.isFinite } &&
             percussionEchoTexture.allSatisfy { $0.isFinite } &&
+            phraseComposition.allSatisfy { $0.finite } &&
             pulseEchoDrive.allSatisfy { $0.isFinite } &&
             upperTiming.allSatisfy { $0.isFinite } &&
             routeContinuation.isFinite &&
@@ -4128,6 +4353,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         ) {
             failures.append(.percussionEchoTextureEvidence)
         }
+        if !phraseCompositionEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.phraseCompositionEvidence)
+        }
         if !pulseEchoDriveEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.pulseEchoDriveEvidence)
         }
@@ -4160,6 +4388,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
               sourcePercussionEchoTextureBarCount ==
                 percussionEchoTexture.count,
               percussionEchoTexture.count == fullMix.sourceBarCount,
+              sourcePhraseCompositionBarCount == phraseComposition.count,
+              phraseComposition.count == fullMix.sourceBarCount,
               sourcePulseEchoDriveBarCount == pulseEchoDrive.count,
               pulseEchoDrive.count == fullMix.sourceBarCount,
               sourceUpperTimingBarCount == upperTiming.count,
@@ -4298,6 +4528,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceInstrumentBarCount == instruments.count &&
             sourcePercussionEchoTextureBarCount ==
                 percussionEchoTexture.count &&
+            sourcePhraseCompositionBarCount == phraseComposition.count &&
             sourcePulseEchoDriveBarCount == pulseEchoDrive.count &&
             sourceUpperTimingBarCount == upperTiming.count &&
             masking.count == fullMix.sourceBarCount &&
@@ -4308,6 +4539,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             closedHat.count == fullMix.sourceBarCount &&
             instruments.count == fullMix.sourceBarCount &&
             percussionEchoTexture.count == fullMix.sourceBarCount &&
+            phraseComposition.count == fullMix.sourceBarCount &&
             pulseEchoDrive.count == fullMix.sourceBarCount &&
             upperTiming.count == fullMix.sourceBarCount
     }
@@ -4526,6 +4758,16 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     }
 
     @inline(never)
+    private func phraseCompositionEvidenceIsComplete(
+        expectedBars: Set<Int>
+    ) -> Bool {
+        Set(phraseComposition.map { $0.bar }) == expectedBars &&
+            phraseComposition.map(\.bar) == fullMix.bars.map(\.bar) &&
+            phraseComposition.count == fullMix.sourceBarCount &&
+            phraseComposition.allSatisfy { $0.isComplete() }
+    }
+
+    @inline(never)
     private func upperTimingEvidenceIsComplete(expectedBars: Set<Int>) -> Bool {
         guard let phraseKind = AutonomousPhraseKind(
             rawValue: symbolic.phraseKind
@@ -4686,6 +4928,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             closedHat.count <= Self.maximumBarCount &&
             instruments.count <= Self.maximumBarCount &&
             percussionEchoTexture.count <= Self.maximumBarCount &&
+            phraseComposition.count <= Self.maximumBarCount &&
             pulseEchoDrive.count <= Self.maximumBarCount &&
             upperTiming.count <= Self.maximumBarCount
     }

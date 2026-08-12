@@ -674,7 +674,8 @@ struct KickSyntaxTests {
             ),
             endingInterlockState: plan.endingInterlockState,
             endingSpatialContrastState: plan.endingSpatialContrastState,
-            endingNarrativeState: plan.endingNarrativeState
+            endingNarrativeState: plan.endingNarrativeState,
+            harmonicContinuation: plan.incomingHarmonicContinuation
         )
     }
 

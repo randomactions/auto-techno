@@ -97,15 +97,42 @@ produce distinct deterministic Resonant Mono PCM. These are structural and
 score-to-PCM facts, not a professional-sound qualification; the shipping policy
 remains uncalibrated.
 
-## Deliberate remaining boundaries
+## Phrase composition layer
 
-This slice does not capture or resample output, create a sample library, or add
-MIDI. A future slice renderer may provide score-owned, phrase-local generated
-audio fragments only after its source ownership, memory bound, callback safety,
-and exact PCM evidence are specified.
+The canonical synth plan now derives one bounded composition record for every
+resolved bar. It does not admit roles or choose an independent style; it
+interprets only material already authorized by the phrase character, narrative,
+section, modal DNA, and ensemble score.
 
-This slice also does not claim rich polyphonic ambient pads, continuous
-sparse-to-arpeggiated density travel, or a complete harmonic voice-leading
-grammar. Dark Chord, Dust Cloud, existing motif transformations, and the
-character conductor provide compatible destinations for those future vertical
-slices without pretending they are already implemented.
+| Capability | Eligible context | Score and PCM consequence |
+| --- | --- | --- |
+| True audio slicing | Broken Suspension or Ambient Drift inside a major-break breakdown with an existing early percussion or kick event | Captures 0.25–2 steps from that bar's exact app-owned dry percussion/kick PCM and schedules at most six forward/reverse triggers at 0.5–2x with boundary fades. No library or cross-session sample storage exists. |
+| Full arpeggiator | Melodic Glow, Acid Pressure, or Peak Drive with an admitted motif outside major breaks, structural markers, and Tone chapters | Replaces sparse anchor notes with 8 or 16 fully resolved notes. Direction, 1/16 or 1/8 rate, octave span, rotation, pitch, duration, and velocity are score-owned. DSP has no free-running sequencer clock; the existing sustained-wash release marker keeps its single long anchor and Tone chapters retain their complementary spectral relation. |
+| Polyphonic pads | Admitted atmosphere during Ambient Drift, Melodic Glow, major breaks, or a Breath chapter | Adds one simultaneous four-voice modal chord through a fixed-state pad voice with bounded filter, drive, spatial send, and exact dry-PCM evidence. Existing atmosphere events remain intact. |
+| Voice-leading | Every eligible pad transition | Chooses among inversions/octaves by total movement, leap penalty, common tones, register spread, and selected contrary outer motion. Each bar records common tones, total semitone movement, maximum leap, and harmonic function. |
+
+Arpeggiator pitches and pad voices share the session's modal vocabulary and
+eight-bar harmonic function arc. This is the cohesion mechanism: rhythmic note
+density and sustained harmony cannot independently choose incompatible pitch
+collections. The sixteen-bar macro position selects direction and turnaround
+behavior deterministically across adaptive phrase boundaries.
+
+The slicer is true resampling, but deliberately phrase-local: it reads only PCM
+rendered and owned by Auto Techno for the current bar, using a percussion event
+when present and the resolved kick as the bounded break source otherwise. It
+never captures a microphone, system audio, external file, or scheduled output,
+and it retains no source buffer in continuation. Rendering occurs during
+detached preparation; the callback still schedules immutable completed buffers
+only.
+
+Identity return, conservative fallback, force-home correction, missing source
+material, and ineligible role/character combinations resolve every new feature
+to exact neutral. Candidate schema 16 binds per-bar score geometry to source and
+output hashes, trigger/rate counts, pad frequency ratios and PCM, arpeggiator
+counts, and voice-leading bounds. The shipping evaluator remains uncalibrated,
+so this is causal structural evidence rather than a professional-quality claim.
+
+Deliberate remaining boundaries are cross-bar/sample-library slicing, granular
+time stretching, arbitrary MIDI import/export, more than four simultaneous pad
+voices, chromatic reharmonization outside the identity mode, and calibrated
+ranking of harmonic or resampling quality.

@@ -903,10 +903,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 15)
-        #expect(QualityQualificationContract.schemaVersion == 16)
+        #expect(vector.schemaVersion == 16)
+        #expect(QualityQualificationContract.schemaVersion == 17)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v16")
+                "autotechno-canonical-engine.v17")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -3261,15 +3261,15 @@ struct AutonomousCandidateEvaluationTests {
         #expect(initialCommit.fingerprint != advancedCommit.fingerprint)
 
         #expect(AutonomousCandidateFingerprint.plan(candidates.primary) ==
-                "7319cf2f4d46ae1c")
+                "62565aad578c7ab7")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
-                "1933b86b590fcbd3")
+                "24168861da771994")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "fdb5871fe732a8db")
+                "17d4f8feba65c457")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3277,7 +3277,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.renderDSPContinuation(
             renderState: positiveZeroRenderState,
             generatedDSPState: orderedGraphState
-        ) == "ba42173591712f7a")
+        ) == "7b2f7f52682cf775")
     }
 
     private var fixturePlanFingerprints: AutonomousCandidatePlanFingerprints {
@@ -3510,6 +3510,7 @@ struct AutonomousCandidateEvaluationTests {
                     sampleRate: 8_000
                 ),
             ],
+            phraseComposition: [.neutral(bar: evidenceBar)],
             pulseEchoDrive: pulseEchoDriveBars ?? [fixturePulseEchoDrive(
                 bar: evidenceBar,
                 renderedFrameCount: defaultTiming?.renderedFrameCount ?? 14_769,

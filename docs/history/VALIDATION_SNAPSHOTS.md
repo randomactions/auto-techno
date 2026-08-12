@@ -949,3 +949,40 @@ Shipping selection remains `uncalibrated.v1`; no listening, app/route smoke,
 latency or peak-memory measurement, hardware soak, professional-quality
 promotion, or release-readiness claim is made. Publication and exact-head
 remote CI remain separate gates.
+
+## Unified phrase composition — 2026-08-12
+
+This candidate adds one score-owned phrase-composition layer to the existing
+director, resolved score, synth plan, and detached renderer. It provides true
+phrase-local resampling of exact app-owned percussion or kick PCM, complete
+8/16-step modal arpeggiator score geometry, a fixed four-voice pad renderer, and
+minimal-motion harmonic continuation across accepted phrase boundaries. Tone
+chapters and structural release markers retain their established spectral and
+sustained-wash ownership. Conservative, identity-return, and force-home paths
+remain neutral. No renderer-side sequencer, sample library, cross-bar PCM cache,
+new runtime, callback work, or user-facing control was added.
+
+Candidate-vector schema 16, quality-contract schema 17, canonical engine v17,
+typed plan-fingerprint domain v10, render-state domain v3, and render/DSP
+continuation domain v3 bind the new plan, source kind, slice/pad PCM consequence,
+arpeggiator geometry, and harmonic continuation. Shipping policy remains
+`uncalibrated.v1`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with matched
+SDKs, isolated caches, serial execution, and separate heavy test processes:
+
+- unified phrase-composition score/DSP/reachability: 9/9;
+- candidate provenance plus phrase composition: 27/27;
+- core and evidence CI group: 135/135 passed in 194.812 seconds;
+- upper integration: 19/19 passed in 150.765 seconds;
+- preparation preflight: 22/22 passed in 515.225 seconds;
+- protected routing: 7/7 passed in 73.420 seconds;
+- fresh optimized `AutoTechno` product build: passed in 67.25 seconds;
+- `git diff --check`: clean before publication.
+
+The release linker emitted non-fatal missing module-cache debug-reference
+warnings from the isolated SwiftPM build path; the product linked successfully.
+This snapshot proves deterministic causal reachability and bounded engineering
+contracts, not listening quality. No exact-build app/route smoke, physical-output
+soak, calibrated quality promotion, or release-readiness claim is made.
+Publication and exact-head remote CI remain separate gates.

@@ -1134,6 +1134,7 @@ struct QualityQualificationFoundationTests {
             percussionEchoTexture: [
                 .neutral(bar: 0, sampleRate: evidence.sampleRate),
             ],
+            phraseComposition: [.neutral(bar: 0)],
             pulseEchoDrive: [AutonomousPulseEchoDriveBarEvidence(
                 bar: 0,
                 bpm: AutonomousSessionDirector.bpm,
@@ -1280,6 +1281,7 @@ struct QualityQualificationFoundationTests {
                 closedHat: source.closedHat,
                 instruments: source.instruments,
                 percussionEchoTexture: source.percussionEchoTexture,
+                phraseComposition: source.phraseComposition,
                 pulseEchoDrive: source.pulseEchoDrive,
                 upperTiming: source.upperTiming,
                 graph: source.graph,
