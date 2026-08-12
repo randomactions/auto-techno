@@ -27,10 +27,14 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   DSP, while non-acid and protected-foundation assignments remain neutral;
 - one transition-only rising adjacent-cluster relation inside the existing
   Metal Veil spectral texture, with no new onset, patch, or sequencer;
-- canonical engine v13, quality-contract schema 13, and candidate-vector schema 12
+- one score-owned sustained-wash envelope relation that enlarges only the final
+  eligible Tonal Motion anchor at an energy-release marker, with no new note,
+  pitch, gate, instrument, or effect route;
+- canonical engine v14, quality-contract schema 14, and candidate-vector schema 13
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax, event-local groove-pulse, ordinary closed-hat,
-  score-owned instrument, acid-operator, and spectral-cluster consequence,
+  score-owned instrument, acid-operator, spectral-cluster, and tonal-envelope
+  consequence,
   score-owned gated percussion texture, shared pulse-echo return-drive,
   score-owned upper-role timing, graph, and
   pre/post upper-timbre evidence;
@@ -89,11 +93,11 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 13 and candidate-vector schema 12 now bind a versioned
-transaction across canonical engine v13, quality policy, evaluator, candidate
+Quality-contract schema 14 and candidate-vector schema 13 now bind a versioned
+transaction across canonical engine v14, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
-instrument, acid-operator, and spectral-cluster,
+instrument, acid-operator, spectral-cluster, and tonal-envelope,
 gated percussion texture, pulse-echo return-drive, and upper-role timing
 projections make each
 score-to-PCM consequence explicit without letting the uncalibrated policy rank

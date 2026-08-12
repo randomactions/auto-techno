@@ -269,6 +269,80 @@ struct UpperTimbrePlanningTests {
         #expect(fallback.upperNotes.allSatisfy { $0.gate == .retrigger })
     }
 
+    @Test("A release marker enlarges only the final eligible tonal anchor envelope")
+    func sustainedWashSelectionAndFallback() {
+        guard let (scene, dna) = distinctMotifScene() else {
+            Issue.record("Expected a deterministic upper-voice scene")
+            return
+        }
+        let resolved = makeResolvedBar(
+            kind: .energyRelease,
+            chapter: .home,
+            events: standardUpperEvents,
+            absoluteBar: 15,
+            localBar: 15,
+            phraseLength: 16,
+            signatureEvent: .displacedKickRecovery
+        )
+        let active = SynthPerformancePlan(
+            scene: scene,
+            dna: dna,
+            kind: .energyRelease,
+            resolvedBars: [resolved]
+        ).bars[0]
+        let expanded = active.upperNotes.filter {
+            $0.envelopeRelation == .sustainedWash
+        }
+        #expect(active.tonalEnvelopeExpansionEligible)
+        #expect(expanded.count == 1)
+        #expect(expanded[0].role == .anchor)
+        #expect(expanded[0].onsetStep == 10)
+        #expect(expanded[0].gate == .retrigger)
+        #expect(expanded[0].instrument.architecture == .tonalMotion)
+        #expect(active.upperNotes.filter { $0 != expanded[0] }.allSatisfy {
+            $0.envelopeRelation == .home
+        })
+
+        let corrected = SynthPerformancePlan(
+            scene: scene,
+            dna: dna,
+            kind: .energyRelease,
+            resolvedBars: [resolved],
+            forceHomeUpperTimbre: true
+        ).bars[0]
+        #expect(corrected.tonalEnvelopeExpansionEligible)
+        #expect(corrected.forceHomeUpperTimbre)
+        #expect(corrected.upperNotes.allSatisfy { $0.envelopeRelation == .home })
+
+        let conservative = SynthPerformancePlan(
+            scene: scene,
+            dna: dna,
+            kind: .energyRelease,
+            resolvedBars: [resolved],
+            conservative: true
+        ).bars[0]
+        #expect(!conservative.tonalEnvelopeExpansionEligible)
+        #expect(conservative.upperNotes.allSatisfy { $0.envelopeRelation == .home })
+
+        let forgedEarlyMarker = makeResolvedBar(
+            kind: .energyRelease,
+            chapter: .home,
+            events: standardUpperEvents,
+            absoluteBar: 14,
+            localBar: 14,
+            phraseLength: 16,
+            signatureEvent: .displacedKickRecovery
+        )
+        let early = SynthPerformancePlan(
+            scene: scene,
+            dna: dna,
+            kind: .energyRelease,
+            resolvedBars: [forgedEarlyMarker]
+        ).bars[0]
+        #expect(!early.tonalEnvelopeExpansionEligible)
+        #expect(early.upperNotes.allSatisfy { $0.envelopeRelation == .home })
+    }
+
     private var standardUpperEvents: [EnsembleResolvedEvent] {
         [
             EnsembleResolvedEvent(voice: .motif, step: 2, intensity: 0.82, relocated: false),
@@ -307,7 +381,11 @@ struct UpperTimbrePlanningTests {
         kind: AutonomousPhraseKind,
         chapter: InterlockChapter,
         events: [EnsembleResolvedEvent],
-        spatialContrast: SpatialContrastArticulation = .foreground
+        spatialContrast: SpatialContrastArticulation = .foreground,
+        absoluteBar: Int = 7,
+        localBar: Int = 3,
+        phraseLength: Int = 8,
+        signatureEvent: SignatureEvent? = nil
     ) -> ResolvedPerformanceBar {
         let section: SectionKind = switch kind {
         case .lock: .groove
@@ -322,15 +400,15 @@ struct UpperTimbrePlanningTests {
         }
         return ResolvedPerformanceBar(
             performance: PerformanceBar(
-                bar: 7,
+                bar: absoluteBar,
                 phrase: 1,
-                localBar: 3,
-                phraseLength: 8,
+                localBar: localBar,
+                phraseLength: phraseLength,
                 section: section,
                 tension: 0.72,
                 roles: [.motif, .response, .atmosphere, .transition],
                 transformations: [],
-                signatureEvent: nil,
+                signatureEvent: signatureEvent,
                 eventSeed: 0xA11CE,
                 accentContour: (0..<16).map { $0.isMultiple(of: 4) ? 1 : 0.42 }
             ),

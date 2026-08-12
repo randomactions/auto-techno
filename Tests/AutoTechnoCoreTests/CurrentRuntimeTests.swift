@@ -187,6 +187,8 @@ struct RepositorySurfaceTests {
             "Truth boundary",
             "Later serious DSP direction",
             "call, delayed response, and turnaround",
+            "larger temporal scale",
+            "higher-resolution MSEG",
             "canonical director/score/renderer path",
         ] {
             #expect(maturity.contains(required), "Maturity register omits \(required)")

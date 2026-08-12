@@ -841,3 +841,41 @@ The durable concept and provisional realization are recorded separately in
 loudness listening, exact-build app playback, physical route/interruption
 smoke, representative latency/peak-memory measurement, or hardware-output
 soak. It makes no shipping professional-quality or release-readiness promotion.
+
+## Release-boundary tonal-envelope expansion — 2026-08-12
+
+This candidate is based on the published rising-cluster mainline commit
+`cad70e41e7662228108944ee7f02948daf78d807`. It gives only the final eligible
+Tonal Motion anchor at the existing paid energy-release marker one durable
+`sustainedWash` relation. The score retains the same onset, pitch, duration,
+velocity, gate, assignment, effects, density, and transport; conservative
+fallback and forced-home correction remain exact neutral.
+
+Detached rendering applies a bounded provisional sustain/release realization
+and retains exact score-to-schedule identity plus an isolated expansion-stem
+hash, peak/RMS, attack/tail ratio, nonzero count, binding, and finiteness.
+Candidate-vector schema 13, quality-contract schema 14, canonical engine v14,
+and typed plan-fingerprint domain v8 identify the score, PCM, continuation, and
+wire-format change. Shipping selection stays `uncalibrated.v1`.
+
+Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+matched SDKs, isolated caches, serial execution, and the workflow's exact
+process boundaries:
+
+- focused score/DSP/evidence and exact-fingerprint checks: 5/5;
+- split upper/prepared-product/transaction filters: 19/19;
+- core and evidence: 125/125 passed in 161.471 seconds;
+- preparation preflight: 22/22 passed in 499.981 seconds;
+- protected routing: 7/7 passed in 67.896 seconds;
+- complete CI-selected matrix: 173/173;
+- fresh optimized `AutoTechno` product build: passed in 58.77 seconds;
+- `git diff --check`: clean before publication.
+
+The frozen development profile and ten-case adversarial contract passed their
+normal tests, but the opt-in complete 128-phrase journey generator was not run
+and no profile artifact was regenerated. The durable concept and provisional
+DSP are separated in `docs/SOUND_CONCEPT_MATURITY.md`. This snapshot does not
+claim matched-loudness listening, exact-build app playback, route/interruption
+smoke, representative latency or peak memory, hardware soak, shipping
+professional-quality qualification, or release readiness. Exact-head remote CI
+remains a separate publication gate.

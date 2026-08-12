@@ -11,12 +11,13 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 13, candidate-vector schema 12, and
-canonical engine identity `autotechno-canonical-engine.v13`. It preserves
+candidate uses quality-contract schema 14, candidate-vector schema 13, and
+canonical engine identity `autotechno-canonical-engine.v14`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, score-owned instrument assignment, architecture-local dry-
-PCM, acid-operator, and rising spectral-cluster evidence, score-owned gated
+PCM, acid-operator, rising spectral-cluster, and tonal-envelope-expansion
+evidence, score-owned gated
 percussion texture,
 shared pulse-echo return-drive,
 score-owned upper-role timing, graph, and
@@ -63,6 +64,27 @@ treatment, and operator blend are implementation v1. A future oversampled,
 higher-order, or differently band-limited DSP may replace them only under a new
 engine/schema identity while preserving deterministic score ownership, neutral
 fallback, protected low end, and truthful consequence evidence.
+
+The existing Tonal Motion architecture also carries one durable
+`sustainedWash` envelope relation. It is eligible only for the final retriggered
+motif anchor at a nonconservative energy-release macro marker, and only when at
+least one sixteenth remains for its consequence to become observable. The score
+does not add a note or change pitch, duration, gate, velocity, instrument,
+effects, or transport. Renderer realization v1 raises the same patch envelope
+to a bounded `0.68` sustain target and multiplies its existing release by `3.2`,
+with absolute caps of `0.92` sustain and `2.4` seconds. These numbers are an
+engineering realization, not the musical concept.
+
+Same-pass evidence retains one event fingerprint, base and applied sustain and
+release values, an exact isolated dry-signal hash, peak/RMS, onset-local attack
+RMS, final-tail RMS and ratio, nonzero count, binding, and finiteness. The
+conservative candidate and a home-timbre correction are exact neutral; the
+correction also clears any inherited expanded release before its first onset.
+Future MSEG or exponential envelopes, oversampled tail colour, envelope-aware
+dynamics, or diffusion must replace this path under a new engine/schema identity
+and retain the same score relation, continuation, evidence, and fallback. While
+shipping selection is uncalibrated, the record can reject broken provenance but
+cannot promote the device as professionally qualified.
 
 Kick-syntax evidence retains one compact record for every bar. It binds the
 resolved grounded/withheld/recovery role, score and rendered kick count/mask,
@@ -247,8 +269,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 13, candidate-vector schema 12, and canonical engine
-v13, the versioned transaction implements the bounded evidence and atomic commit
+Under quality-contract schema 14, candidate-vector schema 13, and canonical engine
+v14, the versioned transaction implements the bounded evidence and atomic commit
 foundation for this loop. It can retain at most the primary, alternate, and
 conservative-fallback candidates, plus one
 home-timbre correction, with no more than four render passes total. Every attempt

@@ -24,9 +24,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 13, candidate-
-   vector schema 12, and canonical engine identity
-   `autotechno-canonical-engine.v13`. Each
+   candidate-evaluation transaction under quality-contract schema 14, candidate-
+   vector schema 13, and canonical engine identity
+   `autotechno-canonical-engine.v14`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax,
    event-local groove-pulse,
@@ -42,6 +42,9 @@ mistaken for a completed feedback system.
    transitions additionally bind one
    rising adjacent-cluster relation to exact component ratios, upward frequency
    geometry, an isolated dry-signal hash, peak/RMS/crest, and finiteness.
+   Eligible Tonal Motion release anchors additionally bind one durable
+   sustained-wash relation to the exact base/applied sustain and release,
+   event identity, isolated dry-signal hash, attack/tail metrics, and finiteness.
    Closed-hat records bind every ordinary hat to
    its score-owned neutral or companion decay role and exact dry-sample
    consequence. Groove-pulse records bind the existing resolved onset to
@@ -209,6 +212,35 @@ independent. Physical metrics remain descriptive while shipping selection is
 uncalibrated; they are not optimization targets. Such a revision requires a new
 engine/schema identity and exact-head qualification against the frozen
 development profile.
+
+## Implemented tonal-envelope expansion slice
+
+`SynthPerformancePlan` owns one durable `sustainedWash` relation on the final
+eligible Tonal Motion anchor at a canonical energy-release marker. Eligibility
+requires a nonconservative release plan, the existing displaced-kick recovery
+signature at macro bar 15, a retriggered motif onset no later than step 12, and
+the existing Tonal Motion architecture. The relation changes no onset, pitch,
+duration, velocity, gate, instrument assignment, effect permission, density, or
+transport. Conservative fallback is exact home; an attempt-local home-timbre
+correction retains the eligibility fact while forcing the relation home and
+clearing any inherited expanded envelope state before the first corrected
+onset.
+
+The current renderer maps this meaning to a bounded sustain target and longer
+release inside the existing Tonal Motion ADSR. The voice continuation latches
+the semantic relation alongside its existing oscillator, filter, comb,
+all-pass, and echo state. Detached rendering uses one pooled isolated signal
+buffer, then retains only an event fingerprint, base/applied envelope facts,
+exact PCM hash, attack/tail metrics, nonzero count, binding, and finiteness.
+No captured PCM or new work reaches the real-time callback.
+
+The exact sustain target, release scale, caps, and ADSR topology are realization
+v1. A later serious renderer may replace them with higher-resolution MSEG or
+exponential curves, envelope-aware dynamics, oversampled tail colour, or
+controlled diffusion only after an objective deficit is demonstrated. It must
+replace rather than layer another envelope path, preserve the score meaning and
+neutral fallback, advance engine/schema identities, and provide equivalent or
+stronger same-pass evidence.
 
 ## Implemented pulse-echo return slice
 

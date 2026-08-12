@@ -22,7 +22,7 @@ func fixedWidthFingerprintHex(_ value: UInt64) -> String {
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
-        digest(domain: "candidate-plan.typed.v7") { sink in
+        digest(domain: "candidate-plan.typed.v8") { sink in
             encode(plan, into: &sink)
         }
     }
@@ -195,6 +195,8 @@ private extension AutonomousTypedFingerprint {
         for bar in synthPerformance.bars {
             sink.aggregate("SynthPerformanceBarUpperNotes")
             sink.field("bar"); sink.int(bar.bar)
+            sink.field("tonalEnvelopeExpansionEligible")
+            sink.bool(bar.tonalEnvelopeExpansionEligible)
             sink.field("notes"); sink.collection(bar.upperNotes.count)
             for note in bar.upperNotes { encode(note, into: &sink) }
         }
@@ -210,6 +212,7 @@ private extension AutonomousTypedFingerprint {
         sink.field("velocity"); sink.double(value.velocity)
         sink.field("gate"); sink.raw(value.gate.rawValue)
         sink.field("timbreIntent"); encode(value.timbreIntent, into: &sink)
+        sink.field("envelopeRelation"); sink.raw(value.envelopeRelation.rawValue)
         sink.field("timingOffsetInSteps"); sink.double(value.timingOffsetInSteps)
         sink.field("instrument"); encode(Optional(value.instrument), into: &sink)
     }
@@ -806,6 +809,7 @@ private extension AutonomousTypedFingerprint {
         sink.field("envelope"); sink.double(value.envelope)
         sink.field("filterEnvelope"); sink.double(value.filterEnvelope)
         sink.field("timbreIntent"); encode(value.timbreIntent, into: &sink)
+        sink.field("envelopeRelation"); sink.raw(value.envelopeRelation.rawValue)
         sink.field("timbreVelocity"); sink.double(value.timbreVelocity)
         sink.field("timbreTreatment"); encode(value.timbreTreatment, into: &sink)
         sink.field("velocityResponse"); encode(value.velocityResponse, into: &sink)
@@ -847,6 +851,7 @@ private extension AutonomousTypedFingerprint {
         sink.field("envelope"); sink.double(value.envelope)
         sink.field("filterEnvelope"); sink.double(value.filterEnvelope)
         sink.field("timbreIntent"); encode(value.timbreIntent, into: &sink)
+        sink.field("envelopeRelation"); sink.raw(value.envelopeRelation.rawValue)
         sink.field("timbreVelocity"); sink.double(value.timbreVelocity)
         sink.field("timbreTreatment"); encode(value.timbreTreatment, into: &sink)
         sink.field("velocityResponse"); encode(value.velocityResponse, into: &sink)

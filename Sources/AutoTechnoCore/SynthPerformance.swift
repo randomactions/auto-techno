@@ -55,6 +55,15 @@ package enum UpperNoteGate: String, CaseIterable, Sendable {
     case slide
 }
 
+/// Durable envelope meaning for an already-resolved upper note. `home` keeps
+/// the patch envelope exact; `sustainedWash` asks the existing Tonal Motion
+/// voice to let the same articulated note occupy a release boundary at a
+/// larger temporal scale. DSP owns the replaceable numeric realization.
+package enum UpperEnvelopeRelation: String, CaseIterable, Sendable {
+    case home
+    case sustainedWash
+}
+
 /// The complete score-owned pitch and articulation request for one upper note.
 /// Start and end ratios are requested trajectory anchors relative to
 /// `SynthWorldDNA.rootFrequency`. DSP records the continuation-dependent
@@ -75,6 +84,7 @@ package struct ResolvedUpperNote: Equatable, Sendable {
     package let velocity: Double
     package let gate: UpperNoteGate
     package let timbreIntent: UpperTimbreIntent
+    package let envelopeRelation: UpperEnvelopeRelation
     /// A score-owned positive onset displacement measured in sixteenth-note
     /// steps. Duration remains independent so delaying a note never shortens
     /// its requested gate.
@@ -85,6 +95,7 @@ package struct ResolvedUpperNote: Equatable, Sendable {
                  startFrequencyRatio: Double, endFrequencyRatio: Double,
                  velocity: Double, gate: UpperNoteGate,
                  timbreIntent: UpperTimbreIntent,
+                 envelopeRelation: UpperEnvelopeRelation = .home,
                  timingOffsetInSteps: Double = 0,
                  instrument: InstrumentAssignment? = nil) {
         self.role = role
@@ -104,6 +115,7 @@ package struct ResolvedUpperNote: Equatable, Sendable {
         self.velocity = min(1, max(0, velocity))
         self.gate = gate
         self.timbreIntent = timbreIntent
+        self.envelopeRelation = envelopeRelation
         self.timingOffsetInSteps = timingOffsetInSteps.isFinite
             ? min(Self.maximumTimingOffsetInSteps, max(0, timingOffsetInSteps))
             : 0
@@ -120,6 +132,7 @@ package struct ResolvedUpperNote: Equatable, Sendable {
             velocity: velocity,
             gate: gate,
             timbreIntent: timbreIntent,
+            envelopeRelation: envelopeRelation,
             timingOffsetInSteps: value,
             instrument: instrument
         )
@@ -376,12 +389,23 @@ package struct SynthPerformanceBar: Equatable, Sendable {
     package let relationalSteps: [RelationalArticulation]
     package let upperNotes: [ResolvedUpperNote]
     package let pulseEchoTextureArticulation: PulseEchoTextureArticulation
+    /// Eligibility before an attempt-local home-timbre correction. The
+    /// selected note carries the active relation; a correction retains this
+    /// fact while resolving every relation to exact home.
+    package let tonalEnvelopeExpansionEligible: Bool
+    /// Attempt-local correction ownership. This is kept separate from
+    /// eligibility so a corrected bar can prove the feature would normally
+    /// have been active while forcing any incoming long release home before
+    /// its first onset.
+    package let forceHomeUpperTimbre: Bool
 
     package init(bar: Int, gesture: SynthGesture, mutationAmount: Double,
                 foundationInstrument: InstrumentAssignment = InstrumentPalette.safeFoundation(),
                 relationalSteps: [RelationalArticulation],
                 upperNotes: [ResolvedUpperNote],
-                pulseEchoTextureArticulation: PulseEchoTextureArticulation = .neutral) {
+                pulseEchoTextureArticulation: PulseEchoTextureArticulation = .neutral,
+                tonalEnvelopeExpansionEligible: Bool = false,
+                forceHomeUpperTimbre: Bool = false) {
         self.bar = bar
         self.gesture = gesture
         self.mutationAmount = min(1, max(0, mutationAmount))
@@ -391,6 +415,8 @@ package struct SynthPerformanceBar: Equatable, Sendable {
             ? relationalSteps : Array(repeating: .neutral, count: 16)
         self.upperNotes = upperNotes
         self.pulseEchoTextureArticulation = pulseEchoTextureArticulation
+        self.tonalEnvelopeExpansionEligible = tonalEnvelopeExpansionEligible
+        self.forceHomeUpperTimbre = forceHomeUpperTimbre
     }
 
     package func articulation(at step: Int) -> RelationalArticulation {
@@ -434,7 +460,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     spectralSculptureEnabled: spectralSculptureEnabled
                 )
             }
-            let upperNotes = SynthPerformancePlan.resolvedUpperNotes(
+            let upperResolution = SynthPerformancePlan.resolvedUpperNotes(
                 scene: scene,
                 dna: dna,
                 kind: kind,
@@ -446,6 +472,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 forceHomeUpperTimbre: forceHomeUpperTimbre,
                 relationalSteps: relationalSteps
             )
+            let upperNotes = upperResolution.notes
             let earliestPulseEchoOnsetStep = upperNotes
                 .filter { $0.instrument.effects.contains(.pulseEcho) }
                 .map { $0.onsetStep }
@@ -475,7 +502,10 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     machineTexture: scene.machineTexture,
                     enabled: pulseEchoTextureEnabled,
                     earliestPulseEchoOnsetStep: earliestPulseEchoOnsetStep
-                )
+                ),
+                tonalEnvelopeExpansionEligible:
+                    upperResolution.tonalEnvelopeExpansionEligible,
+                forceHomeUpperTimbre: forceHomeUpperTimbre
             )
         }
         world = synthWorld
@@ -556,7 +586,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         conservative: Bool,
         forceHomeUpperTimbre: Bool,
         relationalSteps: [RelationalArticulation]
-    ) -> [ResolvedUpperNote] {
+    ) -> (notes: [ResolvedUpperNote], tonalEnvelopeExpansionEligible: Bool) {
         let performance = resolved.performance
         let assignmentConservative = conservative || forceHomeUpperTimbre
         func instrument(_ role: SynthRole) -> InstrumentAssignment {
@@ -609,6 +639,27 @@ package struct SynthPerformancePlan: Equatable, Sendable {
             slideIndex = slideCandidates[Int(selection % UInt64(slideCandidates.count))]
         }
 
+        let anchorInstrument = instrument(.anchor)
+        let expansionCandidateIndex: Int? = {
+            guard !conservative,
+                  kind == .energyRelease,
+                  performance.signatureEvent == .displacedKickRecovery,
+                  ((performance.bar % 16) + 16) % 16 == 15,
+                  resolved.arrangementGesture == .structuralMarker,
+                  anchorInstrument.architecture == .tonalMotion else {
+                return nil
+            }
+            // Leave at least one sixteenth of this bar for the longer release
+            // to become observable; slide notes retain their legato contract.
+            guard let index = orderedMotif.indices.last,
+                  index != slideIndex,
+                  orderedMotif[index].event.step <= 12 else {
+                return nil
+            }
+            return index
+        }()
+        let tonalEnvelopeExpansionEligible = expansionCandidateIndex != nil
+
         let baseMotifDuration = performance.transformations.contains(.extend) ? 2.5 : 1.5
         var notes = orderedMotif.enumerated().map { index, pitch in
             let articulation = relationalSteps[pitch.event.step]
@@ -633,7 +684,9 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 ),
                 gate: isSlide ? .slide : .retrigger,
                 timbreIntent: resonantIntent,
-                instrument: instrument(.anchor)
+                envelopeRelation: index == expansionCandidateIndex &&
+                    !forceHomeUpperTimbre ? .sustainedWash : .home,
+                instrument: anchorInstrument
             )
         }
 
@@ -772,12 +825,12 @@ package struct SynthPerformancePlan: Equatable, Sendable {
             }
         }
 
-        return notes.sorted {
+        return (notes.sorted {
             if $0.onsetStep != $1.onsetStep { return $0.onsetStep < $1.onsetStep }
             let lhsRole = SynthRole.allCases.firstIndex(of: $0.role) ?? 0
             let rhsRole = SynthRole.allCases.firstIndex(of: $1.role) ?? 0
             return lhsRole < rhsRole
-        }
+        }, tonalEnvelopeExpansionEligible)
     }
 
     private static func resolvedMotifPitches(

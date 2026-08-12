@@ -9,6 +9,7 @@ struct AlienVoiceNote: Equatable, Sendable {
     let velocity: Double
     let gate: UpperNoteGate
     let timbreIntent: UpperTimbreIntent
+    let envelopeRelation: UpperEnvelopeRelation
     let instrument: InstrumentAssignment
     let role: SynthRole
     let articulation: RelationalArticulation
@@ -16,6 +17,31 @@ struct AlienVoiceNote: Equatable, Sendable {
     let spatialReverbSend: Double
     let narrativeGainScale: Double
     let narrativeSpectralScale: Double
+
+    init(startFrame: Int, durationFrames: Int, frequency: Double,
+         endFrequency: Double, velocity: Double, gate: UpperNoteGate,
+         timbreIntent: UpperTimbreIntent,
+         envelopeRelation: UpperEnvelopeRelation = .home,
+         instrument: InstrumentAssignment, role: SynthRole,
+         articulation: RelationalArticulation, dryScale: Double,
+         spatialReverbSend: Double, narrativeGainScale: Double,
+         narrativeSpectralScale: Double) {
+        self.startFrame = startFrame
+        self.durationFrames = durationFrames
+        self.frequency = frequency
+        self.endFrequency = endFrequency
+        self.velocity = velocity
+        self.gate = gate
+        self.timbreIntent = timbreIntent
+        self.envelopeRelation = envelopeRelation
+        self.instrument = instrument
+        self.role = role
+        self.articulation = articulation
+        self.dryScale = dryScale
+        self.spatialReverbSend = spatialReverbSend
+        self.narrativeGainScale = narrativeGainScale
+        self.narrativeSpectralScale = narrativeSpectralScale
+    }
 }
 
 struct AlienVoiceState: Equatable, Sendable {
@@ -34,6 +60,7 @@ struct AlienVoiceState: Equatable, Sendable {
     var timbreVelocity = 0.0
     var timbreTreatment = AlienTimbreTreatment.neutral
     var velocityResponse = AlienVelocityResponse.neutral
+    var envelopeRelation = UpperEnvelopeRelation.home
     var previousSource = 0.0
     var filter1 = 0.0
     var filter2 = 0.0
@@ -61,6 +88,7 @@ struct AlienVoiceState: Equatable, Sendable {
             timbreVelocity = 0
             timbreTreatment = .neutral
             velocityResponse = .neutral
+            envelopeRelation = .home
             filter1 = 0
             filter2 = 0
             filter3 = 0
@@ -210,6 +238,32 @@ struct AlienVelocityResponse: Equatable, Sendable {
     }
 }
 
+/// Replaceable v1 projection of the durable sustained-wash relation. Home is
+/// a literal pass-through so existing patch envelopes remain bit-identical.
+package enum TonalEnvelopeExpansionContract {
+    package static let targetSustain = 0.68
+    package static let maximumSustain = 0.92
+    package static let releaseScale = 3.2
+    package static let maximumReleaseSeconds = 2.4
+
+    package static func resolve(
+        baseSustain: Double,
+        baseReleaseSeconds: Double,
+        relation: UpperEnvelopeRelation
+    ) -> (sustain: Double, releaseSeconds: Double) {
+        guard relation == .sustainedWash else {
+            return (baseSustain, baseReleaseSeconds)
+        }
+        return (
+            min(maximumSustain, max(baseSustain, targetSustain)),
+            min(
+                maximumReleaseSeconds,
+                max(baseReleaseSeconds, baseReleaseSeconds * releaseScale)
+            )
+        )
+    }
+}
+
 /// Patch-family projection for the tonal-motion topology. The shared semantic
 /// automation coordinates remain score-owned; this type only translates them
 /// into bounded oscillator, envelope, filter, and memory behavior.
@@ -290,10 +344,12 @@ enum AlienAnalogVoice {
                        world: SynthWorldDNA, bar: SynthPerformanceBar,
                        role: SynthRole, state: inout AlienVoiceState) {
         var architectureMeasurement = [Float](repeating: 0, count: output.count)
+        var envelopeExpansionMeasurement = [Float](repeating: 0, count: output.count)
         render(
             &output,
             measurement: &measurement,
             architectureMeasurement: &architectureMeasurement,
+            envelopeExpansionMeasurement: &envelopeExpansionMeasurement,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
@@ -316,11 +372,41 @@ enum AlienAnalogVoice {
                        sampleRate: Double, level: Double,
                        world: SynthWorldDNA, bar: SynthPerformanceBar,
                        role: SynthRole, state: inout AlienVoiceState) {
+        var envelopeExpansionMeasurement = [Float](repeating: 0, count: output.count)
+        render(
+            &output,
+            measurement: &measurement,
+            architectureMeasurement: &architectureMeasurement,
+            envelopeExpansionMeasurement: &envelopeExpansionMeasurement,
+            pulseEchoSend: &pulseEchoSend,
+            spatialReverbSend: &spatialReverbSend,
+            noteRenderEvidence: &noteRenderEvidence,
+            notes: notes,
+            sampleRate: sampleRate,
+            level: level,
+            world: world,
+            bar: bar,
+            role: role,
+            state: &state
+        )
+    }
+
+    static func render(_ output: inout [Float], measurement: inout [Float],
+                       architectureMeasurement: inout [Float],
+                       envelopeExpansionMeasurement: inout [Float],
+                       pulseEchoSend: inout [Float],
+                       spatialReverbSend: inout [Float],
+                       noteRenderEvidence: inout [UpperNoteRenderEvidence],
+                       notes: [AlienVoiceNote],
+                       sampleRate: Double, level: Double,
+                       world: SynthWorldDNA, bar: SynthPerformanceBar,
+                       role: SynthRole, state: inout AlienVoiceState) {
         guard !output.isEmpty, sampleRate > 0 else { return }
         guard pulseEchoSend.count == output.count else { return }
         guard spatialReverbSend.count == output.count else { return }
         guard measurement.count == output.count else { return }
         guard architectureMeasurement.count == output.count else { return }
+        guard envelopeExpansionMeasurement.count == output.count else { return }
         let scheduled = notes
             .filter {
                 $0.instrument.architecture == .tonalMotion &&
@@ -391,15 +477,29 @@ enum AlienAnalogVoice {
         let baseDecaySeconds = decay(
             for: role, gesture: bar.gesture, fingerprint: fingerprint
         ) * patchTreatment.decayScale
-        let sustain = min(0.92, sustain(
+        let baseSustain = min(0.92, sustain(
             for: role, gesture: bar.gesture, fingerprint: fingerprint
         ) * patchTreatment.sustainScale)
-        let releaseSeconds = release(
+        let baseReleaseSeconds = release(
             for: role, gesture: bar.gesture, fingerprint: fingerprint
         ) * patchTreatment.releaseScale
+        if bar.forceHomeUpperTimbre ||
+            (bar.tonalEnvelopeExpansionEligible &&
+             !scheduled.contains(where: { $0.envelopeRelation == .sustainedWash })) {
+            // An attempt-local home correction must not inherit the active
+            // relation from incoming state before its first corrected onset.
+            state.envelopeRelation = .home
+        }
+        var envelopeTreatment = TonalEnvelopeExpansionContract.resolve(
+            baseSustain: baseSustain,
+            baseReleaseSeconds: baseReleaseSeconds,
+            relation: state.envelopeRelation
+        )
         var attackFrames = max(1, Int(baseAttackSeconds * sampleRate))
         var decaySeconds = baseDecaySeconds
-        let releaseCoefficient = exp(-1 / max(1, releaseSeconds * sampleRate))
+        var releaseCoefficient = exp(-1 / max(
+            1, envelopeTreatment.releaseSeconds * sampleRate
+        ))
         var glideCoefficient = 1 - exp(-1 / max(1, sampleRate * (0.012 + mutation * 0.030)))
         var filterEnvelopeDecay = exp(-1 / max(
             1,
@@ -438,6 +538,15 @@ enum AlienAnalogVoice {
                 )
                 state.timbreIntent = note.timbreIntent
                 state.timbreVelocity = velocity
+                state.envelopeRelation = note.envelopeRelation
+                envelopeTreatment = TonalEnvelopeExpansionContract.resolve(
+                    baseSustain: baseSustain,
+                    baseReleaseSeconds: baseReleaseSeconds,
+                    relation: note.envelopeRelation
+                )
+                releaseCoefficient = exp(-1 / max(
+                    1, envelopeTreatment.releaseSeconds * sampleRate
+                ))
                 targetTimbreTreatment = AlienTimbreTreatment.resolve(
                     intent: note.timbreIntent,
                     velocity: velocity,
@@ -486,6 +595,12 @@ enum AlienAnalogVoice {
                     appliedGate: legatoGate ? .slide : .retrigger,
                     didRetrigger: !legatoGate,
                     timbreIntent: note.timbreIntent,
+                    envelopeRelation: note.envelopeRelation,
+                    baseEnvelopeSustain: baseSustain,
+                    baseEnvelopeReleaseSeconds: baseReleaseSeconds,
+                    appliedEnvelopeSustain: envelopeTreatment.sustain,
+                    appliedEnvelopeReleaseSeconds:
+                        envelopeTreatment.releaseSeconds,
                     requestedVelocity: note.velocity,
                     appliedVelocity: velocity,
                     velocitySpectralEnvelopeScale: velocityResponse.spectralEnvelopeScale,
@@ -521,14 +636,16 @@ enum AlienAnalogVoice {
                 }
                 if legatoGate {
                     let decayCoefficient = 1 - exp(-1 / max(1, decaySeconds * sampleRate))
-                    state.envelope += (sustain - state.envelope) * decayCoefficient
+                    state.envelope += (envelopeTreatment.sustain - state.envelope) *
+                        decayCoefficient
                 } else {
                     let age = max(0, frame - noteStart)
                     let attackProgress = min(1, Double(age) / Double(attackFrames))
                     let shapedAttack = attackProgress * attackProgress * (3 - 2 * attackProgress)
                     let decayTime = max(0, Double(age - attackFrames)) / sampleRate
-                    let decayEnvelope = sustain +
-                        (1 - sustain) * exp(-decayTime / max(0.02, decaySeconds))
+                    let decayEnvelope = envelopeTreatment.sustain +
+                        (1 - envelopeTreatment.sustain) *
+                        exp(-decayTime / max(0.02, decaySeconds))
                     let targetEnvelope = age < attackFrames ? shapedAttack : decayEnvelope
                     state.envelope += (targetEnvelope - state.envelope) * 0.24
                 }
@@ -713,6 +830,9 @@ enum AlienAnalogVoice {
             output[frame] += renderedSample
             measurement[frame] += renderedSample
             architectureMeasurement[frame] += renderedSample
+            if state.envelopeRelation == .sustainedWash {
+                envelopeExpansionMeasurement[frame] += renderedSample
+            }
             if assignment.effects.contains(.filteredReverb) {
                 let send = max(
                     spatialSendLevel,

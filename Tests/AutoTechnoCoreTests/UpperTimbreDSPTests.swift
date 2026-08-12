@@ -224,6 +224,61 @@ struct UpperTimbreDSPTests {
         }
     }
 
+    @Test("Sustained wash preserves home exactly and enlarges only the resolved tonal tail")
+    func sustainedWashPCMAndEvidence() {
+        let home = render(
+            role: .anchor,
+            notes: [note(
+                startFrame: 128,
+                durationFrames: 640,
+                frequency: 196,
+                velocity: 0.82,
+                timbre: .home
+            )]
+        )
+        let explicitHome = render(
+            role: .anchor,
+            notes: [note(
+                startFrame: 128,
+                durationFrames: 640,
+                frequency: 196,
+                velocity: 0.82,
+                timbre: .home,
+                envelopeRelation: .home
+            )]
+        )
+        let expanded = render(
+            role: .anchor,
+            notes: [note(
+                startFrame: 128,
+                durationFrames: 640,
+                frequency: 196,
+                velocity: 0.82,
+                timbre: .home,
+                envelopeRelation: .sustainedWash
+            )]
+        )
+        #expect(home.samples == explicitHome.samples)
+        #expect(home.expansion.allSatisfy { $0 == 0 })
+        #expect(expanded.samples[..<128] == home.samples[..<128])
+        #expect(expanded.samples[128...] != home.samples[128...])
+        #expect(expanded.expansion == expanded.samples)
+        #expect(expanded.expansion.contains { $0 != 0 })
+        #expect(windowRMS(expanded.samples, start: 1_200, count: 800) >
+                windowRMS(home.samples, start: 1_200, count: 800))
+        #expect(expanded.evidence.count == 1)
+        let evidence = expanded.evidence[0]
+        let expected = TonalEnvelopeExpansionContract.resolve(
+            baseSustain: evidence.baseEnvelopeSustain,
+            baseReleaseSeconds: evidence.baseEnvelopeReleaseSeconds,
+            relation: .sustainedWash
+        )
+        #expect(evidence.envelopeRelation == .sustainedWash)
+        #expect(evidence.appliedEnvelopeSustain == expected.sustain)
+        #expect(evidence.appliedEnvelopeReleaseSeconds == expected.releaseSeconds)
+        #expect(expanded.samples.allSatisfy { $0.isFinite })
+    }
+
     @Test("Slides inherit the latched retrigger response and velocity clamps replay")
     func velocityResponseContinuationAndClamps() {
         let onset = 96
@@ -546,9 +601,12 @@ struct UpperTimbreDSPTests {
     private func render(role: SynthRole, notes: [AlienVoiceNote],
                         sampleRate: Double = 8_000,
                         frameCount: Int = 2_400) ->
-        (samples: [Float], state: AlienVoiceState, evidence: [UpperNoteRenderEvidence]) {
+        (samples: [Float], state: AlienVoiceState,
+         evidence: [UpperNoteRenderEvidence], expansion: [Float]) {
         var output = [Float](repeating: 0, count: frameCount)
         var measurement = [Float](repeating: 0, count: output.count)
+        var architecture = [Float](repeating: 0, count: output.count)
+        var expansion = [Float](repeating: 0, count: output.count)
         var pulseEcho = [Float](repeating: 0, count: output.count)
         var spatial = [Float](repeating: 0, count: output.count)
         var noteEvidence: [UpperNoteRenderEvidence] = []
@@ -556,6 +614,8 @@ struct UpperTimbreDSPTests {
         AlienAnalogVoice.render(
             &output,
             measurement: &measurement,
+            architectureMeasurement: &architecture,
+            envelopeExpansionMeasurement: &expansion,
             pulseEchoSend: &pulseEcho,
             spatialReverbSend: &spatial,
             noteRenderEvidence: &noteEvidence,
@@ -568,13 +628,15 @@ struct UpperTimbreDSPTests {
             state: &state
         )
         #expect(output == measurement)
-        return (output, state, noteEvidence)
+        #expect(output == architecture)
+        return (output, state, noteEvidence, expansion)
     }
 
     private func note(startFrame: Int, durationFrames: Int, frequency: Double,
                       endFrequency: Double? = nil, velocity: Double,
                       gate: UpperNoteGate = .retrigger,
                       timbre: UpperTimbreIntent,
+                      envelopeRelation: UpperEnvelopeRelation = .home,
                       role: SynthRole = .anchor) -> AlienVoiceNote {
         AlienVoiceNote(
             startFrame: startFrame,
@@ -584,6 +646,7 @@ struct UpperTimbreDSPTests {
             velocity: velocity,
             gate: gate,
             timbreIntent: timbre,
+            envelopeRelation: envelopeRelation,
             instrument: InstrumentPalette.safeUpper(role: role),
             role: role,
             articulation: .neutral,
@@ -598,7 +661,8 @@ struct UpperTimbreDSPTests {
         _ rendered: (
             samples: [Float],
             state: AlienVoiceState,
-            evidence: [UpperNoteRenderEvidence]
+            evidence: [UpperNoteRenderEvidence],
+            expansion: [Float]
         ),
         sampleRate: Double
     ) -> UpperTimbreEvidence {

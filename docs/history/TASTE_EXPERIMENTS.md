@@ -788,3 +788,89 @@ physical route/interruption smoke, representative latency/peak-memory budget,
 or hardware-output soak was performed. Shipping selection remains
 `uncalibrated.v1`, paired selection remains disabled, and no professional-
 quality promotion is claimed.
+
+## Source 18: release-boundary envelope expansion — 2026-08-12
+
+Source ID `18` used YouTube video `JkPxjdfEYCc`, *An easy trick Bicep uses to
+make their sounds more epic*, from Underdog Electronic Music School, published
+2023-04-03 with a 3:47 duration. The clean-room capture used unauthenticated
+`yt-dlp` with automatic English captions, metadata, and top-ranked comments:
+
+```sh
+yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source18-research.DISeAr -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=JkPxjdfEYCc'
+```
+
+No manual subtitle track was available. The automatic English `en` and
+`en-orig` VTTs were byte-identical, each with SHA-256
+`4068d226b8ce01e2306b7f6e634c666a421c6a92b86277fd4079d528cac73e97`.
+The metadata and comment artifact had SHA-256
+`32b797c9e0a2d0f34f8615459b1afacedf24daaba7945be2b714e3a4303bafcf`.
+A temporary 48 kHz stereo PCM demonstration capture had SHA-256
+`fce1466a22191111ac2771900263bc3b8d08a7f046c6208be12214c3a6946dc9`;
+media, comments, captions, and inspection files remain untracked. The tutorial
+window `0:35...1:15` measured `-25.4 LUFS` / `5.3 LU` / `-9.0 dBFS` peak, and
+the later demonstration window `1:15...2:55` measured `-19.6 LUFS` / `10.9 LU`
+/ `-4.7 dBFS` peak. Those inseparable narration/music values are contextual
+provenance, not engine targets or proof of envelope quality.
+
+The bounded caption paraphrase is: `0:40...1:12` starts from a small, snappy
+pluck and asks how the same sound can become larger at a break; `1:12...1:36`
+lists filter, decay, release, delay, and reverb as common ways to build tension;
+and `1:37...1:56` demonstrates the distinct idea of raising sustain and using a
+long release so the same short gesture becomes a washed-out tonal splash at the
+climax. Literal maximum sustain, workstation/device settings, artist emulation,
+and the source mix are not portable requirements.
+
+The capture returned exactly 50 top-ranked top-level comments and two replies.
+No three independent technical comments converged on a reusable numeric or DSP
+prescription, so comments supplied no design target. Named devices, plug-ins,
+personal names, praise, whole comment text, and artist-copying instructions were
+excluded.
+
+Repository reconciliation rejected another reverb, another synth, a new note,
+a user-facing macro, and literal maximum sustain. The canonical score already
+owns the energy-release marker and Tonal Motion patch family; the missing
+capability was a durable semantic relation allowing one familiar short gesture
+to occupy that boundary at a larger temporal scale. `SynthPerformancePlan`
+therefore marks only the final eligible retriggered Tonal Motion anchor at the
+existing displaced-kick recovery marker as `sustainedWash`. It changes no onset,
+pitch, duration, velocity, gate, assignment, effect route, density, or transport.
+Conservative fallback and home-timbre correction are exact neutral.
+
+Renderer realization v1 maps the relation to a bounded `0.68` sustain target
+and `3.2x` release scale, capped at `0.92` and `2.4` seconds. The semantic
+relation persists in render continuation and typed plan/state fingerprints.
+Detached rendering uses one pooled isolated envelope-expansion tap and retains
+only event identity, base/applied envelope facts, exact hash, peak/RMS,
+attack/tail metrics, nonzero count, binding, and finiteness. Candidate-vector
+schema 13, quality-contract schema 14, canonical engine
+`autotechno-canonical-engine.v14`, and typed plan domain v8 identify the score,
+PCM, continuation, and wire-format change. Shipping selection remains
+`uncalibrated.v1`; the new record can reject broken provenance but does not rank
+or promote the effect.
+
+The maturation boundary is recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). The durable
+concept is the same gesture expanding in temporal scale at a score-owned release
+boundary. The exact sustain target, release multiplier, caps, and ADSR are
+provisional. A serious later renderer may replace them with a high-resolution
+MSEG or exponential envelope, envelope-aware dynamics, oversampled tail colour,
+or controlled diffusion only when calibrated tail/body and masking evidence
+demonstrates a deficit. It must replace rather than duplicate the current path,
+preserve the score relation, fallback, continuation, and evidence, advance
+versions, and pass automated qualification.
+
+Final local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+matched SDKs, isolated module caches, serial SwiftPM, and the workflow's process
+boundaries. The focused envelope score/DSP/evidence and exact-fingerprint
+checks passed 5/5; the complete CI-selected matrix passed 173/173 (19 split
+upper/transaction, 125 core/evidence, 22 preparation preflight, and 7 protected
+routing); and a fresh optimized `AutoTechno` product build passed in 58.77
+seconds. `git diff --check` was clean before publication.
+
+The frozen professional profile and adversarial suite passed their normal
+contract tests, but the opt-in 128-phrase two-rate calibration generator was
+not run and no artifact was regenerated. No listening, exact-build app
+playback, physical route/interruption smoke, representative latency/peak-memory
+budget, hardware-output soak, or professional-quality promotion is claimed
+here. Exact-head remote CI remains a separate publication gate.

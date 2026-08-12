@@ -202,6 +202,11 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
     package let appliedGate: UpperNoteGate
     package let didRetrigger: Bool
     package let timbreIntent: UpperTimbreIntent
+    package let envelopeRelation: UpperEnvelopeRelation
+    package let baseEnvelopeSustain: Double
+    package let baseEnvelopeReleaseSeconds: Double
+    package let appliedEnvelopeSustain: Double
+    package let appliedEnvelopeReleaseSeconds: Double
     package let requestedVelocity: Double
     package let appliedVelocity: Double
     package let velocitySpectralEnvelopeScale: Double
@@ -225,6 +230,11 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         appliedGate: UpperNoteGate,
         didRetrigger: Bool,
         timbreIntent: UpperTimbreIntent,
+        envelopeRelation: UpperEnvelopeRelation = .home,
+        baseEnvelopeSustain: Double = 0,
+        baseEnvelopeReleaseSeconds: Double = 0,
+        appliedEnvelopeSustain: Double = 0,
+        appliedEnvelopeReleaseSeconds: Double = 0,
         requestedVelocity: Double,
         appliedVelocity: Double,
         velocitySpectralEnvelopeScale: Double,
@@ -247,6 +257,11 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         self.appliedGate = appliedGate
         self.didRetrigger = didRetrigger
         self.timbreIntent = timbreIntent
+        self.envelopeRelation = envelopeRelation
+        self.baseEnvelopeSustain = baseEnvelopeSustain
+        self.baseEnvelopeReleaseSeconds = baseEnvelopeReleaseSeconds
+        self.appliedEnvelopeSustain = appliedEnvelopeSustain
+        self.appliedEnvelopeReleaseSeconds = appliedEnvelopeReleaseSeconds
         self.requestedVelocity = requestedVelocity
         self.appliedVelocity = min(1, max(0, appliedVelocity))
         self.velocitySpectralEnvelopeScale = velocitySpectralEnvelopeScale
@@ -505,6 +520,30 @@ package struct SpectralTextureClusterRenderEvidence: Equatable, Sendable {
     package let finite: Bool
 }
 
+/// Reduced same-pass proof that one score-owned Tonal Motion note used the
+/// sustained-wash envelope relation. Only scalar envelope facts and an
+/// isolated signal fingerprint survive detached preparation.
+package struct TonalEnvelopeExpansionRenderEvidence: Equatable, Sendable {
+    package let eligible: Bool
+    package let active: Bool
+    package let eventCount: Int
+    package let relation: UpperEnvelopeRelation
+    package let baseSustain: Double
+    package let baseReleaseSeconds: Double
+    package let appliedSustain: Double
+    package let appliedReleaseSeconds: Double
+    package let eventFingerprint: String
+    package let sampleHash: String
+    package let peak: Double
+    package let rms: Double
+    package let attackRMS: Double
+    package let tailRMS: Double
+    package let tailToAttackDB: Double
+    package let nonzeroSampleCount: Int
+    package let bindingValid: Bool
+    package let finite: Bool
+}
+
 package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
     package let architecture: InstrumentArchitecture
     package let assignments: [InstrumentAssignment]
@@ -520,6 +559,8 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         ResonantMonoModulationRenderEvidence?
     package let spectralTextureCluster:
         SpectralTextureClusterRenderEvidence?
+    package let tonalEnvelopeExpansion:
+        TonalEnvelopeExpansionRenderEvidence?
 
     package init(
         architecture: InstrumentArchitecture,
@@ -535,7 +576,9 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         resonantMonoModulation:
             ResonantMonoModulationRenderEvidence? = nil,
         spectralTextureCluster:
-            SpectralTextureClusterRenderEvidence? = nil
+            SpectralTextureClusterRenderEvidence? = nil,
+        tonalEnvelopeExpansion:
+            TonalEnvelopeExpansionRenderEvidence? = nil
     ) {
         self.architecture = architecture
         self.assignments = assignments
@@ -549,6 +592,7 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         self.finite = finite
         self.resonantMonoModulation = resonantMonoModulation
         self.spectralTextureCluster = spectralTextureCluster
+        self.tonalEnvelopeExpansion = tonalEnvelopeExpansion
     }
 }
 
@@ -957,6 +1001,7 @@ struct RenderBuffers {
     var resonantMonoInstrumentStem: [Float] = []
     var resonantMonoModulationStem: [Float] = []
     var tonalMotionInstrumentStem: [Float] = []
+    var tonalEnvelopeExpansionStem: [Float] = []
     var spectralTextureInstrumentStem: [Float] = []
     var spectralTextureClusterStem: [Float] = []
     var maskingFoundation: [Float] = []
@@ -988,6 +1033,11 @@ struct RenderBuffers {
         }
         reset(&resonantMonoInstrumentStem, frameCount: frameCount)
         reset(&tonalMotionInstrumentStem, frameCount: frameCount)
+        if includeUpperRoleTaps {
+            reset(&tonalEnvelopeExpansionStem, frameCount: frameCount)
+        } else {
+            tonalEnvelopeExpansionStem.removeAll(keepingCapacity: false)
+        }
         reset(&spectralTextureInstrumentStem, frameCount: frameCount)
         if includeUpperRoleTaps {
             reset(&spectralTextureClusterStem, frameCount: frameCount)

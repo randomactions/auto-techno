@@ -884,6 +884,7 @@ package struct AutonomousKickSyntaxBarEvidence: Codable, Equatable, Sendable {
             (48...57).contains(byte) || (97...102).contains(byte)
         }
     }
+
 }
 
 /// Bounded, event-local evidence for the existing score-owned groove pulse.
@@ -1343,6 +1344,8 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         AutonomousResonantMonoModulationEvidence?
     package let spectralTextureCluster:
         AutonomousSpectralTextureClusterEvidence?
+    package let tonalEnvelopeExpansion:
+        AutonomousTonalEnvelopeExpansionEvidence?
 
     package init(_ evidence: InstrumentArchitectureRenderEvidence) {
         architecture = evidence.architecture.rawValue
@@ -1361,12 +1364,16 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         spectralTextureCluster = evidence.spectralTextureCluster.map(
             AutonomousSpectralTextureClusterEvidence.init
         )
+        tonalEnvelopeExpansion = evidence.tonalEnvelopeExpansion.map(
+            AutonomousTonalEnvelopeExpansionEvidence.init
+        )
     }
 
     package var isFinite: Bool {
         finite && peak.isFinite && rms.isFinite &&
             (resonantMonoModulation?.isFinite ?? true) &&
             (spectralTextureCluster?.isFinite ?? true) &&
+            (tonalEnvelopeExpansion?.isFinite ?? true) &&
             assignments.allSatisfy { $0.isFinite }
     }
 
@@ -1406,13 +1413,133 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         if hasClusterAssignment {
             guard architecture == InstrumentArchitecture.spectralTexture.rawValue,
                   let spectralTextureCluster else { return false }
-            return spectralTextureCluster.isComplete(
+            guard spectralTextureCluster.isComplete(
                 assignments: assignments,
                 architectureEventCount: eventCount,
                 sampleRate: sampleRate
-            )
+            ) else { return false }
+        } else if spectralTextureCluster != nil {
+            return false
         }
-        return spectralTextureCluster == nil
+        guard architecture == InstrumentArchitecture.tonalMotion.rawValue ||
+                tonalEnvelopeExpansion == nil else { return false }
+        if architecture == InstrumentArchitecture.tonalMotion.rawValue,
+           let tonalEnvelopeExpansion {
+            guard assignments.contains(where: {
+                $0.use == InstrumentUse.motif.rawValue
+            }) else { return false }
+            guard tonalEnvelopeExpansion.isComplete(
+                architectureEventCount: eventCount,
+                sampleRate: sampleRate
+            ) else { return false }
+        }
+        return true
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
+package struct AutonomousTonalEnvelopeExpansionEvidence: Codable, Equatable,
+        Sendable {
+    package let eligible: Bool
+    package let active: Bool
+    package let eventCount: Int
+    package let relation: String
+    package let baseSustain: Double
+    package let baseReleaseSeconds: Double
+    package let appliedSustain: Double
+    package let appliedReleaseSeconds: Double
+    package let eventFingerprint: String
+    package let sampleHash: String
+    package let peak: Double
+    package let rms: Double
+    package let attackRMS: Double
+    package let tailRMS: Double
+    package let tailToAttackDB: Double
+    package let nonzeroSampleCount: Int
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(_ evidence: TonalEnvelopeExpansionRenderEvidence) {
+        eligible = evidence.eligible
+        active = evidence.active
+        eventCount = evidence.eventCount
+        relation = evidence.relation.rawValue
+        baseSustain = evidence.baseSustain
+        baseReleaseSeconds = evidence.baseReleaseSeconds
+        appliedSustain = evidence.appliedSustain
+        appliedReleaseSeconds = evidence.appliedReleaseSeconds
+        eventFingerprint = evidence.eventFingerprint
+        sampleHash = evidence.sampleHash
+        peak = evidence.peak
+        rms = evidence.rms
+        attackRMS = evidence.attackRMS
+        tailRMS = evidence.tailRMS
+        tailToAttackDB = evidence.tailToAttackDB
+        nonzeroSampleCount = evidence.nonzeroSampleCount
+        bindingValid = evidence.bindingValid
+        finite = evidence.finite
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            baseSustain, baseReleaseSeconds, appliedSustain,
+            appliedReleaseSeconds, peak, rms, attackRMS,
+            tailRMS, tailToAttackDB,
+        ].allSatisfy { $0.isFinite }
+    }
+
+    package func isComplete(architectureEventCount: Int,
+                            sampleRate: Double) -> Bool {
+        let relationValid = UpperEnvelopeRelation(rawValue: relation) != nil
+        guard isFinite, bindingValid, relationValid,
+              eventCount >= 0, eventCount <= 1,
+              architectureEventCount >= eventCount,
+              Self.isSampleHash(eventFingerprint),
+              Self.isSampleHash(sampleHash),
+              nonzeroSampleCount >= 0,
+              nonzeroSampleCount <= Self.barFrames(sampleRate: sampleRate),
+              peak >= 0, rms >= 0, rms <= peak,
+              attackRMS >= 0, attackRMS <= peak,
+              tailRMS >= 0, tailRMS <= peak,
+              abs(tailToAttackDB) <= 160 else { return false }
+        let expectedTailToAttackDB = attackRMS > 0
+            ? 20 * log10(max(1e-12, tailRMS) / attackRMS) : 0
+        guard tailToAttackDB == expectedTailToAttackDB else { return false }
+        let zeroHash = AutonomousKickSyntaxBarEvidence.zeroSampleHash(
+            renderedFrameCount: Self.barFrames(sampleRate: sampleRate)
+        )
+        if active {
+            let expected = TonalEnvelopeExpansionContract.resolve(
+                baseSustain: baseSustain,
+                baseReleaseSeconds: baseReleaseSeconds,
+                relation: .sustainedWash
+            )
+            return eligible && eventCount == 1 &&
+                relation == UpperEnvelopeRelation.sustainedWash.rawValue &&
+                baseSustain >= 0 &&
+                baseSustain <= TonalEnvelopeExpansionContract.maximumSustain &&
+                baseReleaseSeconds > 0 &&
+                appliedSustain == expected.sustain &&
+                appliedReleaseSeconds == expected.releaseSeconds &&
+                peak > 0 && rms > 0 && attackRMS > 0 && tailRMS > 0 &&
+                nonzeroSampleCount > 0 && sampleHash != zeroHash
+        }
+        return eventCount == 0 && relation == UpperEnvelopeRelation.home.rawValue &&
+            baseSustain == 0 && baseReleaseSeconds == 0 &&
+            appliedSustain == 0 && appliedReleaseSeconds == 0 && peak == 0 &&
+            rms == 0 && attackRMS == 0 && tailRMS == 0 &&
+            tailToAttackDB == 0 && nonzeroSampleCount == 0 &&
+            sampleHash == zeroHash
+    }
+
+    private static func barFrames(sampleRate: Double) -> Int {
+        guard sampleRate.isFinite, sampleRate > 0 else { return 0 }
+        return max(1, Int((240 / AutonomousSessionDirector.bpm * sampleRate).rounded()))
     }
 
     private static func isSampleHash(_ value: String) -> Bool {
@@ -1491,6 +1618,18 @@ package struct AutonomousInstrumentBarEvidence: Codable, Equatable, Sendable {
                 } ?? 0
                 return lhs < rhs
             } && Set(architectures.map { $0.architecture }).count == architectures.count
+    }
+
+    package var tonalEnvelopeExpansionEligible: Bool {
+        architectures.first {
+            $0.architecture == InstrumentArchitecture.tonalMotion.rawValue
+        }?.tonalEnvelopeExpansion?.eligible ?? false
+    }
+
+    package var tonalEnvelopeExpansionActive: Bool {
+        architectures.first {
+            $0.architecture == InstrumentArchitecture.tonalMotion.rawValue
+        }?.tonalEnvelopeExpansion?.active ?? false
     }
 }
 
@@ -2632,7 +2771,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 12
+    package static let schemaVersion = 13
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -4415,6 +4554,12 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
                 ) && !forceHomeUpperTimbre
             )
         }
+        let envelopeExpansionEligibilityMatchesAttempt =
+            vector.instruments.allSatisfy { instruments in
+                instruments.tonalEnvelopeExpansionActive ==
+                    (instruments.tonalEnvelopeExpansionEligible &&
+                        !forceHomeUpperTimbre)
+            }
         guard schemaVersion == Self.schemaVersion,
               slot == vector.slot,
               prevalidatedRecordIsStructurallyValid,
@@ -4422,6 +4567,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
               pulseEchoEligibilityMatchesAttempt,
               forceHomeTimingIsNeutral,
               upperTimingEligibilityMatchesAttempt,
+              envelopeExpansionEligibilityMatchesAttempt,
               sourceReasonCodeCount == reasonCodes.count,
               sourceReasonCodeCount <= Self.maximumReasonCodeCount else {
             return false
@@ -4958,6 +5104,14 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
             transaction.attempts[initialIndex].vector.graph &&
             transaction.attempts[correctionIndex].vector.kickSyntax ==
             transaction.attempts[initialIndex].vector.kickSyntax &&
+            zip(
+                transaction.attempts[correctionIndex].vector.instruments,
+                transaction.attempts[initialIndex].vector.instruments
+            ).allSatisfy { correction, initial in
+                correction.bar == initial.bar &&
+                    correction.tonalEnvelopeExpansionEligible ==
+                        initial.tonalEnvelopeExpansionEligible
+            } &&
             transaction.attempts[correctionIndex].vector
                 .percussionEchoTexture ==
             transaction.attempts[initialIndex].vector

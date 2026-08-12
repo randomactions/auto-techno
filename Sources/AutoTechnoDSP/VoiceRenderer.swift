@@ -528,6 +528,7 @@ package enum VoiceRenderer {
         var resonantMonoInstrumentStem: [Float] = []
         var resonantMonoModulationStem: [Float] = []
         var tonalMotionInstrumentStem: [Float] = []
+        var tonalEnvelopeExpansionStem: [Float] = []
         var spectralTextureInstrumentStem: [Float] = []
         var spectralTextureClusterStem: [Float] = []
         var maskingFoundationBus: [Float] = []
@@ -555,6 +556,7 @@ package enum VoiceRenderer {
         swap(&resonantMonoInstrumentStem, &checkedOut.resonantMonoInstrumentStem)
         swap(&resonantMonoModulationStem, &checkedOut.resonantMonoModulationStem)
         swap(&tonalMotionInstrumentStem, &checkedOut.tonalMotionInstrumentStem)
+        swap(&tonalEnvelopeExpansionStem, &checkedOut.tonalEnvelopeExpansionStem)
         swap(&spectralTextureInstrumentStem, &checkedOut.spectralTextureInstrumentStem)
         swap(&spectralTextureClusterStem, &checkedOut.spectralTextureClusterStem)
         swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
@@ -697,6 +699,7 @@ package enum VoiceRenderer {
                 resonantMonoInstrumentStem: &resonantMonoInstrumentStem,
                 resonantMonoModulationStem: &resonantMonoModulationStem,
                 tonalMotionInstrumentStem: &tonalMotionInstrumentStem,
+                tonalEnvelopeExpansionStem: &tonalEnvelopeExpansionStem,
                 spectralTextureInstrumentStem: &spectralTextureInstrumentStem,
                 spectralTextureClusterStem: &spectralTextureClusterStem,
                 noteRenderEvidence: &upperNoteRenderEvidence,
@@ -1299,6 +1302,8 @@ package enum VoiceRenderer {
                                     resonantMonoModulation: resonantMonoModulationStem,
                                     sampleRate: sampleRate,
                                     tonalMotion: tonalMotionInstrumentStem,
+                                    tonalEnvelopeExpansion:
+                                        tonalEnvelopeExpansionStem,
                                     spectralTexture: spectralTextureInstrumentStem,
                                     spectralTextureCluster: spectralTextureClusterStem
                                     ),
@@ -1325,6 +1330,7 @@ package enum VoiceRenderer {
         swap(&resonantMonoInstrumentStem, &checkedOut.resonantMonoInstrumentStem)
         swap(&resonantMonoModulationStem, &checkedOut.resonantMonoModulationStem)
         swap(&tonalMotionInstrumentStem, &checkedOut.tonalMotionInstrumentStem)
+        swap(&tonalEnvelopeExpansionStem, &checkedOut.tonalEnvelopeExpansionStem)
         swap(&spectralTextureInstrumentStem, &checkedOut.spectralTextureInstrumentStem)
         swap(&spectralTextureClusterStem, &checkedOut.spectralTextureClusterStem)
         swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
@@ -1348,6 +1354,7 @@ package enum VoiceRenderer {
         resonantMonoInstrumentStem: inout [Float],
         resonantMonoModulationStem: inout [Float],
         tonalMotionInstrumentStem: inout [Float],
+        tonalEnvelopeExpansionStem: inout [Float],
         spectralTextureInstrumentStem: inout [Float],
         spectralTextureClusterStem: inout [Float],
         noteRenderEvidence: inout [UpperNoteRenderEvidence],
@@ -1419,6 +1426,7 @@ package enum VoiceRenderer {
                     velocity: note.velocity,
                     gate: note.gate,
                     timbreIntent: note.timbreIntent,
+                    envelopeRelation: note.envelopeRelation,
                     instrument: note.instrument,
                     role: role,
                     articulation: relational,
@@ -1448,6 +1456,7 @@ package enum VoiceRenderer {
             &output,
             measurement: &resonantAnchorStem,
             architectureMeasurement: &tonalMotionInstrumentStem,
+            envelopeExpansionMeasurement: &tonalEnvelopeExpansionStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
@@ -1475,6 +1484,7 @@ package enum VoiceRenderer {
             &output,
             measurement: &shadowTimingStem,
             architectureMeasurement: &tonalMotionInstrumentStem,
+            envelopeExpansionMeasurement: &tonalEnvelopeExpansionStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
@@ -1489,6 +1499,7 @@ package enum VoiceRenderer {
             &output,
             measurement: &atmosphereStem,
             architectureMeasurement: &tonalMotionInstrumentStem,
+            envelopeExpansionMeasurement: &tonalEnvelopeExpansionStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
@@ -1529,6 +1540,7 @@ package enum VoiceRenderer {
             &output,
             measurement: &responseTimingStem,
             architectureMeasurement: &tonalMotionInstrumentStem,
+            envelopeExpansionMeasurement: &tonalEnvelopeExpansionStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
@@ -1556,6 +1568,7 @@ package enum VoiceRenderer {
             &output,
             measurement: &atmosphereStem,
             architectureMeasurement: &tonalMotionInstrumentStem,
+            envelopeExpansionMeasurement: &tonalEnvelopeExpansionStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
@@ -1592,6 +1605,7 @@ package enum VoiceRenderer {
         resonantMonoModulation: [Float],
         sampleRate: Double,
         tonalMotion: [Float],
+        tonalEnvelopeExpansion: [Float],
         spectralTexture: [Float],
         spectralTextureCluster: [Float]
     ) -> [InstrumentArchitectureRenderEvidence] {
@@ -1638,6 +1652,13 @@ package enum VoiceRenderer {
                     uniqueAssignments: uniqueAssignments,
                     samples: spectralTextureCluster
                 ) : nil
+            let envelopeExpansion = architecture == .tonalMotion
+                ? tonalEnvelopeExpansionEvidence(
+                    synthPerformance: synthPerformance,
+                    noteEvidence: upperNoteRenderEvidence,
+                    samples: tonalEnvelopeExpansion,
+                    sampleRate: sampleRate
+                ) : nil
             return InstrumentArchitectureRenderEvidence(
                 architecture: architecture,
                 assignments: uniqueAssignments,
@@ -1650,7 +1671,8 @@ package enum VoiceRenderer {
                 rms: rms,
                 finite: samples.allSatisfy(\.isFinite) && peak.isFinite && rms.isFinite,
                 resonantMonoModulation: modulation,
-                spectralTextureCluster: cluster
+                spectralTextureCluster: cluster,
+                tonalEnvelopeExpansion: envelopeExpansion
             )
         }
     }
@@ -1664,6 +1686,159 @@ package enum VoiceRenderer {
         let startFrequency: Double
         let appliedEndFrequency: Double
         let renderedFrameCount: Int
+    }
+
+    private struct TonalEnvelopeExpansionFact {
+        let role: SynthRole
+        let onsetFrame: Int
+        let patch: InstrumentPatch
+        let relation: UpperEnvelopeRelation
+        let baseSustain: Double
+        let baseReleaseSeconds: Double
+        let appliedSustain: Double
+        let appliedReleaseSeconds: Double
+    }
+
+    @inline(never)
+    private static func tonalEnvelopeExpansionEvidence(
+        synthPerformance: SynthPerformanceBar,
+        noteEvidence: [UpperNoteRenderEvidence],
+        samples: [Float],
+        sampleRate: Double
+    ) -> TonalEnvelopeExpansionRenderEvidence? {
+        let eligible = synthPerformance.tonalEnvelopeExpansionEligible
+        let scoreEvents = synthPerformance.upperNotes.filter {
+            $0.instrument.architecture == .tonalMotion &&
+                $0.envelopeRelation == .sustainedWash
+        }
+        let events = noteEvidence.filter {
+            $0.instrument.architecture == .tonalMotion &&
+                $0.envelopeRelation == .sustainedWash
+        }
+        guard eligible || !events.isEmpty else { return nil }
+
+        var facts: [TonalEnvelopeExpansionFact] = []
+        facts.reserveCapacity(events.count)
+        var bindingValid = scoreEvents.count <= 1 &&
+            events.count == scoreEvents.count
+        for evidence in noteEvidence where
+            evidence.instrument.architecture == .tonalMotion {
+            if evidence.envelopeRelation == .sustainedWash {
+                let expected = TonalEnvelopeExpansionContract.resolve(
+                    baseSustain: evidence.baseEnvelopeSustain,
+                    baseReleaseSeconds: evidence.baseEnvelopeReleaseSeconds,
+                    relation: evidence.envelopeRelation
+                )
+                bindingValid = bindingValid &&
+                    evidence.role == .anchor &&
+                    evidence.appliedGate == .retrigger &&
+                    evidence.appliedEnvelopeSustain == expected.sustain &&
+                    evidence.appliedEnvelopeReleaseSeconds ==
+                        expected.releaseSeconds
+                facts.append(TonalEnvelopeExpansionFact(
+                    role: evidence.role,
+                    onsetFrame: evidence.onsetFrame,
+                    patch: evidence.instrument.patch,
+                    relation: evidence.envelopeRelation,
+                    baseSustain: evidence.baseEnvelopeSustain,
+                    baseReleaseSeconds: evidence.baseEnvelopeReleaseSeconds,
+                    appliedSustain: evidence.appliedEnvelopeSustain,
+                    appliedReleaseSeconds:
+                        evidence.appliedEnvelopeReleaseSeconds
+                ))
+            }
+        }
+        facts.sort { lhs, rhs in
+            if lhs.onsetFrame != rhs.onsetFrame {
+                return lhs.onsetFrame < rhs.onsetFrame
+            }
+            return lhs.patch.rawValue < rhs.patch.rawValue
+        }
+        let stepFrames = Double(samples.count) / 16
+        let sortedScoreEvents = scoreEvents.sorted {
+            if $0.onsetStep != $1.onsetStep { return $0.onsetStep < $1.onsetStep }
+            return $0.instrument.patch.rawValue < $1.instrument.patch.rawValue
+        }
+        bindingValid = bindingValid && zip(sortedScoreEvents, facts).allSatisfy {
+            score, rendered in
+            rendered.role == score.role &&
+                rendered.onsetFrame == upperNoteStartFrame(
+                    note: score,
+                    stepFrames: stepFrames,
+                    frameCount: samples.count
+                ) &&
+                rendered.patch == score.instrument.patch &&
+                rendered.relation == score.envelopeRelation
+        }
+        var sink = StreamingFNV1a()
+        sink.domain("tonal-envelope-expansion-events.typed.v1")
+        sink.collection(facts.count)
+        for fact in facts {
+            sink.aggregate("TonalEnvelopeExpansionFact")
+            sink.field("role"); sink.raw(fact.role.rawValue)
+            sink.field("onsetFrame"); sink.int(fact.onsetFrame)
+            sink.field("patch"); sink.raw(fact.patch.rawValue)
+            sink.field("relation"); sink.raw(fact.relation.rawValue)
+            sink.field("baseSustain"); sink.double(fact.baseSustain)
+            sink.field("baseReleaseSeconds")
+            sink.double(fact.baseReleaseSeconds)
+            sink.field("appliedSustain"); sink.double(fact.appliedSustain)
+            sink.field("appliedReleaseSeconds")
+            sink.double(fact.appliedReleaseSeconds)
+        }
+        var peak = 0.0
+        var energy = 0.0
+        var nonzero = 0
+        var finite = sampleRate.isFinite && sampleRate > 0
+        for sample in samples {
+            let value = Double(sample)
+            peak = max(peak, abs(value))
+            energy += value * value
+            if sample.bitPattern & 0x7fff_ffff != 0 { nonzero += 1 }
+            finite = finite && sample.isFinite && peak.isFinite && energy.isFinite
+        }
+        let rms = sqrt(energy / Double(max(1, samples.count)))
+        let attackFrames = min(samples.count, max(1, Int((sampleRate * 0.024).rounded())))
+        let tailFrames = min(samples.count, max(1, Int((sampleRate * 0.240).rounded())))
+        func windowRMS(_ range: Range<Int>) -> Double {
+            guard !range.isEmpty else { return 0 }
+            let windowEnergy = range.reduce(0.0) { partial, index in
+                let value = Double(samples[index])
+                return partial + value * value
+            }
+            return sqrt(windowEnergy / Double(range.count))
+        }
+        let attackStart = min(samples.count, max(0, facts.first?.onsetFrame ?? 0))
+        let attackEnd = min(samples.count, attackStart + attackFrames)
+        let attackRMS = windowRMS(attackStart..<attackEnd)
+        let tailRMS = windowRMS((samples.count - tailFrames)..<samples.count)
+        let tailToAttackDB = attackRMS > 0
+            ? 20 * log10(max(1e-12, tailRMS) / attackRMS) : 0
+        finite = finite && rms.isFinite && attackRMS.isFinite &&
+            tailRMS.isFinite && tailToAttackDB.isFinite
+        bindingValid = bindingValid && facts.count == scoreEvents.count &&
+            (!eligible || scoreEvents.count <= 1)
+        return TonalEnvelopeExpansionRenderEvidence(
+            eligible: eligible,
+            active: !facts.isEmpty,
+            eventCount: facts.count,
+            relation: facts.first?.relation ?? .home,
+            baseSustain: facts.first?.baseSustain ?? 0,
+            baseReleaseSeconds: facts.first?.baseReleaseSeconds ?? 0,
+            appliedSustain: facts.first?.appliedSustain ?? 0,
+            appliedReleaseSeconds:
+                facts.first?.appliedReleaseSeconds ?? 0,
+            eventFingerprint: fixedWidthFingerprintHex(sink.value),
+            sampleHash: ExactPCMFingerprint.mono(samples),
+            peak: peak,
+            rms: rms,
+            attackRMS: attackRMS,
+            tailRMS: tailRMS,
+            tailToAttackDB: tailToAttackDB,
+            nonzeroSampleCount: nonzero,
+            bindingValid: bindingValid,
+            finite: finite
+        )
     }
 
     @inline(never)

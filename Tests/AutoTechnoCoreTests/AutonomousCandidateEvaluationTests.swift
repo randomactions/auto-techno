@@ -729,10 +729,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 12)
-        #expect(QualityQualificationContract.schemaVersion == 13)
+        #expect(vector.schemaVersion == 13)
+        #expect(QualityQualificationContract.schemaVersion == 14)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v13")
+                "autotechno-canonical-engine.v14")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -1346,6 +1346,105 @@ struct AutonomousCandidateEvaluationTests {
             from: JSONSerialization.data(withJSONObject: forgedObject)
         )
         #expect(!outOfRoute.isComplete)
+    }
+
+    @Test("Tonal envelope expansion evidence binds the applied wash and stays selection-neutral")
+    func tonalEnvelopeExpansionEvidenceContract() throws {
+        let baseSustain = 0.31
+        let baseRelease = 0.22
+        let applied = TonalEnvelopeExpansionContract.resolve(
+            baseSustain: baseSustain,
+            baseReleaseSeconds: baseRelease,
+            relation: .sustainedWash
+        )
+        let relation = TonalEnvelopeExpansionRenderEvidence(
+            eligible: true,
+            active: true,
+            eventCount: 1,
+            relation: .sustainedWash,
+            baseSustain: baseSustain,
+            baseReleaseSeconds: baseRelease,
+            appliedSustain: applied.sustain,
+            appliedReleaseSeconds: applied.releaseSeconds,
+            eventFingerprint: "0123456789abcdef",
+            sampleHash: "fedcba9876543210",
+            peak: 0.18,
+            rms: 0.06,
+            attackRMS: 0.08,
+            tailRMS: 0.03,
+            tailToAttackDB: -8.519_374_645_445_623,
+            nonzeroSampleCount: 2_000,
+            bindingValid: true,
+            finite: true
+        )
+        let assignment = InstrumentPalette.safeUpper(role: .anchor)
+        let bar = AutonomousInstrumentBarEvidence(
+            bar: 15,
+            evidence: [InstrumentArchitectureRenderEvidence(
+                architecture: .tonalMotion,
+                assignments: [assignment],
+                patches: [assignment.patch],
+                uses: [assignment.use],
+                effects: assignment.effects,
+                eventCount: 1,
+                sampleHash: "1111111111111111",
+                peak: 0.20,
+                rms: 0.07,
+                finite: true,
+                tonalEnvelopeExpansion: relation
+            )]
+        )
+        let vector = fixtureVector(
+            slot: .primary,
+            evidenceBar: 15,
+            phraseKind: .energyRelease,
+            instrumentBar: bar
+        )
+        let baseline = fixtureVector(
+            slot: .primary,
+            evidenceBar: 15,
+            phraseKind: .energyRelease
+        )
+        #expect(bar.isComplete(sampleRate: 8_000))
+        #expect(vector.isComplete)
+        #expect(AutonomousCandidateAttempt(
+            kind: .initialRender,
+            vector: vector
+        ).isStructurallyComplete)
+        #expect(vector.fingerprint != baseline.fingerprint)
+        #expect(vector.selectionEvidence == baseline.selectionEvidence)
+
+        let data = try vector.deterministicJSON()
+        var object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        var bars = try #require(object["instruments"] as? [[String: Any]])
+        var architectures = try #require(
+            bars[0]["architectures"] as? [[String: Any]]
+        )
+        var architecture = architectures[0]
+        var serialized = try #require(
+            architecture["tonalEnvelopeExpansion"] as? [String: Any]
+        )
+        #expect(Set(serialized.keys) == Set([
+            "eligible", "active", "eventCount", "relation", "baseSustain",
+            "baseReleaseSeconds", "appliedSustain", "appliedReleaseSeconds",
+            "eventFingerprint", "sampleHash", "peak", "rms", "attackRMS",
+            "tailRMS", "tailToAttackDB", "nonzeroSampleCount",
+            "bindingValid", "finite",
+        ]))
+
+        serialized["appliedReleaseSeconds"] = applied.releaseSeconds + 0.01
+        architecture["tonalEnvelopeExpansion"] = serialized
+        architectures[0] = architecture
+        bars[0]["architectures"] = architectures
+        object["instruments"] = bars
+        let forged = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        #expect(!forged.isComplete)
+        #expect(forged.fingerprint != vector.fingerprint)
     }
 
     @Test("Pulse-echo return drive evidence is bounded, attributable, and selection-neutral")
@@ -2988,15 +3087,15 @@ struct AutonomousCandidateEvaluationTests {
         #expect(initialCommit.fingerprint != advancedCommit.fingerprint)
 
         #expect(AutonomousCandidateFingerprint.plan(candidates.primary) ==
-                "d74f91b0086bc02d")
+                "3e515b4f73020537")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
-                "f26b617349191516")
+                "1933b86b590fcbd3")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "45375e2b599b6b6f")
+                "517bac139e60ea9b")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3004,7 +3103,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.renderDSPContinuation(
             renderState: positiveZeroRenderState,
             generatedDSPState: orderedGraphState
-        ) == "66df03c53bfb6021")
+        ) == "ba42173591712f7a")
     }
 
     private var fixturePlanFingerprints: AutonomousCandidatePlanFingerprints {

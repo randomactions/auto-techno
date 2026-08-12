@@ -194,6 +194,50 @@ struct KickSyntaxTests {
         #expect(selectedAttempt.reasonCodes.isEmpty)
         #expect(selectedAttempt.vector == prepared.selectedCandidateEvidence)
 
+        let selectedSynth = SynthPerformancePlan(
+            scene: source.scene,
+            dna: source.dna,
+            kind: source.kind,
+            resolvedBars: source.resolvedBars,
+            conservative: source.conservative
+        )
+        let expansionIndex = try #require(selectedSynth.bars.firstIndex {
+            $0.tonalEnvelopeExpansionEligible
+        })
+        let expansion = try #require(
+            prepared.selectedCandidateEvidence.instruments[expansionIndex]
+                .architectures.first {
+                    $0.architecture == InstrumentArchitecture.tonalMotion.rawValue
+                }?.tonalEnvelopeExpansion
+        )
+        #expect(expansion.eligible && expansion.active)
+        #expect(expansion.eventCount == 1)
+        #expect(expansion.relation == UpperEnvelopeRelation.sustainedWash.rawValue)
+        #expect(expansion.appliedSustain > expansion.baseSustain)
+        #expect(expansion.appliedReleaseSeconds > expansion.baseReleaseSeconds)
+        #expect(expansion.peak > 0 && expansion.rms > 0)
+        #expect(expansion.attackRMS > 0 && expansion.tailRMS > 0)
+        #expect(expansion.nonzeroSampleCount > 0)
+        #expect(expansion.bindingValid && expansion.isFinite)
+        #expect(expansion.isComplete(
+            architectureEventCount: prepared.selectedCandidateEvidence
+                .instruments[expansionIndex].architectures.first {
+                    $0.architecture == InstrumentArchitecture.tonalMotion.rawValue
+                }?.eventCount ?? 0,
+            sampleRate: 8_000
+        ))
+        let fallbackSynth = SynthPerformancePlan(
+            scene: fixture.candidates.fallback.scene,
+            dna: fixture.candidates.fallback.dna,
+            kind: fixture.candidates.fallback.kind,
+            resolvedBars: fixture.candidates.fallback.resolvedBars,
+            conservative: true
+        )
+        #expect(fallbackSynth.bars.allSatisfy {
+            !$0.tonalEnvelopeExpansionEligible &&
+                $0.upperNotes.allSatisfy { $0.envelopeRelation == .home }
+        })
+
         let evidence = prepared.selectedCandidateEvidence
         #expect(evidence.planFingerprint ==
                 AutonomousCandidateFingerprint.plan(source))
@@ -381,8 +425,16 @@ struct KickSyntaxTests {
             let state = releaseState(seed: seed, withDebt: true)
             let candidates = AutonomousSessionDirector(rootSeed: seed)
                 .candidates(from: state)
+            let synth = SynthPerformancePlan(
+                scene: candidates.primary.scene,
+                dna: candidates.primary.dna,
+                kind: candidates.primary.kind,
+                resolvedBars: candidates.primary.resolvedBars,
+                conservative: candidates.primary.conservative
+            )
             if syntaxIndexes(in: candidates.primary) != nil,
-               syntaxIndexes(in: candidates.alternate) != nil {
+               syntaxIndexes(in: candidates.alternate) != nil,
+               synth.bars.contains(where: \.tonalEnvelopeExpansionEligible) {
                 return Fixture(state: state, candidates: candidates)
             }
         }
