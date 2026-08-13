@@ -504,6 +504,40 @@ struct SpatialProtectedRoutingRegressionTests {
         #expect(distantEvent?.spatialReverbSend == 0.30)
         #expect(foregroundEvent?.spatialDepthPosition == .foreground)
         #expect(foregroundEvent?.spatialReverbSend == 0)
+        let distantFDN = distantBlock.spatialFDNRenderEvidence
+        let foregroundFDN = foregroundBlock.spatialFDNRenderEvidence
+        let expectedFDN = FeedbackDelayNetworkConfiguration(
+            scene: plan.scene,
+            sampleRate: 8_000
+        )
+        #expect(distantFDN.finite)
+        #expect(distantFDN.lineCount ==
+                FeedbackDelayNetworkConfiguration.lineCount)
+        #expect(distantFDN.delayFrameCounts == expectedFDN.delayFrameCounts)
+        #expect(distantFDN.maximumFeedbackGain < 1)
+        #expect(distantFDN.spatialDepthPosition == .distant)
+        #expect(distantFDN.carrierVoice == .transition)
+        #expect(distantFDN.carrierStep == carrierStep)
+        #expect(distantFDN.scoreReverbSend == 0.30)
+        #expect(distantFDN.spatialSendRMS > 0)
+        #expect(distantFDN.inputRMS > 0)
+        #expect(distantFDN.wetRMS > 0)
+        #expect(distantFDN.wetPeak > distantFDN.wetRMS)
+        #expect(distantFDN.activeInputFrameCount > 0)
+        #expect(distantFDN.activeWetFrameCount > 0)
+        #expect(distantFDN.inputSampleHash.count == 16)
+        #expect(distantFDN.wetLeftSampleHash.count == 16)
+        #expect(distantFDN.wetRightSampleHash.count == 16)
+        #expect(distantFDN.wetLeftSampleHash != distantFDN.wetRightSampleHash)
+        #expect(foregroundFDN.spatialDepthPosition == .foreground)
+        #expect(foregroundFDN.carrierVoice == nil)
+        #expect(foregroundFDN.scoreReverbSend == 0)
+        #expect(foregroundFDN.spatialSendRMS > 0)
+        #expect(distantFDN.spatialSendRMS != foregroundFDN.spatialSendRMS)
+        #expect(distantFDN.inputSampleHash != foregroundFDN.inputSampleHash)
+        #expect(distantBlock.effects.contains {
+            $0.kind == .spatialFDN && $0.active
+        })
         let distantCarrierFrame = Int((
             Double(carrierStep) * Double(distantBlock.left.count) / 16
         ).rounded())

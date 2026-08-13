@@ -55,14 +55,25 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
-Quality-contract schema 17, candidate-vector schema 16, and canonical engine v17
+The canonical late field has its own deterministic DSP and integration gate.
+Tests cover eight ordered odd route-derived delays, strictly sub-unity
+delay-proportional gains, high-frequency damping bounds, diffuse and decaying
+stereo impulse response, rate-normalized onset, continuation, route reset, and
+non-finite fallback. Full-render regressions bind score depth and effect state to
+exact input/wet hashes while requiring unchanged kick and foundation
+fingerprints. Candidate tamper tests require one bounded spatial-FDN record per
+bar and reject invalid geometry, gain, hash, count, or score binding. These are
+engineering and provenance results; they are not listening, route-recovery, or
+physical-output-soak results.
+
+Quality-contract schema 18, candidate-vector schema 17, and canonical engine v18
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
 event-local groove-pulse, ordinary
 closed-hat, score-owned instrument and its acid/cluster/envelope consequence,
 score-owned gated percussion texture,
-shared pulse-echo return-drive, score-owned upper-role timing,
+shared pulse-echo return-drive, score-owned spatial-FDN, score-owned upper-role timing,
 score-owned phrase slicing, arpeggiator geometry, polyphonic pad signal, and
 voice-leading continuation,
 graph, and pre/post upper-timbre vector for every retained attempt. Groove-pulse
@@ -238,7 +249,7 @@ or PCM.
 ## Hybrid feedback and callback isolation
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, and phrase-
-composition evidence carried by quality-contract schema 17 change detached
+composition and spatial-FDN evidence carried by quality-contract schema 18 change detached
 preparation only. They add
 no callback capture, analysis, or live-feedback work; the requirements below
 remain gates

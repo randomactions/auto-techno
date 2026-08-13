@@ -1917,6 +1917,13 @@ package enum AutonomousPhrasePreparer {
         let maximumVoiceCombFrames = Int(maximumSampleRate * 0.009) + 1
         let maximumVoiceAllPassFrames = Int(maximumSampleRate * 0.005) + 1
         let maximumGraphDelayFrames = Int(maximumSampleRate * 0.42) + 1
+        let maximumFDNLineFrames = Int(
+            maximumSampleRate *
+                FeedbackDelayNetworkConfiguration.maximumDelaySeconds
+        ) + 1
+        let maximumFDNStorageFrames =
+            maximumFDNLineFrames *
+                FeedbackDelayNetworkConfiguration.lineCount
 
         func indexIsValid(_ index: Int, for count: Int) -> Bool {
             count == 0 ? index == 0 : (0..<count).contains(index)
@@ -1947,6 +1954,42 @@ package enum AutonomousPhrasePreparer {
             state.delayLeft.count <= maximumGraphDelayFrames &&
                 state.delayRight.count == state.delayLeft.count &&
                 indexIsValid(state.writeIndex, for: state.delayLeft.count)
+        }
+        func spatialFDNStateIsBounded(
+            _ state: FeedbackDelayNetworkState
+        ) -> Bool {
+            if state.storage.isEmpty || state.lineOffsets.isEmpty ||
+                state.lineLengths.isEmpty || state.writeIndices.isEmpty ||
+                state.dampingStates.isEmpty {
+                return state.storage.isEmpty && state.lineOffsets.isEmpty &&
+                    state.lineLengths.isEmpty && state.writeIndices.isEmpty &&
+                    state.dampingStates.isEmpty
+            }
+            let lineCount = FeedbackDelayNetworkConfiguration.lineCount
+            guard state.storage.count <= maximumFDNStorageFrames,
+                  state.lineOffsets.count == lineCount,
+                  state.lineLengths.count == lineCount,
+                  state.writeIndices.count == lineCount,
+                  state.dampingStates.count == lineCount,
+                  state.dampingStates.allSatisfy(\.isFinite) else {
+                return false
+            }
+            var expectedOffset = 0
+            for line in 0..<lineCount {
+                let length = state.lineLengths[line]
+                guard state.lineOffsets[line] == expectedOffset,
+                      length >= 3, length <= maximumFDNLineFrames,
+                      indexIsValid(state.writeIndices[line], for: length),
+                      expectedOffset <= state.storage.count - length else {
+                    return false
+                }
+                expectedOffset += length
+            }
+            return expectedOffset == state.storage.count &&
+                zip(
+                    state.lineLengths,
+                    state.lineLengths.dropFirst()
+                ).allSatisfy { $0 < $1 }
         }
         let voices = [
             renderState.alienAnchorState,
@@ -2042,11 +2085,7 @@ package enum AutonomousPhrasePreparer {
                 renderState.chorusWriteIndex,
                 for: renderState.chorusDelay.count
             ) &&
-            renderState.reverbBuffer.count <= Int(maximumSampleRate * 20) + 1 &&
-            indexIsValid(
-                renderState.reverbWriteIndex,
-                for: renderState.reverbBuffer.count
-            ) &&
+            spatialFDNStateIsBounded(renderState.spatialFDNState) &&
             (AutomaticMixBalancer.minimumKickCorrectionDB...0).contains(
                 renderState.automaticMixState.kickCorrectionDB
             ) &&

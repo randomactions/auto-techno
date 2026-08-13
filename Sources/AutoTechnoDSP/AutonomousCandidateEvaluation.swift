@@ -3112,6 +3112,228 @@ package struct AutonomousPulseEchoDriveBarEvidence: Codable, Equatable, Sendable
     }
 }
 
+/// Bounded candidate projection of the canonical late spatial field. It keeps
+/// only score/configuration identity and reduced PCM facts; FDN delay memory
+/// remains renderer continuation and never enters the quality vector.
+package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
+    package let bar: Int
+    package let sampleRate: Double
+    package let renderedFrameCount: Int
+    package let lineCount: Int
+    package let delayFrameCounts: [Int]
+    package let roomScale: Double
+    package let decayTimeSeconds: Double
+    package let dampingHz: Double
+    package let maximumFeedbackGain: Double
+    package let synthSendGain: Double
+    package let percussionSendGain: Double
+    package let wetGain: Double
+    package let spatialDepthPosition: String
+    package let carrierVoice: String?
+    package let carrierStep: Int?
+    package let scoreReverbSend: Double
+    package let scoreHighPassHz: Double
+    package let scoreLowPassHz: Double
+    package let inputSampleHash: String
+    package let wetLeftSampleHash: String
+    package let wetRightSampleHash: String
+    package let inputRMS: Double
+    package let spatialSendRMS: Double
+    package let wetPeak: Double
+    package let wetRMS: Double
+    package let wetStereoCorrelation: Double
+    package let activeInputFrameCount: Int
+    package let activeWetFrameCount: Int
+    package let firstWetFrameIndex: Int
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(
+        _ evidence: SpatialFDNRenderEvidence,
+        bindingValid: Bool
+    ) {
+        bar = evidence.bar
+        sampleRate = evidence.sampleRate
+        renderedFrameCount = evidence.renderedFrameCount
+        lineCount = evidence.lineCount
+        delayFrameCounts = evidence.delayFrameCounts
+        roomScale = evidence.roomScale
+        decayTimeSeconds = evidence.decayTimeSeconds
+        dampingHz = evidence.dampingHz
+        maximumFeedbackGain = evidence.maximumFeedbackGain
+        synthSendGain = evidence.synthSendGain
+        percussionSendGain = evidence.percussionSendGain
+        wetGain = evidence.wetGain
+        spatialDepthPosition = evidence.spatialDepthPosition.rawValue
+        carrierVoice = evidence.carrierVoice?.rawValue
+        carrierStep = evidence.carrierStep
+        scoreReverbSend = evidence.scoreReverbSend
+        scoreHighPassHz = evidence.scoreHighPassHz
+        scoreLowPassHz = evidence.scoreLowPassHz
+        inputSampleHash = evidence.inputSampleHash
+        wetLeftSampleHash = evidence.wetLeftSampleHash
+        wetRightSampleHash = evidence.wetRightSampleHash
+        inputRMS = evidence.inputRMS
+        spatialSendRMS = evidence.spatialSendRMS
+        wetPeak = evidence.wetPeak
+        wetRMS = evidence.wetRMS
+        wetStereoCorrelation = evidence.wetStereoCorrelation
+        activeInputFrameCount = evidence.activeInputFrameCount
+        activeWetFrameCount = evidence.activeWetFrameCount
+        firstWetFrameIndex = evidence.firstWetFrameIndex
+        self.bindingValid = bindingValid
+        finite = evidence.finite
+    }
+
+    package static func neutral(
+        bar: Int,
+        sampleRate: Double
+    ) -> AutonomousSpatialFDNBarEvidence {
+        let configuration = FeedbackDelayNetworkConfiguration(
+            sampleRate: sampleRate,
+            roomScale: 1,
+            decayTimeSeconds:
+                FeedbackDelayNetworkConfiguration.minimumDecayTimeSeconds,
+            dampingHz: FeedbackDelayNetworkConfiguration.minimumDampingHz,
+            synthSendGain: 0,
+            percussionSendGain: 0,
+            wetGain: 0
+        )
+        let frameCount = max(1, Int((
+            240.0 / AutonomousSessionDirector.bpm * sampleRate
+        ).rounded()))
+        return AutonomousSpatialFDNBarEvidence(
+            SpatialFDNRenderEvidence(
+                bar: bar,
+                sampleRate: sampleRate,
+                renderedFrameCount: frameCount,
+                lineCount: FeedbackDelayNetworkConfiguration.lineCount,
+                delayFrameCounts: configuration.delayFrameCounts,
+                roomScale: configuration.roomScale,
+                decayTimeSeconds: configuration.decayTimeSeconds,
+                dampingHz: configuration.dampingHz,
+                maximumFeedbackGain: configuration.maximumFeedbackGain,
+                synthSendGain: configuration.synthSendGain,
+                percussionSendGain: configuration.percussionSendGain,
+                wetGain: configuration.wetGain,
+                spatialDepthPosition: .foreground,
+                carrierVoice: nil,
+                carrierStep: nil,
+                scoreReverbSend: 0,
+                scoreHighPassHz: 300,
+                scoreLowPassHz: 4_200,
+                inputSampleHash: "0123456789abcdef",
+                wetLeftSampleHash: "0123456789abcdef",
+                wetRightSampleHash: "0123456789abcdef",
+                inputRMS: 0,
+                spatialSendRMS: 0,
+                wetPeak: 0,
+                wetRMS: 0,
+                wetStereoCorrelation: 0,
+                activeInputFrameCount: 0,
+                activeWetFrameCount: 0,
+                firstWetFrameIndex: -1,
+                finite: true
+            ),
+            bindingValid: true
+        )
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            sampleRate, roomScale, decayTimeSeconds, dampingHz,
+            maximumFeedbackGain, synthSendGain, percussionSendGain, wetGain,
+            scoreReverbSend, scoreHighPassHz, scoreLowPassHz, inputRMS,
+            spatialSendRMS, wetPeak, wetRMS, wetStereoCorrelation,
+        ].allSatisfy { $0.isFinite }
+    }
+
+    package func isComplete(routeSampleRate: Double) -> Bool {
+        let expectedFrames = max(1, Int((
+            240.0 / AutonomousSessionDirector.bpm * routeSampleRate
+        ).rounded()))
+        let retainedConfiguration = FeedbackDelayNetworkConfiguration(
+            sampleRate: routeSampleRate,
+            roomScale: roomScale,
+            decayTimeSeconds: decayTimeSeconds,
+            dampingHz: dampingHz,
+            synthSendGain: synthSendGain,
+            percussionSendGain: percussionSendGain,
+            wetGain: wetGain
+        )
+        guard isFinite, bindingValid, bar >= 0,
+              sampleRate == routeSampleRate,
+              renderedFrameCount == expectedFrames,
+              retainedConfiguration.isBoundedAndStable,
+              lineCount == FeedbackDelayNetworkConfiguration.lineCount,
+              delayFrameCounts == retainedConfiguration.delayFrameCounts,
+              maximumFeedbackGain ==
+                retainedConfiguration.maximumFeedbackGain,
+              zip(
+                delayFrameCounts,
+                delayFrameCounts.dropFirst()
+              ).allSatisfy({ $0 < $1 }),
+              delayFrameCounts.allSatisfy({ frames in
+                  frames >= 3 && !frames.isMultiple(of: 2) &&
+                      frames <= Int(
+                          routeSampleRate *
+                            FeedbackDelayNetworkConfiguration.maximumDelaySeconds
+                      ) + 1
+              }),
+              roomScale >= FeedbackDelayNetworkConfiguration.minimumRoomScale,
+              roomScale <= FeedbackDelayNetworkConfiguration.maximumRoomScale,
+              decayTimeSeconds >=
+                FeedbackDelayNetworkConfiguration.minimumDecayTimeSeconds,
+              decayTimeSeconds <=
+                FeedbackDelayNetworkConfiguration.maximumDecayTimeSeconds,
+              dampingHz >= FeedbackDelayNetworkConfiguration.minimumDampingHz,
+              dampingHz <= routeSampleRate * 0.45,
+              maximumFeedbackGain > 0, maximumFeedbackGain < 1,
+              (0...0.5).contains(synthSendGain),
+              (0...0.16).contains(percussionSendGain),
+              (0...0.24).contains(wetGain),
+              let depth = SpatialDepthPosition(rawValue: spatialDepthPosition),
+              carrierVoice.flatMap(EnsembleVoice.init(rawValue:)) != nil ||
+                carrierVoice == nil,
+              carrierStep.map({ (0..<16).contains($0) }) ?? true,
+              (0...1).contains(scoreReverbSend),
+              scoreHighPassHz >= 20,
+              scoreLowPassHz >= scoreHighPassHz,
+              scoreLowPassHz <= 20_000,
+              Self.isSampleHash(inputSampleHash),
+              Self.isSampleHash(wetLeftSampleHash),
+              Self.isSampleHash(wetRightSampleHash),
+              inputRMS >= 0, spatialSendRMS >= 0,
+              wetPeak >= 0, wetRMS >= 0, wetRMS <= wetPeak,
+              (-1...1).contains(wetStereoCorrelation),
+              (0...renderedFrameCount).contains(activeInputFrameCount),
+              (0...renderedFrameCount).contains(activeWetFrameCount) else {
+            return false
+        }
+        let depthIsCoherent: Bool
+        switch depth {
+        case .foreground:
+            depthIsCoherent = carrierVoice == nil && carrierStep == nil &&
+                scoreReverbSend == 0
+        case .distant:
+            depthIsCoherent = carrierVoice != nil && carrierStep != nil &&
+                scoreReverbSend > 0
+        }
+        let inputIsCoherent = (activeInputFrameCount == 0) == (inputRMS == 0)
+        let wetIsCoherent = activeWetFrameCount == 0
+            ? wetPeak == 0 && wetRMS == 0 && firstWetFrameIndex == -1
+            : wetPeak > 0 && wetRMS > 0 &&
+                (0..<renderedFrameCount).contains(firstWetFrameIndex)
+        return depthIsCoherent && inputIsCoherent && wetIsCoherent
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 package struct AutonomousGraphEvidence: Codable, Equatable, Sendable {
     package static let maximumViolationCount = 64
 
@@ -3280,13 +3502,14 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
     case percussionEchoTextureEvidence = "percussion-echo-texture-evidence"
     case phraseCompositionEvidence = "phrase-composition-evidence"
     case pulseEchoDriveEvidence = "pulse-echo-drive-evidence"
+    case spatialFDNEvidence = "spatial-fdn-evidence"
     case upperTimingEvidence = "upper-timing-evidence"
 }
 
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 16
+    package static let schemaVersion = 17
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -3326,6 +3549,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let phraseComposition: [AutonomousPhraseCompositionBarEvidence]
     package let sourcePulseEchoDriveBarCount: Int
     package let pulseEchoDrive: [AutonomousPulseEchoDriveBarEvidence]
+    package let sourceSpatialFDNBarCount: Int
+    package let spatialFDN: [AutonomousSpatialFDNBarEvidence]
     package let sourceUpperTimingBarCount: Int
     package let upperTiming: [AutonomousUpperTimingBarEvidence]
     package let graph: AutonomousGraphEvidence
@@ -3355,6 +3580,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         percussionEchoTexture: [AutonomousPercussionEchoTextureBarEvidence],
         phraseComposition: [AutonomousPhraseCompositionBarEvidence],
         pulseEchoDrive: [AutonomousPulseEchoDriveBarEvidence],
+        spatialFDN: [AutonomousSpatialFDNBarEvidence],
         upperTiming: [AutonomousUpperTimingBarEvidence],
         graph: AutonomousGraphEvidence,
         routeContinuation: AutonomousRouteContinuationEvidence,
@@ -3393,6 +3619,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         )
         sourcePulseEchoDriveBarCount = pulseEchoDrive.count
         self.pulseEchoDrive = Array(pulseEchoDrive.prefix(Self.maximumBarCount))
+        sourceSpatialFDNBarCount = spatialFDN.count
+        self.spatialFDN = Array(spatialFDN.prefix(Self.maximumBarCount))
         sourceUpperTimingBarCount = upperTiming.count
         self.upperTiming = Array(upperTiming.prefix(Self.maximumBarCount))
         self.graph = graph
@@ -3866,6 +4094,53 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 bindingValid: bindingValid
             )
         }
+        let expectedSpatialFDNConfiguration = FeedbackDelayNetworkConfiguration(
+            scene: plan.scene,
+            sampleRate: sampleRate,
+            phraseKind: plan.kind
+        )
+        let spatialFDN = boundedBlocks.map { block in
+            let evidence = block.spatialFDNRenderEvidence
+            let spatial = block.resolvedPerformance.spatialContrast
+            let planBarMatches = plan.resolvedBars.first {
+                $0.performance.bar == block.bar
+            } == block.resolvedPerformance
+            let bindingValid = planBarMatches &&
+                evidence.bar == block.bar &&
+                evidence.sampleRate == sampleRate &&
+                evidence.renderedFrameCount == block.left.count &&
+                evidence.renderedFrameCount == block.right.count &&
+                evidence.lineCount ==
+                    FeedbackDelayNetworkConfiguration.lineCount &&
+                evidence.delayFrameCounts ==
+                    expectedSpatialFDNConfiguration.delayFrameCounts &&
+                evidence.roomScale == expectedSpatialFDNConfiguration.roomScale &&
+                evidence.decayTimeSeconds ==
+                    expectedSpatialFDNConfiguration.decayTimeSeconds &&
+                evidence.dampingHz == expectedSpatialFDNConfiguration.dampingHz &&
+                evidence.maximumFeedbackGain ==
+                    expectedSpatialFDNConfiguration.maximumFeedbackGain &&
+                evidence.synthSendGain ==
+                    expectedSpatialFDNConfiguration.synthSendGain &&
+                evidence.percussionSendGain ==
+                    expectedSpatialFDNConfiguration.percussionSendGain &&
+                evidence.wetGain == expectedSpatialFDNConfiguration.wetGain &&
+                evidence.spatialDepthPosition == spatial.depthPosition &&
+                evidence.carrierVoice == spatial.carrierVoice &&
+                evidence.carrierStep == spatial.carrierStep &&
+                evidence.scoreReverbSend == spatial.reverbSend &&
+                evidence.scoreHighPassHz == spatial.highPassHz &&
+                evidence.scoreLowPassHz == spatial.lowPassHz &&
+                block.effects.contains {
+                    $0.kind == .spatialFDN &&
+                        $0.amount == evidence.wetGain &&
+                        $0.active == (evidence.activeWetFrameCount > 0)
+                }
+            return AutonomousSpatialFDNBarEvidence(
+                evidence,
+                bindingValid: bindingValid
+            )
+        }
         let phraseComposition = boundedBlocks.map {
             AutonomousPhraseCompositionBarEvidence(block: $0)
         }
@@ -3923,6 +4198,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             percussionEchoTexture: percussionEchoTexture,
             phraseComposition: phraseComposition,
             pulseEchoDrive: pulseEchoDrive,
+            spatialFDN: spatialFDN,
             upperTiming: upperTiming,
             graph: graphEvidence,
             routeContinuation: route,
@@ -4299,6 +4575,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             percussionEchoTexture.allSatisfy { $0.isFinite } &&
             phraseComposition.allSatisfy { $0.finite } &&
             pulseEchoDrive.allSatisfy { $0.isFinite } &&
+            spatialFDN.allSatisfy { $0.isFinite } &&
             upperTiming.allSatisfy { $0.isFinite } &&
             routeContinuation.isFinite &&
             preGraphUpperTimbreEvidence.candidateValuesAreFinite &&
@@ -4359,6 +4636,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         if !pulseEchoDriveEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.pulseEchoDriveEvidence)
         }
+        if !spatialFDNEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.spatialFDNEvidence)
+        }
         if !upperTimingEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.upperTimingEvidence)
         }
@@ -4392,6 +4672,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
               phraseComposition.count == fullMix.sourceBarCount,
               sourcePulseEchoDriveBarCount == pulseEchoDrive.count,
               pulseEchoDrive.count == fullMix.sourceBarCount,
+              sourceSpatialFDNBarCount == spatialFDN.count,
+              spatialFDN.count == fullMix.sourceBarCount,
               sourceUpperTimingBarCount == upperTiming.count,
               upperTiming.count == fullMix.sourceBarCount,
               preGraphUpperTimbreEvidence.candidateEvidenceIsComplete(
@@ -4530,6 +4812,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 percussionEchoTexture.count &&
             sourcePhraseCompositionBarCount == phraseComposition.count &&
             sourcePulseEchoDriveBarCount == pulseEchoDrive.count &&
+            sourceSpatialFDNBarCount == spatialFDN.count &&
             sourceUpperTimingBarCount == upperTiming.count &&
             masking.count == fullMix.sourceBarCount &&
             stems.count == fullMix.sourceBarCount &&
@@ -4541,6 +4824,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             percussionEchoTexture.count == fullMix.sourceBarCount &&
             phraseComposition.count == fullMix.sourceBarCount &&
             pulseEchoDrive.count == fullMix.sourceBarCount &&
+            spatialFDN.count == fullMix.sourceBarCount &&
             upperTiming.count == fullMix.sourceBarCount
     }
 
@@ -4768,6 +5052,20 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     }
 
     @inline(never)
+    private func spatialFDNEvidenceIsComplete(
+        expectedBars: Set<Int>
+    ) -> Bool {
+        Set(spatialFDN.map { $0.bar }) == expectedBars &&
+            spatialFDN.map(\.bar) == fullMix.bars.map(\.bar) &&
+            spatialFDN.count == fullMix.sourceBarCount &&
+            spatialFDN.allSatisfy {
+                $0.isComplete(
+                    routeSampleRate: routeContinuation.sampleRate
+                )
+            }
+    }
+
+    @inline(never)
     private func upperTimingEvidenceIsComplete(expectedBars: Set<Int>) -> Bool {
         guard let phraseKind = AutonomousPhraseKind(
             rawValue: symbolic.phraseKind
@@ -4893,6 +5191,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 percussionEchoTexture.count &&
             sourcePercussionEchoTextureBarCount <= Self.maximumBarCount &&
             sourcePulseEchoDriveBarCount >= pulseEchoDrive.count &&
+            sourceSpatialFDNBarCount >= spatialFDN.count &&
+            sourceSpatialFDNBarCount <= Self.maximumBarCount &&
             sourceUpperTimingBarCount >= upperTiming.count
     }
 
@@ -4930,6 +5230,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             percussionEchoTexture.count <= Self.maximumBarCount &&
             phraseComposition.count <= Self.maximumBarCount &&
             pulseEchoDrive.count <= Self.maximumBarCount &&
+            spatialFDN.count <= Self.maximumBarCount &&
             upperTiming.count <= Self.maximumBarCount
     }
 
@@ -4952,7 +5253,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             groovePulseRecordsAreBounded() &&
             closedHatRecordsAreBounded() && instrumentRecordsAreBounded() &&
             percussionEchoTextureRecordsAreBounded() &&
-            pulseEchoDriveRecordsAreBounded() && upperTimingRecordsAreBounded()
+            pulseEchoDriveRecordsAreBounded() &&
+            spatialFDNRecordsAreBounded() && upperTimingRecordsAreBounded()
     }
 
     @inline(never)
@@ -5038,6 +5340,22 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     @inline(never)
     private func pulseEchoDriveRecordsAreBounded() -> Bool {
         pulseEchoDrive.map({ $0.bar }) == fullMix.bars.map({ $0.bar })
+    }
+
+    @inline(never)
+    private func spatialFDNRecordsAreBounded() -> Bool {
+        spatialFDN.map({ $0.bar }) == fullMix.bars.map({ $0.bar }) &&
+            spatialFDN.allSatisfy {
+                $0.delayFrameCounts.count <=
+                    FeedbackDelayNetworkConfiguration.lineCount &&
+                    $0.renderedFrameCount >= 0 &&
+                    $0.activeInputFrameCount >= 0 &&
+                    $0.activeInputFrameCount <= $0.renderedFrameCount &&
+                    $0.activeWetFrameCount >= 0 &&
+                    $0.activeWetFrameCount <= $0.renderedFrameCount &&
+                    $0.firstWetFrameIndex >= -1 &&
+                    $0.firstWetFrameIndex < max(1, $0.renderedFrameCount)
+            }
     }
 
     @inline(never)

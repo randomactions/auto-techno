@@ -504,7 +504,8 @@ package enum VoiceRenderer {
     static func renderBar(scene: TechnoScene, sampleRate: Double, state: inout RenderState,
                           dna: SceneDNA, resolved: ResolvedPerformanceBar,
                           synthWorld: SynthWorldDNA, synthPerformance: SynthPerformanceBar,
-                          workspace: inout RenderWorkspace, layer: RenderLayer) -> RenderedBar {
+                          workspace: inout RenderWorkspace, layer: RenderLayer,
+                          phraseKind: AutonomousPhraseKind = .lock) -> RenderedBar {
         let performance = resolved.performance
         let section = performance.section
         let frames = max(1, Int((240.0 / scene.bpm * sampleRate).rounded()))
@@ -846,16 +847,39 @@ package enum VoiceRenderer {
         }
         let chorusRate = 2.0 * Double.pi / (sampleRate * (1.8 + scene.hypnosis * 1.8))
         let chorusDepth = 2.0 + dramaticDistance * 5.0
-        // Phrase-scale memory: the tail remains audible across many bars while
-        // bounded feedback and ducking keep the groove authoritative.
-        let reverbSeconds = 12.0 + scene.atmosphere * 8.0
-        let reverbFrames = max(32, Int(sampleRate * reverbSeconds))
-        if state.reverbBuffer.count != reverbFrames {
-            state.reverbBuffer = [Float](repeating: 0, count: reverbFrames)
-            state.reverbWriteIndex = 0
-        }
-        let reverbFeedback = Float(0.52 + scene.hypnosis * 0.16 + scene.drone * 0.08)
-        let reverbWet = Float(dramaticDistance * 0.07 + scene.drone * 0.10)
+        // One canonical eight-line late field replaces the former single long
+        // repeating delay. Its immutable configuration is derived from the
+        // same score-owned scene and persists through detached continuation.
+        let spatialFDNConfiguration = FeedbackDelayNetworkConfiguration(
+            scene: scene,
+            sampleRate: sampleRate,
+            phraseKind: phraseKind
+        )
+        state.spatialFDNState.prepare(for: spatialFDNConfiguration)
+        var spatialFDNScratch = [Double](
+            repeating: 0,
+            count: FeedbackDelayNetworkConfiguration.lineCount
+        )
+        var spatialFDNInputFingerprint = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frames
+        )
+        var spatialFDNWetLeftFingerprint = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frames
+        )
+        var spatialFDNWetRightFingerprint = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frames
+        )
+        var spatialFDNInputEnergy = 0.0
+        var spatialFDNSpatialSendEnergy = 0.0
+        var spatialFDNWetEnergy = 0.0
+        var spatialFDNWetLeftEnergy = 0.0
+        var spatialFDNWetRightEnergy = 0.0
+        var spatialFDNWetCrossEnergy = 0.0
+        var spatialFDNWetPeak = 0.0
+        var spatialFDNActiveInputFrameCount = 0
+        var spatialFDNActiveWetFrameCount = 0
+        var spatialFDNFirstWetFrameIndex = -1
+        var spatialFDNFinite = spatialFDNConfiguration.isBoundedAndStable
         let pulseEchoTexture = synthPerformance.pulseEchoTextureArticulation
         let pulseEchoDriveAmount = layer == .full
             ? pulseEchoTexture.appliedAmount : 0
@@ -1039,23 +1063,40 @@ package enum VoiceRenderer {
                 pulseEchoPostDriveLowBandState.isFinite &&
                 difference.isFinite
             // A short independent reflection gives upper voices depth before
-            // the longer dark reverb. It is deliberately high-passed by the
-            // upper-bus source and never receives kick/bass, preserving mono-
-            // compatible low end.
+            // the late FDN. Neither path receives kick or bass, preserving the
+            // centered, mono-compatible low end.
             let earlyRead = state.earlyReflectionBuffer[state.earlyReflectionWriteIndex]
             state.earlyReflectionBuffer[state.earlyReflectionWriteIndex] = synthInput * 0.30
             let earlyMix = Float(0.035 + dramaticDistance * 0.08)
-            let reverbRead = state.reverbBuffer[state.reverbWriteIndex]
-            let drumSend = percussionStem[index] * Float(scene.atmosphere * 0.08)
+            let drumSend = percussionStem[index] *
+                Float(spatialFDNConfiguration.percussionSendGain)
             let rawSpatialSend = Double(spatialReverbSendBus[index])
             spatialHighPassState +=
                 (rawSpatialSend - spatialHighPassState) * spatialHighPassCoefficient
             let highPassedSpatialSend = rawSpatialSend - spatialHighPassState
             spatialLowPassState +=
                 (highPassedSpatialSend - spatialLowPassState) * spatialLowPassCoefficient
-            state.reverbBuffer[state.reverbWriteIndex] = synthInput * 0.42 + drumSend +
-                Float(spatialLowPassState) + reverbRead * reverbFeedback
-            let reverbTail = reverbRead * reverbWet
+            let spatialFDNInput = synthInput *
+                Float(spatialFDNConfiguration.synthSendGain) + drumSend +
+                Float(spatialLowPassState)
+            let spatialFDNFrame = FeedbackDelayNetwork.processPrepared(
+                input: spatialFDNInput,
+                configuration: spatialFDNConfiguration,
+                state: &state.spatialFDNState,
+                scratch: &spatialFDNScratch
+            )
+            spatialFDNInputFingerprint.append(spatialFDNInput)
+            let spatialFDNInputValue = Double(spatialFDNInput)
+            spatialFDNInputEnergy += spatialFDNInputValue * spatialFDNInputValue
+            spatialFDNSpatialSendEnergy +=
+                spatialLowPassState * spatialLowPassState
+            if spatialFDNInput.bitPattern != 0 &&
+                spatialFDNInput.bitPattern != 0x8000_0000 {
+                spatialFDNActiveInputFrameCount += 1
+            }
+            spatialFDNFinite = spatialFDNFinite && spatialFDNInput.isFinite &&
+                spatialFDNFrame.left.isFinite && spatialFDNFrame.right.isFinite &&
+                spatialLowPassState.isFinite
             state.delayWriteIndex = (state.delayWriteIndex + 1) % delayFrames
             state.earlyReflectionWriteIndex = (state.earlyReflectionWriteIndex + 1) % earlyReflectionFrames
             low += (Double(input) - low) * 0.045
@@ -1084,13 +1125,39 @@ package enum VoiceRenderer {
             let reflectionPan = min(1.0, max(0.0, 0.5 - pan * 0.85))
             let reflectionLeft = earlyRead * earlyMix * Float(cos(reflectionPan * Double.pi * 0.5))
             let reflectionRight = earlyRead * earlyMix * Float(sin(reflectionPan * Double.pi * 0.5))
-            let audibleReverbTail = reverbTail
+            let spatialFDNScale = Float(spatialFDNConfiguration.wetGain) * upperDuck
+            let spatialFDNLeft = spatialFDNFrame.left * spatialFDNScale
+            let spatialFDNRight = spatialFDNFrame.right * spatialFDNScale
+            spatialFDNWetLeftFingerprint.append(spatialFDNLeft)
+            spatialFDNWetRightFingerprint.append(spatialFDNRight)
+            let spatialFDNLeftValue = Double(spatialFDNLeft)
+            let spatialFDNRightValue = Double(spatialFDNRight)
+            spatialFDNWetLeftEnergy += spatialFDNLeftValue * spatialFDNLeftValue
+            spatialFDNWetRightEnergy += spatialFDNRightValue * spatialFDNRightValue
+            spatialFDNWetCrossEnergy += spatialFDNLeftValue * spatialFDNRightValue
+            spatialFDNWetEnergy += spatialFDNLeftValue * spatialFDNLeftValue +
+                spatialFDNRightValue * spatialFDNRightValue
+            spatialFDNWetPeak = max(
+                spatialFDNWetPeak,
+                abs(spatialFDNLeftValue),
+                abs(spatialFDNRightValue)
+            )
+            let wetIsActive = (spatialFDNLeft.bitPattern != 0 &&
+                spatialFDNLeft.bitPattern != 0x8000_0000) ||
+                (spatialFDNRight.bitPattern != 0 &&
+                    spatialFDNRight.bitPattern != 0x8000_0000)
+            if wetIsActive {
+                spatialFDNActiveWetFrameCount += 1
+                if spatialFDNFirstWetFrameIndex == -1 {
+                    spatialFDNFirstWetFrameIndex = index
+                }
+            }
             let leftPreMaster = center + synthLeftOut + reflectionLeft +
                 (spatial + pulseEcho) * (1.0 + delayPan * 0.18) * upperDuck +
-                audibleReverbTail * (1.0 + delayPan * 0.24)
+                spatialFDNLeft
             let rightPreMaster = center + synthRightOut + reflectionRight +
                 (spatial + pulseEcho) * (1.0 + (1.0 - delayPan) * 0.18) * upperDuck +
-                audibleReverbTail * (1.0 + (1.0 - delayPan) * 0.24)
+                spatialFDNRight
             // Linked two-band glue: center and upper energy share detector
             // gains, so compression cannot pull the stereo image sideways.
             // This is deliberately before the master safety stage.
@@ -1117,7 +1184,6 @@ package enum VoiceRenderer {
             state.stereoPanPhase = (state.stereoPanPhase + panRate).truncatingRemainder(dividingBy: 2.0 * Double.pi)
             state.chorusPhase = (state.chorusPhase + chorusRate).truncatingRemainder(dividingBy: 2.0 * Double.pi)
             state.chorusWriteIndex = (state.chorusWriteIndex + 1) % chorusFrames
-            state.reverbWriteIndex = (state.reverbWriteIndex + 1) % reverbFrames
         }
         // One bounded pass reduces the exact terminal detector and audible
         // kick buses. Fingerprints stream over sample bits without retaining
@@ -1248,6 +1314,66 @@ package enum VoiceRenderer {
             differenceRMS: pulseEchoDifferenceRMS,
             finite: pulseEchoReturnDriveFinite
         )
+        let spatialFDNEvidenceFrameCount = Double(max(1, frames))
+        let spatialFDNInputRMS = sqrt(
+            spatialFDNInputEnergy / spatialFDNEvidenceFrameCount
+        )
+        let spatialFDNSpatialSendRMS = sqrt(
+            spatialFDNSpatialSendEnergy / spatialFDNEvidenceFrameCount
+        )
+        let spatialFDNWetRMS = sqrt(
+            spatialFDNWetEnergy / (spatialFDNEvidenceFrameCount * 2)
+        )
+        let spatialFDNWetStereoDenominator = sqrt(max(
+            0.000_000_000_000_000_001,
+            spatialFDNWetLeftEnergy * spatialFDNWetRightEnergy
+        ))
+        let spatialFDNWetStereoCorrelation =
+            spatialFDNWetLeftEnergy > 0 && spatialFDNWetRightEnergy > 0
+            ? min(1, max(-1,
+                spatialFDNWetCrossEnergy / spatialFDNWetStereoDenominator
+            )) : 0
+        spatialFDNFinite = spatialFDNFinite && [
+            spatialFDNInputRMS,
+            spatialFDNSpatialSendRMS,
+            spatialFDNWetPeak,
+            spatialFDNWetRMS,
+            spatialFDNWetStereoCorrelation,
+        ].allSatisfy(\.isFinite)
+        let spatialFDNRenderEvidence = SpatialFDNRenderEvidence(
+            bar: performance.bar,
+            sampleRate: sampleRate,
+            renderedFrameCount: frames,
+            lineCount: FeedbackDelayNetworkConfiguration.lineCount,
+            delayFrameCounts: spatialFDNConfiguration.delayFrameCounts,
+            roomScale: spatialFDNConfiguration.roomScale,
+            decayTimeSeconds: spatialFDNConfiguration.decayTimeSeconds,
+            dampingHz: spatialFDNConfiguration.dampingHz,
+            maximumFeedbackGain:
+                spatialFDNConfiguration.maximumFeedbackGain,
+            synthSendGain: spatialFDNConfiguration.synthSendGain,
+            percussionSendGain:
+                spatialFDNConfiguration.percussionSendGain,
+            wetGain: spatialFDNConfiguration.wetGain,
+            spatialDepthPosition: resolved.spatialContrast.depthPosition,
+            carrierVoice: resolved.spatialContrast.carrierVoice,
+            carrierStep: resolved.spatialContrast.carrierStep,
+            scoreReverbSend: resolved.spatialContrast.reverbSend,
+            scoreHighPassHz: resolved.spatialContrast.highPassHz,
+            scoreLowPassHz: resolved.spatialContrast.lowPassHz,
+            inputSampleHash: spatialFDNInputFingerprint.fingerprint,
+            wetLeftSampleHash: spatialFDNWetLeftFingerprint.fingerprint,
+            wetRightSampleHash: spatialFDNWetRightFingerprint.fingerprint,
+            inputRMS: spatialFDNInputRMS,
+            spatialSendRMS: spatialFDNSpatialSendRMS,
+            wetPeak: spatialFDNWetPeak,
+            wetRMS: spatialFDNWetRMS,
+            wetStereoCorrelation: spatialFDNWetStereoCorrelation,
+            activeInputFrameCount: spatialFDNActiveInputFrameCount,
+            activeWetFrameCount: spatialFDNActiveWetFrameCount,
+            firstWetFrameIndex: spatialFDNFirstWetFrameIndex,
+            finite: spatialFDNFinite
+        )
         let upperTimingEvents: [UpperTimingRenderEvent]
         if layer == .full, renderScheduledUpperNotes {
             var unmatchedNoteEvidence = upperNoteRenderEvidence
@@ -1346,6 +1472,8 @@ package enum VoiceRenderer {
                                     polyphonicPadRenderEvidence,
                                    pulseEchoReturnDriveRenderEvidence:
                                     pulseEchoReturnDriveRenderEvidence,
+                                   spatialFDNRenderEvidence:
+                                    spatialFDNRenderEvidence,
                                    upperNoteRenderEvidence: upperNoteRenderEvidence,
                                    upperTimingRenderEvidence: upperTimingRenderEvidence,
                                    resonantAnchorSamples: resonantAnchorStem,

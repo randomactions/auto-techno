@@ -40,13 +40,17 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one score-owned foreground lead-performance timing relation that delays only
   later retriggered anchors inside an eligible melodic lock while the first
   anchor, companions, drums, and transport retain their existing score;
-- canonical engine v17, quality-contract schema 17, and candidate-vector schema 16
+- one canonical eight-line stereo late field replacing the former single long
+  mono feedback delay, with scene-derived decay/damping, exact continuation,
+  protected low end, and score-bound per-bar evidence;
+- canonical engine v18, quality-contract schema 18, and candidate-vector schema 17
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax and debt-to-recovery climax arc,
   event-local groove-pulse, ordinary closed-hat,
   score-owned instrument, acid-operator, spectral-cluster, and tonal-envelope
   consequence,
   score-owned gated percussion texture, shared pulse-echo return-drive,
+  score-owned spatial-FDN configuration and wet consequence,
   score-owned upper-role timing, graph, and
   pre/post upper-timbre evidence;
 - six phrase-scale performance characters with bounded two-character memory and a
@@ -104,12 +108,12 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 17 and candidate-vector schema 16 now bind a versioned
-transaction across canonical engine v17, quality policy, evaluator, candidate
+Quality-contract schema 18 and candidate-vector schema 17 now bind a versioned
+transaction across canonical engine v18, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 instrument, acid-operator, spectral-cluster, and tonal-envelope,
-gated percussion texture, pulse-echo return-drive, and upper-role timing,
+gated percussion texture, pulse-echo return-drive, spatial-FDN, and upper-role timing,
 including foreground lead performance,
 projections, unified phrase composition, plus exact paid-debt-to-release climax
 provenance, make each

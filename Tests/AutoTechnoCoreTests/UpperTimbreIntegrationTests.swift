@@ -2246,6 +2246,7 @@ struct UpperTimbreIntegrationTests {
             pulseEchoReturnDriveRenderEvidence:
                 pulseEchoReturnDriveRenderEvidence ??
                     source.pulseEchoReturnDriveRenderEvidence,
+            spatialFDNRenderEvidence: source.spatialFDNRenderEvidence,
             upperNoteRenderEvidence: source.upperNoteRenderEvidence,
             upperTimingRenderEvidence: source.upperTimingRenderEvidence,
             graphInputRemainderTimbreEvidence:

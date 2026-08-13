@@ -903,10 +903,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 16)
-        #expect(QualityQualificationContract.schemaVersion == 17)
+        #expect(vector.schemaVersion == 17)
+        #expect(QualityQualificationContract.schemaVersion == 18)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v17")
+                "autotechno-canonical-engine.v18")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -2767,6 +2767,86 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete)
     }
 
+    @Test("Spatial FDN evidence is bounded, deterministic, required, and selection-neutral")
+    func spatialFDNEvidenceContract() throws {
+        let source = fixtureVector(slot: .primary)
+        let evidence = try #require(source.spatialFDN.first)
+
+        #expect(evidence.lineCount == FeedbackDelayNetworkConfiguration.lineCount)
+        #expect(evidence.delayFrameCounts.count == evidence.lineCount)
+        #expect(evidence.isComplete(routeSampleRate: 8_000))
+        #expect(source.sourceSpatialFDNBarCount == 1)
+        #expect(source.isComplete)
+        #expect(!source.completenessFailures.contains(.spatialFDNEvidence))
+
+        let decoder = JSONDecoder()
+        var object = try #require(JSONSerialization.jsonObject(
+            with: source.deterministicJSON()
+        ) as? [String: Any])
+        var bars = try #require(object["spatialFDN"] as? [[String: Any]])
+
+        var changedHashBar = bars[0]
+        changedHashBar["wetLeftSampleHash"] = "fedcba9876543210"
+        object["spatialFDN"] = [changedHashBar]
+        let changedHash = try decoder.decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        #expect(changedHash.isComplete)
+        #expect(changedHash.fingerprint != source.fingerprint)
+        #expect(changedHash.selectionEvidence == source.selectionEvidence)
+
+        let invalidMutations: [(String, Any)] = [
+            ("lineCount", 7),
+            ("delayFrameCounts", [345, 425, 425, 633, 777, 905, 1097, 1305]),
+            ("roomScale", 1.1),
+            ("maximumFeedbackGain", 1.0),
+            ("bindingValid", false),
+            ("wetLeftSampleHash", "not-a-pcm-hash"),
+        ]
+        for (field, value) in invalidMutations {
+            var forgedObject = try #require(JSONSerialization.jsonObject(
+                with: source.deterministicJSON()
+            ) as? [String: Any])
+            var forgedBars = try #require(
+                forgedObject["spatialFDN"] as? [[String: Any]]
+            )
+            forgedBars[0][field] = value
+            forgedObject["spatialFDN"] = forgedBars
+            let forged = try decoder.decode(
+                AutonomousCandidateEvaluationVector.self,
+                from: JSONSerialization.data(withJSONObject: forgedObject)
+            )
+            #expect(!forged.isComplete)
+            #expect(forged.completenessFailures.contains(.spatialFDNEvidence))
+        }
+
+        var missingObject = try #require(JSONSerialization.jsonObject(
+            with: source.deterministicJSON()
+        ) as? [String: Any])
+        missingObject["spatialFDN"] = []
+        missingObject["sourceSpatialFDNBarCount"] = 0
+        let missing = try decoder.decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: missingObject)
+        )
+        #expect(!missing.isComplete)
+        #expect(missing.completenessFailures.contains(.spatialFDNEvidence))
+
+        bars.append(bars[0])
+        var oversizedObject = try #require(JSONSerialization.jsonObject(
+            with: source.deterministicJSON()
+        ) as? [String: Any])
+        oversizedObject["sourceSpatialFDNBarCount"] = 17
+        oversizedObject["spatialFDN"] = Array(repeating: bars[0], count: 17)
+        let oversized = try decoder.decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: oversizedObject)
+        )
+        #expect(oversized.spatialFDN.count == 17)
+        #expect(!oversized.recordIsStructurallyValid)
+    }
+
     @Test("Failed candidate evidence remains structurally retainable")
     func failedAttemptIsRetainable() {
         let vector = fixtureVector(slot: .alternate, nonFinite: true)
@@ -3265,11 +3345,11 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
-                "24168861da771994")
+                "f5fb830816c2715e")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "17d4f8feba65c457")
+                "8c200b7603db07ab")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3277,7 +3357,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.renderDSPContinuation(
             renderState: positiveZeroRenderState,
             generatedDSPState: orderedGraphState
-        ) == "7b2f7f52682cf775")
+        ) == "4e01b4eb18900225")
     }
 
     private var fixturePlanFingerprints: AutonomousCandidatePlanFingerprints {
@@ -3305,6 +3385,7 @@ struct AutonomousCandidateEvaluationTests {
         percussionEchoTextureBar:
             AutonomousPercussionEchoTextureBarEvidence? = nil,
         pulseEchoDriveBars: [AutonomousPulseEchoDriveBarEvidence]? = nil,
+        spatialFDNBar: AutonomousSpatialFDNBarEvidence? = nil,
         upperTimingBars: [AutonomousUpperTimingBarEvidence]? = nil,
         nonFinite: Bool = false
     ) -> AutonomousCandidateEvaluationVector {
@@ -3515,6 +3596,10 @@ struct AutonomousCandidateEvaluationTests {
                 bar: evidenceBar,
                 renderedFrameCount: defaultTiming?.renderedFrameCount ?? 14_769,
                 interlockChapter: defaultTimingChapter
+            )],
+            spatialFDN: [spatialFDNBar ?? .neutral(
+                bar: evidenceBar,
+                sampleRate: 8_000
             )],
             upperTiming: resolvedUpperTimingBars,
             graph: graph,

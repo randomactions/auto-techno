@@ -11,8 +11,8 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 17, candidate-vector schema 16, and
-canonical engine identity `autotechno-canonical-engine.v17`. It preserves
+candidate uses quality-contract schema 18, candidate-vector schema 17, and
+canonical engine identity `autotechno-canonical-engine.v18`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
@@ -21,6 +21,7 @@ PCM, acid-operator, rising spectral-cluster, and tonal-envelope-expansion
 evidence, score-owned gated
 percussion texture,
 shared pulse-echo return-drive,
+score-owned spatial-FDN configuration and exact stereo wet consequence,
 score-bound phrase composition covering true percussion resampling,
 arpeggiation, four-voice pad PCM, and quantified voice-leading,
 score-owned upper-role timing—including bounded foreground lead performance—graph, and
@@ -122,6 +123,18 @@ concept. A later DSP maturation may replace them with higher-order filtering,
 fractional or stereo delay, controlled nonlinear colour, and perceptually
 calibrated bounds only if the same input/output-gate semantics, fallback,
 deterministic score, and score-to-PCM evidence remain intact.
+
+Spatial-FDN evidence retains one compact record for every rendered bar. It
+binds the existing score-owned depth/carrier/send/filter articulation and the
+scene-derived eight-line configuration to exact input and stereo wet hashes,
+level, correlation, activity, onset, continuation, and finiteness facts. Delay
+geometry is derived at the route rate, every recursive line gain is strictly
+below unity, and retained continuation is hard-bounded. Kick and foundation do
+not enter this field; exact protected-route regression tests prove their PCM
+identity. The record is required for structural completeness and changes the
+transaction fingerprint, but remains absent from selection evidence under
+`uncalibrated.v1`. See [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md) for the signal,
+fallback, and replacement contract.
 
 `ProfessionalEvidenceReportBank` accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
@@ -281,8 +294,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 17, candidate-vector schema 16, and canonical engine
-v17, the versioned transaction implements the bounded evidence and atomic commit
+Under quality-contract schema 18, candidate-vector schema 17, and canonical engine
+v18, the versioned transaction implements the bounded evidence and atomic commit
 foundation for this loop. It can retain at most the primary, alternate, and
 conservative-fallback candidates, plus one
 home-timbre correction, with no more than four render passes total. Every attempt

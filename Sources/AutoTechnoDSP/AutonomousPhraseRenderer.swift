@@ -8,7 +8,7 @@ package enum VoiceKind: String, CaseIterable, Sendable {
 
 package enum EffectKind: String, CaseIterable, Sendable {
     case busEQ, maskingGuard, saturation, phaser, chorus, comb, unsyncedEcho, pulseEcho
-    case gatedPercussionEcho, reverb, glue, master
+    case gatedPercussionEcho, reverb, spatialFDN, glue, master
 }
 
 package struct EffectState: Equatable, Sendable {
@@ -158,8 +158,7 @@ package struct RenderState: Equatable, Sendable {
     package var lowBandEnvelope = 0.0
     package var highBandEnvelope = 0.0
     package var automaticMixState = AutomaticMixState()
-    package var reverbBuffer: [Float] = []
-    package var reverbWriteIndex = 0
+    package var spatialFDNState = FeedbackDelayNetworkState()
     var resonantFoundationState = ResonantMonoState()
     var resonantAnchorState = ResonantMonoState()
     var resonantShadowState = ResonantMonoState()
@@ -676,6 +675,77 @@ package struct PulseEchoReturnDriveRenderEvidence: Equatable, Sendable {
     package let finite: Bool
 }
 
+/// Same-pass reduced evidence for the canonical eight-line late spatial tail.
+/// It binds the score-owned selective send and scene-derived configuration to
+/// exact FDN input/wet PCM without retaining another audio buffer.
+package struct SpatialFDNRenderEvidence: Equatable, Sendable {
+    package static let evidenceVersion = "spatial-fdn.render.v1"
+
+    package let bar: Int
+    package let sampleRate: Double
+    package let renderedFrameCount: Int
+    package let lineCount: Int
+    package let delayFrameCounts: [Int]
+    package let roomScale: Double
+    package let decayTimeSeconds: Double
+    package let dampingHz: Double
+    package let maximumFeedbackGain: Double
+    package let synthSendGain: Double
+    package let percussionSendGain: Double
+    package let wetGain: Double
+    package let spatialDepthPosition: SpatialDepthPosition
+    package let carrierVoice: EnsembleVoice?
+    package let carrierStep: Int?
+    package let scoreReverbSend: Double
+    package let scoreHighPassHz: Double
+    package let scoreLowPassHz: Double
+    package let inputSampleHash: String
+    package let wetLeftSampleHash: String
+    package let wetRightSampleHash: String
+    package let inputRMS: Double
+    package let spatialSendRMS: Double
+    package let wetPeak: Double
+    package let wetRMS: Double
+    package let wetStereoCorrelation: Double
+    package let activeInputFrameCount: Int
+    package let activeWetFrameCount: Int
+    package let firstWetFrameIndex: Int
+    package let finite: Bool
+
+    package static let neutral = SpatialFDNRenderEvidence(
+        bar: -1,
+        sampleRate: 0,
+        renderedFrameCount: 0,
+        lineCount: 0,
+        delayFrameCounts: [],
+        roomScale: 0,
+        decayTimeSeconds: 0,
+        dampingHz: 0,
+        maximumFeedbackGain: 0,
+        synthSendGain: 0,
+        percussionSendGain: 0,
+        wetGain: 0,
+        spatialDepthPosition: .foreground,
+        carrierVoice: nil,
+        carrierStep: nil,
+        scoreReverbSend: 0,
+        scoreHighPassHz: 0,
+        scoreLowPassHz: 0,
+        inputSampleHash: "",
+        wetLeftSampleHash: "",
+        wetRightSampleHash: "",
+        inputRMS: 0,
+        spatialSendRMS: 0,
+        wetPeak: 0,
+        wetRMS: 0,
+        wetStereoCorrelation: 0,
+        activeInputFrameCount: 0,
+        activeWetFrameCount: 0,
+        firstWetFrameIndex: -1,
+        finite: false
+    )
+}
+
 package struct RenderedBar: Equatable, Sendable {
     package let sampleRate: Double
     package let samples: [Float]
@@ -702,6 +772,7 @@ package struct RenderedBar: Equatable, Sendable {
     package let audioSliceRenderEvidence: AudioSliceRenderEvidence
     package let polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence
     package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
+    package let spatialFDNRenderEvidence: SpatialFDNRenderEvidence
     package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
     package let upperTimingRenderEvidence: UpperTimingRenderEvidence
     /// Transient detached-preparation taps. They never cross into RenderBlock
@@ -725,6 +796,7 @@ package struct RenderedBar: Equatable, Sendable {
                 audioSliceRenderEvidence: AudioSliceRenderEvidence = .neutral,
                 polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence = .neutral,
                 pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
+                spatialFDNRenderEvidence: SpatialFDNRenderEvidence = .neutral,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 upperTimingRenderEvidence: UpperTimingRenderEvidence,
                 resonantAnchorSamples: [Float],
@@ -765,6 +837,7 @@ package struct RenderedBar: Equatable, Sendable {
         self.audioSliceRenderEvidence = audioSliceRenderEvidence
         self.polyphonicPadRenderEvidence = polyphonicPadRenderEvidence
         self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
+        self.spatialFDNRenderEvidence = spatialFDNRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.upperTimingRenderEvidence = upperTimingRenderEvidence
         self.resonantAnchorSamples = resonantAnchorSamples
@@ -822,6 +895,7 @@ package struct RenderBlock: Equatable, Sendable {
     package let audioSliceRenderPassesMatch: Bool
     package let polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence
     package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
+    package let spatialFDNRenderEvidence: SpatialFDNRenderEvidence
     /// Exact score-owned upper notes used for this bar. The renderer no longer
     /// invents pitch, duration, velocity, or slide decisions after resolution.
     package var resolvedUpperNotes: [ResolvedUpperNote] {
@@ -862,6 +936,7 @@ package struct RenderBlock: Equatable, Sendable {
                 audioSliceRenderPassesMatch: Bool = true,
                 polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence = .neutral,
                 pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
+                spatialFDNRenderEvidence: SpatialFDNRenderEvidence = .neutral,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 upperTimingRenderEvidence: UpperTimingRenderEvidence,
                 graphInputRemainderTimbreEvidence: UpperTimbreEvidence,
@@ -902,6 +977,7 @@ package struct RenderBlock: Equatable, Sendable {
         self.audioSliceRenderPassesMatch = audioSliceRenderPassesMatch
         self.polyphonicPadRenderEvidence = polyphonicPadRenderEvidence
         self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
+        self.spatialFDNRenderEvidence = spatialFDNRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.upperTimingRenderEvidence = upperTimingRenderEvidence
         self.graphInputRemainderTimbreEvidence = graphInputRemainderTimbreEvidence
@@ -1166,7 +1242,8 @@ package enum AutonomousPhraseRenderer {
                 synthWorld: synthPlan.world,
                 synthPerformance: synthPerformance,
                 workspace: &workspace,
-                layer: .protectedRhythm
+                layer: .protectedRhythm,
+                phraseKind: plan.kind
             )
             guard !cancellationRequested() else { return nil }
             let rendered = VoiceRenderer.renderBar(
@@ -1178,7 +1255,8 @@ package enum AutonomousPhraseRenderer {
                 synthWorld: synthPlan.world,
                 synthPerformance: synthPerformance,
                 workspace: &workspace,
-                layer: .full
+                layer: .full,
+                phraseKind: plan.kind
             )
             guard !cancellationRequested() else { return nil }
             let events = resolved.ensemble.events.map { event in
@@ -1394,6 +1472,7 @@ package enum AutonomousPhraseRenderer {
             )
             let pulseEchoActive = pulseEchoReturnEvidence.currentSendRMS > 0 ||
                 pulseEchoReturnEvidence.postDriveRMS > 0
+            let spatialFDNEvidence = rendered.spatialFDNRenderEvidence
             let graphEffects = graph.nodes.map {
                 EffectState(kind: effectKind($0.kind), amount: $0.amount, active: $0.mix > 0)
             } + [
@@ -1407,6 +1486,11 @@ package enum AutonomousPhraseRenderer {
                     kind: .pulseEcho,
                     amount: pulseEchoAmount,
                     active: pulseEchoActive
+                ),
+                EffectState(
+                    kind: .spatialFDN,
+                    amount: spatialFDNEvidence.wetGain,
+                    active: spatialFDNEvidence.activeWetFrameCount > 0
                 ),
                 EffectState(kind: .maskingGuard, amount: 1),
                 EffectState(kind: .glue, amount: 1),
@@ -1450,6 +1534,8 @@ package enum AutonomousPhraseRenderer {
                     rendered.polyphonicPadRenderEvidence,
                 pulseEchoReturnDriveRenderEvidence:
                     rendered.pulseEchoReturnDriveRenderEvidence,
+                spatialFDNRenderEvidence:
+                    rendered.spatialFDNRenderEvidence,
                 upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,
                 upperTimingRenderEvidence: rendered.upperTimingRenderEvidence,
                 graphInputRemainderTimbreEvidence: graphInputRemainderTimbreEvidence,

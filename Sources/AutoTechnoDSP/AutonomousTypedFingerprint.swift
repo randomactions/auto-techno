@@ -657,8 +657,8 @@ private extension AutonomousTypedFingerprint {
         sink.field("lowBandEnvelope"); sink.double(value.lowBandEnvelope)
         sink.field("highBandEnvelope"); sink.double(value.highBandEnvelope)
         sink.field("automaticMixState"); encode(value.automaticMixState, into: &sink)
-        sink.field("reverbBuffer"); encode(value.reverbBuffer, into: &sink)
-        sink.field("reverbWriteIndex"); sink.int(value.reverbWriteIndex)
+        sink.field("spatialFDNState")
+        encode(value.spatialFDNState, into: &sink)
         sink.field("resonantFoundationState")
         encode(value.resonantFoundationState, into: &sink)
         sink.field("resonantAnchorState"); encode(value.resonantAnchorState, into: &sink)
@@ -684,6 +684,23 @@ private extension AutonomousTypedFingerprint {
         encode(value.previousGraphInputRemainderEvidenceFrame, into: &sink)
         sink.field("previousPostGraphRemainderEvidenceFrame")
         encode(value.previousPostGraphRemainderEvidenceFrame, into: &sink)
+    }
+
+    static func encode(
+        _ value: FeedbackDelayNetworkState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("FeedbackDelayNetworkState")
+        sink.field("storage"); encode(value.storage, into: &sink)
+        sink.field("lineOffsets"); sink.collection(value.lineOffsets.count)
+        for offset in value.lineOffsets { sink.int(offset) }
+        sink.field("lineLengths"); sink.collection(value.lineLengths.count)
+        for length in value.lineLengths { sink.int(length) }
+        sink.field("writeIndices"); sink.collection(value.writeIndices.count)
+        for index in value.writeIndices { sink.int(index) }
+        sink.field("dampingStates")
+        sink.collection(value.dampingStates.count)
+        for state in value.dampingStates { sink.double(state) }
     }
 
     static func encode(
@@ -730,13 +747,24 @@ private extension AutonomousTypedFingerprint {
         sink.field("lowBandEnvelope"); sink.double(value.lowBandEnvelope)
         sink.field("highBandEnvelope"); sink.double(value.highBandEnvelope)
         sink.field("automaticMixState"); encode(value.automaticMixState, into: &sink)
-        sink.field("reverbBuffer")
+        sink.field("spatialFDNState")
         guard encode(
-            value.reverbBuffer,
+            value.spatialFDNState.storage,
             into: &sink,
             cancellationRequested: cancellationRequested
         ) else { return false }
-        sink.field("reverbWriteIndex"); sink.int(value.reverbWriteIndex)
+        sink.field("spatialFDNLineOffsets")
+        sink.collection(value.spatialFDNState.lineOffsets.count)
+        for offset in value.spatialFDNState.lineOffsets { sink.int(offset) }
+        sink.field("spatialFDNLineLengths")
+        sink.collection(value.spatialFDNState.lineLengths.count)
+        for length in value.spatialFDNState.lineLengths { sink.int(length) }
+        sink.field("spatialFDNWriteIndices")
+        sink.collection(value.spatialFDNState.writeIndices.count)
+        for index in value.spatialFDNState.writeIndices { sink.int(index) }
+        sink.field("spatialFDNDampingStates")
+        sink.collection(value.spatialFDNState.dampingStates.count)
+        for state in value.spatialFDNState.dampingStates { sink.double(state) }
         sink.field("resonantFoundationState")
         encode(value.resonantFoundationState, into: &sink)
         sink.field("resonantAnchorState"); encode(value.resonantAnchorState, into: &sink)

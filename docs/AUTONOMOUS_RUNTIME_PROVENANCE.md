@@ -27,15 +27,15 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 17, candidate-
-   vector schema 16, and canonical engine identity
-   `autotechno-canonical-engine.v17`. Each
+   candidate-evaluation transaction under quality-contract schema 18, candidate-
+   vector schema 17, and canonical engine identity
+   `autotechno-canonical-engine.v18`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
    event-local groove-pulse,
    ordinary closed-hat, score-owned instrument, score-owned gated percussion
-   texture, shared pulse-echo return-drive,
+   texture, shared pulse-echo return-drive, score-bound spatial-FDN,
    phrase-local slice source/output PCM, arpeggiator geometry, polyphonic pad
    PCM, and voice-leading movement,
    score-owned upper-role timing—including a bounded foreground lead-performance
@@ -129,7 +129,7 @@ mistaken for a completed feedback system.
    existing patches without creating another renderer. The voice
    renderer applies
    the resolved protagonist contour and may place one eligible existing event on
-   a filtered send into the existing reverb; neither operation creates another
+   a filtered send into the canonical late spatial field; neither operation creates another
    onset or topology. The renderer also renders full and protected-rhythm
    layers and mirrors exact dry samples into private kick, foundation,
    percussion, upper-tonal, and atmosphere stems. A bounded preparation-time
@@ -166,6 +166,13 @@ mistaken for a completed feedback system.
    sample-aligned; pitch, velocity, duration, gate intent, density, and
    instrument assignment do not change. Macro endpoints, conservative,
    forced-home, identity-return, and major-break paths resolve exact zero timing.
+   The late spatial realization is one eight-line Householder FDN derived from
+   the same scene and score. It replaces the former 12–20 second mono feedback
+   delay while keeping the separate early reflection, rhythmic delay, pulse
+   echo, graph diffusion, and gated-percussion return in their existing roles.
+   Flat bounded state continues the tail; route geometry resets it
+   deterministically. Same-pass records bind exact input/stereo-wet hashes and
+   measurements to configuration and score facts without retaining PCM.
 6. The unchanged pre-fader kick remains the ducking detector. The generated
    graph receives the exact `full - protected-rhythm` remainder, and its output
    is recombined with the protected stereo rhythm route. The protected route

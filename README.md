@@ -19,6 +19,8 @@ account.
 - one score-owned phrase-composition layer with bounded true percussion
   resampling, 8–16-step modal arpeggiation, four-voice pads, and cross-bar
   minimal-motion voice-leading;
+- one score-owned eight-line stereo FDN late field with bounded decay, damping,
+  continuation, protected low end, and exact per-bar consequence evidence;
 - engine-owned synthesis, effects, mixing, and output safety;
 - detached preparation followed by sample-time scheduling of immutable buffers;
 - route recovery at the active hardware sample rate;
@@ -77,6 +79,7 @@ revision.
 - [`docs/PRODUCT.md`](docs/PRODUCT.md) — stable product and interaction contract
 - [`docs/INSTRUMENT_PALETTE.md`](docs/INSTRUMENT_PALETTE.md) — internal synth, patch, role, automation, and effect matrix
 - [`docs/PERFORMANCE_GRAMMAR.md`](docs/PERFORMANCE_GRAMMAR.md) — phrase character, foundation behavior, compatibility, and evidence matrix
+- [`docs/SPATIAL_ENGINE.md`](docs/SPATIAL_ENGINE.md) — canonical FDN ownership, bounds, continuation, evidence, and qualification boundary
 - [`docs/SOUND_QUALITY.md`](docs/SOUND_QUALITY.md) — professional-sound and automated-quality contract
 - [`docs/SOUND_CONCEPT_MATURITY.md`](docs/SOUND_CONCEPT_MATURITY.md) — durable musical concepts and the richer DSP that may replace their current realization
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — ordered engine-evolution outcomes

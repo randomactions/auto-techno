@@ -986,3 +986,53 @@ This snapshot proves deterministic causal reachability and bounded engineering
 contracts, not listening quality. No exact-build app/route smoke, physical-output
 soak, calibrated quality promotion, or release-readiness claim is made.
 Publication and exact-head remote CI remain separate gates.
+
+## Canonical FDN spatial engine — 2026-08-13
+
+This candidate replaces the canonical renderer's former single 12–20 second
+mono late-delay buffer with one eight-line stereo feedback delay network. The
+existing score remains the owner of spatial depth, carrier, send, filtering,
+phrase boundary, and fallback. Scene intent resolves bounded room scale, RT60,
+damping, synth/percussion sends, and wet gain before detached rendering. The
+same continuing FDN state is retained across identity return while that
+score-owned home boundary applies a 0.45 audible-return scale. Kick and
+foundation remain outside the field; no alternate renderer, callback work,
+plug-in surface, or user control was added.
+
+Candidate-vector schema 17, quality-contract schema 18, and canonical engine
+v18 bind one complete spatial-FDN record to every rendered bar. The record
+retains route-derived delay geometry, strictly sub-unity feedback, score
+identity, exact input/stereo-wet hashes, levels, correlation, activity, onset,
+binding, and finiteness. Shipping selection remains `uncalibrated.v1`, and this
+evidence remains selection-neutral.
+
+The frozen engine-v10 profile was not changed or regenerated. A complete
+44.1/48 kHz journey comparison accepted the same 8/14 observations as the
+current-main baseline: establishment, chapter change, contrast, and identity
+return at both rates. The new bank's self-profile was complete and qualified
+(`b41f0fcd6cc5d252`), and its adversarial suite passed
+(`08b4b3532a6f86da`). This is compatibility evidence against a deliberately old
+frozen profile, not shipping quality promotion.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with matched
+SDKs, isolated caches, serial execution, and the workflow's exact process
+boundaries:
+
+- focused FDN, candidate, quality, and protected-routing contracts: 42/42;
+- complete two-rate frozen/self-profile/adversarial comparison: passed;
+- core and evidence CI group: 141/141 passed;
+- preparation preflight: 22/22 passed;
+- protected routing: 7/7 passed;
+- split upper/prepared-product/transaction gates: 19/19 passed;
+- complete CI-selected matrix: 189/189;
+- optimized `AutoTechno` product build: passed in 62.24 seconds;
+- `git diff --check`: clean before publication.
+
+The release linker emitted non-fatal missing module-cache debug-reference
+warnings from the reused isolated SwiftPM build path; the optimized product
+linked successfully. This snapshot proves deterministic DSP bounds, truthful
+score-to-PCM evidence, protected low-end identity, rate compatibility, and
+offline qualification behavior. Exact-build app playback, listening/taste,
+route/interruption recovery, representative preparation latency and peak
+memory, and physical-output soak remain separate gates. Publication and
+exact-head remote CI remain separate gates.

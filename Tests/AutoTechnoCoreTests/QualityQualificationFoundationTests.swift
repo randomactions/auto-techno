@@ -1176,6 +1176,10 @@ struct QualityQualificationFoundationTests {
                 interlockChapter: .home,
                 finite: true
             )],
+            spatialFDN: [AutonomousSpatialFDNBarEvidence.neutral(
+                bar: 0,
+                sampleRate: evidence.sampleRate
+            )],
             upperTiming: [AutonomousUpperTimingBarEvidence(
                 bar: 0,
                 chapter: .home,
@@ -1283,6 +1287,7 @@ struct QualityQualificationFoundationTests {
                 percussionEchoTexture: source.percussionEchoTexture,
                 phraseComposition: source.phraseComposition,
                 pulseEchoDrive: source.pulseEchoDrive,
+                spatialFDN: source.spatialFDN,
                 upperTiming: source.upperTiming,
                 graph: source.graph,
                 routeContinuation: source.routeContinuation,
