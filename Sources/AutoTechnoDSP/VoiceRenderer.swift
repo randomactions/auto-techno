@@ -544,6 +544,8 @@ package enum VoiceRenderer {
         closedHatRenderEvidence.reserveCapacity(
             resolved.closedHatDecayArticulations.count
         )
+        var resonantMonoNonlinearCoreEvidence =
+            TPTAntialiasedNonlinearCoreEvidenceAccumulator()
         swap(&output, &checkedOut.output)
         swap(&kickBus, &checkedOut.kick)
         swap(&kickDetectorBus, &checkedOut.kickDetector)
@@ -604,7 +606,8 @@ package enum VoiceRenderer {
                     frequency: frequency,
                     assignment: synthPerformance.foundationInstrument,
                     velocity: accent,
-                    state: &state.resonantFoundationState
+                    state: &state.resonantFoundationState,
+                    nonlinearCoreEvidence: &resonantMonoNonlinearCoreEvidence
                 )
             case .rumble:
                 rumble(&output, measurement: &foundationStem,
@@ -729,6 +732,8 @@ package enum VoiceRenderer {
                 polyphonicPadStem: &polyphonicPadStem,
                 polyphonicPadRenderEvidence: &polyphonicPadRenderEvidence,
                 noteRenderEvidence: &upperNoteRenderEvidence,
+                resonantMonoNonlinearCoreEvidence:
+                    &resonantMonoNonlinearCoreEvidence,
                 renderScheduledNotes: renderScheduledUpperNotes,
                 scene: scene,
                 sampleRate: sampleRate,
@@ -1457,6 +1462,8 @@ package enum VoiceRenderer {
                                     upperNoteRenderEvidence: upperNoteRenderEvidence,
                                     resonantMono: resonantMonoInstrumentStem,
                                     resonantMonoModulation: resonantMonoModulationStem,
+                                    resonantMonoNonlinearCore:
+                                        resonantMonoNonlinearCoreEvidence,
                                     sampleRate: sampleRate,
                                     tonalMotion: tonalMotionInstrumentStem,
                                     tonalEnvelopeExpansion:
@@ -1523,6 +1530,8 @@ package enum VoiceRenderer {
         polyphonicPadStem: inout [Float],
         polyphonicPadRenderEvidence: inout PolyphonicPadRenderEvidence,
         noteRenderEvidence: inout [UpperNoteRenderEvidence],
+        resonantMonoNonlinearCoreEvidence:
+            inout TPTAntialiasedNonlinearCoreEvidenceAccumulator,
         renderScheduledNotes: Bool,
         scene: TechnoScene,
         sampleRate: Double,
@@ -1615,7 +1624,8 @@ package enum VoiceRenderer {
             notes: anchorNotes,
             sampleRate: sampleRate,
             level: 0.090 + scene.synthPresence * 0.060,
-            state: &state.resonantAnchorState
+            state: &state.resonantAnchorState,
+            nonlinearCoreEvidence: &resonantMonoNonlinearCoreEvidence
         )
         AlienAnalogVoice.render(
             &output,
@@ -1643,7 +1653,8 @@ package enum VoiceRenderer {
             notes: shadowNotes,
             sampleRate: sampleRate,
             level: 0.032 + scene.synthPresence * 0.034,
-            state: &state.resonantShadowState
+            state: &state.resonantShadowState,
+            nonlinearCoreEvidence: &resonantMonoNonlinearCoreEvidence
         )
         AlienAnalogVoice.render(
             &output,
@@ -1715,7 +1726,8 @@ package enum VoiceRenderer {
             notes: responseNotes,
             sampleRate: sampleRate,
             level: 0.026 + scene.melodicity * 0.030,
-            state: &state.resonantResponseState
+            state: &state.resonantResponseState,
+            nonlinearCoreEvidence: &resonantMonoNonlinearCoreEvidence
         )
         AlienAnalogVoice.render(
             &output,
@@ -1784,6 +1796,8 @@ package enum VoiceRenderer {
         upperNoteRenderEvidence: [UpperNoteRenderEvidence],
         resonantMono: [Float],
         resonantMonoModulation: [Float],
+        resonantMonoNonlinearCore:
+            TPTAntialiasedNonlinearCoreEvidenceAccumulator,
         sampleRate: Double,
         tonalMotion: [Float],
         tonalEnvelopeExpansion: [Float],
@@ -1827,6 +1841,11 @@ package enum VoiceRenderer {
                     samples: resonantMonoModulation,
                     sampleRate: sampleRate
                 ) : nil
+            let nonlinearCore = architecture == .resonantMono
+                ? resonantMonoNonlinearCore.evidence(
+                    sourceAssignmentCount: uniqueAssignments.count,
+                    sourceEventCount: matching.count
+                ) : nil
             let cluster = architecture == .spectralTexture
                 ? spectralTextureClusterEvidence(
                     noteEvidence: upperNoteRenderEvidence,
@@ -1851,6 +1870,7 @@ package enum VoiceRenderer {
                 peak: peak,
                 rms: rms,
                 finite: samples.allSatisfy(\.isFinite) && peak.isFinite && rms.isFinite,
+                nonlinearCore: nonlinearCore,
                 resonantMonoModulation: modulation,
                 spectralTextureCluster: cluster,
                 tonalEnvelopeExpansion: envelopeExpansion

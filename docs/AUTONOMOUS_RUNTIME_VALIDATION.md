@@ -66,12 +66,12 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 18, candidate-vector schema 17, and canonical engine v18
+Quality-contract schema 19, candidate-vector schema 18, and canonical engine v19
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
 event-local groove-pulse, ordinary
-closed-hat, score-owned instrument and its acid/cluster/envelope consequence,
+closed-hat, score-owned instrument and its acid/nonlinear-core/cluster/envelope consequence,
 score-owned gated percussion texture,
 shared pulse-echo return-drive, score-owned spatial-FDN, score-owned upper-role timing,
 score-owned phrase slicing, arpeggiator geometry, polyphonic pad signal, and
@@ -102,6 +102,14 @@ relation, exact current ratio, requested/applied index bounds, deterministic
 event and operator hashes, positive finite operator peak/RMS/crest, and bounded
 low-band energy. A non-acid architecture may not carry that record; the
 protected foundation must retain exact neutral operator evidence and PCM.
+Every Resonant Mono architecture record must also retain one complete
+`tpt-svf-adaa-tanh.v1` core record. Unique assignment/event counts and processed
+samples must bind to the architecture; cutoff, Q, drive, and band-mix extrema
+must remain inside route-rate bounds; and exact input/output hashes plus peak/RMS
+must be finite and nonzero. The record is forbidden on other architectures.
+Focused DSP tests compare its first-order ADAA tanh against point-sampled tanh,
+compare TPT response across rates, sweep aggressive modulation across every
+supported rate, and require exact chunk continuation.
 Cross-rate tests must cover the minimum and maximum supported routes, exact-zero
 event endpoints, deterministic replay, live canonical-session reachability,
 and a complete selected primary transaction. Current numeric DSP values are a
@@ -248,8 +256,9 @@ or PCM.
 
 ## Hybrid feedback and callback isolation
 
-Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, and phrase-
-composition and spatial-FDN evidence carried by quality-contract schema 18 change detached
+Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
+composition, spatial-FDN, and nonlinear-core evidence carried by quality-contract
+schema 19 change detached
 preparation only. They add
 no callback capture, analysis, or live-feedback work; the requirements below
 remain gates

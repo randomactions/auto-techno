@@ -14,6 +14,8 @@ account.
 - phrase-boundary continuation with temporal memory and bounded fallback;
 - three score-selected internal synthesis architectures with bounded patch
   automation and exact score-to-PCM evidence;
+- one shared Resonant Mono TPT/ADAA nonlinear core with bounded semantic
+  modulation, exact continuation, and same-pass input/output evidence;
 - six phrase-scale performance characters coordinating foundation, rhythm,
   role-compatible patches, and automation under one persistent identity;
 - one score-owned phrase-composition layer with bounded true percussion
@@ -80,6 +82,7 @@ revision.
 - [`docs/INSTRUMENT_PALETTE.md`](docs/INSTRUMENT_PALETTE.md) — internal synth, patch, role, automation, and effect matrix
 - [`docs/PERFORMANCE_GRAMMAR.md`](docs/PERFORMANCE_GRAMMAR.md) — phrase character, foundation behavior, compatibility, and evidence matrix
 - [`docs/SPATIAL_ENGINE.md`](docs/SPATIAL_ENGINE.md) — canonical FDN ownership, bounds, continuation, evidence, and qualification boundary
+- [`docs/NONLINEAR_DSP_CORE.md`](docs/NONLINEAR_DSP_CORE.md) — canonical TPT/ADAA ownership, bounds, evidence, and qualification boundary
 - [`docs/SOUND_QUALITY.md`](docs/SOUND_QUALITY.md) — professional-sound and automated-quality contract
 - [`docs/SOUND_CONCEPT_MATURITY.md`](docs/SOUND_CONCEPT_MATURITY.md) — durable musical concepts and the richer DSP that may replace their current realization
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — ordered engine-evolution outcomes

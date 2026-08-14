@@ -903,10 +903,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 17)
-        #expect(QualityQualificationContract.schemaVersion == 18)
+        #expect(vector.schemaVersion == 18)
+        #expect(QualityQualificationContract.schemaVersion == 19)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v18")
+                "autotechno-canonical-engine.v19")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
@@ -1263,6 +1263,8 @@ struct AutonomousCandidateEvaluationTests {
                 peak: 0.20,
                 rms: 0.08,
                 finite: true,
+                nonlinearCore:
+                    fixtureTPTAntialiasedNonlinearCoreRenderEvidence(),
                 resonantMonoModulation:
                     fixtureResonantMonoModulationRenderEvidence()
             )]
@@ -1291,7 +1293,8 @@ struct AutonomousCandidateEvaluationTests {
         let serialized = try #require(architectures.first)
         #expect(Set(serialized.keys) == Set([
             "architecture", "sourceAssignmentCount", "assignments", "eventCount",
-            "sampleHash", "peak", "rms", "finite", "resonantMonoModulation",
+            "sampleHash", "peak", "rms", "finite", "nonlinearCore",
+            "resonantMonoModulation",
         ]))
         let serializedAssignments = try #require(
             serialized["assignments"] as? [[String: Any]]
@@ -1304,6 +1307,18 @@ struct AutonomousCandidateEvaluationTests {
         let serializedModulation = try #require(
             serialized["resonantMonoModulation"] as? [String: Any]
         )
+        let serializedCore = try #require(
+            serialized["nonlinearCore"] as? [String: Any]
+        )
+        #expect(Set(serializedCore.keys) == Set([
+            "version", "antialiasOrder", "sourceAssignmentCount",
+            "sourceEventCount", "processedSampleCount", "minimumCutoffHz",
+            "maximumCutoffHz", "minimumQ", "maximumQ",
+            "minimumInputDrive", "maximumInputDrive", "minimumOutputDrive",
+            "maximumOutputDrive", "minimumBandMix", "maximumBandMix",
+            "inputSampleHash", "outputSampleHash", "inputPeak", "inputRMS",
+            "outputPeak", "outputRMS", "bindingValid", "finite",
+        ]))
         #expect(Set(serializedModulation.keys) == Set([
             "sourceAssignmentCount", "eventCount", "orderedEventCount",
             "metallicEventCount", "orderedModulatorRatio",
@@ -1389,6 +1404,25 @@ struct AutonomousCandidateEvaluationTests {
             from: JSONSerialization.data(withJSONObject: disconnectedObject)
         )
         #expect(!disconnected.isComplete)
+
+        var forgedCoreObject = object
+        var forgedCoreBars = bars
+        var forgedCoreBar = forgedCoreBars[0]
+        var forgedCoreArchitectures = architectures
+        var forgedCoreArchitecture = forgedCoreArchitectures[0]
+        var forgedCore = serializedCore
+        forgedCore["version"] = "unqualified-core.v999"
+        forgedCoreArchitecture["nonlinearCore"] = forgedCore
+        forgedCoreArchitectures[0] = forgedCoreArchitecture
+        forgedCoreBar["architectures"] = forgedCoreArchitectures
+        forgedCoreBars[0] = forgedCoreBar
+        forgedCoreObject["instruments"] = forgedCoreBars
+        let forgedCoreVector = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedCoreObject)
+        )
+        #expect(!forgedCoreVector.isComplete)
+        #expect(forgedCoreVector.fingerprint != vector.fingerprint)
 
         var misplacedObject = object
         var misplacedBars = bars
@@ -3345,11 +3379,11 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
-                "f5fb830816c2715e")
+                "d6d404790bd651aa")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "8c200b7603db07ab")
+                "1d26ee6f170727a7")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3357,7 +3391,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.renderDSPContinuation(
             renderState: positiveZeroRenderState,
             generatedDSPState: orderedGraphState
-        ) == "4e01b4eb18900225")
+        ) == "1cd07aec247972a1")
     }
 
     private var fixturePlanFingerprints: AutonomousCandidatePlanFingerprints {
@@ -4008,6 +4042,8 @@ struct AutonomousCandidateEvaluationTests {
                 peak: 0.20,
                 rms: 0.08,
                 finite: true,
+                nonlinearCore:
+                    fixtureTPTAntialiasedNonlinearCoreRenderEvidence(),
                 resonantMonoModulation:
                     fixtureResonantMonoModulationRenderEvidence()
             )]
@@ -4034,6 +4070,36 @@ struct AutonomousCandidateEvaluationTests {
             operatorRMS: 0.08,
             operatorCrestFactor: 2.5,
             lowBandEnergyRatio: lowBandEnergyRatio,
+            bindingValid: bindingValid,
+            finite: true
+        )
+    }
+
+    private func fixtureTPTAntialiasedNonlinearCoreRenderEvidence(
+        bindingValid: Bool = true
+    ) -> TPTAntialiasedNonlinearCoreRenderEvidence {
+        TPTAntialiasedNonlinearCoreRenderEvidence(
+            version: TPTAntialiasedNonlinearCoreContract.version,
+            antialiasOrder: TPTAntialiasedNonlinearCoreContract.antialiasOrder,
+            sourceAssignmentCount: 1,
+            sourceEventCount: 1,
+            processedSampleCount: 800,
+            minimumCutoffHz: 80,
+            maximumCutoffHz: 1_200,
+            minimumQ: 0.8,
+            maximumQ: 3.0,
+            minimumInputDrive: 1.0,
+            maximumInputDrive: 2.0,
+            minimumOutputDrive: 1.1,
+            maximumOutputDrive: 1.5,
+            minimumBandMix: 0.05,
+            maximumBandMix: 0.20,
+            inputSampleHash: "0123456789abcdef",
+            outputSampleHash: "fedcba9876543210",
+            inputPeak: 1,
+            inputRMS: 0.5,
+            outputPeak: 0.20,
+            outputRMS: 0.08,
             bindingValid: bindingValid,
             finite: true
         )

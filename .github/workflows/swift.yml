@@ -121,7 +121,7 @@ jobs:
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(AdaptiveAutonomousSessionTests|GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|FeedbackDelayNetworkTests|RepositorySurfaceTests|IdentityReturnContinuationTests|InstrumentPaletteTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|ProfessionalQualityCalibration|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
+          --filter '(AdaptiveAutonomousSessionTests|GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|FeedbackDelayNetworkTests|RepositorySurfaceTests|IdentityReturnContinuationTests|InstrumentPaletteTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|ProfessionalQualityCalibration|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
 
       - name: Run preparation preflight tests
         run: >-

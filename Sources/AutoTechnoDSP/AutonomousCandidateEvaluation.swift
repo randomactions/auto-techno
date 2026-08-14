@@ -1527,6 +1527,133 @@ package struct AutonomousSpectralTextureClusterEvidence: Codable, Equatable, Sen
     }
 }
 
+/// Candidate-safe projection of the exact samples and bounded parameters that
+/// passed through the shared TPT/ADAA core. It carries only scalar facts and
+/// fingerprints; no reconstructable PCM or mutable renderer state survives.
+package struct AutonomousTPTAntialiasedNonlinearCoreEvidence: Codable, Equatable,
+        Sendable {
+    package let version: String
+    package let antialiasOrder: Int
+    package let sourceAssignmentCount: Int
+    package let sourceEventCount: Int
+    package let processedSampleCount: Int
+    package let minimumCutoffHz: Double
+    package let maximumCutoffHz: Double
+    package let minimumQ: Double
+    package let maximumQ: Double
+    package let minimumInputDrive: Double
+    package let maximumInputDrive: Double
+    package let minimumOutputDrive: Double
+    package let maximumOutputDrive: Double
+    package let minimumBandMix: Double
+    package let maximumBandMix: Double
+    package let inputSampleHash: String
+    package let outputSampleHash: String
+    package let inputPeak: Double
+    package let inputRMS: Double
+    package let outputPeak: Double
+    package let outputRMS: Double
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(_ evidence: TPTAntialiasedNonlinearCoreRenderEvidence) {
+        version = evidence.version
+        antialiasOrder = evidence.antialiasOrder
+        sourceAssignmentCount = evidence.sourceAssignmentCount
+        sourceEventCount = evidence.sourceEventCount
+        processedSampleCount = evidence.processedSampleCount
+        minimumCutoffHz = evidence.minimumCutoffHz
+        maximumCutoffHz = evidence.maximumCutoffHz
+        minimumQ = evidence.minimumQ
+        maximumQ = evidence.maximumQ
+        minimumInputDrive = evidence.minimumInputDrive
+        maximumInputDrive = evidence.maximumInputDrive
+        minimumOutputDrive = evidence.minimumOutputDrive
+        maximumOutputDrive = evidence.maximumOutputDrive
+        minimumBandMix = evidence.minimumBandMix
+        maximumBandMix = evidence.maximumBandMix
+        inputSampleHash = evidence.inputSampleHash
+        outputSampleHash = evidence.outputSampleHash
+        inputPeak = evidence.inputPeak
+        inputRMS = evidence.inputRMS
+        outputPeak = evidence.outputPeak
+        outputRMS = evidence.outputRMS
+        bindingValid = evidence.bindingValid
+        finite = evidence.finite
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            minimumCutoffHz, maximumCutoffHz, minimumQ, maximumQ,
+            minimumInputDrive, maximumInputDrive, minimumOutputDrive,
+            maximumOutputDrive, minimumBandMix, maximumBandMix, inputPeak,
+            inputRMS, outputPeak, outputRMS,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func isComplete(
+        architectureAssignmentCount: Int,
+        architectureEventCount: Int,
+        sampleRate: Double
+    ) -> Bool {
+        guard bindingValid, isFinite,
+              version == TPTAntialiasedNonlinearCoreContract.version,
+              antialiasOrder ==
+                TPTAntialiasedNonlinearCoreContract.antialiasOrder,
+              sourceAssignmentCount == architectureAssignmentCount,
+              sourceEventCount == architectureEventCount,
+              processedSampleCount >= sourceEventCount,
+              sampleRate >=
+                QualityQualificationContract.minimumSupportedSampleRate,
+              sampleRate <=
+                QualityQualificationContract.maximumSupportedSampleRate else {
+            return false
+        }
+        let maximumFramesPerEvent = Int(ceil(
+            sampleRate * 240.0 / AutonomousSessionDirector.bpm
+        ))
+        guard processedSampleCount <=
+                sourceEventCount * maximumFramesPerEvent,
+              minimumCutoffHz >=
+                TPTAntialiasedNonlinearCoreContract.minimumCutoffHz,
+              minimumCutoffHz <= maximumCutoffHz,
+              maximumCutoffHz <= sampleRate *
+                TPTAntialiasedNonlinearCoreContract.maximumCutoffFraction,
+              minimumQ >= TPTAntialiasedNonlinearCoreContract.minimumQ,
+              minimumQ <= maximumQ,
+              maximumQ <= TPTAntialiasedNonlinearCoreContract.maximumQ,
+              minimumInputDrive >=
+                TPTAntialiasedNonlinearCoreContract.minimumDrive,
+              minimumInputDrive <= maximumInputDrive,
+              maximumInputDrive <=
+                TPTAntialiasedNonlinearCoreContract.maximumDrive,
+              minimumOutputDrive >=
+                TPTAntialiasedNonlinearCoreContract.minimumDrive,
+              minimumOutputDrive <= maximumOutputDrive,
+              maximumOutputDrive <=
+                TPTAntialiasedNonlinearCoreContract.maximumDrive,
+              minimumBandMix >= 0,
+              minimumBandMix <= maximumBandMix,
+              maximumBandMix <=
+                TPTAntialiasedNonlinearCoreContract.maximumBandMix,
+              Self.isSampleHash(inputSampleHash),
+              Self.isSampleHash(outputSampleHash),
+              inputPeak > 0, inputRMS > 0, inputRMS <= inputPeak,
+              outputPeak > 0, outputRMS > 0, outputRMS <= outputPeak,
+              inputPeak <= Double(Float.greatestFiniteMagnitude),
+              outputPeak <= Double(Float.greatestFiniteMagnitude) else {
+            return false
+        }
+        return true
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sendable {
     package let architecture: String
     package let sourceAssignmentCount: Int
@@ -1536,6 +1663,8 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
     package let peak: Double
     package let rms: Double
     package let finite: Bool
+    package let nonlinearCore:
+        AutonomousTPTAntialiasedNonlinearCoreEvidence?
     package let resonantMonoModulation:
         AutonomousResonantMonoModulationEvidence?
     package let spectralTextureCluster:
@@ -1554,6 +1683,9 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         peak = Double(evidence.peak)
         rms = Double(evidence.rms)
         finite = evidence.finite
+        nonlinearCore = evidence.nonlinearCore.map(
+            AutonomousTPTAntialiasedNonlinearCoreEvidence.init
+        )
         resonantMonoModulation = evidence.resonantMonoModulation.map(
             AutonomousResonantMonoModulationEvidence.init
         )
@@ -1567,6 +1699,7 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
 
     package var isFinite: Bool {
         finite && peak.isFinite && rms.isFinite &&
+            (nonlinearCore?.isFinite ?? true) &&
             (resonantMonoModulation?.isFinite ?? true) &&
             (spectralTextureCluster?.isFinite ?? true) &&
             (tonalEnvelopeExpansion?.isFinite ?? true) &&
@@ -1588,6 +1721,16 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
             peak >= 0 && rms >= 0 && rms <= peak &&
             peak <= Double(Float.greatestFiniteMagnitude)
         guard baseComplete else { return false }
+        if architecture == InstrumentArchitecture.resonantMono.rawValue {
+            guard let nonlinearCore,
+                  nonlinearCore.isComplete(
+                    architectureAssignmentCount: assignments.count,
+                    architectureEventCount: eventCount,
+                    sampleRate: sampleRate
+                  ) else { return false }
+        } else if nonlinearCore != nil {
+            return false
+        }
         let hasAcidAssignment = assignments.contains {
             $0.patch == InstrumentPatch.acidThread.rawValue ||
                 $0.patch == InstrumentPatch.acidSequence.rawValue
@@ -3509,7 +3652,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 17
+    package static let schemaVersion = 18
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5

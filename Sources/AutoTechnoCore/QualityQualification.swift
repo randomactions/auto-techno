@@ -4,14 +4,14 @@ import Foundation
 /// policy is deliberately uncalibrated: these types make evidence reproducible
 /// without claiming that professional-quality targets exist yet.
 package enum QualityQualificationContract {
-    /// Version 18 binds the score-owned spatial-depth articulation to bounded
-    /// eight-line FDN configuration, exact wet-render, and continuation
-    /// evidence.
+    /// Version 19 binds resonant-mono patch automation to the shared bounded
+    /// TPT filter and first-order antiderivative-antialiased tanh consequence,
+    /// including exact input/output fingerprints and applied parameter ranges.
     /// The shipping policy remains uncalibrated; this version identifies
     /// evidence, not runtime promotion.
-    package static let schemaVersion = 18
+    package static let schemaVersion = 19
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v18"
+    package static let engineVersion = "autotechno-canonical-engine.v19"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

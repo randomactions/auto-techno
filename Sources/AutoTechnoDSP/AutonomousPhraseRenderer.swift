@@ -565,6 +565,8 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
     package let peak: Float
     package let rms: Float
     package let finite: Bool
+    package let nonlinearCore:
+        TPTAntialiasedNonlinearCoreRenderEvidence?
     package let resonantMonoModulation:
         ResonantMonoModulationRenderEvidence?
     package let spectralTextureCluster:
@@ -583,6 +585,8 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         peak: Float,
         rms: Float,
         finite: Bool,
+        nonlinearCore:
+            TPTAntialiasedNonlinearCoreRenderEvidence? = nil,
         resonantMonoModulation:
             ResonantMonoModulationRenderEvidence? = nil,
         spectralTextureCluster:
@@ -600,6 +604,7 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         self.peak = peak
         self.rms = rms
         self.finite = finite
+        self.nonlinearCore = nonlinearCore
         self.resonantMonoModulation = resonantMonoModulation
         self.spectralTextureCluster = spectralTextureCluster
         self.tonalEnvelopeExpansion = tonalEnvelopeExpansion

@@ -32,6 +32,9 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one score-owned acid spectral relation whose existing thread/sequence patches
   express ordered-hollow or metallic-tension intent through bounded operator
   DSP, while non-acid and protected-foundation assignments remain neutral;
+- one shared Resonant Mono nonlinear-filter core that replaces four local
+  coefficient one-poles and a pointwise rational saturator with bounded TPT SVF
+  modulation plus first-order ADAA tanh shaping and exact same-pass evidence;
 - one transition-only rising adjacent-cluster relation inside the existing
   Metal Veil spectral texture, with no new onset, patch, or sequencer;
 - one score-owned sustained-wash envelope relation that enlarges only the final
@@ -43,12 +46,12 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one canonical eight-line stereo late field replacing the former single long
   mono feedback delay, with scene-derived decay/damping, exact continuation,
   protected low end, and score-bound per-bar evidence;
-- canonical engine v18, quality-contract schema 18, and candidate-vector schema 17
+- canonical engine v19, quality-contract schema 19, and candidate-vector schema 18
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax and debt-to-recovery climax arc,
   event-local groove-pulse, ordinary closed-hat,
-  score-owned instrument, acid-operator, spectral-cluster, and tonal-envelope
-  consequence,
+  score-owned instrument, acid-operator, spectral-cluster, tonal-envelope, and
+  Resonant Mono nonlinear-core consequence,
   score-owned gated percussion texture, shared pulse-echo return-drive,
   score-owned spatial-FDN configuration and wet consequence,
   score-owned upper-role timing, graph, and
@@ -108,11 +111,11 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 18 and candidate-vector schema 17 now bind a versioned
-transaction across canonical engine v18, quality policy, evaluator, candidate
+Quality-contract schema 19 and candidate-vector schema 18 now bind a versioned
+transaction across canonical engine v19, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
-instrument, acid-operator, spectral-cluster, and tonal-envelope,
+instrument, acid-operator, TPT/ADAA nonlinear-core, spectral-cluster, and tonal-envelope,
 gated percussion texture, pulse-echo return-drive, spatial-FDN, and upper-role timing,
 including foreground lead performance,
 projections, unified phrase composition, plus exact paid-debt-to-release climax
@@ -152,6 +155,14 @@ Iteratively improve oscillators, filters, distortion, dynamics, space, role
 hierarchy, and final output treatment through the shared evidence and adaptation
 contract. Each slice must produce a materially useful engine capability rather
 than a one-off preset, special-case mix fix, or alternative renderer.
+
+The first shared filter/nonlinear slice is now active in Resonant Mono: a
+rate-normalized TPT SVF and first-order ADAA tanh path replace that architecture's
+former local one-pole cascade and rational saturator. Its exact applied bounds,
+input/output fingerprints, and continuation are candidate evidence. Later
+architecture adoption must replace an existing mechanism in place and add its
+own truthful binding; this milestone does not authorize blanket oversampling or
+a second renderer.
 
 ### 6. Qualify long-horizon professional sound
 

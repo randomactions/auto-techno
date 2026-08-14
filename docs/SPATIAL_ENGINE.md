@@ -26,9 +26,9 @@ evidence about the consequence.
    A route-geometry change resets it deterministically before rendering the new
    route.
 5. `SpatialFDNRenderEvidence` streams hashes and reduced measurements from the
-   exact input and stereo wet samples. Candidate-vector schema 17 binds one
-   record to every rendered bar under quality-contract schema 18 and canonical
-   engine v18.
+   exact input and stereo wet samples. Candidate-vector schema 18 binds one
+   record to every rendered bar under quality-contract schema 19 and canonical
+   engine v19.
 
 No musical choice, analysis, file operation, allocation, or state mutation from
 this path runs on the real-time audio callback. The app schedules the already

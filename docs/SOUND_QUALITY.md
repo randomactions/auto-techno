@@ -11,13 +11,13 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 18, candidate-vector schema 17, and
-canonical engine identity `autotechno-canonical-engine.v18`. It preserves
+candidate uses quality-contract schema 19, candidate-vector schema 18, and
+canonical engine identity `autotechno-canonical-engine.v19`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
 architecture-local dry-
-PCM, acid-operator, rising spectral-cluster, and tonal-envelope-expansion
+PCM, acid-operator, TPT/ADAA nonlinear-core, rising spectral-cluster, and tonal-envelope-expansion
 evidence, score-owned gated
 percussion texture,
 shared pulse-echo return-drive,
@@ -68,6 +68,17 @@ treatment, and operator blend are implementation v1. A future oversampled,
 higher-order, or differently band-limited DSP may replace them only under a new
 engine/schema identity while preserving deterministic score ownership, neutral
 fallback, protected low end, and truthful consequence evidence.
+
+Every Resonant Mono assignment now reaches one shared nonlinear-filter core.
+First-order antiderivative-antialiased `tanh` shaping surrounds a
+topology-preserving-transform state-variable filter; the existing patch and
+semantic automation remain the score owner. Same-pass evidence binds exact
+assignment/event/sample counts, applied cutoff/Q/drive/band-mix ranges, pre-core
+and post-core fingerprints, signal levels, continuation, and finiteness. This
+replaces the architecture's former four local coefficient one-poles and private
+rational saturator. It does not claim that separate architecture or generated-
+graph nonlinearities have been migrated, and it remains selection-neutral while
+shipping policy is uncalibrated.
 
 The existing Tonal Motion architecture also carries one durable
 `sustainedWash` envelope relation. It is eligible only for the final retriggered
@@ -294,8 +305,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 18, candidate-vector schema 17, and canonical engine
-v18, the versioned transaction implements the bounded evidence and atomic commit
+Under quality-contract schema 19, candidate-vector schema 18, and canonical engine
+v19, the versioned transaction implements the bounded evidence and atomic commit
 foundation for this loop. It can retain at most the primary, alternate, and
 conservative-fallback candidates, plus one
 home-timbre correction, with no more than four render passes total. Every attempt

@@ -863,14 +863,42 @@ private extension AutonomousTypedFingerprint {
         sink.field("activePatch"); encode(value.activePatch, into: &sink)
         sink.field("phase"); sink.double(value.phase)
         sink.field("subPhase"); sink.double(value.subPhase)
-        sink.field("filter1"); sink.double(value.filter1)
-        sink.field("filter2"); sink.double(value.filter2)
-        sink.field("filter3"); sink.double(value.filter3)
-        sink.field("filter4"); sink.double(value.filter4)
+        sink.field("nonlinearCore"); encode(value.nonlinearCore, into: &sink)
         sink.field("dcInput"); sink.double(value.dcInput)
         sink.field("dcOutput"); sink.double(value.dcOutput)
         sink.field("frequency"); sink.double(value.frequency)
         sink.field("envelope"); sink.double(value.envelope)
+    }
+
+    static func encode(
+        _ value: TPTAntialiasedNonlinearCoreState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("TPTAntialiasedNonlinearCoreState")
+        sink.field("inputShaper")
+        encode(value.inputShaper, into: &sink)
+        sink.field("filter")
+        encode(value.filter, into: &sink)
+        sink.field("outputShaper")
+        encode(value.outputShaper, into: &sink)
+    }
+
+    static func encode(
+        _ value: AntiderivativeAntialiasedTanhState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("AntiderivativeAntialiasedTanhState")
+        sink.field("previousInput"); sink.double(value.previousInput)
+        sink.field("hasPreviousInput"); sink.bool(value.hasPreviousInput)
+    }
+
+    static func encode(
+        _ value: TPTStateVariableFilterState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("TPTStateVariableFilterState")
+        sink.field("integrator1"); sink.double(value.integrator1)
+        sink.field("integrator2"); sink.double(value.integrator2)
     }
 
     static func encode(_ value: SpectralTextureState, into sink: inout StreamingFNV1a) {

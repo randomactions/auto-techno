@@ -76,10 +76,7 @@ struct ResonantMonoState: Equatable, Sendable {
     var activePatch: InstrumentPatch?
     var phase = 0.0
     var subPhase = 0.0
-    var filter1 = 0.0
-    var filter2 = 0.0
-    var filter3 = 0.0
-    var filter4 = 0.0
+    var nonlinearCore = TPTAntialiasedNonlinearCoreState()
     var dcInput = 0.0
     var dcOutput = 0.0
     var frequency = 55.0
@@ -88,10 +85,7 @@ struct ResonantMonoState: Equatable, Sendable {
     mutating func prepare(patch: InstrumentPatch) {
         guard patch.architecture == .resonantMono else { return }
         if let activePatch, activePatch != patch {
-            filter1 = 0
-            filter2 = 0
-            filter3 = 0
-            filter4 = 0
+            nonlinearCore.reset()
             dcInput = 0
             dcOutput = 0
             envelope = 0
@@ -116,7 +110,9 @@ enum ResonantMonoVoice {
         frequency: Double,
         assignment: InstrumentAssignment,
         velocity: Double,
-        state: inout ResonantMonoState
+        state: inout ResonantMonoState,
+        nonlinearCoreEvidence:
+            inout TPTAntialiasedNonlinearCoreEvidenceAccumulator
     ) {
         guard assignment.architecture == .resonantMono,
               assignment.use == .foundationBass else { return }
@@ -138,7 +134,8 @@ enum ResonantMonoVoice {
             gate: .retrigger,
             assignment: assignment,
             state: &state,
-            modulationMeasurement: &noModulationMeasurement
+            modulationMeasurement: &noModulationMeasurement,
+            nonlinearCoreEvidence: &nonlinearCoreEvidence
         )
     }
 
@@ -153,7 +150,9 @@ enum ResonantMonoVoice {
         notes: [AlienVoiceNote],
         sampleRate: Double,
         level: Double,
-        state: inout ResonantMonoState
+        state: inout ResonantMonoState,
+        nonlinearCoreEvidence:
+            inout TPTAntialiasedNonlinearCoreEvidenceAccumulator
     ) {
         let scheduled = notes.filter {
             $0.instrument.architecture == .resonantMono &&
@@ -184,7 +183,8 @@ enum ResonantMonoVoice {
                 gate: appliedGate,
                 assignment: note.instrument,
                 state: &state,
-                modulationMeasurement: &modulationMeasurement
+                modulationMeasurement: &modulationMeasurement,
+                nonlinearCoreEvidence: &nonlinearCoreEvidence
             )
             let requestedEnd = note.startFrame.addingReportingOverflow(note.durationFrames)
             let requestedGateEnd = requestedEnd.overflow ? Int.max : requestedEnd.partialValue
@@ -232,7 +232,9 @@ enum ResonantMonoVoice {
         gate: UpperNoteGate,
         assignment: InstrumentAssignment,
         state: inout ResonantMonoState,
-        modulationMeasurement: inout [Float]
+        modulationMeasurement: inout [Float],
+        nonlinearCoreEvidence:
+            inout TPTAntialiasedNonlinearCoreEvidenceAccumulator
     ) -> (renderedFrameCount: Int,
           modulation: ResonantMonoModulationEventRenderEvidence?) {
         guard sampleRate > 0, start >= 0, start < output.count,
@@ -265,6 +267,19 @@ enum ResonantMonoVoice {
         }
         let sawWeight = assignment.patch == .bassPulse ? 0.18 : 0.46
         let sineWeight = max(0.16, 1 - pulseWeight - sawWeight)
+        let bandMix: Double = switch assignment.patch {
+        case .bassPulse:
+            0.02 + automation.motion * 0.04
+        case .bassPluck:
+            0.05 + automation.motion * 0.08
+        case .acidThread:
+            0.10 + automation.motion * 0.12
+        case .acidSequence:
+            0.15 + automation.motion * 0.18
+        case .northStar, .darkChord, .glassRunner, .alienNoise, .metalVeil,
+             .dustCloud:
+            0
+        }
         let requestedStart = max(20, startFrequency)
         if gate == .retrigger {
             state.frequency = requestedStart
@@ -354,16 +369,17 @@ enum ResonantMonoVoice {
                 sampleRate * 0.16,
                 baseCutoff + state.envelope * envelopeDepth * (0.72 + accentLift)
             )
-            let rawCoefficient = 2 * .pi * cutoff / sampleRate
-            let coefficient = min(0.42, max(0.002, rawCoefficient / (1 + rawCoefficient)))
-            let feedback = state.filter4 * resonance
-            let driven = saturate((source - feedback) * drive)
-            state.filter1 += (driven - state.filter1) * coefficient
-            state.filter2 += (saturate(state.filter1 * 1.07) - state.filter2) * coefficient
-            state.filter3 += (saturate(state.filter2 * 1.05) - state.filter3) * coefficient
-            state.filter4 += (saturate(state.filter3 * 1.03) - state.filter4) * coefficient
-            let body = state.filter3 * 0.70 + state.filter2 * 0.30
-            let shaped = saturate(body * (1.05 + automation.motion * 0.42))
+            let shaped = TPTAntialiasedNonlinearCore.process(
+                input: source,
+                sampleRate: sampleRate,
+                cutoffHz: cutoff,
+                resonance: resonance,
+                inputDrive: drive,
+                outputDrive: 1.05 + automation.motion * 0.42,
+                bandMix: bandMix,
+                state: &state.nonlinearCore,
+                evidence: &nonlinearCoreEvidence
+            )
             let dcBlocked = shaped - state.dcInput + 0.995 * state.dcOutput
             state.dcInput = shaped
             state.dcOutput = dcBlocked
@@ -392,10 +408,6 @@ enum ResonantMonoVoice {
             )
         }
         return (renderedCount, modulationEvidence)
-    }
-
-    private static func saturate(_ value: Double) -> Double {
-        value / (1 + abs(value) * 0.56)
     }
 
     private static func wrap(_ phase: Double) -> Double {

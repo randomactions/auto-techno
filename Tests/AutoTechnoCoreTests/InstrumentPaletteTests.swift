@@ -511,6 +511,23 @@ struct InstrumentPaletteTests {
                 #expect(architecture.eventCount >= architecture.assignments.count)
                 #expect(architecture.assignments.allSatisfy { $0.isValid })
                 #expect(architecture.sampleHash.count == 16)
+                #expect((architecture.nonlinearCore != nil) ==
+                        (architecture.architecture == .resonantMono))
+                if let nonlinearCore = architecture.nonlinearCore {
+                    #expect(nonlinearCore.version ==
+                            TPTAntialiasedNonlinearCoreContract.version)
+                    #expect(nonlinearCore.bindingValid)
+                    #expect(nonlinearCore.finite)
+                    #expect(nonlinearCore.sourceAssignmentCount ==
+                            architecture.assignments.count)
+                    #expect(nonlinearCore.sourceEventCount == architecture.eventCount)
+                    #expect(nonlinearCore.processedSampleCount >=
+                            nonlinearCore.sourceEventCount)
+                    #expect(nonlinearCore.inputSampleHash.count == 16)
+                    #expect(nonlinearCore.outputSampleHash.count == 16)
+                    #expect(nonlinearCore.inputSampleHash !=
+                            nonlinearCore.outputSampleHash)
+                }
                 if let modulation = architecture.resonantMonoModulation {
                     #expect(architecture.architecture == .resonantMono)
                     #expect(modulation.bindingValid)
@@ -718,10 +735,16 @@ struct InstrumentPaletteTests {
         #expect(acidArchitectures.allSatisfy { architecture in
             guard architecture.architecture ==
                     InstrumentArchitecture.resonantMono.rawValue,
+                  let nonlinearCore = architecture.nonlinearCore,
                   let modulation = architecture.resonantMonoModulation else {
                 return false
             }
             return architecture.isComplete(sampleRate: 8_000) &&
+                nonlinearCore.isComplete(
+                    architectureAssignmentCount: architecture.assignments.count,
+                    architectureEventCount: architecture.eventCount,
+                    sampleRate: 8_000
+                ) &&
                 modulation.isComplete(
                     assignments: architecture.assignments,
                     architectureEventCount: architecture.eventCount
@@ -828,6 +851,8 @@ struct InstrumentPaletteTests {
         switch assignment.architecture {
         case .resonantMono:
             var state = ResonantMonoState()
+            var nonlinearCoreEvidence =
+                TPTAntialiasedNonlinearCoreEvidenceAccumulator()
             ResonantMonoVoice.renderUpper(
                 &output,
                 measurement: &roleMeasurement,
@@ -839,7 +864,8 @@ struct InstrumentPaletteTests {
                 notes: [note],
                 sampleRate: sampleRate,
                 level: 0.08,
-                state: &state
+                state: &state,
+                nonlinearCoreEvidence: &nonlinearCoreEvidence
             )
         case .tonalMotion:
             var state = AlienVoiceState()

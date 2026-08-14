@@ -27,9 +27,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 18, candidate-
-   vector schema 17, and canonical engine identity
-   `autotechno-canonical-engine.v18`. Each
+   candidate-evaluation transaction under quality-contract schema 19, candidate-
+   vector schema 18, and canonical engine identity
+   `autotechno-canonical-engine.v19`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -45,7 +45,11 @@ mistaken for a completed feedback system.
    peak, RMS, and event count. Acid assignments additionally bind their durable
    ordered-hollow or metallic-tension relation to same-pass operator-event
    counts, current ratio/index realization, event and operator hashes,
-   peak/RMS/crest, low-band energy ratio, and finiteness. Eligible Metal Veil
+   peak/RMS/crest, low-band energy ratio, and finiteness.
+   Every Resonant Mono record also binds its exact unique assignment/event and
+   processed-sample counts, applied TPT cutoff/Q and ADAA drive/band-mix ranges,
+   pre-core/post-core fingerprints, signal levels, continuation, and finiteness.
+   Eligible Metal Veil
    transitions additionally bind one
    rising adjacent-cluster relation to exact component ratios, upward frequency
    geometry, an isolated dry-signal hash, peak/RMS/crest, and finiteness.
@@ -119,7 +123,11 @@ mistaken for a completed feedback system.
    those intentions as a bounded two-operator, dark-to-bright-to-dark aperture
    with a renderer-owned anti-alias budget and low-band-protected modulation
    delta. Non-acid and protected-foundation assignments retain the neutral
-   operator path. The semantic relation is durable; current oscillator ratios,
+   operator path. All Resonant Mono assignments then pass through the one shared
+   TPT state-variable filter and first-order antiderivative-antialiased tanh
+   core under the existing patch automation. This replaces that architecture's
+   former one-pole cascade and private saturator; it adds no parallel renderer.
+   The semantic relation is durable; current oscillator ratios,
    index curve, high-pass treatment, and blend are replaceable DSP details that
    require a new versioned evidence contract when changed. The planner also
    consumes the resolved performance character and foundation behavior.
