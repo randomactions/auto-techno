@@ -200,8 +200,9 @@ checkpoint/rate observations with no relationship failures.
 The Professional Evidence v3 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. Its own policy
 availability remains false by design. Calibrated paired ranking remains disabled
-until representative canonical-journey cancellation, latency, and peak-working-
-memory budgets pass.
+until the exact shipping comparator repeats the now-passing generic transaction
+cancellation, latency, and peak-working-memory envelope under the pinned
+profile/adversarial identities.
 
 ## Determinism and sample-rate consistency
 
@@ -295,6 +296,18 @@ Before enabling calibrated paired ranking, establish bounded streaming phrase
 analysis and measure cancellation latency, preparation latency, and peak working
 memory across the full four-pass limit. A test-only comparator does not satisfy
 this release gate.
+
+The generic transaction readiness probe now supplies that prerequisite at 44.1
+and 48 kHz. Three optimized maximum-size iterations per rate measured healthy
+paired worst times of 6.372/6.873 seconds, full four-pass worst times of
+12.247/13.357 seconds, post-comparison cancellation of 0.014...0.032 ms, and
+80,461,824 bytes maximum RSS. Its deterministic numeric-storage estimate is
+113,161,984 bytes under a 128 MiB ceiling. Healthy work fits the 7.385-second
+shortest-phrase lookahead; correction/fallback fits one 14.769-second
+frozen-topology hold. These figures do not satisfy the final release gate until
+the exact shipping evaluator, artifact-loading path, and reason-coded policy
+replay pass the same probe. See
+[`PAIRED_SELECTION_READINESS.md`](PAIRED_SELECTION_READINESS.md).
 
 The declared budget must leave enough lookahead to schedule the future boundary
 without callback work or silence. A late successor may repeat the current

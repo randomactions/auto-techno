@@ -111,6 +111,12 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter equivalentPreparedTransactionsAcrossRates
 
+      - name: Run paired-preparation resource envelope
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter representativeRateWorkingSetEnvelope
+
       - name: Run phrase-boundary evidence
         run: >-
           swift test --no-parallel --skip-build

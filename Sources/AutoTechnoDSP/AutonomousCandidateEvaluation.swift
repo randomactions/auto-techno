@@ -4242,58 +4242,20 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sampleRate: sampleRate,
             phraseKind: plan.kind
         )
-        let spatialFDN = boundedBlocks.map { block in
-            let evidence = block.spatialFDNRenderEvidence
-            let spatial = block.resolvedPerformance.spatialContrast
-            let planBarMatches = plan.resolvedBars.first {
-                $0.performance.bar == block.bar
-            } == block.resolvedPerformance
-            let bindingValid = planBarMatches &&
-                evidence.bar == block.bar &&
-                evidence.sampleRate == sampleRate &&
-                evidence.renderedFrameCount == block.left.count &&
-                evidence.renderedFrameCount == block.right.count &&
-                evidence.lineCount ==
-                    FeedbackDelayNetworkConfiguration.lineCount &&
-                evidence.delayFrameCounts ==
-                    expectedSpatialFDNConfiguration.delayFrameCounts &&
-                evidence.roomScale == expectedSpatialFDNConfiguration.roomScale &&
-                evidence.decayTimeSeconds ==
-                    expectedSpatialFDNConfiguration.decayTimeSeconds &&
-                evidence.dampingHz == expectedSpatialFDNConfiguration.dampingHz &&
-                evidence.maximumFeedbackGain ==
-                    expectedSpatialFDNConfiguration.maximumFeedbackGain &&
-                evidence.synthSendGain ==
-                    expectedSpatialFDNConfiguration.synthSendGain &&
-                evidence.percussionSendGain ==
-                    expectedSpatialFDNConfiguration.percussionSendGain &&
-                evidence.wetGain == expectedSpatialFDNConfiguration.wetGain &&
-                evidence.spatialDepthPosition == spatial.depthPosition &&
-                evidence.carrierVoice == spatial.carrierVoice &&
-                evidence.carrierStep == spatial.carrierStep &&
-                evidence.scoreReverbSend == spatial.reverbSend &&
-                evidence.scoreHighPassHz == spatial.highPassHz &&
-                evidence.scoreLowPassHz == spatial.lowPassHz &&
-                block.effects.contains {
-                    $0.kind == .spatialFDN &&
-                        $0.amount == evidence.wetGain &&
-                        $0.active == (evidence.activeWetFrameCount > 0)
-                }
-            return AutonomousSpatialFDNBarEvidence(
-                evidence,
-                bindingValid: bindingValid
-            )
-        }
+        let spatialFDN = makeSpatialFDNEvidence(
+            blocks: boundedBlocks,
+            planBars: plan.resolvedBars,
+            expectedConfiguration: expectedSpatialFDNConfiguration,
+            sampleRate: sampleRate
+        )
         let phraseComposition = boundedBlocks.map {
             AutonomousPhraseCompositionBarEvidence(block: $0)
         }
-        let upperTiming = boundedBlocks.map { block in
-            makeUpperTimingEvidence(
-                block: block,
-                planBPM: plan.scene.bpm,
-                routeSampleRate: sampleRate
-            )
-        }
+        let upperTiming = makeUpperTimingEvidence(
+            blocks: boundedBlocks,
+            planBPM: plan.scene.bpm,
+            routeSampleRate: sampleRate
+        )
         let graphEvidence = AutonomousGraphEvidence(
             graphFingerprint: graphFingerprint,
             revision: graph.revision,
@@ -4348,6 +4310,98 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             preGraphUpperTimbreEvidence: preGraphUpperTimbreEvidence,
             postGraphUpperTimbreEvidence: upperTimbreEvidence
         )
+    }
+
+    /// Keeps the spatial-FDN binding audit out of the already large candidate
+    /// vector constructor. Apart from making this evidence easier to inspect,
+    /// the explicit frame prevents Swift's generic metadata lookup for
+    /// `contains(where:)` from exhausting the testing worker's bounded stack.
+    @inline(never)
+    private static func makeSpatialFDNEvidence(
+        blocks: [RenderBlock],
+        planBars: [ResolvedPerformanceBar],
+        expectedConfiguration: FeedbackDelayNetworkConfiguration,
+        sampleRate: Double
+    ) -> [AutonomousSpatialFDNBarEvidence] {
+        var result: [AutonomousSpatialFDNBarEvidence] = []
+        result.reserveCapacity(blocks.count)
+        for block in blocks {
+            result.append(AutonomousSpatialFDNBarEvidence(
+                block.spatialFDNRenderEvidence,
+                bindingValid: spatialFDNBindingIsValid(
+                    block: block,
+                    planBars: planBars,
+                    expectedConfiguration: expectedConfiguration,
+                    sampleRate: sampleRate
+                )
+            ))
+        }
+        return result
+    }
+
+    @inline(never)
+    private static func spatialFDNBindingIsValid(
+        block: RenderBlock,
+        planBars: [ResolvedPerformanceBar],
+        expectedConfiguration: FeedbackDelayNetworkConfiguration,
+        sampleRate: Double
+    ) -> Bool {
+        let evidence = block.spatialFDNRenderEvidence
+        let spatial = block.resolvedPerformance.spatialContrast
+        var planBarMatches = false
+        for planBar in planBars where planBar.performance.bar == block.bar {
+            planBarMatches = planBar == block.resolvedPerformance
+            break
+        }
+        var effectMatches = false
+        for effect in block.effects {
+            if effect.kind == .spatialFDN &&
+                effect.amount == evidence.wetGain &&
+                effect.active == (evidence.activeWetFrameCount > 0) {
+                effectMatches = true
+                break
+            }
+        }
+        return planBarMatches &&
+            evidence.bar == block.bar &&
+            evidence.sampleRate == sampleRate &&
+            evidence.renderedFrameCount == block.left.count &&
+            evidence.renderedFrameCount == block.right.count &&
+            evidence.lineCount == FeedbackDelayNetworkConfiguration.lineCount &&
+            evidence.delayFrameCounts == expectedConfiguration.delayFrameCounts &&
+            evidence.roomScale == expectedConfiguration.roomScale &&
+            evidence.decayTimeSeconds == expectedConfiguration.decayTimeSeconds &&
+            evidence.dampingHz == expectedConfiguration.dampingHz &&
+            evidence.maximumFeedbackGain ==
+                expectedConfiguration.maximumFeedbackGain &&
+            evidence.synthSendGain == expectedConfiguration.synthSendGain &&
+            evidence.percussionSendGain ==
+                expectedConfiguration.percussionSendGain &&
+            evidence.wetGain == expectedConfiguration.wetGain &&
+            evidence.spatialDepthPosition == spatial.depthPosition &&
+            evidence.carrierVoice == spatial.carrierVoice &&
+            evidence.carrierStep == spatial.carrierStep &&
+            evidence.scoreReverbSend == spatial.reverbSend &&
+            evidence.scoreHighPassHz == spatial.highPassHz &&
+            evidence.scoreLowPassHz == spatial.lowPassHz && effectMatches
+    }
+
+    @inline(never)
+    private static func makeUpperTimingEvidence(
+        blocks: [RenderBlock],
+        planBPM: Double,
+        routeSampleRate: Double
+    ) -> [AutonomousUpperTimingBarEvidence] {
+        var result: [AutonomousUpperTimingBarEvidence] = []
+        result.reserveCapacity(blocks.count)
+        for block in blocks {
+            result.append(makeUpperTimingEvidence(
+                block: block,
+                planBPM: planBPM,
+                routeSampleRate: routeSampleRate
+            ))
+        }
+        return result
     }
 
     @inline(never)
@@ -4436,6 +4490,22 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         let appliedGateEndFrame: Int
     }
 
+    private struct UpperTimingStatistics {
+        let activeOffsetCount: Int
+        let protectedRoleActiveOffsetCount: Int
+        let anchorActiveOffsetCount: Int
+        let anchorEventCount: Int
+        let minimumOffset: Double
+        let maximumOffset: Double
+        let anchorMinimumOffset: Double
+        let anchorMaximumOffset: Double
+        let anchorFingerprint: String
+        let shadowMinimumOffset: Double
+        let shadowMaximumOffset: Double
+        let responseMinimumOffset: Double
+        let responseMaximumOffset: Double
+    }
+
     @inline(never)
     private static func makeUpperTimingEvidence(
         block: RenderBlock,
@@ -4443,12 +4513,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         routeSampleRate: Double
     ) -> AutonomousUpperTimingBarEvidence {
         let renderEvidence = block.upperTimingRenderEvidence
-        let scheduleUpperNotes =
-            block.resolvedPerformance.performance.signatureEvent != .textureCollapse &&
-            block.resolvedPerformance.performance.roles.contains {
-                $0 == .motif || $0 == .response || $0 == .atmosphere ||
-                    $0 == .transition
-            }
+        let scheduleUpperNotes = upperTimingScheduleEnabled(block)
         let sourceScoreNotes = scheduleUpperNotes
             ? block.synthPerformance.upperNotes : []
         let scoreNotes = Array(
@@ -4461,81 +4526,23 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             block.upperNoteRenderEvidence.prefix(maximumUpperTimingEventsPerBar)
         )
         let stepFrames = Double(renderEvidence.renderedFrameCount) / 16
-        let scoreTuples = sortedUpperTimingTuples(scoreNotes.map { note in
-            let expectedOnsetFrame = VoiceRenderer.upperNoteStartFrame(
-                note: note,
-                stepFrames: stepFrames,
-                frameCount: renderEvidence.renderedFrameCount
-            )
-            let durationFrames = VoiceRenderer.upperNoteDurationFrames(
-                note: note,
-                stepFrames: stepFrames
-            )
-            let requestedEnd = expectedOnsetFrame.addingReportingOverflow(
-                durationFrames
-            )
-            let requestedGateEndFrame = requestedEnd.overflow
-                ? Int.max : requestedEnd.partialValue
-            return UpperTimingFingerprintTuple(
-                role: note.role.rawValue,
-                baseOnsetStep: note.onsetStep,
-                offsetBitPattern: note.timingOffsetInSteps.bitPattern,
-                expectedOnsetFrame: expectedOnsetFrame,
-                appliedOnsetFrame: expectedOnsetFrame,
-                requestedGateEndFrame: requestedGateEndFrame
-            )
-        })
-        let renderTuples = sortedUpperTimingTuples(renderEvents.map { event in
-            UpperTimingFingerprintTuple(
-                role: event.role.rawValue,
-                baseOnsetStep: event.baseOnsetStep,
-                offsetBitPattern: event.requestedOffsetInSteps.bitPattern,
-                expectedOnsetFrame: event.expectedOnsetFrame,
-                appliedOnsetFrame: event.appliedOnsetFrame,
-                requestedGateEndFrame: event.requestedGateEndFrame
-            )
-        })
-        let eventGateFacts = renderEvents.map {
-            UpperTimingAppliedGateFact(
-                role: $0.role,
-                onsetFrame: $0.appliedOnsetFrame,
-                requestedGateEndFrame: $0.requestedGateEndFrame,
-                appliedGateEndFrame: $0.appliedGateEndFrame
-            )
-        }.sorted(by: upperTimingGateFactOrder)
-        let actualGateFacts = actualRenderEvidence.map {
-            UpperTimingAppliedGateFact(
-                role: $0.role,
-                onsetFrame: $0.onsetFrame,
-                requestedGateEndFrame: $0.requestedGateEndFrame,
-                appliedGateEndFrame: $0.appliedGateEndFrame
-            )
-        }.sorted(by: upperTimingGateFactOrder)
+        let scoreTuples = scoreUpperTimingTuples(
+            scoreNotes,
+            stepFrames: stepFrames,
+            frameCount: renderEvidence.renderedFrameCount
+        )
+        let renderTuples = renderUpperTimingTuples(renderEvents)
+        let eventGateFacts = upperTimingGateFacts(renderEvents)
+        let actualGateFacts = upperNoteGateFacts(actualRenderEvidence)
         let scoreFingerprint = upperTimingFingerprint(scoreTuples)
         let renderFingerprint = upperTimingFingerprint(renderTuples)
         let appliedGateFingerprint = upperTimingAppliedGateFingerprint(
             eventGateFacts
         )
-        let offsets = scoreNotes.map(\.timingOffsetInSteps)
-        let minimumOffset = offsets.min() ?? 0
-        let maximumOffset = offsets.max() ?? 0
-        let activeOffsetCount = offsets.filter { $0.bitPattern != 0 }.count
-        let anchorOffsets = renderEvents.filter {
-            $0.role == .anchor
-        }.map(\.requestedOffsetInSteps)
-        let protectedRoleActiveOffsetCount = renderEvents.filter { event in
-            (event.role == .atmosphere || event.role == .transition) &&
-                event.requestedOffsetInSteps.bitPattern != 0
-        }.count
-        let anchorActiveOffsetCount = anchorOffsets.filter {
-            $0.bitPattern != 0
-        }.count
-        let shadowOffsets = renderEvents.filter {
-            $0.role == .shadow
-        }.map(\.requestedOffsetInSteps)
-        let responseOffsets = renderEvents.filter {
-            $0.role == .response
-        }.map(\.requestedOffsetInSteps)
+        let statistics = upperTimingStatistics(
+            scoreNotes: scoreNotes,
+            renderEvents: renderEvents
+        )
         let anchorSignal = AutonomousUpperTimingRoleSignalEvidence(
             role: .anchor,
             evidence: renderEvidence.anchorSignal
@@ -4548,47 +4555,29 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             role: .response,
             evidence: renderEvidence.responseSignal
         )
-        let bindingValid = renderEvidence.bar == block.bar &&
-            renderEvidence.chapter == block.resolvedPerformance.interlockChapter &&
-            renderEvidence.relation == block.synthPerformance.upperTimingRelation &&
-            renderEvidence.performanceCharacter ==
-                block.resolvedPerformance.performanceCharacter &&
-            renderEvidence.bpm == planBPM &&
-            renderEvidence.sampleRate == routeSampleRate &&
-            renderEvidence.renderedFrameCount == block.left.count &&
-            renderEvidence.renderedFrameCount == block.right.count &&
-            sourceScoreNotes.count <= maximumUpperTimingEventsPerBar &&
-            renderEvidence.events.count <= maximumUpperTimingEventsPerBar &&
-            block.upperNoteRenderEvidence.count <= maximumUpperTimingEventsPerBar &&
-            sourceScoreNotes.count == renderEvidence.events.count &&
-            renderEvidence.events.count == block.upperNoteRenderEvidence.count &&
-            scoreTuples.count == renderTuples.count &&
-            scoreFingerprint == renderFingerprint &&
-            eventGateFacts == actualGateFacts &&
-            actualGateFacts.allSatisfy {
-                $0.onsetFrame >= 0 &&
-                    $0.requestedGateEndFrame > $0.onsetFrame &&
-                    $0.appliedGateEndFrame >= $0.onsetFrame &&
-                    $0.appliedGateEndFrame <= min(
-                        $0.requestedGateEndFrame,
-                        renderEvidence.renderedFrameCount
-                    )
-            } &&
-            anchorSignal.eventCount == renderEvents.filter {
-                $0.role == .anchor
-            }.count &&
-            shadowSignal.eventCount == renderEvents.filter {
-                $0.role == .shadow
-            }.count &&
-            responseSignal.eventCount == renderEvents.filter {
-                $0.role == .response
-            }.count
-        let finite = planBPM.isFinite && routeSampleRate.isFinite &&
-            offsets.allSatisfy(\.isFinite) &&
-            renderEvents.allSatisfy { event in
-                event.requestedOffsetInSteps.isFinite
-            } && anchorSignal.isFinite && shadowSignal.isFinite &&
-            responseSignal.isFinite
+        let bindingValid = upperTimingBindingIsValid(
+            block: block,
+            renderEvidence: renderEvidence,
+            planBPM: planBPM,
+            routeSampleRate: routeSampleRate,
+            sourceScoreNoteCount: sourceScoreNotes.count,
+            scoreTupleCount: scoreTuples.count,
+            renderTupleCount: renderTuples.count,
+            scoreFingerprint: scoreFingerprint,
+            renderFingerprint: renderFingerprint,
+            eventGateFacts: eventGateFacts,
+            actualGateFacts: actualGateFacts,
+            anchorSignalCount: anchorSignal.eventCount,
+            shadowSignalCount: shadowSignal.eventCount,
+            responseSignalCount: responseSignal.eventCount
+        )
+        let finite = upperTimingIsFinite(
+            planBPM: planBPM,
+            routeSampleRate: routeSampleRate,
+            scoreNotes: scoreNotes,
+            renderEvents: renderEvents,
+            signals: [anchorSignal, shadowSignal, responseSignal]
+        )
         return AutonomousUpperTimingBarEvidence(
             bar: block.bar,
             chapter: block.resolvedPerformance.interlockChapter,
@@ -4600,25 +4589,23 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             renderedFrameCount: renderEvidence.renderedFrameCount,
             sourceScoreNoteCount: sourceScoreNotes.count,
             sourceRenderEventCount: renderEvidence.events.count,
-            anchorEventCount: renderEvents.filter {
-                $0.role == .anchor
-            }.count,
-            activeOffsetCount: activeOffsetCount,
-            protectedRoleActiveOffsetCount: protectedRoleActiveOffsetCount,
-            anchorActiveOffsetCount: anchorActiveOffsetCount,
-            minimumOffsetInSteps: minimumOffset,
-            maximumOffsetInSteps: maximumOffset,
-            maximumRoleSpreadInSteps: maximumOffset - minimumOffset,
-            anchorMinimumOffsetInSteps: anchorOffsets.min() ?? 0,
-            anchorMaximumOffsetInSteps: anchorOffsets.max() ?? 0,
+            anchorEventCount: statistics.anchorEventCount,
+            activeOffsetCount: statistics.activeOffsetCount,
+            protectedRoleActiveOffsetCount:
+                statistics.protectedRoleActiveOffsetCount,
+            anchorActiveOffsetCount: statistics.anchorActiveOffsetCount,
+            minimumOffsetInSteps: statistics.minimumOffset,
+            maximumOffsetInSteps: statistics.maximumOffset,
+            maximumRoleSpreadInSteps:
+                statistics.maximumOffset - statistics.minimumOffset,
+            anchorMinimumOffsetInSteps: statistics.anchorMinimumOffset,
+            anchorMaximumOffsetInSteps: statistics.anchorMaximumOffset,
             anchorOffsetPatternFingerprint:
-                AutonomousUpperTimingBarEvidence.offsetPatternFingerprint(
-                    anchorOffsets
-                ),
-            shadowMinimumOffsetInSteps: shadowOffsets.min() ?? 0,
-            shadowMaximumOffsetInSteps: shadowOffsets.max() ?? 0,
-            responseMinimumOffsetInSteps: responseOffsets.min() ?? 0,
-            responseMaximumOffsetInSteps: responseOffsets.max() ?? 0,
+                statistics.anchorFingerprint,
+            shadowMinimumOffsetInSteps: statistics.shadowMinimumOffset,
+            shadowMaximumOffsetInSteps: statistics.shadowMaximumOffset,
+            responseMinimumOffsetInSteps: statistics.responseMinimumOffset,
+            responseMaximumOffsetInSteps: statistics.responseMaximumOffset,
             scoreFingerprint: scoreFingerprint,
             renderFingerprint: renderFingerprint,
             appliedGateFingerprint: appliedGateFingerprint,
@@ -4628,6 +4615,254 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             bindingValid: bindingValid,
             finite: finite
         )
+    }
+
+    @inline(never)
+    private static func upperTimingScheduleEnabled(_ block: RenderBlock) -> Bool {
+        guard block.resolvedPerformance.performance.signatureEvent !=
+                .textureCollapse else {
+            return false
+        }
+        for role in block.resolvedPerformance.performance.roles {
+            if role == .motif || role == .response || role == .atmosphere ||
+                role == .transition {
+                return true
+            }
+        }
+        return false
+    }
+
+    @inline(never)
+    private static func upperTimingStatistics(
+        scoreNotes: [ResolvedUpperNote],
+        renderEvents: [UpperTimingRenderEvent]
+    ) -> UpperTimingStatistics {
+        var offsets: [Double] = []
+        offsets.reserveCapacity(scoreNotes.count)
+        var activeOffsetCount = 0
+        for note in scoreNotes {
+            offsets.append(note.timingOffsetInSteps)
+            if note.timingOffsetInSteps.bitPattern != 0 {
+                activeOffsetCount += 1
+            }
+        }
+
+        var anchorOffsets: [Double] = []
+        var shadowOffsets: [Double] = []
+        var responseOffsets: [Double] = []
+        var protectedRoleActiveOffsetCount = 0
+        var anchorActiveOffsetCount = 0
+        var anchorEventCount = 0
+        for event in renderEvents {
+            switch event.role {
+            case .anchor:
+                anchorEventCount += 1
+                anchorOffsets.append(event.requestedOffsetInSteps)
+                if event.requestedOffsetInSteps.bitPattern != 0 {
+                    anchorActiveOffsetCount += 1
+                }
+            case .shadow:
+                shadowOffsets.append(event.requestedOffsetInSteps)
+            case .response:
+                responseOffsets.append(event.requestedOffsetInSteps)
+            case .atmosphere, .transition:
+                if event.requestedOffsetInSteps.bitPattern != 0 {
+                    protectedRoleActiveOffsetCount += 1
+                }
+            }
+        }
+        return UpperTimingStatistics(
+            activeOffsetCount: activeOffsetCount,
+            protectedRoleActiveOffsetCount: protectedRoleActiveOffsetCount,
+            anchorActiveOffsetCount: anchorActiveOffsetCount,
+            anchorEventCount: anchorEventCount,
+            minimumOffset: offsets.min() ?? 0,
+            maximumOffset: offsets.max() ?? 0,
+            anchorMinimumOffset: anchorOffsets.min() ?? 0,
+            anchorMaximumOffset: anchorOffsets.max() ?? 0,
+            anchorFingerprint:
+                AutonomousUpperTimingBarEvidence.offsetPatternFingerprint(
+                    anchorOffsets
+                ),
+            shadowMinimumOffset: shadowOffsets.min() ?? 0,
+            shadowMaximumOffset: shadowOffsets.max() ?? 0,
+            responseMinimumOffset: responseOffsets.min() ?? 0,
+            responseMaximumOffset: responseOffsets.max() ?? 0
+        )
+    }
+
+    @inline(never)
+    private static func upperTimingBindingIsValid(
+        block: RenderBlock,
+        renderEvidence: UpperTimingRenderEvidence,
+        planBPM: Double,
+        routeSampleRate: Double,
+        sourceScoreNoteCount: Int,
+        scoreTupleCount: Int,
+        renderTupleCount: Int,
+        scoreFingerprint: String,
+        renderFingerprint: String,
+        eventGateFacts: [UpperTimingAppliedGateFact],
+        actualGateFacts: [UpperTimingAppliedGateFact],
+        anchorSignalCount: Int,
+        shadowSignalCount: Int,
+        responseSignalCount: Int
+    ) -> Bool {
+        guard renderEvidence.bar == block.bar,
+              renderEvidence.chapter ==
+                block.resolvedPerformance.interlockChapter,
+              renderEvidence.relation ==
+                block.synthPerformance.upperTimingRelation,
+              renderEvidence.performanceCharacter ==
+                block.resolvedPerformance.performanceCharacter,
+              renderEvidence.bpm == planBPM,
+              renderEvidence.sampleRate == routeSampleRate,
+              renderEvidence.renderedFrameCount == block.left.count,
+              renderEvidence.renderedFrameCount == block.right.count,
+              sourceScoreNoteCount <= maximumUpperTimingEventsPerBar,
+              renderEvidence.events.count <= maximumUpperTimingEventsPerBar,
+              block.upperNoteRenderEvidence.count <=
+                maximumUpperTimingEventsPerBar,
+              sourceScoreNoteCount == renderEvidence.events.count,
+              renderEvidence.events.count ==
+                block.upperNoteRenderEvidence.count,
+              scoreTupleCount == renderTupleCount,
+              scoreFingerprint == renderFingerprint,
+              eventGateFacts == actualGateFacts else {
+            return false
+        }
+        for fact in actualGateFacts {
+            guard fact.onsetFrame >= 0,
+                  fact.requestedGateEndFrame > fact.onsetFrame,
+                  fact.appliedGateEndFrame >= fact.onsetFrame,
+                  fact.appliedGateEndFrame <= min(
+                    fact.requestedGateEndFrame,
+                    renderEvidence.renderedFrameCount
+                  ) else {
+                return false
+            }
+        }
+        var anchorCount = 0
+        var shadowCount = 0
+        var responseCount = 0
+        for event in renderEvidence.events {
+            switch event.role {
+            case .anchor: anchorCount += 1
+            case .shadow: shadowCount += 1
+            case .response: responseCount += 1
+            case .atmosphere, .transition: break
+            }
+        }
+        return anchorSignalCount == anchorCount &&
+            shadowSignalCount == shadowCount &&
+            responseSignalCount == responseCount
+    }
+
+    @inline(never)
+    private static func upperTimingIsFinite(
+        planBPM: Double,
+        routeSampleRate: Double,
+        scoreNotes: [ResolvedUpperNote],
+        renderEvents: [UpperTimingRenderEvent],
+        signals: [AutonomousUpperTimingRoleSignalEvidence]
+    ) -> Bool {
+        guard planBPM.isFinite, routeSampleRate.isFinite else { return false }
+        for note in scoreNotes where !note.timingOffsetInSteps.isFinite {
+            return false
+        }
+        for event in renderEvents
+        where !event.requestedOffsetInSteps.isFinite {
+            return false
+        }
+        for signal in signals where !signal.isFinite { return false }
+        return true
+    }
+
+    @inline(never)
+    private static func scoreUpperTimingTuples(
+        _ notes: [ResolvedUpperNote],
+        stepFrames: Double,
+        frameCount: Int
+    ) -> [UpperTimingFingerprintTuple] {
+        var result: [UpperTimingFingerprintTuple] = []
+        result.reserveCapacity(notes.count)
+        for note in notes {
+            let expectedOnsetFrame = VoiceRenderer.upperNoteStartFrame(
+                note: note,
+                stepFrames: stepFrames,
+                frameCount: frameCount
+            )
+            let durationFrames = VoiceRenderer.upperNoteDurationFrames(
+                note: note,
+                stepFrames: stepFrames
+            )
+            let requestedEnd = expectedOnsetFrame.addingReportingOverflow(
+                durationFrames
+            )
+            result.append(UpperTimingFingerprintTuple(
+                role: note.role.rawValue,
+                baseOnsetStep: note.onsetStep,
+                offsetBitPattern: note.timingOffsetInSteps.bitPattern,
+                expectedOnsetFrame: expectedOnsetFrame,
+                appliedOnsetFrame: expectedOnsetFrame,
+                requestedGateEndFrame: requestedEnd.overflow
+                    ? Int.max : requestedEnd.partialValue
+            ))
+        }
+        return sortedUpperTimingTuples(result)
+    }
+
+    @inline(never)
+    private static func renderUpperTimingTuples(
+        _ events: [UpperTimingRenderEvent]
+    ) -> [UpperTimingFingerprintTuple] {
+        var result: [UpperTimingFingerprintTuple] = []
+        result.reserveCapacity(events.count)
+        for event in events {
+            result.append(UpperTimingFingerprintTuple(
+                role: event.role.rawValue,
+                baseOnsetStep: event.baseOnsetStep,
+                offsetBitPattern: event.requestedOffsetInSteps.bitPattern,
+                expectedOnsetFrame: event.expectedOnsetFrame,
+                appliedOnsetFrame: event.appliedOnsetFrame,
+                requestedGateEndFrame: event.requestedGateEndFrame
+            ))
+        }
+        return sortedUpperTimingTuples(result)
+    }
+
+    @inline(never)
+    private static func upperTimingGateFacts(
+        _ events: [UpperTimingRenderEvent]
+    ) -> [UpperTimingAppliedGateFact] {
+        var result: [UpperTimingAppliedGateFact] = []
+        result.reserveCapacity(events.count)
+        for event in events {
+            result.append(UpperTimingAppliedGateFact(
+                role: event.role,
+                onsetFrame: event.appliedOnsetFrame,
+                requestedGateEndFrame: event.requestedGateEndFrame,
+                appliedGateEndFrame: event.appliedGateEndFrame
+            ))
+        }
+        return result.sorted(by: upperTimingGateFactOrder)
+    }
+
+    @inline(never)
+    private static func upperNoteGateFacts(
+        _ evidence: [UpperNoteRenderEvidence]
+    ) -> [UpperTimingAppliedGateFact] {
+        var result: [UpperTimingAppliedGateFact] = []
+        result.reserveCapacity(evidence.count)
+        for item in evidence {
+            result.append(UpperTimingAppliedGateFact(
+                role: item.role,
+                onsetFrame: item.onsetFrame,
+                requestedGateEndFrame: item.requestedGateEndFrame,
+                appliedGateEndFrame: item.appliedGateEndFrame
+            ))
+        }
+        return result.sorted(by: upperTimingGateFactOrder)
     }
 
     private static func sortedUpperTimingTuples(

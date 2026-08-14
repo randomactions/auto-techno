@@ -158,7 +158,14 @@ adversarial suite `2340017ec6c59440`. It evaluates complete representative-rate 
 without PCM, stems, or event lists and rejects every dimension and relationship
 independently. Calibrated paired ranking and the hybrid live-feedback loop below
 remain target architecture until their implementation and validation are
-recorded.
+recorded. The existing transaction now has a conservative 128 MiB numeric
+working-storage envelope and a passing opt-in optimized 44.1/48 kHz probe:
+healthy two-candidate preparation fits the shortest phrase lookahead, the full
+four-pass correction/fallback path fits one bounded frozen-topology hold, and
+post-comparison cancellation is sub-millisecond. This closes the generic
+preparation-budget prerequisite only; a test evaluator cannot qualify or enable
+the shipping policy. See
+[`PAIRED_SELECTION_READINESS.md`](PAIRED_SELECTION_READINESS.md).
 
 ## Engine ownership
 
@@ -320,9 +327,10 @@ The production evaluator does not request a paired comparison, so the healthy
 path performs one primary render and reports qualification unavailable.
 Phrase analysis now streams within an explicit working-memory envelope, with
 independent DFT, chunk-parity, representative-rate, cancellation, and optimized
-fixture evidence. Calibrated paired ranking stays disabled until representative
-canonical-journey candidate cancellation, latency, and peak-memory budgets pass
-under the frozen profile and adversarial suite. Preparation
+fixture evidence. Calibrated paired ranking stays disabled until the exact
+shipping comparator repeats the now-passing representative-rate cancellation,
+latency, and peak-memory envelope under the frozen profile and adversarial
+suite. Preparation
 checks cancellation at bounded
 bar-render and evidence-phase boundaries as well as between candidates; the
 streaming preflight and continuation fingerprints also check within their long

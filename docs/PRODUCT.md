@@ -129,7 +129,11 @@ evidence, explicit analysis-memory provenance, and complete canonical-journey
 report-bank validation. A frozen non-reconstructable development profile and
 passing adversarial suite now qualify complete 44.1/48 kHz engine banks offline.
 They do not activate runtime ranking: the shipping policy remains truthfully
-unavailable and renders one primary candidate on the healthy path.
+unavailable and renders one primary candidate on the healthy path. The bounded
+transaction now has a passing representative-rate operational-readiness
+envelope for healthy pairing and its maximum correction/fallback path, but that
+test seam is not the calibrated shipping evaluator and cannot activate policy.
+See `PAIRED_SELECTION_READINESS.md`.
 
 ## Hard constraints
 

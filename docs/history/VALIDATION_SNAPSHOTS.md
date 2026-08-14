@@ -1036,3 +1036,46 @@ offline qualification behavior. Exact-build app playback, listening/taste,
 route/interruption recovery, representative preparation latency and peak
 memory, and physical-output soak remain separate gates. Publication and
 exact-head remote CI remain separate gates.
+
+## Bounded paired-selection readiness — 2026-08-15
+
+This candidate adds a deterministic numeric-storage budget and an opt-in
+optimized operational probe around the existing detached candidate transaction.
+It adds no score, renderer, PCM, runtime evaluator, callback work, profile,
+selector, or alternate engine. Shipping selection remains
+`uncalibrated.v1`: the healthy app still renders one primary candidate and
+reports professional qualification unavailable.
+
+Three optimized maximum-size iterations per representative rate rendered both
+the healthy primary/alternate path and the full primary/alternate/correction/
+fallback path. Healthy worst latency was 6.372 seconds at 44.1 kHz and 6.873
+seconds at 48 kHz. Four-pass worst latency was 12.247/13.357 seconds,
+post-comparison cancellation was 0.014...0.032 ms, maximum RSS was 80,461,824
+bytes, and the conservative numeric-storage estimate was 113,161,984 bytes
+under a 128 MiB ceiling. This proves the generic transaction envelope only; it
+does not install or qualify the exact shipping comparator.
+
+Validation also reproduced a pre-existing `e979529` debug-test stack overflow
+in the score-owned kick preflight. The crash report placed the failure in the
+upper-timing evidence constructor on Swift Testing's cooperative worker. A
+semantics-preserving decomposition retained the same score/render fingerprints,
+gate facts, role counts, finite checks, and spatial-FDN bindings while reducing
+the single-bar upper-timing constructor's debug stack frame from 581,632 bytes
+to 5,168 bytes. The exact formerly crashing suite then passed 3/3.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with matched
+SDKs, isolated caches, serial execution, and separate heavy test processes:
+
+- paired transaction/cancellation/correction/rate/readiness filters: 7/7;
+- core and evidence CI group: 146/146 passed in 233.710 seconds;
+- preparation preflight: 22/22 passed in 634.023 seconds;
+- protected routing: 7/7 passed in 97.973 seconds;
+- optimized operational probe: passed at both representative rates;
+- optimized `AutoTechno` product build: passed in 67.58 seconds;
+- `git diff --check`: clean before publication.
+
+This snapshot records operational readiness and deterministic engineering
+contracts, not professional sound quality or runtime promotion. Exact shipping-
+evaluator replay, exact-build app playback, physical route/interruption smoke,
+sustained hardware soak, publication, and exact-head remote CI remain separate
+gates.

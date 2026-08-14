@@ -72,8 +72,12 @@ qualify complete 44.1/48 kHz engine banks, but do not participate in runtime
 selection. The transaction records up to primary, alternate, and fallback
 attempts plus one home-timbre correction within four total passes, but it does
 not constitute professional-quality qualification or general quality-driven
-candidate selection. Calibrated paired ranking remains disabled pending passing
-representative-journey cancellation, latency, and peak-memory budgets;
+candidate selection. Calibrated paired ranking remains disabled pending the
+exact shipping-evaluator activation gate. The generic bounded transaction now
+passes representative-rate cancellation, latency, and peak-memory readiness:
+healthy pairing fits one shortest-phrase lookahead and the maximum four-pass
+path fits one existing frozen-topology hold. The probe remains intentionally
+test-seam driven and therefore cannot activate runtime ranking;
 hybrid live feedback is also not implemented.
 
 The pulse-echo return-drive code and same-pass reduced evidence are present in
@@ -137,10 +141,11 @@ local and untracked.
 The runtime now enforces and records a maximum of three complete candidates, one
 home-timbre correction, and four render passes, then atomically carries the
 selected evidence, decision, and controller state into continuation. Next,
-enable paired comparison only after representative-journey cancellation,
-preparation-latency, and peak-memory gates pass. Continue to select a valid
-candidate or conservative fallback when the
-calibrated policy cannot qualify an attempt.
+install the exact frozen-profile shipping comparator off the callback and replay
+the now-passing representative-rate resource envelope through that evaluator.
+Continue to select a qualified candidate or conservative fallback when the
+calibrated policy cannot qualify either authored attempt. See
+[`PAIRED_SELECTION_READINESS.md`](PAIRED_SELECTION_READINESS.md).
 
 ### 4. Add safe hybrid live feedback
 
