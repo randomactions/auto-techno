@@ -46,9 +46,9 @@ package struct ProfessionalQualityCandidateAssessment: Codable, Equatable,
 package struct ProfessionalQualityPairedCandidateEvaluator:
         AutonomousCandidateEvaluating {
     package static let policyFamilyVersion =
-        "autotechno-quality.paired-calibrated.v1"
+        "autotechno-quality.paired-calibrated.v2"
     package static let evaluatorVersionIdentifier =
-        "autotechno-candidate-evaluator.paired-calibrated.v1"
+        "autotechno-candidate-evaluator.paired-calibrated.v2"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport
@@ -197,6 +197,12 @@ package struct ProfessionalQualityPairedCandidateEvaluator:
             primary: assessment(of: primary),
             alternate: assessment(of: alternate)
         )
+    }
+
+    package func requestsPairedComparison(
+        after primary: AutonomousCandidateEvaluationVector
+    ) -> Bool {
+        assessment(of: primary).availability == .available
     }
 
     package func compare(

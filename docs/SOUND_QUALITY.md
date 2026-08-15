@@ -284,6 +284,17 @@ evidence remains descriptive under `uncalibrated.v1`, does not enter
 
 ## Development qualification loop
 
+The dormant exact-engine paired evaluator now has a preloaded route-local
+boundary. It requests an alternate only for an applicable checkpoint at a
+calibrated 44.1/48 kHz route; missing artifacts and unsupported rates retain the
+uncalibrated identity and single-primary path. Exact maximum-path replay passed
+latency, memory, cancellation, transaction, and hard-safe fallback bounds, but
+both authored candidates from an unseen seed fell outside the current
+single-journey establishment profile at both rates. That negative evidence keeps
+shipping selection on `uncalibrated.v1`; profile diversity and independent
+holdouts must be solved before activation rather than widening failed metrics in
+place.
+
 1. Render the same private canonical journey bank before and after a change at
    representative sample rates and structural checkpoints.
 2. Capture exact engine, quality-policy, fixture, continuation, route, and

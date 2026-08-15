@@ -40,6 +40,14 @@ reason. As a compatibility diagnostic, the same v19 bank passed only 8/14
 observations against the retained engine-v10 profile. That result is why the
 historical artifact cannot silently become the current selector.
 
+The paired evaluator is now version 2. After the primary evidence exists it
+requests an alternate only when the phrase maps to a calibrated checkpoint at a
+covered rate. `ProfessionalQualityPreparationEvaluator` is a preloaded,
+route-local boundary: exact current artifacts at 44.1/48 kHz delegate to the
+paired evaluator, while missing artifacts and unsupported rates retain the
+existing uncalibrated identity and single-primary behavior. The wrapper performs
+no bundle I/O. It is not installed by either app-facing preparation overload.
+
 ## Activation envelope
 
 The preparation contract is bounded by existing engine constants and the new
@@ -100,25 +108,68 @@ swift test -c release --disable-sandbox --no-parallel \
   --filter operationalEnvelope
 ```
 
-Normal CI runs only `representativeRateWorkingSetEnvelope`; the six expensive
-maximum-path measurements remain opt-in so ordinary exact-head validation does
-not grow by several minutes.
+Normal CI runs `representativeRateWorkingSetEnvelope` plus the inexpensive
+unsupported-route single-primary contract; the six expensive maximum-path
+measurements remain opt-in so ordinary exact-head validation does not grow by
+several minutes.
+
+## Exact-policy operational evidence
+
+The exact pinned evaluator was then replayed through three maximum 16-bar
+transactions at each calibrated rate. Immutable artifacts loaded before the
+timed region in 0.020 seconds. The transaction remained deterministic, the
+hard-safe score-owned fallback crossed the atomic commit boundary only when the
+selected slot was actually `.fallback`, and unsupported-rate replay stayed on
+one uncalibrated primary. The exact path measured:
+
+| Rate | Median | p95/worst | Result |
+| --- | ---: | ---: | --- |
+| 44.1 kHz | 9.545 s | 9.549 s | conservative fallback |
+| 48 kHz | 10.385 s | 10.448 s | conservative fallback |
+
+- post-comparison cancellation: 0.042...0.048 ms;
+- maximum resident set size: 81,559,552 bytes (77.78 MiB);
+- resident-set increase: 63,242,240 bytes;
+- deterministic transaction fingerprints: `9dd25ed8f2d50514` at 44.1 kHz and
+  `b4723625fa4bcb69` at 48 kHz.
+
+Operational bounds passed, but activation quality did not. The unseen
+representative primary missed establishment bounds for bar centroid span, bar
+crest-factor span, maximum boundary delta, and phrase-wide RMS trajectory peak
+at both rates. The alternate still missed maximum boundary delta and RMS
+trajectory peak at both rates, plus spectral rolloff at 48 kHz. Because the
+current profile was derived from one seed journey (`48291`), this is evidence of
+insufficient generalization, not permission to widen individual thresholds.
+
+Run the exact check explicitly:
+
+```sh
+AUTOTECHNO_RUN_EXACT_PAIRED_POLICY=1 \
+AUTOTECHNO_EXACT_PAIRED_ITERATIONS=3 \
+swift test -c release --disable-sandbox --no-parallel \
+  --filter exactEvaluatorOperationalEnvelope
+```
+
+Normal CI adds the inexpensive unsupported-route single-primary contract. The
+six maximum exact-evaluator renders remain opt-in.
 
 ## Remaining activation proof
 
-The immutable loader, non-compensable comparator, fallback result, and exact
-transaction replay are now implemented and tested through the package policy
-seam. They still cannot qualify the shipping policy because the app-facing
-preparation overload deliberately installs the uncalibrated evaluator.
-Activation still requires all of the following in one explicitly authorized
-change:
+The immutable loader, preloaded route boundary, non-compensable comparator,
+fallback result, exact transaction replay, unsupported-route fallback, and
+operational probe are implemented behind the package seam. They still cannot
+qualify the shipping policy: the exact probe demonstrated systematic rejection
+outside the single calibration journey, and the app-facing preparation overload
+deliberately installs the uncalibrated evaluator. Activation still requires all
+of the following in one explicitly authorized change:
 
-1. load the pinned resources once before detached preparation, with no bundle
-   I/O, decoding, allocation, or analysis on the callback;
-2. retain uncalibrated, single-primary playback at unsupported route rates or
-   when the frozen artifacts are unavailable;
-3. rerun this optimized probe through the exact shipping evaluator and repeat
-   deterministic, route-recovery, stale-work, app, and sustained playback checks.
+1. replace the single-journey profile with a versioned, diverse canonical
+   journey bank and keep independent holdout journeys out of calibration;
+2. pass those holdouts and the adversarial suite without weakening hard safety,
+   boundary, rate-consistency, or non-compensable metric semantics;
+3. install the already-preloaded evaluator off the callback and repeat
+   deterministic, route-recovery, stale-work, app, physical-route, and sustained
+   playback checks on that exact build.
 
 Until those proofs pass, the frozen development policy remains offline evidence
 and professional runtime qualification remains unavailable.

@@ -760,7 +760,8 @@ package final class PreparedAutonomousPhrase: Sendable {
 
     /// The uncalibrated foundation remains playable while clearly reporting
     /// qualification unavailable. Once a calibrated policy is installed, only
-    /// qualified/adjusted material may cross the atomic commit boundary.
+    /// qualified/adjusted authored material or the hard-safe score-owned
+    /// conservative fallback may cross the atomic commit boundary.
     package var commitEligible: Bool {
         guard candidateEvaluation.isComplete,
               commitProvenance.candidateEvaluationFingerprint ==
@@ -790,6 +791,7 @@ package final class PreparedAutonomousPhrase: Sendable {
         return AutonomousCommitPolicy.isEligible(
             playbackHardGatesPassed: playbackHardGatesPassed,
             evaluationHardGatesPassed: selectedCandidateEvidence.hardGatesPassed,
+            selectedSlot: candidateEvaluation.selectedSlot,
             decision: qualityDecision,
             continuationState: qualityContinuationState,
             candidateFingerprint: audioPreflight.quality.sampleHash,
@@ -805,6 +807,7 @@ package enum AutonomousCommitPolicy {
     package static func isEligible(
         playbackHardGatesPassed: Bool,
         evaluationHardGatesPassed: Bool,
+        selectedSlot: AutonomousCandidateSlot?,
         decision: QualityDecision,
         continuationState: QualityContinuationState,
         candidateFingerprint: String,
@@ -833,8 +836,15 @@ package enum AutonomousCommitPolicy {
         if decision.policyVersion == QualityQualificationContract.uncalibratedPolicyVersion {
             return decision.outcome == .qualificationUnavailable
         }
-        return evaluationHardGatesPassed &&
-            (decision.outcome == .qualified || decision.outcome == .adjusted)
+        guard evaluationHardGatesPassed else { return false }
+        switch decision.outcome {
+        case .qualified, .adjusted:
+            return selectedSlot == .primary || selectedSlot == .alternate
+        case .conservativeFallback:
+            return selectedSlot == .fallback
+        case .qualificationUnavailable, .rejected, .deterministicHold:
+            return false
+        }
     }
 }
 
@@ -997,6 +1007,14 @@ package protocol AutonomousCandidateEvaluating: Sendable {
     var evaluatorVersion: String { get }
     var requiresPairedCandidates: Bool { get }
 
+    /// Candidate-local decision made only after the immutable primary exists.
+    /// A calibrated evaluator can decline an unnecessary alternate when this
+    /// phrase has no applicable checkpoint or the active route is outside its
+    /// profile, while fixed test policies retain their declared behavior.
+    func requestsPairedComparison(
+        after primary: AutonomousCandidateEvaluationVector
+    ) -> Bool
+
     func compare(
         primary: AutonomousCandidateEvaluationVector,
         alternate: AutonomousCandidateEvaluationVector
@@ -1011,6 +1029,14 @@ package protocol AutonomousCandidateEvaluating: Sendable {
         selected: AutonomousCandidateEvaluationVector,
         transaction: AutonomousCandidateEvaluationTransaction
     ) -> AutonomousCandidatePolicyVerdict
+}
+
+package extension AutonomousCandidateEvaluating {
+    func requestsPairedComparison(
+        after primary: AutonomousCandidateEvaluationVector
+    ) -> Bool {
+        requiresPairedCandidates
+    }
 }
 
 package struct UncalibratedAutonomousCandidateEvaluator:
@@ -1408,9 +1434,12 @@ package enum AutonomousPhrasePreparer {
         var alternateProduct: CandidateRenderProduct?
         var comparison: AutonomousQualityComparison = .unavailable
 
+        let qualityComparisonRequested = evaluator.requestsPairedComparison(
+            after: primaryVector
+        )
         let primaryNeedsAlternate = AutonomousCandidateSelector.needsAlternate(
             primary: primaryVector.selectionEvidence,
-            qualityComparisonAvailable: evaluator.requiresPairedCandidates
+            qualityComparisonAvailable: qualityComparisonRequested
         ) || (!routeRecovery && evaluator.requestsHomeUpperTimbreCorrection(
             for: primaryVector,
             slot: .primary
@@ -1428,7 +1457,7 @@ package enum AutonomousPhrasePreparer {
                 ? initialAlternate : nil
         }
 
-        if evaluator.requiresPairedCandidates, let alternateVector {
+        if qualityComparisonRequested, let alternateVector {
             comparison = evaluator.compare(
                 primary: primaryVector,
                 alternate: alternateVector
@@ -1480,7 +1509,7 @@ package enum AutonomousPhrasePreparer {
                     alternateProduct = corrected
                 }
             }
-            if evaluator.requiresPairedCandidates, let alternateVector {
+            if qualityComparisonRequested, let alternateVector {
                 comparison = evaluator.compare(
                     primary: primaryVector,
                     alternate: alternateVector

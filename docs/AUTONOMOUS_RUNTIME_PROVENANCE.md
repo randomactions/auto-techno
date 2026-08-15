@@ -115,8 +115,15 @@ mistaken for a completed feedback system.
    `556508db468b3a64`. Its evaluator maps Core-owned candidate checkpoints into
    the same 39-metric observation, rejects dimensions independently, and records
    a conservative-fallback comparison when neither authored candidate passes.
-   The app-facing overload still installs the uncalibrated evaluator, so loading
-   and selection behavior in the shipping runtime are unchanged.
+   A preloaded route-local preparation evaluator delegates only when exact
+   artifacts exist and the route is 44.1 or 48 kHz; otherwise it preserves the
+   uncalibrated identity and single-primary path. It requests a pair only after
+   the primary maps to an applicable calibrated checkpoint. The app-facing
+   overload still installs the uncalibrated evaluator, so loading and selection
+   behavior in the shipping runtime are unchanged. Exact operational replay
+   stayed bounded but rejected both authored candidates from an unseen seed at
+   both rates, so the single-journey profile remains an explicit activation
+   blocker rather than a shipping quality claim.
 5. `AutonomousPhraseRenderer` constructs the required synth world and synth
    performance. The synth planner resolves the three-step driver, five-stage
    follower, chapter articulation, internal architecture and patch, four bounded

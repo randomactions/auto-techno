@@ -145,9 +145,13 @@ home-timbre correction, and four render passes, then atomically carries the
 selected evidence, decision, and controller state into continuation. The exact
 engine-v19 profile, passing adversarial suite, non-compensable checkpoint-local
 comparator, calibrated fallback result, and transaction replay are now present
-behind the package seam. Next, explicitly install the preloaded evaluator off the
-callback and replay the now-passing representative-rate resource envelope through
-that shipping path.
+behind the package seam. A preloaded route-local boundary now retains
+single-primary uncalibrated behavior when artifacts are absent or the rate is
+unsupported, and the exact comparator fits the measured preparation envelope.
+However, its single-seed profile rejected both authored candidates from an
+unseen representative seed at 44.1 and 48 kHz. Next, calibrate from diverse
+canonical journeys, reserve independent holdout journeys, and require holdout
+plus adversarial success before seeking explicit shipping activation.
 Continue to select a qualified candidate or conservative fallback when the
 calibrated policy cannot qualify either authored attempt. See
 [`PAIRED_SELECTION_READINESS.md`](PAIRED_SELECTION_READINESS.md).

@@ -284,6 +284,42 @@ struct ProfessionalQualityCalibrationTests {
                 artifacts.evaluator.policyVersion)
     }
 
+    @Test("Preparation evaluator is calibrated only for preloaded covered routes")
+    func preparationEvaluatorAvailability() throws {
+        let artifacts = try ProfessionalQualityPairedArtifacts.load()
+        let available = ProfessionalQualityPreparationEvaluator(
+            sampleRate: 48_000,
+            artifacts: artifacts
+        )
+        #expect(available.availability == .available)
+        #expect(available.requiresPairedCandidates)
+        #expect(available.policyVersion == artifacts.evaluator.policyVersion)
+        #expect(available.evaluatorVersion == artifacts.evaluator.evaluatorVersion)
+        #expect(available.policyVersion.contains("paired-calibrated.v2"))
+
+        let unsupported = ProfessionalQualityPreparationEvaluator(
+            sampleRate: 8_000,
+            artifacts: artifacts
+        )
+        #expect(unsupported.availability == .unsupportedSampleRate)
+        #expect(!unsupported.requiresPairedCandidates)
+        #expect(unsupported.policyVersion ==
+                QualityQualificationContract.uncalibratedPolicyVersion)
+        #expect(unsupported.evaluatorVersion ==
+                QualityQualificationContract.uncalibratedEvaluatorVersion)
+
+        let missing = ProfessionalQualityPreparationEvaluator(
+            sampleRate: 48_000,
+            artifacts: nil
+        )
+        #expect(missing.availability == .artifactsUnavailable)
+        #expect(!missing.requiresPairedCandidates)
+        #expect(missing.policyVersion ==
+                QualityQualificationContract.uncalibratedPolicyVersion)
+        #expect(missing.evaluatorVersion ==
+                QualityQualificationContract.uncalibratedEvaluatorVersion)
+    }
+
     @Test("Incomplete rate matrices and non-finite metrics cannot calibrate")
     func invalidCalibrationInputs() throws {
         let observations = try representativeObservations()

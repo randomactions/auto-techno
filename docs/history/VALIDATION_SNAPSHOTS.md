@@ -1110,3 +1110,46 @@ and the optimized `AutoTechno` product build in 41.10 seconds.
 Publication, exact-head CI, exact-build app launch, explicit
 shipping activation, exact-evaluator resource probing, route/interruption smoke,
 listening, and hardware soak remain separate gates.
+
+## Exact paired-evaluator operational envelope — 2026-08-15
+
+This candidate adds a preloaded, route-local wrapper around the dormant v19
+paired evaluator. It requests a pair only after primary evidence maps to an
+applicable calibrated checkpoint. Missing artifacts and unsupported rates retain
+the uncalibrated evaluator identity and single-primary behavior. A calibrated
+conservative fallback may cross the atomic commit boundary only when hard gates
+pass and the transaction actually selected the score-owned fallback slot. The
+app-facing overload remains uncalibrated, so this candidate changes no shipping
+selection, PCM, callback work, UI, or runtime mode.
+
+An opt-in release probe loaded immutable artifacts before timing and replayed
+three exact maximum 16-bar transactions at 44.1 and 48 kHz. Worst latency was
+9.549/10.448 seconds, post-comparison cancellation was 0.042...0.048 ms,
+maximum RSS was 81,559,552 bytes, and every transaction was complete,
+deterministic, and commit-eligible through its hard-safe fallback. The
+unsupported-rate test rendered only one primary and retained uncalibrated
+provenance.
+
+The operational envelope passed, but the quality activation gate failed. At
+both rates the unseen primary missed establishment bounds for bar centroid span,
+bar crest-factor span, maximum boundary delta, and phrase-wide RMS trajectory
+peak. The alternate missed maximum boundary delta and RMS trajectory peak at
+both rates, plus spectral rolloff at 48 kHz. The current profile comes from one
+seed journey (`48291`); the result is recorded as insufficient generalization,
+not addressed by silently widening its individual metric bounds. Diverse
+canonical calibration journeys and independent holdouts remain required before
+any explicitly authorized shipping activation.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated
+caches and the workflow's serial process boundaries:
+
+- exact optimized evaluator envelope: 1/1 in 73.493 seconds;
+- workflow upper/transaction/rate/readiness partitions: 21/21;
+- core and evidence matrix: 153/153 in 233.104 seconds;
+- preparation preflight: 22/22 in 628.449 seconds;
+- protected routing: 7/7 in 97.829 seconds;
+- optimized `AutoTechno` product build: passed in 60.14 seconds;
+- `git diff --check`: clean before publication.
+
+Publication, exact-head remote CI, exact-build app launch, listening,
+route/interruption smoke, and hardware soak remained separate gates.

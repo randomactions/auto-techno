@@ -562,6 +562,7 @@ struct UpperTimbreIntegrationTests {
         #expect(AutonomousCommitPolicy.isEligible(
             playbackHardGatesPassed: true,
             evaluationHardGatesPassed: true,
+            selectedSlot: .primary,
             decision: playableDecision,
             continuationState: playableState,
             candidateFingerprint: "candidate-playable",
@@ -583,11 +584,54 @@ struct UpperTimbreIntegrationTests {
         #expect(!AutonomousCommitPolicy.isEligible(
             playbackHardGatesPassed: true,
             evaluationHardGatesPassed: true,
+            selectedSlot: .primary,
             decision: calibratedUnavailable,
             continuationState: unavailableState,
             candidateFingerprint: "candidate-unavailable",
             evidenceFingerprint: "evidence-unavailable",
             controllerStateFingerprint: "controller-unavailable"
+        ))
+        let calibratedFallback = QualityDecision(
+            policyVersion: "test-calibrated-policy.v1",
+            outcome: .conservativeFallback,
+            reasonCodes: [.conservativeFallbackV1],
+            candidateFingerprint: "candidate-fallback",
+            evidenceFingerprint: "evidence-fallback"
+        )
+        let fallbackState = QualityContinuationState().recording(
+            decision: calibratedFallback,
+            evidenceFingerprint: "evidence-fallback",
+            controllerStateFingerprint: "controller-fallback"
+        )
+        #expect(AutonomousCommitPolicy.isEligible(
+            playbackHardGatesPassed: true,
+            evaluationHardGatesPassed: true,
+            selectedSlot: .fallback,
+            decision: calibratedFallback,
+            continuationState: fallbackState,
+            candidateFingerprint: "candidate-fallback",
+            evidenceFingerprint: "evidence-fallback",
+            controllerStateFingerprint: "controller-fallback"
+        ))
+        #expect(!AutonomousCommitPolicy.isEligible(
+            playbackHardGatesPassed: true,
+            evaluationHardGatesPassed: false,
+            selectedSlot: .fallback,
+            decision: calibratedFallback,
+            continuationState: fallbackState,
+            candidateFingerprint: "candidate-fallback",
+            evidenceFingerprint: "evidence-fallback",
+            controllerStateFingerprint: "controller-fallback"
+        ))
+        #expect(!AutonomousCommitPolicy.isEligible(
+            playbackHardGatesPassed: true,
+            evaluationHardGatesPassed: true,
+            selectedSlot: .primary,
+            decision: calibratedFallback,
+            continuationState: fallbackState,
+            candidateFingerprint: "candidate-fallback",
+            evidenceFingerprint: "evidence-fallback",
+            controllerStateFingerprint: "controller-fallback"
         ))
         let qualified = QualityDecision(
             policyVersion: "test-calibrated-policy.v1",
@@ -604,6 +648,7 @@ struct UpperTimbreIntegrationTests {
         #expect(AutonomousCommitPolicy.isEligible(
             playbackHardGatesPassed: true,
             evaluationHardGatesPassed: true,
+            selectedSlot: .primary,
             decision: qualified,
             continuationState: qualifiedState,
             candidateFingerprint: "candidate-qualified",
@@ -613,6 +658,7 @@ struct UpperTimbreIntegrationTests {
         #expect(!AutonomousCommitPolicy.isEligible(
             playbackHardGatesPassed: true,
             evaluationHardGatesPassed: false,
+            selectedSlot: .primary,
             decision: qualified,
             continuationState: qualifiedState,
             candidateFingerprint: "candidate-qualified",
@@ -622,6 +668,27 @@ struct UpperTimbreIntegrationTests {
         #expect(!AutonomousCommitPolicy.isEligible(
             playbackHardGatesPassed: true,
             evaluationHardGatesPassed: true,
+            selectedSlot: .fallback,
+            decision: qualified,
+            continuationState: qualifiedState,
+            candidateFingerprint: "candidate-qualified",
+            evidenceFingerprint: "evidence-qualified",
+            controllerStateFingerprint: "controller-qualified"
+        ))
+        #expect(!AutonomousCommitPolicy.isEligible(
+            playbackHardGatesPassed: true,
+            evaluationHardGatesPassed: true,
+            selectedSlot: nil,
+            decision: qualified,
+            continuationState: qualifiedState,
+            candidateFingerprint: "candidate-qualified",
+            evidenceFingerprint: "evidence-qualified",
+            controllerStateFingerprint: "controller-qualified"
+        ))
+        #expect(!AutonomousCommitPolicy.isEligible(
+            playbackHardGatesPassed: true,
+            evaluationHardGatesPassed: true,
+            selectedSlot: .primary,
             decision: qualified,
             continuationState: qualifiedState,
             candidateFingerprint: "foreign-candidate",
@@ -631,6 +698,7 @@ struct UpperTimbreIntegrationTests {
         #expect(!AutonomousCommitPolicy.isEligible(
             playbackHardGatesPassed: false,
             evaluationHardGatesPassed: true,
+            selectedSlot: .primary,
             decision: qualified,
             continuationState: qualifiedState,
             candidateFingerprint: "candidate-qualified",
@@ -640,6 +708,7 @@ struct UpperTimbreIntegrationTests {
         #expect(!AutonomousCommitPolicy.isEligible(
             playbackHardGatesPassed: true,
             evaluationHardGatesPassed: true,
+            selectedSlot: .primary,
             decision: qualified,
             continuationState: qualifiedState,
             candidateFingerprint: "candidate-qualified",

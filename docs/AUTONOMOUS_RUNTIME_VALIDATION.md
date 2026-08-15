@@ -307,9 +307,14 @@ paired worst times of 6.372/6.873 seconds, full four-pass worst times of
 shortest-phrase lookahead; correction/fallback fits one 14.769-second
 frozen-topology hold. These figures do not satisfy the final release gate. The
 exact-engine artifact loader, checkpoint-local evaluator, calibrated fallback
-result, and reason-coded transaction replay now have deterministic tests, but
-the app-facing overload does not install them and they have not run this probe
-as the shipping policy. See
+result, preloaded route boundary, unsupported-rate single-primary fallback, and
+reason-coded transaction replay now have deterministic tests. Three exact-policy
+maximum-path iterations per rate fit the single-hold envelope: worst latency was
+9.549/10.448 seconds, cancellation was 0.042...0.048 ms, and maximum RSS was
+81,559,552 bytes. Both authored candidates were nevertheless outside the
+single-journey establishment profile at both rates. The app-facing overload does
+not install the evaluator; operational success therefore does not satisfy the
+quality or activation gate. See
 [`PAIRED_SELECTION_READINESS.md`](PAIRED_SELECTION_READINESS.md).
 
 The declared budget must leave enough lookahead to schedule the future boundary
