@@ -770,6 +770,9 @@ package struct RenderedBar: Equatable, Sendable {
     /// analysis. No stem PCM leaves detached preparation.
     package let dryFoundationSampleHash: String
     package let dryPercussionSampleHash: String
+    package let dryModalPercussionSampleHash: String
+    package let modalPercussionRenderEvidence: ModalPercussionBarRenderEvidence
+    package let modalPercussionFoundationRoutingValid: Bool
     package let groovePulseRenderEvidence: [GroovePulseRenderEvidence]
     package let closedHatRenderEvidence: [ClosedHatRenderEvidence]
     package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
@@ -783,6 +786,8 @@ package struct RenderedBar: Equatable, Sendable {
     package let upperTimingRenderEvidence: UpperTimingRenderEvidence
     /// Transient detached-preparation taps. They never cross into RenderBlock
     /// or the scheduler; only reduced evidence survives phrase preparation.
+    package let graphRemainderReferenceLeftSamples: [Float]
+    package let graphRemainderReferenceRightSamples: [Float]
     package let resonantAnchorSamples: [Float]
     package let detunedCompanionSamples: [Float]
 
@@ -794,6 +799,9 @@ package struct RenderedBar: Equatable, Sendable {
                 stemReconstruction: StemReconstructionEvidence,
                 dryFoundationSampleHash: String,
                 dryPercussionSampleHash: String,
+                dryModalPercussionSampleHash: String,
+                modalPercussionRenderEvidence: ModalPercussionBarRenderEvidence,
+                modalPercussionFoundationRoutingValid: Bool,
                 groovePulseRenderEvidence: [GroovePulseRenderEvidence],
                 closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
@@ -805,6 +813,8 @@ package struct RenderedBar: Equatable, Sendable {
                 spatialFDNRenderEvidence: SpatialFDNRenderEvidence = .neutral,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 upperTimingRenderEvidence: UpperTimingRenderEvidence,
+                graphRemainderReferenceLeftSamples: [Float],
+                graphRemainderReferenceRightSamples: [Float],
                 resonantAnchorSamples: [Float],
                 detunedCompanionSamples: [Float]) {
         self.sampleRate = sampleRate
@@ -830,6 +840,10 @@ package struct RenderedBar: Equatable, Sendable {
         self.stemReconstruction = stemReconstruction
         self.dryFoundationSampleHash = dryFoundationSampleHash
         self.dryPercussionSampleHash = dryPercussionSampleHash
+        self.dryModalPercussionSampleHash = dryModalPercussionSampleHash
+        self.modalPercussionRenderEvidence = modalPercussionRenderEvidence
+        self.modalPercussionFoundationRoutingValid =
+            modalPercussionFoundationRoutingValid
         self.groovePulseRenderEvidence = groovePulseRenderEvidence.sorted { $0.step < $1.step }
         self.closedHatRenderEvidence = closedHatRenderEvidence.sorted {
             $0.scoreEventIndex < $1.scoreEventIndex
@@ -846,6 +860,10 @@ package struct RenderedBar: Equatable, Sendable {
         self.spatialFDNRenderEvidence = spatialFDNRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.upperTimingRenderEvidence = upperTimingRenderEvidence
+        self.graphRemainderReferenceLeftSamples =
+            graphRemainderReferenceLeftSamples
+        self.graphRemainderReferenceRightSamples =
+            graphRemainderReferenceRightSamples
         self.resonantAnchorSamples = resonantAnchorSamples
         self.detunedCompanionSamples = detunedCompanionSamples
     }
@@ -888,6 +906,11 @@ package struct RenderBlock: Equatable, Sendable {
     /// after the generated graph. It contains foundation and percussion while
     /// excluding newly scheduled upper voices.
     package let protectedRhythmSampleHash: String
+    /// Same-pass modal-foundation evidence from the protected render that is
+    /// actually scheduled with the accepted block.
+    package let modalPercussionRenderEvidence: ModalPercussionBarRenderEvidence
+    package let modalPercussionRenderPassesMatch: Bool
+    package let modalPercussionFoundationRoutingValid: Bool
     /// Same-pass, event-local evidence for every score-owned groove pulse.
     /// It is reduced into the bounded candidate transaction before scheduling.
     package let groovePulseRenderEvidence: [GroovePulseRenderEvidence]
@@ -909,10 +932,11 @@ package struct RenderBlock: Equatable, Sendable {
     }
     package let upperNoteRenderEvidence: [UpperNoteRenderEvidence]
     package let upperTimingRenderEvidence: UpperTimingRenderEvidence
-    /// The existing graph input is the full-render minus protected-rhythm
-    /// remainder. It carries the newly scheduled upper path plus any shared
-    /// continuation or nonlinear interaction; role-local articulation fields
-    /// come only from the dedicated taps above.
+    /// The graph input is the full-render minus protected-rhythm remainder
+    /// from exact references that exclude the identical modal-foundation
+    /// contribution. It carries the newly scheduled upper path plus other
+    /// shared continuation/nonlinear interaction; role-local articulation
+    /// fields come only from the dedicated taps above.
     package let graphInputRemainderTimbreEvidence: UpperTimbreEvidence
     package let postGraphRemainderTimbreEvidence: UpperTimbreEvidence
     package let resolvedPerformance: ResolvedPerformanceBar
@@ -932,6 +956,9 @@ package struct RenderBlock: Equatable, Sendable {
                 protectedFoundationSampleHash: String,
                 percussionSampleHash: String,
                 protectedRhythmSampleHash: String,
+                modalPercussionRenderEvidence: ModalPercussionBarRenderEvidence,
+                modalPercussionRenderPassesMatch: Bool,
+                modalPercussionFoundationRoutingValid: Bool,
                 groovePulseRenderEvidence: [GroovePulseRenderEvidence],
                 closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
@@ -967,6 +994,10 @@ package struct RenderBlock: Equatable, Sendable {
         self.protectedFoundationSampleHash = protectedFoundationSampleHash
         self.percussionSampleHash = percussionSampleHash
         self.protectedRhythmSampleHash = protectedRhythmSampleHash
+        self.modalPercussionRenderEvidence = modalPercussionRenderEvidence
+        self.modalPercussionRenderPassesMatch = modalPercussionRenderPassesMatch
+        self.modalPercussionFoundationRoutingValid =
+            modalPercussionFoundationRoutingValid
         self.groovePulseRenderEvidence = groovePulseRenderEvidence.sorted { $0.step < $1.step }
         self.closedHatRenderEvidence = closedHatRenderEvidence.sorted {
             $0.scoreEventIndex < $1.scoreEventIndex
@@ -1098,6 +1129,7 @@ struct RenderBuffers {
     var kick: [Float] = []
     var kickDetector: [Float] = []
     var foundationStem: [Float] = []
+    var modalPercussionStem: [Float] = []
     var percussionStem: [Float] = []
     var percussionTextureStem: [Float] = []
     var upperTonalStem: [Float] = []
@@ -1122,6 +1154,7 @@ struct RenderBuffers {
         reset(&kick, frameCount: frameCount)
         reset(&kickDetector, frameCount: frameCount)
         reset(&foundationStem, frameCount: frameCount)
+        reset(&modalPercussionStem, frameCount: frameCount)
         reset(&percussionStem, frameCount: frameCount)
         reset(&percussionTextureStem, frameCount: frameCount)
         reset(&upperTonalStem, frameCount: frameCount)
@@ -1310,14 +1343,14 @@ package enum AutonomousPhraseRenderer {
             }
             let buses = busStates(rendered: rendered, scene: plan.scene, events: events)
             let graphInputLeft = zip(
-                rendered.leftSamples,
-                protectedRhythm.leftSamples
+                rendered.graphRemainderReferenceLeftSamples,
+                protectedRhythm.graphRemainderReferenceLeftSamples
             ).map {
                 $0.0 - $0.1
             }
             let graphInputRight = zip(
-                rendered.rightSamples,
-                protectedRhythm.rightSamples
+                rendered.graphRemainderReferenceRightSamples,
+                protectedRhythm.graphRemainderReferenceRightSamples
             ).map {
                 $0.0 - $0.1
             }
@@ -1522,6 +1555,14 @@ package enum AutonomousPhraseRenderer {
                     left: protectedRhythm.leftSamples,
                     right: protectedRhythm.rightSamples
                 ),
+                modalPercussionRenderEvidence:
+                    protectedRhythm.modalPercussionRenderEvidence,
+                modalPercussionRenderPassesMatch:
+                    protectedRhythm.modalPercussionRenderEvidence ==
+                        rendered.modalPercussionRenderEvidence,
+                modalPercussionFoundationRoutingValid:
+                    protectedRhythm.modalPercussionFoundationRoutingValid &&
+                        rendered.modalPercussionFoundationRoutingValid,
                 groovePulseRenderEvidence: rendered.groovePulseRenderEvidence,
                 closedHatRenderEvidence: rendered.closedHatRenderEvidence,
                 instrumentRenderEvidence: rendered.instrumentRenderEvidence,

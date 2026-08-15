@@ -250,6 +250,8 @@ package enum ModalPercussionVoice {
                 frameCount: frameCount,
                 outgoingStateFingerprint: outgoingStateFingerprint
             )
+        }.sorted {
+            $0.articulation.scoreEventIndex < $1.articulation.scoreEventIndex
         }
         finite = finite && eventEvidence.allSatisfy { $0.finite }
 

@@ -5,6 +5,266 @@ import Testing
 
 @Suite("Spatial carrier and protected routing regressions")
 struct SpatialProtectedRoutingRegressionTests {
+    @Test("The tuned tom uses only its resolved modal articulation")
+    func tunedTomUsesOnlyTheResolvedModalArticulation() throws {
+        let fixture = try #require(modalFoundationFixture())
+        let source = fixture.resolved
+        let canonical = renderBar(
+            plan: fixture.plan,
+            resolved: source,
+            sampleRate: 8_000
+        )
+        let sourceArticulation = try #require(
+            source.modalPercussionArticulations.first
+        )
+        let changedArticulation = ModalPercussionArticulation(
+            scoreEventIndex: sourceArticulation.scoreEventIndex,
+            step: sourceArticulation.step,
+            use: sourceArticulation.use,
+            modalIdentity: sourceArticulation.modalIdentity,
+            modalDegree: sourceArticulation.modalDegree,
+            octave: sourceArticulation.octave,
+            fundamentalHz: min(196, sourceArticulation.fundamentalHz * 1.08),
+            excitation: sourceArticulation.excitation,
+            damping: sourceArticulation.damping,
+            brightness: sourceArticulation.brightness,
+            inharmonicity: sourceArticulation.inharmonicity,
+            eventIntensity: sourceArticulation.eventIntensity,
+            seed: sourceArticulation.seed
+        )
+        let changedArticulations = source.modalPercussionArticulations.map {
+            $0.scoreEventIndex == sourceArticulation.scoreEventIndex
+                ? changedArticulation : $0
+        }
+        let changed = renderBar(
+            plan: fixture.plan,
+            resolved: replacing(
+                source,
+                modalPercussionArticulations: changedArticulations
+            ),
+            sampleRate: 8_000
+        )
+        let unbound = renderBar(
+            plan: fixture.plan,
+            resolved: replacing(source, modalPercussionArticulations: []),
+            sampleRate: 8_000
+        )
+
+        #expect(canonical.modalPercussionRenderEvidence.events.map(\.articulation) ==
+                source.modalPercussionArticulations)
+        #expect(changed.modalPercussionRenderEvidence.events.map(\.articulation) ==
+                changedArticulations)
+        #expect(canonical.modalPercussionRenderEvidence.dryBarSampleHash !=
+                changed.modalPercussionRenderEvidence.dryBarSampleHash)
+        #expect(unbound.modalPercussionRenderEvidence.events.isEmpty)
+        #expect(unbound.modalPercussionRenderEvidence.dryBarRMS == 0)
+    }
+
+    @Test("Modal foundation evidence is bit-exact across full and protected passes")
+    func modalFoundationFullAndProtectedPassesAreBitExact() throws {
+        let fixture = try #require(modalFoundationFixture())
+        let full = renderBar(
+            plan: fixture.plan,
+            resolved: fixture.resolved,
+            sampleRate: 8_000,
+            layer: .full
+        )
+        let protected = renderBar(
+            plan: fixture.plan,
+            resolved: fixture.resolved,
+            sampleRate: 8_000,
+            layer: .protectedRhythm
+        )
+
+        #expect(full.modalPercussionRenderEvidence ==
+                protected.modalPercussionRenderEvidence)
+        #expect(full.dryModalPercussionSampleHash ==
+                protected.dryModalPercussionSampleHash)
+        #expect(full.modalPercussionFoundationRoutingValid)
+        #expect(protected.modalPercussionFoundationRoutingValid)
+    }
+
+    @Test("Modal foundation routes only to foundation")
+    func modalFoundationRoutesToFoundationAndNotPercussionOrUpper() throws {
+        let fixture = try #require(modalFoundationFixture())
+        let inactiveResolved = replacing(
+            fixture.resolved,
+            modalPercussionArticulations: []
+        )
+        let active = renderBar(
+            plan: fixture.plan,
+            resolved: fixture.resolved,
+            sampleRate: 8_000
+        )
+        let inactive = renderBar(
+            plan: fixture.plan,
+            resolved: inactiveResolved,
+            sampleRate: 8_000
+        )
+        let activeFull = renderBar(
+            plan: fixture.plan,
+            resolved: fixture.resolved,
+            sampleRate: 8_000,
+            includeUpperNotes: true
+        )
+        let activeProtected = renderBar(
+            plan: fixture.plan,
+            resolved: fixture.resolved,
+            sampleRate: 8_000,
+            layer: .protectedRhythm,
+            includeUpperNotes: true
+        )
+        let inactiveFull = renderBar(
+            plan: fixture.plan,
+            resolved: inactiveResolved,
+            sampleRate: 8_000,
+            includeUpperNotes: true
+        )
+        let inactiveProtected = renderBar(
+            plan: fixture.plan,
+            resolved: inactiveResolved,
+            sampleRate: 8_000,
+            layer: .protectedRhythm,
+            includeUpperNotes: true
+        )
+
+        #expect(active.modalPercussionFoundationRoutingValid)
+        #expect(active.dryModalPercussionSampleHash ==
+                active.modalPercussionRenderEvidence.dryBarSampleHash)
+        #expect(active.dryModalPercussionSampleHash !=
+                inactive.dryModalPercussionSampleHash)
+        #expect(active.dryFoundationSampleHash != inactive.dryFoundationSampleHash)
+        #expect(active.dryPercussionSampleHash == inactive.dryPercussionSampleHash)
+        #expect(active.upperNoteRenderEvidence == inactive.upperNoteRenderEvidence)
+        #expect(active.upperTimingRenderEvidence == inactive.upperTimingRenderEvidence)
+        #expect(graphRemainderHash(full: activeFull, protected: activeProtected) ==
+                graphRemainderHash(
+                    full: inactiveFull,
+                    protected: inactiveProtected
+                ))
+    }
+
+    @Test("Modal foundation leaves the kick detector unchanged")
+    func modalFoundationLeavesKickDetectorUnchanged() throws {
+        let fixture = try #require(modalFoundationFixture())
+        let active = renderBar(
+            plan: fixture.plan,
+            resolved: fixture.resolved,
+            sampleRate: 8_000
+        )
+        let inactive = renderBar(
+            plan: fixture.plan,
+            resolved: replacing(
+                fixture.resolved,
+                modalPercussionArticulations: []
+            ),
+            sampleRate: 8_000
+        )
+
+        #expect(fixture.resolved.ensemble.events.contains { $0.voice == .kick })
+        #expect(active.kickMix == inactive.kickMix)
+        #expect(active.dryPercussionSampleHash == inactive.dryPercussionSampleHash)
+        #expect(active.dryFoundationSampleHash != inactive.dryFoundationSampleHash)
+    }
+
+    @Test("Upper home correction leaves modal score and dry PCM unchanged")
+    func upperHomeCorrectionLeavesModalScoreAndDryPCMUnchanged() throws {
+        let fixture = try #require(modalFoundationFixture())
+        let plan = replacing(fixture.plan, resolvedBars: [fixture.resolved])
+        let graph = DSPGraphGenerator.safePlan(sessionSeed: plan.dna.sceneSeed)
+        var initialState = RenderState()
+        var correctionState = RenderState()
+        var initialGraphState = GeneratedDSPContinuationState()
+        var correctionGraphState = GeneratedDSPContinuationState()
+        let initial = try #require(AutonomousPhraseRenderer.render(
+            plan: plan,
+            graph: graph,
+            sampleRate: 8_000,
+            state: &initialState,
+            graphState: &initialGraphState,
+            forceHomeUpperTimbre: false
+        ).first)
+        let correction = try #require(AutonomousPhraseRenderer.render(
+            plan: plan,
+            graph: graph,
+            sampleRate: 8_000,
+            state: &correctionState,
+            graphState: &correctionGraphState,
+            forceHomeUpperTimbre: true
+        ).first)
+
+        #expect(initial.resolvedPerformance.modalPercussionArticulations ==
+                correction.resolvedPerformance.modalPercussionArticulations)
+        #expect(initial.modalPercussionRenderEvidence ==
+                correction.modalPercussionRenderEvidence)
+        #expect(initial.modalPercussionRenderPassesMatch)
+        #expect(correction.modalPercussionRenderPassesMatch)
+        #expect(initial.protectedFoundationSampleHash ==
+                correction.protectedFoundationSampleHash)
+    }
+
+    @Test("A bar without an onset carries truthful continuation or neutral evidence")
+    func barWithoutOnsetCarriesTruthfulContinuationOrNeutralEvidence() throws {
+        let fixture = try #require(modalFoundationFixture())
+        let source = fixture.resolved
+        let noOnset = replacing(source, modalPercussionArticulations: [])
+        let synthPlan = SynthPerformancePlan(
+            scene: fixture.plan.scene,
+            dna: fixture.plan.dna,
+            kind: fixture.plan.kind,
+            resolvedBars: [source],
+            forceHomeUpperTimbre: true
+        )
+        let synthBar = synthPlan.bars[0]
+        var state = RenderState()
+        var workspace = RenderWorkspace()
+        let active = VoiceRenderer.renderBar(
+            scene: fixture.plan.scene,
+            sampleRate: 8_000,
+            state: &state,
+            dna: fixture.plan.dna,
+            resolved: source,
+            synthWorld: synthPlan.world,
+            synthPerformance: synthBar,
+            workspace: &workspace,
+            layer: .protectedRhythm
+        )
+        let successor = VoiceRenderer.renderBar(
+            scene: fixture.plan.scene,
+            sampleRate: 8_000,
+            state: &state,
+            dna: fixture.plan.dna,
+            resolved: noOnset,
+            synthWorld: synthPlan.world,
+            synthPerformance: synthBar,
+            workspace: &workspace,
+            layer: .protectedRhythm
+        )
+        var neutralState = RenderState()
+        let neutral = VoiceRenderer.renderBar(
+            scene: fixture.plan.scene,
+            sampleRate: 8_000,
+            state: &neutralState,
+            dna: fixture.plan.dna,
+            resolved: noOnset,
+            synthWorld: synthPlan.world,
+            synthPerformance: synthBar,
+            workspace: &workspace,
+            layer: .protectedRhythm
+        )
+
+        #expect(successor.modalPercussionRenderEvidence.events.isEmpty)
+        #expect(successor.modalPercussionRenderEvidence.incomingStateFingerprint ==
+                active.modalPercussionRenderEvidence.outgoingStateFingerprint)
+        #expect(successor.modalPercussionRenderEvidence.continuationRendered ==
+                (successor.modalPercussionRenderEvidence.activeIncomingVoiceCount > 0))
+        #expect(neutral.modalPercussionRenderEvidence.events.isEmpty)
+        #expect(!neutral.modalPercussionRenderEvidence.continuationRendered)
+        #expect(neutral.modalPercussionRenderEvidence.activeIncomingVoiceCount == 0)
+        #expect(neutral.modalPercussionRenderEvidence.activeOutgoingVoiceCount == 0)
+        #expect(neutral.modalPercussionRenderEvidence.dryBarRMS == 0)
+    }
+
     @Test("Streaming mono fingerprints preserve exact PCM identity")
     func streamingMonoFingerprintMatchesArrayFingerprint() {
         let fixtures: [[Float]] = [
@@ -633,6 +893,25 @@ struct SpatialProtectedRoutingRegressionTests {
         return nil
     }
 
+    private func modalFoundationFixture() -> (
+        plan: AutonomousPhrasePlan,
+        resolved: ResolvedPerformanceBar
+    )? {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var state = director.initialState()
+        for _ in 0..<128 {
+            let plan = director.plan(from: state)
+            if let resolved = plan.resolvedBars.first(where: {
+                !$0.modalPercussionArticulations.isEmpty &&
+                    $0.ensemble.events.contains { $0.voice == .kick }
+            }) {
+                return (plan, resolved)
+            }
+            state.advance(using: plan)
+        }
+        return nil
+    }
+
     private func toneCandidate(in plan: AutonomousPhrasePlan)
         -> (Int, EnsembleResolvedEvent)? {
         for (index, resolved) in plan.resolvedBars.enumerated().reversed() {
@@ -657,7 +936,8 @@ struct SpatialProtectedRoutingRegressionTests {
         plan: AutonomousPhrasePlan,
         resolved: ResolvedPerformanceBar,
         sampleRate: Double,
-        layer: RenderLayer = .full
+        layer: RenderLayer = .full,
+        includeUpperNotes: Bool = false
     ) -> RenderedBar {
         let synthPlan = SynthPerformancePlan(
             scene: plan.scene,
@@ -683,9 +963,25 @@ struct SpatialProtectedRoutingRegressionTests {
             dna: plan.dna,
             resolved: resolved,
             synthWorld: synthPlan.world,
-            synthPerformance: noUpperNotes,
+            synthPerformance: includeUpperNotes ? planned : noUpperNotes,
             workspace: &workspace,
             layer: layer
+        )
+    }
+
+    private func graphRemainderHash(
+        full: RenderedBar,
+        protected: RenderedBar
+    ) -> String {
+        ExactPCMFingerprint.stereo(
+            left: zip(
+                full.graphRemainderReferenceLeftSamples,
+                protected.graphRemainderReferenceLeftSamples
+            ).map { $0.0 - $0.1 },
+            right: zip(
+                full.graphRemainderReferenceRightSamples,
+                protected.graphRemainderReferenceRightSamples
+            ).map { $0.0 - $0.1 }
         )
     }
 
@@ -720,21 +1016,28 @@ struct SpatialProtectedRoutingRegressionTests {
         spatialContrast: SpatialContrastArticulation? = nil,
         interlockChapter: InterlockChapter? = nil,
         groovePulses: [GroovePulseArticulation]? = nil,
-        closedHatDecayArticulations: [ClosedHatDecayArticulation]? = nil
+        closedHatDecayArticulations: [ClosedHatDecayArticulation]? = nil,
+        modalPercussionArticulations: [ModalPercussionArticulation]? = nil
     ) -> ResolvedPerformanceBar {
         ResolvedPerformanceBar(
             performance: resolved.performance,
             ensemble: ensemble ?? resolved.ensemble,
             arrangementGesture: resolved.arrangementGesture,
             percussionGear: resolved.percussionGear,
+            performanceCharacter: resolved.performanceCharacter,
+            foundationBehavior: resolved.foundationBehavior,
             foundationCompanion: resolved.foundationCompanion,
             pulseEchoEnabled: resolved.pulseEchoEnabled,
             interlockChapter: interlockChapter ?? resolved.interlockChapter,
             groovePulses: groovePulses ?? resolved.groovePulses,
             closedHatDecayArticulations: closedHatDecayArticulations ??
                 resolved.closedHatDecayArticulations,
+            modalPercussionArticulations: modalPercussionArticulations ??
+                resolved.modalPercussionArticulations,
             spatialContrast: spatialContrast ?? resolved.spatialContrast,
-            narrative: resolved.narrative
+            narrative: resolved.narrative,
+            kickSyntaxRole: resolved.kickSyntaxRole,
+            percussionEchoTexture: resolved.percussionEchoTexture
         )
     }
 

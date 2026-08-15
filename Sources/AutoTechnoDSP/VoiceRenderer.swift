@@ -518,6 +518,7 @@ package enum VoiceRenderer {
         var kickBus: [Float] = []
         var kickDetectorBus: [Float] = []
         var foundationStem: [Float] = []
+        var modalPercussionStem: [Float] = []
         var percussionStem: [Float] = []
         var percussionTextureStem: [Float] = []
         var audioSliceStem = [Float](repeating: 0, count: frames)
@@ -550,6 +551,7 @@ package enum VoiceRenderer {
         swap(&kickBus, &checkedOut.kick)
         swap(&kickDetectorBus, &checkedOut.kickDetector)
         swap(&foundationStem, &checkedOut.foundationStem)
+        swap(&modalPercussionStem, &checkedOut.modalPercussionStem)
         swap(&percussionStem, &checkedOut.percussionStem)
         swap(&percussionTextureStem, &checkedOut.percussionTextureStem)
         swap(&upperTonalStem, &checkedOut.upperTonalStem)
@@ -571,6 +573,10 @@ package enum VoiceRenderer {
         var random = SeededGenerator(seed: performance.eventSeed)
         var renderedKickEventCount = 0
         var renderedKickStepMask: UInt16 = 0
+        var scheduledModalPercussion: [ScheduledModalPercussionEvent] = []
+        scheduledModalPercussion.reserveCapacity(
+            resolved.modalPercussionArticulations.count
+        )
 
         for (scoreEventIndex, event) in resolved.ensemble.events.enumerated() {
             let pulseArticulation = event.voice == .groovePulse
@@ -614,10 +620,17 @@ package enum VoiceRenderer {
                        start: start, sampleRate: sampleRate,
                        level: 0.072 * accent, seed: scene.seed, step: event.step)
             case .tunedTom:
-                let frequency = 49.0 * pow(2, Double(dna.tonalCenter) / 12)
-                tom(&output, measurement: &foundationStem,
-                    start: start, sampleRate: sampleRate,
-                    level: 0.085 * accent, frequency: frequency)
+                guard let articulation = resolved.modalPercussion(
+                    atEventIndex: scoreEventIndex
+                ), articulation.step == event.step,
+                   articulation.use == .foundationCompanion else {
+                    break
+                }
+                scheduledModalPercussion.append(ScheduledModalPercussionEvent(
+                    articulation: articulation,
+                    startFrame: start,
+                    level: 0.085 * performance.accent(at: event.step)
+                ))
             case .percussion:
                 let level = ClosedHatVoiceContract.level(
                     section: section,
@@ -665,6 +678,26 @@ package enum VoiceRenderer {
             default: break
             }
         }
+        let modalPercussionRenderEvidence = ModalPercussionVoice.renderBar(
+            into: &modalPercussionStem,
+            bar: performance.bar,
+            sampleRate: sampleRate,
+            events: scheduledModalPercussion,
+            state: &state.modalPercussionState
+        )
+        for index in 0..<frames {
+            let modalSample = modalPercussionStem[index]
+            foundationStem[index] += modalSample
+        }
+        let dryModalPercussionSampleHash = ExactPCMFingerprint.mono(
+            modalPercussionStem
+        )
+        let modalPercussionFoundationRoutingValid =
+            modalPercussionRenderEvidence.dryBarSampleHash ==
+                dryModalPercussionSampleHash &&
+            modalPercussionRenderEvidence.events.allSatisfy {
+                $0.articulation.use == .foundationCompanion
+            }
         let percussionEchoTextureRenderEvidence =
             PercussionEchoTextureVoice.render(
                 source: percussionStem,
@@ -1190,6 +1223,20 @@ package enum VoiceRenderer {
             state.chorusPhase = (state.chorusPhase + chorusRate).truncatingRemainder(dividingBy: 2.0 * Double.pi)
             state.chorusWriteIndex = (state.chorusWriteIndex + 1) % chorusFrames
         }
+        // Modal foundation remains a protected center contribution, but its
+        // identical full/protected consequence must not leak into the upper
+        // graph remainder through the shared nonlinear center/upper master.
+        // The existing terminal master safety still receives the recombined
+        // protected signal in AutonomousPhraseRenderer.
+        let graphRemainderReferenceLeftSamples = left
+        let graphRemainderReferenceRightSamples = right
+        for index in 0..<frames where modalPercussionStem[index] != 0 {
+            let modalMasterSample = safeMaster(
+                modalPercussionStem[index] * 1.015
+            )
+            left[index] += modalMasterSample
+            right[index] += modalMasterSample
+        }
         // One bounded pass reduces the exact terminal detector and audible
         // kick buses. Fingerprints stream over sample bits without retaining
         // another PCM buffer, and nonzero counts use the same exact bits.
@@ -1454,6 +1501,12 @@ package enum VoiceRenderer {
                                    dryPercussionSampleHash: ExactPCMFingerprint.mono(
                                     percussionStem
                                    ),
+                                   dryModalPercussionSampleHash:
+                                    dryModalPercussionSampleHash,
+                                   modalPercussionRenderEvidence:
+                                    modalPercussionRenderEvidence,
+                                   modalPercussionFoundationRoutingValid:
+                                    modalPercussionFoundationRoutingValid,
                                    groovePulseRenderEvidence: groovePulseRenderEvidence,
                                    closedHatRenderEvidence: closedHatRenderEvidence,
                                    instrumentRenderEvidence: instrumentEvidence(
@@ -1483,12 +1536,17 @@ package enum VoiceRenderer {
                                     spatialFDNRenderEvidence,
                                    upperNoteRenderEvidence: upperNoteRenderEvidence,
                                    upperTimingRenderEvidence: upperTimingRenderEvidence,
+                                   graphRemainderReferenceLeftSamples:
+                                    graphRemainderReferenceLeftSamples,
+                                   graphRemainderReferenceRightSamples:
+                                    graphRemainderReferenceRightSamples,
                                    resonantAnchorSamples: resonantAnchorStem,
                                    detunedCompanionSamples: detunedCompanionStem)
         swap(&output, &checkedOut.output)
         swap(&kickBus, &checkedOut.kick)
         swap(&kickDetectorBus, &checkedOut.kickDetector)
         swap(&foundationStem, &checkedOut.foundationStem)
+        swap(&modalPercussionStem, &checkedOut.modalPercussionStem)
         swap(&percussionStem, &checkedOut.percussionStem)
         swap(&percussionTextureStem, &checkedOut.percussionTextureStem)
         swap(&upperTonalStem, &checkedOut.upperTonalStem)
@@ -2486,23 +2544,6 @@ package enum VoiceRenderer {
             let renderedSample = Float(
                 ((noise - low * 0.72) * (burstEnvelope * 0.46 + tail) + body) * level
             )
-            output[start + i] += renderedSample
-            measurement[start + i] += renderedSample
-        }
-    }
-
-    private static func tom(_ output: inout [Float], measurement: inout [Float],
-                            start: Int, sampleRate: Double, level: Double, frequency: Double) {
-        let frames = min(Int(sampleRate * 0.22), output.count - start)
-        guard frames > 0 else { return }
-        var phase = 0.0
-        for i in 0..<frames {
-            let t = Double(i) / sampleRate
-            let glide = frequency * (1.0 + 0.16 * exp(-t * 30))
-            phase += 2 * Double.pi * glide / sampleRate
-            let envelope = min(1.0, t / 0.004) * exp(-t * 17)
-            let body = sin(phase) + sin(phase * 1.97) * 0.08
-            let renderedSample = Float(tanh(body * 1.15) * envelope * level)
             output[start + i] += renderedSample
             measurement[start + i] += renderedSample
         }
