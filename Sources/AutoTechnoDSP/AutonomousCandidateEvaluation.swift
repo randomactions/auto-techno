@@ -6409,8 +6409,7 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
                 }
             }
         }
-        guard transaction.comparison != .fallback,
-              transaction.comparison == .unavailable || replayAlternateIndex != nil else {
+        guard transaction.comparison == .unavailable || replayAlternateIndex != nil else {
             return false
         }
         let replayChoice = AutonomousCandidateSelector.choose(
@@ -6511,7 +6510,7 @@ private extension AutonomousCandidateComparison {
         case .primary: .primary
         case .alternate: .alternate
         case .tie: .tie
-        case .fallback: .unavailable
+        case .fallback: .fallback
         }
     }
 }

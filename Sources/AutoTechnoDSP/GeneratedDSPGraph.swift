@@ -896,6 +896,7 @@ package enum AutonomousQualityComparison: Equatable, Sendable {
     case primary
     case alternate
     case tie
+    case fallback
 }
 
 package struct AutonomousCandidateEvidence: Equatable, Sendable {
@@ -933,11 +934,16 @@ package enum AutonomousCandidateSelector {
         ) { return .primary }
         let primaryValid = primary.symbolicValid && primary.safetyValid
         let alternateValid = alternate.map { $0.symbolicValid && $0.safetyValid } ?? false
+        // A calibrated policy may reject every surviving authored candidate.
+        // That non-compensable result must reach the conservative score even
+        // when exactly one candidate passed the lower-level signal gates.
+        if qualityComparison == .fallback { return .fallback }
         switch (primaryValid, alternateValid) {
         case (true, true):
             switch qualityComparison {
             case .alternate: return .alternate
             case .unavailable, .primary, .tie: return .primary
+            case .fallback: return .fallback
             }
         case (true, false): return .primary
         case (false, true): return .alternate
@@ -2123,6 +2129,7 @@ package enum AutonomousPhrasePreparer {
         case .primary: .primary
         case .alternate: .alternate
         case .tie: .tie
+        case .fallback: .fallback
         }
     }
 

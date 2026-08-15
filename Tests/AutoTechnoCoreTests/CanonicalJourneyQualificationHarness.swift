@@ -59,17 +59,6 @@ struct CanonicalJourneyQualificationHarness {
 
         for _ in 0..<max(1, maximumPhrases) {
             let plan = director.candidates(from: state).primary
-            var checkpoints: [CanonicalJourneyCheckpoint] = []
-            if plan.phraseIndex == 0 { checkpoints.append(.establishment) }
-            switch plan.kind {
-            case .contrast: checkpoints.append(.contrast)
-            case .majorBreak: checkpoints.append(.majorBreak)
-            case .energyRelease: checkpoints.append(.release)
-            case .identityReturn: checkpoints.append(.identityReturn)
-            case .lock: break
-            }
-            if plan.phraseIndex >= 16 { checkpoints.append(.longContinuation) }
-
             let chapters = plan.resolvedBars.map(\.interlockChapter)
             let changesInsidePhrase = zip(chapters, chapters.dropFirst()).contains { pair in
                 pair.0 != pair.1
@@ -77,9 +66,11 @@ struct CanonicalJourneyQualificationHarness {
             let changesAtBoundary = previousChapter.map { previous in
                 chapters.first.map { $0 != previous } ?? false
             } ?? false
-            if changesInsidePhrase || changesAtBoundary {
-                checkpoints.append(.chapterChange)
-            }
+            let checkpoints = CanonicalJourneyCheckpoint.applicable(
+                phraseIndex: plan.phraseIndex,
+                phraseKind: plan.kind,
+                chapterChanged: changesInsidePhrase || changesAtBoundary
+            )
 
             for checkpoint in checkpoints where !contains(checkpoint) {
                 result.append(candidate(checkpoint, plan: plan, state: state))

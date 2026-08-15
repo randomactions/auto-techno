@@ -7,8 +7,8 @@ import Testing
 struct ProfessionalQualityCalibrationIntegrationTests {
     /// This deliberately expensive, explicit development harness renders the
     /// complete canonical journey at 44.1 and 48 kHz. Normal CI validates the
-    /// frozen aggregate profile; regeneration is opt-in so every source-bank
-    /// change is intentional and reviewable.
+    /// frozen historical and current-engine paired artifacts; regeneration is
+    /// opt-in so every source-bank change is intentional and reviewable.
     @Test("Generate complete representative-rate profile and adversarial identity")
     func generateRepresentativeProfile() throws {
         guard ProcessInfo.processInfo.environment[
@@ -34,18 +34,26 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             adversarialSuite: adversarial
         )
         let qualification = try policy.evaluate(bank: bank)
+        let pairedEvaluator = try ProfessionalQualityPairedCandidateEvaluator(
+            profile: profile,
+            adversarialSuite: adversarial
+        )
 
         #expect(bank.sourceReportCount ==
                 CanonicalJourneyCheckpoint.allCases.count *
                     ProfessionalQualityCalibrationProfile.requiredSampleRates.count)
-        #expect(frozenQualification.qualified)
         #expect(frozenQualification.calibrationSourceEngineVersion ==
                 "autotechno-canonical-engine.v10")
         #expect(frozenQualification.evaluatedEngineVersion ==
                 QualityQualificationContract.engineVersion)
+        #expect(!frozenQualification.qualified)
+        #expect(frozenQualification.acceptedObservationCount == 8)
         #expect(profile.isComplete)
         #expect(adversarial.passed)
         #expect(qualification.qualified)
+        #expect(pairedEvaluator.requiresPairedCandidates)
+        #expect(pairedEvaluator.policyVersion.contains(profile.fingerprint))
+        #expect(pairedEvaluator.policyVersion.contains(adversarial.fingerprint))
         #expect(!profile.fingerprint.isEmpty)
         #expect(!adversarial.fingerprint.isEmpty)
 
@@ -58,7 +66,10 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         let qualificationJSON = try #require(String(
             data: qualification.deterministicJSON(), encoding: .utf8
         ))
-        try writeFrozenArtifacts(
+        let frozenQualificationJSON = try #require(String(
+            data: frozenQualification.deterministicJSON(), encoding: .utf8
+        ))
+        try writePairedArtifacts(
             profile: profile,
             adversarial: adversarial
         )
@@ -71,6 +82,11 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         print("AUTOTECHNO_DEVELOPMENT_QUALIFICATION_JSON_BEGIN")
         print(qualificationJSON)
         print("AUTOTECHNO_DEVELOPMENT_QUALIFICATION_JSON_END")
+        print("AUTOTECHNO_FROZEN_COMPATIBILITY_JSON_BEGIN")
+        print(frozenQualificationJSON)
+        print("AUTOTECHNO_FROZEN_COMPATIBILITY_JSON_END")
+        print("AUTOTECHNO_FROZEN_COMPATIBILITY_ACCEPTED_COUNT=" +
+              "\(frozenQualification.acceptedObservationCount)")
         print("AUTOTECHNO_CALIBRATION_PROFILE_FINGERPRINT=\(profile.fingerprint)")
         print("AUTOTECHNO_ADVERSARIAL_SUITE_FINGERPRINT=\(adversarial.fingerprint)")
     }
@@ -166,7 +182,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         FileHandle.standardError.write(data)
     }
 
-    private func writeFrozenArtifacts(
+    private func writePairedArtifacts(
         profile: ProfessionalQualityCalibrationProfile,
         adversarial: ProfessionalQualityAdversarialSuiteReport
     ) throws {
@@ -181,13 +197,13 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         )
         try profile.deterministicJSON().write(
             to: directory.appendingPathComponent(
-                ProfessionalQualityFrozenArtifacts.profileResource + ".json"
+                "\(ProfessionalQualityPairedArtifacts.profileResource).json"
             ),
             options: .atomic
         )
         try adversarial.deterministicJSON().write(
             to: directory.appendingPathComponent(
-                ProfessionalQualityFrozenArtifacts.adversarialResource + ".json"
+                "\(ProfessionalQualityPairedArtifacts.adversarialResource).json"
             ),
             options: .atomic
         )
@@ -197,16 +213,6 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         plan: AutonomousPhrasePlan,
         previousChapter: InterlockChapter?
     ) -> [CanonicalJourneyCheckpoint] {
-        var result: [CanonicalJourneyCheckpoint] = []
-        if plan.phraseIndex == 0 { result.append(.establishment) }
-        switch plan.kind {
-        case .contrast: result.append(.contrast)
-        case .majorBreak: result.append(.majorBreak)
-        case .energyRelease: result.append(.release)
-        case .identityReturn: result.append(.identityReturn)
-        case .lock: break
-        }
-        if plan.phraseIndex >= 16 { result.append(.longContinuation) }
         let chapters = plan.resolvedBars.map(\.interlockChapter)
         let changesInsidePhrase = zip(chapters, chapters.dropFirst()).contains {
             $0.0 != $0.1
@@ -214,9 +220,10 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         let changesAtBoundary = previousChapter.map { previous in
             chapters.first.map { $0 != previous } ?? false
         } ?? false
-        if changesInsidePhrase || changesAtBoundary {
-            result.append(.chapterChange)
-        }
-        return result
+        return CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: plan.phraseIndex,
+            phraseKind: plan.kind,
+            chapterChanged: changesInsidePhrase || changesAtBoundary
+        )
     }
 }

@@ -110,6 +110,13 @@ mistaken for a completed feedback system.
    adversarial suite by pinned fingerprints without activating the shipping
    evaluator. Later engine versions are evaluated against that frozen source;
    they do not relabel it as current-runtime evidence.
+   `ProfessionalQualityPairedArtifacts` separately validates the exact engine-v19
+   paired-policy profile `ffc8be201e9b8564` and adversarial suite
+   `556508db468b3a64`. Its evaluator maps Core-owned candidate checkpoints into
+   the same 39-metric observation, rejects dimensions independently, and records
+   a conservative-fallback comparison when neither authored candidate passes.
+   The app-facing overload still installs the uncalibrated evaluator, so loading
+   and selection behavior in the shipping runtime are unchanged.
 5. `AutonomousPhraseRenderer` constructs the required synth world and synth
    performance. The synth planner resolves the three-step driver, five-stage
    follower, chapter articulation, internal architecture and patch, four bounded

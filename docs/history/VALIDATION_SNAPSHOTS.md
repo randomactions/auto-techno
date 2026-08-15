@@ -1079,3 +1079,34 @@ contracts, not professional sound quality or runtime promotion. Exact shipping-
 evaluator replay, exact-build app playback, physical route/interruption smoke,
 sustained hardware soak, publication, and exact-head remote CI remain separate
 gates.
+
+## Exact-engine paired candidate policy — 2026-08-15
+
+This candidate adds the dormant exact-engine judge required by the preceding
+bounded transaction. It centralizes canonical checkpoint ownership in Core,
+projects each complete candidate into the same 39-metric Professional Evidence
+v3 observation, preserves independent verdicts for candidates representing more
+than one checkpoint, and records an explicit conservative-fallback comparison
+when neither authored candidate passes. The selector and transaction validator
+now preserve and replay that result instead of flattening it to unavailable.
+
+The immutable paired resources identify canonical engine v19, profile
+`ffc8be201e9b8564`, and adversarial suite `556508db468b3a64`. The optimized
+calibration source contained 14 observations: seven checkpoints at both 44.1
+and 48 kHz. It self-qualified 14/14 and the suite rejected all 10 adversarial
+cases for their expected non-compensable reason. The retained engine-v10 profile
+accepted only 8/14 v19 observations, confirming it remains a historical
+compatibility artifact rather than a silent shipping selector.
+
+The app-facing overload remains `uncalibrated.v1`, so this candidate adds no
+render pass, callback work, selection change, or PCM change. Current-profile
+loading and fast policy tests are part of normal CI; full artifact generation
+remains opt-in. Local serial validation on Xcode 26.6 and Apple Swift 6.3.3
+passed the 151-test core/evidence group in 229.771 seconds, 22/22 preparation
+preflight tests in 629.048 seconds, 7/7 protected-routing tests in 98.107
+seconds, the final 42-test candidate/calibration/quality set in 5.208 seconds,
+and the optimized `AutoTechno` product build in 41.10 seconds.
+
+Publication, exact-head CI, exact-build app launch, explicit
+shipping activation, exact-evaluator resource probing, route/interruption smoke,
+listening, and hardware soak remain separate gates.

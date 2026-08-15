@@ -37,6 +37,32 @@ package enum CanonicalJourneyCheckpoint: String, CaseIterable, Codable, Equatabl
     case release
     case identityReturn = "identity-return"
     case longContinuation = "long-continuation"
+
+    /// Returns every calibrated structural checkpoint represented by one
+    /// resolved candidate. A phrase may legitimately carry more than one
+    /// checkpoint (for example, a late release at a chapter boundary), while
+    /// an ordinary lock phrase may carry none. Keeping this semantic mapping
+    /// in Core prevents report generation and detached DSP evaluation from
+    /// inventing separate checkpoint rules.
+    package static func applicable(
+        phraseIndex: Int,
+        phraseKind: AutonomousPhraseKind,
+        chapterChanged: Bool
+    ) -> [CanonicalJourneyCheckpoint] {
+        guard phraseIndex >= 0 else { return [] }
+        var represented = Set<CanonicalJourneyCheckpoint>()
+        if phraseIndex == 0 { represented.insert(.establishment) }
+        if chapterChanged { represented.insert(.chapterChange) }
+        switch phraseKind {
+        case .contrast: represented.insert(.contrast)
+        case .majorBreak: represented.insert(.majorBreak)
+        case .energyRelease: represented.insert(.release)
+        case .identityReturn: represented.insert(.identityReturn)
+        case .lock: break
+        }
+        if phraseIndex >= 16 { represented.insert(.longContinuation) }
+        return allCases.filter(represented.contains)
+    }
 }
 
 package enum QualityDecisionOutcome: String, Codable, Equatable, Sendable {

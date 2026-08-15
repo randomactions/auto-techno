@@ -156,9 +156,15 @@ professional-quality qualification. The separate frozen development contract
 now loads the engine-v10 source profile `c52545b5641e6cfb` and passing
 adversarial suite `2340017ec6c59440`. It evaluates complete representative-rate engine banks
 without PCM, stems, or event lists and rejects every dimension and relationship
-independently. Calibrated paired ranking and the hybrid live-feedback loop below
-remain target architecture until their implementation and validation are
-recorded. The existing transaction now has a conservative 128 MiB numeric
+independently. A distinct immutable engine-v19 paired-policy profile
+`ffc8be201e9b8564` and passing adversarial suite `556508db468b3a64` now construct
+an exact-engine, checkpoint-local evaluator through the existing package seam.
+It judges every applicable checkpoint independently, never averages dimensions,
+and requests the conservative fallback when both authored candidates fail. The
+app-facing preparation overload does not install it: shipping selection remains
+single-primary and qualification unavailable pending the explicit activation
+and exact-evaluator operational gate. Hybrid live feedback remains target
+architecture. The existing transaction now has a conservative 128 MiB numeric
 working-storage envelope and a passing opt-in optimized 44.1/48 kHz probe:
 healthy two-candidate preparation fits the shortest phrase lookahead, the full
 four-pass correction/fallback path fits one bounded frozen-topology hold, and
@@ -328,7 +334,8 @@ path performs one primary render and reports qualification unavailable.
 Phrase analysis now streams within an explicit working-memory envelope, with
 independent DFT, chunk-parity, representative-rate, cancellation, and optimized
 fixture evidence. Calibrated paired ranking stays disabled until the exact
-shipping comparator repeats the now-passing representative-rate cancellation,
+engine comparator is explicitly installed and repeats the now-passing
+representative-rate cancellation,
 latency, and peak-memory envelope under the frozen profile and adversarial
 suite. Preparation
 checks cancellation at bounded

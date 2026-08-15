@@ -194,6 +194,96 @@ struct ProfessionalQualityCalibrationTests {
                 ProfessionalQualityCalibrationProfile.requiredSampleRates)
     }
 
+    @Test("Exact-engine paired policy selects only independently accepted candidates")
+    func pairedCandidatePolicy() throws {
+        let observations = try representativeObservations()
+        let profile = try ProfessionalQualityCalibrationProfile(
+            engineVersion: QualityQualificationContract.engineVersion,
+            sourceBankFingerprint: "paired-candidate-policy-test",
+            sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
+            observations: observations
+        )
+        let adversarial = try ProfessionalQualityAdversarialSuiteReport(
+            profile: profile,
+            sourceObservations: observations
+        )
+        let evaluator = try ProfessionalQualityPairedCandidateEvaluator(
+            profile: profile,
+            adversarialSuite: adversarial
+        )
+        #expect(evaluator.policyVersion.contains(profile.fingerprint))
+        #expect(evaluator.policyVersion.contains(adversarial.fingerprint))
+
+        let primary = [try #require(observations.first {
+            $0.checkpoint == .release && $0.sampleRate == 48_000
+        })]
+        let releaseProfile = try #require(profile[.release])
+        let truePeakBounds = try #require(releaseProfile[.truePeakDBTP])
+        let rejected = [try primary[0].replacing(
+            .truePeakDBTP,
+            with: truePeakBounds.upper + 0.01
+        )]
+
+        let acceptedAssessment = evaluator.assessment(of: primary)
+        let rejectedAssessment = evaluator.assessment(of: rejected)
+        #expect(acceptedAssessment.availability == .available)
+        #expect(acceptedAssessment.accepted)
+        #expect(rejectedAssessment.availability == .available)
+        #expect(!rejectedAssessment.accepted)
+        #expect(rejectedAssessment.verdicts.flatMap(\.failedMetrics) ==
+                [.truePeakDBTP])
+        #expect(evaluator.compare(primary: primary, alternate: rejected) == .primary)
+        #expect(evaluator.compare(primary: rejected, alternate: primary) == .alternate)
+        #expect(evaluator.compare(primary: primary, alternate: primary) == .tie)
+        #expect(evaluator.compare(primary: rejected, alternate: rejected) == .fallback)
+        #expect(evaluator.compare(primary: [], alternate: []) == .unavailable)
+    }
+
+    @Test("Historical development artifacts cannot activate current-engine pairing")
+    func staleProfileCannotActivatePairing() throws {
+        let frozen = try ProfessionalQualityFrozenArtifacts.load()
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPairedCandidateEvaluator(
+                profile: frozen.profile,
+                adversarialSuite: frozen.adversarialSuite
+            )
+        }
+    }
+
+    @Test("Current paired artifacts load with exact engine and policy identities")
+    func pairedArtifacts() throws {
+        let artifacts = try ProfessionalQualityPairedArtifacts.load()
+
+        #expect(artifacts.profile.isComplete)
+        #expect(artifacts.adversarialSuite.passed)
+        #expect(artifacts.profile.engineVersion ==
+                QualityQualificationContract.engineVersion)
+        #expect(artifacts.profile.evidenceVersion ==
+                ProfessionalEvidenceReportBank.evidenceVersion)
+        #expect(artifacts.profile.fingerprint ==
+                ProfessionalQualityPairedArtifacts.expectedProfileFingerprint)
+        #expect(artifacts.adversarialSuite.fingerprint ==
+                ProfessionalQualityPairedArtifacts
+                    .expectedAdversarialSuiteFingerprint)
+        #expect(artifacts.evaluator.policyVersion.contains(
+            ProfessionalQualityPairedArtifacts.expectedProfileFingerprint
+        ))
+        #expect(artifacts.evaluator.policyVersion.contains(
+            ProfessionalQualityPairedArtifacts
+                .expectedAdversarialSuiteFingerprint
+        ))
+        #expect(artifacts.evaluator.requiresPairedCandidates)
+
+        let reloaded = try ProfessionalQualityPairedArtifacts(
+            profileData: artifacts.profile.deterministicJSON(),
+            adversarialSuiteData: artifacts.adversarialSuite.deterministicJSON()
+        )
+        #expect(reloaded.profile == artifacts.profile)
+        #expect(reloaded.adversarialSuite == artifacts.adversarialSuite)
+        #expect(reloaded.evaluator.policyVersion ==
+                artifacts.evaluator.policyVersion)
+    }
+
     @Test("Incomplete rate matrices and non-finite metrics cannot calibrate")
     func invalidCalibrationInputs() throws {
         let observations = try representativeObservations()

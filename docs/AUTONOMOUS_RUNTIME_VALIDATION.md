@@ -200,9 +200,10 @@ checkpoint/rate observations with no relationship failures.
 The Professional Evidence v3 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. Its own policy
 availability remains false by design. Calibrated paired ranking remains disabled
-until the exact shipping comparator repeats the now-passing generic transaction
-cancellation, latency, and peak-working-memory envelope under the pinned
-profile/adversarial identities.
+even though the exact engine-v19 checkpoint-local comparator and pinned
+profile/adversarial identities now load and replay through the package seam. The
+shipping overload must still be explicitly activated and repeat the now-passing
+generic transaction cancellation, latency, and peak-working-memory envelope.
 
 ## Determinism and sample-rate consistency
 
@@ -304,9 +305,11 @@ paired worst times of 6.372/6.873 seconds, full four-pass worst times of
 80,461,824 bytes maximum RSS. Its deterministic numeric-storage estimate is
 113,161,984 bytes under a 128 MiB ceiling. Healthy work fits the 7.385-second
 shortest-phrase lookahead; correction/fallback fits one 14.769-second
-frozen-topology hold. These figures do not satisfy the final release gate until
-the exact shipping evaluator, artifact-loading path, and reason-coded policy
-replay pass the same probe. See
+frozen-topology hold. These figures do not satisfy the final release gate. The
+exact-engine artifact loader, checkpoint-local evaluator, calibrated fallback
+result, and reason-coded transaction replay now have deterministic tests, but
+the app-facing overload does not install them and they have not run this probe
+as the shipping policy. See
 [`PAIRED_SELECTION_READINESS.md`](PAIRED_SELECTION_READINESS.md).
 
 The declared budget must leave enough lookahead to schedule the future boundary

@@ -1082,27 +1082,15 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
             throw CanonicalJourneyQualificationReportError.candidateEvaluationMismatch
         }
         let symbolic = selectedCandidateEvidence.symbolic
-        let checkpointMatches: Bool
-        switch checkpoint {
-        case .establishment:
-            checkpointMatches = symbolic.phraseIndex == 0
-        case .chapterChange:
-            checkpointMatches = symbolic.chapterChanged
-        case .contrast:
-            checkpointMatches = symbolic.phraseKind ==
-                AutonomousPhraseKind.contrast.rawValue
-        case .majorBreak:
-            checkpointMatches = symbolic.phraseKind ==
-                AutonomousPhraseKind.majorBreak.rawValue
-        case .release:
-            checkpointMatches = symbolic.phraseKind ==
-                AutonomousPhraseKind.energyRelease.rawValue
-        case .identityReturn:
-            checkpointMatches = symbolic.phraseKind ==
-                AutonomousPhraseKind.identityReturn.rawValue
-        case .longContinuation:
-            checkpointMatches = symbolic.phraseIndex >= 16
-        }
+        let checkpointMatches = AutonomousPhraseKind(
+            rawValue: symbolic.phraseKind
+        ).map {
+            CanonicalJourneyCheckpoint.applicable(
+                phraseIndex: symbolic.phraseIndex,
+                phraseKind: $0,
+                chapterChanged: symbolic.chapterChanged
+            ).contains(checkpoint)
+        } ?? false
         guard checkpointMatches else {
             throw CanonicalJourneyQualificationReportError.checkpointMismatch
         }

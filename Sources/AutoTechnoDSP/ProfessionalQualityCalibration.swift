@@ -142,15 +142,32 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         metrics = sorted
     }
 
-    package init(report: CanonicalJourneyQualificationReport) throws {
-        let vector = report.selectedCandidateEvidence
+    /// Projects one complete detached candidate into the same bounded metric
+    /// observation used by the offline journey bank. The caller supplies only
+    /// a Core-owned checkpoint that the candidate actually represents; no PCM,
+    /// renderer state, or report wrapper is required by the paired evaluator.
+    package init(
+        candidate vector: AutonomousCandidateEvaluationVector,
+        engineVersion: String,
+        checkpoint: CanonicalJourneyCheckpoint
+    ) throws {
+        guard let phraseKind = AutonomousPhraseKind(
+            rawValue: vector.symbolic.phraseKind
+        ), CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: vector.symbolic.phraseIndex,
+            phraseKind: phraseKind,
+            chapterChanged: vector.symbolic.chapterChanged
+        ).contains(checkpoint) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let sampleRate = vector.routeContinuation.sampleRate
         let expectedStemBars = vector.fullMix.bars.map(\.bar).sorted()
         let actualStemBars = vector.stems.map(\.bar).sorted()
         guard actualStemBars == expectedStemBars,
               vector.stems.count == vector.fullMix.sourceBarCount else {
             throw ProfessionalQualityCalibrationError
                 .incompleteStemBarCoverage(
-                    report.checkpoint,
+                    checkpoint,
                     expectedStemBars,
                     actualStemBars
                 )
@@ -168,23 +185,21 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         guard stemRoleFailures.isEmpty else {
             throw ProfessionalQualityCalibrationError
                 .incompleteStemRoleEvidence(
-                    report.checkpoint,
+                    checkpoint,
                     stemRoleFailures
                 )
         }
         guard vector.kickSyntax.count == vector.fullMix.sourceBarCount,
               vector.kickSyntax.allSatisfy({
-                  $0.isComplete(sampleRate: report.sampleRate)
+                  $0.isComplete(sampleRate: sampleRate)
               }) else {
             throw ProfessionalQualityCalibrationError
-                .incompleteKickSyntaxEvidence(report.checkpoint)
+                .incompleteKickSyntaxEvidence(checkpoint)
         }
-        guard vector.isComplete, vector.isFinite,
-              report.evidenceScope ==
-                CanonicalJourneyQualificationReport.currentEvidenceScope else {
+        guard vector.isComplete, vector.isFinite else {
             throw ProfessionalQualityCalibrationError
                 .incompleteCandidateEvidence(
-                    report.checkpoint,
+                    checkpoint,
                     vector.completenessFailures
                 )
         }
@@ -343,11 +358,27 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 value: mean(kickSyntax.map(\.audibleGain))),
         ]
         try self.init(
-            engineVersion: report.engineVersion,
-            checkpoint: report.checkpoint,
-            sampleRate: report.sampleRate,
+            engineVersion: engineVersion,
+            checkpoint: checkpoint,
+            sampleRate: sampleRate,
             hardGatesPassed: vector.hardGatesPassed,
             metrics: metrics
+        )
+    }
+
+    package init(report: CanonicalJourneyQualificationReport) throws {
+        guard report.evidenceScope ==
+                CanonicalJourneyQualificationReport.currentEvidenceScope else {
+            throw ProfessionalQualityCalibrationError
+                .incompleteCandidateEvidence(
+                    report.checkpoint,
+                    report.selectedCandidateEvidence.completenessFailures
+                )
+        }
+        try self.init(
+            candidate: report.selectedCandidateEvidence,
+            engineVersion: report.engineVersion,
+            checkpoint: report.checkpoint
         )
     }
 

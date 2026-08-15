@@ -5,6 +5,35 @@ import Testing
 
 @Suite("Versioned quality qualification foundation")
 struct QualityQualificationFoundationTests {
+    @Test("Canonical checkpoint mapping is ordered, multi-valued, and may be empty")
+    func canonicalCheckpointMapping() {
+        #expect(CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: 0,
+            phraseKind: .lock,
+            chapterChanged: false
+        ) == [.establishment])
+        #expect(CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: 16,
+            phraseKind: .energyRelease,
+            chapterChanged: true
+        ) == [.chapterChange, .release, .longContinuation])
+        #expect(CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: 4,
+            phraseKind: .identityReturn,
+            chapterChanged: false
+        ) == [.identityReturn])
+        #expect(CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: 5,
+            phraseKind: .lock,
+            chapterChanged: false
+        ).isEmpty)
+        #expect(CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: -1,
+            phraseKind: .contrast,
+            chapterChanged: true
+        ).isEmpty)
+    }
+
     @Test("Core decisions and continuation round-trip deterministically")
     func coreRoundTrip() throws {
         #expect(QualityQualificationContract.maximumCorrectionRenders == 1)

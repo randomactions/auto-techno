@@ -67,9 +67,11 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   boundaries, and continuation.
 
 The shipping evaluator remains uncalibrated and renders the primary once on the
-healthy path. A frozen offline development profile and adversarial suite now
-qualify complete 44.1/48 kHz engine banks, but do not participate in runtime
-selection. The transaction records up to primary, alternate, and fallback
+healthy path. The historical engine-v10 development profile remains an offline
+compatibility yardstick. A distinct current-engine profile and adversarial suite
+now construct a checkpoint-local paired evaluator through the package seam, but
+do not participate in runtime selection. The transaction records up to primary,
+alternate, and fallback
 attempts plus one home-timbre correction within four total passes, but it does
 not constitute professional-quality qualification or general quality-driven
 candidate selection. Calibrated paired ranking remains disabled pending the
@@ -140,9 +142,12 @@ local and untracked.
 
 The runtime now enforces and records a maximum of three complete candidates, one
 home-timbre correction, and four render passes, then atomically carries the
-selected evidence, decision, and controller state into continuation. Next,
-install the exact frozen-profile shipping comparator off the callback and replay
-the now-passing representative-rate resource envelope through that evaluator.
+selected evidence, decision, and controller state into continuation. The exact
+engine-v19 profile, passing adversarial suite, non-compensable checkpoint-local
+comparator, calibrated fallback result, and transaction replay are now present
+behind the package seam. Next, explicitly install the preloaded evaluator off the
+callback and replay the now-passing representative-rate resource envelope through
+that shipping path.
 Continue to select a qualified candidate or conservative fallback when the
 calibrated policy cannot qualify either authored attempt. See
 [`PAIRED_SELECTION_READINESS.md`](PAIRED_SELECTION_READINESS.md).

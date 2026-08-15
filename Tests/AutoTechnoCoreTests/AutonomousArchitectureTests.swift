@@ -1914,6 +1914,16 @@ struct AutonomousPreparationPreflightTests {
             symbolicValid: true, safetyValid: true, interesting: true, combinedScore: stagnant.combinedScore
         )) == .primary)
         #expect(AutonomousCandidateSelector.choose(primary: unsafe, alternate: unsafe) == .fallback)
+        #expect(AutonomousCandidateSelector.choose(
+            primary: healthy,
+            alternate: alternate,
+            qualityComparison: .fallback
+        ) == .fallback)
+        #expect(AutonomousCandidateSelector.choose(
+            primary: healthy,
+            alternate: unsafe,
+            qualityComparison: .fallback
+        ) == .fallback)
     }
 
     @Test("Fixed-seed phrase audio is deterministic and satisfies safety limits",

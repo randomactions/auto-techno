@@ -14,6 +14,32 @@ musical continuation; retains only reduced evidence for rejected attempts; and
 atomically commits the selected immutable product. The readiness work adds no
 renderer, score, runtime profile, user selector, callback work, or PCM change.
 
+## Exact-engine candidate policy
+
+The repository now also carries a separate immutable paired-policy profile for
+canonical engine v19 (`ffc8be201e9b8564`) and its passing ten-case adversarial
+suite (`556508db468b3a64`). This does not replace or relabel the historical
+engine-v10 development profile. Loading the paired resources requires the exact
+current engine and Professional Evidence v3 identities; a stale profile, an
+incomplete suite, or a fingerprint mismatch fails construction.
+
+The detached evaluator projects a complete candidate into the same 39-metric
+vector used by the journey report bank for every Core-owned checkpoint that the
+candidate represents. Each checkpoint is judged independently. There is no
+aggregate score and no distance-to-profile optimization: one accepted candidate
+wins, two accepted candidates deterministically retain the primary, two rejected
+candidates request the existing conservative fallback, and missing, inapplicable,
+or unsupported-rate evidence remains unavailable. Profile trajectory and
+cross-rate relationships remain whole-bank development gates; they are not
+misrepresented as facts available from one candidate.
+
+The profile was generated from all seven canonical checkpoints at 44.1 and
+48 kHz (14 observations); the generated bank self-qualified 14/14 and every one
+of the ten non-compensable adversarial scenarios was rejected for its expected
+reason. As a compatibility diagnostic, the same v19 bank passed only 8/14
+observations against the retained engine-v10 profile. That result is why the
+historical artifact cannot silently become the current selector.
+
 ## Activation envelope
 
 The preparation contract is bounded by existing engine constants and the new
@@ -80,20 +106,18 @@ not grow by several minutes.
 
 ## Remaining activation proof
 
-The current probe deliberately uses the package evaluator seam to exercise the
-real render/correction/fallback transaction. It cannot by itself qualify the
-shipping policy. Activation still requires all of the following in one change:
+The immutable loader, non-compensable comparator, fallback result, and exact
+transaction replay are now implemented and tested through the package policy
+seam. They still cannot qualify the shipping policy because the app-facing
+preparation overload deliberately installs the uncalibrated evaluator.
+Activation still requires all of the following in one explicitly authorized
+change:
 
-1. load the pinned profile and adversarial identity before detached preparation,
-   with no bundle I/O, decoding, allocation, or analysis on the callback;
-2. evaluate every applicable canonical checkpoint as a non-compensable vector,
-   choose only a qualified primary/alternate, and preserve the conservative
-   fallback when both fail;
-3. persist the exact calibrated policy/evaluator identities and reason-coded
-   transaction outcome, then replay that known policy during validation;
-4. retain uncalibrated, single-primary playback at unsupported route rates or
+1. load the pinned resources once before detached preparation, with no bundle
+   I/O, decoding, allocation, or analysis on the callback;
+2. retain uncalibrated, single-primary playback at unsupported route rates or
    when the frozen artifacts are unavailable;
-5. rerun this optimized probe through the exact shipping evaluator and repeat
+3. rerun this optimized probe through the exact shipping evaluator and repeat
    deterministic, route-recovery, stale-work, app, and sustained playback checks.
 
 Until those proofs pass, the frozen development policy remains offline evidence

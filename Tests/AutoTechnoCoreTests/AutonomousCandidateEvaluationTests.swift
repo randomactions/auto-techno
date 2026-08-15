@@ -2954,6 +2954,93 @@ struct AutonomousCandidateEvaluationTests {
         #expect(decoded.reasonCodes.contains(.conservativeFallbackV1))
     }
 
+    @Test("Candidate projection equals the canonical report projection")
+    func candidateObservationProjection() throws {
+        let vector = fixtureVector(slot: .primary)
+        let attempt = AutonomousCandidateAttempt(
+            kind: .initialRender,
+            reasonCodes: [],
+            vector: vector
+        )
+        let transaction = AutonomousCandidateEvaluationTransaction(
+            engineVersion: QualityQualificationContract.engineVersion,
+            policyVersion: QualityQualificationContract.uncalibratedPolicyVersion,
+            evaluatorVersion:
+                QualityQualificationContract.uncalibratedEvaluatorVersion,
+            planFingerprints: fixturePlanFingerprints,
+            attempts: [attempt],
+            selectedAttemptIndex: 0,
+            selectedSlot: .primary,
+            comparison: .unavailable,
+            correctionCount: 0
+        )
+        let report = try CanonicalJourneyQualificationReport(
+            engineVersion: QualityQualificationContract.engineVersion,
+            fixtureFingerprint: "candidate-projection-fixture",
+            continuationFingerprint: "candidate-projection-continuation",
+            checkpoint: .establishment,
+            routeFingerprint: vector.routeContinuation.routeFingerprint,
+            routeGeneration: 0,
+            selectedCandidateEvidence: vector,
+            candidateEvaluation: transaction,
+            sampleHash: vector.fullMix.sampleHash
+        )
+        let fromCandidate = try ProfessionalQualityObservation(
+            candidate: vector,
+            engineVersion: QualityQualificationContract.engineVersion,
+            checkpoint: .establishment
+        )
+        #expect(try ProfessionalQualityObservation(report: report) == fromCandidate)
+        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
+            try ProfessionalQualityObservation(
+                candidate: vector,
+                engineVersion: QualityQualificationContract.engineVersion,
+                checkpoint: .release
+            )
+        }
+    }
+
+    @Test("Exact paired evaluator preserves a hard-safe conservative fallback")
+    func exactPairedEvaluatorTerminalFallback() throws {
+        let evaluator = try ProfessionalQualityPairedArtifacts.load().evaluator
+        let primary = AutonomousCandidateAttempt(
+            kind: .initialRender,
+            reasonCodes: [],
+            vector: fixtureVector(slot: .primary)
+        )
+        let alternate = AutonomousCandidateAttempt(
+            kind: .initialRender,
+            reasonCodes: [],
+            vector: fixtureVector(slot: .alternate)
+        )
+        let fallbackVector = fixtureVector(slot: .fallback)
+        let fallback = AutonomousCandidateAttempt(
+            kind: .initialRender,
+            forceSafeGraph: true,
+            reasonCodes: [],
+            vector: fallbackVector
+        )
+        let transaction = AutonomousCandidateEvaluationTransaction(
+            engineVersion: QualityQualificationContract.engineVersion,
+            policyVersion: evaluator.policyVersion,
+            evaluatorVersion: evaluator.evaluatorVersion,
+            planFingerprints: fixturePlanFingerprints,
+            attempts: [primary, alternate, fallback],
+            selectedAttemptIndex: 2,
+            selectedSlot: .fallback,
+            comparison: .fallback,
+            correctionCount: 0
+        )
+
+        #expect(transaction.isComplete)
+        let verdict = evaluator.terminalVerdict(
+            selected: fallbackVector,
+            transaction: transaction
+        )
+        #expect(verdict.outcome == .conservativeFallback)
+        #expect(verdict.reasonCodes == [.conservativeFallbackV1])
+    }
+
     @Test("Transactions retain three candidates and one correction only")
     func boundedTransaction() throws {
         let primary = AutonomousCandidateAttempt(
@@ -3085,6 +3172,23 @@ struct AutonomousCandidateEvaluationTests {
             correctionCount: 0
         )
         #expect(paired.isComplete)
+
+        let calibratedFallback = AutonomousCandidateEvaluationTransaction(
+            engineVersion: "engine.test.v1",
+            policyVersion: "policy.test.v1",
+            evaluatorVersion: "evaluator.test.v1",
+            planFingerprints: plans,
+            attempts: [primary, AutonomousCandidateAttempt(
+                kind: .initialRender,
+                reasonCodes: [],
+                vector: fixtureVector(slot: .alternate)
+            ), fallback],
+            selectedAttemptIndex: 2,
+            selectedSlot: .fallback,
+            comparison: .fallback,
+            correctionCount: 0
+        )
+        #expect(calibratedFallback.isComplete)
 
         let impossibleFallback = AutonomousCandidateEvaluationTransaction(
             engineVersion: "engine.test.v1",
