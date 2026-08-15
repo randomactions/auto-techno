@@ -464,6 +464,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let interlockChapter: InterlockChapter
     package let groovePulses: [GroovePulseArticulation]
     package let closedHatDecayArticulations: [ClosedHatDecayArticulation]
+    package let modalPercussionArticulations: [ModalPercussionArticulation]
     package let spatialContrast: SpatialContrastArticulation
     package let narrative: NarrativeArticulation
     package let kickSyntaxRole: KickSyntaxRole
@@ -477,6 +478,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
                  interlockChapter: InterlockChapter,
                  groovePulses: [GroovePulseArticulation] = [],
                  closedHatDecayArticulations: [ClosedHatDecayArticulation]? = nil,
+                 modalPercussionArticulations: [ModalPercussionArticulation] = [],
                  spatialContrast: SpatialContrastArticulation = .foreground,
                  narrative: NarrativeArticulation = .initial,
                  kickSyntaxRole: KickSyntaxRole = .grounded,
@@ -502,6 +504,9 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.groovePulses = groovePulses.sorted { $0.step < $1.step }
         self.closedHatDecayArticulations = closedHatDecayArticulations ??
             ClosedHatDecayResolver.articulations(from: ensemble)
+        self.modalPercussionArticulations = modalPercussionArticulations.sorted {
+            $0.scoreEventIndex < $1.scoreEventIndex
+        }
         self.spatialContrast = spatialContrast
         self.narrative = narrative
         self.kickSyntaxRole = kickSyntaxRole
@@ -514,6 +519,12 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
 
     package func closedHatDecay(atEventIndex index: Int) -> ClosedHatDecayArticulation? {
         closedHatDecayArticulations.first { $0.scoreEventIndex == index }
+    }
+
+    package func modalPercussion(
+        atEventIndex index: Int
+    ) -> ModalPercussionArticulation? {
+        modalPercussionArticulations.first { $0.scoreEventIndex == index }
     }
 }
 
@@ -695,6 +706,7 @@ package enum KickSyntaxResolver {
             interlockChapter: resolved.interlockChapter,
             groovePulses: resolved.groovePulses,
             closedHatDecayArticulations: ClosedHatDecayResolver.articulations(from: ensemble),
+            modalPercussionArticulations: resolved.modalPercussionArticulations,
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative,
             kickSyntaxRole: role,
@@ -1513,6 +1525,14 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 companion: foundation.companion,
                 gear: gear, gesture: gesture
             )
+            let modalPercussionArticulations = ModalPercussionResolver.foundationArticulations(
+                ensemble: ensemble,
+                dna: dna,
+                performance: bar,
+                character: character,
+                gesture: gesture,
+                behavior: foundation.behavior
+            )
             let groovePulses = GroovePulseResolver.articulations(
                 from: ensemble,
                 absoluteBar: absoluteBar,
@@ -1551,6 +1571,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 interlockChapter: interlockState.currentChapter,
                 groovePulses: groovePulses,
                 closedHatDecayArticulations: closedHatDecayArticulations,
+                modalPercussionArticulations: modalPercussionArticulations,
                 spatialContrast: spatialContrast,
                 narrative: narrative,
                 percussionEchoTexture: percussionEchoTexture

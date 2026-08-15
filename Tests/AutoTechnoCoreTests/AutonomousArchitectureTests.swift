@@ -1354,6 +1354,36 @@ struct AdaptiveAutonomousSessionTests {
         #expect(sawBreakSpace)
     }
 
+    @Test("Director modal percussion follows only surviving tuned foundation events")
+    func directorModalPercussionOwnsExistingFoundationEvents() {
+        var foundModalFoundation = false
+        for rawSeed in 1...24 {
+            let result = sequence(seed: UInt64(rawSeed), phraseCount: 32)
+            for plan in result.plans {
+                for resolved in plan.resolvedBars {
+                    let tunedEvents = resolved.ensemble.events.enumerated().filter {
+                        $0.element.voice == .tunedTom
+                    }
+                    let articulations = resolved.modalPercussionArticulations
+                    if !tunedEvents.isEmpty {
+                        foundModalFoundation = true
+                    }
+                    #expect(articulations.count == tunedEvents.count)
+                    #expect(articulations.count <= 2)
+                    #expect(articulations.map(\.scoreEventIndex) == tunedEvents.map(\.offset))
+                    #expect(zip(articulations, tunedEvents).allSatisfy { articulation, event in
+                        articulation.use == .foundationCompanion &&
+                            articulation.step == event.element.step &&
+                            articulation.eventIntensity == event.element.intensity
+                    })
+                    #expect((resolved.foundationBehavior == .tunedPercussive) ==
+                            !articulations.isEmpty)
+                }
+            }
+        }
+        #expect(foundModalFoundation)
+    }
+
     @Test("Dark scenes can establish Phrygian identity without changing it between phrases")
     func phrygianIdentityAndMotifFingerprint() {
         let intent = MusicalIntent(values: [.darkness: 1, .atmosphericDarkness: 0.7])
