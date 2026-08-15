@@ -67,7 +67,7 @@ package enum ResonantMonoSpectralRelation: String, CaseIterable, Sendable {
 
 /// Durable harmonic tension owned by the existing spectral-texture transition.
 /// The renderer may later replace the provisional oscillator bank while this
-/// score meaning, its bounded rise, and its exact neutral fallback remain.
+/// score meaning, its bounded rise, and its exact neutral state remain.
 package enum SpectralTextureClusterRelation: String, CaseIterable, Sendable {
     case risingAdjacentCluster
 }
@@ -276,10 +276,8 @@ package enum InstrumentPalette {
         kind: AutonomousPhraseKind,
         gesture: SynthGesture,
         mutationAmount: Double,
-        foundationBehavior: FoundationBehavior? = nil,
-        conservative: Bool
+        foundationBehavior: FoundationBehavior? = nil
     ) -> InstrumentAssignment {
-        guard !conservative else { return safeFoundation() }
         if let foundationBehavior {
             let patch: InstrumentPatch
             let automation: InstrumentAutomation
@@ -350,11 +348,11 @@ package enum InstrumentPalette {
         gesture: SynthGesture,
         chapter: InterlockChapter,
         mutationAmount: Double,
-        conservative: Bool,
+        forceHome: Bool,
         pulseEchoEnabled: Bool,
         performanceCharacter: PerformanceCharacter = .hypnoticLock
     ) -> InstrumentAssignment {
-        guard !conservative else { return safeUpper(role: role) }
+        guard !forceHome else { return safeUpper(role: role) }
         let patch: InstrumentPatch
         switch (performanceCharacter, role) {
         case (.acidPressure, .anchor):

@@ -107,7 +107,7 @@ struct UpperTimbrePlanningTests {
         let singleMotif = standardUpperEvents.filter {
             $0.voice != .motif || $0.step == 2
         }
-        let fallback = SynthPerformancePlan(
+        let homeSingleVoice = SynthPerformancePlan(
             scene: scene,
             dna: dna,
             kind: .contrast,
@@ -115,9 +115,9 @@ struct UpperTimbrePlanningTests {
                 kind: .contrast, chapter: .motion, events: singleMotif
             )]
         ).bars[0]
-        #expect(fallback.upperNotes(for: .anchor).count == 1)
-        #expect(fallback.upperNotes.allSatisfy { $0.timbreIntent == .home })
-        #expect(fallback.upperNotes.allSatisfy { $0.gate == .retrigger })
+        #expect(homeSingleVoice.upperNotes(for: .anchor).count == 1)
+        #expect(homeSingleVoice.upperNotes.allSatisfy { $0.timbreIntent == .home })
+        #expect(homeSingleVoice.upperNotes.allSatisfy { $0.gate == .retrigger })
     }
 
     @Test("Tone chapters put detuned motion only on shadow and response notes")
@@ -237,8 +237,8 @@ struct UpperTimbrePlanningTests {
         #expect(foreground.upperNotes(for: .transition).isEmpty)
     }
 
-    @Test("A conservative candidate forces the authored home articulation")
-    func conservativeFallbackHome() {
+    @Test("The evaluator correction forces the authored home articulation")
+    func correctionForcesHome() {
         guard let (scene, dna) = distinctMotifScene() else {
             Issue.record("Expected a deterministic upper-voice scene")
             return
@@ -254,19 +254,19 @@ struct UpperTimbrePlanningTests {
             kind: .contrast,
             resolvedBars: [resolved]
         ).bars[0]
-        let fallback = SynthPerformancePlan(
+        let corrected = SynthPerformancePlan(
             scene: scene,
             dna: dna,
             kind: .contrast,
             resolvedBars: [resolved],
-            conservative: true
+            forceHomeUpperTimbre: true
         ).bars[0]
 
         #expect(exploratory.upperNotes.contains {
             $0.timbreIntent.kind == .detunedMotion
         })
-        #expect(fallback.upperNotes.allSatisfy { $0.timbreIntent == .home })
-        #expect(fallback.upperNotes.allSatisfy { $0.gate == .retrigger })
+        #expect(corrected.upperNotes.allSatisfy { $0.timbreIntent == .home })
+        #expect(corrected.upperNotes.allSatisfy { $0.gate == .retrigger })
     }
 
     @Test("A release marker enlarges only the final eligible tonal anchor envelope")
@@ -313,16 +313,6 @@ struct UpperTimbrePlanningTests {
         #expect(corrected.tonalEnvelopeExpansionEligible)
         #expect(corrected.forceHomeUpperTimbre)
         #expect(corrected.upperNotes.allSatisfy { $0.envelopeRelation == .home })
-
-        let conservative = SynthPerformancePlan(
-            scene: scene,
-            dna: dna,
-            kind: .energyRelease,
-            resolvedBars: [resolved],
-            conservative: true
-        ).bars[0]
-        #expect(!conservative.tonalEnvelopeExpansionEligible)
-        #expect(conservative.upperNotes.allSatisfy { $0.envelopeRelation == .home })
 
         let forgedEarlyMarker = makeResolvedBar(
             kind: .energyRelease,

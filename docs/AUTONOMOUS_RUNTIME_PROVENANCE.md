@@ -8,7 +8,7 @@ mistaken for a completed feedback system.
 ## Current implementation
 
 1. `AutonomousSessionDirector` owns fixed 130 BPM, the private canonical
-   identity, temporal memory, candidate phrases, and successor selection.
+   identity, temporal memory, one canonical phrase, and successor planning.
 2. Each `AutonomousPhrasePlan` carries a complete musical intention, Scene DNA,
    resolved performance bars, outgoing interlock, spatial-contrast, and
    protagonist-narrative state, plus groove-interest evidence. Supporting-role
@@ -20,14 +20,14 @@ mistaken for a completed feedback system.
    Bounded two-character memory avoids immediate character repetition when another
    compatible interpretation exists. Per-bar foundation behavior, role set, and
    kick grammar must remain compatible with that phrase character; identity
-   return and conservative fallback resolve to the hypnotic home.
+   return resolves to the hypnotic home.
    A derived `PhraseCompositionBar` then coordinates phrase-local slice
    triggers, arpeggiator notes, pad voicing, and voice-leading from that same
    score and modal identity; it never admits a role independently.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   candidate-evaluation transaction under quality-contract schema 19, candidate-
+   primary-evaluation transaction under quality-contract schema 20, candidate-
    vector schema 18, and canonical engine identity
    `autotechno-canonical-engine.v19`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
@@ -72,26 +72,23 @@ mistaken for a completed feedback system.
    temporal bounds and, when present, cross-checks the rendered four-bar kick
    recovery.
    It adds no score event, PCM, controller, or callback work. The transaction
-   binds all three
-   plan fingerprints, engine/policy/evaluator versions, attempt-local reasons,
-   selection, comparison, and correction provenance. It permits at most the
-   primary, alternate, and deterministic fallback plus one home-timbre
-   correction, with four render passes total. All attempts begin from the same
+   binds the one plan fingerprint, engine/policy/evaluator versions,
+   attempt-local reasons, and correction provenance. It permits one initial
+   render plus one same-plan home-timbre correction, with two render passes
+   total. Both attempts begin from the same
    incoming state. Their evidence records the incoming continuation and the
    outgoing render-plus-generated-DSP state before the quality decision; outer
    commit provenance then binds the chosen transaction, selected sample hash,
    outgoing render/DSP state, and finalized quality continuation state.
 
-   The shipping evaluator is uncalibrated and does not request paired rendering,
-   so a healthy primary is rendered exactly once. Alternate and fallback remain
-   bounded validity paths, not a general professional-quality ranking system.
+   The shipping evaluator is the exact-engine calibrated primary policy. A
+   healthy primary is rendered once; only an explicit home-timbre correction
+   causes the same plan to render a second time.
    Phrase analysis now streams across immutable render blocks within a recorded
-   6 MiB upper bound. A frozen diverse profile, passing adversarial suite, and
-   disjoint holdout qualification now qualify complete representative-rate
-   engine banks offline. The paired comparator remains disabled in the app-
-   facing overload even though representative cancellation, preparation-
-   latency, and peak-memory probes pass. Cancellation is
-   checked within each candidate at bounded bar-render
+   6 MiB upper bound. A diverse profile, passing adversarial suite, and disjoint
+   holdout qualification qualify complete representative-rate engine banks
+   offline and supply the same runtime policy. Cancellation is checked within
+   each attempt at bounded bar-render
    and evidence boundaries; route changes cancel detached preparation and
    prevent stale route work from committing.
    This transaction does not feed observations into future composition.
@@ -105,34 +102,22 @@ mistaken for a completed feedback system.
    RMS trajectory, active-window counts, and bounded working-memory provenance.
    A deterministic Professional Evidence v4
    bank requires every named journey checkpoint for every included sample rate,
-   plus complete exact-role masking and stem evidence. Its policy status is
-   unconditionally unavailable because the bank is observation-only; it cannot
-   promote or correct audio. `ProfessionalQualityFrozenArtifacts` separately
-   validates the non-reconstructable engine-v10 development profile and
-   adversarial suite by pinned fingerprints without activating the shipping
-   evaluator. Later engine versions are evaluated against that frozen source;
-   they do not relabel it as current-runtime evidence.
-   `ProfessionalQualityPairedArtifacts` separately validates the exact engine-v19
-   paired-policy profile `4b55055d1904ead8`, adversarial suite
-   `a34c3ba6acec9c2e`, and disjoint holdout qualification
-   `c333586ce068d5af`. The profile derives from 28 complete canonical journeys;
-   four untouched replacement journeys passed 56/56 local observations and all
-   trajectory/rate relationships. Its evaluator maps Core-owned candidate
-   checkpoints into the same 39-metric observation, rejects dimensions
-   independently, and records
-   a conservative-fallback comparison when neither authored candidate passes.
+   plus complete exact-role masking and stem evidence. The bank remains
+   observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
+   engine-v19 profile `4b55055d1904ead8`, adversarial suite
+   `a34c3ba6acec9c2e`, and disjoint holdout qualification `c333586ce068d5af`.
+   The profile derives from 28 complete canonical journeys; four untouched
+   replacement journeys passed 56/56 local observations and all trajectory/rate
+   relationships. Its evaluator maps the Core-owned plan checkpoint into the
+   same 39-metric observation and rejects dimensions independently.
    Short-program EBU-style loudness range is retained descriptively rather than
    treated as a gate-discontinuous policy dimension; integrated, momentary,
    short-term, true-peak, and the other stable metrics remain evaluative.
    A preloaded route-local preparation evaluator delegates only when exact
-   artifacts exist and the route is 44.1 or 48 kHz; otherwise it preserves the
-   uncalibrated identity and single-primary path. It requests a pair only after
-   the primary maps to an applicable calibrated checkpoint. The app-facing
-   overload still installs the uncalibrated evaluator, so loading and selection
-   behavior in the shipping runtime are unchanged. Exact operational replay and
-   offline generalization now pass, but neither constitutes explicit shipping
-   activation, listening approval, route/interruption validation, or hardware
-   soak.
+   artifacts exist and the route is 44.1 or 48 kHz; otherwise it reports
+   qualification unavailable and cannot commit. Exact operational replay and
+   offline generalization pass, but neither constitutes listening approval,
+   route/interruption validation, or hardware soak.
 5. `AutonomousPhraseRenderer` constructs the required synth world and synth
    performance. The synth planner resolves the three-step driver, five-stage
    follower, chapter articulation, internal architecture and patch, four bounded
@@ -175,8 +160,8 @@ mistaken for a completed feedback system.
    intensities into a cyclic 3-3-2 accent/ghost relation; onset, count, timing,
    and every other voice remain unchanged. The conservative candidate preserves
    the prior alternating intensity cell and resolves every pulse to the
-   bit-identical legacy middle/neutral contact. Same-pass event evidence is
-   descriptive only; the uncalibrated evaluator does not rank it.
+   score-owned physical contact. Same-pass event evidence is consumed by the
+   calibrated primary evaluator.
    Ordinary closed hats retain the existing 50 ms source and RNG order. When a
    resolved open hat shares the same onset, the score labels only that closed
    hat as its companion and the renderer increases its decay rate; every other
@@ -214,8 +199,8 @@ mistaken for a completed feedback system.
    upper-only stem. Dedicated dry anchor and shadow/response taps retain
    role-local articulation attribution. Masking evidence now compares exact
    post-fader foundation, dry percussion, and combined dry-upper taps over all
-   sixteen bar windows. It is descriptive only: uncalibrated masking evidence
-   applies no cut, while the existing authored envelope, kick-linked guard,
+   sixteen bar windows. The primary evaluator uses the evidence without applying
+   callback-time cuts; the existing authored envelope, kick-linked guard,
    ducking, glue, and output-safety stages remain active. Upper-timbre evidence
    schema 3 (quality-report contract schema 8) retains protected rhythm as its
    masking reference and adds bounded onset-local anchor-velocity observations
@@ -225,8 +210,7 @@ mistaken for a completed feedback system.
    stays neutral for this response. Retriggers latch the response and legato
    slides inherit it, preserving persistent tails. The reduced evidence records
    applied scales, gain-normalized attack high-band ratio, and tail-to-attack
-   ratio; incomplete windows remain explicit and the uncalibrated policy cannot
-   promote them.
+   ratio; incomplete windows remain explicit and cannot be qualified.
 7. `TechnoEngine` prepares away from the callback and schedules completed buffers
    by sample time. It derives its read-only waveform on a fixed decibel scale and
    owns transport, visual position, and route recovery, not musical composition.
@@ -242,8 +226,7 @@ before step seven may activate it. The articulation identifies the earliest
 eligible event, admits one score step of its dry percussion role window, begins
 the delayed return four steps later, and closes that output gate after four
 more steps. It adds no event, does not alter the dry percussion score, and has
-no cross-bar delay continuation. Conservative fallback and every ineligible
-bar are exact neutral.
+no cross-bar delay continuation. Every ineligible bar is exact neutral.
 
 Detached rendering reduces the admitted source and bounded return to exact
 hashes, peak/RMS, frame geometry, nonzero counts, exact-zero output endpoints,
@@ -256,11 +239,10 @@ The fixed one-sixteenth delay, feedback, filter corners, gain, mono image, and
 transition curve are explicitly provisional renderer architecture. A mature DSP
 revision may improve interpolation, stereo placement, filtering, diffusion,
 nonlinear colour, and perceptual calibration without changing the score-owned
-input/output gates, deterministic fallback, evidence owner, or one-runtime
+input/output gates, evidence owner, or one-runtime
 contract. Stateful replacements must decay or fade all residual energy inside
 the same bounded output gate and remain sample-indexed and block-partition
-independent. Physical metrics remain descriptive while shipping selection is
-uncalibrated; they are not optimization targets. Such a revision requires a new
+independent. Descriptive physical metrics are not optimization targets. Such a revision requires a new
 engine/schema identity and exact-head qualification against the frozen
 development profile.
 
@@ -272,8 +254,8 @@ requires a nonconservative release plan, the existing displaced-kick recovery
 signature at macro bar 15, a retriggered motif onset no later than step 12, and
 the existing Tonal Motion architecture. The relation changes no onset, pitch,
 duration, velocity, gate, instrument assignment, effect permission, density, or
-transport. Conservative fallback is exact home; an attempt-local home-timbre
-correction retains the eligibility fact while forcing the relation home and
+transport. An attempt-local home-timbre correction retains the eligibility fact
+while forcing the relation home and
 clearing any inherited expanded envelope state before the first corrected
 onset.
 
@@ -290,7 +272,7 @@ v1. A later serious renderer may replace them with higher-resolution MSEG or
 exponential curves, envelope-aware dynamics, oversampled tail colour, or
 controlled diffusion only after an objective deficit is demonstrated. It must
 replace rather than layer another envelope path, preserve the score meaning and
-neutral fallback, advance engine/schema identities, and provide equivalent or
+neutral ineligible behavior, advance engine/schema identities, and provide equivalent or
 stronger same-pass evidence.
 
 ## Implemented pulse-echo return slice
@@ -322,8 +304,8 @@ requires exact pre/post identity and zero difference. Active drive remains
 outside feedback, binds exact changed-frame and peak witnesses, and permits only
 the transfer's bounded low-level lift up to `3.2x` RMS. The implementation is
 present, and its exact-source local structural, signal, protected-routing, and
-release-build matrix passed. Policy remains uncalibrated, so this evidence
-cannot select or promote a candidate or establish professional quality.
+release-build matrix passed. This evidence remains one non-compensable input; it
+does not alone establish professional quality.
 
 ## Implemented upper-role timing slice
 
@@ -331,8 +313,8 @@ The current implementation extends the existing resolved upper-note score and
 canonical voice scheduler; it does not introduce another clock, sequencer,
 voice, renderer, or continuation state. Eligible breath-chapter bars reuse the
 absolute 16-bar macro position to delay existing shadow and response attacks by
-the bounded half/full aperture described above. Exact-zero fallback paths retain
-the prior schedule bit for bit.
+the bounded half/full aperture described above. Exact-zero ineligible paths
+retain the prior schedule bit for bit.
 
 Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
@@ -341,9 +323,8 @@ response dry taps retain finite role-local hash, peak, and RMS evidence. Current
 candidate-vector schema 14 reduces those tuples into exact score/render and
 renderer-applied-gate fingerprints, relation-specific offset facts, protected-
 role neutrality, cascade-aperture or lead-pattern replay, and route-derived
-frame geometry. The shipping evaluator remains
-uncalibrated, so this evidence is
-descriptive and does not alter candidate selection.
+frame geometry. The calibrated evaluator judges this evidence as part of the
+single primary transaction.
 
 ## Target unified loop
 
@@ -354,7 +335,7 @@ persistent state
   -> generate a bounded set of semantic candidates
   -> render immutable future audio
   -> evaluate planned structure and app-owned PCM
-  -> select a qualified candidate or deterministic fallback
+  -> qualify, adjust, or reject that plan
   -> commit plan, render, graph, evaluator, and controller state
   -> adapt only a future sample-indexed boundary
 ```
@@ -373,7 +354,7 @@ long-form comparison against the committed history. Controllers own bounded
 corrections such as role balance. The session director consumes only qualified,
 bounded observations and remains the sole owner of future musical decisions.
 Independent controllers must not compete over the same role or parameter; coupled
-decisions share one state, bounds, slew policy, and fallback.
+decisions share one state, bounds, slew policy, and home target.
 
 ## Hybrid feedback boundary
 
@@ -391,14 +372,14 @@ does not own. Each observation names its source sample range, controller revisio
 and earliest eligible future boundary. A decision may affect only an immutable
 candidate that has not yet been scheduled, and it is applied at that declared
 sample boundary. Late, incomplete, non-finite, stale, or mismatched observations
-are ignored in favor of the deterministic hold or fallback path. No analysis may
+are ignored in favor of the deterministic accepted-PCM hold. No analysis may
 rewrite the current buffer or a scheduled bar.
 
 ## Reproducibility and product boundary
 
 The same private initial state and accepted, sample-indexed feedback state must
-reproduce the same candidates, selection, graph, samples, controller evolution,
-and outgoing continuation state. Evaluation inputs and fallback outcomes are part
+reproduce the same plan, decision, graph, samples, controller evolution, and
+outgoing continuation state. Evaluation inputs and terminal outcomes are part
 of continuation provenance, not ambient hidden state. Route recovery must retain
 or deterministically rebuild them at the active sample rate.
 

@@ -11,7 +11,7 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 19, candidate-vector schema 18, and
+candidate uses quality-contract schema 20, candidate-vector schema 18, and
 canonical engine identity `autotechno-canonical-engine.v19`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
@@ -53,7 +53,7 @@ the mixed percussion stem, adding density, or creating another onset. Closed-hat
 records likewise bind every resolved ordinary-hat event to its neutral or
 same-onset open-hat-companion decay role, exact dry-sample identity, and bounded
 level, spectral, and tail consequence. They do not add events or promote a
-candidate while the evaluator is uncalibrated.
+plan before the calibrated evaluator reaches a terminal decision.
 
 The existing acid-thread and acid-sequence patches now carry durable ordered-
 hollow and metallic-tension spectral intentions. The current Resonant Mono
@@ -66,8 +66,8 @@ and finiteness. Those semantics and evidence ownership are the long-lived
 contract; the present ratios, index mapping, anti-alias budget, high-pass
 treatment, and operator blend are implementation v1. A future oversampled,
 higher-order, or differently band-limited DSP may replace them only under a new
-engine/schema identity while preserving deterministic score ownership, neutral
-fallback, protected low end, and truthful consequence evidence.
+engine/schema identity while preserving deterministic score ownership, the home
+correction, protected low end, and truthful consequence evidence.
 
 Every Resonant Mono assignment now reaches one shared nonlinear-filter core.
 First-order antiderivative-antialiased `tanh` shaping surrounds a
@@ -77,8 +77,7 @@ assignment/event/sample counts, applied cutoff/Q/drive/band-mix ranges, pre-core
 and post-core fingerprints, signal levels, continuation, and finiteness. This
 replaces the architecture's former four local coefficient one-poles and private
 rational saturator. It does not claim that separate architecture or generated-
-graph nonlinearities have been migrated, and it remains selection-neutral while
-shipping policy is uncalibrated.
+graph nonlinearities have been migrated.
 
 The existing Tonal Motion architecture also carries one durable
 `sustainedWash` envelope relation. It is eligible only for the final retriggered
@@ -93,13 +92,13 @@ engineering realization, not the musical concept.
 Same-pass evidence retains one event fingerprint, base and applied sustain and
 release values, an exact isolated dry-signal hash, peak/RMS, onset-local attack
 RMS, final-tail RMS and ratio, nonzero count, binding, and finiteness. The
-conservative candidate and a home-timbre correction are exact neutral; the
-correction also clears any inherited expanded release before its first onset.
+home-timbre correction is exact neutral and clears any inherited expanded
+release before its first onset.
 Future MSEG or exponential envelopes, oversampled tail colour, envelope-aware
 dynamics, or diffusion must replace this path under a new engine/schema identity
-and retain the same score relation, continuation, evidence, and fallback. While
-shipping selection is uncalibrated, the record can reject broken provenance but
-cannot promote the device as professionally qualified.
+and retain the same score relation, continuation, evidence, and bounded
+correction. The record can reject broken provenance but does not alone promote
+the device as professionally qualified.
 
 Kick-syntax evidence retains one compact record for every bar. It binds the
 resolved grounded/withheld/recovery role, score and rendered kick count/mask,
@@ -109,8 +108,8 @@ The only active relation is a paid nonconservative energy-release sequence of
 grounded setup, two adjacent withheld bars, and step-zero recovery. Withheld
 bars must be exactly silent in every kick projection while their existing
 weak-pulse cell and motif remain positive; recovery must be positive. The
-policy remains uncalibrated, so these facts can reject broken provenance but
-cannot promote the musical device.
+primary policy uses these facts without allowing one dimension to compensate
+for broken provenance or a failed signal gate.
 
 Climax-arc evidence retains one compact relation for the whole candidate. It
 fingerprints every exact incoming dramatic-debt record paid by a nonconservative
@@ -118,21 +117,21 @@ energy release, counts contrast and major-break sources separately, retains
 bounded opening and due-bar geometry, and, when kick recovery is present,
 cross-checks the existing grounded, withheld, withheld, and recovery evidence.
 It adds no score event or PCM.
-This is long-form causal evidence for a future calibrated policy; version 1 does
-not assert a loudness or tension target and cannot alter uncalibrated selection.
+This is long-form causal evidence; version 1 does not assert a separate loudness
+or tension target.
 
 Gated-percussion-texture evidence also retains one compact record for every
 bar. An active record binds an eligible existing percussion event to one-step
 input admission, a four-step delayed output start, a four-step output window,
 exact protected-return hashes, finite peak/RMS, nonzero counts, exact-zero
 window endpoints, and full/protected render-pass agreement. The score adds no
-onset and the renderer retains no captured loop: conservative and ineligible
-bars are exact neutral, and delay/filter work remains detached from the
+onset and the renderer retains no captured loop: ineligible bars are exact
+neutral, and delay/filter work remains detached from the
 callback. The current feedback, filter corners, return level, mono placement,
 and boundary window are engineering realization v1, not the durable musical
 concept. A later DSP maturation may replace them with higher-order filtering,
 fractional or stereo delay, controlled nonlinear colour, and perceptually
-calibrated bounds only if the same input/output-gate semantics, fallback,
+calibrated bounds only if the same input/output-gate semantics,
 deterministic score, and score-to-PCM evidence remain intact.
 
 Spatial-FDN evidence retains one compact record for every rendered bar. It
@@ -143,41 +142,24 @@ geometry is derived at the route rate, every recursive line gain is strictly
 below unity, and retained continuation is hard-bounded. Kick and foundation do
 not enter this field; exact protected-route regression tests prove their PCM
 identity. The record is required for structural completeness and changes the
-transaction fingerprint, but remains absent from selection evidence under
-`uncalibrated.v1`. See [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md) for the signal,
-fallback, and replacement contract.
+transaction fingerprint. See [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md) for the
+signal and replacement contract.
 
 `ProfessionalEvidenceReportBank` accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
-complete phrase, role-masking, and role-stem evidence. The shipping evaluator
-remains deliberately uncalibrated: a healthy preparation renders the primary
-once, and neither the transaction nor the report bank constitutes runtime
-professional-quality qualification. The separate frozen development contract
-now loads the engine-v10 source profile `c52545b5641e6cfb` and passing
-adversarial suite `2340017ec6c59440`. It evaluates complete representative-rate engine banks
-without PCM, stems, or event lists and rejects every dimension and relationship
-independently. A distinct immutable engine-v19 paired-policy profile
-`4b55055d1904ead8`, passing adversarial suite `a34c3ba6acec9c2e`, and qualified
-disjoint holdout `c333586ce068d5af` now construct an exact-engine,
-checkpoint-local evaluator through the existing package seam.
-It judges every applicable checkpoint independently, never averages dimensions,
-and requests the conservative fallback when both authored candidates fail. The
-app-facing preparation overload does not install it: shipping selection remains
-single-primary and qualification unavailable pending explicit activation.
-The profile derives from 28 complete 44.1/48 kHz journeys; four replacement
-holdout journeys passed 56/56 local verdicts and every phrase/rate relationship.
+complete phrase, role-masking, and role-stem evidence. The app installs the
+exact-engine primary policy from profile `4b55055d1904ead8`, adversarial suite
+`a34c3ba6acec9c2e`, and disjoint holdout `c333586ce068d5af`. It judges every
+applicable checkpoint independently and never averages dimensions. The profile
+derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
+passed 56/56 local verdicts and every phrase/rate relationship.
 EBU-style short-program loudness range stays descriptive because its gated
 percentile can change discontinuously when one short-term block crosses the
 gate. Integrated, momentary, short-term, and true-peak evidence remain policy
-dimensions. Hybrid live feedback remains target
-architecture. The existing transaction now has a conservative 128 MiB numeric
-working-storage envelope and a passing opt-in optimized 44.1/48 kHz probe:
-healthy two-candidate preparation fits the shortest phrase lookahead, the full
-four-pass correction/fallback path fits one bounded frozen-topology hold, and
-post-comparison cancellation is sub-millisecond. This closes the generic
-preparation-budget prerequisite only; a test evaluator cannot qualify or enable
-the shipping policy. See
-[`PAIRED_SELECTION_READINESS.md`](PAIRED_SELECTION_READINESS.md).
+dimensions. Hybrid live feedback remains target architecture. The transaction
+is bounded to one initial render plus one optional same-plan correction, and its
+streaming analyzers retain fixed working-memory ceilings. See
+[`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md).
 
 ## Engine ownership
 
@@ -263,16 +245,15 @@ The implementation preserves dry upper-source identity, score events, protected
 rhythm, persistent patch and phrase identity, and the identity-return score by
 leaving the send source and feedback write unchanged. The exact-source local
 structural, signal, protected-routing, and release-build matrix recorded in the
-validation snapshot passed. Its evidence remains descriptive under
-`uncalibrated.v1`; it cannot select or promote a candidate and does not qualify
-professional sound.
+validation snapshot passed. Its evidence is one input to the calibrated primary
+policy and does not alone qualify professional sound.
 
 ### Upper-role timing evidence
 
 The implemented harmonic-timing slice delays only existing shadow and response
 notes during eligible breath-chapter bars. `ResolvedUpperNote` owns the positive
 displacement in sixteenth-note steps. The anchor, atmosphere, transition,
-conservative, forced-home, identity-return, major-break, and sixteen-bar macro
+forced-home, identity-return, major-break, and sixteen-bar macro
 endpoint paths remain exact zero. Between exact alignment at macro bars 0 and
 15, the deterministic aperture rises and falls on absolute bar position; shadow
 uses half depth, response uses full depth, and the full displacement is capped
@@ -285,21 +266,18 @@ requested gate end, bounded renderer-owned applied gate end, causal role counts,
 exact protected/role offset relationships, and separate shadow/response dry
 hashes with finite peak and RMS. A normal eligible attempt must contain the
 displacement; forced-home and every ineligible path must be neutral. This
-evidence remains descriptive under `uncalibrated.v1`, does not enter
-`selectionEvidence`, and adds no audio-callback work or persistent timing state.
+evidence adds no audio-callback work or persistent timing state.
 
 ## Development qualification loop
 
-The dormant exact-engine paired evaluator now has a preloaded route-local
-boundary. It requests an alternate only for an applicable checkpoint at a
-calibrated 44.1/48 kHz route; missing artifacts and unsupported rates retain the
-uncalibrated identity and single-primary path. Exact maximum-path replay passed
-latency, memory, cancellation, transaction, and hard-safe fallback bounds. The
-initial single-journey profile failed unseen candidates, and the first two
-holdout cohorts exposed masking/transient/crest and short-program LRA semantics
-instead of being silently absorbed as proof. The final 28-journey profile,
-adversarial suite, and four disjoint holdouts now pass offline. Shipping remains
-`uncalibrated.v1` until the separate explicit activation decision.
+The exact-engine primary evaluator is preloaded at app construction and created
+per covered 44.1/48 kHz route. Missing artifacts and unsupported rates are
+truthfully unavailable and cannot commit. The initial single-journey profile
+failed unseen phrases, and the first two holdout cohorts exposed
+masking/transient/crest and short-program LRA semantics instead of being silently
+absorbed as proof. The final 28-journey profile, adversarial suite, and four
+disjoint holdouts pass offline and are the same artifacts used by runtime
+preparation.
 
 1. Render the same private canonical journey bank before and after a change at
    representative sample rates and structural checkpoints.
@@ -320,14 +298,14 @@ adversarial suite, and four disjoint holdouts now pass offline. Shipping remains
 
 The target loop is bounded and persistent:
 
-1. The canonical director proposes a fixed number of complete plans from the
-   current musical and quality state.
+1. The canonical director proposes one complete plan from the current musical
+   and quality state.
 2. Detached preparation renders immutable audio and exact role evidence.
 3. Hard gates reject unsafe or invalid output.
 4. The quality policy evaluates the surviving multidimensional evidence.
-5. A fixed number of bounded, deterministic corrections may be applied before a
-   candidate is selected or the conservative fallback is used.
-6. The chosen plan, reason-coded evidence, controller state, and policy version
+5. The evaluator may request one deterministic home-timbre correction of that
+   same plan; otherwise it reaches a terminal verdict after the first pass.
+6. The committed plan, reason-coded evidence, controller state, and policy version
    become continuation input for future preparation.
 7. Final immutable blocks receive a second safety check before scheduling.
 
@@ -335,25 +313,22 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 19, candidate-vector schema 18, and canonical engine
-v19, the versioned transaction implements the bounded evidence and atomic commit
-foundation for this loop. It can retain at most the primary, alternate, and
-conservative-fallback candidates, plus one
-home-timbre correction, with no more than four render passes total. Every attempt
-starts from the same incoming state. The transaction records the incoming
+Under quality-contract schema 20, candidate-vector schema 18, and canonical
+engine v19, the versioned transaction implements the bounded evidence and atomic
+commit foundation for this loop. It retains one initial attempt and at most one
+same-plan home-timbre correction, with no more than two render passes total.
+Every attempt starts from the same incoming state. The transaction records the incoming
 continuation fingerprint and each attempt's outgoing render-plus-generated-DSP
 fingerprint before a quality decision exists; outer commit provenance then binds
 the chosen transaction, sample hash, render/DSP state, and finalized quality
 continuation state. Rejected attempts remain attempt-local.
 
-The production evaluator does not request a paired comparison, so the healthy
-path performs one primary render and reports qualification unavailable.
+The production evaluator judges the primary plan directly; qualified or adjusted
+decisions may commit, while rejected or unavailable decisions may not.
 Phrase analysis now streams within an explicit working-memory envelope, with
 independent DFT, chunk-parity, representative-rate, cancellation, and optimized
-fixture evidence. The exact comparator, diverse frozen profile, adversarial
-suite, holdout qualification, and representative-rate operational envelope are
-available only through the package seam. Calibrated paired ranking stays
-disabled until the app-facing overload is explicitly authorized to install it.
+fixture evidence. The diverse profile, adversarial suite, and holdout
+qualification are the one primary policy's versioned artifacts.
 Preparation
 checks cancellation at bounded
 bar-render and evidence-phase boundaries as well as between candidates; the

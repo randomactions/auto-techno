@@ -25,10 +25,10 @@ struct SpatialProtectedRoutingRegressionTests {
         }
     }
 
-    @Test("Neutral closed hats retain legacy PCM and bounded evidence at supported routes")
+    @Test("Neutral closed hats retain exact PCM and bounded evidence at supported routes")
     func closedHatEvidenceIsExactAcrossSampleRates() throws {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
-        let plan = director.candidates(from: director.initialState()).primary
+        let plan = director.plan(from: director.initialState())
         let source = try #require(plan.resolvedBars.first)
         let event = EnsembleResolvedEvent(
             voice: .percussion,
@@ -170,7 +170,7 @@ struct SpatialProtectedRoutingRegressionTests {
     @Test("Closed-hat companion decay changes only its future dry sample")
     func closedHatCompanionPreservesUnrelatedRoutingAndRandomOrder() throws {
         let director = AutonomousSessionDirector(rootSeed: 90_909)
-        let sourcePlan = director.candidates(from: director.initialState()).primary
+        let sourcePlan = director.plan(from: director.initialState())
         let source = try #require(sourcePlan.resolvedBars.first)
         let events = [
             EnsembleResolvedEvent(
@@ -206,8 +206,7 @@ struct SpatialProtectedRoutingRegressionTests {
             absoluteBar: source.performance.bar,
             swingPercent: sourcePlan.dna.rhythm.swingPercent,
             percussionGear: source.percussionGear,
-            eventSeed: source.performance.eventSeed,
-            conservative: false
+            eventSeed: source.performance.eventSeed
         )
         func resolved(role: ClosedHatDecayRole) -> ResolvedPerformanceBar {
             replacing(
@@ -298,7 +297,7 @@ struct SpatialProtectedRoutingRegressionTests {
     @Test("Groove-pulse evidence is bit-exact across full and protected layers")
     func groovePulseEvidenceMatchesProtectedRoute() throws {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
-        let sourcePlan = director.candidates(from: director.initialState()).primary
+        let sourcePlan = director.plan(from: director.initialState())
         let source = try #require(sourcePlan.resolvedBars.first {
             WeakSixteenthStage(absoluteBar: $0.performance.bar) == .syncopatedLean &&
                 $0.arrangementGesture != .minimalize &&
@@ -330,7 +329,6 @@ struct SpatialProtectedRoutingRegressionTests {
             dna: sourcePlan.dna,
             kind: sourcePlan.kind,
             resolvedBars: [isolated],
-            conservative: sourcePlan.conservative,
             forceHomeUpperTimbre: true
         )
         let plannedSynth = synthPlan.bars[0]
@@ -370,7 +368,7 @@ struct SpatialProtectedRoutingRegressionTests {
     @Test("Stochastic percussion is one bit-exact protected-rhythm performance")
     func stochasticPercussionProtectedRouteIsBitExact() throws {
         let director = AutonomousSessionDirector(rootSeed: 42)
-        let sourcePlan = director.candidates(from: director.initialState()).primary
+        let sourcePlan = director.plan(from: director.initialState())
         let percussionVoices: [EnsembleVoice] = [
             .percussion, .clap, .openHat, .metallic,
         ]
@@ -402,7 +400,6 @@ struct SpatialProtectedRoutingRegressionTests {
             dna: sourcePlan.dna,
             kind: sourcePlan.kind,
             resolvedBars: [isolated],
-            conservative: true,
             forceHomeUpperTimbre: true
         )
         let plannedSynth = synthPlan.bars[0]
@@ -565,7 +562,7 @@ struct SpatialProtectedRoutingRegressionTests {
     @Test("Spatial and tone articulation preserve exact foundation sample fingerprints")
     func articulationPreservesFoundationSamples() {
         let director = AutonomousSessionDirector()
-        let plan = director.candidates(from: director.initialState()).primary
+        let plan = director.plan(from: director.initialState())
         guard let (barIndex, motif) = toneCandidate(in: plan) else {
             Issue.record("Expected a motif event suitable for tone sculpture")
             return
@@ -622,7 +619,7 @@ struct SpatialProtectedRoutingRegressionTests {
             let director = AutonomousSessionDirector(rootSeed: seed)
             var state = director.initialState()
             for _ in 0..<160 {
-                let plan = director.candidates(from: state).primary
+                let plan = director.plan(from: state)
                 if plan.kind == .majorBreak,
                    let index = plan.resolvedBars.firstIndex(where: {
                        $0.spatialContrast.depthPosition == .distant &&
@@ -667,7 +664,6 @@ struct SpatialProtectedRoutingRegressionTests {
             dna: plan.dna,
             kind: plan.kind,
             resolvedBars: [resolved],
-            conservative: plan.conservative,
             forceHomeUpperTimbre: true
         )
         let planned = synthPlan.bars[0]
@@ -757,8 +753,6 @@ struct SpatialProtectedRoutingRegressionTests {
             openedDebt: plan.openedDebt,
             paidDebtIDs: plan.paidDebtIDs,
             requestsTopologyMutation: plan.requestsTopologyMutation,
-            alternate: plan.alternate,
-            conservative: plan.conservative,
             interest: plan.interest,
             endingInterlockState: plan.endingInterlockState,
             endingSpatialContrastState: plan.endingSpatialContrastState,

@@ -4,27 +4,23 @@ import Testing
 
 @Suite("Score-owned gated percussion texture")
 struct PercussionEchoTextureTests {
-    @Test("The director resolves one bounded contrast gesture and fallback stays neutral")
+    @Test("The director resolves one bounded primary contrast gesture")
     func scoreOwnershipAndReachability() throws {
-        let first = try #require(activePrimaryFixture())
-        let second = try #require(activePrimaryFixture())
-        #expect(first.candidates == second.candidates)
+        let first = try #require(activePlanFixture())
+        let second = try #require(activePlanFixture())
+        #expect(first.plan == second.plan)
         #expect(first.state == second.state)
 
-        let activeBars = first.candidates.primary.resolvedBars.filter {
+        let activeBars = first.plan.resolvedBars.filter {
             $0.percussionEchoTexture != nil
         }
         #expect(!activeBars.isEmpty)
-        #expect(first.candidates.fallback.resolvedBars.allSatisfy {
-            $0.percussionEchoTexture == nil
-        })
-        for resolved in first.candidates.primary.resolvedBars {
+        for resolved in first.plan.resolvedBars {
             let expected = PercussionEchoTextureResolver.articulation(
                 ensemble: resolved.ensemble,
-                kind: first.candidates.primary.kind,
+                kind: first.plan.kind,
                 character: resolved.performanceCharacter,
-                gesture: resolved.arrangementGesture,
-                conservative: first.candidates.primary.conservative
+                gesture: resolved.arrangementGesture
             )
             #expect(resolved.percussionEchoTexture == expected)
             if let articulation = resolved.percussionEchoTexture {
@@ -42,24 +38,24 @@ struct PercussionEchoTextureTests {
             }
         }
 
-        let activeIndex = try #require(first.candidates.primary.resolvedBars.firstIndex {
+        let activeIndex = try #require(first.plan.resolvedBars.firstIndex {
             $0.percussionEchoTexture != nil
         })
-        let activeBar = first.candidates.primary.resolvedBars[activeIndex]
-        var neutralBars = first.candidates.primary.resolvedBars
+        let activeBar = first.plan.resolvedBars[activeIndex]
+        var neutralBars = first.plan.resolvedBars
         neutralBars[activeIndex] = replacingTexture(in: activeBar, with: nil)
         let neutralPlan = replacingBars(
-            in: first.candidates.primary,
+            in: first.plan,
             with: neutralBars
         )
-        #expect(AutonomousCandidateFingerprint.plan(first.candidates.primary) !=
+        #expect(AutonomousCandidateFingerprint.plan(first.plan) !=
                 AutonomousCandidateFingerprint.plan(neutralPlan))
     }
 
     @Test("The later output gate changes only the protected percussion consequence")
     func protectedRendererDifferential() throws {
-        let fixture = try #require(activePrimaryFixture())
-        let plan = fixture.candidates.primary
+        let fixture = try #require(activePlanFixture())
+        let plan = fixture.plan
         let index = try #require(plan.resolvedBars.firstIndex {
             $0.percussionEchoTexture != nil
         })
@@ -69,15 +65,13 @@ struct PercussionEchoTextureTests {
             scene: plan.scene,
             dna: plan.dna,
             kind: plan.kind,
-            resolvedBars: [activeResolved],
-            conservative: plan.conservative
+            resolvedBars: [activeResolved]
         )
         let neutralSynth = SynthPerformancePlan(
             scene: plan.scene,
             dna: plan.dna,
             kind: plan.kind,
-            resolvedBars: [neutralResolved],
-            conservative: plan.conservative
+            resolvedBars: [neutralResolved]
         )
         #expect(activeSynth.bars == neutralSynth.bars)
 
@@ -140,13 +134,13 @@ struct PercussionEchoTextureTests {
 
     @Test("Preparation rejects a forged input window before rendering")
     func forgedScoreRejected() throws {
-        let fixture = try #require(activePrimaryFixture())
-        let activeIndex = try #require(fixture.candidates.primary.resolvedBars.firstIndex {
+        let fixture = try #require(activePlanFixture())
+        let activeIndex = try #require(fixture.plan.resolvedBars.firstIndex {
             $0.percussionEchoTexture != nil
         })
-        let activeBar = fixture.candidates.primary.resolvedBars[activeIndex]
+        let activeBar = fixture.plan.resolvedBars[activeIndex]
         let articulation = try #require(activeBar.percussionEchoTexture)
-        var forgedBars = fixture.candidates.primary.resolvedBars
+        var forgedBars = fixture.plan.resolvedBars
         forgedBars[activeIndex] = replacingTexture(
             in: activeBar,
             with: PercussionEchoTextureArticulation(
@@ -155,18 +149,14 @@ struct PercussionEchoTextureTests {
                 outputEndStep: articulation.outputEndStep + 1
             )
         )
-        let forged = AutonomousPhraseCandidates(
-            primary: replacingBars(
-                in: fixture.candidates.primary,
-                with: forgedBars
-            ),
-            alternate: fixture.candidates.alternate,
-            fallback: fixture.candidates.fallback
+        let forged = replacingBars(
+            in: fixture.plan,
+            with: forgedBars
         )
         var renderState = RenderState()
         renderState.barIndex = fixture.state.memory.totalBars
         let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
-            candidates: forged,
+            plan: forged,
             sessionSeed: fixture.state.rootSeed,
             memory: fixture.state.memory,
             sampleRate: 8_000,
@@ -174,6 +164,7 @@ struct PercussionEchoTextureTests {
             incomingGraphState: GeneratedDSPContinuationState(),
             previousGraph: nil,
             incomingQualityState: fixture.state.quality,
+            evaluator: AcceptingPrimaryTestEvaluator(),
             cancellationRequested: { false }
         )
         _ = renderState
@@ -182,22 +173,18 @@ struct PercussionEchoTextureTests {
 
     @Test("Prepared transaction retains the exact score to protected-return consequence")
     func preparedProductEvidence() throws {
-        let fixture = try #require(activePrimaryFixture())
+        let fixture = try #require(activePlanFixture())
         let prepared = try #require(prepare(
-            fixture.candidates,
+            fixture.plan,
             state: fixture.state
         ))
 
         #expect(prepared.candidateEvaluation.isComplete)
-        #expect(prepared.candidateEvaluation.selectedSlot == .primary)
-        #expect(prepared.selectedCandidateEvidence.slot == .primary)
         #expect(prepared.selectedCandidateEvidence.isComplete)
-        #expect(!prepared.usedAlternate)
-        #expect(!prepared.usedFallback)
         #expect(prepared.commitEligible)
 
         let evidence = prepared.selectedCandidateEvidence
-        let selected = fixture.candidates.primary
+        let selected = fixture.plan
         #expect(evidence.percussionEchoTexture.count == selected.resolvedBars.count)
         #expect(evidence.percussionEchoTexture.map(\.bar) ==
                 selected.resolvedBars.map { $0.performance.bar })
@@ -222,34 +209,34 @@ struct PercussionEchoTextureTests {
         })
     }
 
-    private func activePrimaryFixture() -> (
+    private func activePlanFixture() -> (
         state: AutonomousSessionState,
-        candidates: AutonomousPhraseCandidates
+        plan: AutonomousPhrasePlan
     )? {
         for seed in UInt64(1)...64 {
             let director = AutonomousSessionDirector(rootSeed: seed)
             var state = director.initialState()
             for _ in 0..<80 {
-                let candidates = director.candidates(from: state)
-                if candidates.primary.resolvedBars.contains(where: {
+                let plan = director.plan(from: state)
+                if plan.resolvedBars.contains(where: {
                     $0.percussionEchoTexture != nil
                 }) {
-                    return (state, candidates)
+                    return (state, plan)
                 }
-                state.advance(using: candidates.primary)
+                state.advance(using: plan)
             }
         }
         return nil
     }
 
     private func prepare(
-        _ candidates: AutonomousPhraseCandidates,
+        _ plan: AutonomousPhrasePlan,
         state: AutonomousSessionState
     ) -> PreparedAutonomousPhrase? {
         var renderState = RenderState()
         renderState.barIndex = state.memory.totalBars
         return AutonomousPhrasePreparer.prepareIfNotCancelled(
-            candidates: candidates,
+            plan: plan,
             sessionSeed: state.rootSeed,
             memory: state.memory,
             sampleRate: 8_000,
@@ -257,6 +244,7 @@ struct PercussionEchoTextureTests {
             incomingGraphState: GeneratedDSPContinuationState(),
             previousGraph: nil,
             incomingQualityState: state.quality,
+            evaluator: AcceptingPrimaryTestEvaluator(),
             cancellationRequested: { false }
         )
     }
@@ -299,8 +287,6 @@ struct PercussionEchoTextureTests {
             openedDebt: source.openedDebt,
             paidDebtIDs: source.paidDebtIDs,
             requestsTopologyMutation: source.requestsTopologyMutation,
-            alternate: source.alternate,
-            conservative: source.conservative,
             interest: source.interest,
             endingInterlockState: source.endingInterlockState,
             endingSpatialContrastState: source.endingSpatialContrastState,

@@ -45,10 +45,16 @@ private struct ScheduledVisual {
 /// immutable blocks and cheap waveform envelopes consumed by the scheduler.
 private enum AutonomousPerformancePreparer {
     static func prepare(request: PhrasePreparationRequest,
-                        director: AutonomousSessionDirector) -> PreparedPhrase? {
-        let candidates = director.candidates(from: request.sourceState)
+                        director: AutonomousSessionDirector,
+                        artifacts: ProfessionalQualityPrimaryArtifacts?)
+        -> PreparedPhrase? {
+        let plan = director.plan(from: request.sourceState)
+        let evaluator = ProfessionalQualityPreparationEvaluator(
+            sampleRate: request.key.sampleRate,
+            artifacts: artifacts
+        )
         guard let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
-            candidates: candidates,
+            plan: plan,
             sessionSeed: request.sourceState.rootSeed,
             memory: request.sourceState.memory,
             sampleRate: request.key.sampleRate,
@@ -58,7 +64,9 @@ private enum AutonomousPerformancePreparer {
             incomingQualityState: request.sourceState.quality,
             routeRecovery: request.key.routeRecovery,
             routeChannelCount: request.key.channelCount,
-            routeGeneration: request.key.routeGeneration
+            routeGeneration: request.key.routeGeneration,
+            evaluator: evaluator,
+            cancellationRequested: { Task.isCancelled }
         ), !Task.isCancelled else { return nil }
         var waveforms: [[Float]] = []
         waveforms.reserveCapacity(prepared.blocks.count)
@@ -143,6 +151,9 @@ final class TechnoEngine: ObservableObject {
     /// task is cancelling, so the interrupted phrase remains the recovery
     /// source instead of being replaced by a stale successor request.
     private var routeRecoveryRequest: PhrasePreparationRequest?
+    /// Loaded once outside detached preparation and never touched by the audio
+    /// callback. A failed load leaves professional qualification unavailable.
+    private let qualityArtifacts: ProfessionalQualityPrimaryArtifacts?
 
     private var nextBlockIndex = 0
     private var nextScheduleSample: AVAudioFramePosition = 0
@@ -154,6 +165,7 @@ final class TechnoEngine: ObservableObject {
 
     init() {
         let director = AutonomousSessionDirector()
+        qualityArtifacts = try? ProfessionalQualityPrimaryArtifacts.load()
         self.director = director
         sessionState = director.initialState()
         audioEngine.attach(player)
@@ -296,8 +308,13 @@ final class TechnoEngine: ObservableObject {
         let taskSerial = preparationTaskSerial
         activePreparationTaskSerial = taskSerial
         let director = director
+        let qualityArtifacts = qualityArtifacts
         let task = Task.detached(priority: .userInitiated) {
-            AutonomousPerformancePreparer.prepare(request: request, director: director)
+            AutonomousPerformancePreparer.prepare(
+                request: request,
+                director: director,
+                artifacts: qualityArtifacts
+            )
         }
         preparationTask = task
         Task { @MainActor [weak self] in

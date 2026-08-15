@@ -223,20 +223,14 @@ struct QualityQualificationFoundationTests {
             candidateFingerprint: "candidate-wrong-reason",
             evidenceFingerprint: "evidence-wrong-reason"
         )
-        let fallbackWithoutReason = QualityDecision(
+        let rejectedWithoutReason = QualityDecision(
             policyVersion: "test-policy.v1",
-            outcome: .conservativeFallback,
-            reasonCodes: [.hardGateFailedV1]
-        )
-        let holdWithoutReason = QualityDecision(
-            policyVersion: "test-policy.v1",
-            outcome: .deterministicHold,
+            outcome: .rejected,
             reasonCodes: []
         )
         #expect(!missingQualifiedReason.hasOutcomeConsistentReasonCodes)
         #expect(!adjustedWithQualifiedReason.hasOutcomeConsistentReasonCodes)
-        #expect(!fallbackWithoutReason.hasOutcomeConsistentReasonCodes)
-        #expect(!holdWithoutReason.hasOutcomeConsistentReasonCodes)
+        #expect(!rejectedWithoutReason.hasOutcomeConsistentReasonCodes)
         let rejectedInconsistentReasons = accepted.recording(
             decision: adjustedWithQualifiedReason,
             evidenceFingerprint: "evidence-wrong-reason",
@@ -603,300 +597,6 @@ struct QualityQualificationFoundationTests {
         }
     }
 
-    @Test("Candidate transaction reports serialize and reject contradictory provenance")
-    func boundedAndSerializable() throws {
-        var left = [Float](
-            repeating: 0,
-            count: UpperTimbreEvidenceAnalyzer.maximumFrames + 1_000
-        )
-        let right = left
-        left[0] = .nan
-        left[1] = .infinity
-        let evidence = UpperTimbreEvidenceAnalyzer.analyze(UpperTimbreAnalysisInput(
-            left: left,
-            right: right,
-            sampleRate: 48_000
-        ))
-        #expect(evidence.analyzedFrameCount == UpperTimbreEvidenceAnalyzer.maximumFrames)
-        #expect(!evidence.finite)
-        #expect(allScalarsAreFinite(evidence))
-
-        let unavailable = reportFixture(evidence: evidence, sampleHash: "sample-test")
-        #expect(unavailable.vector.recordIsStructurallyValid)
-        #expect(unavailable.vector.isComplete)
-        #expect(!unavailable.vector.isFinite)
-        #expect(unavailable.transaction.isComplete)
-        #expect(unavailable.transaction.selectedAttemptIndex == 2)
-        #expect(unavailable.transaction.attempts[2].vector == unavailable.vector)
-        #expect(unavailable.transaction.engineVersion == "engine-test")
-        let report = try qualificationReport(fixture: unavailable)
-        let first = try report.deterministicJSON()
-        let second = try report.deterministicJSON()
-        #expect(first == second)
-        #expect(try CanonicalJourneyQualificationReport
-            .decodeDeterministicJSON(first) == report)
-        var noncanonicalBytes = Data(" ".utf8)
-        noncanonicalBytes.append(first)
-        #expect(throws: CanonicalJourneyQualificationReportError
-            .candidateEvaluationMismatch) {
-            try CanonicalJourneyQualificationReport
-                .decodeDeterministicJSON(noncanonicalBytes)
-        }
-        let reportJSON = try #require(String(data: first, encoding: .utf8))
-        let tamperedScope = Data(reportJSON.replacingOccurrences(
-            of: CanonicalJourneyQualificationReport.currentEvidenceScope,
-            with: "tampered-evidence-scope.v1"
-        ).utf8)
-        #expect(throws: CanonicalJourneyQualificationReportError
-            .candidateEvaluationMismatch) {
-            try CanonicalJourneyQualificationReport
-                .decodeDeterministicJSON(tamperedScope)
-        }
-        #expect(report.decision.outcome == .qualificationUnavailable)
-        #expect(report.reasonCodes.contains(.policyUncalibratedV1))
-        #expect(report.reasonCodes.contains(.evidenceNonFiniteV1))
-        #expect(report.reasonCodes.contains(.hardGateFailedV1))
-        #expect(report.evidenceFingerprint == unavailable.transaction.fingerprint)
-        #expect(report.selectedCandidateEvidenceFingerprint ==
-                unavailable.vector.fingerprint)
-        #expect(report.evidence == evidence)
-        #expect(report.evidenceScope ==
-                CanonicalJourneyQualificationReport.currentEvidenceScope)
-
-        let finiteEvidence = UpperTimbreEvidenceAnalyzer.analyze(
-            UpperTimbreAnalysisInput(
-                left: [Float](repeating: 0, count: 64),
-                right: [Float](repeating: 0, count: 64),
-                sampleRate: 48_000
-            )
-        )
-        let calibrated = reportFixture(
-            evidence: finiteEvidence,
-            sampleHash: "candidate-evaluator-unavailable",
-            policyVersion: "test-calibrated-policy.v1"
-        )
-        let evaluatorUnavailable = QualityDecision.qualificationUnavailable(
-            policyVersion: "test-calibrated-policy.v1",
-            candidateFingerprint: calibrated.vector.fullMix.sampleHash,
-            evidenceFingerprint: calibrated.transaction.fingerprint
-        )
-        let evaluatorUnavailableState = QualityContinuationState().recording(
-            decision: evaluatorUnavailable,
-            evidenceFingerprint: calibrated.transaction.fingerprint,
-            controllerStateFingerprint:
-                calibrated.vector.routeContinuation.controllerStateFingerprint
-        )
-        let calibratedReport = try qualificationReport(
-            fixture: calibrated,
-            policyVersion: "test-calibrated-policy.v1",
-            decision: evaluatorUnavailable,
-            outgoingState: evaluatorUnavailableState
-        )
-        #expect(calibratedReport.reasonCodes.contains(.evaluatorUnavailableV1))
-        #expect(!calibratedReport.reasonCodes.contains(.evidenceMissingV1))
-
-        let falseMissingEvidence = QualityDecision(
-            policyVersion: "test-calibrated-policy.v1",
-            outcome: .qualificationUnavailable,
-            reasonCodes: [.evidenceMissingV1],
-            candidateFingerprint: calibrated.vector.fullMix.sampleHash,
-            evidenceFingerprint: calibrated.transaction.fingerprint
-        )
-        let falseMissingState = QualityContinuationState().recording(
-            decision: falseMissingEvidence,
-            evidenceFingerprint: calibrated.transaction.fingerprint,
-            controllerStateFingerprint:
-                calibrated.vector.routeContinuation.controllerStateFingerprint
-        )
-        #expect(throws: CanonicalJourneyQualificationReportError.reasonCodeMismatch) {
-            try qualificationReport(
-                fixture: calibrated,
-                policyVersion: "test-calibrated-policy.v1",
-                decision: falseMissingEvidence,
-                outgoingState: falseMissingState
-            )
-        }
-
-        #expect(throws: CanonicalJourneyQualificationReportError.missingCalibratedDecision) {
-            try qualificationReport(
-                fixture: calibrated,
-                policyVersion: "test-calibrated-policy.v1"
-            )
-        }
-
-        let unavailableReasons = [
-            QualityReasonCode.policyUncalibratedV1,
-            .conservativeFallbackV1,
-        ] + unavailable.transaction.attempts[2].reasonCodes
-        let candidateMismatch = QualityDecision(
-            outcome: .qualificationUnavailable,
-            reasonCodes: unavailableReasons,
-            candidateFingerprint: "different-candidate",
-            evidenceFingerprint: unavailable.transaction.fingerprint
-        )
-        let candidateMismatchState = QualityContinuationState().recording(
-            decision: candidateMismatch,
-            evidenceFingerprint: unavailable.transaction.fingerprint,
-            controllerStateFingerprint:
-                unavailable.vector.routeContinuation.controllerStateFingerprint
-        )
-        #expect(throws: CanonicalJourneyQualificationReportError.candidateFingerprintMismatch) {
-            try qualificationReport(
-                fixture: unavailable,
-                decision: candidateMismatch,
-                outgoingState: candidateMismatchState
-            )
-        }
-
-        let finiteUnavailable = reportFixture(
-            evidence: finiteEvidence,
-            sampleHash: "candidate-observed"
-        )
-        let observedDecision = QualityDecision.qualificationUnavailable(
-            candidateFingerprint: finiteUnavailable.vector.fullMix.sampleHash,
-            evidenceFingerprint: finiteUnavailable.transaction.fingerprint
-        )
-        let extraReasonDecision = QualityDecision(
-            outcome: .qualificationUnavailable,
-            reasonCodes: [.policyUncalibratedV1, .evidenceMismatchV1],
-            candidateFingerprint: finiteUnavailable.vector.fullMix.sampleHash,
-            evidenceFingerprint: finiteUnavailable.transaction.fingerprint
-        )
-        let extraReasonState = QualityContinuationState().recording(
-            decision: extraReasonDecision,
-            evidenceFingerprint: finiteUnavailable.transaction.fingerprint,
-            controllerStateFingerprint:
-                finiteUnavailable.vector.routeContinuation.controllerStateFingerprint
-        )
-        #expect(throws: CanonicalJourneyQualificationReportError.reasonCodeMismatch) {
-            try qualificationReport(
-                fixture: finiteUnavailable,
-                decision: extraReasonDecision,
-                outgoingState: extraReasonState
-            )
-        }
-        let inconsistentObservation = QualityContinuationState(
-            lastDecision: observedDecision,
-            observedCandidateFingerprint: "different-candidate",
-            observedEvidenceFingerprint: "different-evidence"
-        )
-        #expect(throws: CanonicalJourneyQualificationReportError.schemaMismatch) {
-            try qualificationReport(
-                fixture: finiteUnavailable,
-                decision: observedDecision,
-                outgoingState: inconsistentObservation
-            )
-        }
-
-        let foreignControllerState = QualityContinuationState().recording(
-            decision: observedDecision,
-            evidenceFingerprint: finiteUnavailable.transaction.fingerprint,
-            controllerStateFingerprint: "foreign-controller"
-        )
-        #expect(throws: CanonicalJourneyQualificationReportError
-            .outgoingObservationMismatch) {
-            try qualificationReport(
-                fixture: finiteUnavailable,
-                decision: observedDecision,
-                outgoingState: foreignControllerState
-            )
-        }
-
-        let mismatchedDecision = QualityDecision(
-            outcome: .qualificationUnavailable,
-            reasonCodes: unavailableReasons,
-            candidateFingerprint: unavailable.vector.fullMix.sampleHash,
-            evidenceFingerprint: "not-the-transaction"
-        )
-        let mismatchedState = QualityContinuationState().recording(
-            decision: mismatchedDecision,
-            evidenceFingerprint: "not-the-transaction",
-            controllerStateFingerprint:
-                unavailable.vector.routeContinuation.controllerStateFingerprint
-        )
-        #expect(throws: CanonicalJourneyQualificationReportError.evidenceFingerprintMismatch) {
-            try qualificationReport(
-                fixture: unavailable,
-                decision: mismatchedDecision,
-                outgoingState: mismatchedState
-            )
-        }
-
-        let contradictoryQualification = QualityDecision(
-            policyVersion: "test-calibrated-policy.v1",
-            outcome: .qualified,
-            reasonCodes: [.candidateQualifiedV1, .hardGateFailedV1],
-            candidateFingerprint: calibrated.vector.fullMix.sampleHash,
-            evidenceFingerprint: calibrated.transaction.fingerprint
-        )
-        let contradictoryOutgoing = QualityContinuationState(
-            revision: 1,
-            lastDecision: contradictoryQualification,
-            acceptedPolicyVersion: "test-calibrated-policy.v1",
-            acceptedCandidateFingerprint: calibrated.vector.fullMix.sampleHash,
-            acceptedEvidenceFingerprint: calibrated.transaction.fingerprint,
-            acceptedControllerStateFingerprint: "controller",
-            observedCandidateFingerprint: calibrated.vector.fullMix.sampleHash,
-            observedEvidenceFingerprint: calibrated.transaction.fingerprint,
-            observedControllerStateFingerprint: "controller"
-        )
-        #expect(throws: CanonicalJourneyQualificationReportError.reasonCodeMismatch) {
-            try qualificationReport(
-                fixture: calibrated,
-                policyVersion: "test-calibrated-policy.v1",
-                decision: contradictoryQualification,
-                outgoingState: contradictoryOutgoing
-            )
-        }
-
-        let emptyEvidence = UpperTimbreEvidenceAnalyzer.analyze(
-            UpperTimbreAnalysisInput(left: [], right: [], sampleRate: 48_000)
-        )
-        let empty = reportFixture(
-            evidence: emptyEvidence,
-            sampleHash: "candidate-empty",
-            policyVersion: "test-calibrated-policy.v1"
-        )
-        let impossibleEmptyQualification = QualityDecision(
-            policyVersion: "test-calibrated-policy.v1",
-            outcome: .qualified,
-            reasonCodes: [.candidateQualifiedV1, .evidenceMissingV1, .hardGateFailedV1],
-            candidateFingerprint: empty.vector.fullMix.sampleHash,
-            evidenceFingerprint: empty.transaction.fingerprint
-        )
-        #expect(throws: CanonicalJourneyQualificationReportError.reasonCodeMismatch) {
-            try qualificationReport(
-                fixture: empty,
-                policyVersion: "test-calibrated-policy.v1",
-                decision: impossibleEmptyQualification
-            )
-        }
-
-        let unreasonedDecision = QualityDecision(
-            outcome: .qualificationUnavailable,
-            reasonCodes: [],
-            candidateFingerprint: unavailable.vector.fullMix.sampleHash,
-            evidenceFingerprint: unavailable.transaction.fingerprint
-        )
-        #expect(throws: CanonicalJourneyQualificationReportError.reasonCodeMismatch) {
-            try qualificationReport(fixture: unavailable, decision: unreasonedDecision)
-        }
-
-        #expect(throws: CanonicalJourneyQualificationReportError.invalidBounds) {
-            try qualificationReport(
-                fixture: unavailable,
-                correctionRenderCount:
-                    QualityQualificationContract.maximumCorrectionRenders + 1
-            )
-        }
-        #expect(throws: CanonicalJourneyQualificationReportError.routeMismatch) {
-            try qualificationReport(
-                fixture: unavailable,
-                routeFingerprint: "different-route"
-            )
-        }
-    }
-
     private typealias ReportFixture = (
         vector: AutonomousCandidateEvaluationVector,
         transaction: AutonomousCandidateEvaluationTransaction
@@ -916,9 +616,7 @@ struct QualityQualificationFoundationTests {
             policyVersion: policyVersion,
             fixtureFingerprint: "fixture-test",
             continuationFingerprint: "continuation-test",
-            checkpoint: checkpoint ?? (
-                fixture.vector.slot == .fallback ? .identityReturn : .establishment
-            ),
+            checkpoint: checkpoint ?? .establishment,
             routeFingerprint: routeFingerprint ??
                 fixture.vector.routeContinuation.routeFingerprint,
             routeGeneration: fixture.vector.routeContinuation.routeGeneration,
@@ -927,9 +625,7 @@ struct QualityQualificationFoundationTests {
             sampleHash: fixture.vector.fullMix.sampleHash,
             decision: decision,
             outgoingState: outgoingState,
-            usedAlternate: fixture.transaction.selectedSlot == .alternate,
-            usedFallback: fixture.transaction.selectedSlot == .fallback,
-            usedHomeTimbreFallback: fixture.transaction.selectedAttemptIndex.map {
+            usedHomeTimbreCorrection: fixture.transaction.selectedAttemptIndex.map {
                 fixture.transaction.attempts[$0].forceHomeUpperTimbre
             } ?? false,
             correctionRenderCount: correctionRenderCount
@@ -985,8 +681,6 @@ struct QualityQualificationFoundationTests {
             interestScore: interest.score,
             interestValid: interest.valid,
             chapterChanged: checkpoint == .chapterChange,
-            alternate: false,
-            conservative: false,
             boundsValid: true
         )
         let hardGates = AutonomousHardGateEvidence(
@@ -1089,7 +783,6 @@ struct QualityQualificationFoundationTests {
                 )
         )
         let vector = AutonomousCandidateEvaluationVector(
-            slot: .primary,
             planFingerprint: planFingerprint,
             graphFingerprint: graphFingerprint,
             symbolic: symbolic,
@@ -1266,141 +959,28 @@ struct QualityQualificationFoundationTests {
             preGraphUpperTimbreEvidence: evidence,
             postGraphUpperTimbreEvidence: evidence
         )
-        func remappedVector(
-            _ source: AutonomousCandidateEvaluationVector,
-            slot: AutonomousCandidateSlot,
-            planFingerprint: String,
-            phraseKind: AutonomousPhraseKind,
-            alternate: Bool,
-            conservative: Bool
-        ) -> AutonomousCandidateEvaluationVector {
-            let sourceSymbolic = source.symbolic
-            let remappedSymbolic = AutonomousSymbolicEvidence(
-                planFingerprint: planFingerprint,
-                phraseIndex: sourceSymbolic.phraseIndex,
-                startBar: sourceSymbolic.startBar,
-                declaredBarCount: sourceSymbolic.declaredBarCount,
-                resolvedBarCount: sourceSymbolic.resolvedBarCount,
-                phraseKind: phraseKind.rawValue,
-                pulseClarity: sourceSymbolic.pulseClarity,
-                intentionalSpace: sourceSymbolic.intentionalSpace,
-                responseClosure: sourceSymbolic.responseClosure,
-                structuralTimeliness: sourceSymbolic.structuralTimeliness,
-                identityContinuity: sourceSymbolic.identityContinuity,
-                weakPositionCoverage: sourceSymbolic.weakPositionCoverage,
-                trailingSideRelationship: sourceSymbolic.trailingSideRelationship,
-                overactivityPenalty: sourceSymbolic.overactivityPenalty,
-                overdueDebtCount: sourceSymbolic.overdueDebtCount,
-                interestScore: sourceSymbolic.interestScore,
-                interestValid: sourceSymbolic.interestValid,
-                chapterChanged: sourceSymbolic.chapterChanged,
-                alternate: alternate,
-                conservative: conservative,
-                boundsValid: sourceSymbolic.boundsValid
-            )
-            return AutonomousCandidateEvaluationVector(
-                slot: slot,
-                planFingerprint: planFingerprint,
-                graphFingerprint: source.graphFingerprint,
-                symbolic: remappedSymbolic,
-                hardGates: source.hardGates,
-                fullMix: source.fullMix,
-                masking: source.masking,
-                stems: source.stems,
-                automaticMix: source.automaticMix,
-                kickSyntax: source.kickSyntax,
-                climaxArc: source.climaxArc,
-                groovePulse: source.groovePulse,
-                closedHat: source.closedHat,
-                instruments: source.instruments,
-                percussionEchoTexture: source.percussionEchoTexture,
-                phraseComposition: source.phraseComposition,
-                pulseEchoDrive: source.pulseEchoDrive,
-                spatialFDN: source.spatialFDN,
-                upperTiming: source.upperTiming,
-                graph: source.graph,
-                routeContinuation: source.routeContinuation,
-                preGraphUpperTimbreEvidence: source.preGraphUpperTimbreEvidence,
-                postGraphUpperTimbreEvidence: source.postGraphUpperTimbreEvidence
-            )
-        }
-        func attemptReasons(for candidate: AutonomousCandidateEvaluationVector)
-            -> [QualityReasonCode] {
-            var reasons: [QualityReasonCode] = []
-            if !candidate.isComplete { reasons.append(.evidenceMissingV1) }
-            if !candidate.isFinite { reasons.append(.evidenceNonFiniteV1) }
-            if !candidate.hardGatesPassed { reasons.append(.hardGateFailedV1) }
-            return reasons
-        }
-        let primaryAttempt = AutonomousCandidateAttempt(
+        var attemptReasons: [QualityReasonCode] = []
+        if !vector.isComplete { attemptReasons.append(.evidenceMissingV1) }
+        if !vector.isFinite { attemptReasons.append(.evidenceNonFiniteV1) }
+        if !vector.hardGatesPassed { attemptReasons.append(.hardGateFailedV1) }
+        let attempt = AutonomousCandidateAttempt(
             kind: .initialRender,
-            reasonCodes: attemptReasons(for: vector),
+            reasonCodes: attemptReasons,
             vector: vector
         )
-        let plans = AutonomousCandidatePlanFingerprints(
-            primary: planFingerprint,
-            alternate: "plan-alternate",
-            fallback: "plan-fallback"
-        )
-        let attempts: [AutonomousCandidateAttempt]
-        let selectedVector: AutonomousCandidateEvaluationVector
-        let selectedAttemptIndex: Int
-        let selectedSlot: AutonomousCandidateSlot
-        if vector.selectionEvidence.safetyValid {
-            attempts = [primaryAttempt]
-            selectedVector = vector
-            selectedAttemptIndex = 0
-            selectedSlot = .primary
-        } else {
-            let alternate = remappedVector(
-                vector,
-                slot: .alternate,
-                planFingerprint: plans.alternate,
-                phraseKind: .lock,
-                alternate: true,
-                conservative: false
-            )
-            let fallback = remappedVector(
-                vector,
-                slot: .fallback,
-                planFingerprint: plans.fallback,
-                phraseKind: .identityReturn,
-                alternate: false,
-                conservative: true
-            )
-            attempts = [
-                primaryAttempt,
-                AutonomousCandidateAttempt(
-                    kind: .initialRender,
-                    reasonCodes: attemptReasons(for: alternate),
-                    vector: alternate
-                ),
-                AutonomousCandidateAttempt(
-                    kind: .initialRender,
-                    forceSafeGraph: true,
-                    reasonCodes: attemptReasons(for: fallback),
-                    vector: fallback
-                ),
-            ]
-            selectedVector = fallback
-            selectedAttemptIndex = 2
-            selectedSlot = .fallback
-        }
         let transaction = AutonomousCandidateEvaluationTransaction(
-            engineVersion: "engine-test",
+            engineVersion: QualityQualificationContract.engineVersion,
             policyVersion: policyVersion,
             evaluatorVersion: policyVersion ==
                 QualityQualificationContract.uncalibratedPolicyVersion
                 ? QualityQualificationContract.uncalibratedEvaluatorVersion
                 : "evaluator-test",
-            planFingerprints: plans,
-            attempts: attempts,
-            selectedAttemptIndex: selectedAttemptIndex,
-            selectedSlot: selectedSlot,
-            comparison: .unavailable,
+            planFingerprint: planFingerprint,
+            attempts: [attempt],
+            selectedAttemptIndex: 0,
             correctionCount: 0
         )
-        return (selectedVector, transaction)
+        return (vector, transaction)
     }
 
     private var validReportMaskingObservations:

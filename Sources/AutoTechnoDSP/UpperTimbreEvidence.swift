@@ -918,7 +918,7 @@ package enum CanonicalJourneyQualificationReportError: Error, Equatable, Sendabl
 
 package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendable {
     package static let currentEvidenceScope =
-        "candidate-structural-bs1770-signal-role-upper-commit.v3"
+        "primary-structural-bs1770-signal-role-upper-commit.v4"
     package static let maximumEncodedBytes = 4 * 1_024 * 1_024
     package let schemaVersion: Int
     package let engineVersion: String
@@ -941,9 +941,7 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
     package let decision: QualityDecision
     package let incomingState: QualityContinuationState
     package let outgoingState: QualityContinuationState
-    package let usedAlternate: Bool
-    package let usedFallback: Bool
-    package let usedHomeTimbreFallback: Bool
+    package let usedHomeTimbreCorrection: Bool
     package let correctionRenderCount: Int
 
     /// Decode-only wire value. Keeping `Decodable` off the validated report
@@ -971,9 +969,7 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
         let decision: QualityDecision
         let incomingState: QualityContinuationState
         let outgoingState: QualityContinuationState
-        let usedAlternate: Bool
-        let usedFallback: Bool
-        let usedHomeTimbreFallback: Bool
+        let usedHomeTimbreCorrection: Bool
         let correctionRenderCount: Int
     }
 
@@ -992,9 +988,7 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
         decision: QualityDecision? = nil,
         incomingState: QualityContinuationState = QualityContinuationState(),
         outgoingState: QualityContinuationState? = nil,
-        usedAlternate: Bool = false,
-        usedFallback: Bool = false,
-        usedHomeTimbreFallback: Bool = false,
+        usedHomeTimbreCorrection: Bool = false,
         correctionRenderCount: Int = 0
     ) throws {
         let evidence = selectedCandidateEvidence.postGraphUpperTimbreEvidence
@@ -1019,9 +1013,6 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
         }
         var defaultReasons: [QualityReasonCode] = [.policyUncalibratedV1] +
             (retainedSelectedAttempt?.reasonCodes ?? [])
-        if candidateEvaluation.selectedSlot == .fallback {
-            defaultReasons.append(.conservativeFallbackV1)
-        }
         if selectedCandidateEvidence.routeContinuation.routeRecovery {
             defaultReasons.append(.routeRecoveryV1)
         }
@@ -1095,10 +1086,7 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
             throw CanonicalJourneyQualificationReportError.checkpointMismatch
         }
         let selectedAttempt = candidateEvaluation.attempts[selectedIndex]
-        var requiredAttemptReasons = Set(selectedAttempt.reasonCodes)
-        if candidateEvaluation.selectedSlot == .fallback {
-            requiredAttemptReasons.insert(.conservativeFallbackV1)
-        }
+        let requiredAttemptReasons = Set(selectedAttempt.reasonCodes)
         guard requiredAttemptReasons.isSubset(of: Set(selectedDecision.reasonCodes)) else {
             throw CanonicalJourneyQualificationReportError.reasonCodeMismatch
         }
@@ -1106,9 +1094,6 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
             QualityQualificationContract.uncalibratedEvaluatorVersion {
             var exactReasons = Set(selectedAttempt.reasonCodes)
             exactReasons.insert(.policyUncalibratedV1)
-            if candidateEvaluation.selectedSlot == .fallback {
-                exactReasons.insert(.conservativeFallbackV1)
-            }
             if selectedCandidateEvidence.routeContinuation.routeRecovery {
                 exactReasons.insert(.routeRecoveryV1)
             }
@@ -1116,10 +1101,6 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
                 throw CanonicalJourneyQualificationReportError.reasonCodeMismatch
             }
         }
-        let reportsFallback = selectedDecision.reasonCodes.contains(
-            .conservativeFallbackV1
-        )
-        let reportsHold = selectedDecision.reasonCodes.contains(.deterministicHoldV1)
         let reportsRouteRecovery = selectedDecision.reasonCodes.contains(
             .routeRecoveryV1
         )
@@ -1129,12 +1110,10 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
         let reportsStaleEvidence = selectedDecision.reasonCodes.contains(
             .staleEvidenceV1
         )
-        guard reportsFallback == (candidateEvaluation.selectedSlot == .fallback),
-              reportsRouteRecovery == selectedCandidateEvidence
+        guard reportsRouteRecovery == selectedCandidateEvidence
                 .routeContinuation.routeRecovery,
               !reportsRouteRecovery || !reportsStaleEvidence,
-              reportsHardGateFailure == !selectedCandidateEvidence.hardGatesPassed,
-              !reportsHold else {
+              reportsHardGateFailure == !selectedCandidateEvidence.hardGatesPassed else {
             throw CanonicalJourneyQualificationReportError.reasonCodeMismatch
         }
         guard selectedDecision.policyVersion !=
@@ -1259,14 +1238,10 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
             throw CanonicalJourneyQualificationReportError.routeMismatch
         }
         guard correctionRenderCount == candidateEvaluation.correctionCount,
-              usedAlternate ==
-                (candidateEvaluation.selectedSlot == .alternate),
-              usedFallback ==
-                (candidateEvaluation.selectedSlot == .fallback),
               let selectedAttempt = candidateEvaluation.selectedAttemptIndex.map({
                   candidateEvaluation.attempts[$0]
               }),
-              usedHomeTimbreFallback ==
+              usedHomeTimbreCorrection ==
                 selectedAttempt.forceHomeUpperTimbre else {
             throw CanonicalJourneyQualificationReportError.candidateEvaluationMismatch
         }
@@ -1291,9 +1266,7 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
         self.decision = selectedDecision
         self.incomingState = incomingState
         self.outgoingState = selectedOutgoing
-        self.usedAlternate = usedAlternate
-        self.usedFallback = usedFallback
-        self.usedHomeTimbreFallback = usedHomeTimbreFallback
+        self.usedHomeTimbreCorrection = usedHomeTimbreCorrection
         self.correctionRenderCount = correctionRenderCount
     }
 
@@ -1344,9 +1317,7 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
             decision: decoded.decision,
             incomingState: decoded.incomingState,
             outgoingState: decoded.outgoingState,
-            usedAlternate: decoded.usedAlternate,
-            usedFallback: decoded.usedFallback,
-            usedHomeTimbreFallback: decoded.usedHomeTimbreFallback,
+            usedHomeTimbreCorrection: decoded.usedHomeTimbreCorrection,
             correctionRenderCount: decoded.correctionRenderCount
         )
         guard try validated.deterministicJSON() == data else {

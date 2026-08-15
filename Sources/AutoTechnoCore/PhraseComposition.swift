@@ -214,10 +214,9 @@ package enum PhraseCompositionResolver {
         dna: SceneDNA,
         kind: AutonomousPhraseKind,
         resolvedBars: [ResolvedPerformanceBar],
-        conservative: Bool,
         harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState()
     ) -> [PhraseCompositionBar] {
-        guard !conservative, kind != .identityReturn else {
+        guard kind != .identityReturn else {
             return resolvedBars.map { .neutral(bar: $0.performance.bar) }
         }
 
@@ -419,7 +418,7 @@ package enum PhraseCompositionResolver {
             gesture: resolved.performance.section == .breakdown ? .suspend : .interlock,
             chapter: resolved.interlockChapter,
             mutationAmount: 0.36 + resolved.performance.tension * 0.24,
-            conservative: false,
+            forceHome: false,
             pulseEchoEnabled: false,
             performanceCharacter: character
         )

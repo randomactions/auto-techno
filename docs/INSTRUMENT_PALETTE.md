@@ -83,7 +83,7 @@ changes reset only the bounded state that would otherwise leak the previous
 patch’s filter, envelope, or resonator identity; oscillator and continuation
 behavior remain deterministic.
 
-## Selection, density, and fallback
+## Selection and density
 
 The existing `SynthPerformancePlan` resolves assignments from the phrase kind,
 performance character, foundation behavior, gesture, interlock chapter, scene
@@ -99,8 +99,8 @@ count” through meaningful audible roles rather than a quota such as “always
 create 5–10 tracks.” A future density rule should continue to operate through
 the ensemble score and its existing space/overactivity evidence.
 
-The conservative fallback remains in this same catalog: Bass Pulse for the
-foundation and stable Tonal Motion homes for upper roles. It does not switch
+The evaluator's single permitted correction uses the catalog's stable Tonal
+Motion homes for upper roles. It rerenders the same score and never switches
 runtime, renderer, graph profile, or external instrument.
 
 ## Evidence and safety
@@ -115,9 +115,8 @@ Detached preparation records, for each audible architecture and bar:
 That bounded, machine-readable record enters candidate evidence; raw stem PCM
 does not. Invalid architecture/use/patch/effect combinations, out-of-range
 automation, malformed hashes, and non-finite evidence make the evidence
-incomplete. The shipping evaluator remains uncalibrated, so these observations
-prove score-to-PCM truth and support future qualification; they do not by
-themselves claim professional sound or change candidate selection.
+incomplete. These observations prove score-to-PCM truth for the calibrated
+primary evaluator; they do not by themselves claim professional sound.
 
 The shared return is intentionally recorded beside, rather than inside, the
 architecture-local dry record. Each full bar retains bar/BPM/delay/render
@@ -126,9 +125,8 @@ amount, current-send RMS, exact pre-drive and post-drive hashes, pre/post peak,
 RMS, and low-band RMS, difference RMS, and finite status. Candidate-vector
 schema 7 binds those observations to the matching instrument effect access and
 requires exact pre/post identity on neutral paths. The exact-source local
-structural, signal, protected-routing, and release-build matrix passed; policy
-remains uncalibrated, so neither record qualifies professional sound or changes
-candidate selection.
+structural, signal, protected-routing, and release-build matrix passed; neither
+record alone qualifies professional sound.
 
 All planning, assignment, rendering, and evidence reduction happen during
 detached preparation. No new decision, allocation, analysis, logging, file or

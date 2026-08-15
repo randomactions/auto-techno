@@ -8,7 +8,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 ## Current baseline
 
 - one-button autonomous macOS app at fixed 130 BPM;
-- reproducible session planning with temporal memory and bounded fallback;
+- reproducible single-plan session planning with temporal memory;
 - resolved bars authoritative for audio and telemetry;
 - engine-owned synthesis and effects with protected low-end routing;
 - exact private role evidence, bounded preparation-time kick/foundation mix
@@ -46,7 +46,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one canonical eight-line stereo late field replacing the former single long
   mono feedback delay, with scene-derived decay/damping, exact continuation,
   protected low end, and score-bound per-bar evidence;
-- canonical engine v19, quality-contract schema 19, and candidate-vector schema 18
+- canonical engine v19, quality-contract schema 20, and candidate-vector schema 18
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax and debt-to-recovery climax arc,
   event-local groove-pulse, ordinary closed-hat,
@@ -67,32 +67,23 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
 
-The shipping evaluator remains uncalibrated and renders the primary once on the
-healthy path. The historical engine-v10 development profile remains an offline
-compatibility yardstick. A distinct current-engine profile derived from 28
-complete journeys, a passing adversarial suite, and a disjoint four-journey
-holdout qualification now construct a checkpoint-local paired evaluator through
-the package seam, but do not participate in runtime selection. The transaction
-records up to primary,
-alternate, and fallback
-attempts plus one home-timbre correction within four total passes, but it does
-not constitute professional-quality qualification or general quality-driven
-candidate selection. Calibrated paired ranking remains disabled pending the
-exact shipping-evaluator activation gate. The generic bounded transaction now
-passes representative-rate cancellation, latency, and peak-memory readiness:
-healthy pairing fits one shortest-phrase lookahead and the maximum four-pass
-path fits one existing frozen-topology hold. The probe remains intentionally
-test-seam driven and therefore cannot activate runtime ranking;
-hybrid live feedback is also not implemented.
+The app now installs one exact-engine calibrated evaluator from the current
+profile derived from 28 complete journeys, a passing adversarial suite, and a
+disjoint four-journey holdout qualification. Each boundary owns one canonical
+plan and one terminal decision. The evaluator may request one same-plan
+home-timbre correction, for two render passes maximum; no paired comparator,
+alternate phrase, fallback phrase, or permissive shipping policy remains.
+Missing artifacts and unsupported routes are truthfully unavailable and cannot
+commit. Hybrid live feedback is not implemented.
 
 The pulse-echo return-drive code and same-pass reduced evidence are present in
 the current implementation candidate. The exact-source local structural/signal
 suite and release build now establish its validated engineering baseline; they
-do not change the uncalibrated evaluator or claim professional quality.
+do not by themselves claim professional quality.
 
 [`SOUND_CONCEPT_MATURITY.md`](SOUND_CONCEPT_MATURITY.md) separately records the
 durable musical intentions behind these slices, the versioned DSP that currently
-expresses them, their evidence and fallback owners, and the richer renderer work
+expresses them, their evidence owners, and the richer renderer work
 that may replace provisional implementations later. That register prevents a
 tutorial-derived coefficient or first implementation from becoming the
 permanent definition of the concept.
@@ -103,7 +94,7 @@ Build unified vertical slices through the same persistent performance and qualit
 state. Reuse the canonical score, role evidence, renderer, and continuation
 contract. Add a specialized internal DSP module only when the existing primitives
 cannot express a materially different audible capability; the canonical director
-must still own its selection, transition, evidence, and fallback.
+must still own its selection, transition, evidence, and bounded correction.
 
 Do not add an internal parameter until its path to score, PCM, evidence, and
 future adaptation is tested. Prefer consolidating or connecting dormant state
@@ -120,7 +111,7 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 19 and candidate-vector schema 18 now bind a versioned
+Quality-contract schema 20 and candidate-vector schema 18 now bind a versioned
 transaction across canonical engine v19, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
@@ -129,8 +120,7 @@ gated percussion texture, pulse-echo return-drive, spatial-FDN, and upper-role t
 including foreground lead performance,
 projections, unified phrase composition, plus exact paid-debt-to-release climax
 provenance, make each
-score-to-PCM consequence explicit without letting the uncalibrated policy rank
-that evidence. Professional
+score-to-PCM consequence explicit for the calibrated primary policy. Professional
 Evidence v4 adds standards-based phrase loudness/true peak, bounded streaming
 physical-time spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
@@ -140,35 +130,27 @@ guardrails, a passing ten-case adversarial suite, and a disjoint holdout report
 covering 56/56 observations with zero relationship failures. Short-program
 EBU-style loudness range remains descriptive because its gated percentile is
 discontinuous at small populations; integrated, momentary, short-term, and true-
-peak evidence remain evaluative. The development policy is available only for
-offline engine-bank qualification; the shipping policy and selection evidence
-remain unchanged. Keep WAVs, stems, and reference recordings local and untracked.
+peak evidence remain evaluative. Keep WAVs, stems, and reference recordings
+local and untracked.
 
-### 3. Generalize bounded evaluation and correction
+### 3. Operate one calibrated primary evaluator
 
-The runtime now enforces and records a maximum of three complete candidates, one
-home-timbre correction, and four render passes, then atomically carries the
-selected evidence, decision, and controller state into continuation. The exact
-engine-v19 diverse profile, passing adversarial suite, disjoint holdout
-qualification, non-compensable checkpoint-local comparator, calibrated fallback
-result, and transaction replay are now present behind the package seam. A
-preloaded route-local boundary now retains
-single-primary uncalibrated behavior when artifacts are absent or the rate is
-unsupported, and the exact comparator fits the measured preparation envelope.
-The former single-journey generalization blocker is now closed offline: 28
-development journeys and four disjoint replacement holdouts pass at 44.1 and
-48 kHz. Shipping activation remains a separate explicit decision and must not be
-inferred from artifact availability.
-Continue to select a qualified candidate or conservative fallback when the
-calibrated policy cannot qualify either authored attempt. See
-[`PAIRED_SELECTION_READINESS.md`](PAIRED_SELECTION_READINESS.md).
+The runtime now records one complete plan, one initial attempt, and at most one
+home-timbre correction, then atomically carries the terminal evidence, decision,
+and controller state into continuation. The exact engine-v19 diverse profile,
+passing adversarial suite, disjoint holdout qualification, non-compensable
+checkpoint policy, and transaction replay are the app path. The former
+single-journey generalization blocker is closed: 28 development journeys and
+four disjoint replacement holdouts pass at 44.1 and 48 kHz. A missing artifact,
+unsupported route, failed gate, or rejected score produces no new commit. See
+[`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md).
 
 ### 4. Add safe hybrid live feedback
 
 Capture only app-owned mixer PCM through a preallocated lock-free handoff. Analyze
 fixed, sample-indexed windows off the callback and publish immutable snapshots for
 unscheduled future bars or phrases. Prove rate consistency, bounded latency,
-deterministic replay, no missed-successor instability, and coherent fallback.
+deterministic replay, no missed-successor instability, and coherent transport hold.
 
 ### 5. Evolve the internal sound engine
 

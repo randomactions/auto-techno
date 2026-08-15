@@ -171,7 +171,7 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
     /// Projects one complete detached candidate into the same bounded metric
     /// observation used by the offline journey bank. The caller supplies only
     /// a Core-owned checkpoint that the candidate actually represents; no PCM,
-    /// renderer state, or report wrapper is required by the paired evaluator.
+    /// renderer state, or report wrapper is required by the primary evaluator.
     package init(
         candidate vector: AutonomousCandidateEvaluationVector,
         engineVersion: String,
@@ -660,7 +660,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                       let maximum = values.max() else {
                     throw ProfessionalQualityCalibrationError.invalidMetricSet
                 }
-                let pairedRateDrifts = try corpus.trajectories.map {
+                let crossRateDrifts = try corpus.trajectories.map {
                     trajectory -> Double in
                     let values = trajectory.observations
                         .filter { $0.checkpoint == checkpoint }
@@ -676,7 +676,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 let guardBand = Self.diverseGuardBand(
                     metric: metric,
                     values: values,
-                    pairedRateDrifts: pairedRateDrifts
+                    crossRateDrifts: crossRateDrifts
                 )
                 let domain = Self.domain(for: metric)
                 metricBounds.append(try ProfessionalQualityMetricBounds(
@@ -697,7 +697,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             let pair = trajectoryKind.checkpoints
             for metric in ProfessionalQualityMetric.allCases {
                 var deltas: [Double] = []
-                var pairedRateDrifts: [Double] = []
+                var crossRateDrifts: [Double] = []
                 for trajectory in corpus.trajectories {
                     let trajectoryDeltas = try Self.metricDeltas(
                         trajectory: trajectory,
@@ -711,7 +711,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                         throw ProfessionalQualityCalibrationError
                             .invalidMetricSet
                     }
-                    pairedRateDrifts.append(maximum - minimum)
+                    crossRateDrifts.append(maximum - minimum)
                 }
                 guard let minimum = deltas.min(),
                       let maximum = deltas.max() else {
@@ -720,7 +720,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 let guardBand = Self.diverseGuardBand(
                     metric: metric,
                     values: deltas,
-                    pairedRateDrifts: pairedRateDrifts
+                    crossRateDrifts: crossRateDrifts
                 )
                 trajectoryBounds.append(try ProfessionalQualityTrajectoryBounds(
                     trajectory: trajectoryKind,
@@ -753,7 +753,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 let guardBand = Self.diverseGuardBand(
                     metric: metric,
                     values: absoluteDeltas,
-                    pairedRateDrifts: []
+                    crossRateDrifts: []
                 )
                 rateBounds.append(try ProfessionalQualityRateConsistencyBounds(
                     checkpoint: checkpoint,
@@ -775,9 +775,9 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         rateConsistency = rateBounds
     }
 
-    /// Legacy offline calibration seam for one already reduced journey. It
-    /// accepts no PCM and preserves deterministic decoding of the historical
-    /// v1 resources. Current profile generation uses the diverse corpus
+    /// Reduced single-journey seam for deterministic metric unit tests. It
+    /// accepts no PCM and cannot activate the primary evaluator because it is
+    /// not a diverse calibration. Shipping profile generation uses the corpus
     /// initializer above.
     package init(
         engineVersion: String,
@@ -1081,14 +1081,14 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
     private static func diverseGuardBand(
         metric: ProfessionalQualityMetric,
         values: [Double],
-        pairedRateDrifts: [Double]
+        crossRateDrifts: [Double]
     ) -> Double {
         guard let minimum = values.min(), let maximum = values.max() else {
             return 0
         }
         let centerMagnitude = abs(values.reduce(0, +) / Double(values.count))
         let observedSpread = maximum - minimum
-        let maximumRateDrift = pairedRateDrifts.max() ?? 0
+        let maximumRateDrift = crossRateDrifts.max() ?? 0
         let absoluteFloor = guardBand(
             metric: metric,
             values: [0],

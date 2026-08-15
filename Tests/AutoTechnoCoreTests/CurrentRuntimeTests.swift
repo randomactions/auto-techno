@@ -12,14 +12,14 @@ struct CurrentRuntimeTests {
 
         #expect(AutonomousSessionDirector.bpm == 130)
         #expect(state.rootSeed == AutonomousSessionDirector.defaultSeed)
-        #expect(director.candidates(from: state).primary.scene.bpm == AutonomousSessionDirector.bpm)
+        #expect(director.plan(from: state).scene.bpm == AutonomousSessionDirector.bpm)
     }
 
     @Test("Scene DNA and synth planning are deterministic", arguments: [UInt64(42), 48_291, 90_909])
     func currentPlanningIsDeterministic(seed: UInt64) {
         let director = AutonomousSessionDirector(rootSeed: seed)
-        let first = director.candidates(from: director.initialState()).primary
-        let second = director.candidates(from: director.initialState()).primary
+        let first = director.plan(from: director.initialState())
+        let second = director.plan(from: director.initialState())
         let firstSynth = SynthPerformancePlan(
             scene: first.scene, dna: first.dna, kind: first.kind,
             resolvedBars: first.resolvedBars
@@ -39,7 +39,7 @@ struct CurrentRuntimeTests {
     @Test("The current phrase renderer replays from continuation state")
     func rendererContinuationReplay() {
         let director = AutonomousSessionDirector(rootSeed: 42)
-        let phrase = director.candidates(from: director.initialState()).primary
+        let phrase = director.plan(from: director.initialState())
         let graph = DSPGraphGenerator.safePlan(sessionSeed: 42)
         var renderA = RenderState()
         var renderB = RenderState()
@@ -129,6 +129,12 @@ struct RepositorySurfaceTests {
             "V2", "SceneRenderer", "ReferenceMetrics", "AuthoredSynthVoice",
             "DramaticJourneyPlan", "PerformancePlan", "ArrangementPlan",
             "TransitionPlan", "TechnoPattern", "TasteProfile", "JukeboxPlan",
+            "AutonomousPhraseCandidates",
+            "ProfessionalQualityPairedCandidateEvaluator",
+            "ProfessionalQualityPairedArtifacts",
+            "ProfessionalQualityDevelopmentPolicy",
+            "ProfessionalQualityFrozenArtifacts",
+            "usedAlternate", "usedFallback", "usedHomeTimbreFallback",
         ]
         let enumerator = try #require(FileManager.default.enumerator(
             at: sources,

@@ -407,10 +407,9 @@ package enum PercussionEchoTextureResolver {
         ensemble: EnsembleContext,
         kind: AutonomousPhraseKind,
         character: PerformanceCharacter,
-        gesture: ArrangementGesture,
-        conservative: Bool
+        gesture: ArrangementGesture
     ) -> PercussionEchoTextureArticulation? {
-        guard !conservative, kind == .contrast,
+        guard kind == .contrast,
               character == .brokenSuspension,
               gesture == .gearShift,
               let source = eligibleSourceEvents(in: ensemble).first else {
@@ -502,10 +501,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.interlockChapter = interlockChapter
         self.groovePulses = groovePulses.sorted { $0.step < $1.step }
         self.closedHatDecayArticulations = closedHatDecayArticulations ??
-            ClosedHatDecayResolver.articulations(
-                from: ensemble,
-                conservative: true
-            )
+            ClosedHatDecayResolver.articulations(from: ensemble)
         self.spatialContrast = spatialContrast
         self.narrative = narrative
         self.kickSyntaxRole = kickSyntaxRole
@@ -525,14 +521,15 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
 /// closed-hat score events. Matching happens after arbitration, so relocation
 /// can create or remove a companion without leaving stale proposal metadata.
 package enum ClosedHatDecayResolver {
-    package static func articulations(from ensemble: EnsembleContext,
-                                      conservative: Bool) -> [ClosedHatDecayArticulation] {
+    package static func articulations(
+        from ensemble: EnsembleContext
+    ) -> [ClosedHatDecayArticulation] {
         var result: [ClosedHatDecayArticulation] = []
         result.reserveCapacity(4)
         for (scoreEventIndex, event) in ensemble.events.enumerated() {
             guard event.voice == .percussion else { continue }
             guard result.count < 4 else { break }
-            let sharesStepWithOpenHat = !conservative && ensemble.events.contains {
+            let sharesStepWithOpenHat = ensemble.events.contains {
                 $0.voice == .openHat && $0.step == event.step
             }
             result.append(ClosedHatDecayArticulation(
@@ -555,12 +552,10 @@ package enum KickSyntaxResolver {
     package static func resolve(
         resolvedBars: [ResolvedPerformanceBar],
         kind: AutonomousPhraseKind,
-        paidDebtIDs: [Int],
-        conservative: Bool
+        paidDebtIDs: [Int]
     ) -> [ResolvedPerformanceBar] {
         guard resolvedBars.count <= 16,
               kind == .energyRelease,
-              !conservative,
               !paidDebtIDs.isEmpty,
               resolvedBars.allSatisfy({ $0.kickSyntaxRole == .grounded }),
               let recoveryIndex = resolvedBars.firstIndex(where: {
@@ -699,10 +694,7 @@ package enum KickSyntaxResolver {
             pulseEchoEnabled: resolved.pulseEchoEnabled,
             interlockChapter: resolved.interlockChapter,
             groovePulses: resolved.groovePulses,
-            closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
-                from: ensemble,
-                conservative: false
-            ),
+            closedHatDecayArticulations: ClosedHatDecayResolver.articulations(from: ensemble),
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative,
             kickSyntaxRole: role,
@@ -716,14 +708,12 @@ package enum GroovePulseResolver {
 
     package static func proposals(absoluteBar: Int, percussionActive: Bool,
                                   majorBreak: Bool,
-                                  gesture: ArrangementGesture,
-                                  conservative: Bool = false) -> [EnsembleEventProposal] {
+                                  gesture: ArrangementGesture) -> [EnsembleEventProposal] {
         guard percussionActive, !majorBreak else { return [] }
         let stage = WeakSixteenthStage(absoluteBar: absoluteBar)
         return pattern(stage: stage, gesture: gesture,
                        macroEnding: (absoluteBar + 1).isMultiple(of: 16),
-                       majorBreak: majorBreak,
-                       conservative: conservative).map { step, intensity in
+                       majorBreak: majorBreak).map { step, intensity in
             EnsembleEventProposal(
                 voice: .groovePulse,
                 requestedStep: step,
@@ -737,8 +727,7 @@ package enum GroovePulseResolver {
                                       absoluteBar: Int,
                                       swingPercent: Double,
                                       percussionGear: PercussionGear,
-                                      eventSeed: UInt64,
-                                      conservative: Bool) -> [GroovePulseArticulation] {
+                                      eventSeed: UInt64) -> [GroovePulseArticulation] {
         let stage = WeakSixteenthStage(absoluteBar: absoluteBar)
         let shuffle = min(0.12, max(0, (swingPercent - 0.5) * 2.0))
         return ensemble.events.compactMap { event in
@@ -746,8 +735,7 @@ package enum GroovePulseResolver {
             let physical = physicalArticulation(
                 gear: percussionGear,
                 eventSeed: eventSeed,
-                step: event.step,
-                conservative: conservative
+                step: event.step
             )
             return GroovePulseArticulation(
                 step: event.step,
@@ -764,13 +752,12 @@ package enum GroovePulseResolver {
 
     /// Accent grouping is a property of the complete resolved cell, not of
     /// proposals that may later be removed by ensemble arbitration. A partial
-    /// cell keeps the legacy alternating intensities without reflowing steps.
+    /// cell preserves its already-resolved intensities without reflowing steps.
     package static func resolvingAccentGrouping(
         in ensemble: EnsembleContext,
         absoluteBar: Int,
         gesture: ArrangementGesture,
-        majorBreak: Bool,
-        conservative: Bool
+        majorBreak: Bool
     ) -> EnsembleContext {
         guard !majorBreak,
               WeakSixteenthStage(absoluteBar: absoluteBar) == .syncopatedLean,
@@ -780,22 +767,14 @@ package enum GroovePulseResolver {
         let grouped = pattern(
             stage: .syncopatedLean,
             gesture: gesture,
-            macroEnding: absoluteBar % 16 == 15,
-            conservative: false
-        )
-        let legacy = pattern(
-            stage: .syncopatedLean,
-            gesture: gesture,
-            macroEnding: absoluteBar % 16 == 15,
-            conservative: true
+            macroEnding: absoluteBar % 16 == 15
         )
         let grooveEvents = ensemble.events.filter { $0.voice == .groovePulse }
             .sorted { $0.step < $1.step }
         let completeCell = grooveEvents.count == grouped.count &&
             zip(grooveEvents, grouped).allSatisfy { $0.step == $1.0 }
-        let selected = Dictionary(uniqueKeysWithValues:
-            conservative || !completeCell ? legacy : grouped
-        )
+        guard completeCell else { return ensemble }
+        let selected = Dictionary(uniqueKeysWithValues: grouped)
         let events = ensemble.events.map { event in
             guard event.voice == .groovePulse,
                   let intensity = selected[event.step] else {
@@ -819,10 +798,8 @@ package enum GroovePulseResolver {
     private static func physicalArticulation(
         gear: PercussionGear,
         eventSeed: UInt64,
-        step: Int,
-        conservative: Bool
+        step: Int
     ) -> (zone: GroovePulseStrikeZone, damping: Double, microvariation: Double) {
-        guard !conservative else { return (.middle, 0.5, 0) }
         let zone: GroovePulseStrikeZone
         let damping: Double
         switch gear {
@@ -851,8 +828,7 @@ package enum GroovePulseResolver {
     package static func pattern(stage: WeakSixteenthStage,
                                 gesture: ArrangementGesture,
                                 macroEnding: Bool,
-                                majorBreak: Bool = false,
-                                conservative: Bool = false) -> [(Int, Double)] {
+                                majorBreak: Bool = false) -> [(Int, Double)] {
         guard !majorBreak else { return [] }
         switch stage {
         case .skeleton:
@@ -865,9 +841,7 @@ package enum GroovePulseResolver {
             return [(7, 0.42), (15, 0.42)]
         case .syncopatedLean:
             let steps = [1, 3, 5, 7, 9, 11, 13, 15]
-            let intensities = conservative
-                ? [0.30, 0.72, 0.30, 0.72, 0.30, 0.72, 0.30, 0.72]
-                : [0.30, 0.72, 0.30, 0.30, 0.72, 0.30, 0.30, 0.72]
+            let intensities = [0.30, 0.72, 0.30, 0.30, 0.72, 0.30, 0.30, 0.72]
             return zip(steps, intensities).map { step, intensity in
                 (step, intensity)
             }
@@ -881,7 +855,7 @@ package enum GroovePulseResolver {
 
 package enum EnsembleArbiter {
     /// Resolves the baseline score before rendering. Kick anchors are immutable
-    /// during arbitration, while other events may move to declared alternatives
+    /// during arbitration, while other events may move to declared nearby steps
     /// to preserve gaps. The phrase-level syntax resolver may subsequently
     /// withhold an exact kick subset without moving this grid.
     package static func resolve(proposals: [EnsembleEventProposal], focusRole: PerformanceRole,
@@ -1160,8 +1134,6 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let openedDebt: SessionDramaticDebt?
     package let paidDebtIDs: [Int]
     package let requestsTopologyMutation: Bool
-    package let alternate: Bool
-    package let conservative: Bool
     package let interest: PhraseInterestReport
     package let performanceCharacterEvidence: PerformanceCharacterEvidence
     package let endingInterlockState: InterlockEvolutionState
@@ -1175,7 +1147,7 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
                  kind: AutonomousPhraseKind, scene: TechnoScene, dna: SceneDNA,
                  resolvedBars: [ResolvedPerformanceBar], openedDebt: SessionDramaticDebt?,
                  paidDebtIDs: [Int], requestsTopologyMutation: Bool,
-                 alternate: Bool, conservative: Bool, interest: PhraseInterestReport,
+                 interest: PhraseInterestReport,
                  endingInterlockState: InterlockEvolutionState,
                  endingSpatialContrastState: SpatialContrastState = SpatialContrastState(),
                  endingNarrativeState: NarrativeEvolutionState = NarrativeEvolutionState(),
@@ -1190,14 +1162,11 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
         self.openedDebt = openedDebt
         self.paidDebtIDs = paidDebtIDs
         self.requestsTopologyMutation = requestsTopologyMutation
-        self.alternate = alternate
-        self.conservative = conservative
         self.interest = interest
         performanceCharacterEvidence = PerformanceCharacterEvidence(
             resolvedBars: resolvedBars,
             kind: kind,
-            paidDebtIDs: paidDebtIDs,
-            conservative: conservative
+            paidDebtIDs: paidDebtIDs
         )
         self.endingInterlockState = endingInterlockState
         self.endingSpatialContrastState = endingSpatialContrastState
@@ -1208,7 +1177,6 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
             dna: dna,
             kind: kind,
             resolvedBars: resolvedBars,
-            conservative: conservative,
             harmonicContinuation: harmonicContinuation
         )
         endingHarmonicContinuation = HarmonicContinuationState(
@@ -1235,22 +1203,6 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
                 density: Double(bar.roles.count) / Double(PerformanceRole.allCases.count)
             )
         }
-    }
-}
-
-package struct AutonomousPhraseCandidates: Equatable, Sendable {
-    package let primary: AutonomousPhrasePlan
-    package let alternate: AutonomousPhrasePlan
-    package let fallback: AutonomousPhrasePlan
-
-    package init(
-        primary: AutonomousPhrasePlan,
-        alternate: AutonomousPhrasePlan,
-        fallback: AutonomousPhrasePlan
-    ) {
-        self.primary = primary
-        self.alternate = alternate
-        self.fallback = fallback
     }
 }
 
@@ -1389,8 +1341,8 @@ package enum PhraseInterestEvaluator {
     }
 }
 
-/// Pure, deterministic session policy. It produces complete immutable phrase
-/// candidates; rendering and candidate audio comparison live in AutoTechnoDSP.
+/// Pure, deterministic session policy. It produces one complete immutable
+/// phrase; rendering and calibrated evaluation live in AutoTechnoDSP.
 package struct AutonomousSessionDirector: Equatable, Sendable {
     package static let bpm = 130.0
     package static let defaultSeed: UInt64 = 48_291
@@ -1404,13 +1356,12 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         AutonomousSessionState(rootSeed: rootSeed)
     }
 
-    package func candidates(from state: AutonomousSessionState) -> AutonomousPhraseCandidates {
+    /// Resolves the one canonical phrase proposed at this musical boundary.
+    /// Quality evaluation may correct this same plan once, but it never asks
+    /// the director for a parallel substitute.
+    package func plan(from state: AutonomousSessionState) -> AutonomousPhrasePlan {
         let kind = nextKind(state: state)
-        return AutonomousPhraseCandidates(
-            primary: makePlan(state: state, kind: kind, alternate: false, conservative: false),
-            alternate: makePlan(state: state, kind: kind, alternate: true, conservative: false),
-            fallback: makePlan(state: state, kind: .identityReturn, alternate: false, conservative: true)
-        )
+        return makePlan(state: state, kind: kind)
     }
 
     private func nextKind(state: AutonomousSessionState) -> AutonomousPhraseKind {
@@ -1433,12 +1384,14 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         return .lock
     }
 
-    private func makePlan(state: AutonomousSessionState, kind: AutonomousPhraseKind,
-                          alternate: Bool, conservative: Bool) -> AutonomousPhrasePlan {
+    private func makePlan(state: AutonomousSessionState,
+                          kind: AutonomousPhraseKind) -> AutonomousPhrasePlan {
         let start = state.memory.totalBars
-        let rawLength = 4 + Int(seed(state: state, domain: conservative ? 0xFA11BAC : 0xF4A5E,
-                                     index: alternate ? 1 : 0) % 13)
-        let baseLength = conservative ? 8 : rawLength
+        let baseLength = 4 + Int(seed(
+            state: state,
+            domain: 0xF4A5E,
+            index: 0
+        ) % 13)
         let structuralKind = kind == .majorBreak || kind == .energyRelease || kind == .identityReturn
         let barsToMacroBoundary = 16 - (start % 16)
         // Structural phrases always contain the next global sixteen-bar
@@ -1447,13 +1400,13 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         let length = structuralKind ? max(baseLength, barsToMacroBoundary) : baseLength
         let mutationAmount: Double
         switch kind {
-        case .lock: mutationAmount = alternate ? 0.10 : 0.035
-        case .contrast: mutationAmount = alternate ? 0.20 : 0.13
-        case .majorBreak: mutationAmount = alternate ? 0.16 : 0.10
-        case .energyRelease: mutationAmount = alternate ? 0.11 : 0.07
-        case .identityReturn: mutationAmount = conservative ? 0 : 0.045
+        case .lock: mutationAmount = 0.035
+        case .contrast: mutationAmount = 0.13
+        case .majorBreak: mutationAmount = 0.10
+        case .energyRelease: mutationAmount = 0.07
+        case .identityReturn: mutationAmount = 0.045
         }
-        let phraseSeed = seed(state: state, domain: 0x51A7E, index: alternate ? 1 : 0)
+        let phraseSeed = seed(state: state, domain: 0x51A7E, index: 0)
         let intent = MusicalIntent.mutated(state.intent, seed: phraseSeed, amount: mutationAmount)
             .preservingCorrelations()
         let scene = TechnoScene(intent: intent, seed: state.identitySeed, bpm: Self.bpm)
@@ -1466,11 +1419,9 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             kind: kind,
             rootSeed: state.rootSeed,
             phraseIndex: state.phraseIndex,
-            recentPerformanceCharacters: state.memory.recentPerformanceCharacters,
-            alternate: alternate,
-            conservative: conservative
+            recentPerformanceCharacters: state.memory.recentPerformanceCharacters
         )
-        let focusRole = focus(kind: kind, alternate: alternate, seed: phraseSeed)
+        let focusRole = focus(kind: kind, seed: phraseSeed)
         var resolvedBars: [ResolvedPerformanceBar] = []
         resolvedBars.reserveCapacity(length)
         var interlockState = state.memory.interlockEvolution
@@ -1490,7 +1441,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             let progress = length == 1 ? 1 : Double(localBar) / Double(length - 1)
             let tension = tension(kind: kind, progress: progress, prior: state.memory.currentPhrase.last?.tension ?? 0.42)
             let transformations = transformations(kind: kind, localBar: localBar, length: length,
-                                                   alternate: alternate, seed: phraseSeed)
+                                                   seed: phraseSeed)
             let absoluteBar = start + localBar
             let proposedRoles = roles(
                 kind: kind,
@@ -1549,10 +1500,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             let gear = percussionGear(absoluteBar: absoluteBar)
             let foundation = foundationResolution(
                 character: character,
-                dna: dna,
                 kind: kind,
-                alternate: alternate,
-                conservative: conservative,
                 localBar: localBar,
                 length: length,
                 gesture: gesture
@@ -1563,26 +1511,21 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 character: character,
                 foundationBehavior: foundation.behavior,
                 companion: foundation.companion,
-                gear: gear, gesture: gesture, conservative: conservative
+                gear: gear, gesture: gesture
             )
             let groovePulses = GroovePulseResolver.articulations(
                 from: ensemble,
                 absoluteBar: absoluteBar,
                 swingPercent: dna.rhythm.swingPercent,
                 percussionGear: gear,
-                eventSeed: bar.eventSeed,
-                conservative: conservative
+                eventSeed: bar.eventSeed
             )
-            let closedHatDecayArticulations = ClosedHatDecayResolver.articulations(
-                from: ensemble,
-                conservative: conservative
-            )
+            let closedHatDecayArticulations = ClosedHatDecayResolver.articulations(from: ensemble)
             let percussionEchoTexture = PercussionEchoTextureResolver.articulation(
                 ensemble: ensemble,
                 kind: kind,
                 character: character,
-                gesture: gesture,
-                conservative: conservative
+                gesture: gesture
             )
             let echoEnabled = pulseEchoEnabled(
                 scene: scene, bar: bar, kind: kind,
@@ -1638,8 +1581,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         resolvedBars = KickSyntaxResolver.resolve(
             resolvedBars: resolvedBars,
             kind: kind,
-            paidDebtIDs: paidDebtIDs,
-            conservative: conservative
+            paidDebtIDs: paidDebtIDs
         )
         let interest = PhraseInterestEvaluator.evaluate(
             resolvedBars: resolvedBars,
@@ -1664,9 +1606,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             openedDebt: openedDebt,
             paidDebtIDs: paidDebtIDs,
             requestsTopologyMutation: state.phraseIndex > 0 &&
-                (kind == .contrast || kind == .majorBreak) && !conservative,
-            alternate: alternate,
-            conservative: conservative,
+                (kind == .contrast || kind == .majorBreak),
             interest: interest,
             endingInterlockState: interlockState,
             endingSpatialContrastState: spatialContrastState,
@@ -1688,11 +1628,9 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         kind: AutonomousPhraseKind,
         rootSeed: UInt64,
         phraseIndex: Int,
-        recentPerformanceCharacters: [PerformanceCharacter],
-        alternate: Bool,
-        conservative: Bool
+        recentPerformanceCharacters: [PerformanceCharacter]
     ) -> PerformanceCharacter {
-        guard !conservative, kind != .identityReturn else { return .hypnoticLock }
+        guard kind != .identityReturn else { return .hypnoticLock }
         let preferred: [PerformanceCharacter] = switch kind {
         case .lock: [.hypnoticLock, .melodicGlow]
         case .contrast: [.acidPressure, .brokenSuspension, .melodicGlow]
@@ -1706,18 +1644,17 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         let phraseSeed = SceneDNA.derivedSeed(
             scene: rootSeed,
             domain: 0x51A7E ^ UInt64(phraseIndex + 1),
-            index: alternate ? 1 : 0
+            index: 0
         )
-        let offset = alternate ? 1 : 0
-        return choices[(Int(phraseSeed % UInt64(choices.count)) + offset) % choices.count]
+        return choices[Int(phraseSeed % UInt64(choices.count))]
     }
 
-    private func focus(kind: AutonomousPhraseKind, alternate: Bool, seed: UInt64) -> PerformanceRole {
+    private func focus(kind: AutonomousPhraseKind, seed: UInt64) -> PerformanceRole {
         switch kind {
         case .majorBreak: return .atmosphere
         case .energyRelease: return .foundation
         case .identityReturn: return .motif
-        case .contrast: return alternate ? .response : .percussion
+        case .contrast: return .percussion
         case .lock:
             let palette: [PerformanceRole] = [.foundation, .percussion, .motif, .atmosphere]
             return palette[Int(seed % UInt64(palette.count))]
@@ -1855,14 +1792,14 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         return result
     }
 
-    private func transformations(kind: AutonomousPhraseKind, localBar: Int, length: Int,
-                                 alternate: Bool, seed: UInt64) -> [MusicalTransformation] {
+    private func transformations(kind: AutonomousPhraseKind, localBar: Int,
+                                 length: Int, seed: UInt64) -> [MusicalTransformation] {
         if localBar == 0 {
             switch kind {
             case .energyRelease: return [.restore, .extend]
             case .identityReturn: return [.restore]
             case .majorBreak: return [.omit]
-            case .contrast: return alternate ? [.displace] : [.rotate]
+            case .contrast: return [.rotate]
             case .lock: return [.`repeat`]
             }
         }
@@ -1876,7 +1813,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         let roll = SceneDNA.derivedSeed(scene: seed, domain: 0x72A, index: localBar) % 100
         if kind == .majorBreak { return roll < 70 ? [.fragment] : [.omit] }
         if roll < 62 { return [.`repeat`] }
-        if roll < 76 { return alternate ? [.displace] : [.rotate] }
+        if roll < 76 { return [.rotate] }
         if roll < 90 { return [.fragment] }
         return [.answer]
     }
@@ -1898,15 +1835,14 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                                      foundationBehavior: FoundationBehavior? = nil,
                                      companion: FoundationCompanion,
                                      gear: PercussionGear,
-                                     gesture: ArrangementGesture,
-                                     conservative: Bool) -> EnsembleContext {
+                                     gesture: ArrangementGesture) -> EnsembleContext {
         let rotation = bar.transformations.contains(.rotate) ? 2 : 0
         let displacement = bar.transformations.contains(.displace) ? 1 : 0
         func shifted(_ step: Int) -> Int { (step + rotation + displacement) % 16 }
         let resolvedFoundationBehavior = foundationBehavior ?? FoundationBehavior(
             companion: companion
         )
-        var kickSteps = conservative ? dna.rhythm.kickSteps : characterKickSteps(
+        var kickSteps = characterKickSteps(
             dna: dna,
             bar: bar,
             character: character,
@@ -1925,7 +1861,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         }
         if bar.roles.contains(.foundation), companion == .bass,
            !bar.transformations.contains(.omit) {
-            let bassSteps = conservative ? dna.rhythm.bassSteps : foundationBassSteps(
+            let bassSteps = foundationBassSteps(
                 dna: dna,
                 kickSteps: kickSteps,
                 behavior: resolvedFoundationBehavior
@@ -1995,8 +1931,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 absoluteBar: bar.bar,
                 percussionActive: true,
                 majorBreak: kind == .majorBreak,
-                gesture: gesture,
-                conservative: conservative
+                gesture: gesture
             )
         }
         if bar.roles.contains(.motif), !bar.transformations.contains(.omit) {
@@ -2034,8 +1969,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             in: resolved,
             absoluteBar: bar.bar,
             gesture: gesture,
-            majorBreak: kind == .majorBreak,
-            conservative: conservative
+            majorBreak: kind == .majorBreak
         )
     }
 
@@ -2134,25 +2068,11 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
 
     private func foundationResolution(
         character: PerformanceCharacter,
-        dna: SceneDNA,
         kind: AutonomousPhraseKind,
-        alternate: Bool,
-        conservative: Bool,
         localBar: Int,
         length: Int,
         gesture: ArrangementGesture
     ) -> (behavior: FoundationBehavior, companion: FoundationCompanion) {
-        if conservative {
-            let companion = legacyFoundationCompanion(
-                dna: dna,
-                kind: kind,
-                alternate: alternate,
-                localBar: localBar,
-                length: length,
-                gesture: gesture
-            )
-            return (FoundationBehavior(companion: companion), companion)
-        }
         let behavior = PerformanceCharacterContract.foundationBehavior(
             for: character,
             gesture: gesture,
@@ -2164,28 +2084,6 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             "Performance character emitted an incompatible foundation"
         )
         return (behavior, behavior.companion)
-    }
-
-    private func legacyFoundationCompanion(
-        dna: SceneDNA,
-        kind: AutonomousPhraseKind,
-        alternate: Bool,
-        localBar: Int,
-        length: Int,
-        gesture: ArrangementGesture
-    ) -> FoundationCompanion {
-        switch kind {
-        case .majorBreak:
-            return gesture == .structuralMarker ? .tunedTom : .empty
-        case .contrast where alternate && localBar >= length / 2:
-            switch dna.foundationCompanion {
-            case .bass: return .monoRumble
-            case .monoRumble: return .tunedTom
-            case .tunedTom, .empty: return .bass
-            }
-        case .lock, .contrast, .energyRelease, .identityReturn:
-            return dna.foundationCompanion
-        }
     }
 
     private func pulseEchoEnabled(scene: TechnoScene, bar: PerformanceBar,

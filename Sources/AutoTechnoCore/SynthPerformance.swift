@@ -67,7 +67,7 @@ package enum UpperEnvelopeRelation: String, CaseIterable, Sendable {
 /// The complete score-owned pitch and articulation request for one upper note.
 /// Start and end ratios are requested trajectory anchors relative to
 /// `SynthWorldDNA.rootFrequency`. DSP records the continuation-dependent
-/// audible start/end frequencies separately, so legacy home glide remains
+/// audible start/end frequencies separately, so the continuing home glide remains
 /// observable instead of being misrepresented as a score decision.
 package struct ResolvedUpperNote: Equatable, Sendable {
     package static let minimumDurationInSteps = 1.0 / 16.0
@@ -318,9 +318,9 @@ package struct InterlockEvolutionState: Equatable, Sendable {
             let nonHome: [InterlockChapter] = [.breath, .tone, .motion, .memory]
             let recent = Set(previousChapters + [currentChapter])
             let unusedPreferred = preferred.filter { !recent.contains($0) }
-            let unusedFallback = nonHome.filter { !recent.contains($0) }
+            let unseenNonHome = nonHome.filter { !recent.contains($0) }
             let choices = !unusedPreferred.isEmpty ? unusedPreferred
-                : (!unusedFallback.isEmpty ? unusedFallback : nonHome)
+                : (!unseenNonHome.isEmpty ? unseenNonHome : nonHome)
             selected = choices[Int(entropy % UInt64(choices.count))]
         }
         return InterlockEvolutionState(
@@ -448,23 +448,21 @@ package struct SynthPerformanceBar: Equatable, Sendable {
 package struct SynthPerformancePlan: Equatable, Sendable {
     package let world: SynthWorldDNA
     package let kind: AutonomousPhraseKind
-    package let conservative: Bool
-    package let upperTimbreFallback: Bool
+    package let homeTimbreCorrection: Bool
     package let bars: [SynthPerformanceBar]
 
     package init(scene: TechnoScene, dna: SceneDNA, kind: AutonomousPhraseKind,
-                 resolvedBars: [ResolvedPerformanceBar], conservative: Bool = false,
+                 resolvedBars: [ResolvedPerformanceBar],
                  forceHomeUpperTimbre: Bool = false,
                  compositionBars suppliedComposition: [PhraseCompositionBar]? = nil) {
         let synthWorld = SynthWorldDNA(scene: scene, dna: dna)
-        let compositionBars = conservative || forceHomeUpperTimbre
+        let compositionBars = forceHomeUpperTimbre
             ? resolvedBars.map { PhraseCompositionBar.neutral(bar: $0.performance.bar) }
             : suppliedComposition ?? PhraseCompositionResolver.resolve(
                 scene: scene,
                 dna: dna,
                 kind: kind,
-                resolvedBars: resolvedBars,
-                conservative: false
+                resolvedBars: resolvedBars
             )
         let synthBars = resolvedBars.enumerated().map { index, resolved in
             let performanceBar = resolved.performance
@@ -476,7 +474,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
             let hasRelationalUpperMaterial = resolved.ensemble.events.contains {
                 $0.voice == .motif || $0.voice == .response
             }
-            let spectralSculptureEnabled = !conservative && kind != .identityReturn &&
+            let spectralSculptureEnabled = kind != .identityReturn &&
                 kind != .majorBreak && hasRelationalUpperMaterial
             let relationalSteps = (0..<16).map { step in
                 RelationalArticulation(
@@ -494,7 +492,6 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 resolved: resolved,
                 gesture: gesture,
                 mutationAmount: mutation,
-                conservative: conservative,
                 forceHomeUpperTimbre: forceHomeUpperTimbre,
                 relationalSteps: relationalSteps,
                 composition: composition
@@ -507,7 +504,6 @@ package struct SynthPerformancePlan: Equatable, Sendable {
             let pulseEchoTextureEnabled = resolved.interlockChapter == .memory &&
                 resolved.pulseEchoEnabled &&
                 earliestPulseEchoOnsetStep != nil &&
-                !conservative &&
                 !forceHomeUpperTimbre &&
                 kind != .identityReturn &&
                 kind != .majorBreak
@@ -520,8 +516,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     kind: kind,
                     gesture: gesture,
                     mutationAmount: mutation,
-                    foundationBehavior: resolved.foundationBehavior,
-                    conservative: conservative
+                    foundationBehavior: resolved.foundationBehavior
                 ),
                 relationalSteps: relationalSteps,
                 upperNotes: upperNotes,
@@ -539,8 +534,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         }
         world = synthWorld
         self.kind = kind
-        self.conservative = conservative
-        upperTimbreFallback = forceHomeUpperTimbre
+        homeTimbreCorrection = forceHomeUpperTimbre
         bars = synthBars
     }
 
@@ -612,14 +606,12 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         resolved: ResolvedPerformanceBar,
         gesture: SynthGesture,
         mutationAmount: Double,
-        conservative: Bool,
         forceHomeUpperTimbre: Bool,
         relationalSteps: [RelationalArticulation],
         composition: PhraseCompositionBar
     ) -> (notes: [ResolvedUpperNote], tonalEnvelopeExpansionEligible: Bool,
           timingRelation: UpperTimingRelation) {
         let performance = resolved.performance
-        let assignmentConservative = conservative || forceHomeUpperTimbre
         func instrument(_ role: SynthRole) -> InstrumentAssignment {
             InstrumentPalette.resolveUpper(
                 role: role,
@@ -628,7 +620,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 gesture: gesture,
                 chapter: resolved.interlockChapter,
                 mutationAmount: mutationAmount,
-                conservative: assignmentConservative,
+                forceHome: forceHomeUpperTimbre,
                 pulseEchoEnabled: resolved.pulseEchoEnabled,
                 performanceCharacter: resolved.performanceCharacter
             )
@@ -642,7 +634,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
             if $0.event.step != $1.event.step { return $0.event.step < $1.event.step }
             return $0.sourceIndex < $1.sourceIndex
         }
-        let variationEnabled = !conservative && !forceHomeUpperTimbre &&
+        let variationEnabled = !forceHomeUpperTimbre &&
             kind != .identityReturn && kind != .majorBreak
         let resonantEligible = variationEnabled &&
             resolved.interlockChapter == .motion &&
@@ -672,8 +664,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
 
         let anchorInstrument = instrument(.anchor)
         let expansionCandidateIndex: Int? = {
-            guard !conservative,
-                  kind == .energyRelease,
+            guard kind == .energyRelease,
                   performance.signatureEvent == .displacedKickRecovery,
                   ((performance.bar % 16) + 16) % 16 == 15,
                   resolved.arrangementGesture == .structuralMarker,

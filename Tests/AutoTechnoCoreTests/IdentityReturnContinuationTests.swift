@@ -10,7 +10,7 @@ struct IdentityReturnContinuationTests {
         var identityInput: AutonomousSessionState?
 
         for _ in 0..<80 {
-            let plan = director.candidates(from: canonicalState).primary
+            let plan = director.plan(from: canonicalState)
             if plan.kind == .identityReturn,
                plan.startBar == 118,
                plan.resolvedBars.last?.performance.bar == 127 {
@@ -54,7 +54,7 @@ struct IdentityReturnContinuationTests {
             )
         )
 
-        let identity = director.candidates(from: state).primary
+        let identity = director.plan(from: state)
         guard let finalIdentityBar = identity.resolvedBars.last else {
             Issue.record("Expected a resolved identity-return bar")
             return
@@ -73,7 +73,7 @@ struct IdentityReturnContinuationTests {
         state.advance(using: identity)
         #expect(state.memory.narrativeEvolution == identity.endingNarrativeState)
 
-        let next = director.candidates(from: state).primary
+        let next = director.plan(from: state)
         guard let firstNextMacroBar = next.resolvedBars.first else {
             Issue.record("Expected the next macro to contain a resolved bar")
             return

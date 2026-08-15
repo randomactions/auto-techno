@@ -2,14 +2,14 @@ import AutoTechnoCore
 import Foundation
 
 /// Deterministic upper bound for numeric working storage during detached
-/// candidate preparation. This is an activation-readiness contract, not a
+/// primary preparation. This is a runtime-readiness contract, not a
 /// runtime allocation counter and not a quality verdict.
 package struct AutonomousPreparationResourceBudget: Equatable, Sendable {
     package static let representativeSampleRates = [44_100.0, 48_000.0]
     package static let maximumPeakWorkingByteCount = 128 * 1_024 * 1_024
-    /// The shortest authored phrase is four bars. A healthy paired successor
-    /// must fit this first lookahead window; the four-pass hard-failure path may
-    /// consume one bounded frozen-topology repeat but not a second one.
+    /// The shortest authored phrase is four bars. Its initial render and the
+    /// one permitted corrective rerender must fit before the second frozen-
+    /// topology hold boundary.
     package static let minimumPhraseLookaheadSeconds =
         4.0 * 240.0 / AutonomousSessionDirector.bpm
     package static let maximumSingleHoldLookaheadSeconds =
@@ -60,7 +60,7 @@ package struct AutonomousPreparationResourceBudget: Equatable, Sendable {
 
         // Mirrors every bounded variable-length continuation owner validated
         // by AutonomousPhrasePreparer. Both current and retiring graph states
-        // are included for every conservatively live candidate product.
+        // are included for every live primary render product.
         let voiceContinuationSeconds = 5.0 * (0.34 + 0.009 + 0.005)
         let spatialFDNSeconds = Double(
             FeedbackDelayNetworkConfiguration.lineCount

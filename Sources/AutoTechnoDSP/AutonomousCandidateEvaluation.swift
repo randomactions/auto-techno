@@ -1,29 +1,28 @@
 import AutoTechnoCore
 import Foundation
 
-/// The three score-owned candidates that may participate in one detached
-/// preparation transaction. This is provenance, not another runtime selector.
-package enum AutonomousCandidateSlot: String, Codable, CaseIterable, Sendable {
-    case primary
-    case alternate
-    case fallback
-}
-
-/// At most one initial render per candidate and one bounded correction render
-/// may be retained by an evaluation transaction.
+/// One initial primary render and at most one correction render may be retained
+/// by an evaluation transaction.
 package enum AutonomousCandidateAttemptKind: String, Codable, CaseIterable, Sendable {
     case initialRender
     case correctionRender
 }
 
-/// Describes the evaluator comparison without embedding shipping policy in the
-/// signal-evidence layer.
-package enum AutonomousCandidateComparison: String, Codable, CaseIterable, Sendable {
-    case unavailable
-    case primary
-    case alternate
-    case fallback
-    case tie
+/// Compact projection of the primary render's playback gate. It is diagnostic
+/// evidence only; the calibrated evaluator owns the terminal decision.
+package struct AutonomousPlaybackGateEvidence: Equatable, Sendable {
+    package let symbolicValid: Bool
+    package let safetyValid: Bool
+    package let interesting: Bool
+    package let combinedScore: Double
+
+    package init(symbolicValid: Bool, safetyValid: Bool, interesting: Bool,
+                 combinedScore: Double) {
+        self.symbolicValid = symbolicValid
+        self.safetyValid = safetyValid
+        self.interesting = interesting
+        self.combinedScore = min(1, max(0, combinedScore))
+    }
 }
 
 package struct AutonomousSymbolicEvidence: Codable, Equatable, Sendable {
@@ -45,8 +44,6 @@ package struct AutonomousSymbolicEvidence: Codable, Equatable, Sendable {
     package let interestScore: Double
     package let interestValid: Bool
     package let chapterChanged: Bool
-    package let alternate: Bool
-    package let conservative: Bool
     package let boundsValid: Bool
 
     package init(
@@ -68,8 +65,6 @@ package struct AutonomousSymbolicEvidence: Codable, Equatable, Sendable {
         interestScore: Double,
         interestValid: Bool,
         chapterChanged: Bool,
-        alternate: Bool,
-        conservative: Bool,
         boundsValid: Bool
     ) {
         self.planFingerprint = planFingerprint
@@ -90,8 +85,6 @@ package struct AutonomousSymbolicEvidence: Codable, Equatable, Sendable {
         self.interestScore = interestScore
         self.interestValid = interestValid
         self.chapterChanged = chapterChanged
-        self.alternate = alternate
-        self.conservative = conservative
         self.boundsValid = boundsValid
     }
 
@@ -985,7 +978,6 @@ package struct AutonomousClimaxArcEvidence: Codable, Equatable, Sendable {
 
     package func isComplete(
         phraseKind: String,
-        conservative: Bool,
         startBar: Int,
         declaredBarCount: Int,
         kickSyntax: [AutonomousKickSyntaxBarEvidence]
@@ -1011,7 +1003,7 @@ package struct AutonomousClimaxArcEvidence: Codable, Equatable, Sendable {
                 firstWithheldBar == nil && secondWithheldBar == nil &&
                 recoveryBar == nil && roles.allSatisfy { $0 == .grounded }
         case .dramaticDebtRelease, .dramaticDebtRecovery:
-            guard kind == .energyRelease, !conservative,
+            guard kind == .energyRelease,
                   paidDebtCount > 0,
                   contrastDebtCount + majorBreakDebtCount == paidDebtCount,
                   let earliestOpenedAtBar,
@@ -2097,10 +2089,9 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
     }
 
     package func normalEligibility(
-        phraseKind: AutonomousPhraseKind,
-        conservative: Bool
+        phraseKind: AutonomousPhraseKind
     ) -> Bool {
-        phraseKind == .contrast && !conservative &&
+        phraseKind == .contrast &&
             performanceCharacter == PerformanceCharacter.brokenSuspension.rawValue &&
             arrangementGesture == ArrangementGesture.gearShift.rawValue &&
             eligibleSourceStepMask != 0
@@ -2108,8 +2099,7 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
 
     package func isComplete(
         sampleRate: Double,
-        phraseKind: AutonomousPhraseKind,
-        conservative: Bool
+        phraseKind: AutonomousPhraseKind
     ) -> Bool {
         guard bar >= 0,
               PerformanceCharacter(rawValue: performanceCharacter) != nil,
@@ -2131,8 +2121,7 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
               (0...renderedFrameCount).contains(outOfWindowNonzeroSampleCount),
               renderPassesMatch, bindingValid, isFinite,
               active == normalEligibility(
-                phraseKind: phraseKind,
-                conservative: conservative
+                phraseKind: phraseKind
               ) else {
             return false
         }
@@ -2601,10 +2590,8 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
     }
 
     package func normalTimingEligibility(
-        phraseKind: AutonomousPhraseKind,
-        conservative: Bool
+        phraseKind: AutonomousPhraseKind
     ) -> Bool {
-        guard !conservative else { return false }
         let cascadeEligible = chapter == InterlockChapter.breath.rawValue &&
             SynthPerformancePlan.upperTimingAperture(absoluteBar: bar) > 0 &&
             anchorEventCount > 0 &&
@@ -2619,8 +2606,7 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
 
     package func isComplete(
         routeSampleRate: Double,
-        phraseKind: AutonomousPhraseKind,
-        conservative: Bool
+        phraseKind: AutonomousPhraseKind
     ) -> Bool {
         let maximumEvents = AutonomousCandidateEvaluationVector
             .maximumUpperTimingEventsPerBar
@@ -2732,7 +2718,7 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
             let expectedActive = max(0, anchorEventCount - 1)
             return chapter == InterlockChapter.home.rawValue &&
                 performanceCharacter == PerformanceCharacter.melodicGlow.rawValue &&
-                phraseKind == .lock && !conservative &&
+                phraseKind == .lock &&
                 anchorEventCount >= 2 &&
                 activeOffsetCount == expectedActive &&
                 anchorActiveOffsetCount == expectedActive &&
@@ -2769,7 +2755,6 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
 
         guard timingRelation == .harmonicCascade,
               chapter == InterlockChapter.breath.rawValue,
-              !conservative,
               phraseKind != .identityReturn,
               phraseKind != .majorBreak,
               anchorEventCount > 0,
@@ -2993,7 +2978,6 @@ package struct AutonomousPulseEchoDriveBarEvidence: Codable, Equatable, Sendable
     package func isComplete(
         sampleRate: Double,
         phraseKind: AutonomousPhraseKind,
-        conservative: Bool,
         instruments: AutonomousInstrumentBarEvidence
     ) -> Bool {
         let sampleRateIsSupported = sampleRate >=
@@ -3060,7 +3044,7 @@ package struct AutonomousPulseEchoDriveBarEvidence: Codable, Equatable, Sendable
             $0 <= PulseEchoTextureArticulation.latestDrivenOnsetStep
         } == true
         let normallyEligible = chapter == .memory && scoreEnabled &&
-            hasPulseEchoAccess && hasTimelyPulseEchoOnset && !conservative &&
+            hasPulseEchoAccess && hasTimelyPulseEchoOnset &&
             phraseKind != .identityReturn && phraseKind != .majorBreak
         guard !driveEligible || normallyEligible else { return false }
         let expectedAmount = driveEligible
@@ -3196,14 +3180,13 @@ package struct AutonomousPulseEchoDriveBarEvidence: Codable, Equatable, Sendable
 
     package func normalDriveEligibility(
         phraseKind: AutonomousPhraseKind,
-        conservative: Bool,
         instruments: AutonomousInstrumentBarEvidence
     ) -> Bool {
         interlockChapter == InterlockChapter.memory.rawValue && scoreEnabled &&
             hasPulseEchoAccess(in: instruments) &&
             earliestPulseEchoOnsetStep.map {
                 $0 <= PulseEchoTextureArticulation.latestDrivenOnsetStep
-            } == true && !conservative &&
+            } == true &&
             phraseKind != .identityReturn && phraseKind != .majorBreak
     }
 
@@ -3664,7 +3647,6 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package static let maximumUpperTimingEventsPerBar = 64
 
     package let schemaVersion: Int
-    package let slot: AutonomousCandidateSlot
     package let planFingerprint: String
     package let graphFingerprint: String
     package let symbolic: AutonomousSymbolicEvidence
@@ -3706,7 +3688,6 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let postGraphUpperTimbreEvidence: UpperTimbreEvidence
 
     package init(
-        slot: AutonomousCandidateSlot,
         planFingerprint: String,
         graphFingerprint: String,
         symbolic: AutonomousSymbolicEvidence,
@@ -3731,7 +3712,6 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         postGraphUpperTimbreEvidence: UpperTimbreEvidence
     ) {
         schemaVersion = Self.schemaVersion
-        self.slot = slot
         self.planFingerprint = planFingerprint
         self.graphFingerprint = graphFingerprint
         self.symbolic = symbolic
@@ -3773,7 +3753,6 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     }
 
     package static func make(
-        slot: AutonomousCandidateSlot,
         plan: AutonomousPhrasePlan,
         graph: DSPGraphPlan,
         planFingerprint: String,
@@ -3847,8 +3826,6 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             interestScore: plan.interest.score,
             interestValid: plan.interest.valid,
             chapterChanged: internalChapterChange || startBoundaryChanged,
-            alternate: plan.alternate,
-            conservative: plan.conservative,
             boundsValid: completeInputs
         )
         let hardGates = AutonomousHardGateEvidence(
@@ -4005,8 +3982,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 }
             )
             let syntaxAuthorizationMatches = role == .grounded || (
-                plan.kind == .energyRelease && !plan.conservative &&
-                    !plan.paidDebtIDs.isEmpty
+                plan.kind == .energyRelease && !plan.paidDebtIDs.isEmpty
             )
             let planBarMatches = resolvedPlanBar.map {
                 $0 == block.resolvedPerformance && $0.performance.bar == block.bar
@@ -4286,7 +4262,6 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         )
         guard !cancellationRequested() else { return nil }
         return AutonomousCandidateEvaluationVector(
-            slot: slot,
             planFingerprint: planFingerprint,
             graphFingerprint: graphFingerprint,
             symbolic: symbolic,
@@ -4410,8 +4385,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         incomingDramaticDebts: [SessionDramaticDebt],
         kickSyntax: [AutonomousKickSyntaxBarEvidence]
     ) -> AutonomousClimaxArcEvidence {
-        let active = plan.kind == .energyRelease && !plan.conservative &&
-            !plan.paidDebtIDs.isEmpty
+        let active = plan.kind == .energyRelease && !plan.paidDebtIDs.isEmpty
         guard active else {
             return .inactive(releaseStartBar: plan.startBar)
         }
@@ -5025,20 +4999,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
 
     @inline(never)
     private func identityAndPrimaryEvidenceAreComplete() -> Bool {
-        let slotMatchesSymbolicIntent: Bool
-        switch slot {
-        case .primary:
-            slotMatchesSymbolicIntent = !symbolic.alternate && !symbolic.conservative
-        case .alternate:
-            slotMatchesSymbolicIntent = symbolic.alternate && !symbolic.conservative
-        case .fallback:
-            slotMatchesSymbolicIntent = !symbolic.alternate && symbolic.conservative
-        }
         guard schemaVersion == Self.schemaVersion,
               !planFingerprint.isEmpty, !graphFingerprint.isEmpty,
               planFingerprint == symbolic.planFingerprint,
               graphFingerprint == graph.graphFingerprint,
-              slotMatchesSymbolicIntent,
               symbolic.isComplete, hardGates.isComplete, fullMix.isComplete,
               graph.isComplete, routeContinuation.isComplete,
               sourceInstrumentBarCount == instruments.count,
@@ -5308,7 +5272,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
 
         let withheldIndices = roles.indices.filter { roles[$0] == .withheld }
         let recoveryIndices = roles.indices.filter { roles[$0] == .recovery }
-        guard phraseKind == .energyRelease, !symbolic.conservative,
+        guard phraseKind == .energyRelease,
               withheldIndices.count == 2, recoveryIndices.count == 1,
               let firstWithheld = withheldIndices.first,
               let recovery = recoveryIndices.first,
@@ -5336,7 +5300,6 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     private func climaxArcEvidenceIsComplete() -> Bool {
         climaxArc.isComplete(
             phraseKind: symbolic.phraseKind,
-            conservative: symbolic.conservative,
             startBar: symbolic.startBar,
             declaredBarCount: symbolic.declaredBarCount,
             kickSyntax: kickSyntax
@@ -5388,8 +5351,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         return percussionEchoTexture.allSatisfy {
             $0.isComplete(
                 sampleRate: routeContinuation.sampleRate,
-                phraseKind: phraseKind,
-                conservative: symbolic.conservative
+                phraseKind: phraseKind
             )
         }
     }
@@ -5410,7 +5372,6 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             guard pulse.isComplete(
                 sampleRate: routeContinuation.sampleRate,
                 phraseKind: phraseKind,
-                conservative: symbolic.conservative,
                 instruments: instrument
             ) else {
                 return false
@@ -5459,8 +5420,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                   timing.renderedFrameCount == pulse.renderedFrameCount,
                   timing.isComplete(
                       routeSampleRate: routeContinuation.sampleRate,
-                      phraseKind: phraseKind,
-                      conservative: symbolic.conservative
+                      phraseKind: phraseKind
                   ) else {
                 return false
             }
@@ -5468,11 +5428,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         return true
     }
 
-    /// The one selector projection shared by live preparation and transaction
-    /// replay validation. It deliberately retains the shipping playback gate
-    /// rather than promoting the larger uncalibrated evidence vector.
-    package var selectionEvidence: AutonomousCandidateEvidence {
-        AutonomousCandidateEvidence(
+    package var playbackGateEvidence: AutonomousPlaybackGateEvidence {
+        AutonomousPlaybackGateEvidence(
             symbolicValid: symbolic.interestValid,
             safetyValid: playbackHardGatesPassed,
             interesting: hardGates.audioSafetyValid,
@@ -5816,30 +5773,25 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
 
     package let schemaVersion: Int
     package let kind: AutonomousCandidateAttemptKind
-    package let forceSafeGraph: Bool
     package let forceHomeUpperTimbre: Bool
     package let sourceReasonCodeCount: Int
     package let reasonCodes: [QualityReasonCode]
-    package let slot: AutonomousCandidateSlot
     package let vector: AutonomousCandidateEvaluationVector
 
     package init(
         kind: AutonomousCandidateAttemptKind,
-        forceSafeGraph: Bool = false,
         forceHomeUpperTimbre: Bool = false,
         reasonCodes: [QualityReasonCode] = [],
         vector: AutonomousCandidateEvaluationVector
     ) {
         schemaVersion = Self.schemaVersion
         self.kind = kind
-        self.forceSafeGraph = forceSafeGraph
         self.forceHomeUpperTimbre = forceHomeUpperTimbre
         let normalizedReasons = Array(Set(reasonCodes)).sorted {
             $0.rawValue < $1.rawValue
         }
         sourceReasonCodeCount = normalizedReasons.count
         self.reasonCodes = Array(normalizedReasons.prefix(Self.maximumReasonCodeCount))
-        slot = vector.slot
         self.vector = vector
     }
 
@@ -5894,7 +5846,6 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
             !pulse.bindingValid || pulse.driveEligible == (
                 pulse.normalDriveEligibility(
                     phraseKind: phraseKind,
-                    conservative: vector.symbolic.conservative,
                     instruments: instruments
                 ) && !forceHomeUpperTimbre
             )
@@ -5904,8 +5855,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
         let upperTimingEligibilityMatchesAttempt = vector.upperTiming.allSatisfy {
             !$0.bindingValid || ($0.activeOffsetCount > 0) == (
                 $0.normalTimingEligibility(
-                    phraseKind: phraseKind,
-                    conservative: vector.symbolic.conservative
+                    phraseKind: phraseKind
                 ) && !forceHomeUpperTimbre
             )
         }
@@ -5916,7 +5866,6 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
                         !forceHomeUpperTimbre)
             }
         guard schemaVersion == Self.schemaVersion,
-              slot == vector.slot,
               prevalidatedRecordIsStructurallyValid,
               vector.pulseEchoDrive.count == vector.instruments.count,
               pulseEchoEligibilityMatchesAttempt,
@@ -5944,12 +5893,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
                 return false
             }
         }
-        let safeGraphExpected = kind == .initialRender && vector.slot == .fallback
-        let safeGraphIsMutationFree = !safeGraphExpected ||
-            (vector.graph.mutationKind == nil && vector.graph.mutatedNodeCount == 0)
-        return forceSafeGraph == safeGraphExpected &&
-            safeGraphIsMutationFree &&
-            missingReason == !prevalidatedVectorIsComplete &&
+        return missingReason == !prevalidatedVectorIsComplete &&
             nonFiniteReason == !prevalidatedVectorIsFinite &&
             hardGateReason == !prevalidatedHardGatesPassed
     }
@@ -5966,45 +5910,8 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
     }
 }
 
-package struct AutonomousCandidatePlanFingerprints: Codable, Equatable, Sendable {
-    package let primary: String
-    package let alternate: String
-    package let fallback: String
-
-    package init(primary: String, alternate: String, fallback: String) {
-        self.primary = primary
-        self.alternate = alternate
-        self.fallback = fallback
-    }
-
-    package static func make(
-        candidates: AutonomousPhraseCandidates
-    ) -> AutonomousCandidatePlanFingerprints {
-        AutonomousCandidatePlanFingerprints(
-            primary: AutonomousCandidateFingerprint.plan(candidates.primary),
-            alternate: AutonomousCandidateFingerprint.plan(candidates.alternate),
-            fallback: AutonomousCandidateFingerprint.plan(candidates.fallback)
-        )
-    }
-
-    package subscript(slot: AutonomousCandidateSlot) -> String {
-        switch slot {
-        case .primary: primary
-        case .alternate: alternate
-        case .fallback: fallback
-        }
-    }
-
-    package var isComplete: Bool {
-        !primary.isEmpty && !alternate.isEmpty && !fallback.isEmpty &&
-            Set([primary, alternate, fallback]).count == 3
-    }
-}
-
 package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sendable {
-    package static let schemaVersion = 1
-    package static let maximumCandidateAttempts =
-        QualityQualificationContract.maximumDistinctCandidates
+    package static let schemaVersion = 2
     package static let maximumCorrectionAttempts =
         QualityQualificationContract.maximumCorrectionRenders
     package static let maximumAttemptCount =
@@ -6014,12 +5921,10 @@ package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sen
     package let engineVersion: String
     package let policyVersion: String
     package let evaluatorVersion: String
-    package let planFingerprints: AutonomousCandidatePlanFingerprints
+    package let planFingerprint: String
     package let sourceAttemptCount: Int
     package let attempts: [AutonomousCandidateAttempt]
     package let selectedAttemptIndex: Int?
-    package let selectedSlot: AutonomousCandidateSlot?
-    package let comparison: AutonomousCandidateComparison
     package let correctionCount: Int
     package let boundsValid: Bool
 
@@ -6027,61 +5932,29 @@ package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sen
         engineVersion: String,
         policyVersion: String,
         evaluatorVersion: String,
-        planFingerprints: AutonomousCandidatePlanFingerprints,
+        planFingerprint: String,
         attempts sourceAttempts: [AutonomousCandidateAttempt],
         selectedAttemptIndex sourceSelectedAttemptIndex: Int?,
-        selectedSlot: AutonomousCandidateSlot?,
-        comparison: AutonomousCandidateComparison,
         correctionCount sourceCorrectionCount: Int
     ) {
         schemaVersion = Self.schemaVersion
         self.engineVersion = engineVersion
         self.policyVersion = policyVersion
         self.evaluatorVersion = evaluatorVersion
-        self.planFingerprints = planFingerprints
+        self.planFingerprint = planFingerprint
         sourceAttemptCount = sourceAttempts.count
 
-        var retained: [(sourceIndex: Int, attempt: AutonomousCandidateAttempt)] = []
-        var candidateSlots = Set<AutonomousCandidateSlot>()
-        var retainedCorrection = false
-        var sourceCandidateCount = 0
-        var sourceCorrectionAttemptCount = 0
-        var duplicateCandidateSlot = false
-        for (sourceIndex, attempt) in sourceAttempts.enumerated() {
-            switch attempt.kind {
-            case .initialRender:
-                sourceCandidateCount += 1
-                if candidateSlots.contains(attempt.vector.slot) {
-                    duplicateCandidateSlot = true
-                } else if candidateSlots.count < Self.maximumCandidateAttempts {
-                    candidateSlots.insert(attempt.vector.slot)
-                    retained.append((sourceIndex, attempt))
-                }
-            case .correctionRender:
-                sourceCorrectionAttemptCount += 1
-                if !retainedCorrection {
-                    retainedCorrection = true
-                    retained.append((sourceIndex, attempt))
-                }
-            }
+        let retainedAttempts = Array(sourceAttempts.prefix(Self.maximumAttemptCount))
+        attempts = retainedAttempts
+        selectedAttemptIndex = sourceSelectedAttemptIndex.flatMap {
+            retainedAttempts.indices.contains($0) ? $0 : nil
         }
-        retained.sort { $0.sourceIndex < $1.sourceIndex }
-        attempts = retained.map { $0.attempt }
-        if let sourceSelectedAttemptIndex,
-           let boundedIndex = retained.firstIndex(where: {
-               $0.sourceIndex == sourceSelectedAttemptIndex
-           }) {
-            selectedAttemptIndex = boundedIndex
-        } else {
-            selectedAttemptIndex = nil
-        }
-        self.selectedSlot = selectedSlot
-        self.comparison = comparison
+        let sourceCorrectionAttemptCount = sourceAttempts.filter {
+            $0.kind == .correctionRender
+        }.count
         correctionCount = min(Self.maximumCorrectionAttempts, max(0, sourceCorrectionCount))
         boundsValid = sourceAttempts.count <= Self.maximumAttemptCount &&
-            sourceCandidateCount <= Self.maximumCandidateAttempts &&
             sourceCorrectionAttemptCount <= Self.maximumCorrectionAttempts &&
-            !duplicateCandidateSlot &&
             sourceCorrectionCount == sourceCorrectionAttemptCount
     }
 
@@ -6103,22 +5976,7 @@ package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sen
 /// them into tuple locals made the prior monolithic getter exceed the 512 KiB
 /// cooperative preparation-thread stack before any audio could be committed.
 private final class AutonomousCandidateEvaluationTransactionValidator {
-    private struct PrevalidatedAttemptRecord {
-        let recordIsStructurallyValid: Bool
-        let vectorIsComplete: Bool
-        let vectorIsFinite: Bool
-        let hardGatesPassed: Bool
-    }
-
     private let transaction: AutonomousCandidateEvaluationTransaction
-    private var prevalidatedAttemptRecords: [PrevalidatedAttemptRecord] = []
-    private var initialIndices: [Int] = []
-    private var correctionIndices: [Int] = []
-    private var primaryInitialIndex: Int?
-    private var alternateInitialIndex: Int?
-    private var fallbackInitialIndex: Int?
-    private var initialForceHomeUpperTimbre: Bool?
-    private var usesUncalibratedEvaluator = false
 
     init(_ transaction: AutonomousCandidateEvaluationTransaction) {
         self.transaction = transaction
@@ -6126,397 +5984,119 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
 
     @inline(never)
     func validate() -> Bool {
-        validateHeader() &&
-            prevalidateAttemptRecords() &&
-            validateAttemptLayout() &&
-            validateSharedInputs() &&
-            validateKnownEvaluatorHistory() &&
-            validateCorrectionHistory() &&
-            validateFallbackHistory() &&
-            validateSelectionReplay()
-    }
-
-    /// Evaluate the large vector and full-mix gates directly from the
-    /// reference-owned transaction validator. Passing only four booleans into
-    /// attempt layout avoids nesting full-mix signal validation beneath the
-    /// attempt and vector structural getter frames on cooperative threads.
-    @inline(never)
-    private func prevalidateAttemptRecords() -> Bool {
-        prevalidatedAttemptRecords.reserveCapacity(
-            AutonomousCandidateEvaluationTransaction.maximumAttemptCount
-        )
-        for index in transaction.attempts.indices {
-            let signalSafetyValid =
-                transaction.attempts[index].vector.fullMix.signalSafetyValid
-            let hardGateSummaryIsCanonical = transaction.attempts[index]
-                .vector.hardGateSummaryIsCanonicalForTransactionValidation(
-                    prevalidatedSignalSafetyValid: signalSafetyValid
-                )
-            let recordIsStructurallyValid = transaction.attempts[index]
-                .vector.recordIsStructurallyValid(
-                    prevalidatedHardGateSummaryIsCanonical:
-                        hardGateSummaryIsCanonical
-                )
-            guard recordIsStructurallyValid else { return false }
-            let vectorIsComplete =
-                transaction.attempts[index].vector.isComplete
-            let vectorIsFinite = transaction.attempts[index].vector.isFinite
-            prevalidatedAttemptRecords.append(PrevalidatedAttemptRecord(
-                recordIsStructurallyValid: true,
-                vectorIsComplete: vectorIsComplete,
-                vectorIsFinite: vectorIsFinite,
-                hardGatesPassed:
-                    transaction.attempts[index]
-                        .vector.hardGatesPassedForTransactionValidation(
-                            prevalidatedVectorIsComplete: vectorIsComplete,
-                            prevalidatedVectorIsFinite: vectorIsFinite,
-                            prevalidatedSignalSafetyValid: signalSafetyValid
-                        )
-            ))
-        }
-        return prevalidatedAttemptRecords.count == transaction.attempts.count
-    }
-
-    @inline(never)
-    private func validateHeader() -> Bool {
-        let usesUncalibratedPolicy = transaction.policyVersion ==
-            QualityQualificationContract.uncalibratedPolicyVersion
-        usesUncalibratedEvaluator = transaction.evaluatorVersion ==
-            QualityQualificationContract.uncalibratedEvaluatorVersion
-        guard transaction.schemaVersion == AutonomousCandidateEvaluationTransaction.schemaVersion,
+        guard transaction.schemaVersion ==
+                AutonomousCandidateEvaluationTransaction.schemaVersion,
               transaction.boundsValid,
-              !transaction.engineVersion.trimmingCharacters(
-                  in: .whitespacesAndNewlines
-              ).isEmpty,
+              transaction.engineVersion ==
+                QualityQualificationContract.engineVersion,
               !transaction.policyVersion.trimmingCharacters(
                   in: .whitespacesAndNewlines
               ).isEmpty,
               !transaction.evaluatorVersion.trimmingCharacters(
                   in: .whitespacesAndNewlines
               ).isEmpty,
-              usesUncalibratedPolicy == usesUncalibratedEvaluator,
-              !usesUncalibratedEvaluator || transaction.comparison == .unavailable,
-              transaction.planFingerprints.isComplete,
-              !transaction.attempts.isEmpty,
-              transaction.attempts.count <=
-                AutonomousCandidateEvaluationTransaction.maximumAttemptCount,
+              !transaction.planFingerprint.isEmpty,
               transaction.sourceAttemptCount == transaction.attempts.count,
-              transaction.correctionCount >= 0,
-              transaction.correctionCount <=
-                AutonomousCandidateEvaluationTransaction.maximumCorrectionAttempts,
-              let selectedAttemptIndex = transaction.selectedAttemptIndex,
-              transaction.attempts.indices.contains(selectedAttemptIndex),
-              let selectedSlot = transaction.selectedSlot else {
+              (1...AutonomousCandidateEvaluationTransaction.maximumAttemptCount)
+                .contains(transaction.attempts.count),
+              let selectedIndex = transaction.selectedAttemptIndex,
+              transaction.attempts.indices.contains(selectedIndex),
+              selectedIndex == transaction.attempts.index(before:
+                transaction.attempts.endIndex),
+              transaction.attempts[0].kind == .initialRender,
+              !transaction.attempts[0].forceHomeUpperTimbre else {
             return false
         }
-        return transaction.attempts[selectedAttemptIndex].slot == selectedSlot
-    }
 
-    @inline(never)
-    private func validateAttemptLayout() -> Bool {
-        initialIndices.reserveCapacity(
-            AutonomousCandidateEvaluationTransaction.maximumCandidateAttempts
-        )
-        correctionIndices.reserveCapacity(
-            AutonomousCandidateEvaluationTransaction.maximumCorrectionAttempts
-        )
-        var seenInitialSlots = Set<AutonomousCandidateSlot>()
-        var previousInitialRank = -1
-
-        for index in transaction.attempts.indices {
-            guard prevalidatedAttemptRecords.indices.contains(index),
-                  transaction.attempts[index].isStructurallyComplete(
-                    prevalidatedRecordIsStructurallyValid:
-                        prevalidatedAttemptRecords[index]
-                            .recordIsStructurallyValid,
-                    prevalidatedVectorIsComplete:
-                        prevalidatedAttemptRecords[index].vectorIsComplete,
-                    prevalidatedVectorIsFinite:
-                        prevalidatedAttemptRecords[index].vectorIsFinite,
-                    prevalidatedHardGatesPassed:
-                        prevalidatedAttemptRecords[index].hardGatesPassed
-                  ),
-                  transaction.attempts[index].vector.planFingerprint ==
-                    transaction.planFingerprints[transaction.attempts[index].slot] else {
+        for attempt in transaction.attempts {
+            let vector = attempt.vector
+            let signalSafetyValid = vector.fullMix.signalSafetyValid
+            let hardGateSummaryIsCanonical =
+                vector.hardGateSummaryIsCanonicalForTransactionValidation(
+                    prevalidatedSignalSafetyValid: signalSafetyValid
+                )
+            guard vector.planFingerprint == transaction.planFingerprint,
+                  vector.recordIsStructurallyValid(
+                    prevalidatedHardGateSummaryIsCanonical:
+                        hardGateSummaryIsCanonical
+                  ) else {
                 return false
             }
-            switch transaction.attempts[index].kind {
-            case .initialRender:
-                let slot = transaction.attempts[index].slot
-                guard !seenInitialSlots.contains(slot),
-                      let rank = Self.rank(of: slot), rank >= previousInitialRank else {
-                    return false
-                }
-                seenInitialSlots.insert(slot)
-                previousInitialRank = rank
-                if let initialForceHomeUpperTimbre {
-                    guard initialForceHomeUpperTimbre ==
-                        transaction.attempts[index].forceHomeUpperTimbre else {
-                        return false
-                    }
-                } else {
-                    initialForceHomeUpperTimbre =
-                        transaction.attempts[index].forceHomeUpperTimbre
-                }
-                initialIndices.append(index)
-                switch slot {
-                case .primary: primaryInitialIndex = index
-                case .alternate: alternateInitialIndex = index
-                case .fallback: fallbackInitialIndex = index
-                }
-            case .correctionRender:
-                correctionIndices.append(index)
-            }
-        }
-
-        guard initialIndices.count <=
-                AutonomousCandidateEvaluationTransaction.maximumCandidateAttempts,
-              correctionIndices.count == transaction.correctionCount,
-              correctionIndices.count <=
-                AutonomousCandidateEvaluationTransaction.maximumCorrectionAttempts,
-              initialIndices.first == primaryInitialIndex,
-              primaryInitialIndex != nil else {
-            return false
-        }
-        return initialForceHomeUpperTimbre != true || transaction.correctionCount == 0
-    }
-
-    @inline(never)
-    private func validateSharedInputs() -> Bool {
-        guard let firstIndex = transaction.attempts.indices.first,
-              let primaryInitialIndex,
-              let initialForceHomeUpperTimbre else {
-            return false
-        }
-        for index in transaction.attempts.indices where index != firstIndex {
-            guard sharedRouteInputsMatch(firstIndex, index) else { return false }
-        }
-        guard transaction.attempts[firstIndex].vector.routeContinuation.routeRecovery ==
-                initialForceHomeUpperTimbre else {
-            return false
-        }
-        for index in transaction.attempts.indices {
-            guard transaction.attempts[index].vector.symbolic.phraseIndex ==
-                    transaction.attempts[primaryInitialIndex].vector.symbolic.phraseIndex,
-                  transaction.attempts[index].vector.symbolic.startBar ==
-                    transaction.attempts[primaryInitialIndex].vector.symbolic.startBar else {
+            let vectorIsComplete = vector.isComplete
+            let vectorIsFinite = vector.isFinite
+            guard attempt.isStructurallyComplete(
+                prevalidatedRecordIsStructurallyValid: true,
+                prevalidatedVectorIsComplete: vectorIsComplete,
+                prevalidatedVectorIsFinite: vectorIsFinite,
+                prevalidatedHardGatesPassed:
+                    vector.hardGatesPassedForTransactionValidation(
+                        prevalidatedVectorIsComplete: vectorIsComplete,
+                        prevalidatedVectorIsFinite: vectorIsFinite,
+                        prevalidatedSignalSafetyValid: signalSafetyValid
+                    )
+            ) else {
                 return false
             }
         }
-        if let alternateInitialIndex,
-           transaction.attempts[alternateInitialIndex].vector.symbolic.phraseKind !=
-            transaction.attempts[primaryInitialIndex].vector.symbolic.phraseKind {
+
+        if transaction.attempts.count == 1 {
+            return selectedIndex == 0 && transaction.correctionCount == 0
+        }
+        guard transaction.attempts.count == 2,
+              selectedIndex == 1,
+              transaction.correctionCount == 1,
+              transaction.attempts[1].kind == .correctionRender,
+              transaction.attempts[1].forceHomeUpperTimbre else {
             return false
         }
-        if let fallbackInitialIndex,
-           transaction.attempts[fallbackInitialIndex].vector.symbolic.phraseKind !=
-            AutonomousPhraseKind.identityReturn.rawValue {
-            return false
-        }
-        return true
-    }
-
-    @inline(never)
-    private func validateKnownEvaluatorHistory() -> Bool {
-        guard usesUncalibratedEvaluator else { return true }
-        guard let primaryInitialIndex else { return false }
-        let routeRecovery = transaction.attempts[primaryInitialIndex]
-            .vector.routeContinuation.routeRecovery
-        let primaryRepairable = !routeRecovery && isRepairable(primaryInitialIndex)
-        let primaryEvidence = selectionEvidence(primaryInitialIndex)
-        let needsAlternate = AutonomousCandidateSelector.needsAlternate(
-            primary: primaryEvidence,
-            qualityComparisonAvailable: false
-        ) || primaryRepairable
-        guard (alternateInitialIndex != nil) == needsAlternate else { return false }
-
-        let alternateEvidence = alternateInitialIndex.map(selectionEvidence)
-        let preCorrectionChoice = AutonomousCandidateSelector.choose(
-            primary: primaryEvidence,
-            alternate: alternateEvidence,
-            qualityComparison: .unavailable
+        return correctionMatchesInitial(
+            transaction.attempts[1].vector,
+            transaction.attempts[0].vector
         )
-        let preCorrectionSlot: AutonomousCandidateSlot?
-        switch preCorrectionChoice {
-        case .primary: preCorrectionSlot = .primary
-        case .alternate: preCorrectionSlot = .alternate
-        case .fallback: preCorrectionSlot = nil
-        }
-        let alternateRepairable = !routeRecovery &&
-            (alternateInitialIndex.map(isRepairable) ?? false)
-        let expectedCorrectionSlot = AutonomousCandidateCorrectionPolicy.choose(
-            selectedSlot: preCorrectionSlot,
-            primaryRepairable: primaryRepairable,
-            alternateRepairable: alternateRepairable
-        )
-        let actualCorrectionSlot = correctionIndices.first.map {
-            transaction.attempts[$0].slot
-        }
-        return actualCorrectionSlot == expectedCorrectionSlot &&
-            correctionIndices.isEmpty == (expectedCorrectionSlot == nil)
-    }
-
-    @inline(never)
-    private func validateCorrectionHistory() -> Bool {
-        guard let correctionIndex = correctionIndices.first else { return true }
-        let correctionSlot = transaction.attempts[correctionIndex].slot
-        guard correctionSlot != .fallback,
-              transaction.attempts[correctionIndex].forceHomeUpperTimbre,
-              alternateInitialIndex != nil,
-              let matchingInitialIndex = initialIndex(for: correctionSlot),
-              matchingInitialIndex < correctionIndex,
-              correctionMatchesInitial(correctionIndex, matchingInitialIndex) else {
-            return false
-        }
-        var lastAuthoredInitial = -1
-        for index in initialIndices
-        where transaction.attempts[index].slot != .fallback {
-            lastAuthoredInitial = max(lastAuthoredInitial, index)
-        }
-        return correctionIndex > lastAuthoredInitial
-    }
-
-    @inline(never)
-    private func validateFallbackHistory() -> Bool {
-        guard let fallbackInitialIndex else { return true }
-        guard let selectedAttemptIndex = transaction.selectedAttemptIndex else {
-            return false
-        }
-        return fallbackInitialIndex == transaction.attempts.index(
-            before: transaction.attempts.endIndex
-        ) && transaction.attempts[fallbackInitialIndex].forceSafeGraph &&
-            alternateInitialIndex != nil &&
-            selectedAttemptIndex == fallbackInitialIndex &&
-            transaction.selectedSlot == .fallback
-    }
-
-    @inline(never)
-    private func validateSelectionReplay() -> Bool {
-        guard let primaryInitialIndex,
-              let selectedAttemptIndex = transaction.selectedAttemptIndex,
-              let selectedSlot = transaction.selectedSlot else {
-            return false
-        }
-        var replayPrimaryIndex = primaryInitialIndex
-        var replayAlternateIndex = alternateInitialIndex
-        if let correctionIndex = correctionIndices.first {
-            let evidence = selectionEvidence(correctionIndex)
-            if evidence.symbolicValid && evidence.safetyValid {
-                if transaction.attempts[correctionIndex].slot == .primary {
-                    replayPrimaryIndex = correctionIndex
-                } else if transaction.attempts[correctionIndex].slot == .alternate {
-                    replayAlternateIndex = correctionIndex
-                }
-            }
-        }
-        guard transaction.comparison == .unavailable || replayAlternateIndex != nil else {
-            return false
-        }
-        let replayChoice = AutonomousCandidateSelector.choose(
-            primary: selectionEvidence(replayPrimaryIndex),
-            alternate: replayAlternateIndex.map(selectionEvidence),
-            qualityComparison: transaction.comparison.qualityComparison
-        )
-        switch replayChoice {
-        case .primary:
-            return selectedSlot == .primary && selectedAttemptIndex == replayPrimaryIndex
-        case .alternate:
-            return selectedSlot == .alternate &&
-                selectedAttemptIndex == replayAlternateIndex
-        case .fallback:
-            return selectedSlot == .fallback &&
-                selectedAttemptIndex == fallbackInitialIndex
-        }
-    }
-
-    @inline(never)
-    private func sharedRouteInputsMatch(_ firstIndex: Int, _ candidateIndex: Int) -> Bool {
-        let first = transaction.attempts[firstIndex].vector.routeContinuation
-        let candidate = transaction.attempts[candidateIndex].vector.routeContinuation
-        return candidate.sampleRate == first.sampleRate &&
-            candidate.channelCount == first.channelCount &&
-            candidate.routeGeneration == first.routeGeneration &&
-            candidate.routeFingerprint == first.routeFingerprint &&
-            candidate.incomingContinuationFingerprint ==
-                first.incomingContinuationFingerprint &&
-            candidate.incomingQualityStateFingerprint ==
-                first.incomingQualityStateFingerprint &&
-            candidate.incomingKickCorrectionDB == first.incomingKickCorrectionDB &&
-            candidate.incomingTopologyRevision == first.incomingTopologyRevision &&
-            candidate.previousGraphFingerprint == first.previousGraphFingerprint &&
-            candidate.routeRecovery == first.routeRecovery
     }
 
     @inline(never)
     private func correctionMatchesInitial(
-        _ correctionIndex: Int,
-        _ initialIndex: Int
+        _ correction: AutonomousCandidateEvaluationVector,
+        _ initial: AutonomousCandidateEvaluationVector
     ) -> Bool {
-        transaction.attempts[correctionIndex].vector.symbolic ==
-            transaction.attempts[initialIndex].vector.symbolic &&
-            transaction.attempts[correctionIndex].vector.graph ==
-            transaction.attempts[initialIndex].vector.graph &&
-            transaction.attempts[correctionIndex].vector.kickSyntax ==
-            transaction.attempts[initialIndex].vector.kickSyntax &&
-            transaction.attempts[correctionIndex].vector.climaxArc ==
-            transaction.attempts[initialIndex].vector.climaxArc &&
-            zip(
-                transaction.attempts[correctionIndex].vector.instruments,
-                transaction.attempts[initialIndex].vector.instruments
-            ).allSatisfy { correction, initial in
-                correction.bar == initial.bar &&
-                    correction.tonalEnvelopeExpansionEligible ==
-                        initial.tonalEnvelopeExpansionEligible
+        correction.symbolic == initial.symbolic &&
+            correction.graph == initial.graph &&
+            correction.kickSyntax == initial.kickSyntax &&
+            correction.climaxArc == initial.climaxArc &&
+            sharedRouteInputsMatch(correction, initial) &&
+            zip(correction.instruments, initial.instruments).allSatisfy {
+                corrected, source in
+                corrected.bar == source.bar &&
+                    corrected.tonalEnvelopeExpansionEligible ==
+                        source.tonalEnvelopeExpansionEligible
             } &&
-            transaction.attempts[correctionIndex].vector
-                .percussionEchoTexture ==
-            transaction.attempts[initialIndex].vector
-                .percussionEchoTexture
+            correction.percussionEchoTexture ==
+                initial.percussionEchoTexture
     }
 
     @inline(never)
-    private func isRepairable(_ index: Int) -> Bool {
-        UncalibratedAutonomousCandidateEvaluator.requestsHomeUpperTimbreCorrection(
-            for: transaction.attempts[index].vector
-        )
-    }
-
-    @inline(never)
-    private func selectionEvidence(_ index: Int) -> AutonomousCandidateEvidence {
-        transaction.attempts[index].vector.selectionEvidence
-    }
-
-    private func initialIndex(for slot: AutonomousCandidateSlot) -> Int? {
-        switch slot {
-        case .primary: primaryInitialIndex
-        case .alternate: alternateInitialIndex
-        case .fallback: fallbackInitialIndex
-        }
-    }
-
-    private static func rank(of slot: AutonomousCandidateSlot) -> Int? {
-        switch slot {
-        case .primary: 0
-        case .alternate: 1
-        case .fallback: 2
-        }
+    private func sharedRouteInputsMatch(
+        _ correction: AutonomousCandidateEvaluationVector,
+        _ initial: AutonomousCandidateEvaluationVector
+    ) -> Bool {
+        let left = correction.routeContinuation
+        let right = initial.routeContinuation
+        return left.sampleRate == right.sampleRate &&
+            left.channelCount == right.channelCount &&
+            left.routeGeneration == right.routeGeneration &&
+            left.routeFingerprint == right.routeFingerprint &&
+            left.incomingContinuationFingerprint ==
+                right.incomingContinuationFingerprint &&
+            left.incomingQualityStateFingerprint ==
+                right.incomingQualityStateFingerprint &&
+            left.incomingKickCorrectionDB == right.incomingKickCorrectionDB &&
+            left.incomingTopologyRevision == right.incomingTopologyRevision &&
+            left.previousGraphFingerprint == right.previousGraphFingerprint &&
+            left.routeRecovery == right.routeRecovery
     }
 }
 
-private extension AutonomousCandidateComparison {
-    var qualityComparison: AutonomousQualityComparison {
-        switch self {
-        case .unavailable: .unavailable
-        case .primary: .primary
-        case .alternate: .alternate
-        case .tie: .tie
-        case .fallback: .fallback
-        }
-    }
-}
-
-/// Separately names every continuation owner before combining them. The
-/// combined value is suitable for the reduced route/continuation evidence.
 package struct AutonomousCandidateContinuationFingerprint: Codable, Equatable, Sendable {
     package let renderState: String
     package let generatedDSPState: String

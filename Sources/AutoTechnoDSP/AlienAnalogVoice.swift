@@ -561,7 +561,7 @@ enum AlienAnalogVoice {
                 if legatoGate {
                     startFrequency = max(20, state.frequency)
                 } else if note.timbreIntent.kind != .resonantSequence {
-                    // Home and detuned-motion notes share the legacy pitch
+                    // Home and detuned-motion notes share the existing pitch
                     // trajectory. Detuned motion may change only oscillator
                     // beating; it must not smuggle in a retrigger pitch jump.
                     startFrequency = max(20, state.frequency)

@@ -38,35 +38,33 @@ package struct ProfessionalQualityCandidateAssessment: Codable, Equatable,
     }
 }
 
-/// Exact-engine calibrated evaluator for the existing bounded preparation
+/// Exact-engine calibrated evaluator for the bounded primary preparation
 /// transaction. Construction requires a complete adversarially challenged
-/// profile produced by the current canonical engine. A historical development
-/// profile can still diagnose later engines, but cannot silently become the
-/// shipping selector.
-package struct ProfessionalQualityPairedCandidateEvaluator:
+/// profile and qualified holdout produced by the current canonical engine.
+package struct ProfessionalQualityPrimaryEvaluator:
         AutonomousCandidateEvaluating {
     package static let policyFamilyVersion =
-        "autotechno-quality.paired-calibrated.v3"
+        "autotechno-quality.primary-calibrated.v1"
     package static let evaluatorVersionIdentifier =
-        "autotechno-candidate-evaluator.paired-calibrated.v3"
+        "autotechno-candidate-evaluator.primary-calibrated.v1"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport
     package let holdoutQualification: ProfessionalQualityHoldoutQualification
     package let policyVersion: String
     package let evaluatorVersion = Self.evaluatorVersionIdentifier
-    package let requiresPairedCandidates = true
 
     package init(
         profile: ProfessionalQualityCalibrationProfile,
         adversarialSuite: ProfessionalQualityAdversarialSuiteReport,
         holdoutQualification: ProfessionalQualityHoldoutQualification
     ) throws {
-        _ = try ProfessionalQualityDevelopmentPolicy(
-            profile: profile,
-            adversarialSuite: adversarialSuite
-        )
-        guard profile.usesDiverseCalibration,
+        guard profile.isComplete,
+              profile.usesDiverseCalibration,
+              adversarialSuite.passed,
+              !profile.fingerprint.isEmpty,
+              adversarialSuite.profileFingerprint == profile.fingerprint,
+              !adversarialSuite.fingerprint.isEmpty,
               adversarialSuite.schemaVersion ==
                 ProfessionalQualityAdversarialSuiteReport.schemaVersion,
               holdoutQualification.qualified,
@@ -100,11 +98,16 @@ package struct ProfessionalQualityPairedCandidateEvaluator:
         ) else {
             return .unavailable(.invalidEvidence)
         }
-        let checkpoints = CanonicalJourneyCheckpoint.applicable(
+        let applicableCheckpoints = CanonicalJourneyCheckpoint.applicable(
             phraseIndex: candidate.symbolic.phraseIndex,
             phraseKind: phraseKind,
             chapterChanged: candidate.symbolic.chapterChanged
         )
+        // Ordinary lock phrases use the continuation envelope. It is derived
+        // from the same engine's later steady-state journey observations and
+        // gives every primary phrase a calibrated, non-aggregate judgment.
+        let checkpoints = applicableCheckpoints.isEmpty
+            ? [.longContinuation] : applicableCheckpoints
         let sampleRate = candidate.routeContinuation.sampleRate
         guard !checkpoints.isEmpty else {
             return .unavailable(
@@ -203,38 +206,18 @@ package struct ProfessionalQualityPairedCandidateEvaluator:
         )
     }
 
-    package func compare(
-        primary: AutonomousCandidateEvaluationVector,
-        alternate: AutonomousCandidateEvaluationVector
-    ) -> AutonomousQualityComparison {
-        compare(
-            primary: assessment(of: primary),
-            alternate: assessment(of: alternate)
-        )
-    }
-
-    package func requestsPairedComparison(
-        after primary: AutonomousCandidateEvaluationVector
-    ) -> Bool {
-        assessment(of: primary).availability == .available
-    }
-
-    package func compare(
-        primary: [ProfessionalQualityObservation],
-        alternate: [ProfessionalQualityObservation]
-    ) -> AutonomousQualityComparison {
-        compare(
-            primary: assessment(of: primary),
-            alternate: assessment(of: alternate)
-        )
-    }
-
     package func requestsHomeUpperTimbreCorrection(
-        for candidate: AutonomousCandidateEvaluationVector,
-        slot: AutonomousCandidateSlot
+        for candidate: AutonomousCandidateEvaluationVector
     ) -> Bool {
-        UncalibratedAutonomousCandidateEvaluator
-            .requestsHomeUpperTimbreCorrection(for: candidate)
+        candidate.hardGates.symbolicValid &&
+            candidate.hardGates.graphValid &&
+            candidate.hardGates.audioSafetyValid &&
+            candidate.hardGates.fullMixFinite &&
+            candidate.hardGates.blocksPresent &&
+            candidate.hardGates.blockChannelsAligned &&
+            candidate.hardGates.allSamplesFinite &&
+            candidate.hardGates.completeInputs &&
+            !candidate.postGraphUpperTimbreEvidence.finite
     }
 
     package func terminalVerdict(
@@ -245,17 +228,6 @@ package struct ProfessionalQualityPairedCandidateEvaluator:
             return AutonomousCandidatePolicyVerdict(
                 outcome: .rejected,
                 reasonCodes: [.hardGateFailedV1]
-            )
-        }
-        // The conservative plan is a continuity/safety result, not an authored
-        // candidate that may be relabeled as professionally qualified. Once its
-        // hard gates pass, preserve that exact terminal outcome even when its
-        // deliberately neutral identity lies outside the authored checkpoint
-        // profile that rejected both candidates.
-        if selected.slot == .fallback {
-            return AutonomousCandidatePolicyVerdict(
-                outcome: .conservativeFallback,
-                reasonCodes: [.conservativeFallbackV1]
             )
         }
         let result = assessment(of: selected)
@@ -272,26 +244,9 @@ package struct ProfessionalQualityPairedCandidateEvaluator:
             )
         }
         return AutonomousCandidatePolicyVerdict(
-            outcome: .qualified,
-            reasonCodes: [.candidateQualifiedV1]
+            outcome: transaction.correctionCount == 0 ? .qualified : .adjusted,
+            reasonCodes: transaction.correctionCount == 0
+                ? [.candidateQualifiedV1] : [.candidateAdjustedV1]
         )
-    }
-
-    private func compare(
-        primary: ProfessionalQualityCandidateAssessment,
-        alternate: ProfessionalQualityCandidateAssessment
-    ) -> AutonomousQualityComparison {
-        guard primary.availability == .available,
-              alternate.availability == .available,
-              primary.sampleRate == alternate.sampleRate,
-              primary.checkpoints == alternate.checkpoints else {
-            return .unavailable
-        }
-        switch (primary.accepted, alternate.accepted) {
-        case (true, false): return .primary
-        case (false, true): return .alternate
-        case (true, true): return .tie
-        case (false, false): return .fallback
-        }
     }
 }

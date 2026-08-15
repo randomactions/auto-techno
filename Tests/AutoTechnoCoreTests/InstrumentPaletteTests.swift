@@ -49,15 +49,13 @@ struct InstrumentPaletteTests {
                         world: world,
                         kind: kind,
                         gesture: gesture,
-                        mutationAmount: 0.73,
-                        conservative: false
+                        mutationAmount: 0.73
                     )
                     #expect(foundation == InstrumentPalette.resolveFoundation(
                         world: world,
                         kind: kind,
                         gesture: gesture,
-                        mutationAmount: 0.73,
-                        conservative: false
+                        mutationAmount: 0.73
                     ))
                     #expect(foundation.isValid)
                     #expect(foundation.automation.space == 0)
@@ -72,7 +70,7 @@ struct InstrumentPaletteTests {
                                 gesture: gesture,
                                 chapter: chapter,
                                 mutationAmount: 0.73,
-                                conservative: false,
+                                forceHome: false,
                                 pulseEchoEnabled: true
                             )
                             #expect(assignment.isValid)
@@ -83,7 +81,7 @@ struct InstrumentPaletteTests {
                                 gesture: gesture,
                                 chapter: chapter,
                                 mutationAmount: 0.73,
-                                conservative: false,
+                                forceHome: false,
                                 pulseEchoEnabled: true
                             ))
                             selectedPatches.insert(assignment.patch)
@@ -97,30 +95,23 @@ struct InstrumentPaletteTests {
         #expect(selectedArchitectures == Set(InstrumentArchitecture.allCases))
     }
 
-    @Test("Fallback stays inside the same catalog and tonal home identity")
-    func fallbackContract() {
+    @Test("The evaluator correction stays inside the catalog and tonal home identity")
+    func correctionHomeContract() {
         let world = fixtureWorld(seed: 48_291)
-        #expect(InstrumentPalette.resolveFoundation(
-            world: world,
-            kind: .contrast,
-            gesture: .corrode,
-            mutationAmount: 1,
-            conservative: true
-        ) == InstrumentPalette.safeFoundation())
         for role in SynthRole.allCases {
-            let fallback = InstrumentPalette.resolveUpper(
+            let correctionHome = InstrumentPalette.resolveUpper(
                 role: role,
                 world: world,
                 kind: .contrast,
                 gesture: .corrode,
                 chapter: .motion,
                 mutationAmount: 1,
-                conservative: true,
+                forceHome: true,
                 pulseEchoEnabled: true
             )
-            #expect(fallback == InstrumentPalette.safeUpper(role: role))
-            #expect(fallback.architecture == .tonalMotion)
-            #expect(fallback.isValid)
+            #expect(correctionHome == InstrumentPalette.safeUpper(role: role))
+            #expect(correctionHome.architecture == .tonalMotion)
+            #expect(correctionHome.isValid)
         }
     }
 
@@ -134,8 +125,7 @@ struct InstrumentPaletteTests {
                 kind: .energyRelease,
                 gesture: .release,
                 mutationAmount: 0.72,
-                foundationBehavior: behavior,
-                conservative: false
+                foundationBehavior: behavior
             )
         }
         for index in assignments.indices {
@@ -459,13 +449,12 @@ struct InstrumentPaletteTests {
         var session = director.initialState()
         var selectedPlan: AutonomousPhrasePlan?
         for _ in 0..<24 {
-            let plan = director.candidates(from: session).primary
+            let plan = director.plan(from: session)
             let synth = SynthPerformancePlan(
                 scene: plan.scene,
                 dna: plan.dna,
                 kind: plan.kind,
-                resolvedBars: plan.resolvedBars,
-                conservative: plan.conservative
+                resolvedBars: plan.resolvedBars
             )
             let plannedArchitectures = Set(zip(plan.resolvedBars, synth.bars).flatMap {
                 resolved, bar in
@@ -568,13 +557,12 @@ struct InstrumentPaletteTests {
         var selectedPlan: AutonomousPhrasePlan?
         var plannedRelations = Set<String>()
         for _ in 0..<64 {
-            let plan = director.candidates(from: session).primary
+            let plan = director.plan(from: session)
             let synth = SynthPerformancePlan(
                 scene: plan.scene,
                 dna: plan.dna,
                 kind: plan.kind,
-                resolvedBars: plan.resolvedBars,
-                conservative: plan.conservative
+                resolvedBars: plan.resolvedBars
             )
             let relations = Set(synth.bars.flatMap(\.upperNotes).compactMap {
                 $0.instrument.resonantMonoSpectralRelation?.rawValue
@@ -656,11 +644,11 @@ struct InstrumentPaletteTests {
 
     @Test("Canonical journey reaches a prepared rising-cluster transition")
     func preparedSpectralClusterEvidence() throws {
-        let fixture = try #require(activeSpectralClusterPrimaryFixture())
+        let fixture = try #require(activeSpectralClusterPlanFixture())
         var incomingRenderState = RenderState()
         incomingRenderState.barIndex = fixture.state.memory.totalBars
         let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
-            candidates: fixture.candidates,
+            plan: fixture.plan,
             sessionSeed: fixture.state.rootSeed,
             memory: fixture.state.memory,
             sampleRate: 8_000,
@@ -668,14 +656,12 @@ struct InstrumentPaletteTests {
             incomingGraphState: GeneratedDSPContinuationState(),
             previousGraph: nil,
             incomingQualityState: fixture.state.quality,
+            evaluator: AcceptingPrimaryTestEvaluator(),
             cancellationRequested: { false }
         )
         let prepared = try #require(preparedResult)
         #expect(prepared.candidateEvaluation.isComplete)
-        #expect(prepared.candidateEvaluation.selectedSlot == .primary)
         #expect(prepared.selectedCandidateEvidence.isComplete)
-        #expect(!prepared.usedAlternate)
-        #expect(!prepared.usedFallback)
         #expect(prepared.commitEligible)
 
         let clusters = prepared.selectedCandidateEvidence.instruments
@@ -700,11 +686,11 @@ struct InstrumentPaletteTests {
 
     @Test("Prepared evidence binds the selected acid score to its operator consequence")
     func preparedAcidRelationEvidence() throws {
-        let fixture = try #require(activeAcidPrimaryFixture())
+        let fixture = try #require(activeAcidPlanFixture())
         var incomingRenderState = RenderState()
         incomingRenderState.barIndex = fixture.state.memory.totalBars
         let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
-            candidates: fixture.candidates,
+            plan: fixture.plan,
             sessionSeed: fixture.state.rootSeed,
             memory: fixture.state.memory,
             sampleRate: 8_000,
@@ -712,21 +698,18 @@ struct InstrumentPaletteTests {
             incomingGraphState: GeneratedDSPContinuationState(),
             previousGraph: nil,
             incomingQualityState: fixture.state.quality,
+            evaluator: AcceptingPrimaryTestEvaluator(),
             cancellationRequested: { false }
         )
         let prepared = try #require(preparedResult)
 
         #expect(prepared.candidateEvaluation.isComplete)
-        #expect(prepared.candidateEvaluation.selectedSlot == .primary)
-        #expect(prepared.selectedCandidateEvidence.slot == .primary)
         #expect(prepared.selectedCandidateEvidence.isComplete)
-        #expect(!prepared.usedAlternate)
-        #expect(!prepared.usedFallback)
         #expect(prepared.commitEligible)
 
         let evidence = prepared.selectedCandidateEvidence
         #expect(evidence.sourceInstrumentBarCount ==
-                fixture.candidates.primary.resolvedBars.count)
+                fixture.plan.resolvedBars.count)
         #expect(evidence.instruments.count == evidence.sourceInstrumentBarCount)
         let acidArchitectures = evidence.instruments.flatMap(\.architectures).filter {
             $0.resonantMonoModulation != nil
@@ -752,52 +735,50 @@ struct InstrumentPaletteTests {
         })
     }
 
-    private func activeAcidPrimaryFixture() -> (
+    private func activeAcidPlanFixture() -> (
         state: AutonomousSessionState,
-        candidates: AutonomousPhraseCandidates
+        plan: AutonomousPhrasePlan
     )? {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
         for _ in 0..<64 {
-            let candidates = director.candidates(from: state)
+            let plan = director.plan(from: state)
             let synth = SynthPerformancePlan(
-                scene: candidates.primary.scene,
-                dna: candidates.primary.dna,
-                kind: candidates.primary.kind,
-                resolvedBars: candidates.primary.resolvedBars,
-                conservative: candidates.primary.conservative
+                scene: plan.scene,
+                dna: plan.dna,
+                kind: plan.kind,
+                resolvedBars: plan.resolvedBars
             )
             if synth.bars.flatMap(\.upperNotes).contains(where: {
                 $0.instrument.resonantMonoSpectralRelation != nil
             }) {
-                return (state, candidates)
+                return (state, plan)
             }
-            state.advance(using: candidates.primary)
+            state.advance(using: plan)
         }
         return nil
     }
 
-    private func activeSpectralClusterPrimaryFixture() -> (
+    private func activeSpectralClusterPlanFixture() -> (
         state: AutonomousSessionState,
-        candidates: AutonomousPhraseCandidates
+        plan: AutonomousPhrasePlan
     )? {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
         for _ in 0..<96 {
-            let candidates = director.candidates(from: state)
+            let plan = director.plan(from: state)
             let synth = SynthPerformancePlan(
-                scene: candidates.primary.scene,
-                dna: candidates.primary.dna,
-                kind: candidates.primary.kind,
-                resolvedBars: candidates.primary.resolvedBars,
-                conservative: candidates.primary.conservative
+                scene: plan.scene,
+                dna: plan.dna,
+                kind: plan.kind,
+                resolvedBars: plan.resolvedBars
             )
             if synth.bars.flatMap(\.upperNotes).contains(where: {
                 $0.instrument.spectralTextureClusterRelation != nil
             }) {
-                return (state, candidates)
+                return (state, plan)
             }
-            state.advance(using: candidates.primary)
+            state.advance(using: plan)
         }
         return nil
     }

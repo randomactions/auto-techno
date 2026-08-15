@@ -1220,7 +1220,6 @@ package enum AutonomousPhraseRenderer {
         let synthPlan = SynthPerformancePlan(
             scene: plan.scene, dna: plan.dna, kind: plan.kind,
             resolvedBars: plan.resolvedBars,
-            conservative: plan.conservative,
             forceHomeUpperTimbre: forceHomeUpperTimbre,
             compositionBars: plan.phraseComposition
         )

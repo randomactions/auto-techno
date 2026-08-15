@@ -13,9 +13,8 @@ foundation behavior, patches, and bounded automation.
 The canonical `AutonomousSessionDirector` selects one character for a complete
 future phrase. It excludes the two most recent characters when another
 compatible choice is available, then records the selected character in bounded
-continuation memory. Primary and alternate candidates may therefore propose
-different coherent interpretations without independently randomizing layers.
-Identity return and conservative fallback resolve to Hypnotic Lock.
+continuation memory. The director proposes one coherent interpretation without
+independently randomizing layers. Identity return resolves to Hypnotic Lock.
 
 ## Character matrix
 
@@ -58,8 +57,7 @@ cannot bypass that continuity contract.
 
 Foundation events continue to avoid kick collisions. Foundation assignments
 remain centered with zero spatial automation and stay inside the protected
-low-end route. The conservative candidate uses the legacy companion and event
-resolution exactly, even though its evidence names the equivalent behavior.
+low-end route.
 
 ## Selection and continuation
 
@@ -69,7 +67,7 @@ Phrase kind bounds the available character set:
 - contrast: Acid Pressure, Broken Suspension, or Melodic Glow;
 - major break: Broken Suspension or Ambient Drift;
 - energy release: Peak Drive or Acid Pressure;
-- identity return and conservative fallback: Hypnotic Lock.
+- identity return: Hypnotic Lock.
 
 Within that set, deterministic seed material and the last two committed
 characters select the next interpretation. The choice happens during detached
@@ -84,18 +82,17 @@ foundation, role, and rhythm consequences. The plan fingerprint binds the
 record and every per-bar character/behavior value. Candidate validation rejects
 an incoherent record.
 
-The candidate vector separately retains complete per-bar kick-syntax evidence.
+The primary vector separately retains complete per-bar kick-syntax evidence.
 It requires exact score/render kick masks, exact-zero detector, audible, and stem
 signal during both withheld bars, positive step-zero recovery evidence, and the
-unchanged weak-pulse carrier. This evidence remains a hard provenance boundary;
-the uncalibrated policy does not rank or promote the syntax.
+unchanged weak-pulse carrier. This evidence remains a hard provenance boundary
+inside the calibrated policy.
 
 The existing instrument evidence then records the exact resolved patch,
 automation, effect access, architecture-local dry-PCM hash, event count, peak,
 RMS, and finite state. Tests establish that Sub Pulse, Monotone, Point, and Pump
 produce distinct deterministic Resonant Mono PCM. These are structural and
-score-to-PCM facts, not a professional-sound qualification; the shipping policy
-remains uncalibrated.
+score-to-PCM facts, not by themselves a professional-sound qualification.
 
 ## Phrase composition layer
 
@@ -125,12 +122,12 @@ and it retains no source buffer in continuation. Rendering occurs during
 detached preparation; the callback still schedules immutable completed buffers
 only.
 
-Identity return, conservative fallback, force-home correction, missing source
-material, and ineligible role/character combinations resolve every new feature
-to exact neutral. Candidate schema 16 binds per-bar score geometry to source and
+Identity return, force-home correction, missing source material, and ineligible
+role/character combinations resolve every new feature to exact neutral.
+Candidate schema 16 binds per-bar score geometry to source and
 output hashes, trigger/rate counts, pad frequency ratios and PCM, arpeggiator
-counts, and voice-leading bounds. The shipping evaluator remains uncalibrated,
-so this is causal structural evidence rather than a professional-quality claim.
+counts, and voice-leading bounds. This is causal structural evidence rather than
+a professional-quality claim by itself.
 
 Deliberate remaining boundaries are cross-bar/sample-library slicing, granular
 time stretching, arbitrary MIDI import/export, more than four simultaneous pad

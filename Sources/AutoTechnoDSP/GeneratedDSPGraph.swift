@@ -204,7 +204,7 @@ package enum DSPGraphGenerator {
         let mutationSeed = SceneDNA.derivedSeed(
             scene: sessionSeed,
             domain: UInt64(phrase.phraseIndex + memory.topologyRevision + 1),
-            index: phrase.alternate ? 1 : 0
+            index: 0
         )
         let kind = DSPGraphMutationKind.allCases[Int(mutationSeed % UInt64(DSPGraphMutationKind.allCases.count))]
         var nodes = previous.nodes
@@ -662,7 +662,7 @@ package struct PhraseAudioPreflight: Equatable, Sendable {
             report.finite && report.truePeakEstimate <= 0.95 &&
             abs(report.dcOffset) < 0.05 && report.lowStereoCorrelation > 0.94 &&
             report.maxBoundaryDelta < 0.65
-        // Movement is evidence for comparison, not a musicality threshold. A
+        // Movement is evaluator evidence, not a standalone musicality threshold. A
         // sparse lock or break may be the most intentional candidate.
         interesting = safetyValid
     }
@@ -701,9 +701,7 @@ package final class PreparedAutonomousPhrase: Sendable {
     package let incomingQualityState: QualityContinuationState
     package let qualityContinuationState: QualityContinuationState
     package let correctionRenderCount: Int
-    package let usedAlternate: Bool
-    package let usedFallback: Bool
-    package let usedHomeTimbreFallback: Bool
+    package let usedHomeTimbreCorrection: Bool
 
     fileprivate init(
         plan: AutonomousPhrasePlan,
@@ -720,9 +718,7 @@ package final class PreparedAutonomousPhrase: Sendable {
         incomingQualityState: QualityContinuationState,
         qualityContinuationState: QualityContinuationState,
         correctionRenderCount: Int,
-        usedAlternate: Bool,
-        usedFallback: Bool,
-        usedHomeTimbreFallback: Bool
+        usedHomeTimbreCorrection: Bool
     ) {
         self.plan = plan
         self.graph = graph
@@ -739,9 +735,7 @@ package final class PreparedAutonomousPhrase: Sendable {
         self.incomingQualityState = incomingQualityState
         self.qualityContinuationState = qualityContinuationState
         self.correctionRenderCount = correctionRenderCount
-        self.usedAlternate = usedAlternate
-        self.usedFallback = usedFallback
-        self.usedHomeTimbreFallback = usedHomeTimbreFallback
+        self.usedHomeTimbreCorrection = usedHomeTimbreCorrection
     }
 
     package var combinedScore: Double {
@@ -758,10 +752,8 @@ package final class PreparedAutonomousPhrase: Sendable {
         playbackHardGatesPassed && selectedCandidateEvidence.hardGatesPassed
     }
 
-    /// The uncalibrated foundation remains playable while clearly reporting
-    /// qualification unavailable. Once a calibrated policy is installed, only
-    /// qualified/adjusted authored material or the hard-safe score-owned
-    /// conservative fallback may cross the atomic commit boundary.
+    /// Only a calibrated, hard-valid judgment of the one primary phrase may
+    /// cross the atomic commit boundary.
     package var commitEligible: Bool {
         guard candidateEvaluation.isComplete,
               commitProvenance.candidateEvaluationFingerprint ==
@@ -791,7 +783,6 @@ package final class PreparedAutonomousPhrase: Sendable {
         return AutonomousCommitPolicy.isEligible(
             playbackHardGatesPassed: playbackHardGatesPassed,
             evaluationHardGatesPassed: selectedCandidateEvidence.hardGatesPassed,
-            selectedSlot: candidateEvaluation.selectedSlot,
             decision: qualityDecision,
             continuationState: qualityContinuationState,
             candidateFingerprint: audioPreflight.quality.sampleHash,
@@ -807,7 +798,6 @@ package enum AutonomousCommitPolicy {
     package static func isEligible(
         playbackHardGatesPassed: Bool,
         evaluationHardGatesPassed: Bool,
-        selectedSlot: AutonomousCandidateSlot?,
         decision: QualityDecision,
         continuationState: QualityContinuationState,
         candidateFingerprint: String,
@@ -833,24 +823,18 @@ package enum AutonomousCommitPolicy {
                     controllerStateFingerprint else {
             return false
         }
-        if decision.policyVersion == QualityQualificationContract.uncalibratedPolicyVersion {
-            return decision.outcome == .qualificationUnavailable
-        }
         guard evaluationHardGatesPassed else { return false }
         switch decision.outcome {
         case .qualified, .adjusted:
-            return selectedSlot == .primary || selectedSlot == .alternate
-        case .conservativeFallback:
-            return selectedSlot == .fallback
-        case .qualificationUnavailable, .rejected, .deterministicHold:
+            return true
+        case .qualificationUnavailable, .rejected:
             return false
         }
     }
 }
 
-/// One preparation transaction owns one corrective rerender budget across its
-/// primary, alternate, and fallback candidates. This keeps detached work
-/// bounded even when every candidate fails its evidence hard gate.
+/// One preparation transaction owns one corrective rerender budget for its
+/// single primary plan.
 package struct AutonomousCorrectionBudget: Equatable, Sendable {
     package let maximum: Int
     package private(set) var used: Int
@@ -892,98 +876,6 @@ package struct AutonomousRenderPassBudget: Equatable, Sendable {
     }
 }
 
-package enum AutonomousPreflightChoice: Equatable, Sendable {
-    case primary
-    case alternate
-    case fallback
-}
-
-/// The calibrated evaluator owns this comparison after inspecting the complete
-/// evidence vectors. Until calibration exists, preparation passes `.unavailable`
-/// and preserves a hard-valid primary rather than inventing taste thresholds.
-package enum AutonomousQualityComparison: Equatable, Sendable {
-    case unavailable
-    case primary
-    case alternate
-    case tie
-    case fallback
-}
-
-package struct AutonomousCandidateEvidence: Equatable, Sendable {
-    package let symbolicValid: Bool
-    package let safetyValid: Bool
-    package let interesting: Bool
-    package let combinedScore: Double
-
-    package init(symbolicValid: Bool, safetyValid: Bool, interesting: Bool,
-                combinedScore: Double) {
-        self.symbolicValid = symbolicValid
-        self.safetyValid = safetyValid
-        self.interesting = interesting
-        self.combinedScore = min(1, max(0, combinedScore))
-    }
-}
-
-/// Pure selection policy used by preparation and synthetic policy tests. Hard
-/// gates are non-compensable. An unavailable or exact-tie quality comparison
-/// preserves a hard-valid primary; a calibrated evaluator may explicitly order
-/// the complete evidence vectors without teaching this selector DSP thresholds.
-package enum AutonomousCandidateSelector {
-    package static func needsAlternate(primary: AutonomousCandidateEvidence,
-                                       qualityComparisonAvailable: Bool = false) -> Bool {
-        !(primary.symbolicValid && primary.safetyValid) || qualityComparisonAvailable
-    }
-
-    package static func choose(primary: AutonomousCandidateEvidence,
-                              alternate: AutonomousCandidateEvidence?,
-                              qualityComparison: AutonomousQualityComparison = .unavailable)
-        -> AutonomousPreflightChoice {
-        if !needsAlternate(
-            primary: primary,
-            qualityComparisonAvailable: qualityComparison != .unavailable
-        ) { return .primary }
-        let primaryValid = primary.symbolicValid && primary.safetyValid
-        let alternateValid = alternate.map { $0.symbolicValid && $0.safetyValid } ?? false
-        // A calibrated policy may reject every surviving authored candidate.
-        // That non-compensable result must reach the conservative score even
-        // when exactly one candidate passed the lower-level signal gates.
-        if qualityComparison == .fallback { return .fallback }
-        switch (primaryValid, alternateValid) {
-        case (true, true):
-            switch qualityComparison {
-            case .alternate: return .alternate
-            case .unavailable, .primary, .tie: return .primary
-            case .fallback: return .fallback
-            }
-        case (true, false): return .primary
-        case (false, true): return .alternate
-        case (false, false): return .fallback
-        }
-    }
-}
-
-package enum AutonomousCandidateCorrectionPolicy {
-    package static func choose(
-        selectedSlot: AutonomousCandidateSlot?,
-        primaryRepairable: Bool,
-        alternateRepairable: Bool
-    ) -> AutonomousCandidateSlot? {
-        if let selectedSlot {
-            switch selectedSlot {
-            case .primary: return primaryRepairable ? .primary : nil
-            case .alternate: return alternateRepairable ? .alternate : nil
-            case .fallback:
-                if primaryRepairable { return .primary }
-                if alternateRepairable { return .alternate }
-                return nil
-            }
-        }
-        if primaryRepairable { return .primary }
-        if alternateRepairable { return .alternate }
-        return nil
-    }
-}
-
 package struct AutonomousCandidatePolicyVerdict: Equatable, Sendable {
     package let outcome: QualityDecisionOutcome
     package let reasonCodes: [QualityReasonCode]
@@ -999,30 +891,14 @@ package struct AutonomousCandidatePolicyVerdict: Equatable, Sendable {
     }
 }
 
-/// A package-only seam for a future calibrated comparator. The production
-/// overload below always installs the uncalibrated implementation; this is not
-/// a second runtime, profile, or user-selectable mode.
+/// The sole preparation-time policy seam. It judges one immutable primary
+/// render and may request one bounded correction of that same plan.
 package protocol AutonomousCandidateEvaluating: Sendable {
     var policyVersion: String { get }
     var evaluatorVersion: String { get }
-    var requiresPairedCandidates: Bool { get }
-
-    /// Candidate-local decision made only after the immutable primary exists.
-    /// A calibrated evaluator can decline an unnecessary alternate when this
-    /// phrase has no applicable checkpoint or the active route is outside its
-    /// profile, while fixed test policies retain their declared behavior.
-    func requestsPairedComparison(
-        after primary: AutonomousCandidateEvaluationVector
-    ) -> Bool
-
-    func compare(
-        primary: AutonomousCandidateEvaluationVector,
-        alternate: AutonomousCandidateEvaluationVector
-    ) -> AutonomousQualityComparison
 
     func requestsHomeUpperTimbreCorrection(
-        for candidate: AutonomousCandidateEvaluationVector,
-        slot: AutonomousCandidateSlot
+        for candidate: AutonomousCandidateEvaluationVector
     ) -> Bool
 
     func terminalVerdict(
@@ -1031,51 +907,22 @@ package protocol AutonomousCandidateEvaluating: Sendable {
     ) -> AutonomousCandidatePolicyVerdict
 }
 
-package extension AutonomousCandidateEvaluating {
-    func requestsPairedComparison(
-        after primary: AutonomousCandidateEvaluationVector
-    ) -> Bool {
-        requiresPairedCandidates
-    }
-}
-
-package struct UncalibratedAutonomousCandidateEvaluator:
+/// Explicit offline evidence collector used to build a profile. The shipping
+/// app never installs it and therefore never treats unavailable policy as
+/// playable acceptance.
+package struct ProfessionalEvidenceOnlyEvaluator:
     AutonomousCandidateEvaluating {
     package let policyVersion =
         QualityQualificationContract.uncalibratedPolicyVersion
     package let evaluatorVersion =
         QualityQualificationContract.uncalibratedEvaluatorVersion
-    package let requiresPairedCandidates = false
 
     package init() {}
 
-    package func compare(
-        primary: AutonomousCandidateEvaluationVector,
-        alternate: AutonomousCandidateEvaluationVector
-    ) -> AutonomousQualityComparison {
-        .unavailable
-    }
-
     package func requestsHomeUpperTimbreCorrection(
-        for candidate: AutonomousCandidateEvaluationVector,
-        slot: AutonomousCandidateSlot
-    ) -> Bool {
-        Self.requestsHomeUpperTimbreCorrection(for: candidate)
-    }
-
-    package static func requestsHomeUpperTimbreCorrection(
         for candidate: AutonomousCandidateEvaluationVector
     ) -> Bool {
-        !candidate.symbolic.conservative &&
-            candidate.hardGates.symbolicValid &&
-            candidate.hardGates.graphValid &&
-            candidate.hardGates.audioSafetyValid &&
-            candidate.hardGates.fullMixFinite &&
-            candidate.hardGates.blocksPresent &&
-            candidate.hardGates.blockChannelsAligned &&
-            candidate.hardGates.allSamplesFinite &&
-            candidate.hardGates.completeInputs &&
-            !candidate.postGraphUpperTimbreEvidence.finite
+        false
     }
 
     package func terminalVerdict(
@@ -1097,7 +944,7 @@ package enum AutonomousPhrasePreparer {
         let incomingRenderState: RenderState
         let incomingGraphState: GeneratedDSPContinuationState
         let previousGraph: DSPGraphPlan?
-        let planFingerprints: AutonomousCandidatePlanFingerprints
+        let planFingerprint: String
         let routeFingerprint: String
         let incomingContinuationFingerprint: String
         let incomingQualityStateFingerprint: String
@@ -1114,7 +961,7 @@ package enum AutonomousPhrasePreparer {
             incomingRenderState: RenderState,
             incomingGraphState: GeneratedDSPContinuationState,
             previousGraph: DSPGraphPlan?,
-            planFingerprints: AutonomousCandidatePlanFingerprints,
+            planFingerprint: String,
             routeFingerprint: String,
             incomingContinuationFingerprint: String,
             incomingQualityStateFingerprint: String,
@@ -1130,7 +977,7 @@ package enum AutonomousPhrasePreparer {
             self.incomingRenderState = incomingRenderState
             self.incomingGraphState = incomingGraphState
             self.previousGraph = previousGraph
-            self.planFingerprints = planFingerprints
+            self.planFingerprint = planFingerprint
             self.routeFingerprint = routeFingerprint
             self.incomingContinuationFingerprint = incomingContinuationFingerprint
             self.incomingQualityStateFingerprint = incomingQualityStateFingerprint
@@ -1142,72 +989,8 @@ package enum AutonomousPhrasePreparer {
         }
     }
 
-    package static func prepare(candidates: AutonomousPhraseCandidates,
-                               sessionSeed: UInt64,
-                               memory: TemporalMusicalMemory,
-                               sampleRate: Double,
-                               incomingRenderState: RenderState,
-                               incomingGraphState: GeneratedDSPContinuationState,
-                               previousGraph: DSPGraphPlan?,
-                               incomingQualityState: QualityContinuationState = QualityContinuationState(),
-                               routeRecovery: Bool = false,
-                               routeChannelCount: Int = 2,
-                               routeGeneration: Int = 0) -> PreparedAutonomousPhrase {
-        guard let prepared = prepareTransaction(
-            candidates: candidates,
-            sessionSeed: sessionSeed,
-            memory: memory,
-            sampleRate: sampleRate,
-            incomingRenderState: incomingRenderState,
-            incomingGraphState: incomingGraphState,
-            previousGraph: previousGraph,
-            incomingQualityState: incomingQualityState,
-            routeRecovery: routeRecovery,
-            routeChannelCount: routeChannelCount,
-            routeGeneration: routeGeneration,
-            evaluator: UncalibratedAutonomousCandidateEvaluator(),
-            cancellationRequested: { false }
-        ) else {
-            preconditionFailure("Non-cancellable preparation stopped unexpectedly")
-        }
-        return prepared
-    }
-
-    /// App-facing failable preparation. Cancellation is observed between
-    /// candidate renders so a stale route cannot start another expensive pass.
-    package static func prepareIfNotCancelled(
-        candidates: AutonomousPhraseCandidates,
-        sessionSeed: UInt64,
-        memory: TemporalMusicalMemory,
-        sampleRate: Double,
-        incomingRenderState: RenderState,
-        incomingGraphState: GeneratedDSPContinuationState,
-        previousGraph: DSPGraphPlan?,
-        incomingQualityState: QualityContinuationState = QualityContinuationState(),
-        routeRecovery: Bool = false,
-        routeChannelCount: Int = 2,
-        routeGeneration: Int = 0,
-        cancellationRequested: @escaping @Sendable () -> Bool = { Task.isCancelled }
-    ) -> PreparedAutonomousPhrase? {
-        prepareTransaction(
-            candidates: candidates,
-            sessionSeed: sessionSeed,
-            memory: memory,
-            sampleRate: sampleRate,
-            incomingRenderState: incomingRenderState,
-            incomingGraphState: incomingGraphState,
-            previousGraph: previousGraph,
-            incomingQualityState: incomingQualityState,
-            routeRecovery: routeRecovery,
-            routeChannelCount: routeChannelCount,
-            routeGeneration: routeGeneration,
-            evaluator: UncalibratedAutonomousCandidateEvaluator(),
-            cancellationRequested: cancellationRequested
-        )
-    }
-
     package static func prepare<E: AutonomousCandidateEvaluating>(
-        candidates: AutonomousPhraseCandidates,
+        plan: AutonomousPhrasePlan,
         sessionSeed: UInt64,
         memory: TemporalMusicalMemory,
         sampleRate: Double,
@@ -1221,7 +1004,7 @@ package enum AutonomousPhrasePreparer {
         evaluator: E
     ) -> PreparedAutonomousPhrase {
         guard let prepared = prepareTransaction(
-            candidates: candidates,
+            plan: plan,
             sessionSeed: sessionSeed,
             memory: memory,
             sampleRate: sampleRate,
@@ -1241,7 +1024,7 @@ package enum AutonomousPhrasePreparer {
     }
 
     package static func prepareIfNotCancelled<E: AutonomousCandidateEvaluating>(
-        candidates: AutonomousPhraseCandidates,
+        plan: AutonomousPhrasePlan,
         sessionSeed: UInt64,
         memory: TemporalMusicalMemory,
         sampleRate: Double,
@@ -1256,7 +1039,7 @@ package enum AutonomousPhrasePreparer {
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> PreparedAutonomousPhrase? {
         prepareTransaction(
-            candidates: candidates,
+            plan: plan,
             sessionSeed: sessionSeed,
             memory: memory,
             sampleRate: sampleRate,
@@ -1273,7 +1056,7 @@ package enum AutonomousPhrasePreparer {
     }
 
     private static func prepareTransaction<E: AutonomousCandidateEvaluating>(
-        candidates: AutonomousPhraseCandidates,
+        plan: AutonomousPhrasePlan,
         sessionSeed: UInt64,
         memory: TemporalMusicalMemory,
         sampleRate: Double,
@@ -1306,17 +1089,17 @@ package enum AutonomousPhrasePreparer {
                 QualityQualificationContract.requiredRouteChannelCount,
               routeGeneration >= 0,
               memory.topologyRevision < Int.max,
-              candidates.primary.startBar == memory.totalBars,
-              candidates.primary.startBar == incomingRenderState.barIndex,
-              candidates.primary.phraseIndex <
+              plan.startBar == memory.totalBars,
+              plan.startBar == incomingRenderState.barIndex,
+              plan.phraseIndex <
                 Int.max - memory.topologyRevision,
-              sessionSeed &+ 17 == candidates.primary.scene.seed,
+              sessionSeed &+ 17 == plan.scene.seed,
               incomingQualityState.acceptanceProvenanceComplete,
               incomingControllerStateIsCoherent,
-              candidateDebtsMatchMemory(candidates, memory: memory),
-              candidateInputsAreBounded(candidates),
-              candidateCharactersMatchSession(
-                  candidates,
+              candidateDebtsMatchMemory(plan, memory: memory),
+              candidateInputIsBounded(plan),
+              candidateCharacterMatchesSession(
+                  plan,
                   memory: memory,
                   sessionSeed: sessionSeed
               ),
@@ -1326,13 +1109,11 @@ package enum AutonomousPhrasePreparer {
                   previousGraph: previousGraph,
                   sessionSeed: sessionSeed,
                   routeRecovery: routeRecovery,
-                  phraseIndex: candidates.primary.phraseIndex
+                  phraseIndex: plan.phraseIndex
               ) else {
             return nil
         }
-        let planFingerprints = AutonomousCandidatePlanFingerprints.make(
-            candidates: candidates
-        )
+        let planFingerprint = AutonomousCandidateFingerprint.plan(plan)
         let previousGraphFingerprint = previousGraph.map {
             AutonomousCandidateFingerprint.graph($0)
         } ?? "none"
@@ -1364,7 +1145,7 @@ package enum AutonomousPhrasePreparer {
             incomingRenderState: incomingRenderState,
             incomingGraphState: incomingGraphState,
             previousGraph: previousGraph,
-            planFingerprints: planFingerprints,
+            planFingerprint: planFingerprint,
             routeFingerprint: routeFingerprint,
             incomingContinuationFingerprint: incomingContinuationFingerprint,
             incomingQualityStateFingerprint: incomingQualityStateFingerprint,
@@ -1377,9 +1158,7 @@ package enum AutonomousPhrasePreparer {
 
         func product(
             plan: AutonomousPhrasePlan,
-            slot: AutonomousCandidateSlot,
             kind: AutonomousCandidateAttemptKind = .initialRender,
-            forceSafeGraph: Bool = false,
             forceHomeUpperTimbre: Bool = false
         ) -> CandidateRenderProduct? {
             guard !renderContext.cancellationRequested(),
@@ -1388,7 +1167,6 @@ package enum AutonomousPhrasePreparer {
             }
             guard let rendered = renderAttempt(
                 plan: plan,
-                slot: slot,
                 kind: kind,
                 sessionSeed: renderContext.sessionSeed,
                 memory: renderContext.memory,
@@ -1396,7 +1174,7 @@ package enum AutonomousPhrasePreparer {
                 incomingRenderState: renderContext.incomingRenderState,
                 incomingGraphState: renderContext.incomingGraphState,
                 previousGraph: renderContext.previousGraph,
-                planFingerprint: renderContext.planFingerprints[slot],
+                planFingerprint: renderContext.planFingerprint,
                 routeFingerprint: renderContext.routeFingerprint,
                 incomingContinuationFingerprint:
                     renderContext.incomingContinuationFingerprint,
@@ -1410,143 +1188,29 @@ package enum AutonomousPhrasePreparer {
                 routeRecovery: renderContext.routeRecovery,
                 routeChannelCount: renderContext.routeChannelCount,
                 routeGeneration: renderContext.routeGeneration,
-                forceSafeGraph: forceSafeGraph,
                 forceHomeUpperTimbre: forceHomeUpperTimbre,
                 cancellationRequested: renderContext.cancellationRequested
             ) else { return nil }
             return renderContext.cancellationRequested() ? nil : rendered
         }
 
-        guard let initialPrimary = product(
-            plan: candidates.primary,
-            slot: .primary
-        ) else { return nil }
+        guard let initialPrimary = product(plan: plan) else { return nil }
         attempts.append(initialPrimary.attempt)
-        var primaryVector = initialPrimary.vector
-        var primaryAttemptIndex = 0
-        var primaryProduct: CandidateRenderProduct? =
-            initialPrimary.vector.selectionEvidence.safetyValid &&
-            initialPrimary.vector.selectionEvidence.symbolicValid
-                ? initialPrimary : nil
+        var selected = initialPrimary
+        var selectedAttemptIndex = 0
 
-        var alternateVector: AutonomousCandidateEvaluationVector?
-        var alternateAttemptIndex: Int?
-        var alternateProduct: CandidateRenderProduct?
-        var comparison: AutonomousQualityComparison = .unavailable
-
-        let qualityComparisonRequested = evaluator.requestsPairedComparison(
-            after: primaryVector
-        )
-        let primaryNeedsAlternate = AutonomousCandidateSelector.needsAlternate(
-            primary: primaryVector.selectionEvidence,
-            qualityComparisonAvailable: qualityComparisonRequested
-        ) || (!routeRecovery && evaluator.requestsHomeUpperTimbreCorrection(
-            for: primaryVector,
-            slot: .primary
-        ))
-        if primaryNeedsAlternate {
-            guard let initialAlternate = product(
-                plan: candidates.alternate,
-                slot: .alternate
-            ) else { return nil }
-            attempts.append(initialAlternate.attempt)
-            alternateVector = initialAlternate.vector
-            alternateAttemptIndex = attempts.count - 1
-            let evidence = initialAlternate.vector.selectionEvidence
-            alternateProduct = evidence.symbolicValid && evidence.safetyValid
-                ? initialAlternate : nil
-        }
-
-        if qualityComparisonRequested, let alternateVector {
-            comparison = evaluator.compare(
-                primary: primaryVector,
-                alternate: alternateVector
-            )
-        }
-
-        var selectedSlot = selectedCandidateSlot(
-            primary: primaryVector,
-            alternate: alternateVector,
-            comparison: comparison
-        )
-
-        let primaryRepairable = !routeRecovery &&
-            evaluator.requestsHomeUpperTimbreCorrection(
-                for: primaryVector,
-                slot: .primary
-            )
-        let alternateRepairable = !routeRecovery && (alternateVector.map {
-            evaluator.requestsHomeUpperTimbreCorrection(
-                for: $0,
-                slot: .alternate
-            )
-        } ?? false)
-        let correctionSlot = AutonomousCandidateCorrectionPolicy.choose(
-            selectedSlot: selectedSlot,
-            primaryRepairable: primaryRepairable,
-            alternateRepairable: alternateRepairable
-        )
-
-        if let correctionSlot, correctionBudget.claim() {
-            let correctionPlan = correctionSlot == .primary
-                ? candidates.primary : candidates.alternate
+        if !routeRecovery,
+           evaluator.requestsHomeUpperTimbreCorrection(
+               for: initialPrimary.vector
+           ), correctionBudget.claim() {
             guard let corrected = product(
-                plan: correctionPlan,
-                slot: correctionSlot,
+                plan: plan,
                 kind: .correctionRender,
                 forceHomeUpperTimbre: true
             ) else { return nil }
             attempts.append(corrected.attempt)
-            let correctedEvidence = corrected.vector.selectionEvidence
-            if correctedEvidence.symbolicValid && correctedEvidence.safetyValid {
-                if correctionSlot == .primary {
-                    primaryVector = corrected.vector
-                    primaryAttemptIndex = attempts.count - 1
-                    primaryProduct = corrected
-                } else {
-                    alternateVector = corrected.vector
-                    alternateAttemptIndex = attempts.count - 1
-                    alternateProduct = corrected
-                }
-            }
-            if qualityComparisonRequested, let alternateVector {
-                comparison = evaluator.compare(
-                    primary: primaryVector,
-                    alternate: alternateVector
-                )
-            }
-            selectedSlot = selectedCandidateSlot(
-                primary: primaryVector,
-                alternate: alternateVector,
-                comparison: comparison
-            )
-        }
-
-        let selected: CandidateRenderProduct
-        let selectedAttemptIndex: Int
-        switch selectedSlot {
-        case .primary:
-            guard let primaryProduct else { return nil }
-            alternateProduct = nil
-            selected = primaryProduct
-            selectedAttemptIndex = primaryAttemptIndex
-        case .alternate:
-            guard let alternateProduct, let alternateAttemptIndex else { return nil }
-            primaryProduct = nil
-            selected = alternateProduct
-            selectedAttemptIndex = alternateAttemptIndex
-        case .fallback, .none:
-            primaryProduct = nil
-            alternateProduct = nil
-            guard let fallback = product(
-                plan: candidates.fallback,
-                slot: .fallback,
-                forceSafeGraph: true
-            ) else { return nil }
-            attempts.append(fallback.attempt)
-            selected = fallback
+            selected = corrected
             selectedAttemptIndex = attempts.count - 1
-            selectedSlot = .fallback
         }
 
         guard !cancellationRequested(), attempts.count == renderPassBudget.used else {
@@ -1556,11 +1220,9 @@ package enum AutonomousPhrasePreparer {
             engineVersion: QualityQualificationContract.engineVersion,
             policyVersion: evaluator.policyVersion,
             evaluatorVersion: evaluator.evaluatorVersion,
-            planFingerprints: planFingerprints,
+            planFingerprint: planFingerprint,
             attempts: attempts,
             selectedAttemptIndex: selectedAttemptIndex,
-            selectedSlot: selectedSlot,
-            comparison: transactionComparison(comparison),
             correctionCount: correctionBudget.used
         )
         return finalize(
@@ -1574,86 +1236,55 @@ package enum AutonomousPhrasePreparer {
     /// Reject malformed score payloads before fingerprinting, allocating, or
     /// entering any candidate render. The director currently emits 4...16 bars;
     /// this hard ceiling protects future/package callers from unbounded work.
-    private static func candidateInputsAreBounded(
-        _ candidates: AutonomousPhraseCandidates
+    private static func candidateInputIsBounded(
+        _ plan: AutonomousPhrasePlan
     ) -> Bool {
-        let sharedPhraseIdentity =
-            candidates.alternate.phraseIndex == candidates.primary.phraseIndex &&
-            candidates.fallback.phraseIndex == candidates.primary.phraseIndex &&
-            candidates.alternate.startBar == candidates.primary.startBar &&
-            candidates.fallback.startBar == candidates.primary.startBar &&
-            candidates.alternate.kind == candidates.primary.kind &&
-            candidates.fallback.kind == .identityReturn &&
-            candidates.alternate.scene.seed == candidates.primary.scene.seed &&
-            candidates.fallback.scene.seed == candidates.primary.scene.seed &&
-            candidates.alternate.dna == candidates.primary.dna &&
-            candidates.fallback.dna == candidates.primary.dna
-        return sharedPhraseIdentity &&
-            candidateIsBounded(candidates.primary, for: .primary) &&
-            candidateIsBounded(candidates.alternate, for: .alternate) &&
-            candidateIsBounded(candidates.fallback, for: .fallback)
+        candidateIsBounded(plan)
     }
 
     private static func candidateDebtsMatchMemory(
-        _ candidates: AutonomousPhraseCandidates,
+        _ plan: AutonomousPhrasePlan,
         memory: TemporalMusicalMemory
     ) -> Bool {
         guard memory.openDebts.count <= 128 else { return false }
         let openDebtIDs = memory.openDebts.map(\.id)
-        func matchesIncomingDebts(_ plan: AutonomousPhrasePlan) -> Bool {
-            if plan.kind == .energyRelease {
-                return plan.paidDebtIDs == openDebtIDs
-            }
-            return plan.paidDebtIDs.isEmpty
+        if plan.kind == .energyRelease {
+            return plan.paidDebtIDs == openDebtIDs
         }
-        return matchesIncomingDebts(candidates.primary) &&
-            matchesIncomingDebts(candidates.alternate) &&
-            candidates.fallback.paidDebtIDs.isEmpty
+        return plan.paidDebtIDs.isEmpty
     }
 
-    private static func candidateCharactersMatchSession(
-        _ candidates: AutonomousPhraseCandidates,
+    private static func candidateCharacterMatchesSession(
+        _ plan: AutonomousPhrasePlan,
         memory: TemporalMusicalMemory,
         sessionSeed: UInt64
     ) -> Bool {
-        func planMatches(_ plan: AutonomousPhrasePlan) -> Bool {
-            let expectedCharacter = AutonomousSessionDirector
-                .canonicalPerformanceCharacter(
-                    kind: plan.kind,
-                    rootSeed: sessionSeed,
-                    phraseIndex: plan.phraseIndex,
-                    recentPerformanceCharacters:
-                        memory.recentPerformanceCharacters,
-                    alternate: plan.alternate,
-                    conservative: plan.conservative
-                )
-            return plan.resolvedBars.allSatisfy { resolved in
-                guard resolved.performanceCharacter == expectedCharacter else {
-                    return false
-                }
-                if plan.conservative {
-                    return resolved.foundationBehavior.companion ==
-                        resolved.foundationCompanion
-                }
-                let expectedBehavior = PerformanceCharacterContract
-                    .foundationBehavior(
-                        for: expectedCharacter,
-                        gesture: resolved.arrangementGesture,
-                        localBar: resolved.performance.localBar,
-                        phraseLength: resolved.performance.phraseLength
-                    )
-                return resolved.foundationBehavior == expectedBehavior &&
-                    resolved.foundationCompanion == expectedBehavior.companion
+        let expectedCharacter = AutonomousSessionDirector
+            .canonicalPerformanceCharacter(
+                kind: plan.kind,
+                rootSeed: sessionSeed,
+                phraseIndex: plan.phraseIndex,
+                recentPerformanceCharacters:
+                    memory.recentPerformanceCharacters
+            )
+        return plan.resolvedBars.allSatisfy { resolved in
+            guard resolved.performanceCharacter == expectedCharacter else {
+                return false
             }
+            let expectedBehavior = PerformanceCharacterContract
+                .foundationBehavior(
+                    for: expectedCharacter,
+                    gesture: resolved.arrangementGesture,
+                    localBar: resolved.performance.localBar,
+                    phraseLength: resolved.performance.phraseLength
+                )
+            return resolved.foundationBehavior == expectedBehavior &&
+                resolved.foundationCompanion == expectedBehavior.companion
         }
-        return planMatches(candidates.primary) &&
-            planMatches(candidates.alternate) &&
-            planMatches(candidates.fallback)
     }
 
     private static func candidateIsBounded(
-        _ plan: AutonomousPhrasePlan,
-        for slot: AutonomousCandidateSlot
+        _ plan: AutonomousPhrasePlan
     ) -> Bool {
         let scene = plan.scene
         let dna = plan.dna
@@ -1688,8 +1319,7 @@ package enum AutonomousPhrasePreparer {
             guard resolvedBarIsBounded(
                 resolved,
                 index: index,
-                plan: plan,
-                slot: slot
+                plan: plan
             ) else { return false }
         }
         let canonicalScoreBars = canonicalKickSyntaxBars(for: plan)
@@ -1697,31 +1327,14 @@ package enum AutonomousPhrasePreparer {
             plan.resolvedBars,
             canonical: canonicalScoreBars
         ) else { return false }
-        guard plan.performanceCharacterEvidence.valid else { return false }
-        switch slot {
-        case .primary:
-            return !plan.alternate && !plan.conservative
-        case .alternate:
-            return plan.alternate && !plan.conservative
-        case .fallback:
-            let groovePulseArticulationIsNeutral = plan.resolvedBars.allSatisfy {
-                $0.groovePulses.allSatisfy {
-                    $0.strikeZone == .middle &&
-                        $0.damping == 0.5 &&
-                        $0.timbreMicrovariation == 0
-                }
-            }
-            return !plan.alternate && plan.conservative &&
-                groovePulseArticulationIsNeutral
-        }
+        return plan.performanceCharacterEvidence.valid
     }
 
     @inline(never)
     private static func resolvedBarIsBounded(
         _ resolved: ResolvedPerformanceBar,
         index: Int,
-        plan: AutonomousPhrasePlan,
-        slot: AutonomousCandidateSlot
+        plan: AutonomousPhrasePlan
     ) -> Bool {
         let performance = resolved.performance
         let expectedBar = plan.startBar + index
@@ -1766,8 +1379,7 @@ package enum AutonomousPhrasePreparer {
             $0.element.voice == .percussion
         })
         let canonicalClosedHatDecay = ClosedHatDecayResolver.articulations(
-            from: resolved.ensemble,
-            conservative: plan.conservative
+            from: resolved.ensemble
         )
         let closedHatDecayIsCanonical =
             closedHatEvents.count <=
@@ -1782,43 +1394,10 @@ package enum AutonomousPhrasePreparer {
                 ensemble: resolved.ensemble,
                 kind: plan.kind,
                 character: resolved.performanceCharacter,
-                gesture: resolved.arrangementGesture,
-                conservative: plan.conservative
+                gesture: resolved.arrangementGesture
             )
         let percussionEchoTextureIsCanonical =
             resolved.percussionEchoTexture == canonicalPercussionEchoTexture
-        let fallbackScoreIsCanonical: Bool
-        if slot == .fallback {
-            let canonicalEnsemble = AutonomousSessionDirector.ensemblePlan(
-                dna: plan.dna,
-                bar: performance,
-                focus: resolved.ensemble.focusRole,
-                release: plan.kind == .energyRelease,
-                kind: plan.kind,
-                character: resolved.performanceCharacter,
-                foundationBehavior: resolved.foundationBehavior,
-                companion: resolved.foundationCompanion,
-                gear: resolved.percussionGear,
-                gesture: resolved.arrangementGesture,
-                conservative: true
-            )
-            let canonicalGrooveEvents = canonicalEnsemble.events.filter {
-                $0.voice == .groovePulse
-            }
-            let canonicalGroovePulses = GroovePulseResolver.articulations(
-                from: canonicalEnsemble,
-                absoluteBar: expectedBar,
-                swingPercent: plan.dna.rhythm.swingPercent,
-                percussionGear: resolved.percussionGear,
-                eventSeed: performance.eventSeed,
-                conservative: true
-            )
-            fallbackScoreIsCanonical =
-                canonicalGrooveEvents == grooveEvents &&
-                canonicalGroovePulses == grooveArticulations
-        } else {
-            fallbackScoreIsCanonical = true
-        }
         return performance.phrase == plan.phraseIndex &&
             performance.localBar == index &&
             performance.phraseLength == plan.barCount &&
@@ -1839,9 +1418,8 @@ package enum AutonomousPhrasePreparer {
             } && kickEventSteps == resolved.ensemble.kickAnchors &&
             kickScoreMatchesRole && resolved.groovePulses.count <= 8 &&
             Set(resolved.groovePulses.map { pulse in pulse.step }).count ==
-                resolved.groovePulses.count && grooveScoreIsCanonical &&
-            closedHatDecayIsCanonical && percussionEchoTextureIsCanonical &&
-            fallbackScoreIsCanonical
+            resolved.groovePulses.count && grooveScoreIsCanonical &&
+            closedHatDecayIsCanonical && percussionEchoTextureIsCanonical
     }
 
     /// Replays the director's baseline score and the one allowed kick-syntax
@@ -1861,8 +1439,7 @@ package enum AutonomousPhrasePreparer {
                 foundationBehavior: resolved.foundationBehavior,
                 companion: resolved.foundationCompanion,
                 gear: resolved.percussionGear,
-                gesture: resolved.arrangementGesture,
-                conservative: plan.conservative
+                gesture: resolved.arrangementGesture
             )
             return ResolvedPerformanceBar(
                 performance: resolved.performance,
@@ -1879,12 +1456,10 @@ package enum AutonomousPhrasePreparer {
                     absoluteBar: resolved.performance.bar,
                     swingPercent: plan.dna.rhythm.swingPercent,
                     percussionGear: resolved.percussionGear,
-                    eventSeed: resolved.performance.eventSeed,
-                    conservative: plan.conservative
+                    eventSeed: resolved.performance.eventSeed
                 ),
                 closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
-                    from: ensemble,
-                    conservative: plan.conservative
+                    from: ensemble
                 ),
                 spatialContrast: resolved.spatialContrast,
                 narrative: resolved.narrative,
@@ -1894,16 +1469,14 @@ package enum AutonomousPhrasePreparer {
                         ensemble: ensemble,
                         kind: plan.kind,
                         character: resolved.performanceCharacter,
-                        gesture: resolved.arrangementGesture,
-                        conservative: plan.conservative
+                        gesture: resolved.arrangementGesture
                     )
             )
         }
         return KickSyntaxResolver.resolve(
             resolvedBars: baseline,
             kind: plan.kind,
-            paidDebtIDs: plan.paidDebtIDs,
-            conservative: plan.conservative
+            paidDebtIDs: plan.paidDebtIDs
         )
     }
 
@@ -2133,37 +1706,7 @@ package enum AutonomousPhrasePreparer {
             graphsBelongToSession && graphBoundaryIsCoherent
     }
 
-    private static func selectedCandidateSlot(
-        primary: AutonomousCandidateEvaluationVector,
-        alternate: AutonomousCandidateEvaluationVector?,
-        comparison: AutonomousQualityComparison
-    ) -> AutonomousCandidateSlot? {
-        let choice = AutonomousCandidateSelector.choose(
-            primary: primary.selectionEvidence,
-            alternate: alternate?.selectionEvidence,
-            qualityComparison: comparison
-        )
-        switch choice {
-        case .primary: return .primary
-        case .alternate: return .alternate
-        case .fallback: return nil
-        }
-    }
-
-    private static func transactionComparison(
-        _ comparison: AutonomousQualityComparison
-    ) -> AutonomousCandidateComparison {
-        switch comparison {
-        case .unavailable: .unavailable
-        case .primary: .primary
-        case .alternate: .alternate
-        case .tie: .tie
-        case .fallback: .fallback
-        }
-    }
-
     private final class CandidateRenderProduct: Sendable {
-        let slot: AutonomousCandidateSlot
         let plan: AutonomousPhrasePlan
         let graph: DSPGraphPlan
         let blocks: [RenderBlock]
@@ -2174,7 +1717,6 @@ package enum AutonomousPhrasePreparer {
         let attempt: AutonomousCandidateAttempt
 
         init(
-            slot: AutonomousCandidateSlot,
             plan: AutonomousPhrasePlan,
             graph: DSPGraphPlan,
             blocks: [RenderBlock],
@@ -2184,7 +1726,6 @@ package enum AutonomousPhrasePreparer {
             vector: AutonomousCandidateEvaluationVector,
             attempt: AutonomousCandidateAttempt
         ) {
-            self.slot = slot
             self.plan = plan
             self.graph = graph
             self.blocks = blocks
@@ -2198,7 +1739,6 @@ package enum AutonomousPhrasePreparer {
 
     private static func renderAttempt(
         plan: AutonomousPhrasePlan,
-        slot: AutonomousCandidateSlot,
         kind: AutonomousCandidateAttemptKind,
         sessionSeed: UInt64,
         memory: TemporalMusicalMemory,
@@ -2216,40 +1756,24 @@ package enum AutonomousPhrasePreparer {
         routeRecovery: Bool,
         routeChannelCount: Int,
         routeGeneration: Int,
-        forceSafeGraph: Bool = false,
         forceHomeUpperTimbre: Bool = false,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> CandidateRenderProduct? {
         guard !cancellationRequested() else { return nil }
-        let safeGraphSource = routeRecovery ? incomingGraphState.graph : previousGraph
-        let proposedGraph = forceSafeGraph
-            ? safeGraphSource.map {
-                DSPGraphPlan(
-                    sessionSeed: $0.sessionSeed,
-                    revision: $0.revision,
-                    nodes: $0.nodes,
-                    mutation: nil,
-                    lowEndProtected: $0.lowEndProtected,
-                    protectedRouting: $0.protectedRouting
-                )
-            } ?? DSPGraphGenerator.safePlan(sessionSeed: sessionSeed)
-            : DSPGraphGenerator.plan(sessionSeed: sessionSeed, phrase: plan, memory: memory,
-                                     previous: previousGraph, routeRecovery: routeRecovery)
-        let graph: DSPGraphPlan
-        if DSPGraphValidator.validate(proposedGraph).valid {
-            graph = proposedGraph
-        } else if let previousGraph, DSPGraphValidator.validate(previousGraph).valid {
-            graph = previousGraph
-        } else {
-            graph = DSPGraphGenerator.safePlan(sessionSeed: sessionSeed)
-        }
+        let graph = DSPGraphGenerator.plan(
+            sessionSeed: sessionSeed,
+            phrase: plan,
+            memory: memory,
+            previous: previousGraph,
+            routeRecovery: routeRecovery
+        )
+        guard DSPGraphValidator.validate(graph).valid else { return nil }
         var renderState = incomingRenderState
         var graphState = incomingGraphState
-        let homeTimbreFallback = routeRecovery || forceHomeUpperTimbre
         guard let blocks = AutonomousPhraseRenderer.renderIfNotCancelled(
             plan: plan, graph: graph, sampleRate: sampleRate,
             state: &renderState, graphState: &graphState,
-            forceHomeUpperTimbre: homeTimbreFallback,
+            forceHomeUpperTimbre: forceHomeUpperTimbre,
             cancellationRequested: cancellationRequested
         ) else { return nil }
         guard !cancellationRequested() else { return nil }
@@ -2272,7 +1796,6 @@ package enum AutonomousPhrasePreparer {
         let graphFingerprint = AutonomousCandidateFingerprint.graph(graph)
         guard !cancellationRequested() else { return nil }
         guard let vector = AutonomousCandidateEvaluationVector.make(
-            slot: slot,
             plan: plan,
             graph: graph,
             planFingerprint: planFingerprint,
@@ -2298,8 +1821,7 @@ package enum AutonomousPhrasePreparer {
         guard !cancellationRequested() else { return nil }
         let attempt = AutonomousCandidateAttempt(
             kind: kind,
-            forceSafeGraph: forceSafeGraph,
-            forceHomeUpperTimbre: homeTimbreFallback,
+            forceHomeUpperTimbre: forceHomeUpperTimbre,
             reasonCodes: attemptReasonCodes(
                 plan: plan,
                 blocks: blocks,
@@ -2310,7 +1832,6 @@ package enum AutonomousPhrasePreparer {
             vector: vector
         )
         return CandidateRenderProduct(
-            slot: slot,
             plan: plan,
             graph: graph,
             blocks: blocks,
@@ -2363,9 +1884,6 @@ package enum AutonomousPhrasePreparer {
             transaction: transaction
         )
         var reasonCodes = verdict.reasonCodes + selected.attempt.reasonCodes
-        if selected.slot == .fallback {
-            reasonCodes.append(.conservativeFallbackV1)
-        }
         if selected.vector.routeContinuation.routeRecovery {
             // Fresh evidence from the replacement route is not stale. This
             // operational reason preserves recovery provenance without making
@@ -2415,9 +1933,7 @@ package enum AutonomousPhrasePreparer {
             incomingQualityState: incomingQualityState,
             qualityContinuationState: outgoingQuality,
             correctionRenderCount: transaction.correctionCount,
-            usedAlternate: selected.slot == .alternate,
-            usedFallback: selected.slot == .fallback,
-            usedHomeTimbreFallback: selected.attempt.forceHomeUpperTimbre
+            usedHomeTimbreCorrection: selected.attempt.forceHomeUpperTimbre
         )
     }
 }

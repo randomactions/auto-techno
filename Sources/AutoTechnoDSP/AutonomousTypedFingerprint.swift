@@ -174,8 +174,6 @@ private extension AutonomousTypedFingerprint {
         sink.field("paidDebtIDs"); sink.collection(value.paidDebtIDs.count)
         for id in value.paidDebtIDs { sink.int(id) }
         sink.field("requestsTopologyMutation"); sink.bool(value.requestsTopologyMutation)
-        sink.field("alternate"); sink.bool(value.alternate)
-        sink.field("conservative"); sink.bool(value.conservative)
         sink.field("interest"); encode(value.interest, into: &sink)
         sink.field("performanceCharacterEvidence")
         encode(value.performanceCharacterEvidence, into: &sink)
@@ -196,7 +194,6 @@ private extension AutonomousTypedFingerprint {
             dna: value.dna,
             kind: value.kind,
             resolvedBars: value.resolvedBars,
-            conservative: value.conservative,
             compositionBars: value.phraseComposition
         )
         sink.field("resolvedUpperNotes")

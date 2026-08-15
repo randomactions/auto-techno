@@ -1,16 +1,15 @@
 import Foundation
 
 /// Immutable qualification artifacts for the current canonical engine's
-/// checkpoint-local paired-candidate judge. Loading these resources validates
-/// both their deterministic identities and the adversarial gate; it does not
-/// activate paired rendering or alter the shipping preparation overload.
-package struct ProfessionalQualityPairedArtifacts: Sendable {
+/// checkpoint-local primary-phrase judge. Loading these resources validates
+/// their deterministic identities, adversarial gate, and disjoint holdout.
+package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     package static let profileResource =
-        "professional-quality-paired-profile-v2"
+        "professional-quality-primary-profile-v1"
     package static let adversarialResource =
-        "professional-quality-paired-adversarial-suite-v2"
+        "professional-quality-primary-adversarial-suite-v1"
     package static let holdoutResource =
-        "professional-quality-paired-holdout-v1"
+        "professional-quality-primary-holdout-v1"
     package static let expectedProfileFingerprint = "4b55055d1904ead8"
     package static let expectedAdversarialSuiteFingerprint =
         "a34c3ba6acec9c2e"
@@ -20,7 +19,7 @@ package struct ProfessionalQualityPairedArtifacts: Sendable {
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport
     package let holdoutQualification: ProfessionalQualityHoldoutQualification
-    package let evaluator: ProfessionalQualityPairedCandidateEvaluator
+    package let evaluator: ProfessionalQualityPrimaryEvaluator
 
     package init(
         profileData: Data,
@@ -37,7 +36,7 @@ package struct ProfessionalQualityPairedArtifacts: Sendable {
             .decodeDeterministicJSON(Self.canonicalResourceData(
                 holdoutQualificationData
             ))
-        let evaluator = try ProfessionalQualityPairedCandidateEvaluator(
+        let evaluator = try ProfessionalQualityPrimaryEvaluator(
             profile: profile,
             adversarialSuite: adversarialSuite,
             holdoutQualification: holdoutQualification

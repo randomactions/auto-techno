@@ -11,7 +11,7 @@ account.
 - fixed 130 BPM and one private canonical identity;
 - reproducible musical decisions for the same initial and continuation state;
 - one resolved per-bar score shared by planning, audio, and telemetry;
-- phrase-boundary continuation with temporal memory and bounded fallback;
+- phrase-boundary continuation with temporal memory and accepted-PCM hold;
 - three score-selected internal synthesis architectures with bounded patch
   automation and exact score-to-PCM evidence;
 - one shared Resonant Mono TPT/ADAA nonlinear core with bounded semantic
@@ -84,6 +84,8 @@ revision.
 - [`docs/SPATIAL_ENGINE.md`](docs/SPATIAL_ENGINE.md) — canonical FDN ownership, bounds, continuation, evidence, and qualification boundary
 - [`docs/NONLINEAR_DSP_CORE.md`](docs/NONLINEAR_DSP_CORE.md) — canonical TPT/ADAA ownership, bounds, evidence, and qualification boundary
 - [`docs/SOUND_QUALITY.md`](docs/SOUND_QUALITY.md) — professional-sound and automated-quality contract
+- [`docs/PRIMARY_EVALUATOR.md`](docs/PRIMARY_EVALUATOR.md) — calibrated single-plan runtime judgment and commit boundary
+- [`docs/PRIMARY_EVALUATOR.md`](docs/PRIMARY_EVALUATOR.md) — calibrated single-plan runtime judgment and commit boundary
 - [`docs/SOUND_CONCEPT_MATURITY.md`](docs/SOUND_CONCEPT_MATURITY.md) — durable musical concepts and the richer DSP that may replace their current realization
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — ordered engine-evolution outcomes
 - [`docs/AUTONOMOUS_RUNTIME_PROVENANCE.md`](docs/AUTONOMOUS_RUNTIME_PROVENANCE.md) — runtime ownership and feedback flow

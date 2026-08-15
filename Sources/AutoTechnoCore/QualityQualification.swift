@@ -1,23 +1,19 @@
 import Foundation
 
-/// Stable versions for the first machine-readable quality foundation. The
-/// policy is deliberately uncalibrated: these types make evidence reproducible
-/// without claiming that professional-quality targets exist yet.
+/// Stable versions for the calibrated single-primary quality contract.
 package enum QualityQualificationContract {
     /// Version 19 binds resonant-mono patch automation to the shared bounded
     /// TPT filter and first-order antiderivative-antialiased tanh consequence,
     /// including exact input/output fingerprints and applied parameter ranges.
-    /// The shipping policy remains uncalibrated; this version identifies
-    /// evidence, not runtime promotion.
-    package static let schemaVersion = 19
+    /// Quality schema 20 removes the previous multi-plan decision outcomes while the
+    /// signal engine and its calibrated metric ranges remain version 19.
+    package static let schemaVersion = 20
     package static let reasonCodeVersion = 1
     package static let engineVersion = "autotechno-canonical-engine.v19"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1
-    package static let maximumComparedCandidates = 2
-    package static let maximumDistinctCandidates = 3
-    package static let maximumRenderPasses = 4
+    package static let maximumRenderPasses = 2
     package static let maximumPhraseBars = 16
     package static let minimumSupportedSampleRate = 8_000.0
     package static let maximumSupportedSampleRate = 192_000.0
@@ -70,8 +66,6 @@ package enum QualityDecisionOutcome: String, Codable, Equatable, Sendable {
     case qualified
     case rejected
     case adjusted
-    case conservativeFallback = "conservative-fallback"
-    case deterministicHold = "deterministic-hold"
 }
 
 /// Versioned, durable reason identifiers. Raw values are report wire values;
@@ -86,10 +80,8 @@ package enum QualityReasonCode: String, CaseIterable, Codable, Hashable, Sendabl
     case guardrailRegressionV1 = "quality.guardrail-regression.v1"
     case candidateQualifiedV1 = "quality.candidate-qualified.v1"
     case candidateAdjustedV1 = "quality.candidate-adjusted.v1"
-    case conservativeFallbackV1 = "quality.conservative-fallback.v1"
     case staleEvidenceV1 = "quality.stale-evidence.v1"
     case routeRecoveryV1 = "quality.route-recovery.v1"
-    case deterministicHoldV1 = "quality.deterministic-hold.v1"
     case acceptanceProvenanceMissingV1 = "quality.acceptance-provenance-missing.v1"
     case evidenceMismatchV1 = "quality.evidence-mismatch.v1"
 }
@@ -188,35 +180,32 @@ package struct QualityDecision: Codable, Equatable, Sendable {
     }
 
     /// Durable terminal reason codes must agree with the decision outcome.
-    /// Operational fallback/hold reasons may accompany an unavailable
-    /// uncalibrated observation, but can never masquerade as acceptance.
+    /// Transport continuity is deliberately not a quality-policy outcome.
     package var hasOutcomeConsistentReasonCodes: Bool {
         let qualified = reasonCodes.contains(.candidateQualifiedV1)
         let adjusted = reasonCodes.contains(.candidateAdjustedV1)
-        let fallback = reasonCodes.contains(.conservativeFallbackV1)
-        let hold = reasonCodes.contains(.deterministicHoldV1)
         let reportsUncalibrated = reasonCodes.contains(.policyUncalibratedV1)
         let isUncalibrated = policyVersion ==
             QualityQualificationContract.uncalibratedPolicyVersion
         guard !policyVersion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               reportsUncalibrated == isUncalibrated,
-              !isUncalibrated || outcome == .qualificationUnavailable,
-              !(fallback && hold) else {
+              !isUncalibrated || outcome == .qualificationUnavailable else {
             return false
         }
         switch outcome {
         case .qualified:
-            return qualified && !adjusted && !fallback && !hold
+            return qualified && !adjusted
         case .adjusted:
-            return adjusted && !qualified && !fallback && !hold
+            return adjusted && !qualified
         case .rejected:
-            return !qualified && !adjusted && !fallback && !hold
-        case .conservativeFallback:
-            return fallback && !qualified && !adjusted && !hold
-        case .deterministicHold:
-            return hold && !qualified && !adjusted && !fallback
+            return !qualified && !adjusted && hasNonCompensableFailureReason
         case .qualificationUnavailable:
-            return !qualified && !adjusted
+            return !qualified && !adjusted && (
+                reportsUncalibrated ||
+                    reasonCodes.contains(.evaluatorUnavailableV1) ||
+                    reasonCodes.contains(.evidenceMissingV1) ||
+                    reasonCodes.contains(.evidenceNonFiniteV1)
+            )
         }
     }
 }
@@ -288,9 +277,7 @@ package struct QualityContinuationState: Codable, Equatable, Sendable {
         if !outcomeReasonsMatch {
             let reasons = decision.reasonCodes.filter {
                 $0 != .candidateQualifiedV1 &&
-                    $0 != .candidateAdjustedV1 &&
-                    $0 != .conservativeFallbackV1 &&
-                    $0 != .deterministicHoldV1
+                    $0 != .candidateAdjustedV1
             } + [.hardGateFailedV1]
             effectiveDecision = QualityDecision(
                 policyVersion: decision.policyVersion,

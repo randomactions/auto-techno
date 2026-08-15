@@ -39,95 +39,95 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
 
-      - name: Run atomic prepared continuation
+      - name: Run atomic primary commit
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter atomicPreparedContinuation
+          --filter calibratedPrimaryCommit
 
-      - name: Run lightweight upper contracts
+      - name: Run lightweight primary and evidence contracts
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(boundedCandidateSelection|closedHatDecayPlanFingerprint|boundedPreparationInputs|conservativeFallbackGrooveCellIsCanonical)'
+          --filter '(primaryCandidatePolicy|preparationEvaluatorAvailability|closedHatEvidenceContract|failedAttemptIsRetainable)'
 
-      - name: Run 8 kHz closed-hat route preparation
+      - name: Run 8 kHz primary unavailability gate
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter closedHatCompanion8KRoutePreparation
+          --filter unsupported8KRouteStaysUnavailable
 
-      - name: Run 12 kHz closed-hat route preparation
+      - name: Run 12 kHz primary unavailability gate
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter closedHatCompanion12KRoutePreparation
+          --filter unsupported12KRouteStaysUnavailable
 
       - name: Run closed-hat evidence tampering
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter closedHatCompanionRenderEvidenceTampering
+          --filter closedHatEvidenceContract
 
       - name: Run pulse-echo evidence tampering
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter pulseEchoReturnBindingTampering
+          --filter pulseEchoDriveEvidenceContract
 
-      - name: Run paired evaluator transaction
+      - name: Run unavailable-route commit gate
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter pairedEvaluatorTransaction
+          --filter unavailableRouteDoesNotCommit
 
-      - name: Run candidate-boundary cancellation
+      - name: Run primary-boundary cancellation
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter candidateBoundaryCancellation
+          --filter primaryBoundaryCancellation
 
-      - name: Run paired correction order
+      - name: Run single correction order
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter pairedCorrectionOrder
+          --filter onePrimaryCorrection
 
-      - name: Run rejected-candidate isolation
+      - name: Run rejected-attempt isolation
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter rejectedCandidateIsolation
+          --filter failedAttemptIsRetainable
 
       - name: Run representative-rate intent
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter representativeRateIntent
+          --filter representativeRateEquivalence
 
       - name: Run equivalent prepared transactions across rates
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter equivalentPreparedTransactionsAcrossRates
+          --filter deviceSampleRates
 
-      - name: Run paired-preparation resource envelope
+      - name: Run primary-preparation resource envelope
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(representativeRateWorkingSetEnvelope|unsupportedRouteStaysSinglePrimary)'
+          --filter '(representativeRateWorkingSetEnvelope|missingArtifactsStayUnavailable)'
 
       - name: Run phrase-boundary evidence
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter phraseBoundaryEvidence
+          --filter rendererContinuationReplay
 
       - name: Run core and evidence tests
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(AdaptiveAutonomousSessionTests|GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|FeedbackDelayNetworkTests|RepositorySurfaceTests|IdentityReturnContinuationTests|InstrumentPaletteTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|ProfessionalQualityCalibration|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
+          --filter '(AdaptiveAutonomousSessionTests|GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|FeedbackDelayNetworkTests|RepositorySurfaceTests|IdentityReturnContinuationTests|InstrumentPaletteTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|PrimaryEvaluatorReadinessTests|ProfessionalQualityCalibration|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
 
       - name: Run preparation preflight tests
         run: >-

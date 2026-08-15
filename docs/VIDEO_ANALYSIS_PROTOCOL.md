@@ -41,7 +41,8 @@ promotion verdict.
   responsibility is deficient, what evidence should expose it, and which
   observable result would disconfirm the hypothesis.
 - Identify the existing canonical owner, reusable state or DSP capability,
-  bounded action, continuation behavior, fallback, and duplicate path avoided.
+  bounded action, continuation behavior, home correction or neutral ineligible
+  behavior, and duplicate path avoided.
 - Reject advice that requires a new user control, selectable seed, alternative
   engine, unrelated gear emulation, or extra density without a measurable
   product benefit.

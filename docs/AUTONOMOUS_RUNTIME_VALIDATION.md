@@ -59,14 +59,14 @@ The canonical late field has its own deterministic DSP and integration gate.
 Tests cover eight ordered odd route-derived delays, strictly sub-unity
 delay-proportional gains, high-frequency damping bounds, diffuse and decaying
 stereo impulse response, rate-normalized onset, continuation, route reset, and
-non-finite fallback. Full-render regressions bind score depth and effect state to
+non-finite containment. Full-render regressions bind score depth and effect state to
 exact input/wet hashes while requiring unchanged kick and foundation
 fingerprints. Candidate tamper tests require one bounded spatial-FDN record per
 bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 19, candidate-vector schema 18, and canonical engine v19
+Quality-contract schema 20, candidate-vector schema 18, and canonical engine v19
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
@@ -79,15 +79,15 @@ voice-leading continuation,
 graph, and pre/post upper-timbre vector for every retained attempt. Groove-pulse
 evidence must cover every bar
 explicitly, bind each score event to one exact dry-sample
-hash plus bounded level/spectral/tail consequence, and leave selection unchanged
-while the evaluator is uncalibrated. For the complete syncopated-lean cell, tests
+hash plus bounded level/spectral/tail consequence inside the single primary
+evaluation. For the complete syncopated-lean cell, tests
 must prove that the 3-3-2 intensity relationship changes only existing pulse
 windows, retains the same event steps/count/timing/physical articulation, and
-returns to the prior alternating cell in the conservative candidate. The
+retains its one canonical grouping. The
 closed-hat projection must cover every bar, match each surviving ordinary-hat
 score event by stable event index, and prove that only a same-onset open-hat
-companion changes the closed-hat tail. Neutral and conservative events must
-retain the legacy sample identity, with no onset, count, intensity, timing,
+companion changes the closed-hat tail. Neutral events must retain their sample
+identity, with no onset, count, intensity, timing,
 brightness, level, or companion-voice change. The instrument projection must
 cover every bar, bind every audible assignment to
 one catalog architecture, patch, musical use, bounded automation vector, and
@@ -113,9 +113,9 @@ supported rate, and require exact chunk continuation.
 Cross-rate tests must cover the minimum and maximum supported routes, exact-zero
 event endpoints, deterministic replay, live canonical-session reachability,
 and a complete selected primary transaction. Current numeric DSP values are a
-versioned realization, not permanent musical targets. The transaction binds all
-candidate-plan fingerprints, the
-engine/policy/evaluator versions, the selected attempt, correction count, route
+versioned realization, not permanent musical targets. The transaction binds the
+one plan fingerprint, engine/policy/evaluator versions, terminal attempt,
+correction count, route
 generation, incoming continuation, and the pre-decision outgoing render/DSP
 state. Full-mix evidence must identify ITU-R BS.1770-5, retain physical-time
 gating counts and phrase-wide integrated/momentary/short-term values, and derive
@@ -140,22 +140,21 @@ the canonical `[3, 7, 11, 15]` weak-pulse evidence plus motif context. Full and
 protected render passes, detector-to-audible scaling, automatic-mix gain, and
 all hashes must agree. Missing bars, forged roles, arbitrary kick deletion,
 nonzero withheld signal, silent recovery, or a changed non-kick score make the
-candidate incomplete; none of this evidence changes uncalibrated selection.
+candidate incomplete; the primary evaluator cannot qualify incomplete evidence.
 
-Climax-arc evidence must remain inactive for debt-free, conservative, and
+Climax-arc evidence must remain inactive for debt-free and
 non-release phrases. An active record must fingerprint the exact incoming debt
 set paid by the release, distinguish contrast and major-break sources, retain
 bounded open/due bars, and, when the existing kick recovery is present,
 cross-check one grounded setup, two adjacent withheld bars, and its macro marker.
-It may reject broken long-form
-provenance but may not rank the phrase while shipping policy is uncalibrated.
+It may reject broken long-form provenance as one non-compensable input.
 
 Gated-percussion-texture evidence must cover every rendered bar. Active records
 must bind the canonical eligible source-step mask and earliest admitted step to
 the exact one-step input window, four-step delayed output start, four-step
 output window, route-derived frame geometry, finite source/return hashes and
 metrics, zero out-of-window samples, exact-zero output endpoints, and identical
-full/protected render passes. Ineligible and conservative records must be exact
+full/protected render passes. Ineligible records must be exact
 neutral. Tests must hold the resolved bar, synth plan, dry percussion hash,
 foundation, kick, groove-pulse, and ordinary-hat evidence fixed while proving
 the return changes protected PCM only after its requested output gate. These
@@ -173,7 +172,7 @@ preserve hashes and all pre/post metrics exactly with zero difference RMS;
 active drive must remain outside feedback, bind replayable changed-frame and
 peak witnesses, and stay within the transfer's bounded low-level lift of at
 most `3.2x` RMS plus its conservative physical peak cap.
-Conservative, forced-home, identity-return, major-break, non-memory, and
+Forced-home, identity-return, major-break, non-memory, and
 ineligible paths must remain neutral. The implementation candidate contains
 this record, and the exact-source local structural/signal tests plus release
 build are recorded as passing in the validation snapshot.
@@ -187,57 +186,51 @@ one sixteenth step. Score and renderer tuples must agree on role, base onset,
 requested offset, expected/applied onset, and requested gate end, while the
 renderer-owned applied gate end remains bounded by onset, requested end, and bar
 end. Present companion roles must retain finite nonzero dry evidence. Macro
-endpoints, conservative, forced-home, identity-return, major-break, and otherwise
-ineligible paths must remain exactly neutral, and uncalibrated selection must
-remain unchanged.
+endpoints, forced-home, identity-return, major-break, and otherwise ineligible
+paths must remain exactly neutral.
 
-This schema is evidence infrastructure, not a passing shipping professional-
-quality policy. The shipping evaluator is uncalibrated, renders one primary
-candidate on the healthy path, and must continue to report qualification
-unavailable. The frozen offline development policy must load pinned profile and
-adversarial-suite identities and accept all fourteen representative
-checkpoint/rate observations with no relationship failures.
+The shipping evaluator is the exact-engine calibrated primary policy. It renders
+one primary plan on the healthy path and may request one same-plan home-timbre
+correction. Missing artifacts and unsupported routes must report qualification
+unavailable and may not commit.
 The Professional Evidence v4 bank must contain every canonical checkpoint for
-every included rate and complete exact-role masking/stem evidence. Its own policy
-availability remains false by design. Calibrated paired ranking remains disabled
-even though the exact engine-v19 checkpoint-local comparator and pinned diverse
-profile/adversarial/holdout identities now load and replay through the package
-seam. The profile must cover at least 24 complete development trajectories; the
-current frozen profile covers 28. Holdouts must be source-disjoint, contain at
+every included rate and complete exact-role masking/stem evidence. The exact
+engine-v19 primary policy and pinned diverse profile/adversarial/holdout
+identities must load and replay through the app path. The profile must cover at
+least 24 complete development trajectories; the current profile covers 28.
+Holdouts must be source-disjoint, contain at
 least four complete journeys, accept every checkpoint/rate observation, and
 produce no trajectory or rate-consistency failure. Short-program EBU-style LRA
 must remain descriptive; stable BS.1770 loudness and true-peak dimensions remain
-evaluative. The shipping overload must still be explicitly activated.
+evaluative. Runtime commit tests must use that exact profile identity.
 
 ## Determinism and sample-rate consistency
 
 Tests must prove that the same initial state plus the same accepted,
-sample-indexed feedback packets produces the same candidate set, selected plan,
+sample-indexed feedback packets produces the same plan and terminal decision,
 graph, immutable PCM, evaluator/controller state, and outgoing continuation
-state. Candidate order, ties, missing evidence, and fallback selection must be
-deterministic.
+state. Missing evidence and correction decisions must be deterministic.
 
 Run equivalent journeys at 44.1 and 48 kHz and across a route change. Decisions
-must be based on rate-normalized evidence and select the same musical intention,
-candidate class, and controller direction unless a documented safety constraint
-requires a rate-specific fallback. Rate changes may change sample counts and
+must be based on rate-normalized evidence and retain the same musical intention
+and controller direction unless a documented safety constraint forces
+qualification unavailable. Rate changes may change sample counts and
 PCM hashes; they must not silently change identity, dramatic obligations, or
 accepted-feedback provenance. Rebuilding at the new rate must preserve coherent
 continuation and reject stale work from the previous route.
 
 ## Bounded generation, evaluation, and adaptation
 
-Candidate count, full renders, corrective rerenders, analysis windows, and total
+Plan count, full renders, corrective rerenders, analysis windows, and total
 work per future boundary must each have an explicit finite maximum. Tests must
 exercise those maxima and prove that invalid or low-quality output cannot trigger
 unbounded search. The runtime must always end in one of three states: a qualified
-candidate, a deterministic conservative fallback, or a coherent repeat/hold of
-the last qualified material.
+initial render, an adjusted same-plan render, or no commit with a coherent
+repeat/hold of the last qualified material.
 
-The current transaction permits at most three distinct candidate renders
-(primary, alternate, and fallback), one home-timbre correction, and four render
-passes total. Cancellation is checked before and after bounded bar-render and
-evidence phases as well as between candidates. Route changes cancel detached
+The current transaction permits one initial render, one home-timbre correction,
+and two render passes total. Cancellation is checked before and after bounded
+bar-render and evidence phases as well as between attempts. Route changes cancel detached
 preparation, advance the route generation, and reject stale results before they
 can commit.
 
@@ -250,13 +243,13 @@ Controller tests must cover:
 - alternating and adversarial evidence without oscillation, escalating
   correction, or a repeating limit cycle;
 - silent, sparse, invalid, clipped, non-finite, missing, late, and stale evidence;
-- state hold, bounded recovery toward home, deterministic fallback, and clean
+- state hold, bounded recovery toward home, unavailable/rejected decisions, and clean
   reset only at an explicitly defined lifecycle boundary;
 - no competition between separate controllers for the same parameter or role.
 
-The selected candidate's evaluator and controller state must be committed
+The accepted plan's evaluator and controller state must be committed
 atomically with its plan, render state, graph state, and continuation state.
-Rejected candidates must not leak their state. Cache keys and route-recovery
+Rejected attempts must not leak their state. Cache keys and route-recovery
 requests must distinguish every state or revision capable of changing selection
 or PCM.
 
@@ -264,7 +257,7 @@ or PCM.
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
 composition, spatial-FDN, and nonlinear-core evidence carried by quality-contract
-schema 19 change detached
+schema 20 change detached
 preparation only. They add
 no callback capture, analysis, or live-feedback work; the requirements below
 remain gates
@@ -287,40 +280,22 @@ controller revision, and target future sample boundary. Partial, overwritten,
 late, stale, or mismatched packets are rejected. Decisions may affect only audio
 that has not been scheduled and may take effect only at their declared future
 boundary. Tests must prove that current and already scheduled buffers remain
-immutable and that a missed deadline follows the deterministic hold/fallback
-path without a gap.
+immutable and that a missed deadline follows the deterministic accepted-PCM hold
+without a gap.
 
 ## Preparation budget
 
 Measure detached preparation and background analysis for the minimum and maximum
-phrase lengths, maximum candidate/rerender path, conservative fallback, and route
+phrase lengths, maximum two-pass path, and route
 rebuild at representative 44.1 and 48 kHz devices. Record median, high-percentile,
 and worst observed times plus peak working memory.
 
-Before enabling calibrated paired ranking, establish bounded streaming phrase
-analysis and measure cancellation latency, preparation latency, and peak working
-memory across the full four-pass limit. A test-only comparator does not satisfy
-this release gate.
-
-The generic transaction readiness probe now supplies that prerequisite at 44.1
-and 48 kHz. Three optimized maximum-size iterations per rate measured healthy
-paired worst times of 6.372/6.873 seconds, full four-pass worst times of
-12.247/13.357 seconds, post-comparison cancellation of 0.014...0.032 ms, and
-80,461,824 bytes maximum RSS. Its deterministic numeric-storage estimate is
-113,161,984 bytes under a 128 MiB ceiling. Healthy work fits the 7.385-second
-shortest-phrase lookahead; correction/fallback fits one 14.769-second
-frozen-topology hold. These figures do not satisfy the final release gate. The
-exact-engine artifact loader, checkpoint-local evaluator, calibrated fallback
-result, preloaded route boundary, unsupported-rate single-primary fallback, and
-reason-coded transaction replay now have deterministic tests. Three exact-policy
-maximum-path iterations per rate fit the single-hold envelope: worst latency was
-9.549/10.448 seconds, cancellation was 0.042...0.048 ms, and maximum RSS was
-81,559,552 bytes. The original single-journey profile failed unseen candidates;
-the replacement profile now derives from 28 complete journeys and passes a
-ten-case adversarial suite plus four disjoint holdouts at both rates. The app-
-facing overload still does not install the evaluator; operational and offline-
-generalization success therefore do not constitute activation. See
-[`PAIRED_SELECTION_READINESS.md`](PAIRED_SELECTION_READINESS.md).
+The exact-engine artifact loader, route-local primary evaluator, unavailable-rate
+gate, one-correction transaction order, and reason-coded replay require
+deterministic tests at 44.1 and 48 kHz. The deterministic numeric-storage estimate
+must remain below the declared 128 MiB ceiling. The profile derives from 28
+complete journeys and passes a ten-case adversarial suite plus four disjoint
+holdouts at both rates. See [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md).
 
 The declared budget must leave enough lookahead to schedule the future boundary
 without callback work or silence. A late successor may repeat the current
@@ -351,12 +326,12 @@ During the run:
 2. change output routes and sample rates;
 3. trigger and recover from an interruption;
 4. sleep and wake the Mac;
-5. exercise normal, maximum-candidate, fallback, and missed-analysis-deadline paths;
+5. exercise normal, one-correction, rejection, unavailable, and missed-analysis-deadline paths;
 6. confirm continuous phrase progression, bounded controller state, stable CPU and
    memory, and no clicks, gaps, runaway tails, oscillating balance, crashes, or
    disabled transport.
 
 Record hardware, OS, sample rates, exact commit, quality-contract revision,
-start/end times, preparation and analysis timing, controller/fallback events,
+start/end times, preparation and analysis timing, controller/correction events,
 interventions, and observations. A missing soak is reported as unverified, never
 inferred from unit tests, builds, simulations, or prior snapshots.

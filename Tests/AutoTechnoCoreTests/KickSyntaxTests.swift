@@ -6,14 +6,14 @@ import Testing
 struct KickSyntaxTests {
     private struct Fixture {
         let state: AutonomousSessionState
-        let candidates: AutonomousPhraseCandidates
+        let plan: AutonomousPhrasePlan
     }
 
     @Test("Paid release withholds two canonical kick bars before recovery")
     func paidReleaseArc() throws {
         let fixture = try #require(eligibleFixture())
 
-        for plan in [fixture.candidates.primary, fixture.candidates.alternate] {
+        for plan in [fixture.plan] {
             let indexes = try #require(syntaxIndexes(in: plan))
             let baseline = canonicalBaseline(for: plan)
 
@@ -64,10 +64,7 @@ struct KickSyntaxTests {
                 #expect(resolved.performanceCharacter ==
                         plan.performanceCharacterEvidence.character)
                 #expect(resolved.closedHatDecayArticulations ==
-                        ClosedHatDecayResolver.articulations(
-                            from: resolved.ensemble,
-                            conservative: false
-                        ))
+                        ClosedHatDecayResolver.articulations(from: resolved.ensemble))
             }
 
             let recovery = plan.resolvedBars[indexes.recovery]
@@ -96,35 +93,20 @@ struct KickSyntaxTests {
         }
     }
 
-    @Test("Debt gates syntax while legacy rumble DNA still resolves the canonical bass arc")
+    @Test("Debt gates syntax while rumble DNA resolves the canonical bass arc")
     func neutralGates() throws {
         let fixture = try #require(eligibleFixture())
-        let primary = fixture.candidates.primary
+        let primary = fixture.plan
         let baseline = canonicalBaseline(for: primary)
-
-        #expect(fixture.candidates.fallback.resolvedBars.allSatisfy {
-            $0.kickSyntaxRole == .grounded
-        })
 
         let noDebtState = releaseState(seed: fixture.state.rootSeed, withDebt: false)
         let noDebt = AutonomousSessionDirector(rootSeed: noDebtState.rootSeed)
-            .candidates(from: noDebtState)
-        #expect(noDebt.primary.kind == .energyRelease)
-        #expect(noDebt.primary.paidDebtIDs.isEmpty)
-        #expect(noDebt.primary.resolvedBars.allSatisfy {
+            .plan(from: noDebtState)
+        #expect(noDebt.kind == .energyRelease)
+        #expect(noDebt.paidDebtIDs.isEmpty)
+        #expect(noDebt.resolvedBars.allSatisfy {
             $0.kickSyntaxRole == .grounded
         })
-        #expect(noDebt.alternate.resolvedBars.allSatisfy {
-            $0.kickSyntaxRole == .grounded
-        })
-
-        let conservative = KickSyntaxResolver.resolve(
-            resolvedBars: baseline,
-            kind: .energyRelease,
-            paidDebtIDs: primary.paidDebtIDs,
-            conservative: true
-        )
-        #expect(conservative == baseline)
 
         let marker = try #require(baseline.firstIndex {
             $0.arrangementGesture == .structuralMarker
@@ -152,14 +134,13 @@ struct KickSyntaxTests {
         let earlyMarker = KickSyntaxResolver.resolve(
             resolvedBars: shortSetup,
             kind: .energyRelease,
-            paidDebtIDs: primary.paidDebtIDs,
-            conservative: false
+            paidDebtIDs: primary.paidDebtIDs
         )
         #expect(earlyMarker == shortSetup)
         #expect(earlyMarker.allSatisfy { $0.kickSyntaxRole == .grounded })
 
         let monoFixture = try #require(monoRumbleFixture())
-        let monoPlan = monoFixture.candidates.primary
+        let monoPlan = monoFixture.plan
         #expect(monoPlan.dna.foundationCompanion == .monoRumble)
         #expect(monoPlan.resolvedBars.allSatisfy {
             $0.foundationCompanion == .bass &&
@@ -171,19 +152,15 @@ struct KickSyntaxTests {
     @Test("Preflight rejects forged syntax roles and arbitrary kick deletion")
     func preflightRejectsTampering() throws {
         let fixture = try #require(eligibleFixture())
-        let source = fixture.candidates.primary
+        let source = fixture.plan
         let indexes = try #require(syntaxIndexes(in: source))
 
         let prepared = try #require(preflight(
-            fixture.candidates,
+            fixture.plan,
             state: fixture.state
         ))
         #expect(prepared.candidateEvaluation.isComplete)
-        #expect(prepared.candidateEvaluation.selectedSlot == .primary)
-        #expect(prepared.selectedCandidateEvidence.slot == .primary)
         #expect(prepared.selectedCandidateEvidence.isComplete)
-        #expect(!prepared.usedAlternate)
-        #expect(!prepared.usedFallback)
         let selectedAttemptIndex = try #require(
             prepared.candidateEvaluation.selectedAttemptIndex
         )
@@ -198,8 +175,7 @@ struct KickSyntaxTests {
             scene: source.scene,
             dna: source.dna,
             kind: source.kind,
-            resolvedBars: source.resolvedBars,
-            conservative: source.conservative
+            resolvedBars: source.resolvedBars
         )
         let expansionIndex = try #require(selectedSynth.bars.firstIndex {
             $0.tonalEnvelopeExpansionEligible
@@ -226,18 +202,6 @@ struct KickSyntaxTests {
                 }?.eventCount ?? 0,
             sampleRate: 8_000
         ))
-        let fallbackSynth = SynthPerformancePlan(
-            scene: fixture.candidates.fallback.scene,
-            dna: fixture.candidates.fallback.dna,
-            kind: fixture.candidates.fallback.kind,
-            resolvedBars: fixture.candidates.fallback.resolvedBars,
-            conservative: true
-        )
-        #expect(fallbackSynth.bars.allSatisfy {
-            !$0.tonalEnvelopeExpansionEligible &&
-                $0.upperNotes.allSatisfy { $0.envelopeRelation == .home }
-        })
-
         let evidence = prepared.selectedCandidateEvidence
         #expect(evidence.planFingerprint ==
                 AutonomousCandidateFingerprint.plan(source))
@@ -270,7 +234,6 @@ struct KickSyntaxTests {
         #expect(evidence.climaxArc.bindingValid)
         #expect(evidence.climaxArc.isComplete(
             phraseKind: evidence.symbolic.phraseKind,
-            conservative: evidence.symbolic.conservative,
             startBar: evidence.symbolic.startBar,
             declaredBarCount: evidence.symbolic.declaredBarCount,
             kickSyntax: evidence.kickSyntax
@@ -321,19 +284,19 @@ struct KickSyntaxTests {
             seed: fixture.state.rootSeed,
             withDebt: false
         )
-        #expect(preflight(fixture.candidates, state: noDebtState) == nil)
+        #expect(preflight(fixture.plan, state: noDebtState) == nil)
 
         var roleBars = source.resolvedBars
         roleBars[indexes.recovery] = replacingBar(
             roleBars[indexes.recovery],
             kickSyntaxRole: .grounded
         )
-        let forgedRole = AutonomousPhraseCandidates(
-            primary: replacingBars(in: source, with: roleBars, memory: fixture.state.memory),
-            alternate: fixture.candidates.alternate,
-            fallback: fixture.candidates.fallback
+        let forgedRole = replacingBars(
+            in: source,
+            with: roleBars,
+            memory: fixture.state.memory
         )
-        #expect(AutonomousCandidateFingerprint.plan(forgedRole.primary) !=
+        #expect(AutonomousCandidateFingerprint.plan(forgedRole) !=
                 AutonomousCandidateFingerprint.plan(source))
         #expect(preflight(forgedRole, state: fixture.state) == nil)
 
@@ -356,14 +319,10 @@ struct KickSyntaxTests {
             withheld,
             groovePulses: forgedPulses
         )
-        let forgedGroove = AutonomousPhraseCandidates(
-            primary: replacingBars(
-                in: source,
-                with: grooveBars,
-                memory: fixture.state.memory
-            ),
-            alternate: fixture.candidates.alternate,
-            fallback: fixture.candidates.fallback
+        let forgedGroove = replacingBars(
+            in: source,
+            with: grooveBars,
+            memory: fixture.state.memory
         )
         #expect(preflight(forgedGroove, state: fixture.state) == nil)
 
@@ -387,10 +346,10 @@ struct KickSyntaxTests {
             grounded,
             ensemble: forgedEnsemble
         )
-        let forgedKick = AutonomousPhraseCandidates(
-            primary: replacingBars(in: source, with: kickBars, memory: fixture.state.memory),
-            alternate: fixture.candidates.alternate,
-            fallback: fixture.candidates.fallback
+        let forgedKick = replacingBars(
+            in: source,
+            with: kickBars,
+            memory: fixture.state.memory
         )
         #expect(preflight(forgedKick, state: fixture.state) == nil)
 
@@ -412,14 +371,10 @@ struct KickSyntaxTests {
             narrative: syntaxBar.narrative,
             kickSyntaxRole: syntaxBar.kickSyntaxRole
         )
-        let forgedCharacter = AutonomousPhraseCandidates(
-            primary: replacingBars(
-                in: source,
-                with: characterBars,
-                memory: fixture.state.memory
-            ),
-            alternate: fixture.candidates.alternate,
-            fallback: fixture.candidates.fallback
+        let forgedCharacter = replacingBars(
+            in: source,
+            with: characterBars,
+            memory: fixture.state.memory
         )
         #expect(preflight(forgedCharacter, state: fixture.state) == nil)
 
@@ -430,16 +385,12 @@ struct KickSyntaxTests {
             in: source,
             as: otherCharacter
         )
-        let coherentWrongCharacter = AutonomousPhraseCandidates(
-            primary: replacingBars(
-                in: source,
-                with: coherentWrongCharacterBars,
-                memory: fixture.state.memory
-            ),
-            alternate: fixture.candidates.alternate,
-            fallback: fixture.candidates.fallback
+        let coherentWrongCharacter = replacingBars(
+            in: source,
+            with: coherentWrongCharacterBars,
+            memory: fixture.state.memory
         )
-        #expect(coherentWrongCharacter.primary.performanceCharacterEvidence.valid)
+        #expect(coherentWrongCharacter.performanceCharacterEvidence.valid)
         #expect(preflight(coherentWrongCharacter, state: fixture.state) == nil)
     }
 
@@ -448,19 +399,17 @@ struct KickSyntaxTests {
         let seeds = preferred + (1...512).map { UInt64($0) }
         for seed in seeds {
             let state = releaseState(seed: seed, withDebt: true)
-            let candidates = AutonomousSessionDirector(rootSeed: seed)
-                .candidates(from: state)
+            let plan = AutonomousSessionDirector(rootSeed: seed)
+                .plan(from: state)
             let synth = SynthPerformancePlan(
-                scene: candidates.primary.scene,
-                dna: candidates.primary.dna,
-                kind: candidates.primary.kind,
-                resolvedBars: candidates.primary.resolvedBars,
-                conservative: candidates.primary.conservative
+                scene: plan.scene,
+                dna: plan.dna,
+                kind: plan.kind,
+                resolvedBars: plan.resolvedBars
             )
-            if syntaxIndexes(in: candidates.primary) != nil,
-               syntaxIndexes(in: candidates.alternate) != nil,
+            if syntaxIndexes(in: plan) != nil,
                synth.bars.contains(where: \.tonalEnvelopeExpansionEligible) {
-                return Fixture(state: state, candidates: candidates)
+                return Fixture(state: state, plan: plan)
             }
         }
         return nil
@@ -473,11 +422,10 @@ struct KickSyntaxTests {
             guard state.identityDNA.foundationCompanion == .monoRumble else {
                 continue
             }
-            let candidates = AutonomousSessionDirector(rootSeed: seed)
-                .candidates(from: state)
-            if syntaxIndexes(in: candidates.primary) != nil,
-               syntaxIndexes(in: candidates.alternate) != nil {
-                return Fixture(state: state, candidates: candidates)
+            let plan = AutonomousSessionDirector(rootSeed: seed)
+                .plan(from: state)
+            if syntaxIndexes(in: plan) != nil {
+                return Fixture(state: state, plan: plan)
             }
         }
         return nil
@@ -529,8 +477,7 @@ struct KickSyntaxTests {
                 foundationBehavior: resolved.foundationBehavior,
                 companion: resolved.foundationCompanion,
                 gear: resolved.percussionGear,
-                gesture: resolved.arrangementGesture,
-                conservative: plan.conservative
+                gesture: resolved.arrangementGesture
             )
             return ResolvedPerformanceBar(
                 performance: resolved.performance,
@@ -547,13 +494,9 @@ struct KickSyntaxTests {
                     absoluteBar: resolved.performance.bar,
                     swingPercent: plan.dna.rhythm.swingPercent,
                     percussionGear: resolved.percussionGear,
-                    eventSeed: resolved.performance.eventSeed,
-                    conservative: plan.conservative
+                    eventSeed: resolved.performance.eventSeed
                 ),
-                closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
-                    from: ensemble,
-                    conservative: plan.conservative
-                ),
+                closedHatDecayArticulations: ClosedHatDecayResolver.articulations(from: ensemble),
                 spatialContrast: resolved.spatialContrast,
                 narrative: resolved.narrative
             )
@@ -581,8 +524,7 @@ struct KickSyntaxTests {
                 foundationBehavior: behavior,
                 companion: behavior.companion,
                 gear: resolved.percussionGear,
-                gesture: resolved.arrangementGesture,
-                conservative: false
+                gesture: resolved.arrangementGesture
             )
             return ResolvedPerformanceBar(
                 performance: resolved.performance,
@@ -599,13 +541,9 @@ struct KickSyntaxTests {
                     absoluteBar: resolved.performance.bar,
                     swingPercent: plan.dna.rhythm.swingPercent,
                     percussionGear: resolved.percussionGear,
-                    eventSeed: resolved.performance.eventSeed,
-                    conservative: false
+                    eventSeed: resolved.performance.eventSeed
                 ),
-                closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
-                    from: ensemble,
-                    conservative: false
-                ),
+                closedHatDecayArticulations: ClosedHatDecayResolver.articulations(from: ensemble),
                 spatialContrast: resolved.spatialContrast,
                 narrative: resolved.narrative
             )
@@ -613,8 +551,7 @@ struct KickSyntaxTests {
         return KickSyntaxResolver.resolve(
             resolvedBars: baseline,
             kind: plan.kind,
-            paidDebtIDs: plan.paidDebtIDs,
-            conservative: false
+            paidDebtIDs: plan.paidDebtIDs
         )
     }
 
@@ -639,8 +576,7 @@ struct KickSyntaxTests {
             interlockChapter: source.interlockChapter,
             groovePulses: groovePulses ?? source.groovePulses,
             closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
-                from: selectedEnsemble,
-                conservative: false
+                from: selectedEnsemble
             ),
             spatialContrast: source.spatialContrast,
             narrative: source.narrative,
@@ -664,8 +600,6 @@ struct KickSyntaxTests {
             openedDebt: plan.openedDebt,
             paidDebtIDs: plan.paidDebtIDs,
             requestsTopologyMutation: plan.requestsTopologyMutation,
-            alternate: plan.alternate,
-            conservative: plan.conservative,
             interest: PhraseInterestEvaluator.evaluate(
                 resolvedBars: resolvedBars,
                 kind: plan.kind,
@@ -680,13 +614,13 @@ struct KickSyntaxTests {
     }
 
     private func preflight(
-        _ candidates: AutonomousPhraseCandidates,
+        _ plan: AutonomousPhrasePlan,
         state: AutonomousSessionState
     ) -> PreparedAutonomousPhrase? {
         var renderState = RenderState()
         renderState.barIndex = state.memory.totalBars
         return AutonomousPhrasePreparer.prepareIfNotCancelled(
-            candidates: candidates,
+            plan: plan,
             sessionSeed: state.rootSeed,
             memory: state.memory,
             sampleRate: 8_000,
@@ -694,6 +628,7 @@ struct KickSyntaxTests {
             incomingGraphState: GeneratedDSPContinuationState(),
             previousGraph: nil,
             incomingQualityState: state.quality,
+            evaluator: AcceptingPrimaryTestEvaluator(),
             cancellationRequested: { false }
         )
     }

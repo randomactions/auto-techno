@@ -7,8 +7,8 @@ import Testing
 struct AutonomousCandidateEvaluationTests {
     @Test("Reduced vector JSON and FNV fingerprints are deterministic and round trip")
     func deterministicVector() throws {
-        let first = fixtureVector(slot: .primary)
-        let second = fixtureVector(slot: .primary)
+        let first = fixtureVector()
+        let second = fixtureVector()
 
         #expect(first.isComplete)
         #expect(first.isFinite)
@@ -28,9 +28,9 @@ struct AutonomousCandidateEvaluationTests {
                 decoded.postGraphUpperTimbreEvidence)
     }
 
-    @Test("Kick syntax evidence binds score, render, silence, and remains selection-neutral")
+    @Test("Kick syntax evidence binds score, render, silence, and remains playback-gate-neutral")
     func kickSyntaxEvidenceContract() throws {
-        let baseline = fixtureVector(slot: .primary)
+        let baseline = fixtureVector()
         let grounded = try #require(baseline.kickSyntax.first)
         let zeroHash = AutonomousKickSyntaxBarEvidence.zeroSampleHash(
             renderedFrameCount: 14_769
@@ -97,7 +97,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!gainForged.isComplete)
         #expect(gainForged.isFinite)
         #expect(gainForged.recordIsStructurallyValid)
-        #expect(gainForged.selectionEvidence == baseline.selectionEvidence)
+        #expect(gainForged.playbackGateEvidence == baseline.playbackGateEvidence)
 
         var roleForgedObject = object
         var roleForgedBars = try #require(
@@ -111,7 +111,7 @@ struct AutonomousCandidateEvaluationTests {
         )
         #expect(!roleForged.isComplete)
         #expect(roleForged.recordIsStructurallyValid)
-        #expect(roleForged.selectionEvidence == baseline.selectionEvidence)
+        #expect(roleForged.playbackGateEvidence == baseline.playbackGateEvidence)
 
         var missingObject = object
         missingObject["sourceKickSyntaxBarCount"] = 0
@@ -125,7 +125,6 @@ struct AutonomousCandidateEvaluationTests {
         #expect(missing.recordIsStructurallyValid)
 
         let nonFinite = fixtureVector(
-            slot: .primary,
             kickSyntaxBar: fixtureKickSyntax(detectorPeak: .nan)
         )
         #expect(!nonFinite.isComplete)
@@ -185,7 +184,6 @@ struct AutonomousCandidateEvaluationTests {
         #expect(evidence.recordIsStructurallyValid)
         #expect(evidence.isComplete(
             phraseKind: AutonomousPhraseKind.energyRelease.rawValue,
-            conservative: false,
             startBar: 128,
             declaredBarCount: 16,
             kickSyntax: syntax
@@ -208,7 +206,6 @@ struct AutonomousCandidateEvaluationTests {
         )
         #expect(releaseOnly.isComplete(
             phraseKind: AutonomousPhraseKind.energyRelease.rawValue,
-            conservative: false,
             startBar: 128,
             declaredBarCount: 16,
             kickSyntax: (128..<144).map {
@@ -234,13 +231,12 @@ struct AutonomousCandidateEvaluationTests {
         )
         #expect(!wrongGeometry.isComplete(
             phraseKind: AutonomousPhraseKind.energyRelease.rawValue,
-            conservative: false,
             startBar: 128,
             declaredBarCount: 16,
             kickSyntax: syntax
         ))
 
-        let baseline = fixtureVector(slot: .primary)
+        let baseline = fixtureVector()
         let data = try baseline.deterministicJSON()
         var object = try #require(
             JSONSerialization.jsonObject(with: data) as? [String: Any]
@@ -255,31 +251,27 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!forged.isComplete)
         #expect(forged.recordIsStructurallyValid)
         #expect(forged.fingerprint != baseline.fingerprint)
-        #expect(forged.selectionEvidence == baseline.selectionEvidence)
+        #expect(forged.playbackGateEvidence == baseline.playbackGateEvidence)
     }
 
-    @Test("Gated percussion texture evidence is compact, causal, and selection-neutral")
+    @Test("Gated percussion texture evidence is compact, causal, and playback-gate-neutral")
     func percussionEchoTextureEvidenceContract() throws {
         let neutral = fixtureVector(
-            slot: .primary,
             phraseKind: .contrast
         )
         let activeRecord = fixturePercussionEchoTexture()
         let active = fixtureVector(
-            slot: .primary,
             phraseKind: .contrast,
             percussionEchoTextureBar: activeRecord
         )
 
         #expect(activeRecord.isComplete(
             sampleRate: 8_000,
-            phraseKind: .contrast,
-            conservative: false
-        ))
+            phraseKind: .contrast        ))
         #expect(active.isComplete)
         #expect(active.isFinite)
         #expect(active.fingerprint != neutral.fingerprint)
-        #expect(active.selectionEvidence == neutral.selectionEvidence)
+        #expect(active.playbackGateEvidence == neutral.playbackGateEvidence)
 
         let data = try active.deterministicJSON()
         let object = try #require(
@@ -313,7 +305,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!forged.isComplete)
         #expect(forged.isFinite)
         #expect(forged.recordIsStructurallyValid)
-        #expect(forged.selectionEvidence == active.selectionEvidence)
+        #expect(forged.playbackGateEvidence == active.playbackGateEvidence)
 
         var unboundObject = object
         var unboundBars = bars
@@ -359,7 +351,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!oversized.recordIsStructurallyValid)
     }
 
-    @Test("Upper timing evidence is compact, score-bound, and selection-neutral")
+    @Test("Upper timing evidence is compact, score-bound, and playback-gate-neutral")
     func upperTimingEvidenceContract() throws {
         let neutral = fixtureUpperTiming()
         let active = fixtureUpperTiming(
@@ -385,12 +377,10 @@ struct AutonomousCandidateEvaluationTests {
             responseRMS: 0.015
         )
         let baseline = fixtureVector(
-            slot: .primary,
             evidenceBar: 7,
             upperTimingBars: [fixtureUpperTiming(bar: 7)]
         )
         let vector = fixtureVector(
-            slot: .primary,
             evidenceBar: 7,
             upperTimingBars: [active]
         )
@@ -398,15 +388,11 @@ struct AutonomousCandidateEvaluationTests {
         #expect(neutral.isFinite)
         #expect(neutral.isComplete(
             routeSampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
         #expect(active.isFinite)
         #expect(active.isComplete(
             routeSampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
         let performed = fixtureUpperTiming(
             bar: 7,
             chapter: .home,
@@ -426,13 +412,9 @@ struct AutonomousCandidateEvaluationTests {
         )
         #expect(performed.isComplete(
             routeSampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
         #expect(performed.normalTimingEligibility(
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
         #expect(!fixtureUpperTiming(
             bar: 7,
             chapter: .home,
@@ -451,9 +433,7 @@ struct AutonomousCandidateEvaluationTests {
                 SynthPerformancePlan.maximumLeadPerformanceOffsetInSteps
         ).isComplete(
             routeSampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
         #expect(!fixtureUpperTiming(
             bar: 7,
             chapter: .breath,
@@ -473,9 +453,7 @@ struct AutonomousCandidateEvaluationTests {
             responseRMS: 0.012
         ).isComplete(
             routeSampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
         for bar in [1, 7, 8, 14] {
             let expectedDepth = ResolvedUpperNote.maximumTimingOffsetInSteps *
                 SynthPerformancePlan.upperTimingAperture(absoluteBar: bar)
@@ -497,9 +475,7 @@ struct AutonomousCandidateEvaluationTests {
             )
             #expect(replay.isComplete(
                 routeSampleRate: 8_000,
-                phraseKind: .lock,
-                conservative: false
-            ))
+                phraseKind: .lock            ))
         }
         for bar in [0, 15] {
             let endpoint = fixtureUpperTiming(
@@ -517,9 +493,7 @@ struct AutonomousCandidateEvaluationTests {
             )
             #expect(endpoint.isComplete(
                 routeSampleRate: 8_000,
-                phraseKind: .lock,
-                conservative: false
-            ))
+                phraseKind: .lock            ))
         }
         #expect(!fixtureUpperTiming(
             bar: 7,
@@ -539,9 +513,7 @@ struct AutonomousCandidateEvaluationTests {
             responseRMS: 0.012
         ).isComplete(
             routeSampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
         #expect(!fixtureUpperTiming(
             sourceScoreNoteCount:
                 AutonomousCandidateEvaluationVector.maximumUpperTimingEventsPerBar + 1,
@@ -549,19 +521,16 @@ struct AutonomousCandidateEvaluationTests {
                 AutonomousCandidateEvaluationVector.maximumUpperTimingEventsPerBar + 1
         ).isComplete(
             routeSampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != baseline.fingerprint)
-        #expect(vector.selectionEvidence == baseline.selectionEvidence)
+        #expect(vector.playbackGateEvidence == baseline.playbackGateEvidence)
         #expect(AutonomousCandidateAttempt(
             kind: .initialRender,
             vector: vector
         ).isStructurallyComplete)
         let chapterMismatch = fixtureVector(
-            slot: .primary,
             evidenceBar: 7,
             pulseEchoDriveBars: [fixturePulseEchoDrive(
                 bar: 7,
@@ -738,7 +707,6 @@ struct AutonomousCandidateEvaluationTests {
 
         let excessiveBars = (0..<17).map { fixtureUpperTiming(bar: $0) }
         let constructorBounded = fixtureVector(
-            slot: .primary,
             upperTimingBars: excessiveBars
         )
         #expect(constructorBounded.sourceUpperTimingBarCount == 17)
@@ -775,9 +743,7 @@ struct AutonomousCandidateEvaluationTests {
             shadowRMS: 0.01
         ).isComplete(
             routeSampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
         #expect(!fixtureUpperTiming(
             bar: 7,
             chapter: .tone,
@@ -792,9 +758,7 @@ struct AutonomousCandidateEvaluationTests {
             shadowRMS: 0.01
         ).isComplete(
             routeSampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
         #expect(!fixtureUpperTiming(
             chapter: .breath,
             sourceScoreNoteCount: 2,
@@ -808,9 +772,7 @@ struct AutonomousCandidateEvaluationTests {
             shadowRMS: 0.01
         ).isComplete(
             routeSampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
         #expect(!fixtureUpperTiming(
             bar: 7,
             chapter: .breath,
@@ -823,9 +785,7 @@ struct AutonomousCandidateEvaluationTests {
             shadowEventCount: 1
         ).isComplete(
             routeSampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
 
         let forcedHomeActive = AutonomousCandidateAttempt(
             kind: .initialRender,
@@ -844,11 +804,8 @@ struct AutonomousCandidateEvaluationTests {
         )
         #expect(!silentNeutral.isComplete(
             routeSampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: false
-        ))
+            phraseKind: .lock        ))
         let silentNeutralVector = fixtureVector(
-            slot: .primary,
             evidenceBar: 7,
             upperTimingBars: [silentNeutral]
         )
@@ -873,7 +830,6 @@ struct AutonomousCandidateEvaluationTests {
             responseRMS: 0.012
         )
         let eligibleNeutralVector = fixtureVector(
-            slot: .primary,
             evidenceBar: 7,
             upperTimingBars: [eligibleNeutral]
         )
@@ -898,23 +854,22 @@ struct AutonomousCandidateEvaluationTests {
             sourceRenderEventCount: 1,
             events: [event]
         )
-        let vector = fixtureVector(slot: .primary, groovePulseBar: bar)
+        let vector = fixtureVector(groovePulseBar: bar)
 
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
         #expect(vector.schemaVersion == 18)
-        #expect(QualityQualificationContract.schemaVersion == 19)
+        #expect(QualityQualificationContract.schemaVersion == 20)
         #expect(QualityQualificationContract.engineVersion ==
                 "autotechno-canonical-engine.v19")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
-        #expect(vector.fingerprint != fixtureVector(slot: .primary).fingerprint)
-        #expect(vector.selectionEvidence ==
-                fixtureVector(slot: .primary).selectionEvidence)
+        #expect(vector.fingerprint != fixtureVector().fingerprint)
+        #expect(vector.playbackGateEvidence ==
+                fixtureVector().playbackGateEvidence)
 
         let ghostVector = fixtureVector(
-            slot: .primary,
             planFingerprintOverride: "plan-primary-ghost",
             groovePulseBar: AutonomousGroovePulseBarEvidence(
                 bar: 0,
@@ -928,7 +883,6 @@ struct AutonomousCandidateEvaluationTests {
             )
         )
         let accentVector = fixtureVector(
-            slot: .primary,
             planFingerprintOverride: "plan-primary-accent",
             groovePulseBar: AutonomousGroovePulseBarEvidence(
                 bar: 0,
@@ -943,29 +897,6 @@ struct AutonomousCandidateEvaluationTests {
         )
         #expect(ghostVector.isComplete && accentVector.isComplete)
         #expect(ghostVector.fingerprint != accentVector.fingerprint)
-        let ghostSelection = ghostVector.selectionEvidence
-        let accentSelectionWithMaximumMovement = AutonomousCandidateEvidence(
-            symbolicValid: accentVector.selectionEvidence.symbolicValid,
-            safetyValid: accentVector.selectionEvidence.safetyValid,
-            interesting: accentVector.selectionEvidence.interesting,
-            combinedScore: accentVector.selectionEvidence.combinedScore + 0.18
-        )
-        #expect(ghostSelection != accentSelectionWithMaximumMovement)
-        #expect(!AutonomousCandidateSelector.needsAlternate(primary: ghostSelection))
-        #expect(!AutonomousCandidateSelector.needsAlternate(
-            primary: accentSelectionWithMaximumMovement
-        ))
-        #expect(AutonomousCandidateSelector.choose(
-            primary: ghostSelection,
-            alternate: nil,
-            qualityComparison: .unavailable
-        ) == .primary)
-        #expect(AutonomousCandidateSelector.choose(
-            primary: accentSelectionWithMaximumMovement,
-            alternate: nil,
-            qualityComparison: .unavailable
-        ) == .primary)
-
         let data = try vector.deterministicJSON()
         let decoded = try JSONDecoder().decode(
             AutonomousCandidateEvaluationVector.self,
@@ -1110,8 +1041,8 @@ struct AutonomousCandidateEvaluationTests {
             sourceRenderEventCount: 2,
             events: [neutral, companion]
         )
-        let baseline = fixtureVector(slot: .primary)
-        let vector = fixtureVector(slot: .primary, closedHatBar: authoredBar)
+        let baseline = fixtureVector()
+        let vector = fixtureVector(closedHatBar: authoredBar)
 
         #expect(emptyBar.isComplete(sampleRate: 8_000))
         #expect(emptyBar.isFinite)
@@ -1123,7 +1054,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != baseline.fingerprint)
-        #expect(vector.selectionEvidence == baseline.selectionEvidence)
+        #expect(vector.playbackGateEvidence == baseline.playbackGateEvidence)
 
         let data = try vector.deterministicJSON()
         let repeatedData = try vector.deterministicJSON()
@@ -1270,17 +1201,16 @@ struct AutonomousCandidateEvaluationTests {
             )]
         )
         let vector = fixtureVector(
-            slot: .primary,
             instrumentBar: instrumentBar
         )
-        let empty = fixtureVector(slot: .primary)
+        let empty = fixtureVector()
 
         #expect(instrumentBar.isComplete(sampleRate: 8_000))
         #expect(instrumentBar.isFinite)
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != empty.fingerprint)
-        #expect(vector.selectionEvidence == empty.selectionEvidence)
+        #expect(vector.playbackGateEvidence == empty.playbackGateEvidence)
 
         let data = try vector.deterministicJSON()
         let object = try #require(
@@ -1435,7 +1365,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!misplaced.isComplete)
     }
 
-    @Test("Rising spectral cluster evidence is bounded and selection-neutral")
+    @Test("Rising spectral cluster evidence is bounded and playback-gate-neutral")
     func spectralTextureClusterEvidenceContract() throws {
         let assignment = InstrumentAssignment(
             use: .transition,
@@ -1479,12 +1409,12 @@ struct AutonomousCandidateEvaluationTests {
                 spectralTextureCluster: cluster
             )]
         )
-        let vector = fixtureVector(slot: .primary, instrumentBar: bar)
-        let baseline = fixtureVector(slot: .primary)
+        let vector = fixtureVector(instrumentBar: bar)
+        let baseline = fixtureVector()
         #expect(bar.isComplete(sampleRate: 8_000))
         #expect(vector.isComplete)
         #expect(vector.fingerprint != baseline.fingerprint)
-        #expect(vector.selectionEvidence == baseline.selectionEvidence)
+        #expect(vector.playbackGateEvidence == baseline.playbackGateEvidence)
 
         let data = try vector.deterministicJSON()
         var object = try #require(
@@ -1556,7 +1486,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!outOfRoute.isComplete)
     }
 
-    @Test("Tonal envelope expansion evidence binds the applied wash and stays selection-neutral")
+    @Test("Tonal envelope expansion evidence binds the applied wash and stays playback-gate-neutral")
     func tonalEnvelopeExpansionEvidenceContract() throws {
         let baseSustain = 0.31
         let baseRelease = 0.22
@@ -1603,13 +1533,11 @@ struct AutonomousCandidateEvaluationTests {
             )]
         )
         let vector = fixtureVector(
-            slot: .primary,
             evidenceBar: 15,
             phraseKind: .energyRelease,
             instrumentBar: bar
         )
         let baseline = fixtureVector(
-            slot: .primary,
             evidenceBar: 15,
             phraseKind: .energyRelease
         )
@@ -1620,7 +1548,7 @@ struct AutonomousCandidateEvaluationTests {
             vector: vector
         ).isStructurallyComplete)
         #expect(vector.fingerprint != baseline.fingerprint)
-        #expect(vector.selectionEvidence == baseline.selectionEvidence)
+        #expect(vector.playbackGateEvidence == baseline.playbackGateEvidence)
 
         let data = try vector.deterministicJSON()
         var object = try #require(
@@ -1655,7 +1583,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(forged.fingerprint != vector.fingerprint)
     }
 
-    @Test("Pulse-echo return drive evidence is bounded, attributable, and selection-neutral")
+    @Test("Pulse-echo return drive evidence is bounded, attributable, and playback-gate-neutral")
     func pulseEchoDriveEvidenceContract() throws {
         let pulseInstrument = fixturePulseEchoInstrumentBar()
         let preDrivePeak = Double(Float(0.20))
@@ -1688,7 +1616,6 @@ struct AutonomousCandidateEvaluationTests {
             interlockChapter: .memory
         )
         let baseline = fixtureVector(
-            slot: .primary,
             instrumentBar: pulseInstrument,
             pulseEchoDriveBars: [fixturePulseEchoDrive(
                 scoreEnabled: true,
@@ -1696,7 +1623,6 @@ struct AutonomousCandidateEvaluationTests {
             )]
         )
         let vector = fixtureVector(
-            slot: .primary,
             instrumentBar: pulseInstrument,
             pulseEchoDriveBars: [active]
         )
@@ -1706,13 +1632,12 @@ struct AutonomousCandidateEvaluationTests {
         #expect(active.isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != baseline.fingerprint)
-        #expect(vector.selectionEvidence == baseline.selectionEvidence)
+        #expect(vector.playbackGateEvidence == baseline.playbackGateEvidence)
         #expect(AutonomousCandidateAttempt(
             kind: .initialRender,
             reasonCodes: [],
@@ -1946,7 +1871,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
 
@@ -1995,7 +1919,6 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!active.isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: noPulseAccess
         ))
         #expect(fixturePulseEchoDrive(
@@ -2004,7 +1927,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: noPulseAccess
         ))
         #expect(!fixturePulseEchoDrive(
@@ -2012,7 +1934,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         #expect(!fixturePulseEchoDrive(
@@ -2030,7 +1951,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         let tinyAmount = 0.000_000_000_001
@@ -2060,7 +1980,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         #expect(!fixturePulseEchoDrive(
@@ -2081,7 +2000,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         let boundaryPeak = fixturePulseEchoDrive(
@@ -2109,7 +2027,6 @@ struct AutonomousCandidateEvaluationTests {
         #expect(boundaryPeak.isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         #expect(!fixturePulseEchoDrive(
@@ -2135,7 +2052,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         #expect(!fixturePulseEchoDrive(
@@ -2147,7 +2063,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         #expect(!fixturePulseEchoDrive(
@@ -2162,7 +2077,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: noPulseAccess
         ))
 
@@ -2180,7 +2094,6 @@ struct AutonomousCandidateEvaluationTests {
         #expect(nonMemoryBypass.isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         let forceHomeBypass = fixturePulseEchoDrive(
@@ -2195,7 +2108,6 @@ struct AutonomousCandidateEvaluationTests {
             interlockChapter: .memory
         )
         let forceHomeVector = fixtureVector(
-            slot: .primary,
             instrumentBar: pulseInstrument,
             pulseEchoDriveBars: [forceHomeBypass]
         )
@@ -2226,16 +2138,13 @@ struct AutonomousCandidateEvaluationTests {
         #expect(lateOnly.isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         #expect(!lateOnly.normalDriveEligibility(
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         let lateOnlyVector = fixtureVector(
-            slot: .primary,
             instrumentBar: pulseInstrument,
             pulseEchoDriveBars: [lateOnly]
         )
@@ -2261,7 +2170,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
 
@@ -2269,16 +2177,9 @@ struct AutonomousCandidateEvaluationTests {
             #expect(!active.isComplete(
                 sampleRate: 8_000,
                 phraseKind: forcedPhrase,
-                conservative: false,
                 instruments: pulseInstrument
             ))
         }
-        #expect(!active.isComplete(
-            sampleRate: 8_000,
-            phraseKind: .lock,
-            conservative: true,
-            instruments: pulseInstrument
-        ))
         let lowLevelPreDrivePeak = Double(Float(0.02))
         let lowLevelPostDrivePeak = abs(Double(
             PulseEchoReturnDriveContract.process(
@@ -2305,7 +2206,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         #expect(!fixturePulseEchoDrive(
@@ -2326,7 +2226,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         #expect(fixturePulseEchoDrive(
@@ -2348,32 +2247,27 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
 
         #expect(!fixturePulseEchoDrive(delayFrameCount: 2_768).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: AutonomousInstrumentBarEvidence(bar: 0, evidence: [])
         ))
         #expect(!fixturePulseEchoDrive(renderedFrameCount: 14_768).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: AutonomousInstrumentBarEvidence(bar: 0, evidence: [])
         ))
         #expect(!fixturePulseEchoDrive(bpm: 129).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: AutonomousInstrumentBarEvidence(bar: 0, evidence: [])
         ))
         #expect(!fixturePulseEchoDrive(bar: 1).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: pulseInstrument
         ))
         #expect(!fixturePulseEchoDrive(
@@ -2386,7 +2280,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: AutonomousInstrumentBarEvidence(bar: 0, evidence: [])
         ))
         #expect(!fixturePulseEchoDrive(
@@ -2395,7 +2288,6 @@ struct AutonomousCandidateEvaluationTests {
         ).isComplete(
             sampleRate: 8_000,
             phraseKind: .lock,
-            conservative: false,
             instruments: AutonomousInstrumentBarEvidence(bar: 0, evidence: [])
         ))
         #expect(!fixturePulseEchoDrive(finite: false).isFinite)
@@ -2404,7 +2296,6 @@ struct AutonomousCandidateEvaluationTests {
             fixturePulseEchoDrive(bar: bar)
         }
         let constructorBounded = fixtureVector(
-            slot: .primary,
             pulseEchoDriveBars: oversizedSource
         )
         #expect(constructorBounded.sourcePulseEchoDriveBarCount == 17)
@@ -2431,7 +2322,6 @@ struct AutonomousCandidateEvaluationTests {
     @Test("Masking and stem payloads are bounded and malformed vectors are incomplete")
     func malformedBoundedEvidence() throws {
         let excessiveMasking = fixtureVector(
-            slot: .primary,
             maskingSourceCount: 13,
             maskingObservationCount: 13
         )
@@ -2440,7 +2330,6 @@ struct AutonomousCandidateEvaluationTests {
         #expect(excessiveMasking.recordIsStructurallyValid)
 
         let missingStem = fixtureVector(
-            slot: .primary,
             stemSourceRoleCount: 4,
             stemRoleCount: 4
         )
@@ -2449,7 +2338,6 @@ struct AutonomousCandidateEvaluationTests {
         #expect(missingStem.recordIsStructurallyValid)
 
         let excessiveStem = fixtureVector(
-            slot: .primary,
             stemSourceRoleCount: 6,
             stemRoleCount: 6
         )
@@ -2499,7 +2387,7 @@ struct AutonomousCandidateEvaluationTests {
                 AutonomousCandidateEvaluationVector.maximumBarCount)
         #expect(!oversizedFullMix.isComplete)
 
-        let sourceVector = fixtureVector(slot: .primary)
+        let sourceVector = fixtureVector()
         var graphObject = try #require(JSONSerialization.jsonObject(
             with: sourceVector.deterministicJSON()
         ) as? [String: Any])
@@ -2794,16 +2682,11 @@ struct AutonomousCandidateEvaluationTests {
             mutatedNodeCount: 0
         )
         #expect(!unknownMutationGraph.isComplete)
-        #expect(!AutonomousCandidatePlanFingerprints(
-            primary: "same-plan",
-            alternate: "same-plan",
-            fallback: "fallback-plan"
-        ).isComplete)
     }
 
-    @Test("Spatial FDN evidence is bounded, deterministic, required, and selection-neutral")
+    @Test("Spatial FDN evidence is bounded, deterministic, required, and playback-gate-neutral")
     func spatialFDNEvidenceContract() throws {
-        let source = fixtureVector(slot: .primary)
+        let source = fixtureVector()
         let evidence = try #require(source.spatialFDN.first)
 
         #expect(evidence.lineCount == FeedbackDelayNetworkConfiguration.lineCount)
@@ -2828,7 +2711,7 @@ struct AutonomousCandidateEvaluationTests {
         )
         #expect(changedHash.isComplete)
         #expect(changedHash.fingerprint != source.fingerprint)
-        #expect(changedHash.selectionEvidence == source.selectionEvidence)
+        #expect(changedHash.playbackGateEvidence == source.playbackGateEvidence)
 
         let invalidMutations: [(String, Any)] = [
             ("lineCount", 7),
@@ -2883,7 +2766,7 @@ struct AutonomousCandidateEvaluationTests {
 
     @Test("Failed candidate evidence remains structurally retainable")
     func failedAttemptIsRetainable() {
-        let vector = fixtureVector(slot: .alternate, nonFinite: true)
+        let vector = fixtureVector(nonFinite: true)
         let attempt = AutonomousCandidateAttempt(
             kind: .initialRender,
             reasonCodes: [.evidenceNonFiniteV1, .hardGateFailedV1, .evidenceNonFiniteV1],
@@ -2898,468 +2781,6 @@ struct AutonomousCandidateEvaluationTests {
             QualityReasonCode.evidenceNonFiniteV1.rawValue,
             QualityReasonCode.hardGateFailedV1.rawValue,
         ].sorted())
-    }
-
-    @Test("Reports preserve a non-finite rejected attempt beside a finite fallback")
-    func rejectedAttemptReportRoundTrip() throws {
-        let rejected = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            reasonCodes: [.evidenceNonFiniteV1, .hardGateFailedV1],
-            vector: fixtureVector(slot: .primary, nonFinite: true)
-        )
-        let rejectedAlternate = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            reasonCodes: [.evidenceNonFiniteV1, .hardGateFailedV1],
-            vector: fixtureVector(slot: .alternate, nonFinite: true)
-        )
-        let fallback = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            forceSafeGraph: true,
-            reasonCodes: [],
-            vector: fixtureVector(slot: .fallback)
-        )
-        let transaction = AutonomousCandidateEvaluationTransaction(
-            engineVersion: QualityQualificationContract.engineVersion,
-            policyVersion: QualityQualificationContract.uncalibratedPolicyVersion,
-            evaluatorVersion: QualityQualificationContract.uncalibratedEvaluatorVersion,
-            planFingerprints: fixturePlanFingerprints,
-            attempts: [rejected, rejectedAlternate, fallback],
-            selectedAttemptIndex: 2,
-            selectedSlot: .fallback,
-            comparison: .unavailable,
-            correctionCount: 0
-        )
-        #expect(transaction.isComplete)
-
-        let report = try CanonicalJourneyQualificationReport(
-            engineVersion: QualityQualificationContract.engineVersion,
-            fixtureFingerprint: "fixture-non-finite-rejected",
-            continuationFingerprint: "continuation-non-finite-rejected",
-            checkpoint: .establishment,
-            routeFingerprint: fallback.vector.routeContinuation.routeFingerprint,
-            routeGeneration: 0,
-            selectedCandidateEvidence: fallback.vector,
-            candidateEvaluation: transaction,
-            sampleHash: fallback.vector.fullMix.sampleHash,
-            usedFallback: true
-        )
-        let json = try report.deterministicJSON()
-        #expect(String(decoding: json, as: UTF8.self).contains("NaN"))
-        let decoded = try CanonicalJourneyQualificationReport
-            .decodeDeterministicJSON(json)
-        #expect(try decoded.deterministicJSON() == json)
-        #expect(decoded.selectedCandidateEvidence == report.selectedCandidateEvidence)
-        #expect(decoded.commitProvenance == report.commitProvenance)
-        #expect(decoded.candidateEvaluation.attempts.count == 3)
-        #expect(decoded.reasonCodes.contains(.conservativeFallbackV1))
-    }
-
-    @Test("Candidate projection equals the canonical report projection")
-    func candidateObservationProjection() throws {
-        let vector = fixtureVector(slot: .primary)
-        let attempt = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            reasonCodes: [],
-            vector: vector
-        )
-        let transaction = AutonomousCandidateEvaluationTransaction(
-            engineVersion: QualityQualificationContract.engineVersion,
-            policyVersion: QualityQualificationContract.uncalibratedPolicyVersion,
-            evaluatorVersion:
-                QualityQualificationContract.uncalibratedEvaluatorVersion,
-            planFingerprints: fixturePlanFingerprints,
-            attempts: [attempt],
-            selectedAttemptIndex: 0,
-            selectedSlot: .primary,
-            comparison: .unavailable,
-            correctionCount: 0
-        )
-        let report = try CanonicalJourneyQualificationReport(
-            engineVersion: QualityQualificationContract.engineVersion,
-            fixtureFingerprint: "candidate-projection-fixture",
-            continuationFingerprint: "candidate-projection-continuation",
-            checkpoint: .establishment,
-            routeFingerprint: vector.routeContinuation.routeFingerprint,
-            routeGeneration: 0,
-            selectedCandidateEvidence: vector,
-            candidateEvaluation: transaction,
-            sampleHash: vector.fullMix.sampleHash
-        )
-        let fromCandidate = try ProfessionalQualityObservation(
-            candidate: vector,
-            engineVersion: QualityQualificationContract.engineVersion,
-            checkpoint: .establishment
-        )
-        #expect(try ProfessionalQualityObservation(report: report) == fromCandidate)
-        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
-            try ProfessionalQualityObservation(
-                candidate: vector,
-                engineVersion: QualityQualificationContract.engineVersion,
-                checkpoint: .release
-            )
-        }
-    }
-
-    @Test("Exact paired evaluator preserves a hard-safe conservative fallback")
-    func exactPairedEvaluatorTerminalFallback() throws {
-        let evaluator = try ProfessionalQualityPairedArtifacts.load().evaluator
-        let primary = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            reasonCodes: [],
-            vector: fixtureVector(slot: .primary)
-        )
-        let alternate = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            reasonCodes: [],
-            vector: fixtureVector(slot: .alternate)
-        )
-        let fallbackVector = fixtureVector(slot: .fallback)
-        let fallback = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            forceSafeGraph: true,
-            reasonCodes: [],
-            vector: fallbackVector
-        )
-        let transaction = AutonomousCandidateEvaluationTransaction(
-            engineVersion: QualityQualificationContract.engineVersion,
-            policyVersion: evaluator.policyVersion,
-            evaluatorVersion: evaluator.evaluatorVersion,
-            planFingerprints: fixturePlanFingerprints,
-            attempts: [primary, alternate, fallback],
-            selectedAttemptIndex: 2,
-            selectedSlot: .fallback,
-            comparison: .fallback,
-            correctionCount: 0
-        )
-
-        #expect(transaction.isComplete)
-        let verdict = evaluator.terminalVerdict(
-            selected: fallbackVector,
-            transaction: transaction
-        )
-        #expect(verdict.outcome == .conservativeFallback)
-        #expect(verdict.reasonCodes == [.conservativeFallbackV1])
-    }
-
-    @Test("Transactions retain three candidates and one correction only")
-    func boundedTransaction() throws {
-        let primary = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            reasonCodes: [],
-            vector: fixtureVector(slot: .primary)
-        )
-        let failedPrimary = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            reasonCodes: [.evidenceNonFiniteV1, .hardGateFailedV1],
-            vector: fixtureVector(slot: .primary, nonFinite: true)
-        )
-        let alternate = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            reasonCodes: [.evidenceNonFiniteV1, .hardGateFailedV1],
-            vector: fixtureVector(slot: .alternate, nonFinite: true)
-        )
-        let fallback = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            forceSafeGraph: true,
-            reasonCodes: [],
-            vector: fixtureVector(slot: .fallback)
-        )
-        let correction = AutonomousCandidateAttempt(
-            kind: .correctionRender,
-            forceHomeUpperTimbre: true,
-            reasonCodes: [],
-            vector: fixtureVector(slot: .primary)
-        )
-        let failedCorrection = AutonomousCandidateAttempt(
-            kind: .correctionRender,
-            forceHomeUpperTimbre: true,
-            reasonCodes: [.evidenceNonFiniteV1, .hardGateFailedV1],
-            vector: fixtureVector(slot: .primary, nonFinite: true)
-        )
-        let plans = fixturePlanFingerprints
-        let transaction = AutonomousCandidateEvaluationTransaction(
-            engineVersion: "engine.test.v1",
-            policyVersion: "policy.test.v1",
-            evaluatorVersion: "evaluator.test.v1",
-            planFingerprints: plans,
-            attempts: [failedPrimary, alternate, failedCorrection, fallback],
-            selectedAttemptIndex: 3,
-            selectedSlot: .fallback,
-            comparison: .primary,
-            correctionCount: 1
-        )
-
-        #expect(transaction.isComplete)
-        #expect(transaction.attempts.count == 4)
-        #expect(transaction.correctionCount == 1)
-        #expect(transaction.attempts[1].evidenceComplete == false)
-        #expect(transaction.attempts[2].forceHomeUpperTimbre)
-        #expect(transaction.attempts[3].forceSafeGraph)
-        #expect(transaction.planFingerprints == plans)
-        #expect(transaction.fingerprint == transaction.fingerprint)
-        let kickChangedCorrection = AutonomousCandidateAttempt(
-            kind: .correctionRender,
-            forceHomeUpperTimbre: true,
-            reasonCodes: [.evidenceNonFiniteV1, .hardGateFailedV1],
-            vector: fixtureVector(
-                slot: .primary,
-                kickSyntaxBar: fixtureKickSyntax(
-                    detectorSampleHash: "aaaaaaaaaaaaaaaa"
-                ),
-                nonFinite: true
-            )
-        )
-        let kickChangedTransaction = AutonomousCandidateEvaluationTransaction(
-            engineVersion: "engine.test.v1",
-            policyVersion: "policy.test.v1",
-            evaluatorVersion: "evaluator.test.v1",
-            planFingerprints: plans,
-            attempts: [failedPrimary, alternate, kickChangedCorrection, fallback],
-            selectedAttemptIndex: 3,
-            selectedSlot: .fallback,
-            comparison: .primary,
-            correctionCount: 1
-        )
-        #expect(!kickChangedTransaction.isComplete)
-        let decoder = JSONDecoder()
-        decoder.nonConformingFloatDecodingStrategy = .convertFromString(
-            positiveInfinity: "+Infinity",
-            negativeInfinity: "-Infinity",
-            nan: "NaN"
-        )
-        let decoded = try decoder.decode(
-            AutonomousCandidateEvaluationTransaction.self,
-            from: transaction.deterministicJSON()
-        )
-        #expect(try decoded.deterministicJSON() == transaction.deterministicJSON())
-
-        let correctionTransaction = AutonomousCandidateEvaluationTransaction(
-            engineVersion: "engine.test.v1",
-            policyVersion: "policy.test.v1",
-            evaluatorVersion: "evaluator.test.v1",
-            planFingerprints: plans,
-            attempts: [primary, correction],
-            selectedAttemptIndex: 1,
-            selectedSlot: .primary,
-            comparison: .unavailable,
-            correctionCount: 1
-        )
-        #expect(!correctionTransaction.isComplete)
-        var forgedObject = try #require(JSONSerialization.jsonObject(
-            with: correctionTransaction.deterministicJSON()
-        ) as? [String: Any])
-        var forgedAttempts = try #require(forgedObject["attempts"] as? [[String: Any]])
-        forgedAttempts.append(forgedAttempts[1])
-        forgedObject["attempts"] = forgedAttempts
-        forgedObject["sourceAttemptCount"] = 3
-        forgedObject["correctionCount"] = 2
-        forgedObject["boundsValid"] = true
-        let forged = try decoder.decode(
-            AutonomousCandidateEvaluationTransaction.self,
-            from: JSONSerialization.data(withJSONObject: forgedObject)
-        )
-        #expect(!forged.isComplete)
-
-        let paired = AutonomousCandidateEvaluationTransaction(
-            engineVersion: "engine.test.v1",
-            policyVersion: "policy.test.v1",
-            evaluatorVersion: "evaluator.test.v1",
-            planFingerprints: plans,
-            attempts: [primary, alternate],
-            selectedAttemptIndex: 0,
-            selectedSlot: .primary,
-            comparison: .primary,
-            correctionCount: 0
-        )
-        #expect(paired.isComplete)
-
-        let calibratedFallback = AutonomousCandidateEvaluationTransaction(
-            engineVersion: "engine.test.v1",
-            policyVersion: "policy.test.v1",
-            evaluatorVersion: "evaluator.test.v1",
-            planFingerprints: plans,
-            attempts: [primary, AutonomousCandidateAttempt(
-                kind: .initialRender,
-                reasonCodes: [],
-                vector: fixtureVector(slot: .alternate)
-            ), fallback],
-            selectedAttemptIndex: 2,
-            selectedSlot: .fallback,
-            comparison: .fallback,
-            correctionCount: 0
-        )
-        #expect(calibratedFallback.isComplete)
-
-        let impossibleFallback = AutonomousCandidateEvaluationTransaction(
-            engineVersion: "engine.test.v1",
-            policyVersion: "policy.test.v1",
-            evaluatorVersion: "evaluator.test.v1",
-            planFingerprints: plans,
-            attempts: [primary, alternate, fallback],
-            selectedAttemptIndex: 2,
-            selectedSlot: .fallback,
-            comparison: .primary,
-            correctionCount: 0
-        )
-        #expect(!impossibleFallback.isComplete)
-        var crossRouteObject = try #require(JSONSerialization.jsonObject(
-            with: paired.deterministicJSON()
-        ) as? [String: Any])
-        var crossRouteAttempts = try #require(
-            crossRouteObject["attempts"] as? [[String: Any]]
-        )
-        var alternateAttempt = crossRouteAttempts[1]
-        var alternateVector = try #require(
-            alternateAttempt["vector"] as? [String: Any]
-        )
-        var alternateRoute = try #require(
-            alternateVector["routeContinuation"] as? [String: Any]
-        )
-        alternateRoute["sampleRate"] = 48_000.0
-        alternateRoute["routeGeneration"] = 1
-        alternateRoute["routeFingerprint"] = AutonomousCandidateFingerprint.route(
-            sampleRate: 48_000,
-            generation: 1
-        )
-        alternateRoute["incomingContinuationFingerprint"] = "different-incoming"
-        alternateVector["routeContinuation"] = alternateRoute
-        alternateAttempt["vector"] = alternateVector
-        crossRouteAttempts[1] = alternateAttempt
-        crossRouteObject["attempts"] = crossRouteAttempts
-        let crossRoute = try decoder.decode(
-            AutonomousCandidateEvaluationTransaction.self,
-            from: JSONSerialization.data(withJSONObject: crossRouteObject)
-        )
-        #expect(!crossRoute.isComplete)
-
-        let overbound = AutonomousCandidateEvaluationTransaction(
-            engineVersion: "engine.test.v1",
-            policyVersion: "policy.test.v1",
-            evaluatorVersion: "evaluator.test.v1",
-            planFingerprints: plans,
-            attempts: [primary, alternate, correction, fallback, correction],
-            selectedAttemptIndex: 3,
-            selectedSlot: .primary,
-            comparison: .primary,
-            correctionCount: 2
-        )
-        #expect(overbound.sourceAttemptCount == 5)
-        #expect(overbound.attempts.count == 4)
-        #expect(overbound.correctionCount == 1)
-        #expect(!overbound.boundsValid)
-        #expect(!overbound.isComplete)
-
-        let correctionOnly = AutonomousCandidateEvaluationTransaction(
-            engineVersion: "engine.test.v1",
-            policyVersion: "policy.test.v1",
-            evaluatorVersion: "evaluator.test.v1",
-            planFingerprints: plans,
-            attempts: [correction],
-            selectedAttemptIndex: 0,
-            selectedSlot: .primary,
-            comparison: .unavailable,
-            correctionCount: 1
-        )
-        #expect(!correctionOnly.isComplete)
-
-        let correctionBeforeInitial = AutonomousCandidateEvaluationTransaction(
-            engineVersion: "engine.test.v1",
-            policyVersion: "policy.test.v1",
-            evaluatorVersion: "evaluator.test.v1",
-            planFingerprints: plans,
-            attempts: [correction, primary],
-            selectedAttemptIndex: 0,
-            selectedSlot: .primary,
-            comparison: .unavailable,
-            correctionCount: 1
-        )
-        #expect(!correctionBeforeInitial.isComplete)
-
-        let correctionAfterFallback = AutonomousCandidateEvaluationTransaction(
-            engineVersion: "engine.test.v1",
-            policyVersion: "policy.test.v1",
-            evaluatorVersion: "evaluator.test.v1",
-            planFingerprints: plans,
-            attempts: [primary, alternate, fallback, correction],
-            selectedAttemptIndex: 3,
-            selectedSlot: .primary,
-            comparison: .primary,
-            correctionCount: 1
-        )
-        #expect(!correctionAfterFallback.isComplete)
-    }
-
-    @Test("Uncalibrated replay rejects paired and correction histories it cannot emit")
-    func uncalibratedHistoryReplay() throws {
-        let primaryVector = fixtureVector(slot: .primary)
-        let alternateVector = fixtureVector(slot: .alternate)
-        let primary = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            reasonCodes: [],
-            vector: primaryVector
-        )
-        let alternate = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            reasonCodes: [],
-            vector: alternateVector
-        )
-        let unnecessaryPair = AutonomousCandidateEvaluationTransaction(
-            engineVersion: QualityQualificationContract.engineVersion,
-            policyVersion: QualityQualificationContract.uncalibratedPolicyVersion,
-            evaluatorVersion: QualityQualificationContract.uncalibratedEvaluatorVersion,
-            planFingerprints: fixturePlanFingerprints,
-            attempts: [primary, alternate],
-            selectedAttemptIndex: 0,
-            selectedSlot: .primary,
-            comparison: .unavailable,
-            correctionCount: 0
-        )
-        #expect(!unnecessaryPair.isComplete)
-
-        var object = try #require(JSONSerialization.jsonObject(
-            with: primaryVector.deterministicJSON()
-        ) as? [String: Any])
-        var hardGates = try #require(object["hardGates"] as? [String: Any])
-        hardGates["upperTimbreFinite"] = false
-        object["hardGates"] = hardGates
-        var postGraph = try #require(
-            object["postGraphUpperTimbreEvidence"] as? [String: Any]
-        )
-        postGraph["finite"] = false
-        object["postGraphUpperTimbreEvidence"] = postGraph
-        let decoder = JSONDecoder()
-        decoder.nonConformingFloatDecodingStrategy = .convertFromString(
-            positiveInfinity: "+Infinity",
-            negativeInfinity: "-Infinity",
-            nan: "NaN"
-        )
-        let repairableVector = try decoder.decode(
-            AutonomousCandidateEvaluationVector.self,
-            from: JSONSerialization.data(withJSONObject: object)
-        )
-        let repairablePrimary = AutonomousCandidateAttempt(
-            kind: .initialRender,
-            reasonCodes: [.evidenceNonFiniteV1, .hardGateFailedV1],
-            vector: repairableVector
-        )
-        let correction = AutonomousCandidateAttempt(
-            kind: .correctionRender,
-            forceHomeUpperTimbre: true,
-            reasonCodes: [],
-            vector: primaryVector
-        )
-        let impossibleCorrection = AutonomousCandidateEvaluationTransaction(
-            engineVersion: QualityQualificationContract.engineVersion,
-            policyVersion: QualityQualificationContract.uncalibratedPolicyVersion,
-            evaluatorVersion: QualityQualificationContract.uncalibratedEvaluatorVersion,
-            planFingerprints: fixturePlanFingerprints,
-            attempts: [repairablePrimary, alternate, correction],
-            selectedAttemptIndex: 2,
-            selectedSlot: .primary,
-            comparison: .unavailable,
-            correctionCount: 1
-        )
-        #expect(!impossibleCorrection.isComplete)
     }
 
     @Test("Rejected signed upper evidence still has a total deterministic fingerprint")
@@ -3388,13 +2809,10 @@ struct AutonomousCandidateEvaluationTests {
     func exactStateFingerprints() {
         let director = AutonomousSessionDirector(rootSeed: 42)
         let state = director.initialState()
-        let candidates = director.candidates(from: state)
-        let replay = director.candidates(from: state)
-        #expect(AutonomousCandidateFingerprint.plan(candidates.primary) ==
-                AutonomousCandidateFingerprint.plan(replay.primary))
-        #expect(AutonomousCandidateFingerprint.plan(candidates.primary) !=
-                AutonomousCandidateFingerprint.plan(candidates.alternate))
-        #expect(AutonomousCandidatePlanFingerprints.make(candidates: candidates).isComplete)
+        let plan = director.plan(from: state)
+        let replay = director.plan(from: state)
+        #expect(AutonomousCandidateFingerprint.plan(plan) ==
+                AutonomousCandidateFingerprint.plan(replay))
 
         let graph42 = DSPGraphGenerator.safePlan(sessionSeed: 42)
         let graph43 = DSPGraphGenerator.safePlan(sessionSeed: 43)
@@ -3478,8 +2896,8 @@ struct AutonomousCandidateEvaluationTests {
                 advancedCommit.outgoingQualityStateFingerprint)
         #expect(initialCommit.fingerprint != advancedCommit.fingerprint)
 
-        #expect(AutonomousCandidateFingerprint.plan(candidates.primary) ==
-                "62565aad578c7ab7")
+        #expect(AutonomousCandidateFingerprint.plan(plan) ==
+                "4d9644613d1a20f5")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -3487,7 +2905,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "1d26ee6f170727a7")
+                "9b027ebfdd6a75eb")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3498,16 +2916,7 @@ struct AutonomousCandidateEvaluationTests {
         ) == "1cd07aec247972a1")
     }
 
-    private var fixturePlanFingerprints: AutonomousCandidatePlanFingerprints {
-        AutonomousCandidatePlanFingerprints(
-            primary: "plan-primary",
-            alternate: "plan-alternate",
-            fallback: "plan-fallback"
-        )
-    }
-
     private func fixtureVector(
-        slot: AutonomousCandidateSlot,
         maskingSourceCount: Int = 12,
         maskingObservationCount: Int = 12,
         stemSourceRoleCount: Int = 5,
@@ -3527,8 +2936,8 @@ struct AutonomousCandidateEvaluationTests {
         upperTimingBars: [AutonomousUpperTimingBarEvidence]? = nil,
         nonFinite: Bool = false
     ) -> AutonomousCandidateEvaluationVector {
-        let planFingerprint = planFingerprintOverride ?? fixturePlanFingerprints[slot]
-        let graphFingerprint = "graph-\(slot.rawValue)"
+        let planFingerprint = planFingerprintOverride ?? "plan-primary"
+        let graphFingerprint = "graph-primary"
         let movementScore = nonFinite ? Double.nan : 0
         let interest = PhraseInterestReport(
             pulseClarity: 0.8,
@@ -3552,9 +2961,7 @@ struct AutonomousCandidateEvaluationTests {
             startBar: evidenceBar,
             declaredBarCount: 1,
             resolvedBarCount: 1,
-            phraseKind: (phraseKind ?? (slot == .fallback
-                ? AutonomousPhraseKind.identityReturn
-                : AutonomousPhraseKind.lock)).rawValue,
+            phraseKind: (phraseKind ?? .lock).rawValue,
             pulseClarity: 0.8,
             intentionalSpace: 0.7,
             responseClosure: 0.6,
@@ -3567,8 +2974,6 @@ struct AutonomousCandidateEvaluationTests {
             interestScore: interest.score,
             interestValid: interest.valid,
             chapterChanged: false,
-            alternate: slot == .alternate,
-            conservative: slot == .fallback,
             boundsValid: true
         )
         let hardGates = AutonomousHardGateEvidence(
@@ -3590,7 +2995,7 @@ struct AutonomousCandidateEvaluationTests {
         let fullMix = AutonomousFullMixEvidence(
             sourceBarCount: 1,
             analyzedFrameCount: upper.analyzedFrameCount,
-            sampleHash: "sample-\(slot.rawValue)",
+            sampleHash: "sample-primary",
             peak: 0.5,
             truePeakEstimate: 0.55,
             rms: 0.2,
@@ -3681,7 +3086,6 @@ struct AutonomousCandidateEvaluationTests {
             InterlockChapter(rawValue: $0.chapter)
         } ?? .home
         return AutonomousCandidateEvaluationVector(
-            slot: slot,
             planFingerprint: planFingerprint,
             graphFingerprint: graphFingerprint,
             symbolic: symbolic,

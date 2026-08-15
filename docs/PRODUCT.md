@@ -53,7 +53,7 @@ foundation behavior, kick grammar, role-compatible patches, and automation
 while the session DNA and narrative-owned role admission remain stable.
 Character selection retains the last two
 committed choices, applies only at a future phrase boundary, and returns to the
-hypnotic home for identity return and conservative fallback. See
+hypnotic home for identity return. See
 `PERFORMANCE_GRAMMAR.md` for the human-readable compatibility matrix.
 
 Every new internal parameter must have a demonstrated path through the resolved
@@ -66,18 +66,15 @@ new instrument or mode. `PercussionGear` resolves bounded strike position,
 damping, and seeded microvariation for the existing groove-pulse carrier; the
 complete eight-pulse syncopated-lean state groups only those existing
 intensities into one cyclic 3-3-2 accent/ghost relation. The same render produces
-event-local dry-signal evidence, while the conservative candidate preserves the
-prior alternating intensity cell and exact neutral carrier. These observations
-are retained for a future calibrated policy but do not affect selection while
-the shipping evaluator remains uncalibrated.
+event-local dry-signal evidence. The primary evaluator judges that one canonical
+realization; no legacy alternating candidate or permissive policy remains.
 
 The ordinary closed-hat path uses the same contract. After ensemble arbitration,
 an existing closed hat that shares its resolved onset with the existing open hat
 receives one semantic companion role. The renderer shortens only that closed-hat
 tail; onset, count, intensity, swing, brightness, level, and the open-hat render
 remain unchanged. Same-pass event evidence binds the score event to its exact
-dry-sample consequence, and the conservative candidate keeps the legacy neutral
-decay exactly.
+dry-sample consequence.
 
 The gated-percussion-texture path keeps the same ownership boundary. One
 eligible existing percussion event opens a bounded score-owned input slice and
@@ -95,8 +92,7 @@ not from a free-running DSP clock. Atmosphere bars may render one four-voice pad
 whose inversion is chosen against the last accepted voicing; that compact
 harmonic state continues across phrase boundaries. One per-bar evidence record
 binds those intentions to their exact slice and pad PCM, arpeggiator geometry,
-and voice-leading movement. Conservative and identity-return paths remain
-exactly neutral.
+and voice-leading movement. Identity-return paths remain exactly neutral.
 
 ## Professional-sound objective
 
@@ -126,15 +122,13 @@ Professional quality remains an unverified release goal until the shipping
 policy and its operational gates pass. Professional Evidence v4 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, explicit analysis-memory provenance, and complete canonical-journey
-report-bank validation. A frozen non-reconstructable diverse profile, passing
+report-bank validation. A non-reconstructable diverse profile, passing
 adversarial suite, and disjoint holdout report now qualify complete 44.1/48 kHz
-engine banks offline.
-They do not activate runtime ranking: the shipping policy remains truthfully
-unavailable and renders one primary candidate on the healthy path. The bounded
-transaction now has a passing representative-rate operational-readiness
-envelope for healthy pairing and its maximum correction/fallback path, but that
-test seam is not the calibrated shipping evaluator and cannot activate policy.
-See `PAIRED_SELECTION_READINESS.md`.
+engine banks offline and install the same calibrated policy in detached runtime
+preparation. One canonical plan is rendered, judged, and either committed or
+rejected; the evaluator may request one same-plan home-timbre correction. Missing
+artifacts and unsupported sample rates remain truthfully unavailable and cannot
+commit. See `PRIMARY_EVALUATOR.md`.
 
 ## Hard constraints
 
@@ -146,8 +140,8 @@ See `PAIRED_SELECTION_READINESS.md`.
 - Any future live-output capture only copies app-owned PCM into a preallocated
   lock-free handoff; bounded analysis runs in background work.
 - Adjustments apply only to immutable snapshots for unscheduled future audio.
-- Candidate count, corrective passes, and analysis work remain explicitly
-  bounded; missed deadlines preserve coherent prepared playback.
+- The single plan, at most one corrective pass, and analysis work remain
+  explicitly bounded; missed deadlines repeat already accepted immutable PCM.
 - Route changes rebuild at the active sample rate without silently changing the
   musical identity or corrupting adaptation state.
 - Finite output, peak/DC/boundary limits, low-end compatibility, masking,

@@ -13,10 +13,10 @@ struct ProfessionalQualityCalibrationIntegrationTests {
     ]
     private let holdoutSeeds: [UInt64] = [161_803, 271_828, 314_159, 424_242]
 
-    /// This deliberately expensive, explicit development harness renders the
+    /// This deliberately expensive, explicit calibration harness renders the
     /// complete canonical journey at 44.1 and 48 kHz. Normal CI validates the
-    /// frozen historical and current-engine paired artifacts; regeneration is
-    /// opt-in so every source-bank change is intentional and reviewable.
+    /// current primary artifacts; regeneration is opt-in so every source-bank
+    /// change is intentional and reviewable.
     @Test("Generate complete representative-rate profile and adversarial identity")
     func generateRepresentativeProfile() throws {
         guard ProcessInfo.processInfo.environment[
@@ -76,15 +76,6 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             sourceCorpus: calibrationCorpus
         )
         progress("adversarial-ready fingerprint=\(adversarial.fingerprint)")
-        let policy = try ProfessionalQualityDevelopmentPolicy(
-            profile: profile,
-            adversarialSuite: adversarial
-        )
-        let qualification = try policy.evaluate(
-            observations: try #require(
-                calibrationTrajectories.first
-            ).observations
-        )
         let holdout = try ProfessionalQualityHoldoutQualification(
             profile: profile,
             adversarialSuite: adversarial,
@@ -148,7 +139,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 )
             }
         }
-        let pairedEvaluator = try ProfessionalQualityPairedCandidateEvaluator(
+        let primaryEvaluator = try ProfessionalQualityPrimaryEvaluator(
             profile: profile,
             adversarialSuite: adversarial,
             holdoutQualification: holdout
@@ -162,13 +153,11 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         #expect(profile.usesDiverseCalibration)
         #expect(profile.sourceTrajectoryCount == calibrationSeeds.count)
         #expect(adversarial.passed)
-        #expect(qualification.qualified)
         #expect(holdout.qualified)
         #expect(holdout.holdoutTrajectoryCount == holdoutSeeds.count)
         #expect(holdout.overlappingSourceBankCount == 0)
-        #expect(pairedEvaluator.requiresPairedCandidates)
-        #expect(pairedEvaluator.policyVersion.contains(profile.fingerprint))
-        #expect(pairedEvaluator.policyVersion.contains(adversarial.fingerprint))
+        #expect(primaryEvaluator.policyVersion.contains(profile.fingerprint))
+        #expect(primaryEvaluator.policyVersion.contains(adversarial.fingerprint))
         #expect(!profile.fingerprint.isEmpty)
         #expect(!adversarial.fingerprint.isEmpty)
 
@@ -178,13 +167,10 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         let adversarialJSON = try #require(String(
             data: adversarial.deterministicJSON(), encoding: .utf8
         ))
-        let qualificationJSON = try #require(String(
-            data: qualification.deterministicJSON(), encoding: .utf8
-        ))
         let holdoutJSON = try #require(String(
             data: holdout.deterministicJSON(), encoding: .utf8
         ))
-        try writePairedArtifacts(
+        try writePrimaryArtifacts(
             profile: profile,
             adversarial: adversarial,
             holdout: holdout
@@ -198,9 +184,6 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         print("AUTOTECHNO_HOLDOUT_QUALIFICATION_JSON_BEGIN")
         print(holdoutJSON)
         print("AUTOTECHNO_HOLDOUT_QUALIFICATION_JSON_END")
-        print("AUTOTECHNO_DEVELOPMENT_QUALIFICATION_JSON_BEGIN")
-        print(qualificationJSON)
-        print("AUTOTECHNO_DEVELOPMENT_QUALIFICATION_JSON_END")
         print("AUTOTECHNO_CALIBRATION_PROFILE_FINGERPRINT=\(profile.fingerprint)")
         print("AUTOTECHNO_ADVERSARIAL_SUITE_FINGERPRINT=\(adversarial.fingerprint)")
         print("AUTOTECHNO_HOLDOUT_QUALIFICATION_FINGERPRINT=\(holdout.fingerprint)")
@@ -353,10 +336,10 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         var seen = Set<CanonicalJourneyCheckpoint>()
 
         for _ in 0..<maximumPhrases {
-            let candidates = director.candidates(from: state)
+            let plan = director.plan(from: state)
             let neverCancelled: @Sendable () -> Bool = { false }
             let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
-                candidates: candidates,
+                plan: plan,
                 sessionSeed: state.rootSeed,
                 memory: state.memory,
                 sampleRate: sampleRate,
@@ -364,10 +347,10 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 incomingGraphState: graphState,
                 previousGraph: previousGraph,
                 incomingQualityState: state.quality,
+                evaluator: ProfessionalEvidenceOnlyEvaluator(),
                 cancellationRequested: neverCancelled
             )
             let prepared = try #require(preparedResult)
-            let plan = prepared.plan
             let checkpoints = checkpoints(
                 plan: plan,
                 previousChapter: previousChapter
@@ -431,7 +414,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         FileHandle.standardError.write(data)
     }
 
-    private func writePairedArtifacts(
+    private func writePrimaryArtifacts(
         profile: ProfessionalQualityCalibrationProfile,
         adversarial: ProfessionalQualityAdversarialSuiteReport,
         holdout: ProfessionalQualityHoldoutQualification
@@ -447,19 +430,19 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         )
         try profile.deterministicJSON().write(
             to: directory.appendingPathComponent(
-                "\(ProfessionalQualityPairedArtifacts.profileResource).json"
+                "\(ProfessionalQualityPrimaryArtifacts.profileResource).json"
             ),
             options: .atomic
         )
         try adversarial.deterministicJSON().write(
             to: directory.appendingPathComponent(
-                "\(ProfessionalQualityPairedArtifacts.adversarialResource).json"
+                "\(ProfessionalQualityPrimaryArtifacts.adversarialResource).json"
             ),
             options: .atomic
         )
         try holdout.deterministicJSON().write(
             to: directory.appendingPathComponent(
-                "\(ProfessionalQualityPairedArtifacts.holdoutResource).json"
+                "\(ProfessionalQualityPrimaryArtifacts.holdoutResource).json"
             ),
             options: .atomic
         )

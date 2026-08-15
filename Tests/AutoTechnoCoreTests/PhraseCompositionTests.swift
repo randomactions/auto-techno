@@ -118,7 +118,7 @@ struct PhraseCompositionTests {
         }
         let composition = PhraseCompositionResolver.resolve(
             scene: scene, dna: dna, kind: .lock,
-            resolvedBars: bars, conservative: false
+            resolvedBars: bars
         )
 
         #expect(composition.count == 16)
@@ -143,8 +143,8 @@ struct PhraseCompositionTests {
         #expect(Set(composition.compactMap { $0.arpeggiator?.direction }).count >= 2)
     }
 
-    @Test("Conservative and identity-return plans neutralize all four capabilities")
-    func conservativeFallback() {
+    @Test("Identity-return plans neutralize all four capabilities")
+    func identityReturnNeutrality() {
         let scene = fixtureScene()
         let dna = SceneDNA(scene: scene)
         let bar = fixtureResolved(
@@ -161,16 +161,11 @@ struct PhraseCompositionTests {
                                       intensity: 0.64, relocated: false),
             ]
         )
-        for (kind, conservative) in [
-            (AutonomousPhraseKind.identityReturn, false),
-            (.majorBreak, true),
-        ] {
-            let composition = PhraseCompositionResolver.resolve(
-                scene: scene, dna: dna, kind: kind,
-                resolvedBars: [bar], conservative: conservative
-            )
-            #expect(composition == [.neutral(bar: 0)])
-        }
+        let composition = PhraseCompositionResolver.resolve(
+            scene: scene, dna: dna, kind: .identityReturn,
+            resolvedBars: [bar]
+        )
+        #expect(composition == [.neutral(bar: 0)])
     }
 
     @Test("Accepted pad voicing continues across phrase boundaries")
@@ -191,7 +186,7 @@ struct PhraseCompositionTests {
         }
         let first = PhraseCompositionResolver.resolve(
             scene: scene, dna: dna, kind: .majorBreak,
-            resolvedBars: firstBars, conservative: false
+            resolvedBars: firstBars
         )
         let outgoing = try #require(first.last?.padVoicing?.voices)
         let secondBar = fixtureResolved(
@@ -206,7 +201,7 @@ struct PhraseCompositionTests {
         )
         let continued = PhraseCompositionResolver.resolve(
             scene: scene, dna: dna, kind: .majorBreak,
-            resolvedBars: [secondBar], conservative: false,
+            resolvedBars: [secondBar],
             harmonicContinuation: HarmonicContinuationState(voices: outgoing)
         )
         let next = try #require(continued.first?.padVoicing)
@@ -217,7 +212,7 @@ struct PhraseCompositionTests {
         #expect(next.maximumLeapInSemitones <= 12)
         #expect(continued == PhraseCompositionResolver.resolve(
             scene: scene, dna: dna, kind: .majorBreak,
-            resolvedBars: [secondBar], conservative: false,
+            resolvedBars: [secondBar],
             harmonicContinuation: HarmonicContinuationState(voices: outgoing)
         ))
     }
@@ -229,7 +224,7 @@ struct PhraseCompositionTests {
         var acceptedVoices: [PadVoice]?
 
         for _ in 0..<96 {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             if let incoming = acceptedVoices,
                let firstPad = plan.phraseComposition.compactMap(\.padVoicing).first {
                 let expectedMovement = zip(incoming, firstPad.voices).reduce(0) {
@@ -261,7 +256,7 @@ struct PhraseCompositionTests {
         var breakSourceBars = 0
 
         for _ in 0..<128 {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             if plan.kind == .majorBreak {
                 breakBars += plan.resolvedBars.count
                 breakPercussionBars += plan.resolvedBars.filter {

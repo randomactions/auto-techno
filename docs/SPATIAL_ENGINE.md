@@ -27,7 +27,7 @@ evidence about the consequence.
    route.
 5. `SpatialFDNRenderEvidence` streams hashes and reduced measurements from the
    exact input and stereo wet samples. Candidate-vector schema 18 binds one
-   record to every rendered bar under quality-contract schema 19 and canonical
+   record to every rendered bar under quality-contract schema 20 and canonical
    engine v19.
 
 No musical choice, analysis, file operation, allocation, or state mutation from
@@ -67,21 +67,19 @@ The existing 13 ms early reflection, rhythmic upper delay, pulse echo, generated
 graph diffusion, and score-gated percussion return keep their distinct musical
 jobs. The FDN replaces only the old late mono feedback-delay buffer.
 
-## Truthful evidence and fallback
+## Truthful evidence and containment
 
 Each bar records route rate and frame count, all eight delay lengths, resolved
 room/decay/damping and send values, score-owned depth/carrier/filter identity,
 exact input/left-wet/right-wet hashes, RMS and peak, stereo correlation, active
 sample counts, first wet frame, binding, and finiteness. Structural validation
 rejects missing, duplicated, oversized, non-finite, unstable, wrongly bound, or
-malformed records. Spatial evidence changes the transaction fingerprint but is
-deliberately absent from `selectionEvidence` while the shipping evaluator
-remains `uncalibrated.v1`.
+malformed records. Spatial evidence changes the primary transaction fingerprint.
 
-The normal score fallback remains foreground depth with no selective carrier
-send. That does not disable scene-owned upper/percussion ambience or abruptly
-erase a valid continuing tail; it removes only the optional distant-carrier
-articulation. Invalid FDN configuration or non-finite input produces silence
+The normal score uses foreground depth with no selective carrier send. That does
+not disable scene-owned upper/percussion ambience or abruptly erase a valid
+continuing tail; it removes only the optional distant-carrier articulation.
+Invalid FDN configuration or non-finite input produces silence
 from the late field, and route mismatch rebuilds zeroed bounded state. Kick and
 foundation never enter the FDN and retain exact protected-role fingerprints.
 
@@ -90,10 +88,9 @@ foundation never enter the FDN and retain exact protected-role fingerprints.
 Unit and integration tests can establish configuration bounds, deterministic
 impulse response, density, stereo decorrelation, rate-normalized onset,
 continuation, route reset, score/effect/evidence binding, and exact protected
-role identity. The frozen development profile may accept or reject the new
-engine bank, but it is not recalibrated by this change. Shipping paired selection
-remains unavailable, and an app launch for listening is not a physical-output
-soak or a professional-quality claim.
+role identity. The calibrated primary evaluator may accept, correct, or reject
+the resulting phrase. An app launch for listening is not a physical-output soak
+or a professional-quality claim.
 
 ## Design sources
 

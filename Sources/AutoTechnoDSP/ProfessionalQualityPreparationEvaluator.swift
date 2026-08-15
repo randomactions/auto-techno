@@ -8,21 +8,19 @@ package enum ProfessionalQualityPreparationAvailability: String, Codable,
 }
 
 /// Preloaded, route-local quality evaluator for detached preparation. This type
-/// performs no file I/O and creates no runtime mode: it either delegates to the
-/// exact current-engine paired policy or preserves the existing uncalibrated
-/// evaluator when immutable artifacts or calibrated route coverage are absent.
+/// performs no file I/O and creates no runtime mode. Missing artifacts or
+/// unsupported routes remain truthfully unavailable; they never install a
+/// permissive evaluator.
 package struct ProfessionalQualityPreparationEvaluator:
         AutonomousCandidateEvaluating {
     package let availability: ProfessionalQualityPreparationAvailability
     package let policyVersion: String
     package let evaluatorVersion: String
-    package let requiresPairedCandidates: Bool
-
-    private let calibrated: ProfessionalQualityPairedCandidateEvaluator?
+    private let calibrated: ProfessionalQualityPrimaryEvaluator?
 
     package init(
         sampleRate: Double,
-        artifacts: ProfessionalQualityPairedArtifacts?
+        artifacts: ProfessionalQualityPrimaryArtifacts?
     ) {
         if let artifacts {
             if sampleRate.isFinite,
@@ -31,7 +29,6 @@ package struct ProfessionalQualityPreparationEvaluator:
                 calibrated = artifacts.evaluator
                 policyVersion = artifacts.evaluator.policyVersion
                 evaluatorVersion = artifacts.evaluator.evaluatorVersion
-                requiresPairedCandidates = true
             } else {
                 availability = .unsupportedSampleRate
                 calibrated = nil
@@ -39,7 +36,6 @@ package struct ProfessionalQualityPreparationEvaluator:
                     .uncalibratedPolicyVersion
                 evaluatorVersion = QualityQualificationContract
                     .uncalibratedEvaluatorVersion
-                requiresPairedCandidates = false
             }
         } else {
             availability = .artifactsUnavailable
@@ -48,36 +44,16 @@ package struct ProfessionalQualityPreparationEvaluator:
                 .uncalibratedPolicyVersion
             evaluatorVersion = QualityQualificationContract
                 .uncalibratedEvaluatorVersion
-            requiresPairedCandidates = false
         }
-    }
-
-    package func requestsPairedComparison(
-        after primary: AutonomousCandidateEvaluationVector
-    ) -> Bool {
-        calibrated?.requestsPairedComparison(after: primary) ?? false
-    }
-
-    package func compare(
-        primary: AutonomousCandidateEvaluationVector,
-        alternate: AutonomousCandidateEvaluationVector
-    ) -> AutonomousQualityComparison {
-        calibrated?.compare(primary: primary, alternate: alternate) ??
-            .unavailable
     }
 
     package func requestsHomeUpperTimbreCorrection(
-        for candidate: AutonomousCandidateEvaluationVector,
-        slot: AutonomousCandidateSlot
+        for candidate: AutonomousCandidateEvaluationVector
     ) -> Bool {
         if let calibrated {
-            return calibrated.requestsHomeUpperTimbreCorrection(
-                for: candidate,
-                slot: slot
-            )
+            return calibrated.requestsHomeUpperTimbreCorrection(for: candidate)
         }
-        return UncalibratedAutonomousCandidateEvaluator
-            .requestsHomeUpperTimbreCorrection(for: candidate)
+        return false
     }
 
     package func terminalVerdict(
@@ -90,9 +66,9 @@ package struct ProfessionalQualityPreparationEvaluator:
                 transaction: transaction
             )
         }
-        return UncalibratedAutonomousCandidateEvaluator().terminalVerdict(
-            selected: selected,
-            transaction: transaction
+        return AutonomousCandidatePolicyVerdict(
+            outcome: .qualificationUnavailable,
+            reasonCodes: [.evaluatorUnavailableV1]
         )
     }
 }

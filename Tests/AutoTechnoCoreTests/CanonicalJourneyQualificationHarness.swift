@@ -58,7 +58,7 @@ struct CanonicalJourneyQualificationHarness {
         }
 
         for _ in 0..<max(1, maximumPhrases) {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             let chapters = plan.resolvedBars.map(\.interlockChapter)
             let changesInsidePhrase = zip(chapters, chapters.dropFirst()).contains { pair in
                 pair.0 != pair.1
@@ -103,9 +103,7 @@ struct CanonicalJourneyQualificationHarness {
             decision: prepared.qualityDecision,
             incomingState: prepared.incomingQualityState,
             outgoingState: prepared.qualityContinuationState,
-            usedAlternate: prepared.usedAlternate,
-            usedFallback: prepared.usedFallback,
-            usedHomeTimbreFallback: prepared.usedHomeTimbreFallback,
+            usedHomeTimbreCorrection: prepared.usedHomeTimbreCorrection,
             correctionRenderCount: prepared.correctionRenderCount
         )
     }

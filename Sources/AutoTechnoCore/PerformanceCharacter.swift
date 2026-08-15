@@ -139,55 +139,37 @@ package struct PerformanceCharacterEvidence: Equatable, Sendable {
     package init(
         resolvedBars: [ResolvedPerformanceBar],
         kind: AutonomousPhraseKind,
-        paidDebtIDs: [Int],
-        conservative: Bool
+        paidDebtIDs: [Int]
     ) {
         let selectedCharacter = resolvedBars.first?.performanceCharacter ?? .hypnoticLock
         let barCount = resolvedBars.count
-        let foundationCount: Int
-        let roleCount: Int
-        let rhythmCount: Int
-        if conservative {
-            foundationCount = resolvedBars.filter {
-                $0.performanceCharacter == selectedCharacter &&
-                    $0.foundationBehavior.companion == $0.foundationCompanion
-            }.count
-            roleCount = resolvedBars.filter {
-                $0.performanceCharacter == selectedCharacter
-            }.count
-            rhythmCount = resolvedBars.filter {
-                $0.performanceCharacter == selectedCharacter &&
-                    !$0.ensemble.events.filter { $0.voice == .kick }.isEmpty
-            }.count
-        } else {
-            let authorizedKickSyntax = Self.kickSyntaxArcIsCanonical(
-                resolvedBars: resolvedBars,
-                kind: kind,
-                paidDebtIDs: paidDebtIDs
-            )
-            foundationCount = resolvedBars.filter {
-                $0.performanceCharacter == selectedCharacter &&
-                    $0.foundationBehavior.companion == $0.foundationCompanion &&
-                    PerformanceCharacterContract.foundationIsCompatible(
-                        $0.foundationBehavior,
-                        with: selectedCharacter
-                    )
-            }.count
-            roleCount = resolvedBars.filter {
-                $0.performanceCharacter == selectedCharacter &&
-                    PerformanceCharacterContract.rolesAreCompatible(
-                        $0.performance.roles,
-                        with: selectedCharacter
-                    )
-            }.count
-            rhythmCount = resolvedBars.filter {
-                $0.performanceCharacter == selectedCharacter &&
-                    (PerformanceCharacterContract.rhythmIsCompatible(
-                        $0.ensemble,
-                        with: selectedCharacter
-                    ) || (authorizedKickSyntax && $0.kickSyntaxRole == .withheld))
-            }.count
-        }
+        let authorizedKickSyntax = Self.kickSyntaxArcIsCanonical(
+            resolvedBars: resolvedBars,
+            kind: kind,
+            paidDebtIDs: paidDebtIDs
+        )
+        let foundationCount = resolvedBars.filter {
+            $0.performanceCharacter == selectedCharacter &&
+                $0.foundationBehavior.companion == $0.foundationCompanion &&
+                PerformanceCharacterContract.foundationIsCompatible(
+                    $0.foundationBehavior,
+                    with: selectedCharacter
+                )
+        }.count
+        let roleCount = resolvedBars.filter {
+            $0.performanceCharacter == selectedCharacter &&
+                PerformanceCharacterContract.rolesAreCompatible(
+                    $0.performance.roles,
+                    with: selectedCharacter
+                )
+        }.count
+        let rhythmCount = resolvedBars.filter {
+            $0.performanceCharacter == selectedCharacter &&
+                (PerformanceCharacterContract.rhythmIsCompatible(
+                    $0.ensemble,
+                    with: selectedCharacter
+                ) || (authorizedKickSyntax && $0.kickSyntaxRole == .withheld))
+        }.count
         character = selectedCharacter
         totalBars = barCount
         compatibleFoundationBars = foundationCount

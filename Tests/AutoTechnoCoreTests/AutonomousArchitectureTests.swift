@@ -88,8 +88,7 @@ struct AdaptiveAutonomousSessionTests {
                     scene: plan.scene,
                     dna: plan.dna,
                     kind: plan.kind,
-                    resolvedBars: plan.resolvedBars,
-                    conservative: plan.conservative
+                    resolvedBars: plan.resolvedBars
                 )
                 for (resolved, synthBar) in zip(plan.resolvedBars, synth.bars) {
                     switch resolved.foundationBehavior {
@@ -121,39 +120,13 @@ struct AdaptiveAutonomousSessionTests {
         #expect(observed == Set(PerformanceCharacter.allCases))
     }
 
-    @Test("Conservative fallback retains the legacy ensemble while reporting bounded evidence")
-    func performanceCharacterFallback() {
-        let director = AutonomousSessionDirector(rootSeed: 48_291)
-        let state = director.initialState()
-        let fallback = director.candidates(from: state).fallback
-        #expect(fallback.conservative)
-        #expect(fallback.performanceCharacterEvidence.valid)
-        #expect(fallback.performanceCharacterEvidence.character == .hypnoticLock)
-        for resolved in fallback.resolvedBars {
-            let canonical = AutonomousSessionDirector.ensemblePlan(
-                dna: fallback.dna,
-                bar: resolved.performance,
-                focus: resolved.ensemble.focusRole,
-                release: fallback.kind == .energyRelease,
-                kind: fallback.kind,
-                character: resolved.performanceCharacter,
-                foundationBehavior: resolved.foundationBehavior,
-                companion: resolved.foundationCompanion,
-                gear: resolved.percussionGear,
-                gesture: resolved.arrangementGesture,
-                conservative: true
-            )
-            #expect(canonical == resolved.ensemble)
-        }
-    }
-
     @Test("Character evidence rejects an incompatible foundation and rhythm")
     func performanceCharacterEvidenceRejectsTampering() {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
         var source: ResolvedPerformanceBar?
         for _ in 0..<24 {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             if plan.performanceCharacterEvidence.character == .peakDrive {
                 source = plan.resolvedBars.first
                 break
@@ -182,8 +155,7 @@ struct AdaptiveAutonomousSessionTests {
         let evidence = PerformanceCharacterEvidence(
             resolvedBars: [tampered],
             kind: .lock,
-            paidDebtIDs: [],
-            conservative: false
+            paidDebtIDs: []
         )
         #expect(!evidence.valid)
         #expect(evidence.compatibleFoundationBars == 0)
@@ -201,20 +173,17 @@ struct AdaptiveAutonomousSessionTests {
                 Array(repeating: .pullback, count: 4))
 
         let contour = GroovePulseResolver.pattern(
-            stage: .contour, gesture: .steady, macroEnding: false,
-            conservative: false
+            stage: .contour, gesture: .steady, macroEnding: false
         )
         #expect(contour.map(\.0) == [1, 3, 5, 7, 9, 11, 13, 15])
         #expect(contour.map(\.1) == [0.38, 0.52, 0.38, 0.52, 0.38, 0.52, 0.38, 0.52])
         let lean = GroovePulseResolver.pattern(
-            stage: .syncopatedLean, gesture: .steady, macroEnding: false,
-            conservative: false
+            stage: .syncopatedLean, gesture: .steady, macroEnding: false
         )
         #expect(lean.map(\.0) == contour.map(\.0))
         #expect(lean.map(\.1) == [0.30, 0.72, 0.30, 0.30, 0.72, 0.30, 0.30, 0.72])
         let leanReplay = GroovePulseResolver.pattern(
-            stage: .syncopatedLean, gesture: .steady, macroEnding: false,
-            conservative: false
+            stage: .syncopatedLean, gesture: .steady, macroEnding: false
         )
         #expect(leanReplay.map(\.0) == lean.map(\.0))
         #expect(leanReplay.map(\.1) == lean.map(\.1))
@@ -229,14 +198,6 @@ struct AdaptiveAutonomousSessionTests {
             pair.1 - pair.0
         } == [3, 3, 2])
 
-        let conservativeLean = GroovePulseResolver.pattern(
-            stage: .syncopatedLean, gesture: .steady, macroEnding: false,
-            conservative: true
-        )
-        #expect(conservativeLean.map(\.0) == lean.map(\.0))
-        #expect(conservativeLean.map(\.1) == [
-            0.30, 0.72, 0.30, 0.72, 0.30, 0.72, 0.30, 0.72,
-        ])
         let fullResolved = EnsembleContext(
             focusRole: .percussion,
             events: lean.map { step, intensity in
@@ -254,8 +215,7 @@ struct AdaptiveAutonomousSessionTests {
             in: fullResolved,
             absoluteBar: 8,
             gesture: .steady,
-            majorBreak: false,
-            conservative: false
+            majorBreak: false
         )
         #expect(groupedResolved.events.map(\.intensity) == lean.map(\.1))
         let collisionProposals = [
@@ -277,8 +237,7 @@ struct AdaptiveAutonomousSessionTests {
                 absoluteBar: 8,
                 percussionActive: true,
                 majorBreak: false,
-                gesture: .steady,
-                conservative: false
+                gesture: .steady
             ),
             focusRole: .percussion,
             intentionalPileup: false
@@ -286,41 +245,32 @@ struct AdaptiveAutonomousSessionTests {
         #expect(partialResolved.events.filter {
             $0.voice == .groovePulse
         }.map(\.step) == [1, 3, 5, 9, 11, 13, 15])
-        let legacyPartial = GroovePulseResolver.resolvingAccentGrouping(
+        let partialGrouping = GroovePulseResolver.resolvingAccentGrouping(
             in: partialResolved,
             absoluteBar: 8,
             gesture: .steady,
-            majorBreak: false,
-            conservative: false
+            majorBreak: false
         )
-        let legacyPartialGroove = legacyPartial.events.filter {
+        let partialGroove = partialGrouping.events.filter {
             $0.voice == .groovePulse
         }
-        #expect(legacyPartialGroove.map(\.step) == [1, 3, 5, 9, 11, 13, 15])
-        #expect(legacyPartialGroove.map(\.intensity) == [
-            0.30, 0.72, 0.30, 0.30, 0.72, 0.30, 0.72,
+        #expect(partialGroove.map(\.step) == [1, 3, 5, 9, 11, 13, 15])
+        #expect(partialGroove.map(\.intensity) == [
+            0.30, 0.72, 0.30, 0.72, 0.30, 0.30, 0.72,
         ])
         let minimal = GroovePulseResolver.pattern(
-            stage: .syncopatedLean, gesture: .minimalize, macroEnding: false,
-            conservative: false
+            stage: .syncopatedLean, gesture: .minimalize, macroEnding: false
         )
         #expect(minimal.map(\.0) == [7, 15])
         #expect(minimal.map(\.1) == [0.42, 0.42])
-        let conservativeMinimal = GroovePulseResolver.pattern(
-            stage: .syncopatedLean, gesture: .minimalize, macroEnding: false,
-            conservative: true
-        )
-        #expect(conservativeMinimal.map(\.0) == minimal.map(\.0))
-        #expect(conservativeMinimal.map(\.1) == minimal.map(\.1))
         let pullback = GroovePulseResolver.pattern(
-            stage: .pullback, gesture: .turnaround, macroEnding: true,
-            conservative: false
+            stage: .pullback, gesture: .turnaround, macroEnding: true
         )
         #expect(pullback.map(\.0) == [3, 7, 11, 15])
         #expect(pullback.map(\.1) == [0.50, 0.50, 0.50, 0.72])
         #expect(GroovePulseResolver.pattern(
             stage: .pullback, gesture: .structuralMarker,
-            macroEnding: true, majorBreak: true, conservative: false
+            macroEnding: true, majorBreak: true
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
                 "autotechno-canonical-engine.v19")
@@ -338,8 +288,7 @@ struct AdaptiveAutonomousSessionTests {
             let expected = GroovePulseResolver.pattern(
                 stage: WeakSixteenthStage(absoluteBar: resolved.performance.bar),
                 gesture: resolved.arrangementGesture,
-                macroEnding: (resolved.performance.bar + 1).isMultiple(of: 16),
-                conservative: false
+                macroEnding: (resolved.performance.bar + 1).isMultiple(of: 16)
             )
             #expect(resolved.groovePulses.map(\.step) == expected.map(\.0))
             #expect(resolved.groovePulses.map(\.intensity) == expected.map(\.1))
@@ -397,70 +346,6 @@ struct AdaptiveAutonomousSessionTests {
         }.allSatisfy { $0.groovePulses.isEmpty })
     }
 
-    @Test("Conservative groove-pulse score keeps legacy accents and the neutral carrier")
-    func conservativeGroovePulseArticulation() {
-        let conservativeProposals = GroovePulseResolver.proposals(
-            absoluteBar: 8,
-            percussionActive: true,
-            majorBreak: false,
-            gesture: .steady,
-            conservative: true
-        )
-        #expect(conservativeProposals.map(\.requestedStep) == [1, 3, 5, 7, 9, 11, 13, 15])
-        #expect(conservativeProposals.map(\.intensity) == [
-            0.30, 0.72, 0.30, 0.72, 0.30, 0.72, 0.30, 0.72,
-        ])
-
-        let ensemble = EnsembleContext(
-            focusRole: .percussion,
-            events: [EnsembleResolvedEvent(
-                voice: .groovePulse, step: 7, intensity: 0.52, relocated: false
-            )],
-            kickAnchors: [],
-            intentionalPileup: false
-        )
-        let authored = GroovePulseResolver.articulations(
-            from: ensemble,
-            absoluteBar: 8,
-            swingPercent: 0.54,
-            percussionGear: .contrast,
-            eventSeed: 48_291,
-            conservative: false
-        )
-        let replay = GroovePulseResolver.articulations(
-            from: ensemble,
-            absoluteBar: 8,
-            swingPercent: 0.54,
-            percussionGear: .contrast,
-            eventSeed: 48_291,
-            conservative: false
-        )
-        let neutral = GroovePulseResolver.articulations(
-            from: ensemble,
-            absoluteBar: 8,
-            swingPercent: 0.54,
-            percussionGear: .contrast,
-            eventSeed: 48_291,
-            conservative: true
-        )
-        #expect(authored == replay)
-        #expect(authored.count == 1)
-        #expect(authored[0].strikeZone == .edge)
-        #expect(authored[0].damping == 0.25)
-        #expect([-0.04, -0.02, 0, 0.02, 0.04].contains(
-            authored[0].timbreMicrovariation
-        ))
-        #expect(neutral.count == 1)
-        #expect(neutral[0].step == authored[0].step)
-        #expect(neutral[0].pulseClass == authored[0].pulseClass)
-        #expect(neutral[0].stage == authored[0].stage)
-        #expect(neutral[0].intensity == authored[0].intensity)
-        #expect(neutral[0].timingOffsetInSteps == authored[0].timingOffsetInSteps)
-        #expect(neutral[0].strikeZone == .middle)
-        #expect(neutral[0].damping == 0.5)
-        #expect(neutral[0].timbreMicrovariation == 0)
-    }
-
     @Test("Closed-hat decay roles follow exact post-arbitration companions")
     func closedHatDecayRelationships() {
         let ensemble = EnsembleContext(
@@ -495,10 +380,7 @@ struct AdaptiveAutonomousSessionTests {
             intentionalPileup: true
         )
 
-        let authored = ClosedHatDecayResolver.articulations(
-            from: ensemble,
-            conservative: false
-        )
+        let authored = ClosedHatDecayResolver.articulations(from: ensemble)
         #expect(authored.count == 4)
         #expect(authored.map(\.scoreEventIndex) == [1, 3, 5, 6])
         #expect(authored.map(\.step) == [3, 7, 11, 15])
@@ -507,20 +389,13 @@ struct AdaptiveAutonomousSessionTests {
         ])
         #expect(Set(authored.map(\.scoreEventIndex)).count == authored.count)
 
-        let conservative = ClosedHatDecayResolver.articulations(
-            from: ensemble,
-            conservative: true
-        )
-        #expect(conservative.map(\.scoreEventIndex) == authored.map(\.scoreEventIndex))
-        #expect(conservative.map(\.step) == authored.map(\.step))
-        #expect(conservative.allSatisfy { $0.role == .neutral })
     }
 
     @Test("Director keys every closed-hat decay role to its surviving score event")
     func closedHatDecayDirectorIntegration() {
         let director = AutonomousSessionDirector()
-        let candidates = director.candidates(from: director.initialState())
-        for plan in [candidates.primary, candidates.fallback] {
+        let candidates = director.plan(from: director.initialState())
+        for plan in [candidates] {
             for resolved in plan.resolvedBars {
                 let expected = Array(resolved.ensemble.events.enumerated().filter {
                     $0.element.voice == .percussion
@@ -535,9 +410,6 @@ struct AdaptiveAutonomousSessionTests {
                         atEventIndex: articulation.scoreEventIndex
                     ) == articulation)
                 }
-                if plan.conservative {
-                    #expect(articulations.allSatisfy { $0.role == .neutral })
-                }
             }
         }
     }
@@ -546,7 +418,7 @@ struct AdaptiveAutonomousSessionTests {
     func groovePulseActivityWeight() {
         let director = AutonomousSessionDirector()
         let state = director.initialState()
-        let plan = director.candidates(from: state).primary
+        let plan = director.plan(from: state)
         guard let resolved = plan.resolvedBars.first(where: { !$0.groovePulses.isEmpty }) else {
             Issue.record("Expected a groove-pulse bar in the first phrase")
             return
@@ -638,8 +510,7 @@ struct AdaptiveAutonomousSessionTests {
         for plan in result.plans {
             let synth = SynthPerformancePlan(
                 scene: plan.scene, dna: plan.dna, kind: plan.kind,
-                resolvedBars: plan.resolvedBars,
-                conservative: plan.conservative
+                resolvedBars: plan.resolvedBars
             )
             #expect(synth.bars.count == plan.resolvedBars.count)
             for (resolved, synthBar) in zip(plan.resolvedBars, synth.bars) {
@@ -657,8 +528,7 @@ struct AdaptiveAutonomousSessionTests {
                         $0.timingOffsetInSteps == 0
                     })
                 }
-                if !plan.conservative,
-                   resolved.interlockChapter == .breath,
+                if resolved.interlockChapter == .breath,
                    synthBar.upperNotes.contains(where: { $0.role == .anchor }),
                    synthBar.upperNotes.contains(where: {
                        $0.role == .shadow || $0.role == .response
@@ -741,7 +611,7 @@ struct AdaptiveAutonomousSessionTests {
         var sawIdentityTone = false
         var sawBreak = false
         for _ in 0..<80 where !(sawIdentityTone && sawBreak) {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             if plan.kind == .identityReturn || plan.kind == .majorBreak {
                 let synth = SynthPerformancePlan(
                     scene: plan.scene,
@@ -858,7 +728,7 @@ struct AdaptiveAutonomousSessionTests {
         var sourcePlan: AutonomousPhrasePlan?
         var sourceBar: ResolvedPerformanceBar?
         for _ in 0..<24 where sourceBar == nil {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             if let bar = plan.resolvedBars.first(where: {
                 $0.ensemble.events.filter { $0.voice == .motif }.count >= 2
             }) {
@@ -910,14 +780,12 @@ struct AdaptiveAutonomousSessionTests {
 
         func synthBar(_ resolved: ResolvedPerformanceBar,
                       kind: AutonomousPhraseKind = .lock,
-                      conservative: Bool = false,
                       forceHome: Bool = false) -> SynthPerformanceBar {
             SynthPerformancePlan(
                 scene: plan.scene,
                 dna: plan.dna,
                 kind: kind,
                 resolvedBars: [resolved],
-                conservative: conservative,
                 forceHomeUpperTimbre: forceHome
             ).bars[0]
         }
@@ -954,8 +822,6 @@ struct AdaptiveAutonomousSessionTests {
         }
         #expect(synthBar(replacing(absoluteBar: 7, chapter: .home))
             .upperNotes.allSatisfy { $0.timingOffsetInSteps == 0 })
-        #expect(synthBar(replacing(absoluteBar: 7), conservative: true)
-            .upperNotes.allSatisfy { $0.timingOffsetInSteps == 0 })
         #expect(synthBar(replacing(absoluteBar: 7), forceHome: true)
             .upperNotes.allSatisfy { $0.timingOffsetInSteps == 0 })
         #expect(synthBar(replacing(absoluteBar: 7), kind: .identityReturn)
@@ -983,8 +849,6 @@ struct AdaptiveAutonomousSessionTests {
         #expect(performed.upperNotes.filter { $0.role != .anchor }.allSatisfy {
             $0.timingOffsetInSteps == 0
         })
-        #expect(synthBar(performedResolved, conservative: true)
-            .upperTimingRelation == .aligned)
         #expect(synthBar(performedResolved, forceHome: true)
             .upperTimingRelation == .aligned)
 
@@ -1160,39 +1024,38 @@ struct AdaptiveAutonomousSessionTests {
 
         var liveState = director.initialState()
         var liveLeadPerformance: SynthPerformanceBar?
-        var liveLeadCandidates: AutonomousPhraseCandidates?
+        var liveLeadPlan: AutonomousPhrasePlan?
         var liveLeadIncomingState: AutonomousSessionState?
         for _ in 0..<160 where liveLeadPerformance == nil {
-            let candidates = director.candidates(from: liveState)
+            let candidates = director.plan(from: liveState)
             let candidateSynth = SynthPerformancePlan(
-                scene: candidates.primary.scene,
-                dna: candidates.primary.dna,
-                kind: candidates.primary.kind,
-                resolvedBars: candidates.primary.resolvedBars,
-                conservative: candidates.primary.conservative
+                scene: candidates.scene,
+                dna: candidates.dna,
+                kind: candidates.kind,
+                resolvedBars: candidates.resolvedBars
             )
             liveLeadPerformance = candidateSynth.bars.first {
                 $0.upperTimingRelation == .leadPerformance
             }
             if liveLeadPerformance != nil {
-                liveLeadCandidates = candidates
+                liveLeadPlan = candidates
                 liveLeadIncomingState = liveState
             } else {
-                liveState.advance(using: candidates.primary)
+                liveState.advance(using: candidates)
             }
         }
         let livePerformance = try #require(liveLeadPerformance)
         #expect(livePerformance.upperNotes(for: .anchor).filter {
             $0.timingOffsetInSteps > 0
         }.count == max(0, livePerformance.upperNotes(for: .anchor).count - 1))
-        let liveCandidates = try #require(liveLeadCandidates)
+        let livePlan = try #require(liveLeadPlan)
         let liveIncoming = try #require(liveLeadIncomingState)
         var liveRenderState = RenderState()
         liveRenderState.barIndex = liveIncoming.memory.totalBars
         let neverCancelled: @Sendable () -> Bool = { false }
         let livePrepared = try #require(
             AutonomousPhrasePreparer.prepareIfNotCancelled(
-                candidates: liveCandidates,
+                plan: livePlan,
                 sessionSeed: liveIncoming.rootSeed,
                 memory: liveIncoming.memory,
                 sampleRate: 8_000,
@@ -1200,17 +1063,16 @@ struct AdaptiveAutonomousSessionTests {
                 incomingGraphState: GeneratedDSPContinuationState(),
                 previousGraph: nil,
                 incomingQualityState: liveIncoming.quality,
+                evaluator: AcceptingPrimaryTestEvaluator(),
                 cancellationRequested: neverCancelled
             )
         )
         #expect(livePrepared.candidateEvaluation.isComplete)
-        #expect(livePrepared.candidateEvaluation.selectedSlot == .primary)
         #expect(livePrepared.selectedCandidateEvidence.upperTiming.contains {
             $0.relation == UpperTimingRelation.leadPerformance.rawValue &&
                 $0.isComplete(
                     routeSampleRate: 8_000,
                     phraseKind: .lock,
-                    conservative: false
                 )
         })
         #expect(livePrepared.blocks.contains {
@@ -1266,7 +1128,7 @@ struct AdaptiveAutonomousSessionTests {
         }
 
         let director = AutonomousSessionDirector()
-        let plan = director.candidates(from: director.initialState()).primary
+        let plan = director.plan(from: director.initialState())
         let sampleRate = 8_000.0
         let frameCount = Int((240.0 / plan.scene.bpm * sampleRate).rounded())
         let stepFrames = Double(frameCount) / 16
@@ -1419,7 +1281,7 @@ struct AdaptiveAutonomousSessionTests {
             var supports: [[PerformanceRole]] = []
             var phraseCount = 0
             while state.memory.totalBars < 16 * 1_024, phraseCount < 5_000 {
-                let plan = director.candidates(from: state).primary
+                let plan = director.plan(from: state)
                 kinds.append(plan.kind)
                 supports.append(plan.endingNarrativeState.activeSupportingRoles)
                 #expect(plan.endingNarrativeState.activeSupportingRoles.count <= 3)
@@ -1466,10 +1328,9 @@ struct AdaptiveAutonomousSessionTests {
         var sawContrastDeparture = false
         var sawBreakSpace = false
         for _ in 0..<100 {
-            let candidates = director.candidates(from: state)
-            let plan = candidates.primary
+            let plan = director.plan(from: state)
             if plan.kind == .contrast {
-                sawContrastDeparture = sawContrastDeparture || candidates.alternate.resolvedBars.contains {
+                sawContrastDeparture = sawContrastDeparture || plan.resolvedBars.contains {
                     $0.foundationBehavior == .point || $0.foundationBehavior == .kickTail
                 }
             }
@@ -1516,7 +1377,7 @@ struct AdaptiveAutonomousSessionTests {
         var state = initialState
         var fingerprints: [MotifTimbreFingerprint] = []
         for _ in 0..<20 {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             let world = SynthWorldDNA(scene: plan.scene, dna: plan.dna)
             let synth = SynthPerformancePlan(
                 scene: plan.scene,
@@ -1549,7 +1410,7 @@ struct AdaptiveAutonomousSessionTests {
         var releaseBars: [Int] = []
 
         for _ in 0..<120 {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             if plan.kind != .lock { contrastBars.append(plan.startBar) }
             if plan.kind == .majorBreak { breakBars.append(plan.startBar) }
             if plan.kind == .energyRelease {
@@ -1593,7 +1454,7 @@ struct AdaptiveAutonomousSessionTests {
 
         let groove = GroovePulseResolver.proposals(
             absoluteBar: 8, percussionActive: true,
-            majorBreak: false, gesture: .steady, conservative: false
+            majorBreak: false, gesture: .steady
         )
         let withoutPulses = EnsembleArbiter.resolve(
             proposals: proposals, focusRole: .motif, intentionalPileup: false
@@ -1626,7 +1487,7 @@ struct AdaptiveAutonomousSessionTests {
         var state = director.initialState()
         var plans: [AutonomousPhrasePlan] = []
         for _ in 0..<phraseCount {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             plans.append(plan)
             state.advance(using: plan)
         }
@@ -1646,12 +1507,12 @@ struct GeneratedDSPTopologyTests {
             let seed = UInt64(rawSeed)
             let director = AutonomousSessionDirector(rootSeed: seed)
             var state = director.initialState()
-            let firstPhrase = director.candidates(from: state).primary
+            let firstPhrase = director.plan(from: state)
             let firstGraph = DSPGraphGenerator.plan(
                 sessionSeed: seed, phrase: firstPhrase, memory: state.memory, previous: nil
             )
             state.advance(using: firstPhrase)
-            let secondPhrase = director.candidates(from: state).primary
+            let secondPhrase = director.plan(from: state)
             let secondGraph = DSPGraphGenerator.plan(
                 sessionSeed: seed, phrase: secondPhrase, memory: state.memory, previous: firstGraph
             )
@@ -1688,7 +1549,7 @@ struct GeneratedDSPTopologyTests {
         var graph: DSPGraphPlan?
         var releasePlan: AutonomousPhrasePlan?
         for _ in 0..<40 {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             graph = DSPGraphGenerator.plan(
                 sessionSeed: state.rootSeed, phrase: plan, memory: state.memory, previous: graph
             )
@@ -1754,7 +1615,7 @@ struct GeneratedDSPTopologyTests {
         var mutationPlan: AutonomousPhrasePlan?
         var mutationMemory: TemporalMusicalMemory?
         for _ in 0..<64 {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             if plan.requestsTopologyMutation && plan.kind != .energyRelease {
                 mutationPlan = plan
                 mutationMemory = state.memory
@@ -1771,7 +1632,7 @@ struct GeneratedDSPTopologyTests {
             let mutationSeed = SceneDNA.derivedSeed(
                 scene: seed,
                 domain: UInt64(plan.phraseIndex + memory.topologyRevision + 1),
-                index: plan.alternate ? 1 : 0
+                index: 0
             )
             let kind = DSPGraphMutationKind.allCases[
                 Int(mutationSeed % UInt64(DSPGraphMutationKind.allCases.count))
@@ -1894,38 +1755,6 @@ struct AutonomousPreparationPreflightTests {
         let lowDifferenceEnergy: Double
     }
 
-    @Test("Sparse intent, health, ties, and dual failure follow the bounded selection policy")
-    func selectionPolicy() {
-        let healthy = AutonomousCandidateEvidence(
-            symbolicValid: true, safetyValid: true, interesting: true, combinedScore: 0.60
-        )
-        let stagnant = AutonomousCandidateEvidence(
-            symbolicValid: true, safetyValid: true, interesting: false, combinedScore: 0.42
-        )
-        let alternate = AutonomousCandidateEvidence(
-            symbolicValid: true, safetyValid: true, interesting: true, combinedScore: 0.72
-        )
-        let unsafe = AutonomousCandidateEvidence(
-            symbolicValid: true, safetyValid: false, interesting: false, combinedScore: 0.90
-        )
-        #expect(AutonomousCandidateSelector.choose(primary: healthy, alternate: alternate) == .primary)
-        #expect(AutonomousCandidateSelector.choose(primary: stagnant, alternate: alternate) == .primary)
-        #expect(AutonomousCandidateSelector.choose(primary: stagnant, alternate: AutonomousCandidateEvidence(
-            symbolicValid: true, safetyValid: true, interesting: true, combinedScore: stagnant.combinedScore
-        )) == .primary)
-        #expect(AutonomousCandidateSelector.choose(primary: unsafe, alternate: unsafe) == .fallback)
-        #expect(AutonomousCandidateSelector.choose(
-            primary: healthy,
-            alternate: alternate,
-            qualityComparison: .fallback
-        ) == .fallback)
-        #expect(AutonomousCandidateSelector.choose(
-            primary: healthy,
-            alternate: unsafe,
-            qualityComparison: .fallback
-        ) == .fallback)
-    }
-
     @Test("Fixed-seed phrase audio is deterministic and satisfies safety limits",
           arguments: [UInt64(42), 48_291, 90_909])
     func fixedSeedAudio(seed: UInt64) {
@@ -1949,7 +1778,7 @@ struct AutonomousPreparationPreflightTests {
     func kickMixHierarchy() {
         let director = AutonomousSessionDirector(rootSeed: 42)
         let state = director.initialState()
-        let sourcePlan = director.candidates(from: state).primary
+        let sourcePlan = director.plan(from: state)
         guard let source = sourcePlan.resolvedBars.first(where: { resolved in
             resolved.ensemble.events.contains { $0.voice == .kick }
         }) else {
@@ -2216,7 +2045,7 @@ struct AutonomousPreparationPreflightTests {
     func topologyDistinction() {
         let director = AutonomousSessionDirector(rootSeed: 42)
         let state = director.initialState()
-        let phrase = director.candidates(from: state).primary
+        let phrase = director.plan(from: state)
         let graphA = DSPGraphGenerator.safePlan(sessionSeed: 42)
         let graphB = DSPGraphPlan(
             sessionSeed: 42, revision: 1,
@@ -2242,7 +2071,7 @@ struct AutonomousPreparationPreflightTests {
     func resolvedEventChangesPCMAndMetadata() {
         let director = AutonomousSessionDirector(rootSeed: 42)
         let state = director.initialState()
-        let original = director.candidates(from: state).primary
+        let original = director.plan(from: state)
         guard let barIndex = original.resolvedBars.firstIndex(where: { resolved in
             resolved.ensemble.events.contains { $0.voice != .kick }
         }), let target = original.resolvedBars[barIndex].ensemble.events.first(where: {
@@ -2308,7 +2137,7 @@ struct AutonomousPreparationPreflightTests {
     func relationalStageChangesPCMAndMetadata() {
         let director = AutonomousSessionDirector()
         let state = director.initialState()
-        let original = director.candidates(from: state).primary
+        let original = director.plan(from: state)
         guard let barIndex = original.resolvedBars.firstIndex(where: { resolved in
             resolved.ensemble.events.contains { $0.voice == .motif }
         }), let event = original.resolvedBars[barIndex].ensemble.events.first(where: {
@@ -2399,7 +2228,7 @@ struct AutonomousPreparationPreflightTests {
     func groovePulseResolvedRendering() {
         let director = AutonomousSessionDirector()
         let state = director.initialState()
-        let original = director.candidates(from: state).primary
+        let original = director.plan(from: state)
         guard let barIndex = original.resolvedBars.firstIndex(where: {
             WeakSixteenthStage(absoluteBar: $0.performance.bar) == .syncopatedLean &&
                 $0.arrangementGesture != .minimalize &&
@@ -2409,18 +2238,9 @@ struct AutonomousPreparationPreflightTests {
             return
         }
         let source = original.resolvedBars[barIndex]
-        let legacyIntensity = Dictionary(uniqueKeysWithValues:
-            GroovePulseResolver.pattern(
-                stage: .syncopatedLean,
-                gesture: source.arrangementGesture,
-                macroEnding: false,
-                conservative: true
-            )
-        )
-        guard let target = source.groovePulses.first(where: {
-            legacyIntensity[$0.step] != $0.intensity
-        }) else {
-            Issue.record("Expected grouped and legacy cells to differ")
+        guard let target = source.groovePulses.first(where: { $0.step == 7 }) ??
+                source.groovePulses.first else {
+            Issue.record("Expected a resolved groove pulse")
             return
         }
         let changedMicrovariation = target.timbreMicrovariation == 0
@@ -2456,16 +2276,15 @@ struct AutonomousPreparationPreflightTests {
         #expect(AutonomousCandidateFingerprint.plan(original) !=
                 AutonomousCandidateFingerprint.plan(changed))
 
-        let intensity = legacyIntensity[target.step] ?? target.intensity
+        let intensity = target.intensity == 0.72 ? 0.52 : 0.72
         let intensityEvents = source.ensemble.events.map { event in
-            guard event.voice == .groovePulse,
-                  let legacy = legacyIntensity[event.step] else {
+            guard event.voice == .groovePulse, event.step == target.step else {
                 return event
             }
             return EnsembleResolvedEvent(
                 voice: event.voice,
                 step: event.step,
-                intensity: legacy,
+                intensity: intensity,
                 relocated: event.relocated
             )
         }
@@ -2474,7 +2293,7 @@ struct AutonomousPreparationPreflightTests {
                 step: pulse.step,
                 pulseClass: pulse.pulseClass,
                 stage: pulse.stage,
-                intensity: legacyIntensity[pulse.step] ?? pulse.intensity,
+                intensity: pulse.step == target.step ? intensity : pulse.intensity,
                 timingOffsetInSteps: pulse.timingOffsetInSteps,
                 strikeZone: pulse.strikeZone,
                 damping: pulse.damping,
@@ -2605,14 +2424,11 @@ struct AutonomousPreparationPreflightTests {
         let originalGrooveEvents = originalBlock.events.filter {
             $0.voice == .groovePulse
         }
-        let legacyGrooveEvents = intensityBlock.events.filter {
+        let intensityChangedGrooveEvents = intensityBlock.events.filter {
             $0.voice == .groovePulse
         }
-        #expect(originalGrooveEvents.map(\.step) == legacyGrooveEvents.map(\.step))
-        #expect(legacyGrooveEvents.map(\.intensity) == [
-            0.30, 0.72, 0.30, 0.72, 0.30, 0.72, 0.30, 0.72,
-        ])
-        #expect(zip(originalGrooveEvents, legacyGrooveEvents).allSatisfy {
+        #expect(originalGrooveEvents.map(\.step) == intensityChangedGrooveEvents.map(\.step))
+        #expect(zip(originalGrooveEvents, intensityChangedGrooveEvents).allSatisfy {
             $0.pulseClass == $1.pulseClass &&
                 $0.timingOffsetInSteps == $1.timingOffsetInSteps
         })
@@ -2633,15 +2449,15 @@ struct AutonomousPreparationPreflightTests {
         #expect(originalPulseEvidence?.timbreMicrovariation ==
                 intensityEvidence?.timbreMicrovariation)
         let originalCellEvidence = originalBlock.groovePulseRenderEvidence
-        let legacyCellEvidence = intensityBlock.groovePulseRenderEvidence
-        #expect(originalCellEvidence.map(\.step) == legacyCellEvidence.map(\.step))
+        let intensityCellEvidence = intensityBlock.groovePulseRenderEvidence
+        #expect(originalCellEvidence.map(\.step) == intensityCellEvidence.map(\.step))
         let changedIntensitySteps = zip(
-            originalCellEvidence, legacyCellEvidence
-        ).compactMap { original, legacy in
-            original.intensity == legacy.intensity ? nil : original.step
+            originalCellEvidence, intensityCellEvidence
+        ).compactMap { original, changed in
+            original.intensity == changed.intensity ? nil : original.step
         }
-        #expect(changedIntensitySteps == [7, 9, 11])
-        #expect(zip(originalCellEvidence, legacyCellEvidence).allSatisfy {
+        #expect(changedIntensitySteps == [target.step])
+        #expect(zip(originalCellEvidence, intensityCellEvidence).allSatisfy {
             $0.pulseClass == $1.pulseClass &&
                 $0.stage == $1.stage &&
                 $0.timingOffsetInSteps == $1.timingOffsetInSteps &&
@@ -2649,7 +2465,7 @@ struct AutonomousPreparationPreflightTests {
                 $0.damping == $1.damping &&
                 $0.timbreMicrovariation == $1.timbreMicrovariation
         })
-        #expect(zip(originalCellEvidence, legacyCellEvidence).allSatisfy {
+        #expect(zip(originalCellEvidence, intensityCellEvidence).allSatisfy {
             let intensityChanged = $0.intensity != $1.intensity
             return ($0.sampleHash != $1.sampleHash) == intensityChanged &&
                 ($0.rms != $1.rms) == intensityChanged
@@ -2668,7 +2484,7 @@ struct AutonomousPreparationPreflightTests {
             var sawBreakCarrier = false
 
             for _ in 0..<80 {
-                let plan = director.candidates(from: state).primary
+                let plan = director.plan(from: state)
                 for resolved in plan.resolvedBars {
                     let spatial = resolved.spatialContrast
                     articulations.append(spatial)
@@ -2732,7 +2548,7 @@ struct AutonomousPreparationPreflightTests {
         var state = director.initialState()
         var matched: (AutonomousSessionState, AutonomousPhrasePlan, Int)?
         for _ in 0..<80 where matched == nil {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             if let barIndex = plan.resolvedBars.firstIndex(where: {
                 $0.spatialContrast.depthPosition == .distant
             }) {
@@ -2820,7 +2636,7 @@ struct AutonomousPreparationPreflightTests {
         var sawSupportRemoval = false
 
         for _ in 0..<80 {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             observedKinds.insert(plan.kind)
             #expect(abs((plan.resolvedBars.first?.narrative.presenceStart ?? -1) -
                         previousPresence) < 0.000_000_1)
@@ -2915,7 +2731,7 @@ struct AutonomousPreparationPreflightTests {
     func narrativeRenderingTruth() {
         let director = AutonomousSessionDirector()
         let state = director.initialState()
-        let original = director.candidates(from: state).primary
+        let original = director.plan(from: state)
         guard let barIndex = original.resolvedBars.firstIndex(where: { resolved in
             resolved.ensemble.events.contains { $0.voice == .motif }
         }), let motif = original.resolvedBars[barIndex].ensemble.events
@@ -3006,7 +2822,7 @@ struct AutonomousPreparationPreflightTests {
         var matched: (AutonomousSessionState, AutonomousPhrasePlan, Int,
                       EnsembleResolvedEvent)?
         for _ in 0..<80 where matched == nil {
-            let plan = director.candidates(from: state).primary
+            let plan = director.plan(from: state)
             let synth = SynthPerformancePlan(
                 scene: plan.scene,
                 dna: plan.dna,
@@ -3331,7 +3147,7 @@ struct AutonomousPreparationPreflightTests {
             let director = AutonomousSessionDirector(rootSeed: seed)
             var state = director.initialState()
             for _ in 0..<32 {
-                let plan = director.candidates(from: state).primary
+                let plan = director.plan(from: state)
                 if plan.resolvedBars.contains(where: {
                     $0.foundationCompanion == .monoRumble
                 }) {
@@ -3385,14 +3201,13 @@ struct AutonomousPreparationPreflightTests {
             let director = AutonomousSessionDirector(rootSeed: fixture)
             var state = director.initialState()
             for _ in 0..<40 where matched == nil {
-                let plan = director.candidates(from: state).primary
+                let plan = director.plan(from: state)
                 #expect(plan.resolvedBars.filter(\.pulseEchoEnabled).allSatisfy {
                     $0.foundationCompanion != .monoRumble &&
                         ($0.arrangementGesture == .gearShift ||
                          $0.arrangementGesture == .turnaround)
                 })
-                if plan.conservative || plan.kind == .identityReturn ||
-                    plan.kind == .majorBreak {
+                if plan.kind == .identityReturn || plan.kind == .majorBreak {
                     state.advance(using: plan)
                     continue
                 }
@@ -3451,7 +3266,6 @@ struct AutonomousPreparationPreflightTests {
         func synthBar(
             resolved: ResolvedPerformanceBar,
             kind: AutonomousPhraseKind,
-            conservative: Bool = false,
             forceHome: Bool = false
         ) -> SynthPerformanceBar {
             SynthPerformancePlan(
@@ -3459,7 +3273,6 @@ struct AutonomousPreparationPreflightTests {
                 dna: sourcePlan.dna,
                 kind: kind,
                 resolvedBars: [resolved],
-                conservative: conservative,
                 forceHomeUpperTimbre: forceHome
             ).bars[0]
         }
@@ -3488,11 +3301,6 @@ struct AutonomousPreparationPreflightTests {
         let nonMemory = synthBar(
             resolved: replacingEcho(in: sourceBar, enabled: true, chapter: .tone),
             kind: sourcePlan.kind
-        ).pulseEchoTextureArticulation
-        let conservative = synthBar(
-            resolved: wetBars[barIndex],
-            kind: sourcePlan.kind,
-            conservative: true
         ).pulseEchoTextureArticulation
         let forceHome = synthBar(
             resolved: wetBars[barIndex],
@@ -3532,7 +3340,7 @@ struct AutonomousPreparationPreflightTests {
             kind: sourcePlan.kind
         ).pulseEchoTextureArticulation
         for bypassed in [
-            scoreDisabled, nonMemory, conservative, forceHome,
+            scoreDisabled, nonMemory, forceHome,
             identityReturn, majorBreak, upperless,
         ] {
             #expect(!bypassed.driveEligible)
@@ -3708,8 +3516,6 @@ struct AutonomousPreparationPreflightTests {
                 openedDebt: plan.openedDebt,
                 paidDebtIDs: plan.paidDebtIDs,
                 requestsTopologyMutation: plan.requestsTopologyMutation,
-                alternate: plan.alternate,
-                conservative: plan.conservative,
                 interest: plan.interest,
                 endingInterlockState: plan.endingInterlockState,
                 endingSpatialContrastState: plan.endingSpatialContrastState,
@@ -4045,6 +3851,7 @@ struct AutonomousPreparationPreflightTests {
             #expect(prepared.hardGatesPassed)
             let qualification = try CanonicalJourneyQualificationReport(
                 engineVersion: QualityQualificationContract.engineVersion,
+                policyVersion: prepared.qualityDecision.policyVersion,
                 fixtureFingerprint: "device-rate-\(Int(sampleRate))",
                 continuationFingerprint: "device-rate-continuation-\(seed)",
                 checkpoint: .establishment,
@@ -4059,9 +3866,7 @@ struct AutonomousPreparationPreflightTests {
                 decision: prepared.qualityDecision,
                 incomingState: prepared.incomingQualityState,
                 outgoingState: prepared.qualityContinuationState,
-                usedAlternate: prepared.usedAlternate,
-                usedFallback: prepared.usedFallback,
-                usedHomeTimbreFallback: prepared.usedHomeTimbreFallback,
+                usedHomeTimbreCorrection: prepared.usedHomeTimbreCorrection,
                 correctionRenderCount: prepared.correctionRenderCount
             )
             #expect(qualification.commitProvenance == prepared.commitProvenance)
@@ -4159,8 +3964,6 @@ struct AutonomousPreparationPreflightTests {
             openedDebt: plan.openedDebt,
             paidDebtIDs: plan.paidDebtIDs,
             requestsTopologyMutation: plan.requestsTopologyMutation,
-            alternate: plan.alternate,
-            conservative: plan.conservative,
             interest: PhraseInterestEvaluator.evaluate(
                 resolvedBars: resolvedBars,
                 kind: plan.kind,
@@ -4180,14 +3983,15 @@ struct AutonomousPreparationPreflightTests {
                          previousGraph: DSPGraphPlan? = nil) -> PreparedAutonomousPhrase {
         let director = AutonomousSessionDirector(rootSeed: state.rootSeed)
         return AutonomousPhrasePreparer.prepare(
-            candidates: director.candidates(from: state),
+            plan: director.plan(from: state),
             sessionSeed: state.rootSeed,
             memory: state.memory,
             sampleRate: sampleRate,
             incomingRenderState: renderState,
             incomingGraphState: graphState,
             previousGraph: previousGraph,
-            incomingQualityState: state.quality
+            incomingQualityState: state.quality,
+            evaluator: AcceptingPrimaryTestEvaluator()
         )
     }
 }
