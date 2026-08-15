@@ -918,7 +918,7 @@ package enum CanonicalJourneyQualificationReportError: Error, Equatable, Sendabl
 
 package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendable {
     package static let currentEvidenceScope =
-        "primary-structural-bs1770-signal-role-upper-commit.v4"
+        "primary-structural-bs1770-signal-role-upper-modal-commit.v5"
     package static let maximumEncodedBytes = 4 * 1_024 * 1_024
     package let schemaVersion: Int
     package let engineVersion: String

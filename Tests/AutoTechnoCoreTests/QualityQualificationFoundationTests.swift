@@ -500,7 +500,7 @@ struct QualityQualificationFoundationTests {
         }
     }
 
-    @Test("Professional Evidence v4 bank requires every journey checkpoint and unavailable policy")
+    @Test("Professional Evidence v5 bank requires every journey checkpoint and unavailable policy")
     func professionalEvidenceReportBank() throws {
         var reports: [CanonicalJourneyQualificationReport] = []
         for sampleRate in [44_100.0, 48_000.0] {
@@ -597,6 +597,61 @@ struct QualityQualificationFoundationTests {
         }
     }
 
+    @Test("Professional observation projects active and explicit empty modal evidence")
+    func professionalObservationProjectsModalPercussion() throws {
+        let sampleRate = 48_000.0
+        let frameCount = StreamingPerceptualEvidenceAnalyzer.fftFrameCount(
+            sampleRate: sampleRate
+        )
+        let evidence = UpperTimbreEvidenceAnalyzer.analyze(
+            UpperTimbreAnalysisInput(
+                left: [Float](repeating: 0, count: frameCount),
+                right: [Float](repeating: 0, count: frameCount),
+                sampleRate: sampleRate
+            )
+        )
+        let activeFixture = reportFixture(
+            evidence: evidence,
+            sampleHash: "active-modal-observation",
+            modalPercussion: [fixtureActiveModalBar(sampleRate: sampleRate)]
+        )
+        let active = try ProfessionalQualityObservation(
+            candidate: activeFixture.vector,
+            engineVersion: QualityQualificationContract.engineVersion,
+            checkpoint: .establishment
+        )
+        #expect(active[.modalPercussionActiveBarRatio] == 1)
+        #expect(active[.modalPercussionEventCountMean] == 1)
+        #expect(active[.modalPercussionPitchErrorCentsMaximum] == 0)
+        #expect((active[.modalPercussionAttackToBodyDBMean] ?? 0) > 0)
+        #expect((active[.modalPercussionTailToBodyDBMean] ?? 0) < 0)
+        #expect(active[.modalPercussionSpectralCentroidMeanHz] == 620)
+        #expect(active[.modalPercussionMaskingMaximumOverlap] == 0)
+        #expect(active[.modalPercussionMaximumPoleRadius] == 0.998)
+
+        let emptyFixture = reportFixture(
+            evidence: evidence,
+            sampleHash: "empty-modal-observation"
+        )
+        let empty = try ProfessionalQualityObservation(
+            candidate: emptyFixture.vector,
+            engineVersion: QualityQualificationContract.engineVersion,
+            checkpoint: .establishment
+        )
+        for metric in [
+            ProfessionalQualityMetric.modalPercussionActiveBarRatio,
+            .modalPercussionEventCountMean,
+            .modalPercussionPitchErrorCentsMaximum,
+            .modalPercussionAttackToBodyDBMean,
+            .modalPercussionTailToBodyDBMean,
+            .modalPercussionSpectralCentroidMeanHz,
+            .modalPercussionMaskingMaximumOverlap,
+            .modalPercussionMaximumPoleRadius,
+        ] {
+            #expect(empty[metric] == 0)
+        }
+    }
+
     private typealias ReportFixture = (
         vector: AutonomousCandidateEvaluationVector,
         transaction: AutonomousCandidateEvaluationTransaction
@@ -636,7 +691,8 @@ struct QualityQualificationFoundationTests {
         evidence: UpperTimbreEvidence,
         sampleHash: String,
         policyVersion: String = QualityQualificationContract.uncalibratedPolicyVersion,
-        checkpoint: CanonicalJourneyCheckpoint = .establishment
+        checkpoint: CanonicalJourneyCheckpoint = .establishment,
+        modalPercussion: [AutonomousModalPercussionBarEvidence]? = nil
     ) -> ReportFixture {
         let planFingerprint = "plan-primary-\(checkpoint.rawValue)"
         let graphFingerprint = "graph-primary"
@@ -852,7 +908,7 @@ struct QualityQualificationFoundationTests {
                 sourceRenderEventCount: 0,
                 events: []
             )],
-            modalPercussion: [AutonomousModalPercussionBarEvidence(
+            modalPercussion: modalPercussion ?? [AutonomousModalPercussionBarEvidence(
                 bar: 0,
                 sourceScoreEventCount: 0,
                 sourceRenderEventCount: 0,
@@ -1001,6 +1057,68 @@ struct QualityQualificationFoundationTests {
             correctionCount: 0
         )
         return (vector, transaction)
+    }
+
+    private func fixtureActiveModalBar(
+        sampleRate: Double
+    ) -> AutonomousModalPercussionBarEvidence {
+        let frameCount = Int((
+            240.0 / AutonomousSessionDirector.bpm * sampleRate
+        ).rounded())
+        let event = AutonomousModalPercussionEventEvidence(
+            scoreEventIndex: 0,
+            step: 10,
+            use: ModalPercussionUse.foundationCompanion.rawValue,
+            modalIdentity: ModalIdentity.dorian.rawValue,
+            modalDegree: 0,
+            octave: 1,
+            requestedFundamentalHz: 110,
+            appliedFundamentalHz: 110,
+            excitation: 0.72,
+            damping: 0.6,
+            brightness: 0.34,
+            inharmonicity: 0.025,
+            intensity: 0.58,
+            modeCount: ModalPercussionVoice.modeCount,
+            modeRatioFingerprint: "0123456789abcdef",
+            minimumModeFrequencyHz: 110,
+            maximumModeFrequencyHz: 509.3,
+            maximumPoleRadius: 0.998,
+            excitationFingerprint: "123456789abcdef0",
+            drySampleHash: "23456789abcdef01",
+            renderedFrameCount: frameCount,
+            nonzeroSampleCount: 2_048,
+            peak: 0.02,
+            rms: 0.003,
+            crestFactor: 20.0 / 3,
+            attackRMS: 0.01,
+            bodyRMS: 0.005,
+            tailRMS: 0.002,
+            tailToBodyDB: -7.958_800_173_440_752,
+            spectralCentroidHz: 620,
+            incomingVoiceStateFingerprint: "1111111111111111",
+            outgoingVoiceStateFingerprint: "2222222222222222",
+            finite: true,
+            stable: true,
+            capacityValid: true,
+            scoreBindingValid: true,
+            routeBindingValid: true
+        )
+        return AutonomousModalPercussionBarEvidence(
+            bar: 0,
+            sourceScoreEventCount: 1,
+            sourceRenderEventCount: 1,
+            use: ModalPercussionUse.foundationCompanion.rawValue,
+            incomingStateFingerprint: "1111111111111111",
+            outgoingStateFingerprint: "2222222222222222",
+            dryBarSampleHash: "3456789abcdef012",
+            activeIncomingVoiceCount: 0,
+            activeOutgoingVoiceCount: 1,
+            continuationRendered: false,
+            renderPassesMatch: true,
+            foundationRoutingValid: true,
+            events: [event]
+        )
     }
 
     private var validReportMaskingObservations:

@@ -81,6 +81,49 @@ struct ProfessionalQualityCalibrationTests {
         #expect(suite.cases.first {
             $0.scenario == .silentProxy
         }?.failedMetrics.isEmpty == false)
+        for (scenario, metric) in [
+            (ProfessionalQualityAdversarialScenario.modalDetuning,
+             ProfessionalQualityMetric.modalPercussionPitchErrorCentsMaximum),
+            (.modalRunawayTail, .modalPercussionTailToBodyDBMean),
+            (.modalMaskingFlood, .modalPercussionMaskingMaximumOverlap),
+            (.modalRateDrift, .modalPercussionSpectralCentroidMeanHz),
+        ] {
+            let attacked = try #require(suite.cases.first {
+                $0.scenario == scenario
+            })
+            #expect(attacked.rejected)
+            #expect(attacked.failedMetrics.contains(metric))
+        }
+    }
+
+    @Test("Modal metrics are versioned, bounded, and non-compensable")
+    func modalMetricContract() {
+        #expect(ProfessionalQualityObservation.schemaVersion == 2)
+        #expect(ProfessionalQualityObservation.observationVersion ==
+                "autotechno-professional-quality-observation.v2")
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 5)
+        #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
+                "autotechno-professional-evidence.v5")
+        #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
+                "autotechno-quality.primary-calibrated.v2")
+        #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
+                "autotechno-candidate-evaluator.primary-calibrated.v2")
+        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 3)
+        #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
+                "autotechno-professional-quality-adversarial.v3")
+
+        for metric in [
+            ProfessionalQualityMetric.modalPercussionPitchErrorCentsMaximum,
+            .modalPercussionMaskingMaximumOverlap,
+            .modalPercussionMaximumPoleRadius,
+        ] {
+            #expect(metric.acceptsSaferValuesBelowCalibration)
+            #expect(metric.semanticMinimum == 0)
+        }
+        #expect(ProfessionalQualityMetric.modalPercussionActiveBarRatio
+            .participatesInQualification)
+        #expect(ProfessionalQualityMetric.modalPercussionEventCountMean
+            .participatesInQualification)
     }
 
     @Test("One failed dimension cannot be compensated by centered peers")
@@ -139,6 +182,9 @@ struct ProfessionalQualityCalibrationTests {
             .maskingMaximumOverlap,
             .maskingOverlapWindowRatio,
             .maskingLongestRunRatio,
+            .modalPercussionPitchErrorCentsMaximum,
+            .modalPercussionMaskingMaximumOverlap,
+            .modalPercussionMaximumPoleRadius,
         ] {
             let bounds = try #require(checkpoint[metric])
             let improved = try baseline.replacing(
@@ -530,11 +576,22 @@ struct ProfessionalQualityCalibrationTests {
             .kickAudibleToDetectorDBMean: -9,
             .kickDuckingEnvelopeRatioMean: 0.90,
             .kickAudibleGainMean: 0.35,
+            .modalPercussionActiveBarRatio: 0.5,
+            .modalPercussionEventCountMean: 1,
+            .modalPercussionPitchErrorCentsMaximum: 0,
+            .modalPercussionAttackToBodyDBMean: 6,
+            .modalPercussionTailToBodyDBMean: -8,
+            .modalPercussionSpectralCentroidMeanHz: 620,
+            .modalPercussionMaskingMaximumOverlap: 0.2,
+            .modalPercussionMaximumPoleRadius: 0.998,
         ]
         return ProfessionalQualityMetric.allCases.map { metric in
-            ProfessionalQualityMetricValue(
+            let metricRateOffset = metric ==
+                .modalPercussionMaximumPoleRadius
+                ? rateOffset * 0.01 : rateOffset
+            return ProfessionalQualityMetricValue(
                 metric: metric,
-                value: (scalar[metric] ?? 0) + rateOffset
+                value: (scalar[metric] ?? 0) + metricRateOffset
             )
         }
     }

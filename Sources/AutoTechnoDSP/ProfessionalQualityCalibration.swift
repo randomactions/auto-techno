@@ -75,12 +75,31 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
     case kickAudibleToDetectorDBMean = "kick-audible-to-detector-db-mean"
     case kickDuckingEnvelopeRatioMean = "kick-ducking-envelope-ratio-mean"
     case kickAudibleGainMean = "kick-audible-gain-mean"
+    case modalPercussionActiveBarRatio =
+        "modal-percussion-active-bar-ratio"
+    case modalPercussionEventCountMean =
+        "modal-percussion-event-count-mean"
+    case modalPercussionPitchErrorCentsMaximum =
+        "modal-percussion-pitch-error-cents-maximum"
+    case modalPercussionAttackToBodyDBMean =
+        "modal-percussion-attack-to-body-db-mean"
+    case modalPercussionTailToBodyDBMean =
+        "modal-percussion-tail-to-body-db-mean"
+    case modalPercussionSpectralCentroidMeanHz =
+        "modal-percussion-spectral-centroid-mean-hz"
+    case modalPercussionMaskingMaximumOverlap =
+        "modal-percussion-masking-maximum-overlap"
+    case modalPercussionMaximumPoleRadius =
+        "modal-percussion-maximum-pole-radius"
 
     package var acceptsSaferValuesBelowCalibration: Bool {
         switch self {
         case .truePeakDBTP, .absoluteDCOffset, .maximumBoundaryDelta,
                 .maskingMaximumOverlap, .maskingOverlapWindowRatio,
-                .maskingLongestRunRatio:
+                .maskingLongestRunRatio,
+                .modalPercussionPitchErrorCentsMaximum,
+                .modalPercussionMaskingMaximumOverlap,
+                .modalPercussionMaximumPoleRadius:
             return true
         default:
             return false
@@ -97,7 +116,9 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
 
     package var semanticMinimum: Double {
         switch self {
-        case .truePeakDBTP: return -120
+        case .truePeakDBTP, .modalPercussionAttackToBodyDBMean,
+                .modalPercussionTailToBodyDBMean:
+            return -120
         default: return 0
         }
     }
@@ -116,9 +137,9 @@ package struct ProfessionalQualityMetricValue: Codable, Equatable, Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 1
+    package static let schemaVersion = 2
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v1"
+        "autotechno-professional-quality-observation.v2"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -269,6 +290,22 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         }
         let kickDivisor = Double(max(1, kickSyntax.count))
 
+        let modalBars = vector.modalPercussion
+        let activeModalBars = modalBars.filter {
+            !$0.events.isEmpty || $0.activeIncomingVoiceCount > 0
+        }
+        let modalEvents = modalBars.flatMap(\.events)
+        let modalDivisor = Double(max(1, modalBars.count))
+        let activeModalBarSet = Set(activeModalBars.map(\.bar))
+        let modalMasking = vector.masking
+            .filter { activeModalBarSet.contains($0.bar) }
+            .flatMap(\.observations)
+            .filter {
+                $0.firstRole == MaskingRole.foundation.rawValue &&
+                    ($0.secondRole == MaskingRole.percussion.rawValue ||
+                        $0.secondRole == MaskingRole.upper.rawValue)
+            }
+
         var kickFoundationDifferences: [Double] = []
         for stemBar in vector.stems {
             guard let kick = stemBar.roles.first(where: {
@@ -382,6 +419,49 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 })),
             ProfessionalQualityMetricValue(metric: .kickAudibleGainMean,
                 value: mean(kickSyntax.map(\.audibleGain))),
+            ProfessionalQualityMetricValue(
+                metric: .modalPercussionActiveBarRatio,
+                value: Double(activeModalBars.count) / modalDivisor
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .modalPercussionEventCountMean,
+                value: mean(modalBars.map { Double($0.events.count) })
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .modalPercussionPitchErrorCentsMaximum,
+                value: modalEvents.map { event in
+                    abs(1_200 * log2(
+                        event.appliedFundamentalHz /
+                            event.requestedFundamentalHz
+                    ))
+                }.max() ?? 0
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .modalPercussionAttackToBodyDBMean,
+                value: mean(modalEvents.map {
+                    decibels(max($0.attackRMS, 1e-12),
+                             max($0.bodyRMS, 1e-12))
+                })
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .modalPercussionTailToBodyDBMean,
+                value: mean(modalEvents.map {
+                    decibels(max($0.tailRMS, 1e-12),
+                             max($0.bodyRMS, 1e-12))
+                })
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .modalPercussionSpectralCentroidMeanHz,
+                value: mean(modalEvents.map(\.spectralCentroidHz))
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .modalPercussionMaskingMaximumOverlap,
+                value: modalMasking.map(\.maximumOverlap).max() ?? 0
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .modalPercussionMaximumPoleRadius,
+                value: modalEvents.map(\.maximumPoleRadius).max() ?? 0
+            ),
         ]
         try self.init(
             engineVersion: engineVersion,
@@ -1053,6 +1133,18 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             absoluteFloor = transientDensityQuantizationFloor
         case .kickEventCountMean:
             absoluteFloor = 0.25
+        case .modalPercussionEventCountMean,
+                .modalPercussionActiveBarRatio:
+            absoluteFloor = 0.25
+        case .modalPercussionPitchErrorCentsMaximum:
+            absoluteFloor = 15
+        case .modalPercussionAttackToBodyDBMean,
+                .modalPercussionTailToBodyDBMean:
+            absoluteFloor = 1
+        case .modalPercussionSpectralCentroidMeanHz:
+            absoluteFloor = 60
+        case .modalPercussionMaximumPoleRadius:
+            absoluteFloor = 0.000_5
         default:
             absoluteFloor = 0.04
         }
@@ -1139,13 +1231,16 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .maskingLongestRunRatio, .activeKickFoundationBarRatio,
                 .kickGroundedBarRatio, .kickWithheldBarRatio,
                 .kickRecoveryBarRatio, .kickDuckingEnvelopeRatioMean,
-                .kickAudibleGainMean:
+                .kickAudibleGainMean, .modalPercussionActiveBarRatio,
+                .modalPercussionMaskingMaximumOverlap,
+                .modalPercussionMaximumPoleRadius:
             return 0...1
         case .stereoCorrelation, .lowStereoCorrelation:
             return -1...1
         case .spectralCentroidMeanHz, .spectralCentroidSpreadHz,
                 .spectralBandwidthMeanHz, .spectralRolloff85MeanHz,
-                .barCentroidSpanHz:
+                .barCentroidSpanHz,
+                .modalPercussionSpectralCentroidMeanHz:
             return 0...(QualityQualificationContract.maximumSupportedSampleRate / 2)
         case .loudnessRangeLU, .crestFactorDB,
                 .rmsTrajectoryDeltaMeanDB, .rmsTrajectoryDeltaPeakDB,
@@ -1155,10 +1250,17 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             return 0...120
         case .kickOverFoundationActiveDBMean:
             return -120...120
+        case .modalPercussionAttackToBodyDBMean,
+                .modalPercussionTailToBodyDBMean:
+            return -120...120
         case .kickAudibleToDetectorDBMean:
             return -120...0
         case .kickEventCountMean:
             return 0...16
+        case .modalPercussionEventCountMean:
+            return 0...2
+        case .modalPercussionPitchErrorCentsMaximum:
+            return 0...1_200
         }
     }
 

@@ -13,6 +13,10 @@ package enum ProfessionalQualityAdversarialScenario: String, CaseIterable,
     case foreignRate = "foreign-rate"
     case trajectoryFlattening = "trajectory-flattening"
     case rateDrift = "rate-drift"
+    case modalDetuning = "modal-detuning"
+    case modalRunawayTail = "modal-runaway-tail"
+    case modalMaskingFlood = "modal-masking-flood"
+    case modalRateDrift = "modal-rate-drift"
 }
 
 package struct ProfessionalQualityAdversarialCaseResult: Codable, Equatable,
@@ -33,12 +37,12 @@ package struct ProfessionalQualityAdversarialCaseResult: Codable, Equatable,
 /// evidence. Every scenario must be rejected independently.
 package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         Sendable {
-    package static let legacySchemaVersion = 1
-    package static let schemaVersion = 2
+    package static let legacySchemaVersion = 2
+    package static let schemaVersion = 3
     package static let legacySuiteVersion =
-        "autotechno-professional-quality-adversarial.v1"
-    package static let suiteVersion =
         "autotechno-professional-quality-adversarial.v2"
+    package static let suiteVersion =
+        "autotechno-professional-quality-adversarial.v3"
 
     package let schemaVersion: Int
     package let suiteVersion: String
@@ -172,6 +176,39 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             ),
             expected: .metricOutOfRange
         )
+        append(
+            .modalDetuning,
+            observation: try baseline.replacing(
+                .modalPercussionPitchErrorCentsMaximum,
+                with: outside(
+                    .modalPercussionPitchErrorCentsMaximum,
+                    preferLower: false
+                )
+            ),
+            expected: .metricOutOfRange
+        )
+        append(
+            .modalRunawayTail,
+            observation: try baseline.replacing(
+                .modalPercussionTailToBodyDBMean,
+                with: outside(
+                    .modalPercussionTailToBodyDBMean,
+                    preferLower: false
+                )
+            ),
+            expected: .metricOutOfRange
+        )
+        append(
+            .modalMaskingFlood,
+            observation: try baseline.replacing(
+                .modalPercussionMaskingMaximumOverlap,
+                with: outside(
+                    .modalPercussionMaskingMaximumOverlap,
+                    preferLower: false
+                )
+            ),
+            expected: .metricOutOfRange
+        )
 
         var silenceMetrics = baseline.metrics
         let silentValues: [ProfessionalQualityMetric: Double] = [
@@ -235,6 +272,26 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             actualReasons: rateFailures.isEmpty ? [] : [.rateConsistencyFailed],
             failedMetrics: Array(Set(rateFailures.map(\.metric)))
                 .sorted { $0.rawValue < $1.rawValue }
+        ))
+
+        let modalRateAttack = try Self.rateAttack(
+            metric: .modalPercussionSpectralCentroidMeanHz,
+            profile: profile,
+            observations: sourceObservations
+        )
+        let modalRateFailures = ProfessionalQualityRelationshipEvaluator
+            .evaluate(observations: modalRateAttack, against: profile)
+            .filter {
+                $0.kind == .rateConsistency &&
+                    $0.metric == .modalPercussionSpectralCentroidMeanHz
+            }
+        generated.append(ProfessionalQualityAdversarialCaseResult(
+            scenario: .modalRateDrift,
+            rejected: !modalRateFailures.isEmpty,
+            expectedReason: .rateConsistencyFailed,
+            actualReasons: modalRateFailures.isEmpty
+                ? [] : [.rateConsistencyFailed],
+            failedMetrics: [.modalPercussionSpectralCentroidMeanHz]
         ))
 
         schemaVersion = profile.usesDiverseCalibration
@@ -310,8 +367,8 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
               let string = String(data: data, encoding: .utf8) else { return "" }
         var sink = StreamingFNV1a()
         sink.domain(schemaVersion == Self.schemaVersion
-            ? "professional-quality-adversarial-suite-json.v2"
-            : "professional-quality-adversarial-suite-json.v1")
+            ? "professional-quality-adversarial-suite-json.v3"
+            : "professional-quality-adversarial-suite-json.v2")
         sink.string(string)
         return fixedWidthFingerprintHex(sink.value)
     }
@@ -415,6 +472,45 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                     $0.kind == .rateConsistency &&
                         $0.checkpoint == rateBound.checkpoint &&
                         $0.metric == rateBound.metric
+                }
+            if locallyAccepted && relationshipFailed { return mutated }
+        }
+        throw ProfessionalQualityCalibrationError.invalidBounds
+    }
+
+    private static func rateAttack(
+        metric: ProfessionalQualityMetric,
+        profile: ProfessionalQualityCalibrationProfile,
+        observations: [ProfessionalQualityObservation]
+    ) throws -> [ProfessionalQualityObservation] {
+        for rateBound in profile.rateConsistency where
+                rateBound.metric == metric {
+            guard let lowIndex = observations.firstIndex(where: {
+                $0.sampleRate == profile.sampleRates[0] &&
+                    $0.checkpoint == rateBound.checkpoint
+            }), let highIndex = observations.firstIndex(where: {
+                $0.sampleRate == profile.sampleRates[1] &&
+                    $0.checkpoint == rateBound.checkpoint
+            }), let metricBounds = profile[rateBound.checkpoint]?[metric]
+            else { continue }
+            var mutated = observations
+            mutated[lowIndex] = try mutated[lowIndex].replacing(
+                metric, with: metricBounds.lower
+            )
+            mutated[highIndex] = try mutated[highIndex].replacing(
+                metric, with: metricBounds.upper
+            )
+            let locallyAccepted = [lowIndex, highIndex].allSatisfy {
+                ProfessionalQualityProfileEvaluator.evaluate(
+                    mutated[$0], against: profile
+                ).accepted
+            }
+            let relationshipFailed = ProfessionalQualityRelationshipEvaluator
+                .evaluate(observations: mutated, against: profile)
+                .contains {
+                    $0.kind == .rateConsistency &&
+                        $0.checkpoint == rateBound.checkpoint &&
+                        $0.metric == metric
                 }
             if locallyAccepted && relationshipFailed { return mutated }
         }
