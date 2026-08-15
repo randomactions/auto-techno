@@ -1389,6 +1389,20 @@ package enum AutonomousPhrasePreparer {
             Set(resolved.closedHatDecayArticulations.map {
                 $0.scoreEventIndex
             }).count == resolved.closedHatDecayArticulations.count
+        let canonicalModalPercussion = ModalPercussionResolver.foundationArticulations(
+            ensemble: resolved.ensemble,
+            dna: plan.dna,
+            performance: performance,
+            character: resolved.performanceCharacter,
+            gesture: resolved.arrangementGesture,
+            behavior: resolved.foundationBehavior
+        )
+        let modalPercussionIsCanonical =
+            resolved.modalPercussionArticulations.count <= 2 &&
+            resolved.modalPercussionArticulations == canonicalModalPercussion &&
+            Set(resolved.modalPercussionArticulations.map {
+                $0.scoreEventIndex
+            }).count == resolved.modalPercussionArticulations.count
         let canonicalPercussionEchoTexture =
             PercussionEchoTextureResolver.articulation(
                 ensemble: resolved.ensemble,
@@ -1419,7 +1433,8 @@ package enum AutonomousPhrasePreparer {
             kickScoreMatchesRole && resolved.groovePulses.count <= 8 &&
             Set(resolved.groovePulses.map { pulse in pulse.step }).count ==
             resolved.groovePulses.count && grooveScoreIsCanonical &&
-            closedHatDecayIsCanonical && percussionEchoTextureIsCanonical
+            closedHatDecayIsCanonical && modalPercussionIsCanonical &&
+            percussionEchoTextureIsCanonical
     }
 
     /// Replays the director's baseline score and the one allowed kick-syntax
@@ -1461,6 +1476,15 @@ package enum AutonomousPhrasePreparer {
                 closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
                     from: ensemble
                 ),
+                modalPercussionArticulations:
+                    ModalPercussionResolver.foundationArticulations(
+                        ensemble: ensemble,
+                        dna: plan.dna,
+                        performance: resolved.performance,
+                        character: resolved.performanceCharacter,
+                        gesture: resolved.arrangementGesture,
+                        behavior: resolved.foundationBehavior
+                    ),
                 spatialContrast: resolved.spatialContrast,
                 narrative: resolved.narrative,
                 kickSyntaxRole: .grounded,
@@ -1504,7 +1528,9 @@ package enum AutonomousPhrasePreparer {
                 actualBar.ensemble.kickAnchors == canonicalBar.ensemble.kickAnchors &&
                 actualKickEvents == canonicalKickEvents &&
                 actualNonKickEvents == canonicalNonKickEvents &&
-                syntaxGroovePulsesMatch
+                syntaxGroovePulsesMatch &&
+                actualBar.modalPercussionArticulations ==
+                    canonicalBar.modalPercussionArticulations
         }
     }
 

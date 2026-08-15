@@ -1761,6 +1761,21 @@ struct GeneratedDSPTopologyTests {
 
 @Suite("Autonomous preparation preflight")
 struct AutonomousPreparationPreflightTests {
+    private final class InputGateCancellationProbe: @unchecked Sendable {
+        private(set) var callCount = 0
+
+        func cancellationRequested() -> Bool {
+            callCount += 1
+            return callCount > 1
+        }
+    }
+
+    private struct ModalPlanFixture {
+        let state: AutonomousSessionState
+        let plan: AutonomousPhrasePlan
+        let barIndex: Int
+    }
+
     private struct PulseEchoRenderProjection: Equatable {
         let events: [[VoiceEvent]]
         let upperNoteEvidence: [[UpperNoteRenderEvidence]]
@@ -1783,6 +1798,99 @@ struct AutonomousPreparationPreflightTests {
         let second: PulseEchoRenderProjection
         let differenceEnergy: Double
         let lowDifferenceEnergy: Double
+    }
+
+    @Test("Modal percussion plan fingerprint covers every score field")
+    func modalPercussionPlanFingerprintCoversEveryScoreField() {
+        guard let fixture = modalPlanFixture(),
+              let source = fixture.plan.resolvedBars[fixture.barIndex]
+                .modalPercussionArticulations.first else {
+            Issue.record("Expected a canonical modal foundation articulation")
+            return
+        }
+        let originalFingerprint = AutonomousCandidateFingerprint.plan(fixture.plan)
+        let alternateIdentity = ModalIdentity.allCases.first {
+            $0 != source.modalIdentity
+        } ?? source.modalIdentity
+        let changes: [ModalPercussionArticulation] = [
+            replacing(source, scoreEventIndex: source.scoreEventIndex + 1),
+            replacing(source, step: source.step + 1),
+            replacing(source, use: .sparsePercussion),
+            replacing(source, modalIdentity: alternateIdentity),
+            replacing(source, modalDegree: source.modalDegree + 1),
+            replacing(source, octave: source.octave + 1),
+            replacing(source, fundamentalHz: min(196, source.fundamentalHz + 1)),
+            replacing(source, excitation: source.excitation == 0 ? 1 : 0),
+            replacing(source, damping: source.damping == 0 ? 1 : 0),
+            replacing(source, brightness: source.brightness == 0 ? 1 : 0),
+            replacing(
+                source,
+                inharmonicity: source.inharmonicity == 0 ? 0.12 : 0
+            ),
+            replacing(
+                source,
+                eventIntensity: source.eventIntensity == 0 ? 1 : 0
+            ),
+            replacing(source, seed: source.seed ^ 0xA5A5),
+        ]
+
+        for changed in changes {
+            let changedPlan = replacingModalArticulations(
+                in: fixture,
+                with: fixture.plan.resolvedBars[fixture.barIndex]
+                    .modalPercussionArticulations.map {
+                        $0.scoreEventIndex == source.scoreEventIndex ? changed : $0
+                    }
+            )
+            #expect(AutonomousCandidateFingerprint.plan(changedPlan) != originalFingerprint)
+        }
+    }
+
+    @Test("Preflight rejects missing, duplicate, reordered, and forged modal articulations")
+    func preflightRejectsMissingDuplicateReorderedAndForgedModalArticulations() {
+        guard let fixture = modalPlanFixture(),
+              fixture.plan.resolvedBars[fixture.barIndex]
+                .modalPercussionArticulations.count == 2 else {
+            Issue.record("Expected two canonical modal foundation articulations")
+            return
+        }
+        let source = fixture.plan.resolvedBars[fixture.barIndex]
+            .modalPercussionArticulations
+        let reordered = [
+            replacing(source[0], scoreEventIndex: source[1].scoreEventIndex),
+            replacing(source[1], scoreEventIndex: source[0].scoreEventIndex),
+        ]
+        let forged = [
+            replacing(
+                source[0],
+                fundamentalHz: min(196, source[0].fundamentalHz + 1)
+            ),
+            source[1],
+        ]
+        let attacks = [
+            [ModalPercussionArticulation](),
+            [source[0], source[0]],
+            reordered,
+            forged,
+        ]
+
+        for attack in attacks {
+            let plan = replacingModalArticulations(in: fixture, with: attack)
+            let probe = probePreparation(plan: plan, state: fixture.state)
+            #expect(probe.prepared == nil)
+            #expect(probe.cancellationCallCount == 1)
+        }
+    }
+
+    @Test("Canonical kick replay preserves modal articulations")
+    func canonicalKickReplayPreservesModalArticulations() {
+        guard let fixture = modalPlanFixture() else {
+            Issue.record("Expected a canonical modal foundation articulation")
+            return
+        }
+        let probe = probePreparation(plan: fixture.plan, state: fixture.state)
+        #expect(probe.prepared == nil)
+        #expect(probe.cancellationCallCount > 1)
     }
 
     @Test("Fixed-seed phrase audio is deterministic and satisfies safety limits",
@@ -3978,6 +4086,108 @@ struct AutonomousPreparationPreflightTests {
             differenceEnergy: differenceEnergy,
             lowDifferenceEnergy: lowDifferenceEnergy
         )
+    }
+
+    private func modalPlanFixture() -> ModalPlanFixture? {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var state = director.initialState()
+        for _ in 0..<128 {
+            let plan = director.plan(from: state)
+            if let barIndex = plan.resolvedBars.firstIndex(where: {
+                $0.modalPercussionArticulations.count == 2
+            }) {
+                return ModalPlanFixture(state: state, plan: plan, barIndex: barIndex)
+            }
+            state.advance(using: plan)
+        }
+        return nil
+    }
+
+    private func replacingModalArticulations(
+        in fixture: ModalPlanFixture,
+        with articulations: [ModalPercussionArticulation]
+    ) -> AutonomousPhrasePlan {
+        let source = fixture.plan.resolvedBars[fixture.barIndex]
+        let changed = ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: source.ensemble,
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            performanceCharacter: source.performanceCharacter,
+            foundationBehavior: source.foundationBehavior,
+            foundationCompanion: source.foundationCompanion,
+            pulseEchoEnabled: source.pulseEchoEnabled,
+            interlockChapter: source.interlockChapter,
+            groovePulses: source.groovePulses,
+            closedHatDecayArticulations: source.closedHatDecayArticulations,
+            modalPercussionArticulations: articulations,
+            spatialContrast: source.spatialContrast,
+            narrative: source.narrative,
+            kickSyntaxRole: source.kickSyntaxRole,
+            percussionEchoTexture: source.percussionEchoTexture
+        )
+        var bars = fixture.plan.resolvedBars
+        bars[fixture.barIndex] = changed
+        return replacingResolvedBars(
+            in: fixture.plan,
+            with: bars,
+            memory: fixture.state.memory
+        )
+    }
+
+    private func replacing(
+        _ source: ModalPercussionArticulation,
+        scoreEventIndex: Int? = nil,
+        step: Int? = nil,
+        use: ModalPercussionUse? = nil,
+        modalIdentity: ModalIdentity? = nil,
+        modalDegree: Int? = nil,
+        octave: Int? = nil,
+        fundamentalHz: Double? = nil,
+        excitation: Double? = nil,
+        damping: Double? = nil,
+        brightness: Double? = nil,
+        inharmonicity: Double? = nil,
+        eventIntensity: Double? = nil,
+        seed: UInt64? = nil
+    ) -> ModalPercussionArticulation {
+        ModalPercussionArticulation(
+            scoreEventIndex: scoreEventIndex ?? source.scoreEventIndex,
+            step: step ?? source.step,
+            use: use ?? source.use,
+            modalIdentity: modalIdentity ?? source.modalIdentity,
+            modalDegree: modalDegree ?? source.modalDegree,
+            octave: octave ?? source.octave,
+            fundamentalHz: fundamentalHz ?? source.fundamentalHz,
+            excitation: excitation ?? source.excitation,
+            damping: damping ?? source.damping,
+            brightness: brightness ?? source.brightness,
+            inharmonicity: inharmonicity ?? source.inharmonicity,
+            eventIntensity: eventIntensity ?? source.eventIntensity,
+            seed: seed ?? source.seed
+        )
+    }
+
+    private func probePreparation(
+        plan: AutonomousPhrasePlan,
+        state: AutonomousSessionState
+    ) -> (prepared: PreparedAutonomousPhrase?, cancellationCallCount: Int) {
+        var renderState = RenderState()
+        renderState.barIndex = plan.startBar
+        let probe = InputGateCancellationProbe()
+        let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            plan: plan,
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: renderState,
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            incomingQualityState: state.quality,
+            evaluator: AcceptingPrimaryTestEvaluator(),
+            cancellationRequested: probe.cancellationRequested
+        )
+        return (prepared, probe.callCount)
     }
 
     private func replacingResolvedBars(in plan: AutonomousPhrasePlan,

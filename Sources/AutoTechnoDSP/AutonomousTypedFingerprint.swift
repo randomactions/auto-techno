@@ -22,7 +22,7 @@ func fixedWidthFingerprintHex(_ value: UInt64) -> String {
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
-        digest(domain: "candidate-plan.typed.v10") { sink in
+        digest(domain: "candidate-plan.typed.v11") { sink in
             encode(plan, into: &sink)
         }
     }
@@ -437,6 +437,11 @@ private extension AutonomousTypedFingerprint {
         for articulation in value.closedHatDecayArticulations {
             encode(articulation, into: &sink)
         }
+        sink.field("modalPercussionArticulations")
+        sink.collection(value.modalPercussionArticulations.count)
+        for articulation in value.modalPercussionArticulations {
+            encode(articulation, into: &sink)
+        }
         sink.field("percussionEchoTexture")
         sink.presence(value.percussionEchoTexture != nil)
         if let texture = value.percussionEchoTexture {
@@ -504,6 +509,26 @@ private extension AutonomousTypedFingerprint {
         sink.field("scoreEventIndex"); sink.int(value.scoreEventIndex)
         sink.field("step"); sink.int(value.step)
         sink.field("role"); sink.raw(value.role.rawValue)
+    }
+
+    static func encode(
+        _ value: ModalPercussionArticulation,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("ModalPercussionArticulation")
+        sink.field("scoreEventIndex"); sink.int(value.scoreEventIndex)
+        sink.field("step"); sink.int(value.step)
+        sink.field("use"); sink.raw(value.use.rawValue)
+        sink.field("modalIdentity"); sink.raw(value.modalIdentity.rawValue)
+        sink.field("modalDegree"); sink.int(value.modalDegree)
+        sink.field("octave"); sink.int(value.octave)
+        sink.field("fundamentalHz"); sink.double(value.fundamentalHz)
+        sink.field("excitation"); sink.double(value.excitation)
+        sink.field("damping"); sink.double(value.damping)
+        sink.field("brightness"); sink.double(value.brightness)
+        sink.field("inharmonicity"); sink.double(value.inharmonicity)
+        sink.field("eventIntensity"); sink.double(value.eventIntensity)
+        sink.field("seed"); sink.uint64(value.seed)
     }
 
     static func encode(_ value: SpatialContrastArticulation, into sink: inout StreamingFNV1a) {
