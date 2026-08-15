@@ -1919,6 +1919,277 @@ package struct AutonomousClosedHatBarEvidence: Codable, Equatable, Sendable {
     }
 }
 
+/// Compact same-pass evidence for one score-owned modal-foundation strike.
+/// It retains no excitation or output PCM.
+package struct AutonomousModalPercussionEventEvidence:
+        Codable, Equatable, Sendable {
+    package let scoreEventIndex: Int
+    package let step: Int
+    package let use: String
+    package let modalIdentity: String
+    package let modalDegree: Int
+    package let octave: Int
+    package let requestedFundamentalHz: Double
+    package let appliedFundamentalHz: Double
+    package let excitation: Double
+    package let damping: Double
+    package let brightness: Double
+    package let inharmonicity: Double
+    package let intensity: Double
+    package let modeCount: Int
+    package let modeRatioFingerprint: String
+    package let minimumModeFrequencyHz: Double
+    package let maximumModeFrequencyHz: Double
+    package let maximumPoleRadius: Double
+    package let excitationFingerprint: String
+    package let drySampleHash: String
+    package let renderedFrameCount: Int
+    package let nonzeroSampleCount: Int
+    package let peak: Double
+    package let rms: Double
+    package let crestFactor: Double
+    package let attackRMS: Double
+    package let bodyRMS: Double
+    package let tailRMS: Double
+    package let tailToBodyDB: Double
+    package let spectralCentroidHz: Double
+    package let incomingVoiceStateFingerprint: String
+    package let outgoingVoiceStateFingerprint: String
+    package let finite: Bool
+    package let stable: Bool
+    package let capacityValid: Bool
+    package let scoreBindingValid: Bool
+    package let routeBindingValid: Bool
+
+    package init(
+        scoreEventIndex: Int,
+        step: Int,
+        use: String,
+        modalIdentity: String,
+        modalDegree: Int,
+        octave: Int,
+        requestedFundamentalHz: Double,
+        appliedFundamentalHz: Double,
+        excitation: Double,
+        damping: Double,
+        brightness: Double,
+        inharmonicity: Double,
+        intensity: Double,
+        modeCount: Int,
+        modeRatioFingerprint: String,
+        minimumModeFrequencyHz: Double,
+        maximumModeFrequencyHz: Double,
+        maximumPoleRadius: Double,
+        excitationFingerprint: String,
+        drySampleHash: String,
+        renderedFrameCount: Int,
+        nonzeroSampleCount: Int,
+        peak: Double,
+        rms: Double,
+        crestFactor: Double,
+        attackRMS: Double,
+        bodyRMS: Double,
+        tailRMS: Double,
+        tailToBodyDB: Double,
+        spectralCentroidHz: Double,
+        incomingVoiceStateFingerprint: String,
+        outgoingVoiceStateFingerprint: String,
+        finite: Bool,
+        stable: Bool,
+        capacityValid: Bool,
+        scoreBindingValid: Bool,
+        routeBindingValid: Bool
+    ) {
+        self.scoreEventIndex = scoreEventIndex
+        self.step = step
+        self.use = use
+        self.modalIdentity = modalIdentity
+        self.modalDegree = modalDegree
+        self.octave = octave
+        self.requestedFundamentalHz = requestedFundamentalHz
+        self.appliedFundamentalHz = appliedFundamentalHz
+        self.excitation = excitation
+        self.damping = damping
+        self.brightness = brightness
+        self.inharmonicity = inharmonicity
+        self.intensity = intensity
+        self.modeCount = modeCount
+        self.modeRatioFingerprint = modeRatioFingerprint
+        self.minimumModeFrequencyHz = minimumModeFrequencyHz
+        self.maximumModeFrequencyHz = maximumModeFrequencyHz
+        self.maximumPoleRadius = maximumPoleRadius
+        self.excitationFingerprint = excitationFingerprint
+        self.drySampleHash = drySampleHash
+        self.renderedFrameCount = renderedFrameCount
+        self.nonzeroSampleCount = nonzeroSampleCount
+        self.peak = peak
+        self.rms = rms
+        self.crestFactor = crestFactor
+        self.attackRMS = attackRMS
+        self.bodyRMS = bodyRMS
+        self.tailRMS = tailRMS
+        self.tailToBodyDB = tailToBodyDB
+        self.spectralCentroidHz = spectralCentroidHz
+        self.incomingVoiceStateFingerprint = incomingVoiceStateFingerprint
+        self.outgoingVoiceStateFingerprint = outgoingVoiceStateFingerprint
+        self.finite = finite
+        self.stable = stable
+        self.capacityValid = capacityValid
+        self.scoreBindingValid = scoreBindingValid
+        self.routeBindingValid = routeBindingValid
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            requestedFundamentalHz, appliedFundamentalHz, excitation, damping,
+            brightness, inharmonicity, intensity, minimumModeFrequencyHz,
+            maximumModeFrequencyHz, maximumPoleRadius, peak, rms, crestFactor,
+            attackRMS, bodyRMS, tailRMS, tailToBodyDB, spectralCentroidHz,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func isComplete(sampleRate: Double) -> Bool {
+        let expectedFrames = max(1, Int((
+            240 / AutonomousSessionDirector.bpm * sampleRate
+        ).rounded()))
+        return sampleRate.isFinite && sampleRate > 0 &&
+            ModalPercussionUse(rawValue: use) == .foundationCompanion &&
+            ModalIdentity(rawValue: modalIdentity) != nil &&
+            (0..<(16 * 6)).contains(scoreEventIndex) &&
+            (0..<16).contains(step) &&
+            (0..<12).contains(modalDegree) &&
+            (-2...6).contains(octave) &&
+            (48...196).contains(requestedFundamentalHz) &&
+            appliedFundamentalHz == requestedFundamentalHz &&
+            appliedFundamentalHz > 0 &&
+            appliedFundamentalHz < 0.9 * sampleRate * 0.5 &&
+            (0...1).contains(excitation) && (0...1).contains(damping) &&
+            (0...1).contains(brightness) &&
+            (0...0.12).contains(inharmonicity) &&
+            (0...1).contains(intensity) &&
+            modeCount == ModalPercussionVoice.modeCount &&
+            Self.isFingerprint(modeRatioFingerprint) &&
+            minimumModeFrequencyHz >= appliedFundamentalHz &&
+            maximumModeFrequencyHz >= minimumModeFrequencyHz &&
+            maximumModeFrequencyHz < 0.9 * sampleRate * 0.5 &&
+            maximumPoleRadius > 0 && maximumPoleRadius < 1 &&
+            Self.isFingerprint(excitationFingerprint) &&
+            Self.isFingerprint(drySampleHash) &&
+            renderedFrameCount == expectedFrames &&
+            nonzeroSampleCount > 0 &&
+            nonzeroSampleCount <= renderedFrameCount &&
+            peak > 0 && peak <= 1 && rms > 0 && rms <= peak &&
+            crestFactor >= 1 && attackRMS >= 0 && attackRMS <= 1 &&
+            bodyRMS >= 0 && bodyRMS <= 1 && tailRMS >= 0 && tailRMS <= 1 &&
+            (-120...120).contains(tailToBodyDB) &&
+            (0...(sampleRate / 2)).contains(spectralCentroidHz) &&
+            Self.isFingerprint(incomingVoiceStateFingerprint) &&
+            Self.isFingerprint(outgoingVoiceStateFingerprint) &&
+            stable && capacityValid && scoreBindingValid && routeBindingValid
+    }
+
+    private static func isFingerprint(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
+/// Every candidate bar owns one modal record, including explicit empty and
+/// continuation-only bars.
+package struct AutonomousModalPercussionBarEvidence:
+        Codable, Equatable, Sendable {
+    package let bar: Int
+    package let sourceScoreEventCount: Int
+    package let sourceRenderEventCount: Int
+    package let use: String
+    package let incomingStateFingerprint: String
+    package let outgoingStateFingerprint: String
+    package let dryBarSampleHash: String
+    package let activeIncomingVoiceCount: Int
+    package let activeOutgoingVoiceCount: Int
+    package let continuationRendered: Bool
+    package let renderPassesMatch: Bool
+    package let foundationRoutingValid: Bool
+    package let events: [AutonomousModalPercussionEventEvidence]
+
+    package init(
+        bar: Int,
+        sourceScoreEventCount: Int,
+        sourceRenderEventCount: Int,
+        use: String,
+        incomingStateFingerprint: String,
+        outgoingStateFingerprint: String,
+        dryBarSampleHash: String,
+        activeIncomingVoiceCount: Int,
+        activeOutgoingVoiceCount: Int,
+        continuationRendered: Bool,
+        renderPassesMatch: Bool,
+        foundationRoutingValid: Bool,
+        events: [AutonomousModalPercussionEventEvidence]
+    ) {
+        self.bar = bar
+        self.sourceScoreEventCount = sourceScoreEventCount
+        self.sourceRenderEventCount = sourceRenderEventCount
+        self.use = use
+        self.incomingStateFingerprint = incomingStateFingerprint
+        self.outgoingStateFingerprint = outgoingStateFingerprint
+        self.dryBarSampleHash = dryBarSampleHash
+        self.activeIncomingVoiceCount = activeIncomingVoiceCount
+        self.activeOutgoingVoiceCount = activeOutgoingVoiceCount
+        self.continuationRendered = continuationRendered
+        self.renderPassesMatch = renderPassesMatch
+        self.foundationRoutingValid = foundationRoutingValid
+        self.events = Array(events.prefix(
+            AutonomousCandidateEvaluationVector.maximumModalPercussionEventsPerBar
+        ))
+    }
+
+    package var isFinite: Bool { events.allSatisfy { $0.isFinite } }
+
+    package func isComplete(sampleRate: Double) -> Bool {
+        let expectedFrames = max(1, Int((
+            240 / AutonomousSessionDirector.bpm * sampleRate
+        ).rounded()))
+        let neutralStateIsCanonical = sourceScoreEventCount != 0 ||
+            activeIncomingVoiceCount != 0 || activeOutgoingVoiceCount != 0 || (
+                incomingStateFingerprint == outgoingStateFingerprint &&
+                    dryBarSampleHash == ExactPCMFingerprint.mono(
+                        [Float](repeating: 0, count: expectedFrames)
+                    )
+            )
+        return bar >= 0 &&
+            ModalPercussionUse(rawValue: use) == .foundationCompanion &&
+            sourceScoreEventCount >= 0 &&
+            sourceScoreEventCount <=
+                AutonomousCandidateEvaluationVector.maximumModalPercussionEventsPerBar &&
+            sourceRenderEventCount == sourceScoreEventCount &&
+            events.count == sourceScoreEventCount &&
+            events.map(\.scoreEventIndex) ==
+                events.map(\.scoreEventIndex).sorted() &&
+            Set(events.map(\.scoreEventIndex)).count == events.count &&
+            Self.isFingerprint(incomingStateFingerprint) &&
+            Self.isFingerprint(outgoingStateFingerprint) &&
+            Self.isFingerprint(dryBarSampleHash) &&
+            (0...ModalPercussionVoice.voiceCapacity)
+                .contains(activeIncomingVoiceCount) &&
+            (0...ModalPercussionVoice.voiceCapacity)
+                .contains(activeOutgoingVoiceCount) &&
+            continuationRendered == (activeIncomingVoiceCount > 0) &&
+            neutralStateIsCanonical && renderPassesMatch &&
+            foundationRoutingValid &&
+            events.allSatisfy {
+                $0.use == use && $0.isComplete(sampleRate: sampleRate)
+            }
+    }
+
+    private static func isFingerprint(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 package struct AutonomousInstrumentBarEvidence: Codable, Equatable, Sendable {
     package let bar: Int
     package let sourceArchitectureCount: Int
@@ -3624,6 +3895,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
     case climaxArcEvidence = "climax-arc-evidence"
     case groovePulseEvidence = "groove-pulse-evidence"
     case closedHatEvidence = "closed-hat-evidence"
+    case modalPercussionEvidence = "modal-percussion-evidence"
     case instrumentEvidence = "instrument-evidence"
     case percussionEchoTextureEvidence = "percussion-echo-texture-evidence"
     case phraseCompositionEvidence = "phrase-composition-evidence"
@@ -3635,12 +3907,13 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 18
+    package static let schemaVersion = 19
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
     package static let maximumGroovePulseEventsPerBar = 8
     package static let maximumClosedHatEventsPerBar = 4
+    package static let maximumModalPercussionEventsPerBar = 2
     package static let maximumInstrumentArchitecturesPerBar = 3
     package static let maximumInstrumentAssignmentsPerArchitecture = 6
     package static let maximumInstrumentEventsPerBar = 64
@@ -3665,6 +3938,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let groovePulse: [AutonomousGroovePulseBarEvidence]
     package let sourceClosedHatBarCount: Int
     package let closedHat: [AutonomousClosedHatBarEvidence]
+    package let sourceModalPercussionBarCount: Int
+    package let modalPercussion: [AutonomousModalPercussionBarEvidence]
     package let sourceInstrumentBarCount: Int
     package let instruments: [AutonomousInstrumentBarEvidence]
     package let sourcePercussionEchoTextureBarCount: Int
@@ -3700,6 +3975,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         climaxArc: AutonomousClimaxArcEvidence,
         groovePulse: [AutonomousGroovePulseBarEvidence],
         closedHat: [AutonomousClosedHatBarEvidence] = [],
+        modalPercussion: [AutonomousModalPercussionBarEvidence],
         instruments: [AutonomousInstrumentBarEvidence],
         percussionEchoTexture: [AutonomousPercussionEchoTextureBarEvidence],
         phraseComposition: [AutonomousPhraseCompositionBarEvidence],
@@ -3730,6 +4006,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.groovePulse = Array(groovePulse.prefix(Self.maximumBarCount))
         sourceClosedHatBarCount = closedHat.count
         self.closedHat = Array(closedHat.prefix(Self.maximumBarCount))
+        sourceModalPercussionBarCount = modalPercussion.count
+        self.modalPercussion = Array(
+            modalPercussion.prefix(Self.maximumBarCount)
+        )
         sourceInstrumentBarCount = instruments.count
         self.instruments = Array(instruments.prefix(Self.maximumBarCount))
         sourcePercussionEchoTextureBarCount = percussionEchoTexture.count
@@ -4143,6 +4423,11 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 events: matched
             )
         }
+        let modalPercussion = makeModalPercussionEvidence(
+            blocks: boundedBlocks,
+            planBars: plan.resolvedBars,
+            sampleRate: sampleRate
+        )
         let instruments = boundedBlocks.map { block in
             AutonomousInstrumentBarEvidence(
                 bar: block.bar,
@@ -4274,6 +4559,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             climaxArc: climaxArc,
             groovePulse: groovePulse,
             closedHat: closedHat,
+            modalPercussion: modalPercussion,
             instruments: instruments,
             percussionEchoTexture: percussionEchoTexture,
             phraseComposition: phraseComposition,
@@ -4285,6 +4571,128 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             preGraphUpperTimbreEvidence: preGraphUpperTimbreEvidence,
             postGraphUpperTimbreEvidence: upperTimbreEvidence
         )
+    }
+
+    @inline(never)
+    private static func makeModalPercussionEvidence(
+        blocks: [RenderBlock],
+        planBars: [ResolvedPerformanceBar],
+        sampleRate: Double
+    ) -> [AutonomousModalPercussionBarEvidence] {
+        var result: [AutonomousModalPercussionBarEvidence] = []
+        result.reserveCapacity(blocks.count)
+        for (index, block) in blocks.enumerated() {
+            let resolved = block.resolvedPerformance
+            let score = resolved.modalPercussionArticulations
+            let render = block.modalPercussionRenderEvidence
+            let renderedEvents = render.events
+            let tunedTomIndices = resolved.ensemble.events.enumerated()
+                .filter { $0.element.voice == .tunedTom }
+                .map(\.offset)
+            let scoreIndices = score.map(\.scoreEventIndex)
+            let renderedIndices = renderedEvents.map {
+                $0.articulation.scoreEventIndex
+            }
+            let planBarMatches = planBars.indices.contains(index) &&
+                planBars[index] == resolved &&
+                planBars[index].performance.bar == block.bar
+            let barBindingValid = planBarMatches &&
+                block.section == resolved.performance.section &&
+                render.bar == block.bar && render.sampleRate == sampleRate &&
+                render.renderedFrameCount == block.left.count &&
+                block.left.count == block.right.count &&
+                scoreIndices == tunedTomIndices &&
+                renderedIndices == scoreIndices &&
+                render.dryBarSampleHash == block.dryModalPercussionSampleHash &&
+                block.modalPercussionRenderPassesMatch &&
+                block.modalPercussionFoundationRoutingValid
+            let events = renderedEvents.compactMap {
+                evidence -> AutonomousModalPercussionEventEvidence? in
+                let index = evidence.articulation.scoreEventIndex
+                guard score.filter({ $0.scoreEventIndex == index }).count == 1,
+                      let articulation = score.first(where: {
+                          $0.scoreEventIndex == index
+                      }),
+                      resolved.ensemble.events.indices.contains(index) else {
+                    return nil
+                }
+                let scoreEvent = resolved.ensemble.events[index]
+                let scoreBindingValid = barBindingValid &&
+                    scoreEvent.voice == .tunedTom &&
+                    scoreEvent.step == articulation.step &&
+                    scoreEvent.intensity == articulation.eventIntensity &&
+                    articulation.use == .foundationCompanion &&
+                    evidence.articulation == articulation &&
+                    evidence.requestedFundamentalHz ==
+                        articulation.fundamentalHz &&
+                    evidence.appliedFundamentalHz ==
+                        articulation.fundamentalHz &&
+                    evidence.modeCount == ModalPercussionVoice.modeCount &&
+                    evidence.stable && evidence.capacityValid
+                return AutonomousModalPercussionEventEvidence(
+                    scoreEventIndex: articulation.scoreEventIndex,
+                    step: articulation.step,
+                    use: articulation.use.rawValue,
+                    modalIdentity: articulation.modalIdentity.rawValue,
+                    modalDegree: articulation.modalDegree,
+                    octave: articulation.octave,
+                    requestedFundamentalHz:
+                        evidence.requestedFundamentalHz,
+                    appliedFundamentalHz: evidence.appliedFundamentalHz,
+                    excitation: articulation.excitation,
+                    damping: articulation.damping,
+                    brightness: articulation.brightness,
+                    inharmonicity: articulation.inharmonicity,
+                    intensity: articulation.eventIntensity,
+                    modeCount: evidence.modeCount,
+                    modeRatioFingerprint: evidence.modeRatioFingerprint,
+                    minimumModeFrequencyHz:
+                        evidence.minimumModeFrequencyHz,
+                    maximumModeFrequencyHz:
+                        evidence.maximumModeFrequencyHz,
+                    maximumPoleRadius: evidence.maximumPoleRadius,
+                    excitationFingerprint: evidence.excitationFingerprint,
+                    drySampleHash: evidence.drySampleHash,
+                    renderedFrameCount: evidence.renderedFrameCount,
+                    nonzeroSampleCount: evidence.nonzeroSampleCount,
+                    peak: evidence.peak,
+                    rms: evidence.rms,
+                    crestFactor: evidence.crestFactor,
+                    attackRMS: evidence.attackRMS,
+                    bodyRMS: evidence.bodyRMS,
+                    tailRMS: evidence.tailRMS,
+                    tailToBodyDB: evidence.tailToBodyDB,
+                    spectralCentroidHz: evidence.spectralCentroidHz,
+                    incomingVoiceStateFingerprint:
+                        evidence.incomingVoiceStateFingerprint,
+                    outgoingVoiceStateFingerprint:
+                        evidence.outgoingVoiceStateFingerprint,
+                    finite: evidence.finite,
+                    stable: evidence.stable,
+                    capacityValid: evidence.capacityValid,
+                    scoreBindingValid: scoreBindingValid,
+                    routeBindingValid: evidence.routeBindingValid &&
+                        render.sampleRate == sampleRate
+                )
+            }.sorted { $0.scoreEventIndex < $1.scoreEventIndex }
+            result.append(AutonomousModalPercussionBarEvidence(
+                bar: block.bar,
+                sourceScoreEventCount: score.count,
+                sourceRenderEventCount: renderedEvents.count,
+                use: ModalPercussionUse.foundationCompanion.rawValue,
+                incomingStateFingerprint: render.incomingStateFingerprint,
+                outgoingStateFingerprint: render.outgoingStateFingerprint,
+                dryBarSampleHash: render.dryBarSampleHash,
+                activeIncomingVoiceCount: render.activeIncomingVoiceCount,
+                activeOutgoingVoiceCount: render.activeOutgoingVoiceCount,
+                continuationRendered: render.continuationRendered,
+                renderPassesMatch:
+                    block.modalPercussionRenderPassesMatch,
+                foundationRoutingValid: barBindingValid,
+                events: events
+            ))
+        }
+        return result
     }
 
     /// Keeps the spatial-FDN binding audit out of the already large candidate
@@ -4923,6 +5331,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             kickSyntax.allSatisfy { $0.isFinite } &&
             groovePulse.allSatisfy { $0.isFinite } &&
             closedHat.allSatisfy { $0.isFinite } &&
+            modalPercussion.allSatisfy { $0.isFinite } &&
             instruments.allSatisfy { $0.isFinite } &&
             percussionEchoTexture.allSatisfy { $0.isFinite } &&
             phraseComposition.allSatisfy { $0.finite } &&
@@ -4974,6 +5383,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         if !closedHatEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.closedHatEvidence)
         }
+        if !modalPercussionEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.modalPercussionEvidence)
+        }
         if !instrumentEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.instrumentEvidence)
         }
@@ -5007,6 +5419,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
               graph.isComplete, routeContinuation.isComplete,
               sourceInstrumentBarCount == instruments.count,
               instruments.count == fullMix.sourceBarCount,
+              sourceModalPercussionBarCount == modalPercussion.count,
+              modalPercussion.count == fullMix.sourceBarCount,
               sourcePercussionEchoTextureBarCount ==
                 percussionEchoTexture.count,
               percussionEchoTexture.count == fullMix.sourceBarCount,
@@ -5149,6 +5563,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceKickSyntaxBarCount == kickSyntax.count &&
             sourceGroovePulseBarCount == groovePulse.count &&
             sourceClosedHatBarCount == closedHat.count &&
+            sourceModalPercussionBarCount == modalPercussion.count &&
             sourceInstrumentBarCount == instruments.count &&
             sourcePercussionEchoTextureBarCount ==
                 percussionEchoTexture.count &&
@@ -5162,6 +5577,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             kickSyntax.count == fullMix.sourceBarCount &&
             groovePulse.count == fullMix.sourceBarCount &&
             closedHat.count == fullMix.sourceBarCount &&
+            modalPercussion.count == fullMix.sourceBarCount &&
             instruments.count == fullMix.sourceBarCount &&
             percussionEchoTexture.count == fullMix.sourceBarCount &&
             phraseComposition.count == fullMix.sourceBarCount &&
@@ -5325,6 +5741,35 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             closedHat.allSatisfy {
                 $0.isComplete(sampleRate: routeContinuation.sampleRate)
             } && closedHat.count == fullMix.sourceBarCount
+    }
+
+    @inline(never)
+    private func modalPercussionEvidenceIsComplete(
+        expectedBars: Set<Int>
+    ) -> Bool {
+        guard Set(modalPercussion.map(\.bar)) == expectedBars,
+              modalPercussion.map(\.bar) == fullMix.bars.map(\.bar),
+              modalPercussion.count == fullMix.sourceBarCount,
+              modalPercussion.allSatisfy({
+                  $0.isComplete(sampleRate: routeContinuation.sampleRate)
+              }) else {
+            return false
+        }
+        for index in modalPercussion.indices {
+            let bar = modalPercussion[index]
+            if index > 0,
+               bar.incomingStateFingerprint !=
+                modalPercussion[index - 1].outgoingStateFingerprint {
+                return false
+            }
+            if !bar.events.allSatisfy({
+                $0.outgoingVoiceStateFingerprint ==
+                    bar.outgoingStateFingerprint
+            }) {
+                return false
+            }
+        }
+        return true
     }
 
     @inline(never)
@@ -5521,6 +5966,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceKickSyntaxBarCount <= Self.maximumBarCount &&
             sourceGroovePulseBarCount >= groovePulse.count &&
             sourceClosedHatBarCount >= closedHat.count &&
+            sourceModalPercussionBarCount >= modalPercussion.count &&
+            sourceModalPercussionBarCount <= Self.maximumBarCount &&
             sourceInstrumentBarCount >= instruments.count &&
             sourcePercussionEchoTextureBarCount >=
                 percussionEchoTexture.count &&
@@ -5561,6 +6008,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             kickSyntax.count <= Self.maximumBarCount &&
             groovePulse.count <= Self.maximumBarCount &&
             closedHat.count <= Self.maximumBarCount &&
+            modalPercussion.count <= Self.maximumBarCount &&
             instruments.count <= Self.maximumBarCount &&
             percussionEchoTexture.count <= Self.maximumBarCount &&
             phraseComposition.count <= Self.maximumBarCount &&
@@ -5586,7 +6034,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         maskingRecordsAreBounded() && stemRecordsAreBounded() &&
             automaticMixRecordsAreBounded() && kickSyntaxRecordsAreBounded() &&
             groovePulseRecordsAreBounded() &&
-            closedHatRecordsAreBounded() && instrumentRecordsAreBounded() &&
+            closedHatRecordsAreBounded() &&
+            modalPercussionRecordsAreBounded() &&
+            instrumentRecordsAreBounded() &&
             percussionEchoTextureRecordsAreBounded() &&
             pulseEchoDriveRecordsAreBounded() &&
             spatialFDNRecordsAreBounded() && upperTimingRecordsAreBounded()
@@ -5652,6 +6102,25 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             return false
         }
         return true
+    }
+
+    @inline(never)
+    private func modalPercussionRecordsAreBounded() -> Bool {
+        modalPercussion.map(\.bar) == fullMix.bars.map(\.bar) &&
+            modalPercussion.allSatisfy {
+                $0.sourceScoreEventCount >= 0 &&
+                    $0.sourceScoreEventCount <=
+                        Self.maximumModalPercussionEventsPerBar &&
+                    $0.sourceRenderEventCount >= 0 &&
+                    $0.sourceRenderEventCount <=
+                        Self.maximumModalPercussionEventsPerBar &&
+                    $0.events.count <=
+                        Self.maximumModalPercussionEventsPerBar &&
+                    (0...ModalPercussionVoice.voiceCapacity)
+                        .contains($0.activeIncomingVoiceCount) &&
+                    (0...ModalPercussionVoice.voiceCapacity)
+                        .contains($0.activeOutgoingVoiceCount)
+            }
     }
 
     @inline(never)
@@ -5911,7 +6380,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
 }
 
 package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sendable {
-    package static let schemaVersion = 2
+    package static let schemaVersion = 3
     package static let maximumCorrectionAttempts =
         QualityQualificationContract.maximumCorrectionRenders
     package static let maximumAttemptCount =
@@ -6064,6 +6533,7 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
             correction.graph == initial.graph &&
             correction.kickSyntax == initial.kickSyntax &&
             correction.climaxArc == initial.climaxArc &&
+            correction.modalPercussion == initial.modalPercussion &&
             sharedRouteInputsMatch(correction, initial) &&
             zip(correction.instruments, initial.instruments).allSatisfy {
                 corrected, source in

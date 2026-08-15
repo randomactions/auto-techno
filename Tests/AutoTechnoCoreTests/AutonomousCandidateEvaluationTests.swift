@@ -28,6 +28,186 @@ struct AutonomousCandidateEvaluationTests {
                 decoded.postGraphUpperTimbreEvidence)
     }
 
+    @Test("Modal percussion evidence binds score, signal, route, and stem facts")
+    func modalPercussionEvidenceContract() throws {
+        let neutral = fixtureVector()
+        let activeBar = fixtureModalPercussionBar(
+            events: [fixtureModalPercussionEvent()]
+        )
+        let active = fixtureVector(modalPercussionBar: activeBar)
+        let event = try #require(active.modalPercussion.first?.events.first)
+
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 19)
+        #expect(neutral.isComplete)
+        #expect(active.isComplete)
+        #expect(active.isFinite)
+        #expect(event.use == ModalPercussionUse.foundationCompanion.rawValue)
+        #expect(event.modeCount == ModalPercussionVoice.modeCount)
+        #expect(event.requestedFundamentalHz == event.appliedFundamentalHz)
+        #expect(event.scoreBindingValid)
+        #expect(event.routeBindingValid)
+        #expect(active.fingerprint != neutral.fingerprint)
+        let decoded = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: active.deterministicJSON()
+        )
+        #expect(decoded == active)
+    }
+
+    @Test("Modal percussion covers every empty and active bar exactly once")
+    func modalPercussionEvidenceCoversEmptyAndActiveBars() throws {
+        let first = fixtureModalPercussionEvent(
+            scoreEventIndex: 0,
+            step: 10,
+            incomingVoiceStateFingerprint: "1111111111111111",
+            outgoingVoiceStateFingerprint: "2222222222222222"
+        )
+        let second = fixtureModalPercussionEvent(
+            scoreEventIndex: 1,
+            step: 14,
+            fundamentalHz: 146.832_383_958_703_8,
+            incomingVoiceStateFingerprint: "3333333333333333",
+            outgoingVoiceStateFingerprint: "2222222222222222"
+        )
+        let baseline = fixtureVector(modalPercussionBar:
+            fixtureModalPercussionBar(events: [first, second])
+        )
+        #expect(baseline.isComplete)
+        #expect(fixtureVector().modalPercussion.first?.events.isEmpty == true)
+
+        let missing = try tamperedVector(baseline) {
+            $0["sourceModalPercussionBarCount"] = 0
+            $0["modalPercussion"] = []
+        }
+        #expect(missing.completenessFailures.contains(.modalPercussionEvidence))
+
+        let duplicate = try tamperedModalBar(baseline) { bar in
+            var events = try #require(bar["events"] as? [[String: Any]])
+            events[1]["scoreEventIndex"] = 0
+            bar["events"] = events
+        }
+        #expect(duplicate.completenessFailures.contains(.modalPercussionEvidence))
+
+        let reordered = try tamperedModalBar(baseline) { bar in
+            let events = try #require(bar["events"] as? [[String: Any]])
+            bar["events"] = Array(events.reversed())
+        }
+        #expect(reordered.completenessFailures.contains(.modalPercussionEvidence))
+
+        let countMismatch = try tamperedModalBar(baseline) { bar in
+            bar["sourceRenderEventCount"] = 1
+        }
+        #expect(countMismatch.completenessFailures.contains(.modalPercussionEvidence))
+    }
+
+    @Test("Modal percussion rejects detuning, unstable poles, extra onsets, and wrong stems")
+    func modalPercussionRejectsDetuningUnstablePoleExtraOnsetAndWrongStem() throws {
+        let baseline = fixtureVector(modalPercussionBar:
+            fixtureModalPercussionBar(events: [fixtureModalPercussionEvent()])
+        )
+        let eventAttacks: [(String, Any)] = [
+            ("appliedFundamentalHz", 111.0),
+            ("maximumPoleRadius", 1.0),
+            ("modeCount", 7),
+            ("use", ModalPercussionUse.sparsePercussion.rawValue),
+        ]
+        for (field, value) in eventAttacks {
+            let attacked = try tamperedModalEvent(baseline) { event in
+                event[field] = value
+            }
+            #expect(attacked.completenessFailures.contains(.modalPercussionEvidence))
+        }
+
+        let extraOnset = try tamperedModalBar(baseline) { bar in
+            bar["sourceRenderEventCount"] = 2
+        }
+        #expect(extraOnset.completenessFailures.contains(.modalPercussionEvidence))
+
+        let wrongStem = try tamperedModalBar(baseline) { bar in
+            bar["foundationRoutingValid"] = false
+        }
+        #expect(wrongStem.completenessFailures.contains(.modalPercussionEvidence))
+    }
+
+    @Test("Modal percussion rejects forged binding, continuation, route, hash, and non-finite facts")
+    func modalPercussionRejectsForgedBindingContinuationRouteAndNonFiniteEvidence()
+            throws {
+        let baseline = fixtureVector(modalPercussionBar:
+            fixtureModalPercussionBar(events: [fixtureModalPercussionEvent()])
+        )
+        let bindingAttacks: [(String, Any)] = [
+            ("scoreBindingValid", false),
+            ("routeBindingValid", false),
+            ("incomingVoiceStateFingerprint", "bad"),
+            ("outgoingVoiceStateFingerprint", "bad"),
+            ("drySampleHash", "bad"),
+        ]
+        for (field, value) in bindingAttacks {
+            let attacked = try tamperedModalEvent(baseline) { event in
+                event[field] = value
+            }
+            #expect(attacked.completenessFailures.contains(.modalPercussionEvidence))
+        }
+        for field in ["incomingStateFingerprint", "outgoingStateFingerprint"] {
+            let attacked = try tamperedModalBar(baseline) { bar in
+                bar[field] = "bad"
+            }
+            #expect(attacked.completenessFailures.contains(.modalPercussionEvidence))
+        }
+        let passMismatch = try tamperedModalBar(baseline) { bar in
+            bar["renderPassesMatch"] = false
+        }
+        #expect(passMismatch.completenessFailures.contains(.modalPercussionEvidence))
+
+        let nonFinite = fixtureVector(modalPercussionBar:
+            fixtureModalPercussionBar(events: [fixtureModalPercussionEvent(
+                rms: .nan,
+                finite: false
+            )])
+        )
+        #expect(!nonFinite.isFinite)
+        #expect(nonFinite.completenessFailures.contains(.modalPercussionEvidence))
+    }
+
+    @Test("Modal percussion correction evidence must exactly match the initial attempt")
+    func modalPercussionCorrectionMustMatchInitial() {
+        let initialVector = fixtureVector(modalPercussionBar:
+            fixtureModalPercussionBar(events: [fixtureModalPercussionEvent()])
+        )
+        let changedVector = fixtureVector(modalPercussionBar:
+            fixtureModalPercussionBar(events: [fixtureModalPercussionEvent(
+                spectralCentroidHz: 720
+            )])
+        )
+        func transaction(
+            correction: AutonomousCandidateEvaluationVector
+        ) -> AutonomousCandidateEvaluationTransaction {
+            AutonomousCandidateEvaluationTransaction(
+                engineVersion: QualityQualificationContract.engineVersion,
+                policyVersion: "primary-test",
+                evaluatorVersion: "primary-test",
+                planFingerprint: initialVector.planFingerprint,
+                attempts: [
+                    AutonomousCandidateAttempt(
+                        kind: .initialRender,
+                        vector: initialVector
+                    ),
+                    AutonomousCandidateAttempt(
+                        kind: .correctionRender,
+                        forceHomeUpperTimbre: true,
+                        vector: correction
+                    ),
+                ],
+                selectedAttemptIndex: 1,
+                correctionCount: 1
+            )
+        }
+
+        #expect(transaction(correction: initialVector).isComplete)
+        #expect(!transaction(correction: changedVector).isComplete)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 3)
+    }
+
     @Test("Kick syntax evidence binds score, render, silence, and remains playback-gate-neutral")
     func kickSyntaxEvidenceContract() throws {
         let baseline = fixtureVector()
@@ -859,7 +1039,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 18)
+        #expect(vector.schemaVersion == 19)
         #expect(QualityQualificationContract.schemaVersion == 20)
         #expect(QualityQualificationContract.engineVersion ==
                 "autotechno-canonical-engine.v19")
@@ -2941,6 +3121,7 @@ struct AutonomousCandidateEvaluationTests {
         climaxArc: AutonomousClimaxArcEvidence? = nil,
         groovePulseBar: AutonomousGroovePulseBarEvidence? = nil,
         closedHatBar: AutonomousClosedHatBarEvidence? = nil,
+        modalPercussionBar: AutonomousModalPercussionBarEvidence? = nil,
         instrumentBar: AutonomousInstrumentBarEvidence? = nil,
         percussionEchoTextureBar:
             AutonomousPercussionEchoTextureBarEvidence? = nil,
@@ -3136,6 +3317,8 @@ struct AutonomousCandidateEvaluationTests {
                 sourceRenderEventCount: 0,
                 events: []
             )],
+            modalPercussion: [modalPercussionBar ??
+                fixtureModalPercussionBar(bar: evidenceBar)],
             instruments: [instrumentBar ?? AutonomousInstrumentBarEvidence(
                 bar: evidenceBar,
                 evidence: []
@@ -3162,6 +3345,131 @@ struct AutonomousCandidateEvaluationTests {
             preGraphUpperTimbreEvidence: upper,
             postGraphUpperTimbreEvidence: upper
         )
+    }
+
+    private func fixtureModalPercussionEvent(
+        scoreEventIndex: Int = 0,
+        step: Int = 10,
+        use: ModalPercussionUse = .foundationCompanion,
+        fundamentalHz: Double = 110,
+        appliedFundamentalHz: Double? = nil,
+        maximumPoleRadius: Double = 0.998,
+        incomingVoiceStateFingerprint: String = "1111111111111111",
+        outgoingVoiceStateFingerprint: String = "2222222222222222",
+        rms: Double = 0.003,
+        spectralCentroidHz: Double = 620,
+        scoreBindingValid: Bool = true,
+        routeBindingValid: Bool = true,
+        finite: Bool = true
+    ) -> AutonomousModalPercussionEventEvidence {
+        AutonomousModalPercussionEventEvidence(
+            scoreEventIndex: scoreEventIndex,
+            step: step,
+            use: use.rawValue,
+            modalIdentity: ModalIdentity.dorian.rawValue,
+            modalDegree: scoreEventIndex == 0 ? 0 : 5,
+            octave: 1,
+            requestedFundamentalHz: fundamentalHz,
+            appliedFundamentalHz: appliedFundamentalHz ?? fundamentalHz,
+            excitation: 0.72,
+            damping: 0.60,
+            brightness: 0.34,
+            inharmonicity: 0.025,
+            intensity: 0.58,
+            modeCount: ModalPercussionVoice.modeCount,
+            modeRatioFingerprint: "0123456789abcdef",
+            minimumModeFrequencyHz: fundamentalHz,
+            maximumModeFrequencyHz: fundamentalHz * 4.63,
+            maximumPoleRadius: maximumPoleRadius,
+            excitationFingerprint: "123456789abcdef0",
+            drySampleHash: "23456789abcdef01",
+            renderedFrameCount: 14_769,
+            nonzeroSampleCount: 2_048,
+            peak: 0.02,
+            rms: rms,
+            crestFactor: 0.02 / max(0.000_001, rms.isFinite ? rms : 0.003),
+            attackRMS: 0.01,
+            bodyRMS: 0.005,
+            tailRMS: 0.002,
+            tailToBodyDB: -7.958_800_173_440_752,
+            spectralCentroidHz: spectralCentroidHz,
+            incomingVoiceStateFingerprint: incomingVoiceStateFingerprint,
+            outgoingVoiceStateFingerprint: outgoingVoiceStateFingerprint,
+            finite: finite,
+            stable: true,
+            capacityValid: true,
+            scoreBindingValid: scoreBindingValid,
+            routeBindingValid: routeBindingValid
+        )
+    }
+
+    private func fixtureModalPercussionBar(
+        bar: Int = 0,
+        events: [AutonomousModalPercussionEventEvidence] = [],
+        sourceScoreEventCount: Int? = nil,
+        sourceRenderEventCount: Int? = nil,
+        incomingStateFingerprint: String = "1111111111111111",
+        outgoingStateFingerprint: String = "2222222222222222",
+        foundationRoutingValid: Bool = true,
+        renderPassesMatch: Bool = true
+    ) -> AutonomousModalPercussionBarEvidence {
+        AutonomousModalPercussionBarEvidence(
+            bar: bar,
+            sourceScoreEventCount: sourceScoreEventCount ?? events.count,
+            sourceRenderEventCount: sourceRenderEventCount ?? events.count,
+            use: ModalPercussionUse.foundationCompanion.rawValue,
+            incomingStateFingerprint: incomingStateFingerprint,
+            outgoingStateFingerprint: events.isEmpty
+                ? incomingStateFingerprint : outgoingStateFingerprint,
+            dryBarSampleHash: events.isEmpty
+                ? ExactPCMFingerprint.mono(
+                    [Float](repeating: 0, count: 14_769)
+                ) : "3456789abcdef012",
+            activeIncomingVoiceCount: 0,
+            activeOutgoingVoiceCount: events.count,
+            continuationRendered: false,
+            renderPassesMatch: renderPassesMatch,
+            foundationRoutingValid: foundationRoutingValid,
+            events: events
+        )
+    }
+
+    private func tamperedVector(
+        _ source: AutonomousCandidateEvaluationVector,
+        mutate: (inout [String: Any]) throws -> Void
+    ) throws -> AutonomousCandidateEvaluationVector {
+        var object = try #require(JSONSerialization.jsonObject(
+            with: source.deterministicJSON()
+        ) as? [String: Any])
+        try mutate(&object)
+        return try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+    }
+
+    private func tamperedModalBar(
+        _ source: AutonomousCandidateEvaluationVector,
+        mutate: (inout [String: Any]) throws -> Void
+    ) throws -> AutonomousCandidateEvaluationVector {
+        try tamperedVector(source) { object in
+            var bars = try #require(
+                object["modalPercussion"] as? [[String: Any]]
+            )
+            try mutate(&bars[0])
+            object["modalPercussion"] = bars
+        }
+    }
+
+    private func tamperedModalEvent(
+        _ source: AutonomousCandidateEvaluationVector,
+        mutate: (inout [String: Any]) throws -> Void
+    ) throws -> AutonomousCandidateEvaluationVector {
+        try tamperedModalBar(source) { bar in
+            var events = try #require(bar["events"] as? [[String: Any]])
+            try mutate(&events[0])
+            bar["events"] = events
+        }
     }
 
     private func fixtureKickSyntax(

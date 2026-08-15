@@ -4,6 +4,14 @@ import Testing
 
 @Suite("Single primary evaluator readiness", .serialized)
 struct PrimaryEvaluatorReadinessTests {
+    @Test("Modal evidence is non-compensable before the primary policy")
+    func modalEvidencePrecedesPrimaryPolicy() {
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 19)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 3)
+        #expect(AutonomousCandidateCompletenessFailure.modalPercussionEvidence
+            .rawValue == "modal-percussion-evidence")
+    }
+
     @Test("The maximum two-pass primary preparation fits the declared memory envelope")
     func representativeRateWorkingSetEnvelope() throws {
         #expect(QualityQualificationContract.maximumRenderPasses == 2)

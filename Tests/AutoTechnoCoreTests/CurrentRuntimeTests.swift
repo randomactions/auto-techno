@@ -84,6 +84,8 @@ struct CurrentRuntimeTests {
             protectedFoundationSampleHash: source.protectedFoundationSampleHash,
             percussionSampleHash: source.percussionSampleHash,
             protectedRhythmSampleHash: source.protectedRhythmSampleHash,
+            dryModalPercussionSampleHash:
+                source.dryModalPercussionSampleHash,
             modalPercussionRenderEvidence:
                 source.modalPercussionRenderEvidence,
             modalPercussionRenderPassesMatch:

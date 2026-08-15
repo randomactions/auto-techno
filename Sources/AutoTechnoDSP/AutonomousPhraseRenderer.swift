@@ -908,6 +908,7 @@ package struct RenderBlock: Equatable, Sendable {
     package let protectedRhythmSampleHash: String
     /// Same-pass modal-foundation evidence from the protected render that is
     /// actually scheduled with the accepted block.
+    package let dryModalPercussionSampleHash: String
     package let modalPercussionRenderEvidence: ModalPercussionBarRenderEvidence
     package let modalPercussionRenderPassesMatch: Bool
     package let modalPercussionFoundationRoutingValid: Bool
@@ -956,6 +957,7 @@ package struct RenderBlock: Equatable, Sendable {
                 protectedFoundationSampleHash: String,
                 percussionSampleHash: String,
                 protectedRhythmSampleHash: String,
+                dryModalPercussionSampleHash: String,
                 modalPercussionRenderEvidence: ModalPercussionBarRenderEvidence,
                 modalPercussionRenderPassesMatch: Bool,
                 modalPercussionFoundationRoutingValid: Bool,
@@ -994,6 +996,7 @@ package struct RenderBlock: Equatable, Sendable {
         self.protectedFoundationSampleHash = protectedFoundationSampleHash
         self.percussionSampleHash = percussionSampleHash
         self.protectedRhythmSampleHash = protectedRhythmSampleHash
+        self.dryModalPercussionSampleHash = dryModalPercussionSampleHash
         self.modalPercussionRenderEvidence = modalPercussionRenderEvidence
         self.modalPercussionRenderPassesMatch = modalPercussionRenderPassesMatch
         self.modalPercussionFoundationRoutingValid =
@@ -1555,6 +1558,8 @@ package enum AutonomousPhraseRenderer {
                     left: protectedRhythm.leftSamples,
                     right: protectedRhythm.rightSamples
                 ),
+                dryModalPercussionSampleHash:
+                    protectedRhythm.dryModalPercussionSampleHash,
                 modalPercussionRenderEvidence:
                     protectedRhythm.modalPercussionRenderEvidence,
                 modalPercussionRenderPassesMatch:

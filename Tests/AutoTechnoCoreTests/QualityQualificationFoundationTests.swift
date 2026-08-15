@@ -1,5 +1,5 @@
 import AutoTechnoCore
-import AutoTechnoDSP
+@testable import AutoTechnoDSP
 import Foundation
 import Testing
 
@@ -850,6 +850,26 @@ struct QualityQualificationFoundationTests {
                 bar: 0,
                 sourceScoreEventCount: 0,
                 sourceRenderEventCount: 0,
+                events: []
+            )],
+            modalPercussion: [AutonomousModalPercussionBarEvidence(
+                bar: 0,
+                sourceScoreEventCount: 0,
+                sourceRenderEventCount: 0,
+                use: ModalPercussionUse.foundationCompanion.rawValue,
+                incomingStateFingerprint: "1111111111111111",
+                outgoingStateFingerprint: "1111111111111111",
+                dryBarSampleHash: ExactPCMFingerprint.mono(
+                    [Float](repeating: 0, count: Int((
+                        240.0 / AutonomousSessionDirector.bpm *
+                            evidence.sampleRate
+                    ).rounded()))
+                ),
+                activeIncomingVoiceCount: 0,
+                activeOutgoingVoiceCount: 0,
+                continuationRendered: false,
+                renderPassesMatch: true,
+                foundationRoutingValid: true,
                 events: []
             )],
             instruments: [AutonomousInstrumentBarEvidence(bar: 0, evidence: [])],
