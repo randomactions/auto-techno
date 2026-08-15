@@ -5,13 +5,14 @@ import Foundation
 /// scratch buffers; it never constructs a phrase-sized mono or spectrogram
 /// array.
 package final class StreamingPerceptualEvidence: Codable, Equatable, Sendable {
-    package static let schemaVersion = 1
+    package static let schemaVersion = 2
     package static let analyzerVersion =
-        "autotechno-streaming-perceptual-evidence.v1"
+        "autotechno-streaming-perceptual-evidence.v2"
 
     package let schemaVersion: Int
     package let analyzerVersion: String
     package let sourceFrameCount: Int
+    package let analysisFrameCount: Int
     package let fftFrameCount: Int
     package let hopFrameCount: Int
     package let analyzedWindowCount: Int
@@ -33,6 +34,7 @@ package final class StreamingPerceptualEvidence: Codable, Equatable, Sendable {
         schemaVersion: Int,
         analyzerVersion: String,
         sourceFrameCount: Int,
+        analysisFrameCount: Int,
         fftFrameCount: Int,
         hopFrameCount: Int,
         analyzedWindowCount: Int,
@@ -53,6 +55,7 @@ package final class StreamingPerceptualEvidence: Codable, Equatable, Sendable {
         self.schemaVersion = schemaVersion
         self.analyzerVersion = analyzerVersion
         self.sourceFrameCount = sourceFrameCount
+        self.analysisFrameCount = analysisFrameCount
         self.fftFrameCount = fftFrameCount
         self.hopFrameCount = hopFrameCount
         self.analyzedWindowCount = analyzedWindowCount
@@ -78,6 +81,7 @@ package final class StreamingPerceptualEvidence: Codable, Equatable, Sendable {
         lhs.schemaVersion == rhs.schemaVersion &&
             lhs.analyzerVersion == rhs.analyzerVersion &&
             lhs.sourceFrameCount == rhs.sourceFrameCount &&
+            lhs.analysisFrameCount == rhs.analysisFrameCount &&
             lhs.fftFrameCount == rhs.fftFrameCount &&
             lhs.hopFrameCount == rhs.hopFrameCount &&
             lhs.analyzedWindowCount == rhs.analyzedWindowCount &&
@@ -97,17 +101,20 @@ package final class StreamingPerceptualEvidence: Codable, Equatable, Sendable {
     }
 
     package var isComplete: Bool {
-        let expectedWindows = sourceFrameCount >= fftFrameCount
-            ? 1 + (sourceFrameCount - fftFrameCount) / hopFrameCount
+        let expectedWindows = sourceFrameCount >= analysisFrameCount
+            ? 1 + (sourceFrameCount - analysisFrameCount) / hopFrameCount
             : 0
         return schemaVersion == Self.schemaVersion &&
             analyzerVersion == Self.analyzerVersion &&
-            sourceFrameCount >= 0 && fftFrameCount >= 2 &&
+            sourceFrameCount >= 0 && analysisFrameCount >= 2 &&
+            analysisFrameCount <= fftFrameCount && fftFrameCount >= 2 &&
             fftFrameCount.nonzeroBitCount == 1 &&
-            hopFrameCount == fftFrameCount / 2 &&
+            hopFrameCount == analysisFrameCount / 2 &&
             analyzedWindowCount == expectedWindows &&
             (0...analyzedWindowCount).contains(activeWindowCount) &&
-            maximumBufferedFrameCount == min(sourceFrameCount, fftFrameCount) &&
+            maximumBufferedFrameCount == min(
+                sourceFrameCount, analysisFrameCount
+            ) &&
             peakWorkingByteCount > 0
     }
 }
@@ -117,15 +124,20 @@ package enum StreamingPerceptualEvidenceAnalyzer {
     package static let minimumFFTFrameCount = 512
     package static let maximumFFTFrameCount = 8_192
 
-    package static func fftFrameCount(sampleRate: Double) -> Int {
+    package static func analysisFrameCount(sampleRate: Double) -> Int {
         guard sampleRate.isFinite, sampleRate > 0 else {
             return minimumFFTFrameCount
         }
         let target = max(2, Int((sampleRate * targetWindowSeconds).rounded()))
+        return target.isMultiple(of: 2) ? target : target + 1
+    }
+
+    package static func fftFrameCount(sampleRate: Double) -> Int {
+        let target = analysisFrameCount(sampleRate: sampleRate)
         var lower = 1
         while lower <= target / 2 { lower *= 2 }
-        let upper = lower < Int.max / 2 ? lower * 2 : lower
-        let selected = target - lower <= upper - target ? lower : upper
+        let selected = lower < target && lower < Int.max / 2
+            ? lower * 2 : lower
         return min(maximumFFTFrameCount, max(minimumFFTFrameCount, selected))
     }
 
@@ -187,6 +199,7 @@ package enum StreamingPerceptualEvidenceAnalyzer {
 
     private struct Accumulator {
         let sampleRate: Double
+        let analysisSize: Int
         let fftSize: Int
         let hopSize: Int
         var ring: [Double]
@@ -213,11 +226,13 @@ package enum StreamingPerceptualEvidenceAnalyzer {
 
         init(sampleRate: Double) {
             self.sampleRate = sampleRate
+            analysisSize = StreamingPerceptualEvidenceAnalyzer
+                .analysisFrameCount(sampleRate: sampleRate)
             fftSize = StreamingPerceptualEvidenceAnalyzer.fftFrameCount(
                 sampleRate: sampleRate
             )
-            hopSize = fftSize / 2
-            ring = [Double](repeating: 0, count: fftSize)
+            hopSize = analysisSize / 2
+            ring = [Double](repeating: 0, count: analysisSize)
             real = [Double](repeating: 0, count: fftSize)
             imaginary = [Double](repeating: 0, count: fftSize)
             previousNormalizedMagnitude = [Double](
@@ -242,10 +257,10 @@ package enum StreamingPerceptualEvidenceAnalyzer {
                 let rightSample = Double(right[index])
                 if !leftSample.isFinite || !rightSample.isFinite { finite = false }
                 let mono = (leftSample + rightSample) * 0.5
-                ring[sourceFrameCount % fftSize] = mono
+                ring[sourceFrameCount % analysisSize] = mono
                 sourceFrameCount += 1
-                if sourceFrameCount >= fftSize,
-                   (sourceFrameCount - fftSize).isMultiple(of: hopSize) {
+                if sourceFrameCount >= analysisSize,
+                   (sourceFrameCount - analysisSize).isMultiple(of: hopSize) {
                     guard analyzeWindow(
                         cancellationRequested: cancellationRequested
                     ) else { return false }
@@ -258,16 +273,24 @@ package enum StreamingPerceptualEvidenceAnalyzer {
             cancellationRequested: @escaping @Sendable () -> Bool
         ) -> Bool {
             guard !cancellationRequested() else { return false }
-            let oldest = sourceFrameCount % fftSize
+            let oldest = sourceFrameCount % analysisSize
             var squareSum = 0.0
             for index in 0..<fftSize {
-                let sample = ring[(oldest + index) % fftSize]
-                let window = 0.5 - 0.5 * cos(
-                    2 * Double.pi * Double(index) / Double(fftSize - 1)
-                )
+                let sample: Double
+                let window: Double
+                if index < analysisSize {
+                    sample = ring[(oldest + index) % analysisSize]
+                    window = 0.5 - 0.5 * cos(
+                        2 * Double.pi * Double(index) /
+                            Double(analysisSize - 1)
+                    )
+                    squareSum += sample * sample
+                } else {
+                    sample = 0
+                    window = 0
+                }
                 real[index] = sample * window
                 imaginary[index] = 0
-                squareSum += sample * sample
             }
             guard Self.fft(
                 real: &real,
@@ -276,7 +299,7 @@ package enum StreamingPerceptualEvidenceAnalyzer {
             ) else { return false }
 
             analyzedWindowCount += 1
-            let rms = sqrt(squareSum / Double(fftSize))
+            let rms = sqrt(squareSum / Double(analysisSize))
             let rmsDB = rms > 0 ? 20 * log10(rms) : -120
             if let previousRMSDB {
                 let delta = abs(rmsDB - previousRMSDB)
@@ -366,16 +389,18 @@ package enum StreamingPerceptualEvidenceAnalyzer {
                     ? trajectoryDeltaSum / Double(trajectoryTransitionCount) : 0,
                 trajectoryDeltaPeak,
             ]
-            let scalarCount = fftSize * 3 + (fftSize / 2 + 1)
+            let scalarCount = analysisSize + fftSize * 2 +
+                (fftSize / 2 + 1)
             return StreamingPerceptualEvidence(
                 schemaVersion: StreamingPerceptualEvidence.schemaVersion,
                 analyzerVersion: StreamingPerceptualEvidence.analyzerVersion,
                 sourceFrameCount: sourceFrameCount,
+                analysisFrameCount: analysisSize,
                 fftFrameCount: fftSize,
                 hopFrameCount: hopSize,
                 analyzedWindowCount: analyzedWindowCount,
                 activeWindowCount: activeWindowCount,
-                maximumBufferedFrameCount: min(sourceFrameCount, fftSize),
+                maximumBufferedFrameCount: min(sourceFrameCount, analysisSize),
                 peakWorkingByteCount: scalarCount * MemoryLayout<Double>.stride,
                 spectralCentroidMeanHz: values[0],
                 spectralCentroidSpreadHz: values[1],

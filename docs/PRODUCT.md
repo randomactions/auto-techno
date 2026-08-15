@@ -123,11 +123,12 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v3 supplies standards-based phrase
-loudness/true-peak evidence plus bounded physical-time spectral and trajectory
+policy and its operational gates pass. Professional Evidence v4 supplies
+standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, explicit analysis-memory provenance, and complete canonical-journey
-report-bank validation. A frozen non-reconstructable development profile and
-passing adversarial suite now qualify complete 44.1/48 kHz engine banks offline.
+report-bank validation. A frozen non-reconstructable diverse profile, passing
+adversarial suite, and disjoint holdout report now qualify complete 44.1/48 kHz
+engine banks offline.
 They do not activate runtime ranking: the shipping policy remains truthfully
 unavailable and renders one primary candidate on the healthy path. The bounded
 transaction now has a passing representative-rate operational-readiness

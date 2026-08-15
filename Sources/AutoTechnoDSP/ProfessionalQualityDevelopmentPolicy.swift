@@ -47,9 +47,9 @@ package struct ProfessionalQualityDevelopmentQualification: Codable, Equatable,
 /// the uncalibrated evaluator until the later paired-selection roadmap stage.
 package struct ProfessionalQualityDevelopmentPolicy: Sendable {
     package static let policyVersion =
-        "autotechno-quality.development-calibrated.v1"
+        "autotechno-quality.development-calibrated.v2"
     package static let evaluatorVersion =
-        "autotechno-professional-quality-evaluator.v1"
+        "autotechno-professional-quality-evaluator.v2"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport

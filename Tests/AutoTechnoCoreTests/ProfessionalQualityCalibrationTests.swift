@@ -119,6 +119,75 @@ struct ProfessionalQualityCalibrationTests {
         #expect(verdict.failedMetrics == [.truePeakDBTP])
     }
 
+    @Test("Safer one-sided metrics accept improvement but reject regression")
+    func directionalSafetyBounds() throws {
+        let observations = try representativeObservations()
+        let profile = try ProfessionalQualityCalibrationProfile(
+            engineVersion: QualityQualificationContract.engineVersion,
+            sourceBankFingerprint: "directional-safety-test",
+            sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
+            observations: observations
+        )
+        let baseline = try #require(observations.first {
+            $0.checkpoint == .establishment && $0.sampleRate == 48_000
+        })
+        let checkpoint = try #require(profile[.establishment])
+        for metric in [
+            ProfessionalQualityMetric.truePeakDBTP,
+            .absoluteDCOffset,
+            .maximumBoundaryDelta,
+            .maskingMaximumOverlap,
+            .maskingOverlapWindowRatio,
+            .maskingLongestRunRatio,
+        ] {
+            let bounds = try #require(checkpoint[metric])
+            let improved = try baseline.replacing(
+                metric,
+                with: metric.semanticMinimum
+            )
+            let regressed = try baseline.replacing(
+                metric,
+                with: bounds.upper + max(0.001, abs(bounds.upper) * 0.01)
+            )
+            #expect(ProfessionalQualityProfileEvaluator.evaluate(
+                improved, against: profile
+            ).accepted)
+            let verdict = ProfessionalQualityProfileEvaluator.evaluate(
+                regressed, against: profile
+            )
+            #expect(!verdict.accepted)
+            #expect(verdict.failedMetrics == [metric])
+        }
+    }
+
+    @Test("Short-phrase loudness range remains descriptive")
+    func descriptiveLoudnessRange() throws {
+        let observations = try representativeObservations()
+        let profile = try ProfessionalQualityCalibrationProfile(
+            engineVersion: QualityQualificationContract.engineVersion,
+            sourceBankFingerprint: "descriptive-lra-test",
+            sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
+            observations: observations
+        )
+        let baseline = try #require(observations.first {
+            $0.checkpoint == .release && $0.sampleRate == 48_000
+        })
+        let extreme = try baseline.replacing(.loudnessRangeLU, with: 120)
+        #expect(ProfessionalQualityProfileEvaluator.evaluate(
+            extreme, against: profile
+        ).accepted)
+
+        let changed = try observations.map { observation in
+            observation.checkpoint == .release && observation.sampleRate == 44_100
+                ? try observation.replacing(.loudnessRangeLU, with: 120)
+                : observation
+        }
+        #expect(ProfessionalQualityRelationshipEvaluator.evaluate(
+            observations: changed,
+            against: profile
+        ).allSatisfy { $0.metric != .loudnessRangeLU })
+    }
+
     @Test("Frozen development policy evaluates later engines without enabling runtime ranking")
     func developmentPolicy() throws {
         let observations = try representativeObservations()
@@ -196,20 +265,14 @@ struct ProfessionalQualityCalibrationTests {
 
     @Test("Exact-engine paired policy selects only independently accepted candidates")
     func pairedCandidatePolicy() throws {
-        let observations = try representativeObservations()
-        let profile = try ProfessionalQualityCalibrationProfile(
-            engineVersion: QualityQualificationContract.engineVersion,
-            sourceBankFingerprint: "paired-candidate-policy-test",
-            sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
-            observations: observations
-        )
-        let adversarial = try ProfessionalQualityAdversarialSuiteReport(
-            profile: profile,
-            sourceObservations: observations
-        )
+        let artifacts = try diverseArtifacts()
+        let observations = artifacts.calibration.trajectories[1].observations
+        let profile = artifacts.profile
+        let adversarial = artifacts.adversarial
         let evaluator = try ProfessionalQualityPairedCandidateEvaluator(
             profile: profile,
-            adversarialSuite: adversarial
+            adversarialSuite: adversarial,
+            holdoutQualification: artifacts.holdout
         )
         #expect(evaluator.policyVersion.contains(profile.fingerprint))
         #expect(evaluator.policyVersion.contains(adversarial.fingerprint))
@@ -242,10 +305,12 @@ struct ProfessionalQualityCalibrationTests {
     @Test("Historical development artifacts cannot activate current-engine pairing")
     func staleProfileCannotActivatePairing() throws {
         let frozen = try ProfessionalQualityFrozenArtifacts.load()
+        let current = try diverseArtifacts()
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
             try ProfessionalQualityPairedCandidateEvaluator(
                 profile: frozen.profile,
-                adversarialSuite: frozen.adversarialSuite
+                adversarialSuite: frozen.adversarialSuite,
+                holdoutQualification: current.holdout
             )
         }
     }
@@ -256,6 +321,8 @@ struct ProfessionalQualityCalibrationTests {
 
         #expect(artifacts.profile.isComplete)
         #expect(artifacts.adversarialSuite.passed)
+        #expect(artifacts.profile.usesDiverseCalibration)
+        #expect(artifacts.holdoutQualification.qualified)
         #expect(artifacts.profile.engineVersion ==
                 QualityQualificationContract.engineVersion)
         #expect(artifacts.profile.evidenceVersion ==
@@ -272,16 +339,114 @@ struct ProfessionalQualityCalibrationTests {
             ProfessionalQualityPairedArtifacts
                 .expectedAdversarialSuiteFingerprint
         ))
+        #expect(artifacts.evaluator.policyVersion.contains(
+            ProfessionalQualityPairedArtifacts
+                .expectedHoldoutQualificationFingerprint
+        ))
         #expect(artifacts.evaluator.requiresPairedCandidates)
 
         let reloaded = try ProfessionalQualityPairedArtifacts(
             profileData: artifacts.profile.deterministicJSON(),
-            adversarialSuiteData: artifacts.adversarialSuite.deterministicJSON()
+            adversarialSuiteData: artifacts.adversarialSuite.deterministicJSON(),
+            holdoutQualificationData: artifacts.holdoutQualification
+                .deterministicJSON()
         )
         #expect(reloaded.profile == artifacts.profile)
         #expect(reloaded.adversarialSuite == artifacts.adversarialSuite)
+        #expect(reloaded.holdoutQualification ==
+                artifacts.holdoutQualification)
         #expect(reloaded.evaluator.policyVersion ==
                 artifacts.evaluator.policyVersion)
+    }
+
+    @Test("Diverse corpus identity is ordered and bounded")
+    func diverseCorpusIdentity() throws {
+        let trajectories = try (0..<24).map { index in
+            try ProfessionalQualityCalibrationTrajectory(
+                sourceBankFingerprint: "corpus-\(index)",
+                observations: representativeObservations(
+                    trajectoryOffset: Double(index) * 0.001
+                )
+            )
+        }
+        let forward = try ProfessionalQualityCalibrationCorpus(
+            trajectories: trajectories
+        )
+        let reversed = try ProfessionalQualityCalibrationCorpus(
+            trajectories: Array(trajectories.reversed())
+        )
+
+        #expect(forward == reversed)
+        #expect(forward.fingerprint == reversed.fingerprint)
+        #expect(forward.sourceTrajectoryCount == 24)
+        #expect(forward.sourceObservationCount == 24 * 14)
+        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
+            try ProfessionalQualityCalibrationProfile(
+                corpus: ProfessionalQualityCalibrationCorpus(
+                    trajectories: Array(trajectories.dropLast())
+                )
+            )
+        }
+    }
+
+    @Test("Holdout qualification requires disjoint accepted journeys")
+    func holdoutDisjointnessAndAcceptance() throws {
+        let artifacts = try diverseArtifacts()
+        let overlapCorpus = try ProfessionalQualityCalibrationCorpus(
+            trajectories: [artifacts.calibration.trajectories[0]] +
+                (0..<3).map { index in
+                    try ProfessionalQualityCalibrationTrajectory(
+                        sourceBankFingerprint: "overlap-holdout-\(index)",
+                        observations: representativeObservations()
+                    )
+                }
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityHoldoutQualification(
+                profile: artifacts.profile,
+                adversarialSuite: artifacts.adversarial,
+                calibrationCorpus: artifacts.calibration,
+                holdoutCorpus: overlapCorpus
+            )
+        }
+
+        let release = try #require(artifacts.profile[.release])
+        let peak = try #require(release[.truePeakDBTP])
+        var rejectedObservations = try representativeObservations()
+        let targetIndex = try #require(rejectedObservations.firstIndex {
+            $0.checkpoint == .release && $0.sampleRate == 48_000
+        })
+        rejectedObservations[targetIndex] = try rejectedObservations[targetIndex]
+            .replacing(.truePeakDBTP, with: peak.upper + 0.1)
+        let rejectedCorpus = try ProfessionalQualityCalibrationCorpus(
+            trajectories: [
+                try ProfessionalQualityCalibrationTrajectory(
+                    sourceBankFingerprint: "rejected-holdout",
+                    observations: rejectedObservations
+                ),
+            ] + (0..<3).map { index in
+                try ProfessionalQualityCalibrationTrajectory(
+                    sourceBankFingerprint: "accepted-holdout-\(index)",
+                    observations: representativeObservations()
+                )
+            }
+        )
+        let holdout = try ProfessionalQualityHoldoutQualification(
+            profile: artifacts.profile,
+            adversarialSuite: artifacts.adversarial,
+            calibrationCorpus: artifacts.calibration,
+            holdoutCorpus: rejectedCorpus
+        )
+        #expect(!holdout.qualified)
+        #expect(holdout.acceptedObservationCount ==
+                holdout.sourceObservationCount - 1)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPairedCandidateEvaluator(
+                profile: artifacts.profile,
+                adversarialSuite: artifacts.adversarial,
+                holdoutQualification: holdout
+            )
+        }
     }
 
     @Test("Preparation evaluator is calibrated only for preloaded covered routes")
@@ -295,7 +460,7 @@ struct ProfessionalQualityCalibrationTests {
         #expect(available.requiresPairedCandidates)
         #expect(available.policyVersion == artifacts.evaluator.policyVersion)
         #expect(available.evaluatorVersion == artifacts.evaluator.evaluatorVersion)
-        #expect(available.policyVersion.contains("paired-calibrated.v2"))
+        #expect(available.policyVersion.contains("paired-calibrated.v3"))
 
         let unsupported = ProfessionalQualityPreparationEvaluator(
             sampleRate: 8_000,
@@ -351,7 +516,9 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    private func representativeObservations() throws
+    private func representativeObservations(
+        trajectoryOffset: Double = 0
+    ) throws
         -> [ProfessionalQualityObservation] {
         var observations: [ProfessionalQualityObservation] = []
         for (checkpointIndex, checkpoint) in
@@ -365,12 +532,53 @@ struct ProfessionalQualityCalibrationTests {
                     hardGatesPassed: true,
                     metrics: metricValues(
                         checkpointIndex: checkpointIndex,
-                        rateOffset: sampleRate == 48_000 ? 0.01 : 0
+                        rateOffset: (sampleRate == 48_000 ? 0.01 : 0) +
+                            trajectoryOffset
                     )
                 ))
             }
         }
         return observations
+    }
+
+    private func diverseArtifacts() throws -> (
+        calibration: ProfessionalQualityCalibrationCorpus,
+        profile: ProfessionalQualityCalibrationProfile,
+        adversarial: ProfessionalQualityAdversarialSuiteReport,
+        holdout: ProfessionalQualityHoldoutQualification
+    ) {
+        let calibrationTrajectories = try (0..<24).map { index in
+            try ProfessionalQualityCalibrationTrajectory(
+                sourceBankFingerprint: "calibration-\(index)",
+                observations: representativeObservations()
+            )
+        }
+        let calibration = try ProfessionalQualityCalibrationCorpus(
+            trajectories: calibrationTrajectories
+        )
+        let profile = try ProfessionalQualityCalibrationProfile(
+            corpus: calibration
+        )
+        let adversarial = try ProfessionalQualityAdversarialSuiteReport(
+            profile: profile,
+            sourceCorpus: calibration
+        )
+        let holdoutTrajectories = try (0..<4).map { index in
+            try ProfessionalQualityCalibrationTrajectory(
+                sourceBankFingerprint: "holdout-\(index)",
+                observations: representativeObservations()
+            )
+        }
+        let holdoutCorpus = try ProfessionalQualityCalibrationCorpus(
+            trajectories: holdoutTrajectories
+        )
+        let holdout = try ProfessionalQualityHoldoutQualification(
+            profile: profile,
+            adversarialSuite: adversarial,
+            calibrationCorpus: calibration,
+            holdoutCorpus: holdoutCorpus
+        )
+        return (calibration, profile, adversarial, holdout)
     }
 
     private func metricValues(

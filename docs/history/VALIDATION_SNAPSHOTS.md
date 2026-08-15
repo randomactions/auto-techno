@@ -1153,3 +1153,54 @@ caches and the workflow's serial process boundaries:
 
 Publication, exact-head remote CI, exact-build app launch, listening,
 route/interruption smoke, and hardware soak remained separate gates.
+
+## Diverse professional-quality profile and holdout — 2026-08-15
+
+This candidate replaces the retired single-journey engine-v19 paired resources
+with Professional Evidence v4 artifacts derived from 28 complete canonical
+journeys at every checkpoint and both 44.1 and 48 kHz. Profile
+`4b55055d1904ead8` self-accepted all 392 calibration observations and every
+phrase/rate relationship. Adversarial suite `a34c3ba6acec9c2e` rejected all ten
+attacks for their expected non-compensable reason. Source-disjoint holdout
+qualification `c333586ce068d5af` accepted 56/56 observations from four complete
+replacement journeys with zero relationship failures.
+
+The holdout process failed closed twice before producing those resources. The
+first 24-journey profile accepted every local holdout observation but found four
+relationship failures: one masking trajectory and three rate-sensitive
+transient/crest relationships. Those journeys became development evidence; a
+new untouched cohort then exposed one release phrase whose short-term gated
+loudness-range percentile differed by 12.16 LU across rates while integrated,
+momentary, and short-term maxima stayed aligned. The source analyzer already
+documented EBU-style LRA as descriptive for this use. The evaluator now honors
+that contract: LRA remains recorded but does not act as a local, trajectory, or
+rate gate. Discrete transient density also carries its exact one-event-per-bar
+resolution at fixed 130 BPM. No failed holdout was relabeled as passing proof.
+
+Streaming spectral evidence now uses a physical-duration analysis window at
+each route rate and zero-pads to the next radix-two FFT, instead of letting FFT
+rounding change the analyzed duration. The transient envelope coefficient is
+normalized from its 48 kHz physical time constant. Safety-oriented peak, DC,
+boundary, and masking bounds accept improvements below calibration while still
+rejecting regressions. These changes affect detached evidence and offline
+qualification only; they add no callback work and do not change PCM.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated
+caches and the workflow's serial process boundaries:
+
+- frozen artifact, corpus, adversarial, and holdout contracts: 14/14;
+- explicit optimized 28-development/4-holdout generation: passed;
+- split upper/route/transaction/rate/readiness partitions: 21/21;
+- core and evidence matrix: 158/158 in 243.294 seconds;
+- preparation preflight: 22/22 in 638.052 seconds;
+- protected routing: 7/7 in 97.712 seconds;
+- complete CI-selected matrix: 208/208;
+- clean optimized `AutoTechno` product build: passed in 75.29 seconds;
+- `git diff --check`: clean before publication.
+
+The report bank still reports policy unavailable and the app-facing overload
+still installs `uncalibrated.v1`, rendering one healthy primary. This snapshot
+proves offline artifact generalization and deterministic engineering contracts,
+not shipping activation, listening quality, app/route smoke, interruption
+recovery, or sustained hardware soak. Publication, exact-head remote CI, and
+exact-build app launch remain separate gates.

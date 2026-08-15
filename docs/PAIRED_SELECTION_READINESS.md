@@ -17,11 +17,13 @@ renderer, score, runtime profile, user selector, callback work, or PCM change.
 ## Exact-engine candidate policy
 
 The repository now also carries a separate immutable paired-policy profile for
-canonical engine v19 (`ffc8be201e9b8564`) and its passing ten-case adversarial
-suite (`556508db468b3a64`). This does not replace or relabel the historical
-engine-v10 development profile. Loading the paired resources requires the exact
-current engine and Professional Evidence v3 identities; a stale profile, an
-incomplete suite, or a fingerprint mismatch fails construction.
+canonical engine v19 (`4b55055d1904ead8`), its passing ten-case adversarial
+suite (`a34c3ba6acec9c2e`), and a qualified disjoint holdout report
+(`c333586ce068d5af`). This does not replace or relabel the historical engine-v10
+development profile. Loading the paired resources requires the exact current
+engine and Professional Evidence v4 identities; a stale profile, incomplete
+suite, failed holdout, source overlap, or fingerprint mismatch fails
+construction.
 
 The detached evaluator projects a complete candidate into the same 39-metric
 vector used by the journey report bank for every Core-owned checkpoint that the
@@ -33,14 +35,17 @@ or unsupported-rate evidence remains unavailable. Profile trajectory and
 cross-rate relationships remain whole-bank development gates; they are not
 misrepresented as facts available from one candidate.
 
-The profile was generated from all seven canonical checkpoints at 44.1 and
-48 kHz (14 observations); the generated bank self-qualified 14/14 and every one
-of the ten non-compensable adversarial scenarios was rejected for its expected
-reason. As a compatibility diagnostic, the same v19 bank passed only 8/14
-observations against the retained engine-v10 profile. That result is why the
-historical artifact cannot silently become the current selector.
+The profile was generated from 28 complete canonical journeys at all seven
+checkpoints and both 44.1 and 48 kHz (392 observations). Every calibration
+journey passed its local and phrase/rate relationships, and all ten
+non-compensable adversarial scenarios were rejected for their expected reasons.
+Four separately generated replacement holdouts then passed 56/56 local verdicts
+and zero relationship failures. Short-program EBU-style LRA stays descriptive
+because its gated percentile population is unstable at small counts; integrated,
+momentary, short-term, true-peak, hard-safety, spectral, masking, and the other
+stable dimensions remain evaluative.
 
-The paired evaluator is now version 2. After the primary evidence exists it
+The paired evaluator is now version 3. After the primary evidence exists it
 requests an alternate only when the phrase maps to a calibrated checkpoint at a
 covered rate. `ProfessionalQualityPreparationEvaluator` is a preloaded,
 route-local boundary: exact current artifacts at 44.1/48 kHz delegate to the
@@ -133,13 +138,17 @@ one uncalibrated primary. The exact path measured:
 - deterministic transaction fingerprints: `9dd25ed8f2d50514` at 44.1 kHz and
   `b4723625fa4bcb69` at 48 kHz.
 
-Operational bounds passed, but activation quality did not. The unseen
+The original single-journey artifact used by this historical probe failed
+generalization. The unseen
 representative primary missed establishment bounds for bar centroid span, bar
 crest-factor span, maximum boundary delta, and phrase-wide RMS trajectory peak
 at both rates. The alternate still missed maximum boundary delta and RMS
 trajectory peak at both rates, plus spectral rolloff at 48 kHz. Because the
-current profile was derived from one seed journey (`48291`), this is evidence of
-insufficient generalization, not permission to widen individual thresholds.
+then-current profile was derived from one seed journey (`48291`), this was
+evidence of insufficient generalization, not permission to widen individual
+thresholds. The diverse replacement profile and holdouts above close that
+offline quality blocker; the historical timings remain the latest exact-policy
+operational measurement until the explicit activation build is replayed.
 
 Run the exact check explicitly:
 
@@ -156,20 +165,14 @@ six maximum exact-evaluator renders remain opt-in.
 ## Remaining activation proof
 
 The immutable loader, preloaded route boundary, non-compensable comparator,
-fallback result, exact transaction replay, unsupported-route fallback, and
-operational probe are implemented behind the package seam. They still cannot
-qualify the shipping policy: the exact probe demonstrated systematic rejection
-outside the single calibration journey, and the app-facing preparation overload
-deliberately installs the uncalibrated evaluator. Activation still requires all
-of the following in one explicitly authorized change:
+fallback result, exact transaction replay, unsupported-route fallback, diverse
+profile, adversarial suite, disjoint holdout, and operational probe are
+implemented behind the package seam. The first two former activation blockers
+are closed offline. The app-facing preparation overload deliberately still
+installs the uncalibrated evaluator.
 
-1. replace the single-journey profile with a versioned, diverse canonical
-   journey bank and keep independent holdout journeys out of calibration;
-2. pass those holdouts and the adversarial suite without weakening hard safety,
-   boundary, rate-consistency, or non-compensable metric semantics;
-3. install the already-preloaded evaluator off the callback and repeat
-   deterministic, route-recovery, stale-work, app, physical-route, and sustained
-   playback checks on that exact build.
-
-Until those proofs pass, the frozen development policy remains offline evidence
-and professional runtime qualification remains unavailable.
+Activation therefore remains one explicitly authorized change: install the
+already-preloaded evaluator off the callback and repeat deterministic,
+route-recovery, stale-work, app, physical-route, and sustained playback checks
+on that exact build. Until then, the frozen development policy remains offline
+evidence and professional runtime qualification remains unavailable.

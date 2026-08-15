@@ -197,13 +197,17 @@ candidate on the healthy path, and must continue to report qualification
 unavailable. The frozen offline development policy must load pinned profile and
 adversarial-suite identities and accept all fourteen representative
 checkpoint/rate observations with no relationship failures.
-The Professional Evidence v3 bank must contain every canonical checkpoint for
+The Professional Evidence v4 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. Its own policy
 availability remains false by design. Calibrated paired ranking remains disabled
-even though the exact engine-v19 checkpoint-local comparator and pinned
-profile/adversarial identities now load and replay through the package seam. The
-shipping overload must still be explicitly activated and repeat the now-passing
-generic transaction cancellation, latency, and peak-working-memory envelope.
+even though the exact engine-v19 checkpoint-local comparator and pinned diverse
+profile/adversarial/holdout identities now load and replay through the package
+seam. The profile must cover at least 24 complete development trajectories; the
+current frozen profile covers 28. Holdouts must be source-disjoint, contain at
+least four complete journeys, accept every checkpoint/rate observation, and
+produce no trajectory or rate-consistency failure. Short-program EBU-style LRA
+must remain descriptive; stable BS.1770 loudness and true-peak dimensions remain
+evaluative. The shipping overload must still be explicitly activated.
 
 ## Determinism and sample-rate consistency
 
@@ -311,10 +315,11 @@ result, preloaded route boundary, unsupported-rate single-primary fallback, and
 reason-coded transaction replay now have deterministic tests. Three exact-policy
 maximum-path iterations per rate fit the single-hold envelope: worst latency was
 9.549/10.448 seconds, cancellation was 0.042...0.048 ms, and maximum RSS was
-81,559,552 bytes. Both authored candidates were nevertheless outside the
-single-journey establishment profile at both rates. The app-facing overload does
-not install the evaluator; operational success therefore does not satisfy the
-quality or activation gate. See
+81,559,552 bytes. The original single-journey profile failed unseen candidates;
+the replacement profile now derives from 28 complete journeys and passes a
+ten-case adversarial suite plus four disjoint holdouts at both rates. The app-
+facing overload still does not install the evaluator; operational and offline-
+generalization success therefore do not constitute activation. See
 [`PAIRED_SELECTION_READINESS.md`](PAIRED_SELECTION_READINESS.md).
 
 The declared budget must leave enough lookahead to schedule the future boundary

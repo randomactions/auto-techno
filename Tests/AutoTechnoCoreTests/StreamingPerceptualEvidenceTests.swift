@@ -22,11 +22,12 @@ struct StreamingPerceptualEvidenceTests {
                 )
             )
             #expect(evidence.isComplete)
-            #expect(evidence.maximumBufferedFrameCount == evidence.fftFrameCount)
+            #expect(evidence.maximumBufferedFrameCount ==
+                    evidence.analysisFrameCount)
             #expect(abs(
-                Double(evidence.fftFrameCount) / sampleRate -
+                Double(evidence.analysisFrameCount) / sampleRate -
                     StreamingPerceptualEvidenceAnalyzer.targetWindowSeconds
-            ) < 0.005)
+            ) < 0.000_05)
             #expect(abs(evidence.spectralCentroidMeanHz - 1_000) < 4)
             centroids.append(evidence.spectralCentroidMeanHz)
         }
@@ -36,7 +37,7 @@ struct StreamingPerceptualEvidenceTests {
     @Test("Radix-two FFT agrees with an independent direct DFT")
     func independentDFTReference() throws {
         let sampleRate = 48_000.0
-        let frameCount = StreamingPerceptualEvidenceAnalyzer.fftFrameCount(
+        let frameCount = StreamingPerceptualEvidenceAnalyzer.analysisFrameCount(
             sampleRate: sampleRate
         )
         let signal = (0..<frameCount).map { frame in
@@ -52,10 +53,36 @@ struct StreamingPerceptualEvidenceTests {
                 sampleRate: sampleRate
             )
         )
-        let reference = directDFTCentroid(signal, sampleRate: sampleRate)
+        let reference = directDFTCentroid(
+            signal,
+            fftFrameCount: evidence.fftFrameCount,
+            sampleRate: sampleRate
+        )
 
         #expect(evidence.analyzedWindowCount == 1)
         #expect(abs(evidence.spectralCentroidMeanHz - reference) < 0.000_001)
+    }
+
+    @Test("Transient envelope and density use physical time at every rate")
+    func rateNormalizedTransientDensity() {
+        var densities: [Double] = []
+        for sampleRate in [44_100.0, 48_000.0, 96_000.0] {
+            var signal = [Float](
+                repeating: 0,
+                count: Int((2 * sampleRate).rounded())
+            )
+            for time in stride(from: 0.1, through: 1.8, by: 0.1) {
+                let frame = Int((time * sampleRate).rounded())
+                signal[frame] = 0.8
+            }
+            let metrics = MusicalQualityMetrics(
+                left: signal,
+                right: signal,
+                sampleRate: sampleRate
+            )
+            densities.append(metrics.transientDensity)
+        }
+        #expect((densities.max() ?? 0) - (densities.min() ?? 0) < 0.001)
     }
 
     @Test("Flatness and positive flux distinguish tone, noise, and change")
@@ -308,26 +335,29 @@ struct StreamingPerceptualEvidenceTests {
 
     private func directDFTCentroid(
         _ samples: [Float],
+        fftFrameCount: Int,
         sampleRate: Double
     ) -> Double {
-        let count = samples.count
+        let analysisCount = samples.count
         var magnitudeSum = 0.0
         var weightedFrequency = 0.0
-        for bin in 1...count / 2 {
+        for bin in 1...fftFrameCount / 2 {
             var real = 0.0
             var imaginary = 0.0
-            for frame in 0..<count {
+            for frame in 0..<analysisCount {
                 let window = 0.5 - 0.5 * cos(
-                    2 * Double.pi * Double(frame) / Double(count - 1)
+                    2 * Double.pi * Double(frame) /
+                        Double(analysisCount - 1)
                 )
                 let phase = -2 * Double.pi * Double(bin * frame) /
-                    Double(count)
+                    Double(fftFrameCount)
                 let sample = Double(samples[frame]) * window
                 real += sample * cos(phase)
                 imaginary += sample * sin(phase)
             }
             let magnitude = hypot(real, imaginary)
-            let frequency = Double(bin) * sampleRate / Double(count)
+            let frequency = Double(bin) * sampleRate /
+                Double(fftFrameCount)
             magnitudeSum += magnitude
             weightedFrequency += frequency * magnitude
         }

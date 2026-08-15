@@ -60,17 +60,20 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   tested compatibility contract across foundation behavior, canonical narrative
   roles, rhythm, and existing instrument assignments;
 - phrase-wide streaming ITU-R BS.1770-5 loudness, Annex 2 true peak,
-  rate-derived spectral/trajectory evidence, explicit bounded working memory,
-  and a complete-checkpoint Professional Evidence v3 report bank;
+  physical-time spectral/trajectory evidence, rate-normalized transient
+  detection, explicit bounded working memory, and a complete-checkpoint
+  Professional Evidence v4 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
 
 The shipping evaluator remains uncalibrated and renders the primary once on the
 healthy path. The historical engine-v10 development profile remains an offline
-compatibility yardstick. A distinct current-engine profile and adversarial suite
-now construct a checkpoint-local paired evaluator through the package seam, but
-do not participate in runtime selection. The transaction records up to primary,
+compatibility yardstick. A distinct current-engine profile derived from 28
+complete journeys, a passing adversarial suite, and a disjoint four-journey
+holdout qualification now construct a checkpoint-local paired evaluator through
+the package seam, but do not participate in runtime selection. The transaction
+records up to primary,
 alternate, and fallback
 attempts plus one home-timbre correction within four total passes, but it does
 not constitute professional-quality qualification or general quality-driven
@@ -128,30 +131,34 @@ projections, unified phrase composition, plus exact paid-debt-to-release climax
 provenance, make each
 score-to-PCM consequence explicit without letting the uncalibrated policy rank
 that evidence. Professional
-Evidence v3 adds standards-based phrase loudness/true peak, bounded streaming
-spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
+Evidence v4 adds standards-based phrase loudness/true peak, bounded streaming
+physical-time spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
 complete role attribution. The repository now carries a deterministic,
-non-reconstructable 44.1/48 kHz development profile, relational rate/trajectory
-guardrails, and a passing ten-case adversarial suite. The development policy is
-available only for offline engine-bank qualification; the shipping policy and
-selection evidence remain unchanged. Keep WAVs, stems, and reference recordings
-local and untracked.
+non-reconstructable 44.1/48 kHz diverse profile, relational rate/trajectory
+guardrails, a passing ten-case adversarial suite, and a disjoint holdout report
+covering 56/56 observations with zero relationship failures. Short-program
+EBU-style loudness range remains descriptive because its gated percentile is
+discontinuous at small populations; integrated, momentary, short-term, and true-
+peak evidence remain evaluative. The development policy is available only for
+offline engine-bank qualification; the shipping policy and selection evidence
+remain unchanged. Keep WAVs, stems, and reference recordings local and untracked.
 
 ### 3. Generalize bounded evaluation and correction
 
 The runtime now enforces and records a maximum of three complete candidates, one
 home-timbre correction, and four render passes, then atomically carries the
 selected evidence, decision, and controller state into continuation. The exact
-engine-v19 profile, passing adversarial suite, non-compensable checkpoint-local
-comparator, calibrated fallback result, and transaction replay are now present
-behind the package seam. A preloaded route-local boundary now retains
+engine-v19 diverse profile, passing adversarial suite, disjoint holdout
+qualification, non-compensable checkpoint-local comparator, calibrated fallback
+result, and transaction replay are now present behind the package seam. A
+preloaded route-local boundary now retains
 single-primary uncalibrated behavior when artifacts are absent or the rate is
 unsupported, and the exact comparator fits the measured preparation envelope.
-However, its single-seed profile rejected both authored candidates from an
-unseen representative seed at 44.1 and 48 kHz. Next, calibrate from diverse
-canonical journeys, reserve independent holdout journeys, and require holdout
-plus adversarial success before seeking explicit shipping activation.
+The former single-journey generalization blocker is now closed offline: 28
+development journeys and four disjoint replacement holdouts pass at 44.1 and
+48 kHz. Shipping activation remains a separate explicit decision and must not be
+inferred from artifact availability.
 Continue to select a qualified candidate or conservative fallback when the
 calibrated policy cannot qualify either authored attempt. See
 [`PAIRED_SELECTION_READINESS.md`](PAIRED_SELECTION_READINESS.md).

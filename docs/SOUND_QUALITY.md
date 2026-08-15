@@ -157,13 +157,19 @@ now loads the engine-v10 source profile `c52545b5641e6cfb` and passing
 adversarial suite `2340017ec6c59440`. It evaluates complete representative-rate engine banks
 without PCM, stems, or event lists and rejects every dimension and relationship
 independently. A distinct immutable engine-v19 paired-policy profile
-`ffc8be201e9b8564` and passing adversarial suite `556508db468b3a64` now construct
-an exact-engine, checkpoint-local evaluator through the existing package seam.
+`4b55055d1904ead8`, passing adversarial suite `a34c3ba6acec9c2e`, and qualified
+disjoint holdout `c333586ce068d5af` now construct an exact-engine,
+checkpoint-local evaluator through the existing package seam.
 It judges every applicable checkpoint independently, never averages dimensions,
 and requests the conservative fallback when both authored candidates fail. The
 app-facing preparation overload does not install it: shipping selection remains
-single-primary and qualification unavailable pending the explicit activation
-and exact-evaluator operational gate. Hybrid live feedback remains target
+single-primary and qualification unavailable pending explicit activation.
+The profile derives from 28 complete 44.1/48 kHz journeys; four replacement
+holdout journeys passed 56/56 local verdicts and every phrase/rate relationship.
+EBU-style short-program loudness range stays descriptive because its gated
+percentile can change discontinuously when one short-term block crosses the
+gate. Integrated, momentary, short-term, and true-peak evidence remain policy
+dimensions. Hybrid live feedback remains target
 architecture. The existing transaction now has a conservative 128 MiB numeric
 working-storage envelope and a passing opt-in optimized 44.1/48 kHz probe:
 healthy two-candidate preparation fits the shortest phrase lookahead, the full
@@ -288,12 +294,12 @@ The dormant exact-engine paired evaluator now has a preloaded route-local
 boundary. It requests an alternate only for an applicable checkpoint at a
 calibrated 44.1/48 kHz route; missing artifacts and unsupported rates retain the
 uncalibrated identity and single-primary path. Exact maximum-path replay passed
-latency, memory, cancellation, transaction, and hard-safe fallback bounds, but
-both authored candidates from an unseen seed fell outside the current
-single-journey establishment profile at both rates. That negative evidence keeps
-shipping selection on `uncalibrated.v1`; profile diversity and independent
-holdouts must be solved before activation rather than widening failed metrics in
-place.
+latency, memory, cancellation, transaction, and hard-safe fallback bounds. The
+initial single-journey profile failed unseen candidates, and the first two
+holdout cohorts exposed masking/transient/crest and short-program LRA semantics
+instead of being silently absorbed as proof. The final 28-journey profile,
+adversarial suite, and four disjoint holdouts now pass offline. Shipping remains
+`uncalibrated.v1` until the separate explicit activation decision.
 
 1. Render the same private canonical journey bank before and after a change at
    representative sample rates and structural checkpoints.
@@ -344,11 +350,11 @@ The production evaluator does not request a paired comparison, so the healthy
 path performs one primary render and reports qualification unavailable.
 Phrase analysis now streams within an explicit working-memory envelope, with
 independent DFT, chunk-parity, representative-rate, cancellation, and optimized
-fixture evidence. Calibrated paired ranking stays disabled until the exact
-engine comparator is explicitly installed and repeats the now-passing
-representative-rate cancellation,
-latency, and peak-memory envelope under the frozen profile and adversarial
-suite. Preparation
+fixture evidence. The exact comparator, diverse frozen profile, adversarial
+suite, holdout qualification, and representative-rate operational envelope are
+available only through the package seam. Calibrated paired ranking stays
+disabled until the app-facing overload is explicitly authorized to install it.
+Preparation
 checks cancellation at bounded
 bar-render and evidence-phase boundaries as well as between candidates; the
 streaming preflight and continuation fingerprints also check within their long

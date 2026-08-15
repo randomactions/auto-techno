@@ -506,7 +506,7 @@ struct QualityQualificationFoundationTests {
         }
     }
 
-    @Test("Professional Evidence v3 bank requires every journey checkpoint and unavailable policy")
+    @Test("Professional Evidence v4 bank requires every journey checkpoint and unavailable policy")
     func professionalEvidenceReportBank() throws {
         var reports: [CanonicalJourneyQualificationReport] = []
         for sampleRate in [44_100.0, 48_000.0] {
@@ -534,7 +534,7 @@ struct QualityQualificationFoundationTests {
         }
 
         let bank = try ProfessionalEvidenceReportBank(reports: Array(reports.reversed()))
-        #expect(bank.schemaVersion == 3)
+        #expect(bank.schemaVersion == ProfessionalEvidenceReportBank.schemaVersion)
         #expect(bank.evidenceVersion ==
                 ProfessionalEvidenceReportBank.evidenceVersion)
         #expect(bank.sourceReportCount ==

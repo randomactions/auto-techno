@@ -33,9 +33,12 @@ package struct ProfessionalQualityAdversarialCaseResult: Codable, Equatable,
 /// evidence. Every scenario must be rejected independently.
 package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 1
-    package static let suiteVersion =
+    package static let legacySchemaVersion = 1
+    package static let schemaVersion = 2
+    package static let legacySuiteVersion =
         "autotechno-professional-quality-adversarial.v1"
+    package static let suiteVersion =
+        "autotechno-professional-quality-adversarial.v2"
 
     package let schemaVersion: Int
     package let suiteVersion: String
@@ -48,9 +51,11 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         profile: ProfessionalQualityCalibrationProfile,
         sourceObservations: [ProfessionalQualityObservation]
     ) throws {
+        let expectedSourceObservationCount = profile.checkpoints.first
+            .map { $0.sourceObservationCount *
+                CanonicalJourneyCheckpoint.allCases.count } ?? 0
         guard profile.isComplete, !profile.fingerprint.isEmpty,
-              sourceObservations.count == profile.sampleRates.count *
-                CanonicalJourneyCheckpoint.allCases.count,
+              sourceObservations.count == expectedSourceObservationCount,
               sourceObservations.allSatisfy({
                   ProfessionalQualityProfileEvaluator.evaluate(
                       $0, against: profile
@@ -232,16 +237,46 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                 .sorted { $0.rawValue < $1.rawValue }
         ))
 
-        schemaVersion = Self.schemaVersion
-        suiteVersion = Self.suiteVersion
+        schemaVersion = profile.usesDiverseCalibration
+            ? Self.schemaVersion : Self.legacySchemaVersion
+        suiteVersion = profile.usesDiverseCalibration
+            ? Self.suiteVersion : Self.legacySuiteVersion
         profileFingerprint = profile.fingerprint
         sourceObservationCount = sourceObservations.count
         baselineAcceptanceCount = sourceObservations.count
         cases = generated.sorted { $0.scenario.rawValue < $1.scenario.rawValue }
     }
 
+    package init(
+        profile: ProfessionalQualityCalibrationProfile,
+        sourceCorpus: ProfessionalQualityCalibrationCorpus
+    ) throws {
+        guard profile.usesDiverseCalibration,
+              sourceCorpus.isComplete,
+              sourceCorpus.sourceTrajectoryCount ==
+                profile.sourceTrajectoryCount,
+              sourceCorpus.fingerprint == profile.sourceBankFingerprint,
+              sourceCorpus.trajectories.allSatisfy({ trajectory in
+                  ProfessionalQualityRelationshipEvaluator.evaluate(
+                      observations: trajectory.observations,
+                      against: profile
+                  ).isEmpty
+              }) else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        try self.init(
+            profile: profile,
+            sourceObservations: sourceCorpus.observations
+        )
+    }
+
     package var passed: Bool {
-        schemaVersion == Self.schemaVersion && suiteVersion == Self.suiteVersion &&
+        let recognizedVersion =
+            (schemaVersion == Self.legacySchemaVersion &&
+                suiteVersion == Self.legacySuiteVersion) ||
+            (schemaVersion == Self.schemaVersion &&
+                suiteVersion == Self.suiteVersion)
+        return recognizedVersion &&
             !profileFingerprint.isEmpty && sourceObservationCount > 0 &&
             baselineAcceptanceCount == sourceObservationCount &&
             cases.count == ProfessionalQualityAdversarialScenario.allCases.count &&
@@ -274,7 +309,9 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         guard let data = try? deterministicJSON(),
               let string = String(data: data, encoding: .utf8) else { return "" }
         var sink = StreamingFNV1a()
-        sink.domain("professional-quality-adversarial-suite-json.v1")
+        sink.domain(schemaVersion == Self.schemaVersion
+            ? "professional-quality-adversarial-suite-json.v2"
+            : "professional-quality-adversarial-suite-json.v1")
         sink.string(string)
         return fixedWidthFingerprintHex(sink.value)
     }

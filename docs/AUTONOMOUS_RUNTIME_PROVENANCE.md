@@ -86,10 +86,11 @@ mistaken for a completed feedback system.
    so a healthy primary is rendered exactly once. Alternate and fallback remain
    bounded validity paths, not a general professional-quality ranking system.
    Phrase analysis now streams across immutable render blocks within a recorded
-   6 MiB upper bound. A frozen offline profile and passing adversarial suite now
-   qualify complete representative-rate engine banks, but a calibrated paired
-   comparator stays disabled pending representative-journey cancellation,
-   preparation-latency, and peak-memory budgets. Cancellation is
+   6 MiB upper bound. A frozen diverse profile, passing adversarial suite, and
+   disjoint holdout qualification now qualify complete representative-rate
+   engine banks offline. The paired comparator remains disabled in the app-
+   facing overload even though representative cancellation, preparation-
+   latency, and peak-memory probes pass. Cancellation is
    checked within each candidate at bounded bar-render
    and evidence boundaries; route changes cancel detached preparation and
    prevent stale route work from committing.
@@ -98,10 +99,11 @@ mistaken for a completed feedback system.
    K-weighting and two-stage 400 ms gating, and measures true peak with the
    published Annex 2 four-phase FIR. The candidate vector retains analyzed
    frame and gating-block counts, integrated/momentary/short-term loudness,
-   loudness spread, and dBTP evidence. It also retains rate-derived FFT/hop
-   geometry, actual spectral centroid/bandwidth/flatness/rolloff, positive flux,
+   loudness spread, and dBTP evidence. It also retains physical-time analysis
+   windows with zero-padded radix-two FFT geometry, actual spectral
+   centroid/bandwidth/flatness/rolloff, positive flux,
    RMS trajectory, active-window counts, and bounded working-memory provenance.
-   A deterministic Professional Evidence v3
+   A deterministic Professional Evidence v4
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. Its policy status is
    unconditionally unavailable because the bank is observation-only; it cannot
@@ -111,19 +113,26 @@ mistaken for a completed feedback system.
    evaluator. Later engine versions are evaluated against that frozen source;
    they do not relabel it as current-runtime evidence.
    `ProfessionalQualityPairedArtifacts` separately validates the exact engine-v19
-   paired-policy profile `ffc8be201e9b8564` and adversarial suite
-   `556508db468b3a64`. Its evaluator maps Core-owned candidate checkpoints into
-   the same 39-metric observation, rejects dimensions independently, and records
+   paired-policy profile `4b55055d1904ead8`, adversarial suite
+   `a34c3ba6acec9c2e`, and disjoint holdout qualification
+   `c333586ce068d5af`. The profile derives from 28 complete canonical journeys;
+   four untouched replacement journeys passed 56/56 local observations and all
+   trajectory/rate relationships. Its evaluator maps Core-owned candidate
+   checkpoints into the same 39-metric observation, rejects dimensions
+   independently, and records
    a conservative-fallback comparison when neither authored candidate passes.
+   Short-program EBU-style loudness range is retained descriptively rather than
+   treated as a gate-discontinuous policy dimension; integrated, momentary,
+   short-term, true-peak, and the other stable metrics remain evaluative.
    A preloaded route-local preparation evaluator delegates only when exact
    artifacts exist and the route is 44.1 or 48 kHz; otherwise it preserves the
    uncalibrated identity and single-primary path. It requests a pair only after
    the primary maps to an applicable calibrated checkpoint. The app-facing
    overload still installs the uncalibrated evaluator, so loading and selection
-   behavior in the shipping runtime are unchanged. Exact operational replay
-   stayed bounded but rejected both authored candidates from an unseen seed at
-   both rates, so the single-journey profile remains an explicit activation
-   blocker rather than a shipping quality claim.
+   behavior in the shipping runtime are unchanged. Exact operational replay and
+   offline generalization now pass, but neither constitutes explicit shipping
+   activation, listening approval, route/interruption validation, or hardware
+   soak.
 5. `AutonomousPhraseRenderer` constructs the required synth world and synth
    performance. The synth planner resolves the three-step driver, five-stage
    follower, chapter articulation, internal architecture and patch, four bounded

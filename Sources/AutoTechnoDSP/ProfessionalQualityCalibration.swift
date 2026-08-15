@@ -75,6 +75,32 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
     case kickAudibleToDetectorDBMean = "kick-audible-to-detector-db-mean"
     case kickDuckingEnvelopeRatioMean = "kick-ducking-envelope-ratio-mean"
     case kickAudibleGainMean = "kick-audible-gain-mean"
+
+    package var acceptsSaferValuesBelowCalibration: Bool {
+        switch self {
+        case .truePeakDBTP, .absoluteDCOffset, .maximumBoundaryDelta,
+                .maskingMaximumOverlap, .maskingOverlapWindowRatio,
+                .maskingLongestRunRatio:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// EBU-style LRA is retained as descriptive phrase evidence. On short
+    /// autonomous phrases its relative gate and percentile population can
+    /// change discontinuously when one short-term block crosses the gate, so
+    /// it is not a stable non-compensable policy dimension.
+    package var participatesInQualification: Bool {
+        self != .loudnessRangeLU
+    }
+
+    package var semanticMinimum: Double {
+        switch self {
+        case .truePeakDBTP: return -120
+        default: return 0
+        }
+    }
 }
 
 package struct ProfessionalQualityMetricValue: Codable, Equatable, Sendable {
@@ -442,7 +468,11 @@ package struct ProfessionalQualityMetricBounds: Codable, Equatable, Sendable {
     }
 
     package func contains(_ value: Double) -> Bool {
-        value.isFinite && (lower...upper).contains(value)
+        guard value.isFinite else { return false }
+        if metric.acceptsSaferValuesBelowCalibration {
+            return value >= metric.semanticMinimum && value <= upper
+        }
+        return (lower...upper).contains(value)
     }
 }
 
@@ -558,10 +588,16 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 1
-    package static let profileVersion =
+    package static let legacySchemaVersion = 1
+    package static let schemaVersion = 2
+    package static let legacyProfileVersion =
         "autotechno-professional-quality-profile.v1"
+    package static let legacyEvidenceVersion =
+        "autotechno-professional-evidence.v3"
+    package static let profileVersion =
+        "autotechno-professional-quality-profile.v2"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
+    package static let minimumCalibrationTrajectoryCount = 24
 
     package let schemaVersion: Int
     package let profileVersion: String
@@ -594,9 +630,155 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         )
     }
 
-    /// Offline calibration seam for already reduced observations. It accepts no
-    /// PCM and requires the same complete checkpoint/rate matrix as a report
-    /// bank. Production profile generation uses the bank initializer above.
+    /// Current calibration path. Every metric envelope is learned across
+    /// several complete canonical journeys while preserving journey identity
+    /// for phrase-wide and rate-consistency relationships.
+    package init(corpus: ProfessionalQualityCalibrationCorpus) throws {
+        guard corpus.isComplete,
+              corpus.sourceTrajectoryCount >=
+                Self.minimumCalibrationTrajectoryCount,
+              corpus.sampleRates == Self.requiredSampleRates,
+              !corpus.fingerprint.isEmpty else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+
+        var profiles: [ProfessionalQualityCheckpointProfile] = []
+        for checkpoint in CanonicalJourneyCheckpoint.allCases {
+            let sources = corpus.trajectories.flatMap { trajectory in
+                trajectory.observations.filter { $0.checkpoint == checkpoint }
+            }
+            guard sources.count == corpus.sourceTrajectoryCount *
+                    Self.requiredSampleRates.count else {
+                throw ProfessionalQualityCalibrationError
+                    .incompleteCheckpointCoverage
+            }
+            var metricBounds: [ProfessionalQualityMetricBounds] = []
+            for metric in ProfessionalQualityMetric.allCases {
+                let values = sources.compactMap { $0[metric] }
+                guard values.count == sources.count,
+                      let minimum = values.min(),
+                      let maximum = values.max() else {
+                    throw ProfessionalQualityCalibrationError.invalidMetricSet
+                }
+                let pairedRateDrifts = try corpus.trajectories.map {
+                    trajectory -> Double in
+                    let values = trajectory.observations
+                        .filter { $0.checkpoint == checkpoint }
+                        .compactMap { $0[metric] }
+                    guard values.count == Self.requiredSampleRates.count,
+                          let minimum = values.min(),
+                          let maximum = values.max() else {
+                        throw ProfessionalQualityCalibrationError
+                            .incompleteCheckpointCoverage
+                    }
+                    return maximum - minimum
+                }
+                let guardBand = Self.diverseGuardBand(
+                    metric: metric,
+                    values: values,
+                    pairedRateDrifts: pairedRateDrifts
+                )
+                let domain = Self.domain(for: metric)
+                metricBounds.append(try ProfessionalQualityMetricBounds(
+                    metric: metric,
+                    lower: max(domain.lowerBound, minimum - guardBand),
+                    upper: min(domain.upperBound, maximum + guardBand)
+                ))
+            }
+            profiles.append(try ProfessionalQualityCheckpointProfile(
+                checkpoint: checkpoint,
+                sourceObservationCount: sources.count,
+                bounds: metricBounds
+            ))
+        }
+
+        var trajectoryBounds: [ProfessionalQualityTrajectoryBounds] = []
+        for trajectoryKind in ProfessionalQualityTrajectory.allCases {
+            let pair = trajectoryKind.checkpoints
+            for metric in ProfessionalQualityMetric.allCases {
+                var deltas: [Double] = []
+                var pairedRateDrifts: [Double] = []
+                for trajectory in corpus.trajectories {
+                    let trajectoryDeltas = try Self.metricDeltas(
+                        trajectory: trajectory,
+                        from: pair.from,
+                        to: pair.to,
+                        metric: metric
+                    )
+                    deltas.append(contentsOf: trajectoryDeltas)
+                    guard let minimum = trajectoryDeltas.min(),
+                          let maximum = trajectoryDeltas.max() else {
+                        throw ProfessionalQualityCalibrationError
+                            .invalidMetricSet
+                    }
+                    pairedRateDrifts.append(maximum - minimum)
+                }
+                guard let minimum = deltas.min(),
+                      let maximum = deltas.max() else {
+                    throw ProfessionalQualityCalibrationError.invalidMetricSet
+                }
+                let guardBand = Self.diverseGuardBand(
+                    metric: metric,
+                    values: deltas,
+                    pairedRateDrifts: pairedRateDrifts
+                )
+                trajectoryBounds.append(try ProfessionalQualityTrajectoryBounds(
+                    trajectory: trajectoryKind,
+                    metric: metric,
+                    lowerDelta: minimum - guardBand,
+                    upperDelta: maximum + guardBand
+                ))
+            }
+        }
+
+        var rateBounds: [ProfessionalQualityRateConsistencyBounds] = []
+        for checkpoint in CanonicalJourneyCheckpoint.allCases {
+            for metric in ProfessionalQualityMetric.allCases {
+                let absoluteDeltas = try corpus.trajectories.map {
+                    trajectory -> Double in
+                    let values = trajectory.observations
+                        .filter { $0.checkpoint == checkpoint }
+                        .compactMap { $0[metric] }
+                    guard values.count == Self.requiredSampleRates.count,
+                          let minimum = values.min(),
+                          let maximum = values.max() else {
+                        throw ProfessionalQualityCalibrationError
+                            .incompleteCheckpointCoverage
+                    }
+                    return maximum - minimum
+                }
+                guard let maximum = absoluteDeltas.max() else {
+                    throw ProfessionalQualityCalibrationError.invalidMetricSet
+                }
+                let guardBand = Self.diverseGuardBand(
+                    metric: metric,
+                    values: absoluteDeltas,
+                    pairedRateDrifts: []
+                )
+                rateBounds.append(try ProfessionalQualityRateConsistencyBounds(
+                    checkpoint: checkpoint,
+                    metric: metric,
+                    maximumAbsoluteDelta: maximum + guardBand
+                ))
+            }
+        }
+
+        schemaVersion = Self.schemaVersion
+        profileVersion = Self.profileVersion
+        observationVersion = ProfessionalQualityObservation.observationVersion
+        evidenceVersion = corpus.evidenceVersion
+        engineVersion = corpus.engineVersion
+        sourceBankFingerprint = corpus.fingerprint
+        sampleRates = corpus.sampleRates
+        checkpoints = profiles
+        trajectories = trajectoryBounds
+        rateConsistency = rateBounds
+    }
+
+    /// Legacy offline calibration seam for one already reduced journey. It
+    /// accepts no PCM and preserves deterministic decoding of the historical
+    /// v1 resources. Current profile generation uses the diverse corpus
+    /// initializer above.
     package init(
         engineVersion: String,
         evidenceVersion: String = ProfessionalEvidenceReportBank.evidenceVersion,
@@ -712,8 +894,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 ))
             }
         }
-        schemaVersion = Self.schemaVersion
-        profileVersion = Self.profileVersion
+        schemaVersion = Self.legacySchemaVersion
+        profileVersion = Self.legacyProfileVersion
         observationVersion = ProfessionalQualityObservation.observationVersion
         self.evidenceVersion = evidenceVersion
         self.engineVersion = engineVersion
@@ -725,10 +907,20 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
     }
 
     package var isComplete: Bool {
-        schemaVersion == Self.schemaVersion &&
-            profileVersion == Self.profileVersion &&
+        let isLegacy = schemaVersion == Self.legacySchemaVersion &&
+            profileVersion == Self.legacyProfileVersion
+        let isDiverse = schemaVersion == Self.schemaVersion &&
+            profileVersion == Self.profileVersion
+        let expectedObservationCount = isLegacy
+            ? Self.requiredSampleRates.count
+            : sourceTrajectoryCount * Self.requiredSampleRates.count
+        return (isLegacy || isDiverse) &&
             observationVersion == ProfessionalQualityObservation.observationVersion &&
-            evidenceVersion == ProfessionalEvidenceReportBank.evidenceVersion &&
+            (isDiverse
+                ? evidenceVersion == ProfessionalEvidenceReportBank.evidenceVersion
+                : [Self.legacyEvidenceVersion,
+                   ProfessionalEvidenceReportBank.evidenceVersion]
+                    .contains(evidenceVersion)) &&
             !engineVersion.trimmingCharacters(
                 in: .whitespacesAndNewlines
             ).isEmpty &&
@@ -738,7 +930,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             sampleRates == Self.requiredSampleRates &&
             checkpoints.map(\.checkpoint) == CanonicalJourneyCheckpoint.allCases &&
             checkpoints.allSatisfy {
-                $0.sourceObservationCount == Self.requiredSampleRates.count &&
+                $0.sourceObservationCount == expectedObservationCount &&
                     $0.isComplete && $0.bounds.allSatisfy { bounds in
                         let domain = Self.domain(for: bounds.metric)
                         return bounds.lower >= domain.lowerBound &&
@@ -776,7 +968,23 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             rateConsistency.allSatisfy {
                 $0.maximumAbsoluteDelta.isFinite &&
                     $0.maximumAbsoluteDelta >= 0
-            }
+            } &&
+            (isLegacy || sourceTrajectoryCount >=
+                Self.minimumCalibrationTrajectoryCount)
+    }
+
+    package var sourceTrajectoryCount: Int {
+        guard let count = checkpoints.first?.sourceObservationCount,
+              count.isMultiple(of: Self.requiredSampleRates.count) else {
+            return 0
+        }
+        return count / Self.requiredSampleRates.count
+    }
+
+    package var usesDiverseCalibration: Bool {
+        schemaVersion == Self.schemaVersion &&
+            profileVersion == Self.profileVersion &&
+            sourceTrajectoryCount >= Self.minimumCalibrationTrajectoryCount
     }
 
     package func deterministicJSON() throws -> Data {
@@ -800,7 +1008,12 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
     }
 
     package var fingerprint: String {
-        (try? Self.fingerprint(of: deterministicJSON())) ?? ""
+        let domain = usesDiverseCalibration
+            ? "professional-quality-calibration-json.v2"
+            : "professional-quality-calibration-json.v1"
+        return (try? Self.fingerprint(
+            of: deterministicJSON(), domain: domain
+        )) ?? ""
     }
 
     package subscript(
@@ -832,12 +1045,82 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             absoluteFloor = 120
         case .maximumBoundaryDelta, .absoluteDCOffset:
             absoluteFloor = 0.002
+        case .maskingOverlapWindowRatio, .maskingLongestRunRatio:
+            absoluteFloor = 1 / Double(
+                SpectrumMaskingAnalyzer.analyzedWindowCount
+            )
+        case .barTransientDensityMean, .barTransientDensitySpan:
+            absoluteFloor = transientDensityQuantizationFloor
         case .kickEventCountMean:
             absoluteFloor = 0.25
         default:
             absoluteFloor = 0.04
         }
         return max(absoluteFloor, observedRateDrift * 2, centerMagnitude * 0.08)
+    }
+
+    /// Transient density counts discrete events per second. At fixed 130 BPM,
+    /// one changed event in one four-beat bar is the smallest physically
+    /// meaningful difference; representative-rate frame rounding makes the
+    /// exact resolution slightly rate-dependent.
+    private static var transientDensityQuantizationFloor: Double {
+        let barSeconds = 4 * 60 / AutonomousSessionDirector.bpm
+        return requiredSampleRates.map { sampleRate in
+            let frameCount = max(
+                1,
+                Int((barSeconds * sampleRate).rounded())
+            )
+            return sampleRate / Double(frameCount)
+        }.max() ?? 0
+    }
+
+    /// A multi-journey envelope already includes the observed min/max musical
+    /// diversity. Its extrapolation margin is therefore based on one observed
+    /// spread plus the worst same-journey rate drift, rather
+    /// than treating cross-journey variation as if it were measurement error.
+    private static func diverseGuardBand(
+        metric: ProfessionalQualityMetric,
+        values: [Double],
+        pairedRateDrifts: [Double]
+    ) -> Double {
+        guard let minimum = values.min(), let maximum = values.max() else {
+            return 0
+        }
+        let centerMagnitude = abs(values.reduce(0, +) / Double(values.count))
+        let observedSpread = maximum - minimum
+        let maximumRateDrift = pairedRateDrifts.max() ?? 0
+        let absoluteFloor = guardBand(
+            metric: metric,
+            values: [0],
+            minimum: 0,
+            maximum: 0
+        )
+        return max(
+            absoluteFloor,
+            observedSpread,
+            maximumRateDrift * 2,
+            centerMagnitude * 0.08
+        )
+    }
+
+    private static func metricDeltas(
+        trajectory: ProfessionalQualityCalibrationTrajectory,
+        from: CanonicalJourneyCheckpoint,
+        to: CanonicalJourneyCheckpoint,
+        metric: ProfessionalQualityMetric
+    ) throws -> [Double] {
+        try requiredSampleRates.map { sampleRate in
+            guard let fromValue = trajectory.observations.first(where: {
+                $0.sampleRate == sampleRate && $0.checkpoint == from
+            })?[metric],
+                  let toValue = trajectory.observations.first(where: {
+                      $0.sampleRate == sampleRate && $0.checkpoint == to
+                  })?[metric] else {
+                throw ProfessionalQualityCalibrationError
+                    .incompleteCheckpointCoverage
+            }
+            return toValue - fromValue
+        }
     }
 
     private static func domain(
@@ -879,12 +1162,15 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         }
     }
 
-    private static func fingerprint(of data: Data) throws -> String {
+    private static func fingerprint(
+        of data: Data,
+        domain: String = "professional-quality-calibration-json.v1"
+    ) throws -> String {
         guard let string = String(data: data, encoding: .utf8) else {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
         var sink = StreamingFNV1a()
-        sink.domain("professional-quality-calibration-json.v1")
+        sink.domain(domain)
         sink.string(string)
         return fixedWidthFingerprintHex(sink.value)
     }
@@ -929,7 +1215,8 @@ package enum ProfessionalQualityRelationshipEvaluator {
     ) -> [ProfessionalQualityRelationshipFailure] {
         guard profile.isComplete else { return [] }
         var failures: [ProfessionalQualityRelationshipFailure] = []
-        for bounds in profile.trajectories {
+        for bounds in profile.trajectories
+            where bounds.metric.participatesInQualification {
             let pair = bounds.trajectory.checkpoints
             for sampleRate in profile.sampleRates {
                 guard let from = observations.first(where: {
@@ -952,7 +1239,8 @@ package enum ProfessionalQualityRelationshipEvaluator {
                 }
             }
         }
-        for bounds in profile.rateConsistency {
+        for bounds in profile.rateConsistency
+            where bounds.metric.participatesInQualification {
             let values = profile.sampleRates.compactMap { sampleRate in
                 observations.first {
                     $0.sampleRate == sampleRate &&
@@ -1017,7 +1305,8 @@ package enum ProfessionalQualityProfileEvaluator {
         if !observation.hardGatesPassed {
             reasons.insert(.hardGateFailure)
         }
-        for metric in ProfessionalQualityMetric.allCases {
+        for metric in ProfessionalQualityMetric.allCases
+            where metric.participatesInQualification {
             guard let value = observation[metric],
                   let bounds = checkpoint[metric],
                   bounds.contains(value) else {

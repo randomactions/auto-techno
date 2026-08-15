@@ -46,35 +46,49 @@ package struct ProfessionalQualityCandidateAssessment: Codable, Equatable,
 package struct ProfessionalQualityPairedCandidateEvaluator:
         AutonomousCandidateEvaluating {
     package static let policyFamilyVersion =
-        "autotechno-quality.paired-calibrated.v2"
+        "autotechno-quality.paired-calibrated.v3"
     package static let evaluatorVersionIdentifier =
-        "autotechno-candidate-evaluator.paired-calibrated.v2"
+        "autotechno-candidate-evaluator.paired-calibrated.v3"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport
+    package let holdoutQualification: ProfessionalQualityHoldoutQualification
     package let policyVersion: String
     package let evaluatorVersion = Self.evaluatorVersionIdentifier
     package let requiresPairedCandidates = true
 
     package init(
         profile: ProfessionalQualityCalibrationProfile,
-        adversarialSuite: ProfessionalQualityAdversarialSuiteReport
+        adversarialSuite: ProfessionalQualityAdversarialSuiteReport,
+        holdoutQualification: ProfessionalQualityHoldoutQualification
     ) throws {
         _ = try ProfessionalQualityDevelopmentPolicy(
             profile: profile,
             adversarialSuite: adversarialSuite
         )
-        guard profile.engineVersion == QualityQualificationContract.engineVersion,
+        guard profile.usesDiverseCalibration,
+              adversarialSuite.schemaVersion ==
+                ProfessionalQualityAdversarialSuiteReport.schemaVersion,
+              holdoutQualification.qualified,
+              holdoutQualification.engineVersion == profile.engineVersion,
+              holdoutQualification.profileFingerprint == profile.fingerprint,
+              holdoutQualification.adversarialSuiteFingerprint ==
+                adversarialSuite.fingerprint,
+              holdoutQualification.calibrationCorpusFingerprint ==
+                profile.sourceBankFingerprint,
+              profile.engineVersion == QualityQualificationContract.engineVersion,
               profile.evidenceVersion ==
                 ProfessionalEvidenceReportBank.evidenceVersion else {
             throw ProfessionalQualityCalibrationError.profileMismatch
         }
         self.profile = profile
         self.adversarialSuite = adversarialSuite
+        self.holdoutQualification = holdoutQualification
         policyVersion = [
             Self.policyFamilyVersion,
             "profile-\(profile.fingerprint)",
             "adversarial-\(adversarialSuite.fingerprint)",
+            "holdout-\(holdoutQualification.fingerprint)",
         ].joined(separator: ".")
     }
 

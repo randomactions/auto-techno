@@ -126,6 +126,11 @@ package struct MusicalQualityMetrics: Equatable, Sendable {
         var previousEnvelope = 0.0
         var transients = 0
         let refractory = max(1, Int(sampleRate * 0.035))
+        let referenceEnvelopeCoefficient = 0.08
+        let envelopeCoefficient = 1 - pow(
+            1 - referenceEnvelopeCoefficient,
+            48_000 / sampleRate
+        )
         var lastTransient = -refractory
         var frame = 0
         for (left, right) in chunks {
@@ -150,7 +155,8 @@ package struct MusicalQualityMetrics: Equatable, Sendable {
                     transients += 1
                     lastTransient = frame
                 }
-                previousEnvelope += (envelope - previousEnvelope) * 0.08
+                previousEnvelope +=
+                    (envelope - previousEnvelope) * envelopeCoefficient
                 frame += 1
             }
         }
