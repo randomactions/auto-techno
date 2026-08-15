@@ -159,6 +159,7 @@ package struct RenderState: Equatable, Sendable {
     package var highBandEnvelope = 0.0
     package var automaticMixState = AutomaticMixState()
     package var spatialFDNState = FeedbackDelayNetworkState()
+    package var modalPercussionState = ModalPercussionVoiceState()
     var resonantFoundationState = ResonantMonoState()
     var resonantAnchorState = ResonantMonoState()
     var resonantShadowState = ResonantMonoState()

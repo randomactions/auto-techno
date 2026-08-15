@@ -6172,7 +6172,7 @@ package struct AutonomousCandidateContinuationFingerprint: Codable, Equatable, S
             routeRecovery: routeRecovery,
             combined: AutonomousCandidateCanonicalJSON.fingerprint(
                 FingerprintPayload(
-                    version: "candidate-continuation.v1",
+                    version: "candidate-continuation.v2",
                     renderState: render,
                     generatedDSPState: graph,
                     qualityState: quality,

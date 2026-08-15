@@ -34,7 +34,7 @@ package enum AutonomousTypedFingerprint {
     }
 
     package static func renderState(_ state: RenderState) -> String {
-        digest(domain: "render-state.typed.v3") { sink in
+        digest(domain: "render-state.typed.v4") { sink in
             encode(state, into: &sink)
         }
     }
@@ -44,7 +44,7 @@ package enum AutonomousTypedFingerprint {
         cancellationRequested: @Sendable () -> Bool
     ) -> String? {
         cancellableDigest(
-            domain: "render-state.typed.v3",
+            domain: "render-state.typed.v4",
             cancellationRequested: cancellationRequested
         ) { sink in
             encode(
@@ -101,7 +101,7 @@ package enum AutonomousTypedFingerprint {
         renderState: RenderState,
         generatedDSPState: GeneratedDSPContinuationState
     ) -> String {
-        digest(domain: "render-dsp-continuation.typed.v3") { sink in
+        digest(domain: "render-dsp-continuation.typed.v4") { sink in
             sink.field("renderState"); encode(renderState, into: &sink)
             sink.field("generatedDSPState"); encode(generatedDSPState, into: &sink)
         }
@@ -113,7 +113,7 @@ package enum AutonomousTypedFingerprint {
         cancellationRequested: @Sendable () -> Bool
     ) -> String? {
         cancellableDigest(
-            domain: "render-dsp-continuation.typed.v3",
+            domain: "render-dsp-continuation.typed.v4",
             cancellationRequested: cancellationRequested
         ) { sink in
             sink.field("renderState")
@@ -681,6 +681,8 @@ private extension AutonomousTypedFingerprint {
         sink.field("automaticMixState"); encode(value.automaticMixState, into: &sink)
         sink.field("spatialFDNState")
         encode(value.spatialFDNState, into: &sink)
+        sink.field("modalPercussionState")
+        encode(value.modalPercussionState, into: &sink)
         sink.field("resonantFoundationState")
         encode(value.resonantFoundationState, into: &sink)
         sink.field("resonantAnchorState"); encode(value.resonantAnchorState, into: &sink)
@@ -787,6 +789,8 @@ private extension AutonomousTypedFingerprint {
         sink.field("spatialFDNDampingStates")
         sink.collection(value.spatialFDNState.dampingStates.count)
         for state in value.spatialFDNState.dampingStates { sink.double(state) }
+        sink.field("modalPercussionState")
+        encode(value.modalPercussionState, into: &sink)
         sink.field("resonantFoundationState")
         encode(value.resonantFoundationState, into: &sink)
         sink.field("resonantAnchorState"); encode(value.resonantAnchorState, into: &sink)
@@ -838,6 +842,48 @@ private extension AutonomousTypedFingerprint {
         sink.field("previousPostGraphRemainderEvidenceFrame")
         encode(value.previousPostGraphRemainderEvidenceFrame, into: &sink)
         return true
+    }
+
+    static func encode(
+        _ value: ModalPercussionVoiceState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("ModalPercussionVoiceState")
+        sink.field("sampleRate"); sink.double(value.sampleRate)
+        sink.field("slot0"); encode(value.slot0, into: &sink)
+        sink.field("slot1"); encode(value.slot1, into: &sink)
+        sink.field("slot2"); encode(value.slot2, into: &sink)
+        sink.field("slot3"); encode(value.slot3, into: &sink)
+    }
+
+    static func encode(
+        _ value: ModalPercussionVoiceSlotState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("ModalPercussionVoiceSlotState")
+        sink.field("active"); sink.bool(value.active)
+        sink.field("articulationSeed"); sink.uint64(value.articulationSeed)
+        sink.field("ageFrames"); sink.int(value.ageFrames)
+        sink.field("remainingFrames"); sink.int(value.remainingFrames)
+        sink.field("mode0"); encode(value.mode0, into: &sink)
+        sink.field("mode1"); encode(value.mode1, into: &sink)
+        sink.field("mode2"); encode(value.mode2, into: &sink)
+        sink.field("mode3"); encode(value.mode3, into: &sink)
+        sink.field("mode4"); encode(value.mode4, into: &sink)
+        sink.field("mode5"); encode(value.mode5, into: &sink)
+    }
+
+    static func encode(
+        _ value: ModalPercussionModeState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("ModalPercussionModeState")
+        sink.field("frequencyHz"); sink.double(value.frequencyHz)
+        sink.field("poleRadius"); sink.double(value.poleRadius)
+        sink.field("coefficient"); sink.double(value.coefficient)
+        sink.field("weight"); sink.double(value.weight)
+        sink.field("y1"); sink.double(value.y1)
+        sink.field("y2"); sink.double(value.y2)
     }
 
     static func encode(_ value: [Float], into sink: inout StreamingFNV1a) {

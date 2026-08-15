@@ -2832,6 +2832,19 @@ struct AutonomousCandidateEvaluationTests {
                 AutonomousCandidateFingerprint.renderState(positiveZeroRenderState))
         #expect(AutonomousCandidateFingerprint.renderState(positiveZeroRenderState) !=
                 AutonomousCandidateFingerprint.renderState(negativeZeroRenderState))
+        var modalRenderState = RenderState()
+        modalRenderState.modalPercussionState.sampleRate = 48_000
+        modalRenderState.modalPercussionState.slot0.active = true
+        modalRenderState.modalPercussionState.slot0.articulationSeed = 0xA11CE
+        #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) !=
+                AutonomousCandidateFingerprint.renderState(modalRenderState))
+        #expect(AutonomousCandidateFingerprint.renderState(
+            emptyRenderState,
+            cancellationRequested: { false }
+        ) != AutonomousCandidateFingerprint.renderState(
+            modalRenderState,
+            cancellationRequested: { false }
+        ))
 
         var orderedGraphState = GeneratedDSPContinuationState()
         orderedGraphState.nodeStates[2] = DSPGraphNodeState()
@@ -2901,7 +2914,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
-                "d6d404790bd651aa")
+                "12769b267dd4f075")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
@@ -2913,7 +2926,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.renderDSPContinuation(
             renderState: positiveZeroRenderState,
             generatedDSPState: orderedGraphState
-        ) == "1cd07aec247972a1")
+        ) == "8b42aaf5ea81e130")
     }
 
     private func fixtureVector(
