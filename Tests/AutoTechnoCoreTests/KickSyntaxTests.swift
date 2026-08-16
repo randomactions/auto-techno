@@ -149,8 +149,16 @@ struct KickSyntaxTests {
         #expect(syntaxIndexes(in: monoPlan) != nil)
     }
 
+    // This end-to-end preflight check combines a full prepared phrase with many
+    // macro-expanded assertions, so execute it on the main thread's normal stack.
+    @MainActor
     @Test("Preflight rejects forged syntax roles and arbitrary kick deletion")
     func preflightRejectsTampering() throws {
+        try verifyPreflightRejectsTampering()
+    }
+
+    @inline(never)
+    private func verifyPreflightRejectsTampering() throws {
         let fixture = try #require(eligibleFixture())
         let source = fixture.plan
         let indexes = try #require(syntaxIndexes(in: source))
