@@ -75,6 +75,12 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter pulseEchoDriveEvidenceContract
 
+      - name: Run modal-percussion evidence tampering
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter 'modalPercussionRejects'
+
       - name: Run unavailable-route commit gate
         run: >-
           swift test --no-parallel --skip-build
@@ -105,6 +111,18 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter representativeRateEquivalence
 
+      - name: Run modal-percussion representative-rate decay
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter physicalDecayMatchesAt44100And48000
+
+      - name: Run modal-percussion correction equality
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter modalPercussionCorrectionMustMatchInitial
+
       - name: Run equivalent prepared transactions across rates
         run: >-
           swift test --no-parallel --skip-build
@@ -127,7 +145,7 @@ jobs:
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(AdaptiveAutonomousSessionTests|GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|FeedbackDelayNetworkTests|RepositorySurfaceTests|IdentityReturnContinuationTests|InstrumentPaletteTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|PrimaryEvaluatorReadinessTests|ProfessionalQualityCalibration|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
+          --filter '(AdaptiveAutonomousSessionTests|GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|FeedbackDelayNetworkTests|RepositorySurfaceTests|IdentityReturnContinuationTests|InstrumentPaletteTests|KickSyntaxTests|ModalPercussionDSPTests|ModalPercussionPlanningTests|PercussionEchoTextureTests|PhraseCompositionTests|PrimaryEvaluatorReadinessTests|ProfessionalQualityCalibration|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
 
       - name: Run preparation preflight tests
         run: >-

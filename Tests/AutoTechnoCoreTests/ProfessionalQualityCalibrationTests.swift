@@ -412,7 +412,7 @@ struct ProfessionalQualityCalibrationTests {
         #expect(available.availability == .available)
         #expect(available.policyVersion == artifacts.evaluator.policyVersion)
         #expect(available.evaluatorVersion == artifacts.evaluator.evaluatorVersion)
-        #expect(available.policyVersion.contains("primary-calibrated.v1"))
+        #expect(available.policyVersion.contains("primary-calibrated.v2"))
 
         let unsupported = ProfessionalQualityPreparationEvaluator(
             sampleRate: 8_000,

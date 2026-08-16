@@ -5,6 +5,42 @@ import Testing
 
 @Suite("Current autonomous runtime")
 struct CurrentRuntimeTests {
+    @Test("Modal primary identities advance as one exact contract")
+    func modalPrimaryIdentityContract() {
+        #expect(QualityQualificationContract.schemaVersion == 21)
+        #expect(QualityQualificationContract.engineVersion ==
+                "autotechno-canonical-engine.v20")
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 19)
+        #expect(ProfessionalQualityObservation.schemaVersion == 2)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 5)
+        #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
+                "autotechno-quality.primary-calibrated.v2")
+        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 3)
+        #expect(CanonicalJourneyQualificationReport.currentEvidenceScope ==
+                "primary-structural-bs1770-signal-role-upper-modal-commit.v5")
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 3)
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v2"))
+        #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
+            .hasSuffix("-v2"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v2"))
+    }
+
+    @Test("Only v2 primary resources are present in source and bundle")
+    func primaryResourcesAreV2Only() {
+        let resourceDirectory = repositoryRoot
+            .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
+        for stem in ["profile", "adversarial-suite", "holdout"] {
+            let prefix = "professional-quality-primary-\(stem)"
+            #expect(!FileManager.default.fileExists(atPath:
+                resourceDirectory.appendingPathComponent("\(prefix)-v1.json").path))
+            #expect(FileManager.default.fileExists(atPath:
+                resourceDirectory.appendingPathComponent("\(prefix)-v2.json").path))
+            #expect(!ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: "\(prefix)-v1"))
+            #expect(ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: "\(prefix)-v2"))
+        }
+    }
     @Test("The director owns the fixed tempo and default seed")
     func fixedSessionIdentity() {
         let director = AutonomousSessionDirector()
@@ -115,6 +151,13 @@ struct CurrentRuntimeTests {
             blocks: [asymmetricNonFinite],
             sampleRate: 8_000
         ).finite)
+    }
+
+    private var repositoryRoot: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
     }
 }
 

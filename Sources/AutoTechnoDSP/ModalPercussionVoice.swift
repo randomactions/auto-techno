@@ -580,7 +580,7 @@ package enum ModalPercussionVoice {
             let body = sqrt(bodyEnergy / Double(max(1, bodyCount)))
             let tail = sqrt(tailEnergy / Double(max(1, tailCount)))
             let tailToBodyDB = body > 0
-                ? 20 * log10(max(1e-12, tail) / body)
+                ? max(-120, 20 * log10(max(1e-12, tail) / body))
                 : -120
             return EventMetrics(
                 sampleHash: fingerprint.fingerprint,

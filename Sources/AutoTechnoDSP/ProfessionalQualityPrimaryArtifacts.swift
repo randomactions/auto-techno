@@ -5,16 +5,16 @@ import Foundation
 /// their deterministic identities, adversarial gate, and disjoint holdout.
 package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     package static let profileResource =
-        "professional-quality-primary-profile-v1"
+        "professional-quality-primary-profile-v2"
     package static let adversarialResource =
-        "professional-quality-primary-adversarial-suite-v1"
+        "professional-quality-primary-adversarial-suite-v2"
     package static let holdoutResource =
-        "professional-quality-primary-holdout-v1"
-    package static let expectedProfileFingerprint = "4b55055d1904ead8"
+        "professional-quality-primary-holdout-v2"
+    package static let expectedProfileFingerprint = "33592f06e3c86a77"
     package static let expectedAdversarialSuiteFingerprint =
-        "a34c3ba6acec9c2e"
+        "15ae673a07bc6cd0"
     package static let expectedHoldoutQualificationFingerprint =
-        "c333586ce068d5af"
+        "dbe3ba28fa1a1956"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport
@@ -73,6 +73,10 @@ package struct ProfessionalQualityPrimaryArtifacts: Sendable {
             throw ProfessionalQualityCalibrationError.profileMismatch
         }
         return artifacts
+    }
+
+    package static func containsBundledResource(named name: String) -> Bool {
+        Bundle.module.url(forResource: name, withExtension: "json") != nil
     }
 
     /// SwiftPM text resources retain the repository's final line feed. Remove

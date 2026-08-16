@@ -2,14 +2,13 @@ import Foundation
 
 /// Stable versions for the calibrated single-primary quality contract.
 package enum QualityQualificationContract {
-    /// Version 19 binds resonant-mono patch automation to the shared bounded
-    /// TPT filter and first-order antiderivative-antialiased tanh consequence,
-    /// including exact input/output fingerprints and applied parameter ranges.
-    /// Quality schema 20 removes the previous multi-plan decision outcomes while the
-    /// signal engine and its calibrated metric ranges remain version 19.
-    package static let schemaVersion = 20
+    /// Version 20 binds the score-owned modal foundation articulation, its
+    /// stable six-mode resonator, exact continuation and protected routing,
+    /// and the modal dimensions judged by the single primary evaluator.
+    /// Quality schema 21 advances those identities as one exact contract.
+    package static let schemaVersion = 21
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v19"
+    package static let engineVersion = "autotechno-canonical-engine.v20"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

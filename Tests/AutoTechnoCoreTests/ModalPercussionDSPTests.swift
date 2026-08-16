@@ -197,6 +197,34 @@ struct ModalPercussionDSPTests {
         #expect(event.rms.isFinite)
     }
 
+    @Test("A late bar strike reports the bounded missing-tail sentinel")
+    func lateBarStrikeHasBoundedTailEvidence() throws {
+        let sampleRate = 44_100.0
+        let frameCount = Int((
+            240 / AutonomousSessionDirector.bpm * sampleRate
+        ).rounded())
+        let startFrame = frameCount - Int((sampleRate * 0.10).rounded())
+        var state = ModalPercussionVoiceState()
+        var output = [Float](repeating: 0, count: frameCount)
+        let evidence = ModalPercussionVoice.renderBar(
+            into: &output,
+            bar: 0,
+            sampleRate: sampleRate,
+            events: [scheduled(
+                articulation: articulation(),
+                startFrame: startFrame
+            )],
+            state: &state
+        )
+        let event = try #require(evidence.events.first)
+
+        #expect(event.bodyRMS > 0)
+        #expect(event.tailRMS == 0)
+        #expect(event.tailToBodyDB == -120)
+        #expect(event.tailToBodyDB >= -120)
+        #expect(event.finite)
+    }
+
     @Test("Route rebuild is deterministic")
     func routeRebuildIsDeterministic() {
         var rebuiltState = ModalPercussionVoiceState()
