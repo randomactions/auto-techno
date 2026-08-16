@@ -38,6 +38,39 @@ struct LiveFeedbackCoreTests {
         #expect(decoded.fingerprint == overAttenuated.fingerprint)
     }
 
+    @Test("Negative zero has one canonical live-feedback provenance")
+    func negativeZeroCanonicalizesToPositiveHome() throws {
+        let positiveState = LiveMasterHeadroomContinuationState(committedTrimDB: 0)
+        let negativeState = LiveMasterHeadroomContinuationState(committedTrimDB: -0.0)
+        #expect(negativeState.committedTrimDB.bitPattern == Double.zero.bitPattern)
+        #expect(negativeState == positiveState)
+        #expect(negativeState.fingerprint == positiveState.fingerprint)
+
+        let positiveProposal = makeProposal(proposedTrimDB: 0)
+        let negativeProposal = makeProposal(proposedTrimDB: -0.0)
+        #expect(negativeProposal.proposedTrimDB.bitPattern == Double.zero.bitPattern)
+        #expect(negativeProposal == positiveProposal)
+        #expect(negativeProposal.fingerprint == positiveProposal.fingerprint)
+
+        var stateWire = try jsonObject(positiveState)
+        stateWire["committedTrimDB"] = -0.0
+        let decodedState = try JSONDecoder().decode(
+            LiveMasterHeadroomContinuationState.self,
+            from: JSONSerialization.data(withJSONObject: stateWire)
+        )
+        #expect(decodedState.committedTrimDB.bitPattern == Double.zero.bitPattern)
+        #expect(decodedState.fingerprint == positiveState.fingerprint)
+
+        var proposalWire = try jsonObject(positiveProposal)
+        proposalWire["proposedTrimDB"] = -0.0
+        let decodedProposal = try JSONDecoder().decode(
+            LiveMasterHeadroomProposal.self,
+            from: JSONSerialization.data(withJSONObject: proposalWire)
+        )
+        #expect(decodedProposal.proposedTrimDB.bitPattern == Double.zero.bitPattern)
+        #expect(decodedProposal.fingerprint == positiveProposal.fingerprint)
+    }
+
     @Test("Proposal canonicalizes positions and reason order")
     func proposalCanonicalizesReasons() {
         let proposal = makeProposal(

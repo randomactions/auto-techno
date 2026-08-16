@@ -905,6 +905,12 @@ private extension AutonomousTypedFingerprint {
         sink.field("lowBandEnvelope"); sink.double(value.lowBandEnvelope)
         sink.field("highBandEnvelope"); sink.double(value.highBandEnvelope)
         sink.field("automaticMixState"); encode(value.automaticMixState, into: &sink)
+        // The all-zero home state is the pre-feature semantic identity. Only a
+        // committed live transition appends new provenance to that identity.
+        if value.liveMasterHeadroomState != LiveMasterHeadroomContinuationState() {
+            sink.field("liveMasterHeadroomState")
+            encode(value.liveMasterHeadroomState, into: &sink)
+        }
         sink.field("spatialFDNState")
         encode(value.spatialFDNState, into: &sink)
         sink.field("modalPercussionState")
@@ -997,6 +1003,11 @@ private extension AutonomousTypedFingerprint {
         sink.field("lowBandEnvelope"); sink.double(value.lowBandEnvelope)
         sink.field("highBandEnvelope"); sink.double(value.highBandEnvelope)
         sink.field("automaticMixState"); encode(value.automaticMixState, into: &sink)
+        // Match the normal path's canonical home-state omission exactly.
+        if value.liveMasterHeadroomState != LiveMasterHeadroomContinuationState() {
+            sink.field("liveMasterHeadroomState")
+            encode(value.liveMasterHeadroomState, into: &sink)
+        }
         sink.field("spatialFDNState")
         guard encode(
             value.spatialFDNState.storage,
@@ -1068,6 +1079,40 @@ private extension AutonomousTypedFingerprint {
         sink.field("previousPostGraphRemainderEvidenceFrame")
         encode(value.previousPostGraphRemainderEvidenceFrame, into: &sink)
         return true
+    }
+
+    static func encode(
+        _ value: LiveMasterHeadroomContinuationState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LiveMasterHeadroomContinuationState")
+        sink.field("schemaVersion")
+        sink.int(LiveMasterHeadroomContinuationState.schemaVersion)
+        sink.field("revision"); sink.int(value.revision)
+        sink.field("committedTrimDB"); sink.double(value.committedTrimDB)
+        sink.field("consecutiveCleanWindows")
+        sink.int(value.consecutiveCleanWindows)
+        sink.field("lastProposalFingerprint")
+        sink.presence(value.lastProposalFingerprint != nil)
+        if let lastProposalFingerprint = value.lastProposalFingerprint {
+            sink.string(lastProposalFingerprint)
+        }
+        sink.field("lastObservationFingerprint")
+        sink.presence(value.lastObservationFingerprint != nil)
+        if let lastObservationFingerprint = value.lastObservationFingerprint {
+            sink.string(lastObservationFingerprint)
+        }
+        sink.field("lastAcceptedSourcePhraseIndex")
+        sink.presence(value.lastAcceptedSourcePhraseIndex != nil)
+        if let lastAcceptedSourcePhraseIndex = value.lastAcceptedSourcePhraseIndex {
+            sink.int(lastAcceptedSourcePhraseIndex)
+        }
+        sink.field("earliestEligibleFutureSample")
+        sink.presence(value.earliestEligibleFutureSample != nil)
+        if let earliestEligibleFutureSample = value.earliestEligibleFutureSample {
+            sink.int64(earliestEligibleFutureSample)
+        }
+        sink.field("coreFingerprint"); sink.string(value.fingerprint)
     }
 
     static func encode(

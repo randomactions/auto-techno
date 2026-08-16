@@ -5,6 +5,58 @@ import Testing
 
 @Suite("Spatial carrier and protected routing regressions")
 struct SpatialProtectedRoutingRegressionTests {
+    @Test("Terminal trim preserves protected-routing evidence before scaling")
+    func protectedRoutingRemainsPreTrimEquivalent() throws {
+        let director = AutonomousSessionDirector(rootSeed: 42)
+        let source = director.plan(from: director.initialState())
+        let plan = replacing(
+            source,
+            resolvedBars: Array(source.resolvedBars.prefix(1))
+        )
+        let graph = DSPGraphGenerator.safePlan(sessionSeed: plan.dna.sceneSeed)
+        var homeState = RenderState()
+        var trimState = RenderState()
+        trimState.liveMasterHeadroomState = LiveMasterHeadroomContinuationState(
+            revision: 3,
+            committedTrimDB: -1,
+            consecutiveCleanWindows: 0,
+            lastProposalFingerprint: "proposal-3",
+            lastObservationFingerprint: "observation-3",
+            lastAcceptedSourcePhraseIndex: 2,
+            earliestEligibleFutureSample: 32_000
+        )
+        var homeGraphState = GeneratedDSPContinuationState()
+        var trimGraphState = GeneratedDSPContinuationState()
+        let home = try #require(AutonomousPhraseRenderer.render(
+            plan: plan,
+            graph: graph,
+            sampleRate: 8_000,
+            state: &homeState,
+            graphState: &homeGraphState
+        ).first)
+        let trimmed = try #require(AutonomousPhraseRenderer.render(
+            plan: plan,
+            graph: graph,
+            sampleRate: 8_000,
+            state: &trimState,
+            graphState: &trimGraphState
+        ).first)
+
+        #expect(home.protectedFoundationSampleHash ==
+                trimmed.protectedFoundationSampleHash)
+        #expect(home.protectedRhythmSampleHash ==
+                trimmed.protectedRhythmSampleHash)
+        #expect(home.kickMix == trimmed.kickMix)
+        #expect(home.spatialFDNRenderEvidence == trimmed.spatialFDNRenderEvidence)
+        #expect(home.graphInputRemainderTimbreEvidence ==
+                trimmed.graphInputRemainderTimbreEvidence)
+        #expect(home.postGraphRemainderTimbreEvidence ==
+                trimmed.postGraphRemainderTimbreEvidence)
+        #expect(trimmed.liveMasterTrimRenderEvidence.preTrimStereoSampleHash ==
+                ExactPCMFingerprint.stereo(left: home.left, right: home.right))
+        #expect(trimmed.liveMasterTrimRenderEvidence.exactScaleMatches)
+    }
+
     @Test("The tuned tom uses only its resolved modal articulation")
     func tunedTomUsesOnlyTheResolvedModalArticulation() throws {
         let fixture = try #require(modalFoundationFixture())

@@ -1,5 +1,5 @@
 import AutoTechnoCore
-import AutoTechnoDSP
+@testable import AutoTechnoDSP
 import Foundation
 import Testing
 
@@ -102,11 +102,17 @@ struct CurrentRuntimeTests {
         #expect(report.maxBoundaryDelta < 0.65)
 
         let source = first[0]
+        let nonFiniteLeft: [Float] = [0]
+        let nonFiniteRight: [Float] = [0, .nan]
+        let nonFiniteFingerprint = ExactPCMFingerprint.stereo(
+            left: nonFiniteLeft,
+            right: nonFiniteRight
+        )
         let asymmetricNonFinite = RenderBlock(
             bar: source.bar,
             section: source.section,
-            left: [0],
-            right: [0, .nan],
+            left: nonFiniteLeft,
+            right: nonFiniteRight,
             events: source.events,
             modulation: source.modulation,
             busStates: source.busStates,
@@ -136,6 +142,16 @@ struct CurrentRuntimeTests {
                 source.percussionEchoTextureRenderPassesMatch,
             pulseEchoReturnDriveRenderEvidence:
                 source.pulseEchoReturnDriveRenderEvidence,
+            liveMasterTrimRenderEvidence: LiveMasterTrimRenderEvidence(
+                requestedTrimDB: 0,
+                appliedTrimDB: 0,
+                appliedGain: 1,
+                preTrimStereoSampleHash: nonFiniteFingerprint,
+                postTrimStereoSampleHash: nonFiniteFingerprint,
+                preTrimNonzeroSampleCount: 1,
+                postTrimNonzeroSampleCount: 1,
+                exactScaleMatches: false
+            ),
             upperNoteRenderEvidence: source.upperNoteRenderEvidence,
             upperTimingRenderEvidence: source.upperTimingRenderEvidence,
             graphInputRemainderTimbreEvidence:

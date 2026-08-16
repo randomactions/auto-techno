@@ -51,9 +51,10 @@ package struct LiveMasterHeadroomContinuationState: Codable, Equatable, Sendable
         earliestEligibleFutureSample: Int64? = nil
     ) {
         self.revision = max(0, revision)
-        self.committedTrimDB = committedTrimDB.isFinite
+        let boundedTrim = committedTrimDB.isFinite
             ? min(0, max(-3, committedTrimDB))
             : 0
+        self.committedTrimDB = boundedTrim == 0 ? 0 : boundedTrim
         self.consecutiveCleanWindows = min(2, max(0, consecutiveCleanWindows))
         self.lastProposalFingerprint = Self.nonempty(lastProposalFingerprint)
         self.lastObservationFingerprint = Self.nonempty(lastObservationFingerprint)
@@ -291,9 +292,10 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
         let canonicalReasons = reasonsByRawValue.values.sorted {
             $0.rawValue < $1.rawValue
         }
-        let canonicalTrim = proposedTrimDB.isFinite
+        let boundedTrim = proposedTrimDB.isFinite
             ? min(0, max(-3, proposedTrimDB))
             : proposedTrimDB
+        let canonicalTrim = boundedTrim == 0 ? 0 : boundedTrim
         let canonicalCleanWindows = min(2, max(0, proposedCleanWindows))
         let canonicalFutureSample = max(0, earliestEligibleFutureSample)
 

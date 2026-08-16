@@ -138,6 +138,41 @@ package struct StemReconstructionEvidence: Equatable, Sendable {
     package let upperMaximumError: Float
 }
 
+/// Same-pass proof for the sole terminal live-feedback action. The pre-trim
+/// fingerprint names the already recombined, output-safety-processed stereo
+/// signal. The post-trim fingerprint names the immutable PCM emitted by the
+/// render block. No role-local signal or dynamics state participates here.
+package struct LiveMasterTrimRenderEvidence: Equatable, Sendable {
+    package let requestedTrimDB: Double
+    package let appliedTrimDB: Double
+    package let appliedGain: Double
+    package let preTrimStereoSampleHash: String
+    package let postTrimStereoSampleHash: String
+    package let preTrimNonzeroSampleCount: Int
+    package let postTrimNonzeroSampleCount: Int
+    package let exactScaleMatches: Bool
+
+    package init(
+        requestedTrimDB: Double,
+        appliedTrimDB: Double,
+        appliedGain: Double,
+        preTrimStereoSampleHash: String,
+        postTrimStereoSampleHash: String,
+        preTrimNonzeroSampleCount: Int,
+        postTrimNonzeroSampleCount: Int,
+        exactScaleMatches: Bool
+    ) {
+        self.requestedTrimDB = requestedTrimDB
+        self.appliedTrimDB = appliedTrimDB
+        self.appliedGain = appliedGain
+        self.preTrimStereoSampleHash = preTrimStereoSampleHash
+        self.postTrimStereoSampleHash = postTrimStereoSampleHash
+        self.preTrimNonzeroSampleCount = preTrimNonzeroSampleCount
+        self.postTrimNonzeroSampleCount = postTrimNonzeroSampleCount
+        self.exactScaleMatches = exactScaleMatches
+    }
+}
+
 /// Mutable DSP continuation owned by detached phrase preparation. The audio
 /// player receives immutable buffers and never mutates this state.
 package struct RenderState: Equatable, Sendable {
@@ -158,6 +193,7 @@ package struct RenderState: Equatable, Sendable {
     package var lowBandEnvelope = 0.0
     package var highBandEnvelope = 0.0
     package var automaticMixState = AutomaticMixState()
+    package var liveMasterHeadroomState = LiveMasterHeadroomContinuationState()
     package var spatialFDNState = FeedbackDelayNetworkState()
     package var modalPercussionState = ModalPercussionVoiceState()
     var resonantFoundationState = ResonantMonoState()
@@ -926,6 +962,9 @@ package struct RenderBlock: Equatable, Sendable {
     package let polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence
     package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
     package let spatialFDNRenderEvidence: SpatialFDNRenderEvidence
+    /// Terminal-only attenuation proof. All role and protected-routing evidence
+    /// above is measured before this gain is applied.
+    package let liveMasterTrimRenderEvidence: LiveMasterTrimRenderEvidence
     /// Exact score-owned upper notes used for this bar. The renderer no longer
     /// invents pitch, duration, velocity, or slide decisions after resolution.
     package var resolvedUpperNotes: [ResolvedUpperNote] {
@@ -972,6 +1011,7 @@ package struct RenderBlock: Equatable, Sendable {
                 polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence = .neutral,
                 pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
                 spatialFDNRenderEvidence: SpatialFDNRenderEvidence = .neutral,
+                liveMasterTrimRenderEvidence: LiveMasterTrimRenderEvidence,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 upperTimingRenderEvidence: UpperTimingRenderEvidence,
                 graphInputRemainderTimbreEvidence: UpperTimbreEvidence,
@@ -1018,6 +1058,7 @@ package struct RenderBlock: Equatable, Sendable {
         self.polyphonicPadRenderEvidence = polyphonicPadRenderEvidence
         self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
         self.spatialFDNRenderEvidence = spatialFDNRenderEvidence
+        self.liveMasterTrimRenderEvidence = liveMasterTrimRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.upperTimingRenderEvidence = upperTimingRenderEvidence
         self.graphInputRemainderTimbreEvidence = graphInputRemainderTimbreEvidence
@@ -1494,14 +1535,21 @@ package enum AutonomousPhraseRenderer {
                     left: left, right: right
                 )
             }
-            let outputLeft = zip(
+            let preLiveFeedbackLeft = zip(
                 protectedRhythm.leftSamples,
                 generated.0
             ).map { outputSafety($0 + $1) }
-            let outputRight = zip(
+            let preLiveFeedbackRight = zip(
                 protectedRhythm.rightSamples,
                 generated.1
             ).map { outputSafety($0 + $1) }
+            let terminalOutput = applyLiveMasterTrim(
+                left: preLiveFeedbackLeft,
+                right: preLiveFeedbackRight,
+                state: state.liveMasterHeadroomState
+            )
+            let outputLeft = terminalOutput.left
+            let outputRight = terminalOutput.right
             let relationalPulseEchoAmount = resolved.ensemble.events
                 .filter { $0.voice == .motif || $0.voice == .response }
                 .map { synthPerformance.articulation(at: $0.step).pulseEchoSend }
@@ -1587,6 +1635,7 @@ package enum AutonomousPhraseRenderer {
                     rendered.pulseEchoReturnDriveRenderEvidence,
                 spatialFDNRenderEvidence:
                     rendered.spatialFDNRenderEvidence,
+                liveMasterTrimRenderEvidence: terminalOutput.evidence,
                 upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,
                 upperTimingRenderEvidence: rendered.upperTimingRenderEvidence,
                 graphInputRemainderTimbreEvidence: graphInputRemainderTimbreEvidence,
@@ -1603,6 +1652,84 @@ package enum AutonomousPhraseRenderer {
 
     private static func outputSafety(_ input: Float) -> Float {
         Float(tanh(Double(input) * 1.04) / tanh(1.04) * 0.90)
+    }
+
+    private static func applyLiveMasterTrim(
+        left: [Float],
+        right: [Float],
+        state: LiveMasterHeadroomContinuationState
+    ) -> (
+        left: [Float],
+        right: [Float],
+        evidence: LiveMasterTrimRenderEvidence
+    ) {
+        let requestedTrimDB = state.committedTrimDB
+        let appliedTrimDB = min(0, max(-3, requestedTrimDB))
+        let appliedGain = pow(10.0, appliedTrimDB / 20.0)
+        let outputLeft: [Float]
+        let outputRight: [Float]
+        if appliedTrimDB == 0 {
+            // Preserve the pre-feature sample bit patterns at the home state.
+            outputLeft = left
+            outputRight = right
+        } else {
+            outputLeft = left.map { Float(Double($0) * appliedGain) }
+            outputRight = right.map { Float(Double($0) * appliedGain) }
+        }
+
+        let exactScaleMatches = exactTerminalScaleMatches(
+            preTrim: left,
+            postTrim: outputLeft,
+            gain: appliedGain,
+            neutral: appliedTrimDB == 0
+        ) && exactTerminalScaleMatches(
+            preTrim: right,
+            postTrim: outputRight,
+            gain: appliedGain,
+            neutral: appliedTrimDB == 0
+        )
+        let preTrimNonzeroSampleCount =
+            left.reduce(0) { $0 + ($1 == 0 ? 0 : 1) } +
+            right.reduce(0) { $0 + ($1 == 0 ? 0 : 1) }
+        let postTrimNonzeroSampleCount =
+            outputLeft.reduce(0) { $0 + ($1 == 0 ? 0 : 1) } +
+            outputRight.reduce(0) { $0 + ($1 == 0 ? 0 : 1) }
+        return (
+            outputLeft,
+            outputRight,
+            LiveMasterTrimRenderEvidence(
+                requestedTrimDB: requestedTrimDB,
+                appliedTrimDB: appliedTrimDB,
+                appliedGain: appliedGain,
+                preTrimStereoSampleHash: ExactPCMFingerprint.stereo(
+                    left: left,
+                    right: right
+                ),
+                postTrimStereoSampleHash: ExactPCMFingerprint.stereo(
+                    left: outputLeft,
+                    right: outputRight
+                ),
+                preTrimNonzeroSampleCount: preTrimNonzeroSampleCount,
+                postTrimNonzeroSampleCount: postTrimNonzeroSampleCount,
+                exactScaleMatches: exactScaleMatches
+            )
+        )
+    }
+
+    private static func exactTerminalScaleMatches(
+        preTrim: [Float],
+        postTrim: [Float],
+        gain: Double,
+        neutral: Bool
+    ) -> Bool {
+        guard preTrim.count == postTrim.count else { return false }
+        return zip(preTrim, postTrim).allSatisfy { source, output in
+            guard source.isFinite, output.isFinite else { return false }
+            if neutral {
+                return source.bitPattern == output.bitPattern
+            }
+            return Float(Double(source) * gain).bitPattern == output.bitPattern
+        }
     }
 
     private static func modulation(performance: PerformanceBar, scene: TechnoScene,
