@@ -5,6 +5,116 @@ import Testing
 
 @Suite("Adaptive autonomous session")
 struct AdaptiveAutonomousSessionTests {
+    @Test("Accepted phrase commits quality and live state atomically")
+    func sessionAdvanceCommitsLiveStateAtomicallyWithQuality() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let incoming = director.initialState()
+        let plan = director.plan(from: incoming)
+        let acceptedQuality = QualityContinuationState(revision: 7)
+        let proposal = LiveMasterHeadroomProposal(
+            sourcePhraseIndex: incoming.phraseIndex,
+            sourcePlanFingerprint: "plan",
+            routeGeneration: 1,
+            playerSampleRange: 0..<132_300,
+            observationFingerprint: "observation",
+            incomingRevision: incoming.liveMasterHeadroom.revision,
+            incomingStateFingerprint: incoming.liveMasterHeadroom.fingerprint,
+            outcome: .attenuate,
+            reasonCodes: [.windowAccepted],
+            proposedTrimDB: -0.25,
+            proposedCleanWindows: 0,
+            earliestEligibleFutureSample: 192_000
+        )
+        let acceptedLive = incoming.liveMasterHeadroom.accepting(proposal)
+
+        let advanced = incoming.advance(
+            using: plan,
+            quality: acceptedQuality,
+            liveMasterHeadroom: acceptedLive
+        )
+        let replay = incoming.advance(
+            using: plan,
+            quality: acceptedQuality,
+            liveMasterHeadroom: acceptedLive
+        )
+
+        #expect(incoming.phraseIndex == 0)
+        #expect(incoming.quality.revision == 0)
+        #expect(incoming.liveMasterHeadroom == LiveMasterHeadroomContinuationState())
+        #expect(advanced.phraseIndex == plan.phraseIndex + 1)
+        #expect(advanced.quality == acceptedQuality)
+        #expect(advanced.liveMasterHeadroom == acceptedLive)
+        #expect(advanced == replay)
+    }
+
+    @Test("Invalid live-state jump holds the whole session atomically")
+    func invalidLiveJumpHoldsWholeSessionAtomically() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let incoming = director.initialState()
+        let plan = director.plan(from: incoming)
+        let invalidJump = LiveMasterHeadroomContinuationState(
+            revision: 3,
+            committedTrimDB: -0.75,
+            consecutiveCleanWindows: 0,
+            lastProposalFingerprint: "proposal",
+            lastObservationFingerprint: "observation",
+            lastAcceptedSourcePhraseIndex: incoming.phraseIndex,
+            earliestEligibleFutureSample: 192_000
+        )
+
+        let rejected = incoming.advance(
+            using: plan,
+            quality: QualityContinuationState(revision: 7),
+            liveMasterHeadroom: invalidJump
+        )
+
+        #expect(rejected == incoming)
+        #expect(rejected.memory == incoming.memory)
+        #expect(rejected.quality == incoming.quality)
+        #expect(rejected.liveMasterHeadroom == incoming.liveMasterHeadroom)
+    }
+
+    @Test("Maximum live revision holds the whole session atomically")
+    func maximumLiveRevisionHoldsWholeSessionAtomically() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let base = director.initialState()
+        let maximumLive = LiveMasterHeadroomContinuationState(
+            revision: .max,
+            committedTrimDB: -0.5,
+            consecutiveCleanWindows: 0,
+            lastProposalFingerprint: "previous-proposal",
+            lastObservationFingerprint: "previous-observation",
+            lastAcceptedSourcePhraseIndex: 4,
+            earliestEligibleFutureSample: 1_500
+        )
+        let incoming = AutonomousSessionState(
+            rootSeed: base.rootSeed,
+            phraseIndex: base.phraseIndex,
+            intent: base.intent,
+            memory: base.memory,
+            quality: base.quality,
+            liveMasterHeadroom: maximumLive
+        )
+        let plan = director.plan(from: incoming)
+        let forgedSuccessor = LiveMasterHeadroomContinuationState(
+            revision: .max,
+            committedTrimDB: -0.75,
+            consecutiveCleanWindows: 0,
+            lastProposalFingerprint: "next-proposal",
+            lastObservationFingerprint: "next-observation",
+            lastAcceptedSourcePhraseIndex: 5,
+            earliestEligibleFutureSample: 2_000
+        )
+
+        let rejected = incoming.advance(
+            using: plan,
+            quality: QualityContinuationState(revision: 1),
+            liveMasterHeadroom: forgedSuccessor
+        )
+
+        #expect(rejected == incoming)
+    }
+
     @Test("Fixed seeds replay the same variable phrases and bounded memories",
           arguments: [UInt64(42), 48_291, 90_909, 7, 77_777])
     func deterministicSession(seed: UInt64) {

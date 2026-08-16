@@ -1229,11 +1229,16 @@ package struct AutonomousSessionState: Equatable, Sendable {
     /// observations remain in AutoTechnoDSP; only the selected preparation's
     /// reduced provenance crosses the phrase boundary with the musical state.
     package var quality: QualityContinuationState
+    /// The sole committed live master-headroom continuation. A pending
+    /// observation or proposal cannot mutate this value.
+    package let liveMasterHeadroom: LiveMasterHeadroomContinuationState
 
     package init(rootSeed: UInt64 = AutonomousSessionDirector.defaultSeed, phraseIndex: Int = 0,
                 intent: MusicalIntent = MusicalIntent(),
                 memory: TemporalMusicalMemory = TemporalMusicalMemory(),
-                quality: QualityContinuationState = QualityContinuationState()) {
+                quality: QualityContinuationState = QualityContinuationState(),
+                liveMasterHeadroom: LiveMasterHeadroomContinuationState =
+                    LiveMasterHeadroomContinuationState()) {
         let normalizedIntent = intent.preservingCorrelations()
         self.rootSeed = rootSeed
         identitySeed = rootSeed &+ 17
@@ -1244,14 +1249,67 @@ package struct AutonomousSessionState: Equatable, Sendable {
         self.intent = normalizedIntent
         self.memory = memory
         self.quality = quality
+        self.liveMasterHeadroom = liveMasterHeadroom
     }
 
+    private init(
+        rootSeed: UInt64,
+        identitySeed: UInt64,
+        identityDNA: SceneDNA,
+        phraseIndex: Int,
+        intent: MusicalIntent,
+        memory: TemporalMusicalMemory,
+        quality: QualityContinuationState,
+        liveMasterHeadroom: LiveMasterHeadroomContinuationState
+    ) {
+        self.rootSeed = rootSeed
+        self.identitySeed = identitySeed
+        self.identityDNA = identityDNA
+        self.phraseIndex = max(0, phraseIndex)
+        self.intent = intent.preservingCorrelations()
+        self.memory = memory
+        self.quality = quality
+        self.liveMasterHeadroom = liveMasterHeadroom
+    }
+
+    /// Temporary compile bridge for planning-only callers. It deliberately
+    /// preserves the committed live state. Remove this overload when Task 8
+    /// migrates both `TechnoEngine` acceptance call sites to the atomic
+    /// three-argument value-returning advance below.
     package mutating func advance(using plan: AutonomousPhrasePlan,
                                   quality acceptedQuality: QualityContinuationState? = nil) {
-        memory.record(plan)
-        intent = plan.scene.musicalIntent.preservingCorrelations()
-        phraseIndex = plan.phraseIndex + 1
-        if let acceptedQuality { quality = acceptedQuality }
+        self = advance(
+            using: plan,
+            quality: acceptedQuality ?? quality,
+            liveMasterHeadroom: liveMasterHeadroom
+        )
+    }
+
+    /// The accepted prepared product advances musical, quality, and live
+    /// controller continuation as one deterministic value. Callers cannot
+    /// partially commit one continuation while leaving another behind.
+    package func advance(
+        using plan: AutonomousPhrasePlan,
+        quality acceptedQuality: QualityContinuationState,
+        liveMasterHeadroom acceptedLiveMasterHeadroom:
+            LiveMasterHeadroomContinuationState
+    ) -> AutonomousSessionState {
+        guard acceptedLiveMasterHeadroom == liveMasterHeadroom ||
+                acceptedLiveMasterHeadroom.isImmediateSuccessor(of: liveMasterHeadroom) else {
+            return self
+        }
+        var nextMemory = memory
+        nextMemory.record(plan)
+        return AutonomousSessionState(
+            rootSeed: rootSeed,
+            identitySeed: identitySeed,
+            identityDNA: identityDNA,
+            phraseIndex: plan.phraseIndex + 1,
+            intent: plan.scene.musicalIntent,
+            memory: nextMemory,
+            quality: acceptedQuality,
+            liveMasterHeadroom: acceptedLiveMasterHeadroom
+        )
     }
 }
 
