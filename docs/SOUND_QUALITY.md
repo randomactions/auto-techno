@@ -11,11 +11,12 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 20, candidate-vector schema 18, and
-canonical engine identity `autotechno-canonical-engine.v19`. It preserves
+candidate uses quality-contract schema 21, candidate-vector schema 19, and
+canonical engine identity `autotechno-canonical-engine.v20`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
+score-owned modal-foundation articulation and same-pass resonator evidence,
 architecture-local dry-
 PCM, acid-operator, TPT/ADAA nonlinear-core, rising spectral-cluster, and tonal-envelope-expansion
 evidence, score-owned gated
@@ -54,6 +55,18 @@ records likewise bind every resolved ordinary-hat event to its neutral or
 same-onset open-hat-companion decay role, exact dry-sample identity, and bounded
 level, spectral, and tail consequence. They do not add events or promote a
 plan before the calibrated evaluator reaches a terminal decision.
+
+The tuned-percussive foundation now replaces the former root-only tom
+realization in place. Core resolves up to two articulations from the exact
+existing foundation events, modal DNA, character, gesture, and bar identity.
+The detached renderer uses one six-mode resonator with four fixed continuation
+slots; it does not allocate a voice array, choose pitch, or run a second drum
+engine. Every bar records empty or active score/render coverage, articulation
+and state fingerprints, exact dry PCM, protected/full pass equality, route
+validity, requested and measured pitch, attack/body/tail ratios, spectral
+centroid, masking, maximum pole radius, and finiteness. Eight corresponding
+professional-quality dimensions are independently bounded. Dedicated
+adversarial cases reject detuning, masking flood, rate drift, and runaway tail.
 
 The existing acid-thread and acid-sequence patches now carry durable ordered-
 hollow and metallic-tension spectral intentions. The current Resonant Mono
@@ -148,8 +161,8 @@ signal and replacement contract.
 `ProfessionalEvidenceReportBank` accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary policy from profile `4b55055d1904ead8`, adversarial suite
-`a34c3ba6acec9c2e`, and disjoint holdout `c333586ce068d5af`. It judges every
+exact-engine primary policy from profile `33592f06e3c86a77`, adversarial suite
+`15ae673a07bc6cd0`, and disjoint holdout `dbe3ba28fa1a1956`. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.
@@ -313,8 +326,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 20, candidate-vector schema 18, and canonical
-engine v19, the versioned transaction implements the bounded evidence and atomic
+Under quality-contract schema 21, candidate-vector schema 19, and canonical
+engine v20, the versioned transaction implements the bounded evidence and atomic
 commit foundation for this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.
 Every attempt starts from the same incoming state. The transaction records the incoming

@@ -52,7 +52,7 @@ cannot bypass that continuity contract.
 | Point | Up to three characteristic syncopations | Bass Pluck, short and brighter |
 | Pump | Post-kick bass onsets, bounded to four per bar | Bass Pulse, longer contour and stronger motion |
 | Kick Tail | Mono rumble follows the resolved kick cell | No independently scheduled bass note |
-| Tuned Percussive | Up to two characteristic tuned-tom onsets | No independently scheduled bass note |
+| Tuned Percussive | Up to two existing foundation onsets with score-owned modal pitch and bounded material articulation | Six-mode modal resonator in the protected foundation route; no independently scheduled bass note |
 | Absent | Kick remains the physical anchor without a companion | No independently scheduled bass note |
 
 Foundation events continue to avoid kick collisions. Foundation assignments

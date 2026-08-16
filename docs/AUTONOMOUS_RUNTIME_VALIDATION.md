@@ -1,8 +1,9 @@
 # Autonomous Runtime Validation
 
-Release status is reported as five separate states: implementation,
-structural/signal validation, automated quality qualification, app/runtime
-verification, and hardware soak. Passing one does not imply the others. Human
+Release status is reported as separate states: implemented, focused local
+verification, full local verification, qualification artifacts, published exact
+SHA, exact-head CI, release app launched, app/route QA, listening observation,
+and physical-output soak. Passing one does not imply the others. Human
 listening may propose a new measurable hypothesis or help diagnose a failure,
 but it is not a qualification step and cannot override a failed automated
 result.
@@ -48,8 +49,9 @@ low-end stability, spatial coherence, density and intentional space, motif and
 timbral identity, repetition versus variation, tension/payoff timing, and
 long-form stagnation. Each dimension has a documented target or guardrail,
 analysis window, normalization rule, and failure explanation. A candidate passes
-only when it satisfies every hard invariant, clears the aggregate qualification
-threshold, and introduces no guardrail regression at protected checkpoints.
+only when it satisfies every hard invariant, keeps every applicable calibrated
+dimension within its independent bound, and introduces no guardrail regression
+at protected checkpoints.
 
 Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
@@ -66,12 +68,12 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 20, candidate-vector schema 18, and canonical engine v19
+Quality-contract schema 21, candidate-vector schema 19, and canonical engine v20
 provide the current transaction-level evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
-event-local groove-pulse, ordinary
-closed-hat, score-owned instrument and its acid/nonlinear-core/cluster/envelope consequence,
+event-local groove-pulse, ordinary closed-hat, score-owned modal foundation,
+score-owned instrument and its acid/nonlinear-core/cluster/envelope consequence,
 score-owned gated percussion texture,
 shared pulse-echo return-drive, score-owned spatial-FDN, score-owned upper-role timing,
 score-owned phrase slicing, arpeggiator geometry, polyphonic pad signal, and
@@ -142,6 +144,18 @@ all hashes must agree. Missing bars, forged roles, arbitrary kick deletion,
 nonzero withheld signal, silent recovery, or a changed non-kick score make the
 candidate incomplete; the primary evaluator cannot qualify incomplete evidence.
 
+Modal-foundation evidence must cover every full rendered bar, including empty
+bars and bars carrying only an inherited tail. Active events must map one-to-one
+to the existing tuned-percussive foundation score indices, steps, intensities,
+modal degrees, and bounded material articulation. Requested and measured pitch,
+attack/body/tail ratios, centroid, maximum pole radius, exact dry hash, incoming
+and outgoing voice-state fingerprints, full/protected pass equality, foundation
+routing, masking, and finiteness must all agree. Four fixed voice slots are the
+hard capacity; a fifth onset may not steal one. Focused tests require exact
+continuation across a bar split, bounded late-bar missing-tail evidence, and
+physical-time decay agreement at 44.1 and 48 kHz. The primary policy separately
+rejects detuning, masking flood, representative-rate drift, and runaway tail.
+
 Climax-arc evidence must remain inactive for debt-free and
 non-release phrases. An active record must fingerprint the exact incoming debt
 set paid by the release, distinguish contrast and major-break sources, retain
@@ -193,9 +207,9 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v4 bank must contain every canonical checkpoint for
+The Professional Evidence v5 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v19 primary policy and pinned diverse profile/adversarial/holdout
+engine-v20 primary policy and pinned diverse profile/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 28.
 Holdouts must be source-disjoint, contain at
@@ -257,7 +271,7 @@ or PCM.
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
 composition, spatial-FDN, and nonlinear-core evidence carried by quality-contract
-schema 20 change detached
+schema 21 change detached
 preparation only. They add
 no callback capture, analysis, or live-feedback work; the requirements below
 remain gates
@@ -294,7 +308,7 @@ The exact-engine artifact loader, route-local primary evaluator, unavailable-rat
 gate, one-correction transaction order, and reason-coded replay require
 deterministic tests at 44.1 and 48 kHz. The deterministic numeric-storage estimate
 must remain below the declared 128 MiB ceiling. The profile derives from 28
-complete journeys and passes a ten-case adversarial suite plus four disjoint
+complete journeys and passes a fourteen-case adversarial suite plus four disjoint
 holdouts at both rates. See [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md).
 
 The declared budget must leave enough lookahead to schedule the future boundary

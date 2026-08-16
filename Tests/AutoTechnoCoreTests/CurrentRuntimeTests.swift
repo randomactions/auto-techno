@@ -173,10 +173,10 @@ struct RepositorySurfaceTests {
         #expect(!package.contains("AutoTechnoSynthReference"))
     }
 
-    @Test("Active Swift source contains no retired runtime surface")
+    @Test("Active source and normative prose contain no retired runtime surface")
     func activeSourceHasNoRetiredSurface() throws {
         let sources = repositoryRoot.appendingPathComponent("Sources")
-        let retired = [
+        let retiredSymbols = [
             "V2", "SceneRenderer", "ReferenceMetrics", "AuthoredSynthVoice",
             "DramaticJourneyPlan", "PerformancePlan", "ArrangementPlan",
             "TransitionPlan", "TechnoPattern", "TasteProfile", "JukeboxPlan",
@@ -187,17 +187,62 @@ struct RepositorySurfaceTests {
             "ProfessionalQualityFrozenArtifacts",
             "usedAlternate", "usedFallback", "usedHomeTimbreFallback",
         ]
+        let retiredPhrases = [
+            "conservative candidate", "nonconservative candidate",
+            "conservative score", "alternate candidate", "fallback phrase",
+            "development policy", "frozen policy", "usedalternate",
+            "usedfallback", "private static func tom",
+        ]
+        let retiredProseSymbols = [
+            "ProfessionalQualityPairedCandidateEvaluator",
+            "ProfessionalQualityDevelopmentPolicy",
+            "ProfessionalQualityFrozenArtifacts",
+            "usedAlternate", "usedFallback",
+        ]
         let enumerator = try #require(FileManager.default.enumerator(
             at: sources,
             includingPropertiesForKeys: [.isRegularFileKey]
         ))
         for case let file as URL in enumerator where file.pathExtension == "swift" {
             let contents = try String(contentsOf: file, encoding: .utf8)
-            for name in retired {
+            for name in retiredSymbols {
                 let pattern = "\\b\(NSRegularExpression.escapedPattern(for: name))\\b"
                 #expect(
                     contents.range(of: pattern, options: .regularExpression) == nil,
                     "\(name) remains in \(file.lastPathComponent)"
+                )
+            }
+            let normalized = contents.lowercased()
+            for phrase in retiredPhrases {
+                #expect(
+                    !normalized.contains(phrase),
+                    "\(phrase) remains in \(file.lastPathComponent)"
+                )
+            }
+        }
+
+        var proseFiles = [repositoryRoot.appendingPathComponent("README.md")]
+        let docs = repositoryRoot.appendingPathComponent("docs")
+        let docsEnumerator = try #require(FileManager.default.enumerator(
+            at: docs,
+            includingPropertiesForKeys: [.isRegularFileKey]
+        ))
+        for case let file as URL in docsEnumerator where file.pathExtension == "md" {
+            let relativePath = file.path.replacingOccurrences(
+                of: docs.path + "/", with: ""
+            )
+            guard !relativePath.hasPrefix("history/"),
+                  !relativePath.hasPrefix("superpowers/specs/"),
+                  !relativePath.hasPrefix("superpowers/plans/") else { continue }
+            proseFiles.append(file)
+        }
+        for file in proseFiles {
+            let normalized = try String(contentsOf: file, encoding: .utf8)
+                .lowercased()
+            for retired in retiredProseSymbols + retiredPhrases {
+                #expect(
+                    !normalized.contains(retired.lowercased()),
+                    "\(retired) remains in \(file.lastPathComponent)"
                 )
             }
         }

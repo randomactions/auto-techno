@@ -46,7 +46,10 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one canonical eight-line stereo late field replacing the former single long
   mono feedback delay, with scene-derived decay/damping, exact continuation,
   protected low end, and score-bound per-bar evidence;
-- canonical engine v19, quality-contract schema 20, and candidate-vector schema 18
+- one score-owned modal-percussion foundation voice replacing the root-only
+  realization with six stable modes, four fixed continuation slots,
+  protected routing, and exact same-pass evidence;
+- canonical engine v20, quality-contract schema 21, and candidate-vector schema 19
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax and debt-to-recovery climax arc,
   event-local groove-pulse, ordinary closed-hat,
@@ -62,7 +65,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - phrase-wide streaming ITU-R BS.1770-5 loudness, Annex 2 true peak,
   physical-time spectral/trajectory evidence, rate-normalized transient
   detection, explicit bounded working memory, and a complete-checkpoint
-  Professional Evidence v4 report bank;
+  Professional Evidence v5 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
@@ -72,7 +75,7 @@ profile derived from 28 complete journeys, a passing adversarial suite, and a
 disjoint four-journey holdout qualification. Each boundary owns one canonical
 plan and one terminal decision. The evaluator may request one same-plan
 home-timbre correction, for two render passes maximum; no paired comparator,
-alternate phrase, fallback phrase, or permissive shipping policy remains.
+second phrase, musical substitute, or permissive shipping policy remains.
 Missing artifacts and unsupported routes are truthfully unavailable and cannot
 commit. Hybrid live feedback is not implemented.
 
@@ -111,8 +114,8 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 20 and candidate-vector schema 18 now bind a versioned
-transaction across canonical engine v19, quality policy, evaluator, candidate
+Quality-contract schema 21 and candidate-vector schema 19 now bind a versioned
+transaction across canonical engine v20, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 instrument, acid-operator, TPT/ADAA nonlinear-core, spectral-cluster, and tonal-envelope,
@@ -120,13 +123,16 @@ gated percussion texture, pulse-echo return-drive, spatial-FDN, and upper-role t
 including foreground lead performance,
 projections, unified phrase composition, plus exact paid-debt-to-release climax
 provenance, make each
-score-to-PCM consequence explicit for the calibrated primary policy. Professional
-Evidence v4 adds standards-based phrase loudness/true peak, bounded streaming
+score-to-PCM consequence explicit for the calibrated primary policy. The modal
+foundation projection additionally binds every empty and active bar, score-owned
+articulation, exact dry PCM, protected routing, continuation, pitch, envelope,
+spectral, masking, and pole-stability evidence. Professional Evidence v5 adds
+standards-based phrase loudness/true peak, bounded streaming
 physical-time spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
 complete role attribution. The repository now carries a deterministic,
 non-reconstructable 44.1/48 kHz diverse profile, relational rate/trajectory
-guardrails, a passing ten-case adversarial suite, and a disjoint holdout report
+guardrails, a passing fourteen-case adversarial suite, and a disjoint holdout report
 covering 56/56 observations with zero relationship failures. Short-program
 EBU-style loudness range remains descriptive because its gated percentile is
 discontinuous at small populations; integrated, momentary, short-term, and true-
@@ -137,7 +143,7 @@ local and untracked.
 
 The runtime now records one complete plan, one initial attempt, and at most one
 home-timbre correction, then atomically carries the terminal evidence, decision,
-and controller state into continuation. The exact engine-v19 diverse profile,
+and controller state into continuation. The exact engine-v20 diverse profile,
 passing adversarial suite, disjoint holdout qualification, non-compensable
 checkpoint policy, and transaction replay are the app path. The former
 single-journey generalization blocker is closed: 28 development journeys and

@@ -27,15 +27,16 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 20, candidate-
-   vector schema 18, and canonical engine identity
-   `autotechno-canonical-engine.v19`. Each
+   primary-evaluation transaction under quality-contract schema 21, candidate-
+   vector schema 19, and canonical engine identity
+   `autotechno-canonical-engine.v20`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
    event-local groove-pulse,
-   ordinary closed-hat, score-owned instrument, score-owned gated percussion
-   texture, shared pulse-echo return-drive, score-bound spatial-FDN,
+   ordinary closed-hat, score-owned modal-foundation, score-owned instrument,
+   score-owned gated percussion texture, shared pulse-echo return-drive,
+   score-bound spatial-FDN,
    phrase-local slice source/output PCM, arpeggiator geometry, polyphonic pad
    PCM, and voice-leading movement,
    score-owned upper-role timing—including a bounded foreground lead-performance
@@ -100,16 +101,19 @@ mistaken for a completed feedback system.
    windows with zero-padded radix-two FFT geometry, actual spectral
    centroid/bandwidth/flatness/rolloff, positive flux,
    RMS trajectory, active-window counts, and bounded working-memory provenance.
-   A deterministic Professional Evidence v4
+   A deterministic Professional Evidence v5
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
    observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v19 profile `4b55055d1904ead8`, adversarial suite
-   `a34c3ba6acec9c2e`, and disjoint holdout qualification `c333586ce068d5af`.
+   engine-v20 profile `33592f06e3c86a77`, adversarial suite
+   `15ae673a07bc6cd0`, and disjoint holdout qualification `dbe3ba28fa1a1956`.
    The profile derives from 28 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
    relationships. Its evaluator maps the Core-owned plan checkpoint into the
-   same 39-metric observation and rejects dimensions independently.
+   same 47-metric observation and rejects dimensions independently. The eight
+   modal dimensions cover active-bar ratio, event density, pitch error,
+   attack/body and tail/body relationships, spectral centroid, masking, and
+   maximum pole radius.
    Short-program EBU-style loudness range is retained descriptively rather than
    treated as a gate-discontinuous policy dimension; integrated, momentary,
    short-term, true-peak, and the other stable metrics remain evaluative.
@@ -140,10 +144,17 @@ mistaken for a completed feedback system.
    require a new versioned evidence contract when changed. The planner also
    consumes the resolved performance character and foundation behavior.
    Sub Pulse, Monotone, Point, and Pump become distinct bounded Resonant Mono
-   assignments, while Kick Tail, Tuned Percussive, and Absent reuse the existing
-   rumble, tuned-tom, or empty companion. Upper characters select compatible
-   existing patches without creating another renderer. The voice
-   renderer applies
+   assignments. Kick Tail retains the existing rumble; Tuned Percussive maps
+   its existing foundation events into score-owned modal articulations rendered
+   by one six-mode stable resonator with four fixed continuation slots; Absent
+   stays empty. Upper characters select compatible
+   existing patches without creating another renderer.
+   Each modal bar records exact score/render event counts, articulation and
+   state fingerprints, dry PCM identity, protected/full pass equality, route
+   validity, pitch, attack/body/tail, centroid, masking, and pole-stability
+   facts. Empty bars and inherited tails remain explicit, so missing or forged
+   modal evidence cannot be hidden by another metric.
+   The voice renderer applies
    the resolved protagonist contour and may place one eligible existing event on
    a filtered send into the canonical late spatial field; neither operation creates another
    onset or topology. The renderer also renders full and protected-rhythm
@@ -158,14 +169,15 @@ mistaken for a completed feedback system.
    and seeded microvariation for its fixed 45 ms carrier. On a complete
    eight-pulse syncopated-lean bar, the resolver changes only the existing event
    intensities into a cyclic 3-3-2 accent/ghost relation; onset, count, timing,
-   and every other voice remain unchanged. The conservative candidate preserves
-   the prior alternating intensity cell and resolves every pulse to the
+   and every other voice remain unchanged. Every other eligible score state
+   preserves the prior alternating intensity cell and resolves every pulse to the
    score-owned physical contact. Same-pass event evidence is consumed by the
    calibrated primary evaluator.
    Ordinary closed hats retain the existing 50 ms source and RNG order. When a
    resolved open hat shares the same onset, the score labels only that closed
    hat as its companion and the renderer increases its decay rate; every other
-   hat remains neutral. The conservative score is fully neutral, and bounded
+   hat remains neutral. A score without that companion relation is fully neutral,
+   and bounded
    same-pass evidence makes the event-local PCM consequence attributable.
    The synth performance also projects the existing bounded `machineTexture`
    state into one pulse-echo return articulation. It is active only for a
@@ -298,7 +310,7 @@ return behavior.
 Each full bar emits same-pass bar/BPM/delay/render geometry, score and drive
 eligibility, bounded source and applied amount, current-send RMS, exact pre/post
 sample hashes, pre/post peak, RMS, and low-band RMS, difference RMS, and finite
-status. Candidate-vector schema 7 binds these observations to the score bar,
+status. Candidate-vector schema 19 binds these observations to the score bar,
 phrase kind, route rate, and matching instrument effect access. Neutral drive
 requires exact pre/post identity and zero difference. Active drive remains
 outside feedback, binds exact changed-frame and peak witnesses, and permits only
@@ -320,7 +332,7 @@ Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
 requested gate end, and renderer-applied gate end. Separate anchor, shadow, and
 response dry taps retain finite role-local hash, peak, and RMS evidence. Current
-candidate-vector schema 14 reduces those tuples into exact score/render and
+candidate-vector schema 19 reduces those tuples into exact score/render and
 renderer-applied-gate fingerprints, relation-specific offset facts, protected-
 role neutrality, cascade-aperture or lead-pattern replay, and route-derived
 frame geometry. The calibrated evaluator judges this evidence as part of the
@@ -332,7 +344,7 @@ All future musical development extends one persistent loop:
 
 ```text
 persistent state
-  -> generate a bounded set of semantic candidates
+  -> generate one bounded semantic plan
   -> render immutable future audio
   -> evaluate planned structure and app-owned PCM
   -> qualify, adjust, or reject that plan

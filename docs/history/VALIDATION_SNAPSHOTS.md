@@ -1204,3 +1204,49 @@ proves offline artifact generalization and deterministic engineering contracts,
 not shipping activation, listening quality, app/route smoke, interruption
 recovery, or sustained hardware soak. Publication, exact-head remote CI, and
 exact-build app launch remain separate gates.
+
+## Modal percussion Stage 1 qualification artifacts — 2026-08-16
+
+The canonical tuned-percussive foundation now resolves score-owned modal pitch
+and bounded material articulation into one deterministic six-mode resonator with
+four fixed continuation slots. It replaces the root-only foundation realization
+in place. Candidate schema 19 and Professional Evidence v5 require complete
+empty/active bar coverage, exact score/event and state binding, dry PCM identity,
+protected/full pass equality, route validity, pitch, attack/body/tail,
+spectral-centroid, masking, pole-stability, and representative-rate evidence.
+Quality-contract schema 21 and canonical engine v20 feed those facts into the
+single non-compensable primary policy.
+
+Qualification artifacts were regenerated twice from separate empty trajectory
+caches over 28 development and 4 disjoint holdout journeys at 44.1 and 48 kHz.
+Both runs accepted 392/392 development observations, rejected all fourteen
+adversarial attacks for their expected reason, and accepted 56/56 holdout
+observations with zero relationship failures. Both runs produced the same
+semantic identities:
+
+- profile: `33592f06e3c86a77`;
+- adversarial suite: `15ae673a07bc6cd0`;
+- holdout qualification: `dbe3ba28fa1a1956`.
+
+The corresponding JSON SHA-256 values were byte-identical across both runs:
+
+- profile: `ebe98a7dda4f6f575158e5ad1f45f741d350992421024f75220856d0c3480879`;
+- adversarial suite: `cdad2414faac9f579dbf4809592d297aaae2c217606761a57c027b5b7479290f`;
+- holdout qualification: `87fae59b0805979b63c331b41f0d5a472dd6a258c631ab02e6a609ca27066c02`.
+
+Evidence states at this snapshot boundary:
+
+- implemented: complete;
+- focused local verification: complete, including 28/28 artifact readiness;
+- full local verification: pending;
+- qualification artifacts: complete and byte-reproducible;
+- published exact SHA: pending;
+- exact-head CI: pending;
+- release app launched: pending;
+- app/route QA: pending;
+- listening observation: pending;
+- physical-output soak: pending.
+
+Artifact qualification does not prove app launch, hardware-route recovery,
+subjective listening quality, or physical-output stability. Those remain
+separate evidence states.

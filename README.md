@@ -21,6 +21,9 @@ account.
 - one score-owned phrase-composition layer with bounded true percussion
   resampling, 8–16-step modal arpeggiation, four-voice pads, and cross-bar
   minimal-motion voice-leading;
+- one score-owned six-mode modal-percussion foundation voice with bounded
+  four-slot continuation, protected routing, and rate-normalized pitch,
+  envelope, spectral, masking, and stability evidence;
 - one score-owned eight-line stereo FDN late field with bounded decay, damping,
   continuation, protected low end, and exact per-bar consequence evidence;
 - engine-owned synthesis, effects, mixing, and output safety;
@@ -30,7 +33,7 @@ account.
   callback.
 
 `AutonomousSessionDirector` proposes complete phrases,
-`AutonomousPhrasePreparer` validates a bounded choice, and
+`AutonomousPhrasePreparer` renders and judges that one bounded plan, and
 `AutonomousPhraseRenderer` produces the scheduled audio blocks. There is one
 shipped runtime and no compatibility engine, render profile, selectable seed,
 or comparison mode.
@@ -84,7 +87,6 @@ revision.
 - [`docs/SPATIAL_ENGINE.md`](docs/SPATIAL_ENGINE.md) — canonical FDN ownership, bounds, continuation, evidence, and qualification boundary
 - [`docs/NONLINEAR_DSP_CORE.md`](docs/NONLINEAR_DSP_CORE.md) — canonical TPT/ADAA ownership, bounds, evidence, and qualification boundary
 - [`docs/SOUND_QUALITY.md`](docs/SOUND_QUALITY.md) — professional-sound and automated-quality contract
-- [`docs/PRIMARY_EVALUATOR.md`](docs/PRIMARY_EVALUATOR.md) — calibrated single-plan runtime judgment and commit boundary
 - [`docs/PRIMARY_EVALUATOR.md`](docs/PRIMARY_EVALUATOR.md) — calibrated single-plan runtime judgment and commit boundary
 - [`docs/SOUND_CONCEPT_MATURITY.md`](docs/SOUND_CONCEPT_MATURITY.md) — durable musical concepts and the richer DSP that may replace their current realization
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — ordered engine-evolution outcomes

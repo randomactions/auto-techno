@@ -76,6 +76,15 @@ tail; onset, count, intensity, swing, brightness, level, and the open-hat render
 remain unchanged. Same-pass event evidence binds the score event to its exact
 dry-sample consequence.
 
+The tuned-percussive foundation path now resolves up to two bounded modal
+articulations from the same bar, modal DNA, character, and existing foundation
+events. One deterministic six-mode resonator renders those articulations into
+the protected foundation route with four fixed continuation slots. It replaces
+the former root-only foundation voice in place; there is no second percussion
+engine or renderer-side pitch choice. Same-pass evidence binds score event,
+requested and measured pitch, attack/body/tail relation, spectral centroid,
+masking, pole stability, continuation, render-pass equality, and exact dry PCM.
+
 The gated-percussion-texture path keeps the same ownership boundary. One
 eligible existing percussion event opens a bounded score-owned input slice and
 a later bounded return window; it does not create an onset, capture a reusable
@@ -119,9 +128,9 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v4 supplies
+policy and its operational gates pass. Professional Evidence v5 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
-evidence, explicit analysis-memory provenance, and complete canonical-journey
+evidence, modal-foundation consequence, explicit analysis-memory provenance, and complete canonical-journey
 report-bank validation. A non-reconstructable diverse profile, passing
 adversarial suite, and disjoint holdout report now qualify complete 44.1/48 kHz
 engine banks offline and install the same calibrated policy in detached runtime
