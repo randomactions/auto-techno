@@ -142,16 +142,13 @@ struct LiveOutputWindowEvidenceTests {
     func silenceCannotBecomeRecoveryEvidence() throws {
         let sampleRate = 44_100.0
         let silence = [Float](repeating: 0, count: Int(sampleRate * 3))
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         let evidence = try #require(analyze(
             left: silence,
             right: silence,
-            sampleRate: sampleRate,
-            artifacts: artifacts
+            sampleRate: sampleRate
         ))
-        let target = try #require(LiveOutputWindowAnalyzer.target(
-            evidence: evidence,
-            artifacts: artifacts
+        let target = try #require(LiveFeedbackTestSupport.target(
+            evidence: evidence
         ))
 
         #expect(evidence.complete)
@@ -160,6 +157,69 @@ struct LiveOutputWindowEvidenceTests {
         #expect(evidence.maximumShortTermLoudnessLUFS == -120)
         #expect(!evidence.isActiveProgram)
         #expect(target.isStructurallyValid(sourceEvidence: evidence))
+    }
+
+    @Test("Fingerprint-qualified v3 policy identity is structural and a wrong family is rejected")
+    func fingerprintQualifiedPolicyFamilyIsRequired() throws {
+        let sampleRate = 44_100.0
+        let signal = testSignal(sampleRate: sampleRate)
+        let qualified = try #require(analyze(
+            left: signal,
+            right: signal,
+            sampleRate: sampleRate,
+            qualityPolicyVersion:
+                LiveFeedbackTestSupport.fingerprintQualifiedPolicyVersion
+        ))
+        let target = try #require(LiveFeedbackTestSupport.target(
+            evidence: qualified
+        ))
+
+        #expect(qualified.isStructurallyValid)
+        #expect(target.isStructurallyValid(sourceEvidence: qualified))
+        #expect(qualified.qualityPolicyVersion ==
+                target.qualityPolicyVersion)
+        #expect(LiveOutputWindowAnalyzer.profileFingerprint(
+            inQualityPolicyVersion: qualified.qualityPolicyVersion
+        ) == LiveFeedbackTestSupport.profileFingerprint)
+        #expect(analyze(
+            left: signal,
+            right: signal,
+            sampleRate: sampleRate,
+            qualityPolicyVersion:
+                ProfessionalQualityPrimaryEvaluator.policyFamilyVersion
+        ) == nil)
+        #expect(analyze(
+            left: signal,
+            right: signal,
+            sampleRate: sampleRate,
+            qualityPolicyVersion:
+                "autotechno-quality.primary-calibrated.v2." +
+                "profile-1111111111111111.adversarial-2222222222222222." +
+                "holdout-3333333333333333"
+        ) == nil)
+    }
+
+    @Test("Canonical policy and target profile fingerprints must match")
+    func canonicalPolicyProfileMismatchIsRejected() throws {
+        let signal = testSignal(sampleRate: 44_100)
+        let evidence = try #require(analyze(
+            left: signal,
+            right: signal,
+            sampleRate: 44_100
+        ))
+        let policyProfile = try #require(
+            LiveOutputWindowAnalyzer.profileFingerprint(
+                inQualityPolicyVersion: evidence.qualityPolicyVersion
+            )
+        )
+        let canonicalMismatch = "5555555555555555"
+
+        #expect(policyProfile == LiveFeedbackTestSupport.profileFingerprint)
+        #expect(policyProfile != canonicalMismatch)
+        #expect(LiveFeedbackTestSupport.target(
+            evidence: evidence,
+            profileFingerprint: canonicalMismatch
+        ) == nil)
     }
 
     @Test("Observation fingerprint binds every source and analyzer identity")
@@ -385,9 +445,8 @@ struct LiveOutputWindowEvidenceTests {
         ) == nil)
     }
 
-    @Test("Each metric keeps the bounds belonging to its strictest checkpoint")
+    @Test("Each metric keeps its explicit v3 target checkpoint and bounds")
     func strictestCheckpointUpperBoundWins() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         let signal = testSignal(sampleRate: 48_000)
         let plan = realDirectorPlan {
             LiveOutputPlanSourceIdentity(plan: $0)
@@ -397,42 +456,46 @@ struct LiveOutputWindowEvidenceTests {
             left: signal,
             right: signal,
             sampleRate: 48_000,
-            plan: plan,
-            artifacts: artifacts
+            plan: plan
         ))
-        let target = try #require(LiveOutputWindowAnalyzer.target(
+        let loudnessCheckpoint = try #require(
+            evidence.applicableCheckpoints.last
+        )
+        let truePeakCheckpoint = try #require(
+            evidence.applicableCheckpoints.first
+        )
+        let loudnessLower = evidence.maximumShortTermLoudnessLUFS - 3
+        let loudnessUpper = evidence.maximumShortTermLoudnessLUFS + 0.75
+        let truePeakLower = evidence.truePeakDBTP - 4
+        let truePeakUpper = evidence.truePeakDBTP + 0.5
+        let target = try #require(LiveFeedbackTestSupport.target(
             evidence: evidence,
-            artifacts: artifacts
+            selectedLoudnessCheckpoint: loudnessCheckpoint,
+            selectedTruePeakCheckpoint: truePeakCheckpoint,
+            loudnessLowerLUFS: loudnessLower,
+            loudnessUpperLUFS: loudnessUpper,
+            truePeakLowerDBTP: truePeakLower,
+            truePeakUpperDBTP: truePeakUpper
         ))
-        let loudness = try strictestBounds(
-            metric: .maximumShortTermLoudnessLUFS,
-            checkpoints: evidence.applicableCheckpoints,
-            profile: artifacts.profile
-        )
-        let truePeak = try strictestBounds(
-            metric: .truePeakDBTP,
-            checkpoints: evidence.applicableCheckpoints,
-            profile: artifacts.profile
-        )
 
-        #expect(target.selectedLoudnessCheckpoint == loudness.checkpoint)
-        #expect(target.loudnessLowerLUFS == loudness.bounds.lower)
-        #expect(target.loudnessUpperLUFS == loudness.bounds.upper)
+        #expect(target.selectedLoudnessCheckpoint == loudnessCheckpoint)
+        #expect(target.loudnessLowerLUFS == loudnessLower)
+        #expect(target.loudnessUpperLUFS == loudnessUpper)
         #expect(target.loudnessMidpointLUFS ==
-                (loudness.bounds.lower + loudness.bounds.upper) / 2)
-        #expect(target.selectedTruePeakCheckpoint == truePeak.checkpoint)
-        #expect(target.truePeakLowerDBTP == truePeak.bounds.lower)
-        #expect(target.truePeakUpperDBTP == truePeak.bounds.upper)
+                (loudnessLower + loudnessUpper) / 2)
+        #expect(target.selectedTruePeakCheckpoint == truePeakCheckpoint)
+        #expect(target.truePeakLowerDBTP == truePeakLower)
+        #expect(target.truePeakUpperDBTP == truePeakUpper)
         #expect(target.truePeakMidpointDBTP ==
-                (truePeak.bounds.lower + truePeak.bounds.upper) / 2)
+                (truePeakLower + truePeakUpper) / 2)
         #expect(target.sourceObservationFingerprint == evidence.fingerprint)
-        #expect(target.profileFingerprint == artifacts.profile.fingerprint)
+        #expect(target.profileVersion ==
+                ProfessionalQualityPrimaryEvaluator.requiredProfileVersion)
         #expect(target.isStructurallyValid(sourceEvidence: evidence))
     }
 
-    @Test("An ordinary lock uses the calibrated long-continuation envelope")
+    @Test("An ordinary lock selects the long-continuation checkpoint")
     func ordinaryLockUsesLongContinuation() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         let signal = testSignal(sampleRate: 44_100)
         let plan = realDirectorPlan { plan in
             let identity = LiveOutputPlanSourceIdentity(plan: plan)
@@ -443,42 +506,24 @@ struct LiveOutputWindowEvidenceTests {
             left: signal,
             right: signal,
             sampleRate: 44_100,
-            plan: plan,
-            artifacts: artifacts
+            plan: plan
         ))
-        let target = try #require(LiveOutputWindowAnalyzer.target(
-            evidence: evidence,
-            artifacts: artifacts
+        let target = try #require(LiveFeedbackTestSupport.target(
+            evidence: evidence
         ))
-        let long = try #require(artifacts.profile[.longContinuation])
-        let loudness = try #require(long[.maximumShortTermLoudnessLUFS])
-        let truePeak = try #require(long[.truePeakDBTP])
 
         #expect(evidence.applicableCheckpoints == [.longContinuation])
         #expect(target.applicableCheckpoints == [.longContinuation])
         #expect(target.selectedLoudnessCheckpoint == .longContinuation)
         #expect(target.selectedTruePeakCheckpoint == .longContinuation)
-        #expect(target.loudnessLowerLUFS == loudness.lower)
-        #expect(target.loudnessUpperLUFS == loudness.upper)
-        #expect(target.truePeakLowerDBTP == truePeak.lower)
-        #expect(target.truePeakUpperDBTP == truePeak.upper)
-
-        let profile = artifacts.profile
-        let profileData = try profile.deterministicJSON()
-        let profileJSON = String(decoding: profileData, as: UTF8.self)
-        let foreignBankJSON = profileJSON.replacingOccurrences(
-            of: profile.sourceBankFingerprint,
-            with: "foreign-calibration-bank"
-        )
-        let foreignBank = try ProfessionalQualityCalibrationProfile
-            .decodeDeterministicJSON(Data(foreignBankJSON.utf8))
-        #expect(foreignBank.fingerprint !=
-                ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
+        #expect(target.profileVersion ==
+                ProfessionalQualityPrimaryEvaluator.requiredProfileVersion)
+        #expect(target.qualityPolicyVersion == evidence.qualityPolicyVersion)
+        #expect(target.evaluatorVersion == evidence.evaluatorVersion)
     }
 
     @Test("A target rejects every mismatched source-observation pairing")
     func targetRejectsForgedObservationPairing() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         let signal44 = testSignal(sampleRate: 44_100)
         let baselinePlan = defaultDirectorPlan()
         let changedPhrasePlan = realDirectorPlan { $0.phraseIndex == 1 }
@@ -488,41 +533,35 @@ struct LiveOutputWindowEvidenceTests {
             left: signal44,
             right: signal44,
             sampleRate: 44_100,
-            plan: baselinePlan,
-            artifacts: artifacts
+            plan: baselinePlan
         ))
-        let target = try #require(LiveOutputWindowAnalyzer.target(
-            evidence: baseline,
-            artifacts: artifacts
+        let target = try #require(LiveFeedbackTestSupport.target(
+            evidence: baseline
         ))
         let changedPhrase = try #require(analyze(
             left: signal44,
             right: signal44,
             sampleRate: 44_100,
-            plan: changedPhrasePlan,
-            artifacts: artifacts
+            plan: changedPhrasePlan
         ))
         let changedPlan = try #require(analyze(
             left: signal44,
             right: signal44,
             sampleRate: 44_100,
-            plan: changedPlanSamePhrase,
-            artifacts: artifacts
+            plan: changedPlanSamePhrase
         ))
         let signal48 = testSignal(sampleRate: 48_000)
         let changedRate = try #require(analyze(
             left: signal48,
             right: signal48,
             sampleRate: 48_000,
-            plan: baselinePlan,
-            artifacts: artifacts
+            plan: baselinePlan
         ))
         let changedCheckpoint = try #require(analyze(
             left: signal44,
             right: signal44,
             sampleRate: 44_100,
-            plan: changedCheckpointPlan,
-            artifacts: artifacts
+            plan: changedCheckpointPlan
         ))
         var changedPCM = signal44
         changedPCM[4_096] = -changedPCM[4_096]
@@ -530,8 +569,7 @@ struct LiveOutputWindowEvidenceTests {
             left: changedPCM,
             right: signal44,
             sampleRate: 44_100,
-            plan: baselinePlan,
-            artifacts: artifacts
+            plan: baselinePlan
         ))
 
         #expect(changedPhrase.phraseIndex != baseline.phraseIndex)
@@ -556,8 +594,9 @@ struct LiveOutputWindowEvidenceTests {
         routeGeneration: Int = 3,
         controllerRevision: Int = 4,
         playerSampleRange: Range<Int64>? = nil,
-        artifacts: ProfessionalQualityPrimaryArtifacts? = nil,
         capture: LiveOutputCaptureProvenance? = nil,
+        qualityPolicyVersion: String =
+            LiveFeedbackTestSupport.fingerprintQualifiedPolicyVersion,
         cancellationRequested: @escaping @Sendable () -> Bool = { false }
     ) -> LiveOutputWindowEvidence? {
         let range = playerSampleRange ??
@@ -574,7 +613,7 @@ struct LiveOutputWindowEvidenceTests {
             playerSampleRange: range,
             sampleRate: sampleRate,
             captureProvenance: capture ?? captureProvenance(frameCount: left.count),
-            artifacts: artifacts ?? installedArtifacts(),
+            qualityPolicyVersion: qualityPolicyVersion,
             cancellationRequested: cancellationRequested
         )
     }
@@ -645,13 +684,13 @@ struct LiveOutputWindowEvidenceTests {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
         let first = director.plan(from: state)
-        state.advance(using: first)
+        state.advancePlanning(using: first)
         for _ in 0..<96 {
             let candidate = director.plan(from: state)
             if candidate.kind != first.kind {
                 return (first, candidate)
             }
-            state.advance(using: candidate)
+            state.advancePlanning(using: candidate)
         }
         Issue.record("Expected two real director plans with different kinds")
         fatalError("Canonical director did not reach a second phrase kind")
@@ -666,19 +705,10 @@ struct LiveOutputWindowEvidenceTests {
         for _ in 0..<96 {
             let plan = director.plan(from: state)
             if predicate(plan) { return plan }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         Issue.record("Expected a real director plan matching the predicate")
         fatalError("Canonical director did not reach the required plan")
-    }
-
-    private func installedArtifacts() -> ProfessionalQualityPrimaryArtifacts {
-        do {
-            return try ProfessionalQualityPrimaryArtifacts.load()
-        } catch {
-            Issue.record("Unable to load installed primary artifacts: \(error)")
-            fatalError("Primary quality artifacts are required by this test")
-        }
     }
 
     private func defaultDirectorPlan(
@@ -699,18 +729,6 @@ struct LiveOutputWindowEvidenceTests {
         }
     }
 
-    private func strictestBounds(
-        metric: ProfessionalQualityMetric,
-        checkpoints: [CanonicalJourneyCheckpoint],
-        profile: ProfessionalQualityCalibrationProfile
-    ) throws -> (
-        checkpoint: CanonicalJourneyCheckpoint,
-        bounds: ProfessionalQualityMetricBounds
-    ) {
-        try #require(checkpoints.compactMap { checkpoint in
-            profile[checkpoint]?[metric].map { (checkpoint, $0) }
-        }.min { $0.1.upper < $1.1.upper })
-    }
 }
 
 private final class CancellationCounter: @unchecked Sendable {

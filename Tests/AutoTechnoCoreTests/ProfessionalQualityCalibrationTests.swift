@@ -101,13 +101,15 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalQualityObservation.schemaVersion == 2)
         #expect(ProfessionalQualityObservation.observationVersion ==
                 "autotechno-professional-quality-observation.v2")
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 5)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 6)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v5")
+                "autotechno-professional-evidence.v6")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v2")
+                "autotechno-quality.primary-calibrated.v3")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v2")
+                "autotechno-candidate-evaluator.primary-calibrated.v3")
+        #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
+                "autotechno-professional-quality-profile.v3")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 3)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
                 "autotechno-professional-quality-adversarial.v3")
@@ -234,82 +236,27 @@ struct ProfessionalQualityCalibrationTests {
         ).allSatisfy { $0.metric != .loudnessRangeLU })
     }
 
-    @Test("Exact-engine primary policy accepts only independently qualified evidence")
+    @Test("Pre-v3 in-memory artifacts cannot activate the current primary policy")
     func primaryCandidatePolicy() throws {
         let artifacts = try diverseArtifacts()
-        let observations = artifacts.calibration.trajectories[1].observations
-        let profile = artifacts.profile
-        let adversarial = artifacts.adversarial
-        let evaluator = try ProfessionalQualityPrimaryEvaluator(
-            profile: profile,
-            adversarialSuite: adversarial,
-            holdoutQualification: artifacts.holdout
-        )
-        #expect(evaluator.policyVersion.contains(profile.fingerprint))
-        #expect(evaluator.policyVersion.contains(adversarial.fingerprint))
-
-        let primary = [try #require(observations.first {
-            $0.checkpoint == .release && $0.sampleRate == 48_000
-        })]
-        let releaseProfile = try #require(profile[.release])
-        let truePeakBounds = try #require(releaseProfile[.truePeakDBTP])
-        let rejected = [try primary[0].replacing(
-            .truePeakDBTP,
-            with: truePeakBounds.upper + 0.01
-        )]
-
-        let acceptedAssessment = evaluator.assessment(of: primary)
-        let rejectedAssessment = evaluator.assessment(of: rejected)
-        #expect(acceptedAssessment.availability == .available)
-        #expect(acceptedAssessment.accepted)
-        #expect(rejectedAssessment.availability == .available)
-        #expect(!rejectedAssessment.accepted)
-        #expect(rejectedAssessment.verdicts.flatMap(\.failedMetrics) ==
-                [.truePeakDBTP])
-        #expect(evaluator.assessment(of: []).availability == .noApplicableCheckpoint)
+        #expect(artifacts.profile.profileVersion ==
+                ProfessionalQualityCalibrationProfile.profileVersion)
+        #expect(artifacts.profile.profileVersion !=
+                ProfessionalQualityPrimaryEvaluator.requiredProfileVersion)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryEvaluator(
+                profile: artifacts.profile,
+                adversarialSuite: artifacts.adversarial,
+                holdoutQualification: artifacts.holdout
+            )
+        }
     }
 
-    @Test("Current primary artifacts load with exact engine and policy identities")
+    @Test("Bundled v2 primary artifacts cannot activate the v3 evaluator")
     func primaryArtifacts() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-
-        #expect(artifacts.profile.isComplete)
-        #expect(artifacts.adversarialSuite.passed)
-        #expect(artifacts.profile.usesDiverseCalibration)
-        #expect(artifacts.holdoutQualification.qualified)
-        #expect(artifacts.profile.engineVersion ==
-                QualityQualificationContract.engineVersion)
-        #expect(artifacts.profile.evidenceVersion ==
-                ProfessionalEvidenceReportBank.evidenceVersion)
-        #expect(artifacts.profile.fingerprint ==
-                ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
-        #expect(artifacts.adversarialSuite.fingerprint ==
-                ProfessionalQualityPrimaryArtifacts
-                    .expectedAdversarialSuiteFingerprint)
-        #expect(artifacts.evaluator.policyVersion.contains(
-            ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint
-        ))
-        #expect(artifacts.evaluator.policyVersion.contains(
-            ProfessionalQualityPrimaryArtifacts
-                .expectedAdversarialSuiteFingerprint
-        ))
-        #expect(artifacts.evaluator.policyVersion.contains(
-            ProfessionalQualityPrimaryArtifacts
-                .expectedHoldoutQualificationFingerprint
-        ))
-
-        let reloaded = try ProfessionalQualityPrimaryArtifacts(
-            profileData: artifacts.profile.deterministicJSON(),
-            adversarialSuiteData: artifacts.adversarialSuite.deterministicJSON(),
-            holdoutQualificationData: artifacts.holdoutQualification
-                .deterministicJSON()
-        )
-        #expect(reloaded.profile == artifacts.profile)
-        #expect(reloaded.adversarialSuite == artifacts.adversarialSuite)
-        #expect(reloaded.holdoutQualification ==
-                artifacts.holdoutQualification)
-        #expect(reloaded.evaluator.policyVersion ==
-                artifacts.evaluator.policyVersion)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts.load()
+        }
     }
 
     @Test("Diverse corpus identity is ordered and bounded")
@@ -402,37 +349,23 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Primary preparation evaluator is available only for preloaded covered routes")
-    func preparationEvaluatorAvailability() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        let available = ProfessionalQualityPreparationEvaluator(
-            sampleRate: 48_000,
-            artifacts: artifacts
-        )
-        #expect(available.availability == .available)
-        #expect(available.policyVersion == artifacts.evaluator.policyVersion)
-        #expect(available.evaluatorVersion == artifacts.evaluator.evaluatorVersion)
-        #expect(available.policyVersion.contains("primary-calibrated.v2"))
-
-        let unsupported = ProfessionalQualityPreparationEvaluator(
-            sampleRate: 8_000,
-            artifacts: artifacts
-        )
-        #expect(unsupported.availability == .unsupportedSampleRate)
-        #expect(unsupported.policyVersion ==
-                QualityQualificationContract.uncalibratedPolicyVersion)
-        #expect(unsupported.evaluatorVersion ==
-                QualityQualificationContract.uncalibratedEvaluatorVersion)
-
-        let missing = ProfessionalQualityPreparationEvaluator(
+    @Test("Primary preparation remains unavailable without v3 artifacts")
+    func preparationEvaluatorAvailability() {
+        let representativeRate = ProfessionalQualityPreparationEvaluator(
             sampleRate: 48_000,
             artifacts: nil
         )
-        #expect(missing.availability == .artifactsUnavailable)
-        #expect(missing.policyVersion ==
-                QualityQualificationContract.uncalibratedPolicyVersion)
-        #expect(missing.evaluatorVersion ==
-                QualityQualificationContract.uncalibratedEvaluatorVersion)
+        let unsupportedRate = ProfessionalQualityPreparationEvaluator(
+            sampleRate: 8_000,
+            artifacts: nil
+        )
+        for evaluator in [representativeRate, unsupportedRate] {
+            #expect(evaluator.availability == .artifactsUnavailable)
+            #expect(evaluator.policyVersion ==
+                    QualityQualificationContract.uncalibratedPolicyVersion)
+            #expect(evaluator.evaluatorVersion ==
+                    QualityQualificationContract.uncalibratedEvaluatorVersion)
+        }
     }
 
     @Test("Incomplete rate matrices and non-finite metrics cannot calibrate")

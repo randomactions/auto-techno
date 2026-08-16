@@ -139,6 +139,17 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 )
             }
         }
+        guard profile.profileVersion ==
+                ProfessionalQualityPrimaryEvaluator.requiredProfileVersion else {
+            #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+                try ProfessionalQualityPrimaryEvaluator(
+                    profile: profile,
+                    adversarialSuite: adversarial,
+                    holdoutQualification: holdout
+                )
+            }
+            return
+        }
         let primaryEvaluator = try ProfessionalQualityPrimaryEvaluator(
             profile: profile,
             adversarialSuite: adversarial,
@@ -395,9 +406,11 @@ struct ProfessionalQualityCalibrationIntegrationTests {
 
             previousChapter = plan.resolvedBars.last?.interlockChapter ??
                 previousChapter
-            state.advance(
+            state = state.advance(
                 using: prepared.plan,
-                quality: prepared.qualityContinuationState
+                quality: prepared.qualityContinuationState,
+                liveMasterHeadroom:
+                    prepared.liveMasterHeadroomContinuationState
             )
             renderState = prepared.endingRenderState
             graphState = prepared.endingGraphState

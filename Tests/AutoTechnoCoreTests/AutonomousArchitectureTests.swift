@@ -3,6 +3,455 @@ import AutoTechnoCore
 import Foundation
 import Testing
 
+@Suite("Live feedback primary commit", .serialized)
+struct LiveFeedbackPrimaryCommitTests {
+    private struct RejectingPrimaryEvaluator: AutonomousCandidateEvaluating {
+        let policyVersion = "test-primary-calibrated.v1"
+        let evaluatorVersion = "test-primary-rejecting-live.v1"
+
+        func requestsHomeUpperTimbreCorrection(
+            for candidate: AutonomousCandidateEvaluationVector
+        ) -> Bool { false }
+
+        func terminalVerdict(
+            selected: AutonomousCandidateEvaluationVector,
+            transaction: AutonomousCandidateEvaluationTransaction
+        ) -> AutonomousCandidatePolicyVerdict {
+            AutonomousCandidatePolicyVerdict(
+                outcome: .rejected,
+                reasonCodes: [.guardrailRegressionV1]
+            )
+        }
+    }
+
+    private struct Fixture {
+        let sourceState: AutonomousSessionState
+        let sourcePlan: AutonomousPhrasePlan
+        let targetState: AutonomousSessionState
+        let targetPlan: AutonomousPhrasePlan
+        let incomingRenderState: RenderState
+        let sampleRate: Double
+        let binding: PendingLiveMasterHeadroomBinding
+    }
+
+    @Test("Pending proposal remains detached from incoming committed state")
+    func pendingProposalDoesNotMutateIncomingState() {
+        let fixture = makeFixture()
+        let before = fixture.targetState
+        let incomingRenderState = fixture.incomingRenderState
+
+        let prepared = prepare(
+            fixture,
+            binding: fixture.binding,
+            evaluator: AcceptingPrimaryTestEvaluator()
+        )
+
+        #expect(prepared != nil)
+        #expect(fixture.targetState == before)
+        #expect(incomingRenderState.liveMasterHeadroomState ==
+                before.liveMasterHeadroom)
+        #expect(before.liveMasterHeadroom.revision == 0)
+    }
+
+    @Test("Accepted primary candidate atomically commits quality and live state")
+    func acceptedCandidateCommitsProposalAtomically() throws {
+        let fixture = makeFixture()
+        let prepared = try #require(prepare(
+            fixture,
+            binding: fixture.binding,
+            evaluator: AcceptingPrimaryTestEvaluator()
+        ))
+        let expectedLive = fixture.targetState.liveMasterHeadroom.accepting(
+            fixture.binding.proposal
+        )
+
+        #expect(prepared.commitEligible)
+        #expect(prepared.incomingLiveMasterHeadroomState ==
+                fixture.targetState.liveMasterHeadroom)
+        #expect(prepared.liveMasterHeadroomContinuationState == expectedLive)
+        let committed = fixture.targetState.advance(
+            using: prepared.plan,
+            quality: prepared.qualityContinuationState,
+            liveMasterHeadroom: prepared.liveMasterHeadroomContinuationState
+        )
+        #expect(committed.phraseIndex == prepared.plan.phraseIndex + 1)
+        #expect(committed.quality == prepared.qualityContinuationState)
+        #expect(committed.liveMasterHeadroom == expectedLive)
+    }
+
+    @Test("Rejected primary candidate leaves live continuation unchanged")
+    func rejectedCandidateLeavesLiveContinuationUnchanged() throws {
+        let fixture = makeFixture()
+        let prepared = try #require(prepare(
+            fixture,
+            binding: fixture.binding,
+            evaluator: RejectingPrimaryEvaluator()
+        ))
+        var committed = fixture.targetState
+        if prepared.commitEligible {
+            committed = committed.advance(
+                using: prepared.plan,
+                quality: prepared.qualityContinuationState,
+                liveMasterHeadroom:
+                    prepared.liveMasterHeadroomContinuationState
+            )
+        }
+
+        #expect(prepared.qualityDecision.outcome == .rejected)
+        #expect(!prepared.commitEligible)
+        #expect(committed == fixture.targetState)
+        #expect(committed.liveMasterHeadroom ==
+                fixture.targetState.liveMasterHeadroom)
+    }
+
+    @Test("Proposal must match source, route, revision, controller, target, and future boundary")
+    func proposalMustMatchRoutePlanRevisionAndBoundary() throws {
+        let fixture = makeFixture()
+        let attacks = [
+            proposal(fixture, sourcePhraseIndex: fixture.targetPlan.phraseIndex),
+            proposal(
+                fixture,
+                sourcePlanFingerprint:
+                    AutonomousCandidateFingerprint.plan(fixture.targetPlan)
+            ),
+            proposal(fixture, routeGeneration: 8),
+            proposal(fixture, incomingRevision: 1),
+            proposal(
+                fixture,
+                incomingStateFingerprint: "3333333333333333"
+            ),
+            proposal(fixture, controllerPolicyVersion: "wrong-controller"),
+            proposal(
+                fixture,
+                targetFingerprint:
+                    LiveMasterHeadroomProposal.unavailableTargetFingerprint
+            ),
+            proposal(fixture, earliestEligibleFutureSample: 8_000),
+        ]
+
+        for attack in attacks {
+            #expect(!attack.isStructurallyValid(
+                targetPlan: fixture.targetPlan,
+                incoming: fixture.targetState.liveMasterHeadroom
+            ))
+        }
+        let prepared = try #require(prepare(
+            fixture,
+            binding: attacks[0],
+            evaluator: AcceptingPrimaryTestEvaluator()
+        ))
+        #expect(prepared.selectedCandidateEvidence.liveProposalOutcome ==
+                .unavailable)
+        #expect(prepared.liveMasterHeadroomContinuationState ==
+                fixture.targetState.liveMasterHeadroom)
+        #expect(!prepared.commitEligible)
+    }
+
+    @Test("Pending binding rejects an unrelated but valid source identity")
+    func unrelatedValidSourceIdentityCannotAuthorizeProposal() {
+        let fixture = authoritativeBindingFixture()
+        let otherDirector = AutonomousSessionDirector(rootSeed: 90_909)
+        let unrelatedPlan = otherDirector.plan(from: otherDirector.initialState())
+        let attack = PendingLiveMasterHeadroomBinding(
+            sourceIdentity: LiveOutputPlanSourceIdentity(plan: unrelatedPlan),
+            evidence: fixture.binding.evidence,
+            target: fixture.binding.target,
+            proposal: fixture.binding.proposal,
+            eligibleTarget: fixture.binding.eligibleTarget
+        )
+
+        #expect(!attack.isStructurallyValid(
+            targetPlan: fixture.targetPlan,
+            incoming: fixture.targetState.liveMasterHeadroom
+        ))
+    }
+
+    @Test("Pending binding rejects forged canonical-looking target and observation identities")
+    func forgedValidTargetAndObservationCannotAuthorizeProposal() {
+        let fixture = authoritativeBindingFixture()
+        let proposal = fixture.binding.proposal
+        let forged = LiveMasterHeadroomProposal(
+            controllerPolicyVersion: proposal.controllerPolicyVersion,
+            targetFingerprint: "3333333333333333",
+            sourcePhraseIndex: proposal.sourcePhraseIndex,
+            sourcePlanFingerprint: proposal.sourcePlanFingerprint,
+            routeGeneration: proposal.routeGeneration,
+            playerSampleRange: proposal.playerSampleRange,
+            observationFingerprint: "4444444444444444",
+            incomingRevision: proposal.incomingRevision,
+            incomingStateFingerprint: proposal.incomingStateFingerprint,
+            outcome: proposal.outcome,
+            reasonCodes: proposal.reasonCodes,
+            proposedTrimDB: proposal.proposedTrimDB,
+            proposedCleanWindows: proposal.proposedCleanWindows,
+            earliestEligibleFutureSample:
+                proposal.earliestEligibleFutureSample
+        )
+        let attack = PendingLiveMasterHeadroomBinding(
+            sourceIdentity: fixture.binding.sourceIdentity,
+            evidence: fixture.binding.evidence,
+            target: fixture.binding.target,
+            proposal: forged,
+            eligibleTarget: fixture.binding.eligibleTarget
+        )
+
+        #expect(!attack.isStructurallyValid(
+            targetPlan: fixture.targetPlan,
+            incoming: fixture.targetState.liveMasterHeadroom
+        ))
+    }
+
+    @Test("Pending binding requires the exact App-authoritative future boundary")
+    func wrongEligibleFutureBoundaryCannotAuthorizeProposal() {
+        let fixture = authoritativeBindingFixture()
+        let target = fixture.binding.eligibleTarget
+        let attack = PendingLiveMasterHeadroomBinding(
+            sourceIdentity: fixture.binding.sourceIdentity,
+            evidence: fixture.binding.evidence,
+            target: fixture.binding.target,
+            proposal: fixture.binding.proposal,
+            eligibleTarget: LiveMasterHeadroomEligibleTarget(
+                plan: fixture.targetPlan,
+                routeGeneration: target.routeGeneration,
+                sampleRate: target.sampleRate,
+                earliestEligibleFutureSample:
+                    target.earliestEligibleFutureSample + 1,
+                qualityPolicyVersion: target.qualityPolicyVersion,
+                evaluatorVersion: target.evaluatorVersion,
+                controllerPolicyVersion: target.controllerPolicyVersion
+            )
+        )
+
+        #expect(!attack.isStructurallyValid(
+            targetPlan: fixture.targetPlan,
+            incoming: fixture.targetState.liveMasterHeadroom
+        ))
+    }
+
+    @Test("One primary correction cannot rewrite the live proposal")
+    func onePrimaryCorrectionCannotRewriteLiveProposal() throws {
+        let fixture = makeFixture()
+        let prepared = try #require(prepare(
+            fixture,
+            binding: fixture.binding,
+            evaluator: CorrectingPrimaryTestEvaluator()
+        ))
+        let attempts = prepared.candidateEvaluation.attempts
+
+        #expect(attempts.count == 2)
+        #expect(attempts[0].vector.liveProposalFingerprint ==
+                fixture.binding.proposal.fingerprint)
+        #expect(attempts[1].vector.liveProposalFingerprint ==
+                fixture.binding.proposal.fingerprint)
+        #expect(attempts[0].vector.liveObservationFingerprint ==
+                attempts[1].vector.liveObservationFingerprint)
+        #expect(attempts[0].vector.requestedLiveMasterTrimDB ==
+                attempts[1].vector.requestedLiveMasterTrimDB)
+        #expect(attempts[0].vector.outgoingLiveMasterStateFingerprint ==
+                attempts[1].vector.outgoingLiveMasterStateFingerprint)
+        #expect(prepared.candidateEvaluation.isComplete)
+        #expect(prepared.commitEligible)
+    }
+
+    private func makeFixture() -> Fixture {
+        let sampleRate = 44_100.0
+        let routeGeneration = 7
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let sourceState = director.initialState()
+        let sourcePlan = director.plan(from: sourceState)
+        let targetState = sourceState.advance(
+            using: sourcePlan,
+            quality: sourceState.quality,
+            liveMasterHeadroom: sourceState.liveMasterHeadroom
+        )
+        let targetPlan = director.plan(from: targetState)
+        var incomingRenderState = RenderState()
+        incomingRenderState.barIndex = targetPlan.startBar
+        incomingRenderState.liveMasterHeadroomState =
+            targetState.liveMasterHeadroom
+        let frameCount = try! #require(LiveOutputWindowAnalyzer.frameCount(
+            sampleRate: sampleRate
+        ))
+        let signal = (0..<frameCount).map { frame in
+            Float(0.2 * sin(
+                2 * Double.pi * 997 * Double(frame) / sampleRate
+            ))
+        }
+        let evidence = try! #require(LiveOutputWindowAnalyzer.analyze(
+            left: signal,
+            right: signal,
+            planIdentity: LiveOutputPlanSourceIdentity(plan: sourcePlan),
+            routeGeneration: routeGeneration,
+            controllerRevision: targetState.liveMasterHeadroom.revision,
+            playerSampleRange: 0..<Int64(frameCount),
+            sampleRate: sampleRate,
+            captureProvenance: captureProvenance(frameCount: frameCount),
+            qualityPolicyVersion:
+                LiveFeedbackTestSupport.fingerprintQualifiedPolicyVersion
+        ))
+        let loudnessUpper = evidence.maximumShortTermLoudnessLUFS - 0.8
+        let loudnessLower = loudnessUpper - 2
+        let truePeakUpper = evidence.truePeakDBTP - 0.8
+        let truePeakLower = truePeakUpper - 2
+        let checkpoint = evidence.applicableCheckpoints[0]
+        let target = LiveMasterHeadroomTarget(
+            schemaVersion: LiveMasterHeadroomTarget.schemaVersion,
+            sourceObservationFingerprint: evidence.fingerprint,
+            phraseIndex: evidence.phraseIndex,
+            planFingerprint: evidence.planFingerprint,
+            routeGeneration: evidence.routeGeneration,
+            controllerRevision: evidence.controllerRevision,
+            playerSampleRange: evidence.playerSampleRange,
+            sampleRate: evidence.sampleRate,
+            applicableCheckpoints: evidence.applicableCheckpoints,
+            selectedLoudnessCheckpoint: checkpoint,
+            selectedTruePeakCheckpoint: checkpoint,
+            analyzerVersion: evidence.analyzerVersion,
+            engineVersion: evidence.engineVersion,
+            evidenceVersion: evidence.evidenceVersion,
+            qualityPolicyVersion: evidence.qualityPolicyVersion,
+            evaluatorVersion: evidence.evaluatorVersion,
+            controllerPolicyVersion: evidence.controllerPolicyVersion,
+            profileVersion:
+                ProfessionalQualityPrimaryEvaluator.requiredProfileVersion,
+            profileFingerprint: LiveFeedbackTestSupport.profileFingerprint,
+            loudnessLowerLUFS: loudnessLower,
+            loudnessUpperLUFS: loudnessUpper,
+            loudnessMidpointLUFS: (loudnessLower + loudnessUpper) / 2,
+            truePeakLowerDBTP: truePeakLower,
+            truePeakUpperDBTP: truePeakUpper,
+            truePeakMidpointDBTP: (truePeakLower + truePeakUpper) / 2
+        )
+        let futureBoundary = Int64(frameCount) + 10_000
+        let proposal = LiveMasterHeadroomController.propose(
+            evidence: evidence,
+            target: target,
+            incoming: targetState.liveMasterHeadroom,
+            earliestEligibleFutureSample: futureBoundary
+        )
+        let binding = PendingLiveMasterHeadroomBinding(
+            sourceIdentity: LiveOutputPlanSourceIdentity(plan: sourcePlan),
+            evidence: evidence,
+            target: target,
+            proposal: proposal,
+            eligibleTarget: LiveMasterHeadroomEligibleTarget(
+                plan: targetPlan,
+                routeGeneration: routeGeneration,
+                sampleRate: sampleRate,
+                earliestEligibleFutureSample: futureBoundary,
+                qualityPolicyVersion: evidence.qualityPolicyVersion,
+                evaluatorVersion: evidence.evaluatorVersion,
+                controllerPolicyVersion: evidence.controllerPolicyVersion
+            )
+        )
+        let fixture = Fixture(
+            sourceState: sourceState,
+            sourcePlan: sourcePlan,
+            targetState: targetState,
+            targetPlan: targetPlan,
+            incomingRenderState: incomingRenderState,
+            sampleRate: sampleRate,
+            binding: binding
+        )
+        return fixture
+    }
+
+    private func authoritativeBindingFixture() -> Fixture {
+        makeFixture()
+    }
+
+    private func captureProvenance(
+        frameCount: Int
+    ) -> LiveOutputCaptureProvenance {
+        let packetCount = (
+            frameCount +
+                LiveOutputCaptureProvenance.requiredMaximumPacketFrameCount - 1
+        ) / LiveOutputCaptureProvenance.requiredMaximumPacketFrameCount
+        return LiveOutputCaptureProvenance(
+            packetCount: packetCount,
+            firstPacketSequence: 10,
+            lastPacketSequence: 10 + UInt64(packetCount - 1),
+            droppedPacketDelta: 0,
+            rejectedPacketDelta: 0,
+            queueCapacity: LiveOutputCaptureProvenance.requiredQueueCapacity,
+            maximumPacketFrameCount:
+                LiveOutputCaptureProvenance.requiredMaximumPacketFrameCount,
+            workingMemoryByteCount:
+                frameCount * 2 * MemoryLayout<Float>.stride,
+            coveredFrameCount: frameCount,
+            sampleDiscontinuityCount: 0,
+            gapFrameCount: 0,
+            overlapFrameCount: 0
+        )
+    }
+
+    private func proposal(
+        _ fixture: Fixture,
+        controllerPolicyVersion: String =
+            LiveFeedbackContract.controllerPolicyVersion,
+        targetFingerprint: String? = nil,
+        sourcePhraseIndex: Int? = nil,
+        sourcePlanFingerprint: String? = nil,
+        routeGeneration: Int? = nil,
+        incomingRevision: Int? = nil,
+        incomingStateFingerprint: String? = nil,
+        observationFingerprint: String? = nil,
+        earliestEligibleFutureSample: Int64? = nil
+    ) -> PendingLiveMasterHeadroomBinding {
+        let source = fixture.binding.proposal
+        let proposal = LiveMasterHeadroomProposal(
+            controllerPolicyVersion: controllerPolicyVersion,
+            targetFingerprint: targetFingerprint ?? source.targetFingerprint,
+            sourcePhraseIndex: sourcePhraseIndex ??
+                fixture.sourcePlan.phraseIndex,
+            sourcePlanFingerprint: sourcePlanFingerprint ??
+                AutonomousCandidateFingerprint.plan(fixture.sourcePlan),
+            routeGeneration: routeGeneration ?? source.routeGeneration,
+            playerSampleRange: source.playerSampleRange,
+            observationFingerprint: observationFingerprint ??
+                source.observationFingerprint,
+            incomingRevision: incomingRevision ??
+                fixture.targetState.liveMasterHeadroom.revision,
+            incomingStateFingerprint: incomingStateFingerprint ??
+                fixture.targetState.liveMasterHeadroom.fingerprint,
+            outcome: .attenuate,
+            reasonCodes: [.windowAccepted],
+            proposedTrimDB: -0.25,
+            proposedCleanWindows: 0,
+            earliestEligibleFutureSample: earliestEligibleFutureSample ??
+                source.earliestEligibleFutureSample
+        )
+        return PendingLiveMasterHeadroomBinding(
+            sourceIdentity: fixture.binding.sourceIdentity,
+            evidence: fixture.binding.evidence,
+            target: fixture.binding.target,
+            proposal: proposal,
+            eligibleTarget: fixture.binding.eligibleTarget
+        )
+    }
+
+    private func prepare<E: AutonomousCandidateEvaluating>(
+        _ fixture: Fixture,
+        binding: PendingLiveMasterHeadroomBinding?,
+        evaluator: E
+    ) -> PreparedAutonomousPhrase? {
+        AutonomousPhrasePreparer.prepareIfNotCancelled(
+            plan: fixture.targetPlan,
+            sessionSeed: fixture.targetState.rootSeed,
+            memory: fixture.targetState.memory,
+            sampleRate: fixture.sampleRate,
+            incomingRenderState: fixture.incomingRenderState,
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            incomingQualityState: fixture.targetState.quality,
+            routeGeneration: fixture.binding.eligibleTarget.routeGeneration,
+            pendingLiveMasterBinding: binding,
+            evaluator: evaluator,
+            cancellationRequested: { false }
+        )
+    }
+}
+
 @Suite("Adaptive autonomous session")
 struct AdaptiveAutonomousSessionTests {
     @Test("Accepted phrase commits quality and live state atomically")
@@ -243,7 +692,7 @@ struct AdaptiveAutonomousSessionTests {
                 source = plan.resolvedBars.first
                 break
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         guard let source else {
             Issue.record("Expected a reachable Peak Drive phrase")
@@ -741,7 +1190,7 @@ struct AdaptiveAutonomousSessionTests {
                 }
                 if plan.kind == .majorBreak { sawBreak = true }
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         #expect(sawIdentityTone)
         #expect(sawBreak)
@@ -772,7 +1221,7 @@ struct AdaptiveAutonomousSessionTests {
                 sourceBar = bar
                 break
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         let plan = try #require(sourcePlan)
         let source = try #require(sourceBar)
@@ -1252,7 +1701,7 @@ struct AdaptiveAutonomousSessionTests {
                 liveLeadPlan = candidates
                 liveLeadIncomingState = liveState
             } else {
-                liveState.advance(using: candidates)
+                liveState.advancePlanning(using: candidates)
             }
         }
         let livePerformance = try #require(liveLeadPerformance)
@@ -1507,7 +1956,7 @@ struct AdaptiveAutonomousSessionTests {
                         $0.narrative.activeSupportingRoles == [.atmosphere]
                     })
                 }
-                state.advance(using: plan)
+                state.advancePlanning(using: plan)
                 #expect(state.memory.recentBars.count <= 4)
                 #expect(state.memory.currentPhrase.count <= 16)
                 #expect(state.memory.previousPhrase.count <= 16)
@@ -1559,7 +2008,7 @@ struct AdaptiveAutonomousSessionTests {
                         ) && $0.foundationCompanion == .bass
                 })
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         #expect(sawContrastDeparture)
         #expect(sawBreakSpace)
@@ -1635,7 +2084,7 @@ struct AdaptiveAutonomousSessionTests {
                     return [0, 1, 3, 5, 7, 8, 10].contains(pitchClass)
                 })
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         let fingerprint = fingerprints.first
         #expect(fingerprints.dropFirst().allSatisfy { Optional($0) == fingerprint })
@@ -1658,7 +2107,7 @@ struct AdaptiveAutonomousSessionTests {
                 releaseBars.append(plan.startBar)
                 #expect(Set(plan.paidDebtIDs) == Set(state.memory.openDebts.map(\.id)))
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
             if plan.kind == .energyRelease { #expect(state.memory.openDebts.isEmpty) }
         }
 
@@ -1730,7 +2179,7 @@ struct AdaptiveAutonomousSessionTests {
         for _ in 0..<phraseCount {
             let plan = director.plan(from: state)
             plans.append(plan)
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         return (plans, state)
     }
@@ -1752,7 +2201,7 @@ struct GeneratedDSPTopologyTests {
             let firstGraph = DSPGraphGenerator.plan(
                 sessionSeed: seed, phrase: firstPhrase, memory: state.memory, previous: nil
             )
-            state.advance(using: firstPhrase)
+            state.advancePlanning(using: firstPhrase)
             let secondPhrase = director.plan(from: state)
             let secondGraph = DSPGraphGenerator.plan(
                 sessionSeed: seed, phrase: secondPhrase, memory: state.memory, previous: firstGraph
@@ -1798,7 +2247,7 @@ struct GeneratedDSPTopologyTests {
                 releasePlan = plan
                 break
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         guard let releasePlan, let graph else {
             Issue.record("Expected an energy release within forty phrases")
@@ -1862,7 +2311,7 @@ struct GeneratedDSPTopologyTests {
                 mutationMemory = state.memory
                 break
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         let plan = try #require(mutationPlan)
         let memory = try #require(mutationMemory)
@@ -2363,13 +2812,15 @@ struct AutonomousPreparationPreflightTests {
         var sessionB = director.initialState()
         let firstA = prepare(state: sessionA, sampleRate: 8_000)
         let firstB = prepare(state: sessionB, sampleRate: 8_000)
-        sessionA.advance(
+        sessionA = sessionA.advance(
             using: firstA.plan,
-            quality: firstA.qualityContinuationState
+            quality: firstA.qualityContinuationState,
+            liveMasterHeadroom: firstA.liveMasterHeadroomContinuationState
         )
-        sessionB.advance(
+        sessionB = sessionB.advance(
             using: firstB.plan,
-            quality: firstB.qualityContinuationState
+            quality: firstB.qualityContinuationState,
+            liveMasterHeadroom: firstB.liveMasterHeadroomContinuationState
         )
         let nextA = prepare(
             state: sessionA, sampleRate: 8_000,
@@ -2879,7 +3330,7 @@ struct AutonomousPreparationPreflightTests {
                     }
                     previousCarrier = spatial.carrierVoice
                 }
-                state.advance(using: plan)
+                state.advancePlanning(using: plan)
             }
             #expect(sawContrastCarrier)
             #expect(sawBreakCarrier)
@@ -2903,7 +3354,7 @@ struct AutonomousPreparationPreflightTests {
             }) {
                 matched = (state, plan, barIndex)
             } else {
-                state.advance(using: plan)
+                state.advancePlanning(using: plan)
             }
         }
         guard let (sourceState, original, barIndex) = matched else {
@@ -3068,7 +3519,7 @@ struct AutonomousPreparationPreflightTests {
             }
             #expect(abs(plan.endingNarrativeState.protagonistPresence - previousPresence) <
                     0.000_000_1)
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
 
         #expect(observedKinds == Set(AutonomousPhraseKind.allCases))
@@ -3192,7 +3643,7 @@ struct AutonomousPreparationPreflightTests {
             if let selected = candidates.max(by: { $0.2 < $1.2 }) {
                 matched = (state, plan, selected.0, selected.1)
             } else {
-                state.advance(using: plan)
+                state.advancePlanning(using: plan)
             }
         }
         guard let (sourceState, original, barIndex, motif) = matched else {
@@ -3503,7 +3954,7 @@ struct AutonomousPreparationPreflightTests {
                     matched = (seed, plan)
                     break
                 }
-                state.advance(using: plan)
+                state.advancePlanning(using: plan)
             }
         }
         guard let (seed, plan) = matched else {
@@ -3557,7 +4008,7 @@ struct AutonomousPreparationPreflightTests {
                          $0.arrangementGesture == .turnaround)
                 })
                 if plan.kind == .identityReturn || plan.kind == .majorBreak {
-                    state.advance(using: plan)
+                    state.advancePlanning(using: plan)
                     continue
                 }
                 for (barIndex, resolved) in plan.resolvedBars.enumerated() {
@@ -3583,7 +4034,7 @@ struct AutonomousPreparationPreflightTests {
                         break
                     }
                 }
-                if matched == nil { state.advance(using: plan) }
+                if matched == nil { state.advancePlanning(using: plan) }
             }
         }
         guard let (sourceState, sourcePlan, barIndex) = matched else {
@@ -4309,7 +4760,7 @@ struct AutonomousPreparationPreflightTests {
             }) {
                 return ModalPlanFixture(state: state, plan: plan, barIndex: barIndex)
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         return nil
     }

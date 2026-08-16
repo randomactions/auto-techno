@@ -44,9 +44,11 @@ package struct ProfessionalQualityCandidateAssessment: Codable, Equatable,
 package struct ProfessionalQualityPrimaryEvaluator:
         AutonomousCandidateEvaluating {
     package static let policyFamilyVersion =
-        "autotechno-quality.primary-calibrated.v2"
+        "autotechno-quality.primary-calibrated.v3"
     package static let evaluatorVersionIdentifier =
-        "autotechno-candidate-evaluator.primary-calibrated.v2"
+        "autotechno-candidate-evaluator.primary-calibrated.v3"
+    package static let requiredProfileVersion =
+        "autotechno-professional-quality-profile.v3"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport
@@ -61,6 +63,7 @@ package struct ProfessionalQualityPrimaryEvaluator:
     ) throws {
         guard profile.isComplete,
               profile.usesDiverseCalibration,
+              profile.profileVersion == Self.requiredProfileVersion,
               adversarialSuite.passed,
               !profile.fingerprint.isEmpty,
               adversarialSuite.profileFingerprint == profile.fingerprint,

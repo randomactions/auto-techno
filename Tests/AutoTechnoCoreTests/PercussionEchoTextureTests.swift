@@ -223,7 +223,7 @@ struct PercussionEchoTextureTests {
                 }) {
                     return (state, plan)
                 }
-                state.advance(using: plan)
+                state.advancePlanning(using: plan)
             }
         }
         return nil

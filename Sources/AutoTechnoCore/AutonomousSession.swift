@@ -1272,15 +1272,12 @@ package struct AutonomousSessionState: Equatable, Sendable {
         self.liveMasterHeadroom = liveMasterHeadroom
     }
 
-    /// Temporary compile bridge for planning-only callers. It deliberately
-    /// preserves the committed live state. Remove this overload when Task 8
-    /// migrates both `TechnoEngine` acceptance call sites to the atomic
-    /// three-argument value-returning advance below.
-    package mutating func advance(using plan: AutonomousPhrasePlan,
-                                  quality acceptedQuality: QualityContinuationState? = nil) {
+    /// Advances authored planning state without accepting prepared evidence.
+    /// Runtime commit sites must use the value-returning atomic overload below.
+    package mutating func advancePlanning(using plan: AutonomousPhrasePlan) {
         self = advance(
             using: plan,
-            quality: acceptedQuality ?? quality,
+            quality: quality,
             liveMasterHeadroom: liveMasterHeadroom
         )
     }

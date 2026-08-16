@@ -939,7 +939,7 @@ struct SpatialProtectedRoutingRegressionTests {
                    }) {
                     return (plan, index)
                 }
-                state.advance(using: plan)
+                state.advancePlanning(using: plan)
             }
         }
         return nil
@@ -959,7 +959,7 @@ struct SpatialProtectedRoutingRegressionTests {
             }) {
                 return (plan, resolved)
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         return nil
     }

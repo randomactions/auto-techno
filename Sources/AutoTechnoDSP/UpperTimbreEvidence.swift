@@ -918,7 +918,7 @@ package enum CanonicalJourneyQualificationReportError: Error, Equatable, Sendabl
 
 package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendable {
     package static let currentEvidenceScope =
-        "primary-structural-bs1770-signal-role-upper-modal-commit.v5"
+        "primary-structural-bs1770-signal-role-upper-modal-live-commit.v6"
     package static let maximumEncodedBytes = 4 * 1_024 * 1_024
     package let schemaVersion: Int
     package let engineVersion: String
@@ -1037,7 +1037,10 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
                 outgoingRenderDSPFingerprint:
                     selectedCandidateEvidence.routeContinuation
                         .outgoingRenderDSPFingerprint,
-                qualityState: selectedOutgoing
+                qualityState: selectedOutgoing,
+                outgoingLiveMasterStateFingerprint:
+                    selectedCandidateEvidence
+                        .outgoingLiveMasterStateFingerprint
             )
         guard !engineVersion.isEmpty, !fixtureFingerprint.isEmpty,
               !continuationFingerprint.isEmpty, !routeFingerprint.isEmpty,
@@ -1182,9 +1185,13 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
             throw CanonicalJourneyQualificationReportError.outgoingObservationMismatch
         }
         let incomingControllerFingerprint =
-            AutonomousCandidateFingerprint.automaticMixController(
+            AutonomousCandidateFingerprint.combinedController(
                 kickCorrectionDB: selectedCandidateEvidence.routeContinuation
-                    .incomingKickCorrectionDB
+                    .incomingKickCorrectionDB,
+                liveMasterStateFingerprint:
+                    selectedCandidateEvidence
+                        .incomingLiveMasterStateFingerprint,
+                proposalFingerprint: nil
             )
         let incomingStateHasNoObservation = incomingState.revision == 0 &&
             incomingState.observedCandidateFingerprint == nil &&
@@ -1216,7 +1223,10 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
             outgoingRenderDSPFingerprint:
                 selectedCandidateEvidence.routeContinuation
                     .outgoingRenderDSPFingerprint,
-            qualityState: selectedOutgoing
+            qualityState: selectedOutgoing,
+            outgoingLiveMasterStateFingerprint:
+                selectedCandidateEvidence
+                    .outgoingLiveMasterStateFingerprint
         ) else {
             throw CanonicalJourneyQualificationReportError.candidateEvaluationMismatch
         }

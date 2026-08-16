@@ -6,8 +6,9 @@ import Testing
 struct PrimaryEvaluatorReadinessTests {
     @Test("Modal evidence is non-compensable before the primary policy")
     func modalEvidencePrecedesPrimaryPolicy() {
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 19)
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 3)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 20)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)
+        #expect(AutonomousPreparedCommitProvenance.schemaVersion == 2)
         #expect(AutonomousCandidateCompletenessFailure.modalPercussionEvidence
             .rawValue == "modal-percussion-evidence")
     }
@@ -29,22 +30,31 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("An 8 kHz route cannot activate the calibrated primary evaluator")
-    func unsupported8KRouteStaysUnavailable() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(ProfessionalQualityPreparationEvaluator(
-            sampleRate: 8_000,
-            artifacts: artifacts
-        ).availability == .unsupportedSampleRate)
+    @Test("Bundled v2 artifacts cannot activate the schema-20 primary evaluator")
+    func bundledV2ArtifactsStayUnavailable() {
+        var rejected = false
+        do {
+            _ = try ProfessionalQualityPrimaryArtifacts.load()
+        } catch {
+            rejected = true
+        }
+        #expect(rejected)
     }
 
-    @Test("A 12 kHz route cannot activate the calibrated primary evaluator")
-    func unsupported12KRouteStaysUnavailable() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+    @Test("An 8 kHz route without v3 artifacts remains unavailable")
+    func unsupported8KRouteStaysUnavailable() {
+        #expect(ProfessionalQualityPreparationEvaluator(
+            sampleRate: 8_000,
+            artifacts: nil
+        ).availability == .artifactsUnavailable)
+    }
+
+    @Test("A 12 kHz route without v3 artifacts remains unavailable")
+    func unsupported12KRouteStaysUnavailable() {
         #expect(ProfessionalQualityPreparationEvaluator(
             sampleRate: 12_000,
-            artifacts: artifacts
-        ).availability == .unsupportedSampleRate)
+            artifacts: nil
+        ).availability == .artifactsUnavailable)
     }
 
     @Test("Missing artifacts cannot activate the calibrated primary evaluator")

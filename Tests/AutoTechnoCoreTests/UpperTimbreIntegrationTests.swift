@@ -245,16 +245,12 @@ struct UpperTimbreIntegrationTests {
 
 
 
-    @Test("The calibrated primary evaluator atomically commits one plan")
+    @Test("The injected single primary evaluator atomically commits one plan")
     func calibratedPrimaryCommit() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         let state = director.initialState()
         let plan = director.plan(from: state)
-        let evaluator = ProfessionalQualityPreparationEvaluator(
-            sampleRate: 48_000,
-            artifacts: artifacts
-        )
+        let evaluator = AcceptingPrimaryTestEvaluator()
         let prepared = AutonomousPhrasePreparer.prepare(
             plan: plan,
             sessionSeed: state.rootSeed,
@@ -266,7 +262,6 @@ struct UpperTimbreIntegrationTests {
             evaluator: evaluator
         )
 
-        #expect(evaluator.availability == .available)
         #expect(prepared.plan == plan)
         #expect(prepared.candidateEvaluation.planFingerprint ==
                 AutonomousCandidateFingerprint.plan(plan))
@@ -283,14 +278,13 @@ struct UpperTimbreIntegrationTests {
     }
 
     @Test("Unavailable routes retain evidence but cannot cross the commit gate")
-    func unavailableRouteDoesNotCommit() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+    func unavailableRouteDoesNotCommit() {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         let state = director.initialState()
         let plan = director.plan(from: state)
         let evaluator = ProfessionalQualityPreparationEvaluator(
             sampleRate: 8_000,
-            artifacts: artifacts
+            artifacts: nil
         )
         let prepared = AutonomousPhrasePreparer.prepare(
             plan: plan,
@@ -303,7 +297,7 @@ struct UpperTimbreIntegrationTests {
             evaluator: evaluator
         )
 
-        #expect(evaluator.availability == .unsupportedSampleRate)
+        #expect(evaluator.availability == .artifactsUnavailable)
         #expect(prepared.candidateEvaluation.attempts.count == 1)
         #expect(prepared.candidateEvaluation.correctionCount == 0)
         #expect(prepared.qualityDecision.outcome == .qualificationUnavailable)

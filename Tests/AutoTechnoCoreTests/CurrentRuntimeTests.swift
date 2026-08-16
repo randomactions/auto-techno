@@ -10,22 +10,25 @@ struct CurrentRuntimeTests {
         #expect(QualityQualificationContract.schemaVersion == 21)
         #expect(QualityQualificationContract.engineVersion ==
                 "autotechno-canonical-engine.v20")
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 19)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 20)
         #expect(ProfessionalQualityObservation.schemaVersion == 2)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 5)
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v2")
+                "autotechno-quality.primary-calibrated.v3")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 3)
         #expect(CanonicalJourneyQualificationReport.currentEvidenceScope ==
-                "primary-structural-bs1770-signal-role-upper-modal-commit.v5")
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 3)
+                "primary-structural-bs1770-signal-role-upper-modal-live-commit.v6")
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)
+        #expect(AutonomousPreparedCommitProvenance.schemaVersion == 2)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 6)
+        #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
+                "autotechno-professional-evidence.v6")
         #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v2"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
             .hasSuffix("-v2"))
         #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v2"))
     }
 
-    @Test("Only v2 primary resources are present in source and bundle")
+    @Test("Bundled v2 resources remain present but cannot activate v3")
     func primaryResourcesAreV2Only() {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
@@ -39,6 +42,9 @@ struct CurrentRuntimeTests {
                 .containsBundledResource(named: "\(prefix)-v1"))
             #expect(ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v2"))
+        }
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts.load()
         }
     }
     @Test("The director owns the fixed tempo and default seed")

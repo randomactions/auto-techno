@@ -700,6 +700,10 @@ package final class PreparedAutonomousPhrase: Sendable {
     package let qualityDecision: QualityDecision
     package let incomingQualityState: QualityContinuationState
     package let qualityContinuationState: QualityContinuationState
+    package let incomingLiveMasterHeadroomState:
+        LiveMasterHeadroomContinuationState
+    package let liveMasterHeadroomContinuationState:
+        LiveMasterHeadroomContinuationState
     package let correctionRenderCount: Int
     package let usedHomeTimbreCorrection: Bool
 
@@ -717,6 +721,10 @@ package final class PreparedAutonomousPhrase: Sendable {
         qualityDecision: QualityDecision,
         incomingQualityState: QualityContinuationState,
         qualityContinuationState: QualityContinuationState,
+        incomingLiveMasterHeadroomState:
+            LiveMasterHeadroomContinuationState,
+        liveMasterHeadroomContinuationState:
+            LiveMasterHeadroomContinuationState,
         correctionRenderCount: Int,
         usedHomeTimbreCorrection: Bool
     ) {
@@ -734,6 +742,10 @@ package final class PreparedAutonomousPhrase: Sendable {
         self.qualityDecision = qualityDecision
         self.incomingQualityState = incomingQualityState
         self.qualityContinuationState = qualityContinuationState
+        self.incomingLiveMasterHeadroomState =
+            incomingLiveMasterHeadroomState
+        self.liveMasterHeadroomContinuationState =
+            liveMasterHeadroomContinuationState
         self.correctionRenderCount = correctionRenderCount
         self.usedHomeTimbreCorrection = usedHomeTimbreCorrection
     }
@@ -766,6 +778,10 @@ package final class PreparedAutonomousPhrase: Sendable {
                 audioPreflight.quality.sampleHash,
               selectedCandidateEvidence.postGraphUpperTimbreEvidence ==
                 upperTimbreEvidence,
+              selectedCandidateEvidence.incomingLiveMasterStateFingerprint ==
+                incomingLiveMasterHeadroomState.fingerprint,
+              selectedCandidateEvidence.outgoingLiveMasterStateFingerprint ==
+                liveMasterHeadroomContinuationState.fingerprint,
               qualityContinuationState.observedControllerStateFingerprint ==
                 selectedCandidateEvidence.routeContinuation
                     .controllerStateFingerprint,
@@ -776,7 +792,9 @@ package final class PreparedAutonomousPhrase: Sendable {
                 outgoingRenderDSPFingerprint:
                     selectedCandidateEvidence.routeContinuation
                         .outgoingRenderDSPFingerprint,
-                qualityState: qualityContinuationState
+                qualityState: qualityContinuationState,
+                liveMasterHeadroomState:
+                    liveMasterHeadroomContinuationState
               ) else {
             return false
         }
@@ -937,6 +955,13 @@ package struct ProfessionalEvidenceOnlyEvaluator:
 }
 
 package enum AutonomousPhrasePreparer {
+    private struct LiveMasterBinding {
+        let incoming: LiveMasterHeadroomContinuationState
+        let outgoing: LiveMasterHeadroomContinuationState
+        let proposal: LiveMasterHeadroomProposal?
+        let outcome: LiveFeedbackProposalOutcome
+    }
+
     private final class CandidateRenderContext {
         let sessionSeed: UInt64
         let memory: TemporalMusicalMemory
@@ -948,6 +973,10 @@ package enum AutonomousPhrasePreparer {
         let routeFingerprint: String
         let incomingContinuationFingerprint: String
         let incomingQualityStateFingerprint: String
+        let incomingLiveMasterState: LiveMasterHeadroomContinuationState
+        let outgoingLiveMasterState: LiveMasterHeadroomContinuationState
+        let liveProposal: LiveMasterHeadroomProposal?
+        let liveProposalOutcome: LiveFeedbackProposalOutcome
         let previousGraphFingerprint: String
         let routeRecovery: Bool
         let routeChannelCount: Int
@@ -965,6 +994,10 @@ package enum AutonomousPhrasePreparer {
             routeFingerprint: String,
             incomingContinuationFingerprint: String,
             incomingQualityStateFingerprint: String,
+            incomingLiveMasterState: LiveMasterHeadroomContinuationState,
+            outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
+            liveProposal: LiveMasterHeadroomProposal?,
+            liveProposalOutcome: LiveFeedbackProposalOutcome,
             previousGraphFingerprint: String,
             routeRecovery: Bool,
             routeChannelCount: Int,
@@ -981,6 +1014,10 @@ package enum AutonomousPhrasePreparer {
             self.routeFingerprint = routeFingerprint
             self.incomingContinuationFingerprint = incomingContinuationFingerprint
             self.incomingQualityStateFingerprint = incomingQualityStateFingerprint
+            self.incomingLiveMasterState = incomingLiveMasterState
+            self.outgoingLiveMasterState = outgoingLiveMasterState
+            self.liveProposal = liveProposal
+            self.liveProposalOutcome = liveProposalOutcome
             self.previousGraphFingerprint = previousGraphFingerprint
             self.routeRecovery = routeRecovery
             self.routeChannelCount = routeChannelCount
@@ -1001,6 +1038,7 @@ package enum AutonomousPhrasePreparer {
         routeRecovery: Bool = false,
         routeChannelCount: Int = 2,
         routeGeneration: Int = 0,
+        pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding? = nil,
         evaluator: E
     ) -> PreparedAutonomousPhrase {
         guard let prepared = prepareTransaction(
@@ -1015,6 +1053,7 @@ package enum AutonomousPhrasePreparer {
             routeRecovery: routeRecovery,
             routeChannelCount: routeChannelCount,
             routeGeneration: routeGeneration,
+            pendingLiveMasterBinding: pendingLiveMasterBinding,
             evaluator: evaluator,
             cancellationRequested: { false }
         ) else {
@@ -1035,6 +1074,7 @@ package enum AutonomousPhrasePreparer {
         routeRecovery: Bool = false,
         routeChannelCount: Int = 2,
         routeGeneration: Int = 0,
+        pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding? = nil,
         evaluator: E,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> PreparedAutonomousPhrase? {
@@ -1050,6 +1090,7 @@ package enum AutonomousPhrasePreparer {
             routeRecovery: routeRecovery,
             routeChannelCount: routeChannelCount,
             routeGeneration: routeGeneration,
+            pendingLiveMasterBinding: pendingLiveMasterBinding,
             evaluator: evaluator,
             cancellationRequested: cancellationRequested
         )
@@ -1067,11 +1108,14 @@ package enum AutonomousPhrasePreparer {
         routeRecovery: Bool,
         routeChannelCount: Int,
         routeGeneration: Int,
+        pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding?,
         evaluator: E,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> PreparedAutonomousPhrase? {
-        let incomingControllerFingerprint = automaticMixControllerFingerprint(
-            incomingRenderState
+        let incomingControllerFingerprint = combinedControllerFingerprint(
+            incomingRenderState,
+            liveMasterHeadroomState:
+                incomingRenderState.liveMasterHeadroomState
         )
         let qualityStateHasNoObservation = incomingQualityState.revision == 0 &&
             incomingQualityState.observedCandidateFingerprint == nil &&
@@ -1079,7 +1123,9 @@ package enum AutonomousPhrasePreparer {
             incomingQualityState.observedControllerStateFingerprint == nil
         let incomingControllerStateIsCoherent = qualityStateHasNoObservation
             ? incomingRenderState.automaticMixState.kickCorrectionDB ==
-                AutomaticMixBalancer.homeKickCorrectionDB
+                AutomaticMixBalancer.homeKickCorrectionDB &&
+                incomingRenderState.liveMasterHeadroomState ==
+                    LiveMasterHeadroomContinuationState()
             : incomingQualityState.observedControllerStateFingerprint ==
                 incomingControllerFingerprint
         guard !cancellationRequested(), sampleRate.isFinite,
@@ -1114,6 +1160,13 @@ package enum AutonomousPhrasePreparer {
             return nil
         }
         let planFingerprint = AutonomousCandidateFingerprint.plan(plan)
+        let liveBinding = liveMasterBinding(
+            pendingBinding: pendingLiveMasterBinding,
+            incoming: incomingRenderState.liveMasterHeadroomState,
+            targetPlan: plan,
+            sampleRate: sampleRate,
+            routeGeneration: routeGeneration
+        )
         let previousGraphFingerprint = previousGraph.map {
             AutonomousCandidateFingerprint.graph($0)
         } ?? "none"
@@ -1149,6 +1202,10 @@ package enum AutonomousPhrasePreparer {
             routeFingerprint: routeFingerprint,
             incomingContinuationFingerprint: incomingContinuationFingerprint,
             incomingQualityStateFingerprint: incomingQualityStateFingerprint,
+            incomingLiveMasterState: liveBinding.incoming,
+            outgoingLiveMasterState: liveBinding.outgoing,
+            liveProposal: liveBinding.proposal,
+            liveProposalOutcome: liveBinding.outcome,
             previousGraphFingerprint: previousGraphFingerprint,
             routeRecovery: routeRecovery,
             routeChannelCount: routeChannelCount,
@@ -1180,6 +1237,12 @@ package enum AutonomousPhrasePreparer {
                     renderContext.incomingContinuationFingerprint,
                 incomingQualityStateFingerprint:
                     renderContext.incomingQualityStateFingerprint,
+                incomingLiveMasterState:
+                    renderContext.incomingLiveMasterState,
+                outgoingLiveMasterState:
+                    renderContext.outgoingLiveMasterState,
+                liveProposal: renderContext.liveProposal,
+                liveProposalOutcome: renderContext.liveProposalOutcome,
                 incomingKickCorrectionDB:
                     renderContext.incomingRenderState.automaticMixState
                         .kickCorrectionDB,
@@ -1229,6 +1292,8 @@ package enum AutonomousPhrasePreparer {
             selected: selected,
             transaction: transaction,
             incomingQualityState: incomingQualityState,
+            incomingLiveMasterState: liveBinding.incoming,
+            outgoingLiveMasterState: liveBinding.outgoing,
             evaluator: evaluator
         )
     }
@@ -1647,6 +1712,26 @@ package enum AutonomousPhrasePreparer {
             graphState.graph,
             graphState.retiringGraph,
         ].compactMap { $0 }.allSatisfy { $0.sessionSeed == sessionSeed }
+        let liveState = renderState.liveMasterHeadroomState
+        let liveStateIsBounded: Bool
+        if liveState.revision == 0 {
+            liveStateIsBounded = liveState ==
+                LiveMasterHeadroomContinuationState()
+        } else {
+            liveStateIsBounded = liveState.committedTrimDB.isFinite &&
+                (-3...0).contains(liveState.committedTrimDB) &&
+                (0...2).contains(liveState.consecutiveCleanWindows) &&
+                liveState.lastProposalFingerprint.map(
+                    fingerprintIsCanonical
+                ) == true &&
+                liveState.lastObservationFingerprint.map(
+                    fingerprintIsCanonical
+                ) == true &&
+                liveState.lastAcceptedSourcePhraseIndex.map {
+                    $0 >= 0 && $0 < phraseIndex
+                } == true &&
+                liveState.earliestEligibleFutureSample.map { $0 > 0 } == true
+        }
         let graphBoundaryIsCoherent: Bool
         if !routeRecovery {
             graphBoundaryIsCoherent = graphState.graph == previousGraph
@@ -1723,6 +1808,7 @@ package enum AutonomousPhrasePreparer {
             (AutomaticMixBalancer.minimumKickCorrectionDB...0).contains(
                 renderState.automaticMixState.kickCorrectionDB
             ) &&
+            liveStateIsBounded &&
             voices.allSatisfy(voiceIsBounded) &&
             graphPlanIsBounded(previousGraph) &&
             graphPlanIsBounded(graphState.graph) &&
@@ -1776,6 +1862,10 @@ package enum AutonomousPhrasePreparer {
         routeFingerprint: String,
         incomingContinuationFingerprint: String,
         incomingQualityStateFingerprint: String,
+        incomingLiveMasterState: LiveMasterHeadroomContinuationState,
+        outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
+        liveProposal: LiveMasterHeadroomProposal?,
+        liveProposalOutcome: LiveFeedbackProposalOutcome,
         incomingKickCorrectionDB: Double,
         incomingTopologyRevision: Int,
         previousGraphFingerprint: String,
@@ -1795,6 +1885,7 @@ package enum AutonomousPhrasePreparer {
         )
         guard DSPGraphValidator.validate(graph).valid else { return nil }
         var renderState = incomingRenderState
+        renderState.liveMasterHeadroomState = outgoingLiveMasterState
         var graphState = incomingGraphState
         guard let blocks = AutonomousPhraseRenderer.renderIfNotCancelled(
             plan: plan, graph: graph, sampleRate: sampleRate,
@@ -1818,7 +1909,10 @@ package enum AutonomousPhrasePreparer {
                 generatedDSPState: graphState,
                 cancellationRequested: cancellationRequested
             ) else { return nil }
-        let controllerFingerprint = automaticMixControllerFingerprint(renderState)
+        let controllerFingerprint = combinedControllerFingerprint(
+            renderState,
+            liveMasterHeadroomState: outgoingLiveMasterState
+        )
         let graphFingerprint = AutonomousCandidateFingerprint.graph(graph)
         guard !cancellationRequested() else { return nil }
         guard let vector = AutonomousCandidateEvaluationVector.make(
@@ -1841,6 +1935,10 @@ package enum AutonomousPhrasePreparer {
             routeRecovery: routeRecovery,
             outgoingRenderDSPFingerprint: outgoingRenderDSPFingerprint,
             controllerStateFingerprint: controllerFingerprint,
+            incomingLiveMasterState: incomingLiveMasterState,
+            outgoingLiveMasterState: outgoingLiveMasterState,
+            liveProposal: liveProposal,
+            liveProposalOutcome: liveProposalOutcome,
             incomingDramaticDebts: memory.openDebts,
             cancellationRequested: cancellationRequested
         ) else { return nil }
@@ -1891,18 +1989,64 @@ package enum AutonomousPhrasePreparer {
         return reasons
     }
 
-    private static func automaticMixControllerFingerprint(
-        _ state: RenderState
+    private static func combinedControllerFingerprint(
+        _ state: RenderState,
+        liveMasterHeadroomState: LiveMasterHeadroomContinuationState
     ) -> String {
-        AutonomousCandidateFingerprint.automaticMixController(
-            kickCorrectionDB: state.automaticMixState.kickCorrectionDB
+        AutonomousCandidateFingerprint.combinedController(
+            kickCorrectionDB: state.automaticMixState.kickCorrectionDB,
+            liveMasterHeadroom: liveMasterHeadroomState,
+            proposalFingerprint: nil
         )
+    }
+
+    private static func liveMasterBinding(
+        pendingBinding: PendingLiveMasterHeadroomBinding?,
+        incoming: LiveMasterHeadroomContinuationState,
+        targetPlan: AutonomousPhrasePlan,
+        sampleRate: Double,
+        routeGeneration: Int
+    ) -> LiveMasterBinding {
+        guard let pendingBinding else {
+            return LiveMasterBinding(
+                incoming: incoming,
+                outgoing: incoming,
+                proposal: nil,
+                outcome: .hold
+            )
+        }
+
+        let pendingProposal = pendingBinding.proposal
+        let outgoing = incoming.accepting(pendingProposal)
+        let valid = pendingBinding.isStructurallyValid(
+            targetPlan: targetPlan,
+            incoming: incoming
+        ) && pendingBinding.eligibleTarget.sampleRate == sampleRate &&
+            pendingBinding.eligibleTarget.routeGeneration == routeGeneration &&
+            pendingProposal.isStructurallyValid &&
+            pendingProposal.outcome != .unavailable &&
+            outgoing.isImmediateSuccessor(of: incoming)
+
+        return LiveMasterBinding(
+            incoming: incoming,
+            outgoing: valid ? outgoing : incoming,
+            proposal: pendingProposal,
+            outcome: valid ? pendingProposal.outcome : .unavailable
+        )
+    }
+
+    private static func fingerprintIsCanonical(_ fingerprint: String) -> Bool {
+        fingerprint.utf8.count == 16 && fingerprint.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
     }
 
     private static func finalize<E: AutonomousCandidateEvaluating>(
         selected: CandidateRenderProduct,
         transaction: AutonomousCandidateEvaluationTransaction,
         incomingQualityState: QualityContinuationState,
+        incomingLiveMasterState: LiveMasterHeadroomContinuationState,
+        outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
         evaluator: E
     ) -> PreparedAutonomousPhrase {
         let verdict = evaluator.terminalVerdict(
@@ -1942,7 +2086,8 @@ package enum AutonomousPhrasePreparer {
             selectedSampleHash: selected.vector.fullMix.sampleHash,
             outgoingRenderDSPFingerprint:
                 selected.vector.routeContinuation.outgoingRenderDSPFingerprint,
-            qualityState: outgoingQuality
+            qualityState: outgoingQuality,
+            liveMasterHeadroomState: outgoingLiveMasterState
         )
         return PreparedAutonomousPhrase(
             plan: selected.plan,
@@ -1958,6 +2103,8 @@ package enum AutonomousPhrasePreparer {
             qualityDecision: outgoingQuality.lastDecision,
             incomingQualityState: incomingQualityState,
             qualityContinuationState: outgoingQuality,
+            incomingLiveMasterHeadroomState: incomingLiveMasterState,
+            liveMasterHeadroomContinuationState: outgoingLiveMasterState,
             correctionRenderCount: transaction.correctionCount,
             usedHomeTimbreCorrection: selected.attempt.forceHomeUpperTimbre
         )

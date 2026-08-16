@@ -236,7 +236,7 @@ struct PhraseCompositionTests {
             if let outgoing = plan.phraseComposition.compactMap(\.padVoicing).last?.voices {
                 acceptedVoices = outgoing
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
             if let acceptedVoices {
                 #expect(state.memory.harmonicContinuation.voices == acceptedVoices)
             }
@@ -282,7 +282,7 @@ struct PhraseCompositionTests {
                     #expect(arpPitchClasses.isSubset(of: padPitchClasses))
                 }
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
 
         #expect(sliceBars > 0, "breaks=\(breakBars), percussion=\(breakPercussionBars), sources=\(breakSourceBars)")

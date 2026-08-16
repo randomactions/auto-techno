@@ -17,7 +17,7 @@ struct IdentityReturnContinuationTests {
                 identityInput = canonicalState
                 break
             }
-            canonicalState.advance(using: plan)
+            canonicalState.advancePlanning(using: plan)
         }
 
         guard var state = identityInput else {
@@ -70,7 +70,7 @@ struct IdentityReturnContinuationTests {
         #expect(Set(identity.endingNarrativeState.activeSupportingRoles) ==
                 Set(finalIdentityBar.narrative.activeSupportingRoles + [.percussion]))
 
-        state.advance(using: identity)
+        state.advancePlanning(using: identity)
         #expect(state.memory.narrativeEvolution == identity.endingNarrativeState)
 
         let next = director.plan(from: state)

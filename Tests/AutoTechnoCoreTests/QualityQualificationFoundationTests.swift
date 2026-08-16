@@ -500,7 +500,7 @@ struct QualityQualificationFoundationTests {
         }
     }
 
-    @Test("Professional Evidence v5 bank requires every journey checkpoint and unavailable policy")
+    @Test("Professional Evidence v6 bank requires every journey checkpoint and unavailable policy")
     func professionalEvidenceReportBank() throws {
         var reports: [CanonicalJourneyQualificationReport] = []
         for sampleRate in [44_100.0, 48_000.0] {
@@ -834,10 +834,20 @@ struct QualityQualificationFoundationTests {
             routeRecovery: false,
             outgoingRenderDSPFingerprint: "outgoing-render-dsp",
             controllerStateFingerprint:
-                AutonomousCandidateFingerprint.automaticMixController(
-                    kickCorrectionDB: AutomaticMixBalancer.homeKickCorrectionDB
+                AutonomousCandidateFingerprint.combinedController(
+                    kickCorrectionDB:
+                        AutomaticMixBalancer.homeKickCorrectionDB,
+                    liveMasterHeadroom:
+                        LiveMasterHeadroomContinuationState(),
+                    proposalFingerprint: nil
                 )
         )
+        let liveBlockHash = ExactPCMFingerprint.stereo(
+            left: [0.25],
+            right: [-0.125]
+        )
+        let livePhraseHash = AutonomousCandidateEvaluationVector
+            .liveMasterPhrasePCMFingerprint([liveBlockHash])
         let vector = AutonomousCandidateEvaluationVector(
             planFingerprint: planFingerprint,
             graphFingerprint: graphFingerprint,
@@ -1032,6 +1042,22 @@ struct QualityQualificationFoundationTests {
             )],
             graph: graph,
             routeContinuation: route,
+            incomingLiveMasterRevision: 0,
+            outgoingLiveMasterRevision: 0,
+            incomingLiveMasterStateFingerprint:
+                LiveMasterHeadroomContinuationState().fingerprint,
+            outgoingLiveMasterStateFingerprint:
+                LiveMasterHeadroomContinuationState().fingerprint,
+            liveObservationFingerprint: nil,
+            liveProposalFingerprint: nil,
+            liveProposalOutcome: .hold,
+            requestedLiveMasterTrimDB: 0,
+            appliedLiveMasterTrimDB: 0,
+            liveMasterGain: 1,
+            preLiveMasterPCMFingerprint: livePhraseHash,
+            postLiveMasterPCMFingerprint: livePhraseHash,
+            liveMasterScalingMatches: true,
+            liveEarliestEligibleFutureSample: nil,
             preGraphUpperTimbreEvidence: evidence,
             postGraphUpperTimbreEvidence: evidence
         )

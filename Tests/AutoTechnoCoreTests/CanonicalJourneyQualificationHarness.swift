@@ -76,7 +76,7 @@ struct CanonicalJourneyQualificationHarness {
                 result.append(candidate(checkpoint, plan: plan, state: state))
             }
             previousChapter = chapters.last ?? previousChapter
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
             if CanonicalJourneyCheckpoint.allCases.allSatisfy(contains) { break }
         }
         return result

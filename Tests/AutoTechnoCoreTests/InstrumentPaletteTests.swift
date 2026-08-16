@@ -467,7 +467,7 @@ struct InstrumentPaletteTests {
                 selectedPlan = plan
                 break
             }
-            session.advance(using: plan)
+            session.advancePlanning(using: plan)
         }
         guard let plan = selectedPlan else {
             Issue.record("Expected the canonical session to schedule all architectures")
@@ -572,7 +572,7 @@ struct InstrumentPaletteTests {
                 plannedRelations = relations
                 break
             }
-            session.advance(using: plan)
+            session.advancePlanning(using: plan)
         }
         guard let plan = selectedPlan else {
             Issue.record("Expected the canonical session to schedule an acid relation")
@@ -754,7 +754,7 @@ struct InstrumentPaletteTests {
             }) {
                 return (state, plan)
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         return nil
     }
@@ -778,7 +778,7 @@ struct InstrumentPaletteTests {
             }) {
                 return (state, plan)
             }
-            state.advance(using: plan)
+            state.advancePlanning(using: plan)
         }
         return nil
     }

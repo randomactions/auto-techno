@@ -3902,12 +3902,38 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
     case pulseEchoDriveEvidence = "pulse-echo-drive-evidence"
     case spatialFDNEvidence = "spatial-fdn-evidence"
     case upperTimingEvidence = "upper-timing-evidence"
+    case liveMasterEvidence = "live-master-evidence"
+}
+
+package struct AutonomousLiveMasterRenderValidationInput: Sendable {
+    package let left: [Float]
+    package let right: [Float]
+    package let evidence: LiveMasterTrimRenderEvidence
+
+    package init(
+        left: [Float],
+        right: [Float],
+        evidence: LiveMasterTrimRenderEvidence
+    ) {
+        self.left = left
+        self.right = right
+        self.evidence = evidence
+    }
+}
+
+package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
+    package let requestedTrimDB: Double
+    package let appliedTrimDB: Double
+    package let appliedGain: Double
+    package let preTrimPCMFingerprint: String
+    package let postTrimPCMFingerprint: String
+    package let validatedBlockCount: Int
 }
 
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 19
+    package static let schemaVersion = 20
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -3955,6 +3981,20 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let upperTiming: [AutonomousUpperTimingBarEvidence]
     package let graph: AutonomousGraphEvidence
     package let routeContinuation: AutonomousRouteContinuationEvidence
+    package let incomingLiveMasterRevision: Int
+    package let outgoingLiveMasterRevision: Int
+    package let incomingLiveMasterStateFingerprint: String
+    package let outgoingLiveMasterStateFingerprint: String
+    package let liveObservationFingerprint: String?
+    package let liveProposalFingerprint: String?
+    package let liveProposalOutcome: LiveFeedbackProposalOutcome
+    package let requestedLiveMasterTrimDB: Double
+    package let appliedLiveMasterTrimDB: Double
+    package let liveMasterGain: Double
+    package let preLiveMasterPCMFingerprint: String
+    package let postLiveMasterPCMFingerprint: String
+    package let liveMasterScalingMatches: Bool
+    package let liveEarliestEligibleFutureSample: Int64?
     /// Aggregate over the exact graph-input remainder. This diagnoses whether
     /// a deficit existed before the generated topology.
     package let preGraphUpperTimbreEvidence: UpperTimbreEvidence
@@ -3984,6 +4024,20 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         upperTiming: [AutonomousUpperTimingBarEvidence],
         graph: AutonomousGraphEvidence,
         routeContinuation: AutonomousRouteContinuationEvidence,
+        incomingLiveMasterRevision: Int,
+        outgoingLiveMasterRevision: Int,
+        incomingLiveMasterStateFingerprint: String,
+        outgoingLiveMasterStateFingerprint: String,
+        liveObservationFingerprint: String?,
+        liveProposalFingerprint: String?,
+        liveProposalOutcome: LiveFeedbackProposalOutcome,
+        requestedLiveMasterTrimDB: Double,
+        appliedLiveMasterTrimDB: Double,
+        liveMasterGain: Double,
+        preLiveMasterPCMFingerprint: String,
+        postLiveMasterPCMFingerprint: String,
+        liveMasterScalingMatches: Bool,
+        liveEarliestEligibleFutureSample: Int64?,
         preGraphUpperTimbreEvidence: UpperTimbreEvidence,
         postGraphUpperTimbreEvidence: UpperTimbreEvidence
     ) {
@@ -4028,6 +4082,23 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.upperTiming = Array(upperTiming.prefix(Self.maximumBarCount))
         self.graph = graph
         self.routeContinuation = routeContinuation
+        self.incomingLiveMasterRevision = incomingLiveMasterRevision
+        self.outgoingLiveMasterRevision = outgoingLiveMasterRevision
+        self.incomingLiveMasterStateFingerprint =
+            incomingLiveMasterStateFingerprint
+        self.outgoingLiveMasterStateFingerprint =
+            outgoingLiveMasterStateFingerprint
+        self.liveObservationFingerprint = liveObservationFingerprint
+        self.liveProposalFingerprint = liveProposalFingerprint
+        self.liveProposalOutcome = liveProposalOutcome
+        self.requestedLiveMasterTrimDB = requestedLiveMasterTrimDB
+        self.appliedLiveMasterTrimDB = appliedLiveMasterTrimDB
+        self.liveMasterGain = liveMasterGain
+        self.preLiveMasterPCMFingerprint = preLiveMasterPCMFingerprint
+        self.postLiveMasterPCMFingerprint = postLiveMasterPCMFingerprint
+        self.liveMasterScalingMatches = liveMasterScalingMatches
+        self.liveEarliestEligibleFutureSample =
+            liveEarliestEligibleFutureSample
         self.preGraphUpperTimbreEvidence = preGraphUpperTimbreEvidence
         self.postGraphUpperTimbreEvidence = postGraphUpperTimbreEvidence
     }
@@ -4052,6 +4123,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         routeRecovery: Bool,
         outgoingRenderDSPFingerprint: String,
         controllerStateFingerprint: String,
+        incomingLiveMasterState: LiveMasterHeadroomContinuationState,
+        outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
+        liveProposal: LiveMasterHeadroomProposal?,
+        liveProposalOutcome: LiveFeedbackProposalOutcome,
         incomingDramaticDebts: [SessionDramaticDebt],
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousCandidateEvaluationVector? {
@@ -4545,6 +4620,18 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             outgoingRenderDSPFingerprint: outgoingRenderDSPFingerprint,
             controllerStateFingerprint: controllerStateFingerprint
         )
+        let liveInputs = boundedBlocks.map {
+            AutonomousLiveMasterRenderValidationInput(
+                left: $0.left,
+                right: $0.right,
+                evidence: $0.liveMasterTrimRenderEvidence
+            )
+        }
+        guard let liveEvidence = validatedLiveMasterEvidence(
+            inputs: liveInputs,
+            outgoingState: outgoingLiveMasterState,
+            cancellationRequested: cancellationRequested
+        ) else { return nil }
         guard !cancellationRequested() else { return nil }
         return AutonomousCandidateEvaluationVector(
             planFingerprint: planFingerprint,
@@ -4568,6 +4655,26 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             upperTiming: upperTiming,
             graph: graphEvidence,
             routeContinuation: route,
+            incomingLiveMasterRevision: incomingLiveMasterState.revision,
+            outgoingLiveMasterRevision: outgoingLiveMasterState.revision,
+            incomingLiveMasterStateFingerprint:
+                incomingLiveMasterState.fingerprint,
+            outgoingLiveMasterStateFingerprint:
+                outgoingLiveMasterState.fingerprint,
+            liveObservationFingerprint: liveProposal?.observationFingerprint,
+            liveProposalFingerprint: liveProposal?.fingerprint,
+            liveProposalOutcome: liveProposalOutcome,
+            requestedLiveMasterTrimDB: liveEvidence.requestedTrimDB,
+            appliedLiveMasterTrimDB: liveEvidence.appliedTrimDB,
+            liveMasterGain: liveEvidence.appliedGain,
+            preLiveMasterPCMFingerprint:
+                liveEvidence.preTrimPCMFingerprint,
+            postLiveMasterPCMFingerprint:
+                liveEvidence.postTrimPCMFingerprint,
+            liveMasterScalingMatches:
+                liveEvidence.validatedBlockCount == boundedBlocks.count,
+            liveEarliestEligibleFutureSample:
+                liveProposal?.earliestEligibleFutureSample,
             preGraphUpperTimbreEvidence: preGraphUpperTimbreEvidence,
             postGraphUpperTimbreEvidence: upperTimbreEvidence
         )
@@ -5324,6 +5431,97 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         return fixedWidthFingerprintHex(sink.value)
     }
 
+    package static func validatedLiveMasterEvidence(
+        inputs: [AutonomousLiveMasterRenderValidationInput],
+        outgoingState: LiveMasterHeadroomContinuationState,
+        cancellationRequested: @escaping @Sendable () -> Bool = { false }
+    ) -> AutonomousValidatedLiveMasterEvidence? {
+        guard !inputs.isEmpty, inputs.count <= Self.maximumBarCount,
+              !cancellationRequested() else { return nil }
+        var preTrimFingerprints: [String] = []
+        var postTrimFingerprints: [String] = []
+        preTrimFingerprints.reserveCapacity(inputs.count)
+        postTrimFingerprints.reserveCapacity(inputs.count)
+        var requestedTrim: Double?
+        var appliedTrim: Double?
+        var appliedGain: Double?
+        for input in inputs {
+            guard !cancellationRequested(), !input.left.isEmpty,
+                  input.left.count == input.right.count else { return nil }
+            let evidence = input.evidence
+            let actualPostHash = ExactPCMFingerprint.stereo(
+                left: input.left,
+                right: input.right
+            )
+            let actualPostNonzeroCount = input.left.reduce(0) {
+                $0 + ($1 == 0 ? 0 : 1)
+            } + input.right.reduce(0) {
+                $0 + ($1 == 0 ? 0 : 1)
+            }
+            let totalSampleCount = input.left.count.addingReportingOverflow(
+                input.right.count
+            )
+            guard evidence.requestedTrimDB.isFinite,
+                  evidence.appliedTrimDB.isFinite,
+                  evidence.appliedGain.isFinite,
+                  (-3...0).contains(evidence.requestedTrimDB),
+                  (-3...0).contains(evidence.appliedTrimDB),
+                  evidence.requestedTrimDB ==
+                    outgoingState.committedTrimDB,
+                  evidence.appliedTrimDB == outgoingState.committedTrimDB,
+                  evidence.appliedGain ==
+                    pow(10, evidence.appliedTrimDB / 20),
+                  Self.isLiveFingerprint(
+                    evidence.preTrimStereoSampleHash
+                  ),
+                  evidence.postTrimStereoSampleHash == actualPostHash,
+                  evidence.preTrimNonzeroSampleCount >= 0,
+                  !totalSampleCount.overflow,
+                  evidence.preTrimNonzeroSampleCount <=
+                    totalSampleCount.partialValue,
+                  evidence.postTrimNonzeroSampleCount ==
+                    actualPostNonzeroCount,
+                  evidence.exactScaleMatches else { return nil }
+            if let requestedTrim,
+               requestedTrim != evidence.requestedTrimDB { return nil }
+            if let appliedTrim,
+               appliedTrim != evidence.appliedTrimDB { return nil }
+            if let appliedGain,
+               appliedGain != evidence.appliedGain { return nil }
+            requestedTrim = evidence.requestedTrimDB
+            appliedTrim = evidence.appliedTrimDB
+            appliedGain = evidence.appliedGain
+            preTrimFingerprints.append(evidence.preTrimStereoSampleHash)
+            postTrimFingerprints.append(actualPostHash)
+        }
+        guard let requestedTrim, let appliedTrim, let appliedGain,
+              !cancellationRequested() else { return nil }
+        return AutonomousValidatedLiveMasterEvidence(
+            requestedTrimDB: requestedTrim,
+            appliedTrimDB: appliedTrim,
+            appliedGain: appliedGain,
+            preTrimPCMFingerprint: liveMasterPhrasePCMFingerprint(
+                preTrimFingerprints
+            ),
+            postTrimPCMFingerprint: liveMasterPhrasePCMFingerprint(
+                postTrimFingerprints
+            ),
+            validatedBlockCount: inputs.count
+        )
+    }
+
+    package static func liveMasterPhrasePCMFingerprint(
+        _ orderedBlockFingerprints: [String]
+    ) -> String {
+        var sink = StreamingFNV1a()
+        sink.domain("live-master-phrase-pcm.typed.v1")
+        sink.collection(orderedBlockFingerprints.count)
+        for fingerprint in orderedBlockFingerprints {
+            sink.string(fingerprint)
+        }
+        return fixedWidthFingerprintHex(sink.value)
+    }
+
     package var isFinite: Bool {
         symbolic.isFinite && fullMix.isFinite && masking.allSatisfy { $0.isFinite } &&
             stems.allSatisfy { $0.isFinite } &&
@@ -5338,6 +5536,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             pulseEchoDrive.allSatisfy { $0.isFinite } &&
             spatialFDN.allSatisfy { $0.isFinite } &&
             upperTiming.allSatisfy { $0.isFinite } &&
+            requestedLiveMasterTrimDB.isFinite &&
+            appliedLiveMasterTrimDB.isFinite && liveMasterGain.isFinite &&
             routeContinuation.isFinite &&
             preGraphUpperTimbreEvidence.candidateValuesAreFinite &&
             postGraphUpperTimbreEvidence.candidateValuesAreFinite
@@ -5405,6 +5605,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         }
         if !upperTimingEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.upperTimingEvidence)
+        }
+        if !liveMasterEvidenceIsComplete() {
+            failures.append(.liveMasterEvidence)
         }
         return failures
     }
@@ -5481,12 +5684,72 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                   $0.role == MixRole.kick.rawValue
               }),
               routeContinuation.controllerStateFingerprint ==
-                AutonomousCandidateFingerprint.automaticMixController(
-                    kickCorrectionDB: finalKick.gainDB
+                AutonomousCandidateFingerprint.combinedController(
+                    kickCorrectionDB: finalKick.gainDB,
+                    liveMasterStateFingerprint:
+                        outgoingLiveMasterStateFingerprint,
+                    proposalFingerprint: nil
                 ) else {
             return false
         }
         return true
+    }
+
+    @inline(never)
+    private func liveMasterEvidenceIsComplete() -> Bool {
+        let fingerprints = [
+            incomingLiveMasterStateFingerprint,
+            outgoingLiveMasterStateFingerprint,
+            preLiveMasterPCMFingerprint,
+            postLiveMasterPCMFingerprint,
+        ]
+        guard incomingLiveMasterRevision >= 0,
+              outgoingLiveMasterRevision >= 0,
+              fingerprints.allSatisfy(Self.isLiveFingerprint),
+              liveObservationFingerprint.map(Self.isLiveFingerprint) ?? true,
+              liveProposalFingerprint.map(Self.isLiveFingerprint) ?? true,
+              requestedLiveMasterTrimDB.isFinite,
+              appliedLiveMasterTrimDB.isFinite,
+              liveMasterGain.isFinite,
+              (-3...0).contains(requestedLiveMasterTrimDB),
+              (-3...0).contains(appliedLiveMasterTrimDB),
+              liveMasterGain > 0, liveMasterGain <= 1,
+              liveMasterGain == pow(10, appliedLiveMasterTrimDB / 20),
+              liveMasterScalingMatches,
+              liveEarliestEligibleFutureSample.map({ $0 > 0 }) ?? true else {
+            return false
+        }
+        let hasProposal = liveProposalFingerprint != nil
+        if !hasProposal {
+            return liveProposalOutcome == .hold &&
+                liveObservationFingerprint == nil &&
+                liveEarliestEligibleFutureSample == nil &&
+                outgoingLiveMasterRevision == incomingLiveMasterRevision &&
+                outgoingLiveMasterStateFingerprint ==
+                    incomingLiveMasterStateFingerprint &&
+                requestedLiveMasterTrimDB == appliedLiveMasterTrimDB &&
+                (liveMasterGain != 1 ||
+                    preLiveMasterPCMFingerprint ==
+                        postLiveMasterPCMFingerprint)
+        }
+        if liveProposalOutcome == .unavailable {
+            return outgoingLiveMasterRevision == incomingLiveMasterRevision &&
+                outgoingLiveMasterStateFingerprint ==
+                    incomingLiveMasterStateFingerprint &&
+                requestedLiveMasterTrimDB == appliedLiveMasterTrimDB
+        }
+        return liveObservationFingerprint != nil &&
+            incomingLiveMasterRevision < Int.max &&
+            outgoingLiveMasterRevision == incomingLiveMasterRevision + 1 &&
+            outgoingLiveMasterStateFingerprint !=
+                incomingLiveMasterStateFingerprint &&
+            requestedLiveMasterTrimDB == appliedLiveMasterTrimDB
+    }
+
+    private static func isLiveFingerprint(_ value: String) -> Bool {
+        value.utf8.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
     }
 
     @inline(never)
@@ -5901,6 +6164,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         prevalidatedVectorIsComplete && prevalidatedVectorIsFinite &&
             hardGates.passed && symbolic.interestValid &&
             graph.validationValid && prevalidatedSignalSafetyValid &&
+            liveProposalOutcome != .unavailable &&
             postGraphUpperTimbreEvidence.finite &&
             postGraphUpperTimbreEvidence.candidateValuesAreFinite
     }
@@ -6380,7 +6644,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
 }
 
 package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sendable {
-    package static let schemaVersion = 3
+    package static let schemaVersion = 4
     package static let maximumCorrectionAttempts =
         QualityQualificationContract.maximumCorrectionRenders
     package static let maximumAttemptCount =
@@ -6396,6 +6660,9 @@ package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sen
     package let selectedAttemptIndex: Int?
     package let correctionCount: Int
     package let boundsValid: Bool
+    package let incomingLiveMasterStateFingerprint: String?
+    package let selectedOutgoingLiveMasterStateFingerprint: String?
+    package let liveProposalFingerprint: String?
 
     package init(
         engineVersion: String,
@@ -6422,6 +6689,13 @@ package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sen
             $0.kind == .correctionRender
         }.count
         correctionCount = min(Self.maximumCorrectionAttempts, max(0, sourceCorrectionCount))
+        incomingLiveMasterStateFingerprint = retainedAttempts.first?
+            .vector.incomingLiveMasterStateFingerprint
+        selectedOutgoingLiveMasterStateFingerprint = selectedAttemptIndex.map {
+            retainedAttempts[$0].vector.outgoingLiveMasterStateFingerprint
+        }
+        liveProposalFingerprint = retainedAttempts.first?
+            .vector.liveProposalFingerprint
         boundsValid = sourceAttempts.count <= Self.maximumAttemptCount &&
             sourceCorrectionAttemptCount <= Self.maximumCorrectionAttempts &&
             sourceCorrectionCount == sourceCorrectionAttemptCount
@@ -6473,7 +6747,15 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
               selectedIndex == transaction.attempts.index(before:
                 transaction.attempts.endIndex),
               transaction.attempts[0].kind == .initialRender,
-              !transaction.attempts[0].forceHomeUpperTimbre else {
+              !transaction.attempts[0].forceHomeUpperTimbre,
+              transaction.incomingLiveMasterStateFingerprint ==
+                transaction.attempts[0].vector
+                    .incomingLiveMasterStateFingerprint,
+              transaction.selectedOutgoingLiveMasterStateFingerprint ==
+                transaction.attempts[selectedIndex].vector
+                    .outgoingLiveMasterStateFingerprint,
+              transaction.liveProposalFingerprint ==
+                transaction.attempts[0].vector.liveProposalFingerprint else {
             return false
         }
 
@@ -6534,6 +6816,26 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
             correction.kickSyntax == initial.kickSyntax &&
             correction.climaxArc == initial.climaxArc &&
             correction.modalPercussion == initial.modalPercussion &&
+            correction.incomingLiveMasterRevision ==
+                initial.incomingLiveMasterRevision &&
+            correction.outgoingLiveMasterRevision ==
+                initial.outgoingLiveMasterRevision &&
+            correction.incomingLiveMasterStateFingerprint ==
+                initial.incomingLiveMasterStateFingerprint &&
+            correction.outgoingLiveMasterStateFingerprint ==
+                initial.outgoingLiveMasterStateFingerprint &&
+            correction.liveObservationFingerprint ==
+                initial.liveObservationFingerprint &&
+            correction.liveProposalFingerprint ==
+                initial.liveProposalFingerprint &&
+            correction.liveProposalOutcome == initial.liveProposalOutcome &&
+            correction.requestedLiveMasterTrimDB ==
+                initial.requestedLiveMasterTrimDB &&
+            correction.appliedLiveMasterTrimDB ==
+                initial.appliedLiveMasterTrimDB &&
+            correction.liveMasterGain == initial.liveMasterGain &&
+            correction.liveEarliestEligibleFutureSample ==
+                initial.liveEarliestEligibleFutureSample &&
             sharedRouteInputsMatch(correction, initial) &&
             zip(correction.instruments, initial.instruments).allSatisfy {
                 corrected, source in
@@ -6669,20 +6971,39 @@ package struct AutonomousCandidateContinuationFingerprint: Codable, Equatable, S
 /// outside the transaction so the finalized quality state can be bound without
 /// creating a self-referential evidence fingerprint.
 package struct AutonomousPreparedCommitProvenance: Codable, Equatable, Sendable {
-    package static let schemaVersion = 1
+    package static let schemaVersion = 2
 
     package let schemaVersion: Int
     package let candidateEvaluationFingerprint: String
     package let selectedSampleHash: String
     package let outgoingRenderDSPFingerprint: String
     package let outgoingQualityStateFingerprint: String
+    package let outgoingLiveMasterStateFingerprint: String
     package let fingerprint: String
 
     package init(
         candidateEvaluationFingerprint: String,
         selectedSampleHash: String,
         outgoingRenderDSPFingerprint: String,
-        qualityState: QualityContinuationState
+        qualityState: QualityContinuationState,
+        liveMasterHeadroomState: LiveMasterHeadroomContinuationState
+    ) {
+        self.init(
+            candidateEvaluationFingerprint: candidateEvaluationFingerprint,
+            selectedSampleHash: selectedSampleHash,
+            outgoingRenderDSPFingerprint: outgoingRenderDSPFingerprint,
+            qualityState: qualityState,
+            outgoingLiveMasterStateFingerprint:
+                liveMasterHeadroomState.fingerprint
+        )
+    }
+
+    package init(
+        candidateEvaluationFingerprint: String,
+        selectedSampleHash: String,
+        outgoingRenderDSPFingerprint: String,
+        qualityState: QualityContinuationState,
+        outgoingLiveMasterStateFingerprint: String
     ) {
         schemaVersion = Self.schemaVersion
         self.candidateEvaluationFingerprint = candidateEvaluationFingerprint
@@ -6690,11 +7011,15 @@ package struct AutonomousPreparedCommitProvenance: Codable, Equatable, Sendable 
         self.outgoingRenderDSPFingerprint = outgoingRenderDSPFingerprint
         outgoingQualityStateFingerprint =
             AutonomousCandidateFingerprint.qualityState(qualityState)
+        self.outgoingLiveMasterStateFingerprint =
+            outgoingLiveMasterStateFingerprint
         fingerprint = Self.fingerprint(
             candidateEvaluationFingerprint: candidateEvaluationFingerprint,
             selectedSampleHash: selectedSampleHash,
             outgoingRenderDSPFingerprint: outgoingRenderDSPFingerprint,
-            outgoingQualityStateFingerprint: outgoingQualityStateFingerprint
+            outgoingQualityStateFingerprint: outgoingQualityStateFingerprint,
+            outgoingLiveMasterStateFingerprint:
+                outgoingLiveMasterStateFingerprint
         )
     }
 
@@ -6702,7 +7027,9 @@ package struct AutonomousPreparedCommitProvenance: Codable, Equatable, Sendable 
         schemaVersion == Self.schemaVersion &&
             !candidateEvaluationFingerprint.isEmpty && !selectedSampleHash.isEmpty &&
             !outgoingRenderDSPFingerprint.isEmpty &&
-            !outgoingQualityStateFingerprint.isEmpty && !fingerprint.isEmpty
+            !outgoingQualityStateFingerprint.isEmpty &&
+            Self.isFingerprint(outgoingLiveMasterStateFingerprint) &&
+            !fingerprint.isEmpty
     }
 
     package var isInternallyConsistent: Bool {
@@ -6710,7 +7037,9 @@ package struct AutonomousPreparedCommitProvenance: Codable, Equatable, Sendable 
             candidateEvaluationFingerprint: candidateEvaluationFingerprint,
             selectedSampleHash: selectedSampleHash,
             outgoingRenderDSPFingerprint: outgoingRenderDSPFingerprint,
-            outgoingQualityStateFingerprint: outgoingQualityStateFingerprint
+            outgoingQualityStateFingerprint: outgoingQualityStateFingerprint,
+            outgoingLiveMasterStateFingerprint:
+                outgoingLiveMasterStateFingerprint
         )
     }
 
@@ -6718,14 +7047,34 @@ package struct AutonomousPreparedCommitProvenance: Codable, Equatable, Sendable 
         candidateEvaluationFingerprint: String,
         selectedSampleHash: String,
         outgoingRenderDSPFingerprint: String,
-        qualityState: QualityContinuationState
+        qualityState: QualityContinuationState,
+        liveMasterHeadroomState: LiveMasterHeadroomContinuationState
+    ) -> Bool {
+        matches(
+            candidateEvaluationFingerprint: candidateEvaluationFingerprint,
+            selectedSampleHash: selectedSampleHash,
+            outgoingRenderDSPFingerprint: outgoingRenderDSPFingerprint,
+            qualityState: qualityState,
+            outgoingLiveMasterStateFingerprint:
+                liveMasterHeadroomState.fingerprint
+        )
+    }
+
+    package func matches(
+        candidateEvaluationFingerprint: String,
+        selectedSampleHash: String,
+        outgoingRenderDSPFingerprint: String,
+        qualityState: QualityContinuationState,
+        outgoingLiveMasterStateFingerprint: String
     ) -> Bool {
         isInternallyConsistent &&
             self.candidateEvaluationFingerprint == candidateEvaluationFingerprint &&
             self.selectedSampleHash == selectedSampleHash &&
             self.outgoingRenderDSPFingerprint == outgoingRenderDSPFingerprint &&
             outgoingQualityStateFingerprint ==
-                AutonomousCandidateFingerprint.qualityState(qualityState)
+                AutonomousCandidateFingerprint.qualityState(qualityState) &&
+            self.outgoingLiveMasterStateFingerprint ==
+                outgoingLiveMasterStateFingerprint
     }
 
     private struct FingerprintPayload: Codable {
@@ -6734,20 +7083,30 @@ package struct AutonomousPreparedCommitProvenance: Codable, Equatable, Sendable 
         let selectedSampleHash: String
         let outgoingRenderDSPFingerprint: String
         let outgoingQualityStateFingerprint: String
+        let outgoingLiveMasterStateFingerprint: String
+    }
+
+    private static func isFingerprint(_ value: String) -> Bool {
+        value.utf8.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
     }
 
     private static func fingerprint(
         candidateEvaluationFingerprint: String,
         selectedSampleHash: String,
         outgoingRenderDSPFingerprint: String,
-        outgoingQualityStateFingerprint: String
+        outgoingQualityStateFingerprint: String,
+        outgoingLiveMasterStateFingerprint: String
     ) -> String {
         AutonomousCandidateCanonicalJSON.fingerprint(FingerprintPayload(
-            version: "prepared-commit.v1",
+            version: "prepared-commit.v2",
             candidateEvaluationFingerprint: candidateEvaluationFingerprint,
             selectedSampleHash: selectedSampleHash,
             outgoingRenderDSPFingerprint: outgoingRenderDSPFingerprint,
-            outgoingQualityStateFingerprint: outgoingQualityStateFingerprint
+            outgoingQualityStateFingerprint: outgoingQualityStateFingerprint,
+            outgoingLiveMasterStateFingerprint:
+                outgoingLiveMasterStateFingerprint
         ))
     }
 }
@@ -6830,11 +7189,27 @@ package enum AutonomousCandidateFingerprint {
         )
     }
 
-    package static func automaticMixController(
-        kickCorrectionDB: Double
+    package static func combinedController(
+        kickCorrectionDB: Double,
+        liveMasterHeadroom: LiveMasterHeadroomContinuationState,
+        proposalFingerprint: String?
     ) -> String {
-        "automatic-mix.v1." + fixedWidthFingerprintHex(
-            kickCorrectionDB.bitPattern
+        AutonomousTypedFingerprint.combinedController(
+            kickCorrectionDB: kickCorrectionDB,
+            liveMasterHeadroom: liveMasterHeadroom,
+            proposalFingerprint: proposalFingerprint
+        )
+    }
+
+    package static func combinedController(
+        kickCorrectionDB: Double,
+        liveMasterStateFingerprint: String,
+        proposalFingerprint: String?
+    ) -> String {
+        AutonomousTypedFingerprint.combinedController(
+            kickCorrectionDB: kickCorrectionDB,
+            liveMasterStateFingerprint: liveMasterStateFingerprint,
+            proposalFingerprint: proposalFingerprint
         )
     }
 }

@@ -65,6 +65,7 @@ private enum AutonomousPerformancePreparer {
             routeRecovery: request.key.routeRecovery,
             routeChannelCount: request.key.channelCount,
             routeGeneration: request.key.routeGeneration,
+            pendingLiveMasterBinding: nil,
             evaluator: evaluator,
             cancellationRequested: { Task.isCancelled }
         ), !Task.isCancelled else { return nil }
@@ -343,7 +344,9 @@ final class TechnoEngine: ObservableObject {
     private func acceptPreparedPhrase(_ phrase: PreparedPhrase) {
         guard !isShutDown else { return }
         guard phrase.request.key.phraseIndex == phrase.request.sourceState.phraseIndex else { return }
-        guard phrase.prepared.commitEligible else {
+        guard phrase.prepared.commitEligible,
+              phrase.prepared.incomingLiveMasterHeadroomState ==
+                phrase.request.sourceState.liveMasterHeadroom else {
             if currentPhrase == nil { playbackState = .unavailable }
             return
         }
@@ -361,9 +364,11 @@ final class TechnoEngine: ObservableObject {
             routeRecoveryRequest = nil
         }
         sessionState = phrase.request.sourceState
-        sessionState.advance(
+        sessionState = sessionState.advance(
             using: phrase.prepared.plan,
-            quality: phrase.prepared.qualityContinuationState
+            quality: phrase.prepared.qualityContinuationState,
+            liveMasterHeadroom:
+                phrase.prepared.liveMasterHeadroomContinuationState
         )
         nextBlockIndex = 0
         if let firstWaveform = phrase.waveforms.first {
@@ -596,9 +601,11 @@ final class TechnoEngine: ObservableObject {
                 currentPhrase = next
                 phrase = next
                 sessionState = next.request.sourceState
-                sessionState.advance(
+                sessionState = sessionState.advance(
                     using: next.prepared.plan,
-                    quality: next.prepared.qualityContinuationState
+                    quality: next.prepared.qualityContinuationState,
+                    liveMasterHeadroom:
+                        next.prepared.liveMasterHeadroomContinuationState
                 )
                 nextBlockIndex = 0
                 requestSuccessor(after: next)

@@ -323,6 +323,43 @@ package enum AutonomousTypedFingerprint {
         }
     }
 
+    /// One controller identity binds both independent bounded responsibilities:
+    /// the existing kick/foundation fader and the terminal attenuation-only
+    /// live master. The live state already binds its accepted proposal. A
+    /// pending proposal can additionally participate in diagnostic identities;
+    /// candidate evidence binds it separately before acceptance so it cannot
+    /// alter the committed controller identity on a truthful hold.
+    package static func combinedController(
+        kickCorrectionDB: Double,
+        liveMasterHeadroom: LiveMasterHeadroomContinuationState,
+        proposalFingerprint: String?
+    ) -> String {
+        combinedController(
+            kickCorrectionDB: kickCorrectionDB,
+            liveMasterStateFingerprint: liveMasterHeadroom.fingerprint,
+            proposalFingerprint: proposalFingerprint
+        )
+    }
+
+    package static func combinedController(
+        kickCorrectionDB: Double,
+        liveMasterStateFingerprint: String,
+        proposalFingerprint: String?
+    ) -> String {
+        digest(domain: "combined-controller.typed.v1") { sink in
+            sink.aggregate("CombinedController")
+            sink.field("kickCorrectionDB")
+            sink.double(kickCorrectionDB)
+            sink.field("liveMasterStateFingerprint")
+            sink.string(liveMasterStateFingerprint)
+            sink.field("proposalFingerprint")
+            sink.presence(proposalFingerprint != nil)
+            if let proposalFingerprint {
+                sink.string(proposalFingerprint)
+            }
+        }
+    }
+
     package static func renderDSPContinuation(
         renderState: RenderState,
         generatedDSPState: GeneratedDSPContinuationState

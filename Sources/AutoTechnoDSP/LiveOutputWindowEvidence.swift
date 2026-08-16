@@ -180,8 +180,9 @@ package struct LiveOutputWindowEvidence: Equatable, Sendable {
               analyzerVersion == LiveOutputWindowAnalyzer.analyzerVersion,
               engineVersion == QualityQualificationContract.engineVersion,
               evidenceVersion == ProfessionalEvidenceReportBank.evidenceVersion,
-              qualityPolicyVersion ==
-                LiveOutputWindowAnalyzer.expectedQualityPolicyVersion,
+              LiveOutputWindowAnalyzer.isCurrentQualityPolicyVersion(
+                qualityPolicyVersion
+              ),
               evaluatorVersion == ProfessionalQualityPrimaryEvaluator
                 .evaluatorVersionIdentifier,
               controllerPolicyVersion ==
@@ -372,9 +373,11 @@ package struct LiveMasterHeadroomTarget: Equatable, Sendable {
             controllerPolicyVersion ==
                 sourceEvidence.controllerPolicyVersion &&
             profileVersion ==
-                ProfessionalQualityCalibrationProfile.profileVersion &&
-            profileFingerprint == ProfessionalQualityPrimaryArtifacts
-                .expectedProfileFingerprint &&
+                ProfessionalQualityPrimaryEvaluator.requiredProfileVersion &&
+            Self.fingerprintIsCanonical(profileFingerprint) &&
+            LiveOutputWindowAnalyzer.profileFingerprint(
+                inQualityPolicyVersion: qualityPolicyVersion
+            ) == profileFingerprint &&
             loudnessLowerLUFS.isFinite && loudnessUpperLUFS.isFinite &&
             loudnessLowerLUFS <= loudnessMidpointLUFS &&
             loudnessMidpointLUFS <= loudnessUpperLUFS &&
@@ -385,6 +388,12 @@ package struct LiveMasterHeadroomTarget: Equatable, Sendable {
             truePeakMidpointDBTP <= truePeakUpperDBTP &&
             truePeakMidpointDBTP ==
                 (truePeakLowerDBTP + truePeakUpperDBTP) / 2
+    }
+
+    private static func fingerprintIsCanonical(_ value: String) -> Bool {
+        value.utf8.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
     }
 }
 
@@ -398,12 +407,8 @@ package enum LiveOutputWindowAnalyzer {
         LiveFeedbackContract.controllerPolicyVersion
     package static let windowDurationSeconds = 3.0
     package static let supportedSampleRates = [44_100.0, 48_000.0]
-    package static let expectedQualityPolicyVersion = [
-        ProfessionalQualityPrimaryEvaluator.policyFamilyVersion,
-        "profile-\(ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)",
-        "adversarial-\(ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint)",
-        "holdout-\(ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint)",
-    ].joined(separator: ".")
+    package static let requiredQualityPolicyFamily =
+        ProfessionalQualityPrimaryEvaluator.policyFamilyVersion
 
     package static func frameCount(sampleRate: Double) -> Int? {
         switch sampleRate {
@@ -422,11 +427,19 @@ package enum LiveOutputWindowAnalyzer {
         playerSampleRange: Range<Int64>,
         sampleRate: Double,
         captureProvenance: LiveOutputCaptureProvenance,
-        artifacts: ProfessionalQualityPrimaryArtifacts,
+        artifacts: ProfessionalQualityPrimaryArtifacts? = nil,
+        qualityPolicyVersion: String? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool = { false }
     ) -> LiveOutputWindowEvidence? {
-        guard !cancellationRequested(),
-              currentArtifactsAreExact(artifacts),
+        guard let resolvedQualityPolicyVersion =
+                artifacts?.evaluator.policyVersion ?? qualityPolicyVersion,
+              !cancellationRequested(),
+              artifacts.map(currentArtifactsAreExact) ?? true,
+              isCurrentQualityPolicyVersion(resolvedQualityPolicyVersion),
+              artifacts.map({ _ in
+                qualityPolicyVersion == nil ||
+                    qualityPolicyVersion == resolvedQualityPolicyVersion
+              }) ?? true,
               let requiredFrameCount = frameCount(sampleRate: sampleRate),
               left.count == requiredFrameCount,
               right.count == requiredFrameCount,
@@ -487,7 +500,7 @@ package enum LiveOutputWindowAnalyzer {
             analyzerVersion: analyzerVersion,
             engineVersion: QualityQualificationContract.engineVersion,
             evidenceVersion: ProfessionalEvidenceReportBank.evidenceVersion,
-            qualityPolicyVersion: expectedQualityPolicyVersion,
+            qualityPolicyVersion: resolvedQualityPolicyVersion,
             evaluatorVersion: ProfessionalQualityPrimaryEvaluator
                 .evaluatorVersionIdentifier,
             controllerPolicyVersion: controllerPolicyVersion,
@@ -514,6 +527,8 @@ package enum LiveOutputWindowAnalyzer {
     ) -> LiveMasterHeadroomTarget? {
         let profile = artifacts.profile
         guard currentArtifactsAreExact(artifacts),
+              profile.profileVersion ==
+                ProfessionalQualityPrimaryEvaluator.requiredProfileVersion,
               evidence.isStructurallyValid,
               evidence.engineVersion == profile.engineVersion,
               evidence.evidenceVersion == profile.evidenceVersion,
@@ -575,7 +590,7 @@ package enum LiveOutputWindowAnalyzer {
             profile.schemaVersion ==
                 ProfessionalQualityCalibrationProfile.schemaVersion &&
             profile.profileVersion ==
-                ProfessionalQualityCalibrationProfile.profileVersion &&
+                ProfessionalQualityPrimaryEvaluator.requiredProfileVersion &&
             profile.observationVersion ==
                 ProfessionalQualityObservation.observationVersion &&
             profile.evidenceVersion ==
@@ -586,9 +601,47 @@ package enum LiveOutputWindowAnalyzer {
             profile.fingerprint ==
                 ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint &&
             artifacts.evaluator.profile.fingerprint == profile.fingerprint &&
-            artifacts.evaluator.policyVersion == expectedQualityPolicyVersion &&
+            isCurrentQualityPolicyVersion(
+                artifacts.evaluator.policyVersion
+            ) &&
             artifacts.evaluator.evaluatorVersion ==
                 ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier
+    }
+
+    package static func isCurrentQualityPolicyVersion(
+        _ value: String
+    ) -> Bool {
+        profileFingerprint(inQualityPolicyVersion: value) != nil
+    }
+
+    package static func profileFingerprint(
+        inQualityPolicyVersion value: String
+    ) -> String? {
+        let prefix = requiredQualityPolicyFamily + "."
+        guard value.hasPrefix(prefix) else { return nil }
+        let qualifiers = value.dropFirst(prefix.count).split(
+            separator: ".",
+            omittingEmptySubsequences: false
+        )
+        guard qualifiers.count == 3,
+              qualifier(qualifiers[0], label: "profile-"),
+              qualifier(qualifiers[1], label: "adversarial-"),
+              qualifier(qualifiers[2], label: "holdout-") else {
+            return nil
+        }
+        return String(qualifiers[0].dropFirst("profile-".count))
+    }
+
+    private static func qualifier(
+        _ value: Substring,
+        label: String
+    ) -> Bool {
+        guard value.hasPrefix(label) else { return false }
+        let fingerprint = value.dropFirst(label.count)
+        return fingerprint.utf8.count == 16 &&
+            fingerprint.utf8.allSatisfy { byte in
+                (48...57).contains(byte) || (97...102).contains(byte)
+            }
     }
 
     private static func samplesAreFinite(

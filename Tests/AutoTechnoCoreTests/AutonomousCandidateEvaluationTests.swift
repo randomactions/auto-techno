@@ -5,6 +5,101 @@ import Testing
 
 @Suite("Autonomous candidate evaluation provenance")
 struct AutonomousCandidateEvaluationTests {
+    @Test("Candidate binds exact pre/post terminal trim PCM evidence")
+    func candidateBindsPreAndPostTrimPCM() throws {
+        let prepared = try #require(realPreparedCandidate())
+        let vector = prepared.selectedCandidateEvidence
+        let blockEvidence = prepared.blocks.map(\.liveMasterTrimRenderEvidence)
+
+        #expect(vector.requestedLiveMasterTrimDB == 0)
+        #expect(vector.appliedLiveMasterTrimDB == 0)
+        #expect(vector.liveMasterGain == 1)
+        #expect(!vector.preLiveMasterPCMFingerprint.isEmpty)
+        #expect(!vector.postLiveMasterPCMFingerprint.isEmpty)
+        #expect(vector.preLiveMasterPCMFingerprint ==
+                vector.postLiveMasterPCMFingerprint)
+        #expect(vector.liveMasterScalingMatches)
+        #expect(blockEvidence.allSatisfy { $0.exactScaleMatches })
+        #expect(zip(prepared.blocks, blockEvidence).allSatisfy { block, evidence in
+            evidence.postTrimStereoSampleHash == ExactPCMFingerprint.stereo(
+                left: block.left,
+                right: block.right
+            )
+        })
+    }
+
+    @Test("Candidate rejects tampered terminal trim block evidence")
+    func candidateRejectsTamperedTerminalTrimEvidence() throws {
+        let prepared = try #require(realPreparedCandidate())
+        let block = try #require(prepared.blocks.first)
+        let evidence = block.liveMasterTrimRenderEvidence
+        let input = AutonomousLiveMasterRenderValidationInput(
+            left: block.left,
+            right: block.right,
+            evidence: evidence
+        )
+        #expect(AutonomousCandidateEvaluationVector.validatedLiveMasterEvidence(
+            inputs: [input],
+            outgoingState: LiveMasterHeadroomContinuationState()
+        ) != nil)
+
+        let tampered: [LiveMasterTrimRenderEvidence] = [
+            liveEvidence(evidence, postHash: "1111111111111111"),
+            liveEvidence(
+                evidence,
+                postNonzeroCount: evidence.postTrimNonzeroSampleCount + 1
+            ),
+            liveEvidence(evidence, exactScaleMatches: false),
+            liveEvidence(evidence, requestedTrimDB: -0.25),
+            liveEvidence(evidence, appliedTrimDB: -0.25),
+            liveEvidence(evidence, appliedGain: 0.5),
+        ]
+        for attack in tampered {
+            #expect(AutonomousCandidateEvaluationVector
+                .validatedLiveMasterEvidence(
+                    inputs: [AutonomousLiveMasterRenderValidationInput(
+                        left: block.left,
+                        right: block.right,
+                        evidence: attack
+                    )],
+                    outgoingState: LiveMasterHeadroomContinuationState()
+                ) == nil)
+        }
+    }
+
+    @Test("Combined controller fingerprint binds kick and live master state")
+    func combinedControllerFingerprintBindsKickAndMaster() {
+        let home = LiveMasterHeadroomContinuationState()
+        let attenuated = LiveMasterHeadroomContinuationState(
+            revision: 1,
+            committedTrimDB: -0.25,
+            consecutiveCleanWindows: 0,
+            lastProposalFingerprint: "1111111111111111",
+            lastObservationFingerprint: "2222222222222222",
+            lastAcceptedSourcePhraseIndex: 0,
+            earliestEligibleFutureSample: 192_000
+        )
+        let homeFingerprint = AutonomousCandidateFingerprint.combinedController(
+            kickCorrectionDB: -1,
+            liveMasterHeadroom: home,
+            proposalFingerprint: nil
+        )
+        let liveFingerprint = AutonomousCandidateFingerprint.combinedController(
+            kickCorrectionDB: -1,
+            liveMasterHeadroom: attenuated,
+            proposalFingerprint: attenuated.lastProposalFingerprint
+        )
+        let kickFingerprint = AutonomousCandidateFingerprint.combinedController(
+            kickCorrectionDB: -1.25,
+            liveMasterHeadroom: home,
+            proposalFingerprint: nil
+        )
+
+        #expect(homeFingerprint != liveFingerprint)
+        #expect(homeFingerprint != kickFingerprint)
+        #expect(liveFingerprint != kickFingerprint)
+    }
+
     @Test("Reduced vector JSON and FNV fingerprints are deterministic and round trip")
     func deterministicVector() throws {
         let first = fixtureVector()
@@ -37,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 19)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 20)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -205,7 +300,7 @@ struct AutonomousCandidateEvaluationTests {
 
         #expect(transaction(correction: initialVector).isComplete)
         #expect(!transaction(correction: changedVector).isComplete)
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 3)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)
     }
 
     @Test("Kick syntax evidence binds score, render, silence, and remains playback-gate-neutral")
@@ -1039,7 +1134,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 19)
+        #expect(vector.schemaVersion == 20)
         #expect(QualityQualificationContract.schemaVersion == 21)
         #expect(QualityQualificationContract.engineVersion ==
                 "autotechno-canonical-engine.v20")
@@ -3075,19 +3170,46 @@ struct AutonomousCandidateEvaluationTests {
             candidateEvaluationFingerprint: "transaction",
             selectedSampleHash: "sample",
             outgoingRenderDSPFingerprint: outgoingRenderDSP,
-            qualityState: initialQuality
+            qualityState: initialQuality,
+            liveMasterHeadroomState: LiveMasterHeadroomContinuationState()
         )
         let advancedCommit = AutonomousPreparedCommitProvenance(
             candidateEvaluationFingerprint: "transaction",
             selectedSampleHash: "sample",
             outgoingRenderDSPFingerprint: outgoingRenderDSP,
-            qualityState: advancedQuality
+            qualityState: advancedQuality,
+            liveMasterHeadroomState: LiveMasterHeadroomContinuationState()
         )
         #expect(initialCommit.isInternallyConsistent)
         #expect(advancedCommit.isInternallyConsistent)
         #expect(initialCommit.outgoingQualityStateFingerprint !=
                 advancedCommit.outgoingQualityStateFingerprint)
         #expect(initialCommit.fingerprint != advancedCommit.fingerprint)
+        let advancedLive = LiveMasterHeadroomContinuationState(
+            revision: 1,
+            committedTrimDB: -0.25,
+            lastProposalFingerprint: "1111111111111111",
+            lastObservationFingerprint: "2222222222222222",
+            lastAcceptedSourcePhraseIndex: 0,
+            earliestEligibleFutureSample: 192_000
+        )
+        let liveCommit = AutonomousPreparedCommitProvenance(
+            candidateEvaluationFingerprint: "transaction",
+            selectedSampleHash: "sample",
+            outgoingRenderDSPFingerprint: outgoingRenderDSP,
+            qualityState: initialQuality,
+            liveMasterHeadroomState: advancedLive
+        )
+        #expect(liveCommit.outgoingLiveMasterStateFingerprint ==
+                advancedLive.fingerprint)
+        #expect(liveCommit.fingerprint != initialCommit.fingerprint)
+        #expect(liveCommit.matches(
+            candidateEvaluationFingerprint: "transaction",
+            selectedSampleHash: "sample",
+            outgoingRenderDSPFingerprint: outgoingRenderDSP,
+            qualityState: initialQuality,
+            liveMasterHeadroomState: advancedLive
+        ))
 
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
                 "593029ccd6a6153a")
@@ -3107,6 +3229,47 @@ struct AutonomousCandidateEvaluationTests {
             renderState: positiveZeroRenderState,
             generatedDSPState: orderedGraphState
         ) == "8b42aaf5ea81e130")
+    }
+
+    private func realPreparedCandidate() -> PreparedAutonomousPhrase? {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        return AutonomousPhrasePreparer.prepareIfNotCancelled(
+            plan: director.plan(from: state),
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            incomingQualityState: state.quality,
+            pendingLiveMasterBinding: nil,
+            evaluator: AcceptingPrimaryTestEvaluator(),
+            cancellationRequested: { false }
+        )
+    }
+
+    private func liveEvidence(
+        _ source: LiveMasterTrimRenderEvidence,
+        requestedTrimDB: Double? = nil,
+        appliedTrimDB: Double? = nil,
+        appliedGain: Double? = nil,
+        postHash: String? = nil,
+        postNonzeroCount: Int? = nil,
+        exactScaleMatches: Bool? = nil
+    ) -> LiveMasterTrimRenderEvidence {
+        LiveMasterTrimRenderEvidence(
+            requestedTrimDB: requestedTrimDB ?? source.requestedTrimDB,
+            appliedTrimDB: appliedTrimDB ?? source.appliedTrimDB,
+            appliedGain: appliedGain ?? source.appliedGain,
+            preTrimStereoSampleHash: source.preTrimStereoSampleHash,
+            postTrimStereoSampleHash: postHash ??
+                source.postTrimStereoSampleHash,
+            preTrimNonzeroSampleCount: source.preTrimNonzeroSampleCount,
+            postTrimNonzeroSampleCount: postNonzeroCount ??
+                source.postTrimNonzeroSampleCount,
+            exactScaleMatches: exactScaleMatches ?? source.exactScaleMatches
+        )
     }
 
     private func fixtureVector(
@@ -3262,8 +3425,10 @@ struct AutonomousCandidateEvaluationTests {
             routeRecovery: false,
             outgoingRenderDSPFingerprint: "outgoing-render-dsp",
             controllerStateFingerprint:
-                AutonomousCandidateFingerprint.automaticMixController(
-                    kickCorrectionDB: -1
+                AutonomousCandidateFingerprint.combinedController(
+                    kickCorrectionDB: -1,
+                    liveMasterHeadroom: LiveMasterHeadroomContinuationState(),
+                    proposalFingerprint: nil
                 )
         )
         let explicitPulseEchoChapter = pulseEchoDriveBars?.first.flatMap {
@@ -3279,6 +3444,12 @@ struct AutonomousCandidateEvaluationTests {
         let defaultTimingChapter = defaultTiming.flatMap {
             InterlockChapter(rawValue: $0.chapter)
         } ?? .home
+        let liveBlockHash = ExactPCMFingerprint.stereo(
+            left: [0.25],
+            right: [-0.125]
+        )
+        let livePhraseHash = AutonomousCandidateEvaluationVector
+            .liveMasterPhrasePCMFingerprint([liveBlockHash])
         return AutonomousCandidateEvaluationVector(
             planFingerprint: planFingerprint,
             graphFingerprint: graphFingerprint,
@@ -3342,6 +3513,22 @@ struct AutonomousCandidateEvaluationTests {
             upperTiming: resolvedUpperTimingBars,
             graph: graph,
             routeContinuation: route,
+            incomingLiveMasterRevision: 0,
+            outgoingLiveMasterRevision: 0,
+            incomingLiveMasterStateFingerprint:
+                LiveMasterHeadroomContinuationState().fingerprint,
+            outgoingLiveMasterStateFingerprint:
+                LiveMasterHeadroomContinuationState().fingerprint,
+            liveObservationFingerprint: nil,
+            liveProposalFingerprint: nil,
+            liveProposalOutcome: .hold,
+            requestedLiveMasterTrimDB: 0,
+            appliedLiveMasterTrimDB: 0,
+            liveMasterGain: 1,
+            preLiveMasterPCMFingerprint: livePhraseHash,
+            postLiveMasterPCMFingerprint: livePhraseHash,
+            liveMasterScalingMatches: true,
+            liveEarliestEligibleFutureSample: nil,
             preGraphUpperTimbreEvidence: upper,
             postGraphUpperTimbreEvidence: upper
         )

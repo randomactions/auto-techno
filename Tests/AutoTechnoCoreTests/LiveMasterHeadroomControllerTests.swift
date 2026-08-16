@@ -228,7 +228,6 @@ struct LiveMasterHeadroomControllerTests {
         let routeFour = try Self.analyzePair(
             signal: routeThree.signal,
             plan: Self.defaultPlan(),
-            artifacts: ProfessionalQualityPrimaryArtifacts.load(),
             routeGeneration: 4,
             controllerRevision: 4,
             playerSampleRange: nil
@@ -296,11 +295,9 @@ struct LiveMasterHeadroomControllerTests {
     @Test("Maximum revision and terminal sample boundary cannot overflow")
     func maximumRevisionAndBoundaryCannotOverflow() throws {
         let high = Self.aboveUpperPair
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         let maximumRevision = try Self.analyzePair(
             signal: high.signal,
             plan: Self.defaultPlan(),
-            artifacts: artifacts,
             routeGeneration: 3,
             controllerRevision: .max,
             playerSampleRange: nil
@@ -323,7 +320,6 @@ struct LiveMasterHeadroomControllerTests {
         let terminal = try Self.analyzePair(
             signal: high.signal,
             plan: Self.defaultPlan(),
-            artifacts: artifacts,
             routeGeneration: 3,
             controllerRevision: 4,
             playerSampleRange: terminalRange
@@ -369,6 +365,24 @@ struct LiveMasterHeadroomControllerTests {
         let signal: [Float]
         let evidence: LiveOutputWindowEvidence
         let target: LiveMasterHeadroomTarget
+    }
+
+    private struct TargetBounds: Sendable {
+        let selectedLoudnessCheckpoint: CanonicalJourneyCheckpoint
+        let selectedTruePeakCheckpoint: CanonicalJourneyCheckpoint
+        let loudnessLowerLUFS: Double
+        let loudnessUpperLUFS: Double
+        let truePeakLowerDBTP: Double
+        let truePeakUpperDBTP: Double
+
+        init(_ target: LiveMasterHeadroomTarget) {
+            selectedLoudnessCheckpoint = target.selectedLoudnessCheckpoint
+            selectedTruePeakCheckpoint = target.selectedTruePeakCheckpoint
+            loudnessLowerLUFS = target.loudnessLowerLUFS
+            loudnessUpperLUFS = target.loudnessUpperLUFS
+            truePeakLowerDBTP = target.truePeakLowerDBTP
+            truePeakUpperDBTP = target.truePeakUpperDBTP
+        }
     }
 
     private static let aboveUpperPair = requiredPair(.aboveUpper(excessDB: 0.8))
@@ -417,13 +431,11 @@ struct LiveMasterHeadroomControllerTests {
         controllerRevision: Int = 4,
         playerSampleRange: Range<Int64>? = nil
     ) throws -> Pair {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         let plan = Self.defaultPlan()
         let baseSignal = Self.testSignal(sampleRate: 44_100)
         let base = try analyzePair(
             signal: baseSignal,
             plan: plan,
-            artifacts: artifacts,
             routeGeneration: routeGeneration,
             controllerRevision: controllerRevision,
             playerSampleRange: playerSampleRange
@@ -456,22 +468,20 @@ struct LiveMasterHeadroomControllerTests {
         return try analyzePair(
             signal: scaled,
             plan: plan,
-            artifacts: artifacts,
             routeGeneration: routeGeneration,
             controllerRevision: controllerRevision,
-            playerSampleRange: playerSampleRange
+            playerSampleRange: playerSampleRange,
+            targetBounds: TargetBounds(base.target)
         )
     }
 
     private static func makeInactivePair() throws -> Pair {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         let frameCount = try #require(
             LiveOutputWindowAnalyzer.frameCount(sampleRate: 44_100)
         )
         return try analyzePair(
             signal: [Float](repeating: 0, count: frameCount),
             plan: Self.defaultPlan(),
-            artifacts: artifacts,
             routeGeneration: 3,
             controllerRevision: 4,
             playerSampleRange: nil
@@ -482,62 +492,85 @@ struct LiveMasterHeadroomControllerTests {
         signal: [Float],
         metric: DrivingMetric
     ) throws -> Pair {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         let plan = Self.defaultPlan()
         let base = try analyzePair(
             signal: signal,
             plan: plan,
-            artifacts: artifacts,
             routeGeneration: 3,
             controllerRevision: 4,
             playerSampleRange: nil
         )
+        let targetBounds: TargetBounds
         let currentDifference: Double
         switch metric {
         case .loudness:
+            let target = try #require(LiveFeedbackTestSupport.target(
+                evidence: base.evidence,
+                loudnessLowerLUFS:
+                    base.evidence.maximumShortTermLoudnessLUFS - 1,
+                loudnessUpperLUFS:
+                    base.evidence.maximumShortTermLoudnessLUFS + 1,
+                truePeakLowerDBTP: base.evidence.truePeakDBTP,
+                truePeakUpperDBTP: base.evidence.truePeakDBTP + 2
+            ))
+            targetBounds = TargetBounds(target)
             currentDifference =
                 base.evidence.maximumShortTermLoudnessLUFS -
-                base.target.loudnessUpperLUFS
+                target.loudnessUpperLUFS
         case .truePeak:
+            let target = try #require(LiveFeedbackTestSupport.target(
+                evidence: base.evidence,
+                loudnessLowerLUFS:
+                    base.evidence.maximumShortTermLoudnessLUFS,
+                loudnessUpperLUFS:
+                    base.evidence.maximumShortTermLoudnessLUFS + 2,
+                truePeakLowerDBTP: base.evidence.truePeakDBTP - 1,
+                truePeakUpperDBTP: base.evidence.truePeakDBTP + 1
+            ))
+            targetBounds = TargetBounds(target)
             currentDifference = base.evidence.truePeakDBTP -
-                base.target.truePeakUpperDBTP
+                target.truePeakUpperDBTP
         }
         let gainDB = 0.1 - currentDifference
         let gain = Float(pow(10, gainDB / 20))
         return try analyzePair(
             signal: signal.map { $0 * gain },
             plan: plan,
-            artifacts: artifacts,
             routeGeneration: 3,
             controllerRevision: 4,
-            playerSampleRange: nil
+            playerSampleRange: nil,
+            targetBounds: targetBounds
         )
     }
 
     private static func analyzePair(
         signal: [Float],
         plan: AutonomousPhrasePlan,
-        artifacts: ProfessionalQualityPrimaryArtifacts,
         routeGeneration: Int,
         controllerRevision: Int,
-        playerSampleRange: Range<Int64>?
+        playerSampleRange: Range<Int64>?,
+        targetBounds: TargetBounds? = nil
     ) throws -> Pair {
         let range = playerSampleRange ??
             (80_000..<Int64(80_000 + signal.count))
-        let evidence = try #require(LiveOutputWindowAnalyzer.analyze(
-            left: signal,
-            right: signal,
-            planIdentity: LiveOutputPlanSourceIdentity(plan: plan),
+        let evidence = try #require(LiveFeedbackTestSupport.analyze(
+            signal: signal,
+            plan: plan,
+            sampleRate: 44_100,
             routeGeneration: routeGeneration,
             controllerRevision: controllerRevision,
-            playerSampleRange: range,
-            sampleRate: 44_100,
-            captureProvenance: Self.captureProvenance(frameCount: signal.count),
-            artifacts: artifacts
+            playerSampleRange: range
         ))
-        let target = try #require(LiveOutputWindowAnalyzer.target(
+        let target = try #require(LiveFeedbackTestSupport.target(
             evidence: evidence,
-            artifacts: artifacts
+            selectedLoudnessCheckpoint:
+                targetBounds?.selectedLoudnessCheckpoint,
+            selectedTruePeakCheckpoint:
+                targetBounds?.selectedTruePeakCheckpoint,
+            loudnessLowerLUFS: targetBounds?.loudnessLowerLUFS,
+            loudnessUpperLUFS: targetBounds?.loudnessUpperLUFS,
+            truePeakLowerDBTP: targetBounds?.truePeakLowerDBTP,
+            truePeakUpperDBTP: targetBounds?.truePeakUpperDBTP
         ))
         return Pair(signal: signal, evidence: evidence, target: target)
     }
