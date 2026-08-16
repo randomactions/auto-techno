@@ -97,6 +97,180 @@ package enum AutonomousTypedFingerprint {
         }
     }
 
+    package static func liveOutputPCM(
+        left: [Float],
+        right: [Float],
+        cancellationRequested: @escaping @Sendable () -> Bool = { false }
+    ) -> String? {
+        guard left.count == right.count else { return nil }
+        return cancellableDigest(
+            domain: "live-output-pcm.typed.v1",
+            cancellationRequested: cancellationRequested
+        ) { sink in
+            sink.aggregate("LiveOutputPCM")
+            sink.field("channelCount"); sink.int(2)
+            sink.field("frameCount"); sink.int(left.count)
+            sink.field("left"); sink.collection(left.count)
+            for (index, sample) in left.enumerated() {
+                if index.isMultiple(of: 4_096), cancellationRequested() {
+                    return false
+                }
+                sink.float(sample)
+            }
+            sink.field("right"); sink.collection(right.count)
+            for (index, sample) in right.enumerated() {
+                if index.isMultiple(of: 4_096), cancellationRequested() {
+                    return false
+                }
+                sink.float(sample)
+            }
+            return true
+        }
+    }
+
+    package static func liveOutputWindowEvidence(
+        _ evidence: LiveOutputWindowEvidence
+    ) -> String {
+        digest(domain: "live-output-window-evidence.typed.v1") { sink in
+            sink.aggregate("LiveOutputWindowEvidence")
+            sink.field("schemaVersion"); sink.int(evidence.schemaVersion)
+            sink.field("analyzerVersion"); sink.string(evidence.analyzerVersion)
+            sink.field("engineVersion"); sink.string(evidence.engineVersion)
+            sink.field("evidenceVersion"); sink.string(evidence.evidenceVersion)
+            sink.field("qualityPolicyVersion")
+            sink.string(evidence.qualityPolicyVersion)
+            sink.field("evaluatorVersion"); sink.string(evidence.evaluatorVersion)
+            sink.field("controllerPolicyVersion")
+            sink.string(evidence.controllerPolicyVersion)
+            sink.field("phraseIndex"); sink.int(evidence.phraseIndex)
+            sink.field("planFingerprint"); sink.string(evidence.planFingerprint)
+            sink.field("phraseKind"); sink.raw(evidence.phraseKind.rawValue)
+            sink.field("chapterChanged"); sink.bool(evidence.chapterChanged)
+            sink.field("routeGeneration"); sink.int(evidence.routeGeneration)
+            sink.field("controllerRevision"); sink.int(evidence.controllerRevision)
+            sink.field("playerSampleRange.lowerBound")
+            sink.int64(evidence.playerSampleRange.lowerBound)
+            sink.field("playerSampleRange.upperBound")
+            sink.int64(evidence.playerSampleRange.upperBound)
+            sink.field("sampleRate"); sink.double(evidence.sampleRate)
+            sink.field("frameCount"); sink.int(evidence.frameCount)
+            sink.field("applicableCheckpoints")
+            sink.collection(evidence.applicableCheckpoints.count)
+            for checkpoint in evidence.applicableCheckpoints {
+                sink.raw(checkpoint.rawValue)
+            }
+            let capture = evidence.captureProvenance
+            sink.field("capture.schemaVersion")
+            sink.int(LiveOutputCaptureProvenance.schemaVersion)
+            sink.field("capture.packetCount"); sink.int(capture.packetCount)
+            sink.field("capture.firstPacketSequence")
+            sink.uint64(capture.firstPacketSequence)
+            sink.field("capture.lastPacketSequence")
+            sink.uint64(capture.lastPacketSequence)
+            sink.field("capture.droppedPacketDelta")
+            sink.uint64(capture.droppedPacketDelta)
+            sink.field("capture.rejectedPacketDelta")
+            sink.uint64(capture.rejectedPacketDelta)
+            sink.field("capture.queueCapacity"); sink.int(capture.queueCapacity)
+            sink.field("capture.maximumPacketFrameCount")
+            sink.int(capture.maximumPacketFrameCount)
+            sink.field("capture.workingMemoryByteCount")
+            sink.int(capture.workingMemoryByteCount)
+            sink.field("capture.coveredFrameCount")
+            sink.int(capture.coveredFrameCount)
+            sink.field("capture.sampleDiscontinuityCount")
+            sink.int(capture.sampleDiscontinuityCount)
+            sink.field("capture.gapFrameCount")
+            sink.int(capture.gapFrameCount)
+            sink.field("capture.overlapFrameCount")
+            sink.int(capture.overlapFrameCount)
+            sink.field("captureBounded"); sink.bool(evidence.captureBounded)
+            sink.field("pcmFingerprint"); sink.string(evidence.pcmFingerprint)
+            sink.field("integratedLoudnessLUFS")
+            sink.double(evidence.integratedLoudnessLUFS)
+            sink.field("maximumMomentaryLoudnessLUFS")
+            sink.double(evidence.maximumMomentaryLoudnessLUFS)
+            sink.field("maximumShortTermLoudnessLUFS")
+            sink.double(evidence.maximumShortTermLoudnessLUFS)
+            sink.field("loudnessRangeLU"); sink.double(evidence.loudnessRangeLU)
+            sink.field("momentaryBlockCount"); sink.int(evidence.momentaryBlockCount)
+            sink.field("absoluteGatedBlockCount")
+            sink.int(evidence.absoluteGatedBlockCount)
+            sink.field("relativeGatedBlockCount")
+            sink.int(evidence.relativeGatedBlockCount)
+            sink.field("shortTermBlockCount"); sink.int(evidence.shortTermBlockCount)
+            sink.field("loudnessMaximumBufferedFrameCount")
+            sink.int(evidence.loudnessMaximumBufferedFrameCount)
+            sink.field("loudnessPeakWorkingByteCount")
+            sink.int(evidence.loudnessPeakWorkingByteCount)
+            sink.field("leftTruePeakLinear")
+            sink.double(evidence.leftTruePeakLinear)
+            sink.field("rightTruePeakLinear")
+            sink.double(evidence.rightTruePeakLinear)
+            sink.field("maximumTruePeakLinear")
+            sink.double(evidence.maximumTruePeakLinear)
+            sink.field("leftTruePeakDBTP")
+            sink.double(evidence.leftTruePeakDBTP)
+            sink.field("rightTruePeakDBTP")
+            sink.double(evidence.rightTruePeakDBTP)
+            sink.field("truePeakDBTP"); sink.double(evidence.truePeakDBTP)
+            sink.field("isActiveProgram"); sink.bool(evidence.isActiveProgram)
+            sink.field("complete"); sink.bool(evidence.complete)
+        }
+    }
+
+    package static func liveMasterHeadroomTarget(
+        _ target: LiveMasterHeadroomTarget
+    ) -> String {
+        digest(domain: "live-master-headroom-target.typed.v1") { sink in
+            sink.aggregate("LiveMasterHeadroomTarget")
+            sink.field("schemaVersion"); sink.int(target.schemaVersion)
+            sink.field("sourceObservationFingerprint")
+            sink.string(target.sourceObservationFingerprint)
+            sink.field("phraseIndex"); sink.int(target.phraseIndex)
+            sink.field("planFingerprint"); sink.string(target.planFingerprint)
+            sink.field("routeGeneration"); sink.int(target.routeGeneration)
+            sink.field("controllerRevision"); sink.int(target.controllerRevision)
+            sink.field("playerSampleRange.lowerBound")
+            sink.int64(target.playerSampleRange.lowerBound)
+            sink.field("playerSampleRange.upperBound")
+            sink.int64(target.playerSampleRange.upperBound)
+            sink.field("sampleRate"); sink.double(target.sampleRate)
+            sink.field("applicableCheckpoints")
+            sink.collection(target.applicableCheckpoints.count)
+            for checkpoint in target.applicableCheckpoints {
+                sink.raw(checkpoint.rawValue)
+            }
+            sink.field("selectedLoudnessCheckpoint")
+            sink.raw(target.selectedLoudnessCheckpoint.rawValue)
+            sink.field("selectedTruePeakCheckpoint")
+            sink.raw(target.selectedTruePeakCheckpoint.rawValue)
+            sink.field("analyzerVersion"); sink.string(target.analyzerVersion)
+            sink.field("engineVersion"); sink.string(target.engineVersion)
+            sink.field("evidenceVersion"); sink.string(target.evidenceVersion)
+            sink.field("qualityPolicyVersion")
+            sink.string(target.qualityPolicyVersion)
+            sink.field("evaluatorVersion"); sink.string(target.evaluatorVersion)
+            sink.field("controllerPolicyVersion")
+            sink.string(target.controllerPolicyVersion)
+            sink.field("profileVersion"); sink.string(target.profileVersion)
+            sink.field("profileFingerprint")
+            sink.string(target.profileFingerprint)
+            sink.field("loudnessLowerLUFS")
+            sink.double(target.loudnessLowerLUFS)
+            sink.field("loudnessUpperLUFS")
+            sink.double(target.loudnessUpperLUFS)
+            sink.field("loudnessMidpointLUFS")
+            sink.double(target.loudnessMidpointLUFS)
+            sink.field("truePeakLowerDBTP")
+            sink.double(target.truePeakLowerDBTP)
+            sink.field("truePeakUpperDBTP")
+            sink.double(target.truePeakUpperDBTP)
+            sink.field("truePeakMidpointDBTP")
+            sink.double(target.truePeakMidpointDBTP)
+        }
+    }
+
     package static func renderDSPContinuation(
         renderState: RenderState,
         generatedDSPState: GeneratedDSPContinuationState
