@@ -147,11 +147,17 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(ModalPercussionDSPTests|ModalPercussionPlanningTests)'
 
+      - name: Run adaptive autonomous-session suite
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter AdaptiveAutonomousSessionTests
+
       - name: Run core and evidence tests
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(AdaptiveAutonomousSessionTests|GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|FeedbackDelayNetworkTests|RepositorySurfaceTests|IdentityReturnContinuationTests|InstrumentPaletteTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|PrimaryEvaluatorReadinessTests|ProfessionalQualityCalibration|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
+          --filter '(GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|FeedbackDelayNetworkTests|RepositorySurfaceTests|IdentityReturnContinuationTests|InstrumentPaletteTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|PrimaryEvaluatorReadinessTests|ProfessionalQualityCalibration|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
 
       - name: Run preparation preflight tests
         run: >-
