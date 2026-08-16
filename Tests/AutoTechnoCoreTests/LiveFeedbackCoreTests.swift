@@ -208,11 +208,64 @@ struct LiveFeedbackCoreTests {
         let changedSource = makeProposal(sourcePhraseIndex: 3)
         let changedRoute = makeProposal(routeGeneration: 4)
         let changedRange = makeProposal(playerSampleRange: 101..<1_101)
+        let changedPolicy = makeProposal(controllerPolicyVersion: "foreign-policy")
+        let changedTarget = makeProposal(targetFingerprint: "different-target")
 
         #expect(baseline.fingerprint == replay.fingerprint)
         #expect(changedSource.fingerprint != baseline.fingerprint)
         #expect(changedRoute.fingerprint != baseline.fingerprint)
         #expect(changedRange.fingerprint != baseline.fingerprint)
+        #expect(changedPolicy.fingerprint != baseline.fingerprint)
+        #expect(changedTarget.fingerprint != baseline.fingerprint)
+        #expect(!changedPolicy.isStructurallyValid)
+    }
+
+    @Test("Saturation is an accepted hold distinct from the deadband")
+    func saturationReasonIsFingerprintBound() {
+        let incoming = LiveMasterHeadroomContinuationState(
+            committedTrimDB: -3,
+            consecutiveCleanWindows: 1
+        )
+        let saturation = makeProposal(
+            incoming: incoming,
+            outcome: .hold,
+            reasonCodes: [.windowAccepted, .masterTrimSaturatedV1],
+            proposedTrimDB: -3,
+            proposedCleanWindows: 0
+        )
+        let deadband = makeProposal(
+            incoming: incoming,
+            outcome: .hold,
+            reasonCodes: [.windowAccepted],
+            proposedTrimDB: -3,
+            proposedCleanWindows: 0
+        )
+        let invalidAttenuation = makeProposal(
+            incoming: incoming,
+            outcome: .attenuate,
+            reasonCodes: [.windowAccepted, .masterTrimSaturatedV1],
+            proposedTrimDB: -3,
+            proposedCleanWindows: 0
+        )
+        let invalidSaturationTrim = makeProposal(
+            incoming: incoming,
+            outcome: .hold,
+            reasonCodes: [.windowAccepted, .masterTrimSaturatedV1],
+            proposedTrimDB: -2.875,
+            proposedCleanWindows: 0
+        )
+
+        #expect(saturation.reasonCodes == [
+            .masterTrimSaturatedV1,
+            .windowAccepted,
+        ])
+        #expect(saturation.isStructurallyValid)
+        #expect(saturation.fingerprint != deadband.fingerprint)
+        #expect(incoming.accepting(saturation).revision == 1)
+        #expect(!invalidAttenuation.isStructurallyValid)
+        #expect(incoming.accepting(invalidAttenuation) == incoming)
+        #expect(!invalidSaturationTrim.isStructurallyValid)
+        #expect(incoming.accepting(invalidSaturationTrim) == incoming)
     }
 
     @Test("Strict decoding rejects forged or noncanonical state")
@@ -272,6 +325,8 @@ struct LiveFeedbackCoreTests {
         let baseline = try jsonObject(proposal)
         let mutations: [(String, Any)] = [
             ("schemaVersion", 2),
+            ("controllerPolicyVersion", "foreign-policy"),
+            ("targetFingerprint", " "),
             ("sourcePhraseIndex", -1),
             ("routeGeneration", -1),
             ("incomingRevision", -1),
@@ -292,6 +347,11 @@ struct LiveFeedbackCoreTests {
             forged[key] = value
             try expectDecodeFailure(LiveMasterHeadroomProposal.self, object: forged)
         }
+        for missingKey in ["controllerPolicyVersion", "targetFingerprint"] {
+            var forged = baseline
+            forged.removeValue(forKey: missingKey)
+            try expectDecodeFailure(LiveMasterHeadroomProposal.self, object: forged)
+        }
 
         var nonFinite = baseline
         nonFinite["proposedTrimDB"] = "NaN"
@@ -310,6 +370,9 @@ struct LiveFeedbackCoreTests {
 
     private func makeProposal(
         incoming: LiveMasterHeadroomContinuationState? = nil,
+        controllerPolicyVersion: String =
+            LiveFeedbackContract.controllerPolicyVersion,
+        targetFingerprint: String = "target",
         sourcePhraseIndex: Int = 2,
         routeGeneration: Int = 3,
         playerSampleRange: Range<Int64> = 100..<1_100,
@@ -322,6 +385,8 @@ struct LiveFeedbackCoreTests {
     ) -> LiveMasterHeadroomProposal {
         let state = incoming ?? LiveMasterHeadroomContinuationState()
         return LiveMasterHeadroomProposal(
+            controllerPolicyVersion: controllerPolicyVersion,
+            targetFingerprint: targetFingerprint,
             sourcePhraseIndex: sourcePhraseIndex,
             sourcePlanFingerprint: "plan",
             routeGeneration: routeGeneration,

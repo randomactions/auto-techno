@@ -271,6 +271,58 @@ package enum AutonomousTypedFingerprint {
         }
     }
 
+    /// Typed candidate-provenance identity for the Core-owned reduced
+    /// proposal. The proposal retains its own Core fingerprint so later DSP
+    /// candidate evidence can bind both the semantic payload and its canonical
+    /// Core wire identity without reflecting over the value.
+    package static func liveMasterHeadroomProposal(
+        _ proposal: LiveMasterHeadroomProposal
+    ) -> String {
+        digest(domain: "live-master-headroom-proposal.typed.v1") { sink in
+            sink.aggregate("LiveMasterHeadroomProposal")
+            sink.field("schemaVersion")
+            sink.int(LiveMasterHeadroomProposal.schemaVersion)
+            sink.field("controllerPolicyVersion")
+            sink.string(proposal.controllerPolicyVersion)
+            sink.field("targetFingerprint")
+            sink.string(proposal.targetFingerprint)
+            sink.field("sourcePhraseIndex")
+            sink.int(proposal.sourcePhraseIndex)
+            sink.field("sourcePlanFingerprint")
+            sink.string(proposal.sourcePlanFingerprint)
+            sink.field("routeGeneration")
+            sink.int(proposal.routeGeneration)
+            sink.field("playerSampleRange.lowerBound")
+            sink.int64(proposal.playerSampleRange.lowerBound)
+            sink.field("playerSampleRange.upperBound")
+            sink.int64(proposal.playerSampleRange.upperBound)
+            sink.field("observationFingerprint")
+            sink.presence(proposal.observationFingerprint != nil)
+            if let observationFingerprint = proposal.observationFingerprint {
+                sink.string(observationFingerprint)
+            }
+            sink.field("incomingRevision")
+            sink.int(proposal.incomingRevision)
+            sink.field("incomingStateFingerprint")
+            sink.string(proposal.incomingStateFingerprint)
+            sink.field("outcome")
+            sink.raw(proposal.outcome.rawValue)
+            sink.field("reasonCodes")
+            sink.collection(proposal.reasonCodes.count)
+            for reason in proposal.reasonCodes {
+                sink.raw(reason.rawValue)
+            }
+            sink.field("proposedTrimDB")
+            sink.double(proposal.proposedTrimDB)
+            sink.field("proposedCleanWindows")
+            sink.int(proposal.proposedCleanWindows)
+            sink.field("earliestEligibleFutureSample")
+            sink.int64(proposal.earliestEligibleFutureSample)
+            sink.field("coreFingerprint")
+            sink.string(proposal.fingerprint)
+        }
+    }
+
     package static func renderDSPContinuation(
         renderState: RenderState,
         generatedDSPState: GeneratedDSPContinuationState

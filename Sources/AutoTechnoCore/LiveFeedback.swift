@@ -1,5 +1,10 @@
 import Foundation
 
+package enum LiveFeedbackContract {
+    package static let controllerPolicyVersion =
+        "autotechno-live-master-headroom-controller.v1"
+}
+
 package enum LiveFeedbackProposalOutcome: String, Codable, Equatable, Sendable {
     case unavailable
     case hold
@@ -16,9 +21,10 @@ package enum LiveFeedbackReason: String, CaseIterable, Codable, Equatable, Senda
     case evidenceNonFinite = "live.evidence-non-finite.v1"
     case profileUnavailable = "live.profile-unavailable.v1"
     case staleProposal = "live.stale-proposal.v1"
+    case masterTrimSaturatedV1 = "live.master-trim-saturated.v1"
 
     fileprivate var preventsCommit: Bool {
-        self != .windowAccepted
+        self != .windowAccepted && self != .masterTrimSaturatedV1
     }
 }
 
@@ -238,6 +244,10 @@ package struct LiveMasterHeadroomContinuationState: Codable, Equatable, Sendable
 /// controller transition, and no samples or analyzer-specific values.
 package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
     package static let schemaVersion = 1
+    package static let unavailableTargetFingerprint =
+        "live.target-unavailable.v1"
+    package let controllerPolicyVersion: String
+    package let targetFingerprint: String
     package let sourcePhraseIndex: Int
     package let sourcePlanFingerprint: String
     package let routeGeneration: Int
@@ -253,6 +263,8 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
     package let fingerprint: String
 
     package init(
+        controllerPolicyVersion: String,
+        targetFingerprint: String,
         sourcePhraseIndex: Int,
         sourcePlanFingerprint: String,
         routeGeneration: Int,
@@ -285,6 +297,8 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
         let canonicalCleanWindows = min(2, max(0, proposedCleanWindows))
         let canonicalFutureSample = max(0, earliestEligibleFutureSample)
 
+        self.controllerPolicyVersion = controllerPolicyVersion
+        self.targetFingerprint = targetFingerprint
         self.sourcePhraseIndex = canonicalSourcePhraseIndex
         self.sourcePlanFingerprint = sourcePlanFingerprint
         self.routeGeneration = canonicalRouteGeneration
@@ -298,6 +312,8 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
         self.proposedCleanWindows = canonicalCleanWindows
         self.earliestEligibleFutureSample = canonicalFutureSample
         fingerprint = Self.computeFingerprint(
+            controllerPolicyVersion: controllerPolicyVersion,
+            targetFingerprint: targetFingerprint,
             sourcePhraseIndex: canonicalSourcePhraseIndex,
             sourcePlanFingerprint: sourcePlanFingerprint,
             routeGeneration: canonicalRouteGeneration,
@@ -314,6 +330,7 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
     }
 
     package var isStructurallyValid: Bool {
+        let targetPresent = Self.requiredFingerprintIsCanonical(targetFingerprint)
         let sourcePresent = Self.requiredFingerprintIsCanonical(sourcePlanFingerprint)
         let incomingPresent = Self.requiredFingerprintIsCanonical(incomingStateFingerprint)
         let canonicalReasons = reasonCodes.sorted { $0.rawValue < $1.rawValue }
@@ -322,12 +339,22 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
         switch outcome {
         case .unavailable:
             acceptedReasons = !reasonCodes.isEmpty &&
-                !reasonCodes.contains(.windowAccepted)
-        case .hold, .attenuate, .recover:
+                !reasonCodes.contains(.windowAccepted) &&
+                !reasonCodes.contains(.masterTrimSaturatedV1)
+        case .hold:
+            let ordinaryHold = reasonCodes == [.windowAccepted]
+            let saturatedHold =
+                reasonCodes == [.masterTrimSaturatedV1, .windowAccepted] &&
+                proposedTrimDB == -3 && proposedCleanWindows == 0
+            acceptedReasons = (ordinaryHold || saturatedHold) &&
+                observationFingerprint != nil
+        case .attenuate, .recover:
             acceptedReasons = reasonCodes == [.windowAccepted] &&
                 observationFingerprint != nil
         }
         let computedFingerprint = Self.computeFingerprint(
+            controllerPolicyVersion: controllerPolicyVersion,
+            targetFingerprint: targetFingerprint,
             sourcePhraseIndex: sourcePhraseIndex,
             sourcePlanFingerprint: sourcePlanFingerprint,
             routeGeneration: routeGeneration,
@@ -341,7 +368,12 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
             proposedCleanWindows: proposedCleanWindows,
             earliestEligibleFutureSample: earliestEligibleFutureSample
         )
-        return sourcePresent && incomingPresent &&
+        let targetMatchesOutcome = outcome == .unavailable ||
+            targetFingerprint != Self.unavailableTargetFingerprint
+        return controllerPolicyVersion ==
+                LiveFeedbackContract.controllerPolicyVersion &&
+            targetPresent && targetMatchesOutcome &&
+            sourcePresent && incomingPresent &&
             playerSampleRange.lowerBound >= 0 &&
             !playerSampleRange.isEmpty &&
             earliestEligibleFutureSample > playerSampleRange.upperBound &&
@@ -353,6 +385,8 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
     }
 
     private static func computeFingerprint(
+        controllerPolicyVersion: String,
+        targetFingerprint: String,
         sourcePhraseIndex: Int,
         sourcePlanFingerprint: String,
         routeGeneration: Int,
@@ -368,6 +402,8 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
     ) -> String {
         var fields = [
             String(Self.schemaVersion),
+            controllerPolicyVersion,
+            targetFingerprint,
             String(sourcePhraseIndex),
             sourcePlanFingerprint,
             String(routeGeneration),
@@ -402,6 +438,8 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
+        case controllerPolicyVersion
+        case targetFingerprint
         case sourcePhraseIndex
         case sourcePlanFingerprint
         case routeGeneration
@@ -421,6 +459,14 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
     package init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        let controllerPolicyVersion = try container.decode(
+            String.self,
+            forKey: .controllerPolicyVersion
+        )
+        let targetFingerprint = try container.decode(
+            String.self,
+            forKey: .targetFingerprint
+        )
         let sourcePhraseIndex = try container.decode(Int.self, forKey: .sourcePhraseIndex)
         let sourcePlanFingerprint = try container.decode(
             String.self,
@@ -458,6 +504,9 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
         let encodedFingerprint = try container.decode(String.self, forKey: .fingerprint)
         let canonicalReasons = reasons.sorted { $0.rawValue < $1.rawValue }
         guard schemaVersion == Self.schemaVersion,
+              controllerPolicyVersion ==
+                LiveFeedbackContract.controllerPolicyVersion,
+              Self.requiredFingerprintIsCanonical(targetFingerprint),
               sourcePhraseIndex >= 0,
               Self.requiredFingerprintIsCanonical(sourcePlanFingerprint),
               routeGeneration >= 0,
@@ -479,6 +528,8 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
             )
         }
         let candidate = LiveMasterHeadroomProposal(
+            controllerPolicyVersion: controllerPolicyVersion,
+            targetFingerprint: targetFingerprint,
             sourcePhraseIndex: sourcePhraseIndex,
             sourcePlanFingerprint: sourcePlanFingerprint,
             routeGeneration: routeGeneration,
@@ -506,6 +557,11 @@ package struct LiveMasterHeadroomProposal: Codable, Equatable, Sendable {
     package func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(Self.schemaVersion, forKey: .schemaVersion)
+        try container.encode(
+            controllerPolicyVersion,
+            forKey: .controllerPolicyVersion
+        )
+        try container.encode(targetFingerprint, forKey: .targetFingerprint)
         try container.encode(sourcePhraseIndex, forKey: .sourcePhraseIndex)
         try container.encode(sourcePlanFingerprint, forKey: .sourcePlanFingerprint)
         try container.encode(routeGeneration, forKey: .routeGeneration)

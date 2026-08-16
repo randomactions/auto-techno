@@ -12,6 +12,8 @@ struct AdaptiveAutonomousSessionTests {
         let plan = director.plan(from: incoming)
         let acceptedQuality = QualityContinuationState(revision: 7)
         let proposal = LiveMasterHeadroomProposal(
+            controllerPolicyVersion: LiveFeedbackContract.controllerPolicyVersion,
+            targetFingerprint: "target",
             sourcePhraseIndex: incoming.phraseIndex,
             sourcePlanFingerprint: "plan",
             routeGeneration: 1,

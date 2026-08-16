@@ -395,7 +395,7 @@ package enum LiveOutputWindowAnalyzer {
     package static let analyzerVersion =
         "autotechno-live-output-window-analyzer.v1"
     package static let controllerPolicyVersion =
-        "autotechno-live-master-headroom-controller.v1"
+        LiveFeedbackContract.controllerPolicyVersion
     package static let windowDurationSeconds = 3.0
     package static let supportedSampleRates = [44_100.0, 48_000.0]
     package static let expectedQualityPolicyVersion = [
