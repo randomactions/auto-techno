@@ -31,5 +31,15 @@ let package = Package(
                 .product(name: "Testing", package: "swift-testing"),
             ]
         ),
+        .testTarget(
+            name: "AutoTechnoAppTests",
+            dependencies: [
+                "AutoTechnoApp",
+                "AutoTechnoCore",
+                "AutoTechnoDSP",
+                "CAutoTechnoRealtime",
+                .product(name: "Testing", package: "swift-testing"),
+            ]
+        ),
     ]
 )
