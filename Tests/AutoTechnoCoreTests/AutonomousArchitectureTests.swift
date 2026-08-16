@@ -635,8 +635,16 @@ struct AdaptiveAutonomousSessionTests {
         #expect(sawBreak)
     }
 
+    // This integration check intentionally renders several complete bars. Keep its
+    // macro-expanded assertions off Swift Testing's bounded cooperative-worker stack.
+    @MainActor
     @Test("Breath harmonics align, spread, and realign on the absolute macro grid")
     func upperHarmonicTimingApertureAndFallbacks() throws {
+        try verifyUpperHarmonicTimingApertureAndFallbacks()
+    }
+
+    @inline(never)
+    private func verifyUpperHarmonicTimingApertureAndFallbacks() throws {
         verifyUpperTimingApertureAndEligibility()
 
         let director = AutonomousSessionDirector()
