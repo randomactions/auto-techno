@@ -376,7 +376,15 @@ struct LiveFeedbackPrimaryCommitTests {
             queueCapacity: LiveOutputCaptureProvenance.requiredQueueCapacity,
             maximumPacketFrameCount:
                 LiveOutputCaptureProvenance.requiredMaximumPacketFrameCount,
+            queueStorageByteCount:
+                LiveOutputCaptureProvenance.requiredQueueStorageByteCount,
+            consumerScratchByteCount:
+                LiveOutputCaptureProvenance.requiredConsumerScratchByteCount,
+            activeWindowByteCount:
+                frameCount * 2 * MemoryLayout<Float>.stride,
             workingMemoryByteCount:
+                LiveOutputCaptureProvenance.requiredQueueStorageByteCount +
+                LiveOutputCaptureProvenance.requiredConsumerScratchByteCount +
                 frameCount * 2 * MemoryLayout<Float>.stride,
             coveredFrameCount: frameCount,
             sampleDiscontinuityCount: 0,

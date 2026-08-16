@@ -1,0 +1,1064 @@
+import AutoTechnoApp
+import AutoTechnoCore
+@testable import AutoTechnoDSP
+import Foundation
+import Testing
+
+@Suite("TechnoEngine live feedback scheduling")
+struct TechnoEngineLiveFeedbackTests {
+    @MainActor
+    @Test("Production orchestration maps before capture and designates the first future occurrence")
+    func startupAndResumeDesignateFreshOccurrence() {
+        let owner = LiveFeedbackEngineOrchestrator(routeGeneration: 3)
+        var starts = 0
+        var stops = 0
+        let start: (
+            MixerPlayerClockMap,
+            LiveFeedbackWorkerIdentity,
+            LiveFeedbackRuntimeCoordinator
+        ) -> Bool = { _, identity, runtime in
+            starts += 1
+            return runtime.consumerDidStart(identity: identity) &&
+                runtime.producerDidStart(identity: identity)
+        }
+        let stop = { stops += 1 }
+
+        #expect(owner.stageOccurrence(draft(
+            phraseIndex: 2,
+            startSample: 0,
+            routeGeneration: 3
+        )) == nil)
+        #expect(owner.observeClock(
+            probe(mixer: 0, player: 0),
+            startCapture: start
+        ) == .awaitingStableMap)
+        #expect(starts == 0)
+        let started = owner.observeClock(
+            probe(mixer: 1_024, player: 1_024),
+            startCapture: start
+        )
+        guard case .captureStarted = started else {
+            Issue.record("expected capture after two stable probes")
+            return
+        }
+        #expect(starts == 1)
+        #expect(owner.ledger.playing == nil)
+        let firstPostMap = owner.stageOccurrence(draft(
+            phraseIndex: 2,
+            startSample: 200_000,
+            routeGeneration: 3
+        ))
+        #expect(firstPostMap != nil)
+        #expect(owner.ledger.playing == firstPostMap)
+        let alreadyScheduledPostResume = owner.stageOccurrence(draft(
+            phraseIndex: 3,
+            startSample: 400_000,
+            routeGeneration: 3
+        ))
+        #expect(owner.ledger.scheduledSuccessor == alreadyScheduledPostResume)
+
+        owner.pause(stopCapture: stop)
+        #expect(stops == 1)
+        #expect(owner.ledger.playing == nil)
+        #expect(owner.clockMap == nil)
+        owner.resume(routeGeneration: 3)
+        _ = owner.observeClock(
+            probe(mixer: 20_000, player: 20_000),
+            startCapture: start
+        )
+        _ = owner.observeClock(
+            probe(mixer: 21_024, player: 21_024),
+            startCapture: start
+        )
+        let firstPostResume = owner.ledger.playing
+        #expect(firstPostResume != nil)
+        #expect(firstPostResume != firstPostMap)
+        #expect(firstPostResume?.playerSampleRange ==
+                alreadyScheduledPostResume?.playerSampleRange)
+        #expect(owner.ledger.playing == firstPostResume)
+    }
+
+    @MainActor
+    @Test("Clock-map failure never starts capture and leaves no owner state")
+    func mapFailureCleansUpOwnership() {
+        let owner = LiveFeedbackEngineOrchestrator(routeGeneration: 2)
+        var starts = 0
+        _ = owner.observeClock(
+            probe(mixer: 0, player: 0),
+            startCapture: { _, _, _ in starts += 1; return true }
+        )
+        #expect(owner.observeClock(
+            probe(mixer: 1_024, player: 1_025),
+            startCapture: { _, _, _ in starts += 1; return true }
+        ) == .unavailable)
+        #expect(starts == 0)
+        // A running engine is not yet producer-quiescent. Clock failure may
+        // request recovery, but it must not tear down the tap/queue inline.
+        #expect(owner.clockMap == nil)
+        #expect(owner.runtime.captureOwnership == .inactive)
+        #expect(owner.runtime.activeIdentity == nil)
+    }
+
+    @MainActor
+    @Test("Running clock drift requests recovery before producer teardown")
+    func runningClockDriftRequiresRecovery() {
+        let owner = activeOwner(routeGeneration: 2)
+        #expect(owner.runtime.captureOwnership == .producerEnabled)
+
+        let observation = owner.observeClock(
+            probe(mixer: 2_048, player: 2_049),
+            startCapture: { _, _, _ in
+                Issue.record("drift must not start another producer")
+                return false
+            }
+        )
+
+        #expect(observation == .recoveryRequired)
+        #expect(owner.clockMap == nil)
+        #expect(owner.runtime.captureOwnership == .inactive)
+        #expect(owner.runtime.activeIdentity == nil)
+    }
+
+    @MainActor
+    @Test("Production capture lifecycle authorizes before tap and quiesces before destruction")
+    func captureLifecycleOrdering() {
+        let lifecycle = LiveFeedbackCaptureLifecycle()
+        var startup: [String] = []
+        #expect(lifecycle.startProducer(
+            consumerDidStart: { startup.append("consumer"); return true },
+            producerDidStart: { startup.append("producer"); return true },
+            installTap: { startup.append("tap"); return true }
+        ))
+        #expect(startup == ["consumer", "producer", "tap"])
+
+        startup = []
+        #expect(!lifecycle.startProducer(
+            consumerDidStart: { startup.append("consumer"); return true },
+            producerDidStart: { startup.append("producer"); return false },
+            installTap: {
+                startup.append("tap")
+                Issue.record("tap cannot install after producer denial")
+                return true
+            }
+        ))
+        #expect(startup == ["consumer", "producer"])
+
+        var teardown: [String] = []
+        var producerQuiesced = false
+        lifecycle.quiesceAndTearDown(
+            mode: .stop,
+            quiescePlayer: { _ in teardown.append("player.stop") },
+            quiesceEngine: { _ in
+                teardown.append("engine.stop")
+                producerQuiesced = true
+            },
+            removeTap: {
+                #expect(producerQuiesced)
+                teardown.append("tap.remove")
+            },
+            cancelAndJoinConsumer: {
+                #expect(producerQuiesced)
+                teardown.append("consumer.join")
+                return "joined"
+            },
+            destroyQueue: { proof in
+                #expect(producerQuiesced)
+                teardown.append("queue.destroy.\(proof ?? "missing")")
+            }
+        )
+        #expect(teardown == [
+            "player.stop",
+            "engine.stop",
+            "tap.remove",
+            "consumer.join",
+            "queue.destroy.joined",
+        ])
+    }
+
+    @Test("TechnoEngine delegates recovery, cache, context, and boundary work to production owners")
+    func technoEngineWiresProductionOwners() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(
+                "Sources/AutoTechnoApp/TechnoEngine.swift"
+            ),
+            encoding: .utf8
+        )
+
+        #expect(source.contains(
+            "liveFeedbackCaptureLifecycle.quiesceAndTearDown("
+        ))
+        #expect(source.contains(
+            "liveFeedbackCaptureLifecycle.startProducer("
+        ))
+        #expect(source.contains(
+            "liveFeedbackPreparation.analysisContext("
+        ))
+        #expect(source.contains(
+            "liveFeedbackPreparation.correctionPayload("
+        ))
+        #expect(source.contains("if observation == .recoveryRequired"))
+        #expect(source.contains("beginRecovery()"))
+        #expect(source.contains(
+            "liveFeedbackPreparation.completeSourceAdvance("
+        ))
+    }
+
+    @MainActor
+    @Test("A late source result cannot authorize after its target is playing")
+    func lateSourceExpiresWhenTargetIsPlaying() {
+        let owner = activeOwner(routeGeneration: 5)
+        let source = owner.stageOccurrence(draft(
+            phraseIndex: 4,
+            startSample: 200_000,
+            routeGeneration: 5
+        ))!
+        let target = owner.stageOccurrence(draft(
+            phraseIndex: 5,
+            startSample: 400_000,
+            routeGeneration: 5
+        ))!
+        owner.promote(playerSample: target.playerSampleRange.lowerBound)
+        let identity = owner.runtime.activeIdentity!
+
+        #expect(owner.authorize(
+            identity: identity,
+            sourceOccurrence: source,
+            targetPhraseIndex: 5,
+            proposalFingerprint: "late"
+        ) == .invalidPhraseRelationship)
+        #expect(owner.runtime.invalidatedSourceOccurrences.isEmpty)
+        #expect(owner.ledger.playing == target)
+    }
+
+    @MainActor
+    @Test("Route reset preserves committed trim and hold until an exact newer live occurrence")
+    func routeResetPreservesHoldUntilAuthenticatedRepeat() {
+        let owner = activeOwner(routeGeneration: 3)
+        let source = owner.stageOccurrence(draft(
+            phraseIndex: 7,
+            startSample: 200_000,
+            routeGeneration: 3,
+            appliedMasterTrimDB: -0.75
+        ))!
+        let identity = owner.runtime.activeIdentity!
+        #expect(owner.authorize(
+            identity: identity,
+            sourceOccurrence: source,
+            targetPhraseIndex: 8,
+            proposalFingerprint: "proposal-a"
+        ) == .invalidateUnscheduledSuccessor)
+        owner.rejectCorrectedSuccessor(
+            sourceOccurrence: source,
+            targetPhraseIndex: 8,
+            proposalFingerprint: "proposal-a",
+            expireCorrectedSuccessor: {}
+        )
+        owner.routeReset(routeGeneration: 4, stopCapture: {})
+
+        #expect(owner.runtime.acceptedPCMHold?.sourceOccurrence == source)
+        #expect(owner.runtime.acceptedPCMHold?.sourceOccurrence
+            .appliedMasterTrimDB == -0.75)
+        #expect(!owner.allowsUntrimmedPreparation(
+            sourcePhraseIndex: 7,
+            targetPhraseIndex: 8
+        ))
+
+        _ = owner.observeClock(
+            probe(mixer: 0, player: 0),
+            startCapture: { _, _, _ in true }
+        )
+        _ = owner.observeClock(
+            probe(mixer: 1_024, player: 1_024),
+            startCapture: { _, identity, runtime in
+                runtime.consumerDidStart(identity: identity) &&
+                    runtime.producerDidStart(identity: identity)
+            }
+        )
+        let repeated = owner.stageOccurrence(draft(
+            phraseIndex: 7,
+            startSample: 400_000,
+            routeGeneration: 4,
+            appliedMasterTrimDB: -0.75
+        ))!
+        let freshIdentity = owner.runtime.activeIdentity!
+        #expect(owner.authorize(
+            identity: freshIdentity,
+            sourceOccurrence: source,
+            targetPhraseIndex: 8,
+            proposalFingerprint: "forged-old"
+        ) == .invalidPhraseRelationship)
+        #expect(owner.authorize(
+            identity: freshIdentity,
+            sourceOccurrence: repeated,
+            targetPhraseIndex: 8,
+            proposalFingerprint: "proposal-b"
+        ) == .invalidateUnscheduledSuccessor)
+        #expect(owner.runtime.acceptedPCMHold != nil)
+
+        var advanced = 0
+        owner.performBoundary(
+            sourcePhraseIndex: 7,
+            targetPhraseIndex: 8,
+            correctedSuccessorAvailable: true,
+            expireCorrectedSuccessor: {},
+            advanceCorrectedSuccessor: { advanced += 1 },
+            repeatAcceptedPCM: {}
+        )
+        #expect(advanced == 1)
+        #expect(owner.runtime.acceptedPCMHold == nil)
+    }
+
+    @MainActor
+    @Test("Held accepted PCM retains only a target reference for a later corrected successor")
+    func heldRepeatCanProduceAnotherRealCorrection() throws {
+        let qualityPolicyVersion = testLiveQualityPolicyVersion
+        let plans = sourceAndTargetPlans()
+        let preparation = LiveFeedbackPreparationOwner<
+            TestPreparationKey,
+            Int,
+            String
+        >()
+        let baseKey = TestPreparationKey(
+            phraseIndex: plans.target.phraseIndex,
+            proposalFingerprint: nil
+        )
+        preparation.insertCachedValue(1, forKey: baseKey)
+        #expect(preparation.rememberTargetReference(
+            sourcePlan: plans.source,
+            targetPlan: plans.target,
+            routeGeneration: 3,
+            sampleRate: 48_000,
+            basePayload: "base-request"
+        ))
+
+        let owner = activeOwner(routeGeneration: 3)
+        let firstRange = scheduledRange(
+            plan: plans.source,
+            incoming: plans.incoming,
+            startSample: 800_000,
+            routeGeneration: 3,
+            qualityPolicyVersion: qualityPolicyVersion
+        )
+        let first = try #require(owner.stageOccurrence(
+            LiveFeedbackScheduledOccurrenceDraft(copying: firstRange)
+        ))
+        let firstContext = try #require(preparation.analysisContext(
+            sourceRange: first,
+            sourcePlan: plans.source,
+            incomingState: plans.incoming,
+            controllerStateFingerprint: plans.incoming.fingerprint,
+            qualityPolicyVersion: qualityPolicyVersion
+        ))
+        let firstBinding = try #require(realBinding(
+            context: firstContext
+        ))
+        let identity = try #require(owner.runtime.activeIdentity)
+        #expect(owner.authorize(
+            identity: identity,
+            sourceOccurrence: first,
+            targetPhraseIndex: plans.target.phraseIndex,
+            proposalFingerprint: firstBinding.proposal.fingerprint
+        ) == .invalidateUnscheduledSuccessor)
+
+        preparation.removeCached { key, _ in
+            key.phraseIndex == plans.target.phraseIndex &&
+                key.proposalFingerprint == nil
+        }
+        var expired = 0
+        owner.rejectCorrectedSuccessor(
+            sourceOccurrence: first,
+            targetPhraseIndex: plans.target.phraseIndex,
+            proposalFingerprint: firstBinding.proposal.fingerprint,
+            expireCorrectedSuccessor: { expired += 1 }
+        )
+        var repeats = 0
+        owner.performBoundary(
+            sourcePhraseIndex: plans.source.phraseIndex,
+            targetPhraseIndex: plans.target.phraseIndex,
+            correctedSuccessorAvailable: false,
+            expireCorrectedSuccessor: { expired += 1 },
+            advanceCorrectedSuccessor: {},
+            repeatAcceptedPCM: { repeats += 1 }
+        )
+        #expect(expired == 1)
+        #expect(repeats == 1)
+        #expect(preparation.cachedCount == 0)
+        #expect(preparation.hasTargetReference)
+        #expect(preparation.hasCurrentTargetPayload)
+        #expect(!owner.allowsUntrimmedPreparation(
+            sourcePhraseIndex: plans.source.phraseIndex,
+            targetPhraseIndex: plans.target.phraseIndex
+        ))
+
+        // Recovery resets the player to a low sample position. The accepted
+        // payload stays detached from scheduling and is rebound only to the
+        // newly authenticated occurrence epoch used by TechnoEngine.
+        #expect(owner.playbackTimelineReset(routeGeneration: 3))
+        #expect(preparation.rebindTargetOccurrence(
+            sourcePlan: plans.source,
+            routeGeneration: 3,
+            occurrenceEpoch: owner.runtime.occurrenceEpoch
+        ))
+        #expect(preparation.analysisContext(
+            sourceRange: first,
+            sourcePlan: plans.source,
+            incomingState: plans.incoming,
+            controllerStateFingerprint: plans.incoming.fingerprint,
+            qualityPolicyVersion: qualityPolicyVersion
+        ) == nil)
+        #expect(preparation.cachedCount == 0)
+
+        _ = owner.observeClock(
+            probe(mixer: 0, player: 0),
+            startCapture: { _, _, _ in true }
+        )
+        _ = owner.observeClock(
+            probe(mixer: 1_024, player: 1_024),
+            startCapture: { _, identity, runtime in
+                runtime.consumerDidStart(identity: identity) &&
+                    runtime.producerDidStart(identity: identity)
+            }
+        )
+
+        let repeatedRange = scheduledRange(
+            plan: plans.source,
+            incoming: plans.incoming,
+            startSample: 200_000,
+            routeGeneration: 3,
+            occurrenceEpoch: owner.runtime.occurrenceEpoch,
+            qualityPolicyVersion: qualityPolicyVersion
+        )
+        let repeated = try #require(owner.stageOccurrence(
+            LiveFeedbackScheduledOccurrenceDraft(copying: repeatedRange)
+        ))
+        owner.promote(playerSample: repeated.playerSampleRange.lowerBound)
+        let repeatedContext = try #require(preparation.analysisContext(
+            sourceRange: repeated,
+            sourcePlan: plans.source,
+            incomingState: plans.incoming,
+            controllerStateFingerprint: plans.incoming.fingerprint,
+            qualityPolicyVersion: qualityPolicyVersion
+        ))
+        let repeatedBinding = try #require(realBinding(
+            context: repeatedContext
+        ))
+        let recoveredIdentity = try #require(owner.runtime.activeIdentity)
+
+        #expect(owner.authorize(
+            identity: identity,
+            sourceOccurrence: first,
+            targetPhraseIndex: plans.target.phraseIndex,
+            proposalFingerprint: repeatedBinding.proposal.fingerprint
+        ) == .invalidPhraseRelationship)
+        #expect(owner.authorize(
+            identity: recoveredIdentity,
+            sourceOccurrence: first,
+            targetPhraseIndex: plans.target.phraseIndex,
+            proposalFingerprint: repeatedBinding.proposal.fingerprint
+        ) == .invalidPhraseRelationship)
+        #expect(preparation.correctionPayload(
+            sourceRange: repeated,
+            eligibleTargetIdentity: LiveOutputPlanSourceIdentity(
+                plan: plans.source
+            )
+        ) == nil)
+        #expect(owner.authorize(
+            identity: recoveredIdentity,
+            sourceOccurrence: repeated,
+            targetPhraseIndex: plans.target.phraseIndex,
+            proposalFingerprint: repeatedBinding.proposal.fingerprint
+        ) == .invalidateUnscheduledSuccessor)
+        #expect(preparation.correctionPayload(
+            sourceRange: repeated,
+            eligibleTargetIdentity: repeatedBinding.eligibleTarget.planIdentity
+        ) == "base-request")
+
+        let correctedKey = TestPreparationKey(
+            phraseIndex: plans.target.phraseIndex,
+            proposalFingerprint: repeatedBinding.proposal.fingerprint
+        )
+        preparation.insertCachedValue(2, forKey: correctedKey)
+        var advances = 0
+        owner.performBoundary(
+            sourcePhraseIndex: plans.source.phraseIndex,
+            targetPhraseIndex: plans.target.phraseIndex,
+            correctedSuccessorAvailable: true,
+            expireCorrectedSuccessor: {},
+            advanceCorrectedSuccessor: {
+                advances += 1
+                preparation.completeSourceAdvance(
+                    sourcePhraseIndex: plans.source.phraseIndex
+                )
+            },
+            repeatAcceptedPCM: {}
+        )
+        #expect(advances == 1)
+        #expect(owner.runtime.acceptedPCMHold == nil)
+        #expect(!preparation.hasTargetReference)
+        #expect(preparation.firstCached(where: { key, _ in
+            key == correctedKey
+        })?.value == 2)
+        #expect(preparation.firstCached(where: { key, _ in
+            key.phraseIndex == plans.target.phraseIndex &&
+                key.proposalFingerprint == nil
+        }) == nil)
+    }
+
+    @MainActor
+    @Test("A missed corrected successor enters an accepted-PCM hold without fallback preparation")
+    func missedCorrectedSuccessorHoldsWithoutFallback() {
+        let runtime = activeRuntime(routeGeneration: 8)
+        let identity = try! #require(runtime.activeIdentity)
+        #expect(runtime.authorizeCorrection(
+            identity: identity,
+            sourceOccurrence: occurrence(phraseIndex: 4, startSample: 1_000, routeGeneration: 8),
+            targetPhraseIndex: 5,
+            proposalFingerprint: "proposal-a",
+            sourceIsExactPlayingOccurrence: true,
+            targetHasScheduledSamples: false
+        ) == .invalidateUnscheduledSuccessor)
+
+        var acceptedPCMRepeatCount = 0
+        var fallbackPreparationCount = 0
+        var correctedExpirationCount = 0
+        var cachedUntrimmedTargets: Set<Int> = []
+        var preparingUntrimmedTarget: Int?
+        for _ in 0..<3 {
+            runtime.performBoundary(
+                sourcePhraseIndex: 4,
+                targetPhraseIndex: 5,
+                correctedSuccessorAvailable: false,
+                expireCorrectedSuccessor: { correctedExpirationCount += 1 },
+                advanceCorrectedSuccessor: {},
+                repeatAcceptedPCM: { acceptedPCMRepeatCount += 1 },
+                requestUntrimmedSuccessor: {
+                    fallbackPreparationCount += 1
+                    cachedUntrimmedTargets.insert(5)
+                    preparingUntrimmedTarget = 5
+                }
+            )
+            #expect(cachedUntrimmedTargets.isEmpty)
+            #expect(preparingUntrimmedTarget == nil)
+        }
+
+        #expect(runtime.acceptedPCMHold?.sourcePhraseIndex == 4)
+        #expect(runtime.acceptedPCMHold?.targetPhraseIndex == 5)
+        #expect(correctedExpirationCount == 1)
+        #expect(acceptedPCMRepeatCount == 3)
+        #expect(fallbackPreparationCount == 0)
+        #expect(!runtime.allowsUntrimmedPreparation(
+            sourcePhraseIndex: 4,
+            targetPhraseIndex: 5
+        ))
+    }
+
+    @MainActor
+    @Test("A rejected corrected candidate expires and holds until an explicit authorized release")
+    func rejectedCorrectionRequiresExplicitRelease() {
+        let runtime = activeRuntime(routeGeneration: 3)
+        let identity = try! #require(runtime.activeIdentity)
+        #expect(runtime.authorizeCorrection(
+            identity: identity,
+            sourceOccurrence: occurrence(phraseIndex: 7, startSample: 1_000, routeGeneration: 3),
+            targetPhraseIndex: 8,
+            proposalFingerprint: "proposal-a",
+            sourceIsExactPlayingOccurrence: true,
+            targetHasScheduledSamples: false
+        ) == .invalidateUnscheduledSuccessor)
+
+        var expired = 0
+        runtime.rejectCorrectedSuccessor(
+            sourceOccurrence: occurrence(phraseIndex: 7, startSample: 1_000, routeGeneration: 3),
+            targetPhraseIndex: 8,
+            proposalFingerprint: "proposal-a",
+            expireCorrectedSuccessor: { expired += 1 }
+        )
+        #expect(expired == 1)
+        #expect(runtime.acceptedPCMHold != nil)
+        #expect(!runtime.allowsUntrimmedPreparation(
+            sourcePhraseIndex: 7,
+            targetPhraseIndex: 8
+        ))
+
+        runtime.pause()
+        runtime.resume(routeGeneration: 3)
+        #expect(runtime.acceptedPCMHold != nil)
+
+        let freshIdentity = runtime.recreateCoordinator(routeGeneration: 3)
+        #expect(runtime.consumerDidStart(identity: freshIdentity))
+        #expect(runtime.producerDidStart(identity: freshIdentity))
+        #expect(runtime.authorizeCorrection(
+            identity: freshIdentity,
+            sourceOccurrence: occurrence(phraseIndex: 7, startSample: 200_000, routeGeneration: 3),
+            targetPhraseIndex: 8,
+            proposalFingerprint: "proposal-b",
+            sourceIsExactPlayingOccurrence: true,
+            targetHasScheduledSamples: false
+        ) == .invalidateUnscheduledSuccessor)
+        #expect(runtime.acceptedPCMHold != nil)
+        runtime.rejectCorrectedSuccessor(
+            sourceOccurrence: occurrence(phraseIndex: 7, startSample: 200_000, routeGeneration: 3),
+            targetPhraseIndex: 8,
+            proposalFingerprint: "proposal-b",
+            expireCorrectedSuccessor: {}
+        )
+        #expect(runtime.acceptedPCMHold != nil)
+
+        runtime.routeReset(routeGeneration: 4)
+        #expect(runtime.acceptedPCMHold != nil)
+        #expect(!runtime.allowsUntrimmedPreparation(
+            sourcePhraseIndex: 7,
+            targetPhraseIndex: 8
+        ))
+    }
+
+    @MainActor
+    @Test("Already-scheduled and duplicate sources never invalidate preparation")
+    func invalidationIsFutureOnlyAndOncePerSource() {
+        let runtime = activeRuntime(routeGeneration: 3)
+        let identity = try! #require(runtime.activeIdentity)
+
+        #expect(runtime.authorizeCorrection(
+            identity: identity,
+            sourceOccurrence: occurrence(phraseIndex: 4, startSample: 1_000, routeGeneration: 3),
+            targetPhraseIndex: 5,
+            proposalFingerprint: "scheduled",
+            sourceIsExactPlayingOccurrence: true,
+            targetHasScheduledSamples: true
+        ) == .deferAlreadyScheduledSuccessor)
+        #expect(runtime.authorizeCorrection(
+            identity: identity,
+            sourceOccurrence: occurrence(phraseIndex: 4, startSample: 1_000, routeGeneration: 3),
+            targetPhraseIndex: 5,
+            proposalFingerprint: "first",
+            sourceIsExactPlayingOccurrence: true,
+            targetHasScheduledSamples: false
+        ) == .invalidateUnscheduledSuccessor)
+        #expect(runtime.authorizeCorrection(
+            identity: identity,
+            sourceOccurrence: occurrence(phraseIndex: 4, startSample: 1_000, routeGeneration: 3),
+            targetPhraseIndex: 5,
+            proposalFingerprint: "duplicate",
+            sourceIsExactPlayingOccurrence: true,
+            targetHasScheduledSamples: false
+        ) == .duplicateSourcePhrase)
+    }
+
+    @MainActor
+    @Test("Invalidated occurrence history stays fixed while one phrase repeats")
+    func invalidationHistoryIsBounded() {
+        let runtime = activeRuntime(routeGeneration: 3)
+        let identity = try! #require(runtime.activeIdentity)
+
+        for repetition in 0..<12 {
+            #expect(runtime.authorizeCorrection(
+                identity: identity,
+                sourceOccurrence: occurrence(
+                    phraseIndex: 4,
+                    startSample: Int64(1_000 + repetition * 200_000),
+                    routeGeneration: 3
+                ),
+                targetPhraseIndex: 5,
+                proposalFingerprint: "proposal-\(repetition)",
+                sourceIsExactPlayingOccurrence: true,
+                targetHasScheduledSamples: false
+            ) == .invalidateUnscheduledSuccessor)
+        }
+
+        #expect(runtime.invalidatedSourceOccurrences.count ==
+                LiveFeedbackRuntimeCoordinator
+                    .maximumRetainedInvalidatedSources)
+    }
+
+    @MainActor
+    @Test("Playback occurrence epoch overflow fails closed")
+    func playbackOccurrenceEpochOverflowFailsClosed() {
+        let runtime = LiveFeedbackRuntimeCoordinator(
+            routeGeneration: 3,
+            occurrenceEpoch: .max
+        )
+        runtime.resume(routeGeneration: 3)
+        let identity = runtime.recreateCoordinator(routeGeneration: 3)
+        #expect(runtime.consumerDidStart(identity: identity))
+        #expect(runtime.producerDidStart(identity: identity))
+
+        #expect(!runtime.resetPlaybackTimeline(routeGeneration: 3))
+        #expect(runtime.occurrenceEpoch == .max)
+        #expect(runtime.activeIdentity == nil)
+        #expect(runtime.captureOwnership == .inactive)
+    }
+
+    @MainActor
+    @Test("A queued pre-pause result is dropped by exact lifecycle and coordinator identity")
+    func queuedPrePauseResultIsDropped() async {
+        let runtime = activeRuntime(routeGeneration: 9)
+        let staleIdentity = try! #require(runtime.activeIdentity)
+        let delivery = BufferedLiveFeedbackResultDelivery()
+        var invalidationCount = 0
+
+        delivery.enqueue(identity: staleIdentity) { identity in
+            if runtime.authorizeCorrection(
+                identity: identity,
+                sourceOccurrence: occurrence(phraseIndex: 2, startSample: 1_000, routeGeneration: 9),
+                targetPhraseIndex: 3,
+                proposalFingerprint: "stale",
+                sourceIsExactPlayingOccurrence: true,
+                targetHasScheduledSamples: false
+            ) == .invalidateUnscheduledSuccessor {
+                invalidationCount += 1
+            }
+        }
+        runtime.pause()
+        runtime.resume(routeGeneration: 9)
+        let freshIdentity = runtime.recreateCoordinator(routeGeneration: 9)
+        #expect(freshIdentity.lifecycleToken > staleIdentity.lifecycleToken)
+        #expect(freshIdentity.coordinatorID != staleIdentity.coordinatorID)
+        #expect(runtime.consumerDidStart(identity: freshIdentity))
+        #expect(runtime.producerDidStart(identity: freshIdentity))
+
+        await delivery.flush()
+
+        #expect(invalidationCount == 0)
+        #expect(runtime.invalidatedSourceOccurrences.isEmpty)
+    }
+
+    @MainActor
+    @Test("Producer ownership requires a running consumer and resume creates a fresh generation")
+    func producerRequiresConsumerAndResumeIsFresh() {
+        let runtime = LiveFeedbackRuntimeCoordinator(routeGeneration: 5)
+        runtime.resume(routeGeneration: 5)
+        let first = runtime.recreateCoordinator(routeGeneration: 5)
+
+        #expect(!runtime.producerDidStart(identity: first))
+        #expect(runtime.consumerDidStart(identity: first))
+        #expect(runtime.producerDidStart(identity: first))
+        #expect(runtime.captureOwnership == .producerEnabled)
+
+        runtime.clockMapFailed()
+        #expect(runtime.captureOwnership == .inactive)
+        #expect(runtime.activeIdentity == nil)
+
+        runtime.resume(routeGeneration: 5)
+        let second = runtime.recreateCoordinator(routeGeneration: 5)
+        #expect(second.lifecycleToken > first.lifecycleToken)
+        #expect(second.coordinatorID != first.coordinatorID)
+        #expect(runtime.captureOwnership == .queueReady)
+        #expect(runtime.consumerDidStart(identity: second))
+        #expect(runtime.producerDidStart(identity: second))
+    }
+
+    @MainActor
+    @Test("Every lifecycle boundary rotates identity monotonically")
+    func everyLifecycleBoundaryRotatesIdentity() {
+        let runtime = activeRuntime(routeGeneration: 5)
+        let initial = runtime.lifecycleToken
+
+        runtime.pause()
+        let paused = runtime.lifecycleToken
+        runtime.resume(routeGeneration: 5)
+        let resumed = runtime.lifecycleToken
+        _ = runtime.recreateCoordinator(routeGeneration: 5)
+        let recreated = runtime.lifecycleToken
+        runtime.routeReset(routeGeneration: 6)
+        let routed = runtime.lifecycleToken
+        runtime.shutdown()
+        let shutDown = runtime.lifecycleToken
+
+        #expect(initial < paused)
+        #expect(paused < resumed)
+        #expect(resumed < recreated)
+        #expect(recreated < routed)
+        #expect(routed < shutDown)
+        #expect(runtime.captureOwnership == .inactive)
+        #expect(runtime.activeIdentity == nil)
+    }
+
+    @MainActor
+    private func activeRuntime(
+        routeGeneration: Int
+    ) -> LiveFeedbackRuntimeCoordinator {
+        let runtime = LiveFeedbackRuntimeCoordinator(
+            routeGeneration: routeGeneration
+        )
+        runtime.resume(routeGeneration: routeGeneration)
+        let identity = runtime.recreateCoordinator(
+            routeGeneration: routeGeneration
+        )
+        #expect(runtime.consumerDidStart(identity: identity))
+        #expect(runtime.producerDidStart(identity: identity))
+        return runtime
+    }
+
+    @MainActor
+    private func activeOwner(
+        routeGeneration: Int
+    ) -> LiveFeedbackEngineOrchestrator {
+        let owner = LiveFeedbackEngineOrchestrator(
+            routeGeneration: routeGeneration
+        )
+        _ = owner.observeClock(
+            probe(mixer: 0, player: 0),
+            startCapture: { _, _, _ in true }
+        )
+        _ = owner.observeClock(
+            probe(mixer: 1_024, player: 1_024),
+            startCapture: { _, identity, runtime in
+                runtime.consumerDidStart(identity: identity) &&
+                    runtime.producerDidStart(identity: identity)
+            }
+        )
+        return owner
+    }
+
+    private func probe(
+        mixer: Double,
+        player: Double
+    ) -> MixerPlayerClockProbe {
+        MixerPlayerClockProbe(
+            mixerSample: mixer,
+            playerSample: player,
+            mixerSampleRate: 48_000,
+            playerSampleRate: 48_000
+        )
+    }
+
+    private func draft(
+        phraseIndex: Int,
+        startSample: Int64,
+        routeGeneration: Int,
+        appliedMasterTrimDB: Double = 0
+    ) -> LiveFeedbackScheduledOccurrenceDraft {
+        let range = occurrence(
+            phraseIndex: phraseIndex,
+            startSample: startSample,
+            routeGeneration: routeGeneration
+        )
+        return LiveFeedbackScheduledOccurrenceDraft(
+            phraseIndex: range.phraseIndex,
+            planFingerprint: range.planFingerprint,
+            playerSampleRange: range.playerSampleRange,
+            sampleRate: range.sampleRate,
+            routeGeneration: range.routeGeneration,
+            controllerRevision: range.controllerRevision,
+            qualityPolicyVersion: range.qualityPolicyVersion,
+            evaluatorVersion: range.evaluatorVersion,
+            controllerPolicyVersion: range.controllerPolicyVersion,
+            controllerStateFingerprint: range.controllerStateFingerprint,
+            appliedMasterTrimDB: appliedMasterTrimDB,
+            applicableCheckpoints: range.applicableCheckpoints
+        )
+    }
+
+    private func occurrence(
+        phraseIndex: Int,
+        startSample: Int64,
+        routeGeneration: Int
+    ) -> ScheduledPhraseRange {
+        ScheduledPhraseRange(
+            phraseIndex: phraseIndex,
+            planFingerprint: "0123456789abcdef",
+            playerSampleRange: startSample..<(startSample + 160_000),
+            mixerSampleRange: startSample..<(startSample + 160_000),
+            sampleRate: 48_000,
+            routeGeneration: routeGeneration,
+            controllerRevision: 0,
+            qualityPolicyVersion: "policy",
+            evaluatorVersion: ProfessionalQualityPrimaryEvaluator
+                .evaluatorVersionIdentifier,
+            controllerPolicyVersion: LiveFeedbackContract
+                .controllerPolicyVersion,
+            controllerStateFingerprint: "fedcba9876543210",
+            appliedMasterTrimDB: 0,
+            applicableCheckpoints: [.establishment],
+            earliestEligibleFutureSample: startSample + 160_000
+        )
+    }
+
+    private struct TestPreparationKey: Hashable {
+        let phraseIndex: Int
+        let proposalFingerprint: String?
+    }
+
+    private var testLiveQualityPolicyVersion: String {
+        [
+            ProfessionalQualityPrimaryEvaluator.policyFamilyVersion,
+            "profile-1111111111111111",
+            "adversarial-2222222222222222",
+            "holdout-3333333333333333",
+        ].joined(separator: ".")
+    }
+
+    private func sourceAndTargetPlans() -> (
+        source: AutonomousPhrasePlan,
+        target: AutonomousPhrasePlan,
+        incoming: LiveMasterHeadroomContinuationState
+    ) {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let source = director.plan(from: state)
+        let targetState = state.advance(
+            using: source,
+            quality: state.quality,
+            liveMasterHeadroom: state.liveMasterHeadroom
+        )
+        return (
+            source,
+            director.plan(from: targetState),
+            state.liveMasterHeadroom
+        )
+    }
+
+    private func scheduledRange(
+        plan: AutonomousPhrasePlan,
+        incoming: LiveMasterHeadroomContinuationState,
+        startSample: Int64,
+        routeGeneration: Int,
+        occurrenceEpoch: UInt64 = 0,
+        qualityPolicyVersion: String
+    ) -> ScheduledPhraseRange {
+        let identity = LiveOutputPlanSourceIdentity(plan: plan)
+        let upper = startSample + 160_000
+        return ScheduledPhraseRange(
+            phraseIndex: plan.phraseIndex,
+            planFingerprint: identity.planFingerprint,
+            playerSampleRange: startSample..<upper,
+            mixerSampleRange: startSample..<upper,
+            sampleRate: 48_000,
+            routeGeneration: routeGeneration,
+            occurrenceEpoch: occurrenceEpoch,
+            controllerRevision: incoming.revision,
+            qualityPolicyVersion: qualityPolicyVersion,
+            evaluatorVersion: ProfessionalQualityPrimaryEvaluator
+                .evaluatorVersionIdentifier,
+            controllerPolicyVersion: LiveFeedbackContract
+                .controllerPolicyVersion,
+            controllerStateFingerprint: incoming.fingerprint,
+            appliedMasterTrimDB: incoming.committedTrimDB,
+            applicableCheckpoints: identity.applicableCheckpoints,
+            earliestEligibleFutureSample: upper
+        )
+    }
+
+    private func realBinding(
+        context: LiveFeedbackAnalysisContext
+    ) -> PendingLiveMasterHeadroomBinding? {
+        guard let frameCount = LiveOutputWindowAnalyzer.frameCount(
+            sampleRate: context.sourceRange.sampleRate
+        ) else { return nil }
+        var signal = [Float](repeating: 0, count: frameCount)
+        for index in signal.indices {
+            signal[index] = 0.18 * Float(sin(
+                2 * Double.pi * 220 * Double(index) /
+                    context.sourceRange.sampleRate
+            ))
+        }
+        let packetCount = (frameCount + 1_023) / 1_024
+        let capture = LiveOutputCaptureProvenance(
+            packetCount: packetCount,
+            firstPacketSequence: 500,
+            lastPacketSequence: 500 + UInt64(packetCount - 1),
+            droppedPacketDelta: 0,
+            rejectedPacketDelta: 0,
+            queueCapacity: LiveOutputCaptureProvenance.requiredQueueCapacity,
+            maximumPacketFrameCount:
+                LiveOutputCaptureProvenance.requiredMaximumPacketFrameCount,
+            queueStorageByteCount:
+                LiveOutputCaptureProvenance.requiredQueueStorageByteCount,
+            consumerScratchByteCount:
+                LiveOutputCaptureProvenance.requiredConsumerScratchByteCount,
+            activeWindowByteCount:
+                frameCount * 2 * MemoryLayout<Float>.stride,
+            workingMemoryByteCount:
+                LiveOutputCaptureProvenance.requiredQueueStorageByteCount +
+                LiveOutputCaptureProvenance.requiredConsumerScratchByteCount +
+                frameCount * 2 * MemoryLayout<Float>.stride,
+            coveredFrameCount: frameCount,
+            sampleDiscontinuityCount: 0,
+            gapFrameCount: 0,
+            overlapFrameCount: 0
+        )
+        let evidenceStart = context.sourceRange.playerSampleRange.lowerBound
+        let evidenceRange = evidenceStart..<(evidenceStart + Int64(frameCount))
+        guard let evidence = LiveOutputWindowAnalyzer.analyze(
+            left: signal,
+            right: signal,
+            planIdentity: context.sourceIdentity,
+            routeGeneration: context.sourceRange.routeGeneration,
+            controllerRevision: context.sourceRange.controllerRevision,
+            playerSampleRange: evidenceRange,
+            sampleRate: context.sourceRange.sampleRate,
+            captureProvenance: capture,
+            qualityPolicyVersion: context.qualityPolicyVersion
+        ), let checkpoint = evidence.applicableCheckpoints.first else {
+            return nil
+        }
+        let loudnessLower = evidence.maximumShortTermLoudnessLUFS - 2
+        let loudnessUpper = evidence.maximumShortTermLoudnessLUFS + 1
+        let truePeakLower = evidence.truePeakDBTP - 2
+        let truePeakUpper = evidence.truePeakDBTP + 1
+        let target = LiveMasterHeadroomTarget(
+            schemaVersion: LiveMasterHeadroomTarget.schemaVersion,
+            sourceObservationFingerprint: evidence.fingerprint,
+            phraseIndex: evidence.phraseIndex,
+            planFingerprint: evidence.planFingerprint,
+            routeGeneration: evidence.routeGeneration,
+            controllerRevision: evidence.controllerRevision,
+            playerSampleRange: evidence.playerSampleRange,
+            sampleRate: evidence.sampleRate,
+            applicableCheckpoints: evidence.applicableCheckpoints,
+            selectedLoudnessCheckpoint: checkpoint,
+            selectedTruePeakCheckpoint: checkpoint,
+            analyzerVersion: evidence.analyzerVersion,
+            engineVersion: evidence.engineVersion,
+            evidenceVersion: evidence.evidenceVersion,
+            qualityPolicyVersion: evidence.qualityPolicyVersion,
+            evaluatorVersion: evidence.evaluatorVersion,
+            controllerPolicyVersion: evidence.controllerPolicyVersion,
+            profileVersion:
+                ProfessionalQualityPrimaryEvaluator.requiredProfileVersion,
+            profileFingerprint: "1111111111111111",
+            loudnessLowerLUFS: loudnessLower,
+            loudnessUpperLUFS: loudnessUpper,
+            loudnessMidpointLUFS: (loudnessLower + loudnessUpper) / 2,
+            truePeakLowerDBTP: truePeakLower,
+            truePeakUpperDBTP: truePeakUpper,
+            truePeakMidpointDBTP: (truePeakLower + truePeakUpper) / 2
+        )
+        guard target.isStructurallyValid(sourceEvidence: evidence) else {
+            return nil
+        }
+        let proposal = LiveMasterHeadroomController.propose(
+            evidence: evidence,
+            target: target,
+            incoming: context.incomingState,
+            earliestEligibleFutureSample:
+                context.earliestEligibleFutureSample
+        )
+        guard proposal.outcome != .unavailable else { return nil }
+        let eligibleTarget = LiveMasterHeadroomEligibleTarget(
+            plan: context.targetPlan,
+            routeGeneration: context.sourceRange.routeGeneration,
+            sampleRate: context.sourceRange.sampleRate,
+            earliestEligibleFutureSample:
+                context.earliestEligibleFutureSample,
+            qualityPolicyVersion: evidence.qualityPolicyVersion,
+            evaluatorVersion: evidence.evaluatorVersion,
+            controllerPolicyVersion: evidence.controllerPolicyVersion
+        )
+        let binding = PendingLiveMasterHeadroomBinding(
+            sourceIdentity: context.sourceIdentity,
+            evidence: evidence,
+            target: target,
+            proposal: proposal,
+            eligibleTarget: eligibleTarget
+        )
+        return binding.isStructurallyValid(
+            targetPlan: context.targetPlan,
+            incoming: context.incomingState
+        ) ? binding : nil
+    }
+}

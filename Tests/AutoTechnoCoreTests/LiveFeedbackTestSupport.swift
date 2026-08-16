@@ -111,7 +111,15 @@ enum LiveFeedbackTestSupport {
             rejectedPacketDelta: 0,
             queueCapacity: 256,
             maximumPacketFrameCount: 1_024,
+            queueStorageByteCount:
+                LiveOutputCaptureProvenance.requiredQueueStorageByteCount,
+            consumerScratchByteCount:
+                LiveOutputCaptureProvenance.requiredConsumerScratchByteCount,
+            activeWindowByteCount:
+                frameCount * 2 * MemoryLayout<Float>.stride,
             workingMemoryByteCount:
+                LiveOutputCaptureProvenance.requiredQueueStorageByteCount +
+                LiveOutputCaptureProvenance.requiredConsumerScratchByteCount +
                 frameCount * 2 * MemoryLayout<Float>.stride,
             coveredFrameCount: frameCount,
             sampleDiscontinuityCount: 0,

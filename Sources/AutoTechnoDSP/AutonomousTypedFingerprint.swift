@@ -97,11 +97,17 @@ package enum AutonomousTypedFingerprint {
         }
     }
 
-    package static func liveOutputPCM(
-        left: [Float],
-        right: [Float],
+    package static func liveOutputPCM<Left, Right>(
+        left: Left,
+        right: Right,
         cancellationRequested: @escaping @Sendable () -> Bool = { false }
-    ) -> String? {
+    ) -> String? where
+        Left: RandomAccessCollection,
+        Right: RandomAccessCollection,
+        Left.Element == Float,
+        Right.Element == Float,
+        Left.Index == Int,
+        Right.Index == Int {
         guard left.count == right.count else { return nil }
         return cancellableDigest(
             domain: "live-output-pcm.typed.v1",
@@ -174,6 +180,12 @@ package enum AutonomousTypedFingerprint {
             sink.field("capture.queueCapacity"); sink.int(capture.queueCapacity)
             sink.field("capture.maximumPacketFrameCount")
             sink.int(capture.maximumPacketFrameCount)
+            sink.field("capture.queueStorageByteCount")
+            sink.int(capture.queueStorageByteCount)
+            sink.field("capture.consumerScratchByteCount")
+            sink.int(capture.consumerScratchByteCount)
+            sink.field("capture.activeWindowByteCount")
+            sink.int(capture.activeWindowByteCount)
             sink.field("capture.workingMemoryByteCount")
             sink.int(capture.workingMemoryByteCount)
             sink.field("capture.coveredFrameCount")

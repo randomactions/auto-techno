@@ -9,8 +9,14 @@ package struct LiveOutputCaptureProvenance: Equatable, Sendable {
     package static let schemaVersion = 1
     package static let requiredQueueCapacity = 256
     package static let requiredMaximumPacketFrameCount = 1_024
-    package static let maximumWorkingMemoryByteCount =
+    package static let requiredQueueStorageByteCount = 2_105_536
+    package static let requiredConsumerScratchByteCount =
+        requiredMaximumPacketFrameCount * 2 * MemoryLayout<Float>.stride
+    package static let maximumActiveWindowByteCount =
         144_000 * 2 * MemoryLayout<Float>.stride
+    package static let maximumWorkingMemoryByteCount =
+        requiredQueueStorageByteCount + requiredConsumerScratchByteCount +
+        maximumActiveWindowByteCount
 
     package let packetCount: Int
     package let firstPacketSequence: UInt64
@@ -19,6 +25,9 @@ package struct LiveOutputCaptureProvenance: Equatable, Sendable {
     package let rejectedPacketDelta: UInt64
     package let queueCapacity: Int
     package let maximumPacketFrameCount: Int
+    package let queueStorageByteCount: Int
+    package let consumerScratchByteCount: Int
+    package let activeWindowByteCount: Int
     package let workingMemoryByteCount: Int
     package let coveredFrameCount: Int
     package let sampleDiscontinuityCount: Int
@@ -33,6 +42,9 @@ package struct LiveOutputCaptureProvenance: Equatable, Sendable {
         rejectedPacketDelta: UInt64,
         queueCapacity: Int,
         maximumPacketFrameCount: Int,
+        queueStorageByteCount: Int,
+        consumerScratchByteCount: Int,
+        activeWindowByteCount: Int,
         workingMemoryByteCount: Int,
         coveredFrameCount: Int,
         sampleDiscontinuityCount: Int,
@@ -46,6 +58,9 @@ package struct LiveOutputCaptureProvenance: Equatable, Sendable {
         self.rejectedPacketDelta = rejectedPacketDelta
         self.queueCapacity = queueCapacity
         self.maximumPacketFrameCount = maximumPacketFrameCount
+        self.queueStorageByteCount = queueStorageByteCount
+        self.consumerScratchByteCount = consumerScratchByteCount
+        self.activeWindowByteCount = activeWindowByteCount
         self.workingMemoryByteCount = workingMemoryByteCount
         self.coveredFrameCount = coveredFrameCount
         self.sampleDiscontinuityCount = sampleDiscontinuityCount
@@ -65,7 +80,11 @@ package struct LiveOutputCaptureProvenance: Equatable, Sendable {
               overlapFrameCount == 0,
               queueCapacity == Self.requiredQueueCapacity,
               maximumPacketFrameCount ==
-                Self.requiredMaximumPacketFrameCount else {
+                Self.requiredMaximumPacketFrameCount,
+              queueStorageByteCount ==
+                Self.requiredQueueStorageByteCount,
+              consumerScratchByteCount ==
+                Self.requiredConsumerScratchByteCount else {
             return false
         }
         let minimumPacketCount =
@@ -74,12 +93,21 @@ package struct LiveOutputCaptureProvenance: Equatable, Sendable {
         let sequenceDelta = lastPacketSequence.subtractingReportingOverflow(
             firstPacketSequence
         )
-        let expectedWorkingMemory = frameCount.multipliedReportingOverflow(
+        let expectedActiveWindow = frameCount.multipliedReportingOverflow(
             by: 2 * MemoryLayout<Float>.stride
         )
+        let queueAndScratch = queueStorageByteCount.addingReportingOverflow(
+            consumerScratchByteCount
+        )
+        let expectedWorkingMemory = queueAndScratch.partialValue
+            .addingReportingOverflow(expectedActiveWindow.partialValue)
         return packetCount >= minimumPacketCount &&
             !sequenceDelta.overflow &&
             sequenceDelta.partialValue == UInt64(packetCount - 1) &&
+            !expectedActiveWindow.overflow &&
+            activeWindowByteCount == expectedActiveWindow.partialValue &&
+            activeWindowByteCount <= Self.maximumActiveWindowByteCount &&
+            !queueAndScratch.overflow &&
             !expectedWorkingMemory.overflow &&
             workingMemoryByteCount == expectedWorkingMemory.partialValue &&
             workingMemoryByteCount <= Self.maximumWorkingMemoryByteCount
@@ -418,9 +446,9 @@ package enum LiveOutputWindowAnalyzer {
         }
     }
 
-    package static func analyze(
-        left: [Float],
-        right: [Float],
+    package static func analyze<Left, Right>(
+        left: Left,
+        right: Right,
         planIdentity: LiveOutputPlanSourceIdentity,
         routeGeneration: Int,
         controllerRevision: Int,
@@ -430,10 +458,18 @@ package enum LiveOutputWindowAnalyzer {
         artifacts: ProfessionalQualityPrimaryArtifacts? = nil,
         qualityPolicyVersion: String? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool = { false }
-    ) -> LiveOutputWindowEvidence? {
+    ) -> LiveOutputWindowEvidence? where
+        Left: RandomAccessCollection,
+        Right: RandomAccessCollection,
+        Left.Element == Float,
+        Right.Element == Float,
+        Left.Index == Int,
+        Right.Index == Int {
         guard let resolvedQualityPolicyVersion =
                 artifacts?.evaluator.policyVersion ?? qualityPolicyVersion,
               !cancellationRequested(),
+              left.startIndex == 0,
+              right.startIndex == 0,
               artifacts.map(currentArtifactsAreExact) ?? true,
               isCurrentQualityPolicyVersion(resolvedQualityPolicyVersion),
               artifacts.map({ _ in
@@ -476,8 +512,8 @@ package enum LiveOutputWindowAnalyzer {
             sampleRate: sampleRate,
             cancellationRequested: cancellationRequested
         ), let channelPeaks = BS1770AudioEvidence.stereoTruePeak(
-            leftChunks: [left],
-            rightChunks: [right],
+            left: left,
+            right: right,
             cancellationRequested: cancellationRequested
         ), loudness.integratedLoudness.isFinite,
            loudness.maximumMomentaryLoudness.isFinite,
@@ -644,10 +680,13 @@ package enum LiveOutputWindowAnalyzer {
             }
     }
 
-    private static func samplesAreFinite(
-        _ samples: [Float],
+    private static func samplesAreFinite<Samples>(
+        _ samples: Samples,
         cancellationRequested: @Sendable () -> Bool
-    ) -> Bool {
+    ) -> Bool where
+        Samples: RandomAccessCollection,
+        Samples.Element == Float,
+        Samples.Index == Int {
         for (index, sample) in samples.enumerated() {
             if index.isMultiple(of: 4_096), cancellationRequested() {
                 return false

@@ -16,6 +16,10 @@ private struct PhrasePreparationKey: Hashable, Sendable {
     let qualityPolicyVersion: String
     let qualityControllerFingerprint: String?
     let routeGeneration: Int
+    let incomingLiveMasterRevision: Int
+    let incomingLiveMasterStateFingerprint: String
+    let pendingLiveMasterProposalFingerprint: String?
+    let liveEarliestEligibleFutureSample: Int64?
 }
 
 private struct PhrasePreparationRequest: Sendable {
@@ -24,6 +28,7 @@ private struct PhrasePreparationRequest: Sendable {
     let incomingRenderState: RenderState
     let incomingGraphState: GeneratedDSPContinuationState
     let previousGraph: DSPGraphPlan?
+    let pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding?
 }
 
 private struct PreparedPhrase: Sendable {
@@ -65,7 +70,7 @@ private enum AutonomousPerformancePreparer {
             routeRecovery: request.key.routeRecovery,
             routeChannelCount: request.key.channelCount,
             routeGeneration: request.key.routeGeneration,
-            pendingLiveMasterBinding: nil,
+            pendingLiveMasterBinding: request.pendingLiveMasterBinding,
             evaluator: evaluator,
             cancellationRequested: { Task.isCancelled }
         ), !Task.isCancelled else { return nil }
@@ -84,7 +89,7 @@ private enum AutonomousPerformancePreparer {
 }
 
 @MainActor
-final class TechnoEngine: ObservableObject {
+package final class TechnoEngine: ObservableObject {
     enum PlaybackState: Equatable {
         case preparing
         case ready
@@ -139,7 +144,11 @@ final class TechnoEngine: ObservableObject {
     private var displayTimer: Timer?
 
     private var currentPhrase: PreparedPhrase?
-    private var preparedCache: [PhrasePreparationKey: PreparedPhrase] = [:]
+    private let liveFeedbackPreparation = LiveFeedbackPreparationOwner<
+        PhrasePreparationKey,
+        PreparedPhrase,
+        PhrasePreparationRequest
+    >()
     private var preparationTask: Task<PreparedPhrase?, Never>?
     private var preparationTaskSerial: UInt64 = 0
     private var activePreparationTaskSerial: UInt64?
@@ -161,14 +170,36 @@ final class TechnoEngine: ObservableObject {
     private var currentBarFrames: AVAudioFramePosition = 1
     private var scheduledVisuals: [ScheduledVisual] = []
     private var activeVisualStart: AVAudioFramePosition = -1
+    private var livePCMTransport: LivePCMTransport?
+    private var liveFeedbackCoordinator: LiveFeedbackCoordinator?
+    private var liveScheduledPhrases: [ScheduledPhraseRange: PreparedPhrase] = [:]
+    private let liveFeedbackOrchestrator: LiveFeedbackEngineOrchestrator
+    private let liveFeedbackCaptureLifecycle: LiveFeedbackCaptureLifecycle
+    private var liveFeedbackRuntime: LiveFeedbackRuntimeCoordinator {
+        liveFeedbackOrchestrator.runtime
+    }
+    private var liveScheduledLedger: ScheduledPhraseLedger {
+        liveFeedbackOrchestrator.ledger
+    }
+    private var liveClockMap: MixerPlayerClockMap? {
+        liveFeedbackOrchestrator.clockMap
+    }
+    private var pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding?
     private var isShutDown = false
     private var lifecycleGeneration: UInt64 = 0
 
-    init() {
+    package init(
+        liveFeedbackOrchestrator: LiveFeedbackEngineOrchestrator? = nil,
+        liveFeedbackCaptureLifecycle: LiveFeedbackCaptureLifecycle? = nil
+    ) {
         let director = AutonomousSessionDirector()
         qualityArtifacts = try? ProfessionalQualityPrimaryArtifacts.load()
         self.director = director
         sessionState = director.initialState()
+        self.liveFeedbackOrchestrator = liveFeedbackOrchestrator ??
+            LiveFeedbackEngineOrchestrator(routeGeneration: 0)
+        self.liveFeedbackCaptureLifecycle =
+            liveFeedbackCaptureLifecycle ?? LiveFeedbackCaptureLifecycle()
         audioEngine.attach(player)
         audioEngine.connect(player, to: audioEngine.mainMixerNode, format: nil)
         installConfigurationObserverIfNeeded()
@@ -214,6 +245,7 @@ final class TechnoEngine: ObservableObject {
             playbackState = .unavailable
             return
         }
+        ensureLivePCMTransport(format: format)
         playbackState = .preparing
         requestPreparation(PhrasePreparationRequest(
             key: PhrasePreparationKey(
@@ -226,12 +258,19 @@ final class TechnoEngine: ObservableObject {
                 qualityControllerFingerprint:
                     sessionState.quality.observedControllerStateFingerprint ??
                     sessionState.quality.acceptedControllerStateFingerprint,
-                routeGeneration: preparationEpoch.value
+                routeGeneration: preparationEpoch.value,
+                incomingLiveMasterRevision:
+                    sessionState.liveMasterHeadroom.revision,
+                incomingLiveMasterStateFingerprint:
+                    sessionState.liveMasterHeadroom.fingerprint,
+                pendingLiveMasterProposalFingerprint: nil,
+                liveEarliestEligibleFutureSample: nil
             ),
             sourceState: sessionState,
             incomingRenderState: RenderState(),
             incomingGraphState: GeneratedDSPContinuationState(),
-            previousGraph: nil
+            previousGraph: nil,
+            pendingLiveMasterBinding: nil
         ))
     }
 
@@ -255,7 +294,7 @@ final class TechnoEngine: ObservableObject {
         }
     }
 
-    func shutdown() {
+    package func shutdown() {
         guard !isShutDown else { return }
         isShutDown = true
         lifecycleGeneration &+= 1
@@ -270,7 +309,7 @@ final class TechnoEngine: ObservableObject {
         preparingKey = nil
         queuedPreparationRequest = nil
         activePreparationRequest = nil
-        preparedCache.removeAll(keepingCapacity: false)
+        liveFeedbackPreparation.resetSession()
         currentPhrase = nil
         // View disappearance is a complete transport boundary. A later
         // appearance restarts one coherent session instead of pairing an
@@ -282,8 +321,11 @@ final class TechnoEngine: ObservableObject {
         playbackState = .unavailable
         displayTimer?.invalidate()
         displayTimer = nil
-        player.stop()
-        audioEngine.stop()
+        liveFeedbackOrchestrator.shutdown {
+            self.quiesceAndStopLiveFeedbackCapture(
+                mode: .stop
+            )
+        }
         if let configurationObserver {
             NotificationCenter.default.removeObserver(configurationObserver)
             self.configurationObserver = nil
@@ -292,7 +334,9 @@ final class TechnoEngine: ObservableObject {
 
     private func requestPreparation(_ request: PhrasePreparationRequest) {
         guard !isShutDown else { return }
-        if let prepared = preparedCache.removeValue(forKey: request.key) {
+        if let prepared = liveFeedbackPreparation.removeCachedValue(
+            forKey: request.key
+        ) {
             acceptPreparedPhrase(prepared)
             return
         }
@@ -347,13 +391,47 @@ final class TechnoEngine: ObservableObject {
         guard phrase.prepared.commitEligible,
               phrase.prepared.incomingLiveMasterHeadroomState ==
                 phrase.request.sourceState.liveMasterHeadroom else {
+            if let rejectedProposal = phrase.request
+                .pendingLiveMasterBinding?.proposal.fingerprint,
+               pendingLiveMasterBinding?.proposal.fingerprint ==
+                rejectedProposal {
+                let sourcePhraseIndex = phrase.request
+                    .pendingLiveMasterBinding?.proposal.sourcePhraseIndex ?? -1
+                if let sourceOccurrence = liveScheduledLedger.playing,
+                   sourceOccurrence.phraseIndex == sourcePhraseIndex {
+                    liveFeedbackOrchestrator.rejectCorrectedSuccessor(
+                        sourceOccurrence: sourceOccurrence,
+                        targetPhraseIndex: phrase.request.key.phraseIndex,
+                        proposalFingerprint: rejectedProposal,
+                        expireCorrectedSuccessor: {
+                            self.expirePendingLiveFeedbackAtBoundary()
+                        }
+                    )
+                }
+            }
             if currentPhrase == nil { playbackState = .unavailable }
             return
         }
         guard currentPhrase == nil else {
             if phrase.request.sourceState.phraseIndex == sessionState.phraseIndex {
-                preparedCache[phrase.request.key] = phrase
+                liveFeedbackPreparation.insertCachedValue(
+                    phrase,
+                    forKey: phrase.request.key
+                )
+                if phrase.request.pendingLiveMasterBinding == nil,
+                   let source = currentPhrase {
+                    _ = liveFeedbackPreparation.rememberTargetReference(
+                        sourcePlan: source.prepared.plan,
+                        targetPlan: phrase.prepared.plan,
+                        routeGeneration: phrase.request.key.routeGeneration,
+                        sampleRate: phrase.request.key.sampleRate,
+                        occurrenceEpoch:
+                            liveFeedbackRuntime.occurrenceEpoch,
+                        basePayload: phrase.request
+                    )
+                }
                 trimPreparedCache()
+                refreshLiveFeedbackContexts()
             }
             return
         }
@@ -370,6 +448,9 @@ final class TechnoEngine: ObservableObject {
             liveMasterHeadroom:
                 phrase.prepared.liveMasterHeadroomContinuationState
         )
+        liveFeedbackRuntime.retainRecentSources(
+            currentPhraseIndex: sessionState.phraseIndex
+        )
         nextBlockIndex = 0
         if let firstWaveform = phrase.waveforms.first {
             waveform = firstWaveform
@@ -383,8 +464,38 @@ final class TechnoEngine: ObservableObject {
         }
     }
 
-    private func requestSuccessor(after phrase: PreparedPhrase) {
-        requestPreparation(PhrasePreparationRequest(
+    private func requestSuccessor(
+        after phrase: PreparedPhrase,
+        pendingBinding: PendingLiveMasterHeadroomBinding? = nil
+    ) {
+        let request = makeSuccessorRequest(
+            after: phrase,
+            pendingBinding: pendingBinding
+        )
+        if pendingBinding == nil,
+           !liveFeedbackOrchestrator.allowsUntrimmedPreparation(
+                sourcePhraseIndex: phrase.prepared.plan.phraseIndex,
+                targetPhraseIndex: phrase.prepared.plan.phraseIndex + 1
+           ) {
+            // A hold may retain a plan-owned target reference and a detached
+            // preparation recipe, but it never submits that untrimmed recipe.
+            _ = liveFeedbackPreparation.rebindTargetPayload(
+                sourcePlan: phrase.prepared.plan,
+                routeGeneration: request.key.routeGeneration,
+                sampleRate: request.key.sampleRate,
+                occurrenceEpoch: liveFeedbackRuntime.occurrenceEpoch,
+                basePayload: request
+            )
+            return
+        }
+        requestPreparation(request)
+    }
+
+    private func makeSuccessorRequest(
+        after phrase: PreparedPhrase,
+        pendingBinding: PendingLiveMasterHeadroomBinding? = nil
+    ) -> PhrasePreparationRequest {
+        PhrasePreparationRequest(
             key: PhrasePreparationKey(
                 phraseIndex: sessionState.phraseIndex,
                 sampleRate: phrase.request.key.sampleRate,
@@ -395,18 +506,27 @@ final class TechnoEngine: ObservableObject {
                 qualityControllerFingerprint:
                     sessionState.quality.observedControllerStateFingerprint ??
                     sessionState.quality.acceptedControllerStateFingerprint,
-                routeGeneration: preparationEpoch.value
+                routeGeneration: preparationEpoch.value,
+                incomingLiveMasterRevision:
+                    sessionState.liveMasterHeadroom.revision,
+                incomingLiveMasterStateFingerprint:
+                    sessionState.liveMasterHeadroom.fingerprint,
+                pendingLiveMasterProposalFingerprint:
+                    pendingBinding?.proposal.fingerprint,
+                liveEarliestEligibleFutureSample:
+                    pendingBinding?.proposal.earliestEligibleFutureSample
             ),
             sourceState: sessionState,
             incomingRenderState: phrase.prepared.endingRenderState,
             incomingGraphState: phrase.prepared.endingGraphState,
-            previousGraph: phrase.prepared.graph
-        ))
+            previousGraph: phrase.prepared.graph,
+            pendingLiveMasterBinding: pendingBinding
+        )
     }
 
     private func trimPreparedCache() {
-        preparedCache = preparedCache.filter { key, _ in
-            key.phraseIndex == sessionState.phraseIndex && !key.routeRecovery
+        liveFeedbackPreparation.removeCached { key, _ in
+            key.phraseIndex != sessionState.phraseIndex || key.routeRecovery
         }
     }
 
@@ -417,9 +537,19 @@ final class TechnoEngine: ObservableObject {
             return
         }
         recoveryTask?.cancel()
-        player.stop()
-        audioEngine.stop()
+        liveFeedbackOrchestrator.pause {
+            self.quiesceAndStopLiveFeedbackCapture(
+                mode: .stop
+            )
+        }
+        guard resetLivePlaybackTimeline() else {
+            playbackState = .unavailable
+            return
+        }
         resetSchedule()
+        ensureLivePCMTransport(
+            format: audioEngine.mainMixerNode.outputFormat(forBus: 0)
+        )
         guard scheduleNextBar(first: true) else {
             if playbackState == .preparing || playbackState == .recovering {
                 // A synchronous route mismatch was discovered while honoring
@@ -445,13 +575,23 @@ final class TechnoEngine: ObservableObject {
         guard playbackState == .playing else { return }
         displayTimer?.invalidate()
         displayTimer = nil
-        player.pause()
-        audioEngine.pause()
+        liveFeedbackOrchestrator.pause {
+            self.quiesceAndStopLiveFeedbackCapture(
+                mode: .pause,
+                preserveScheduledPhrases: true
+            )
+        }
         playbackState = .paused
     }
 
     private func resume() {
         guard playbackState == .paused else { return }
+        liveFeedbackOrchestrator.resume(
+            routeGeneration: preparationEpoch.value
+        )
+        ensureLivePCMTransport(
+            format: audioEngine.mainMixerNode.outputFormat(forBus: 0)
+        )
         do {
             try audioEngine.start()
             player.play()
@@ -466,8 +606,15 @@ final class TechnoEngine: ObservableObject {
         guard !isShutDown else { return }
         displayTimer?.invalidate()
         displayTimer = nil
-        player.stop()
-        audioEngine.stop()
+        liveFeedbackOrchestrator.captureFailed {
+            self.quiesceAndStopLiveFeedbackCapture(
+                mode: .stop
+            )
+        }
+        guard resetLivePlaybackTimeline() else {
+            playbackState = .unavailable
+            return
+        }
         playbackState = .recovering
         recoveryTask?.cancel()
         recoveryTask = Task { @MainActor [weak self] in
@@ -478,7 +625,13 @@ final class TechnoEngine: ObservableObject {
                     catch { return }
                 }
                 guard !Task.isCancelled, !self.isShutDown else { return }
+                self.liveFeedbackOrchestrator.resume(
+                    routeGeneration: self.preparationEpoch.value
+                )
                 self.resetSchedule()
+                self.ensureLivePCMTransport(
+                    format: self.audioEngine.mainMixerNode.outputFormat(forBus: 0)
+                )
                 guard self.scheduleNextBar(first: true) else { continue }
                 do {
                     try self.audioEngine.start()
@@ -497,17 +650,50 @@ final class TechnoEngine: ObservableObject {
         }
     }
 
+    /// The player starts again at sample zero after a stop. Rotate a separate
+    /// occurrence epoch so old high sample ranges cannot authenticate results
+    /// against the new low timeline, while preserving the accepted-PCM hold.
+    private func resetLivePlaybackTimeline() -> Bool {
+        guard liveFeedbackOrchestrator.playbackTimelineReset(
+            routeGeneration: preparationEpoch.value
+        ) else { return false }
+        if let source = currentPhrase {
+            _ = liveFeedbackPreparation.rebindTargetOccurrence(
+                sourcePlan: source.prepared.plan,
+                routeGeneration: preparationEpoch.value,
+                occurrenceEpoch: liveFeedbackRuntime.occurrenceEpoch
+            )
+        }
+        return true
+    }
+
     private func handleAudioConfigurationChange() {
         guard !isShutDown else { return }
         let shouldResume = playbackState == .playing || playbackState == .recovering
         let rebuildingPhrase = currentPhrase
         let rebuildingRequest = rebuildingPhrase.map { phrase in
-            PhrasePreparationRequest(
+            var incomingRenderState = phrase.request.incomingRenderState
+            incomingRenderState.automaticMixState =
+                phrase.prepared.endingRenderState.automaticMixState
+            incomingRenderState.liveMasterHeadroomState =
+                phrase.prepared.liveMasterHeadroomContinuationState
+            let source = phrase.request.sourceState
+            let committedSource = AutonomousSessionState(
+                rootSeed: source.rootSeed,
+                phraseIndex: source.phraseIndex,
+                intent: source.intent,
+                memory: source.memory,
+                quality: phrase.prepared.qualityContinuationState,
+                liveMasterHeadroom:
+                    phrase.prepared.liveMasterHeadroomContinuationState
+            )
+            return PhrasePreparationRequest(
                 key: phrase.request.key,
-                sourceState: phrase.request.sourceState,
-                incomingRenderState: phrase.request.incomingRenderState,
+                sourceState: committedSource,
+                incomingRenderState: incomingRenderState,
                 incomingGraphState: phrase.request.incomingGraphState,
-                previousGraph: phrase.prepared.graph
+                previousGraph: phrase.prepared.graph,
+                pendingLiveMasterBinding: nil
             )
         } ?? routeRecoveryRequest ?? activePreparationRequest
         if let rebuildingRequest {
@@ -519,11 +705,18 @@ final class TechnoEngine: ObservableObject {
         recoveryTask = nil
         displayTimer?.invalidate()
         displayTimer = nil
-        player.stop()
-        audioEngine.stop()
         preparationTask?.cancel()
         preparationEpoch.invalidate()
-        preparedCache.removeAll(keepingCapacity: false)
+        liveFeedbackPreparation.invalidateTargetPayloadForRouteChange()
+        liveFeedbackOrchestrator.routeReset(
+            routeGeneration: preparationEpoch.value,
+            stopCapture: {
+                self.quiesceAndStopLiveFeedbackCapture(
+                    mode: .stop
+                )
+            }
+        )
+        liveFeedbackPreparation.removeAllCached(keepingCapacity: false)
         currentPhrase = nil
         queuedPreparationRequest = nil
         resetSchedule()
@@ -545,6 +738,7 @@ final class TechnoEngine: ObservableObject {
             playbackState = .unavailable
             return
         }
+        ensureLivePCMTransport(format: format)
         sessionState = rebuildingRequest.sourceState
         let recoveryRequest = PhrasePreparationRequest(
             key: PhrasePreparationKey(
@@ -557,15 +751,423 @@ final class TechnoEngine: ObservableObject {
                 qualityControllerFingerprint:
                     sessionState.quality.observedControllerStateFingerprint ??
                     sessionState.quality.acceptedControllerStateFingerprint,
-                routeGeneration: preparationEpoch.value
+                routeGeneration: preparationEpoch.value,
+                incomingLiveMasterRevision:
+                    sessionState.liveMasterHeadroom.revision,
+                incomingLiveMasterStateFingerprint:
+                    sessionState.liveMasterHeadroom.fingerprint,
+                pendingLiveMasterProposalFingerprint: nil,
+                liveEarliestEligibleFutureSample: nil
             ),
             sourceState: sessionState,
             incomingRenderState: rebuildingRequest.incomingRenderState,
             incomingGraphState: rebuildingRequest.incomingGraphState,
-            previousGraph: rebuildingRequest.previousGraph
+            previousGraph: rebuildingRequest.previousGraph,
+            pendingLiveMasterBinding: nil
         )
         routeRecoveryRequest = recoveryRequest
         requestPreparation(recoveryRequest)
+    }
+
+    private func ensureLivePCMTransport(format: AVAudioFormat) {
+        guard MixerPlayerClockMap.isSupported(sampleRate: format.sampleRate),
+              format.commonFormat == .pcmFormatFloat32,
+              !format.isInterleaved,
+              format.channelCount == 2 else {
+            liveFeedbackOrchestrator.captureFailed {
+                self.quiesceAndStopLiveFeedbackCapture(
+                    mode: .stop
+                )
+            }
+            return
+        }
+        // Clock probes require a running engine. Queue creation, consumer
+        // start, and tap installation are intentionally deferred until two
+        // exact probes establish the map.
+    }
+
+    /// Producer removal always precedes consumer join and optional queue
+    /// destruction. This method is never called from an audio callback.
+    private func quiesceAndStopLiveFeedbackCapture(
+        mode: LiveFeedbackEngineQuiescenceMode,
+        preserveScheduledPhrases: Bool = false
+    ) {
+        liveFeedbackCaptureLifecycle.quiesceAndTearDown(
+            mode: mode,
+            quiescePlayer: { mode in
+                switch mode {
+                case .pause: self.player.pause()
+                case .stop: self.player.stop()
+                }
+            },
+            quiesceEngine: { mode in
+                switch mode {
+                case .pause: self.audioEngine.pause()
+                case .stop: self.audioEngine.stop()
+                }
+            },
+            removeTap: {
+                self.livePCMTransport?.removeTap()
+            },
+            cancelAndJoinConsumer: {
+                let proof = self.liveFeedbackCoordinator?.stopAndWait()
+                self.liveFeedbackCoordinator = nil
+                return proof
+            },
+            destroyQueue: { stopProof in
+                if let stopProof {
+                    _ = self.livePCMTransport?
+                        .destroyQueueAfterConsumerStopped(proof: stopProof)
+                } else {
+                    _ = self.livePCMTransport?
+                        .destroyQueueBeforeConsumerStarts()
+                }
+                self.livePCMTransport = nil
+                if !preserveScheduledPhrases {
+                    self.liveScheduledPhrases.removeAll(
+                        keepingCapacity: false
+                    )
+                }
+            }
+        )
+        expirePendingLiveFeedbackAtBoundary()
+    }
+
+    private func updateLiveClockAndWorker() {
+        guard playbackState == .playing,
+              let mixerTime = audioEngine.mainMixerNode.lastRenderTime,
+              mixerTime.isSampleTimeValid,
+              let playerTime = player.playerTime(forNodeTime: mixerTime),
+              playerTime.isSampleTimeValid else { return }
+        let probe = MixerPlayerClockProbe(
+            mixerSample: Double(mixerTime.sampleTime),
+            playerSample: Double(playerTime.sampleTime),
+            mixerSampleRate: mixerTime.sampleRate,
+            playerSampleRate: playerTime.sampleRate
+        )
+        let observation = liveFeedbackOrchestrator.observeClock(
+            probe,
+            startCapture: { map, identity, runtime in
+                self.startLiveFeedbackCapture(
+                    map: map,
+                    identity: identity,
+                    runtime: runtime
+                )
+            }
+        )
+        if observation == .recoveryRequired {
+            beginRecovery()
+            return
+        }
+        if case .captureStarted = observation {
+            synchronizeLiveScheduledPhraseKeys()
+            if let playing = liveScheduledLedger.playing {
+                livePCMTransport?.setGeneration(
+                    routeGeneration: playing.routeGeneration,
+                    controllerRevision: playing.controllerRevision
+                )
+            }
+            refreshLiveFeedbackContexts()
+        }
+    }
+
+    private func synchronizeLiveScheduledPhraseKeys() {
+        var additions: [(ScheduledPhraseRange, PreparedPhrase)] = []
+        for range in liveScheduledLedger.retainedRanges
+            where liveScheduledPhrases[range] == nil {
+            if let phrase = liveScheduledPhrases.first(where: { old, _ in
+                old.phraseIndex == range.phraseIndex &&
+                    old.planFingerprint == range.planFingerprint &&
+                    old.playerSampleRange == range.playerSampleRange &&
+                    old.routeGeneration == range.routeGeneration
+            })?.value {
+                additions.append((range, phrase))
+            }
+        }
+        for (range, phrase) in additions {
+            liveScheduledPhrases[range] = phrase
+        }
+        liveScheduledPhrases = liveScheduledPhrases.filter {
+            liveScheduledLedger.contains($0.key)
+        }
+    }
+
+    private func startLiveFeedbackCapture(
+        map: MixerPlayerClockMap,
+        identity: LiveFeedbackWorkerIdentity,
+        runtime: LiveFeedbackRuntimeCoordinator
+    ) -> Bool {
+        guard let transport = LivePCMTransport() else {
+            return false
+        }
+        guard let coordinator = LiveFeedbackCoordinator(
+                transport: transport,
+                sampleRate: map.sampleRate,
+                clockMap: map,
+                identity: identity,
+                artifacts: qualityArtifacts,
+                resultHandler: { [weak self] result in
+                    self?.handleLiveFeedbackResult(result)
+                }
+              ) else {
+            _ = transport.destroyQueueBeforeConsumerStarts()
+            return false
+        }
+        transport.setGeneration(
+            routeGeneration: preparationEpoch.value,
+            controllerRevision: sessionState.liveMasterHeadroom.revision
+        )
+        guard coordinator.start() else {
+            _ = transport.destroyQueueBeforeConsumerStarts()
+            return false
+        }
+        guard liveFeedbackCaptureLifecycle.startProducer(
+            consumerDidStart: {
+                runtime.consumerDidStart(identity: identity)
+            },
+            producerDidStart: {
+                runtime.producerDidStart(identity: identity)
+            },
+            installTap: {
+                transport.installTap(
+                    on: self.audioEngine.mainMixerNode,
+                    nativeStereoFormat: self.audioEngine.mainMixerNode
+                        .outputFormat(forBus: 0)
+                )
+            }
+        ) else {
+            // Permission precedes installation, and installation cannot return
+            // false after publishing a tap. No producer quiescence fence is
+            // required on this pre-producer cleanup path.
+            assert(!transport.tapIsInstalled)
+            if let proof = coordinator.stopAndWait() {
+                _ = transport.destroyQueueAfterConsumerStopped(proof: proof)
+            }
+            return false
+        }
+        livePCMTransport = transport
+        liveFeedbackCoordinator = coordinator
+        refreshLiveFeedbackContexts()
+        return true
+    }
+
+    private func registerScheduledOccurrence(
+        phrase: PreparedPhrase,
+        startSample: Int64
+    ) {
+        var totalFrames: Int64 = 0
+        for block in phrase.prepared.blocks {
+            let next = totalFrames.addingReportingOverflow(
+                Int64(min(block.left.count, block.right.count))
+            )
+            guard !next.overflow else { return }
+            totalFrames = next.partialValue
+        }
+        let end = startSample.addingReportingOverflow(totalFrames)
+        guard totalFrames > 0, !end.overflow else { return }
+        let sourceIdentity = LiveOutputPlanSourceIdentity(
+            plan: phrase.prepared.plan
+        )
+        let controllerState =
+            phrase.prepared.liveMasterHeadroomContinuationState
+        let draft = LiveFeedbackScheduledOccurrenceDraft(
+            phraseIndex: phrase.prepared.plan.phraseIndex,
+            planFingerprint: sourceIdentity.planFingerprint,
+            playerSampleRange: startSample..<end.partialValue,
+            sampleRate: phrase.request.key.sampleRate,
+            routeGeneration: preparationEpoch.value,
+            occurrenceEpoch: liveFeedbackRuntime.occurrenceEpoch,
+            controllerRevision:
+                controllerState.revision,
+            qualityPolicyVersion:
+                phrase.prepared.qualityContinuationState.policyVersion,
+            evaluatorVersion: ProfessionalQualityPrimaryEvaluator
+                .evaluatorVersionIdentifier,
+            controllerPolicyVersion: LiveFeedbackContract
+                .controllerPolicyVersion,
+            controllerStateFingerprint:
+                AutonomousCandidateFingerprint.combinedController(
+                    kickCorrectionDB: phrase.prepared.endingRenderState
+                        .automaticMixState.kickCorrectionDB,
+                    liveMasterHeadroom: controllerState,
+                    proposalFingerprint: nil
+                ),
+            appliedMasterTrimDB: controllerState.committedTrimDB,
+            applicableCheckpoints: sourceIdentity.applicableCheckpoints
+        )
+        guard let range = liveFeedbackOrchestrator.stageOccurrence(draft) else {
+            return
+        }
+        liveScheduledPhrases[range] = phrase
+        liveScheduledPhrases = liveScheduledPhrases.filter {
+            liveScheduledLedger.contains($0.key)
+        }
+        livePCMTransport?.setGeneration(
+            routeGeneration: range.routeGeneration,
+            controllerRevision: range.controllerRevision
+        )
+        refreshLiveFeedbackContexts()
+    }
+
+    private func promoteScheduledLiveRangeIfNeeded(playerSample: Int64) {
+        guard let successor = liveScheduledLedger.scheduledSuccessor,
+              playerSample >= successor.playerSampleRange.lowerBound else {
+            return
+        }
+        liveFeedbackOrchestrator.promote(playerSample: playerSample)
+        liveScheduledPhrases = liveScheduledPhrases.filter {
+            liveScheduledLedger.contains($0.key)
+        }
+        livePCMTransport?.setGeneration(
+            routeGeneration: successor.routeGeneration,
+            controllerRevision: successor.controllerRevision
+        )
+        refreshLiveFeedbackContexts()
+    }
+
+    private func refreshLiveFeedbackContexts() {
+        guard let coordinator = liveFeedbackCoordinator else { return }
+        var contexts: [LiveFeedbackAnalysisContext] = []
+        if let sourceRange = liveScheduledLedger.playing,
+           liveScheduledLedger.scheduledSuccessor == nil,
+           let source = liveScheduledPhrases[sourceRange],
+           let context = liveFeedbackPreparation.analysisContext(
+                sourceRange: sourceRange,
+                sourcePlan: source.prepared.plan,
+                incomingState:
+                    source.prepared.liveMasterHeadroomContinuationState,
+                controllerStateFingerprint:
+                    AutonomousCandidateFingerprint.combinedController(
+                        kickCorrectionDB: source.prepared.endingRenderState
+                            .automaticMixState.kickCorrectionDB,
+                        liveMasterHeadroom: source.prepared
+                            .liveMasterHeadroomContinuationState,
+                        proposalFingerprint: nil
+                    ),
+                qualityPolicyVersion:
+                    source.prepared.qualityContinuationState.policyVersion
+           ) {
+            contexts.append(context)
+        }
+        coordinator.update(ledger: liveScheduledLedger, contexts: contexts)
+    }
+
+    private func handleLiveFeedbackResult(_ result: LiveFeedbackWorkerResult) {
+        guard !isShutDown,
+              playbackState == .playing,
+              result.identity.routeGeneration == preparationEpoch.value,
+              result.sourceRange.routeGeneration == preparationEpoch.value,
+              let clockMap = liveClockMap,
+              result.sourceRange.isStructurallyValid(clockMap: clockMap),
+              liveScheduledLedger.isExactPlayingOccurrence(result.sourceRange),
+              result.binding.proposal.sourcePhraseIndex ==
+                result.sourceRange.phraseIndex,
+              result.binding.proposal.sourcePlanFingerprint ==
+                result.sourceRange.planFingerprint,
+              result.binding.proposal.incomingRevision ==
+                sessionState.liveMasterHeadroom.revision,
+              result.binding.proposal.incomingStateFingerprint ==
+                sessionState.liveMasterHeadroom.fingerprint else { return }
+        let targetPhraseIndex = result.sourceRange.phraseIndex + 1
+        guard let baseRequest = liveFeedbackPreparation.correctionPayload(
+            sourceRange: result.sourceRange,
+            eligibleTargetIdentity: result.binding.eligibleTarget.planIdentity
+        ), liveFeedbackOrchestrator.authorize(
+            identity: result.identity,
+            sourceOccurrence: result.sourceRange,
+            targetPhraseIndex: targetPhraseIndex,
+            proposalFingerprint: result.binding.proposal.fingerprint
+        ) == .invalidateUnscheduledSuccessor else { return }
+
+        liveFeedbackPreparation.removeCached { key, value in
+            key.phraseIndex == targetPhraseIndex &&
+                key.pendingLiveMasterProposalFingerprint == nil &&
+                value.request.sourceState.liveMasterHeadroom ==
+                    sessionState.liveMasterHeadroom
+        }
+        if activePreparationRequest?.key == baseRequest.key {
+            preparationTask?.cancel()
+            preparationTask = nil
+            activePreparationTaskSerial = nil
+            preparingKey = nil
+            activePreparationRequest = nil
+        }
+        if queuedPreparationRequest?.key == baseRequest.key {
+            queuedPreparationRequest = nil
+        }
+
+        pendingLiveMasterBinding = result.binding
+        let correctedKey = PhrasePreparationKey(
+            phraseIndex: baseRequest.key.phraseIndex,
+            sampleRate: baseRequest.key.sampleRate,
+            channelCount: baseRequest.key.channelCount,
+            routeRecovery: false,
+            qualityRevision: baseRequest.key.qualityRevision,
+            qualityPolicyVersion: baseRequest.key.qualityPolicyVersion,
+            qualityControllerFingerprint:
+                baseRequest.key.qualityControllerFingerprint,
+            routeGeneration: baseRequest.key.routeGeneration,
+            incomingLiveMasterRevision:
+                baseRequest.key.incomingLiveMasterRevision,
+            incomingLiveMasterStateFingerprint:
+                baseRequest.key.incomingLiveMasterStateFingerprint,
+            pendingLiveMasterProposalFingerprint:
+                result.binding.proposal.fingerprint,
+            liveEarliestEligibleFutureSample:
+                result.binding.proposal.earliestEligibleFutureSample
+        )
+        requestPreparation(PhrasePreparationRequest(
+            key: correctedKey,
+            sourceState: baseRequest.sourceState,
+            incomingRenderState: baseRequest.incomingRenderState,
+            incomingGraphState: baseRequest.incomingGraphState,
+            previousGraph: baseRequest.previousGraph,
+            pendingLiveMasterBinding: result.binding
+        ))
+    }
+
+    private func expirePendingLiveFeedbackAtBoundary() {
+        guard let proposalFingerprint = pendingLiveMasterBinding?
+            .proposal.fingerprint else { return }
+        liveFeedbackPreparation.removeCached { key, _ in
+            key.pendingLiveMasterProposalFingerprint == proposalFingerprint
+        }
+        if activePreparationRequest?.key
+            .pendingLiveMasterProposalFingerprint == proposalFingerprint {
+            preparationTask?.cancel()
+            preparationTask = nil
+            activePreparationTaskSerial = nil
+            preparingKey = nil
+            activePreparationRequest = nil
+        }
+        if queuedPreparationRequest?.key
+            .pendingLiveMasterProposalFingerprint == proposalFingerprint {
+            queuedPreparationRequest = nil
+        }
+        pendingLiveMasterBinding = nil
+    }
+
+    /// A live-corrected target may never silently reappear as an untrimmed
+    /// cache entry or preparation after its accepted-PCM hold is latched.
+    private func purgeUntrimmedSuccessor(targetPhraseIndex: Int) {
+        liveFeedbackPreparation.removeCached { key, _ in
+            key.phraseIndex == targetPhraseIndex &&
+                key.pendingLiveMasterProposalFingerprint == nil
+        }
+        if activePreparationRequest?.key.phraseIndex == targetPhraseIndex,
+           activePreparationRequest?.key
+            .pendingLiveMasterProposalFingerprint == nil {
+            preparationTask?.cancel()
+            preparationTask = nil
+            activePreparationTaskSerial = nil
+            preparingKey = nil
+            activePreparationRequest = nil
+        }
+        if queuedPreparationRequest?.key.phraseIndex == targetPhraseIndex,
+           queuedPreparationRequest?.key
+            .pendingLiveMasterProposalFingerprint == nil {
+            queuedPreparationRequest = nil
+        }
     }
 
     private func resetSchedule() {
@@ -576,6 +1178,12 @@ final class TechnoEngine: ObservableObject {
         activeVisualStart = -1
         playhead = 0
         barWithinScene = 1
+        liveFeedbackOrchestrator.resetSchedule()
+        liveScheduledPhrases.removeAll(keepingCapacity: false)
+        liveFeedbackCoordinator?.update(
+            ledger: liveScheduledLedger,
+            contexts: []
+        )
     }
 
     @discardableResult
@@ -592,11 +1200,58 @@ final class TechnoEngine: ObservableObject {
                 qualityControllerFingerprint:
                     sessionState.quality.observedControllerStateFingerprint ??
                     sessionState.quality.acceptedControllerStateFingerprint,
-                routeGeneration: preparationEpoch.value
+                routeGeneration: preparationEpoch.value,
+                incomingLiveMasterRevision:
+                    sessionState.liveMasterHeadroom.revision,
+                incomingLiveMasterStateFingerprint:
+                    sessionState.liveMasterHeadroom.fingerprint,
+                pendingLiveMasterProposalFingerprint:
+                    pendingLiveMasterBinding?.proposal.fingerprint,
+                liveEarliestEligibleFutureSample:
+                    pendingLiveMasterBinding?.proposal
+                        .earliestEligibleFutureSample
             )
-            let cachedSuccessor = preparedCache.removeValue(forKey: nextKey)
-            switch AutonomousPhraseBoundaryPolicy.decide(successorPrepared: cachedSuccessor != nil) {
-            case .advance:
+            let sourcePhraseIndex = phrase.prepared.plan.phraseIndex
+            let targetPhraseIndex = sourcePhraseIndex + 1
+            let untrimmedPreparationAllowed = liveFeedbackOrchestrator
+                .allowsUntrimmedPreparation(
+                    sourcePhraseIndex: sourcePhraseIndex,
+                    targetPhraseIndex: targetPhraseIndex
+                )
+            if !untrimmedPreparationAllowed {
+                purgeUntrimmedSuccessor(targetPhraseIndex: targetPhraseIndex)
+            }
+            let cachedSuccessor = untrimmedPreparationAllowed ||
+                nextKey.pendingLiveMasterProposalFingerprint != nil
+                ? liveFeedbackPreparation.removeCachedValue(forKey: nextKey)
+                : nil
+            let boundaryDecision = AutonomousPhraseBoundaryPolicy.decide(
+                successorPrepared: cachedSuccessor != nil
+            )
+            var runtimeAllowsAdvance = false
+            var runtimeRequiresRepeat = false
+            if pendingLiveMasterBinding != nil || !untrimmedPreparationAllowed {
+                liveFeedbackOrchestrator.performBoundary(
+                    sourcePhraseIndex: sourcePhraseIndex,
+                    targetPhraseIndex: targetPhraseIndex,
+                    correctedSuccessorAvailable: cachedSuccessor != nil,
+                    expireCorrectedSuccessor: {
+                        self.expirePendingLiveFeedbackAtBoundary()
+                        self.purgeUntrimmedSuccessor(
+                            targetPhraseIndex: targetPhraseIndex
+                        )
+                    },
+                    advanceCorrectedSuccessor: {
+                        runtimeAllowsAdvance = true
+                    },
+                    repeatAcceptedPCM: {
+                        runtimeRequiresRepeat = true
+                    }
+                )
+            }
+            if boundaryDecision == .advance &&
+                (pendingLiveMasterBinding == nil &&
+                    untrimmedPreparationAllowed || runtimeAllowsAdvance) {
                 guard let next = cachedSuccessor else { return false }
                 currentPhrase = next
                 phrase = next
@@ -607,14 +1262,28 @@ final class TechnoEngine: ObservableObject {
                     liveMasterHeadroom:
                         next.prepared.liveMasterHeadroomContinuationState
                 )
+                liveFeedbackRuntime.retainRecentSources(
+                    currentPhraseIndex: sessionState.phraseIndex
+                )
+                liveFeedbackPreparation.completeSourceAdvance(
+                    sourcePhraseIndex: sourcePhraseIndex
+                )
+                if next.request.pendingLiveMasterBinding != nil {
+                    pendingLiveMasterBinding = nil
+                }
                 nextBlockIndex = 0
                 requestSuccessor(after: next)
-            case .repeatCurrentWithFrozenTopology:
+            } else if boundaryDecision == .repeatCurrentWithFrozenTopology ||
+                runtimeRequiresRepeat {
                 // Never leave the player without a queued bar. Repeating the
                 // coherent current phrase freezes topology and avoids any
                 // rendering or blocking while the successor finishes.
                 nextBlockIndex = 0
-                requestSuccessor(after: phrase)
+                if pendingLiveMasterBinding == nil {
+                    requestSuccessor(after: phrase)
+                }
+            } else {
+                return false
             }
         }
 
@@ -635,11 +1304,20 @@ final class TechnoEngine: ObservableObject {
         let startSample: AVAudioFramePosition
         if first {
             startSample = 0
+        } else {
+            startSample = nextScheduleSample
+        }
+        if blockIndex == 0 {
+            registerScheduledOccurrence(
+                phrase: phrase,
+                startSample: startSample
+            )
+        }
+        if first {
             player.scheduleBuffer(buffer)
             nextScheduleSample = frameLength
             currentBarFrames = frameLength
         } else {
-            startSample = nextScheduleSample
             player.scheduleBuffer(buffer, at: AVAudioTime(sampleTime: startSample, atRate: format.sampleRate))
             nextScheduleSample += frameLength
         }
@@ -671,6 +1349,9 @@ final class TechnoEngine: ObservableObject {
               let nodeTime = player.lastRenderTime,
               let playerTime = player.playerTime(forNodeTime: nodeTime) else { return }
         let sample = max(0, playerTime.sampleTime)
+        updateLiveClockAndWorker()
+        guard playbackState == .playing else { return }
+        promoteScheduledLiveRangeIfNeeded(playerSample: sample)
 
         if let visual = scheduledVisuals.last(where: { $0.startSample <= sample }) {
             if activeVisualStart != visual.startSample {

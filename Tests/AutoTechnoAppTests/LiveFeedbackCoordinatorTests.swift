@@ -1,8 +1,198 @@
 import AutoTechnoApp
+import AutoTechnoCore
+import AutoTechnoDSP
+import CAutoTechnoRealtime
+import Dispatch
+import Foundation
 import Testing
 
 @Suite("Live feedback scheduled-window coordinator")
 struct LiveFeedbackCoordinatorTests {
+    @Test("Scheduled occurrence provenance rejects mapped-range and policy tampering")
+    func scheduledOccurrenceBindsExactRuntimeProvenance() {
+        let map = MixerPlayerClockMap(sampleOffset: 512, sampleRate: 44_100)!
+        let baseline = ScheduledPhraseRange(
+            phraseIndex: 20,
+            planFingerprint: "0123456789abcdef",
+            playerSampleRange: 20_000..<170_000,
+            mixerSampleRange: 19_488..<169_488,
+            sampleRate: 44_100,
+            routeGeneration: 3,
+            controllerRevision: 9,
+            qualityPolicyVersion: "policy-exact",
+            evaluatorVersion: ProfessionalQualityPrimaryEvaluator
+                .evaluatorVersionIdentifier,
+            controllerPolicyVersion: LiveFeedbackContract
+                .controllerPolicyVersion,
+            controllerStateFingerprint: "fedcba9876543210",
+            appliedMasterTrimDB: -0.5,
+            applicableCheckpoints: [.longContinuation],
+            earliestEligibleFutureSample: 170_000
+        )
+        #expect(baseline.isStructurallyValid(clockMap: map))
+
+        let badMap = ScheduledPhraseRange(
+            copying: baseline,
+            mixerSampleRange: 19_489..<169_489
+        )
+        let badEvaluator = ScheduledPhraseRange(
+            copying: baseline,
+            evaluatorVersion: "forged-evaluator"
+        )
+        let badTrim = ScheduledPhraseRange(
+            copying: baseline,
+            appliedMasterTrimDB: 0.25
+        )
+        #expect(!badMap.isStructurallyValid(clockMap: map))
+        #expect(!badEvaluator.isStructurallyValid(clockMap: map))
+        #expect(!badTrim.isStructurallyValid(clockMap: map))
+    }
+
+    @Test("Cancellation interrupts an in-flight worker before queue destruction")
+    func cancellationInterruptsWorkerBeforeDestruction() throws {
+        let transport = try #require(LivePCMTransport())
+        let identity = LiveFeedbackWorkerIdentity(
+            lifecycleToken: 3,
+            coordinatorID: 2,
+            routeGeneration: 7
+        )
+        let started = DispatchSemaphore(value: 0)
+        let cancelled = DispatchSemaphore(value: 0)
+        let analysisStartHook:
+            @Sendable (LiveFeedbackCancellationToken) -> Void = {
+                cancellation in
+                started.signal()
+                while !cancellation.isCancelled {
+                    Thread.sleep(forTimeInterval: 0.001)
+                }
+                cancelled.signal()
+            }
+        let resultHandler:
+            @MainActor @Sendable (LiveFeedbackWorkerResult) -> Void = { _ in }
+        let candidate = LiveFeedbackCoordinator(
+            transport: transport,
+            sampleRate: 44_100,
+            clockMap: MixerPlayerClockMap(
+                sampleOffset: 0,
+                sampleRate: 44_100
+            )!,
+            identity: identity,
+            artifacts: nil,
+            analysisStartHook: analysisStartHook,
+            resultHandler: resultHandler
+        )
+        let coordinator = try #require(candidate)
+        #expect(!transport.consumerIsBound)
+        #expect(coordinator.start())
+        #expect(transport.consumerIsBound)
+        #expect(!transport.destroyQueueBeforeConsumerStarts())
+        coordinator.enqueueAnalysisHookForTesting()
+        #expect(started.wait(timeout: .now() + 1) == .success)
+
+        let began = ContinuousClock.now
+        let proof = try #require(coordinator.stopAndWait())
+        let elapsed = began.duration(to: .now)
+
+        #expect(elapsed < .seconds(1))
+        #expect(cancelled.wait(timeout: .now()) == .success)
+        #expect(transport.consumerIsBound)
+        #expect(transport.destroyQueueAfterConsumerStopped(proof: proof))
+        #expect(!transport.consumerIsBound)
+    }
+
+    @MainActor
+    @Test("Production lifecycle quiesces before real transport join and destruction")
+    func lifecycleOwnsRealTransportDestruction() throws {
+        let transport = try #require(LivePCMTransport())
+        let identity = LiveFeedbackWorkerIdentity(
+            lifecycleToken: 4,
+            coordinatorID: 8,
+            routeGeneration: 2
+        )
+        let resultHandler:
+            @MainActor @Sendable (LiveFeedbackWorkerResult) -> Void = { _ in }
+        let candidate = LiveFeedbackCoordinator(
+            transport: transport,
+            sampleRate: 48_000,
+            clockMap: MixerPlayerClockMap(
+                sampleOffset: 0,
+                sampleRate: 48_000
+            )!,
+            identity: identity,
+            artifacts: nil,
+            resultHandler: resultHandler
+        )
+        let coordinator = try #require(candidate)
+        #expect(coordinator.start())
+        let lifecycle = LiveFeedbackCaptureLifecycle()
+        var quiesced = false
+        var order: [String] = []
+
+        lifecycle.quiesceAndTearDown(
+            mode: .stop,
+            quiescePlayer: { _ in order.append("player") },
+            quiesceEngine: { _ in
+                order.append("engine")
+                quiesced = true
+            },
+            removeTap: {
+                #expect(quiesced)
+                order.append("tap")
+                transport.removeTap()
+            },
+            cancelAndJoinConsumer: {
+                #expect(quiesced)
+                order.append("join")
+                return coordinator.stopAndWait()
+            },
+            destroyQueue: { proof in
+                #expect(quiesced)
+                order.append("destroy")
+                #expect(proof.map {
+                    transport.destroyQueueAfterConsumerStopped(proof: $0)
+                } == true)
+            }
+        )
+
+        #expect(order == ["player", "engine", "tap", "join", "destroy"])
+        #expect(transport.queueHandle == nil)
+        #expect(!transport.consumerIsBound)
+    }
+
+    @Test("The tap handoff publishes only bounded native-stereo packets")
+    func tapPublishesOnlyNativeStereoPackets() throws {
+        let transport = try #require(LivePCMTransport())
+        #expect(LivePCMTransport.queueStorageByteCount ==
+                LiveOutputCaptureProvenance.requiredQueueStorageByteCount)
+        transport.setGeneration(routeGeneration: 7, controllerRevision: 11)
+
+        #expect(transport.publishNativeStereoForOfflineReplay(
+            firstMixerSample: 4_096,
+            left: [0.25, 0.5],
+            right: [-0.25, -0.5]
+        ))
+        #expect(!transport.publishNativeStereoForOfflineReplay(
+            firstMixerSample: 4_098,
+            left: [1],
+            right: [1, 2]
+        ))
+        #expect(!transport.publishNativeStereoForOfflineReplay(
+            firstMixerSample: 4_098,
+            left: [Float](repeating: 0, count: 1_025),
+            right: [Float](repeating: 0, count: 1_025)
+        ))
+
+        let packet = transport.consumeOneForOfflineReplay()
+        #expect(packet?.packetSequence == 0)
+        #expect(packet?.firstMixerSample == 4_096)
+        #expect(packet?.routeGeneration == 7)
+        #expect(packet?.controllerRevision == 11)
+        #expect(packet?.left == [0.25, 0.5])
+        #expect(packet?.right == [-0.25, -0.5])
+        #expect(transport.consumeOneForOfflineReplay() == nil)
+        #expect(transport.destroyQueueBeforeConsumerStarts())
+    }
+
     @Test("Stable integral probes map mixer samples into the player domain")
     func mapsIntegralMixerOffsetIntoPlayerDomain() {
         let first = MixerPlayerClockProbe(
@@ -154,6 +344,70 @@ struct LiveFeedbackCoordinatorTests {
             #expect(windows.first?.right.last == -Float((expectedFrameCount + 511) % 1_024))
             #expect(assembler.unavailability(for: range) == nil)
         }
+    }
+
+    @Test("Production scratch is copied synchronously without per-packet retention")
+    func borrowedScratchIsNotRetained() {
+        #expect(LiveFeedbackCoordinator.maximumRetainedPCMWindows == 1)
+        let frameCount = 132_300
+        let range = makeRange(
+            phraseIndex: 31,
+            startSample: 20_000,
+            frameCount: 150_000
+        )
+        let ledger = ledger(playing: range)
+        var assembler = makeAssembler(sampleRate: 44_100)
+        var left = [Float](
+            repeating: 0,
+            count: LivePCMTransport.maximumPacketFrameCount
+        )
+        var right = left
+        var metadata = ATLivePCMPacketMetadata()
+        var consumed = 0
+        var sequence: UInt64 = 0
+        var completed: LivePhrasePCMWindow?
+
+        while consumed < frameCount {
+            let count = min(
+                LivePCMTransport.maximumPacketFrameCount,
+                frameCount - consumed
+            )
+            for frame in 0..<count {
+                left[frame] = Float((consumed + frame) % 1_024)
+                right[frame] = -left[frame]
+            }
+            metadata.packetSequence = sequence
+            metadata.firstMixerSample =
+                range.mixerSampleRange.lowerBound + Int64(consumed)
+            metadata.frameCount = UInt32(count)
+            metadata.routeGeneration = UInt32(range.routeGeneration)
+            metadata.controllerRevision = UInt32(range.controllerRevision)
+            completed = assembler.consume(
+                metadata: metadata,
+                counters: .zero,
+                left: &left,
+                right: &right,
+                ledger: ledger
+            ) ?? completed
+            left[0] = 9_999
+            right[0] = -9_999
+            consumed += count
+            sequence += 1
+        }
+
+        #expect(completed?.left.first == 0)
+        #expect(completed?.right.first == 0)
+        #expect(completed?.left.count == frameCount)
+        #expect(assembler.fixedPCMStorageByteCount ==
+                frameCount * 2 * MemoryLayout<Float>.stride)
+        #expect(completed?.captureProvenance.queueStorageByteCount ==
+                LivePCMTransport.queueStorageByteCount)
+        #expect(completed?.captureProvenance.consumerScratchByteCount ==
+                LiveOutputCaptureProvenance.requiredConsumerScratchByteCount)
+        #expect(completed?.captureProvenance.workingMemoryByteCount ==
+                LivePCMTransport.queueStorageByteCount +
+                LiveOutputCaptureProvenance.requiredConsumerScratchByteCount +
+                frameCount * 2 * MemoryLayout<Float>.stride)
     }
 
     @Test("Gaps, duplicates, counter changes, generation changes, and non-finite PCM reject")
@@ -363,10 +617,10 @@ struct LiveFeedbackCoordinatorTests {
                     .staleScheduledOccurrence)
         }
         if let firstEmitted {
-            let laterOccurrence = ScheduledPhraseRange(
+            let laterOccurrence = makeRange(
                 phraseIndex: firstEmitted.phraseIndex,
-                planFingerprint: firstEmitted.planFingerprint,
-                playerSampleRange: 3_000_000..<3_150_000,
+                startSample: 3_000_000,
+                frameCount: 150_000,
                 routeGeneration: firstEmitted.routeGeneration,
                 controllerRevision: firstEmitted.controllerRevision
             )
@@ -524,12 +778,25 @@ struct LiveFeedbackCoordinatorTests {
         routeGeneration: Int = 3,
         controllerRevision: Int = 9
     ) -> ScheduledPhraseRange {
-        ScheduledPhraseRange(
+        let playerRange = startSample..<(startSample + Int64(frameCount))
+        return ScheduledPhraseRange(
             phraseIndex: phraseIndex,
-            planFingerprint: "plan-\(phraseIndex)",
-            playerSampleRange: startSample..<(startSample + Int64(frameCount)),
+            planFingerprint: String(format: "%016llx", phraseIndex),
+            playerSampleRange: playerRange,
+            mixerSampleRange:
+                (playerRange.lowerBound - 512)..<(playerRange.upperBound - 512),
+            sampleRate: 44_100,
             routeGeneration: routeGeneration,
-            controllerRevision: controllerRevision
+            controllerRevision: controllerRevision,
+            qualityPolicyVersion: "policy-exact",
+            evaluatorVersion: ProfessionalQualityPrimaryEvaluator
+                .evaluatorVersionIdentifier,
+            controllerPolicyVersion: LiveFeedbackContract
+                .controllerPolicyVersion,
+            controllerStateFingerprint: "fedcba9876543210",
+            appliedMasterTrimDB: -0.5,
+            applicableCheckpoints: [.longContinuation],
+            earliestEligibleFutureSample: playerRange.upperBound
         )
     }
 

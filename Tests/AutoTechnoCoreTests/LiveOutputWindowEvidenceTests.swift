@@ -96,7 +96,15 @@ struct LiveOutputWindowEvidenceTests {
             #expect(evidence.captureProvenance.rejectedPacketDelta == 0)
             #expect(evidence.captureProvenance.queueCapacity == 256)
             #expect(evidence.captureProvenance.maximumPacketFrameCount == 1_024)
+            #expect(evidence.captureProvenance.queueStorageByteCount ==
+                    LiveOutputCaptureProvenance.requiredQueueStorageByteCount)
+            #expect(evidence.captureProvenance.consumerScratchByteCount ==
+                    LiveOutputCaptureProvenance.requiredConsumerScratchByteCount)
+            #expect(evidence.captureProvenance.activeWindowByteCount ==
+                    signal.count * 2 * MemoryLayout<Float>.stride)
             #expect(evidence.captureProvenance.workingMemoryByteCount ==
+                    LiveOutputCaptureProvenance.requiredQueueStorageByteCount +
+                    LiveOutputCaptureProvenance.requiredConsumerScratchByteCount +
                     signal.count * 2 * MemoryLayout<Float>.stride)
             #expect(evidence.captureProvenance.coveredFrameCount == signal.count)
             #expect(evidence.captureProvenance.sampleDiscontinuityCount == 0)
@@ -360,6 +368,33 @@ struct LiveOutputWindowEvidenceTests {
             capture: capture(
                 from: valid,
                 maximumPacketFrameCount: 1_023
+            )
+        ) == nil)
+        #expect(analyze(
+            left: signal,
+            right: signal,
+            sampleRate: 48_000,
+            capture: capture(
+                from: valid,
+                queueStorageByteCount: valid.queueStorageByteCount - 64
+            )
+        ) == nil)
+        #expect(analyze(
+            left: signal,
+            right: signal,
+            sampleRate: 48_000,
+            capture: capture(
+                from: valid,
+                consumerScratchByteCount: valid.consumerScratchByteCount - 4
+            )
+        ) == nil)
+        #expect(analyze(
+            left: signal,
+            right: signal,
+            sampleRate: 48_000,
+            capture: capture(
+                from: valid,
+                activeWindowByteCount: valid.activeWindowByteCount - 4
             )
         ) == nil)
         #expect(analyze(
@@ -635,7 +670,15 @@ struct LiveOutputWindowEvidenceTests {
             rejectedPacketDelta: 0,
             queueCapacity: 256,
             maximumPacketFrameCount: 1_024,
+            queueStorageByteCount:
+                LiveOutputCaptureProvenance.requiredQueueStorageByteCount,
+            consumerScratchByteCount:
+                LiveOutputCaptureProvenance.requiredConsumerScratchByteCount,
+            activeWindowByteCount:
+                frameCount * 2 * MemoryLayout<Float>.stride,
             workingMemoryByteCount:
+                LiveOutputCaptureProvenance.requiredQueueStorageByteCount +
+                LiveOutputCaptureProvenance.requiredConsumerScratchByteCount +
                 frameCount * 2 * MemoryLayout<Float>.stride,
             coveredFrameCount: frameCount,
             sampleDiscontinuityCount: 0,
@@ -652,6 +695,9 @@ struct LiveOutputWindowEvidenceTests {
         rejectedPacketDelta: UInt64? = nil,
         queueCapacity: Int? = nil,
         maximumPacketFrameCount: Int? = nil,
+        queueStorageByteCount: Int? = nil,
+        consumerScratchByteCount: Int? = nil,
+        activeWindowByteCount: Int? = nil,
         workingMemoryByteCount: Int? = nil,
         coveredFrameCount: Int? = nil,
         sampleDiscontinuityCount: Int? = nil,
@@ -667,6 +713,12 @@ struct LiveOutputWindowEvidenceTests {
             queueCapacity: queueCapacity ?? source.queueCapacity,
             maximumPacketFrameCount: maximumPacketFrameCount ??
                 source.maximumPacketFrameCount,
+            queueStorageByteCount: queueStorageByteCount ??
+                source.queueStorageByteCount,
+            consumerScratchByteCount: consumerScratchByteCount ??
+                source.consumerScratchByteCount,
+            activeWindowByteCount: activeWindowByteCount ??
+                source.activeWindowByteCount,
             workingMemoryByteCount: workingMemoryByteCount ??
                 source.workingMemoryByteCount,
             coveredFrameCount: coveredFrameCount ?? source.coveredFrameCount,

@@ -30,6 +30,10 @@ void ATLivePCMQueueDestroy(ATLivePCMQueue *queue) {
     free(queue);
 }
 
+size_t ATLivePCMQueueStorageByteCount(void) {
+    return sizeof(ATLivePCMQueue);
+}
+
 void ATLivePCMQueueSetGeneration(
     ATLivePCMQueue *queue,
     uint32_t routeGeneration,

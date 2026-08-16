@@ -2,6 +2,7 @@
 #define C_AUTO_TECHNO_REALTIME_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -37,6 +38,7 @@ typedef struct {
  */
 ATLivePCMQueue *ATLivePCMQueueCreate(void);
 void ATLivePCMQueueDestroy(ATLivePCMQueue *queue);
+size_t ATLivePCMQueueStorageByteCount(void);
 
 void ATLivePCMQueueSetGeneration(
     ATLivePCMQueue *queue,

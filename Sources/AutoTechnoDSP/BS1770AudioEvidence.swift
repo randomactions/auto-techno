@@ -42,12 +42,19 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
         self = measurement
     }
 
-    package init?(
-        left: [Float],
-        right: [Float],
+    package init?<Left, Right>(
+        left: Left,
+        right: Right,
         sampleRate: Double,
         cancellationRequested: @escaping @Sendable () -> Bool
-    ) {
+    ) where
+        Left: RandomAccessCollection,
+        Right: RandomAccessCollection,
+        Left.Element == Float,
+        Right.Element == Float,
+        Left.Index == Int,
+        Right.Index == Int {
+        guard left.startIndex == 0, right.startIndex == 0 else { return nil }
         guard let result = Self.streamingMeasurement(
             chunks: [(left, right)],
             sampleRate: sampleRate,
@@ -108,11 +115,17 @@ package struct BS1770LoudnessMeasurement: Equatable, Sendable {
         self.peakWorkingByteCount = peakWorkingByteCount
     }
 
-    private static func streamingMeasurement(
-        chunks: [([Float], [Float])],
+    private static func streamingMeasurement<Left, Right>(
+        chunks: [(Left, Right)],
         sampleRate: Double,
         cancellationRequested: @escaping @Sendable () -> Bool
-    ) -> BS1770LoudnessMeasurement? {
+    ) -> BS1770LoudnessMeasurement? where
+        Left: RandomAccessCollection,
+        Right: RandomAccessCollection,
+        Left.Element == Float,
+        Right.Element == Float,
+        Left.Index == Int,
+        Right.Index == Int {
         guard !cancellationRequested() else { return nil }
         let sourceFrameCount = chunks.reduce(0) {
             $0 + min($1.0.count, $1.1.count)
@@ -447,6 +460,37 @@ package enum BS1770AudioEvidence {
             rightChunks: blocks.map(\.right),
             cancellationRequested: cancellationRequested
         )
+    }
+
+    package static func stereoTruePeak<Left, Right>(
+        left: Left,
+        right: Right,
+        cancellationRequested: @escaping @Sendable () -> Bool = { false }
+    ) -> (left: Double, right: Double)? where
+        Left: RandomAccessCollection,
+        Right: RandomAccessCollection,
+        Left.Element == Float,
+        Right.Element == Float,
+        Left.Index == Int,
+        Right.Index == Int {
+        guard !cancellationRequested(),
+              left.startIndex == 0,
+              right.startIndex == 0,
+              left.count == right.count else {
+            return nil
+        }
+        var leftAccumulator = StreamingTruePeakAccumulator()
+        var rightAccumulator = StreamingTruePeakAccumulator()
+        for index in left.indices {
+            if index.isMultiple(of: 4_096), cancellationRequested() {
+                return nil
+            }
+            leftAccumulator.consume(Double(left[index]))
+            rightAccumulator.consume(Double(right[index]))
+        }
+        leftAccumulator.flush()
+        rightAccumulator.flush()
+        return (leftAccumulator.peak, rightAccumulator.peak)
     }
 
     package static func stereoTruePeak(
