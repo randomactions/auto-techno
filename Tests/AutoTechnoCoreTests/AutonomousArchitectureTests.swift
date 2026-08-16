@@ -904,98 +904,107 @@ struct AdaptiveAutonomousSessionTests {
             )
         }
 
-        let legacyNeutralRender = render(legacyNeutralSynth)
-        let neutralRender = render(neutralSynth)
-        let activeRender = render(spread)
-        #expect(neutralRender.leftSamples == legacyNeutralRender.leftSamples)
-        #expect(neutralRender.rightSamples == legacyNeutralRender.rightSamples)
-        #expect(neutralRender.dryFoundationSampleHash ==
-                legacyNeutralRender.dryFoundationSampleHash)
-        #expect(neutralRender.dryPercussionSampleHash ==
-                legacyNeutralRender.dryPercussionSampleHash)
-        #expect(activeRender.leftSamples != neutralRender.leftSamples)
-        #expect(activeRender.resonantAnchorSamples == neutralRender.resonantAnchorSamples)
-        #expect(activeRender.detunedCompanionSamples != neutralRender.detunedCompanionSamples)
-        #expect(activeRender.upperTimingRenderEvidence.shadowSignal.sampleHash !=
-                neutralRender.upperTimingRenderEvidence.shadowSignal.sampleHash)
-        #expect(activeRender.dryFoundationSampleHash == neutralRender.dryFoundationSampleHash)
-        #expect(activeRender.dryPercussionSampleHash == neutralRender.dryPercussionSampleHash)
-        #expect(activeRender.groovePulseRenderEvidence ==
-                neutralRender.groovePulseRenderEvidence)
-        #expect(activeRender.closedHatRenderEvidence == neutralRender.closedHatRenderEvidence)
-        #expect(activeRender.upperTimingRenderEvidence.events.contains {
-            $0.role == .shadow && $0.requestedOffsetInSteps == 0.06 &&
-                $0.appliedOnsetFrame == $0.expectedOnsetFrame
-        })
-        #expect(neutralRender.upperTimingRenderEvidence.events.allSatisfy {
-            $0.requestedOffsetInSteps == 0 &&
-                $0.appliedOnsetFrame == $0.expectedOnsetFrame
-        })
-        let activeUpperOnsets = Array(Set(activeRender.upperNoteRenderEvidence.compactMap {
-            evidence -> Int? in
-            switch evidence.role {
-            case .anchor, .shadow, .response: evidence.onsetFrame
-            case .atmosphere, .transition: nil
-            }
-        })).sorted()
-        let activeUpperSamples = zip(
-            activeRender.resonantAnchorSamples,
-            activeRender.detunedCompanionSamples
-        ).map { $0.0 + $0.1 }
-        #expect(activeRender.stemObservations[.upperTonal] ==
-                StemObservationAnalyzer.analyze(
-                    activeUpperSamples,
-                    sampleRate: 8_000,
-                    onsetFrames: activeUpperOnsets
-                ))
+        func verifyNeutralAndActiveRendering() {
+            let legacyNeutralRender = render(legacyNeutralSynth)
+            let neutralRender = render(neutralSynth)
+            let activeRender = render(spread)
+            #expect(neutralRender.leftSamples == legacyNeutralRender.leftSamples)
+            #expect(neutralRender.rightSamples == legacyNeutralRender.rightSamples)
+            #expect(neutralRender.dryFoundationSampleHash ==
+                    legacyNeutralRender.dryFoundationSampleHash)
+            #expect(neutralRender.dryPercussionSampleHash ==
+                    legacyNeutralRender.dryPercussionSampleHash)
+            #expect(activeRender.leftSamples != neutralRender.leftSamples)
+            #expect(activeRender.resonantAnchorSamples == neutralRender.resonantAnchorSamples)
+            #expect(activeRender.detunedCompanionSamples != neutralRender.detunedCompanionSamples)
+            #expect(activeRender.upperTimingRenderEvidence.shadowSignal.sampleHash !=
+                    neutralRender.upperTimingRenderEvidence.shadowSignal.sampleHash)
+            #expect(activeRender.dryFoundationSampleHash == neutralRender.dryFoundationSampleHash)
+            #expect(activeRender.dryPercussionSampleHash == neutralRender.dryPercussionSampleHash)
+            #expect(activeRender.groovePulseRenderEvidence ==
+                    neutralRender.groovePulseRenderEvidence)
+            #expect(activeRender.closedHatRenderEvidence == neutralRender.closedHatRenderEvidence)
+            #expect(activeRender.upperTimingRenderEvidence.events.contains {
+                $0.role == .shadow && $0.requestedOffsetInSteps == 0.06 &&
+                    $0.appliedOnsetFrame == $0.expectedOnsetFrame
+            })
+            #expect(neutralRender.upperTimingRenderEvidence.events.allSatisfy {
+                $0.requestedOffsetInSteps == 0 &&
+                    $0.appliedOnsetFrame == $0.expectedOnsetFrame
+            })
+            let activeUpperOnsets = Array(Set(activeRender.upperNoteRenderEvidence.compactMap {
+                evidence -> Int? in
+                switch evidence.role {
+                case .anchor, .shadow, .response: evidence.onsetFrame
+                case .atmosphere, .transition: nil
+                }
+            })).sorted()
+            let activeUpperSamples = zip(
+                activeRender.resonantAnchorSamples,
+                activeRender.detunedCompanionSamples
+            ).map { $0.0 + $0.1 }
+            #expect(activeRender.stemObservations[.upperTonal] ==
+                    StemObservationAnalyzer.analyze(
+                        activeUpperSamples,
+                        sampleRate: 8_000,
+                        onsetFrames: activeUpperOnsets
+                    ))
+        }
+        verifyNeutralAndActiveRendering()
 
-        let performedNeutral = SynthPerformanceBar(
-            bar: performed.bar,
-            gesture: performed.gesture,
-            mutationAmount: performed.mutationAmount,
-            foundationInstrument: performed.foundationInstrument,
-            relationalSteps: performed.relationalSteps,
-            upperNotes: performed.upperNotes.map { $0.withTimingOffsetInSteps(0) },
-            upperTimingRelation: .aligned,
-            pulseEchoTextureArticulation: performed.pulseEchoTextureArticulation,
-            tonalEnvelopeExpansionEligible:
-                performed.tonalEnvelopeExpansionEligible,
-            forceHomeUpperTimbre: performed.forceHomeUpperTimbre
-        )
-        let performedRender = render(performed, resolved: performedResolved)
-        let performedNeutralRender = render(
-            performedNeutral,
-            resolved: performedResolved
-        )
-        #expect(performedRender.resonantAnchorSamples !=
-                performedNeutralRender.resonantAnchorSamples)
-        #expect(performedRender.detunedCompanionSamples ==
-                performedNeutralRender.detunedCompanionSamples)
-        #expect(performedRender.dryFoundationSampleHash ==
-                performedNeutralRender.dryFoundationSampleHash)
-        #expect(performedRender.dryPercussionSampleHash ==
-                performedNeutralRender.dryPercussionSampleHash)
-        #expect(performedRender.upperTimingRenderEvidence.relation ==
-                .leadPerformance)
-        #expect(performedRender.upperTimingRenderEvidence.anchorSignal.sampleHash !=
-                performedNeutralRender.upperTimingRenderEvidence.anchorSignal.sampleHash)
-        #expect(performedRender.upperTimingRenderEvidence.events.filter {
-            $0.role == .anchor
-        }.enumerated().allSatisfy { index, event in
-            event.requestedOffsetInSteps ==
-                SynthPerformancePlan.leadPerformanceOffsetInSteps(
-                    performanceIndex: index
-                ) && event.appliedOnsetFrame == event.expectedOnsetFrame
-        })
+        func verifyLeadPerformanceRendering() {
+            let performedNeutral = SynthPerformanceBar(
+                bar: performed.bar,
+                gesture: performed.gesture,
+                mutationAmount: performed.mutationAmount,
+                foundationInstrument: performed.foundationInstrument,
+                relationalSteps: performed.relationalSteps,
+                upperNotes: performed.upperNotes.map { $0.withTimingOffsetInSteps(0) },
+                upperTimingRelation: .aligned,
+                pulseEchoTextureArticulation: performed.pulseEchoTextureArticulation,
+                tonalEnvelopeExpansionEligible:
+                    performed.tonalEnvelopeExpansionEligible,
+                forceHomeUpperTimbre: performed.forceHomeUpperTimbre
+            )
+            let performedRender = render(performed, resolved: performedResolved)
+            let performedNeutralRender = render(
+                performedNeutral,
+                resolved: performedResolved
+            )
+            #expect(performedRender.resonantAnchorSamples !=
+                    performedNeutralRender.resonantAnchorSamples)
+            #expect(performedRender.detunedCompanionSamples ==
+                    performedNeutralRender.detunedCompanionSamples)
+            #expect(performedRender.dryFoundationSampleHash ==
+                    performedNeutralRender.dryFoundationSampleHash)
+            #expect(performedRender.dryPercussionSampleHash ==
+                    performedNeutralRender.dryPercussionSampleHash)
+            #expect(performedRender.upperTimingRenderEvidence.relation ==
+                    .leadPerformance)
+            #expect(performedRender.upperTimingRenderEvidence.anchorSignal.sampleHash !=
+                    performedNeutralRender.upperTimingRenderEvidence.anchorSignal.sampleHash)
+            #expect(performedRender.upperTimingRenderEvidence.events.filter {
+                $0.role == .anchor
+            }.enumerated().allSatisfy { index, event in
+                event.requestedOffsetInSteps ==
+                    SynthPerformancePlan.leadPerformanceOffsetInSteps(
+                        performanceIndex: index
+                    ) && event.appliedOnsetFrame == event.expectedOnsetFrame
+            })
+        }
+        verifyLeadPerformanceRendering()
 
-        let activeProtected = render(spread, layer: .protectedRhythm)
-        let neutralProtected = render(neutralSynth, layer: .protectedRhythm)
-        #expect(activeProtected.leftSamples == neutralProtected.leftSamples)
-        #expect(activeProtected.rightSamples == neutralProtected.rightSamples)
-        #expect(activeProtected.dryFoundationSampleHash ==
-                neutralProtected.dryFoundationSampleHash)
-        #expect(activeProtected.dryPercussionSampleHash ==
-                neutralProtected.dryPercussionSampleHash)
+        func verifyProtectedRhythmRendering() {
+            let activeProtected = render(spread, layer: .protectedRhythm)
+            let neutralProtected = render(neutralSynth, layer: .protectedRhythm)
+            #expect(activeProtected.leftSamples == neutralProtected.leftSamples)
+            #expect(activeProtected.rightSamples == neutralProtected.rightSamples)
+            #expect(activeProtected.dryFoundationSampleHash ==
+                    neutralProtected.dryFoundationSampleHash)
+            #expect(activeProtected.dryPercussionSampleHash ==
+                    neutralProtected.dryPercussionSampleHash)
+        }
+        verifyProtectedRhythmRendering()
 
         let upperless = EnsembleContext(
             focusRole: source.ensemble.focusRole,
@@ -1022,63 +1031,66 @@ struct AdaptiveAutonomousSessionTests {
             $0.timingOffsetInSteps == 0
         })
 
-        var liveState = director.initialState()
-        var liveLeadPerformance: SynthPerformanceBar?
-        var liveLeadPlan: AutonomousPhrasePlan?
-        var liveLeadIncomingState: AutonomousSessionState?
-        for _ in 0..<160 where liveLeadPerformance == nil {
-            let candidates = director.plan(from: liveState)
-            let candidateSynth = SynthPerformancePlan(
-                scene: candidates.scene,
-                dna: candidates.dna,
-                kind: candidates.kind,
-                resolvedBars: candidates.resolvedBars
-            )
-            liveLeadPerformance = candidateSynth.bars.first {
-                $0.upperTimingRelation == .leadPerformance
-            }
-            if liveLeadPerformance != nil {
-                liveLeadPlan = candidates
-                liveLeadIncomingState = liveState
-            } else {
-                liveState.advance(using: candidates)
-            }
-        }
-        let livePerformance = try #require(liveLeadPerformance)
-        #expect(livePerformance.upperNotes(for: .anchor).filter {
-            $0.timingOffsetInSteps > 0
-        }.count == max(0, livePerformance.upperNotes(for: .anchor).count - 1))
-        let livePlan = try #require(liveLeadPlan)
-        let liveIncoming = try #require(liveLeadIncomingState)
-        var liveRenderState = RenderState()
-        liveRenderState.barIndex = liveIncoming.memory.totalBars
-        let neverCancelled: @Sendable () -> Bool = { false }
-        let livePrepared = try #require(
-            AutonomousPhrasePreparer.prepareIfNotCancelled(
-                plan: livePlan,
-                sessionSeed: liveIncoming.rootSeed,
-                memory: liveIncoming.memory,
-                sampleRate: 8_000,
-                incomingRenderState: liveRenderState,
-                incomingGraphState: GeneratedDSPContinuationState(),
-                previousGraph: nil,
-                incomingQualityState: liveIncoming.quality,
-                evaluator: AcceptingPrimaryTestEvaluator(),
-                cancellationRequested: neverCancelled
-            )
-        )
-        #expect(livePrepared.candidateEvaluation.isComplete)
-        #expect(livePrepared.selectedCandidateEvidence.upperTiming.contains {
-            $0.relation == UpperTimingRelation.leadPerformance.rawValue &&
-                $0.isComplete(
-                    routeSampleRate: 8_000,
-                    phraseKind: .lock,
+        func verifyLivePreparedEvidence() throws {
+            var liveState = director.initialState()
+            var liveLeadPerformance: SynthPerformanceBar?
+            var liveLeadPlan: AutonomousPhrasePlan?
+            var liveLeadIncomingState: AutonomousSessionState?
+            for _ in 0..<160 where liveLeadPerformance == nil {
+                let candidates = director.plan(from: liveState)
+                let candidateSynth = SynthPerformancePlan(
+                    scene: candidates.scene,
+                    dna: candidates.dna,
+                    kind: candidates.kind,
+                    resolvedBars: candidates.resolvedBars
                 )
-        })
-        #expect(livePrepared.blocks.contains {
-            $0.upperTimingRenderEvidence.relation == .leadPerformance &&
-                $0.upperTimingRenderEvidence.anchorSignal.peak > 0
-        })
+                liveLeadPerformance = candidateSynth.bars.first {
+                    $0.upperTimingRelation == .leadPerformance
+                }
+                if liveLeadPerformance != nil {
+                    liveLeadPlan = candidates
+                    liveLeadIncomingState = liveState
+                } else {
+                    liveState.advance(using: candidates)
+                }
+            }
+            let livePerformance = try #require(liveLeadPerformance)
+            #expect(livePerformance.upperNotes(for: .anchor).filter {
+                $0.timingOffsetInSteps > 0
+            }.count == max(0, livePerformance.upperNotes(for: .anchor).count - 1))
+            let livePlan = try #require(liveLeadPlan)
+            let liveIncoming = try #require(liveLeadIncomingState)
+            var liveRenderState = RenderState()
+            liveRenderState.barIndex = liveIncoming.memory.totalBars
+            let neverCancelled: @Sendable () -> Bool = { false }
+            let livePrepared = try #require(
+                AutonomousPhrasePreparer.prepareIfNotCancelled(
+                    plan: livePlan,
+                    sessionSeed: liveIncoming.rootSeed,
+                    memory: liveIncoming.memory,
+                    sampleRate: 8_000,
+                    incomingRenderState: liveRenderState,
+                    incomingGraphState: GeneratedDSPContinuationState(),
+                    previousGraph: nil,
+                    incomingQualityState: liveIncoming.quality,
+                    evaluator: AcceptingPrimaryTestEvaluator(),
+                    cancellationRequested: neverCancelled
+                )
+            )
+            #expect(livePrepared.candidateEvaluation.isComplete)
+            #expect(livePrepared.selectedCandidateEvidence.upperTiming.contains {
+                $0.relation == UpperTimingRelation.leadPerformance.rawValue &&
+                    $0.isComplete(
+                        routeSampleRate: 8_000,
+                        phraseKind: .lock,
+                    )
+            })
+            #expect(livePrepared.blocks.contains {
+                $0.upperTimingRenderEvidence.relation == .leadPerformance &&
+                    $0.upperTimingRenderEvidence.anchorSignal.peak > 0
+            })
+        }
+        try verifyLivePreparedEvidence()
     }
 
     @Test("Upper-note frame geometry delays onset without consuming gate duration")
