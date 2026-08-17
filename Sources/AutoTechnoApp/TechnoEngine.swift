@@ -106,6 +106,7 @@ package final class TechnoEngine: ObservableObject {
     @Published private(set) var playbackState: PlaybackState = .preparing
     @Published private(set) var waveform: [Float] = Array(repeating: 0.04, count: 64)
     @Published private(set) var playhead = 0.0
+    @Published private(set) var playingTimeSeconds = 0
     @Published private(set) var sceneNumber = 1
     @Published private(set) var barWithinScene = 1
     @Published private(set) var currentSection: SectionKind = .groove
@@ -136,6 +137,9 @@ package final class TechnoEngine: ObservableObject {
     var positionText: String {
         "\(Int(Self.bpm)) BPM · PHRASE \(sceneNumber) · BAR \(barWithinScene)"
     }
+    var playingTimeText: String {
+        PlayingTimeFormatter.string(forWholeSeconds: playingTimeSeconds)
+    }
 
     private let director: AutonomousSessionDirector
     private var sessionState: AutonomousSessionState
@@ -144,6 +148,7 @@ package final class TechnoEngine: ObservableObject {
     private var configurationObserver: NSObjectProtocol?
     private var recoveryTask: Task<Void, Never>?
     private var displayTimer: Timer?
+    private var playingTimeClock = PlayingTimeClock()
 
     private var currentPhrase: PreparedPhrase?
     private let liveFeedbackPreparation = LiveFeedbackPreparationOwner<
@@ -319,6 +324,7 @@ package final class TechnoEngine: ObservableObject {
         // advanced musical memory with reset render/DSP continuation.
         sessionState = director.initialState()
         resetSchedule()
+        resetPlayingTime()
         sceneNumber = 1
         currentSection = .groove
         playbackState = .unavailable
@@ -441,7 +447,8 @@ package final class TechnoEngine: ObservableObject {
         guard phrase.request.sourceState.phraseIndex == sessionState.phraseIndex else { return }
 
         currentPhrase = phrase
-        if phrase.request.key.routeRecovery {
+        let resumesRecoveredPlayback = phrase.request.key.routeRecovery
+        if resumesRecoveredPlayback {
             routeRecoveryRequest = nil
         }
         sessionState = phrase.request.sourceState
@@ -463,7 +470,9 @@ package final class TechnoEngine: ObservableObject {
         requestSuccessor(after: phrase)
         if requestedPlaybackAfterPreparation {
             requestedPlaybackAfterPreparation = false
-            startFreshPlayback()
+            startFreshPlayback(
+                resetPlayingTime: !resumesRecoveredPlayback
+            )
         }
     }
 
@@ -535,11 +544,14 @@ package final class TechnoEngine: ObservableObject {
         }
     }
 
-    private func startFreshPlayback() {
+    private func startFreshPlayback(resetPlayingTime: Bool = true) {
         guard currentPhrase != nil else {
             requestedPlaybackAfterPreparation = true
             prepare()
             return
+        }
+        if resetPlayingTime {
+            self.resetPlayingTime()
         }
         recoveryTask?.cancel()
         liveFeedbackOrchestrator.pause {
@@ -578,6 +590,7 @@ package final class TechnoEngine: ObservableObject {
 
     private func pause() {
         guard playbackState == .playing else { return }
+        updatePlayingTimeFromPlayerClock()
         displayTimer?.invalidate()
         displayTimer = nil
         liveFeedbackOrchestrator.pause {
@@ -609,6 +622,7 @@ package final class TechnoEngine: ObservableObject {
 
     private func beginRecovery() {
         guard !isShutDown else { return }
+        updatePlayingTimeFromPlayerClock()
         displayTimer?.invalidate()
         displayTimer = nil
         liveFeedbackOrchestrator.captureFailed {
@@ -662,6 +676,7 @@ package final class TechnoEngine: ObservableObject {
         guard liveFeedbackOrchestrator.playbackTimelineReset(
             routeGeneration: preparationEpoch.value
         ) else { return false }
+        playingTimeClock.preserveForTimelineReset()
         if let source = currentPhrase {
             _ = liveFeedbackPreparation.rebindTargetOccurrence(
                 sourcePlan: source.prepared.plan,
@@ -674,6 +689,7 @@ package final class TechnoEngine: ObservableObject {
 
     private func handleAudioConfigurationChange() {
         guard !isShutDown else { return }
+        updatePlayingTimeFromPlayerClock()
         let shouldResume = playbackState == .playing || playbackState == .recovering
         let rebuildingPhrase = currentPhrase
         let rebuildingRequest = rebuildingPhrase.map { phrase in
@@ -1384,6 +1400,10 @@ package final class TechnoEngine: ObservableObject {
               let nodeTime = player.lastRenderTime,
               let playerTime = player.playerTime(forNodeTime: nodeTime) else { return }
         let sample = max(0, playerTime.sampleTime)
+        updatePlayingTime(
+            sampleTime: sample,
+            sampleRate: playerTime.sampleRate
+        )
         updateLiveClockAndWorker()
         guard playbackState == .playing else { return }
         promoteScheduledLiveRangeIfNeeded(playerSample: sample)
@@ -1407,6 +1427,35 @@ package final class TechnoEngine: ObservableObject {
         if nextScheduleSample - sample < currentBarFrames / 2 {
             _ = scheduleNextBar(first: false)
         }
+    }
+
+    private func updatePlayingTimeFromPlayerClock() {
+        guard let nodeTime = player.lastRenderTime,
+              let playerTime = player.playerTime(forNodeTime: nodeTime) else {
+            return
+        }
+        updatePlayingTime(
+            sampleTime: max(0, playerTime.sampleTime),
+            sampleRate: playerTime.sampleRate
+        )
+    }
+
+    private func updatePlayingTime(
+        sampleTime: AVAudioFramePosition,
+        sampleRate: Double
+    ) {
+        let observed = playingTimeClock.observe(
+            sampleTime: sampleTime,
+            sampleRate: sampleRate
+        )
+        if playingTimeSeconds != observed {
+            playingTimeSeconds = observed
+        }
+    }
+
+    private func resetPlayingTime() {
+        playingTimeClock.reset()
+        playingTimeSeconds = 0
     }
 
     private func makeBuffer(left: [Float], right: [Float],

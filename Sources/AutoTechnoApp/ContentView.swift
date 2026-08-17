@@ -58,10 +58,20 @@ struct ContentView: View {
                 .accessibilityLabel(engine.transportTitle)
                 .accessibilityIdentifier("transport-play-pause")
 
-                Text(engine.positionText)
-                    .font(.system(.caption, design: .monospaced).weight(.medium))
-                    .tracking(0.8)
-                    .foregroundStyle(.secondary)
+                VStack(spacing: 7) {
+                    Text(engine.playingTimeText)
+                        .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(engine.isPlaying ? Color.white : Color.secondary)
+                        .accessibilityLabel("Playing time")
+                        .accessibilityValue(engine.playingTimeText)
+                        .accessibilityIdentifier("playing-time")
+
+                    Text(engine.positionText)
+                        .font(.system(.caption, design: .monospaced).weight(.medium))
+                        .tracking(0.8)
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(42)
             .frame(maxWidth: 680)
