@@ -704,6 +704,10 @@ package final class PreparedAutonomousPhrase: Sendable {
         LiveMasterHeadroomContinuationState
     package let liveMasterHeadroomContinuationState:
         LiveMasterHeadroomContinuationState
+    /// App-owned start sample for the exact prepared live-corrected target.
+    /// This is supplied independently of the proposal's minimum boundary and
+    /// is rechecked by scheduling before the first block may be queued.
+    package let liveTargetStartSample: Int64?
     package let correctionRenderCount: Int
     package let usedHomeTimbreCorrection: Bool
 
@@ -725,6 +729,7 @@ package final class PreparedAutonomousPhrase: Sendable {
             LiveMasterHeadroomContinuationState,
         liveMasterHeadroomContinuationState:
             LiveMasterHeadroomContinuationState,
+        liveTargetStartSample: Int64?,
         correctionRenderCount: Int,
         usedHomeTimbreCorrection: Bool
     ) {
@@ -746,6 +751,7 @@ package final class PreparedAutonomousPhrase: Sendable {
             incomingLiveMasterHeadroomState
         self.liveMasterHeadroomContinuationState =
             liveMasterHeadroomContinuationState
+        self.liveTargetStartSample = liveTargetStartSample
         self.correctionRenderCount = correctionRenderCount
         self.usedHomeTimbreCorrection = usedHomeTimbreCorrection
     }
@@ -767,7 +773,14 @@ package final class PreparedAutonomousPhrase: Sendable {
     /// Only a calibrated, hard-valid judgment of the one primary phrase may
     /// cross the atomic commit boundary.
     package var commitEligible: Bool {
-        guard candidateEvaluation.isComplete,
+        guard let liveTargetStart = AutonomousLiveTargetStartEvidence.derived(
+                  incomingRevision:
+                    incomingLiveMasterHeadroomState.revision,
+                  outgoingRevision:
+                    liveMasterHeadroomContinuationState.revision,
+                  targetStartSample: liveTargetStartSample
+              ),
+              candidateEvaluation.isComplete,
               commitProvenance.candidateEvaluationFingerprint ==
                 candidateEvaluationFingerprint,
               let selectedIndex = candidateEvaluation.selectedAttemptIndex,
@@ -794,7 +807,11 @@ package final class PreparedAutonomousPhrase: Sendable {
                         .outgoingRenderDSPFingerprint,
                 qualityState: qualityContinuationState,
                 liveMasterHeadroomState:
-                    liveMasterHeadroomContinuationState
+                    liveMasterHeadroomContinuationState,
+                liveRevisionDelta:
+                    liveMasterHeadroomContinuationState.revision -
+                        incomingLiveMasterHeadroomState.revision,
+                liveTargetStart: liveTargetStart
               ) else {
             return false
         }
@@ -981,6 +998,7 @@ package enum AutonomousPhrasePreparer {
         let routeRecovery: Bool
         let routeChannelCount: Int
         let routeGeneration: Int
+        let liveTargetStartSample: Int64?
         let cancellationRequested: @Sendable () -> Bool
 
         init(
@@ -1002,6 +1020,7 @@ package enum AutonomousPhrasePreparer {
             routeRecovery: Bool,
             routeChannelCount: Int,
             routeGeneration: Int,
+            liveTargetStartSample: Int64?,
             cancellationRequested: @escaping @Sendable () -> Bool
         ) {
             self.sessionSeed = sessionSeed
@@ -1022,6 +1041,7 @@ package enum AutonomousPhrasePreparer {
             self.routeRecovery = routeRecovery
             self.routeChannelCount = routeChannelCount
             self.routeGeneration = routeGeneration
+            self.liveTargetStartSample = liveTargetStartSample
             self.cancellationRequested = cancellationRequested
         }
     }
@@ -1039,6 +1059,7 @@ package enum AutonomousPhrasePreparer {
         routeChannelCount: Int = 2,
         routeGeneration: Int = 0,
         pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding? = nil,
+        liveTargetStartSample: Int64? = nil,
         evaluator: E
     ) -> PreparedAutonomousPhrase {
         guard let prepared = prepareTransaction(
@@ -1054,6 +1075,7 @@ package enum AutonomousPhrasePreparer {
             routeChannelCount: routeChannelCount,
             routeGeneration: routeGeneration,
             pendingLiveMasterBinding: pendingLiveMasterBinding,
+            liveTargetStartSample: liveTargetStartSample,
             evaluator: evaluator,
             cancellationRequested: { false }
         ) else {
@@ -1075,6 +1097,7 @@ package enum AutonomousPhrasePreparer {
         routeChannelCount: Int = 2,
         routeGeneration: Int = 0,
         pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding? = nil,
+        liveTargetStartSample: Int64? = nil,
         evaluator: E,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> PreparedAutonomousPhrase? {
@@ -1091,6 +1114,7 @@ package enum AutonomousPhrasePreparer {
             routeChannelCount: routeChannelCount,
             routeGeneration: routeGeneration,
             pendingLiveMasterBinding: pendingLiveMasterBinding,
+            liveTargetStartSample: liveTargetStartSample,
             evaluator: evaluator,
             cancellationRequested: cancellationRequested
         )
@@ -1109,6 +1133,7 @@ package enum AutonomousPhrasePreparer {
         routeChannelCount: Int,
         routeGeneration: Int,
         pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding?,
+        liveTargetStartSample: Int64?,
         evaluator: E,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> PreparedAutonomousPhrase? {
@@ -1165,7 +1190,8 @@ package enum AutonomousPhrasePreparer {
             incoming: incomingRenderState.liveMasterHeadroomState,
             targetPlan: plan,
             sampleRate: sampleRate,
-            routeGeneration: routeGeneration
+            routeGeneration: routeGeneration,
+            targetStartSample: liveTargetStartSample
         )
         let previousGraphFingerprint = previousGraph.map {
             AutonomousCandidateFingerprint.graph($0)
@@ -1210,6 +1236,7 @@ package enum AutonomousPhrasePreparer {
             routeRecovery: routeRecovery,
             routeChannelCount: routeChannelCount,
             routeGeneration: routeGeneration,
+            liveTargetStartSample: liveTargetStartSample,
             cancellationRequested: cancellationRequested
         )
 
@@ -1251,6 +1278,8 @@ package enum AutonomousPhrasePreparer {
                 routeRecovery: renderContext.routeRecovery,
                 routeChannelCount: renderContext.routeChannelCount,
                 routeGeneration: renderContext.routeGeneration,
+                liveTargetStartSample:
+                    renderContext.liveTargetStartSample,
                 forceHomeUpperTimbre: forceHomeUpperTimbre,
                 cancellationRequested: renderContext.cancellationRequested
             ) else { return nil }
@@ -1872,6 +1901,7 @@ package enum AutonomousPhrasePreparer {
         routeRecovery: Bool,
         routeChannelCount: Int,
         routeGeneration: Int,
+        liveTargetStartSample: Int64?,
         forceHomeUpperTimbre: Bool = false,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> CandidateRenderProduct? {
@@ -1939,6 +1969,7 @@ package enum AutonomousPhrasePreparer {
             outgoingLiveMasterState: outgoingLiveMasterState,
             liveProposal: liveProposal,
             liveProposalOutcome: liveProposalOutcome,
+            liveTargetStartSample: liveTargetStartSample,
             incomingDramaticDebts: memory.openDebts,
             cancellationRequested: cancellationRequested
         ) else { return nil }
@@ -2005,7 +2036,8 @@ package enum AutonomousPhrasePreparer {
         incoming: LiveMasterHeadroomContinuationState,
         targetPlan: AutonomousPhrasePlan,
         sampleRate: Double,
-        routeGeneration: Int
+        routeGeneration: Int,
+        targetStartSample: Int64?
     ) -> LiveMasterBinding {
         guard let pendingBinding else {
             return LiveMasterBinding(
@@ -2023,6 +2055,9 @@ package enum AutonomousPhrasePreparer {
             incoming: incoming
         ) && pendingBinding.eligibleTarget.sampleRate == sampleRate &&
             pendingBinding.eligibleTarget.routeGeneration == routeGeneration &&
+            targetStartSample.map {
+                $0 >= pendingProposal.earliestEligibleFutureSample
+            } == true &&
             pendingProposal.isStructurallyValid &&
             pendingProposal.outcome != .unavailable &&
             outgoing.isImmediateSuccessor(of: incoming)
@@ -2048,7 +2083,7 @@ package enum AutonomousPhrasePreparer {
         incomingLiveMasterState: LiveMasterHeadroomContinuationState,
         outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
         evaluator: E
-    ) -> PreparedAutonomousPhrase {
+    ) -> PreparedAutonomousPhrase? {
         let verdict = evaluator.terminalVerdict(
             selected: selected.vector,
             transaction: transaction
@@ -2081,13 +2116,22 @@ package enum AutonomousPhrasePreparer {
             controllerStateFingerprint:
                 selected.vector.routeContinuation.controllerStateFingerprint
         )
+        guard let liveTargetStart = AutonomousLiveTargetStartEvidence.derived(
+            incomingRevision: selected.vector.incomingLiveMasterRevision,
+            outgoingRevision: selected.vector.outgoingLiveMasterRevision,
+            targetStartSample: selected.vector.liveAppliedFutureSample
+        ) else { return nil }
         let commitProvenance = AutonomousPreparedCommitProvenance(
             candidateEvaluationFingerprint: transactionFingerprint,
             selectedSampleHash: selected.vector.fullMix.sampleHash,
             outgoingRenderDSPFingerprint:
                 selected.vector.routeContinuation.outgoingRenderDSPFingerprint,
             qualityState: outgoingQuality,
-            liveMasterHeadroomState: outgoingLiveMasterState
+            liveMasterHeadroomState: outgoingLiveMasterState,
+            liveRevisionDelta:
+                selected.vector.outgoingLiveMasterRevision -
+                    selected.vector.incomingLiveMasterRevision,
+            liveTargetStart: liveTargetStart
         )
         return PreparedAutonomousPhrase(
             plan: selected.plan,
@@ -2105,6 +2149,7 @@ package enum AutonomousPhrasePreparer {
             qualityContinuationState: outgoingQuality,
             incomingLiveMasterHeadroomState: incomingLiveMasterState,
             liveMasterHeadroomContinuationState: outgoingLiveMasterState,
+            liveTargetStartSample: selected.vector.liveAppliedFutureSample,
             correctionRenderCount: transaction.correctionCount,
             usedHomeTimbreCorrection: selected.attempt.forceHomeUpperTimbre
         )

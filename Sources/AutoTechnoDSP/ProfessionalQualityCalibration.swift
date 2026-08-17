@@ -134,12 +134,366 @@ package struct ProfessionalQualityMetricValue: Codable, Equatable, Sendable {
     }
 }
 
+/// Signal-free provenance for the one live master-headroom transition bound to
+/// a professional-quality observation. Loudness and true peak remain the
+/// existing calibrated metrics; this record is a non-compensable controller,
+/// terminal-scaling, route, and future-boundary hard gate.
+package struct ProfessionalQualityLiveMasterProvenance: Encodable, Equatable,
+        Sendable {
+    package static let schemaVersion = LiveMasterHeadroomContinuationState
+        .schemaVersion
+
+    package let schemaVersion: Int
+    package let controllerPolicyVersion: String
+    package let incomingRevision: Int
+    package let outgoingRevision: Int
+    package let revisionDelta: Int
+    package let incomingStateFingerprint: String
+    package let outgoingStateFingerprint: String
+    package let proposalOutcome: LiveFeedbackProposalOutcome
+    package let observationFingerprint: String?
+    package let proposalFingerprint: String?
+    package let incomingTrimDB: Double
+    package let requestedTrimDB: Double
+    package let appliedTrimDB: Double
+    package let trimDeltaDB: Double
+    package let appliedGain: Double
+    package let incomingCleanWindowCount: Int
+    package let outgoingCleanWindowCount: Int
+    package let routeGeneration: Int
+    package let routeGenerationValid: Bool
+    package let proposalBindingValid: Bool
+    package let preTrimPCMFingerprint: String
+    package let postTrimPCMFingerprint: String
+    package let preTrimBindingValid: Bool
+    package let postTrimBindingValid: Bool
+    package let terminalScalingValid: Bool
+    package let earliestEligibleFutureSample: Int64?
+    package let appliedFutureSample: Int64?
+    package let boundaryValid: Bool
+
+    private init(
+        controllerPolicyVersion: String,
+        incomingRevision: Int,
+        outgoingRevision: Int,
+        incomingStateFingerprint: String,
+        outgoingStateFingerprint: String,
+        proposalOutcome: LiveFeedbackProposalOutcome,
+        observationFingerprint: String?,
+        proposalFingerprint: String?,
+        incomingTrimDB: Double,
+        requestedTrimDB: Double,
+        appliedTrimDB: Double,
+        appliedGain: Double,
+        incomingCleanWindowCount: Int,
+        outgoingCleanWindowCount: Int,
+        routeGeneration: Int,
+        routeGenerationValid: Bool,
+        proposalBindingValid: Bool,
+        preTrimPCMFingerprint: String,
+        postTrimPCMFingerprint: String,
+        preTrimBindingValid: Bool,
+        postTrimBindingValid: Bool,
+        terminalScalingValid: Bool,
+        earliestEligibleFutureSample: Int64?,
+        appliedFutureSample: Int64?,
+        boundaryValid: Bool
+    ) {
+        schemaVersion = Self.schemaVersion
+        self.controllerPolicyVersion = controllerPolicyVersion
+        self.incomingRevision = incomingRevision
+        self.outgoingRevision = outgoingRevision
+        revisionDelta = outgoingRevision - incomingRevision
+        self.incomingStateFingerprint = incomingStateFingerprint
+        self.outgoingStateFingerprint = outgoingStateFingerprint
+        self.proposalOutcome = proposalOutcome
+        self.observationFingerprint = observationFingerprint
+        self.proposalFingerprint = proposalFingerprint
+        self.incomingTrimDB = incomingTrimDB
+        self.requestedTrimDB = requestedTrimDB
+        self.appliedTrimDB = appliedTrimDB
+        trimDeltaDB = appliedTrimDB - incomingTrimDB
+        self.appliedGain = appliedGain
+        self.incomingCleanWindowCount = incomingCleanWindowCount
+        self.outgoingCleanWindowCount = outgoingCleanWindowCount
+        self.routeGeneration = routeGeneration
+        self.routeGenerationValid = routeGenerationValid
+        self.proposalBindingValid = proposalBindingValid
+        self.preTrimPCMFingerprint = preTrimPCMFingerprint
+        self.postTrimPCMFingerprint = postTrimPCMFingerprint
+        self.preTrimBindingValid = preTrimBindingValid
+        self.postTrimBindingValid = postTrimBindingValid
+        self.terminalScalingValid = terminalScalingValid
+        self.earliestEligibleFutureSample = earliestEligibleFutureSample
+        self.appliedFutureSample = appliedFutureSample
+        self.boundaryValid = boundaryValid
+    }
+
+    package var isComplete: Bool {
+        schemaVersion == Self.schemaVersion &&
+            controllerPolicyVersion ==
+                LiveFeedbackContract.controllerPolicyVersion &&
+            incomingRevision >= 0 && outgoingRevision >= 0 &&
+            isFingerprint(incomingStateFingerprint) &&
+            isFingerprint(outgoingStateFingerprint) &&
+            observationFingerprint.map(isFingerprint) ?? true &&
+            proposalFingerprint.map(isFingerprint) ?? true &&
+            isFingerprint(preTrimPCMFingerprint) &&
+            isFingerprint(postTrimPCMFingerprint) &&
+            incomingTrimDB.isFinite && requestedTrimDB.isFinite &&
+            appliedTrimDB.isFinite && trimDeltaDB.isFinite &&
+            appliedGain.isFinite &&
+            revisionDelta == outgoingRevision - incomingRevision &&
+            trimDeltaDB == appliedTrimDB - incomingTrimDB &&
+            (0...2).contains(incomingCleanWindowCount) &&
+            (0...2).contains(outgoingCleanWindowCount) &&
+            routeGeneration >= 0 &&
+            earliestEligibleFutureSample.map { $0 > 0 } ?? true &&
+            appliedFutureSample.map { $0 > 0 } ?? true
+    }
+
+    package var hardGatesPassed: Bool {
+        isComplete && controllerTransitionValid && terminalScaleIsValid &&
+            !boostsAboveUnity && proposalBindingValid &&
+            routeAndBoundaryAreValid
+    }
+
+    package var controllerTransitionValid: Bool {
+        let hasProposal = proposalFingerprint != nil
+        guard hasProposal else {
+            return proposalOutcome == .hold && observationFingerprint == nil &&
+                revisionDelta == 0 && trimDeltaDB == 0 &&
+                incomingStateFingerprint == outgoingStateFingerprint &&
+                incomingCleanWindowCount == outgoingCleanWindowCount &&
+                earliestEligibleFutureSample == nil &&
+                appliedFutureSample == nil
+        }
+        if proposalOutcome == .unavailable {
+            return revisionDelta == 0 && trimDeltaDB == 0 &&
+                incomingStateFingerprint == outgoingStateFingerprint &&
+                incomingCleanWindowCount == outgoingCleanWindowCount
+        }
+        guard observationFingerprint != nil, revisionDelta == 1,
+              incomingStateFingerprint != outgoingStateFingerprint else {
+            return false
+        }
+        switch proposalOutcome {
+        case .unavailable:
+            return false
+        case .hold:
+            return trimDeltaDB == 0
+        case .attenuate:
+            return trimDeltaDB < 0 &&
+                trimDeltaDB >= -LiveMasterHeadroomController.attackStepDB &&
+                outgoingCleanWindowCount == 0
+        case .recover:
+            return trimDeltaDB > 0 &&
+                trimDeltaDB <= LiveMasterHeadroomController.recoveryStepDB &&
+                incomingCleanWindowCount >=
+                    LiveMasterHeadroomController.cleanWindowsForRecovery - 1 &&
+                outgoingCleanWindowCount == 0
+        }
+    }
+
+    package var recoveryIsEarly: Bool {
+        proposalOutcome == .recover && incomingCleanWindowCount <
+            LiveMasterHeadroomController.cleanWindowsForRecovery - 1
+    }
+
+    package var exceedsTransitionSlew: Bool {
+        switch proposalOutcome {
+        case .attenuate:
+            return trimDeltaDB < -LiveMasterHeadroomController.attackStepDB
+        case .recover:
+            return trimDeltaDB > LiveMasterHeadroomController.recoveryStepDB
+        case .unavailable, .hold:
+            return trimDeltaDB != 0
+        }
+    }
+
+    package var boostsAboveUnity: Bool {
+        incomingTrimDB > 0 || requestedTrimDB > 0 || appliedTrimDB > 0 ||
+            appliedGain > 1
+    }
+
+    package var terminalScaleIsValid: Bool {
+        preTrimBindingValid && postTrimBindingValid && terminalScalingValid &&
+            requestedTrimDB == appliedTrimDB &&
+            (-3...0).contains(appliedTrimDB) && appliedGain > 0 &&
+            appliedGain <= 1 &&
+            appliedGain == pow(10, appliedTrimDB / 20)
+    }
+
+    package var routeAndBoundaryAreValid: Bool {
+        guard routeGenerationValid, boundaryValid else { return false }
+        if proposalFingerprint == nil {
+            return earliestEligibleFutureSample == nil &&
+                appliedFutureSample == nil
+        }
+        guard let earliestEligibleFutureSample, let appliedFutureSample else {
+            return false
+        }
+        return appliedFutureSample >= earliestEligibleFutureSample
+    }
+
+    package static func home(
+        candidate: AutonomousCandidateEvaluationVector
+    ) throws -> Self {
+        let provenance = try candidateDerived(candidate)
+        guard candidate.liveProposalFingerprint == nil,
+              candidate.liveProposalOutcome == .hold,
+              provenance.controllerTransitionValid,
+              provenance.hardGatesPassed else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        return provenance
+    }
+
+    package static func transition(
+        candidate: AutonomousCandidateEvaluationVector
+    ) throws -> Self {
+        let provenance = try candidateDerived(candidate)
+        guard candidate.liveProposalFingerprint != nil,
+              candidate.liveProposalOutcome != .unavailable,
+              provenance.controllerTransitionValid,
+              provenance.hardGatesPassed else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        return provenance
+    }
+
+    package static func candidateDerived(
+        _ candidate: AutonomousCandidateEvaluationVector
+    ) throws -> Self {
+        guard candidate.isComplete,
+              candidate.isFinite else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        let hasProposal = candidate.liveProposalFingerprint != nil
+        let boundaryValid: Bool
+        if hasProposal,
+           let earliest = candidate.liveEarliestEligibleFutureSample,
+           let applied = candidate.liveAppliedFutureSample {
+            boundaryValid = applied >= earliest
+        } else {
+            boundaryValid = !hasProposal &&
+                candidate.liveEarliestEligibleFutureSample == nil &&
+                candidate.liveAppliedFutureSample == nil
+        }
+        let provenance = Self(
+            controllerPolicyVersion: LiveFeedbackContract.controllerPolicyVersion,
+            incomingRevision: candidate.incomingLiveMasterRevision,
+            outgoingRevision: candidate.outgoingLiveMasterRevision,
+            incomingStateFingerprint:
+                candidate.incomingLiveMasterStateFingerprint,
+            outgoingStateFingerprint:
+                candidate.outgoingLiveMasterStateFingerprint,
+            proposalOutcome: candidate.liveProposalOutcome,
+            observationFingerprint: candidate.liveObservationFingerprint,
+            proposalFingerprint: candidate.liveProposalFingerprint,
+            incomingTrimDB: candidate.incomingLiveMasterTrimDB,
+            requestedTrimDB: candidate.requestedLiveMasterTrimDB,
+            appliedTrimDB: candidate.appliedLiveMasterTrimDB,
+            appliedGain: candidate.liveMasterGain,
+            incomingCleanWindowCount:
+                candidate.incomingLiveMasterCleanWindowCount,
+            outgoingCleanWindowCount:
+                candidate.outgoingLiveMasterCleanWindowCount,
+            routeGeneration: candidate.routeContinuation.routeGeneration,
+            routeGenerationValid: candidate.routeContinuation.isComplete,
+            proposalBindingValid: candidate.liveProposalBindingMatches,
+            preTrimPCMFingerprint: candidate.preLiveMasterPCMFingerprint,
+            postTrimPCMFingerprint: candidate.postLiveMasterPCMFingerprint,
+            preTrimBindingValid: isFingerprint(
+                candidate.preLiveMasterPCMFingerprint
+            ),
+            postTrimBindingValid: isFingerprint(
+                candidate.postLiveMasterPCMFingerprint
+            ),
+            terminalScalingValid: candidate.liveMasterScalingMatches,
+            earliestEligibleFutureSample:
+                candidate.liveEarliestEligibleFutureSample,
+            appliedFutureSample: candidate.liveAppliedFutureSample,
+            boundaryValid: boundaryValid
+        )
+        guard provenance.isComplete else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        return provenance
+    }
+
+    package func attacked(
+        _ attack: ProfessionalQualityLiveMasterAttack
+    ) -> Self {
+        Self(
+            controllerPolicyVersion: controllerPolicyVersion,
+            incomingRevision: incomingRevision,
+            outgoingRevision: attack == .staleControllerRevision
+                ? incomingRevision : outgoingRevision,
+            incomingStateFingerprint: incomingStateFingerprint,
+            outgoingStateFingerprint: outgoingStateFingerprint,
+            proposalOutcome: proposalOutcome,
+            observationFingerprint: observationFingerprint,
+            proposalFingerprint: proposalFingerprint,
+            incomingTrimDB: incomingTrimDB,
+            requestedTrimDB: requestedTrimDB,
+            appliedTrimDB: attack == .overAttack
+                ? appliedTrimDB -
+                    LiveMasterHeadroomController.attackStepDB
+                : appliedTrimDB,
+            appliedGain: attack == .boostAboveUnity ? 1.01 : appliedGain,
+            incomingCleanWindowCount: attack == .earlyRecovery
+                ? 0 : incomingCleanWindowCount,
+            outgoingCleanWindowCount: outgoingCleanWindowCount,
+            routeGeneration: routeGeneration,
+            routeGenerationValid: attack != .staleRouteGeneration &&
+                routeGenerationValid,
+            proposalBindingValid: attack != .unboundProposalFingerprint &&
+                proposalBindingValid,
+            preTrimPCMFingerprint: preTrimPCMFingerprint,
+            postTrimPCMFingerprint: postTrimPCMFingerprint,
+            preTrimBindingValid: attack != .forgedPreTerminalScaling &&
+                preTrimBindingValid,
+            postTrimBindingValid: attack != .forgedPostTerminalScaling &&
+                postTrimBindingValid,
+            terminalScalingValid: terminalScalingValid,
+            earliestEligibleFutureSample: earliestEligibleFutureSample,
+            appliedFutureSample: attack == .earlyBoundary
+                ? earliestEligibleFutureSample.map { $0 - 1 }
+                : appliedFutureSample,
+            boundaryValid: boundaryValid
+        )
+    }
+
+    private static func isFingerprint(_ value: String) -> Bool {
+        value.utf8.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+
+    private func isFingerprint(_ value: String) -> Bool {
+        Self.isFingerprint(value)
+    }
+}
+
+package enum ProfessionalQualityLiveMasterAttack: Sendable {
+    case forgedPreTerminalScaling
+    case forgedPostTerminalScaling
+    case boostAboveUnity
+    case overAttack
+    case earlyRecovery
+    case staleRouteGeneration
+    case staleControllerRevision
+    case unboundProposalFingerprint
+    case earlyBoundary
+}
+
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 2
+    package static let schemaVersion = 3
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v2"
+        "autotechno-professional-quality-observation.v3"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -148,6 +502,7 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
     package let checkpoint: CanonicalJourneyCheckpoint
     package let sampleRate: Double
     package let hardGatesPassed: Bool
+    package let liveMaster: ProfessionalQualityLiveMasterProvenance
     package let sourceMetricCount: Int
     package let metrics: [ProfessionalQualityMetricValue]
 
@@ -157,6 +512,7 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         checkpoint: CanonicalJourneyCheckpoint,
         sampleRate: Double,
         hardGatesPassed: Bool,
+        liveMaster: ProfessionalQualityLiveMasterProvenance,
         metrics sourceMetrics: [ProfessionalQualityMetricValue]
     ) throws {
         guard !engineVersion.trimmingCharacters(
@@ -185,6 +541,7 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         self.checkpoint = checkpoint
         self.sampleRate = sampleRate
         self.hardGatesPassed = hardGatesPassed
+        self.liveMaster = liveMaster
         sourceMetricCount = sourceMetrics.count
         metrics = sorted
     }
@@ -468,6 +825,8 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             checkpoint: checkpoint,
             sampleRate: sampleRate,
             hardGatesPassed: vector.hardGatesPassed,
+            liveMaster: try ProfessionalQualityLiveMasterProvenance
+                .candidateDerived(vector),
             metrics: metrics
         )
     }
@@ -506,7 +865,7 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             metrics.count == ProfessionalQualityMetric.allCases.count &&
             Set(metrics.map(\.metric)).count == metrics.count &&
             metrics == metrics.sorted { $0.metric.rawValue < $1.metric.rawValue } &&
-            metrics.allSatisfy { $0.value.isFinite }
+            metrics.allSatisfy { $0.value.isFinite } && liveMaster.isComplete
     }
 
     package func replacing(
@@ -520,6 +879,7 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             checkpoint: checkpoint,
             sampleRate: sampleRate,
             hardGatesPassed: hardGatesPassed ?? self.hardGatesPassed,
+            liveMaster: liveMaster,
             metrics: metrics.map {
                 $0.metric == metric
                     ? ProfessionalQualityMetricValue(metric: metric, value: value)
@@ -527,6 +887,46 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             }
         )
     }
+
+    package func replacingLiveMaster(
+        _ provenance: ProfessionalQualityLiveMasterProvenance
+    ) throws -> ProfessionalQualityObservation {
+        try ProfessionalQualityObservation(
+            engineVersion: engineVersion,
+            evidenceVersion: evidenceVersion,
+            checkpoint: checkpoint,
+            sampleRate: sampleRate,
+            hardGatesPassed: hardGatesPassed,
+            liveMaster: provenance,
+            metrics: metrics
+        )
+    }
+
+    package func deterministicJSON() throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        return try encoder.encode(self)
+    }
+
+    package static func decodeDeterministicJSON(
+        _ data: Data
+    ) throws -> ProfessionalQualityObservation {
+        // Observations are transient projections of complete candidate
+        // evidence. Profiles and reason-coded suites persist their reductions;
+        // an independently serialized live provenance is never a trusted input.
+        throw ProfessionalQualityCalibrationError.profileMismatch
+    }
+
+    package init(from decoder: any Decoder) throws {
+        throw DecodingError.dataCorrupted(
+            .init(
+                codingPath: decoder.codingPath,
+                debugDescription:
+                    "Professional observations must be candidate-derived"
+            )
+        )
+    }
+
 }
 
 package struct ProfessionalQualityMetricBounds: Codable, Equatable, Sendable {
@@ -668,14 +1068,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let legacySchemaVersion = 1
-    package static let schemaVersion = 2
-    package static let legacyProfileVersion =
-        "autotechno-professional-quality-profile.v1"
-    package static let legacyEvidenceVersion =
-        "autotechno-professional-evidence.v3"
+    package static let schemaVersion = 3
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v2"
+        "autotechno-professional-quality-profile.v3"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -974,8 +1369,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 ))
             }
         }
-        schemaVersion = Self.legacySchemaVersion
-        profileVersion = Self.legacyProfileVersion
+        schemaVersion = Self.schemaVersion
+        profileVersion = Self.profileVersion
         observationVersion = ProfessionalQualityObservation.observationVersion
         self.evidenceVersion = evidenceVersion
         self.engineVersion = engineVersion
@@ -987,20 +1382,12 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
     }
 
     package var isComplete: Bool {
-        let isLegacy = schemaVersion == Self.legacySchemaVersion &&
-            profileVersion == Self.legacyProfileVersion
-        let isDiverse = schemaVersion == Self.schemaVersion &&
-            profileVersion == Self.profileVersion
-        let expectedObservationCount = isLegacy
-            ? Self.requiredSampleRates.count
-            : sourceTrajectoryCount * Self.requiredSampleRates.count
-        return (isLegacy || isDiverse) &&
+        let expectedObservationCount = sourceTrajectoryCount *
+            Self.requiredSampleRates.count
+        return schemaVersion == Self.schemaVersion &&
+            profileVersion == Self.profileVersion &&
             observationVersion == ProfessionalQualityObservation.observationVersion &&
-            (isDiverse
-                ? evidenceVersion == ProfessionalEvidenceReportBank.evidenceVersion
-                : [Self.legacyEvidenceVersion,
-                   ProfessionalEvidenceReportBank.evidenceVersion]
-                    .contains(evidenceVersion)) &&
+            evidenceVersion == ProfessionalEvidenceReportBank.evidenceVersion &&
             !engineVersion.trimmingCharacters(
                 in: .whitespacesAndNewlines
             ).isEmpty &&
@@ -1049,8 +1436,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 $0.maximumAbsoluteDelta.isFinite &&
                     $0.maximumAbsoluteDelta >= 0
             } &&
-            (isLegacy || sourceTrajectoryCount >=
-                Self.minimumCalibrationTrajectoryCount)
+            sourceTrajectoryCount > 0
     }
 
     package var sourceTrajectoryCount: Int {
@@ -1088,11 +1474,9 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
     }
 
     package var fingerprint: String {
-        let domain = usesDiverseCalibration
-            ? "professional-quality-calibration-json.v2"
-            : "professional-quality-calibration-json.v1"
         return (try? Self.fingerprint(
-            of: deterministicJSON(), domain: domain
+            of: deterministicJSON(),
+            domain: "professional-quality-calibration-json.v3"
         )) ?? ""
     }
 
@@ -1266,7 +1650,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
 
     private static func fingerprint(
         of data: Data,
-        domain: String = "professional-quality-calibration-json.v1"
+        domain: String = "professional-quality-calibration-source-bank-json.v3"
     ) throws -> String {
         guard let string = String(data: data, encoding: .utf8) else {
             throw ProfessionalQualityCalibrationError.invalidIdentity
@@ -1285,6 +1669,13 @@ package enum ProfessionalQualityRejection: String, Codable, Hashable, Sendable {
     case metricOutOfRange = "metric-out-of-range"
     case trajectoryRelationshipFailed = "trajectory-relationship-failed"
     case rateConsistencyFailed = "rate-consistency-failed"
+    case liveControllerMismatch = "live-controller-mismatch"
+    case liveProposalMismatch = "live-proposal-mismatch"
+    case liveTerminalScalingFailure = "live-terminal-scaling-failure"
+    case liveBoostRejected = "live-boost-rejected"
+    case liveTransitionOutOfBounds = "live-transition-out-of-bounds"
+    case liveEarlyRecovery = "live-early-recovery"
+    case liveRouteBoundaryFailure = "live-route-boundary-failure"
 }
 
 package struct ProfessionalQualityVerdict: Codable, Equatable, Sendable {
@@ -1406,6 +1797,32 @@ package enum ProfessionalQualityProfileEvaluator {
         }
         if !observation.hardGatesPassed {
             reasons.insert(.hardGateFailure)
+        }
+        let live = observation.liveMaster
+        if !live.isComplete || live.controllerPolicyVersion !=
+            LiveFeedbackContract.controllerPolicyVersion ||
+            (!live.controllerTransitionValid && !live.recoveryIsEarly &&
+                !live.exceedsTransitionSlew) {
+            reasons.insert(.liveControllerMismatch)
+        }
+        if !live.proposalBindingValid {
+            reasons.insert(.liveProposalMismatch)
+        }
+        if !live.preTrimBindingValid || !live.postTrimBindingValid ||
+            !live.terminalScalingValid || !live.terminalScaleIsValid {
+            reasons.insert(.liveTerminalScalingFailure)
+        }
+        if live.boostsAboveUnity {
+            reasons.insert(.liveBoostRejected)
+        }
+        if live.exceedsTransitionSlew {
+            reasons.insert(.liveTransitionOutOfBounds)
+        }
+        if live.recoveryIsEarly {
+            reasons.insert(.liveEarlyRecovery)
+        }
+        if !live.routeAndBoundaryAreValid {
+            reasons.insert(.liveRouteBoundaryFailure)
         }
         for metric in ProfessionalQualityMetric.allCases
             where metric.participatesInQualification {

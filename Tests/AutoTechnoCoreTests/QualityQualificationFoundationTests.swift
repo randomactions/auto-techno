@@ -538,6 +538,19 @@ struct QualityQualificationFoundationTests {
             #expect(bank.reports.filter { $0.sampleRate == sampleRate }
                 .map(\.checkpoint) == CanonicalJourneyCheckpoint.allCases)
         }
+        for report in bank.reports {
+            #expect(report.liveMaster.controllerPolicyVersion ==
+                    LiveFeedbackContract.controllerPolicyVersion)
+            #expect(report.liveMaster.incomingStateFingerprint ==
+                    report.selectedCandidateEvidence
+                        .incomingLiveMasterStateFingerprint)
+            #expect(report.liveMaster.outgoingStateFingerprint ==
+                    report.selectedCandidateEvidence
+                        .outgoingLiveMasterStateFingerprint)
+            #expect(report.liveMaster.routeGeneration == report.routeGeneration)
+            #expect(report.liveMaster.terminalScaleIsValid)
+            #expect(report.liveMaster.routeAndBoundaryAreValid)
+        }
         #expect(bank.policyAvailability ==
                 .unavailablePendingCalibratedProfileAndAdversarialSuite)
         #expect(bank.calibrationProfileFingerprint == nil)
@@ -620,6 +633,10 @@ struct QualityQualificationFoundationTests {
             engineVersion: QualityQualificationContract.engineVersion,
             checkpoint: .establishment
         )
+        let expectedLive = try ProfessionalQualityLiveMasterProvenance.home(
+            candidate: activeFixture.vector
+        )
+        #expect(active.liveMaster == expectedLive)
         #expect(active[.modalPercussionActiveBarRatio] == 1)
         #expect(active[.modalPercussionEventCountMean] == 1)
         #expect(active[.modalPercussionPitchErrorCentsMaximum] == 0)
@@ -1044,6 +1061,9 @@ struct QualityQualificationFoundationTests {
             routeContinuation: route,
             incomingLiveMasterRevision: 0,
             outgoingLiveMasterRevision: 0,
+            incomingLiveMasterTrimDB: 0,
+            incomingLiveMasterCleanWindowCount: 0,
+            outgoingLiveMasterCleanWindowCount: 0,
             incomingLiveMasterStateFingerprint:
                 LiveMasterHeadroomContinuationState().fingerprint,
             outgoingLiveMasterStateFingerprint:
@@ -1058,6 +1078,8 @@ struct QualityQualificationFoundationTests {
             postLiveMasterPCMFingerprint: livePhraseHash,
             liveMasterScalingMatches: true,
             liveEarliestEligibleFutureSample: nil,
+            liveAppliedFutureSample: nil,
+            liveProposalBindingMatches: true,
             preGraphUpperTimbreEvidence: evidence,
             postGraphUpperTimbreEvidence: evidence
         )

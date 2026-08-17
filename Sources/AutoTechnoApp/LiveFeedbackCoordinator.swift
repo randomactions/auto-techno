@@ -293,6 +293,32 @@ package struct AcceptedPCMHold: Equatable, Sendable {
     package var sourcePhraseIndex: Int { sourceOccurrence.phraseIndex }
 }
 
+package enum LiveCorrectedSuccessorBoundaryDecision: Equatable, Sendable {
+    case advance
+    case repeatAfterExpiringProposal
+}
+
+/// Pure admission check for the App-owned target sample. The scheduler calls
+/// this before it removes a cached candidate or advances any musical state.
+package enum LiveCorrectedSuccessorBoundaryPolicy {
+    package static func decide(
+        hasLiveProposal: Bool,
+        preparedTargetStartSample: Int64?,
+        earliestEligibleFutureSample: Int64?,
+        actualStartSample: Int64
+    ) -> LiveCorrectedSuccessorBoundaryDecision {
+        guard hasLiveProposal else { return .advance }
+        guard actualStartSample > 0,
+              let preparedTargetStartSample,
+              let earliestEligibleFutureSample,
+              preparedTargetStartSample == actualStartSample,
+              actualStartSample >= earliestEligibleFutureSample else {
+            return .repeatAfterExpiringProposal
+        }
+        return .advance
+    }
+}
+
 private struct AuthorizedLiveFeedbackCorrection: Equatable, Sendable {
     let sourceOccurrence: ScheduledPhraseRange
     let targetPhraseIndex: Int

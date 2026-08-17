@@ -17,18 +17,395 @@ package enum ProfessionalQualityAdversarialScenario: String, CaseIterable,
     case modalRunawayTail = "modal-runaway-tail"
     case modalMaskingFlood = "modal-masking-flood"
     case modalRateDrift = "modal-rate-drift"
+    case forgedPreTerminalScaling = "forged-pre-terminal-scaling"
+    case forgedPostTerminalScaling = "forged-post-terminal-scaling"
+    case masterBoostAboveUnity = "master-boost-above-unity"
+    case liveOverAttack = "live-over-attack"
+    case liveEarlyRecovery = "live-early-recovery"
+    case staleLiveRouteGeneration = "stale-live-route-generation"
+    case liveEarlyBoundary = "live-early-boundary"
+    case staleLiveControllerRevision = "stale-live-controller-revision"
+    case unboundLiveProposalFingerprint =
+        "unbound-live-proposal-fingerprint"
 }
 
 package struct ProfessionalQualityAdversarialCaseResult: Codable, Equatable,
         Sendable {
     package let scenario: ProfessionalQualityAdversarialScenario
     package let rejected: Bool
-    package let expectedReason: ProfessionalQualityRejection
+    package let expectedReasons: [ProfessionalQualityRejection]
     package let actualReasons: [ProfessionalQualityRejection]
     package let failedMetrics: [ProfessionalQualityMetric]
 
     package var passed: Bool {
-        rejected && actualReasons.contains(expectedReason)
+        rejected && actualReasons == expectedReasons
+    }
+}
+
+/// The non-reconstructable scheduling projection used by calibration mirrors
+/// the App's `ScheduledPhraseRange`: one full accepted occurrence owns the
+/// three-second capture at its onset and its upper bound is the sole eligible
+/// start of the corrected successor.
+package struct ProfessionalQualityLiveScheduledOccurrenceEvidence: Equatable,
+        Sendable {
+    package let phraseIndex: Int
+    package let planFingerprint: String
+    package let playerSampleRange: Range<Int64>
+    package let capturePlayerSampleRange: Range<Int64>
+    package let sampleRate: Double
+    package let routeGeneration: Int
+    package let occurrenceEpoch: UInt64
+    package let controllerRevision: Int
+    package let qualityPolicyVersion: String
+    package let evaluatorVersion: String
+    package let controllerPolicyVersion: String
+    package let controllerStateFingerprint: String
+    package let appliedMasterTrimDB: Double
+    package let applicableCheckpoints: [CanonicalJourneyCheckpoint]
+    package let earliestEligibleFutureSample: Int64
+
+    package init(
+        phraseIndex: Int,
+        planFingerprint: String,
+        playerSampleRange: Range<Int64>,
+        capturePlayerSampleRange: Range<Int64>,
+        sampleRate: Double,
+        routeGeneration: Int,
+        occurrenceEpoch: UInt64,
+        controllerRevision: Int,
+        qualityPolicyVersion: String,
+        evaluatorVersion: String,
+        controllerPolicyVersion: String,
+        controllerStateFingerprint: String,
+        appliedMasterTrimDB: Double,
+        applicableCheckpoints: [CanonicalJourneyCheckpoint],
+        earliestEligibleFutureSample: Int64
+    ) {
+        self.phraseIndex = phraseIndex
+        self.planFingerprint = planFingerprint
+        self.playerSampleRange = playerSampleRange
+        self.capturePlayerSampleRange = capturePlayerSampleRange
+        self.sampleRate = sampleRate
+        self.routeGeneration = routeGeneration
+        self.occurrenceEpoch = occurrenceEpoch
+        self.controllerRevision = controllerRevision
+        self.qualityPolicyVersion = qualityPolicyVersion
+        self.evaluatorVersion = evaluatorVersion
+        self.controllerPolicyVersion = controllerPolicyVersion
+        self.controllerStateFingerprint = controllerStateFingerprint
+        self.appliedMasterTrimDB = appliedMasterTrimDB
+        self.applicableCheckpoints = applicableCheckpoints
+        self.earliestEligibleFutureSample = earliestEligibleFutureSample
+    }
+
+    package var isComplete: Bool {
+        let occurrenceFrames = playerSampleRange.upperBound
+            .subtractingReportingOverflow(playerSampleRange.lowerBound)
+        let captureFrames = capturePlayerSampleRange.upperBound
+            .subtractingReportingOverflow(capturePlayerSampleRange.lowerBound)
+        guard !occurrenceFrames.overflow, !captureFrames.overflow,
+              let requiredCaptureFrames = LiveOutputWindowAnalyzer.frameCount(
+                sampleRate: sampleRate
+              ) else { return false }
+        return phraseIndex >= 0 && isFingerprint(planFingerprint) &&
+            playerSampleRange.lowerBound >= 0 &&
+            occurrenceFrames.partialValue >= Int64(requiredCaptureFrames) &&
+            capturePlayerSampleRange.lowerBound ==
+                playerSampleRange.lowerBound &&
+            captureFrames.partialValue == Int64(requiredCaptureFrames) &&
+            capturePlayerSampleRange.upperBound <=
+                playerSampleRange.upperBound &&
+            sampleRate >=
+                QualityQualificationContract.minimumSupportedSampleRate &&
+            sampleRate <=
+                QualityQualificationContract.maximumSupportedSampleRate &&
+            routeGeneration >= 0 && controllerRevision >= 0 &&
+            LiveOutputWindowAnalyzer.isCurrentQualityPolicyVersion(
+                qualityPolicyVersion
+            ) &&
+            evaluatorVersion == ProfessionalQualityPrimaryEvaluator
+                .evaluatorVersionIdentifier &&
+            controllerPolicyVersion ==
+                LiveFeedbackContract.controllerPolicyVersion &&
+            isFingerprint(controllerStateFingerprint) &&
+            appliedMasterTrimDB.isFinite &&
+            (-3...0).contains(appliedMasterTrimDB) &&
+            !applicableCheckpoints.isEmpty &&
+            Set(applicableCheckpoints).count == applicableCheckpoints.count &&
+            earliestEligibleFutureSample == playerSampleRange.upperBound
+    }
+
+    private func isFingerprint(_ value: String) -> Bool {
+        value.utf8.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
+fileprivate final class ProfessionalQualityLiveCandidateStorage:
+        Sendable {
+    let value: AutonomousCandidateEvaluationVector
+
+    init(_ value: AutonomousCandidateEvaluationVector) {
+        self.value = value
+    }
+}
+
+package struct ProfessionalQualityLiveCandidateTransitionEvidence: Equatable,
+        Sendable {
+    package let sourceOccurrence:
+        ProfessionalQualityLiveScheduledOccurrenceEvidence
+    package let captureEvidence: LiveOutputWindowEvidence
+    package let targetOccurrence:
+        ProfessionalQualityLiveScheduledOccurrenceEvidence
+    fileprivate let candidateStorage: ProfessionalQualityLiveCandidateStorage
+
+    package var candidate: AutonomousCandidateEvaluationVector {
+        candidateStorage.value
+    }
+
+    package init(
+        sourceOccurrence:
+            ProfessionalQualityLiveScheduledOccurrenceEvidence,
+        captureEvidence: LiveOutputWindowEvidence,
+        targetOccurrence:
+            ProfessionalQualityLiveScheduledOccurrenceEvidence,
+        candidate: AutonomousCandidateEvaluationVector
+    ) throws {
+        self.sourceOccurrence = sourceOccurrence
+        self.captureEvidence = captureEvidence
+        self.targetOccurrence = targetOccurrence
+        candidateStorage = ProfessionalQualityLiveCandidateStorage(candidate)
+        guard isCausal else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+    }
+
+    package var isCausal: Bool {
+        guard sourceOccurrence.isComplete, targetOccurrence.isComplete,
+              captureEvidence.isStructurallyValid,
+              candidateStorage.value.isComplete,
+              candidateStorage.value.isFinite,
+              sourceOccurrence.phraseIndex < Int.max,
+              let candidateKind = AutonomousPhraseKind(
+                rawValue: candidateStorage.value.symbolic.phraseKind
+              ) else { return false }
+        let representedTargetCheckpoints = CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: candidateStorage.value.symbolic.phraseIndex,
+            phraseKind: candidateKind,
+            chapterChanged: candidateStorage.value.symbolic.chapterChanged
+        )
+        let expectedTargetCheckpoints = representedTargetCheckpoints.isEmpty
+            ? [.longContinuation]
+            : representedTargetCheckpoints
+        let expectedSourceControllerFingerprint = AutonomousCandidateFingerprint
+            .combinedController(
+                kickCorrectionDB: candidateStorage.value.routeContinuation
+                    .incomingKickCorrectionDB,
+                liveMasterStateFingerprint: candidateStorage.value
+                    .incomingLiveMasterStateFingerprint,
+                proposalFingerprint: nil
+            )
+        guard captureEvidence.phraseIndex == sourceOccurrence.phraseIndex,
+              captureEvidence.planFingerprint ==
+                sourceOccurrence.planFingerprint,
+              captureEvidence.playerSampleRange ==
+                sourceOccurrence.capturePlayerSampleRange,
+              captureEvidence.sampleRate == sourceOccurrence.sampleRate,
+              captureEvidence.routeGeneration ==
+                sourceOccurrence.routeGeneration,
+              captureEvidence.controllerRevision ==
+                sourceOccurrence.controllerRevision else { return false }
+        guard captureEvidence.qualityPolicyVersion ==
+                sourceOccurrence.qualityPolicyVersion,
+              captureEvidence.evaluatorVersion ==
+                sourceOccurrence.evaluatorVersion,
+              captureEvidence.controllerPolicyVersion ==
+                sourceOccurrence.controllerPolicyVersion,
+              captureEvidence.applicableCheckpoints ==
+                sourceOccurrence.applicableCheckpoints,
+              sourceOccurrence.controllerStateFingerprint ==
+                expectedSourceControllerFingerprint,
+              candidateStorage.value.liveObservationFingerprint ==
+                captureEvidence.fingerprint else { return false }
+        guard targetOccurrence.phraseIndex ==
+                sourceOccurrence.phraseIndex + 1,
+              targetOccurrence.phraseIndex ==
+                candidateStorage.value.symbolic.phraseIndex,
+              targetOccurrence.planFingerprint ==
+                candidateStorage.value.planFingerprint,
+              targetOccurrence.applicableCheckpoints ==
+                expectedTargetCheckpoints,
+              targetOccurrence.playerSampleRange.lowerBound ==
+                sourceOccurrence.playerSampleRange.upperBound,
+              targetOccurrence.playerSampleRange.lowerBound ==
+                sourceOccurrence.earliestEligibleFutureSample else {
+            return false
+        }
+        guard candidateStorage.value.liveEarliestEligibleFutureSample ==
+                sourceOccurrence.earliestEligibleFutureSample,
+              candidateStorage.value.liveAppliedFutureSample ==
+                targetOccurrence.playerSampleRange.lowerBound,
+              sourceOccurrence.controllerRevision ==
+                candidateStorage.value.incomingLiveMasterRevision,
+              targetOccurrence.controllerRevision ==
+                candidateStorage.value.outgoingLiveMasterRevision,
+              sourceOccurrence.appliedMasterTrimDB ==
+                candidateStorage.value.incomingLiveMasterTrimDB,
+              targetOccurrence.appliedMasterTrimDB ==
+                candidateStorage.value.appliedLiveMasterTrimDB else {
+            return false
+        }
+        guard targetOccurrence.controllerStateFingerprint ==
+                candidateStorage.value.routeContinuation
+                    .controllerStateFingerprint,
+              sourceOccurrence.sampleRate == targetOccurrence.sampleRate,
+              sourceOccurrence.sampleRate ==
+                candidateStorage.value.routeContinuation.sampleRate,
+              sourceOccurrence.routeGeneration ==
+                targetOccurrence.routeGeneration,
+              sourceOccurrence.routeGeneration ==
+                candidateStorage.value.routeContinuation.routeGeneration,
+              sourceOccurrence.occurrenceEpoch ==
+                targetOccurrence.occurrenceEpoch else { return false }
+        return sourceOccurrence.qualityPolicyVersion ==
+                targetOccurrence.qualityPolicyVersion &&
+            sourceOccurrence.evaluatorVersion ==
+                targetOccurrence.evaluatorVersion &&
+            sourceOccurrence.controllerPolicyVersion ==
+                targetOccurrence.controllerPolicyVersion
+    }
+
+    package static func == (
+        lhs: ProfessionalQualityLiveCandidateTransitionEvidence,
+        rhs: ProfessionalQualityLiveCandidateTransitionEvidence
+    ) -> Bool {
+        lhs.sourceOccurrence == rhs.sourceOccurrence &&
+            lhs.captureEvidence == rhs.captureEvidence &&
+            lhs.targetOccurrence == rhs.targetOccurrence &&
+            lhs.candidateStorage.value == rhs.candidateStorage.value
+    }
+}
+
+package struct ProfessionalQualityLiveCandidateChain: Equatable, Sendable {
+    package let attenuationTransition:
+        ProfessionalQualityLiveCandidateTransitionEvidence
+    package let cleanHoldTransition:
+        ProfessionalQualityLiveCandidateTransitionEvidence
+    package let recoveryTransition:
+        ProfessionalQualityLiveCandidateTransitionEvidence
+
+    package var attenuation: AutonomousCandidateEvaluationVector {
+        attenuationTransition.candidate
+    }
+    package var cleanHold: AutonomousCandidateEvaluationVector {
+        cleanHoldTransition.candidate
+    }
+    package var recovery: AutonomousCandidateEvaluationVector {
+        recoveryTransition.candidate
+    }
+
+    package init(
+        attenuationTransition:
+            ProfessionalQualityLiveCandidateTransitionEvidence,
+        cleanHoldTransition:
+            ProfessionalQualityLiveCandidateTransitionEvidence,
+        recoveryTransition:
+            ProfessionalQualityLiveCandidateTransitionEvidence
+    ) throws {
+        self.attenuationTransition = attenuationTransition
+        self.cleanHoldTransition = cleanHoldTransition
+        self.recoveryTransition = recoveryTransition
+        guard isCausal else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+    }
+
+    package var isCausal: Bool {
+        guard attenuationTransition.isCausal,
+              cleanHoldTransition.isCausal,
+              recoveryTransition.isCausal,
+              attenuationTransition.targetOccurrence ==
+                cleanHoldTransition.sourceOccurrence,
+              cleanHoldTransition.targetOccurrence ==
+                recoveryTransition.sourceOccurrence else { return false }
+        guard attenuationTransition.candidateStorage.value.isComplete,
+              attenuationTransition.candidateStorage.value.isFinite,
+              attenuationTransition.candidateStorage.value
+                .liveAppliedFutureSample != nil,
+              attenuationTransition.candidateStorage.value
+                .liveProposalFingerprint != nil,
+              attenuationTransition.candidateStorage.value
+                .liveProposalOutcome ==
+                .attenuate,
+              attenuationTransition.candidateStorage.value
+                .outgoingLiveMasterCleanWindowCount == 0
+        else { return false }
+        guard cleanHoldTransition.candidateStorage.value.isComplete,
+              cleanHoldTransition.candidateStorage.value.isFinite,
+              cleanHoldTransition.candidateStorage.value
+                .liveAppliedFutureSample != nil,
+              cleanHoldTransition.candidateStorage.value
+                .liveProposalFingerprint != nil,
+              cleanHoldTransition.candidateStorage.value
+                .liveProposalOutcome == .hold,
+              cleanHoldTransition.candidateStorage.value
+                .incomingLiveMasterCleanWindowCount == 0,
+              cleanHoldTransition.candidateStorage.value
+                .outgoingLiveMasterCleanWindowCount == 1,
+              attenuationTransition.candidateStorage.value
+                .outgoingLiveMasterStateFingerprint ==
+                cleanHoldTransition.candidateStorage.value
+                    .incomingLiveMasterStateFingerprint,
+              attenuationTransition.candidateStorage.value
+                .outgoingLiveMasterRevision ==
+                cleanHoldTransition.candidateStorage.value
+                    .incomingLiveMasterRevision,
+              cleanHoldTransition.candidateStorage.value
+                .incomingLiveMasterTrimDB ==
+                attenuationTransition.candidateStorage.value
+                    .appliedLiveMasterTrimDB else {
+            return false
+        }
+        guard recoveryTransition.candidateStorage.value.isComplete,
+              recoveryTransition.candidateStorage.value.isFinite,
+              recoveryTransition.candidateStorage.value
+                .liveAppliedFutureSample != nil,
+              recoveryTransition.candidateStorage.value
+                .liveProposalFingerprint != nil,
+              recoveryTransition.candidateStorage.value
+                .liveProposalOutcome == .recover,
+              recoveryTransition.candidateStorage.value
+                .incomingLiveMasterCleanWindowCount == 1,
+              recoveryTransition.candidateStorage.value
+                .outgoingLiveMasterCleanWindowCount == 0,
+              cleanHoldTransition.candidateStorage.value
+                .outgoingLiveMasterStateFingerprint ==
+                recoveryTransition.candidateStorage.value
+                    .incomingLiveMasterStateFingerprint,
+              cleanHoldTransition.candidateStorage.value
+                .outgoingLiveMasterRevision ==
+                recoveryTransition.candidateStorage.value
+                    .incomingLiveMasterRevision,
+              recoveryTransition.candidateStorage.value
+                .incomingLiveMasterTrimDB ==
+                cleanHoldTransition.candidateStorage.value
+                    .appliedLiveMasterTrimDB else {
+            return false
+        }
+        guard attenuationTransition.candidateStorage.value.symbolic
+                .phraseIndex < Int.max,
+              cleanHoldTransition.candidateStorage.value.symbolic.phraseIndex <
+                Int.max else {
+            return false
+        }
+        return attenuationTransition.candidateStorage.value.symbolic
+                .phraseIndex + 1 ==
+                cleanHoldTransition.candidateStorage.value.symbolic
+                    .phraseIndex &&
+            cleanHoldTransition.candidateStorage.value.symbolic.phraseIndex +
+                1 == recoveryTransition.candidateStorage.value.symbolic
+                    .phraseIndex
     }
 }
 
@@ -37,23 +414,23 @@ package struct ProfessionalQualityAdversarialCaseResult: Codable, Equatable,
 /// evidence. Every scenario must be rejected independently.
 package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         Sendable {
-    package static let legacySchemaVersion = 2
-    package static let schemaVersion = 3
-    package static let legacySuiteVersion =
-        "autotechno-professional-quality-adversarial.v2"
+    package static let schemaVersion = 4
     package static let suiteVersion =
-        "autotechno-professional-quality-adversarial.v3"
+        "autotechno-professional-quality-adversarial.v4"
 
     package let schemaVersion: Int
     package let suiteVersion: String
     package let profileFingerprint: String
     package let sourceObservationCount: Int
     package let baselineAcceptanceCount: Int
+    package let liveBaselineAcceptanceCount: Int
+    package let liveBaselineObservationFingerprints: [String]
     package let cases: [ProfessionalQualityAdversarialCaseResult]
 
     package init(
         profile: ProfessionalQualityCalibrationProfile,
-        sourceObservations: [ProfessionalQualityObservation]
+        sourceObservations: [ProfessionalQualityObservation],
+        liveCandidateChain: ProfessionalQualityLiveCandidateChain
     ) throws {
         let expectedSourceObservationCount = profile.checkpoints.first
             .map { $0.sourceObservationCount *
@@ -77,7 +454,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         func append(
             _ scenario: ProfessionalQualityAdversarialScenario,
             observation: ProfessionalQualityObservation,
-            expected: ProfessionalQualityRejection
+            expected: [ProfessionalQualityRejection]
         ) {
             let verdict = ProfessionalQualityProfileEvaluator.evaluate(
                 observation, against: profile
@@ -85,7 +462,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             generated.append(ProfessionalQualityAdversarialCaseResult(
                 scenario: scenario,
                 rejected: !verdict.accepted,
-                expectedReason: expected,
+                expectedReasons: expected.sorted { $0.rawValue < $1.rawValue },
                 actualReasons: verdict.reasons,
                 failedMetrics: verdict.failedMetrics
             ))
@@ -112,6 +489,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                 checkpoint: baseline.checkpoint,
                 sampleRate: sampleRate,
                 hardGatesPassed: hardGatesPassed,
+                liveMaster: baseline.liveMaster,
                 metrics: metrics ?? baseline.metrics
             )
         }
@@ -119,7 +497,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         append(
             .hardGateCompensation,
             observation: try identityCopy(hardGatesPassed: false),
-            expected: .hardGateFailure
+            expected: [.hardGateFailure]
         )
         append(
             .truePeakCompensation,
@@ -127,7 +505,127 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                 .truePeakDBTP,
                 with: outside(.truePeakDBTP, preferLower: false)
             ),
-            expected: .metricOutOfRange
+            expected: [.metricOutOfRange]
+        )
+        func acceptedObservation(
+            candidate: AutonomousCandidateEvaluationVector
+        ) throws -> ProfessionalQualityObservation {
+            guard let kind = AutonomousPhraseKind(
+                rawValue: candidate.symbolic.phraseKind
+            ) else {
+                throw ProfessionalQualityCalibrationError.profileMismatch
+            }
+            let checkpoints = CanonicalJourneyCheckpoint.applicable(
+                phraseIndex: candidate.symbolic.phraseIndex,
+                phraseKind: kind,
+                chapterChanged: candidate.symbolic.chapterChanged
+            )
+            for checkpoint in checkpoints {
+                let observation = try ProfessionalQualityObservation(
+                    candidate: candidate,
+                    engineVersion: baseline.engineVersion,
+                    checkpoint: checkpoint
+                )
+                if ProfessionalQualityProfileEvaluator.evaluate(
+                    observation,
+                    against: profile
+                ).accepted {
+                    return observation
+                }
+            }
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        let attenuationObservation = try acceptedObservation(
+            candidate: liveCandidateChain.attenuation
+        )
+        let recoveryObservation = try acceptedObservation(
+            candidate: liveCandidateChain.recovery
+        )
+        let validLiveAttack = attenuationObservation.liveMaster
+        let validLiveRecovery = recoveryObservation.liveMaster
+        guard validLiveAttack.proposalOutcome == .attenuate,
+              validLiveRecovery.proposalOutcome == .recover else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        let acceptedLiveBaselines = [
+            attenuationObservation,
+            recoveryObservation,
+        ]
+        guard acceptedLiveBaselines.allSatisfy({ observation in
+            ProfessionalQualityProfileEvaluator.evaluate(
+                observation, against: profile
+            ).accepted
+        }) else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        append(
+            .forgedPreTerminalScaling,
+            observation: try attenuationObservation.replacingLiveMaster(
+                validLiveAttack.attacked(.forgedPreTerminalScaling)
+            ),
+            expected: [.liveTerminalScalingFailure]
+        )
+        append(
+            .forgedPostTerminalScaling,
+            observation: try attenuationObservation.replacingLiveMaster(
+                validLiveAttack.attacked(.forgedPostTerminalScaling)
+            ),
+            expected: [.liveTerminalScalingFailure]
+        )
+        append(
+            .masterBoostAboveUnity,
+            observation: try attenuationObservation.replacingLiveMaster(
+                validLiveAttack.attacked(.boostAboveUnity)
+            ),
+            // A gain above unity necessarily breaks exact terminal scaling.
+            expected: [.liveBoostRejected, .liveTerminalScalingFailure]
+        )
+        append(
+            .liveOverAttack,
+            observation: try attenuationObservation.replacingLiveMaster(
+                validLiveAttack.attacked(.overAttack)
+            ),
+            // Changing only applied trim necessarily also breaks requested
+            // trim/gain equality while proving the transition slew gate.
+            expected: [
+                .liveTerminalScalingFailure,
+                .liveTransitionOutOfBounds,
+            ]
+        )
+        append(
+            .liveEarlyRecovery,
+            observation: try recoveryObservation.replacingLiveMaster(
+                validLiveRecovery.attacked(.earlyRecovery)
+            ),
+            expected: [.liveEarlyRecovery]
+        )
+        append(
+            .staleLiveRouteGeneration,
+            observation: try attenuationObservation.replacingLiveMaster(
+                validLiveAttack.attacked(.staleRouteGeneration)
+            ),
+            expected: [.liveRouteBoundaryFailure]
+        )
+        append(
+            .liveEarlyBoundary,
+            observation: try attenuationObservation.replacingLiveMaster(
+                validLiveAttack.attacked(.earlyBoundary)
+            ),
+            expected: [.liveRouteBoundaryFailure]
+        )
+        append(
+            .staleLiveControllerRevision,
+            observation: try attenuationObservation.replacingLiveMaster(
+                validLiveAttack.attacked(.staleControllerRevision)
+            ),
+            expected: [.liveControllerMismatch]
+        )
+        append(
+            .unboundLiveProposalFingerprint,
+            observation: try attenuationObservation.replacingLiveMaster(
+                validLiveAttack.attacked(.unboundProposalFingerprint)
+            ),
+            expected: [.liveProposalMismatch]
         )
 
         let trajectoryCheckpoint = try Self.checkpointWithLargestLowerBound(
@@ -149,7 +647,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                 with: trajectoryBounds.lower - max(1e-9,
                     trajectoryBounds.lower * 0.1)
             ),
-            expected: .metricOutOfRange
+            expected: [.metricOutOfRange]
         )
 
         append(
@@ -158,7 +656,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                 .spectralCentroidMeanHz,
                 with: outside(.spectralCentroidMeanHz, preferLower: true)
             ),
-            expected: .metricOutOfRange
+            expected: [.metricOutOfRange]
         )
         append(
             .maskingFlood,
@@ -166,7 +664,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                 .maskingMaximumOverlap,
                 with: outside(.maskingMaximumOverlap, preferLower: false)
             ),
-            expected: .metricOutOfRange
+            expected: [.metricOutOfRange]
         )
         append(
             .lowEndPhaseFailure,
@@ -174,7 +672,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                 .lowStereoCorrelation,
                 with: outside(.lowStereoCorrelation, preferLower: true)
             ),
-            expected: .metricOutOfRange
+            expected: [.metricOutOfRange]
         )
         append(
             .modalDetuning,
@@ -185,7 +683,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                     preferLower: false
                 )
             ),
-            expected: .metricOutOfRange
+            expected: [.metricOutOfRange]
         )
         append(
             .modalRunawayTail,
@@ -196,7 +694,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                     preferLower: false
                 )
             ),
-            expected: .metricOutOfRange
+            expected: [.metricOutOfRange]
         )
         append(
             .modalMaskingFlood,
@@ -207,7 +705,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                     preferLower: false
                 )
             ),
-            expected: .metricOutOfRange
+            expected: [.metricOutOfRange]
         )
 
         var silenceMetrics = baseline.metrics
@@ -234,12 +732,12 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         append(
             .silentProxy,
             observation: try identityCopy(metrics: silenceMetrics),
-            expected: .metricOutOfRange
+            expected: [.metricOutOfRange]
         )
         append(
             .foreignRate,
             observation: try identityCopy(sampleRate: 96_000),
-            expected: .profileMismatch
+            expected: [.profileMismatch]
         )
         let trajectoryAttack = try Self.trajectoryAttack(
             profile: profile,
@@ -251,7 +749,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         generated.append(ProfessionalQualityAdversarialCaseResult(
             scenario: .trajectoryFlattening,
             rejected: !trajectoryFailures.isEmpty,
-            expectedReason: .trajectoryRelationshipFailed,
+            expectedReasons: [.trajectoryRelationshipFailed],
             actualReasons: trajectoryFailures.isEmpty
                 ? [] : [.trajectoryRelationshipFailed],
             failedMetrics: Array(Set(trajectoryFailures.map(\.metric)))
@@ -268,7 +766,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         generated.append(ProfessionalQualityAdversarialCaseResult(
             scenario: .rateDrift,
             rejected: !rateFailures.isEmpty,
-            expectedReason: .rateConsistencyFailed,
+            expectedReasons: [.rateConsistencyFailed],
             actualReasons: rateFailures.isEmpty ? [] : [.rateConsistencyFailed],
             failedMetrics: Array(Set(rateFailures.map(\.metric)))
                 .sorted { $0.rawValue < $1.rawValue }
@@ -288,25 +786,37 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         generated.append(ProfessionalQualityAdversarialCaseResult(
             scenario: .modalRateDrift,
             rejected: !modalRateFailures.isEmpty,
-            expectedReason: .rateConsistencyFailed,
+            expectedReasons: [.rateConsistencyFailed],
             actualReasons: modalRateFailures.isEmpty
                 ? [] : [.rateConsistencyFailed],
             failedMetrics: [.modalPercussionSpectralCentroidMeanHz]
         ))
 
-        schemaVersion = profile.usesDiverseCalibration
-            ? Self.schemaVersion : Self.legacySchemaVersion
-        suiteVersion = profile.usesDiverseCalibration
-            ? Self.suiteVersion : Self.legacySuiteVersion
+        schemaVersion = Self.schemaVersion
+        suiteVersion = Self.suiteVersion
         profileFingerprint = profile.fingerprint
         sourceObservationCount = sourceObservations.count
         baselineAcceptanceCount = sourceObservations.count
+        liveBaselineAcceptanceCount = acceptedLiveBaselines.count
+        liveBaselineObservationFingerprints = try acceptedLiveBaselines.map {
+            guard let json = String(
+                data: try $0.deterministicJSON(),
+                encoding: .utf8
+            ) else {
+                throw ProfessionalQualityCalibrationError.profileMismatch
+            }
+            var sink = StreamingFNV1a()
+            sink.domain("professional-quality-live-baseline.v1")
+            sink.string(json)
+            return fixedWidthFingerprintHex(sink.value)
+        }
         cases = generated.sorted { $0.scenario.rawValue < $1.scenario.rawValue }
     }
 
     package init(
         profile: ProfessionalQualityCalibrationProfile,
-        sourceCorpus: ProfessionalQualityCalibrationCorpus
+        sourceCorpus: ProfessionalQualityCalibrationCorpus,
+        liveCandidateChain: ProfessionalQualityLiveCandidateChain
     ) throws {
         guard profile.usesDiverseCalibration,
               sourceCorpus.isComplete,
@@ -323,19 +833,20 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         }
         try self.init(
             profile: profile,
-            sourceObservations: sourceCorpus.observations
+            sourceObservations: sourceCorpus.observations,
+            liveCandidateChain: liveCandidateChain
         )
     }
 
     package var passed: Bool {
-        let recognizedVersion =
-            (schemaVersion == Self.legacySchemaVersion &&
-                suiteVersion == Self.legacySuiteVersion) ||
-            (schemaVersion == Self.schemaVersion &&
-                suiteVersion == Self.suiteVersion)
-        return recognizedVersion &&
+        return schemaVersion == Self.schemaVersion &&
+            suiteVersion == Self.suiteVersion &&
             !profileFingerprint.isEmpty && sourceObservationCount > 0 &&
             baselineAcceptanceCount == sourceObservationCount &&
+            liveBaselineAcceptanceCount == 2 &&
+            liveBaselineObservationFingerprints.count == 2 &&
+            Set(liveBaselineObservationFingerprints).count == 2 &&
+            liveBaselineObservationFingerprints.allSatisfy { !$0.isEmpty } &&
             cases.count == ProfessionalQualityAdversarialScenario.allCases.count &&
             cases.map(\.scenario) == ProfessionalQualityAdversarialScenario
                 .allCases.sorted { $0.rawValue < $1.rawValue } &&
@@ -366,9 +877,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         guard let data = try? deterministicJSON(),
               let string = String(data: data, encoding: .utf8) else { return "" }
         var sink = StreamingFNV1a()
-        sink.domain(schemaVersion == Self.schemaVersion
-            ? "professional-quality-adversarial-suite-json.v3"
-            : "professional-quality-adversarial-suite-json.v2")
+        sink.domain("professional-quality-adversarial-suite-json.v4")
         sink.string(string)
         return fixedWidthFingerprintHex(sink.value)
     }

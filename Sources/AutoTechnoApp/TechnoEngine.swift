@@ -20,6 +20,7 @@ private struct PhrasePreparationKey: Hashable, Sendable {
     let incomingLiveMasterStateFingerprint: String
     let pendingLiveMasterProposalFingerprint: String?
     let liveEarliestEligibleFutureSample: Int64?
+    let liveTargetStartSample: Int64?
 }
 
 private struct PhrasePreparationRequest: Sendable {
@@ -71,6 +72,7 @@ private enum AutonomousPerformancePreparer {
             routeChannelCount: request.key.channelCount,
             routeGeneration: request.key.routeGeneration,
             pendingLiveMasterBinding: request.pendingLiveMasterBinding,
+            liveTargetStartSample: request.key.liveTargetStartSample,
             evaluator: evaluator,
             cancellationRequested: { Task.isCancelled }
         ), !Task.isCancelled else { return nil }
@@ -264,7 +266,8 @@ package final class TechnoEngine: ObservableObject {
                 incomingLiveMasterStateFingerprint:
                     sessionState.liveMasterHeadroom.fingerprint,
                 pendingLiveMasterProposalFingerprint: nil,
-                liveEarliestEligibleFutureSample: nil
+                liveEarliestEligibleFutureSample: nil,
+                liveTargetStartSample: nil
             ),
             sourceState: sessionState,
             incomingRenderState: RenderState(),
@@ -493,7 +496,8 @@ package final class TechnoEngine: ObservableObject {
 
     private func makeSuccessorRequest(
         after phrase: PreparedPhrase,
-        pendingBinding: PendingLiveMasterHeadroomBinding? = nil
+        pendingBinding: PendingLiveMasterHeadroomBinding? = nil,
+        liveTargetStartSample: Int64? = nil
     ) -> PhrasePreparationRequest {
         PhrasePreparationRequest(
             key: PhrasePreparationKey(
@@ -514,7 +518,8 @@ package final class TechnoEngine: ObservableObject {
                 pendingLiveMasterProposalFingerprint:
                     pendingBinding?.proposal.fingerprint,
                 liveEarliestEligibleFutureSample:
-                    pendingBinding?.proposal.earliestEligibleFutureSample
+                    pendingBinding?.proposal.earliestEligibleFutureSample,
+                liveTargetStartSample: liveTargetStartSample
             ),
             sourceState: sessionState,
             incomingRenderState: phrase.prepared.endingRenderState,
@@ -757,7 +762,8 @@ package final class TechnoEngine: ObservableObject {
                 incomingLiveMasterStateFingerprint:
                     sessionState.liveMasterHeadroom.fingerprint,
                 pendingLiveMasterProposalFingerprint: nil,
-                liveEarliestEligibleFutureSample: nil
+                liveEarliestEligibleFutureSample: nil,
+                liveTargetStartSample: nil
             ),
             sourceState: sessionState,
             incomingRenderState: rebuildingRequest.incomingRenderState,
@@ -1114,7 +1120,9 @@ package final class TechnoEngine: ObservableObject {
             pendingLiveMasterProposalFingerprint:
                 result.binding.proposal.fingerprint,
             liveEarliestEligibleFutureSample:
-                result.binding.proposal.earliestEligibleFutureSample
+                result.binding.proposal.earliestEligibleFutureSample,
+            liveTargetStartSample:
+                result.sourceRange.playerSampleRange.upperBound
         )
         requestPreparation(PhrasePreparationRequest(
             key: correctedKey,
@@ -1209,7 +1217,11 @@ package final class TechnoEngine: ObservableObject {
                     pendingLiveMasterBinding?.proposal.fingerprint,
                 liveEarliestEligibleFutureSample:
                     pendingLiveMasterBinding?.proposal
-                        .earliestEligibleFutureSample
+                        .earliestEligibleFutureSample,
+                liveTargetStartSample:
+                    pendingLiveMasterBinding == nil
+                        ? nil
+                        : Int64(nextScheduleSample)
             )
             let sourcePhraseIndex = phrase.prepared.plan.phraseIndex
             let targetPhraseIndex = sourcePhraseIndex + 1
@@ -1218,11 +1230,26 @@ package final class TechnoEngine: ObservableObject {
                     sourcePhraseIndex: sourcePhraseIndex,
                     targetPhraseIndex: targetPhraseIndex
                 )
-            if !untrimmedPreparationAllowed {
+            let cachedEntry = untrimmedPreparationAllowed ||
+                nextKey.pendingLiveMasterProposalFingerprint != nil
+                ? liveFeedbackPreparation.firstCached { key, _ in
+                    key == nextKey
+                }
+                : nil
+            let correctedBoundaryDecision = LiveCorrectedSuccessorBoundaryPolicy.decide(
+                hasLiveProposal:
+                    nextKey.pendingLiveMasterProposalFingerprint != nil,
+                preparedTargetStartSample:
+                    cachedEntry?.value.prepared.liveTargetStartSample,
+                earliestEligibleFutureSample:
+                    nextKey.liveEarliestEligibleFutureSample,
+                actualStartSample: Int64(nextScheduleSample)
+            )
+            if correctedBoundaryDecision == .advance,
+               !untrimmedPreparationAllowed {
                 purgeUntrimmedSuccessor(targetPhraseIndex: targetPhraseIndex)
             }
-            let cachedSuccessor = untrimmedPreparationAllowed ||
-                nextKey.pendingLiveMasterProposalFingerprint != nil
+            let cachedSuccessor = correctedBoundaryDecision == .advance
                 ? liveFeedbackPreparation.removeCachedValue(forKey: nextKey)
                 : nil
             let boundaryDecision = AutonomousPhraseBoundaryPolicy.decide(
@@ -1306,6 +1333,14 @@ package final class TechnoEngine: ObservableObject {
             startSample = 0
         } else {
             startSample = nextScheduleSample
+        }
+        if blockIndex == 0,
+           phrase.request.pendingLiveMasterBinding != nil {
+            guard let preparedStart = phrase.prepared.liveTargetStartSample,
+                  preparedStart == startSample,
+                  let earliest = phrase.request.key
+                    .liveEarliestEligibleFutureSample,
+                  startSample >= earliest else { return false }
         }
         if blockIndex == 0 {
             registerScheduledOccurrence(

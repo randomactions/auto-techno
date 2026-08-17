@@ -9,6 +9,15 @@ struct PrimaryEvaluatorReadinessTests {
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 20)
         #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 2)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 6)
+        #expect(ProfessionalQualityObservation.schemaVersion == 3)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 3)
+        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 4)
+        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 2)
+        #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
+                "autotechno-quality.primary-calibrated.v3")
+        #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
+                "autotechno-candidate-evaluator.primary-calibrated.v3")
         #expect(AutonomousCandidateCompletenessFailure.modalPercussionEvidence
             .rawValue == "modal-percussion-evidence")
     }

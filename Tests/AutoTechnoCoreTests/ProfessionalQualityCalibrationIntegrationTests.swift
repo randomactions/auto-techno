@@ -71,9 +71,11 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 "relationships=\(relationshipFailures.count)"
             )
         }
+        let liveCandidates = try renderLiveAdversarialCandidates()
         let adversarial = try ProfessionalQualityAdversarialSuiteReport(
             profile: profile,
-            sourceCorpus: calibrationCorpus
+            sourceCorpus: calibrationCorpus,
+            liveCandidateChain: liveCandidates
         )
         progress("adversarial-ready fingerprint=\(adversarial.fingerprint)")
         let holdout = try ProfessionalQualityHoldoutQualification(
@@ -162,9 +164,16 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                     ProfessionalQualityCalibrationProfile.requiredSampleRates.count)
         #expect(profile.isComplete)
         #expect(profile.usesDiverseCalibration)
+        #expect(profile.schemaVersion == 3)
+        #expect(profile.observationVersion ==
+                ProfessionalQualityObservation.observationVersion)
         #expect(profile.sourceTrajectoryCount == calibrationSeeds.count)
         #expect(adversarial.passed)
+        #expect(adversarial.schemaVersion == 4)
+        #expect(adversarial.cases.count ==
+                ProfessionalQualityAdversarialScenario.allCases.count)
         #expect(holdout.qualified)
+        #expect(holdout.schemaVersion == 2)
         #expect(holdout.holdoutTrajectoryCount == holdoutSeeds.count)
         #expect(holdout.overlappingSourceBankCount == 0)
         #expect(primaryEvaluator.policyVersion.contains(profile.fingerprint))
@@ -219,6 +228,11 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         )
         try cache(trajectory: trajectory, seed: seed)
         return trajectory
+    }
+
+    private func renderLiveAdversarialCandidates() throws ->
+        ProfessionalQualityLiveCandidateChain {
+        try LiveFeedbackTestSupport.renderLiveTransitionCandidates()
     }
 
     private func printLeaveTwoOutResults(

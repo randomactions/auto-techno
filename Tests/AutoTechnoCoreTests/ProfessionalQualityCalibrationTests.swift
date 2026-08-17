@@ -36,6 +36,7 @@ struct ProfessionalQualityCalibrationTests {
             checkpoint: observations[0].checkpoint,
             sampleRate: observations[0].sampleRate,
             hardGatesPassed: observations[0].hardGatesPassed,
+            liveMaster: observations[0].liveMaster,
             metrics: observations[0].metrics
         )
         #expect(ProfessionalQualityProfileEvaluator.evaluate(
@@ -54,16 +55,62 @@ struct ProfessionalQualityCalibrationTests {
 
     @Test("The adversarial suite rejects every non-compensable failure")
     func adversarialSuite() throws {
-        let observations = try representativeObservations()
+        let liveCandidates = try transitionCandidates()
+        let observations = try representativeObservations(
+            liveCandidates: liveCandidates
+        )
         let profile = try ProfessionalQualityCalibrationProfile(
             engineVersion: QualityQualificationContract.engineVersion,
             sourceBankFingerprint: "adversarial-bank-test",
             sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
             observations: observations
         )
+        #expect(liveCandidates.isCausal)
+        #expect(liveCandidates.attenuation.outgoingLiveMasterStateFingerprint ==
+                liveCandidates.cleanHold.incomingLiveMasterStateFingerprint)
+        #expect(liveCandidates.cleanHold.outgoingLiveMasterStateFingerprint ==
+                liveCandidates.recovery.incomingLiveMasterStateFingerprint)
+        #expect(liveCandidates.attenuation.liveProposalOutcome == .attenuate)
+        #expect(liveCandidates.cleanHold.liveProposalOutcome == .hold)
+        #expect(liveCandidates.recovery.liveProposalOutcome == .recover)
+        #expect(liveCandidates.attenuationTransition.isCausal)
+        #expect(liveCandidates.cleanHoldTransition.isCausal)
+        #expect(liveCandidates.recoveryTransition.isCausal)
+        #expect(liveCandidates.attenuationTransition.targetOccurrence ==
+                liveCandidates.cleanHoldTransition.sourceOccurrence)
+        #expect(liveCandidates.cleanHoldTransition.targetOccurrence ==
+                liveCandidates.recoveryTransition.sourceOccurrence)
+        for candidate in [
+            liveCandidates.attenuation,
+            liveCandidates.recovery,
+        ] {
+            let kind = try #require(AutonomousPhraseKind(
+                rawValue: candidate.symbolic.phraseKind
+            ))
+            let checkpoint = try #require(
+                CanonicalJourneyCheckpoint.applicable(
+                    phraseIndex: candidate.symbolic.phraseIndex,
+                    phraseKind: kind,
+                    chapterChanged: candidate.symbolic.chapterChanged
+                ).first
+            )
+            let observation = try ProfessionalQualityObservation(
+                candidate: candidate,
+                engineVersion: QualityQualificationContract.engineVersion,
+                checkpoint: checkpoint
+            )
+            let verdict = ProfessionalQualityProfileEvaluator.evaluate(
+                observation,
+                against: profile
+            )
+            #expect(verdict.reasons.isEmpty)
+            #expect(verdict.failedMetrics.isEmpty)
+            #expect(verdict.accepted)
+        }
         let suite = try ProfessionalQualityAdversarialSuiteReport(
             profile: profile,
-            sourceObservations: observations
+            sourceObservations: observations,
+            liveCandidateChain: liveCandidates
         )
 
         #expect(suite.passed)
@@ -94,13 +141,184 @@ struct ProfessionalQualityCalibrationTests {
             #expect(attacked.rejected)
             #expect(attacked.failedMetrics.contains(metric))
         }
+        for (scenario, reason) in [
+            (ProfessionalQualityAdversarialScenario.forgedPreTerminalScaling,
+             ProfessionalQualityRejection.liveTerminalScalingFailure),
+            (.forgedPostTerminalScaling, .liveTerminalScalingFailure),
+            (.masterBoostAboveUnity, .liveBoostRejected),
+            (.liveOverAttack, .liveTransitionOutOfBounds),
+            (.liveEarlyRecovery, .liveEarlyRecovery),
+            (.staleLiveRouteGeneration, .liveRouteBoundaryFailure),
+            (.liveEarlyBoundary, .liveRouteBoundaryFailure),
+            (.staleLiveControllerRevision, .liveControllerMismatch),
+            (.unboundLiveProposalFingerprint, .liveProposalMismatch),
+        ] {
+            let attacked = try #require(suite.cases.first {
+                $0.scenario == scenario
+            })
+            #expect(attacked.rejected)
+            #expect(attacked.expectedReasons.contains(reason))
+            #expect(attacked.actualReasons == attacked.expectedReasons)
+            #expect(attacked.failedMetrics.isEmpty)
+        }
+        #expect(suite.liveBaselineAcceptanceCount == 2)
+        #expect(suite.liveBaselineObservationFingerprints.count == 2)
+    }
+
+    @Test("Live adversarial candidates require one exact App-owned occurrence timeline")
+    func adversarialLiveOccurrenceTimelineRejectsMutations() throws {
+        let chain = try transitionCandidates()
+        let transition = chain.attenuationTransition
+        let source = transition.sourceOccurrence
+        let target = transition.targetOccurrence
+        #expect(transition.isCausal)
+
+        let forgedSourceController = copyOccurrence(
+            source,
+            controllerStateFingerprint: "aaaaaaaaaaaaaaaa"
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try ProfessionalQualityLiveCandidateTransitionEvidence(
+                sourceOccurrence: forgedSourceController,
+                captureEvidence: transition.captureEvidence,
+                targetOccurrence: target,
+                candidate: transition.candidate
+            )
+        }
+
+        let forgedTargetController = copyOccurrence(
+            target,
+            controllerStateFingerprint: "dddddddddddddddd"
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try ProfessionalQualityLiveCandidateTransitionEvidence(
+                sourceOccurrence: source,
+                captureEvidence: transition.captureEvidence,
+                targetOccurrence: forgedTargetController,
+                candidate: transition.candidate
+            )
+        }
+
+        let forgedSourcePlan = copyOccurrence(
+            source,
+            planFingerprint: "bbbbbbbbbbbbbbbb"
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try ProfessionalQualityLiveCandidateTransitionEvidence(
+                sourceOccurrence: forgedSourcePlan,
+                captureEvidence: transition.captureEvidence,
+                targetOccurrence: target,
+                candidate: transition.candidate
+            )
+        }
+
+        let forgedTargetPlan = copyOccurrence(
+            target,
+            planFingerprint: "cccccccccccccccc"
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try ProfessionalQualityLiveCandidateTransitionEvidence(
+                sourceOccurrence: source,
+                captureEvidence: transition.captureEvidence,
+                targetOccurrence: forgedTargetPlan,
+                candidate: transition.candidate
+            )
+        }
+
+        let forgedSourceRate = copyOccurrence(
+            source,
+            sampleRate: 48_000
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try ProfessionalQualityLiveCandidateTransitionEvidence(
+                sourceOccurrence: forgedSourceRate,
+                captureEvidence: transition.captureEvidence,
+                targetOccurrence: target,
+                candidate: transition.candidate
+            )
+        }
+
+        let forgedSourceRoute = copyOccurrence(
+            source,
+            routeGeneration: source.routeGeneration + 1
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try ProfessionalQualityLiveCandidateTransitionEvidence(
+                sourceOccurrence: forgedSourceRoute,
+                captureEvidence: transition.captureEvidence,
+                targetOccurrence: target,
+                candidate: transition.candidate
+            )
+        }
+
+        let forgedTargetEpoch = copyOccurrence(
+            target,
+            occurrenceEpoch: target.occurrenceEpoch + 1
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try ProfessionalQualityLiveCandidateTransitionEvidence(
+                sourceOccurrence: source,
+                captureEvidence: transition.captureEvidence,
+                targetOccurrence: forgedTargetEpoch,
+                candidate: transition.candidate
+            )
+        }
+
+        let shortSource = copyOccurrence(
+            source,
+            playerSampleRange: source.playerSampleRange.lowerBound..<(source
+                .capturePlayerSampleRange.upperBound - 1)
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try ProfessionalQualityLiveCandidateTransitionEvidence(
+                sourceOccurrence: shortSource,
+                captureEvidence: transition.captureEvidence,
+                targetOccurrence: target,
+                candidate: transition.candidate
+            )
+        }
+
+        let shiftedTarget = copyOccurrence(
+            target,
+            playerSampleRange:
+                (target.playerSampleRange.lowerBound + 1)..<(target
+                    .playerSampleRange.upperBound + 1)
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try ProfessionalQualityLiveCandidateTransitionEvidence(
+                sourceOccurrence: source,
+                captureEvidence: transition.captureEvidence,
+                targetOccurrence: shiftedTarget,
+                candidate: transition.candidate
+            )
+        }
+
+        let shiftedBoundary = source.playerSampleRange.upperBound + 1
+        let forgedSource = copyOccurrence(
+            source,
+            playerSampleRange:
+                source.playerSampleRange.lowerBound..<shiftedBoundary
+        )
+        let forgedTarget = copyOccurrence(
+            target,
+            playerSampleRange: shiftedBoundary..<(shiftedBoundary +
+                Int64(target.playerSampleRange.count))
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try ProfessionalQualityLiveCandidateTransitionEvidence(
+                sourceOccurrence: forgedSource,
+                captureEvidence: transition.captureEvidence,
+                targetOccurrence: forgedTarget,
+                candidate: transition.candidate
+            )
+        }
     }
 
     @Test("Modal metrics are versioned, bounded, and non-compensable")
     func modalMetricContract() {
-        #expect(ProfessionalQualityObservation.schemaVersion == 2)
+        #expect(ProfessionalQualityObservation.schemaVersion == 3)
         #expect(ProfessionalQualityObservation.observationVersion ==
-                "autotechno-professional-quality-observation.v2")
+                "autotechno-professional-quality-observation.v3")
         #expect(ProfessionalEvidenceReportBank.schemaVersion == 6)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v6")
@@ -110,9 +328,15 @@ struct ProfessionalQualityCalibrationTests {
                 "autotechno-candidate-evaluator.primary-calibrated.v3")
         #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
                 "autotechno-professional-quality-profile.v3")
-        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 3)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 3)
+        #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
+                "autotechno-professional-quality-profile.v3")
+        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 4)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
-                "autotechno-professional-quality-adversarial.v3")
+                "autotechno-professional-quality-adversarial.v4")
+        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 2)
+        #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
+                "autotechno-professional-quality-holdout.v2")
 
         for metric in [
             ProfessionalQualityMetric.modalPercussionPitchErrorCentsMaximum,
@@ -147,6 +371,7 @@ struct ProfessionalQualityCalibrationTests {
             checkpoint: baseline.checkpoint,
             sampleRate: baseline.sampleRate,
             hardGatesPassed: true,
+            liveMaster: baseline.liveMaster,
             metrics: checkpoint.bounds.map { bounds in
                 ProfessionalQualityMetricValue(
                     metric: bounds.metric,
@@ -236,19 +461,178 @@ struct ProfessionalQualityCalibrationTests {
         ).allSatisfy { $0.metric != .loudnessRangeLU })
     }
 
-    @Test("Pre-v3 in-memory artifacts cannot activate the current primary policy")
+    @Test("Constructed v3 artifacts activate only the single primary policy")
     func primaryCandidatePolicy() throws {
         let artifacts = try diverseArtifacts()
         #expect(artifacts.profile.profileVersion ==
                 ProfessionalQualityCalibrationProfile.profileVersion)
-        #expect(artifacts.profile.profileVersion !=
+        #expect(artifacts.profile.profileVersion ==
                 ProfessionalQualityPrimaryEvaluator.requiredProfileVersion)
-        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            try ProfessionalQualityPrimaryEvaluator(
-                profile: artifacts.profile,
-                adversarialSuite: artifacts.adversarial,
-                holdoutQualification: artifacts.holdout
+        let evaluator = try ProfessionalQualityPrimaryEvaluator(
+            profile: artifacts.profile,
+            adversarialSuite: artifacts.adversarial,
+            holdoutQualification: artifacts.holdout
+        )
+        #expect(evaluator.policyVersion.hasPrefix(
+            ProfessionalQualityPrimaryEvaluator.policyFamilyVersion
+        ))
+    }
+
+    @Test("Live master provenance is non-compensable and missing evidence is a hold")
+    func liveMasterProvenanceHardGates() throws {
+        let observations = try representativeObservations()
+        let profile = try ProfessionalQualityCalibrationProfile(
+            engineVersion: QualityQualificationContract.engineVersion,
+            sourceBankFingerprint: "live-policy-bank-test",
+            sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
+            observations: observations
+        )
+        let baseline = try #require(observations.first {
+            $0.checkpoint == .establishment && $0.sampleRate == 48_000
+        })
+        #expect(baseline.liveMaster.proposalOutcome == .hold)
+        #expect(baseline.liveMaster.proposalFingerprint == nil)
+        #expect(baseline.liveMaster.hardGatesPassed)
+        #expect(ProfessionalQualityProfileEvaluator.evaluate(
+            baseline,
+            against: profile
+        ).accepted)
+
+        let candidates = try transitionCandidates()
+        let validAttack = try ProfessionalQualityLiveMasterProvenance
+            .transition(candidate: candidates.attenuation)
+        let validRecovery = try ProfessionalQualityLiveMasterProvenance
+            .transition(candidate: candidates.recovery)
+        #expect(validAttack.hardGatesPassed)
+        #expect(validRecovery.hardGatesPassed)
+
+        let attacks: [(ProfessionalQualityLiveMasterProvenance,
+            [ProfessionalQualityRejection])] = [
+            (validAttack.attacked(.forgedPreTerminalScaling),
+             [.liveTerminalScalingFailure]),
+            (validAttack.attacked(.forgedPostTerminalScaling),
+             [.liveTerminalScalingFailure]),
+            (validAttack.attacked(.boostAboveUnity),
+             [.liveBoostRejected, .liveTerminalScalingFailure]),
+            (validAttack.attacked(.overAttack),
+             [.liveTerminalScalingFailure, .liveTransitionOutOfBounds]),
+            (validRecovery.attacked(.earlyRecovery),
+             [.liveEarlyRecovery]),
+            (validAttack.attacked(.staleRouteGeneration),
+             [.liveRouteBoundaryFailure]),
+            (validAttack.attacked(.staleControllerRevision),
+             [.liveControllerMismatch]),
+            (validAttack.attacked(.unboundProposalFingerprint),
+             [.liveProposalMismatch]),
+            (validAttack.attacked(.earlyBoundary),
+             [.liveRouteBoundaryFailure]),
+        ]
+        for (provenance, expected) in attacks {
+            let observation = try baseline.replacingLiveMaster(provenance)
+            let verdict = ProfessionalQualityProfileEvaluator.evaluate(
+                observation,
+                against: profile
             )
+            #expect(!verdict.accepted)
+            #expect(verdict.reasons == expected.sorted {
+                $0.rawValue < $1.rawValue
+            })
+            #expect(verdict.failedMetrics.isEmpty)
+        }
+    }
+
+    @Test("Old observation profile adversarial and holdout JSON is rejected")
+    func legacyPolicyJSONIsRejected() throws {
+        let artifacts = try diverseArtifacts()
+        let observation = try #require(
+            artifacts.calibration.trajectories.first?.observations.first
+        )
+        let currentObservationJSON = try observation.deterministicJSON()
+        let oldObservationJSON = try replacingJSONIdentity(
+            currentObservationJSON,
+            replacements: [
+                "\"schemaVersion\":3": "\"schemaVersion\":2",
+                "autotechno-professional-quality-observation.v3":
+                    "autotechno-professional-quality-observation.v2",
+            ]
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityObservation.decodeDeterministicJSON(
+                oldObservationJSON
+            )
+        }
+
+        let oldProfileJSON = try replacingJSONIdentity(
+            artifacts.profile.deterministicJSON(),
+            replacements: [
+                "\"schemaVersion\":3": "\"schemaVersion\":2",
+                "autotechno-professional-quality-profile.v3":
+                    "autotechno-professional-quality-profile.v2",
+            ]
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityCalibrationProfile.decodeDeterministicJSON(
+                oldProfileJSON
+            )
+        }
+
+        let oldAdversarialJSON = try replacingJSONIdentity(
+            artifacts.adversarial.deterministicJSON(),
+            replacements: [
+                "\"schemaVersion\":4": "\"schemaVersion\":3",
+                "autotechno-professional-quality-adversarial.v4":
+                    "autotechno-professional-quality-adversarial.v3",
+            ]
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityAdversarialSuiteReport.decodeDeterministicJSON(
+                oldAdversarialJSON
+            )
+        }
+
+        let oldHoldoutJSON = try replacingJSONIdentity(
+            artifacts.holdout.deterministicJSON(),
+            replacements: [
+                "\"schemaVersion\":2": "\"schemaVersion\":1",
+                "autotechno-professional-quality-holdout.v2":
+                    "autotechno-professional-quality-holdout.v1",
+                "autotechno-professional-quality-holdout-evaluator.v2":
+                    "autotechno-professional-quality-holdout-evaluator.v1",
+            ]
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityHoldoutQualification.decodeDeterministicJSON(
+                oldHoldoutJSON
+            )
+        }
+    }
+
+    @Test("Serialized live observation provenance is never trusted")
+    func serializedLiveObservationProvenanceIsRejected() throws {
+        let observation = try #require(
+            try representativeObservations().first
+        )
+        let current = try observation.deterministicJSON()
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityObservation.decodeDeterministicJSON(current)
+        }
+        for field in [
+            "routeGenerationValid",
+            "proposalBindingValid",
+            "preTrimBindingValid",
+            "postTrimBindingValid",
+            "terminalScalingValid",
+            "boundaryValid",
+        ] {
+            let malicious = try replacingJSONIdentity(
+                current,
+                replacements: ["\"\(field)\":true": "\"\(field)\":false"]
+            )
+            #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+                try ProfessionalQualityObservation.decodeDeterministicJSON(
+                    malicious
+                )
+            }
         }
     }
 
@@ -292,6 +676,7 @@ struct ProfessionalQualityCalibrationTests {
     @Test("Holdout qualification requires disjoint accepted journeys")
     func holdoutDisjointnessAndAcceptance() throws {
         let artifacts = try diverseArtifacts()
+        let liveCandidates = try transitionCandidates()
         let overlapCorpus = try ProfessionalQualityCalibrationCorpus(
             trajectories: [artifacts.calibration.trajectories[0]] +
                 (0..<3).map { index in
@@ -312,7 +697,9 @@ struct ProfessionalQualityCalibrationTests {
 
         let release = try #require(artifacts.profile[.release])
         let peak = try #require(release[.truePeakDBTP])
-        var rejectedObservations = try representativeObservations()
+        var rejectedObservations = try representativeObservations(
+            liveCandidates: liveCandidates
+        )
         let targetIndex = try #require(rejectedObservations.firstIndex {
             $0.checkpoint == .release && $0.sampleRate == 48_000
         })
@@ -327,7 +714,9 @@ struct ProfessionalQualityCalibrationTests {
             ] + (0..<3).map { index in
                 try ProfessionalQualityCalibrationTrajectory(
                     sourceBankFingerprint: "accepted-holdout-\(index)",
-                    observations: representativeObservations()
+                    observations: representativeObservations(
+                        liveCandidates: liveCandidates
+                    )
                 )
             }
         )
@@ -394,34 +783,99 @@ struct ProfessionalQualityCalibrationTests {
                 checkpoint: .establishment,
                 sampleRate: 48_000,
                 hardGatesPassed: true,
+                liveMaster: try homeProvenance(),
                 metrics: metrics
             )
         }
     }
 
     private func representativeObservations(
-        trajectoryOffset: Double = 0
+        trajectoryOffset: Double = 0,
+        liveCandidates: ProfessionalQualityLiveCandidateChain? = nil
     ) throws
         -> [ProfessionalQualityObservation] {
+        let liveObservations: [ProfessionalQualityObservation]
+        if let liveCandidates {
+            liveObservations = try [
+                liveCandidates.attenuation,
+                liveCandidates.recovery,
+            ].map { candidate in
+                guard let phraseKind = AutonomousPhraseKind(
+                    rawValue: candidate.symbolic.phraseKind
+                ), let checkpoint = CanonicalJourneyCheckpoint.applicable(
+                    phraseIndex: candidate.symbolic.phraseIndex,
+                    phraseKind: phraseKind,
+                    chapterChanged: candidate.symbolic.chapterChanged
+                ).first else {
+                    throw ProfessionalQualityCalibrationError.profileMismatch
+                }
+                return try ProfessionalQualityObservation(
+                    candidate: candidate,
+                    engineVersion: QualityQualificationContract.engineVersion,
+                    checkpoint: checkpoint
+                )
+            }
+        } else {
+            liveObservations = []
+        }
         var observations: [ProfessionalQualityObservation] = []
         for (checkpointIndex, checkpoint) in
             CanonicalJourneyCheckpoint.allCases.enumerated() {
-            for sampleRate in ProfessionalQualityCalibrationProfile
-                .requiredSampleRates {
+            let liveAtCheckpoint = liveObservations.filter {
+                $0.checkpoint == checkpoint
+            }
+            for (rateIndex, sampleRate) in ProfessionalQualityCalibrationProfile
+                .requiredSampleRates.enumerated() {
+                let metrics = liveAtCheckpoint.isEmpty
+                    ? metricValues(
+                        checkpointIndex: checkpointIndex,
+                        rateOffset: (sampleRate == 48_000 ? 0.01 : 0) +
+                            trajectoryOffset
+                    )
+                    : liveAtCheckpoint[
+                        min(rateIndex, liveAtCheckpoint.count - 1)
+                    ].metrics
                 observations.append(try ProfessionalQualityObservation(
                     engineVersion: QualityQualificationContract.engineVersion,
                     checkpoint: checkpoint,
                     sampleRate: sampleRate,
                     hardGatesPassed: true,
-                    metrics: metricValues(
-                        checkpointIndex: checkpointIndex,
-                        rateOffset: (sampleRate == 48_000 ? 0.01 : 0) +
-                            trajectoryOffset
-                    )
+                    liveMaster: try homeProvenance(),
+                    metrics: metrics
                 ))
             }
         }
         return observations
+    }
+
+    private func copyOccurrence(
+        _ source: ProfessionalQualityLiveScheduledOccurrenceEvidence,
+        playerSampleRange: Range<Int64>? = nil,
+        planFingerprint: String? = nil,
+        sampleRate: Double? = nil,
+        routeGeneration: Int? = nil,
+        occurrenceEpoch: UInt64? = nil,
+        controllerStateFingerprint: String? = nil
+    ) -> ProfessionalQualityLiveScheduledOccurrenceEvidence {
+        let resolvedRange = playerSampleRange ?? source.playerSampleRange
+        return ProfessionalQualityLiveScheduledOccurrenceEvidence(
+            phraseIndex: source.phraseIndex,
+            planFingerprint: planFingerprint ?? source.planFingerprint,
+            playerSampleRange: resolvedRange,
+            capturePlayerSampleRange: source.capturePlayerSampleRange,
+            sampleRate: sampleRate ?? source.sampleRate,
+            routeGeneration: routeGeneration ?? source.routeGeneration,
+            occurrenceEpoch: occurrenceEpoch ?? source.occurrenceEpoch,
+            controllerRevision: source.controllerRevision,
+            qualityPolicyVersion: source.qualityPolicyVersion,
+            evaluatorVersion: source.evaluatorVersion,
+            controllerPolicyVersion: source.controllerPolicyVersion,
+            controllerStateFingerprint: controllerStateFingerprint ??
+                source.controllerStateFingerprint,
+            appliedMasterTrimDB: source.appliedMasterTrimDB,
+            applicableCheckpoints: source.applicableCheckpoints,
+            earliestEligibleFutureSample: resolvedRange.upperBound
+        )
     }
 
     private func diverseArtifacts() throws -> (
@@ -430,10 +884,13 @@ struct ProfessionalQualityCalibrationTests {
         adversarial: ProfessionalQualityAdversarialSuiteReport,
         holdout: ProfessionalQualityHoldoutQualification
     ) {
+        let liveCandidates = try transitionCandidates()
         let calibrationTrajectories = try (0..<24).map { index in
             try ProfessionalQualityCalibrationTrajectory(
                 sourceBankFingerprint: "calibration-\(index)",
-                observations: representativeObservations()
+                observations: representativeObservations(
+                    liveCandidates: liveCandidates
+                )
             )
         }
         let calibration = try ProfessionalQualityCalibrationCorpus(
@@ -444,12 +901,15 @@ struct ProfessionalQualityCalibrationTests {
         )
         let adversarial = try ProfessionalQualityAdversarialSuiteReport(
             profile: profile,
-            sourceCorpus: calibration
+            sourceCorpus: calibration,
+            liveCandidateChain: liveCandidates
         )
         let holdoutTrajectories = try (0..<4).map { index in
             try ProfessionalQualityCalibrationTrajectory(
                 sourceBankFingerprint: "holdout-\(index)",
-                observations: representativeObservations()
+                observations: representativeObservations(
+                    liveCandidates: liveCandidates
+                )
             )
         }
         let holdoutCorpus = try ProfessionalQualityCalibrationCorpus(
@@ -462,6 +922,50 @@ struct ProfessionalQualityCalibrationTests {
             holdoutCorpus: holdoutCorpus
         )
         return (calibration, profile, adversarial, holdout)
+    }
+
+    private static let homeCandidateFixture:
+        AutonomousCandidateEvaluationVector? = {
+        let director = AutonomousSessionDirector(rootSeed: 91_773)
+        let state = director.initialState()
+        guard let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            plan: director.plan(from: state),
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            incomingQualityState: state.quality,
+            evaluator: AcceptingPrimaryTestEvaluator(),
+            cancellationRequested: { false }
+        ), prepared.selectedCandidateEvidence.isComplete else { return nil }
+        return prepared.selectedCandidateEvidence
+    }()
+
+    private func homeCandidate() throws
+        -> AutonomousCandidateEvaluationVector {
+        guard let candidate = Self.homeCandidateFixture else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        return candidate
+    }
+
+    private func homeProvenance() throws
+        -> ProfessionalQualityLiveMasterProvenance {
+        try .home(candidate: homeCandidate())
+    }
+
+    private static let transitionCandidateFixture:
+        ProfessionalQualityLiveCandidateChain? =
+            try? LiveFeedbackTestSupport.renderLiveTransitionCandidates()
+
+    private func transitionCandidates() throws
+        -> ProfessionalQualityLiveCandidateChain {
+        guard let candidates = Self.transitionCandidateFixture else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        return candidates
     }
 
     private func metricValues(
@@ -527,5 +1031,16 @@ struct ProfessionalQualityCalibrationTests {
                 value: (scalar[metric] ?? 0) + metricRateOffset
             )
         }
+    }
+
+    private func replacingJSONIdentity(
+        _ data: Data,
+        replacements: [String: String]
+    ) throws -> Data {
+        var json = try #require(String(data: data, encoding: .utf8))
+        for (source, replacement) in replacements {
+            json = json.replacingOccurrences(of: source, with: replacement)
+        }
+        return try #require(json.data(using: .utf8))
     }
 }

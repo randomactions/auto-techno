@@ -227,6 +227,21 @@ package struct ProfessionalQualityPrimaryEvaluator:
         selected: AutonomousCandidateEvaluationVector,
         transaction: AutonomousCandidateEvaluationTransaction
     ) -> AutonomousCandidatePolicyVerdict {
+        guard transaction.isComplete,
+              transaction.engineVersion == profile.engineVersion,
+              transaction.policyVersion == policyVersion,
+              transaction.evaluatorVersion == evaluatorVersion,
+              transaction.planFingerprint == selected.planFingerprint,
+              transaction.selectedAttemptIndex.map({
+                  transaction.attempts[$0].vector == selected
+              }) == true,
+              transaction.liveProposalFingerprint ==
+                selected.liveProposalFingerprint else {
+            return AutonomousCandidatePolicyVerdict(
+                outcome: .rejected,
+                reasonCodes: [.guardrailRegressionV1]
+            )
+        }
         guard selected.hardGatesPassed else {
             return AutonomousCandidatePolicyVerdict(
                 outcome: .rejected,

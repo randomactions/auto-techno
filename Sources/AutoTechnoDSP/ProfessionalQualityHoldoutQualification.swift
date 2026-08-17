@@ -23,11 +23,11 @@ package struct ProfessionalQualityHoldoutTrajectoryResult: Codable, Equatable,
 /// still offline evidence: it makes no listening, hardware, or shipping claim.
 package struct ProfessionalQualityHoldoutQualification: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 1
+    package static let schemaVersion = 2
     package static let qualificationVersion =
-        "autotechno-professional-quality-holdout.v1"
+        "autotechno-professional-quality-holdout.v2"
     package static let evaluatorVersion =
-        "autotechno-professional-quality-holdout-evaluator.v1"
+        "autotechno-professional-quality-holdout-evaluator.v2"
     package static let minimumHoldoutTrajectoryCount = 4
 
     package let schemaVersion: Int
@@ -187,7 +187,7 @@ package struct ProfessionalQualityHoldoutQualification: Codable, Equatable,
         guard let data = try? deterministicJSON(),
               let string = String(data: data, encoding: .utf8) else { return "" }
         var sink = StreamingFNV1a()
-        sink.domain("professional-quality-holdout-qualification-json.v1")
+        sink.domain("professional-quality-holdout-qualification-json.v2")
         sink.string(string)
         return fixedWidthFingerprintHex(sink.value)
     }

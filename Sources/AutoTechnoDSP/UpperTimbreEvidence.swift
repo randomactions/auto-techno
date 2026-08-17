@@ -914,6 +914,7 @@ package enum CanonicalJourneyQualificationReportError: Error, Equatable, Sendabl
     case selectedCandidateEvidenceMismatch
     case routeMismatch
     case checkpointMismatch
+    case liveMasterMismatch
 }
 
 package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendable {
@@ -929,6 +930,7 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
     package let sampleRate: Double
     package let routeFingerprint: String
     package let routeGeneration: Int
+    package let liveMaster: ProfessionalQualityLiveMasterProvenance
     package let selectedCandidateEvidence: AutonomousCandidateEvaluationVector
     package let candidateEvaluation: AutonomousCandidateEvaluationTransaction
     package let commitProvenance: AutonomousPreparedCommitProvenance
@@ -947,7 +949,70 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
     /// Decode-only wire value. Keeping `Decodable` off the validated report
     /// prevents package callers from bypassing the size, causality, and
     /// canonical-byte checks with a plain `JSONDecoder`.
-    private struct DecodedWire: Codable {
+    private struct DecodedLiveMasterWire: Decodable {
+        let schemaVersion: Int
+        let controllerPolicyVersion: String
+        let incomingRevision: Int
+        let outgoingRevision: Int
+        let revisionDelta: Int
+        let incomingStateFingerprint: String
+        let outgoingStateFingerprint: String
+        let proposalOutcome: LiveFeedbackProposalOutcome
+        let observationFingerprint: String?
+        let proposalFingerprint: String?
+        let incomingTrimDB: Double
+        let requestedTrimDB: Double
+        let appliedTrimDB: Double
+        let trimDeltaDB: Double
+        let appliedGain: Double
+        let incomingCleanWindowCount: Int
+        let outgoingCleanWindowCount: Int
+        let routeGeneration: Int
+        let routeGenerationValid: Bool
+        let proposalBindingValid: Bool
+        let preTrimPCMFingerprint: String
+        let postTrimPCMFingerprint: String
+        let preTrimBindingValid: Bool
+        let postTrimBindingValid: Bool
+        let terminalScalingValid: Bool
+        let earliestEligibleFutureSample: Int64?
+        let appliedFutureSample: Int64?
+        let boundaryValid: Bool
+
+        func matches(_ trusted: ProfessionalQualityLiveMasterProvenance) -> Bool {
+            schemaVersion == trusted.schemaVersion &&
+                controllerPolicyVersion == trusted.controllerPolicyVersion &&
+                incomingRevision == trusted.incomingRevision &&
+                outgoingRevision == trusted.outgoingRevision &&
+                revisionDelta == trusted.revisionDelta &&
+                incomingStateFingerprint == trusted.incomingStateFingerprint &&
+                outgoingStateFingerprint == trusted.outgoingStateFingerprint &&
+                proposalOutcome == trusted.proposalOutcome &&
+                observationFingerprint == trusted.observationFingerprint &&
+                proposalFingerprint == trusted.proposalFingerprint &&
+                incomingTrimDB == trusted.incomingTrimDB &&
+                requestedTrimDB == trusted.requestedTrimDB &&
+                appliedTrimDB == trusted.appliedTrimDB &&
+                trimDeltaDB == trusted.trimDeltaDB &&
+                appliedGain == trusted.appliedGain &&
+                incomingCleanWindowCount == trusted.incomingCleanWindowCount &&
+                outgoingCleanWindowCount == trusted.outgoingCleanWindowCount &&
+                routeGeneration == trusted.routeGeneration &&
+                routeGenerationValid == trusted.routeGenerationValid &&
+                proposalBindingValid == trusted.proposalBindingValid &&
+                preTrimPCMFingerprint == trusted.preTrimPCMFingerprint &&
+                postTrimPCMFingerprint == trusted.postTrimPCMFingerprint &&
+                preTrimBindingValid == trusted.preTrimBindingValid &&
+                postTrimBindingValid == trusted.postTrimBindingValid &&
+                terminalScalingValid == trusted.terminalScalingValid &&
+                earliestEligibleFutureSample ==
+                    trusted.earliestEligibleFutureSample &&
+                appliedFutureSample == trusted.appliedFutureSample &&
+                boundaryValid == trusted.boundaryValid
+        }
+    }
+
+    private struct DecodedWire: Decodable {
         let schemaVersion: Int
         let engineVersion: String
         let policyVersion: String
@@ -957,6 +1022,7 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
         let sampleRate: Double
         let routeFingerprint: String
         let routeGeneration: Int
+        let liveMaster: DecodedLiveMasterWire
         let selectedCandidateEvidence: AutonomousCandidateEvaluationVector
         let candidateEvaluation: AutonomousCandidateEvaluationTransaction
         let commitProvenance: AutonomousPreparedCommitProvenance
@@ -1030,6 +1096,18 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
                 selectedCandidateEvidence.routeContinuation
                     .controllerStateFingerprint
         )
+        guard let selectedLiveTargetStart =
+                AutonomousLiveTargetStartEvidence.derived(
+                    incomingRevision:
+                        selectedCandidateEvidence.incomingLiveMasterRevision,
+                    outgoingRevision:
+                        selectedCandidateEvidence.outgoingLiveMasterRevision,
+                    targetStartSample:
+                        selectedCandidateEvidence.liveAppliedFutureSample
+                ) else {
+            throw CanonicalJourneyQualificationReportError
+                .candidateEvaluationMismatch
+        }
         let selectedCommitProvenance = commitProvenance ??
             AutonomousPreparedCommitProvenance(
                 candidateEvaluationFingerprint: transactionFingerprint,
@@ -1040,7 +1118,11 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
                 qualityState: selectedOutgoing,
                 outgoingLiveMasterStateFingerprint:
                     selectedCandidateEvidence
-                        .outgoingLiveMasterStateFingerprint
+                        .outgoingLiveMasterStateFingerprint,
+                liveRevisionDelta:
+                    selectedCandidateEvidence.outgoingLiveMasterRevision -
+                        selectedCandidateEvidence.incomingLiveMasterRevision,
+                liveTargetStart: selectedLiveTargetStart
             )
         guard !engineVersion.isEmpty, !fixtureFingerprint.isEmpty,
               !continuationFingerprint.isEmpty, !routeFingerprint.isEmpty,
@@ -1087,6 +1169,17 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
         } ?? false
         guard checkpointMatches else {
             throw CanonicalJourneyQualificationReportError.checkpointMismatch
+        }
+        let selectedLiveMaster = try ProfessionalQualityObservation(
+            candidate: selectedCandidateEvidence,
+            engineVersion: engineVersion,
+            checkpoint: checkpoint
+        ).liveMaster
+        guard selectedLiveMaster.isComplete,
+              selectedLiveMaster.routeGeneration == routeGeneration,
+              selectedLiveMaster.controllerPolicyVersion ==
+                LiveFeedbackContract.controllerPolicyVersion else {
+            throw CanonicalJourneyQualificationReportError.liveMasterMismatch
         }
         let selectedAttempt = candidateEvaluation.attempts[selectedIndex]
         let requiredAttemptReasons = Set(selectedAttempt.reasonCodes)
@@ -1226,7 +1319,11 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
             qualityState: selectedOutgoing,
             outgoingLiveMasterStateFingerprint:
                 selectedCandidateEvidence
-                    .outgoingLiveMasterStateFingerprint
+                    .outgoingLiveMasterStateFingerprint,
+            liveRevisionDelta:
+                selectedCandidateEvidence.outgoingLiveMasterRevision -
+                    selectedCandidateEvidence.incomingLiveMasterRevision,
+            liveTargetStart: selectedLiveTargetStart
         ) else {
             throw CanonicalJourneyQualificationReportError.candidateEvaluationMismatch
         }
@@ -1264,6 +1361,7 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
         sampleRate = evidence.sampleRate
         self.routeFingerprint = routeFingerprint
         self.routeGeneration = routeGeneration
+        liveMaster = selectedLiveMaster
         self.selectedCandidateEvidence = selectedCandidateEvidence
         self.candidateEvaluation = candidateEvaluation
         self.commitProvenance = selectedCommitProvenance
@@ -1330,7 +1428,8 @@ package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendab
             usedHomeTimbreCorrection: decoded.usedHomeTimbreCorrection,
             correctionRenderCount: decoded.correctionRenderCount
         )
-        guard try validated.deterministicJSON() == data else {
+        guard decoded.liveMaster.matches(validated.liveMaster),
+              try validated.deterministicJSON() == data else {
             throw CanonicalJourneyQualificationReportError.candidateEvaluationMismatch
         }
         return validated

@@ -31,6 +31,7 @@ struct LiveFeedbackPrimaryCommitTests {
         let targetPlan: AutonomousPhrasePlan
         let incomingRenderState: RenderState
         let sampleRate: Double
+        let liveTargetStartSample: Int64
         let binding: PendingLiveMasterHeadroomBinding
     }
 
@@ -135,16 +136,12 @@ struct LiveFeedbackPrimaryCommitTests {
                 incoming: fixture.targetState.liveMasterHeadroom
             ))
         }
-        let prepared = try #require(prepare(
+        let prepared = prepare(
             fixture,
             binding: attacks[0],
             evaluator: AcceptingPrimaryTestEvaluator()
-        ))
-        #expect(prepared.selectedCandidateEvidence.liveProposalOutcome ==
-                .unavailable)
-        #expect(prepared.liveMasterHeadroomContinuationState ==
-                fixture.targetState.liveMasterHeadroom)
-        #expect(!prepared.commitEligible)
+        )
+        #expect(prepared == nil)
     }
 
     @Test("Pending binding rejects an unrelated but valid source identity")
@@ -351,6 +348,7 @@ struct LiveFeedbackPrimaryCommitTests {
             targetPlan: targetPlan,
             incomingRenderState: incomingRenderState,
             sampleRate: sampleRate,
+            liveTargetStartSample: futureBoundary,
             binding: binding
         )
         return fixture
@@ -454,6 +452,8 @@ struct LiveFeedbackPrimaryCommitTests {
             incomingQualityState: fixture.targetState.quality,
             routeGeneration: fixture.binding.eligibleTarget.routeGeneration,
             pendingLiveMasterBinding: binding,
+            liveTargetStartSample: binding == nil ? nil :
+                fixture.liveTargetStartSample,
             evaluator: evaluator,
             cancellationRequested: { false }
         )

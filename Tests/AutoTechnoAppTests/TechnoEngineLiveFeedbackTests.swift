@@ -205,6 +205,176 @@ struct TechnoEngineLiveFeedbackTests {
         #expect(source.contains(
             "liveFeedbackPreparation.completeSourceAdvance("
         ))
+        #expect(!source.contains(
+            "holdCorrectedSuccessorAtBoundaryMismatch("
+        ))
+        #expect(!source.contains(
+            "liveTargetStartSample: nextTarget.partialValue"
+        ))
+        let admission = try #require(source.range(of:
+            "let correctedBoundaryDecision = LiveCorrectedSuccessorBoundaryPolicy.decide("
+        ))
+        let stateCommit = try #require(source.range(of:
+            "currentPhrase = next"
+        ))
+        let cacheCommit = try #require(source.range(of:
+            "liveFeedbackPreparation.removeCachedValue(forKey: nextKey)"
+        ))
+        let purgeCommit = try #require(source.range(of:
+            "if correctedBoundaryDecision == .advance,\n" +
+                "               !untrimmedPreparationAllowed {\n" +
+                "                purgeUntrimmedSuccessor("
+        ))
+        let sessionCommit = try #require(source.range(of:
+            "sessionState = next.request.sourceState"
+        ))
+        let proposalCommit = try #require(source.range(of:
+            "if next.request.pendingLiveMasterBinding != nil {\n" +
+                "                    pendingLiveMasterBinding = nil"
+        ))
+        let successorCommit = try #require(source.range(of:
+            "requestSuccessor(after: next)"
+        ))
+        for commit in [
+            cacheCommit,
+            purgeCommit,
+            stateCommit,
+            sessionCommit,
+            proposalCommit,
+            successorCommit,
+        ] {
+            #expect(admission.lowerBound < commit.lowerBound)
+        }
+    }
+
+    @MainActor
+    @Test("Target mismatch expires one correction before repeating immutably")
+    func targetMismatchExpiresBeforeAnyCommit() throws {
+        let owner = activeOwner(routeGeneration: 12)
+        let source = try #require(owner.stageOccurrence(draft(
+            phraseIndex: 6,
+            startSample: 200_000,
+            routeGeneration: 12
+        )))
+        let identity = try #require(owner.runtime.activeIdentity)
+        let proposalFingerprint = "proposal-boundary"
+        #expect(owner.authorize(
+            identity: identity,
+            sourceOccurrence: source,
+            targetPhraseIndex: 7,
+            proposalFingerprint: proposalFingerprint
+        ) == .invalidateUnscheduledSuccessor)
+
+        let cache = LiveFeedbackPreparationOwner<Int, String, String>()
+        cache.insertCachedValue("corrected", forKey: 7)
+        var currentPhraseIndex = 6
+        var sessionRevision = 4
+        var pendingProposal: String? = proposalFingerprint
+        var activeRequest: String? = proposalFingerprint
+        var queuedRequest: String? = proposalFingerprint
+        var expirationCount = 0
+        var repeatCount = 0
+        var secondRequestCount = 0
+
+        let mismatch = LiveCorrectedSuccessorBoundaryPolicy.decide(
+            hasLiveProposal: true,
+            preparedTargetStartSample: 400_000,
+            earliestEligibleFutureSample: 350_000,
+            actualStartSample: 450_000
+        )
+        #expect(mismatch == .repeatAfterExpiringProposal)
+        owner.performBoundary(
+            sourcePhraseIndex: 6,
+            targetPhraseIndex: 7,
+            correctedSuccessorAvailable: mismatch == .advance,
+            expireCorrectedSuccessor: {
+                expirationCount += 1
+                cache.removeCached { _, _ in true }
+                pendingProposal = nil
+                activeRequest = nil
+                queuedRequest = nil
+            },
+            advanceCorrectedSuccessor: {
+                currentPhraseIndex = 7
+                sessionRevision += 1
+            },
+            repeatAcceptedPCM: { repeatCount += 1 }
+        )
+
+        #expect(currentPhraseIndex == 6)
+        #expect(sessionRevision == 4)
+        #expect(pendingProposal == nil)
+        #expect(activeRequest == nil)
+        #expect(queuedRequest == nil)
+        #expect(cache.cachedCount == 0)
+        #expect(expirationCount == 1)
+        #expect(repeatCount == 1)
+        #expect(owner.runtime.acceptedPCMHold?.proposalFingerprint ==
+                proposalFingerprint)
+
+        owner.runtime.performBoundary(
+            sourcePhraseIndex: 6,
+            targetPhraseIndex: 7,
+            correctedSuccessorAvailable: false,
+            expireCorrectedSuccessor: { expirationCount += 1 },
+            advanceCorrectedSuccessor: {
+                Issue.record("an expired proposal cannot advance")
+            },
+            repeatAcceptedPCM: { repeatCount += 1 },
+            requestUntrimmedSuccessor: { secondRequestCount += 1 }
+        )
+        #expect(expirationCount == 1)
+        #expect(repeatCount == 2)
+        #expect(secondRequestCount == 0)
+        #expect(cache.cachedCount == 0)
+
+        #expect(owner.playbackTimelineReset(routeGeneration: 12))
+        _ = owner.observeClock(
+            probe(mixer: 0, player: 0),
+            startCapture: { _, _, _ in true }
+        )
+        _ = owner.observeClock(
+            probe(mixer: 1_024, player: 1_024),
+            startCapture: { _, identity, runtime in
+                runtime.consumerDidStart(identity: identity) &&
+                    runtime.producerDidStart(identity: identity)
+            }
+        )
+        let fresh = try #require(owner.stageOccurrence(draft(
+            phraseIndex: 6,
+            startSample: 500_000,
+            routeGeneration: 12,
+            occurrenceEpoch: owner.runtime.occurrenceEpoch
+        )))
+        let freshIdentity = try #require(owner.runtime.activeIdentity)
+        #expect(owner.authorize(
+            identity: freshIdentity,
+            sourceOccurrence: fresh,
+            targetPhraseIndex: 7,
+            proposalFingerprint: "fresh-proposal"
+        ) == .invalidateUnscheduledSuccessor)
+        cache.insertCachedValue("fresh-corrected", forKey: 7)
+        pendingProposal = "fresh-proposal"
+        owner.performBoundary(
+            sourcePhraseIndex: 6,
+            targetPhraseIndex: 7,
+            correctedSuccessorAvailable: true,
+            expireCorrectedSuccessor: {},
+            advanceCorrectedSuccessor: {
+                currentPhraseIndex = 7
+                sessionRevision += 1
+                pendingProposal = nil
+                _ = cache.removeCachedValue(forKey: 7)
+            },
+            repeatAcceptedPCM: {
+                Issue.record("fresh correction should advance")
+            }
+        )
+        #expect(currentPhraseIndex == 7)
+        #expect(sessionRevision == 5)
+        #expect(pendingProposal == nil)
+        #expect(cache.cachedCount == 0)
+        #expect(owner.runtime.acceptedPCMHold == nil)
     }
 
     @MainActor
@@ -830,6 +1000,7 @@ struct TechnoEngineLiveFeedbackTests {
         phraseIndex: Int,
         startSample: Int64,
         routeGeneration: Int,
+        occurrenceEpoch: UInt64 = 0,
         appliedMasterTrimDB: Double = 0
     ) -> LiveFeedbackScheduledOccurrenceDraft {
         let range = occurrence(
@@ -843,6 +1014,7 @@ struct TechnoEngineLiveFeedbackTests {
             playerSampleRange: range.playerSampleRange,
             sampleRate: range.sampleRate,
             routeGeneration: range.routeGeneration,
+            occurrenceEpoch: occurrenceEpoch,
             controllerRevision: range.controllerRevision,
             qualityPolicyVersion: range.qualityPolicyVersion,
             evaluatorVersion: range.evaluatorVersion,

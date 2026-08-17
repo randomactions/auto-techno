@@ -97,7 +97,15 @@ package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable {
         }
         guard sortedReports.allSatisfy({ report in
             let vector = report.selectedCandidateEvidence
+            guard let observation = try? ProfessionalQualityObservation(
+                report: report
+            ) else { return false }
             return vector.isComplete && vector.isFinite &&
+                observation.isComplete &&
+                observation.liveMaster.hardGatesPassed &&
+                report.liveMaster == observation.liveMaster &&
+                observation.liveMaster.routeGeneration ==
+                    report.routeGeneration &&
                 vector.fullMix.loudnessStandard ==
                     BS1770LoudnessMeasurement.standard &&
                 vector.fullMix.truePeakStandard ==

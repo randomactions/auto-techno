@@ -11,10 +11,10 @@ struct CurrentRuntimeTests {
         #expect(QualityQualificationContract.engineVersion ==
                 "autotechno-canonical-engine.v20")
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 20)
-        #expect(ProfessionalQualityObservation.schemaVersion == 2)
+        #expect(ProfessionalQualityObservation.schemaVersion == 3)
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
                 "autotechno-quality.primary-calibrated.v3")
-        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 3)
+        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 4)
         #expect(CanonicalJourneyQualificationReport.currentEvidenceScope ==
                 "primary-structural-bs1770-signal-role-upper-modal-live-commit.v6")
         #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)

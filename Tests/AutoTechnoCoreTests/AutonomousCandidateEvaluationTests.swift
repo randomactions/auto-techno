@@ -265,7 +265,7 @@ struct AutonomousCandidateEvaluationTests {
     }
 
     @Test("Modal percussion correction evidence must exactly match the initial attempt")
-    func modalPercussionCorrectionMustMatchInitial() {
+    func modalPercussionCorrectionMustMatchInitial() throws {
         let initialVector = fixtureVector(modalPercussionBar:
             fixtureModalPercussionBar(events: [fixtureModalPercussionEvent()])
         )
@@ -300,7 +300,94 @@ struct AutonomousCandidateEvaluationTests {
 
         #expect(transaction(correction: initialVector).isComplete)
         #expect(!transaction(correction: changedVector).isComplete)
+        let changedLiveProposal = try tamperedVector(initialVector) { object in
+            object["liveProposalFingerprint"] = "aaaaaaaaaaaaaaaa"
+        }
+        #expect(!transaction(correction: changedLiveProposal).isComplete)
         #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)
+    }
+
+    @Test("Candidate live policy rejects boost forged scaling stale revision and boundary")
+    func livePolicyCandidateTampering() throws {
+        let baseline = fixtureVector()
+        #expect(baseline.isComplete)
+        for mutate in [
+            { (object: inout [String: Any]) in
+                object["requestedLiveMasterTrimDB"] = 0.1
+                object["appliedLiveMasterTrimDB"] = 0.1
+                object["liveMasterGain"] = 1.01
+            },
+            { (object: inout [String: Any]) in
+                object["liveMasterScalingMatches"] = false
+            },
+            { (object: inout [String: Any]) in
+                object["outgoingLiveMasterRevision"] = 1
+            },
+            { (object: inout [String: Any]) in
+                object["liveAppliedFutureSample"] = 1
+            },
+            { (object: inout [String: Any]) in
+                object["liveProposalBindingMatches"] = false
+            },
+        ] {
+            #expect(!(try tamperedVector(baseline, mutate: mutate)).isComplete)
+        }
+    }
+
+    @Test("Prepared live target start is independent boundary evidence")
+    func preparedLiveTargetStartIsIndependent() throws {
+        let fixture = try liveAttenuationFixture()
+        let exact = try #require(prepareLiveTarget(
+            fixture,
+            actualTargetStartSample: fixture.earliestEligibleFutureSample
+        ))
+        let later = try #require(prepareLiveTarget(
+            fixture,
+            actualTargetStartSample:
+                fixture.earliestEligibleFutureSample + 4_096
+        ))
+        let early = prepareLiveTarget(
+            fixture,
+            actualTargetStartSample:
+                fixture.earliestEligibleFutureSample - 1
+        )
+
+        #expect(exact.selectedCandidateEvidence.isComplete)
+        #expect(later.selectedCandidateEvidence.isComplete)
+        #expect(exact.liveTargetStartSample ==
+                fixture.earliestEligibleFutureSample)
+        #expect(later.liveTargetStartSample ==
+                fixture.earliestEligibleFutureSample + 4_096)
+        #expect(early == nil)
+
+        let tampered = try tamperedVector(
+            exact.selectedCandidateEvidence
+        ) { object in
+            object["liveAppliedFutureSample"] =
+                fixture.earliestEligibleFutureSample - 1
+        }
+        #expect(!tampered.isComplete)
+
+        let rewritten = AutonomousCandidateEvaluationTransaction(
+            engineVersion: QualityQualificationContract.engineVersion,
+            policyVersion: "primary-test",
+            evaluatorVersion: "primary-test",
+            planFingerprint: exact.selectedCandidateEvidence.planFingerprint,
+            attempts: [
+                AutonomousCandidateAttempt(
+                    kind: .initialRender,
+                    vector: exact.selectedCandidateEvidence
+                ),
+                AutonomousCandidateAttempt(
+                    kind: .correctionRender,
+                    forceHomeUpperTimbre: true,
+                    vector: later.selectedCandidateEvidence
+                ),
+            ],
+            selectedAttemptIndex: 1,
+            correctionCount: 1
+        )
+        #expect(!rewritten.isComplete)
     }
 
     @Test("Kick syntax evidence binds score, render, silence, and remains playback-gate-neutral")
@@ -3081,7 +3168,7 @@ struct AutonomousCandidateEvaluationTests {
     }
 
     @Test("Plan, graph, route, and every continuation owner move exact fingerprints")
-    func exactStateFingerprints() {
+    func exactStateFingerprints() throws {
         let director = AutonomousSessionDirector(rootSeed: 42)
         let state = director.initialState()
         let plan = director.plan(from: state)
@@ -3171,14 +3258,18 @@ struct AutonomousCandidateEvaluationTests {
             selectedSampleHash: "sample",
             outgoingRenderDSPFingerprint: outgoingRenderDSP,
             qualityState: initialQuality,
-            liveMasterHeadroomState: LiveMasterHeadroomContinuationState()
+            liveMasterHeadroomState: LiveMasterHeadroomContinuationState(),
+            liveRevisionDelta: 0,
+            liveTargetStart: .noTransition
         )
         let advancedCommit = AutonomousPreparedCommitProvenance(
             candidateEvaluationFingerprint: "transaction",
             selectedSampleHash: "sample",
             outgoingRenderDSPFingerprint: outgoingRenderDSP,
             qualityState: advancedQuality,
-            liveMasterHeadroomState: LiveMasterHeadroomContinuationState()
+            liveMasterHeadroomState: LiveMasterHeadroomContinuationState(),
+            liveRevisionDelta: 0,
+            liveTargetStart: .noTransition
         )
         #expect(initialCommit.isInternallyConsistent)
         #expect(advancedCommit.isInternallyConsistent)
@@ -3193,12 +3284,17 @@ struct AutonomousCandidateEvaluationTests {
             lastAcceptedSourcePhraseIndex: 0,
             earliestEligibleFutureSample: 192_000
         )
+        let scheduledTarget = try AutonomousLiveTargetStartEvidence.scheduled(
+            sample: 192_000
+        )
         let liveCommit = AutonomousPreparedCommitProvenance(
             candidateEvaluationFingerprint: "transaction",
             selectedSampleHash: "sample",
             outgoingRenderDSPFingerprint: outgoingRenderDSP,
             qualityState: initialQuality,
-            liveMasterHeadroomState: advancedLive
+            liveMasterHeadroomState: advancedLive,
+            liveRevisionDelta: 1,
+            liveTargetStart: scheduledTarget
         )
         #expect(liveCommit.outgoingLiveMasterStateFingerprint ==
                 advancedLive.fingerprint)
@@ -3208,8 +3304,36 @@ struct AutonomousCandidateEvaluationTests {
             selectedSampleHash: "sample",
             outgoingRenderDSPFingerprint: outgoingRenderDSP,
             qualityState: initialQuality,
-            liveMasterHeadroomState: advancedLive
+            liveMasterHeadroomState: advancedLive,
+            liveRevisionDelta: 1,
+            liveTargetStart: scheduledTarget
         ))
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let liveCommitJSON = try encoder.encode(liveCommit)
+        let liveCommitString = try #require(String(
+            data: liveCommitJSON,
+            encoding: .utf8
+        ))
+        for forged in [
+            liveCommitString.replacingOccurrences(
+                of: "\"sample\":192000",
+                with: "\"sample\":null"
+            ),
+            liveCommitString.replacingOccurrences(
+                of: "\"sample\":192000",
+                with: "\"sample\":191999"
+            ),
+        ] {
+            let data = try #require(forged.data(using: .utf8))
+            #expect(throws: DecodingError.self) {
+                try JSONDecoder().decode(
+                    AutonomousPreparedCommitProvenance.self,
+                    from: data
+                )
+            }
+        }
 
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
                 "593029ccd6a6153a")
@@ -3244,6 +3368,126 @@ struct AutonomousCandidateEvaluationTests {
             previousGraph: nil,
             incomingQualityState: state.quality,
             pendingLiveMasterBinding: nil,
+            evaluator: AcceptingPrimaryTestEvaluator(),
+            cancellationRequested: { false }
+        )
+    }
+
+    private struct LiveAttenuationFixture {
+        let plan: AutonomousPhrasePlan
+        let sourceState: AutonomousSessionState
+        let incomingRenderState: RenderState
+        let incomingGraphState: GeneratedDSPContinuationState
+        let previousGraph: DSPGraphPlan
+        let binding: PendingLiveMasterHeadroomBinding
+        let earliestEligibleFutureSample: Int64
+    }
+
+    private func liveAttenuationFixture() throws -> LiveAttenuationFixture {
+        let sampleRate = 44_100.0
+        let routeGeneration = 3
+        let director = AutonomousSessionDirector(rootSeed: 48_292)
+        let state = director.initialState()
+        let neverCancelled: @Sendable () -> Bool = { false }
+        let preparedSource = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            plan: director.plan(from: state),
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: sampleRate,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            incomingQualityState: state.quality,
+            routeGeneration: routeGeneration,
+            evaluator: AcceptingPrimaryTestEvaluator(),
+            cancellationRequested: neverCancelled
+        )
+        let source = try #require(preparedSource)
+        let nextState = state.advance(
+            using: source.plan,
+            quality: source.qualityContinuationState,
+            liveMasterHeadroom: source.liveMasterHeadroomContinuationState
+        )
+        let targetPlan = director.plan(from: nextState)
+        let frameCount = try #require(
+            LiveOutputWindowAnalyzer.frameCount(sampleRate: sampleRate)
+        )
+        let left = Array(source.blocks.flatMap(\.left).prefix(frameCount))
+        let right = Array(source.blocks.flatMap(\.right).prefix(frameCount))
+        let playerRange = Int64(80_000)..<Int64(80_000 + frameCount)
+        let evidence = try #require(LiveOutputWindowAnalyzer.analyze(
+            left: left,
+            right: right,
+            planIdentity: LiveOutputPlanSourceIdentity(plan: source.plan),
+            routeGeneration: routeGeneration,
+            controllerRevision: 0,
+            playerSampleRange: playerRange,
+            sampleRate: sampleRate,
+            captureProvenance: LiveFeedbackTestSupport.captureProvenance(
+                frameCount: frameCount
+            ),
+            qualityPolicyVersion:
+                LiveFeedbackTestSupport.fingerprintQualifiedPolicyVersion
+        ))
+        let target = try #require(LiveFeedbackTestSupport.target(
+            evidence: evidence,
+            loudnessUpperLUFS: evidence.maximumShortTermLoudnessLUFS - 1,
+            truePeakUpperDBTP: evidence.truePeakDBTP - 1
+        ))
+        let earliest = playerRange.upperBound + 16_000
+        let proposal = LiveMasterHeadroomController.propose(
+            evidence: evidence,
+            target: target,
+            incoming: LiveMasterHeadroomContinuationState(),
+            earliestEligibleFutureSample: earliest
+        )
+        #expect(proposal.outcome == .attenuate)
+        let binding = PendingLiveMasterHeadroomBinding(
+            sourceIdentity: LiveOutputPlanSourceIdentity(plan: source.plan),
+            evidence: evidence,
+            target: target,
+            proposal: proposal,
+            eligibleTarget: LiveMasterHeadroomEligibleTarget(
+                plan: targetPlan,
+                routeGeneration: routeGeneration,
+                sampleRate: sampleRate,
+                earliestEligibleFutureSample: earliest,
+                qualityPolicyVersion: evidence.qualityPolicyVersion,
+                evaluatorVersion: evidence.evaluatorVersion,
+                controllerPolicyVersion: evidence.controllerPolicyVersion
+            )
+        )
+        #expect(binding.isStructurallyValid(
+            targetPlan: targetPlan,
+            incoming: LiveMasterHeadroomContinuationState()
+        ))
+        return LiveAttenuationFixture(
+            plan: targetPlan,
+            sourceState: nextState,
+            incomingRenderState: source.endingRenderState,
+            incomingGraphState: source.endingGraphState,
+            previousGraph: source.graph,
+            binding: binding,
+            earliestEligibleFutureSample: earliest
+        )
+    }
+
+    private func prepareLiveTarget(
+        _ fixture: LiveAttenuationFixture,
+        actualTargetStartSample: Int64
+    ) -> PreparedAutonomousPhrase? {
+        AutonomousPhrasePreparer.prepareIfNotCancelled(
+            plan: fixture.plan,
+            sessionSeed: fixture.sourceState.rootSeed,
+            memory: fixture.sourceState.memory,
+            sampleRate: fixture.binding.eligibleTarget.sampleRate,
+            incomingRenderState: fixture.incomingRenderState,
+            incomingGraphState: fixture.incomingGraphState,
+            previousGraph: fixture.previousGraph,
+            incomingQualityState: fixture.sourceState.quality,
+            routeGeneration: fixture.binding.eligibleTarget.routeGeneration,
+            pendingLiveMasterBinding: fixture.binding,
+            liveTargetStartSample: actualTargetStartSample,
             evaluator: AcceptingPrimaryTestEvaluator(),
             cancellationRequested: { false }
         )
@@ -3515,6 +3759,9 @@ struct AutonomousCandidateEvaluationTests {
             routeContinuation: route,
             incomingLiveMasterRevision: 0,
             outgoingLiveMasterRevision: 0,
+            incomingLiveMasterTrimDB: 0,
+            incomingLiveMasterCleanWindowCount: 0,
+            outgoingLiveMasterCleanWindowCount: 0,
             incomingLiveMasterStateFingerprint:
                 LiveMasterHeadroomContinuationState().fingerprint,
             outgoingLiveMasterStateFingerprint:
@@ -3529,6 +3776,8 @@ struct AutonomousCandidateEvaluationTests {
             postLiveMasterPCMFingerprint: livePhraseHash,
             liveMasterScalingMatches: true,
             liveEarliestEligibleFutureSample: nil,
+            liveAppliedFutureSample: nil,
+            liveProposalBindingMatches: true,
             preGraphUpperTimbreEvidence: upper,
             postGraphUpperTimbreEvidence: upper
         )
