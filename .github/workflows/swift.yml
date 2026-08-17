@@ -17,7 +17,10 @@ jobs:
   swift-test:
     name: swift-test
     runs-on: macos-15
-    timeout-minutes: 45
+    # The serial, process-isolated qualification bank takes about 45 minutes
+    # before reaching its adversarial and preflight halves on hosted arm64.
+    # Keep a bounded two-hour ceiling without weakening or overlapping gates.
+    timeout-minutes: 120
 
     steps:
       - name: Check out source
