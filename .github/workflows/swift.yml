@@ -39,6 +39,88 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
 
+      - name: Run realtime queue and callback safety
+        run: |
+          swift test --no-parallel --skip-build \
+            --build-path "$RUNNER_TEMP/auto-techno-tests" \
+            --filter LivePCMQueueTests
+          producer_objects="$(find "$RUNNER_TEMP/auto-techno-tests" \
+            -type f -name 'CAutoTechnoRealtimeProducer.c.o' -print)"
+          producer_object_count="$(printf '%s\n' "$producer_objects" | \
+            awk 'NF { count += 1 } END { print count + 0 }')"
+          test "$producer_object_count" -eq 1
+          producer_object="$producer_objects"
+          test -s "$producer_object"
+
+          normalize_symbols() {
+            awk 'NF { symbol = $NF; sub(/^_+/, "", symbol); if (symbol != "") print symbol }'
+          }
+          unexpected_symbols() {
+            awk '$0 != "memcpy" && $0 != "memcpy_chk"'
+          }
+          normalization_self_test="$(printf '%s\n' '_memcpy' '___memcpy_chk' | \
+            normalize_symbols | LC_ALL=C sort -u | tr '\n' ' ')"
+          test "$normalization_self_test" = 'memcpy memcpy_chk '
+          rejection_self_test="$(printf '%s\n' '_malloc' | \
+            normalize_symbols | unexpected_symbols)"
+          test "$rejection_self_test" = 'malloc'
+          empty_object_self_test="$(printf '\n' | \
+            awk 'NF { count += 1 } END { print count + 0 }')"
+          test "$empty_object_self_test" -eq 0
+
+          undefined_symbols="$(nm -u "$producer_object" | \
+            normalize_symbols | LC_ALL=C sort -u)"
+          test -n "$undefined_symbols"
+          unexpected="$(printf '%s\n' "$undefined_symbols" | \
+            unexpected_symbols)"
+          if test -n "$unexpected"; then
+            echo "unexpected callback dependencies:"
+            printf '%s\n' "$unexpected"
+            exit 1
+          fi
+
+      - name: Run live analyzer controller and terminal trim
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(LiveOutputWindowEvidenceTests|LiveMasterHeadroomControllerTests|LiveMasterTrimRenderingTests|BS1770AudioEvidenceTests)'
+
+      - name: Run App live-feedback coordination
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(LiveFeedbackCoordinatorTests|TechnoEngineLiveFeedbackTests)'
+
+      - name: Run candidate evidence and live tampering
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(AutonomousCandidateEvaluationTests|adversarialLiveOccurrenceTimelineRejectsMutations)'
+
+      - name: Run exact primary artifacts and legacy rejection
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(liveHeadroomPrimaryIdentityContract|primaryResourcesAreV3Only|bundledV3ArtifactsAreReady|primaryArtifacts|legacyPolicyJSONIsRejected|serializedLiveObservationProvenanceIsRejected|generateRepresentativeProfile|calibrationCacheRejectsSwappedOrUnboundedBanks|RepositorySurfaceTests)'
+
+      - name: Run primary calibration adversarial challenge
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(deterministicProfile|adversarialSuite)'
+
+      - name: Run primary calibrated-policy contracts
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(modalMetricContract|noAggregateCompensation|directionalSafetyBounds|descriptiveLoudnessRange|primaryCandidatePolicy|liveMasterProvenanceHardGates|diverseCorpusIdentity|preparationEvaluatorAvailability|invalidCalibrationInputs|modalEvidencePrecedesPrimaryPolicy)'
+
+      - name: Run disjoint primary holdout qualification
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter holdoutDisjointnessAndAcceptance
+
       - name: Run atomic primary commit
         run: >-
           swift test --no-parallel --skip-build
@@ -157,7 +239,7 @@ jobs:
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(GeneratedDSPTopologyTests|AutonomousCandidateEvaluationTests|BS1770AudioEvidenceTests|CurrentRuntimeTests|FeedbackDelayNetworkTests|RepositorySurfaceTests|IdentityReturnContinuationTests|InstrumentPaletteTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|PrimaryEvaluatorReadinessTests|ProfessionalQualityCalibration|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
+          --filter '(GeneratedDSPTopologyTests|FeedbackDelayNetworkTests|IdentityReturnContinuationTests|InstrumentPaletteTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|UpperTimbreDSPTests|UpperTimbrePlanningTests|fixedSessionIdentity|currentPlanningIsDeterministic)'
 
       - name: Run preparation preflight tests
         run: >-

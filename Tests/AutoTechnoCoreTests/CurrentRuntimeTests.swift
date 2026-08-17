@@ -5,16 +5,26 @@ import Testing
 
 @Suite("Current autonomous runtime")
 struct CurrentRuntimeTests {
-    @Test("Modal primary identities advance as one exact contract")
-    func modalPrimaryIdentityContract() {
-        #expect(QualityQualificationContract.schemaVersion == 21)
+    @Test("Live headroom primary identities advance as one exact contract")
+    func liveHeadroomPrimaryIdentityContract() {
+        #expect(QualityQualificationContract.schemaVersion == 22)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v20")
+                "autotechno-canonical-engine.v21")
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 20)
         #expect(ProfessionalQualityObservation.schemaVersion == 3)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 3)
+        #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
+                "autotechno-professional-quality-profile.v3")
+        #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
+                "autotechno-candidate-evaluator.primary-calibrated.v3")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
                 "autotechno-quality.primary-calibrated.v3")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 4)
+        #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
+                "autotechno-professional-quality-adversarial.v4")
+        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 2)
+        #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
+                "autotechno-professional-quality-holdout.v2")
         #expect(CanonicalJourneyQualificationReport.currentEvidenceScope ==
                 "primary-structural-bs1770-signal-role-upper-modal-live-commit.v6")
         #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)
@@ -22,29 +32,33 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalEvidenceReportBank.schemaVersion == 6)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v6")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v2"))
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v3"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v2"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v2"))
+            .hasSuffix("-v3"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v3"))
     }
 
-    @Test("Bundled v2 resources remain present but cannot activate v3")
-    func primaryResourcesAreV2Only() {
+    @Test("Only bundled v3 resources remain")
+    func primaryResourcesAreV3Only() {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
         for stem in ["profile", "adversarial-suite", "holdout"] {
             let prefix = "professional-quality-primary-\(stem)"
             #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v1.json").path))
-            #expect(FileManager.default.fileExists(atPath:
+            #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v2.json").path))
+            #expect(FileManager.default.fileExists(atPath:
+                resourceDirectory.appendingPathComponent("\(prefix)-v3.json").path))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v1"))
-            #expect(ProfessionalQualityPrimaryArtifacts
+            #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v2"))
+            #expect(ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: "\(prefix)-v3"))
         }
-        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            try ProfessionalQualityPrimaryArtifacts.load()
+        #expect(throws: Never.self) {
+            _ = try ProfessionalQualityPrimaryArtifacts.load()
         }
     }
     @Test("The director owns the fixed tempo and default seed")
@@ -208,6 +222,8 @@ struct RepositorySurfaceTests {
             "ProfessionalQualityDevelopmentPolicy",
             "ProfessionalQualityFrozenArtifacts",
             "usedAlternate", "usedFallback", "usedHomeTimbreFallback",
+            "legacySchemaVersion", "legacySuiteVersion",
+            "legacyProfileVersion", "legacyEvidenceVersion", "isLegacy",
         ]
         let retiredPhrases = [
             "conservative candidate", "nonconservative candidate",

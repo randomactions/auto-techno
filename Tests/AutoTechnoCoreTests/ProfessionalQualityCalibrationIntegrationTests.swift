@@ -72,6 +72,46 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             )
         }
         let liveCandidates = try renderLiveAdversarialCandidates()
+        progress("live-candidates-ready causal=\(liveCandidates.isCausal)")
+        for (label, candidate) in [
+            ("attenuation", liveCandidates.attenuation),
+            ("recovery", liveCandidates.recovery),
+        ] {
+            guard let kind = AutonomousPhraseKind(
+                rawValue: candidate.symbolic.phraseKind
+            ) else { continue }
+            for checkpoint in CanonicalJourneyCheckpoint.applicable(
+                phraseIndex: candidate.symbolic.phraseIndex,
+                phraseKind: kind,
+                chapterChanged: candidate.symbolic.chapterChanged
+            ) {
+                let observation = try ProfessionalQualityObservation(
+                    candidate: candidate,
+                    engineVersion: QualityQualificationContract.engineVersion,
+                    checkpoint: checkpoint
+                )
+                let verdict = ProfessionalQualityProfileEvaluator.evaluate(
+                    observation,
+                    against: profile
+                )
+                progress(
+                    "live-candidate=\(label) checkpoint=\(checkpoint.rawValue) " +
+                    "accepted=\(verdict.accepted) failed=" +
+                    verdict.failedMetrics.map(\.rawValue).joined(separator: ",")
+                )
+                for metric in verdict.failedMetrics {
+                    guard let value = observation[metric],
+                          let bounds = profile[checkpoint]?[metric] else {
+                        continue
+                    }
+                    progress(
+                        "live-candidate-detail=\(label) " +
+                        "metric=\(metric.rawValue) value=\(value) " +
+                        "bounds=\(bounds.lower)...\(bounds.upper)"
+                    )
+                }
+            }
+        }
         let adversarial = try ProfessionalQualityAdversarialSuiteReport(
             profile: profile,
             sourceCorpus: calibrationCorpus,
@@ -211,22 +251,46 @@ struct ProfessionalQualityCalibrationIntegrationTests {
 
     private func renderTrajectory(seed: UInt64) throws
         -> ProfessionalQualityCalibrationTrajectory {
-        if let cached = try cachedTrajectory(seed: seed) {
+        try resolvedTrajectory(
+            seed: seed,
+            cacheDirectory: cacheDirectory()
+        ) {
+            var reports: [CanonicalJourneyQualificationReport] = []
+            for sampleRate in ProfessionalQualityCalibrationProfile
+                .requiredSampleRates {
+                reports.append(contentsOf: try renderJourney(
+                    seed: seed,
+                    sampleRate: sampleRate
+                ))
+            }
+            return reports
+        }
+    }
+
+    func resolvedTrajectory(
+        seed: UInt64,
+        cacheDirectory: URL?,
+        generateReports: () throws -> [CanonicalJourneyQualificationReport]
+    ) throws -> ProfessionalQualityCalibrationTrajectory {
+        if let cacheDirectory,
+           let cached = try cachedTrajectory(
+               seed: seed,
+               directory: cacheDirectory
+           ) {
             progress("cache-hit seed=\(seed)")
             return cached
         }
-        var reports: [CanonicalJourneyQualificationReport] = []
-        for sampleRate in ProfessionalQualityCalibrationProfile
-            .requiredSampleRates {
-            reports.append(contentsOf: try renderJourney(
-                seed: seed,
-                sampleRate: sampleRate
-            ))
-        }
+        let reports = try generateReports()
         let trajectory = try ProfessionalQualityCalibrationTrajectory(
             bank: ProfessionalEvidenceReportBank(reports: reports)
         )
-        try cache(trajectory: trajectory, seed: seed)
+        if let cacheDirectory {
+            try cache(
+                reports: reports,
+                seed: seed,
+                directory: cacheDirectory
+            )
+        }
         return trajectory
     }
 
@@ -302,47 +366,215 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         }
     }
 
-    private func cachedTrajectory(
-        seed: UInt64
+    func cachedTrajectory(
+        seed: UInt64,
+        directory: URL
     ) throws -> ProfessionalQualityCalibrationTrajectory? {
-        guard let url = cacheURL(seed: seed),
-              FileManager.default.fileExists(atPath: url.path) else {
-            return nil
-        }
-        let data = try Data(contentsOf: url)
-        let decoded = try JSONDecoder().decode(
-            ProfessionalQualityCalibrationTrajectory.self,
-            from: data
-        )
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        guard decoded.isComplete,
-              decoded.engineVersion == QualityQualificationContract.engineVersion,
-              try encoder.encode(decoded) == data else {
-            throw ProfessionalQualityCalibrationError.profileMismatch
-        }
-        return decoded
+        let url = cacheURL(seed: seed, directory: directory)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        guard let values = try? url.resourceValues(forKeys: [.fileSizeKey]),
+              let fileSize = values.fileSize,
+              fileSize > 0,
+              fileSize <= CachedJourneyReportBank.maximumEncodedBytes,
+              let data = try? Data(contentsOf: url) else { return nil }
+        return try decodedCacheTrajectory(data, requestedSeed: seed)
     }
 
-    private func cache(
-        trajectory: ProfessionalQualityCalibrationTrajectory,
-        seed: UInt64
+    func decodedCacheTrajectory(
+        _ data: Data,
+        requestedSeed: UInt64
+    ) throws -> ProfessionalQualityCalibrationTrajectory? {
+        guard !data.isEmpty,
+              data.count <= CachedJourneyReportBank.maximumEncodedBytes,
+              let decoded = try? JSONDecoder().decode(
+                  CachedJourneyReportBank.self,
+                  from: data
+              ),
+              decoded.schemaVersion == CachedJourneyReportBank.schemaVersion,
+              decoded.identity == CachedJourneyIdentity.current(
+                  rootSeed: requestedSeed
+              ),
+              decoded.reportJSON.count ==
+                CachedJourneyReportBank.expectedReportCount,
+              decoded.reportJSON.allSatisfy({
+                  !$0.isEmpty &&
+                      $0.count <= CanonicalJourneyQualificationReport
+                        .maximumEncodedBytes
+              }) else { return nil }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        guard let canonicalData = try? encoder.encode(decoded),
+              canonicalData == data,
+              let reports = try? decoded.reportJSON.map(
+                  CanonicalJourneyQualificationReport.decodeDeterministicJSON
+              ),
+              reports.allSatisfy({ report in
+                  report.schemaVersion == decoded.identity
+                    .qualitySchemaVersion &&
+                      report.engineVersion == decoded.identity.engineVersion &&
+                      report.policyVersion == decoded.identity.policyVersion &&
+                      report.evidenceScope == decoded.identity.evidenceScope &&
+                      report.selectedCandidateEvidence.schemaVersion ==
+                        decoded.identity.candidateSchemaVersion &&
+                      report.candidateEvaluation.schemaVersion ==
+                        decoded.identity.transactionSchemaVersion &&
+                      report.commitProvenance.schemaVersion ==
+                        decoded.identity.commitSchemaVersion &&
+                      decoded.identity.sampleRates.contains(report.sampleRate) &&
+                      report.fixtureFingerprint.hasPrefix(
+                          "seed-\(requestedSeed)."
+                      )
+              }),
+              let bank = try? ProfessionalEvidenceReportBank(reports: reports),
+              bank.schemaVersion == decoded.identity.reportBankSchemaVersion,
+              bank.evidenceVersion == decoded.identity.evidenceVersion,
+              bank.engineVersion == decoded.identity.engineVersion,
+              bank.policyVersion == decoded.identity.policyVersion,
+              bank.evaluatorVersion == decoded.identity.evaluatorVersion,
+              bank.sampleRates == decoded.identity.sampleRates,
+              bank.sourceReportCount ==
+                CachedJourneyReportBank.expectedReportCount,
+              let trajectory = try? ProfessionalQualityCalibrationTrajectory(
+                  bank: bank
+              ),
+              trajectory.isComplete else { return nil }
+        return trajectory
+    }
+
+    func cache(
+        reports: [CanonicalJourneyQualificationReport],
+        seed: UInt64,
+        directory: URL
     ) throws {
-        guard let url = cacheURL(seed: seed) else { return }
+        let url = cacheURL(seed: seed, directory: directory)
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        try encoder.encode(trajectory).write(to: url, options: .atomic)
+        let cache = CachedJourneyReportBank(
+            identity: CachedJourneyIdentity.current(rootSeed: seed),
+            reportJSON: try reports.map { try $0.deterministicJSON() }
+        )
+        let data = try encoder.encode(cache)
+        guard data.count <= CachedJourneyReportBank.maximumEncodedBytes,
+              try decodedCacheTrajectory(data, requestedSeed: seed) != nil else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        try data.write(to: url, options: .atomic)
     }
 
-    private func cacheURL(seed: UInt64) -> URL? {
+    /// Cache only complete candidate-derived reports. Observation JSON is an
+    /// intentionally non-decodable reduction and cannot be trusted as a
+    /// substitute for report validation during deterministic regeneration.
+    struct CachedJourneyReportBank: Codable {
+        static let schemaVersion = 2
+        static let expectedReportCount =
+            CanonicalJourneyCheckpoint.allCases.count *
+                ProfessionalQualityCalibrationProfile.requiredSampleRates.count
+        static let maximumEncodedBytes =
+            ProfessionalEvidenceReportBank.maximumEncodedBytes
+
+        let schemaVersion: Int
+        let identity: CachedJourneyIdentity
+        let reportJSON: [Data]
+
+        init(identity: CachedJourneyIdentity, reportJSON: [Data]) {
+            schemaVersion = Self.schemaVersion
+            self.identity = identity
+            self.reportJSON = reportJSON
+        }
+    }
+
+    struct CachedJourneyIdentity: Codable, Equatable {
+        let rootSeed: UInt64
+        let maximumPhrases: Int
+        let qualitySchemaVersion: Int
+        let engineVersion: String
+        let policyVersion: String
+        let evaluatorVersion: String
+        let candidateSchemaVersion: Int
+        let transactionSchemaVersion: Int
+        let commitSchemaVersion: Int
+        let reportBankSchemaVersion: Int
+        let evidenceVersion: String
+        let evidenceScope: String
+        let observationSchemaVersion: Int
+        let observationVersion: String
+        let profileSchemaVersion: Int
+        let profileVersion: String
+        let primaryEvaluatorVersion: String
+        let primaryPolicyVersion: String
+        let adversarialSchemaVersion: Int
+        let adversarialSuiteVersion: String
+        let holdoutSchemaVersion: Int
+        let holdoutQualificationVersion: String
+        let sampleRates: [Double]
+        let checkpoints: [String]
+
+        static func current(rootSeed: UInt64) -> CachedJourneyIdentity {
+            CachedJourneyIdentity(
+                rootSeed: rootSeed,
+                maximumPhrases: 128,
+                qualitySchemaVersion: QualityQualificationContract.schemaVersion,
+                engineVersion: QualityQualificationContract.engineVersion,
+                policyVersion:
+                    QualityQualificationContract.uncalibratedPolicyVersion,
+                evaluatorVersion:
+                    QualityQualificationContract.uncalibratedEvaluatorVersion,
+                candidateSchemaVersion:
+                    AutonomousCandidateEvaluationVector.schemaVersion,
+                transactionSchemaVersion:
+                    AutonomousCandidateEvaluationTransaction.schemaVersion,
+                commitSchemaVersion:
+                    AutonomousPreparedCommitProvenance.schemaVersion,
+                reportBankSchemaVersion: ProfessionalEvidenceReportBank.schemaVersion,
+                evidenceVersion: ProfessionalEvidenceReportBank.evidenceVersion,
+                evidenceScope:
+                    CanonicalJourneyQualificationReport.currentEvidenceScope,
+                observationSchemaVersion: ProfessionalQualityObservation.schemaVersion,
+                observationVersion:
+                    ProfessionalQualityObservation.observationVersion,
+                profileSchemaVersion:
+                    ProfessionalQualityCalibrationProfile.schemaVersion,
+                profileVersion:
+                    ProfessionalQualityCalibrationProfile.profileVersion,
+                primaryEvaluatorVersion:
+                    ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier,
+                primaryPolicyVersion:
+                    ProfessionalQualityPrimaryEvaluator.policyFamilyVersion,
+                adversarialSchemaVersion:
+                    ProfessionalQualityAdversarialSuiteReport.schemaVersion,
+                adversarialSuiteVersion:
+                    ProfessionalQualityAdversarialSuiteReport.suiteVersion,
+                holdoutSchemaVersion:
+                    ProfessionalQualityHoldoutQualification.schemaVersion,
+                holdoutQualificationVersion:
+                    ProfessionalQualityHoldoutQualification.qualificationVersion,
+                sampleRates:
+                    ProfessionalQualityCalibrationProfile.requiredSampleRates,
+                checkpoints: CanonicalJourneyCheckpoint.allCases.map(\.rawValue)
+            )
+        }
+    }
+
+    func canonicalCacheJSON(_ object: [String: Any]) throws -> Data {
+        try JSONSerialization.data(
+            withJSONObject: object,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+    }
+
+    private func cacheDirectory() -> URL? {
         guard let directory = ProcessInfo.processInfo.environment[
             "AUTOTECHNO_CALIBRATION_CACHE_DIRECTORY"
         ], !directory.isEmpty else { return nil }
         return URL(fileURLWithPath: directory, isDirectory: true)
+    }
+
+    func cacheURL(seed: UInt64, directory: URL) -> URL {
+        directory
             .appendingPathComponent("journey-\(seed).json")
     }
 

@@ -502,30 +502,7 @@ struct QualityQualificationFoundationTests {
 
     @Test("Professional Evidence v6 bank requires every journey checkpoint and unavailable policy")
     func professionalEvidenceReportBank() throws {
-        var reports: [CanonicalJourneyQualificationReport] = []
-        for sampleRate in [44_100.0, 48_000.0] {
-            let frameCount = StreamingPerceptualEvidenceAnalyzer.fftFrameCount(
-                sampleRate: sampleRate
-            )
-            let evidence = UpperTimbreEvidenceAnalyzer.analyze(
-                UpperTimbreAnalysisInput(
-                    left: [Float](repeating: 0, count: frameCount),
-                    right: [Float](repeating: 0, count: frameCount),
-                    sampleRate: sampleRate
-                )
-            )
-            for checkpoint in CanonicalJourneyCheckpoint.allCases {
-                let fixture = reportFixture(
-                    evidence: evidence,
-                    sampleHash: "bank-\(Int(sampleRate))-\(checkpoint.rawValue)",
-                    checkpoint: checkpoint
-                )
-                reports.append(try qualificationReport(
-                    fixture: fixture,
-                    checkpoint: checkpoint
-                ))
-            }
-        }
+        let reports = try qualificationReports()
 
         let bank = try ProfessionalEvidenceReportBank(reports: Array(reports.reversed()))
         #expect(bank.schemaVersion == ProfessionalEvidenceReportBank.schemaVersion)
@@ -610,6 +587,113 @@ struct QualityQualificationFoundationTests {
         }
     }
 
+    @Test("Calibration cache rejects swapped seed and unbounded banks")
+    func calibrationCacheRejectsSwappedOrUnboundedBanks() throws {
+        let fileManager = FileManager.default
+        let directory = fileManager.temporaryDirectory.appendingPathComponent(
+            "auto-techno-calibration-cache-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        try fileManager.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        defer { try? fileManager.removeItem(at: directory) }
+
+        let cacheHarness = ProfessionalQualityCalibrationIntegrationTests()
+        let sourceSeed: UInt64 = 7
+        let targetSeed: UInt64 = 13
+        let reports = try qualificationReports(rootSeed: sourceSeed)
+        try cacheHarness.cache(
+            reports: reports,
+            seed: sourceSeed,
+            directory: directory
+        )
+        let sourceURL = cacheHarness.cacheURL(
+            seed: sourceSeed,
+            directory: directory
+        )
+        let targetURL = cacheHarness.cacheURL(
+            seed: targetSeed,
+            directory: directory
+        )
+        let sourceData = try Data(contentsOf: sourceURL)
+        let cachedSource = try cacheHarness.cachedTrajectory(
+            seed: sourceSeed,
+            directory: directory
+        )
+        let sourceTrajectory = try #require(cachedSource)
+
+        try sourceData.write(to: targetURL, options: .atomic)
+        var regenerated = false
+        let regeneratedTrajectory = try cacheHarness.resolvedTrajectory(
+            seed: targetSeed,
+            cacheDirectory: directory
+        ) {
+            regenerated = true
+            return try qualificationReports(rootSeed: targetSeed)
+        }
+        #expect(regenerated)
+        #expect(regeneratedTrajectory != sourceTrajectory)
+        #expect(try cacheHarness.cachedTrajectory(
+            seed: targetSeed,
+            directory: directory
+        ) == regeneratedTrajectory)
+
+        var forgedRoot = try #require(
+            JSONSerialization.jsonObject(with: sourceData) as? [String: Any]
+        )
+        var identity = try #require(forgedRoot["identity"] as? [String: Any])
+        identity["rootSeed"] = NSNumber(value: targetSeed)
+        forgedRoot["identity"] = identity
+        let forgedData = try cacheHarness.canonicalCacheJSON(forgedRoot)
+        let forgedBank = try JSONDecoder().decode(
+            ProfessionalQualityCalibrationIntegrationTests
+                .CachedJourneyReportBank.self,
+            from: forgedData
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        #expect(try encoder.encode(forgedBank) == forgedData)
+        #expect(forgedBank.identity.rootSeed == targetSeed)
+        try forgedData.write(to: targetURL, options: .atomic)
+        #expect(try cacheHarness.cachedTrajectory(
+            seed: targetSeed,
+            directory: directory
+        ) == nil)
+
+        var oldSchema = forgedRoot
+        oldSchema["schemaVersion"] = 1
+        try cacheHarness.canonicalCacheJSON(oldSchema)
+            .write(to: targetURL, options: .atomic)
+        #expect(try cacheHarness.cachedTrajectory(
+            seed: targetSeed,
+            directory: directory
+        ) == nil)
+
+        var excessiveReports = forgedRoot
+        var reportJSON = try #require(excessiveReports["reportJSON"] as? [Any])
+        reportJSON.append(try #require(reportJSON.first))
+        excessiveReports["reportJSON"] = reportJSON
+        try cacheHarness.canonicalCacheJSON(excessiveReports)
+            .write(to: targetURL, options: .atomic)
+        #expect(try cacheHarness.cachedTrajectory(
+            seed: targetSeed,
+            directory: directory
+        ) == nil)
+
+        let oversized = Data(
+            repeating: 0x20,
+            count: ProfessionalQualityCalibrationIntegrationTests
+                .CachedJourneyReportBank.maximumEncodedBytes + 1
+        )
+        try oversized.write(to: targetURL, options: .atomic)
+        #expect(try cacheHarness.cachedTrajectory(
+            seed: targetSeed,
+            directory: directory
+        ) == nil)
+    }
+
     @Test("Professional observation projects active and explicit empty modal evidence")
     func professionalObservationProjectsModalPercussion() throws {
         let sampleRate = 48_000.0
@@ -674,9 +758,46 @@ struct QualityQualificationFoundationTests {
         transaction: AutonomousCandidateEvaluationTransaction
     )
 
+    private func qualificationReports(
+        rootSeed: UInt64? = nil
+    ) throws -> [CanonicalJourneyQualificationReport] {
+        var reports: [CanonicalJourneyQualificationReport] = []
+        for sampleRate in ProfessionalQualityCalibrationProfile
+            .requiredSampleRates {
+            let frameCount = StreamingPerceptualEvidenceAnalyzer.fftFrameCount(
+                sampleRate: sampleRate
+            )
+            let evidence = UpperTimbreEvidenceAnalyzer.analyze(
+                UpperTimbreAnalysisInput(
+                    left: [Float](repeating: 0, count: frameCount),
+                    right: [Float](repeating: 0, count: frameCount),
+                    sampleRate: sampleRate
+                )
+            )
+            for checkpoint in CanonicalJourneyCheckpoint.allCases {
+                let fixture = reportFixture(
+                    evidence: evidence,
+                    sampleHash:
+                        "bank-\(Int(sampleRate))-\(checkpoint.rawValue)",
+                    checkpoint: checkpoint
+                )
+                reports.append(try qualificationReport(
+                    fixture: fixture,
+                    checkpoint: checkpoint,
+                    fixtureFingerprint: rootSeed.map {
+                        "seed-\($0).fixture-\(Int(sampleRate))-" +
+                            checkpoint.rawValue
+                    } ?? "fixture-test"
+                ))
+            }
+        }
+        return reports
+    }
+
     private func qualificationReport(
         fixture: ReportFixture,
         checkpoint: CanonicalJourneyCheckpoint? = nil,
+        fixtureFingerprint: String = "fixture-test",
         policyVersion: String = QualityQualificationContract.uncalibratedPolicyVersion,
         routeFingerprint: String? = nil,
         decision: QualityDecision? = nil,
@@ -686,7 +807,7 @@ struct QualityQualificationFoundationTests {
         try CanonicalJourneyQualificationReport(
             engineVersion: fixture.transaction.engineVersion,
             policyVersion: policyVersion,
-            fixtureFingerprint: "fixture-test",
+            fixtureFingerprint: fixtureFingerprint,
             continuationFingerprint: "continuation-test",
             checkpoint: checkpoint ?? .establishment,
             routeFingerprint: routeFingerprint ??

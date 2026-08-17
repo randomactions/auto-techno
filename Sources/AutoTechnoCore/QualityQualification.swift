@@ -2,13 +2,13 @@ import Foundation
 
 /// Stable versions for the calibrated single-primary quality contract.
 package enum QualityQualificationContract {
-    /// Version 20 binds the score-owned modal foundation articulation, its
-    /// stable six-mode resonator, exact continuation and protected routing,
-    /// and the modal dimensions judged by the single primary evaluator.
-    /// Quality schema 21 advances those identities as one exact contract.
-    package static let schemaVersion = 21
+    /// Version 21 binds app-owned scheduled live PCM, exact mixer-to-player
+    /// clock mapping, live BS.1770 evidence, bounded terminal attenuation, and
+    /// its atomic commit at an unscheduled future boundary. Quality schema 22
+    /// advances those identities as one exact primary-evaluator contract.
+    package static let schemaVersion = 22
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v20"
+    package static let engineVersion = "autotechno-canonical-engine.v21"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

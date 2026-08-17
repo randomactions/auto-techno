@@ -1222,9 +1222,9 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
         #expect(vector.schemaVersion == 20)
-        #expect(QualityQualificationContract.schemaVersion == 21)
+        #expect(QualityQualificationContract.schemaVersion == 22)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v20")
+                "autotechno-canonical-engine.v21")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)

@@ -636,11 +636,15 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Bundled v2 primary artifacts cannot activate the v3 evaluator")
+    @Test("Bundled v3 primary artifacts activate the exact v3 evaluator")
     func primaryArtifacts() throws {
-        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            try ProfessionalQualityPrimaryArtifacts.load()
-        }
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        #expect(artifacts.profile.fingerprint ==
+                ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
+        #expect(artifacts.adversarialSuite.fingerprint ==
+                ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint)
+        #expect(artifacts.holdoutQualification.fingerprint ==
+                ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint)
     }
 
     @Test("Diverse corpus identity is ordered and bounded")

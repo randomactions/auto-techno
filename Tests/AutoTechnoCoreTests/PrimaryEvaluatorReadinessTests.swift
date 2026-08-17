@@ -39,31 +39,38 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("Bundled v2 artifacts cannot activate the schema-20 primary evaluator")
-    func bundledV2ArtifactsStayUnavailable() {
-        var rejected = false
-        do {
-            _ = try ProfessionalQualityPrimaryArtifacts.load()
-        } catch {
-            rejected = true
+    @Test("Bundled v3 artifacts activate only the exact schema-22 engine")
+    func bundledV3ArtifactsAreReady() throws {
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        #expect(artifacts.profile.engineVersion ==
+                QualityQualificationContract.engineVersion)
+        #expect(artifacts.profile.schemaVersion == 3)
+        #expect(artifacts.adversarialSuite.schemaVersion == 4)
+        #expect(artifacts.holdoutQualification.schemaVersion == 2)
+        for sampleRate in [44_100.0, 48_000.0] {
+            #expect(ProfessionalQualityPreparationEvaluator(
+                sampleRate: sampleRate,
+                artifacts: artifacts
+            ).availability == .available)
         }
-        #expect(rejected)
     }
 
-    @Test("An 8 kHz route without v3 artifacts remains unavailable")
-    func unsupported8KRouteStaysUnavailable() {
+    @Test("An 8 kHz route with exact v3 artifacts is unsupported")
+    func unsupported8KRouteStaysUnavailable() throws {
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(
             sampleRate: 8_000,
-            artifacts: nil
-        ).availability == .artifactsUnavailable)
+            artifacts: artifacts
+        ).availability == .unsupportedSampleRate)
     }
 
-    @Test("A 12 kHz route without v3 artifacts remains unavailable")
-    func unsupported12KRouteStaysUnavailable() {
+    @Test("A 12 kHz route with exact v3 artifacts is unsupported")
+    func unsupported12KRouteStaysUnavailable() throws {
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(
             sampleRate: 12_000,
-            artifacts: nil
-        ).availability == .artifactsUnavailable)
+            artifacts: artifacts
+        ).availability == .unsupportedSampleRate)
     }
 
     @Test("Missing artifacts cannot activate the calibrated primary evaluator")

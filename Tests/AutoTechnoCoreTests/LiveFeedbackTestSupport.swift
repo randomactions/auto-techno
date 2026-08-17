@@ -161,9 +161,10 @@ enum LiveFeedbackTestSupport {
         ProfessionalQualityLiveCandidateChain {
         let sampleRate = 44_100.0
         let routeGeneration = 11
-        // This seed yields an 8/4/4/4-bar real renderer/controller chain with
-        // canonical checkpoints on both attacked candidate phrases.
-        let director = AutonomousSessionDirector(rootSeed: 24_344)
+        // Development-corpus seed 42 yields a real renderer/controller chain
+        // with a chapter change at attenuation and contrast at recovery. Both
+        // attacked baselines are therefore covered by calibrated source PCM.
+        let director = AutonomousSessionDirector(rootSeed: 42)
         let initial = director.initialState()
         let neverCancelled: @Sendable () -> Bool = { false }
         let initialPlan = director.plan(from: initial)
