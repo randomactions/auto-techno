@@ -27,9 +27,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 21, candidate-
-   vector schema 19, and canonical engine identity
-   `autotechno-canonical-engine.v20`. Each
+   primary-evaluation transaction under quality-contract schema 22, candidate-
+   vector schema 20, candidate-transaction schema 4, and canonical engine
+   identity `autotechno-canonical-engine.v21`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -80,7 +80,13 @@ mistaken for a completed feedback system.
    incoming state. Their evidence records the incoming continuation and the
    outgoing render-plus-generated-DSP state before the quality decision; outer
    commit provenance then binds the chosen transaction, selected sample hash,
-   outgoing render/DSP state, and finalized quality continuation state.
+   outgoing render/DSP state, finalized quality continuation state, and the
+   matching live-master continuation. A pending live proposal is applied to a
+   copy of incoming render state and becomes durable only in this atomic commit.
+   The candidate binds source observation/proposal identity, route and future
+   boundary, incoming/outgoing revisions, requested/applied trim, and exact
+   terminal pre/post PCM scaling. Rejected or unavailable work cannot mutate
+   continuation or request an untrimmed substitute.
 
    The shipping evaluator is the exact-engine calibrated primary policy. A
    healthy primary is rendered once; only an explicit home-timbre correction
@@ -101,12 +107,12 @@ mistaken for a completed feedback system.
    windows with zero-padded radix-two FFT geometry, actual spectral
    centroid/bandwidth/flatness/rolloff, positive flux,
    RMS trajectory, active-window counts, and bounded working-memory provenance.
-   A deterministic Professional Evidence v5
+   A deterministic Professional Evidence v6
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
    observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v20 profile `33592f06e3c86a77`, adversarial suite
-   `15ae673a07bc6cd0`, and disjoint holdout qualification `dbe3ba28fa1a1956`.
+   engine-v21 profile v3 `bf5c1ea3c61aef86`, adversarial suite
+   `6301de3109373591`, and disjoint holdout qualification `87283519c0c86cd4`.
    The profile derives from 28 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
    relationships. Its evaluator maps the Core-owned plan checkpoint into the
@@ -226,8 +232,14 @@ mistaken for a completed feedback system.
 7. `TechnoEngine` prepares away from the callback and schedules completed buffers
    by sample time. It derives its read-only waveform on a fixed decibel scale and
    owns transport, visual position, and route recovery, not musical composition.
-   The current app does not copy callback PCM into a background quality analyzer
-   or make live quality-driven continuation decisions.
+   It also owns one scheduled-output feedback coordinator. After an exact
+   two-probe mixer/player clock map succeeds, the main-mixer callback copies only
+   bounded app-owned native-stereo packets into the preallocated C11 queue. A
+   detached worker assembles the first exact three-second phrase window, reuses
+   BS.1770-5/Annex 2 evidence, and reduces it to one attenuation-only proposal.
+   Only an unscheduled successor can consume that proposal, and only the primary
+   evaluator can commit its future controller state. See
+   [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
 ## Implemented gated-percussion-texture slice
 
@@ -310,7 +322,7 @@ return behavior.
 Each full bar emits same-pass bar/BPM/delay/render geometry, score and drive
 eligibility, bounded source and applied amount, current-send RMS, exact pre/post
 sample hashes, pre/post peak, RMS, and low-band RMS, difference RMS, and finite
-status. Candidate-vector schema 19 binds these observations to the score bar,
+status. Candidate-vector schema 20 binds these observations to the score bar,
 phrase kind, route rate, and matching instrument effect access. Neutral drive
 requires exact pre/post identity and zero difference. Active drive remains
 outside feedback, binds exact changed-frame and peak witnesses, and permits only
@@ -332,13 +344,13 @@ Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
 requested gate end, and renderer-applied gate end. Separate anchor, shadow, and
 response dry taps retain finite role-local hash, peak, and RMS evidence. Current
-candidate-vector schema 19 reduces those tuples into exact score/render and
+candidate-vector schema 20 reduces those tuples into exact score/render and
 renderer-applied-gate fingerprints, relation-specific offset facts, protected-
 role neutrality, cascade-aperture or lead-pattern replay, and route-derived
 frame geometry. The calibrated evaluator judges this evidence as part of the
 single primary transaction.
 
-## Target unified loop
+## Canonical unified loop
 
 All future musical development extends one persistent loop:
 
@@ -368,32 +380,51 @@ bounded observations and remains the sole owner of future musical decisions.
 Independent controllers must not compete over the same role or parameter; coupled
 decisions share one state, bounds, slew policy, and home target.
 
-## Hybrid feedback boundary
+## Scheduled-output feedback boundary
 
-Detached preparation may analyze its rendered buffers directly. When validation
-must reflect samples that entered the scheduled output path, the future runtime
-may copy app-owned PCM from the audio callback into a fixed-capacity,
-preallocated, single-writer lock-free exchange. The callback may only perform a
-bounded memory copy and advance lock-free indices. It must never allocate, lock,
-wait, analyze, log, perform file or network I/O, call UI code, or change musical
-state. If the exchange is full, feedback is dropped and the callback continues.
+Detached preparation analyzes its rendered buffers directly. The scheduled-
+output path additionally copies app-owned PCM from the main-mixer callback into
+a fixed-capacity, preallocated C11 single-writer exchange. Invalid tap input
+returns before the producer; valid input performs only pointer/frame guards,
+reads the sample position, calls the bounded producer, and returns. It never
+allocates, locks, waits, analyzes, hashes, logs, performs
+file or network I/O, calls UI code, or changes musical state. If the exchange is
+full, feedback is dropped and the callback continues.
 
-A bounded background analyzer consumes complete sample-indexed windows. It never
-opens a microphone, captures ambient or system audio, or analyzes content the app
-does not own. Each observation names its source sample range, controller revision,
-and earliest eligible future boundary. A decision may affect only an immutable
-candidate that has not yet been scheduled, and it is applied at that declared
-sample boundary. Late, incomplete, non-finite, stale, or mismatched observations
-are ignored in favor of the deterministic accepted-PCM hold. No analysis may
-rewrite the current buffer or a scheduled bar.
+A bounded background analyzer consumes the first complete three-second
+sample-indexed window of an authenticated scheduled occurrence. It never opens a
+microphone, captures ambient or system audio, or analyzes content the app does
+not own. Each observation names its source range, occurrence epoch, route,
+controller revision, plan, exact installed profile, and earliest eligible future
+boundary. One authenticated scheduled occurrence may invalidate one still-
+unscheduled successor. A repeated phrase at a newer authenticated range is a
+different occurrence. A decision may affect only that immutable future candidate
+and is applied at its declared sample boundary after primary acceptance.
+Late evidence is ignored or deferred unless the source is the exact playing
+occurrence and the target is still unscheduled; late evidence alone never
+latches an accepted-PCM hold. That hold begins only when an already authorized
+correction is rejected, unavailable, or misses its first boundary.
+
+Route, pause/resume, and timeline reset rotate lifecycle identity and discard
+stale packets/results. Route and timeline resets preserve an existing hold and
+latch an outstanding authorized correction. A newer authenticated occurrence
+may authorize another correction without clearing the hold. Only a successfully
+advanced corrected successor, complete session reset, or shutdown clears it. No
+analysis rewrites the current buffer or a scheduled bar.
+The complete contract is [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
 ## Reproducibility and product boundary
 
 The same private initial state and accepted, sample-indexed feedback state must
 reproduce the same plan, decision, graph, samples, controller evolution, and
-outgoing continuation state. Evaluation inputs and terminal outcomes are part
-of continuation provenance, not ambient hidden state. Route recovery must retain
-or deterministically rebuild them at the active sample rate.
+outgoing continuation state. Exact observation/proposal identity also requires
+identical packet count and first/last packet sequence, counters, and ranges.
+Valid alternate packetization of the same contiguous PCM may retain the PCM
+fingerprint, BS.1770 measurements, and numeric controller outcome, but it changes
+evidence and proposal fingerprints. Evaluation inputs and
+terminal outcomes are part of continuation provenance, not ambient hidden state.
+Route recovery must retain or deterministically rebuild them at the active
+sample rate.
 
 The selected `PreparedAutonomousPhrase` and its immutable scheduled blocks are
 the only rendered-material commitment. The runtime does not capture or resample

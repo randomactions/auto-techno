@@ -8,8 +8,9 @@ Mono architecture. `InstrumentAssignment` and its existing semantic `color`,
 owners. `ResonantMonoState` owns continuation. The primitive does not choose a
 patch, add an event, run a separate controller, or expose a user setting.
 
-Engine identity `autotechno-canonical-engine.v20`, quality-contract schema 21,
-and candidate-vector schema 19 identify this realization. The calibrated primary
+Engine identity `autotechno-canonical-engine.v21`, quality-contract schema 22,
+candidate-vector schema 20, and candidate-transaction schema 4 identify the
+current realization containing this unchanged core. The calibrated primary
 evaluator consumes the record as one non-compensable part of its terminal
 decision.
 

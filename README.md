@@ -26,6 +26,9 @@ account.
   envelope, spectral, masking, and stability evidence;
 - one score-owned eight-line stereo FDN late field with bounded decay, damping,
   continuation, protected low end, and exact per-bar consequence evidence;
+- one scheduled-output live-feedback path that maps app-owned mixer PCM to the
+  canonical phrase ledger, analyzes the first exact three-second window off the
+  callback, and can commit only a bounded attenuation to unscheduled future PCM;
 - engine-owned synthesis, effects, mixing, and output safety;
 - detached preparation followed by sample-time scheduling of immutable buffers;
 - route recovery at the active hardware sample rate;
@@ -46,11 +49,15 @@ current output. Each musical change must strengthen the same autonomous
 generate, render, evaluate, and adapt loop instead of introducing another
 top-level mechanism.
 
-The current runtime already performs detached safety and structural evaluation.
-The roadmap extends that foundation into multidimensional automated quality
-qualification and bounded feedback from app-owned output. Optional human
-feedback may identify a deficit, but it is not a required curation or promotion
-gate. Legal reference recordings and external analyzers may be used locally for
+The current runtime performs detached safety and structural evaluation, installs
+one calibrated multidimensional primary evaluator, and closes one bounded
+master-headroom loop from app-owned scheduled PCM to an unscheduled future
+phrase. The callback performs only a fixed copy into a preallocated C11 atomic
+handoff; analysis, profile lookup, decisions, preparation, and commit remain off
+the callback. See [`docs/LIVE_FEEDBACK.md`](docs/LIVE_FEEDBACK.md) for ownership,
+failure-hold, lifecycle, and qualification boundaries. Optional human feedback
+may identify a deficit, but it is not a required curation or promotion gate.
+Legal reference recordings and external analyzers may be used locally for
 development; neither they nor third-party instruments or effects are runtime
 dependencies.
 
@@ -88,6 +95,7 @@ revision.
 - [`docs/NONLINEAR_DSP_CORE.md`](docs/NONLINEAR_DSP_CORE.md) — canonical TPT/ADAA ownership, bounds, evidence, and qualification boundary
 - [`docs/SOUND_QUALITY.md`](docs/SOUND_QUALITY.md) — professional-sound and automated-quality contract
 - [`docs/PRIMARY_EVALUATOR.md`](docs/PRIMARY_EVALUATOR.md) — calibrated single-plan runtime judgment and commit boundary
+- [`docs/LIVE_FEEDBACK.md`](docs/LIVE_FEEDBACK.md) — scheduled-output evidence, bounded master-headroom control, and lifecycle contract
 - [`docs/SOUND_CONCEPT_MATURITY.md`](docs/SOUND_CONCEPT_MATURITY.md) — durable musical concepts and the richer DSP that may replace their current realization
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — ordered engine-evolution outcomes
 - [`docs/AUTONOMOUS_RUNTIME_PROVENANCE.md`](docs/AUTONOMOUS_RUNTIME_PROVENANCE.md) — runtime ownership and feedback flow

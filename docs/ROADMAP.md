@@ -49,7 +49,11 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one score-owned modal-percussion foundation voice replacing the root-only
   realization with six stable modes, four fixed continuation slots,
   protected routing, and exact same-pass evidence;
-- canonical engine v20, quality-contract schema 21, and candidate-vector schema 19
+- one scheduled-output master-headroom path mapping app-owned mixer PCM to an
+  exact phrase occurrence, analyzing one fixed three-second window off the
+  callback, and applying a primary-accepted attenuation only to future PCM;
+- canonical engine v21, quality-contract schema 22, candidate-vector schema 20,
+  and candidate-transaction schema 4
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax and debt-to-recovery climax arc,
   event-local groove-pulse, ordinary closed-hat,
@@ -62,22 +66,34 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - six phrase-scale performance characters with bounded two-character memory and a
   tested compatibility contract across foundation behavior, canonical narrative
   roles, rhythm, and existing instrument assignments;
-- phrase-wide streaming ITU-R BS.1770-5 loudness, Annex 2 true peak,
+- phrase-wide and live-window ITU-R BS.1770-5 loudness, Annex 2 true peak,
   physical-time spectral/trajectory evidence, rate-normalized transient
   detection, explicit bounded working memory, and a complete-checkpoint
-  Professional Evidence v5 report bank;
+  Professional Evidence v6 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
 
-The app now installs one exact-engine calibrated evaluator from the current
-profile derived from 28 complete journeys, a passing adversarial suite, and a
-disjoint four-journey holdout qualification. Each boundary owns one canonical
-plan and one terminal decision. The evaluator may request one same-plan
-home-timbre correction, for two render passes maximum; no paired comparator,
-second phrase, musical substitute, or permissive shipping policy remains.
-Missing artifacts and unsupported routes are truthfully unavailable and cannot
-commit. Hybrid live feedback is not implemented.
+The app now installs one exact-engine calibrated primary evaluator v3 from the
+current profile v3 derived from 28 complete journeys, a passing v4 adversarial
+suite, and a disjoint four-journey holdout qualification. Each boundary owns one
+canonical plan and one terminal decision. The evaluator may request one same-
+plan home-timbre correction, for two render passes maximum. Missing artifacts
+and unsupported routes are truthfully unavailable and cannot commit.
+
+The seventh completed architectural stage closes the first live loop. A fixed
+C11 queue copies only app-owned native-stereo mixer PCM; exact clock mapping and
+a bounded occurrence ledger identify the first three-second phrase window; and
+the installed profile drives one `-3...0 dB` attenuation/recovery controller.
+One authenticated scheduled occurrence can invalidate one unscheduled successor,
+and its proposal commits only with the primary-accepted candidate.
+Late evidence alone is ignored or deferred. An authorized correction that is
+rejected, unavailable, or misses its first boundary latches the accepted-PCM
+hold. Route and timeline resets preserve that hold. A newer authenticated
+occurrence may propose recovery but does not itself clear the hold; successful
+corrected advancement, complete session reset, or shutdown clears it. See
+[`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md). App/route QA, listening, and physical-
+output soak remain separate evidence states.
 
 The pulse-echo return-drive code and same-pass reduced evidence are present in
 the current implementation candidate. The exact-source local structural/signal
@@ -114,8 +130,9 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 21 and candidate-vector schema 19 now bind a versioned
-transaction across canonical engine v20, quality policy, evaluator, candidate
+Quality-contract schema 22, candidate-vector schema 20, and candidate-
+transaction schema 4 now bind a versioned transaction across canonical engine
+v21, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 instrument, acid-operator, TPT/ADAA nonlinear-core, spectral-cluster, and tonal-envelope,
@@ -126,13 +143,13 @@ provenance, make each
 score-to-PCM consequence explicit for the calibrated primary policy. The modal
 foundation projection additionally binds every empty and active bar, score-owned
 articulation, exact dry PCM, protected routing, continuation, pitch, envelope,
-spectral, masking, and pole-stability evidence. Professional Evidence v5 adds
+spectral, masking, and pole-stability evidence. Professional Evidence v6 adds
 standards-based phrase loudness/true peak, bounded streaming
 physical-time spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
 complete role attribution. The repository now carries a deterministic,
 non-reconstructable 44.1/48 kHz diverse profile, relational rate/trajectory
-guardrails, a passing fourteen-case adversarial suite, and a disjoint holdout report
+guardrails, a passing 23-case v4 adversarial suite, and a disjoint holdout report
 covering 56/56 observations with zero relationship failures. Short-program
 EBU-style loudness range remains descriptive because its gated percentile is
 discontinuous at small populations; integrated, momentary, short-term, and true-
@@ -143,20 +160,28 @@ local and untracked.
 
 The runtime now records one complete plan, one initial attempt, and at most one
 home-timbre correction, then atomically carries the terminal evidence, decision,
-and controller state into continuation. The exact engine-v20 diverse profile,
-passing adversarial suite, disjoint holdout qualification, non-compensable
+and controller state into continuation. The exact engine-v21 profile v3,
+passing v4 adversarial suite, disjoint holdout qualification, non-compensable
 checkpoint policy, and transaction replay are the app path. The former
 single-journey generalization blocker is closed: 28 development journeys and
 four disjoint replacement holdouts pass at 44.1 and 48 kHz. A missing artifact,
 unsupported route, failed gate, or rejected score produces no new commit. See
 [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md).
 
-### 4. Add safe hybrid live feedback
+### 4. Operate bounded scheduled-output feedback
 
-Capture only app-owned mixer PCM through a preallocated lock-free handoff. Analyze
-fixed, sample-indexed windows off the callback and publish immutable snapshots for
-unscheduled future bars or phrases. Prove rate consistency, bounded latency,
-deterministic replay, no missed-successor instability, and coherent transport hold.
+This outcome is implemented. Auto Techno captures only app-owned mixer PCM
+through a preallocated C11 atomic handoff, assembles the first exact three-second
+sample-indexed phrase window off the callback, and publishes one calibrated
+attenuation proposal for an unscheduled successor. Exact clock mapping,
+occurrence epochs, one invalidation per authenticated scheduled occurrence,
+primary-evaluator commit, route and pause/resume teardown, deterministic replay,
+and accepted-PCM hold are tested. Exact identity replay binds packet count,
+first/last packet sequence, counters, and ranges; alternate valid
+packetization of identical PCM changes evidence/proposal fingerprints even when
+measurements and the numeric controller outcome agree.
+Physical-output behavior is still a later release gate, not an inference from
+this architecture.
 
 ### 5. Evolve the internal sound engine
 

@@ -1250,3 +1250,69 @@ Evidence states at this snapshot boundary:
 Artifact qualification does not prove app launch, hardware-route recovery,
 subjective listening quality, or physical-output stability. Those remain
 separate evidence states.
+
+## Canonical scheduled-output feedback and v3 primary artifacts — 2026-08-17
+
+The seventh architectural stage closes one bounded master-headroom loop on the
+same canonical runtime. The main-mixer callback copies only app-owned native-
+stereo PCM into a 256-slot C11 atomic queue with a 1,024-frame packet maximum.
+An authenticated occurrence ledger and exact two-probe mixer/player clock map
+allow a detached worker to assemble the first three seconds of a scheduled
+phrase. The worker reuses the canonical BS.1770-5 and Annex 2 analyzers and the
+installed profile; only the resulting reduced proposal crosses into future
+preparation.
+
+The controller is attenuation-only within `-3...0 dB`, attacks by no more than
+`0.25 dB` per accepted phrase, and recovers by `0.125 dB` only after two complete
+clean windows. One authenticated scheduled occurrence may invalidate one
+unscheduled successor; repeating a phrase at a newer range is a distinct
+occurrence. The proposal becomes durable only when fresh candidate evidence and
+terminal trim proof pass the one primary evaluator and atomic commit.
+Late evidence alone is ignored or deferred and cannot latch the hold. An
+authorized correction that is missed, unavailable, or rejected does latch the
+accepted-PCM hold; it does not request an untrimmed substitute. Route and
+timeline resets preserve that hold and may latch an outstanding authorization.
+A newer authenticated occurrence may propose recovery but does not itself clear
+the hold; a successful corrected boundary, complete session reset, or shutdown
+does.
+
+Exact replay identity binds packet count, first/last packet sequence, counters,
+ranges, and the other recorded capture-provenance fields. Alternate valid
+packetization of identical contiguous PCM may preserve its PCM fingerprint,
+BS.1770 measurements, and
+numeric controller outcome, but it changes the evidence and proposal
+fingerprints.
+
+Artifact cutover commit `6ac044f4036c662009b67a2314d3b780ff97e448`
+advanced the canonical engine to v21, quality contract to schema 22, candidate
+vector to schema 20, candidate transaction to schema 4, Professional Evidence
+to v6, profile to v3, adversarial suite to schema/family 4/v4, and holdout to
+schema 2. The repository ships only these artifact identities:
+
+- profile: `bf5c1ea3c61aef86`, JSON SHA-256
+  `3cff443f74ebd5d2b84599492451b4005703a6255cc94fec4d5c8931d89d7106`;
+- adversarial suite: `6301de3109373591`, JSON SHA-256
+  `3cbaea77eb7552b5e21a0a886fefe331b67211f4bdcda0c013e23756e88970b8`;
+- holdout qualification: `87283519c0c86cd4`, JSON SHA-256
+  `28094391d31044d9954a547fb04a1e096a3b5533f997d8d2023826d9bab2efd5`.
+
+The v3 profile accepted all 392 development observations from 28 complete
+journeys at 44.1 and 48 kHz. The v4 suite retains 23 non-compensable cases and
+two live baseline observations. The four source-disjoint holdout journeys
+accepted 56/56 observations with zero relationship failures.
+
+Evidence states at this snapshot boundary:
+
+- implementation: complete;
+- deterministic queue, analyzer, controller, candidate, scheduling, lifecycle,
+  and primary-artifact validation: complete in focused local suites;
+- exact-head full local matrix and release build: pending Task 13;
+- publication and exact-head remote CI: pending Task 14;
+- release app launch: pending Task 14;
+- app transport and physical route/interruption QA: pending;
+- listening observation: pending;
+- 60-minute physical-output and recovery soak: pending.
+
+The automated artifacts and replay do not establish physical-output behavior,
+subjective professional quality, interruption recovery, or hardware stability.
+Those remain separate release evidence.

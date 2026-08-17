@@ -61,6 +61,21 @@ struct CurrentRuntimeTests {
             _ = try ProfessionalQualityPrimaryArtifacts.load()
         }
     }
+
+    @Test("The shipped evaluator and live controller form one exact path")
+    func primaryEvaluatorAndLiveControllerAreCanonical() throws {
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+
+        #expect(artifacts.evaluator.evaluatorVersion ==
+                ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier)
+        #expect(LiveMasterHeadroomController.version ==
+                "autotechno-live-master-headroom-controller.v1")
+        #expect(LiveMasterHeadroomController.minimumTrimDB == -3)
+        #expect(LiveMasterHeadroomController.maximumTrimDB == 0)
+        #expect(LiveMasterHeadroomController.attackStepDB == 0.25)
+        #expect(LiveMasterHeadroomController.recoveryStepDB == 0.125)
+        #expect(LiveMasterHeadroomController.cleanWindowsForRecovery == 2)
+    }
     @Test("The director owns the fixed tempo and default seed")
     func fixedSessionIdentity() {
         let director = AutonomousSessionDirector()
@@ -229,7 +244,10 @@ struct RepositorySurfaceTests {
             "conservative candidate", "nonconservative candidate",
             "conservative score", "alternate candidate", "fallback phrase",
             "development policy", "frozen policy", "usedalternate",
-            "usedfallback", "private static func tom",
+            "usedfallback", "private static func tom", "paired selection",
+            "paired-selection", "alternate evaluator", "secondary evaluator",
+            "profile-v2", "adversarial-suite-v2", "holdout-v2",
+            "callback analyzer", "master boost", "user-selectable feedback",
         ]
         let retiredProseSymbols = [
             "ProfessionalQualityPairedCandidateEvaluator",
@@ -283,6 +301,212 @@ struct RepositorySurfaceTests {
                     "\(retired) remains in \(file.lastPathComponent)"
                 )
             }
+        }
+    }
+
+    @Test("Active documentation exposes one canonical live-feedback path")
+    func canonicalLiveFeedbackDocumentationIsCurrent() throws {
+        let liveFeedbackURL = repositoryRoot.appendingPathComponent(
+            "docs/LIVE_FEEDBACK.md"
+        )
+        #expect(FileManager.default.fileExists(atPath: liveFeedbackURL.path))
+        guard FileManager.default.fileExists(atPath: liveFeedbackURL.path) else {
+            return
+        }
+
+        let liveFeedback = try String(
+            contentsOf: liveFeedbackURL,
+            encoding: .utf8
+        )
+        for required in [
+            "# Canonical Live Feedback",
+            "## Ownership",
+            "## Realtime callback boundary",
+            "256",
+            "1,024",
+            "first exact three-second window",
+            "BS.1770-5",
+            "Annex 2",
+            "-3...0 dB",
+            "0.25 dB",
+            "0.125 dB",
+            "pending",
+            "committed",
+            "one feedback-driven invalidation",
+            "one feedback-driven invalidation per authenticated scheduled occurrence",
+            "accepted PCM hold",
+            "occurrence epoch",
+            "Late evidence alone does not latch the hold",
+            "Route and timeline resets preserve a latched hold",
+            "does not itself clear the hold",
+            "complete session reset or shutdown",
+            "packet count and first/last packet sequence",
+            "Different valid packetization metadata changes the evidence and proposal fingerprints",
+            "## Route, transport, and shutdown lifecycle",
+            "## Deterministic replay",
+            "## Qualification boundaries",
+        ] {
+            #expect(liveFeedback.contains(required),
+                    "Live-feedback contract omits \(required)")
+        }
+
+        for document in [
+            "docs/LIVE_FEEDBACK.md",
+            "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
+            "docs/AUTONOMOUS_RUNTIME_VALIDATION.md",
+            "docs/ROADMAP.md",
+            "docs/history/VALIDATION_SNAPSHOTS.md",
+        ] {
+            let rawContents = try String(
+                contentsOf: repositoryRoot.appendingPathComponent(document),
+                encoding: .utf8
+            ).lowercased()
+            let contents = rawContents
+                .split(whereSeparator: \.isWhitespace)
+                .joined(separator: " ")
+            #expect(contents.contains("authenticated scheduled occurrence"),
+                    "\(document) omits occurrence-scoped invalidation")
+            #expect(contents.contains("late evidence alone"),
+                    "\(document) omits late-evidence hold isolation")
+            #expect(contents.contains("route and timeline resets"),
+                    "\(document) omits hold-preserving route reset")
+            #expect(contents.contains("newer authenticated occurrence"),
+                    "\(document) omits authenticated recovery")
+            #expect(contents.contains("complete session reset"),
+                    "\(document) omits explicit hold reset")
+            #expect(contents.contains("shutdown"),
+                    "\(document) omits shutdown hold reset")
+            #expect(contents.contains("packet count"),
+                    "\(document) omits packetized replay identity")
+            #expect(contents.contains("first/last packet sequence"),
+                    "\(document) omits packet sequence replay identity")
+            #expect(
+                contents.contains("alternate valid packetization")
+                    || contents.contains("valid alternate packetization")
+                    || contents.contains("different valid packetization metadata"),
+                "\(document) omits alternate-packetization equivalence"
+            )
+            #expect(
+                contents.contains("evidence/proposal fingerprints")
+                    || contents.contains("evidence and proposal fingerprints"),
+                "\(document) omits packetization-dependent fingerprints"
+            )
+            #expect(!contents.contains("source phrase may invalidate"),
+                    "\(document) retains phrase-scoped invalidation")
+            #expect(!contents.contains("source phrase can invalidate"),
+                    "\(document) retains phrase-scoped invalidation")
+            #expect(!contents.contains("per source phrase"),
+                    "\(document) retains phrase-scoped invalidation")
+            #expect(!contents.contains("route/session lifecycle reset"),
+                    "\(document) incorrectly clears hold on route reset")
+            #expect(!contents.contains("route reset clears"),
+                    "\(document) incorrectly clears hold on route reset")
+            #expect(!contents.contains("route reset releases"),
+                    "\(document) incorrectly releases hold on route reset")
+            #expect(!contents.contains("route and timeline resets clear"),
+                    "\(document) incorrectly clears hold on route reset")
+            #expect(!contents.contains("route and timeline resets release"),
+                    "\(document) incorrectly releases hold on route reset")
+            #expect(!contents.contains("different packet chunking is allowed"),
+                    "\(document) weakens exact packetized replay identity")
+        }
+
+        let roadmap = try String(
+            contentsOf: repositoryRoot.appendingPathComponent("docs/ROADMAP.md"),
+            encoding: .utf8
+        )
+        #expect(roadmap.contains("23-case v4 adversarial suite"))
+        #expect(!roadmap.contains("fourteen-case adversarial suite"))
+
+        for document in [
+            "docs/PRODUCT.md",
+            "docs/SOUND_QUALITY.md",
+        ] {
+            let rawContents = try String(
+                contentsOf: repositoryRoot.appendingPathComponent(document),
+                encoding: .utf8
+            ).lowercased()
+            let contents = rawContents
+                .split(whereSeparator: \.isWhitespace)
+                .joined(separator: " ")
+            #expect(
+                contents.contains(
+                    "late evidence alone is ignored or deferred when its exact target is no longer unscheduled"
+                ),
+                "\(document) omits late-evidence target expiry"
+            )
+            #expect(
+                contents.contains(
+                    "only an already-authorized correction that is rejected, unavailable, or misses its first eligible boundary enters the accepted-pcm hold"
+                ),
+                "\(document) omits authorized-correction hold entry"
+            )
+            #expect(!contents.contains("failure repeats accepted immutable pcm"),
+                    "\(document) overstates hold entry for generic failure")
+            #expect(!contents.contains(
+                "missed deadlines repeat already accepted immutable pcm"
+            ), "\(document) overstates hold entry for generic deadlines")
+            #expect(!contents.contains(
+                "if analysis or preparation misses its deadline, the engine repeats accepted immutable pcm"
+            ), "\(document) overstates hold entry for late analysis")
+        }
+
+        let activeDocuments = try activeDocumentationFiles()
+        let combined = try activeDocuments.map {
+            try String(contentsOf: $0, encoding: .utf8)
+        }.joined(separator: "\n").lowercased()
+
+        for required in [
+            "autotechno-canonical-engine.v21",
+            "quality-contract schema 22",
+            "candidate-vector schema 20",
+            "candidate-transaction schema 4",
+            "professional evidence v6",
+            "profile v3",
+            "evaluator v3",
+            "live feedback",
+            "physical-output soak",
+        ] {
+            #expect(combined.contains(required),
+                    "Active documentation omits \(required)")
+        }
+
+        for forbidden in [
+            "hybrid live feedback is not implemented",
+            "hybrid live feedback remains target architecture",
+            "future hybrid-feedback implementation",
+            "future runtime may copy",
+            "current app does not copy callback pcm",
+            "paired selection",
+            "paired-selection",
+            "paired comparator",
+            "alternate evaluator",
+            "secondary evaluator",
+            "profile-v2",
+            "adversarial-suite-v2",
+            "holdout-v2",
+            "callback analyzer",
+            "master boost",
+            "user-selectable feedback",
+        ] {
+            #expect(!combined.contains(forbidden),
+                    "Active documentation retains \(forbidden)")
+        }
+
+        for document in [
+            "README.md",
+            "docs/PRODUCT.md",
+            "docs/SOUND_QUALITY.md",
+            "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
+            "docs/AUTONOMOUS_RUNTIME_VALIDATION.md",
+            "docs/ROADMAP.md",
+        ] {
+            let contents = try String(
+                contentsOf: repositoryRoot.appendingPathComponent(document),
+                encoding: .utf8
+            )
+            #expect(contents.contains("LIVE_FEEDBACK.md"),
+                    "\(document) does not link the canonical contract")
         }
     }
 
@@ -341,5 +565,24 @@ struct RepositorySurfaceTests {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
+    }
+
+    private func activeDocumentationFiles() throws -> [URL] {
+        var files = [repositoryRoot.appendingPathComponent("README.md")]
+        let docs = repositoryRoot.appendingPathComponent("docs")
+        let enumerator = try #require(FileManager.default.enumerator(
+            at: docs,
+            includingPropertiesForKeys: [.isRegularFileKey]
+        ))
+        for case let file as URL in enumerator where file.pathExtension == "md" {
+            let relativePath = file.path.replacingOccurrences(
+                of: docs.path + "/", with: ""
+            )
+            guard !relativePath.hasPrefix("history/"),
+                  !relativePath.hasPrefix("superpowers/specs/"),
+                  !relativePath.hasPrefix("superpowers/plans/") else { continue }
+            files.append(file)
+        }
+        return files
     }
 }

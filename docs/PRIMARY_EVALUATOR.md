@@ -22,9 +22,10 @@ invalid.
 
 ## Qualification
 
-`ProfessionalQualityPrimaryArtifacts` loads the non-reconstructable engine-v20
-profile `33592f06e3c86a77`, adversarial suite `15ae673a07bc6cd0`, and disjoint
-holdout qualification `dbe3ba28fa1a1956`. The profile derives from 28 complete
+`ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
+engine-v21 profile v3 `bf5c1ea3c61aef86`, adversarial suite v4
+`6301de3109373591`, and disjoint holdout qualification v2
+`87283519c0c86cd4`. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
 relationship gate.
 
@@ -45,9 +46,11 @@ evaluator for detached preparation. Missing artifacts and rates outside 44.1 or
 ## Commit and transport boundary
 
 Only `qualified` or `adjusted` decisions with complete hard gates, exact plan and
-transaction identity, matching controller state, and complete incoming/outgoing
-continuation provenance may commit. Rejected or unavailable work is retained as
-diagnostic evidence but cannot become playback.
+transaction identity, matching combined controller state, and complete incoming/
+outgoing continuation provenance may commit. A pending live-master proposal
+must bind the exact source observation, future boundary, route, controller
+revision, and terminal pre/post trim evidence in both attempts. Rejected or
+unavailable work is retained as diagnostic evidence but cannot become playback.
 
 When preparation is late, cancelled, rejected, or unavailable, sample-time
 transport may repeat the already accepted immutable PCM with its frozen topology.
@@ -63,3 +66,7 @@ physical-time spectral/trajectory evidence, masking and role stems, and every
 score-owned renderer consequence. Offline calibration, runtime commit readiness,
 listening, route/interruption QA, and physical hardware soak remain distinct
 claims.
+
+The scheduled-output controller cannot commit independently of this evaluator.
+See [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md) for its capture, proposal, lifecycle,
+accepted-PCM hold, and physical-QA boundaries.

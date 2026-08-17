@@ -11,8 +11,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 21, candidate-vector schema 19, and
-canonical engine identity `autotechno-canonical-engine.v20`. It preserves
+candidate uses quality-contract schema 22, candidate-vector schema 20,
+candidate-transaction schema 4, and canonical engine identity
+`autotechno-canonical-engine.v21`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
@@ -158,21 +159,24 @@ identity. The record is required for structural completeness and changes the
 transaction fingerprint. See [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md) for the
 signal and replacement contract.
 
-`ProfessionalEvidenceReportBank` accepts a bank only when every canonical
+`ProfessionalEvidenceReportBank` v6 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary policy from profile `33592f06e3c86a77`, adversarial suite
-`15ae673a07bc6cd0`, and disjoint holdout `dbe3ba28fa1a1956`. It judges every
+exact-engine primary evaluator v3 from profile `bf5c1ea3c61aef86`, adversarial
+suite `6301de3109373591`, and disjoint holdout `87283519c0c86cd4`. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.
 EBU-style short-program loudness range stays descriptive because its gated
 percentile can change discontinuously when one short-term block crosses the
 gate. Integrated, momentary, short-term, and true-peak evidence remain policy
-dimensions. Hybrid live feedback remains target architecture. The transaction
-is bounded to one initial render plus one optional same-plan correction, and its
-streaming analyzers retain fixed working-memory ceilings. See
-[`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md).
+dimensions. The seventh architectural stage now carries exact scheduled-output
+provenance, live-controller home/proposal evidence, and terminal pre/post trim
+proof through the same primary transaction. The transaction remains bounded to
+one initial render plus one optional same-plan correction, and its streaming
+analyzers retain fixed working-memory ceilings. See
+[`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md) and
+[`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
 ## Engine ownership
 
@@ -244,7 +248,7 @@ sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
 status. It also retains exact first/last sample bit patterns, the pre-drive peak
 frame, the exact input/amount witness at the post-drive peak, and a replayable
 changed-frame witness together with that frame's exact input bits.
-Candidate-vector schema 7 binds that record to the matching instrument effect
+Candidate-vector schema 20 binds that record to the matching instrument effect
 access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
 sample-rate-normalized boundary transition. Neutral drive requires the no-change
 sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
@@ -273,7 +277,7 @@ uses half depth, response uses full depth, and the full displacement is capped
 at `0.12` of one sixteenth. Note count, base step, pitch, velocity, instrument,
 requested duration, gate, and every protected-rhythm event remain unchanged.
 
-Candidate-vector schema 7 retains one compact record per full rendered bar. It
+Candidate-vector schema 20 retains one compact record per full rendered bar. It
 binds route-derived frame geometry, score and actual renderer onset facts,
 requested gate end, bounded renderer-owned applied gate end, causal role counts,
 exact protected/role offset relationships, and separate shadow/response dry
@@ -326,9 +330,10 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 21, candidate-vector schema 19, and canonical
-engine v20, the versioned transaction implements the bounded evidence and atomic
-commit foundation for this loop. It retains one initial attempt and at most one
+Under quality-contract schema 22, candidate-vector schema 20,
+candidate-transaction schema 4, and canonical engine v21, the versioned
+transaction implements the bounded evidence and atomic commit foundation for
+this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.
 Every attempt starts from the same incoming state. The transaction records the incoming
 continuation fingerprint and each attempt's outgoing render-plus-generated-DSP
@@ -346,30 +351,40 @@ Preparation
 checks cancellation at bounded
 bar-render and evidence-phase boundaries as well as between candidates; the
 streaming preflight and continuation fingerprints also check within their long
-array scans. A route change cancels stale detached work. This foundation adds no
-audio-callback analysis or feedback work.
+array scans. A route change cancels stale detached work. Scheduled-output
+capture is limited to the fixed copy described below; every analysis, decision,
+and future preparation remains detached.
 
-## Hybrid live feedback boundary
+## Canonical live feedback boundary
 
 Live feedback observes only app-owned mixer PCM. It never enables a microphone,
 records the room, identifies an output device acoustically, or sends audio to a
 network or model service.
 
-The audio callback may only copy a bounded sample window into a preallocated
-single-producer/single-consumer handoff. It performs no allocation, locking, FFT,
-analysis, logging, file or network I/O, model inference, or UI work. A bounded
-background worker consumes fixed sample-indexed windows and publishes an
-immutable evidence snapshot through a lock-free handoff.
+The audio callback only copies native-stereo packets of at most 1,024 frames into
+a preallocated 256-slot C11 single-producer/single-consumer handoff. It performs
+no allocation, locking, FFT, analysis, logging, file or network I/O, model
+inference, or UI work. A bounded background worker consumes the first exact
+three-second sample-indexed phrase window and publishes an immutable evidence
+snapshot.
 
 Wall-clock timing does not define evidence. The window's sample positions,
 sample rate, route state, engine version, and quality-policy version do. The same
 captured PCM and versioned state must reproduce the same result in an offline
 replay test.
 
-An adjustment can affect only unscheduled future bars or phrases. It cannot
-rewrite a playing buffer, mutate scheduled audio, or block the scheduler. If
-analysis or preparation misses its deadline, the engine repeats coherent
-prepared material and retains bounded state rather than degrading continuity.
+The one controller derives short-term-loudness and Annex 2 true-peak targets from
+the installed profile. It is attenuation-only within `-3...0 dB`, moves down by
+at most `0.25 dB` per accepted phrase, and recovers by `0.125 dB` only after two
+complete clean observations. The proposal is pending until the primary
+evaluator accepts fresh complete candidate evidence for an unscheduled future
+phrase. It cannot rewrite a playing buffer, mutate scheduled audio, or block the
+scheduler. Late evidence alone is ignored or deferred when its exact target is
+no longer unscheduled; it does not latch a repeat. Only an already-authorized
+correction that is rejected, unavailable, or misses its first eligible boundary
+enters the accepted-PCM hold and repeats accepted immutable PCM. See
+[`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md) for clock mapping, occurrence epochs,
+invalidation, hold, lifecycle, and replay details.
 
 ## Stability and anti-gaming rules
 

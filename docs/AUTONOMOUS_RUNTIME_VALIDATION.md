@@ -68,8 +68,9 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 21, candidate-vector schema 19, and canonical engine v20
-provide the current transaction-level evidence foundation. A complete record
+Quality-contract schema 22, candidate-vector schema 20, candidate-transaction
+schema 4, and canonical engine v21 provide the current transaction-level
+evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
 event-local groove-pulse, ordinary closed-hat, score-owned modal foundation,
@@ -207,9 +208,9 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v5 bank must contain every canonical checkpoint for
+The Professional Evidence v6 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v20 primary policy and pinned diverse profile/adversarial/holdout
+engine-v21 primary evaluator v3 and pinned profile v3/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 28.
 Holdouts must be source-disjoint, contain at
@@ -267,35 +268,58 @@ Rejected attempts must not leak their state. Cache keys and route-recovery
 requests must distinguish every state or revision capable of changing selection
 or PCM.
 
-## Hybrid feedback and callback isolation
+## Scheduled-output feedback and callback isolation
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
 composition, spatial-FDN, and nonlinear-core evidence carried by quality-contract
-schema 21 change detached
-preparation only. They add
-no callback capture, analysis, or live-feedback work; the requirements below
-remain gates
-for a future hybrid-feedback implementation.
+schema 22 change detached preparation only. The implemented master-headroom path
+is the sole scheduled-output feedback responsibility and does not move those
+feature analyzers or decisions onto the callback. See
+[`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
 Feedback may analyze only PCM generated and owned by Auto Techno. It must never
 open a microphone, request recording permission, capture ambient/system audio, or
 depend on an external audio source.
 
-Where scheduled-path feedback is used, callback work is limited to copying a
-fixed maximum of PCM into a preallocated, single-writer lock-free exchange and
-advancing lock-free indices. Tests and instrumentation must demonstrate no
-allocation, lock, wait, analysis, logging, file/network I/O, UI work, or musical
-decision on the callback. Full-capacity behavior drops the observation without
-blocking or corrupting audio.
+Scheduled-path callback work is limited to pointer/frame validation, reading the
+mixer sample time, and copying at most 1,024 native-stereo frames into one of 256
+preallocated C11 atomic queue slots. Invalid tap input must return before the C
+producer; malformed input passed directly to the C API must increment its reject
+counter. Tests and object-symbol inspection must
+demonstrate no allocation, lock, wait, dispatch, analysis, hashing, logging,
+file/network I/O, UI work, or musical decision on the callback. Full-capacity
+behavior drops the observation without blocking or corrupting audio.
 
 Background analysis must have fixed memory and work bounds. Every accepted
-packet records the exact source sample range, route/sample-rate generation,
-controller revision, and target future sample boundary. Partial, overwritten,
-late, stale, or mismatched packets are rejected. Decisions may affect only audio
-that has not been scheduled and may take effect only at their declared future
-boundary. Tests must prove that current and already scheduled buffers remain
-immutable and that a missed deadline follows the deterministic accepted-PCM hold
-without a gap.
+packet records the exact source sample range, route/sample-rate generation, and
+controller revision. The scheduled occurrence additionally binds its occurrence
+epoch, plan, policy/evaluator/controller identities, mapped player/mixer range,
+and target future boundary. Two exact off-callback clock probes must agree before
+the consumer and producer become eligible. Partial, overwritten, late, stale,
+non-finite, lifecycle-mismatched, or unmapped packets are rejected. Exact replay
+identity must bind packet count and first/last packet sequence, counters, ranges,
+and the other recorded capture-provenance fields. Alternate valid packetization
+may preserve PCM identity, BS.1770 measurements, and numeric controller outcome,
+but must change evidence and proposal fingerprints.
+
+The worker assembles the first exact three-second window and reuses the canonical
+BS.1770-5 and Annex 2 implementation. The installed profile supplies independent
+short-term-loudness and true-peak bounds. Controller tests must prove the
+`-3...0 dB` range, no boost, maximum `0.25 dB` attack, `0.125 dB` recovery only
+after two clean windows, deadband hold, saturation hold, and deterministic
+replay. One authenticated scheduled occurrence may invalidate one unscheduled
+successor; repeating the same phrase at a newer authenticated occurrence is a
+new bounded opportunity. Pending state may commit only with the primary-
+accepted candidate. Current and scheduled buffers remain immutable.
+
+Late evidence alone must be ignored or deferred and may not latch the accepted
+PCM hold. Only an authorized correction that is rejected, unavailable, or misses
+its first boundary latches that hold. Route and timeline resets must preserve an
+existing hold and latch an outstanding authorized correction. A newer
+authenticated occurrence may authorize recovery but cannot itself clear the
+hold; only a successful corrected boundary, complete session reset, or shutdown
+does so. The hold repeats accepted PCM without silence or an untrimmed
+substitute.
 
 ## Preparation budget
 
@@ -304,12 +328,13 @@ phrase lengths, maximum two-pass path, and route
 rebuild at representative 44.1 and 48 kHz devices. Record median, high-percentile,
 and worst observed times plus peak working memory.
 
-The exact-engine artifact loader, route-local primary evaluator, unavailable-rate
+The exact-engine v3 artifact loader, route-local primary evaluator, unavailable-rate
 gate, one-correction transaction order, and reason-coded replay require
 deterministic tests at 44.1 and 48 kHz. The deterministic numeric-storage estimate
 must remain below the declared 128 MiB ceiling. The profile derives from 28
-complete journeys and passes a fourteen-case adversarial suite plus four disjoint
-holdouts at both rates. See [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md).
+complete journeys and passes the 23-case v4 adversarial suite plus four disjoint
+holdouts at both rates. See [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md) and
+[`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
 The declared budget must leave enough lookahead to schedule the future boundary
 without callback work or silence. A late successor may repeat the current
@@ -326,7 +351,8 @@ On the exact release build, verify:
 - prepare, play, pause, resume, and phrase-boundary continuation;
 - sample-time scheduling, future-boundary controller application, and read-only
   waveform/position reporting;
-- late-successor hold without silence, premature state advance, or state leakage;
+- authorized-correction hold after a late successor without silence, premature
+  state advance, or state leakage;
 - coherent 44.1/48 kHz route recovery with stale feedback and preparation rejected;
 - no recording permission prompt, microphone device access, or external audio
   dependency.

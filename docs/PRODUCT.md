@@ -128,16 +128,33 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v5 supplies
+policy and its operational gates pass. Professional Evidence v6 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
-evidence, modal-foundation consequence, explicit analysis-memory provenance, and complete canonical-journey
-report-bank validation. A non-reconstructable diverse profile, passing
+evidence, modal-foundation and live-controller consequence, explicit
+analysis-memory provenance, and complete canonical-journey report-bank
+validation. A non-reconstructable diverse profile, passing
 adversarial suite, and disjoint holdout report now qualify complete 44.1/48 kHz
 engine banks offline and install the same calibrated policy in detached runtime
 preparation. One canonical plan is rendered, judged, and either committed or
 rejected; the evaluator may request one same-plan home-timbre correction. Missing
 artifacts and unsupported sample rates remain truthfully unavailable and cannot
 commit. See `PRIMARY_EVALUATOR.md`.
+
+The seventh completed architectural stage closes one scheduled-output
+master-headroom loop. `TechnoEngine` maps app-owned main-mixer PCM to the exact
+scheduled phrase occurrence; a fixed native-stereo C11 handoff copies bounded
+packets; and detached work analyzes the first exact three-second window with the
+same BS.1770-5 and Annex 2 implementation used by candidate evidence. The
+installed profile supplies the targets. The single controller can attenuate
+only `-3...0 dB`, attacks by at most `0.25 dB` per accepted phrase, and recovers
+by `0.125 dB` only after two clean windows. Its pending proposal becomes durable
+only when the single primary evaluator accepts fresh evidence for an
+unscheduled future phrase. Late evidence alone is ignored or deferred when its
+exact target is no longer unscheduled; it does not latch a repeat. Only an
+already-authorized correction that is rejected, unavailable, or misses its
+first eligible boundary enters the accepted-PCM hold and repeats accepted
+immutable PCM. No failure can enable a substitute. See
+[`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
 ## Hard constraints
 
@@ -146,11 +163,13 @@ commit. See `PRIMARY_EVALUATOR.md`.
 - Planning and quality-policy decisions remain outside the real-time callback.
 - The callback performs no allocation, locking, analysis, logging, file or
   network I/O, or UI work.
-- Any future live-output capture only copies app-owned PCM into a preallocated
-  lock-free handoff; bounded analysis runs in background work.
+- Live-output capture copies only app-owned PCM into a preallocated lock-free
+  handoff; bounded analysis runs in background work.
 - Adjustments apply only to immutable snapshots for unscheduled future audio.
 - The single plan, at most one corrective pass, and analysis work remain
-  explicitly bounded; missed deadlines repeat already accepted immutable PCM.
+  explicitly bounded. Late analysis is ignored or deferred after its exact
+  target is no longer unscheduled; only an already-authorized correction that
+  fails its first eligible boundary can enter the accepted-PCM hold.
 - Route changes rebuild at the active sample rate without silently changing the
   musical identity or corrupting adaptation state.
 - Finite output, peak/DC/boundary limits, low-end compatibility, masking,
