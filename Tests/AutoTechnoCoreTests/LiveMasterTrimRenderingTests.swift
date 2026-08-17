@@ -121,56 +121,38 @@ struct LiveMasterTrimRenderingTests {
 
     @Test("Committed trim and revision are fingerprint-bound")
     func trimIsFingerprintBound() {
-        let home = RenderState()
-        var attenuated = RenderState()
-        attenuated.liveMasterHeadroomState = liveState(trimDB: -0.5)
-        var newerRevision = attenuated
-        newerRevision.liveMasterHeadroomState = LiveMasterHeadroomContinuationState(
-            revision: 8,
-            committedTrimDB: -0.5,
-            consecutiveCleanWindows: 1,
-            lastProposalFingerprint: "proposal-8",
-            lastObservationFingerprint: "observation-8",
-            lastAcceptedSourcePhraseIndex: 5,
-            earliestEligibleFutureSample: 96_000
+        let home = fingerprints(
+            liveState: LiveMasterHeadroomContinuationState()
+        )
+        let attenuated = fingerprints(liveState: liveState(trimDB: -0.5))
+        let newerRevision = fingerprints(
+            liveState: LiveMasterHeadroomContinuationState(
+                revision: 8,
+                committedTrimDB: -0.5,
+                consecutiveCleanWindows: 1,
+                lastProposalFingerprint: "proposal-8",
+                lastObservationFingerprint: "observation-8",
+                lastAcceptedSourcePhraseIndex: 5,
+                earliestEligibleFutureSample: 96_000
+            )
         )
 
-        #expect(AutonomousCandidateFingerprint.renderState(home) !=
-                AutonomousCandidateFingerprint.renderState(attenuated))
-        #expect(AutonomousCandidateFingerprint.renderState(attenuated) !=
-                AutonomousCandidateFingerprint.renderState(newerRevision))
-        let cancellableHome = AutonomousCandidateFingerprint.renderState(
-            home,
-            cancellationRequested: { false }
-        )
-        let cancellableAttenuated = AutonomousCandidateFingerprint.renderState(
-            attenuated,
-            cancellationRequested: { false }
-        )
-        let cancellableNewerRevision = AutonomousCandidateFingerprint.renderState(
-            newerRevision,
-            cancellationRequested: { false }
-        )
-        #expect(cancellableHome != nil)
-        #expect(cancellableAttenuated != nil)
-        #expect(cancellableNewerRevision != nil)
-        #expect(cancellableHome != cancellableAttenuated)
-        #expect(cancellableAttenuated != cancellableNewerRevision)
+        #expect(home.normal != attenuated.normal)
+        #expect(attenuated.normal != newerRevision.normal)
+        #expect(home.cancellable != nil)
+        #expect(attenuated.cancellable != nil)
+        #expect(newerRevision.cancellable != nil)
+        #expect(home.cancellable != attenuated.cancellable)
+        #expect(attenuated.cancellable != newerRevision.cancellable)
 
-        var negativeZero = RenderState()
-        negativeZero.liveMasterHeadroomState =
-            LiveMasterHeadroomContinuationState(committedTrimDB: -0.0)
-        #expect(negativeZero.liveMasterHeadroomState.committedTrimDB.bitPattern ==
-                Double.zero.bitPattern)
-        #expect(AutonomousCandidateFingerprint.renderState(negativeZero) ==
-                AutonomousCandidateFingerprint.renderState(home))
-        #expect(AutonomousCandidateFingerprint.renderState(
-            negativeZero,
-            cancellationRequested: { false }
-        ) == AutonomousCandidateFingerprint.renderState(
-            home,
-            cancellationRequested: { false }
-        ))
+        let negativeZero = fingerprints(
+            liveState: LiveMasterHeadroomContinuationState(
+                committedTrimDB: -0.0
+            )
+        )
+        #expect(negativeZero.committedTrimBitPattern == Double.zero.bitPattern)
+        #expect(negativeZero.normal == home.normal)
+        #expect(negativeZero.cancellable == home.cancellable)
     }
 
     @Test("A RenderBlock copy preserves required terminal trim evidence")
@@ -235,6 +217,33 @@ struct LiveMasterTrimRenderingTests {
             lastObservationFingerprint: "observation-7",
             lastAcceptedSourcePhraseIndex: 4,
             earliestEligibleFutureSample: 64_000
+        )
+    }
+
+    /// Swift 6.1's arm64 debug code generation can place every large
+    /// `RenderState` value captured by one `#expect` function on the same
+    /// cooperative-task stack frame. Keep one state in a non-inlined helper
+    /// and return only its small, immutable observations.
+    @inline(never)
+    private func fingerprints(
+        liveState: LiveMasterHeadroomContinuationState
+    ) -> (
+        normal: String,
+        cancellable: String?,
+        committedTrimBitPattern: UInt64
+    ) {
+        var renderState = RenderState()
+        renderState.liveMasterHeadroomState = liveState
+        let normal = AutonomousCandidateFingerprint.renderState(renderState)
+        let cancellable = AutonomousCandidateFingerprint.renderState(
+            renderState,
+            cancellationRequested: { false }
+        )
+        return (
+            normal: normal,
+            cancellable: cancellable,
+            committedTrimBitPattern:
+                renderState.liveMasterHeadroomState.committedTrimDB.bitPattern
         )
     }
 
