@@ -1919,6 +1919,301 @@ package struct AutonomousClosedHatBarEvidence: Codable, Equatable, Sendable {
     }
 }
 
+/// Compact same-pass proof for one existing clap, open-hat, or metallic score
+/// event. The base path is reduced alongside the rendered path so the record
+/// can distinguish a truthful attack-preserving clearance envelope from a
+/// disconnected score label or a broad gain change.
+package struct AutonomousUpperPercussionTailEventEvidence:
+        Codable, Equatable, Sendable {
+    package let scoreEventIndex: Int
+    package let voice: String
+    package let step: Int
+    package let role: String
+    package let intensity: Double
+    package let timingOffsetInSteps: Double
+    package let relocated: Bool
+    package let renderedFrameCount: Int
+    package let attackFrameCount: Int
+    package let appliedFinalMultiplier: Double
+    package let baseSampleHash: String
+    package let renderedSampleHash: String
+    package let baseAttackSampleHash: String
+    package let renderedAttackSampleHash: String
+    package let basePeak: Double
+    package let renderedPeak: Double
+    package let baseRMS: Double
+    package let renderedRMS: Double
+    package let baseAttackRMS: Double
+    package let renderedAttackRMS: Double
+    package let baseTailRMS: Double
+    package let renderedTailRMS: Double
+    package let baseTailToAttackDB: Double
+    package let renderedTailToAttackDB: Double
+    package let differenceRMS: Double
+    package let finite: Bool
+
+    package init(
+        scoreEventIndex: Int,
+        voice: String,
+        step: Int,
+        role: String,
+        intensity: Double,
+        timingOffsetInSteps: Double,
+        relocated: Bool,
+        renderedFrameCount: Int,
+        attackFrameCount: Int,
+        appliedFinalMultiplier: Double,
+        baseSampleHash: String,
+        renderedSampleHash: String,
+        baseAttackSampleHash: String,
+        renderedAttackSampleHash: String,
+        basePeak: Double,
+        renderedPeak: Double,
+        baseRMS: Double,
+        renderedRMS: Double,
+        baseAttackRMS: Double,
+        renderedAttackRMS: Double,
+        baseTailRMS: Double,
+        renderedTailRMS: Double,
+        baseTailToAttackDB: Double,
+        renderedTailToAttackDB: Double,
+        differenceRMS: Double,
+        finite: Bool
+    ) {
+        self.scoreEventIndex = scoreEventIndex
+        self.voice = voice
+        self.step = step
+        self.role = role
+        self.intensity = intensity
+        self.timingOffsetInSteps = timingOffsetInSteps
+        self.relocated = relocated
+        self.renderedFrameCount = renderedFrameCount
+        self.attackFrameCount = attackFrameCount
+        self.appliedFinalMultiplier = appliedFinalMultiplier
+        self.baseSampleHash = baseSampleHash
+        self.renderedSampleHash = renderedSampleHash
+        self.baseAttackSampleHash = baseAttackSampleHash
+        self.renderedAttackSampleHash = renderedAttackSampleHash
+        self.basePeak = basePeak
+        self.renderedPeak = renderedPeak
+        self.baseRMS = baseRMS
+        self.renderedRMS = renderedRMS
+        self.baseAttackRMS = baseAttackRMS
+        self.renderedAttackRMS = renderedAttackRMS
+        self.baseTailRMS = baseTailRMS
+        self.renderedTailRMS = renderedTailRMS
+        self.baseTailToAttackDB = baseTailToAttackDB
+        self.renderedTailToAttackDB = renderedTailToAttackDB
+        self.differenceRMS = differenceRMS
+        self.finite = finite
+    }
+
+    package init(_ evidence: UpperPercussionTailRenderEvidence) {
+        self.init(
+            scoreEventIndex: evidence.scoreEventIndex,
+            voice: evidence.voice.rawValue,
+            step: evidence.step,
+            role: evidence.role.rawValue,
+            intensity: evidence.eventIntensity,
+            timingOffsetInSteps: evidence.timingOffsetInSteps,
+            relocated: evidence.relocated,
+            renderedFrameCount: evidence.renderedFrameCount,
+            attackFrameCount: evidence.attackFrameCount,
+            appliedFinalMultiplier: evidence.appliedFinalMultiplier,
+            baseSampleHash: evidence.baseSampleHash,
+            renderedSampleHash: evidence.renderedSampleHash,
+            baseAttackSampleHash: evidence.baseAttackSampleHash,
+            renderedAttackSampleHash: evidence.renderedAttackSampleHash,
+            basePeak: evidence.basePeak,
+            renderedPeak: evidence.renderedPeak,
+            baseRMS: evidence.baseRMS,
+            renderedRMS: evidence.renderedRMS,
+            baseAttackRMS: evidence.baseAttackRMS,
+            renderedAttackRMS: evidence.renderedAttackRMS,
+            baseTailRMS: evidence.baseTailRMS,
+            renderedTailRMS: evidence.renderedTailRMS,
+            baseTailToAttackDB: evidence.baseTailToAttackDB,
+            renderedTailToAttackDB: evidence.renderedTailToAttackDB,
+            differenceRMS: evidence.differenceRMS,
+            finite: evidence.finite
+        )
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            intensity, timingOffsetInSteps, appliedFinalMultiplier,
+            basePeak, renderedPeak, baseRMS, renderedRMS, baseAttackRMS,
+            renderedAttackRMS, baseTailRMS, renderedTailRMS,
+            baseTailToAttackDB, renderedTailToAttackDB, differenceRMS,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func isComplete(sampleRate: Double) -> Bool {
+        guard sampleRate.isFinite,
+              (QualityQualificationContract.minimumSupportedSampleRate...QualityQualificationContract.maximumSupportedSampleRate)
+                .contains(sampleRate),
+              let resolvedVoice = EnsembleVoice(rawValue: voice),
+              resolvedVoice == .clap || resolvedVoice == .openHat ||
+                resolvedVoice == .metallic,
+              let resolvedRole = UpperPercussionTailRole(rawValue: role),
+              (0..<(16 * 6)).contains(scoreEventIndex),
+              (0..<16).contains(step),
+              (0...1).contains(intensity),
+              (0...0.24).contains(timingOffsetInSteps),
+              renderedFrameCount > 0,
+              renderedFrameCount <= Self.maximumFrameCount(
+                voice: resolvedVoice,
+                sampleRate: sampleRate
+              ),
+              attackFrameCount == UpperPercussionTailDSPContract.attackFrameCount(
+                sampleRate: sampleRate,
+                renderedFrameCount: renderedFrameCount
+              ),
+              attackFrameCount > 0,
+              attackFrameCount < renderedFrameCount,
+              Self.isSampleHash(baseSampleHash),
+              Self.isSampleHash(renderedSampleHash),
+              Self.isSampleHash(baseAttackSampleHash),
+              Self.isSampleHash(renderedAttackSampleHash),
+              basePeak > 0, renderedPeak > 0,
+              baseRMS > 0, renderedRMS > 0,
+              baseAttackRMS > 0, renderedAttackRMS > 0,
+              baseTailRMS > 0, renderedTailRMS > 0,
+              baseRMS <= basePeak, renderedRMS <= renderedPeak,
+              baseAttackRMS <= basePeak,
+              renderedAttackRMS <= renderedPeak,
+              baseTailRMS <= basePeak, renderedTailRMS <= renderedPeak,
+              differenceRMS >= 0,
+              differenceRMS + 1e-12 >= abs(baseRMS - renderedRMS),
+              differenceRMS <= baseRMS + renderedRMS + 1e-12,
+              baseTailToAttackDB == Self.tailToAttackDB(
+                tailRMS: baseTailRMS,
+                attackRMS: baseAttackRMS
+              ),
+              renderedTailToAttackDB == Self.tailToAttackDB(
+                tailRMS: renderedTailRMS,
+                attackRMS: renderedAttackRMS
+              ),
+              baseAttackSampleHash == renderedAttackSampleHash,
+              baseAttackRMS == renderedAttackRMS,
+              isFinite else {
+            return false
+        }
+
+        switch resolvedRole {
+        case .naturalBody:
+            return appliedFinalMultiplier == 1 &&
+                baseSampleHash == renderedSampleHash &&
+                basePeak == renderedPeak && baseRMS == renderedRMS &&
+                baseTailRMS == renderedTailRMS &&
+                baseTailToAttackDB == renderedTailToAttackDB &&
+                differenceRMS.bitPattern == 0
+        case .foregroundClearance:
+            return appliedFinalMultiplier == Double(
+                UpperPercussionTailDSPContract.clearanceFinalMultiplier
+            ) && baseSampleHash != renderedSampleHash &&
+                renderedPeak <= basePeak && renderedRMS < baseRMS &&
+                renderedTailRMS < baseTailRMS &&
+                renderedTailToAttackDB < baseTailToAttackDB &&
+                differenceRMS > 0
+        }
+    }
+
+    private static func maximumFrameCount(
+        voice: EnsembleVoice,
+        sampleRate: Double
+    ) -> Int {
+        let duration = switch voice {
+        case .clap: 0.16
+        case .openHat: 0.19
+        case .metallic: 0.065
+        default: 0.0
+        }
+        return max(0, Int(sampleRate * duration))
+    }
+
+    private static func tailToAttackDB(
+        tailRMS: Double,
+        attackRMS: Double
+    ) -> Double {
+        guard attackRMS > 0 else { return -120 }
+        return min(
+            120,
+            max(-120, 20 * log10(max(tailRMS / attackRMS, 0.000_001)))
+        )
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
+/// One bounded record per bar replays the score-owned contextual policy and
+/// retains the exact event bijection. Empty bars remain explicit evidence.
+package struct AutonomousUpperPercussionTailBarEvidence:
+        Codable, Equatable, Sendable {
+    package let bar: Int
+    package let focusRole: String
+    package let intentionalPileup: Bool
+    package let sourceScoreEventCount: Int
+    package let sourceRenderEventCount: Int
+    package let renderPassesMatch: Bool
+    package let bindingValid: Bool
+    package let events: [AutonomousUpperPercussionTailEventEvidence]
+
+    package init(
+        bar: Int,
+        focusRole: String,
+        intentionalPileup: Bool,
+        sourceScoreEventCount: Int,
+        sourceRenderEventCount: Int,
+        renderPassesMatch: Bool,
+        bindingValid: Bool,
+        events: [AutonomousUpperPercussionTailEventEvidence]
+    ) {
+        self.bar = bar
+        self.focusRole = focusRole
+        self.intentionalPileup = intentionalPileup
+        self.sourceScoreEventCount = sourceScoreEventCount
+        self.sourceRenderEventCount = sourceRenderEventCount
+        self.renderPassesMatch = renderPassesMatch
+        self.bindingValid = bindingValid
+        self.events = Array(events.prefix(
+            AutonomousCandidateEvaluationVector
+                .maximumUpperPercussionTailEventsPerBar
+        ))
+    }
+
+    package var isFinite: Bool { events.allSatisfy(\.isFinite) }
+
+    package func isComplete(
+        sampleRate: Double,
+        phraseKind: AutonomousPhraseKind
+    ) -> Bool {
+        guard bar >= 0,
+              let resolvedFocus = PerformanceRole(rawValue: focusRole),
+              sourceScoreEventCount >= 0,
+              sourceScoreEventCount <= AutonomousCandidateEvaluationVector
+                .maximumUpperPercussionTailEventsPerBar,
+              sourceRenderEventCount == sourceScoreEventCount,
+              events.count == sourceScoreEventCount,
+              events.map(\.scoreEventIndex) ==
+                events.map(\.scoreEventIndex).sorted(),
+              Set(events.map(\.scoreEventIndex)).count == events.count,
+              renderPassesMatch, bindingValid,
+              events.allSatisfy({ $0.isComplete(sampleRate: sampleRate) }) else {
+            return false
+        }
+        let expectedRole: UpperPercussionTailRole =
+            phraseKind != .identityReturn &&
+                resolvedFocus != .percussion && !intentionalPileup ?
+                .foregroundClearance : .naturalBody
+        return events.allSatisfy { $0.role == expectedRole.rawValue }
+    }
+}
+
 /// Compact same-pass evidence for one score-owned modal-foundation strike.
 /// It retains no excitation or output PCM.
 package struct AutonomousModalPercussionEventEvidence:
@@ -3895,6 +4190,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
     case climaxArcEvidence = "climax-arc-evidence"
     case groovePulseEvidence = "groove-pulse-evidence"
     case closedHatEvidence = "closed-hat-evidence"
+    case upperPercussionTailEvidence = "upper-percussion-tail-evidence"
     case modalPercussionEvidence = "modal-percussion-evidence"
     case instrumentEvidence = "instrument-evidence"
     case percussionEchoTextureEvidence = "percussion-echo-texture-evidence"
@@ -3939,6 +4235,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package static let maximumStemRolesPerBar = 5
     package static let maximumGroovePulseEventsPerBar = 8
     package static let maximumClosedHatEventsPerBar = 4
+    package static let maximumUpperPercussionTailEventsPerBar = 4
     package static let maximumModalPercussionEventsPerBar = 2
     package static let maximumInstrumentArchitecturesPerBar = 3
     package static let maximumInstrumentAssignmentsPerArchitecture = 6
@@ -3964,6 +4261,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let groovePulse: [AutonomousGroovePulseBarEvidence]
     package let sourceClosedHatBarCount: Int
     package let closedHat: [AutonomousClosedHatBarEvidence]
+    package let sourceUpperPercussionTailBarCount: Int
+    package let upperPercussionTail:
+        [AutonomousUpperPercussionTailBarEvidence]
     package let sourceModalPercussionBarCount: Int
     package let modalPercussion: [AutonomousModalPercussionBarEvidence]
     package let sourceInstrumentBarCount: Int
@@ -4020,6 +4320,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         climaxArc: AutonomousClimaxArcEvidence,
         groovePulse: [AutonomousGroovePulseBarEvidence],
         closedHat: [AutonomousClosedHatBarEvidence] = [],
+        upperPercussionTail:
+            [AutonomousUpperPercussionTailBarEvidence] = [],
         modalPercussion: [AutonomousModalPercussionBarEvidence],
         instruments: [AutonomousInstrumentBarEvidence],
         percussionEchoTexture: [AutonomousPercussionEchoTextureBarEvidence],
@@ -4070,6 +4372,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.groovePulse = Array(groovePulse.prefix(Self.maximumBarCount))
         sourceClosedHatBarCount = closedHat.count
         self.closedHat = Array(closedHat.prefix(Self.maximumBarCount))
+        sourceUpperPercussionTailBarCount = upperPercussionTail.count
+        self.upperPercussionTail = Array(
+            upperPercussionTail.prefix(Self.maximumBarCount)
+        )
         sourceModalPercussionBarCount = modalPercussion.count
         self.modalPercussion = Array(
             modalPercussion.prefix(Self.maximumBarCount)
@@ -4516,6 +4822,60 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 events: matched
             )
         }
+        let upperPercussionTail = boundedBlocks.map { block in
+            let resolved = block.resolvedPerformance
+            let score = resolved.upperPercussionTailArticulations
+            let rendered = block.upperPercussionTailRenderEvidence
+            let planBarMatches = plan.resolvedBars.first {
+                $0.performance.bar == block.bar
+            } == resolved
+            let replayed = UpperPercussionTailResolver.articulations(
+                from: resolved.ensemble,
+                phraseKind: plan.kind
+            )
+            let matched = rendered.compactMap {
+                evidence -> AutonomousUpperPercussionTailEventEvidence? in
+                guard resolved.ensemble.events.indices.contains(
+                    evidence.scoreEventIndex
+                ), let articulation = score.first(where: {
+                    $0.scoreEventIndex == evidence.scoreEventIndex
+                }) else {
+                    return nil
+                }
+                let event = resolved.ensemble.events[evidence.scoreEventIndex]
+                let expectedTiming = VoiceRenderer.timingOffsetInSteps(
+                    for: event.voice,
+                    step: event.step,
+                    dna: block.sceneDNA
+                )
+                guard articulation.voice == event.voice,
+                      articulation.step == event.step,
+                      evidence.voice == event.voice,
+                      evidence.step == event.step,
+                      evidence.role == articulation.role,
+                      evidence.eventIntensity == event.intensity,
+                      evidence.timingOffsetInSteps == expectedTiming,
+                      evidence.relocated == event.relocated else {
+                    return nil
+                }
+                return AutonomousUpperPercussionTailEventEvidence(evidence)
+            }.sorted { $0.scoreEventIndex < $1.scoreEventIndex }
+            let bindingValid = planBarMatches && replayed == score &&
+                block.section == resolved.performance.section &&
+                score.count == rendered.count && matched.count == score.count &&
+                block.upperPercussionTailRenderPassesMatch
+            return AutonomousUpperPercussionTailBarEvidence(
+                bar: block.bar,
+                focusRole: resolved.ensemble.focusRole.rawValue,
+                intentionalPileup: resolved.ensemble.intentionalPileup,
+                sourceScoreEventCount: score.count,
+                sourceRenderEventCount: rendered.count,
+                renderPassesMatch:
+                    block.upperPercussionTailRenderPassesMatch,
+                bindingValid: bindingValid,
+                events: matched
+            )
+        }
         let modalPercussion = makeModalPercussionEvidence(
             blocks: boundedBlocks,
             planBars: plan.resolvedBars,
@@ -4688,6 +5048,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             climaxArc: climaxArc,
             groovePulse: groovePulse,
             closedHat: closedHat,
+            upperPercussionTail: upperPercussionTail,
             modalPercussion: modalPercussion,
             instruments: instruments,
             percussionEchoTexture: percussionEchoTexture,
@@ -5579,6 +5940,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             kickSyntax.allSatisfy { $0.isFinite } &&
             groovePulse.allSatisfy { $0.isFinite } &&
             closedHat.allSatisfy { $0.isFinite } &&
+            upperPercussionTail.allSatisfy { $0.isFinite } &&
             modalPercussion.allSatisfy { $0.isFinite } &&
             instruments.allSatisfy { $0.isFinite } &&
             percussionEchoTexture.allSatisfy { $0.isFinite } &&
@@ -5633,6 +5995,11 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         }
         if !closedHatEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.closedHatEvidence)
+        }
+        if !upperPercussionTailEvidenceIsComplete(
+            expectedBars: expectedBars
+        ) {
+            failures.append(.upperPercussionTailEvidence)
         }
         if !modalPercussionEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.modalPercussionEvidence)
@@ -5918,6 +6285,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceKickSyntaxBarCount == kickSyntax.count &&
             sourceGroovePulseBarCount == groovePulse.count &&
             sourceClosedHatBarCount == closedHat.count &&
+            sourceUpperPercussionTailBarCount == upperPercussionTail.count &&
             sourceModalPercussionBarCount == modalPercussion.count &&
             sourceInstrumentBarCount == instruments.count &&
             sourcePercussionEchoTextureBarCount ==
@@ -5932,6 +6300,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             kickSyntax.count == fullMix.sourceBarCount &&
             groovePulse.count == fullMix.sourceBarCount &&
             closedHat.count == fullMix.sourceBarCount &&
+            upperPercussionTail.count == fullMix.sourceBarCount &&
             modalPercussion.count == fullMix.sourceBarCount &&
             instruments.count == fullMix.sourceBarCount &&
             percussionEchoTexture.count == fullMix.sourceBarCount &&
@@ -6096,6 +6465,25 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             closedHat.allSatisfy {
                 $0.isComplete(sampleRate: routeContinuation.sampleRate)
             } && closedHat.count == fullMix.sourceBarCount
+    }
+
+    @inline(never)
+    private func upperPercussionTailEvidenceIsComplete(
+        expectedBars: Set<Int>
+    ) -> Bool {
+        guard let phraseKind = AutonomousPhraseKind(
+            rawValue: symbolic.phraseKind
+        ) else {
+            return false
+        }
+        return Set(upperPercussionTail.map(\.bar)) == expectedBars &&
+            upperPercussionTail.map(\.bar) == fullMix.bars.map(\.bar) &&
+            upperPercussionTail.allSatisfy {
+                $0.isComplete(
+                    sampleRate: routeContinuation.sampleRate,
+                    phraseKind: phraseKind
+                )
+            } && upperPercussionTail.count == fullMix.sourceBarCount
     }
 
     @inline(never)
@@ -6322,6 +6710,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceKickSyntaxBarCount <= Self.maximumBarCount &&
             sourceGroovePulseBarCount >= groovePulse.count &&
             sourceClosedHatBarCount >= closedHat.count &&
+            sourceUpperPercussionTailBarCount >= upperPercussionTail.count &&
+            sourceUpperPercussionTailBarCount <= Self.maximumBarCount &&
             sourceModalPercussionBarCount >= modalPercussion.count &&
             sourceModalPercussionBarCount <= Self.maximumBarCount &&
             sourceInstrumentBarCount >= instruments.count &&
@@ -6364,6 +6754,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             kickSyntax.count <= Self.maximumBarCount &&
             groovePulse.count <= Self.maximumBarCount &&
             closedHat.count <= Self.maximumBarCount &&
+            upperPercussionTail.count <= Self.maximumBarCount &&
             modalPercussion.count <= Self.maximumBarCount &&
             instruments.count <= Self.maximumBarCount &&
             percussionEchoTexture.count <= Self.maximumBarCount &&
@@ -6391,6 +6782,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             automaticMixRecordsAreBounded() && kickSyntaxRecordsAreBounded() &&
             groovePulseRecordsAreBounded() &&
             closedHatRecordsAreBounded() &&
+            upperPercussionTailRecordsAreBounded() &&
             modalPercussionRecordsAreBounded() &&
             instrumentRecordsAreBounded() &&
             percussionEchoTextureRecordsAreBounded() &&
@@ -6458,6 +6850,21 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             return false
         }
         return true
+    }
+
+    @inline(never)
+    private func upperPercussionTailRecordsAreBounded() -> Bool {
+        upperPercussionTail.map(\.bar) == fullMix.bars.map(\.bar) &&
+            upperPercussionTail.allSatisfy {
+                $0.sourceScoreEventCount >= 0 &&
+                    $0.sourceScoreEventCount <=
+                        Self.maximumUpperPercussionTailEventsPerBar &&
+                    $0.sourceRenderEventCount >= 0 &&
+                    $0.sourceRenderEventCount <=
+                        Self.maximumUpperPercussionTailEventsPerBar &&
+                    $0.events.count <=
+                        Self.maximumUpperPercussionTailEventsPerBar
+            }
     }
 
     @inline(never)

@@ -1529,6 +1529,194 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!fixtureClosedHatEvent(finite: false).isFinite)
     }
 
+    @Test("Upper-percussion tail evidence binds neutral attacks and audible clearance")
+    func upperPercussionTailEvidenceContract() throws {
+        let active = fixtureUpperPercussionTailEvent()
+        let natural = fixtureUpperPercussionTailEvent(
+            scoreEventIndex: 3,
+            voice: .openHat,
+            step: 11,
+            role: .naturalBody,
+            renderedFrameCount: 1_520,
+            attackFrameCount: 64,
+            appliedFinalMultiplier: 1,
+            renderedSampleHash: "0123456789abcdef",
+            renderedPeak: 0.08,
+            renderedRMS: 0.02,
+            renderedTailRMS: 0.018,
+            renderedTailToAttackDB: tailToAttackDB(
+                tailRMS: 0.018,
+                attackRMS: 0.04
+            ),
+            differenceRMS: 0
+        )
+        let activeBar = AutonomousUpperPercussionTailBarEvidence(
+            bar: 0,
+            focusRole: PerformanceRole.motif.rawValue,
+            intentionalPileup: false,
+            sourceScoreEventCount: 1,
+            sourceRenderEventCount: 1,
+            renderPassesMatch: true,
+            bindingValid: true,
+            events: [active]
+        )
+        let naturalBar = AutonomousUpperPercussionTailBarEvidence(
+            bar: 0,
+            focusRole: PerformanceRole.percussion.rawValue,
+            intentionalPileup: false,
+            sourceScoreEventCount: 1,
+            sourceRenderEventCount: 1,
+            renderPassesMatch: true,
+            bindingValid: true,
+            events: [natural]
+        )
+        let emptyBar = AutonomousUpperPercussionTailBarEvidence(
+            bar: 0,
+            focusRole: PerformanceRole.motif.rawValue,
+            intentionalPileup: false,
+            sourceScoreEventCount: 0,
+            sourceRenderEventCount: 0,
+            renderPassesMatch: true,
+            bindingValid: true,
+            events: []
+        )
+        let baseline = fixtureVector()
+        let vector = fixtureVector(upperPercussionTailBar: activeBar)
+
+        #expect(active.isFinite)
+        #expect(active.isComplete(sampleRate: 8_000))
+        #expect(natural.isComplete(sampleRate: 8_000))
+        #expect(activeBar.isComplete(sampleRate: 8_000, phraseKind: .lock))
+        #expect(naturalBar.isComplete(sampleRate: 8_000, phraseKind: .lock))
+        #expect(emptyBar.isComplete(sampleRate: 8_000, phraseKind: .lock))
+        #expect(vector.isComplete)
+        #expect(vector.isFinite)
+        #expect(vector.fingerprint != baseline.fingerprint)
+        #expect(vector.playbackGateEvidence == baseline.playbackGateEvidence)
+
+        let data = try vector.deterministicJSON()
+        let decoded = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: data
+        )
+        #expect(decoded == vector)
+        #expect(decoded.fingerprint == vector.fingerprint)
+        let object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        let bars = try #require(
+            object["upperPercussionTail"] as? [[String: Any]]
+        )
+        let events = try #require(bars.first?["events"] as? [[String: Any]])
+        let serializedEvent = try #require(events.first)
+        #expect(Set(serializedEvent.keys) == Set([
+            "scoreEventIndex", "voice", "step", "role", "intensity",
+            "timingOffsetInSteps", "relocated", "renderedFrameCount",
+            "attackFrameCount", "appliedFinalMultiplier", "baseSampleHash",
+            "renderedSampleHash", "baseAttackSampleHash",
+            "renderedAttackSampleHash", "basePeak", "renderedPeak",
+            "baseRMS", "renderedRMS", "baseAttackRMS",
+            "renderedAttackRMS", "baseTailRMS", "renderedTailRMS",
+            "baseTailToAttackDB", "renderedTailToAttackDB",
+            "differenceRMS", "finite",
+        ]))
+
+        let excessiveEvents = (0..<5).map { index in
+            fixtureUpperPercussionTailEvent(
+                scoreEventIndex: index,
+                step: index * 2 + 1,
+                baseSampleHash: String(format: "%016x", index + 1),
+                renderedSampleHash: String(format: "%016x", index + 11)
+            )
+        }
+        let truncated = AutonomousUpperPercussionTailBarEvidence(
+            bar: 0,
+            focusRole: PerformanceRole.motif.rawValue,
+            intentionalPileup: false,
+            sourceScoreEventCount: excessiveEvents.count,
+            sourceRenderEventCount: excessiveEvents.count,
+            renderPassesMatch: true,
+            bindingValid: true,
+            events: excessiveEvents
+        )
+        #expect(truncated.events.count ==
+                AutonomousCandidateEvaluationVector
+                    .maximumUpperPercussionTailEventsPerBar)
+        #expect(!truncated.isComplete(sampleRate: 8_000, phraseKind: .lock))
+
+        var oversizedObject = object
+        var oversizedBars = bars
+        var oversizedBar = oversizedBars[0]
+        let oversizedSerializedEvents: [[String: Any]] = (0..<5).map { index in
+            var copy = serializedEvent
+            copy["scoreEventIndex"] = index
+            copy["step"] = index * 2 + 1
+            copy["baseSampleHash"] = String(format: "%016x", index + 1)
+            copy["renderedSampleHash"] = String(format: "%016x", index + 11)
+            return copy
+        }
+        oversizedBar["sourceScoreEventCount"] = 5
+        oversizedBar["sourceRenderEventCount"] = 5
+        oversizedBar["events"] = oversizedSerializedEvents
+        oversizedBars[0] = oversizedBar
+        oversizedObject["upperPercussionTail"] = oversizedBars
+        let decodedOversized = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: oversizedObject)
+        )
+        #expect(decodedOversized.upperPercussionTail[0].events.count == 5)
+        #expect(!decodedOversized.recordIsStructurallyValid)
+
+        #expect(!fixtureUpperPercussionTailEvent(
+            renderedSampleHash: "0123456789abcdef",
+            renderedRMS: 0.02,
+            renderedTailRMS: 0.018,
+            renderedTailToAttackDB: tailToAttackDB(
+                tailRMS: 0.018,
+                attackRMS: 0.04
+            ),
+            differenceRMS: 0
+        ).isComplete(sampleRate: 8_000))
+        #expect(!fixtureUpperPercussionTailEvent(
+            renderedAttackSampleHash: "bbbbbbbbbbbbbbbb"
+        ).isComplete(sampleRate: 8_000))
+        #expect(!fixtureUpperPercussionTailEvent(
+            renderedTailRMS: 0.019,
+            renderedTailToAttackDB: tailToAttackDB(
+                tailRMS: 0.019,
+                attackRMS: 0.04
+            )
+        ).isComplete(sampleRate: 8_000))
+        #expect(!fixtureUpperPercussionTailEvent(
+            role: .naturalBody,
+            appliedFinalMultiplier: 1,
+            renderedSampleHash: "fedcba9876543210"
+        ).isComplete(sampleRate: 8_000))
+        #expect(!fixtureUpperPercussionTailEvent(voice: .percussion)
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureUpperPercussionTailEvent(baseRMS: .nan).isFinite)
+        #expect(!AutonomousUpperPercussionTailBarEvidence(
+            bar: 0,
+            focusRole: PerformanceRole.percussion.rawValue,
+            intentionalPileup: false,
+            sourceScoreEventCount: 1,
+            sourceRenderEventCount: 1,
+            renderPassesMatch: true,
+            bindingValid: true,
+            events: [active]
+        ).isComplete(sampleRate: 8_000, phraseKind: .lock))
+        #expect(!AutonomousUpperPercussionTailBarEvidence(
+            bar: 0,
+            focusRole: PerformanceRole.motif.rawValue,
+            intentionalPileup: false,
+            sourceScoreEventCount: 1,
+            sourceRenderEventCount: 1,
+            renderPassesMatch: false,
+            bindingValid: true,
+            events: [active]
+        ).isComplete(sampleRate: 8_000, phraseKind: .lock))
+    }
+
     @Test("Instrument assignments and exact architecture PCM are bounded provenance")
     func instrumentEvidenceContract() throws {
         let assignment = InstrumentAssignment(
@@ -3528,6 +3716,8 @@ struct AutonomousCandidateEvaluationTests {
         climaxArc: AutonomousClimaxArcEvidence? = nil,
         groovePulseBar: AutonomousGroovePulseBarEvidence? = nil,
         closedHatBar: AutonomousClosedHatBarEvidence? = nil,
+        upperPercussionTailBar:
+            AutonomousUpperPercussionTailBarEvidence? = nil,
         modalPercussionBar: AutonomousModalPercussionBarEvidence? = nil,
         instrumentBar: AutonomousInstrumentBarEvidence? = nil,
         percussionEchoTextureBar:
@@ -3732,6 +3922,19 @@ struct AutonomousCandidateEvaluationTests {
                 sourceRenderEventCount: 0,
                 events: []
             )],
+            upperPercussionTail: [
+                upperPercussionTailBar ??
+                    AutonomousUpperPercussionTailBarEvidence(
+                        bar: evidenceBar,
+                        focusRole: PerformanceRole.percussion.rawValue,
+                        intentionalPileup: false,
+                        sourceScoreEventCount: 0,
+                        sourceRenderEventCount: 0,
+                        renderPassesMatch: true,
+                        bindingValid: true,
+                        events: []
+                    ),
+            ],
             modalPercussion: [modalPercussionBar ??
                 fixtureModalPercussionBar(bar: evidenceBar)],
             instruments: [instrumentBar ?? AutonomousInstrumentBarEvidence(
@@ -4188,6 +4391,81 @@ struct AutonomousCandidateEvaluationTests {
             spectralCentroidHz: spectralCentroidHz,
             tailToAttackDB: tailToAttackDB,
             finite: finite
+        )
+    }
+
+    private func fixtureUpperPercussionTailEvent(
+        scoreEventIndex: Int = 2,
+        voice: EnsembleVoice = .metallic,
+        step: Int = 7,
+        role: UpperPercussionTailRole = .foregroundClearance,
+        intensity: Double = 0.6,
+        timingOffsetInSteps: Double = 0.08,
+        relocated: Bool = false,
+        renderedFrameCount: Int = 520,
+        attackFrameCount: Int = 64,
+        appliedFinalMultiplier: Double = 0.25,
+        baseSampleHash: String = "0123456789abcdef",
+        renderedSampleHash: String = "fedcba9876543210",
+        baseAttackSampleHash: String = "aaaaaaaaaaaaaaaa",
+        renderedAttackSampleHash: String = "aaaaaaaaaaaaaaaa",
+        basePeak: Double = 0.08,
+        renderedPeak: Double = 0.08,
+        baseRMS: Double = 0.02,
+        renderedRMS: Double = 0.015,
+        baseAttackRMS: Double = 0.04,
+        renderedAttackRMS: Double = 0.04,
+        baseTailRMS: Double = 0.018,
+        renderedTailRMS: Double = 0.008,
+        baseTailToAttackDB: Double? = nil,
+        renderedTailToAttackDB: Double? = nil,
+        differenceRMS: Double = 0.008,
+        finite: Bool = true
+    ) -> AutonomousUpperPercussionTailEventEvidence {
+        AutonomousUpperPercussionTailEventEvidence(
+            scoreEventIndex: scoreEventIndex,
+            voice: voice.rawValue,
+            step: step,
+            role: role.rawValue,
+            intensity: intensity,
+            timingOffsetInSteps: timingOffsetInSteps,
+            relocated: relocated,
+            renderedFrameCount: renderedFrameCount,
+            attackFrameCount: attackFrameCount,
+            appliedFinalMultiplier: appliedFinalMultiplier,
+            baseSampleHash: baseSampleHash,
+            renderedSampleHash: renderedSampleHash,
+            baseAttackSampleHash: baseAttackSampleHash,
+            renderedAttackSampleHash: renderedAttackSampleHash,
+            basePeak: basePeak,
+            renderedPeak: renderedPeak,
+            baseRMS: baseRMS,
+            renderedRMS: renderedRMS,
+            baseAttackRMS: baseAttackRMS,
+            renderedAttackRMS: renderedAttackRMS,
+            baseTailRMS: baseTailRMS,
+            renderedTailRMS: renderedTailRMS,
+            baseTailToAttackDB: baseTailToAttackDB ?? tailToAttackDB(
+                tailRMS: baseTailRMS,
+                attackRMS: baseAttackRMS
+            ),
+            renderedTailToAttackDB: renderedTailToAttackDB ?? tailToAttackDB(
+                tailRMS: renderedTailRMS,
+                attackRMS: renderedAttackRMS
+            ),
+            differenceRMS: differenceRMS,
+            finite: finite
+        )
+    }
+
+    private func tailToAttackDB(
+        tailRMS: Double,
+        attackRMS: Double
+    ) -> Double {
+        guard attackRMS > 0 else { return -120 }
+        return min(
+            120,
+            max(-120, 20 * log10(max(tailRMS / attackRMS, 0.000_001)))
         )
     }
 

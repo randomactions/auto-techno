@@ -5,6 +5,49 @@ import Testing
 
 @Suite("Upper-percussion tail DSP")
 struct UpperPercussionTailDSPTests {
+    @Test("Prepared primary retains complete score-to-render tail evidence")
+    func preparedEvidence() throws {
+        let fixture = try #require(activeResolvedBar())
+        let director = AutonomousSessionDirector(rootSeed: fixture.seed)
+        let state = director.initialState()
+        let prepared = AutonomousPhrasePreparer.prepare(
+            plan: fixture.plan,
+            sessionSeed: fixture.seed,
+            memory: state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            evaluator: AcceptingPrimaryTestEvaluator()
+        )
+        let vector = prepared.selectedCandidateEvidence
+        let activeBars = vector.upperPercussionTail.filter { bar in
+            bar.events.contains {
+                $0.role == UpperPercussionTailRole.foregroundClearance.rawValue
+            }
+        }
+
+        #expect(prepared.plan == fixture.plan)
+        #expect(prepared.commitEligible)
+        #expect(prepared.candidateEvaluation.isComplete)
+        #expect(vector.isComplete)
+        #expect(vector.upperPercussionTail.count == fixture.plan.barCount)
+        #expect(vector.sourceUpperPercussionTailBarCount == fixture.plan.barCount)
+        #expect(!activeBars.isEmpty)
+        #expect(activeBars.allSatisfy { bar in
+            bar.bindingValid && bar.renderPassesMatch &&
+                bar.sourceScoreEventCount == bar.sourceRenderEventCount &&
+                bar.sourceScoreEventCount == bar.events.count &&
+                bar.events.allSatisfy {
+                    $0.baseAttackSampleHash == $0.renderedAttackSampleHash &&
+                        $0.baseAttackRMS == $0.renderedAttackRMS &&
+                        $0.renderedTailRMS < $0.baseTailRMS &&
+                        $0.renderedSampleHash != $0.baseSampleHash &&
+                        $0.differenceRMS > 0
+                }
+        })
+    }
+
     @Test("Same-bar clearance changes only the intended post-attack event body")
     func rendererCausality() throws {
         let fixture = try #require(activeResolvedBar())
@@ -194,6 +237,7 @@ struct UpperPercussionTailDSPTests {
     }
 
     private func activeResolvedBar() -> (
+        seed: UInt64,
         plan: AutonomousPhrasePlan,
         resolved: ResolvedPerformanceBar
     )? {
@@ -206,7 +250,7 @@ struct UpperPercussionTailDSPTests {
                         $0.role == .foregroundClearance
                     }
             }) {
-                return (plan, resolved)
+                return (seed, plan, resolved)
             }
         }
         return nil
