@@ -91,6 +91,10 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         "modal-percussion-masking-maximum-overlap"
     case modalPercussionMaximumPoleRadius =
         "modal-percussion-maximum-pole-radius"
+    case upperPercussionTailClearanceEventRatio =
+        "upper-percussion-tail-clearance-event-ratio"
+    case upperPercussionTailRenderedTailToAttackDBMean =
+        "upper-percussion-tail-rendered-tail-to-attack-db-mean"
 
     package var acceptsSaferValuesBelowCalibration: Bool {
         switch self {
@@ -117,7 +121,8 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
     package var semanticMinimum: Double {
         switch self {
         case .truePeakDBTP, .modalPercussionAttackToBodyDBMean,
-                .modalPercussionTailToBodyDBMean:
+                .modalPercussionTailToBodyDBMean,
+                .upperPercussionTailRenderedTailToAttackDBMean:
             return -120
         default: return 0
         }
@@ -663,6 +668,15 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                         $0.secondRole == MaskingRole.upper.rawValue)
             }
 
+        let upperPercussionTailEvents = vector.upperPercussionTail
+            .flatMap(\.events)
+        let activeUpperPercussionTailEvents = upperPercussionTailEvents.filter {
+            $0.role == UpperPercussionTailRole.foregroundClearance.rawValue
+        }
+        let upperPercussionTailDivisor = Double(
+            max(1, upperPercussionTailEvents.count)
+        )
+
         var kickFoundationDifferences: [Double] = []
         for stemBar in vector.stems {
             guard let kick = stemBar.roles.first(where: {
@@ -818,6 +832,17 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             ProfessionalQualityMetricValue(
                 metric: .modalPercussionMaximumPoleRadius,
                 value: modalEvents.map(\.maximumPoleRadius).max() ?? 0
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .upperPercussionTailClearanceEventRatio,
+                value: Double(activeUpperPercussionTailEvents.count) /
+                    upperPercussionTailDivisor
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .upperPercussionTailRenderedTailToAttackDBMean,
+                value: mean(activeUpperPercussionTailEvents.map(
+                    \.renderedTailToAttackDB
+                ))
             ),
         ]
         try self.init(
@@ -1523,7 +1548,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         case .modalPercussionPitchErrorCentsMaximum:
             absoluteFloor = 15
         case .modalPercussionAttackToBodyDBMean,
-                .modalPercussionTailToBodyDBMean:
+                .modalPercussionTailToBodyDBMean,
+                .upperPercussionTailRenderedTailToAttackDBMean:
             absoluteFloor = 1
         case .modalPercussionSpectralCentroidMeanHz:
             absoluteFloor = 60
@@ -1617,7 +1643,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .kickRecoveryBarRatio, .kickDuckingEnvelopeRatioMean,
                 .kickAudibleGainMean, .modalPercussionActiveBarRatio,
                 .modalPercussionMaskingMaximumOverlap,
-                .modalPercussionMaximumPoleRadius:
+                .modalPercussionMaximumPoleRadius,
+                .upperPercussionTailClearanceEventRatio:
             return 0...1
         case .stereoCorrelation, .lowStereoCorrelation:
             return -1...1
@@ -1635,7 +1662,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         case .kickOverFoundationActiveDBMean:
             return -120...120
         case .modalPercussionAttackToBodyDBMean,
-                .modalPercussionTailToBodyDBMean:
+                .modalPercussionTailToBodyDBMean,
+                .upperPercussionTailRenderedTailToAttackDBMean:
             return -120...120
         case .kickAudibleToDetectorDBMean:
             return -120...0

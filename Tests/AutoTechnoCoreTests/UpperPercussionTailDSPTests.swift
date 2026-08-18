@@ -26,6 +26,20 @@ struct UpperPercussionTailDSPTests {
                 $0.role == UpperPercussionTailRole.foregroundClearance.rawValue
             }
         }
+        let allEvents = vector.upperPercussionTail.flatMap(\.events)
+        let activeEvents = allEvents.filter {
+            $0.role == UpperPercussionTailRole.foregroundClearance.rawValue
+        }
+        let observation = try ProfessionalQualityObservation(
+            candidate: vector,
+            engineVersion: QualityQualificationContract.engineVersion,
+            checkpoint: .establishment
+        )
+        let expectedActiveRatio = Double(activeEvents.count) /
+            Double(max(1, allEvents.count))
+        let expectedRenderedTailMean = activeEvents.isEmpty ? 0 :
+            activeEvents.map(\.renderedTailToAttackDB).reduce(0, +) /
+                Double(activeEvents.count)
 
         #expect(prepared.plan == fixture.plan)
         #expect(prepared.commitEligible)
@@ -34,6 +48,10 @@ struct UpperPercussionTailDSPTests {
         #expect(vector.upperPercussionTail.count == fixture.plan.barCount)
         #expect(vector.sourceUpperPercussionTailBarCount == fixture.plan.barCount)
         #expect(!activeBars.isEmpty)
+        #expect(observation[.upperPercussionTailClearanceEventRatio] ==
+                expectedActiveRatio)
+        #expect(observation[.upperPercussionTailRenderedTailToAttackDBMean] ==
+                expectedRenderedTailMean)
         #expect(activeBars.allSatisfy { bar in
             bar.bindingValid && bar.renderPassesMatch &&
                 bar.sourceScoreEventCount == bar.sourceRenderEventCount &&
