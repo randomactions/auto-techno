@@ -1026,3 +1026,82 @@ and the optimized `AutoTechno` product built successfully. Publication and exact
 head CI are recorded after completion. No listening, app/route smoke, latency or
 peak-memory measurement, hardware soak, or professional-quality promotion is
 claimed.
+
+## Source 21: context-owned upper-percussion tail clearance — 2026-08-18
+
+Source ID `21` used YouTube video `Sf97zdQMCv0`, *How to make sounds that
+actually punch through the mix*, from Underdog Electronic Music School,
+published 2023-02-06 with a 5:55 duration. The clean-room capture used
+unauthenticated `yt-dlp` with automatic English captions, metadata, top-ranked
+comments, and temporary audio:
+
+```sh
+yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source21-research.0wqJef -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=Sf97zdQMCv0'
+yt-dlp -f bestaudio -x --audio-format wav --audio-quality 0 --postprocessor-args 'ffmpeg:-ar 48000 -ac 2' -P /private/tmp/auto-techno-source21-research.0wqJef -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=Sf97zdQMCv0'
+```
+
+No manual subtitle track was available. Automatic `en` and `en-orig` VTTs
+were byte-identical with SHA-256
+`24bfa4be946d48965b122c71de4ac440b46bc8bd2a5ce80587b3209eb76309f3`.
+The metadata/comment artifact had SHA-256
+`5b5817c87d747b5aad223bfcd74f538fab36b3553d8db9bc58f55c017802a373`;
+the temporary 48 kHz stereo PCM capture had SHA-256
+`df2817d909dd0d433e54c9a9d998eb2f1e86a1870691254273ecc8fe20cfb3ea`.
+All source media, captions, comments, and inspection files remain untracked.
+The capture returned exactly 50 top-ranked top-level comments and four replies.
+No three independent technical comments converged on a portable numeric tail,
+envelope, or masking target, so community discussion supplied no coefficient.
+
+The bounded caption paraphrase is: `0:00...1:00` contrasts unmanaged percussion
+duration with a tightened loop; `1:01...1:11` explicitly treats the preferred
+amount as stylistic rather than universal; `1:30...1:58` motivates shortening
+tails when other material needs room while rejecting a rule that everything
+must be short; `2:00...3:40` surveys workstation-specific ways to alter decay,
+release, and ambience; and `3:49...5:33` demonstrates that a short transient can
+sound plain alone yet function more clearly inside a mix. Literal workstation
+controls, samples, named devices, tutorial numbers, and external plug-ins are
+not portable engine requirements.
+
+Repository reconciliation considered both reuse and expansion. A new
+percussion lane, instrument, sample source, ambience return, or independent FX
+chain would not better express this source: the claimed relationship concerns
+the duration of already present clap, open-hat, and metallic events. The
+canonical score already owns their admission, focus, and intentional pileup.
+The selected capability therefore reuses those exact events and introduces one
+post-arbitration semantic role, `naturalBody` or `foregroundClearance`.
+Clearance is active only when another score role owns the foreground, the phrase
+is not identity return, and the bar does not intentionally pile roles together.
+No onset, event count, intensity, pitch, instrument, send, transport, or random
+draw changes.
+
+The detached renderer preserves the first 8 ms of each existing voice exactly,
+then applies one state-free raised-cosine release ending at a multiplier of
+`0.25`. Neutral is bit-identical and signed zero is preserved. Event-local
+evidence binds score and render identity, frame geometry, full and attack hashes,
+peak/RMS, attack and tail RMS, tail-to-attack dB, difference RMS, finiteness, and
+protected/full pass equality. The compact candidate retains every bar and at
+most four events per bar. The professional observation adds the clearance-event
+ratio and mean rendered tail-to-attack dB; a dedicated adversarial case rejects
+a forged runaway clearance tail. The change owns no continuation buffer and
+adds no callback work.
+
+The durable intention and maturation boundary are recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). The first
+raised-cosine realization is provisional. A serious later renderer may replace
+it with material-aware MSEGs, coupled cymbal/body models, or envelope-aware
+multiband or dynamic release after the calibrated primary evaluator exposes a
+repeatable clearance or natural-body deficit. The replacement must preserve
+the score role, neutral and attack behavior, event ownership, deterministic
+evidence, and one canonical path; it must replace rather than layer another
+tail controller.
+
+Release-mode artifact generation then accepted all 392 development observations
+from 28 complete journeys, rejected all 24 adversarial cases for their expected
+non-compensable reasons, and accepted all 56 observations from four disjoint
+holdout journeys with zero relationship failures. The resulting v4 profile,
+adversarial, and holdout identities are `4f7a91a51691f923`,
+`4c75434aa7d3866f`, and `97be23f446c25611`. The local process-isolated matrix
+passed all 338 selected test executions, the callback-symbol audit found only
+`memcpy`, and the optimized product built. This is automated implementation and
+qualification evidence, not a listening result, app/route test, or hardware
+soak.

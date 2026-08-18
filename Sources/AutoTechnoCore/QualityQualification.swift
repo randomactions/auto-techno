@@ -4,11 +4,12 @@ import Foundation
 package enum QualityQualificationContract {
     /// Version 21 binds app-owned scheduled live PCM, exact mixer-to-player
     /// clock mapping, live BS.1770 evidence, bounded terminal attenuation, and
-    /// its atomic commit at an unscheduled future boundary. Quality schema 22
-    /// advances those identities as one exact primary-evaluator contract.
-    package static let schemaVersion = 22
+    /// its atomic commit at an unscheduled future boundary. Quality schema 23
+    /// adds score-owned upper-percussion tail evidence and advances those
+    /// identities as one exact primary-evaluator contract.
+    package static let schemaVersion = 23
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v21"
+    package static let engineVersion = "autotechno-canonical-engine.v22"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

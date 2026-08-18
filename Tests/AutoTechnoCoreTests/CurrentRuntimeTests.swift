@@ -5,41 +5,41 @@ import Testing
 
 @Suite("Current autonomous runtime")
 struct CurrentRuntimeTests {
-    @Test("Live headroom primary identities advance as one exact contract")
+    @Test("Upper-percussion tail primary identities advance as one exact contract")
     func liveHeadroomPrimaryIdentityContract() {
-        #expect(QualityQualificationContract.schemaVersion == 22)
+        #expect(QualityQualificationContract.schemaVersion == 23)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v21")
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 20)
-        #expect(ProfessionalQualityObservation.schemaVersion == 3)
-        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 3)
+                "autotechno-canonical-engine.v22")
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 21)
+        #expect(ProfessionalQualityObservation.schemaVersion == 4)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 4)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v3")
+                "autotechno-professional-quality-profile.v4")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v3")
+                "autotechno-candidate-evaluator.primary-calibrated.v4")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v3")
-        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 4)
+                "autotechno-quality.primary-calibrated.v4")
+        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 5)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
-                "autotechno-professional-quality-adversarial.v4")
-        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 2)
+                "autotechno-professional-quality-adversarial.v5")
+        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 3)
         #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
-                "autotechno-professional-quality-holdout.v2")
+                "autotechno-professional-quality-holdout.v3")
         #expect(CanonicalJourneyQualificationReport.currentEvidenceScope ==
-                "primary-structural-bs1770-signal-role-upper-modal-live-commit.v6")
+                "primary-structural-bs1770-signal-role-upper-modal-tail-live-commit.v7")
         #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 2)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 6)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 7)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v6")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v3"))
+                "autotechno-professional-evidence.v7")
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v4"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v3"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v3"))
+            .hasSuffix("-v4"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v4"))
     }
 
-    @Test("Only bundled v3 resources remain")
-    func primaryResourcesAreV3Only() {
+    @Test("Only bundled v4 resources remain")
+    func primaryResourcesAreV4Only() {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
         for stem in ["profile", "adversarial-suite", "holdout"] {
@@ -48,14 +48,18 @@ struct CurrentRuntimeTests {
                 resourceDirectory.appendingPathComponent("\(prefix)-v1.json").path))
             #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v2.json").path))
-            #expect(FileManager.default.fileExists(atPath:
+            #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v3.json").path))
+            #expect(FileManager.default.fileExists(atPath:
+                resourceDirectory.appendingPathComponent("\(prefix)-v4.json").path))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v1"))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v2"))
-            #expect(ProfessionalQualityPrimaryArtifacts
+            #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v3"))
+            #expect(ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: "\(prefix)-v4"))
         }
         #expect(throws: Never.self) {
             _ = try ProfessionalQualityPrimaryArtifacts.load()
@@ -415,7 +419,7 @@ struct RepositorySurfaceTests {
             contentsOf: repositoryRoot.appendingPathComponent("docs/ROADMAP.md"),
             encoding: .utf8
         )
-        #expect(roadmap.contains("23-case v4 adversarial suite"))
+        #expect(roadmap.contains("24-case v5 adversarial suite"))
         #expect(!roadmap.contains("fourteen-case adversarial suite"))
 
         for document in [
@@ -457,13 +461,13 @@ struct RepositorySurfaceTests {
         }.joined(separator: "\n").lowercased()
 
         for required in [
-            "autotechno-canonical-engine.v21",
-            "quality-contract schema 22",
-            "candidate-vector schema 20",
+            "autotechno-canonical-engine.v22",
+            "quality-contract schema 23",
+            "candidate-vector schema 21",
             "candidate-transaction schema 4",
-            "professional evidence v6",
-            "profile v3",
-            "evaluator v3",
+            "professional evidence v7",
+            "profile v4",
+            "evaluator v4",
             "live feedback",
             "physical-output soak",
         ] {

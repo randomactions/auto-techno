@@ -496,9 +496,9 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 3
+    package static let schemaVersion = 4
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v3"
+        "autotechno-professional-quality-observation.v4"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -1093,9 +1093,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 3
+    package static let schemaVersion = 4
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v3"
+        "autotechno-professional-quality-profile.v4"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1678,7 +1678,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
 
     private static func fingerprint(
         of data: Data,
-        domain: String = "professional-quality-calibration-source-bank-json.v3"
+        domain: String = "professional-quality-calibration-source-bank-json.v4"
     ) throws -> String {
         guard let string = String(data: data, encoding: .utf8) else {
             throw ProfessionalQualityCalibrationError.invalidIdentity

@@ -44,7 +44,7 @@ Run:
 env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
   CLANG_MODULE_CACHE_PATH=/private/tmp/auto-techno-source21-module-cache-core \
   SWIFTPM_MODULECACHE_OVERRIDE=/private/tmp/auto-techno-source21-module-cache-core \
-  xcrun swift test --disable-sandbox --no-parallel --jobs 1 --skip-update \
+  xcrun swift test -c release --disable-sandbox --no-parallel --jobs 1 --skip-update \
   --disable-experimental-prebuilts \
   --scratch-path /private/tmp/auto-techno-source21-build-core \
   --filter UpperPercussionTailTests

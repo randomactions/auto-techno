@@ -11,9 +11,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 22, candidate-vector schema 20,
+candidate uses quality-contract schema 23, candidate-vector schema 21,
 candidate-transaction schema 4, and canonical engine identity
-`autotechno-canonical-engine.v21`. It preserves
+`autotechno-canonical-engine.v22`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
@@ -56,6 +56,21 @@ records likewise bind every resolved ordinary-hat event to its neutral or
 same-onset open-hat-companion decay role, exact dry-sample identity, and bounded
 level, spectral, and tail consequence. They do not add events or promote a
 plan before the calibrated evaluator reaches a terminal decision.
+
+Upper-percussion-tail evidence covers every resolved clap, open-hat, and
+metallic event after ensemble arbitration. The score chooses either exact
+`naturalBody` or context-owned `foregroundClearance`; clearance is available
+only when another role owns the foreground, the phrase is not an identity
+return, and the bar does not intentionally pile roles together. The renderer
+keeps the first 8 ms exact, then applies one state-free raised-cosine release to
+a final multiplier of `0.25` after the existing voice has generated its
+canonical sample. The record binds score and rendered event identity, full and
+attack-window hashes, frame geometry, peak/RMS, attack/tail RMS,
+tail-to-attack dB, difference RMS, finiteness, and protected/full pass equality.
+Neutral events must remain bit-identical. Two calibrated observation dimensions
+retain the clearance-event ratio and the mean rendered tail-to-attack dB, and a
+dedicated adversarial case rejects a forged runaway clearance tail. This is a
+bounded reuse of existing voices, not another percussion lane or effect chain.
 
 The tuned-percussive foundation now replaces the former root-only tom
 realization in place. Core resolves up to two articulations from the exact
@@ -159,11 +174,11 @@ identity. The record is required for structural completeness and changes the
 transaction fingerprint. See [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md) for the
 signal and replacement contract.
 
-`ProfessionalEvidenceReportBank` v6 accepts a bank only when every canonical
+`ProfessionalEvidenceReportBank` v7 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v3 from profile `bf5c1ea3c61aef86`, adversarial
-suite `6301de3109373591`, and disjoint holdout `87283519c0c86cd4`. It judges every
+exact-engine primary evaluator v4 from profile `4f7a91a51691f923`, adversarial
+suite `4c75434aa7d3866f`, and disjoint holdout `97be23f446c25611`. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.
@@ -248,7 +263,7 @@ sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
 status. It also retains exact first/last sample bit patterns, the pre-drive peak
 frame, the exact input/amount witness at the post-drive peak, and a replayable
 changed-frame witness together with that frame's exact input bits.
-Candidate-vector schema 20 binds that record to the matching instrument effect
+Candidate-vector schema 21 binds that record to the matching instrument effect
 access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
 sample-rate-normalized boundary transition. Neutral drive requires the no-change
 sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
@@ -277,7 +292,7 @@ uses half depth, response uses full depth, and the full displacement is capped
 at `0.12` of one sixteenth. Note count, base step, pitch, velocity, instrument,
 requested duration, gate, and every protected-rhythm event remain unchanged.
 
-Candidate-vector schema 20 retains one compact record per full rendered bar. It
+Candidate-vector schema 21 retains one compact record per full rendered bar. It
 binds route-derived frame geometry, score and actual renderer onset facts,
 requested gate end, bounded renderer-owned applied gate end, causal role counts,
 exact protected/role offset relationships, and separate shadow/response dry
@@ -330,8 +345,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 22, candidate-vector schema 20,
-candidate-transaction schema 4, and canonical engine v21, the versioned
+Under quality-contract schema 23, candidate-vector schema 21,
+candidate-transaction schema 4, and canonical engine v22, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

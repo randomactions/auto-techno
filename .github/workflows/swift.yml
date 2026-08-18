@@ -104,7 +104,7 @@ jobs:
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(liveHeadroomPrimaryIdentityContract|primaryResourcesAreV3Only|bundledV3ArtifactsAreReady|primaryArtifacts|legacyPolicyJSONIsRejected|serializedLiveObservationProvenanceIsRejected|generateRepresentativeProfile|calibrationCacheRejectsSwappedOrUnboundedBanks|RepositorySurfaceTests)'
+          --filter '(liveHeadroomPrimaryIdentityContract|primaryResourcesAreV4Only|bundledV4ArtifactsAreReady|primaryArtifacts|legacyPolicyJSONIsRejected|serializedLiveObservationProvenanceIsRejected|generateRepresentativeProfile|calibrationCacheRejectsSwappedOrUnboundedBanks|RepositorySurfaceTests)'
 
       - name: Run primary calibration adversarial challenge
         run: >-

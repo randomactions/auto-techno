@@ -76,6 +76,15 @@ tail; onset, count, intensity, swing, brightness, level, and the open-hat render
 remain unchanged. Same-pass event evidence binds the score event to its exact
 dry-sample consequence.
 
+The broader upper-percussion tail path also reuses existing score material.
+After ensemble arbitration, every clap, open-hat, and metallic event receives
+either its exact natural body or foreground-clearance semantics. Clearance is
+chosen only when another role owns focus and the bar is neither an identity
+return nor an intentional pileup. Rendering preserves the attack and shortens
+only the existing tail; it does not add a track, source, send, or effect chain.
+Same-pass event evidence and calibrated clearance/tail dimensions keep that
+contextual decision attributable.
+
 The tuned-percussive foundation path now resolves up to two bounded modal
 articulations from the same bar, modal DNA, character, and existing foundation
 events. One deterministic six-mode resonator renders those articulations into
@@ -128,7 +137,7 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v6 supplies
+policy and its operational gates pass. Professional Evidence v7 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation and live-controller consequence, explicit
 analysis-memory provenance, and complete canonical-journey report-bank

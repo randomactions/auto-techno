@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 20)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 21)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -1221,10 +1221,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 20)
-        #expect(QualityQualificationContract.schemaVersion == 22)
+        #expect(vector.schemaVersion == 21)
+        #expect(QualityQualificationContract.schemaVersion == 23)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v21")
+                "autotechno-canonical-engine.v22")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3524,7 +3524,7 @@ struct AutonomousCandidateEvaluationTests {
         }
 
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
-                "593029ccd6a6153a")
+                "85834103e4dc0ae2")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -3532,7 +3532,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "409344413ef0b17b")
+                "c3230a6262b0985f")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7

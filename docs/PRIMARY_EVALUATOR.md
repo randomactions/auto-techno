@@ -23,9 +23,9 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v21 profile v3 `bf5c1ea3c61aef86`, adversarial suite v4
-`6301de3109373591`, and disjoint holdout qualification v2
-`87283519c0c86cd4`. The profile derives from 28 complete
+engine-v22 profile v4 `4f7a91a51691f923`, adversarial suite v5
+`4c75434aa7d3866f`, and disjoint holdout qualification v3
+`97be23f446c25611`. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
 relationship gate.
 
@@ -33,11 +33,13 @@ Every applicable journey checkpoint is judged independently across the
 versioned professional-quality vector. Dimensions never compensate for one
 another. An ordinary lock phrase without a named checkpoint uses the calibrated
 `longContinuation` envelope so every primary phrase receives a judgment.
-The vector now includes eight modal-foundation dimensions: active-bar ratio,
+The vector includes eight modal-foundation dimensions: active-bar ratio,
 event density, pitch error, attack/body and tail/body relationships, spectral
 centroid, masking overlap, and maximum pole radius. Four dedicated attacks prove
 detuning, masking flood, rate drift, and runaway tail cannot be compensated by
-other strengths.
+other strengths. It also includes the upper-percussion clearance-event ratio
+and rendered tail-to-attack mean; a dedicated runaway-tail attack proves that
+the new release consequence cannot be compensated by unrelated strengths.
 
 The app preloads artifacts away from the audio callback and creates a route-local
 evaluator for detached preparation. Missing artifacts and rates outside 44.1 or

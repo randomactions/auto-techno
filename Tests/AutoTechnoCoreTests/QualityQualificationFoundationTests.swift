@@ -500,7 +500,7 @@ struct QualityQualificationFoundationTests {
         }
     }
 
-    @Test("Professional Evidence v6 bank requires every journey checkpoint and unavailable policy")
+    @Test("Professional Evidence v7 bank requires every journey checkpoint and unavailable policy")
     func professionalEvidenceReportBank() throws {
         let reports = try qualificationReports()
 
@@ -1054,6 +1054,16 @@ struct QualityQualificationFoundationTests {
                 bar: 0,
                 sourceScoreEventCount: 0,
                 sourceRenderEventCount: 0,
+                events: []
+            )],
+            upperPercussionTail: [AutonomousUpperPercussionTailBarEvidence(
+                bar: 0,
+                focusRole: PerformanceRole.percussion.rawValue,
+                intentionalPileup: false,
+                sourceScoreEventCount: 0,
+                sourceRenderEventCount: 0,
+                renderPassesMatch: true,
+                bindingValid: true,
                 events: []
             )],
             modalPercussion: modalPercussion ?? [AutonomousModalPercussionBarEvidence(

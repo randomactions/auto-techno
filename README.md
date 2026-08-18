@@ -24,6 +24,9 @@ account.
 - one score-owned six-mode modal-percussion foundation voice with bounded
   four-slot continuation, protected routing, and rate-normalized pitch,
   envelope, spectral, masking, and stability evidence;
+- one post-arbitration upper-percussion tail policy that reuses the existing
+  clap, open-hat, and metallic voices, preserves their attack, and shortens
+  their release only when another score role owns the foreground;
 - one score-owned eight-line stereo FDN late field with bounded decay, damping,
   continuation, protected low end, and exact per-bar consequence evidence;
 - one scheduled-output live-feedback path that maps app-owned mixer PCM to the

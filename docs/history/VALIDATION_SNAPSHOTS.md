@@ -1316,3 +1316,48 @@ Evidence states at this snapshot boundary:
 The automated artifacts and replay do not establish physical-output behavior,
 subjective professional quality, interruption recovery, or hardware stability.
 Those remain separate release evidence.
+
+## Source 21 upper-percussion tail clearance — 2026-08-18
+
+Source 21 extends the existing clap, open-hat, and metallic events with one
+post-arbitration score role: natural body or foreground clearance. A supporting
+event keeps its first 8 ms exact, then follows a bounded state-free release to a
+`0.25` terminal multiplier. Featured percussion, intentional pileups, and
+identity return remain bit-exact neutral. The slice adds no track, sample source,
+instrument, effect return, continuation buffer, callback work, or user control.
+
+The score-to-render contract retains one compact record per bar and at most four
+event records. It binds event identity, role, route/frame geometry, attack and
+full hashes, peak/RMS, attack and tail RMS, tail-to-attack dB, difference RMS,
+finiteness, and protected/full pass equality. Professional Evidence v7 adds the
+clearance-event ratio and rendered tail-to-attack mean as non-compensable
+metrics. A dedicated adversarial case rejects a runaway clearance tail.
+
+The exact Professional Evidence v7 artifact generation used 28 development
+journeys and four source-disjoint holdout journeys at 44.1 and 48 kHz. It
+accepted 392/392 development observations, rejected every one of 24 adversarial
+cases for its expected reason, and accepted 56/56 holdout observations with zero
+relationship failures. The shipping v4 artifact identities are:
+
+- profile: `4f7a91a51691f923`, JSON SHA-256
+  `2434ef7785fad081adc89871d1df15f5ce7aaf15679cb16a926e9fb92d926e82`;
+- adversarial suite: `4c75434aa7d3866f`, JSON SHA-256
+  `21f3679690998fb200da140f05cc3f3daeb05d556e965dde25f8bca64b0fe0e9`;
+- holdout qualification: `97be23f446c25611`, JSON SHA-256
+  `5cf85daf07a6b5eb53e6c99cada3509899d7ef81daf092d297cc71a3d1e27fbd`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+isolated caches and serial process boundaries. All 338 workflow-selected test
+executions passed across 31 processes, including the callback queue, live
+analyzer/controller, candidate and artifact tampering, calibrated primary,
+holdout, atomic commit, representative-rate, core/evidence, preparation
+preflight, and protected-routing groups. The realtime producer undefined-symbol
+audit found only `memcpy`, the optimized `AutoTechno` product built, and
+`git diff --check` was clean before publication.
+
+This snapshot proves deterministic score/DSP/evidence behavior and offline
+artifact qualification for quality-contract schema 23, candidate-vector schema
+21, canonical engine v22, and primary evaluator v4. Publication and exact-head
+remote CI remain separate gates. Listening observation, app/route and
+interruption QA, latency/peak-memory measurement, and physical-output soak were
+not performed and are not implied.

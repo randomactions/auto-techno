@@ -27,9 +27,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 22, candidate-
-   vector schema 20, candidate-transaction schema 4, and canonical engine
-   identity `autotechno-canonical-engine.v21`. Each
+   primary-evaluation transaction under quality-contract schema 23, candidate-
+   vector schema 21, candidate-transaction schema 4, and canonical engine
+   identity `autotechno-canonical-engine.v22`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -59,7 +59,12 @@ mistaken for a completed feedback system.
    event identity, isolated dry-signal hash, attack/tail metrics, and finiteness.
    Closed-hat records bind every ordinary hat to
    its score-owned neutral or companion decay role and exact dry-sample
-   consequence. Groove-pulse records bind the existing resolved onset to
+   consequence. Upper-percussion-tail records bind every existing clap,
+   open-hat, and metallic event to a post-arbitration natural-body or foreground-
+   clearance role, exact attack preservation, and same-pass full/tail PCM
+   consequence. The state-free curve runs after the voice's canonical sample
+   generation, owns no continuation, and is identical across protected and full
+   render passes. Groove-pulse records bind the existing resolved onset to
    score-owned strike zone, damping, deterministic microvariation, exact
    dry-sample identity, and reduced envelope/spectral consequence. Kick-syntax
    records cover every rendered bar and bind the score role and kick-step mask
@@ -107,12 +112,12 @@ mistaken for a completed feedback system.
    windows with zero-padded radix-two FFT geometry, actual spectral
    centroid/bandwidth/flatness/rolloff, positive flux,
    RMS trajectory, active-window counts, and bounded working-memory provenance.
-   A deterministic Professional Evidence v6
+   A deterministic Professional Evidence v7
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
    observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v21 profile v3 `bf5c1ea3c61aef86`, adversarial suite
-   `6301de3109373591`, and disjoint holdout qualification `87283519c0c86cd4`.
+   engine-v22 profile v4 `4f7a91a51691f923`, adversarial suite
+   `4c75434aa7d3866f`, and disjoint holdout qualification `97be23f446c25611`.
    The profile derives from 28 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
    relationships. Its evaluator maps the Core-owned plan checkpoint into the
@@ -322,7 +327,7 @@ return behavior.
 Each full bar emits same-pass bar/BPM/delay/render geometry, score and drive
 eligibility, bounded source and applied amount, current-send RMS, exact pre/post
 sample hashes, pre/post peak, RMS, and low-band RMS, difference RMS, and finite
-status. Candidate-vector schema 20 binds these observations to the score bar,
+status. Candidate-vector schema 21 binds these observations to the score bar,
 phrase kind, route rate, and matching instrument effect access. Neutral drive
 requires exact pre/post identity and zero difference. Active drive remains
 outside feedback, binds exact changed-frame and peak witnesses, and permits only
@@ -344,7 +349,7 @@ Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
 requested gate end, and renderer-applied gate end. Separate anchor, shadow, and
 response dry taps retain finite role-local hash, peak, and RMS evidence. Current
-candidate-vector schema 20 reduces those tuples into exact score/render and
+candidate-vector schema 21 reduces those tuples into exact score/render and
 renderer-applied-gate fingerprints, relation-specific offset facts, protected-
 role neutrality, cascade-aperture or lead-pattern replay, and route-derived
 frame geometry. The calibrated evaluator judges this evidence as part of the

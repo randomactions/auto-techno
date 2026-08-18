@@ -17,6 +17,8 @@ package enum ProfessionalQualityAdversarialScenario: String, CaseIterable,
     case modalRunawayTail = "modal-runaway-tail"
     case modalMaskingFlood = "modal-masking-flood"
     case modalRateDrift = "modal-rate-drift"
+    case upperPercussionTailRegression =
+        "upper-percussion-tail-regression"
     case forgedPreTerminalScaling = "forged-pre-terminal-scaling"
     case forgedPostTerminalScaling = "forged-post-terminal-scaling"
     case masterBoostAboveUnity = "master-boost-above-unity"
@@ -414,9 +416,9 @@ package struct ProfessionalQualityLiveCandidateChain: Equatable, Sendable {
 /// evidence. Every scenario must be rejected independently.
 package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 4
+    package static let schemaVersion = 5
     package static let suiteVersion =
-        "autotechno-professional-quality-adversarial.v4"
+        "autotechno-professional-quality-adversarial.v5"
 
     package let schemaVersion: Int
     package let suiteVersion: String
@@ -702,6 +704,17 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                 .modalPercussionMaskingMaximumOverlap,
                 with: outside(
                     .modalPercussionMaskingMaximumOverlap,
+                    preferLower: false
+                )
+            ),
+            expected: [.metricOutOfRange]
+        )
+        append(
+            .upperPercussionTailRegression,
+            observation: try baseline.replacing(
+                .upperPercussionTailRenderedTailToAttackDBMean,
+                with: outside(
+                    .upperPercussionTailRenderedTailToAttackDBMean,
                     preferLower: false
                 )
             ),
