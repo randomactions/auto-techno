@@ -464,6 +464,8 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let interlockChapter: InterlockChapter
     package let groovePulses: [GroovePulseArticulation]
     package let closedHatDecayArticulations: [ClosedHatDecayArticulation]
+    package let upperPercussionTailArticulations:
+        [UpperPercussionTailArticulation]
     package let modalPercussionArticulations: [ModalPercussionArticulation]
     package let spatialContrast: SpatialContrastArticulation
     package let narrative: NarrativeArticulation
@@ -478,6 +480,8 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
                  interlockChapter: InterlockChapter,
                  groovePulses: [GroovePulseArticulation] = [],
                  closedHatDecayArticulations: [ClosedHatDecayArticulation]? = nil,
+                 upperPercussionTailArticulations:
+                    [UpperPercussionTailArticulation]? = nil,
                  modalPercussionArticulations: [ModalPercussionArticulation] = [],
                  spatialContrast: SpatialContrastArticulation = .foreground,
                  narrative: NarrativeArticulation = .initial,
@@ -504,6 +508,12 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.groovePulses = groovePulses.sorted { $0.step < $1.step }
         self.closedHatDecayArticulations = closedHatDecayArticulations ??
             ClosedHatDecayResolver.articulations(from: ensemble)
+        self.upperPercussionTailArticulations =
+            upperPercussionTailArticulations ??
+            UpperPercussionTailResolver.articulations(
+                from: ensemble,
+                phraseKind: .identityReturn
+            )
         self.modalPercussionArticulations = modalPercussionArticulations.sorted {
             $0.scoreEventIndex < $1.scoreEventIndex
         }
@@ -525,6 +535,14 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         atEventIndex index: Int
     ) -> ModalPercussionArticulation? {
         modalPercussionArticulations.first { $0.scoreEventIndex == index }
+    }
+
+    package func upperPercussionTail(
+        atEventIndex index: Int
+    ) -> UpperPercussionTailArticulation? {
+        upperPercussionTailArticulations.first {
+            $0.scoreEventIndex == index
+        }
     }
 }
 
@@ -638,15 +656,18 @@ package enum KickSyntaxResolver {
         var result = resolvedBars
         result[firstWithheldIndex] = replacingKickScore(
             in: firstWithheld,
-            role: .withheld
+            role: .withheld,
+            phraseKind: kind
         )
         result[secondWithheldIndex] = replacingKickScore(
             in: secondWithheld,
-            role: .withheld
+            role: .withheld,
+            phraseKind: kind
         )
         result[recoveryIndex] = replacingKickScore(
             in: recovery,
-            role: .recovery
+            role: .recovery,
+            phraseKind: kind
         )
         return result
     }
@@ -681,7 +702,8 @@ package enum KickSyntaxResolver {
 
     private static func replacingKickScore(
         in resolved: ResolvedPerformanceBar,
-        role: KickSyntaxRole
+        role: KickSyntaxRole,
+        phraseKind: AutonomousPhraseKind
     ) -> ResolvedPerformanceBar {
         let ensemble: EnsembleContext
         if role == .withheld {
@@ -706,6 +728,11 @@ package enum KickSyntaxResolver {
             interlockChapter: resolved.interlockChapter,
             groovePulses: resolved.groovePulses,
             closedHatDecayArticulations: ClosedHatDecayResolver.articulations(from: ensemble),
+            upperPercussionTailArticulations:
+                UpperPercussionTailResolver.articulations(
+                    from: ensemble,
+                    phraseKind: phraseKind
+                ),
             modalPercussionArticulations: resolved.modalPercussionArticulations,
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative,
@@ -1596,6 +1623,11 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 eventSeed: bar.eventSeed
             )
             let closedHatDecayArticulations = ClosedHatDecayResolver.articulations(from: ensemble)
+            let upperPercussionTailArticulations =
+                UpperPercussionTailResolver.articulations(
+                    from: ensemble,
+                    phraseKind: kind
+                )
             let percussionEchoTexture = PercussionEchoTextureResolver.articulation(
                 ensemble: ensemble,
                 kind: kind,
@@ -1626,6 +1658,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 interlockChapter: interlockState.currentChapter,
                 groovePulses: groovePulses,
                 closedHatDecayArticulations: closedHatDecayArticulations,
+                upperPercussionTailArticulations:
+                    upperPercussionTailArticulations,
                 modalPercussionArticulations: modalPercussionArticulations,
                 spatialContrast: spatialContrast,
                 narrative: narrative,

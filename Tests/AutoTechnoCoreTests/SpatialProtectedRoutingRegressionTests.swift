@@ -1084,6 +1084,8 @@ struct SpatialProtectedRoutingRegressionTests {
             groovePulses: groovePulses ?? resolved.groovePulses,
             closedHatDecayArticulations: closedHatDecayArticulations ??
                 resolved.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                resolved.upperPercussionTailArticulations,
             modalPercussionArticulations: modalPercussionArticulations ??
                 resolved.modalPercussionArticulations,
             spatialContrast: spatialContrast ?? resolved.spatialContrast,

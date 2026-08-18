@@ -1,8 +1,91 @@
 import AutoTechnoCore
+@testable import AutoTechnoDSP
 import Testing
 
 @Suite("Score-owned upper-percussion tail")
 struct UpperPercussionTailTests {
+    @Test("Preflight rejects missing, duplicate, and retargeted tail policy")
+    func preflightRejectsForgedArticulations() throws {
+        let fixture = try #require(fingerprintFixture())
+        #expect(prepare(fixture.plan, state: fixture.state) != nil)
+
+        let sourceBar = fixture.plan.resolvedBars[fixture.barIndex]
+        let source = try #require(
+            sourceBar.upperPercussionTailArticulations.first
+        )
+        let missing = Array(
+            sourceBar.upperPercussionTailArticulations.dropFirst()
+        )
+        let duplicate = sourceBar.upperPercussionTailArticulations + [source]
+        var retargeted = sourceBar.upperPercussionTailArticulations
+        retargeted[0] = UpperPercussionTailArticulation(
+            scoreEventIndex: source.scoreEventIndex,
+            voice: source.voice == .clap ? .openHat : .clap,
+            step: source.step,
+            role: source.role
+        )
+
+        for forgedArticulations in [missing, duplicate, retargeted] {
+            var bars = fixture.plan.resolvedBars
+            bars[fixture.barIndex] = replacingBar(
+                sourceBar,
+                tailArticulations: forgedArticulations
+            )
+            let forged = replacingBars(in: fixture.plan, with: bars)
+            #expect(prepare(forged, state: fixture.state) == nil)
+        }
+    }
+
+    @Test("Tail role participates in the typed plan identity")
+    func planFingerprintIncludesTailRole() throws {
+        let fixture = try #require(fingerprintFixture())
+        let plan = fixture.plan
+        let barIndex = fixture.barIndex
+        let sourceBar = plan.resolvedBars[barIndex]
+        var changedArticulations = sourceBar.upperPercussionTailArticulations
+        let source = changedArticulations[0]
+        changedArticulations[0] = UpperPercussionTailArticulation(
+            scoreEventIndex: source.scoreEventIndex,
+            voice: source.voice,
+            step: source.step,
+            role: source.role == .naturalBody ?
+                .foregroundClearance : .naturalBody
+        )
+        var changedBars = plan.resolvedBars
+        changedBars[barIndex] = replacingBar(
+            sourceBar,
+            tailArticulations: changedArticulations
+        )
+        let changed = replacingBars(in: plan, with: changedBars)
+
+        #expect(AutonomousCandidateFingerprint.plan(plan) !=
+                AutonomousCandidateFingerprint.plan(changed))
+    }
+
+    @Test("Director retains the exact post-arbitration policy in every bar")
+    func directorOwnsCanonicalArticulations() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var state = director.initialState()
+        var sawForegroundClearance = false
+
+        for _ in 0..<12 {
+            let plan = director.plan(from: state)
+            for resolved in plan.resolvedBars {
+                let expected = UpperPercussionTailResolver.articulations(
+                    from: resolved.ensemble,
+                    phraseKind: plan.kind
+                )
+                #expect(resolved.upperPercussionTailArticulations == expected)
+                sawForegroundClearance = sawForegroundClearance || expected.contains {
+                    $0.role == .foregroundClearance
+                }
+            }
+            state.advancePlanning(using: plan)
+        }
+
+        #expect(sawForegroundClearance)
+    }
+
     @Test("Supporting upper percussion resolves bounded foreground clearance")
     func supportingForegroundClearance() {
         let ensemble = context(
@@ -18,8 +101,7 @@ struct UpperPercussionTailTests {
 
         let articulations = UpperPercussionTailResolver.articulations(
             from: ensemble,
-            phraseKind: .contrast,
-            conservative: false
+            phraseKind: .contrast
         )
 
         #expect(articulations.map(\.scoreEventIndex) == [1, 2, 3])
@@ -30,7 +112,7 @@ struct UpperPercussionTailTests {
         })
     }
 
-    @Test("Featured, piled-up, conservative, and identity material stays natural")
+    @Test("Featured, piled-up, and identity material stays natural")
     func neutralPolicyGates() {
         let supporting = context(
             focusRole: .motif,
@@ -49,23 +131,15 @@ struct UpperPercussionTailTests {
         let cases = [
             UpperPercussionTailResolver.articulations(
                 from: percussionFocused,
-                phraseKind: .contrast,
-                conservative: false
+                phraseKind: .contrast
             ),
             UpperPercussionTailResolver.articulations(
                 from: piledUp,
-                phraseKind: .contrast,
-                conservative: false
+                phraseKind: .contrast
             ),
             UpperPercussionTailResolver.articulations(
                 from: supporting,
-                phraseKind: .contrast,
-                conservative: true
-            ),
-            UpperPercussionTailResolver.articulations(
-                from: supporting,
-                phraseKind: .identityReturn,
-                conservative: false
+                phraseKind: .identityReturn
             ),
         ]
 
@@ -93,13 +167,11 @@ struct UpperPercussionTailTests {
 
         let first = UpperPercussionTailResolver.articulations(
             from: ensemble,
-            phraseKind: .lock,
-            conservative: false
+            phraseKind: .lock
         )
         let replay = UpperPercussionTailResolver.articulations(
             from: ensemble,
-            phraseKind: .lock,
-            conservative: false
+            phraseKind: .lock
         )
 
         #expect(first == replay)
@@ -132,6 +204,92 @@ struct UpperPercussionTailTests {
             step: step,
             intensity: intensity,
             relocated: false
+        )
+    }
+
+    private func replacingBar(
+        _ source: ResolvedPerformanceBar,
+        tailArticulations: [UpperPercussionTailArticulation]
+    ) -> ResolvedPerformanceBar {
+        ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: source.ensemble,
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            performanceCharacter: source.performanceCharacter,
+            foundationBehavior: source.foundationBehavior,
+            foundationCompanion: source.foundationCompanion,
+            pulseEchoEnabled: source.pulseEchoEnabled,
+            interlockChapter: source.interlockChapter,
+            groovePulses: source.groovePulses,
+            closedHatDecayArticulations: source.closedHatDecayArticulations,
+            upperPercussionTailArticulations: tailArticulations,
+            modalPercussionArticulations: source.modalPercussionArticulations,
+            spatialContrast: source.spatialContrast,
+            narrative: source.narrative,
+            kickSyntaxRole: source.kickSyntaxRole,
+            percussionEchoTexture: source.percussionEchoTexture
+        )
+    }
+
+    private func replacingBars(
+        in plan: AutonomousPhrasePlan,
+        with bars: [ResolvedPerformanceBar]
+    ) -> AutonomousPhrasePlan {
+        AutonomousPhrasePlan(
+            phraseIndex: plan.phraseIndex,
+            startBar: plan.startBar,
+            barCount: plan.barCount,
+            kind: plan.kind,
+            scene: plan.scene,
+            dna: plan.dna,
+            resolvedBars: bars,
+            openedDebt: plan.openedDebt,
+            paidDebtIDs: plan.paidDebtIDs,
+            requestsTopologyMutation: plan.requestsTopologyMutation,
+            interest: plan.interest,
+            endingInterlockState: plan.endingInterlockState,
+            endingSpatialContrastState: plan.endingSpatialContrastState,
+            endingNarrativeState: plan.endingNarrativeState,
+            harmonicContinuation: plan.incomingHarmonicContinuation
+        )
+    }
+
+    private func fingerprintFixture() -> (
+        state: AutonomousSessionState,
+        plan: AutonomousPhrasePlan,
+        barIndex: Int
+    )? {
+        for seed in 1...128 {
+            let director = AutonomousSessionDirector(rootSeed: UInt64(seed))
+            let state = director.initialState()
+            let plan = director.plan(from: state)
+            if let barIndex = plan.resolvedBars.firstIndex(where: {
+                !$0.upperPercussionTailArticulations.isEmpty
+            }) {
+                return (state, plan, barIndex)
+            }
+        }
+        return nil
+    }
+
+    private func prepare(
+        _ plan: AutonomousPhrasePlan,
+        state: AutonomousSessionState
+    ) -> PreparedAutonomousPhrase? {
+        var renderState = RenderState()
+        renderState.barIndex = state.memory.totalBars
+        return AutonomousPhrasePreparer.prepareIfNotCancelled(
+            plan: plan,
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: renderState,
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            incomingQualityState: state.quality,
+            evaluator: AcceptingPrimaryTestEvaluator(),
+            cancellationRequested: { false }
         )
     }
 }

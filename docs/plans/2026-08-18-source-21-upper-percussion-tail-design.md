@@ -118,10 +118,9 @@ one articulation for every retained clap, open-hat, and metallic event, ordered
 by score-event index and bounded to four records per bar. It resolves
 `foregroundClearance` only when all of these are true:
 
-1. the plan is nonconservative;
-2. the phrase is not `identityReturn`;
-3. `ensemble.focusRole != .percussion`;
-4. `ensemble.intentionalPileup == false`.
+1. the phrase is not `identityReturn`;
+2. `ensemble.focusRole != .percussion`;
+3. `ensemble.intentionalPileup == false`.
 
 Every other valid event resolves `naturalBody`. Missing, duplicate, retargeted,
 or noncanonical articulations fail preparation before rendering. The same exact
@@ -231,7 +230,7 @@ disagreement.
   event loops.
 - Route changes rebuild future immutable audio at the active sample rate and
   cancel stale preparation under the existing contract.
-- Conservative and identity-return plans are exact neutral.
+- Identity-return plans are exact neutral.
 - Home-timbre correction retains the same percussion score and evidence policy.
 - A rejected or unavailable primary decision cannot commit the new engine state.
 
@@ -240,7 +239,7 @@ disagreement.
 Write failing tests before each production change.
 
 1. **Core policy:** post-arbitration one-to-one records, active supporting-role
-   reachability, exact neutral featured/pileup/conservative/identity paths,
+   reachability, exact neutral featured/pileup/identity paths,
    deterministic replay, bounds, and typed-plan sensitivity.
 2. **DSP oracle:** current neutral PCM hashes remain exact; active attack prefix
    remains exact while tail/hash/RMS change in the intended direction at 44.1,

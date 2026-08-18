@@ -375,6 +375,8 @@ struct KickSyntaxTests {
             interlockChapter: syntaxBar.interlockChapter,
             groovePulses: syntaxBar.groovePulses,
             closedHatDecayArticulations: syntaxBar.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                syntaxBar.upperPercussionTailArticulations,
             spatialContrast: syntaxBar.spatialContrast,
             narrative: syntaxBar.narrative,
             kickSyntaxRole: syntaxBar.kickSyntaxRole
@@ -505,6 +507,11 @@ struct KickSyntaxTests {
                     eventSeed: resolved.performance.eventSeed
                 ),
                 closedHatDecayArticulations: ClosedHatDecayResolver.articulations(from: ensemble),
+                upperPercussionTailArticulations:
+                    UpperPercussionTailResolver.articulations(
+                        from: ensemble,
+                        phraseKind: plan.kind
+                    ),
                 spatialContrast: resolved.spatialContrast,
                 narrative: resolved.narrative
             )
@@ -552,6 +559,11 @@ struct KickSyntaxTests {
                     eventSeed: resolved.performance.eventSeed
                 ),
                 closedHatDecayArticulations: ClosedHatDecayResolver.articulations(from: ensemble),
+                upperPercussionTailArticulations:
+                    UpperPercussionTailResolver.articulations(
+                        from: ensemble,
+                        phraseKind: plan.kind
+                    ),
                 spatialContrast: resolved.spatialContrast,
                 narrative: resolved.narrative
             )
@@ -586,6 +598,8 @@ struct KickSyntaxTests {
             closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
                 from: selectedEnsemble
             ),
+            upperPercussionTailArticulations:
+                source.upperPercussionTailArticulations,
             spatialContrast: source.spatialContrast,
             narrative: source.narrative,
             kickSyntaxRole: kickSyntaxRole ?? source.kickSyntaxRole

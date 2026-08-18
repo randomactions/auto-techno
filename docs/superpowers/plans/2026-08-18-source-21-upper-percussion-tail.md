@@ -27,14 +27,13 @@ events. Assert that the resolver:
 #expect(articulations.allSatisfy { $0.role == .foregroundClearance })
 #expect(UpperPercussionTailResolver.resolve(
     ensemble: percussionFocused,
-    phraseKind: .contrast,
-    conservative: false
+    phraseKind: .contrast
 ).allSatisfy { $0.role == .naturalBody })
 ```
 
 Cover supporting-focus reachability; exact natural-body resolution for
-percussion focus, intentional pileup, conservative generation, and
-`identityReturn`; noneligible voices; deterministic ordering; normalized steps;
+percussion focus, intentional pileup, and `identityReturn`; noneligible voices;
+deterministic ordering; normalized steps;
 and the four-record bound.
 
 - [ ] **Step 2: Run the focused test and verify RED**
@@ -132,10 +131,9 @@ package func upperPercussionTail(
 }
 ```
 
-The initializer default must derive from the final `ensemble`, current phrase
-kind, and conservative state at the director call site rather than silently
-guessing active policy. Pass the exact array through every production and test
-copy constructor.
+The director call site must derive the field from the final `ensemble` and
+current phrase kind rather than silently guessing active policy. Pass the exact
+array through every production and test copy constructor.
 
 - [ ] **Step 4: Recompute after any post-pass event mutation**
 
@@ -308,10 +306,10 @@ through nested large-value copies.
 
 - [ ] **Step 5: Prove a real prepared product end to end**
 
-Prepare a reachable nonconservative supporting-focus phrase. Assert the selected
+Prepare a reachable supporting-focus phrase. Assert the selected
 single primary plan is commit-eligible and every live compact event matches the
-actual resolved score/render evidence. Add a conservative/identity neutral
-prepared product and a render-evidence tamper rejection.
+actual resolved score/render evidence. Add an identity-return neutral prepared
+product and a render-evidence tamper rejection.
 
 - [ ] **Step 6: Run focused suites and commit**
 

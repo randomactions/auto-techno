@@ -265,6 +265,8 @@ struct PercussionEchoTextureTests {
             interlockChapter: source.interlockChapter,
             groovePulses: source.groovePulses,
             closedHatDecayArticulations: source.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                source.upperPercussionTailArticulations,
             spatialContrast: source.spatialContrast,
             narrative: source.narrative,
             kickSyntaxRole: source.kickSyntaxRole,

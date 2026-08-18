@@ -32,11 +32,9 @@ package enum UpperPercussionTailResolver {
 
     package static func articulations(
         from ensemble: EnsembleContext,
-        phraseKind: AutonomousPhraseKind,
-        conservative: Bool
+        phraseKind: AutonomousPhraseKind
     ) -> [UpperPercussionTailArticulation] {
-        let useForegroundClearance = !conservative &&
-            phraseKind != .identityReturn &&
+        let useForegroundClearance = phraseKind != .identityReturn &&
             ensemble.focusRole != .percussion &&
             !ensemble.intentionalPileup
         let role: UpperPercussionTailRole = useForegroundClearance ?

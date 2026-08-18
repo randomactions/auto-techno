@@ -400,6 +400,8 @@ struct UpperTimbreIntegrationTests {
             interlockChapter: chapter,
             groovePulses: resolved.groovePulses,
             closedHatDecayArticulations: resolved.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                resolved.upperPercussionTailArticulations,
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative
         )
@@ -433,6 +435,8 @@ struct UpperTimbreIntegrationTests {
             interlockChapter: resolved.interlockChapter,
             groovePulses: resolved.groovePulses,
             closedHatDecayArticulations: resolved.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                resolved.upperPercussionTailArticulations,
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative
         )
@@ -466,6 +470,8 @@ struct UpperTimbreIntegrationTests {
             interlockChapter: resolved.interlockChapter,
             groovePulses: resolved.groovePulses,
             closedHatDecayArticulations: resolved.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                resolved.upperPercussionTailArticulations,
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative
         )

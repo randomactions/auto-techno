@@ -718,6 +718,8 @@ struct AdaptiveAutonomousSessionTests {
             interlockChapter: source.interlockChapter,
             groovePulses: source.groovePulses,
             closedHatDecayArticulations: source.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                source.upperPercussionTailArticulations,
             spatialContrast: source.spatialContrast,
             narrative: source.narrative
         )
@@ -1266,6 +1268,8 @@ struct AdaptiveAutonomousSessionTests {
                 interlockChapter: chapter,
                 groovePulses: source.groovePulses,
                 closedHatDecayArticulations: source.closedHatDecayArticulations,
+                upperPercussionTailArticulations:
+                    source.upperPercussionTailArticulations,
                 spatialContrast: source.spatialContrast,
                 narrative: source.narrative
             )
@@ -1417,6 +1421,8 @@ struct AdaptiveAutonomousSessionTests {
             interlockChapter: .breath,
             groovePulses: source.groovePulses,
             closedHatDecayArticulations: source.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                source.upperPercussionTailArticulations,
             spatialContrast: source.spatialContrast,
             narrative: source.narrative
         )
@@ -3999,6 +4005,8 @@ struct AutonomousPreparationPreflightTests {
                 interlockChapter: chapter,
                 groovePulses: resolved.groovePulses,
                 closedHatDecayArticulations: resolved.closedHatDecayArticulations,
+                upperPercussionTailArticulations:
+                    resolved.upperPercussionTailArticulations,
                 spatialContrast: resolved.spatialContrast,
                 narrative: resolved.narrative
             )
@@ -4790,6 +4798,8 @@ struct AutonomousPreparationPreflightTests {
             interlockChapter: source.interlockChapter,
             groovePulses: source.groovePulses,
             closedHatDecayArticulations: source.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                source.upperPercussionTailArticulations,
             modalPercussionArticulations: articulations,
             spatialContrast: source.spatialContrast,
             narrative: source.narrative,

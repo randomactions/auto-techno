@@ -1483,6 +1483,19 @@ package enum AutonomousPhrasePreparer {
             Set(resolved.closedHatDecayArticulations.map {
                 $0.scoreEventIndex
             }).count == resolved.closedHatDecayArticulations.count
+        let canonicalUpperPercussionTail =
+            UpperPercussionTailResolver.articulations(
+                from: resolved.ensemble,
+                phraseKind: plan.kind
+            )
+        let upperPercussionTailIsCanonical =
+            resolved.upperPercussionTailArticulations.count <=
+                UpperPercussionTailResolver.maximumEventCount &&
+            resolved.upperPercussionTailArticulations ==
+                canonicalUpperPercussionTail &&
+            Set(resolved.upperPercussionTailArticulations.map {
+                $0.scoreEventIndex
+            }).count == resolved.upperPercussionTailArticulations.count
         let canonicalModalPercussion = ModalPercussionResolver.foundationArticulations(
             ensemble: resolved.ensemble,
             dna: plan.dna,
@@ -1527,7 +1540,8 @@ package enum AutonomousPhrasePreparer {
             kickScoreMatchesRole && resolved.groovePulses.count <= 8 &&
             Set(resolved.groovePulses.map { pulse in pulse.step }).count ==
             resolved.groovePulses.count && grooveScoreIsCanonical &&
-            closedHatDecayIsCanonical && modalPercussionIsCanonical &&
+            closedHatDecayIsCanonical && upperPercussionTailIsCanonical &&
+            modalPercussionIsCanonical &&
             percussionEchoTextureIsCanonical
     }
 
@@ -1570,6 +1584,11 @@ package enum AutonomousPhrasePreparer {
                 closedHatDecayArticulations: ClosedHatDecayResolver.articulations(
                     from: ensemble
                 ),
+                upperPercussionTailArticulations:
+                    UpperPercussionTailResolver.articulations(
+                        from: ensemble,
+                        phraseKind: plan.kind
+                    ),
                 modalPercussionArticulations:
                     ModalPercussionResolver.foundationArticulations(
                         ensemble: ensemble,
