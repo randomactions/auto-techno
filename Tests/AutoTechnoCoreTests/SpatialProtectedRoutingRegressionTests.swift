@@ -679,14 +679,24 @@ struct SpatialProtectedRoutingRegressionTests {
 
     @Test("Stochastic percussion is one bit-exact protected-rhythm performance")
     func stochasticPercussionProtectedRouteIsBitExact() throws {
-        let director = AutonomousSessionDirector(rootSeed: 42)
-        let sourcePlan = director.plan(from: director.initialState())
         let percussionVoices: [EnsembleVoice] = [
             .percussion, .clap, .openHat, .metallic,
         ]
-        let source = try #require(sourcePlan.resolvedBars.first { resolved in
-            resolved.ensemble.events.contains { percussionVoices.contains($0.voice) }
-        })
+        let upperTailVoices: [EnsembleVoice] = [.clap, .openHat, .metallic]
+        let fixtureCandidates: [(AutonomousPhrasePlan, ResolvedPerformanceBar)] =
+            (UInt64(1)...128).compactMap { seed in
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            let plan = director.plan(from: director.initialState())
+            guard let resolved = plan.resolvedBars.first(where: { bar in
+                bar.ensemble.events.contains {
+                    upperTailVoices.contains($0.voice)
+                }
+            }) else { return nil }
+            return (plan, resolved)
+        }
+        let fixture = try #require(fixtureCandidates.first)
+        let sourcePlan = fixture.0
+        let source = fixture.1
         let isolatedEvents = source.ensemble.events.filter {
             percussionVoices.contains($0.voice)
         }
@@ -754,6 +764,14 @@ struct SpatialProtectedRoutingRegressionTests {
         })
         #expect(full.0.dryFoundationSampleHash == protected.0.dryFoundationSampleHash)
         #expect(full.0.dryPercussionSampleHash == protected.0.dryPercussionSampleHash)
+        #expect(!full.0.upperPercussionTailRenderEvidence.isEmpty)
+        #expect(full.0.upperPercussionTailRenderEvidence ==
+                protected.0.upperPercussionTailRenderEvidence)
+        #expect(full.0.upperPercussionTailRenderEvidence.allSatisfy {
+            $0.role == .naturalBody &&
+                $0.baseSampleHash == $0.renderedSampleHash &&
+                $0.differenceRMS == 0
+        })
         #expect(full.0.masking.count == 12)
         #expect(protected.0.masking.isEmpty)
         #expect(full.0 == replay.0)

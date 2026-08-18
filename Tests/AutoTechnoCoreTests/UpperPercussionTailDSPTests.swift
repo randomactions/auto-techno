@@ -5,6 +5,80 @@ import Testing
 
 @Suite("Upper-percussion tail DSP")
 struct UpperPercussionTailDSPTests {
+    @Test("Same-bar clearance changes only the intended post-attack event body")
+    func rendererCausality() throws {
+        let fixture = try #require(activeResolvedBar())
+        let activeBar = fixture.resolved
+        let neutralArticulations = activeBar.upperPercussionTailArticulations.map {
+            UpperPercussionTailArticulation(
+                scoreEventIndex: $0.scoreEventIndex,
+                voice: $0.voice,
+                step: $0.step,
+                role: .naturalBody
+            )
+        }
+        let neutralBar = replacingTail(
+            in: activeBar,
+            with: neutralArticulations
+        )
+
+        let active = render(
+            plan: fixture.plan,
+            resolved: activeBar,
+            sampleRate: 48_000
+        )
+        let neutral = render(
+            plan: fixture.plan,
+            resolved: neutralBar,
+            sampleRate: 48_000
+        )
+
+        #expect(active.upperPercussionTailRenderEvidence.count ==
+                activeBar.upperPercussionTailArticulations.count)
+        #expect(active.upperPercussionTailRenderEvidence.count ==
+                neutral.upperPercussionTailRenderEvidence.count)
+        #expect(active.upperPercussionTailRenderEvidence.allSatisfy {
+            $0.role == .foregroundClearance && $0.finite
+        })
+        #expect(neutral.upperPercussionTailRenderEvidence.allSatisfy {
+            $0.role == .naturalBody && $0.finite &&
+                $0.baseSampleHash == $0.renderedSampleHash &&
+                $0.differenceRMS == 0
+        })
+
+        for (activeEvent, neutralEvent) in zip(
+            active.upperPercussionTailRenderEvidence,
+            neutral.upperPercussionTailRenderEvidence
+        ) {
+            #expect(activeEvent.scoreEventIndex == neutralEvent.scoreEventIndex)
+            #expect(activeEvent.voice == neutralEvent.voice)
+            #expect(activeEvent.step == neutralEvent.step)
+            #expect(activeEvent.renderedFrameCount == neutralEvent.renderedFrameCount)
+            #expect(activeEvent.attackFrameCount == neutralEvent.attackFrameCount)
+            #expect(activeEvent.baseSampleHash == neutralEvent.baseSampleHash)
+            #expect(activeEvent.baseAttackSampleHash ==
+                    activeEvent.renderedAttackSampleHash)
+            #expect(activeEvent.renderedAttackSampleHash ==
+                    neutralEvent.renderedAttackSampleHash)
+            #expect(activeEvent.renderedSampleHash != neutralEvent.renderedSampleHash)
+            #expect(activeEvent.differenceRMS > 0)
+            #expect(activeEvent.renderedTailRMS < activeEvent.baseTailRMS)
+            #expect(activeEvent.renderedTailToAttackDB <
+                    activeEvent.baseTailToAttackDB)
+        }
+
+        #expect(active.dryFoundationSampleHash == neutral.dryFoundationSampleHash)
+        #expect(active.dryModalPercussionSampleHash ==
+                neutral.dryModalPercussionSampleHash)
+        #expect(active.modalPercussionRenderEvidence ==
+                neutral.modalPercussionRenderEvidence)
+        #expect(active.groovePulseRenderEvidence ==
+                neutral.groovePulseRenderEvidence)
+        #expect(active.closedHatRenderEvidence == neutral.closedHatRenderEvidence)
+        #expect(active.instrumentRenderEvidence == neutral.instrumentRenderEvidence)
+        #expect(active.dryPercussionSampleHash != neutral.dryPercussionSampleHash)
+    }
+
     @Test("Clearance preserves an 8 ms attack and reaches the bounded tail")
     func physicalTimeGeometry() {
         for sampleRate in [44_100.0, 48_000.0, 96_000.0, 192_000.0] {
@@ -117,5 +191,77 @@ struct UpperPercussionTailDSPTests {
                 #expect(value <= 1)
             }
         }
+    }
+
+    private func activeResolvedBar() -> (
+        plan: AutonomousPhrasePlan,
+        resolved: ResolvedPerformanceBar
+    )? {
+        for seed in UInt64(1)...128 {
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            let plan = director.plan(from: director.initialState())
+            if let resolved = plan.resolvedBars.first(where: { bar in
+                !bar.upperPercussionTailArticulations.isEmpty &&
+                    bar.upperPercussionTailArticulations.allSatisfy {
+                        $0.role == .foregroundClearance
+                    }
+            }) {
+                return (plan, resolved)
+            }
+        }
+        return nil
+    }
+
+    private func replacingTail(
+        in source: ResolvedPerformanceBar,
+        with articulations: [UpperPercussionTailArticulation]
+    ) -> ResolvedPerformanceBar {
+        ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: source.ensemble,
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            performanceCharacter: source.performanceCharacter,
+            foundationBehavior: source.foundationBehavior,
+            foundationCompanion: source.foundationCompanion,
+            pulseEchoEnabled: source.pulseEchoEnabled,
+            interlockChapter: source.interlockChapter,
+            groovePulses: source.groovePulses,
+            closedHatDecayArticulations: source.closedHatDecayArticulations,
+            upperPercussionTailArticulations: articulations,
+            modalPercussionArticulations: source.modalPercussionArticulations,
+            spatialContrast: source.spatialContrast,
+            narrative: source.narrative,
+            kickSyntaxRole: source.kickSyntaxRole,
+            percussionEchoTexture: source.percussionEchoTexture
+        )
+    }
+
+    private func render(
+        plan: AutonomousPhrasePlan,
+        resolved: ResolvedPerformanceBar,
+        sampleRate: Double
+    ) -> RenderedBar {
+        let synthPlan = SynthPerformancePlan(
+            scene: plan.scene,
+            dna: plan.dna,
+            kind: plan.kind,
+            resolvedBars: [resolved]
+        )
+        var state = RenderState()
+        state.barIndex = resolved.performance.bar
+        var workspace = RenderWorkspace()
+        return VoiceRenderer.renderBar(
+            scene: plan.scene,
+            sampleRate: sampleRate,
+            state: &state,
+            dna: plan.dna,
+            resolved: resolved,
+            synthWorld: synthPlan.world,
+            synthPerformance: synthPlan.bars[0],
+            workspace: &workspace,
+            layer: .full,
+            phraseKind: plan.kind
+        )
     }
 }

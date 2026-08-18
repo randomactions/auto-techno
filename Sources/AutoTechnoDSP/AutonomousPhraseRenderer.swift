@@ -811,6 +811,8 @@ package struct RenderedBar: Equatable, Sendable {
     package let modalPercussionFoundationRoutingValid: Bool
     package let groovePulseRenderEvidence: [GroovePulseRenderEvidence]
     package let closedHatRenderEvidence: [ClosedHatRenderEvidence]
+    package let upperPercussionTailRenderEvidence:
+        [UpperPercussionTailRenderEvidence]
     package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
     package let percussionEchoTextureRenderEvidence:
         PercussionEchoTextureRenderEvidence
@@ -840,6 +842,8 @@ package struct RenderedBar: Equatable, Sendable {
                 modalPercussionFoundationRoutingValid: Bool,
                 groovePulseRenderEvidence: [GroovePulseRenderEvidence],
                 closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
+                upperPercussionTailRenderEvidence:
+                    [UpperPercussionTailRenderEvidence] = [],
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
                 percussionEchoTextureRenderEvidence:
                     PercussionEchoTextureRenderEvidence,
@@ -884,6 +888,10 @@ package struct RenderedBar: Equatable, Sendable {
         self.closedHatRenderEvidence = closedHatRenderEvidence.sorted {
             $0.scoreEventIndex < $1.scoreEventIndex
         }
+        self.upperPercussionTailRenderEvidence =
+            upperPercussionTailRenderEvidence.sorted {
+                $0.scoreEventIndex < $1.scoreEventIndex
+            }
         self.instrumentRenderEvidence = instrumentRenderEvidence.sorted {
             (InstrumentArchitecture.allCases.firstIndex(of: $0.architecture) ?? 0) <
                 (InstrumentArchitecture.allCases.firstIndex(of: $1.architecture) ?? 0)
@@ -953,6 +961,11 @@ package struct RenderBlock: Equatable, Sendable {
     package let groovePulseRenderEvidence: [GroovePulseRenderEvidence]
     /// Same-pass reduced evidence for each ordinary closed-hat score event.
     package let closedHatRenderEvidence: [ClosedHatRenderEvidence]
+    /// Same-pass base-versus-applied evidence for existing clap, open-hat, and
+    /// metallic score events. No event PCM survives detached preparation.
+    package let upperPercussionTailRenderEvidence:
+        [UpperPercussionTailRenderEvidence]
+    package let upperPercussionTailRenderPassesMatch: Bool
     package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
     package let percussionEchoTextureRenderEvidence:
         PercussionEchoTextureRenderEvidence
@@ -1002,6 +1015,9 @@ package struct RenderBlock: Equatable, Sendable {
                 modalPercussionFoundationRoutingValid: Bool,
                 groovePulseRenderEvidence: [GroovePulseRenderEvidence],
                 closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
+                upperPercussionTailRenderEvidence:
+                    [UpperPercussionTailRenderEvidence] = [],
+                upperPercussionTailRenderPassesMatch: Bool = true,
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
                 percussionEchoTextureRenderEvidence:
                     PercussionEchoTextureRenderEvidence,
@@ -1045,6 +1061,12 @@ package struct RenderBlock: Equatable, Sendable {
         self.closedHatRenderEvidence = closedHatRenderEvidence.sorted {
             $0.scoreEventIndex < $1.scoreEventIndex
         }
+        self.upperPercussionTailRenderEvidence =
+            upperPercussionTailRenderEvidence.sorted {
+                $0.scoreEventIndex < $1.scoreEventIndex
+            }
+        self.upperPercussionTailRenderPassesMatch =
+            upperPercussionTailRenderPassesMatch
         self.instrumentRenderEvidence = instrumentRenderEvidence.sorted {
             (InstrumentArchitecture.allCases.firstIndex(of: $0.architecture) ?? 0) <
                 (InstrumentArchitecture.allCases.firstIndex(of: $1.architecture) ?? 0)
@@ -1618,6 +1640,11 @@ package enum AutonomousPhraseRenderer {
                         rendered.modalPercussionFoundationRoutingValid,
                 groovePulseRenderEvidence: rendered.groovePulseRenderEvidence,
                 closedHatRenderEvidence: rendered.closedHatRenderEvidence,
+                upperPercussionTailRenderEvidence:
+                    protectedRhythm.upperPercussionTailRenderEvidence,
+                upperPercussionTailRenderPassesMatch:
+                    protectedRhythm.upperPercussionTailRenderEvidence ==
+                        rendered.upperPercussionTailRenderEvidence,
                 instrumentRenderEvidence: rendered.instrumentRenderEvidence,
                 percussionEchoTextureRenderEvidence:
                     protectedRhythm.percussionEchoTextureRenderEvidence,

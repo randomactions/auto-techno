@@ -545,6 +545,11 @@ package enum VoiceRenderer {
         closedHatRenderEvidence.reserveCapacity(
             resolved.closedHatDecayArticulations.count
         )
+        var upperPercussionTailRenderEvidence:
+            [UpperPercussionTailRenderEvidence] = []
+        upperPercussionTailRenderEvidence.reserveCapacity(
+            resolved.upperPercussionTailArticulations.count
+        )
         var resonantMonoNonlinearCoreEvidence =
             TPTAntialiasedNonlinearCoreEvidenceAccumulator()
         swap(&output, &checkedOut.output)
@@ -652,19 +657,62 @@ package enum VoiceRenderer {
                     closedHatRenderEvidence.append(evidence)
                 }
             case .clap:
-                clap(&output, measurement: &percussionStem,
-                     start: start, sampleRate: sampleRate, level: 0.08 * accent,
-                     brightness: scene.character.percussionBrightness, random: &random)
+                guard let articulation = resolved.upperPercussionTail(
+                    atEventIndex: scoreEventIndex
+                ), articulation.voice == event.voice,
+                   articulation.step == event.step else { break }
+                if let evidence = clap(
+                    &output,
+                    measurement: &percussionStem,
+                    start: start,
+                    sampleRate: sampleRate,
+                    level: 0.08 * accent,
+                    brightness: scene.character.percussionBrightness,
+                    random: &random,
+                    articulation: articulation,
+                    event: event,
+                    timingOffsetInSteps: offset
+                ) {
+                    upperPercussionTailRenderEvidence.append(evidence)
+                }
             case .openHat:
-                openHat(&output, measurement: &percussionStem,
-                        start: start, sampleRate: sampleRate,
-                        level: 0.052 * accent,
-                        brightness: scene.character.percussionBrightness, random: &random)
+                guard let articulation = resolved.upperPercussionTail(
+                    atEventIndex: scoreEventIndex
+                ), articulation.voice == event.voice,
+                   articulation.step == event.step else { break }
+                if let evidence = openHat(
+                    &output,
+                    measurement: &percussionStem,
+                    start: start,
+                    sampleRate: sampleRate,
+                    level: 0.052 * accent,
+                    brightness: scene.character.percussionBrightness,
+                    random: &random,
+                    articulation: articulation,
+                    event: event,
+                    timingOffsetInSteps: offset
+                ) {
+                    upperPercussionTailRenderEvidence.append(evidence)
+                }
             case .metallic:
-                metallicPercussion(&output, measurement: &percussionStem,
-                                   start: start, sampleRate: sampleRate,
-                                   level: 0.042 * accent,
-                                   brightness: scene.character.percussionBrightness, random: &random)
+                guard let articulation = resolved.upperPercussionTail(
+                    atEventIndex: scoreEventIndex
+                ), articulation.voice == event.voice,
+                   articulation.step == event.step else { break }
+                if let evidence = metallicPercussion(
+                    &output,
+                    measurement: &percussionStem,
+                    start: start,
+                    sampleRate: sampleRate,
+                    level: 0.042 * accent,
+                    brightness: scene.character.percussionBrightness,
+                    random: &random,
+                    articulation: articulation,
+                    event: event,
+                    timingOffsetInSteps: offset
+                ) {
+                    upperPercussionTailRenderEvidence.append(evidence)
+                }
             case .groovePulse:
                 guard let pulseArticulation else { break }
                 let pulseSeed = performance.eventSeed ^ UInt64(event.step + 1) ^ 0x6A20_0C15
@@ -1509,6 +1557,8 @@ package enum VoiceRenderer {
                                     modalPercussionFoundationRoutingValid,
                                    groovePulseRenderEvidence: groovePulseRenderEvidence,
                                    closedHatRenderEvidence: closedHatRenderEvidence,
+                                   upperPercussionTailRenderEvidence:
+                                    upperPercussionTailRenderEvidence,
                                    instrumentRenderEvidence: instrumentEvidence(
                                     resolved: resolved,
                                     synthPerformance: synthPerformance,
@@ -2525,10 +2575,27 @@ package enum VoiceRenderer {
         )
     }
 
-    private static func clap(_ output: inout [Float], measurement: inout [Float],
-                             start: Int, sampleRate: Double, level: Double, brightness: Double,
-                             random: inout SeededGenerator) {
-        let frames = min(Int(sampleRate * 0.16), output.count - start); guard frames > 0 else { return }
+    private static func clap(
+        _ output: inout [Float],
+        measurement: inout [Float],
+        start: Int,
+        sampleRate: Double,
+        level: Double,
+        brightness: Double,
+        random: inout SeededGenerator,
+        articulation: UpperPercussionTailArticulation,
+        event: EnsembleResolvedEvent,
+        timingOffsetInSteps: Double
+    ) -> UpperPercussionTailRenderEvidence? {
+        let frames = min(Int(sampleRate * 0.16), output.count - start)
+        guard frames > 0 else { return nil }
+        var evidence = UpperPercussionTailEvidenceAccumulator(
+            articulation: articulation,
+            event: event,
+            timingOffsetInSteps: timingOffsetInSteps,
+            sampleRate: sampleRate,
+            renderedFrameCount: frames
+        )
         var low = 0.0
         let bursts = [0.0, 0.011, 0.023]
         for i in 0..<frames {
@@ -2541,20 +2608,44 @@ package enum VoiceRenderer {
             }
             let tail = t > 0.026 ? exp(-(t - 0.026) * 25) * 0.34 : 0
             let body = sin(2 * .pi * 185 * t) * exp(-t * 31) * 0.22
-            let renderedSample = Float(
+            let baseSample = Float(
                 ((noise - low * 0.72) * (burstEnvelope * 0.46 + tail) + body) * level
+            )
+            let renderedSample = UpperPercussionTailDSPContract.process(
+                sample: baseSample,
+                role: articulation.role,
+                frame: i,
+                renderedFrameCount: frames,
+                sampleRate: sampleRate
             )
             output[start + i] += renderedSample
             measurement[start + i] += renderedSample
+            evidence.append(frame: i, base: baseSample, rendered: renderedSample)
         }
+        return evidence.evidence
     }
 
-    private static func metallicPercussion(_ output: inout [Float], measurement: inout [Float],
-                                           start: Int, sampleRate: Double,
-                                           level: Double, brightness: Double,
-                                           random: inout SeededGenerator) {
+    private static func metallicPercussion(
+        _ output: inout [Float],
+        measurement: inout [Float],
+        start: Int,
+        sampleRate: Double,
+        level: Double,
+        brightness: Double,
+        random: inout SeededGenerator,
+        articulation: UpperPercussionTailArticulation,
+        event: EnsembleResolvedEvent,
+        timingOffsetInSteps: Double
+    ) -> UpperPercussionTailRenderEvidence? {
         let frames = min(Int(sampleRate * 0.065), output.count - start)
-        guard frames > 0 else { return }
+        guard frames > 0 else { return nil }
+        var evidence = UpperPercussionTailEvidenceAccumulator(
+            articulation: articulation,
+            event: event,
+            timingOffsetInSteps: timingOffsetInSteps,
+            sampleRate: sampleRate,
+            renderedFrameCount: frames
+        )
         let partials = [1_730.0, 2_417.0, 3_101.0, 4_729.0, 6_083.0]
         var noiseState = 0.0
         for i in 0..<frames {
@@ -2566,19 +2657,44 @@ package enum VoiceRenderer {
                 return result + sin(2 * .pi * partial.element * detune * t + Double(partial.offset) * 0.7) / Double(partial.offset + 2)
             }
             let envelope = exp(-t * (38 - brightness * 10))
-            let renderedSample = Float(
+            let baseSample = Float(
                 (resonances * 0.72 + (noise - noiseState) * 0.16) * envelope * level
+            )
+            let renderedSample = UpperPercussionTailDSPContract.process(
+                sample: baseSample,
+                role: articulation.role,
+                frame: i,
+                renderedFrameCount: frames,
+                sampleRate: sampleRate
             )
             output[start + i] += renderedSample
             measurement[start + i] += renderedSample
+            evidence.append(frame: i, base: baseSample, rendered: renderedSample)
         }
+        return evidence.evidence
     }
 
-    private static func openHat(_ output: inout [Float], measurement: inout [Float],
-                                start: Int, sampleRate: Double, level: Double,
-                                brightness: Double, random: inout SeededGenerator) {
+    private static func openHat(
+        _ output: inout [Float],
+        measurement: inout [Float],
+        start: Int,
+        sampleRate: Double,
+        level: Double,
+        brightness: Double,
+        random: inout SeededGenerator,
+        articulation: UpperPercussionTailArticulation,
+        event: EnsembleResolvedEvent,
+        timingOffsetInSteps: Double
+    ) -> UpperPercussionTailRenderEvidence? {
         let frames = min(Int(sampleRate * 0.19), output.count - start)
-        guard frames > 0 else { return }
+        guard frames > 0 else { return nil }
+        var evidence = UpperPercussionTailEvidenceAccumulator(
+            articulation: articulation,
+            event: event,
+            timingOffsetInSteps: timingOffsetInSteps,
+            sampleRate: sampleRate,
+            renderedFrameCount: frames
+        )
         var filtered = 0.0
         for i in 0..<frames {
             let t = Double(i) / sampleRate
@@ -2587,12 +2703,21 @@ package enum VoiceRenderer {
             let metallic = sin(2.0 * Double.pi * (3_600 + brightness * 3_800) * t)
                 + sin(2.0 * Double.pi * (5_100 + brightness * 2_200) * t) * 0.42
             let envelope = min(1.0, t / 0.0015) * exp(-t * (18.0 - brightness * 4.0))
-            let renderedSample = Float(
+            let baseSample = Float(
                 (noise - filtered * 0.55 + metallic * 0.16) * envelope * level
+            )
+            let renderedSample = UpperPercussionTailDSPContract.process(
+                sample: baseSample,
+                role: articulation.role,
+                frame: i,
+                renderedFrameCount: frames,
+                sampleRate: sampleRate
             )
             output[start + i] += renderedSample
             measurement[start + i] += renderedSample
+            evidence.append(frame: i, base: baseSample, rendered: renderedSample)
         }
+        return evidence.evidence
     }
 
 }
