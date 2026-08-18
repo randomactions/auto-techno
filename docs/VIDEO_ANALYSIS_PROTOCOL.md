@@ -53,6 +53,30 @@ promotion verdict.
   Preserve completed historical studies in `history/TASTE_EXPERIMENTS.md`; do
   not turn that archive back into an active approval ledger.
 
+## Choose the causal engine shape
+
+For each source, choose the implementation shape that expresses the durable
+idea most directly. Reusing an existing score owner, voice, or effect is not a
+goal by itself, and neither is adding a novel mechanism.
+
+- Extend an existing mechanism when the source changes the behavior or
+  relationship of material the canonical score already owns and the existing
+  path can retain truthful score-to-PCM evidence.
+- Add a new internal track, instrument, synthesis primitive, or effect chain
+  when the source describes a genuinely missing role or signal process and the
+  new owner is the smallest way to make the intended consequence attributable.
+- Reject both reuse and novelty when they would encode workstation workflow,
+  add density without a musical responsibility, duplicate an existing owner,
+  or produce a parameter whose PCM and quality consequence cannot be measured.
+- Compare the plausible shapes in the source design record and state why the
+  selected one best fits the musical cause, bounds, continuation, fallback,
+  realtime contract, and automated quality deficit.
+
+While a video-improvement goal is active and the user has delegated design
+judgment, this choice belongs to the implementation loop. It does not require a
+separate per-video approval gate; deterministic qualification and exact-head
+validation remain mandatory before publication.
+
 ## Qualification boundary
 
 Videos, comments, view counts, creator authority, external measurements, and
