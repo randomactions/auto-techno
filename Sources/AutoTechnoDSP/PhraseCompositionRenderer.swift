@@ -124,6 +124,17 @@ package struct PolyphonicPadRenderEvidence: Equatable, Sendable {
     package let voiceCount: Int
     package let renderedFrameCount: Int
     package let requestedFrequencyRatios: [Double]
+    package let rhythmicModulationRelation: PadRhythmicModulationRelation
+    package let rhythmicModulationPhaseOffset: Int
+    package let rhythmicModulationPatternFingerprint: String
+    package let minimumFilterScale: Double
+    package let maximumFilterScale: Double
+    package let minimumSpatialSendScale: Double
+    package let maximumSpatialSendScale: Double
+    package let filterModulationDifferenceRMS: Double
+    package let spatialSendDifferenceRMS: Double
+    package let spatialSendSampleHash: String
+    package let spatialSendRMS: Double
     package let outputSampleHash: String
     package let outputRMS: Double
     package let outputPeak: Double
@@ -134,6 +145,17 @@ package struct PolyphonicPadRenderEvidence: Equatable, Sendable {
         voiceCount: 0,
         renderedFrameCount: 0,
         requestedFrequencyRatios: [],
+        rhythmicModulationRelation: .neutral,
+        rhythmicModulationPhaseOffset: 0,
+        rhythmicModulationPatternFingerprint: "",
+        minimumFilterScale: 1,
+        maximumFilterScale: 1,
+        minimumSpatialSendScale: 1,
+        maximumSpatialSendScale: 1,
+        filterModulationDifferenceRMS: 0,
+        spatialSendDifferenceRMS: 0,
+        spatialSendSampleHash: "",
+        spatialSendRMS: 0,
         outputSampleHash: "",
         outputRMS: 0,
         outputPeak: 0,
@@ -195,17 +217,49 @@ enum PolyphonicPadVoice {
             520 + automation.color * 2_800
         )
         let coefficient = min(0.36, 1 - exp(-2 * .pi * cutoff / sampleRate))
+        let modulation = voicing.rhythmicModulation
+        let patternFingerprint = PadRhythmicModulationFingerprint.make(modulation)
+        let filterScales = (0..<PadRhythmicModulation.stepCount).map {
+            modulation.filterScale(atStep: $0)
+        }
+        let spatialScales = (0..<PadRhythmicModulation.stepCount).map {
+            modulation.spatialSendScale(atStep: $0)
+        }
+        let minimumFilterScale = filterScales.min() ?? 1
+        let maximumFilterScale = filterScales.max() ?? 1
+        let minimumSpatialSendScale = spatialScales.min() ?? 1
+        let maximumSpatialSendScale = spatialScales.max() ?? 1
+        var neutralLowPass = state.lowPass
+        var filterDifferenceEnergy = 0.0
+        var spatialDifferenceEnergy = 0.0
+        var spatialEnergy = 0.0
+        var spatialFingerprint = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frames
+        )
         let detune = [0.9974, 1.0011, 0.9987, 1.0026]
         let pans = [-0.38, -0.12, 0.14, 0.40]
         var energy = 0.0
         var peak = 0.0
         var finite = rootFrequency.isFinite && level.isFinite
         for index in 0..<frames {
+            let localStep = min(
+                PadRhythmicModulation.stepCount - 1,
+                max(0, voicing.onsetStep + Int(Double(index) / stepFrames))
+            )
+            let filterScale = modulation.filterScale(atStep: localStep)
+            let spatialSendScale = modulation.spatialSendScale(atStep: localStep)
+            let appliedCoefficient = modulation.active
+                ? min(0.36, 1 - exp(
+                    -2 * .pi * cutoff * filterScale / sampleRate
+                ))
+                : coefficient
             let attack = min(1, Double(index + 1) / Double(attackFrames))
             let release = min(1, Double(frames - index) / Double(releaseFrames))
             let boundaryEnvelope = min(attack, release)
             var mixed = 0.0
             var spatial = 0.0
+            var neutralMixed = 0.0
+            var neutralSpatial = 0.0
             for voiceIndex in 0..<PadVoicing.voiceCount {
                 let frequency = min(
                     sampleRate * 0.18,
@@ -220,23 +274,53 @@ enum PolyphonicPadVoice {
                 let sine = sin(2 * .pi * phase)
                 let source = triangle * 0.52 + sine * 0.48
                 state.lowPass[voiceIndex] +=
-                    (source - state.lowPass[voiceIndex]) * coefficient
+                    (source - state.lowPass[voiceIndex]) * appliedCoefficient
+                if modulation.active {
+                    neutralLowPass[voiceIndex] +=
+                        (source - neutralLowPass[voiceIndex]) * coefficient
+                }
                 state.envelope[voiceIndex] +=
                     (boundaryEnvelope - state.envelope[voiceIndex]) * 0.006
                 let voice = state.lowPass[voiceIndex] * state.envelope[voiceIndex] *
                     (0.82 + automation.motion * 0.18)
                 mixed += voice * (0.25 - Double(voiceIndex) * 0.018)
                 spatial += voice * pans[voiceIndex]
+                if modulation.active {
+                    let neutralVoice = neutralLowPass[voiceIndex] *
+                        state.envelope[voiceIndex] *
+                        (0.82 + automation.motion * 0.18)
+                    neutralMixed += neutralVoice *
+                        (0.25 - Double(voiceIndex) * 0.018)
+                    neutralSpatial += neutralVoice * pans[voiceIndex]
+                }
             }
             let driven = tanh(mixed * (1.08 + automation.shape * 0.32))
             let sample = Float(driven * max(0, level))
+            if modulation.active {
+                let neutralDriven = tanh(
+                    neutralMixed * (1.08 + automation.shape * 0.32)
+                )
+                let difference = Double(sample) -
+                    Double(Float(neutralDriven * max(0, level)))
+                filterDifferenceEnergy += difference * difference
+            }
             let frame = start + index
             output[frame] += sample
             measurement[frame] += sample
-            spatialReverbSend[frame] += Float(
-                (mixed * 0.72 + spatial * 0.12) *
+            let neutralSpatialSend = (mixed * 0.72 + spatial * 0.12) *
+                min(0.48, 0.16 + automation.space * 0.32) * max(0, level)
+            let padSpatialSend = Float(neutralSpatialSend * spatialSendScale)
+            spatialReverbSend[frame] += padSpatialSend
+            spatialFingerprint.append(padSpatialSend)
+            let spatialValue = Double(padSpatialSend)
+            spatialEnergy += spatialValue * spatialValue
+            let neutralReferenceSend = modulation.active
+                ? (neutralMixed * 0.72 + neutralSpatial * 0.12) *
                     min(0.48, 0.16 + automation.space * 0.32) * max(0, level)
-            )
+                : neutralSpatialSend
+            let spatialDifference = spatialValue -
+                Double(Float(neutralReferenceSend))
+            spatialDifferenceEnergy += spatialDifference * spatialDifference
             let value = Double(sample)
             energy += value * value
             peak = max(peak, abs(value))
@@ -248,6 +332,21 @@ enum PolyphonicPadVoice {
             voiceCount: voicing.voices.count,
             renderedFrameCount: frames,
             requestedFrequencyRatios: voicing.voices.map(\.frequencyRatio),
+            rhythmicModulationRelation: modulation.relation,
+            rhythmicModulationPhaseOffset: modulation.phaseOffset,
+            rhythmicModulationPatternFingerprint: patternFingerprint,
+            minimumFilterScale: minimumFilterScale,
+            maximumFilterScale: maximumFilterScale,
+            minimumSpatialSendScale: minimumSpatialSendScale,
+            maximumSpatialSendScale: maximumSpatialSendScale,
+            filterModulationDifferenceRMS: sqrt(
+                filterDifferenceEnergy / Double(max(1, frames))
+            ),
+            spatialSendDifferenceRMS: sqrt(
+                spatialDifferenceEnergy / Double(max(1, frames))
+            ),
+            spatialSendSampleHash: spatialFingerprint.fingerprint,
+            spatialSendRMS: sqrt(spatialEnergy / Double(max(1, frames))),
             outputSampleHash: ExactPCMFingerprint.mono(measurement),
             outputRMS: sqrt(energy / Double(max(1, frames))),
             outputPeak: peak,
@@ -258,5 +357,17 @@ enum PolyphonicPadVoice {
     private static func wrap(_ phase: Double) -> Double {
         let result = phase.truncatingRemainder(dividingBy: 1)
         return result < 0 ? result + 1 : result
+    }
+}
+
+enum PadRhythmicModulationFingerprint {
+    static func make(_ modulation: PadRhythmicModulation) -> String {
+        var samples: [Float] = []
+        samples.reserveCapacity(PadRhythmicModulation.stepCount * 2)
+        for step in 0..<PadRhythmicModulation.stepCount {
+            samples.append(Float(modulation.filterScale(atStep: step)))
+            samples.append(Float(modulation.spatialSendScale(atStep: step)))
+        }
+        return ExactPCMFingerprint.mono(samples)
     }
 }

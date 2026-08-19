@@ -1303,3 +1303,97 @@ audit found only the allowed copy primitive, and the optimized `AutoTechno`
 product built. Publication and exact-head CI are recorded separately after
 completion. No listening, app/route smoke, latency or peak-memory measurement,
 hardware soak, or professional-quality promotion is claimed.
+
+## Source 24: rhythmic modulation of an existing pad — 2026-08-19
+
+Source ID `24` used YouTube video `ixwUbj01dtY`, *Create movement with rhythmic
+modulation*, from Underdog Electronic Music School, published 2022-09-19 with
+an 11:48 duration. The clean-room capture used unauthenticated yt-dlp
+`2026.07.04` for metadata, automatic English captions, and top-ranked comments:
+
+```sh
+/opt/homebrew/bin/yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source24-research.uZy2nQ -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=ixwUbj01dtY'
+```
+
+No manual subtitle track was available. Automatic `en` and `en-orig` VTTs
+were byte-identical with SHA-256
+`1f0818654121625b1ca3b6c026bf18653bc6f35b1d21e142aee42b6e9b89a773`.
+The metadata/comment artifact had SHA-256
+`12fd50da3ff04f59b89a92141ea490efe854e436e37f7321058d9700361c3812`.
+The capture returned exactly 50 top-ranked top-level comments and nine replies;
+one top-level item was a channel promotion, leaving 49 independent comments.
+Current YouTube media delivery returned HTTP 403 for the advertised audio
+formats even after the official temporary PO-token provider supplied a valid
+token, so this source has no audio-demo measurement. No cookies, signed-in
+session, account, or browser state was used. The provider was stopped and all
+captions, comments, token material, and research files remain untracked.
+
+The bounded caption paraphrase is: `0:00...1:12` starts from a static pad and
+argues for timbre motion that supports drum energy without adding notes;
+`1:12...2:28` introduces step-shaped parameter movement as a way to make one
+held sound rhythmic; `2:28...5:22` demonstrates a custom 16-step relation built
+from a repeating three-sixteenth cell and rejects an unsuitable distortion
+mapping by listening; `5:58...8:38` coordinates filter gating with a separately
+moving wet-effect amount to create ghosted rhythmic detail; and
+`8:38...10:38` treats modular routing as the means, not the musical requirement.
+No displayed depth, offset, cutoff, delay, mix, or distortion value is portable
+to the engine.
+
+The comment sample converged on static pads reducing energy and sixteenth-note
+gating or rhythmic modulation restoring movement, with several arrangement
+variations. It did not establish a numeric target or require a particular
+workstation device. The durable hypothesis is therefore score-owned parameter
+rhythm on an existing sustained role, not another pattern lane or plug-in
+emulation.
+
+Repository reconciliation explicitly considered both reuse and expansion.
+The canonical engine already owns a four-voice pad, minimal-motion harmonic
+continuation, a pad low-pass path, a spatial-reverb send, bar time, and complete
+phrase-composition evidence. A new pad instrument, sequencer, delay, FDN,
+automation lane, or effect chain would duplicate those owners. Source 24 instead
+adds one bounded `PadRhythmicModulation` value to the existing `PadVoicing`.
+Naturally resolved major-break pads use the three-step relation only from macro
+positions 8 through 14, so the latter half of the break gradually regains
+rhythmic energy; minimalized and structural-marker gestures remain neutral.
+Absolute bar modulo three owns phase, preserving the cell across phrase splits.
+
+The detached renderer applies the relation only to the pad's existing low-pass
+cutoff and existing spatial-reverb send. The v1 engineering scales are
+`0.38 / 1.00 / 0.62` for filter movement and `0.72 / 0.85 / 1.28` for the send;
+literal `1.0` remains bit-identical to the prior path. No note, pitch, chord,
+gate, voice count, instrument, onset, transport, random draw, effect topology,
+continuation buffer, callback work, or UI control is added.
+
+Same-pass evidence binds the relation, absolute phase, exact 16-step pattern,
+applied filter/send extrema, pad and send hashes/RMS, and streamed
+active-versus-neutral difference RMS. Candidate validation replays the musical
+context and rejects wrong section, gesture, macro position, phase, pattern,
+flat consequence, nonfinite data, or render-pass mismatch. Professional
+observation retains active-bar ratio plus mean filter-difference-to-pad and
+spatial-difference-to-send levels in dB;
+a dedicated non-compensable adversarial case rejects a disconnected filter
+consequence.
+
+The durable intention and replacement boundary are recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). The discrete
+v1 projection is provisional. A later serious renderer may replace it with a
+smoothed control-rate envelope, higher-order or nonlinear filter movement,
+tempo-safe modulated diffusion, multiband send shaping, or a richer score-owned
+modulation graph only after calibrated movement, masking, transition, or
+artifact evidence exposes a repeatable deficit. The replacement must preserve
+the existing pad owner, absolute-time phase, exact neutral path, deterministic
+evidence, and one primary decision; it must replace rather than coexist with a
+second modulation lane.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3. The complete
+process-isolated workflow matrix passed 354/354 test executions, including the
+five-rate active/neutral pad path, real prepared evidence, primary artifacts,
+adversarial qualification, disjoint holdout, atomic commit, cancellation and
+correction, Core/evidence, preparation preflight, and protected routing. A
+post-review rebuild of the exact artifact/legacy group passed 13/13 after its
+legacy-identity mutations were updated to the current schemas. The realtime
+producer undefined-symbol audit found only the permitted copy primitive in both
+local debug and release objects, and the optimized `AutoTechno` product built in
+79.44 seconds. Publication and exact-head CI remain separate gates. No listening,
+app/route/interruption QA, latency or peak-memory measurement, hardware-output
+soak, or claim that the inaccessible source demonstration was heard is made.

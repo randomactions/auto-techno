@@ -1442,6 +1442,57 @@ only the allowed copy primitive, the optimized `AutoTechno` product built, and
 This snapshot proves deterministic score/DSP/evidence behavior and offline
 artifact qualification for quality-contract schema 25, candidate-vector schema
 23, canonical engine v24, Professional Evidence v9, and primary evaluator v6.
-Publication and exact-head remote CI remain separate gates. Listening
+The implementation was published at `7be05e02a1e7f2a4c0a5801370c9a3703ca9eb8f`;
+the CI-only process-timeout correction was published at exact head
+`e867be1a583886f4e87c5aa778d3083ad2f0e781`. GitHub Actions run
+`32272747671` passed every process-isolated test and the release build in
+1h52m57s. Listening observation, app/route and interruption QA,
+latency/peak-memory measurement, and physical-output soak were not performed
+and are not implied.
+
+## Source 24 pad rhythmic modulation — 2026-08-19
+
+Source 24 extends the existing four-voice pad with one score-owned
+three-sixteenth rhythmic-modulation relation. Naturally resolved latter-half
+major-break pads reuse their existing low-pass and spatial-reverb send; early,
+minimalized, structural-marker, identity, and ineligible bars remain exact
+neutral. Absolute bar time owns phase, so the cell does not restart when a
+phrase is split. The slice adds no note, track, instrument, effect return,
+continuation buffer, callback work, or user control.
+
+Candidate evidence retains the exact relation, phase and 16-step pattern,
+applied filter/send extrema, pad and send hashes/RMS, same-pass
+active-versus-neutral difference RMS, score binding, finiteness, and render-pass
+agreement. Professional Evidence v10 adds activity plus level-relative
+filter-difference-to-pad and spatial-difference-to-send metrics in dB. Its
+disconnected-filter adversarial case is non-compensable.
+
+Release-mode artifact generation reused 32 cached complete journeys, accepted
+392/392 development observations from 28 journeys, rejected all 27 adversarial
+cases for their exact expected reasons, and accepted 56/56 observations from
+four disjoint holdout journeys with zero relationship failures. The shipping v7
+identities are:
+
+- profile: `fba981b1743f1ec4`, JSON SHA-256
+  `8030f1e7960ef33775a976f536ffcb7aa7842f774d2ec40655b4e96c44be32ee`;
+- adversarial suite: `2876d8a016965bd0`, JSON SHA-256
+  `165e9d98e98345b973474f40a16158fd804672ffc45808713b7d51139a0eaf01`;
+- holdout qualification: `62e93183f2f604ee`, JSON SHA-256
+  `246f1141aa27b4f6182bf62b076d60226249f2cb1144d8af275bbef1e8f4cef6`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated
+module caches and serial process boundaries. The complete workflow-equivalent
+matrix passed 354/354 test executions across 31 processes. It covers natural
+score reachability, exact neutral identity, 8/44.1/48/96/192 kHz PCM,
+prepared-candidate binding and tamper rejection, the regenerated primary
+artifacts, adversarial qualification, disjoint holdout, atomic commit,
+representative-rate and cancellation/correction paths, Core/evidence,
+preflight, and protected routing. After static review tightened the legacy-JSON
+identity test, the rebuilt exact-artifact group passed 13/13 again. Both local
+debug and release realtime-producer objects expose only the allowed copy
+primitive, the optimized `AutoTechno` product built in 79.44 seconds, and
+`git diff --check` remained clean.
+
+Publication and exact-head remote CI remain separate pending gates. Listening
 observation, app/route and interruption QA, latency/peak-memory measurement,
-and physical-output soak were not performed and are not implied.
+and physical-output soak have not been performed and are not implied.

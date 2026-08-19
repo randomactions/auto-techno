@@ -23,6 +23,8 @@ package enum ProfessionalQualityAdversarialScenario: String, CaseIterable,
         "upper-spectral-reveal-runaway"
     case percussionAnticipationSwellFlattened =
         "percussion-anticipation-swell-flattened"
+    case padRhythmicModulationDisconnected =
+        "pad-rhythmic-modulation-disconnected"
     case forgedPreTerminalScaling = "forged-pre-terminal-scaling"
     case forgedPostTerminalScaling = "forged-post-terminal-scaling"
     case masterBoostAboveUnity = "master-boost-above-unity"
@@ -420,9 +422,9 @@ package struct ProfessionalQualityLiveCandidateChain: Equatable, Sendable {
 /// evidence. Every scenario must be rejected independently.
 package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 7
+    package static let schemaVersion = 8
     package static let suiteVersion =
-        "autotechno-professional-quality-adversarial.v7"
+        "autotechno-professional-quality-adversarial.v8"
 
     package let schemaVersion: Int
     package let suiteVersion: String
@@ -753,6 +755,26 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                     abs(anticipationBounds.upper - anticipationBounds.lower) *
                         0.1
                 )
+            ),
+            expected: [.metricOutOfRange]
+        )
+        let majorBreakBaseline = try Self.baseline(
+            checkpoint: .majorBreak,
+            observations: sourceObservations
+        )
+        guard let padRhythmBounds = profile[.majorBreak]?[
+            .padRhythmicFilterDifferenceToPadDBMean
+        ], padRhythmBounds.lower > -120 else {
+            throw ProfessionalQualityCalibrationError.invalidMetricSet
+        }
+        append(
+            .padRhythmicModulationDisconnected,
+            observation: try majorBreakBaseline.replacing(
+                .padRhythmicFilterDifferenceToPadDBMean,
+                with: max(-120, padRhythmBounds.lower - max(
+                    1,
+                    abs(padRhythmBounds.upper - padRhythmBounds.lower) * 0.1
+                ))
             ),
             expected: [.metricOutOfRange]
         )

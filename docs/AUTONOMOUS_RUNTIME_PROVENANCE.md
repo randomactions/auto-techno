@@ -27,9 +27,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 25, candidate-
-   vector schema 23, candidate-transaction schema 4, and canonical engine
-   identity `autotechno-canonical-engine.v24`. Each
+   primary-evaluation transaction under quality-contract schema 26, candidate-
+   vector schema 24, candidate-transaction schema 4, and canonical engine
+   identity `autotechno-canonical-engine.v25`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -39,7 +39,7 @@ mistaken for a completed feedback system.
    return-drive,
    score-bound spatial-FDN,
    phrase-local slice source/output PCM, arpeggiator geometry, polyphonic pad
-   PCM, and voice-leading movement,
+   PCM, pad rhythmic-modulation consequence, and voice-leading movement,
    score-owned upper-role timing—including a bounded foreground lead-performance
    relation—graph, and pre/post upper-timbre evidence.
    Instrument records bind each resolved architecture, patch, use, automation,
@@ -118,16 +118,16 @@ mistaken for a completed feedback system.
    windows with zero-padded radix-two FFT geometry, actual spectral
    centroid/bandwidth/flatness/rolloff, positive flux,
    RMS trajectory, active-window counts, and bounded working-memory provenance.
-   A deterministic Professional Evidence v9
+   A deterministic Professional Evidence v10
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
    observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v24 profile v6 `e5dd5c31a2f52e0c`, adversarial suite
-   `3bcabc8fb4118913`, and disjoint holdout qualification `4eae3a36734c295b`.
+   engine-v25 profile v7, adversarial suite v8, and disjoint holdout
+   qualification v6.
    The profile derives from 28 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
    relationships. Its evaluator maps the Core-owned plan checkpoint into the
-   same 53-metric observation and rejects dimensions independently. The eight
+   same 56-metric observation and rejects dimensions independently. The eight
    modal dimensions cover active-bar ratio, event density, pitch error,
    attack/body and tail/body relationships, spectral centroid, masking, and
    maximum pole radius.
@@ -346,7 +346,7 @@ return behavior.
 Each full bar emits same-pass bar/BPM/delay/render geometry, score and drive
 eligibility, bounded source and applied amount, current-send RMS, exact pre/post
 sample hashes, pre/post peak, RMS, and low-band RMS, difference RMS, and finite
-status. Candidate-vector schema 23 binds these observations to the score bar,
+status. Candidate-vector schema 24 binds these observations to the score bar,
 phrase kind, route rate, and matching instrument effect access. Neutral drive
 requires exact pre/post identity and zero difference. Active drive remains
 outside feedback, binds exact changed-frame and peak witnesses, and permits only
@@ -354,6 +354,25 @@ the transfer's bounded low-level lift up to `3.2x` RMS. The implementation is
 present, and its exact-source local structural, signal, protected-routing, and
 release-build matrix passed. This evidence remains one non-compensable input; it
 does not alone establish professional quality.
+
+## Implemented pad rhythmic-modulation slice
+
+The canonical phrase-composition resolver now retains one bounded rhythmic
+modulation value on an existing `PadVoicing`. It is active only on naturally
+resolved latter-half major-break pads, with absolute bar modulo three owning the
+cell phase. The renderer reuses the pad's existing low-pass and spatial-reverb
+send; it creates no note source, clock, instrument, effect return, continuation
+buffer, or callback state. Literal neutral retains the previous operation order
+and PCM exactly.
+
+Every prepared bar reduces relation, phase, exact pattern identity, applied
+filter/send extrema, pad and send hashes/RMS, and streamed same-pass difference
+RMS into the existing phrase-composition evidence. Professional observation
+retains active-bar ratio plus filter and spatial difference means. Context,
+phase, pattern, finite/bounded signal, and active-consequence checks are
+non-compensable. This v1 scale projection is replaceable DSP; the score-owned
+held-sound rhythmic intention, absolute phase, neutral path, and evidence remain
+the durable boundary.
 
 ## Implemented upper-role timing slice
 
@@ -368,7 +387,7 @@ Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
 requested gate end, and renderer-applied gate end. Separate anchor, shadow, and
 response dry taps retain finite role-local hash, peak, and RMS evidence. Current
-candidate-vector schema 23 reduces those tuples into exact score/render and
+candidate-vector schema 24 reduces those tuples into exact score/render and
 renderer-applied-gate fingerprints, relation-specific offset facts, protected-
 role neutrality, cascade-aperture or lead-pattern replay, and route-derived
 frame geometry. The calibrated evaluator judges this evidence as part of the

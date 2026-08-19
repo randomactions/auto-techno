@@ -96,6 +96,326 @@ struct PhraseCompositionTests {
         #expect(evidence.finite && output.allSatisfy { $0.isFinite })
     }
 
+    @Test("A held pad acquires one score-owned three-step timbre rhythm")
+    func rhythmicPadScoreOwnership() throws {
+        let scene = fixtureScene()
+        let dna = SceneDNA(scene: scene)
+        let bars = (8...10).map { bar in
+            fixtureResolved(
+                bar: bar,
+                section: .breakdown,
+                character: .ambientDrift,
+                roles: [.foundation, .atmosphere],
+                events: [
+                    EnsembleResolvedEvent(
+                        voice: .atmosphere, step: 0,
+                        intensity: 0.55, relocated: false
+                    ),
+                    EnsembleResolvedEvent(
+                        voice: .kick, step: 0,
+                        intensity: 1, relocated: false
+                    ),
+                ],
+                arrangementGesture: .steady,
+                interlockChapter: .breath
+            )
+        }
+        let composition = PhraseCompositionResolver.resolve(
+            scene: scene,
+            dna: dna,
+            kind: .majorBreak,
+            resolvedBars: bars
+        )
+        let modulations = try composition.map {
+            try #require($0.padVoicing).rhythmicModulation
+        }
+
+        #expect(modulations.map(\.relation) == [
+            .threeStepPulse, .threeStepPulse, .threeStepPulse,
+        ])
+        #expect(modulations.map(\.phaseOffset) == [2, 0, 1])
+        #expect(modulations[0].filterScale(atStep: 0) == 0.62)
+        #expect(modulations[0].filterScale(atStep: 1) == 0.38)
+        #expect(modulations[0].filterScale(atStep: 2) == 1)
+        #expect(modulations[0].spatialSendScale(atStep: 0) == 1.28)
+
+        let first = PhraseCompositionResolver.resolve(
+            scene: scene, dna: dna, kind: .majorBreak,
+            resolvedBars: Array(bars.prefix(2))
+        )
+        let continuation = HarmonicContinuationState(
+            voices: try #require(first.last?.padVoicing).voices
+        )
+        let split = PhraseCompositionResolver.resolve(
+            scene: scene, dna: dna, kind: .majorBreak,
+            resolvedBars: [bars[2]], harmonicContinuation: continuation
+        )
+        #expect(split.first?.padVoicing == composition[2].padVoicing)
+
+        let minimal = fixtureResolved(
+            bar: 8, section: .breakdown, character: .ambientDrift,
+            roles: [.foundation, .atmosphere], events: bars[0].ensemble.events,
+            arrangementGesture: .minimalize, interlockChapter: .breath
+        )
+        let early = fixtureResolved(
+            bar: 4, section: .breakdown, character: .ambientDrift,
+            roles: [.foundation, .atmosphere], events: bars[0].ensemble.events,
+            arrangementGesture: .steady, interlockChapter: .breath
+        )
+        for neutralBar in [minimal, early] {
+            let neutral = PhraseCompositionResolver.resolve(
+                scene: scene, dna: dna, kind: .majorBreak,
+                resolvedBars: [neutralBar]
+            )
+            #expect(neutral.first?.padVoicing?.rhythmicModulation == .neutral)
+        }
+    }
+
+    @Test("Pad rhythmic motion changes only existing pad filter and spatial send")
+    func rhythmicPadPCMAndNeutralIdentity() {
+        let voices = [0, 3, 7, 10].map {
+            PadVoice(modalDegree: $0, semitone: $0)
+        }
+        let neutral = PadVoicing(
+            function: .tonic, onsetStep: 0, durationInSteps: 16,
+            voices: voices, previousVoices: voices,
+            instrument: InstrumentPalette.safeUpper(role: .atmosphere)
+        )
+        let active = PadVoicing(
+            function: neutral.function,
+            onsetStep: neutral.onsetStep,
+            durationInSteps: neutral.durationInSteps,
+            voices: neutral.voices,
+            previousVoices: neutral.voices,
+            instrument: neutral.instrument,
+            rhythmicModulation: PadRhythmicModulation(
+                relation: .threeStepPulse,
+                phaseOffset: 1
+            )
+        )
+
+        for sampleRate in [8_000.0, 44_100, 48_000, 96_000, 192_000] {
+            let frameCount = Int((
+                240 / AutonomousSessionDirector.bpm * sampleRate
+            ).rounded())
+            func render(_ voicing: PadVoicing) -> (
+                [Float], [Float], PolyphonicPadState,
+                PolyphonicPadRenderEvidence
+            ) {
+                var output = [Float](repeating: 0, count: frameCount)
+                var measurement = output
+                var send = output
+                var state = PolyphonicPadState()
+                let evidence = PolyphonicPadVoice.render(
+                    &output,
+                    measurement: &measurement,
+                    spatialReverbSend: &send,
+                    voicing: voicing,
+                    rootFrequency: 65.41,
+                    sampleRate: sampleRate,
+                    stepFrames: Double(frameCount) / 16,
+                    level: 0.04,
+                    state: &state
+                )
+                return (output, send, state, evidence)
+            }
+
+            let baseline = render(neutral)
+            let explicitNeutral = render(PadVoicing(
+                function: neutral.function,
+                onsetStep: neutral.onsetStep,
+                durationInSteps: neutral.durationInSteps,
+                voices: neutral.voices,
+                previousVoices: neutral.voices,
+                instrument: neutral.instrument,
+                rhythmicModulation: .neutral
+            ))
+            let modulated = render(active)
+
+            #expect(baseline.0 == explicitNeutral.0)
+            #expect(baseline.1 == explicitNeutral.1)
+            #expect(baseline.2 == explicitNeutral.2)
+            #expect(baseline.3 == explicitNeutral.3)
+            #expect(baseline.3.rhythmicModulationRelation == .neutral)
+            #expect(baseline.3.filterModulationDifferenceRMS == 0)
+            #expect(baseline.3.spatialSendDifferenceRMS == 0)
+
+            #expect(modulated.0 != baseline.0)
+            #expect(modulated.1 != baseline.1)
+            #expect(modulated.3.renderedFrameCount == frameCount)
+            #expect(modulated.3.rhythmicModulationRelation == .threeStepPulse)
+            #expect(modulated.3.rhythmicModulationPhaseOffset == 1)
+            #expect(modulated.3.minimumFilterScale == 0.38)
+            #expect(modulated.3.maximumFilterScale == 1)
+            #expect(modulated.3.minimumSpatialSendScale == 0.72)
+            #expect(modulated.3.maximumSpatialSendScale == 1.28)
+            #expect(modulated.3.filterModulationDifferenceRMS > 0)
+            #expect(modulated.3.spatialSendDifferenceRMS > 0)
+            #expect(modulated.3.spatialSendRMS > 0)
+            #expect(modulated.3.outputSampleHash != baseline.3.outputSampleHash)
+            #expect(modulated.3.spatialSendSampleHash !=
+                    baseline.3.spatialSendSampleHash)
+            #expect(modulated.3.finite)
+            #expect(modulated.0.allSatisfy { $0.isFinite })
+            #expect(modulated.1.allSatisfy { $0.isFinite })
+        }
+    }
+
+    @MainActor
+    @Test("Prepared evidence binds the score-owned pad rhythm to its PCM")
+    func rhythmicPadCandidateEvidence() throws {
+        try verifyRhythmicPadCandidateEvidence()
+    }
+
+    @inline(never)
+    private func verifyRhythmicPadCandidateEvidence() throws {
+        let director = AutonomousSessionDirector()
+        var state = director.initialState()
+
+        for _ in 0..<128 {
+            let plan = director.plan(from: state)
+            let activeIndexes = plan.phraseComposition.indices.filter {
+                plan.phraseComposition[$0].padVoicing?
+                    .rhythmicModulation.active == true
+            }
+            guard !activeIndexes.isEmpty else {
+                state.advancePlanning(using: plan)
+                continue
+            }
+
+            var renderState = RenderState()
+            renderState.barIndex = state.memory.totalBars
+            let prepared = AutonomousPhrasePreparer.prepare(
+                plan: plan,
+                sessionSeed: state.rootSeed,
+                memory: state.memory,
+                sampleRate: 8_000,
+                incomingRenderState: renderState,
+                incomingGraphState: GeneratedDSPContinuationState(),
+                previousGraph: nil,
+                incomingQualityState: state.quality,
+                evaluator: AcceptingPrimaryTestEvaluator()
+            )
+            let vector = prepared.selectedCandidateEvidence
+            #expect(prepared.candidateEvaluation.isComplete)
+            #expect(vector.isComplete)
+            #expect(vector.phraseComposition.count == plan.barCount)
+
+            for index in activeIndexes {
+                let score = try #require(
+                    plan.phraseComposition[index].padVoicing
+                ).rhythmicModulation
+                let record = vector.phraseComposition[index]
+                #expect(record.bar == plan.resolvedBars[index].performance.bar)
+                #expect(record.section == SectionKind.breakdown.rawValue)
+                #expect(record.padRhythmicModulationRelation ==
+                        PadRhythmicModulationRelation.threeStepPulse.rawValue)
+                #expect(record.padRhythmicModulationPhaseOffset ==
+                        score.phaseOffset)
+                #expect(record.padRhythmicModulationPatternFingerprint ==
+                        PadRhythmicModulationFingerprint.make(score))
+                #expect(record.padFilterModulationDifferenceRMS > 0)
+                #expect(record.padSpatialSendDifferenceRMS > 0)
+                #expect(record.padSpatialSendRMS > 0)
+                #expect(record.bindingValid && record.finite)
+                #expect(record.isComplete(phraseKind: plan.kind.rawValue))
+            }
+
+            let activeRecords = activeIndexes.map {
+                vector.phraseComposition[$0]
+            }
+            let observation = try ProfessionalQualityObservation(
+                candidate: vector,
+                engineVersion: QualityQualificationContract.engineVersion,
+                checkpoint: .majorBreak
+            )
+            #expect(observation[.padRhythmicModulationActiveBarRatio] ==
+                    Double(activeRecords.count) / Double(plan.barCount))
+            func decibels(_ numerator: Double, _ denominator: Double) -> Double {
+                min(120, max(-120,
+                    20 * (log10(numerator) - log10(denominator))
+                ))
+            }
+            #expect(observation[.padRhythmicFilterDifferenceToPadDBMean] ==
+                    activeRecords.map {
+                        decibels(
+                            $0.padFilterModulationDifferenceRMS,
+                            $0.padRMS
+                        )
+                    }.reduce(0, +) / Double(activeRecords.count))
+            #expect(observation[.padRhythmicSpatialDifferenceToSendDBMean] ==
+                    activeRecords.map {
+                        decibels(
+                            $0.padSpatialSendDifferenceRMS,
+                            $0.padSpatialSendRMS
+                        )
+                    }.reduce(0, +) / Double(activeRecords.count))
+
+            let record = vector.phraseComposition[try #require(activeIndexes.first)]
+            let encoded = try JSONEncoder().encode(record)
+            let json = try #require(
+                JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+            )
+            let keys = Set(json.keys)
+            #expect(keys.isSuperset(of: [
+                "section", "arrangementGesture",
+                "padRhythmicModulationRelation",
+                "padRhythmicModulationPhaseOffset",
+                "padRhythmicModulationPatternFingerprint",
+                "padFilterModulationDifferenceRMS",
+                "padSpatialSendDifferenceRMS",
+                "padSpatialSendSampleHash", "padSpatialSendRMS",
+            ]))
+
+            func forged(_ key: String, _ value: Any) throws
+                    -> AutonomousPhraseCompositionBarEvidence {
+                var changed = json
+                changed[key] = value
+                return try JSONDecoder().decode(
+                    AutonomousPhraseCompositionBarEvidence.self,
+                    from: JSONSerialization.data(withJSONObject: changed)
+                )
+            }
+            func forged(_ updates: [String: Any]) throws
+                    -> AutonomousPhraseCompositionBarEvidence {
+                var changed = json
+                for (key, value) in updates { changed[key] = value }
+                return try JSONDecoder().decode(
+                    AutonomousPhraseCompositionBarEvidence.self,
+                    from: JSONSerialization.data(withJSONObject: changed)
+                )
+            }
+            let wrongPhase = (record.padRhythmicModulationPhaseOffset + 1) %
+                PadRhythmicModulation.cellLength
+            let wrongPhaseModulation = PadRhythmicModulation(
+                relation: .threeStepPulse,
+                phaseOffset: wrongPhase
+            )
+            let tampered = try [
+                forged("section", SectionKind.groove.rawValue),
+                forged("arrangementGesture",
+                       ArrangementGesture.minimalize.rawValue),
+                forged("padRhythmicModulationPhaseOffset", 3),
+                forged([
+                    "padRhythmicModulationPhaseOffset": wrongPhase,
+                    "padRhythmicModulationPatternFingerprint":
+                        PadRhythmicModulationFingerprint.make(
+                            wrongPhaseModulation
+                        ),
+                ]),
+                forged("padRhythmicModulationPatternFingerprint",
+                       "0000000000000000"),
+                forged("padFilterModulationDifferenceRMS", 0),
+                forged("padSpatialSendDifferenceRMS", 0),
+            ]
+            #expect(tampered.allSatisfy {
+                !$0.isComplete(phraseKind: plan.kind.rawValue)
+            })
+            return
+        }
+        Issue.record("Expected a naturally reachable rhythmic pad phrase")
+    }
+
     @Test("Arpeggiation and pad harmony share modal pitches and minimal motion")
     func harmonicComposition() throws {
         let scene = fixtureScene()
@@ -251,6 +571,7 @@ struct PhraseCompositionTests {
         var sliceBars = 0
         var arpeggiatorBars = 0
         var padBars = 0
+        var rhythmicallyModulatedPadBars = 0
         var breakBars = 0
         var breakPercussionBars = 0
         var breakSourceBars = 0
@@ -269,7 +590,12 @@ struct PhraseCompositionTests {
             for composition in plan.phraseComposition {
                 if composition.audioSlice != nil { sliceBars += 1 }
                 if composition.arpeggiator != nil { arpeggiatorBars += 1 }
-                if composition.padVoicing != nil { padBars += 1 }
+                if let pad = composition.padVoicing {
+                    padBars += 1
+                    if pad.rhythmicModulation.active {
+                        rhythmicallyModulatedPadBars += 1
+                    }
+                }
                 if let arpeggiator = composition.arpeggiator,
                    let pad = composition.padVoicing {
                     let padPitchClasses = Set(pad.voices.map {
@@ -288,6 +614,7 @@ struct PhraseCompositionTests {
         #expect(sliceBars > 0, "breaks=\(breakBars), percussion=\(breakPercussionBars), sources=\(breakSourceBars)")
         #expect(arpeggiatorBars > 0)
         #expect(padBars > 0)
+        #expect(rhythmicallyModulatedPadBars > 0)
     }
 
     @Test("Broken major breaks resample their exact rendered percussion source")
@@ -388,7 +715,9 @@ struct PhraseCompositionTests {
         section: SectionKind,
         character: PerformanceCharacter,
         roles: [PerformanceRole],
-        events: [EnsembleResolvedEvent]
+        events: [EnsembleResolvedEvent],
+        arrangementGesture: ArrangementGesture = .minimalize,
+        interlockChapter: InterlockChapter = .breath
     ) -> ResolvedPerformanceBar {
         let performance = PerformanceBar(
             bar: bar,
@@ -411,13 +740,13 @@ struct PhraseCompositionTests {
                 kickAnchors: [],
                 intentionalPileup: false
             ),
-            arrangementGesture: .minimalize,
+            arrangementGesture: arrangementGesture,
             percussionGear: .contrast,
             performanceCharacter: character,
             foundationBehavior: .absent,
             foundationCompanion: .empty,
             pulseEchoEnabled: false,
-            interlockChapter: .breath,
+            interlockChapter: interlockChapter,
             spatialContrast: .foreground,
             narrative: NarrativeArticulation(
                 presenceStart: 0.62,

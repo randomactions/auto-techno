@@ -107,6 +107,62 @@ package enum PadHarmonicFunction: String, CaseIterable, Sendable {
     case returnPull
 }
 
+/// Bar-resolved rhythmic motion for one already-sustained pad. The relation is
+/// semantic score data rather than a renderer-local LFO: absolute-bar phase
+/// continues the three-sixteenth cell across phrase boundaries, while neutral
+/// bars execute the legacy pad path exactly.
+package enum PadRhythmicModulationRelation: String, CaseIterable, Sendable {
+    case neutral
+    case threeStepPulse = "three-step-pulse"
+}
+
+package struct PadRhythmicModulation: Equatable, Sendable {
+    package static let cellLength = 3
+    package static let stepCount = 16
+
+    package let relation: PadRhythmicModulationRelation
+    package let phaseOffset: Int
+
+    package init(
+        relation: PadRhythmicModulationRelation,
+        phaseOffset: Int = 0
+    ) {
+        self.relation = relation
+        self.phaseOffset = relation == .neutral
+            ? 0 : min(Self.cellLength - 1, max(0, phaseOffset))
+    }
+
+    package static let neutral = PadRhythmicModulation(relation: .neutral)
+
+    package var active: Bool { relation != .neutral }
+
+    /// A deliberately asymmetric three-step cell. The filter opening supplies
+    /// the audible rhythmic articulation while the later spatial-send lift
+    /// creates a bounded response from the existing spatial return.
+    package func filterScale(atStep step: Int) -> Double {
+        guard active else { return 1 }
+        switch cellIndex(atStep: step) {
+        case 0: return 0.38
+        case 1: return 1
+        default: return 0.62
+        }
+    }
+
+    package func spatialSendScale(atStep step: Int) -> Double {
+        guard active else { return 1 }
+        switch cellIndex(atStep: step) {
+        case 0: return 0.72
+        case 1: return 0.85
+        default: return 1.28
+        }
+    }
+
+    private func cellIndex(atStep step: Int) -> Int {
+        let boundedStep = min(Self.stepCount - 1, max(0, step))
+        return (boundedStep + phaseOffset) % Self.cellLength
+    }
+}
+
 package struct PadVoice: Equatable, Sendable {
     package let modalDegree: Int
     package let semitone: Int
@@ -134,11 +190,13 @@ package struct PadVoicing: Equatable, Sendable {
     package let maximumLeapInSemitones: Int
     package let contraryOuterMotion: Bool
     package let instrument: InstrumentAssignment
+    package let rhythmicModulation: PadRhythmicModulation
 
     package init(function: PadHarmonicFunction, onsetStep: Int,
                  durationInSteps: Double, voices: [PadVoice],
                  previousVoices: [PadVoice],
-                 instrument: InstrumentAssignment) {
+                 instrument: InstrumentAssignment,
+                 rhythmicModulation: PadRhythmicModulation = .neutral) {
         self.function = function
         self.onsetStep = min(15, max(0, onsetStep))
         self.durationInSteps = min(
@@ -166,6 +224,7 @@ package struct PadVoicing: Equatable, Sendable {
         }
         self.instrument = instrument.isValid
             ? instrument : InstrumentPalette.safeUpper(role: .atmosphere)
+        self.rhythmicModulation = rhythmicModulation
     }
 }
 
@@ -430,7 +489,33 @@ package enum PhraseCompositionResolver {
             previousVoices: previousVoices,
             instrument: assignment.patch.architecture == .tonalMotion
                 ? assignment
-                : InstrumentPalette.safeUpper(role: .atmosphere)
+                : InstrumentPalette.safeUpper(role: .atmosphere),
+            rhythmicModulation: padRhythmicModulation(
+                kind: kind,
+                resolved: resolved
+            )
+        )
+    }
+
+    private static func padRhythmicModulation(
+        kind: AutonomousPhraseKind,
+        resolved: ResolvedPerformanceBar
+    ) -> PadRhythmicModulation {
+        let absoluteBar = resolved.performance.bar
+        let macroPosition = positiveModulo(absoluteBar, 16)
+        let supportsRhythmicInfrastructure =
+            kind == .majorBreak &&
+            resolved.performance.section == .breakdown &&
+            (8...14).contains(macroPosition) &&
+            resolved.arrangementGesture != .minimalize &&
+            resolved.arrangementGesture != .structuralMarker
+        guard supportsRhythmicInfrastructure else { return .neutral }
+        let remainder = absoluteBar % PadRhythmicModulation.cellLength
+        let phase = remainder >= 0
+            ? remainder : remainder + PadRhythmicModulation.cellLength
+        return PadRhythmicModulation(
+            relation: .threeStepPulse,
+            phaseOffset: phase
         )
     }
 

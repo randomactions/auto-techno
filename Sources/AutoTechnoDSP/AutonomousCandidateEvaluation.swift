@@ -2987,6 +2987,8 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
 package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         Sendable {
     package let bar: Int
+    package let section: String
+    package let arrangementGesture: String
     package let sliceActive: Bool
     package let sliceTriggerCount: Int
     package let sliceReverseTriggerCount: Int
@@ -3007,6 +3009,17 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
     package let padCommonToneCount: Int
     package let padTotalMovement: Int
     package let padMaximumLeap: Int
+    package let padRhythmicModulationRelation: String
+    package let padRhythmicModulationPhaseOffset: Int
+    package let padRhythmicModulationPatternFingerprint: String
+    package let padMinimumFilterScale: Double
+    package let padMaximumFilterScale: Double
+    package let padMinimumSpatialSendScale: Double
+    package let padMaximumSpatialSendScale: Double
+    package let padFilterModulationDifferenceRMS: Double
+    package let padSpatialSendDifferenceRMS: Double
+    package let padSpatialSendSampleHash: String
+    package let padSpatialSendRMS: Double
     package let padSampleHash: String
     package let padRMS: Double
     package let padPeak: Double
@@ -3021,6 +3034,8 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         let pad = composition.padVoicing
         let padRender = block.polyphonicPadRenderEvidence
         bar = block.bar
+        section = block.resolvedPerformance.performance.section.rawValue
+        arrangementGesture = block.resolvedPerformance.arrangementGesture.rawValue
         sliceActive = slice.active
         sliceTriggerCount = slice.triggerCount
         sliceReverseTriggerCount = slice.reverseTriggerCount
@@ -3041,6 +3056,21 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         padCommonToneCount = pad?.commonToneCount ?? 0
         padTotalMovement = pad?.totalMovementInSemitones ?? 0
         padMaximumLeap = pad?.maximumLeapInSemitones ?? 0
+        padRhythmicModulationRelation = padRender.active
+            ? padRender.rhythmicModulationRelation.rawValue : ""
+        padRhythmicModulationPhaseOffset = padRender.active
+            ? padRender.rhythmicModulationPhaseOffset : 0
+        padRhythmicModulationPatternFingerprint = padRender.active
+            ? padRender.rhythmicModulationPatternFingerprint : ""
+        padMinimumFilterScale = padRender.minimumFilterScale
+        padMaximumFilterScale = padRender.maximumFilterScale
+        padMinimumSpatialSendScale = padRender.minimumSpatialSendScale
+        padMaximumSpatialSendScale = padRender.maximumSpatialSendScale
+        padFilterModulationDifferenceRMS =
+            padRender.filterModulationDifferenceRMS
+        padSpatialSendDifferenceRMS = padRender.spatialSendDifferenceRMS
+        padSpatialSendSampleHash = padRender.spatialSendSampleHash
+        padSpatialSendRMS = padRender.spatialSendRMS
         padSampleHash = padRender.outputSampleHash
         padRMS = padRender.outputRMS
         padPeak = padRender.outputPeak
@@ -3053,15 +3083,33 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
             padRender.active == (pad != nil) &&
             padRender.voiceCount == (pad?.voices.count ?? 0) &&
             padRender.requestedFrequencyRatios ==
-                (pad?.voices.map(\.frequencyRatio) ?? [])
+                (pad?.voices.map(\.frequencyRatio) ?? []) &&
+            padRender.rhythmicModulationRelation ==
+                (pad?.rhythmicModulation.relation ?? .neutral) &&
+            padRender.rhythmicModulationPhaseOffset ==
+                (pad?.rhythmicModulation.phaseOffset ?? 0) &&
+            (!padRender.active ||
+                padRender.rhythmicModulationPatternFingerprint ==
+                    PadRhythmicModulationFingerprint.make(
+                        pad?.rhythmicModulation ?? .neutral
+                    ))
         finite = slice.finite && padRender.finite &&
             sliceMinimumRate.isFinite && sliceMaximumRate.isFinite &&
             sliceOutputRMS.isFinite && padRMS.isFinite && padPeak.isFinite
+            && padMinimumFilterScale.isFinite &&
+            padMaximumFilterScale.isFinite &&
+            padMinimumSpatialSendScale.isFinite &&
+            padMaximumSpatialSendScale.isFinite &&
+            padFilterModulationDifferenceRMS.isFinite &&
+            padSpatialSendDifferenceRMS.isFinite &&
+            padSpatialSendRMS.isFinite
     }
 
     package static func neutral(bar: Int) -> Self {
         Self(
             bar: bar,
+            section: SectionKind.groove.rawValue,
+            arrangementGesture: ArrangementGesture.steady.rawValue,
             sliceActive: false,
             sliceTriggerCount: 0,
             sliceReverseTriggerCount: 0,
@@ -3082,6 +3130,17 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
             padCommonToneCount: 0,
             padTotalMovement: 0,
             padMaximumLeap: 0,
+            padRhythmicModulationRelation: "",
+            padRhythmicModulationPhaseOffset: 0,
+            padRhythmicModulationPatternFingerprint: "",
+            padMinimumFilterScale: 1,
+            padMaximumFilterScale: 1,
+            padMinimumSpatialSendScale: 1,
+            padMaximumSpatialSendScale: 1,
+            padFilterModulationDifferenceRMS: 0,
+            padSpatialSendDifferenceRMS: 0,
+            padSpatialSendSampleHash: "",
+            padSpatialSendRMS: 0,
             padSampleHash: "",
             padRMS: 0,
             padPeak: 0,
@@ -3092,7 +3151,8 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
     }
 
     private init(
-        bar: Int, sliceActive: Bool, sliceTriggerCount: Int,
+        bar: Int, section: String, arrangementGesture: String,
+        sliceActive: Bool, sliceTriggerCount: Int,
         sliceReverseTriggerCount: Int, sliceMinimumRate: Double,
         sliceMaximumRate: Double, sliceSourceKind: String, sliceSourceHash: String,
         sliceOutputHash: String, sliceOutputRMS: Double,
@@ -3100,11 +3160,22 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         arpeggiatorRateInSteps: Int, arpeggiatorOctaveSpan: Int,
         arpeggiatorStepCount: Int, padActive: Bool, padFunction: String,
         padVoiceCount: Int, padCommonToneCount: Int, padTotalMovement: Int,
-        padMaximumLeap: Int, padSampleHash: String, padRMS: Double,
-        padPeak: Double, renderPassesMatch: Bool, bindingValid: Bool,
+        padMaximumLeap: Int,
+        padRhythmicModulationRelation: String,
+        padRhythmicModulationPhaseOffset: Int,
+        padRhythmicModulationPatternFingerprint: String,
+        padMinimumFilterScale: Double, padMaximumFilterScale: Double,
+        padMinimumSpatialSendScale: Double, padMaximumSpatialSendScale: Double,
+        padFilterModulationDifferenceRMS: Double,
+        padSpatialSendDifferenceRMS: Double,
+        padSpatialSendSampleHash: String, padSpatialSendRMS: Double,
+        padSampleHash: String, padRMS: Double, padPeak: Double,
+        renderPassesMatch: Bool, bindingValid: Bool,
         finite: Bool
     ) {
         self.bar = bar
+        self.section = section
+        self.arrangementGesture = arrangementGesture
         self.sliceActive = sliceActive
         self.sliceTriggerCount = sliceTriggerCount
         self.sliceReverseTriggerCount = sliceReverseTriggerCount
@@ -3125,6 +3196,20 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         self.padCommonToneCount = padCommonToneCount
         self.padTotalMovement = padTotalMovement
         self.padMaximumLeap = padMaximumLeap
+        self.padRhythmicModulationRelation = padRhythmicModulationRelation
+        self.padRhythmicModulationPhaseOffset =
+            padRhythmicModulationPhaseOffset
+        self.padRhythmicModulationPatternFingerprint =
+            padRhythmicModulationPatternFingerprint
+        self.padMinimumFilterScale = padMinimumFilterScale
+        self.padMaximumFilterScale = padMaximumFilterScale
+        self.padMinimumSpatialSendScale = padMinimumSpatialSendScale
+        self.padMaximumSpatialSendScale = padMaximumSpatialSendScale
+        self.padFilterModulationDifferenceRMS =
+            padFilterModulationDifferenceRMS
+        self.padSpatialSendDifferenceRMS = padSpatialSendDifferenceRMS
+        self.padSpatialSendSampleHash = padSpatialSendSampleHash
+        self.padSpatialSendRMS = padSpatialSendRMS
         self.padSampleHash = padSampleHash
         self.padRMS = padRMS
         self.padPeak = padPeak
@@ -3133,8 +3218,10 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         self.finite = finite
     }
 
-    package func isComplete() -> Bool {
+    package func isComplete(phraseKind: String) -> Bool {
         guard bar >= 0, renderPassesMatch, bindingValid, finite,
+              SectionKind(rawValue: section) != nil,
+              ArrangementGesture(rawValue: arrangementGesture) != nil,
               sliceTriggerCount >= 0,
               sliceTriggerCount <= AudioSlicePlan.maximumTriggerCount,
               sliceReverseTriggerCount >= 0,
@@ -3146,7 +3233,16 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
               padCommonToneCount >= 0,
               padCommonToneCount <= PadVoicing.voiceCount,
               padTotalMovement >= 0, padMaximumLeap >= 0,
-              sliceOutputRMS >= 0, padRMS >= 0, padRMS <= padPeak else {
+              sliceOutputRMS >= 0, padRMS >= 0, padRMS <= padPeak,
+              padMinimumFilterScale > 0,
+              padMinimumFilterScale <= padMaximumFilterScale,
+              padMinimumSpatialSendScale > 0,
+              padMinimumSpatialSendScale <= padMaximumSpatialSendScale,
+              padFilterModulationDifferenceRMS >= 0,
+              padFilterModulationDifferenceRMS <= 2,
+              padSpatialSendDifferenceRMS >= 0,
+              padSpatialSendDifferenceRMS <= 2,
+              padSpatialSendRMS >= 0, padSpatialSendRMS <= 2 else {
             return false
         }
         if sliceActive {
@@ -3174,12 +3270,77 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         }
         if padActive {
             guard PadHarmonicFunction(rawValue: padFunction) != nil,
+                  let modulationRelation = PadRhythmicModulationRelation(
+                    rawValue: padRhythmicModulationRelation
+                  ),
                   padVoiceCount == PadVoicing.voiceCount,
                   padRMS > 0, padPeak > 0, isHash(padSampleHash),
+                  padSpatialSendRMS > 0,
+                  isHash(padSpatialSendSampleHash),
                   padMaximumLeap <= 12 else { return false }
+            let modulation = PadRhythmicModulation(
+                relation: modulationRelation,
+                phaseOffset: padRhythmicModulationPhaseOffset
+            )
+            guard padRhythmicModulationPatternFingerprint ==
+                    PadRhythmicModulationFingerprint.make(modulation) else {
+                return false
+            }
+            switch modulationRelation {
+            case .neutral:
+                guard padRhythmicModulationPhaseOffset == 0,
+                      padMinimumFilterScale == 1,
+                      padMaximumFilterScale == 1,
+                      padMinimumSpatialSendScale == 1,
+                      padMaximumSpatialSendScale == 1,
+                      padFilterModulationDifferenceRMS.bitPattern == 0,
+                      padSpatialSendDifferenceRMS.bitPattern == 0 else {
+                    return false
+                }
+            case .threeStepPulse:
+                guard phraseKind == AutonomousPhraseKind.majorBreak.rawValue,
+                      section == SectionKind.breakdown.rawValue,
+                      (8...14).contains(bar % 16),
+                      arrangementGesture != ArrangementGesture.minimalize.rawValue,
+                      arrangementGesture != ArrangementGesture.structuralMarker.rawValue,
+                      (0..<PadRhythmicModulation.cellLength).contains(
+                    padRhythmicModulationPhaseOffset
+                ),
+                      padRhythmicModulationPhaseOffset ==
+                        bar % PadRhythmicModulation.cellLength,
+                      padMinimumFilterScale == 0.38,
+                      padMaximumFilterScale == 1,
+                      padMinimumSpatialSendScale == 0.72,
+                      padMaximumSpatialSendScale == 1.28,
+                      padFilterModulationDifferenceRMS > 0,
+                      padSpatialSendDifferenceRMS > 0 else {
+                    return false
+                }
+            }
+            let shouldApplyRhythmicModulation =
+                phraseKind == AutonomousPhraseKind.majorBreak.rawValue &&
+                section == SectionKind.breakdown.rawValue &&
+                (8...14).contains(bar % 16) &&
+                arrangementGesture != ArrangementGesture.minimalize.rawValue &&
+                arrangementGesture != ArrangementGesture.structuralMarker.rawValue
+            guard (modulationRelation == .threeStepPulse) ==
+                    shouldApplyRhythmicModulation else {
+                return false
+            }
         } else if !padFunction.isEmpty || padVoiceCount != 0 ||
                     padCommonToneCount != 0 || padTotalMovement != 0 ||
                     padMaximumLeap != 0 || !padSampleHash.isEmpty ||
+                    !padRhythmicModulationRelation.isEmpty ||
+                    padRhythmicModulationPhaseOffset != 0 ||
+                    !padRhythmicModulationPatternFingerprint.isEmpty ||
+                    padMinimumFilterScale != 1 ||
+                    padMaximumFilterScale != 1 ||
+                    padMinimumSpatialSendScale != 1 ||
+                    padMaximumSpatialSendScale != 1 ||
+                    padFilterModulationDifferenceRMS.bitPattern != 0 ||
+                    padSpatialSendDifferenceRMS.bitPattern != 0 ||
+                    !padSpatialSendSampleHash.isEmpty ||
+                    padSpatialSendRMS.bitPattern != 0 ||
                     padRMS.bitPattern != 0 || padPeak.bitPattern != 0 {
             return false
         }
@@ -4437,7 +4598,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 23
+    package static let schemaVersion = 24
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -6786,7 +6947,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         Set(phraseComposition.map { $0.bar }) == expectedBars &&
             phraseComposition.map(\.bar) == fullMix.bars.map(\.bar) &&
             phraseComposition.count == fullMix.sourceBarCount &&
-            phraseComposition.allSatisfy { $0.isComplete() }
+            phraseComposition.allSatisfy {
+                $0.isComplete(phraseKind: symbolic.phraseKind)
+            }
     }
 
     @inline(never)

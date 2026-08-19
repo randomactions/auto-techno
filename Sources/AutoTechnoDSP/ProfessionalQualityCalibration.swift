@@ -103,6 +103,12 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         "percussion-anticipation-swell-active-bar-ratio"
     case percussionAnticipationSwellLateToEarlyDBMean =
         "percussion-anticipation-swell-late-to-early-db-mean"
+    case padRhythmicModulationActiveBarRatio =
+        "pad-rhythmic-modulation-active-bar-ratio"
+    case padRhythmicFilterDifferenceToPadDBMean =
+        "pad-rhythmic-filter-difference-to-pad-db-mean"
+    case padRhythmicSpatialDifferenceToSendDBMean =
+        "pad-rhythmic-spatial-difference-to-send-db-mean"
 
     package var acceptsSaferValuesBelowCalibration: Bool {
         switch self {
@@ -131,7 +137,9 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         case .truePeakDBTP, .modalPercussionAttackToBodyDBMean,
                 .modalPercussionTailToBodyDBMean,
                 .upperPercussionTailRenderedTailToAttackDBMean,
-                .percussionAnticipationSwellLateToEarlyDBMean:
+                .percussionAnticipationSwellLateToEarlyDBMean,
+                .padRhythmicFilterDifferenceToPadDBMean,
+                .padRhythmicSpatialDifferenceToSendDBMean:
             return -120
         default: return 0
         }
@@ -505,9 +513,9 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 6
+    package static let schemaVersion = 7
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v6"
+        "autotechno-professional-quality-observation.v7"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -706,6 +714,13 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         let anticipationBarDivisor = Double(
             max(1, vector.percussionEchoTexture.count)
         )
+        let rhythmicPadBars = vector.phraseComposition.filter {
+            $0.padRhythmicModulationRelation ==
+                PadRhythmicModulationRelation.threeStepPulse.rawValue
+        }
+        let phraseCompositionDivisor = Double(
+            max(1, vector.phraseComposition.count)
+        )
 
         var kickFoundationDifferences: [Double] = []
         for stemBar in vector.stems {
@@ -894,6 +909,29 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             ProfessionalQualityMetricValue(
                 metric: .percussionAnticipationSwellLateToEarlyDBMean,
                 value: mean(anticipationSwellBars.map(\.lateToEarlyDB))
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .padRhythmicModulationActiveBarRatio,
+                value: Double(rhythmicPadBars.count) /
+                    phraseCompositionDivisor
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .padRhythmicFilterDifferenceToPadDBMean,
+                value: mean(rhythmicPadBars.map {
+                    decibels(
+                        $0.padFilterModulationDifferenceRMS,
+                        $0.padRMS
+                    )
+                })
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .padRhythmicSpatialDifferenceToSendDBMean,
+                value: mean(rhythmicPadBars.map {
+                    decibels(
+                        $0.padSpatialSendDifferenceRMS,
+                        $0.padSpatialSendRMS
+                    )
+                })
             ),
         ]
         try self.init(
@@ -1144,9 +1182,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 6
+    package static let schemaVersion = 7
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v6"
+        "autotechno-professional-quality-profile.v7"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1600,7 +1638,9 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             absoluteFloor = 15
         case .modalPercussionAttackToBodyDBMean,
                 .modalPercussionTailToBodyDBMean,
-                .upperPercussionTailRenderedTailToAttackDBMean:
+                .upperPercussionTailRenderedTailToAttackDBMean,
+                .padRhythmicFilterDifferenceToPadDBMean,
+                .padRhythmicSpatialDifferenceToSendDBMean:
             absoluteFloor = 1
         case .modalPercussionSpectralCentroidMeanHz:
             absoluteFloor = 60
@@ -1698,7 +1738,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .upperPercussionTailClearanceEventRatio,
                 .upperSpectralRevealActiveEventRatio,
                 .upperSpectralRevealAppliedCutoffRatioMean,
-                .percussionAnticipationSwellActiveBarRatio:
+                .percussionAnticipationSwellActiveBarRatio,
+                .padRhythmicModulationActiveBarRatio:
             return 0...1
         case .stereoCorrelation, .lowStereoCorrelation:
             return -1...1
@@ -1718,7 +1759,9 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         case .modalPercussionAttackToBodyDBMean,
                 .modalPercussionTailToBodyDBMean,
                 .upperPercussionTailRenderedTailToAttackDBMean,
-                .percussionAnticipationSwellLateToEarlyDBMean:
+                .percussionAnticipationSwellLateToEarlyDBMean,
+                .padRhythmicFilterDifferenceToPadDBMean,
+                .padRhythmicSpatialDifferenceToSendDBMean:
             return -120...120
         case .kickAudibleToDetectorDBMean:
             return -120...0
