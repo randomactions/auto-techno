@@ -16,6 +16,9 @@ account.
   automation and exact score-to-PCM evidence;
 - one shared Resonant Mono TPT/ADAA nonlinear core with bounded semantic
   modulation, exact continuation, and same-pass input/output evidence;
+- one score-owned protagonist spectral reveal that reuses the existing
+  Resonant Mono or Tonal Motion anchor filter, preserves exact home PCM, and
+  retains independent score/render plus isolated-anchor evidence;
 - six phrase-scale performance characters coordinating foundation, rhythm,
   role-compatible patches, and automation under one persistent identity;
 - one score-owned phrase-composition layer with bounded true percussion

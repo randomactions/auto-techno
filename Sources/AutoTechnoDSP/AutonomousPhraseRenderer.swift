@@ -240,6 +240,9 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
     package let didRetrigger: Bool
     package let timbreIntent: UpperTimbreIntent
     package let envelopeRelation: UpperEnvelopeRelation
+    package let spectralReveal: UpperSpectralRevealArticulation
+    package var minimumAppliedCutoffHz: Double
+    package var maximumAppliedCutoffHz: Double
     package let baseEnvelopeSustain: Double
     package let baseEnvelopeReleaseSeconds: Double
     package let appliedEnvelopeSustain: Double
@@ -268,6 +271,9 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         didRetrigger: Bool,
         timbreIntent: UpperTimbreIntent,
         envelopeRelation: UpperEnvelopeRelation = .home,
+        spectralReveal: UpperSpectralRevealArticulation = .home,
+        minimumAppliedCutoffHz: Double = 0,
+        maximumAppliedCutoffHz: Double = 0,
         baseEnvelopeSustain: Double = 0,
         baseEnvelopeReleaseSeconds: Double = 0,
         appliedEnvelopeSustain: Double = 0,
@@ -295,6 +301,9 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         self.didRetrigger = didRetrigger
         self.timbreIntent = timbreIntent
         self.envelopeRelation = envelopeRelation
+        self.spectralReveal = spectralReveal
+        self.minimumAppliedCutoffHz = minimumAppliedCutoffHz
+        self.maximumAppliedCutoffHz = maximumAppliedCutoffHz
         self.baseEnvelopeSustain = baseEnvelopeSustain
         self.baseEnvelopeReleaseSeconds = baseEnvelopeReleaseSeconds
         self.appliedEnvelopeSustain = appliedEnvelopeSustain
@@ -591,6 +600,28 @@ package struct TonalEnvelopeExpansionRenderEvidence: Equatable, Sendable {
     package let finite: Bool
 }
 
+/// Same-pass proof that an existing protagonist architecture used the
+/// score-owned narrative reveal. The source remains the existing anchor tap;
+/// no additional PCM buffer or effect return survives detached preparation.
+package struct UpperSpectralRevealRenderEvidence: Equatable, Sendable {
+    package let eligible: Bool
+    package let active: Bool
+    package let sourceScoreEventCount: Int
+    package let renderedEventCount: Int
+    package let activeEventCount: Int
+    package let minimumActiveAperture: Double
+    package let maximumActiveAperture: Double
+    package let minimumAppliedCutoffHz: Double
+    package let maximumAppliedCutoffHz: Double
+    package let scoreFingerprint: String
+    package let renderFingerprint: String
+    package let anchorSampleHash: String
+    package let anchorPeak: Double
+    package let anchorRMS: Double
+    package let bindingValid: Bool
+    package let finite: Bool
+}
+
 package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
     package let architecture: InstrumentArchitecture
     package let assignments: [InstrumentAssignment]
@@ -610,6 +641,8 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         SpectralTextureClusterRenderEvidence?
     package let tonalEnvelopeExpansion:
         TonalEnvelopeExpansionRenderEvidence?
+    package let upperSpectralReveal:
+        UpperSpectralRevealRenderEvidence?
 
     package init(
         architecture: InstrumentArchitecture,
@@ -629,7 +662,9 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         spectralTextureCluster:
             SpectralTextureClusterRenderEvidence? = nil,
         tonalEnvelopeExpansion:
-            TonalEnvelopeExpansionRenderEvidence? = nil
+            TonalEnvelopeExpansionRenderEvidence? = nil,
+        upperSpectralReveal:
+            UpperSpectralRevealRenderEvidence? = nil
     ) {
         self.architecture = architecture
         self.assignments = assignments
@@ -645,6 +680,7 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         self.resonantMonoModulation = resonantMonoModulation
         self.spectralTextureCluster = spectralTextureCluster
         self.tonalEnvelopeExpansion = tonalEnvelopeExpansion
+        self.upperSpectralReveal = upperSpectralReveal
     }
 }
 

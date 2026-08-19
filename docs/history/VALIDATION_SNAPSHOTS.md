@@ -1361,3 +1361,48 @@ artifact qualification for quality-contract schema 23, candidate-vector schema
 remote CI remain separate gates. Listening observation, app/route and
 interruption QA, latency/peak-memory measurement, and physical-output soak were
 not performed and are not implied.
+
+## Source 22 protagonist spectral reveal — 2026-08-19
+
+Source 22 extends the existing anchor protagonist with one score-owned spectral
+reveal relation. Naturally emerging lock or contrast bars apply aperture
+`0.45 + 0.55 * presence^2` to the current Resonant Mono or Tonal Motion cutoff;
+home, supporting roles, force-home correction, and ineligible bars remain exact
+neutral. The slice adds no track, instrument, effect return, continuation
+buffer, callback state, alternate evaluator, or user control.
+
+The score-to-render contract retains independent score/render event counts and
+fingerprints, active-event and aperture facts, actual cutoff extrema, and the
+isolated anchor hash/peak/RMS. Candidate-vector schema 22 requires the record,
+and Professional Evidence v8 adds event-weighted active and cutoff-ratio facts.
+A dedicated adversarial case rejects an escaped cutoff relation.
+
+Release-mode artifact generation accepted all 392 development observations
+from 28 complete journeys, rejected all 25 adversarial cases for their expected
+non-compensable reason, and accepted all 56 observations from four disjoint
+holdout journeys with zero relationship failures. The shipping v5 artifact
+identities are:
+
+- profile: `a4f10f84996591bb`, JSON SHA-256
+  `88e18dbd892bf1657f1fcc8c3f7c7ae1f2b36f3a32c48999d46dc101cec86866`;
+- adversarial suite: `533141d901ed71c6`, JSON SHA-256
+  `4e46f53c5566d146ae88029d974f6b663ded352db8cb5fd0530155e94db23574`;
+- holdout qualification: `de7f4ca2dc3c94dc`, JSON SHA-256
+  `6449aa9801848fd83c82faaaac67aa1e3f8189a319cabc22a9a84ee2b9f14113`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+isolated caches and serial process boundaries. All 346 workflow-selected test
+executions passed across 31 processes, including focused protagonist reveal,
+callback queue, live analyzer/controller, candidate and artifact tampering,
+calibrated primary, adversarial, disjoint holdout, atomic commit,
+representative-rate, core/evidence, preparation preflight, and protected-routing
+groups. The realtime producer undefined-symbol audit found only the allowed
+copy primitive, the optimized `AutoTechno` product built, and `git diff
+--check` was clean before publication.
+
+This snapshot proves deterministic score/DSP/evidence behavior and offline
+artifact qualification for quality-contract schema 24, candidate-vector schema
+22, canonical engine v23, and primary evaluator v5. Publication and exact-head
+remote CI remain separate gates. Listening observation, app/route and
+interruption QA, latency/peak-memory measurement, and physical-output soak were
+not performed and are not implied.

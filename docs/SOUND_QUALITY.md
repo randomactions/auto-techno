@@ -11,9 +11,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 23, candidate-vector schema 21,
+candidate uses quality-contract schema 24, candidate-vector schema 22,
 candidate-transaction schema 4, and canonical engine identity
-`autotechno-canonical-engine.v22`. It preserves
+`autotechno-canonical-engine.v23`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
@@ -129,6 +129,26 @@ and retain the same score relation, continuation, evidence, and bounded
 correction. The record can reject broken provenance but does not alone promote
 the device as professionally qualified.
 
+The existing protagonist now also carries one durable spectral-reveal relation.
+Only an anchor in a naturally emerging lock or contrast bar can be active. The
+current realization multiplies that note's already requested Resonant Mono or
+Tonal Motion cutoff by the bounded score aperture
+`0.45 + 0.55 * presence^2`; exact home branches to the prior cutoff before
+arithmetic. It changes no oscillator, envelope, note geometry, patch, send,
+effect topology, or continuation owner.
+
+Each applicable architecture record retains independent score/render event
+counts and fingerprints, an event-weighted active count, active-aperture and
+actual-cutoff extrema, and exact isolated-anchor hash/peak/RMS. Attempt
+validation requires active evidence exactly for normal eligibility and exact
+neutrality for evaluator-owned home correction. Professional observation binds
+the active-event ratio and mean active-record cutoff ratio; a dedicated
+adversarial case rejects a cutoff outside the exact-engine profile. This is a
+measured reuse of the existing protagonist, not another synth or automation
+lane. A later multiband, higher-order, formant-safe, or oversampled reveal must
+replace this scalar realization in place and retain the same score, home, send,
+and evidence contract.
+
 Kick-syntax evidence retains one compact record for every bar. It binds the
 resolved grounded/withheld/recovery role, score and rendered kick count/mask,
 exact detector and audible hashes/nonzero counts, detector/audible peak and RMS,
@@ -174,11 +194,11 @@ identity. The record is required for structural completeness and changes the
 transaction fingerprint. See [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md) for the
 signal and replacement contract.
 
-`ProfessionalEvidenceReportBank` v7 accepts a bank only when every canonical
+`ProfessionalEvidenceReportBank` v8 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v4 from profile `4f7a91a51691f923`, adversarial
-suite `4c75434aa7d3866f`, and disjoint holdout `97be23f446c25611`. It judges every
+exact-engine primary evaluator v5 from profile `a4f10f84996591bb`, adversarial
+suite `533141d901ed71c6`, and disjoint holdout `de7f4ca2dc3c94dc`. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.
@@ -345,8 +365,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 23, candidate-vector schema 21,
-candidate-transaction schema 4, and canonical engine v22, the versioned
+Under quality-contract schema 24, candidate-vector schema 22,
+candidate-transaction schema 4, and canonical engine v23, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

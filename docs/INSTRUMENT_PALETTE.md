@@ -60,6 +60,15 @@ envelopes, filter motion, comb memory, and unsynced echo. North Star, Dark
 Chord, and Glass Runner are substantively different oscillator/envelope/filter
 homes inside this one topology.
 
+Resonant Mono and Tonal Motion share one additional score meaning for existing
+motif anchors: an emerging protagonist may disclose spectral detail through
+that architecture's already owned filter. The relation is not a fifth
+automation coordinate or a new patch. It is resolved per note from the
+canonical narrative contour, exact home preserves the patch's prior cutoff,
+and the existing downstream sends receive the same filtered voice. Spectral
+Texture remains ineligible because it serves response, atmosphere, and
+transition rather than the dominant motif.
+
 ### Spectral Texture
 
 A deterministic ring-modulation and resonator source for alien responses,

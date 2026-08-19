@@ -228,6 +228,7 @@ enum SpectralTextureVoice {
                 appliedGate: .retrigger,
                 didRetrigger: true,
                 timbreIntent: note.timbreIntent,
+                spectralReveal: note.spectralReveal,
                 requestedVelocity: note.velocity,
                 appliedVelocity: velocity,
                 velocitySpectralEnvelopeScale: 0.82 + velocity * 0.36,

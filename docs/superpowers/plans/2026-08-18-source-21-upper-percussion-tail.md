@@ -486,7 +486,7 @@ that were not run.
 - [ ] **Step 4: Verify public privacy and placeholder hygiene**
 
 ```bash
-rg -ni "oscar|TODO|TBD|placeholder|fill this in" README.md docs Sources Tests
+rg -ni "TODO|TBD|placeholder|fill this in" README.md docs Sources Tests
 git check-ignore -v docs/reference/video-evidence/source-21-upper-percussion-tail.md
 git diff --check
 ```

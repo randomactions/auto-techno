@@ -27,9 +27,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 23, candidate-
+   primary-evaluation transaction under quality-contract schema 24, candidate-
    vector schema 21, candidate-transaction schema 4, and canonical engine
-   identity `autotechno-canonical-engine.v22`. Each
+   identity `autotechno-canonical-engine.v23`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -57,6 +57,11 @@ mistaken for a completed feedback system.
    Eligible Tonal Motion release anchors additionally bind one durable
    sustained-wash relation to the exact base/applied sustain and release,
    event identity, isolated dry-signal hash, attack/tail metrics, and finiteness.
+   Eligible emerging motif anchors in Resonant Mono or Tonal Motion additionally
+   bind one spectral-reveal relation to independent score/render counts and
+   fingerprints, active aperture and actual cutoff extrema, and the exact
+   isolated-anchor hash/peak/RMS. Home correction retains eligibility while
+   resolving the existing filter path to literal home.
    Closed-hat records bind every ordinary hat to
    its score-owned neutral or companion decay role and exact dry-sample
    consequence. Upper-percussion-tail records bind every existing clap,
@@ -112,12 +117,12 @@ mistaken for a completed feedback system.
    windows with zero-padded radix-two FFT geometry, actual spectral
    centroid/bandwidth/flatness/rolloff, positive flux,
    RMS trajectory, active-window counts, and bounded working-memory provenance.
-   A deterministic Professional Evidence v7
+   A deterministic Professional Evidence v8
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
    observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v22 profile v4 `4f7a91a51691f923`, adversarial suite
-   `4c75434aa7d3866f`, and disjoint holdout qualification `97be23f446c25611`.
+   engine-v23 profile v5 `a4f10f84996591bb`, adversarial suite
+   `533141d901ed71c6`, and disjoint holdout qualification `de7f4ca2dc3c94dc`.
    The profile derives from 28 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
    relationships. Its evaluator maps the Core-owned plan checkpoint into the
@@ -166,7 +171,12 @@ mistaken for a completed feedback system.
    facts. Empty bars and inherited tails remain explicit, so missing or forged
    modal evidence cannot be hidden by another metric.
    The voice renderer applies
-   the resolved protagonist contour and may place one eligible existing event on
+   the resolved protagonist contour. An emerging lock or contrast anchor may
+   also apply one score-owned spectral-reveal aperture to its existing Resonant
+   Mono or Tonal Motion cutoff. Exact home preserves the prior path, downstream
+   sends consume the same filtered voice, and no track, instrument, effect bus,
+   continuation field, or callback work is added. The renderer may place one
+   eligible existing event on
    a filtered send into the canonical late spatial field; neither operation creates another
    onset or topology. The renderer also renders full and protected-rhythm
    layers and mirrors exact dry samples into private kick, foundation,
@@ -349,7 +359,7 @@ Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
 requested gate end, and renderer-applied gate end. Separate anchor, shadow, and
 response dry taps retain finite role-local hash, peak, and RMS evidence. Current
-candidate-vector schema 21 reduces those tuples into exact score/render and
+candidate-vector schema 22 reduces those tuples into exact score/render and
 renderer-applied-gate fingerprints, relation-specific offset facts, protected-
 role neutrality, cascade-aperture or lead-pattern replay, and route-derived
 frame geometry. The calibrated evaluator judges this evidence as part of the

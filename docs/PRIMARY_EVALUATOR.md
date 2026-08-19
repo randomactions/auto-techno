@@ -23,9 +23,9 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v22 profile v4 `4f7a91a51691f923`, adversarial suite v5
-`4c75434aa7d3866f`, and disjoint holdout qualification v3
-`97be23f446c25611`. The profile derives from 28 complete
+engine-v23 profile v5 `a4f10f84996591bb`, adversarial suite v6
+`533141d901ed71c6`, and disjoint holdout qualification v4
+`de7f4ca2dc3c94dc`. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
 relationship gate.
 
@@ -39,7 +39,10 @@ centroid, masking overlap, and maximum pole radius. Four dedicated attacks prove
 detuning, masking flood, rate drift, and runaway tail cannot be compensated by
 other strengths. It also includes the upper-percussion clearance-event ratio
 and rendered tail-to-attack mean; a dedicated runaway-tail attack proves that
-the new release consequence cannot be compensated by unrelated strengths.
+the release consequence cannot be compensated by unrelated strengths. The
+profile also retains protagonist-reveal activity and applied-cutoff ratios; a
+dedicated runaway-cutoff attack proves that the reveal cannot escape its
+exact-engine envelope and be compensated by unrelated strengths.
 
 The app preloads artifacts away from the audio callback and creates a route-local
 evaluator for detached preparation. Missing artifacts and rates outside 44.1 or

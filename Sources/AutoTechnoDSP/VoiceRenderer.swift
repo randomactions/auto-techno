@@ -1563,6 +1563,7 @@ package enum VoiceRenderer {
                                     resolved: resolved,
                                     synthPerformance: synthPerformance,
                                     upperNoteRenderEvidence: upperNoteRenderEvidence,
+                                    anchorSamples: resonantAnchorStem,
                                     resonantMono: resonantMonoInstrumentStem,
                                     resonantMonoModulation: resonantMonoModulationStem,
                                     resonantMonoNonlinearCore:
@@ -1709,6 +1710,7 @@ package enum VoiceRenderer {
                     gate: note.gate,
                     timbreIntent: note.timbreIntent,
                     envelopeRelation: note.envelopeRelation,
+                    spectralReveal: note.spectralReveal,
                     instrument: note.instrument,
                     role: role,
                     articulation: relational,
@@ -1902,6 +1904,7 @@ package enum VoiceRenderer {
         resolved: ResolvedPerformanceBar,
         synthPerformance: SynthPerformanceBar,
         upperNoteRenderEvidence: [UpperNoteRenderEvidence],
+        anchorSamples: [Float],
         resonantMono: [Float],
         resonantMonoModulation: [Float],
         resonantMonoNonlinearCore:
@@ -1967,6 +1970,12 @@ package enum VoiceRenderer {
                     samples: tonalEnvelopeExpansion,
                     sampleRate: sampleRate
                 ) : nil
+            let spectralReveal = upperSpectralRevealEvidence(
+                architecture: architecture,
+                synthPerformance: synthPerformance,
+                noteEvidence: upperNoteRenderEvidence,
+                anchorSamples: anchorSamples
+            )
             return InstrumentArchitectureRenderEvidence(
                 architecture: architecture,
                 assignments: uniqueAssignments,
@@ -1981,9 +1990,157 @@ package enum VoiceRenderer {
                 nonlinearCore: nonlinearCore,
                 resonantMonoModulation: modulation,
                 spectralTextureCluster: cluster,
-                tonalEnvelopeExpansion: envelopeExpansion
+                tonalEnvelopeExpansion: envelopeExpansion,
+                upperSpectralReveal: spectralReveal
             )
         }
+    }
+
+    private struct UpperSpectralRevealScoreFact {
+        let role: SynthRole
+        let onsetStep: Int
+        let patch: InstrumentPatch
+        let relation: UpperSpectralRevealRelation
+        let aperture: Double
+    }
+
+    private struct UpperSpectralRevealRenderFact {
+        let role: SynthRole
+        let onsetFrame: Int
+        let patch: InstrumentPatch
+        let relation: UpperSpectralRevealRelation
+        let aperture: Double
+        let minimumAppliedCutoffHz: Double
+        let maximumAppliedCutoffHz: Double
+    }
+
+    @inline(never)
+    private static func upperSpectralRevealEvidence(
+        architecture: InstrumentArchitecture,
+        synthPerformance: SynthPerformanceBar,
+        noteEvidence: [UpperNoteRenderEvidence],
+        anchorSamples: [Float]
+    ) -> UpperSpectralRevealRenderEvidence? {
+        guard architecture == .resonantMono || architecture == .tonalMotion else {
+            return nil
+        }
+        let scoreEvents = synthPerformance.upperNotes.filter {
+            $0.role == .anchor && $0.instrument.architecture == architecture
+        }
+        guard !scoreEvents.isEmpty else { return nil }
+        let renderEvents = noteEvidence.filter {
+            $0.role == .anchor && $0.instrument.architecture == architecture
+        }
+        var unmatchedRenderEvents = renderEvents
+        var bindingValid = scoreEvents.count == renderEvents.count
+        for score in scoreEvents {
+            let index = unmatchedRenderEvents.firstIndex { rendered in
+                rendered.role == score.role &&
+                    rendered.requestedGate == score.gate &&
+                    rendered.timbreIntent == score.timbreIntent &&
+                    rendered.spectralReveal == score.spectralReveal &&
+                    rendered.requestedVelocity == score.velocity &&
+                    rendered.instrument == score.instrument
+            }
+            guard let index else {
+                bindingValid = false
+                continue
+            }
+            unmatchedRenderEvents.remove(at: index)
+        }
+        bindingValid = bindingValid && unmatchedRenderEvents.isEmpty
+
+        let scoreFacts = scoreEvents.map {
+            UpperSpectralRevealScoreFact(
+                role: $0.role,
+                onsetStep: $0.onsetStep,
+                patch: $0.instrument.patch,
+                relation: $0.spectralReveal.relation,
+                aperture: $0.spectralReveal.aperture
+            )
+        }.sorted {
+            if $0.onsetStep != $1.onsetStep {
+                return $0.onsetStep < $1.onsetStep
+            }
+            return $0.patch.rawValue < $1.patch.rawValue
+        }
+        let renderFacts = renderEvents.map {
+            UpperSpectralRevealRenderFact(
+                role: $0.role,
+                onsetFrame: $0.onsetFrame,
+                patch: $0.instrument.patch,
+                relation: $0.spectralReveal.relation,
+                aperture: $0.spectralReveal.aperture,
+                minimumAppliedCutoffHz: $0.minimumAppliedCutoffHz,
+                maximumAppliedCutoffHz: $0.maximumAppliedCutoffHz
+            )
+        }.sorted {
+            if $0.onsetFrame != $1.onsetFrame {
+                return $0.onsetFrame < $1.onsetFrame
+            }
+            return $0.patch.rawValue < $1.patch.rawValue
+        }
+        var scoreSink = StreamingFNV1a()
+        scoreSink.domain("upper-spectral-reveal.score.v1")
+        scoreSink.collection(scoreFacts.count)
+        for fact in scoreFacts {
+            scoreSink.raw(fact.role.rawValue)
+            scoreSink.int(fact.onsetStep)
+            scoreSink.raw(fact.patch.rawValue)
+            scoreSink.raw(fact.relation.rawValue)
+            scoreSink.double(fact.aperture)
+        }
+        var renderSink = StreamingFNV1a()
+        renderSink.domain("upper-spectral-reveal.render.v1")
+        renderSink.collection(renderFacts.count)
+        for fact in renderFacts {
+            renderSink.raw(fact.role.rawValue)
+            renderSink.int(fact.onsetFrame)
+            renderSink.raw(fact.patch.rawValue)
+            renderSink.raw(fact.relation.rawValue)
+            renderSink.double(fact.aperture)
+            renderSink.double(fact.minimumAppliedCutoffHz)
+            renderSink.double(fact.maximumAppliedCutoffHz)
+        }
+        let activeFacts = renderFacts.filter {
+            $0.relation == .emerging
+        }
+        let measuredFacts = activeFacts.isEmpty ? renderFacts : activeFacts
+        let activeApertures = activeFacts.map(\.aperture)
+        let minimumCutoffs = measuredFacts.map(\.minimumAppliedCutoffHz)
+        let maximumCutoffs = measuredFacts.map(\.maximumAppliedCutoffHz)
+        bindingValid = bindingValid && renderFacts.allSatisfy {
+            $0.minimumAppliedCutoffHz > 0 &&
+                $0.maximumAppliedCutoffHz >= $0.minimumAppliedCutoffHz
+        }
+        let peak = anchorSamples.reduce(0.0) {
+            max($0, abs(Double($1)))
+        }
+        let energy = anchorSamples.reduce(0.0) {
+            $0 + Double($1) * Double($1)
+        }
+        let rms = sqrt(energy / Double(max(1, anchorSamples.count)))
+        let active = !activeFacts.isEmpty
+        let scalars = activeApertures + minimumCutoffs + maximumCutoffs + [peak, rms]
+        return UpperSpectralRevealRenderEvidence(
+            eligible: synthPerformance.spectralRevealEligible,
+            active: active,
+            sourceScoreEventCount: scoreFacts.count,
+            renderedEventCount: renderFacts.count,
+            activeEventCount: activeFacts.count,
+            minimumActiveAperture: activeApertures.min() ?? 1,
+            maximumActiveAperture: activeApertures.max() ?? 1,
+            minimumAppliedCutoffHz: minimumCutoffs.min() ?? 0,
+            maximumAppliedCutoffHz: maximumCutoffs.max() ?? 0,
+            scoreFingerprint: fixedWidthFingerprintHex(scoreSink.value),
+            renderFingerprint: fixedWidthFingerprintHex(renderSink.value),
+            anchorSampleHash: ExactPCMFingerprint.mono(anchorSamples),
+            anchorPeak: peak,
+            anchorRMS: rms,
+            bindingValid: bindingValid,
+            finite: anchorSamples.allSatisfy(\.isFinite) &&
+                scalars.allSatisfy(\.isFinite)
+        )
     }
 
     private struct SpectralTextureClusterFact {

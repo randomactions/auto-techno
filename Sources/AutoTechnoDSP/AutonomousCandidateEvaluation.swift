@@ -1646,6 +1646,107 @@ package struct AutonomousTPTAntialiasedNonlinearCoreEvidence: Codable, Equatable
     }
 }
 
+package struct AutonomousUpperSpectralRevealEvidence: Codable, Equatable,
+        Sendable {
+    package let eligible: Bool
+    package let active: Bool
+    package let sourceScoreEventCount: Int
+    package let renderedEventCount: Int
+    package let activeEventCount: Int
+    package let minimumActiveAperture: Double
+    package let maximumActiveAperture: Double
+    package let minimumAppliedCutoffHz: Double
+    package let maximumAppliedCutoffHz: Double
+    package let scoreFingerprint: String
+    package let renderFingerprint: String
+    package let anchorSampleHash: String
+    package let anchorPeak: Double
+    package let anchorRMS: Double
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(_ evidence: UpperSpectralRevealRenderEvidence) {
+        eligible = evidence.eligible
+        active = evidence.active
+        sourceScoreEventCount = evidence.sourceScoreEventCount
+        renderedEventCount = evidence.renderedEventCount
+        activeEventCount = evidence.activeEventCount
+        minimumActiveAperture = evidence.minimumActiveAperture
+        maximumActiveAperture = evidence.maximumActiveAperture
+        minimumAppliedCutoffHz = evidence.minimumAppliedCutoffHz
+        maximumAppliedCutoffHz = evidence.maximumAppliedCutoffHz
+        scoreFingerprint = evidence.scoreFingerprint
+        renderFingerprint = evidence.renderFingerprint
+        anchorSampleHash = evidence.anchorSampleHash
+        anchorPeak = evidence.anchorPeak
+        anchorRMS = evidence.anchorRMS
+        bindingValid = evidence.bindingValid
+        finite = evidence.finite
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            minimumActiveAperture, maximumActiveAperture, minimumAppliedCutoffHz,
+            maximumAppliedCutoffHz, anchorPeak, anchorRMS,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func isComplete(
+        architecture: String,
+        architectureEventCount: Int,
+        sampleRate: Double
+    ) -> Bool {
+        guard let resolvedArchitecture = InstrumentArchitecture(
+            rawValue: architecture
+        ), resolvedArchitecture == .resonantMono ||
+                resolvedArchitecture == .tonalMotion,
+              bindingValid, isFinite,
+              sourceScoreEventCount > 0,
+              sourceScoreEventCount == renderedEventCount,
+              activeEventCount >= 0,
+              activeEventCount <= renderedEventCount,
+              renderedEventCount <= architectureEventCount,
+              renderedEventCount <=
+                AutonomousCandidateEvaluationVector.maximumInstrumentEventsPerBar,
+              minimumAppliedCutoffHz >=
+                TPTAntialiasedNonlinearCoreContract.minimumCutoffHz,
+              minimumAppliedCutoffHz <= maximumAppliedCutoffHz,
+              sampleRate >=
+                QualityQualificationContract.minimumSupportedSampleRate,
+              sampleRate <=
+                QualityQualificationContract.maximumSupportedSampleRate,
+              Self.isSampleHash(scoreFingerprint),
+              Self.isSampleHash(renderFingerprint),
+              Self.isSampleHash(anchorSampleHash),
+              anchorPeak > 0, anchorRMS > 0,
+              anchorRMS <= anchorPeak else {
+            return false
+        }
+        let maximumCutoffFraction = resolvedArchitecture == .resonantMono
+            ? TPTAntialiasedNonlinearCoreContract.maximumCutoffFraction
+            : 0.36
+        guard maximumAppliedCutoffHz <= sampleRate * maximumCutoffFraction else {
+            return false
+        }
+        if active {
+            return eligible && activeEventCount > 0 &&
+                minimumActiveAperture >=
+                    UpperSpectralRevealArticulation.minimumAperture &&
+                minimumActiveAperture <= maximumActiveAperture &&
+                maximumActiveAperture < 1
+        }
+        return activeEventCount == 0 &&
+            minimumActiveAperture.bitPattern == 1.0.bitPattern &&
+            maximumActiveAperture.bitPattern == 1.0.bitPattern
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sendable {
     package let architecture: String
     package let sourceAssignmentCount: Int
@@ -1663,6 +1764,8 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         AutonomousSpectralTextureClusterEvidence?
     package let tonalEnvelopeExpansion:
         AutonomousTonalEnvelopeExpansionEvidence?
+    package let upperSpectralReveal:
+        AutonomousUpperSpectralRevealEvidence?
 
     package init(_ evidence: InstrumentArchitectureRenderEvidence) {
         architecture = evidence.architecture.rawValue
@@ -1687,6 +1790,9 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         tonalEnvelopeExpansion = evidence.tonalEnvelopeExpansion.map(
             AutonomousTonalEnvelopeExpansionEvidence.init
         )
+        upperSpectralReveal = evidence.upperSpectralReveal.map(
+            AutonomousUpperSpectralRevealEvidence.init
+        )
     }
 
     package var isFinite: Bool {
@@ -1695,6 +1801,7 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
             (resonantMonoModulation?.isFinite ?? true) &&
             (spectralTextureCluster?.isFinite ?? true) &&
             (tonalEnvelopeExpansion?.isFinite ?? true) &&
+            (upperSpectralReveal?.isFinite ?? true) &&
             assignments.allSatisfy { $0.isFinite }
     }
 
@@ -1763,6 +1870,22 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
                 architectureEventCount: eventCount,
                 sampleRate: sampleRate
             ) else { return false }
+        }
+        let hasMotifAssignment = assignments.contains {
+            $0.use == InstrumentUse.motif.rawValue
+        }
+        let revealArchitecture = architecture ==
+                InstrumentArchitecture.resonantMono.rawValue ||
+            architecture == InstrumentArchitecture.tonalMotion.rawValue
+        if hasMotifAssignment && revealArchitecture {
+            guard let upperSpectralReveal,
+                  upperSpectralReveal.isComplete(
+                    architecture: architecture,
+                    architectureEventCount: eventCount,
+                    sampleRate: sampleRate
+                  ) else { return false }
+        } else if upperSpectralReveal != nil {
+            return false
         }
         return true
     }
@@ -2501,9 +2624,13 @@ package struct AutonomousInstrumentBarEvidence: Codable, Equatable, Sendable {
     package var isFinite: Bool { architectures.allSatisfy { $0.isFinite } }
 
     package func isComplete(sampleRate: Double) -> Bool {
-        bar >= 0 && sourceArchitectureCount == architectures.count &&
+        let revealCount = architectures.reduce(into: 0) {
+            if $1.upperSpectralReveal != nil { $0 += 1 }
+        }
+        return bar >= 0 && sourceArchitectureCount == architectures.count &&
             architectures.count <=
                 AutonomousCandidateEvaluationVector.maximumInstrumentArchitecturesPerBar &&
+            revealCount <= 1 &&
             architectures.allSatisfy { $0.isComplete(sampleRate: sampleRate) } &&
             architectures.map { $0.architecture } ==
                 architectures.map { $0.architecture }.sorted {
@@ -2527,6 +2654,18 @@ package struct AutonomousInstrumentBarEvidence: Codable, Equatable, Sendable {
         architectures.first {
             $0.architecture == InstrumentArchitecture.tonalMotion.rawValue
         }?.tonalEnvelopeExpansion?.active ?? false
+    }
+
+    package var spectralRevealEligible: Bool {
+        architectures.compactMap(\.upperSpectralReveal).contains {
+            $0.eligible
+        }
+    }
+
+    package var spectralRevealActive: Bool {
+        architectures.compactMap(\.upperSpectralReveal).contains {
+            $0.active
+        }
     }
 }
 
@@ -4229,7 +4368,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 21
+    package static let schemaVersion = 22
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -7097,6 +7236,12 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
                     (instruments.tonalEnvelopeExpansionEligible &&
                         !forceHomeUpperTimbre)
             }
+        let spectralRevealEligibilityMatchesAttempt =
+            vector.instruments.allSatisfy { instruments in
+                instruments.spectralRevealActive ==
+                    (instruments.spectralRevealEligible &&
+                        !forceHomeUpperTimbre)
+            }
         guard schemaVersion == Self.schemaVersion,
               prevalidatedRecordIsStructurallyValid,
               vector.pulseEchoDrive.count == vector.instruments.count,
@@ -7104,6 +7249,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
               forceHomeTimingIsNeutral,
               upperTimingEligibilityMatchesAttempt,
               envelopeExpansionEligibilityMatchesAttempt,
+              spectralRevealEligibilityMatchesAttempt,
               sourceReasonCodeCount == reasonCodes.count,
               sourceReasonCodeCount <= Self.maximumReasonCodeCount else {
             return false
@@ -7350,7 +7496,9 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
                 corrected, source in
                 corrected.bar == source.bar &&
                     corrected.tonalEnvelopeExpansionEligible ==
-                        source.tonalEnvelopeExpansionEligible
+                        source.tonalEnvelopeExpansionEligible &&
+                    corrected.spectralRevealEligible ==
+                        source.spectralRevealEligible
             } &&
             correction.percussionEchoTexture ==
                 initial.percussionEchoTexture

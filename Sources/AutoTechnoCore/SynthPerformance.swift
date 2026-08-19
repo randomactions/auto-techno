@@ -85,6 +85,7 @@ package struct ResolvedUpperNote: Equatable, Sendable {
     package let gate: UpperNoteGate
     package let timbreIntent: UpperTimbreIntent
     package let envelopeRelation: UpperEnvelopeRelation
+    package let spectralReveal: UpperSpectralRevealArticulation
     /// A score-owned positive onset displacement measured in sixteenth-note
     /// steps. Duration remains independent so delaying a note never shortens
     /// its requested gate.
@@ -96,6 +97,7 @@ package struct ResolvedUpperNote: Equatable, Sendable {
                  velocity: Double, gate: UpperNoteGate,
                  timbreIntent: UpperTimbreIntent,
                  envelopeRelation: UpperEnvelopeRelation = .home,
+                 spectralReveal: UpperSpectralRevealArticulation = .home,
                  timingOffsetInSteps: Double = 0,
                  instrument: InstrumentAssignment? = nil) {
         self.role = role
@@ -116,6 +118,7 @@ package struct ResolvedUpperNote: Equatable, Sendable {
         self.gate = gate
         self.timbreIntent = timbreIntent
         self.envelopeRelation = envelopeRelation
+        self.spectralReveal = spectralReveal
         self.timingOffsetInSteps = timingOffsetInSteps.isFinite
             ? min(Self.maximumTimingOffsetInSteps, max(0, timingOffsetInSteps))
             : 0
@@ -133,7 +136,27 @@ package struct ResolvedUpperNote: Equatable, Sendable {
             gate: gate,
             timbreIntent: timbreIntent,
             envelopeRelation: envelopeRelation,
+            spectralReveal: spectralReveal,
             timingOffsetInSteps: value,
+            instrument: instrument
+        )
+    }
+
+    package func withSpectralReveal(
+        _ articulation: UpperSpectralRevealArticulation
+    ) -> ResolvedUpperNote {
+        ResolvedUpperNote(
+            role: role,
+            onsetStep: onsetStep,
+            durationInSteps: durationInSteps,
+            startFrequencyRatio: startFrequencyRatio,
+            endFrequencyRatio: endFrequencyRatio,
+            velocity: velocity,
+            gate: gate,
+            timbreIntent: timbreIntent,
+            envelopeRelation: envelopeRelation,
+            spectralReveal: articulation,
+            timingOffsetInSteps: timingOffsetInSteps,
             instrument: instrument
         )
     }
@@ -403,6 +426,9 @@ package struct SynthPerformanceBar: Equatable, Sendable {
     /// selected note carries the active relation; a correction retains this
     /// fact while resolving every relation to exact home.
     package let tonalEnvelopeExpansionEligible: Bool
+    /// Eligibility before an attempt-local home correction. Applied notes can
+    /// still be exact home while retaining this causal score fact.
+    package let spectralRevealEligible: Bool
     /// Attempt-local correction ownership. This is kept separate from
     /// eligibility so a corrected bar can prove the feature would normally
     /// have been active while forcing any incoming long release home before
@@ -417,6 +443,7 @@ package struct SynthPerformanceBar: Equatable, Sendable {
                 upperTimingRelation: UpperTimingRelation = .aligned,
                 pulseEchoTextureArticulation: PulseEchoTextureArticulation = .neutral,
                 tonalEnvelopeExpansionEligible: Bool = false,
+                spectralRevealEligible: Bool = false,
                 forceHomeUpperTimbre: Bool = false) {
         self.bar = bar
         self.gesture = gesture
@@ -430,6 +457,7 @@ package struct SynthPerformanceBar: Equatable, Sendable {
         self.upperTimingRelation = upperTimingRelation
         self.pulseEchoTextureArticulation = pulseEchoTextureArticulation
         self.tonalEnvelopeExpansionEligible = tonalEnvelopeExpansionEligible
+        self.spectralRevealEligible = spectralRevealEligible
         self.forceHomeUpperTimbre = forceHomeUpperTimbre
     }
 
@@ -456,14 +484,16 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                  forceHomeUpperTimbre: Bool = false,
                  compositionBars suppliedComposition: [PhraseCompositionBar]? = nil) {
         let synthWorld = SynthWorldDNA(scene: scene, dna: dna)
-        let compositionBars = forceHomeUpperTimbre
-            ? resolvedBars.map { PhraseCompositionBar.neutral(bar: $0.performance.bar) }
-            : suppliedComposition ?? PhraseCompositionResolver.resolve(
+        let authoredCompositionBars = suppliedComposition ??
+            PhraseCompositionResolver.resolve(
                 scene: scene,
                 dna: dna,
                 kind: kind,
                 resolvedBars: resolvedBars
             )
+        let compositionBars = forceHomeUpperTimbre
+            ? resolvedBars.map { PhraseCompositionBar.neutral(bar: $0.performance.bar) }
+            : authoredCompositionBars
         let synthBars = resolvedBars.enumerated().map { index, resolved in
             let performanceBar = resolved.performance
             let composition = compositionBars.indices.contains(index)
@@ -497,6 +527,36 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 composition: composition
             )
             let upperNotes = upperResolution.notes
+            let eligibilityNotes: [ResolvedUpperNote]
+            if forceHomeUpperTimbre {
+                let authoredComposition = authoredCompositionBars.indices.contains(index)
+                    ? authoredCompositionBars[index]
+                    : .neutral(bar: performanceBar.bar)
+                eligibilityNotes = SynthPerformancePlan.resolvedUpperNotes(
+                    scene: scene,
+                    dna: dna,
+                    kind: kind,
+                    world: synthWorld,
+                    resolved: resolved,
+                    gesture: gesture,
+                    mutationAmount: mutation,
+                    forceHomeUpperTimbre: false,
+                    relationalSteps: relationalSteps,
+                    composition: authoredComposition
+                ).notes
+            } else {
+                eligibilityNotes = upperNotes
+            }
+            let spectralRevealEligible = eligibilityNotes.contains { note in
+                note.role == .anchor &&
+                    UpperSpectralRevealResolver.articulation(
+                        role: note.role,
+                        narrative: resolved.narrative,
+                        phraseKind: kind,
+                        forceHome: false,
+                        step: note.onsetStep
+                    ).relation == .emerging
+            }
             let earliestPulseEchoOnsetStep = upperNotes
                 .filter { $0.instrument.effects.contains(.pulseEcho) }
                 .map { $0.onsetStep }
@@ -529,6 +589,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 ),
                 tonalEnvelopeExpansionEligible:
                     upperResolution.tonalEnvelopeExpansionEligible,
+                spectralRevealEligible: spectralRevealEligible,
                 forceHomeUpperTimbre: forceHomeUpperTimbre
             )
         }
@@ -708,6 +769,13 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 timbreIntent: resonantIntent,
                 envelopeRelation: index == expansionCandidateIndex &&
                     !forceHomeUpperTimbre ? .sustainedWash : .home,
+                spectralReveal: UpperSpectralRevealResolver.articulation(
+                    role: .anchor,
+                    narrative: resolved.narrative,
+                    phraseKind: kind,
+                    forceHome: forceHomeUpperTimbre,
+                    step: pitch.event.step
+                ),
                 instrument: anchorInstrument
             )
         }
@@ -724,6 +792,13 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     velocity: step.velocity,
                     gate: .retrigger,
                     timbreIntent: resonantIntent,
+                    spectralReveal: UpperSpectralRevealResolver.articulation(
+                        role: .anchor,
+                        narrative: resolved.narrative,
+                        phraseKind: kind,
+                        forceHome: forceHomeUpperTimbre,
+                        step: step.onsetStep
+                    ),
                     instrument: anchorInstrument
                 )
             })

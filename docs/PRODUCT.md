@@ -85,6 +85,16 @@ only the existing tail; it does not add a track, source, send, or effect chain.
 Same-pass event evidence and calibrated clearance/tail dimensions keep that
 contextual decision attributable.
 
+The protagonist spectral-reveal path follows the same reuse-or-expand rule.
+When an existing anchor is already narratively emerging in a lock or contrast
+phrase, the score may veil and disclose that exact Resonant Mono or Tonal
+Motion voice through its existing filter. It changes no note, role, patch,
+effect access, send, density, transport, or random draw, and exact home
+correction returns to the previous cutoff path. A new lead track, synth, or
+filter bus would duplicate the protagonist rather than strengthen its arrival.
+Independent score/render identities, actual cutoff facts, and isolated-anchor
+PCM evidence keep the relation attributable and replaceable.
+
 The tuned-percussive foundation path now resolves up to two bounded modal
 articulations from the same bar, modal DNA, character, and existing foundation
 events. One deterministic six-mode resonator renders those articulations into
@@ -137,7 +147,7 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v7 supplies
+policy and its operational gates pass. Professional Evidence v8 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation and live-controller consequence, explicit
 analysis-memory provenance, and complete canonical-journey report-bank

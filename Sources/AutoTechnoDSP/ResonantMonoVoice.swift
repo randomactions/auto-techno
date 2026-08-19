@@ -133,6 +133,7 @@ enum ResonantMonoVoice {
             velocity: velocity,
             gate: .retrigger,
             assignment: assignment,
+            spectralReveal: .home,
             state: &state,
             modulationMeasurement: &noModulationMeasurement,
             nonlinearCoreEvidence: &nonlinearCoreEvidence
@@ -182,6 +183,7 @@ enum ResonantMonoVoice {
                 velocity: note.velocity,
                 gate: appliedGate,
                 assignment: note.instrument,
+                spectralReveal: note.spectralReveal,
                 state: &state,
                 modulationMeasurement: &modulationMeasurement,
                 nonlinearCoreEvidence: &nonlinearCoreEvidence
@@ -205,6 +207,9 @@ enum ResonantMonoVoice {
                 appliedGate: appliedGate,
                 didRetrigger: appliedGate == .retrigger,
                 timbreIntent: note.timbreIntent,
+                spectralReveal: note.spectralReveal,
+                minimumAppliedCutoffHz: result.minimumAppliedCutoffHz,
+                maximumAppliedCutoffHz: result.maximumAppliedCutoffHz,
                 requestedVelocity: note.velocity,
                 appliedVelocity: min(1, max(0, note.velocity)),
                 velocitySpectralEnvelopeScale: 0.72 + min(1, max(0, note.velocity)) * 0.72,
@@ -231,21 +236,26 @@ enum ResonantMonoVoice {
         velocity: Double,
         gate: UpperNoteGate,
         assignment: InstrumentAssignment,
+        spectralReveal: UpperSpectralRevealArticulation,
         state: inout ResonantMonoState,
         modulationMeasurement: inout [Float],
         nonlinearCoreEvidence:
             inout TPTAntialiasedNonlinearCoreEvidenceAccumulator
     ) -> (renderedFrameCount: Int,
-          modulation: ResonantMonoModulationEventRenderEvidence?) {
+          modulation: ResonantMonoModulationEventRenderEvidence?,
+          minimumAppliedCutoffHz: Double,
+          maximumAppliedCutoffHz: Double) {
         guard sampleRate > 0, start >= 0, start < output.count,
               roleMeasurement.count == output.count,
               architectureMeasurement.count == output.count,
               pulseEchoSend.count == output.count,
               spatialReverbSend.count == output.count,
               modulationMeasurement.isEmpty ||
-                modulationMeasurement.count == output.count else { return (0, nil) }
+                modulationMeasurement.count == output.count else {
+            return (0, nil, 0, 0)
+        }
         let frames = min(durationFrames, output.count - start)
-        guard frames > 0 else { return (0, nil) }
+        guard frames > 0 else { return (0, nil, 0, 0) }
         state.prepare(patch: assignment.patch)
         let automation = assignment.automation
         let boundedVelocity = min(1, max(0, velocity))
@@ -301,6 +311,8 @@ enum ResonantMonoVoice {
         var secondHighPassOutput = 0.0
         var appliedPeakIndex = 0.0
         var renderedCount = 0
+        var minimumAppliedCutoffHz = Double.infinity
+        var maximumAppliedCutoffHz = 0.0
         for index in 0..<frames {
             let age = Double(index) / sampleRate
             let attack = min(1, Double(index) / Double(attackFrames))
@@ -365,10 +377,19 @@ enum ResonantMonoVoice {
             }
             let source = legacySource + modulationDelta
             let accentLift = boundedVelocity * (0.42 + automation.motion * 0.42)
-            let cutoff = min(
+            let requestedCutoff = min(
                 sampleRate * 0.16,
                 baseCutoff + state.envelope * envelopeDepth * (0.72 + accentLift)
             )
+            let cutoff = UpperSpectralRevealContract.appliedCutoffHz(
+                requestedCutoffHz: requestedCutoff,
+                articulation: spectralReveal,
+                sampleRate: sampleRate,
+                maximumCutoffFraction:
+                    TPTAntialiasedNonlinearCoreContract.maximumCutoffFraction
+            )
+            minimumAppliedCutoffHz = min(minimumAppliedCutoffHz, cutoff)
+            maximumAppliedCutoffHz = max(maximumAppliedCutoffHz, cutoff)
             let shaped = TPTAntialiasedNonlinearCore.process(
                 input: source,
                 sampleRate: sampleRate,
@@ -407,7 +428,12 @@ enum ResonantMonoVoice {
                 renderedFrameCount: renderedCount
             )
         }
-        return (renderedCount, modulationEvidence)
+        return (
+            renderedCount,
+            modulationEvidence,
+            minimumAppliedCutoffHz.isFinite ? minimumAppliedCutoffHz : 0,
+            maximumAppliedCutoffHz
+        )
     }
 
     private static func wrap(_ phase: Double) -> Double {

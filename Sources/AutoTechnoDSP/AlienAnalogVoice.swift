@@ -10,6 +10,7 @@ struct AlienVoiceNote: Equatable, Sendable {
     let gate: UpperNoteGate
     let timbreIntent: UpperTimbreIntent
     let envelopeRelation: UpperEnvelopeRelation
+    let spectralReveal: UpperSpectralRevealArticulation
     let instrument: InstrumentAssignment
     let role: SynthRole
     let articulation: RelationalArticulation
@@ -22,6 +23,7 @@ struct AlienVoiceNote: Equatable, Sendable {
          endFrequency: Double, velocity: Double, gate: UpperNoteGate,
          timbreIntent: UpperTimbreIntent,
          envelopeRelation: UpperEnvelopeRelation = .home,
+         spectralReveal: UpperSpectralRevealArticulation = .home,
          instrument: InstrumentAssignment, role: SynthRole,
          articulation: RelationalArticulation, dryScale: Double,
          spatialReverbSend: Double, narrativeGainScale: Double,
@@ -34,6 +36,7 @@ struct AlienVoiceNote: Equatable, Sendable {
         self.gate = gate
         self.timbreIntent = timbreIntent
         self.envelopeRelation = envelopeRelation
+        self.spectralReveal = spectralReveal
         self.instrument = instrument
         self.role = role
         self.articulation = articulation
@@ -455,6 +458,7 @@ enum AlienAnalogVoice {
         var spatialSendLevel = 0.0
         var narrativeGainScale = 1.0
         var narrativeSpectralScale = 1.0
+        var spectralReveal = UpperSpectralRevealArticulation.home
         var targetTimbreTreatment = scheduled.contains(where: { note in
             AlienTimbreTreatment.resolve(
                 intent: note.timbreIntent,
@@ -596,6 +600,9 @@ enum AlienAnalogVoice {
                     didRetrigger: !legatoGate,
                     timbreIntent: note.timbreIntent,
                     envelopeRelation: note.envelopeRelation,
+                    spectralReveal: note.spectralReveal,
+                    minimumAppliedCutoffHz: 0,
+                    maximumAppliedCutoffHz: 0,
                     baseEnvelopeSustain: baseSustain,
                     baseEnvelopeReleaseSeconds: baseReleaseSeconds,
                     appliedEnvelopeSustain: envelopeTreatment.sustain,
@@ -613,6 +620,7 @@ enum AlienAnalogVoice {
                 spatialSendLevel = min(1, max(0, note.spatialReverbSend))
                 narrativeGainScale = max(0, note.narrativeGainScale)
                 narrativeSpectralScale = max(0.01, note.narrativeSpectralScale)
+                spectralReveal = note.spectralReveal
                 attackFrames = max(1, Int(
                     baseAttackSeconds * articulation.attackScale * sampleRate
                 ))
@@ -742,10 +750,28 @@ enum AlienAnalogVoice {
                     : articulationSpectralScale
                 let baseCutoff = (170 + Double(world.variation) * 55 + roleIndex * 48) *
                     spectralScale * patchTreatment.cutoffScale
-                let cutoff = min(oversampledRate * 0.18,
-                                 baseCutoff + (1 - mutation) * 1_280 + envelopeLift * 1_850 +
-                                 state.filterEnvelope * timbreTreatment.filterEnvelopeDepth +
-                                 modulator * mutation * 310)
+                let requestedCutoff = min(
+                    oversampledRate * 0.18,
+                    baseCutoff + (1 - mutation) * 1_280 + envelopeLift * 1_850 +
+                        state.filterEnvelope * timbreTreatment.filterEnvelopeDepth +
+                        modulator * mutation * 310
+                )
+                let cutoff = UpperSpectralRevealContract.appliedCutoffHz(
+                    requestedCutoffHz: requestedCutoff,
+                    articulation: spectralReveal,
+                    sampleRate: oversampledRate,
+                    maximumCutoffFraction: 0.18
+                )
+                if let evidenceIndex = activeEvidenceIndex {
+                    let currentMinimum = noteRenderEvidence[evidenceIndex]
+                        .minimumAppliedCutoffHz
+                    noteRenderEvidence[evidenceIndex].minimumAppliedCutoffHz =
+                        currentMinimum == 0 ? cutoff : min(currentMinimum, cutoff)
+                    noteRenderEvidence[evidenceIndex].maximumAppliedCutoffHz = max(
+                        noteRenderEvidence[evidenceIndex].maximumAppliedCutoffHz,
+                        cutoff
+                    )
+                }
                 let rawCoefficient = 2 * .pi * cutoff / oversampledRate
                 let coefficient = min(0.46, max(0.004,
                     rawCoefficient / (1 + rawCoefficient * 0.5)))

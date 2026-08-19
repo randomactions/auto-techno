@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 21)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 22)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -1221,10 +1221,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 21)
-        #expect(QualityQualificationContract.schemaVersion == 23)
+        #expect(vector.schemaVersion == 22)
+        #expect(QualityQualificationContract.schemaVersion == 24)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v22")
+                "autotechno-canonical-engine.v23")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -1747,7 +1747,9 @@ struct AutonomousCandidateEvaluationTests {
                 nonlinearCore:
                     fixtureTPTAntialiasedNonlinearCoreRenderEvidence(),
                 resonantMonoModulation:
-                    fixtureResonantMonoModulationRenderEvidence()
+                    fixtureResonantMonoModulationRenderEvidence(),
+                upperSpectralReveal:
+                    fixtureUpperSpectralRevealRenderEvidence()
             )]
         )
         let vector = fixtureVector(
@@ -1774,7 +1776,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(Set(serialized.keys) == Set([
             "architecture", "sourceAssignmentCount", "assignments", "eventCount",
             "sampleHash", "peak", "rms", "finite", "nonlinearCore",
-            "resonantMonoModulation",
+            "resonantMonoModulation", "upperSpectralReveal",
         ]))
         let serializedAssignments = try #require(
             serialized["assignments"] as? [[String: Any]]
@@ -2079,7 +2081,9 @@ struct AutonomousCandidateEvaluationTests {
                 peak: 0.20,
                 rms: 0.07,
                 finite: true,
-                tonalEnvelopeExpansion: relation
+                tonalEnvelopeExpansion: relation,
+                upperSpectralReveal:
+                    fixtureUpperSpectralRevealRenderEvidence()
             )]
         )
         let vector = fixtureVector(
@@ -3524,7 +3528,7 @@ struct AutonomousCandidateEvaluationTests {
         }
 
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
-                "85834103e4dc0ae2")
+                "7d7225767edbec51")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -3532,7 +3536,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "c3230a6262b0985f")
+                "e603fb4d045127fb")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -4588,8 +4592,32 @@ struct AutonomousCandidateEvaluationTests {
                 nonlinearCore:
                     fixtureTPTAntialiasedNonlinearCoreRenderEvidence(),
                 resonantMonoModulation:
-                    fixtureResonantMonoModulationRenderEvidence()
+                    fixtureResonantMonoModulationRenderEvidence(),
+                upperSpectralReveal:
+                    fixtureUpperSpectralRevealRenderEvidence()
             )]
+        )
+    }
+
+    private func fixtureUpperSpectralRevealRenderEvidence()
+        -> UpperSpectralRevealRenderEvidence {
+        UpperSpectralRevealRenderEvidence(
+            eligible: false,
+            active: false,
+            sourceScoreEventCount: 1,
+            renderedEventCount: 1,
+            activeEventCount: 0,
+            minimumActiveAperture: 1,
+            maximumActiveAperture: 1,
+            minimumAppliedCutoffHz: 1_000,
+            maximumAppliedCutoffHz: 1_000,
+            scoreFingerprint: "0123456789abcdef",
+            renderFingerprint: "0123456789abcdef",
+            anchorSampleHash: "0123456789abcdef",
+            anchorPeak: 0.20,
+            anchorRMS: 0.08,
+            bindingValid: true,
+            finite: true
         )
     }
 

@@ -95,6 +95,10 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         "upper-percussion-tail-clearance-event-ratio"
     case upperPercussionTailRenderedTailToAttackDBMean =
         "upper-percussion-tail-rendered-tail-to-attack-db-mean"
+    case upperSpectralRevealActiveEventRatio =
+        "upper-spectral-reveal-active-event-ratio"
+    case upperSpectralRevealAppliedCutoffRatioMean =
+        "upper-spectral-reveal-applied-cutoff-ratio-mean"
 
     package var acceptsSaferValuesBelowCalibration: Bool {
         switch self {
@@ -496,9 +500,9 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 4
+    package static let schemaVersion = 5
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v4"
+        "autotechno-professional-quality-observation.v5"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -676,6 +680,20 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         let upperPercussionTailDivisor = Double(
             max(1, upperPercussionTailEvents.count)
         )
+        let spectralRevealEvidence = vector.instruments.flatMap(
+            \.architectures
+        ).compactMap(\.upperSpectralReveal)
+        let activeSpectralRevealEvidence = spectralRevealEvidence.filter(
+            \.active
+        )
+        let spectralRevealEventCount = spectralRevealEvidence.reduce(0) {
+            $0 + $1.renderedEventCount
+        }
+        let activeSpectralRevealEventCount =
+            activeSpectralRevealEvidence.reduce(0) {
+                $0 + $1.activeEventCount
+            }
+        let spectralRevealDivisor = Double(max(1, spectralRevealEventCount))
 
         var kickFoundationDifferences: [Double] = []
         for stemBar in vector.stems {
@@ -843,6 +861,18 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 value: mean(activeUpperPercussionTailEvents.map(
                     \.renderedTailToAttackDB
                 ))
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .upperSpectralRevealActiveEventRatio,
+                value: Double(activeSpectralRevealEventCount) /
+                    spectralRevealDivisor
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .upperSpectralRevealAppliedCutoffRatioMean,
+                value: mean(activeSpectralRevealEvidence.map {
+                    $0.maximumAppliedCutoffHz /
+                        vector.routeContinuation.sampleRate
+                })
             ),
         ]
         try self.init(
@@ -1093,9 +1123,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 4
+    package static let schemaVersion = 5
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v4"
+        "autotechno-professional-quality-profile.v5"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1644,7 +1674,9 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .kickAudibleGainMean, .modalPercussionActiveBarRatio,
                 .modalPercussionMaskingMaximumOverlap,
                 .modalPercussionMaximumPoleRadius,
-                .upperPercussionTailClearanceEventRatio:
+                .upperPercussionTailClearanceEventRatio,
+                .upperSpectralRevealActiveEventRatio,
+                .upperSpectralRevealAppliedCutoffRatioMean:
             return 0...1
         case .stereoCorrelation, .lowStereoCorrelation:
             return -1...1

@@ -1105,3 +1105,94 @@ passed all 338 selected test executions, the callback-symbol audit found only
 `memcpy`, and the optimized product built. This is automated implementation and
 qualification evidence, not a listening result, app/route test, or hardware
 soak.
+
+## Source 22: protagonist spectral reveal — 2026-08-18
+
+Source ID `22` used YouTube video `ByjKEl_uO9g`, *The Fred Again.. phenomenon
+(5 lessons)*, from Underdog Electronic Music School, published 2023-01-23 with
+a 16:14 duration. The clean-room capture used unauthenticated `yt-dlp` for
+metadata, automatic English captions, top-ranked comments, and temporary audio:
+
+```sh
+yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source22-research.EMOAAV -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=ByjKEl_uO9g'
+yt-dlp -f bestaudio -x --audio-format wav --audio-quality 0 --postprocessor-args 'ffmpeg:-ar 48000 -ac 2' -P /private/tmp/auto-techno-source22-research.EMOAAV -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=ByjKEl_uO9g'
+```
+
+No manual subtitle track was available. Automatic `en` and `en-orig` VTTs
+were byte-identical with SHA-256
+`96e9778781ea6b46b07a7b981bc72778f3f0ec287c287b26089eac7c98e7d804`.
+The metadata/comment artifact had SHA-256
+`f436469a09d668a22a0849d984e5706e881b25dde680bfc834e8ff085d3fd20e`;
+the temporary 48 kHz stereo PCM capture had SHA-256
+`a4b0b10a47199996fb1ac228f7fbd862968641c4faf5c333f6c4f81b977befdb`.
+Current YouTube media delivery required yt-dlp's official PO-token workflow
+through a temporary localhost provider. The provider was stopped after the
+capture, and all source media, captions, comments, token artifacts, and audio
+inspection files remain untracked.
+
+The bounded caption paraphrase is: `0:14...1:23` uses a sustained degree to
+establish context; `1:23...3:11` lets a complex hook's rhythm arrive behind a
+low-pass veil before disclosing its detail; `3:11...4:00` coordinates the hook
+with kick motion; `4:00...6:58` uses weak pre-kick positions as rhythmic
+pockets; `6:58...8:33` removes an established anchor before restoring the
+frame; `8:33...10:18` values spontaneous human capture despite roughness; and
+`10:18...15:29` uses four-note colour to make harmony less uniform. Source
+samples, presets, workstation operations, creator identity, and tutorial
+numbers are not engine requirements.
+
+The capture returned exactly 50 top-ranked top-level comments and eleven
+replies. Four independent top-level comments converged on intimacy or
+spontaneity rather than capture polish. That supports the durable performance
+hypothesis, but the standalone product has no microphone, imported vocal, or
+account boundary. A synthetic lo-fi vocal lane would imitate the tutorial's
+workflow without its cause. No comments established a portable filter,
+sidechain, timing, or harmony coefficient.
+
+Repository reconciliation considered both reuse and expansion. Existing
+owners already cover the source's sidechain relationship, weak-pulse pockets,
+kick withholding/recovery, modal four-note harmony, and atmospheric context.
+A second drum pattern, sidechain, chord track, vocal source, or effect bus
+would duplicate those owners. The missing capability was narrower: the
+existing protagonist could gain presence, but its hidden-to-revealed filter
+movement was not a score-owned relation shared by its two foreground synth
+architectures.
+
+Source 22 therefore adds `UpperSpectralRevealRelation` to existing anchor
+notes. In naturally emerging lock or contrast bars, the current Resonant Mono
+or Tonal Motion protagonist uses aperture `0.45 + 0.55 * presence^2` on its
+existing cutoff. Supporting roles, notes, rhythm, velocity, patch, sends,
+transport, density, random state, and effect topology are unchanged. Home
+branches to the exact prior cutoff, and evaluator-owned correction resolves
+the same eligible bar to literal home. No track, instrument, effect return,
+continuation buffer, callback state, or UI control is added.
+
+Same-pass architecture-local evidence retains independent score/render event
+counts and fingerprints, active-event and aperture facts, actual cutoff
+extrema, and the isolated anchor hash/peak/RMS. Candidate-vector schema 22
+requires that record on each applicable existing protagonist architecture and
+rejects decoded cutoff or binding forgery. The professional observation adds
+an event-weighted active ratio and applied-cutoff ratio; a dedicated
+adversarial case rejects a cutoff that escapes the calibrated reveal range.
+
+The durable intention and replacement boundary are recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). A later serious
+renderer may replace the scalar aperture with a higher-order score trajectory,
+multiband or formant-safe morph, or a better oversampled filter only after
+calibrated legibility, masking, or artifact evidence exposes a repeatable
+deficit. It must preserve the protagonist, exact home path, sends, role and
+score ownership, and causal evidence, and replace rather than layer another
+reveal chain. Focused validation proved natural reachability,
+representative-rate cutoff bounds, exact home behavior, same-bar isolated
+anchor PCM change, complete prepared evidence, decoded cutoff-forgery
+rejection, and correction-owned eligibility retention. Release-mode artifact
+generation then accepted all 392 development observations from 28 complete
+journeys, rejected all 25 adversarial cases for their expected non-compensable
+reasons, and accepted all 56 observations from four disjoint holdout journeys
+with zero relationship failures. The resulting v5 profile, v6 adversarial,
+and v4 holdout identities are `a4f10f84996591bb`, `533141d901ed71c6`, and
+`de7f4ca2dc3c94dc`. The broader local matrix passed all 346 workflow-selected
+test executions across 31 serial process boundaries; the realtime producer
+symbol audit found only the allowed copy primitive and the optimized
+`AutoTechno` product built. Publication and exact-head CI are recorded
+separately after completion; no listening, app/route smoke, latency or
+peak-memory measurement, or hardware soak is claimed by this source record.
