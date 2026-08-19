@@ -1196,3 +1196,110 @@ symbol audit found only the allowed copy primitive and the optimized
 `AutoTechno` product built. Publication and exact-head CI are recorded
 separately after completion; no listening, app/route smoke, latency or
 peak-memory measurement, or hardware soak is claimed by this source record.
+
+## Source 23: percussion anticipation into an owned release — 2026-08-19
+
+Source ID `23` used YouTube video `pQJm66oAsG4`, *The way out of the
+8-bar loop*, from Underdog Electronic Music School, published 2022-10-17 with
+a 7:52 duration. The clean-room capture used an isolated yt-dlp environment,
+the official local PO-token provider required by current YouTube media
+delivery, automatic English captions, metadata, top-ranked comments, and
+temporary audio:
+
+```sh
+/private/tmp/yt-dlp-source23-venv/bin/python -m yt_dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source23-research.7tB6iQ -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=pQJm66oAsG4'
+/private/tmp/yt-dlp-source23-venv/bin/python -m yt_dlp -f bestaudio -x --audio-format wav --audio-quality 0 --postprocessor-args 'ffmpeg:-ar 48000 -ac 2' -P /private/tmp/auto-techno-source23-research.7tB6iQ -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=pQJm66oAsG4'
+```
+
+The capture itself records yt-dlp `2026.03.17`; the tool was upgraded after
+capture to `2026.07.04` for subsequent sources. No manual subtitle track was
+available. Automatic `en` and `en-orig` VTTs were byte-identical with SHA-256
+`fd6070ae1a994f7a5c5ca7ee5b666193318a397e9ca18028a6e6c3d5be523617`.
+The metadata/comment artifact had SHA-256
+`7095c8353e703ff5c47dd0e0efcef7b2acb52a09cc6fd1985cf015bb5878c45d`;
+the temporary 48 kHz stereo PCM capture was 472.038458 seconds and had SHA-256
+`3fa33ac2f492d1e4655a11c65d68dd0c4eebd679a00ba617a82ce32a50bdc1e8`.
+The provider was stopped after capture, and all source media, captions,
+comments, token material, and inspection images remain untracked.
+
+The bounded caption paraphrase is: `0:32...1:58` starts from one stable loop,
+duplicates its frame, removes low rhythm and bass through the middle, then
+restores the full frame; `2:00...2:38` names tension and anticipation as the
+reason the return feels consequential; `2:45...4:04` develops the release as a
+memorable event rather than another repetition; and `4:10...6:56` builds a
+reverse-reverb gesture by rendering a broad wet tail, reversing it, removing
+the source transient, and letting the crescendo disappear at the arrival.
+The optional band-pass demonstration supports evolving spectral occupancy, not
+a portable cutoff, duration, send, or gain coefficient.
+
+As a bounded audio-demo check, four consecutive 4-second windows from
+`5:50...6:06` were high-pass inspected and measured approximately `-29.77`,
+`-27.58`, `-24.06`, and `-24.92` dBFS RMS. The trajectory supports a broad
+rise in upper-band energy before the arrival; it does not make the source's
+filter, level, duration, or exact curve portable to the engine.
+
+The capture returned exactly 50 top-ranked top-level comments and fourteen
+replies. Six independent top-level comments converged on spreading core sounds,
+preverb or reversed delay, melodic foreshadowing, a short silence, or a reverse
+tail as ways to make an arrival feel prepared. That supports the general
+anticipation relationship. It does not establish a numeric reverb, filter,
+feedback, or level target, and workstation operations or external effect names
+are not engine requirements.
+
+Repository reconciliation considered both reuse and expansion. A new riser
+track, instrument, reverb engine, captured sample, or effect bus would duplicate
+current owners and weaken causality. `KickSyntaxResolver` already owns the
+grounded, two-bar-withheld, recovery arc; `PercussionEchoTextureResolver` and
+its protected renderer already own one bounded filtered percussion return. The
+demonstration's literal bass mute is not copied: the canonical foundation
+behavior remains independently score-owned, and overriding it here would couple
+two musical owners without a measured foundation deficit. The
+missing capability was therefore a second semantic relation on that same
+return. On only the second withheld energy-release bar at macro position 14,
+one already-resolved weak percussion event anchors a one-step input window on
+the existing protected percussion stem; the detached renderer reverses that
+bounded wet tail and applies a raised-cosine
+crescendo ending at exact zero on the already-owned release boundary. It adds
+no onset, track, instrument, bus, transport state, random draw, continuation
+buffer, callback work, or UI control. The established contrast `gatedEcho`
+branch remains the same canonical path and retains its prior PCM behavior.
+
+Same-pass evidence binds the semantic relation, kick-syntax role, input/output
+geometry, protected input and return hashes, peak/RMS, early/late RMS and rise
+dB, nonzero counts, exact-zero endpoints, and protected/full render-pass
+equality. Candidate-vector schema 23 retains one record for every bar and
+rejects wrong relation, geometry, score/render binding, flat active swell, and
+nonfinite or oversized decoded input. The professional observation adds active-
+bar ratio and early-to-late rise dimensions; a dedicated adversarial case must
+reject a flattened release-rise metric. Exact home and ineligible bars remain
+neutral, and the feature owns no additional continuation.
+
+The durable intention and replacement boundary are recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). The first
+reverse-wet/raised-cosine realization is provisional. A serious later renderer
+may replace it with transient-aware reverse convolution, fractional or
+multitap stereo delay, denser diffusion, spectral shaping, or controlled
+nonlinear colour only after calibrated buildup, masking, or artifact evidence
+exposes a repeatable deficit. The replacement must preserve the existing
+percussion owner, kick-syntax release boundary, exact neutral and gated paths,
+determinism, and causal evidence; it must replace rather than layer another
+buildup chain.
+
+Release-mode artifact generation accepted all 392 development observations
+from 28 complete journeys, rejected all 26 adversarial cases for their exact
+expected non-compensable reasons, and accepted all 56 observations from four
+disjoint holdout journeys with zero relationship failures. The resulting v6
+profile, v7 adversarial suite, and v5 holdout identities are
+`e5dd5c31a2f52e0c`, `3bcabc8fb4118913`, and `4eae3a36734c295b`.
+Focused score, DSP, representative-rate, prepared-transaction, malformed-input,
+fingerprint, broader regression, release-build, publication, and exact-head CI
+validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated caches
+and serial process boundaries. All 351 workflow-selected test executions passed
+across 31 processes, including the callback queue, live analyzer/controller,
+candidate and artifact tampering, calibrated primary, adversarial, disjoint
+holdout, atomic commit, representative-rate, core/evidence, preparation
+preflight, and protected-routing groups. The realtime producer undefined-symbol
+audit found only the allowed copy primitive, and the optimized `AutoTechno`
+product built. Publication and exact-head CI are recorded separately after
+completion. No listening, app/route smoke, latency or peak-memory measurement,
+hardware soak, or professional-quality promotion is claimed.

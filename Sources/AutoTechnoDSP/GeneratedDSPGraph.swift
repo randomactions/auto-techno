@@ -1515,7 +1515,9 @@ package enum AutonomousPhrasePreparer {
                 ensemble: resolved.ensemble,
                 kind: plan.kind,
                 character: resolved.performanceCharacter,
-                gesture: resolved.arrangementGesture
+                gesture: resolved.arrangementGesture,
+                kickSyntaxRole: resolved.kickSyntaxRole,
+                absoluteBar: resolved.performance.bar
             )
         let percussionEchoTextureIsCanonical =
             resolved.percussionEchoTexture == canonicalPercussionEchoTexture
@@ -1606,7 +1608,8 @@ package enum AutonomousPhrasePreparer {
                         ensemble: ensemble,
                         kind: plan.kind,
                         character: resolved.performanceCharacter,
-                        gesture: resolved.arrangementGesture
+                        gesture: resolved.arrangementGesture,
+                        absoluteBar: resolved.performance.bar
                     )
             )
         }

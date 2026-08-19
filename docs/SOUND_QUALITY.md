@@ -11,17 +11,17 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 24, candidate-vector schema 22,
+candidate uses quality-contract schema 25, candidate-vector schema 23,
 candidate-transaction schema 4, and canonical engine identity
-`autotechno-canonical-engine.v23`. It preserves
+`autotechno-canonical-engine.v24`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
 score-owned modal-foundation articulation and same-pass resonator evidence,
 architecture-local dry-
 PCM, acid-operator, TPT/ADAA nonlinear-core, rising spectral-cluster, and tonal-envelope-expansion
-evidence, score-owned gated
-percussion texture,
+evidence, score-owned gated and anticipatory
+percussion-return texture,
 shared pulse-echo return-drive,
 score-owned spatial-FDN configuration and exact stereo wet consequence,
 score-bound phrase composition covering true percussion resampling,
@@ -169,19 +169,25 @@ It adds no score event or PCM.
 This is long-form causal evidence; version 1 does not assert a separate loudness
 or tension target.
 
-Gated-percussion-texture evidence also retains one compact record for every
-bar. An active record binds an eligible existing percussion event to one-step
-input admission, a four-step delayed output start, a four-step output window,
-exact protected-return hashes, finite peak/RMS, nonzero counts, exact-zero
-window endpoints, and full/protected render-pass agreement. The score adds no
-onset and the renderer retains no captured loop: ineligible bars are exact
-neutral, and delay/filter work remains detached from the
-callback. The current feedback, filter corners, return level, mono placement,
-and boundary window are engineering realization v1, not the durable musical
-concept. A later DSP maturation may replace them with higher-order filtering,
-fractional or stereo delay, controlled nonlinear colour, and perceptually
-calibrated bounds only if the same input/output-gate semantics,
-deterministic score, and score-to-PCM evidence remain intact.
+Percussion-return-texture evidence also retains one compact record for every
+bar. A `gatedEcho` record binds an eligible existing percussion event to one-
+step input admission, a four-step delayed output start, a four-step output
+window, exact protected-return hashes, finite peak/RMS, nonzero counts, exact-
+zero window endpoints, and full/protected render-pass agreement. On only the
+second kick-withheld release bar, `anticipationSwell` binds that same canonical
+return owner to a reverse wet trajectory spanning the remaining bar, exact
+release-boundary zero, early/late RMS, and at least 3 dB of measured rise. The
+score adds no onset and the renderer retains no captured loop or cross-bar
+state: ineligible bars are exact neutral, and all work remains detached from
+the callback. Professional dimensions retain the active-bar ratio and mean
+late-to-early rise, while a dedicated adversarial case rejects a flattened
+release rise. The current feedback, filter corners, reversal, return level,
+mono placement, and boundary curve are engineering realization v1, not the
+durable musical concept. A later DSP maturation may replace them with transient-
+aware reverse convolution, higher-order filtering, fractional or stereo delay,
+denser diffusion, or controlled nonlinear colour only if the same answer-or-
+anticipation semantics, release boundary, deterministic score, exact neutral
+and gated behavior, and score-to-PCM evidence remain intact.
 
 Spatial-FDN evidence retains one compact record for every rendered bar. It
 binds the existing score-owned depth/carrier/send/filter articulation and the
@@ -194,11 +200,11 @@ identity. The record is required for structural completeness and changes the
 transaction fingerprint. See [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md) for the
 signal and replacement contract.
 
-`ProfessionalEvidenceReportBank` v8 accepts a bank only when every canonical
+`ProfessionalEvidenceReportBank` v9 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v5 from profile `a4f10f84996591bb`, adversarial
-suite `533141d901ed71c6`, and disjoint holdout `de7f4ca2dc3c94dc`. It judges every
+exact-engine primary evaluator v6 from profile `e5dd5c31a2f52e0c`, adversarial
+suite `3bcabc8fb4118913`, and disjoint holdout `4eae3a36734c295b`. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.
@@ -283,7 +289,7 @@ sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
 status. It also retains exact first/last sample bit patterns, the pre-drive peak
 frame, the exact input/amount witness at the post-drive peak, and a replayable
 changed-frame witness together with that frame's exact input bits.
-Candidate-vector schema 21 binds that record to the matching instrument effect
+Candidate-vector schema 23 binds that record to the matching instrument effect
 access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
 sample-rate-normalized boundary transition. Neutral drive requires the no-change
 sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
@@ -312,7 +318,7 @@ uses half depth, response uses full depth, and the full displacement is capped
 at `0.12` of one sixteenth. Note count, base step, pitch, velocity, instrument,
 requested duration, gate, and every protected-rhythm event remain unchanged.
 
-Candidate-vector schema 21 retains one compact record per full rendered bar. It
+Candidate-vector schema 23 retains one compact record per full rendered bar. It
 binds route-derived frame geometry, score and actual renderer onset facts,
 requested gate end, bounded renderer-owned applied gate end, causal role counts,
 exact protected/role offset relationships, and separate shadow/response dry
@@ -365,8 +371,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 24, candidate-vector schema 22,
-candidate-transaction schema 4, and canonical engine v23, the versioned
+Under quality-contract schema 25, candidate-vector schema 23,
+candidate-transaction schema 4, and canonical engine v24, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

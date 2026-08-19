@@ -22,7 +22,7 @@ func fixedWidthFingerprintHex(_ value: UInt64) -> String {
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
-        digest(domain: "candidate-plan.typed.v13") { sink in
+        digest(domain: "candidate-plan.typed.v14") { sink in
             encode(plan, into: &sink)
         }
     }
@@ -740,6 +740,7 @@ private extension AutonomousTypedFingerprint {
         sink.presence(value.percussionEchoTexture != nil)
         if let texture = value.percussionEchoTexture {
             sink.aggregate("PercussionEchoTextureArticulation")
+            sink.field("relation"); sink.raw(texture.relation.rawValue)
             sink.field("inputStep"); sink.int(texture.inputStep)
             sink.field("outputStartStep"); sink.int(texture.outputStartStep)
             sink.field("outputEndStep"); sink.int(texture.outputEndStep)

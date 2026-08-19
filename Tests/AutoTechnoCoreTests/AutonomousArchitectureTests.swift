@@ -844,7 +844,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v23")
+                "autotechno-canonical-engine.v24")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")

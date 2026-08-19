@@ -177,9 +177,10 @@ package enum GroovePulseVoice {
     }
 }
 
-/// Fixed renderer for the score-owned percussion input/output gate relation.
-/// The delay line is bar-local, the return is band-limited, and exact-zero
-/// window endpoints prevent a discontinuity without adding continuation state.
+/// Fixed renderer for the score-owned percussion-return relation. The delay
+/// line is bar-local, the return is band-limited, and exact-zero endpoints
+/// protect both the established gate and anticipation-swell boundaries without
+/// adding continuation state.
 package enum PercussionEchoTextureVoice {
     package static let feedback = 0.72
     package static let returnGain = 0.42
@@ -207,6 +208,7 @@ package enum PercussionEchoTextureVoice {
             for _ in 0..<frameCount { returnFingerprint.append(0) }
             return PercussionEchoTextureRenderEvidence(
                 active: false,
+                relation: nil,
                 bpm: bpm,
                 sampleRate: sampleRate,
                 inputStep: -1,
@@ -223,6 +225,9 @@ package enum PercussionEchoTextureVoice {
                 inputRMS: 0,
                 returnPeak: 0,
                 returnRMS: 0,
+                earlyOutputRMS: 0,
+                lateOutputRMS: 0,
+                lateToEarlyDB: 0,
                 inputNonzeroSampleCount: 0,
                 returnNonzeroSampleCount: 0,
                 outOfWindowNonzeroSampleCount: 0,
@@ -281,67 +286,161 @@ package enum PercussionEchoTextureVoice {
         var finite = geometryValid && bpm.isFinite && sampleRate.isFinite &&
             feedback.isFinite && returnGain.isFinite &&
             highPassCoefficient.isFinite && lowPassCoefficient.isFinite
-
-        for index in 0..<frameCount {
-            let read = delay[delayIndex]
-            let admittedInput = geometryValid &&
-                index >= inputStartFrame && index < inputEndFrame
-                ? source[index] : 0
-            delay[delayIndex] = admittedInput + read * Float(feedback)
-            delayIndex = (delayIndex + 1) % delayFrameCount
-
-            let readValue = Double(read)
-            highPassState += (readValue - highPassState) * highPassCoefficient
-            let highPassed = readValue - highPassState
-            lowPassState += (highPassed - lowPassState) * lowPassCoefficient
-            let insideOutput = geometryValid &&
-                index >= outputStartFrame && index < outputEndFrame
-            let gate: Double
+        func recordInput(_ sample: Float) {
+            inputFingerprint.append(sample)
+            let value = Double(sample)
+            inputPeak = max(inputPeak, abs(value))
+            inputEnergy += value * value
+            if sample.bitPattern & 0x7fff_ffff != 0 {
+                inputNonzeroSampleCount += 1
+            }
+        }
+        func recordOutput(_ sample: Float, insideOutput: Bool) {
+            returnFingerprint.append(sample)
+            let value = Double(sample)
             if insideOutput {
-                let fadeIn = Double(index - outputStartFrame) /
-                    Double(transitionFrames)
-                let fadeOut = Double(outputEndFrame - 1 - index) /
-                    Double(transitionFrames)
-                gate = min(1, max(0, min(fadeIn, fadeOut)))
-            } else {
-                gate = 0
+                returnPeak = max(returnPeak, abs(value))
+                returnEnergy += value * value
             }
-            let renderedSample = Float(lowPassState * returnGain * gate)
-            returnStem[index] = renderedSample
-            returnFingerprint.append(renderedSample)
-
-            if geometryValid && index >= inputStartFrame && index < inputEndFrame {
-                inputFingerprint.append(source[index])
-                let value = Double(source[index])
-                inputPeak = max(inputPeak, abs(value))
-                inputEnergy += value * value
-                if source[index].bitPattern & 0x7fff_ffff != 0 {
-                    inputNonzeroSampleCount += 1
-                }
-            }
-            let outputValue = Double(renderedSample)
-            if insideOutput {
-                returnPeak = max(returnPeak, abs(outputValue))
-                returnEnergy += outputValue * outputValue
-            }
-            if renderedSample.bitPattern & 0x7fff_ffff != 0 {
+            if sample.bitPattern & 0x7fff_ffff != 0 {
                 returnNonzeroSampleCount += 1
                 if !insideOutput { outOfWindowNonzeroSampleCount += 1 }
             }
-            finite = finite && admittedInput.isFinite && read.isFinite &&
-                renderedSample.isFinite && highPassState.isFinite &&
-                lowPassState.isFinite
+        }
+
+        if articulation.relation == .gatedEcho {
+            for index in 0..<frameCount {
+                let read = delay[delayIndex]
+                let admittedInput = geometryValid &&
+                    index >= inputStartFrame && index < inputEndFrame
+                    ? source[index] : 0
+                delay[delayIndex] = admittedInput + read * Float(feedback)
+                delayIndex = (delayIndex + 1) % delayFrameCount
+
+                let readValue = Double(read)
+                highPassState += (readValue - highPassState) * highPassCoefficient
+                let highPassed = readValue - highPassState
+                lowPassState += (highPassed - lowPassState) * lowPassCoefficient
+                let insideOutput = geometryValid &&
+                    index >= outputStartFrame && index < outputEndFrame
+                let gate: Double
+                if insideOutput {
+                    let fadeIn = Double(index - outputStartFrame) /
+                        Double(transitionFrames)
+                    let fadeOut = Double(outputEndFrame - 1 - index) /
+                        Double(transitionFrames)
+                    gate = min(1, max(0, min(fadeIn, fadeOut)))
+                } else {
+                    gate = 0
+                }
+                let renderedSample = Float(lowPassState * returnGain * gate)
+                returnStem[index] = renderedSample
+                recordOutput(renderedSample, insideOutput: insideOutput)
+
+                if geometryValid && index >= inputStartFrame && index < inputEndFrame {
+                    recordInput(source[index])
+                }
+                finite = finite && admittedInput.isFinite && read.isFinite &&
+                    renderedSample.isFinite && highPassState.isFinite &&
+                    lowPassState.isFinite
+            }
+        } else {
+            var forwardWet = [Float](repeating: 0, count: frameCount)
+            for index in 0..<frameCount {
+                let read = delay[delayIndex]
+                let admittedInput = geometryValid &&
+                    index >= inputStartFrame && index < inputEndFrame
+                    ? source[index] : 0
+                delay[delayIndex] = admittedInput + read * Float(feedback)
+                delayIndex = (delayIndex + 1) % delayFrameCount
+
+                let readValue = Double(read)
+                highPassState += (readValue - highPassState) * highPassCoefficient
+                let highPassed = readValue - highPassState
+                lowPassState += (highPassed - lowPassState) * lowPassCoefficient
+                let wetSample = Float(lowPassState * returnGain)
+                forwardWet[index] = wetSample
+                if geometryValid && index >= inputStartFrame && index < inputEndFrame {
+                    recordInput(source[index])
+                }
+                finite = finite && admittedInput.isFinite && read.isFinite &&
+                    wetSample.isFinite && highPassState.isFinite &&
+                    lowPassState.isFinite
+            }
+            for index in 0..<frameCount {
+                let insideOutput = geometryValid &&
+                    index >= outputStartFrame && index < outputEndFrame
+                let renderedSample: Float
+                if insideOutput {
+                    let relativeIndex = index - outputStartFrame
+                    let reverseIndex = outputEndFrame - 1 - relativeIndex
+                    let progress = Double(relativeIndex) /
+                        Double(max(1, outputWindowFrameCount - 1))
+                    let crescendo = 0.5 - 0.5 * cos(.pi * progress)
+                    let fadeOut = min(
+                        1,
+                        max(0, Double(outputEndFrame - 1 - index) /
+                            Double(transitionFrames))
+                    )
+                    renderedSample = forwardWet[reverseIndex] *
+                        Float(crescendo * fadeOut)
+                } else {
+                    renderedSample = 0
+                }
+                returnStem[index] = renderedSample
+                recordOutput(renderedSample, insideOutput: insideOutput)
+                finite = finite && renderedSample.isFinite
+            }
         }
         let inputRMS = inputWindowFrameCount > 0
             ? sqrt(inputEnergy / Double(inputWindowFrameCount)) : 0
         let returnRMS = outputWindowFrameCount > 0
             ? sqrt(returnEnergy / Double(outputWindowFrameCount)) : 0
+        let riseAnalysisEnd = max(
+            outputStartFrame,
+            outputEndFrame - transitionFrames
+        )
+        let riseAnalysisFrameCount = max(0, riseAnalysisEnd - outputStartFrame)
+        let riseSegmentFrameCount = max(1, riseAnalysisFrameCount / 4)
+        let earlyEnd = min(
+            riseAnalysisEnd,
+            outputStartFrame + riseSegmentFrameCount
+        )
+        let lateStart = max(
+            outputStartFrame,
+            riseAnalysisEnd - riseSegmentFrameCount
+        )
+        func rms(in range: Range<Int>) -> Double {
+            guard !range.isEmpty,
+                  range.lowerBound >= 0,
+                  range.upperBound <= returnStem.count else { return 0 }
+            let energy = range.reduce(0.0) {
+                let sample = Double(returnStem[$1])
+                return $0 + sample * sample
+            }
+            return sqrt(energy / Double(range.count))
+        }
+        let earlyOutputRMS = geometryValid
+            ? rms(in: outputStartFrame..<earlyEnd) : 0
+        let lateOutputRMS = geometryValid
+            ? rms(in: lateStart..<riseAnalysisEnd) : 0
+        let lateToEarlyDB: Double
+        if lateOutputRMS > 0, earlyOutputRMS > 0 {
+            lateToEarlyDB = min(120, max(-120,
+                20 * (log10(lateOutputRMS) - log10(earlyOutputRMS))
+            ))
+        } else if lateOutputRMS > 0 {
+            lateToEarlyDB = 120
+        } else {
+            lateToEarlyDB = 0
+        }
         let firstOutputBits = geometryValid
             ? returnStem[outputStartFrame].bitPattern : 0
         let lastOutputBits = geometryValid
             ? returnStem[outputEndFrame - 1].bitPattern : 0
         return PercussionEchoTextureRenderEvidence(
             active: true,
+            relation: articulation.relation,
             bpm: bpm,
             sampleRate: sampleRate,
             inputStep: articulation.inputStep,
@@ -358,13 +457,18 @@ package enum PercussionEchoTextureVoice {
             inputRMS: inputRMS,
             returnPeak: returnPeak,
             returnRMS: returnRMS,
+            earlyOutputRMS: earlyOutputRMS,
+            lateOutputRMS: lateOutputRMS,
+            lateToEarlyDB: lateToEarlyDB,
             inputNonzeroSampleCount: inputNonzeroSampleCount,
             returnNonzeroSampleCount: returnNonzeroSampleCount,
             outOfWindowNonzeroSampleCount: outOfWindowNonzeroSampleCount,
             firstOutputSampleBitPattern: firstOutputBits,
             lastOutputSampleBitPattern: lastOutputBits,
             finite: finite && inputPeak.isFinite && inputRMS.isFinite &&
-                returnPeak.isFinite && returnRMS.isFinite
+                returnPeak.isFinite && returnRMS.isFinite &&
+                earlyOutputRMS.isFinite && lateOutputRMS.isFinite &&
+                lateToEarlyDB.isFinite
         )
     }
 }

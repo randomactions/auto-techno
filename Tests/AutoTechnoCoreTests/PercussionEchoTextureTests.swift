@@ -1,9 +1,18 @@
 import AutoTechnoCore
 @testable import AutoTechnoDSP
+import Foundation
 import Testing
 
-@Suite("Score-owned gated percussion texture")
+@Suite("Score-owned percussion echo texture")
 struct PercussionEchoTextureTests {
+    private struct ReleaseFixture {
+        let state: AutonomousSessionState
+        let plan: AutonomousPhrasePlan
+        let firstWithheld: Int
+        let secondWithheld: Int
+        let recovery: Int
+    }
+
     @Test("The director resolves one bounded primary contrast gesture")
     func scoreOwnershipAndReachability() throws {
         let first = try #require(activePlanFixture())
@@ -132,6 +141,45 @@ struct PercussionEchoTextureTests {
                 Array(neutral.rightSamples.prefix(outputStartFrame)))
     }
 
+    @Test("The established gated echo remains bit exact")
+    func gatedEchoLegacyIdentity() {
+        for sampleRate in [8_000.0, 44_100, 48_000, 96_000, 192_000] {
+            let frameCount = Int((
+                240 / AutonomousSessionDirector.bpm * sampleRate
+            ).rounded())
+            let articulation = PercussionEchoTextureArticulation(
+                relation: .gatedEcho,
+                inputStep: 3,
+                outputStartStep: 7,
+                outputEndStep: 11
+            )
+            let inputStart = Int((
+                Double(articulation.inputStep) * Double(frameCount) / 16
+            ).rounded())
+            var source = [Float](repeating: 0, count: frameCount)
+            source[inputStart + 1] = 0.2
+            source[inputStart + max(2, frameCount / 64)] = -0.11
+            var actual = [Float](repeating: 0, count: frameCount)
+            let evidence = PercussionEchoTextureVoice.render(
+                source: source,
+                returnStem: &actual,
+                articulation: articulation,
+                bpm: AutonomousSessionDirector.bpm,
+                sampleRate: sampleRate
+            )
+            let expected = legacyGatedEcho(
+                source: source,
+                articulation: articulation,
+                sampleRate: sampleRate
+            )
+
+            #expect(actual == expected)
+            #expect(evidence.relation == .gatedEcho)
+            #expect(evidence.returnSampleHash ==
+                    ExactPCMFingerprint.mono(expected))
+        }
+    }
+
     @Test("Preparation rejects a forged input window before rendering")
     func forgedScoreRejected() throws {
         let fixture = try #require(activePlanFixture())
@@ -204,9 +252,199 @@ struct PercussionEchoTextureTests {
         })
         #expect(prepared.blocks.contains { block in
             block.effects.contains {
-                $0.kind == .gatedPercussionEcho && $0.active
+                $0.kind == .percussionEchoTexture && $0.active
             }
         })
+    }
+
+    @Test("The final withheld release bar resolves one anticipation swell")
+    func anticipationSwellScoreArc() throws {
+        let first = try #require(releaseFixture())
+        let second = try #require(releaseFixture())
+        #expect(first.plan == second.plan)
+        #expect(first.state == second.state)
+
+        let active = first.plan.resolvedBars.enumerated().filter {
+            $0.element.percussionEchoTexture?.relation == .anticipationSwell
+        }
+        #expect(active.count == 1)
+        #expect(active.first?.offset == first.secondWithheld)
+        let bar = try #require(active.first?.element)
+        let articulation = try #require(bar.percussionEchoTexture)
+        let source = try #require(
+            PercussionEchoTextureResolver.eligibleSourceEvents(
+                in: bar.ensemble
+            ).first
+        )
+        #expect(bar.kickSyntaxRole == .withheld)
+        #expect(bar.performance.localBar == 14)
+        #expect(articulation.inputStep == source.step)
+        #expect(articulation.outputStartStep == source.step + 1)
+        #expect(articulation.outputEndStep == 16)
+        #expect(first.plan.resolvedBars[first.firstWithheld]
+            .percussionEchoTexture == nil)
+        #expect(first.plan.resolvedBars[first.recovery]
+            .percussionEchoTexture == nil)
+
+        let noDebtState = releaseState(
+            seed: first.state.rootSeed,
+            withDebt: false
+        )
+        let noDebt = AutonomousSessionDirector(rootSeed: noDebtState.rootSeed)
+            .plan(from: noDebtState)
+        #expect(noDebt.resolvedBars.allSatisfy {
+            $0.percussionEchoTexture?.relation != .anticipationSwell
+        })
+
+        var neutralBars = first.plan.resolvedBars
+        neutralBars[first.secondWithheld] = replacingTexture(
+            in: bar,
+            with: nil
+        )
+        let neutral = replacingBars(in: first.plan, with: neutralBars)
+        #expect(AutonomousCandidateFingerprint.plan(first.plan) !=
+                AutonomousCandidateFingerprint.plan(neutral))
+    }
+
+    @Test("The anticipation swell rises and closes exactly at every supported route rate")
+    func anticipationSwellRateGeometry() {
+        for sampleRate in [8_000.0, 44_100, 48_000, 96_000, 192_000] {
+            let evidence = renderAnticipationSwell(sampleRate: sampleRate)
+            #expect(evidence.active)
+            #expect(evidence.relation == .anticipationSwell)
+            #expect(evidence.finite)
+            #expect(evidence.inputPeak > 0)
+            #expect(evidence.returnPeak > 0)
+            #expect(evidence.returnRMS > 0)
+            #expect(evidence.earlyOutputRMS > 0)
+            #expect(evidence.lateOutputRMS > evidence.earlyOutputRMS)
+            #expect(evidence.lateToEarlyDB >=
+                    PercussionEchoTextureResolver.minimumAnticipationRiseDB)
+            #expect(evidence.outOfWindowNonzeroSampleCount == 0)
+            #expect(evidence.firstOutputSampleBitPattern & 0x7fff_ffff == 0)
+            #expect(evidence.lastOutputSampleBitPattern & 0x7fff_ffff == 0)
+        }
+    }
+
+    @Test("The anticipation relation changes only the existing percussion return")
+    func anticipationSwellProtectedDifferential() throws {
+        let fixture = try #require(releaseFixture())
+        let activeResolved = fixture.plan.resolvedBars[fixture.secondWithheld]
+        let neutralResolved = replacingTexture(in: activeResolved, with: nil)
+        let activeSynth = SynthPerformancePlan(
+            scene: fixture.plan.scene,
+            dna: fixture.plan.dna,
+            kind: fixture.plan.kind,
+            resolvedBars: [activeResolved]
+        )
+        let neutralSynth = SynthPerformancePlan(
+            scene: fixture.plan.scene,
+            dna: fixture.plan.dna,
+            kind: fixture.plan.kind,
+            resolvedBars: [neutralResolved]
+        )
+        #expect(activeSynth.bars == neutralSynth.bars)
+
+        var activeState = RenderState()
+        activeState.barIndex = activeResolved.performance.bar
+        var neutralState = activeState
+        var activeWorkspace = RenderWorkspace()
+        var neutralWorkspace = RenderWorkspace()
+        let active = VoiceRenderer.renderBar(
+            scene: fixture.plan.scene,
+            sampleRate: 8_000,
+            state: &activeState,
+            dna: fixture.plan.dna,
+            resolved: activeResolved,
+            synthWorld: activeSynth.world,
+            synthPerformance: activeSynth.bars[0],
+            workspace: &activeWorkspace,
+            layer: .protectedRhythm
+        )
+        let neutral = VoiceRenderer.renderBar(
+            scene: fixture.plan.scene,
+            sampleRate: 8_000,
+            state: &neutralState,
+            dna: fixture.plan.dna,
+            resolved: neutralResolved,
+            synthWorld: neutralSynth.world,
+            synthPerformance: neutralSynth.bars[0],
+            workspace: &neutralWorkspace,
+            layer: .protectedRhythm
+        )
+
+        let evidence = active.percussionEchoTextureRenderEvidence
+        #expect(evidence.relation == .anticipationSwell)
+        #expect(evidence.lateOutputRMS > evidence.earlyOutputRMS)
+        #expect(!neutral.percussionEchoTextureRenderEvidence.active)
+        #expect(active.dryPercussionSampleHash == neutral.dryPercussionSampleHash)
+        #expect(active.dryFoundationSampleHash == neutral.dryFoundationSampleHash)
+        #expect(active.kickMix == neutral.kickMix)
+        #expect(active.groovePulseRenderEvidence == neutral.groovePulseRenderEvidence)
+        #expect(active.closedHatRenderEvidence == neutral.closedHatRenderEvidence)
+        #expect(active.leftSamples != neutral.leftSamples)
+        #expect(active.rightSamples != neutral.rightSamples)
+
+        let articulation = try #require(activeResolved.percussionEchoTexture)
+        let outputStartFrame = Int((
+            Double(articulation.outputStartStep) *
+                Double(active.leftSamples.count) / 16
+        ).rounded())
+        #expect(Array(active.leftSamples.prefix(outputStartFrame)) ==
+                Array(neutral.leftSamples.prefix(outputStartFrame)))
+        #expect(Array(active.rightSamples.prefix(outputStartFrame)) ==
+                Array(neutral.rightSamples.prefix(outputStartFrame)))
+    }
+
+    @MainActor
+    @Test("Prepared release retains the anticipation relation and rejects a forged relation")
+    func anticipationPreparedEvidenceAndForgery() throws {
+        let fixture = try #require(releaseFixture())
+        let prepared = try #require(prepare(
+            fixture.plan,
+            state: fixture.state
+        ))
+        #expect(prepared.candidateEvaluation.isComplete)
+        #expect(prepared.selectedCandidateEvidence.isComplete)
+        #expect(prepared.commitEligible)
+        let record = prepared.selectedCandidateEvidence
+            .percussionEchoTexture[fixture.secondWithheld]
+        #expect(record.active)
+        #expect(record.relation ==
+                PercussionEchoTextureRelation.anticipationSwell.rawValue)
+        #expect(record.kickSyntaxRole == KickSyntaxRole.withheld.rawValue)
+        #expect(record.lateOutputRMS > record.earlyOutputRMS)
+        #expect(record.lateToEarlyDB >=
+                PercussionEchoTextureResolver.minimumAnticipationRiseDB)
+        #expect(record.isComplete(sampleRate: 8_000, phraseKind: .energyRelease))
+        let observation = try ProfessionalQualityObservation(
+            candidate: prepared.selectedCandidateEvidence,
+            engineVersion: QualityQualificationContract.engineVersion,
+            checkpoint: .release
+        )
+        #expect(observation[
+            .percussionAnticipationSwellActiveBarRatio
+        ] == 1.0 / Double(fixture.plan.barCount))
+        #expect(observation[
+            .percussionAnticipationSwellLateToEarlyDBMean
+        ] == record.lateToEarlyDB)
+
+        let sourceBar = fixture.plan.resolvedBars[fixture.secondWithheld]
+        let source = try #require(sourceBar.percussionEchoTexture)
+        var forgedBars = fixture.plan.resolvedBars
+        forgedBars[fixture.secondWithheld] = replacingTexture(
+            in: sourceBar,
+            with: PercussionEchoTextureArticulation(
+                relation: .gatedEcho,
+                inputStep: source.inputStep,
+                outputStartStep: source.outputStartStep,
+                outputEndStep: source.outputEndStep
+            )
+        )
+        let forged = replacingBars(in: fixture.plan, with: forgedBars)
+        #expect(AutonomousCandidateFingerprint.plan(fixture.plan) !=
+                AutonomousCandidateFingerprint.plan(forged))
+        #expect(prepare(forged, state: fixture.state) == nil)
     }
 
     private func activePlanFixture() -> (
@@ -227,6 +465,153 @@ struct PercussionEchoTextureTests {
             }
         }
         return nil
+    }
+
+    private func releaseFixture() -> ReleaseFixture? {
+        let preferred: [UInt64] = [48_291, 42, 90_909, 7, 77_777]
+        for seed in preferred + (1...512).map({ UInt64($0) }) {
+            let state = releaseState(seed: seed, withDebt: true)
+            let plan = AutonomousSessionDirector(rootSeed: seed).plan(from: state)
+            guard let recovery = plan.resolvedBars.firstIndex(where: {
+                $0.kickSyntaxRole == .recovery
+            }), recovery >= 2,
+            plan.resolvedBars[recovery - 2].kickSyntaxRole == .withheld,
+            plan.resolvedBars[recovery - 1].kickSyntaxRole == .withheld,
+            plan.resolvedBars[recovery - 1].percussionEchoTexture?.relation ==
+                .anticipationSwell else { continue }
+            return ReleaseFixture(
+                state: state,
+                plan: plan,
+                firstWithheld: recovery - 2,
+                secondWithheld: recovery - 1,
+                recovery: recovery
+            )
+        }
+        return nil
+    }
+
+    private func releaseState(
+        seed: UInt64,
+        withDebt: Bool
+    ) -> AutonomousSessionState {
+        let director = AutonomousSessionDirector(rootSeed: seed)
+        var state = director.initialState()
+        state.phraseIndex = 12
+        state.memory = TemporalMusicalMemory(
+            totalBars: 128,
+            lastContrastBar: 112,
+            lastBreakBar: 96,
+            openDebts: withDebt ? [SessionDramaticDebt(
+                id: 77,
+                openedAtBar: 96,
+                dueByBar: 224,
+                source: .contrast
+            )] : []
+        )
+        return state
+    }
+
+    @inline(never)
+    private func renderAnticipationSwell(
+        sampleRate: Double
+    ) -> PercussionEchoTextureRenderEvidence {
+        let frameCount = Int((
+            240 / AutonomousSessionDirector.bpm * sampleRate
+        ).rounded())
+        let inputStep = 3
+        let inputStart = Int((
+            Double(inputStep) * Double(frameCount) / 16
+        ).rounded())
+        var source = [Float](repeating: 0, count: frameCount)
+        if inputStart + 1 < source.count {
+            source[inputStart + 1] = 0.2
+        }
+        var output = [Float](repeating: 0, count: frameCount)
+        return PercussionEchoTextureVoice.render(
+            source: source,
+            returnStem: &output,
+            articulation: PercussionEchoTextureArticulation(
+                relation: .anticipationSwell,
+                inputStep: inputStep,
+                outputStartStep: inputStep + 1,
+                outputEndStep: 16
+            ),
+            bpm: AutonomousSessionDirector.bpm,
+            sampleRate: sampleRate
+        )
+    }
+
+    /// Independent copy of the pre-anticipation gated-return formula. Keep it
+    /// test-local so later renderer refactors must preserve the established PCM
+    /// instead of merely agreeing with their own reduced evidence.
+    private func legacyGatedEcho(
+        source: [Float],
+        articulation: PercussionEchoTextureArticulation,
+        sampleRate: Double
+    ) -> [Float] {
+        let frameCount = source.count
+        let stepFrames = Double(frameCount) / 16
+        func frame(_ step: Int) -> Int {
+            min(frameCount, max(0,
+                Int((Double(step) * stepFrames).rounded())
+            ))
+        }
+        let inputStartFrame = frame(articulation.inputStep)
+        let inputEndFrame = frame(
+            articulation.inputStep +
+                PercussionEchoTextureResolver.inputWindowLengthInSteps
+        )
+        let outputStartFrame = frame(articulation.outputStartStep)
+        let outputEndFrame = frame(articulation.outputEndStep)
+        let delayFrameCount = max(1, Int(stepFrames.rounded()))
+        let transitionFrames = PercussionEchoTextureVoice
+            .transitionFrameCount(sampleRate: sampleRate)
+        let highPassCoefficient = min(
+            0.35,
+            1 - exp(-2 * .pi * PercussionEchoTextureVoice.highPassHz /
+                sampleRate)
+        )
+        let lowPassCoefficient = min(
+            0.55,
+            1 - exp(-2 * .pi * PercussionEchoTextureVoice.lowPassHz /
+                sampleRate)
+        )
+        var delay = [Float](repeating: 0, count: delayFrameCount)
+        var delayIndex = 0
+        var highPassState = 0.0
+        var lowPassState = 0.0
+        var result = [Float](repeating: 0, count: frameCount)
+
+        for index in 0..<frameCount {
+            let read = delay[delayIndex]
+            let admittedInput = index >= inputStartFrame &&
+                index < inputEndFrame ? source[index] : 0
+            delay[delayIndex] = admittedInput + read *
+                Float(PercussionEchoTextureVoice.feedback)
+            delayIndex = (delayIndex + 1) % delayFrameCount
+
+            let readValue = Double(read)
+            highPassState += (readValue - highPassState) *
+                highPassCoefficient
+            let highPassed = readValue - highPassState
+            lowPassState += (highPassed - lowPassState) * lowPassCoefficient
+            let insideOutput = index >= outputStartFrame &&
+                index < outputEndFrame
+            let gate: Double
+            if insideOutput {
+                let fadeIn = Double(index - outputStartFrame) /
+                    Double(transitionFrames)
+                let fadeOut = Double(outputEndFrame - 1 - index) /
+                    Double(transitionFrames)
+                gate = min(1, max(0, min(fadeIn, fadeOut)))
+            } else {
+                gate = 0
+            }
+            result[index] = Float(
+                lowPassState * PercussionEchoTextureVoice.returnGain * gate
+            )
+        }
+        return result
     }
 
     private func prepare(
@@ -267,6 +652,8 @@ struct PercussionEchoTextureTests {
             closedHatDecayArticulations: source.closedHatDecayArticulations,
             upperPercussionTailArticulations:
                 source.upperPercussionTailArticulations,
+            modalPercussionArticulations:
+                source.modalPercussionArticulations,
             spatialContrast: source.spatialContrast,
             narrative: source.narrative,
             kickSyntaxRole: source.kickSyntaxRole,

@@ -1406,3 +1406,42 @@ artifact qualification for quality-contract schema 24, candidate-vector schema
 remote CI remain separate gates. Listening observation, app/route and
 interruption QA, latency/peak-memory measurement, and physical-output soak were
 not performed and are not implied.
+
+## Source 23 percussion anticipation swell — 2026-08-19
+
+Source 23 extends the existing percussion-echo texture with one score-owned
+anticipation relation on the second kick-withheld energy-release bar. One
+already-resolved weak-percussion event anchors a bounded one-step input window;
+the detached renderer reverses that wet tail and shapes it toward the unchanged
+kick-recovery boundary. The existing gated-echo path remains exact, and the
+slice adds no track, onset, instrument, effect bus, continuation state, callback
+work, or user control.
+
+Candidate evidence retains the score relation, kick-syntax role, input/output
+geometry, hashes, early/late energy, rise, boundary zeros, and render-pass
+agreement for every bar. Professional Evidence v9 adds anticipation activity
+and rise metrics; its flattened-envelope adversarial case is non-compensable.
+Release-mode artifact generation accepted 392/392 development observations
+from 28 journeys, rejected all 26 adversarial cases for their exact expected
+reasons, and accepted 56/56 observations from four disjoint holdout journeys
+with zero relationship failures. The shipping v6 identities are:
+
+- profile: `e5dd5c31a2f52e0c`, JSON SHA-256
+  `47afbd7f3366429fa75da78d73c63c04cc69d050f97a48dab8e4dd644cd815a9`;
+- adversarial suite: `3bcabc8fb4118913`, JSON SHA-256
+  `fbcd70e1122c45a7ad15ad107260fe2cded46e3153d35e6f50ca5c00f11c0f09`;
+- holdout qualification: `4eae3a36734c295b`, JSON SHA-256
+  `6c4104f42f02e5358934c61234daa7ed2bbb0332c0c7dff6c64a572e3731048f`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated
+caches and serial process boundaries. All 351 workflow-selected test executions
+passed across 31 processes. The realtime producer undefined-symbol audit found
+only the allowed copy primitive, the optimized `AutoTechno` product built, and
+`git diff --check` was clean before publication.
+
+This snapshot proves deterministic score/DSP/evidence behavior and offline
+artifact qualification for quality-contract schema 25, candidate-vector schema
+23, canonical engine v24, Professional Evidence v9, and primary evaluator v6.
+Publication and exact-head remote CI remain separate gates. Listening
+observation, app/route and interruption QA, latency/peak-memory measurement,
+and physical-output soak were not performed and are not implied.

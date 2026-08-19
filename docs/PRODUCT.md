@@ -104,13 +104,17 @@ engine or renderer-side pitch choice. Same-pass evidence binds score event,
 requested and measured pitch, attack/body/tail relation, spectral centroid,
 masking, pole stability, continuation, render-pass equality, and exact dry PCM.
 
-The gated-percussion-texture path keeps the same ownership boundary. One
-eligible existing percussion event opens a bounded score-owned input slice and
-a later bounded return window; it does not create an onset, capture a reusable
-loop, add cross-bar effect state, or expose a control. Same-pass protected-return
-evidence binds the timing and PCM consequence. The musical gate relationship is
-durable, while its current delay, filtering, feedback, gain, stereo placement,
-and smoothing remain replaceable internal DSP details for future maturation.
+The percussion-return path keeps the same ownership boundary. One eligible
+existing percussion event opens a bounded score-owned input slice. A contrast
+bar admits its filtered tail inside a later gate; the final withheld bar before
+an already-owned kick recovery may instead reverse that same wet tail into a
+deterministic crescendo that reaches exact zero at the release boundary. It
+does not create an onset, capture a reusable loop, add cross-bar effect state,
+or expose a control. Same-pass protected-return evidence binds the semantic
+relation, timing, PCM, and early-to-late energy consequence. The musical
+answer-or-anticipation relationship is durable, while its current delay,
+filtering, feedback, reversal, gain, stereo placement, and smoothing remain
+replaceable internal DSP details for future maturation.
 
 The phrase-composition path adds four coordinated capabilities without adding a
 second engine. In eligible broken or ambient major breaks, immutable trigger data resamples
@@ -147,7 +151,7 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v8 supplies
+policy and its operational gates pass. Professional Evidence v9 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation and live-controller consequence, explicit
 analysis-memory provenance, and complete canonical-journey report-bank

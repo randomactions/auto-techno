@@ -27,15 +27,16 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 24, candidate-
-   vector schema 21, candidate-transaction schema 4, and canonical engine
-   identity `autotechno-canonical-engine.v23`. Each
+   primary-evaluation transaction under quality-contract schema 25, candidate-
+   vector schema 23, candidate-transaction schema 4, and canonical engine
+   identity `autotechno-canonical-engine.v24`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
    event-local groove-pulse,
    ordinary closed-hat, score-owned modal-foundation, score-owned instrument,
-   score-owned gated percussion texture, shared pulse-echo return-drive,
+   score-owned gated/anticipatory percussion-return texture, shared pulse-echo
+   return-drive,
    score-bound spatial-FDN,
    phrase-local slice source/output PCM, arpeggiator geometry, polyphonic pad
    PCM, and voice-leading movement,
@@ -117,16 +118,16 @@ mistaken for a completed feedback system.
    windows with zero-padded radix-two FFT geometry, actual spectral
    centroid/bandwidth/flatness/rolloff, positive flux,
    RMS trajectory, active-window counts, and bounded working-memory provenance.
-   A deterministic Professional Evidence v8
+   A deterministic Professional Evidence v9
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
    observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v23 profile v5 `a4f10f84996591bb`, adversarial suite
-   `533141d901ed71c6`, and disjoint holdout qualification `de7f4ca2dc3c94dc`.
+   engine-v24 profile v6 `e5dd5c31a2f52e0c`, adversarial suite
+   `3bcabc8fb4118913`, and disjoint holdout qualification `4eae3a36734c295b`.
    The profile derives from 28 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
    relationships. Its evaluator maps the Core-owned plan checkpoint into the
-   same 47-metric observation and rejects dimensions independently. The eight
+   same 53-metric observation and rejects dimensions independently. The eight
    modal dimensions cover active-bar ratio, event density, pitch error,
    attack/body and tail/body relationships, spectral centroid, masking, and
    maximum pole radius.
@@ -256,29 +257,37 @@ mistaken for a completed feedback system.
    evaluator can commit its future controller state. See
    [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
-## Implemented gated-percussion-texture slice
+## Implemented percussion-return-texture slice
 
-The canonical director now resolves one optional articulation after ensemble
-arbitration. Only a nonconservative contrast bar with the broken-suspension
-character, gear-shift gesture, and an existing eligible percussion event at or
-before step seven may activate it. The articulation identifies the earliest
-eligible event, admits one score step of its dry percussion role window, begins
-the delayed return four steps later, and closes that output gate after four
-more steps. It adds no event, does not alter the dry percussion score, and has
-no cross-bar delay continuation. Every ineligible bar is exact neutral.
+The canonical director resolves one optional articulation after ensemble
+arbitration. A nonconservative contrast bar with the broken-suspension
+character, gear-shift gesture, grounded kick syntax, and an existing eligible
+percussion event at or before step seven may select `gatedEcho`. The
+articulation identifies the earliest eligible event, admits one score step of
+its dry percussion role window, begins the delayed return four steps later, and
+closes that output gate after four more steps. On the final kick-withheld bar
+before an already-resolved energy-release recovery, the same existing owner may
+instead select `anticipationSwell`: one event anchors a one-step input window
+on the canonical protected percussion stem, whose bounded wet remainder is
+reversed and shaped into a crescendo ending at literal zero at the release
+boundary. It adds no event, does not alter the dry percussion score, and has no
+cross-bar delay continuation. Every ineligible bar is exact neutral.
 
 Detached rendering reduces the admitted source and bounded return to exact
 hashes, peak/RMS, frame geometry, nonzero counts, exact-zero output endpoints,
-and full/protected pass agreement. The effect is part of the protected rhythm
-path; its combined dry-plus-return signal enters percussion role analysis and
-masking, while the dry percussion hash and reverb source remain attributable to
-the original events. No PCM loop or reusable sample survives preparation.
+early/late RMS and rise dB, and full/protected pass agreement. The effect is
+part of the protected rhythm path; its combined dry-plus-return signal enters
+percussion role analysis and masking, while the dry percussion hash and reverb
+source remain attributable to the original events. Candidate evidence
+cross-checks the semantic relation against kick syntax and absolute macro
+position. No PCM loop or reusable sample survives preparation.
 
-The fixed one-sixteenth delay, feedback, filter corners, gain, mono image, and
-transition curve are explicitly provisional renderer architecture. A mature DSP
-revision may improve interpolation, stereo placement, filtering, diffusion,
-nonlinear colour, and perceptual calibration without changing the score-owned
-input/output gates, evidence owner, or one-runtime
+The fixed delay, feedback, filter corners, reverse-wet projection, gain, mono
+image, and transition curves are explicitly provisional renderer architecture.
+A mature DSP revision may improve interpolation, transient-aware reversal,
+stereo placement, filtering, diffusion, nonlinear colour, and perceptual
+calibration without changing the score-owned answer-or-anticipation relation,
+release boundary, evidence owner, exact legacy gate, or one-runtime
 contract. Stateful replacements must decay or fade all residual energy inside
 the same bounded output gate and remain sample-indexed and block-partition
 independent. Descriptive physical metrics are not optimization targets. Such a revision requires a new
@@ -337,7 +346,7 @@ return behavior.
 Each full bar emits same-pass bar/BPM/delay/render geometry, score and drive
 eligibility, bounded source and applied amount, current-send RMS, exact pre/post
 sample hashes, pre/post peak, RMS, and low-band RMS, difference RMS, and finite
-status. Candidate-vector schema 21 binds these observations to the score bar,
+status. Candidate-vector schema 23 binds these observations to the score bar,
 phrase kind, route rate, and matching instrument effect access. Neutral drive
 requires exact pre/post identity and zero difference. Active drive remains
 outside feedback, binds exact changed-frame and peak witnesses, and permits only
@@ -359,7 +368,7 @@ Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
 requested gate end, and renderer-applied gate end. Separate anchor, shadow, and
 response dry taps retain finite role-local hash, peak, and RMS evidence. Current
-candidate-vector schema 22 reduces those tuples into exact score/render and
+candidate-vector schema 23 reduces those tuples into exact score/render and
 renderer-applied-gate fingerprints, relation-specific offset facts, protected-
 role neutrality, cascade-aperture or lead-pattern replay, and route-derived
 frame geometry. The calibrated evaluator judges this evidence as part of the

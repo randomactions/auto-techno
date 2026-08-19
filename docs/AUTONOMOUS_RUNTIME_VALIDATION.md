@@ -68,14 +68,14 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 24, candidate-vector schema 22, candidate-transaction
-schema 4, and canonical engine v23 provide the current transaction-level
+Quality-contract schema 25, candidate-vector schema 23, candidate-transaction
+schema 4, and canonical engine v24 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
 event-local groove-pulse, ordinary closed-hat, score-owned modal foundation,
 score-owned instrument and its acid/nonlinear-core/cluster/envelope consequence,
-score-owned gated percussion texture,
+score-owned gated/anticipatory percussion-return texture,
 shared pulse-echo return-drive, score-owned spatial-FDN, score-owned upper-role timing,
 score-owned phrase slicing, arpeggiator geometry, polyphonic pad signal, and
 voice-leading continuation,
@@ -191,18 +191,22 @@ bounded open/due bars, and, when the existing kick recovery is present,
 cross-check one grounded setup, two adjacent withheld bars, and its macro marker.
 It may reject broken long-form provenance as one non-compensable input.
 
-Gated-percussion-texture evidence must cover every rendered bar. Active records
-must bind the canonical eligible source-step mask and earliest admitted step to
-the exact one-step input window, four-step delayed output start, four-step
-output window, route-derived frame geometry, finite source/return hashes and
-metrics, zero out-of-window samples, exact-zero output endpoints, and identical
-full/protected render passes. Ineligible records must be exact
-neutral. Tests must hold the resolved bar, synth plan, dry percussion hash,
-foundation, kick, groove-pulse, and ordinary-hat evidence fixed while proving
-the return changes protected PCM only after its requested output gate. These
-tests establish the current realization, not a permanent filter/delay recipe;
-future DSP upgrades must preserve the score contract and requalify the
-evidence.
+Percussion-return-texture evidence must cover every rendered bar. Active
+records must bind the canonical eligible source-step mask and earliest admitted
+step to the semantic relation, kick-syntax role, route-derived geometry, finite
+source/return hashes and metrics, zero out-of-window samples, exact-zero output
+endpoints, and identical full/protected render passes. `gatedEcho` requires the
+exact one-step input window, four-step delayed output start, and four-step
+output window. `anticipationSwell` is allowed only on the second withheld
+energy-release bar at macro position 14; it uses the same one-step source,
+spans the bounded remainder of that bar, retains positive early/late RMS with
+late greater than early by at least 3 dB, and ends at literal zero on the
+recovery boundary. Ineligible records must be exact neutral. Tests must hold the
+resolved bar, synth plan, dry percussion hash, foundation, kick, groove-pulse,
+and ordinary-hat evidence fixed while proving that only the existing return
+changes. These tests establish the current realization, not a permanent
+filter/delay/reversal recipe; future DSP upgrades must preserve both score
+relations, the release boundary, and the evidence before requalification.
 
 Pulse-echo return-drive evidence must cover every full rendered bar and bind the
 bar, fixed BPM, route-derived three-sixteenth delay-frame count, rendered-frame
@@ -235,9 +239,9 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v8 bank must contain every canonical checkpoint for
+The Professional Evidence v9 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v23 primary evaluator v5 and pinned profile v5/adversarial/holdout
+engine-v24 primary evaluator v6 and pinned profile v6/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 28.
 Holdouts must be source-disjoint, contain at
@@ -299,7 +303,7 @@ or PCM.
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
 composition, spatial-FDN, and nonlinear-core evidence carried by quality-contract
-schema 24 change detached preparation only. The implemented master-headroom path
+schema 25 change detached preparation only. The implemented master-headroom path
 is the sole scheduled-output feedback responsibility and does not move those
 feature analyzers or decisions onto the callback. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
@@ -355,11 +359,11 @@ phrase lengths, maximum two-pass path, and route
 rebuild at representative 44.1 and 48 kHz devices. Record median, high-percentile,
 and worst observed times plus peak working memory.
 
-The exact-engine v5 artifact loader, route-local primary evaluator, unavailable-rate
+The exact-engine v6 artifact loader, route-local primary evaluator, unavailable-rate
 gate, one-correction transaction order, and reason-coded replay require
 deterministic tests at 44.1 and 48 kHz. The deterministic numeric-storage estimate
 must remain below the declared 128 MiB ceiling. The profile derives from 28
-complete journeys and passes the 25-case v6 adversarial suite plus four disjoint
+complete journeys and passes the 26-case v7 adversarial suite plus four disjoint
 holdouts at both rates. See [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md) and
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 

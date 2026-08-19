@@ -2677,7 +2677,9 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
     package let bar: Int
     package let performanceCharacter: String
     package let arrangementGesture: String
+    package let kickSyntaxRole: String
     package let active: Bool
+    package let relation: String
     package let eligibleSourceStepMask: UInt16
     package let inputStep: Int
     package let outputStartStep: Int
@@ -2693,6 +2695,9 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
     package let inputRMS: Double
     package let returnPeak: Double
     package let returnRMS: Double
+    package let earlyOutputRMS: Double
+    package let lateOutputRMS: Double
+    package let lateToEarlyDB: Double
     package let inputNonzeroSampleCount: Int
     package let returnNonzeroSampleCount: Int
     package let outOfWindowNonzeroSampleCount: Int
@@ -2707,6 +2712,7 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
         bar: Int,
         performanceCharacter: PerformanceCharacter,
         arrangementGesture: ArrangementGesture,
+        kickSyntaxRole: KickSyntaxRole,
         eligibleSourceStepMask: UInt16,
         renderPassesMatch: Bool,
         bindingValid: Bool
@@ -2714,7 +2720,9 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
         self.bar = bar
         self.performanceCharacter = performanceCharacter.rawValue
         self.arrangementGesture = arrangementGesture.rawValue
+        self.kickSyntaxRole = kickSyntaxRole.rawValue
         active = evidence.active
+        relation = evidence.relation?.rawValue ?? ""
         self.eligibleSourceStepMask = eligibleSourceStepMask
         inputStep = evidence.inputStep
         outputStartStep = evidence.outputStartStep
@@ -2730,6 +2738,9 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
         inputRMS = evidence.inputRMS
         returnPeak = evidence.returnPeak
         returnRMS = evidence.returnRMS
+        earlyOutputRMS = evidence.earlyOutputRMS
+        lateOutputRMS = evidence.lateOutputRMS
+        lateToEarlyDB = evidence.lateToEarlyDB
         inputNonzeroSampleCount = evidence.inputNonzeroSampleCount
         returnNonzeroSampleCount = evidence.returnNonzeroSampleCount
         outOfWindowNonzeroSampleCount = evidence.outOfWindowNonzeroSampleCount
@@ -2749,6 +2760,7 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
         let frameCount = barFrameCount(sampleRate: sampleRate)
         let evidence = PercussionEchoTextureRenderEvidence(
             active: false,
+            relation: nil,
             bpm: AutonomousSessionDirector.bpm,
             sampleRate: sampleRate,
             inputStep: -1,
@@ -2769,6 +2781,9 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
             inputRMS: 0,
             returnPeak: 0,
             returnRMS: 0,
+            earlyOutputRMS: 0,
+            lateOutputRMS: 0,
+            lateToEarlyDB: 0,
             inputNonzeroSampleCount: 0,
             returnNonzeroSampleCount: 0,
             outOfWindowNonzeroSampleCount: 0,
@@ -2781,6 +2796,7 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
             bar: bar,
             performanceCharacter: performanceCharacter,
             arrangementGesture: arrangementGesture,
+            kickSyntaxRole: .grounded,
             eligibleSourceStepMask: 0,
             renderPassesMatch: true,
             bindingValid: true
@@ -2790,16 +2806,32 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
     package var isFinite: Bool {
         finite && [
             inputPeak, inputRMS, returnPeak, returnRMS,
+            earlyOutputRMS, lateOutputRMS, lateToEarlyDB,
         ].allSatisfy(\.isFinite)
     }
 
-    package func normalEligibility(
+    package func normalRelation(
         phraseKind: AutonomousPhraseKind
-    ) -> Bool {
-        phraseKind == .contrast &&
+    ) -> PercussionEchoTextureRelation? {
+        if phraseKind == .contrast &&
             performanceCharacter == PerformanceCharacter.brokenSuspension.rawValue &&
             arrangementGesture == ArrangementGesture.gearShift.rawValue &&
-            eligibleSourceStepMask != 0
+            kickSyntaxRole == KickSyntaxRole.grounded.rawValue &&
+            eligibleSourceStepMask != 0 {
+            return .gatedEcho
+        }
+        let macroPosition = ((bar % 16) + 16) % 16
+        if phraseKind == .energyRelease,
+           (performanceCharacter == PerformanceCharacter.peakDrive.rawValue ||
+            performanceCharacter == PerformanceCharacter.acidPressure.rawValue),
+           arrangementGesture == ArrangementGesture.steady.rawValue,
+           kickSyntaxRole == KickSyntaxRole.withheld.rawValue,
+           macroPosition == PercussionEchoTextureResolver
+            .anticipationSwellMacroPosition,
+           eligibleSourceStepMask != 0 {
+            return .anticipationSwell
+        }
+        return nil
     }
 
     package func isComplete(
@@ -2809,6 +2841,7 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
         guard bar >= 0,
               PerformanceCharacter(rawValue: performanceCharacter) != nil,
               ArrangementGesture(rawValue: arrangementGesture) != nil,
+              KickSyntaxRole(rawValue: kickSyntaxRole) != nil,
               sampleRate.isFinite,
               sampleRate >= QualityQualificationContract.minimumSupportedSampleRate,
               sampleRate <= QualityQualificationContract.maximumSupportedSampleRate,
@@ -2819,25 +2852,28 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
               Self.isSampleHash(returnSampleHash),
               inputPeak >= 0, inputRMS >= 0, inputRMS <= inputPeak,
               returnPeak >= 0, returnRMS >= 0, returnRMS <= returnPeak,
+              earlyOutputRMS >= 0, earlyOutputRMS <= returnPeak,
+              lateOutputRMS >= 0, lateOutputRMS <= returnPeak,
+              (-120...120).contains(lateToEarlyDB),
               inputPeak <= Double(Float.greatestFiniteMagnitude),
               returnPeak <= Double(Float.greatestFiniteMagnitude),
               (0...renderedFrameCount).contains(inputNonzeroSampleCount),
               (0...renderedFrameCount).contains(returnNonzeroSampleCount),
               (0...renderedFrameCount).contains(outOfWindowNonzeroSampleCount),
               renderPassesMatch, bindingValid, isFinite,
-              active == normalEligibility(
-                phraseKind: phraseKind
-              ) else {
+              active == (normalRelation(phraseKind: phraseKind) != nil) else {
             return false
         }
 
         if !active {
-            return inputStep == -1 && outputStartStep == -1 &&
+            return relation.isEmpty && inputStep == -1 && outputStartStep == -1 &&
                 outputEndStep == -1 && inputWindowFrameCount == 0 &&
                 outputWindowFrameCount == 0 && delayFrameCount == 0 &&
                 transitionFrameCount == 0 && inputPeak.bitPattern == 0 &&
                 inputRMS.bitPattern == 0 && returnPeak.bitPattern == 0 &&
-                returnRMS.bitPattern == 0 && inputNonzeroSampleCount == 0 &&
+                returnRMS.bitPattern == 0 && earlyOutputRMS.bitPattern == 0 &&
+                lateOutputRMS.bitPattern == 0 && lateToEarlyDB.bitPattern == 0 &&
+                inputNonzeroSampleCount == 0 &&
                 returnNonzeroSampleCount == 0 &&
                 outOfWindowNonzeroSampleCount == 0 &&
                 firstOutputSampleBitPattern & 0x7fff_ffff == 0 &&
@@ -2850,14 +2886,32 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
                     )
         }
 
+        guard let expectedRelation = normalRelation(phraseKind: phraseKind),
+              relation == expectedRelation.rawValue else {
+            return false
+        }
         let expectedInputStep = eligibleSourceStepMask.trailingZeroBitCount
         guard inputStep == expectedInputStep,
-              inputStep <= PercussionEchoTextureResolver.latestInputStep,
-              outputStartStep == inputStep +
-                PercussionEchoTextureResolver.outputDelayInSteps,
-              outputEndStep == outputStartStep +
-                PercussionEchoTextureResolver.outputWindowLengthInSteps,
-              outputEndStep < 16 else {
+              inputStep <= PercussionEchoTextureResolver.latestInputStep else {
+            return false
+        }
+        let expectedOutputStartStep: Int
+        let expectedOutputEndStep: Int
+        switch expectedRelation {
+        case .gatedEcho:
+            expectedOutputStartStep = inputStep +
+                PercussionEchoTextureResolver.outputDelayInSteps
+            expectedOutputEndStep = expectedOutputStartStep +
+                PercussionEchoTextureResolver.outputWindowLengthInSteps
+        case .anticipationSwell:
+            expectedOutputStartStep = inputStep +
+                PercussionEchoTextureResolver.inputWindowLengthInSteps
+            expectedOutputEndStep = PercussionEchoTextureResolver
+                .anticipationSwellOutputEndStep
+        }
+        guard outputStartStep == expectedOutputStartStep,
+              outputEndStep == expectedOutputEndStep,
+              outputEndStep <= 16 else {
             return false
         }
         let expectedInputStart = Self.frame(
@@ -2879,6 +2933,20 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
         let zeroReturnHash = AutonomousKickSyntaxBarEvidence.zeroSampleHash(
             renderedFrameCount: renderedFrameCount
         )
+        let computedRiseDB: Double
+        if lateOutputRMS > 0, earlyOutputRMS > 0 {
+            computedRiseDB = min(120, max(-120,
+                20 * (log10(lateOutputRMS) - log10(earlyOutputRMS))
+            ))
+        } else if lateOutputRMS > 0 {
+            computedRiseDB = 120
+        } else {
+            computedRiseDB = 0
+        }
+        let riseIsValid = expectedRelation == .gatedEcho ||
+            (earlyOutputRMS > 0 && lateOutputRMS > earlyOutputRMS &&
+             lateToEarlyDB >= PercussionEchoTextureResolver
+                .minimumAnticipationRiseDB)
         return inputWindowFrameCount == expectedInputEnd - expectedInputStart &&
             outputWindowFrameCount == expectedOutputEnd - expectedOutputStart &&
             delayFrameCount == max(
@@ -2892,6 +2960,7 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
             returnNonzeroSampleCount > 0 && outOfWindowNonzeroSampleCount == 0 &&
             firstOutputSampleBitPattern & 0x7fff_ffff == 0 &&
             lastOutputSampleBitPattern & 0x7fff_ffff == 0 &&
+            lateToEarlyDB == computedRiseDB && riseIsValid &&
             inputSampleHash != AutonomousKickSyntaxBarEvidence.zeroSampleHash(
                 renderedFrameCount: inputWindowFrameCount
             ) && returnSampleHash != zeroReturnHash
@@ -4368,7 +4437,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 22
+    package static let schemaVersion = 23
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -5042,6 +5111,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             let bindingValid = eligibleMask != nil && planBarMatches &&
                 block.section == resolved.performance.section &&
                 evidence.active == (articulation != nil) &&
+                evidence.relation == articulation?.relation &&
                 evidence.bpm == plan.scene.bpm &&
                 evidence.sampleRate == sampleRate &&
                 evidence.renderedFrameCount == block.left.count &&
@@ -5057,6 +5127,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 bar: block.bar,
                 performanceCharacter: resolved.performanceCharacter,
                 arrangementGesture: resolved.arrangementGesture,
+                kickSyntaxRole: resolved.kickSyntaxRole,
                 eligibleSourceStepMask: eligibleMask ?? 0,
                 renderPassesMatch:
                     block.percussionEchoTextureRenderPassesMatch,
@@ -6675,11 +6746,12 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
            percussionEchoTexture.count == fullMix.sourceBarCount else {
             return false
         }
-        return percussionEchoTexture.allSatisfy {
-            $0.isComplete(
-                sampleRate: routeContinuation.sampleRate,
-                phraseKind: phraseKind
-            )
+        return zip(percussionEchoTexture, kickSyntax).allSatisfy { texture, kick in
+            texture.bar == kick.bar && texture.kickSyntaxRole == kick.role &&
+                texture.isComplete(
+                    sampleRate: routeContinuation.sampleRate,
+                    phraseKind: phraseKind
+                )
         }
     }
 

@@ -22,9 +22,10 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one compact climax-arc record that fingerprints the exact earlier contrast or
   major-break obligations paid by that energy release and cross-checks their
   existing grounded/withheld/recovery consequence;
-- one score-owned gated percussion texture that admits an existing early
-  percussion slice and exposes only a bounded delayed return window, without
-  resampling, new events, or cross-bar delay state;
+- one score-owned percussion-return texture that reuses an existing early
+  percussion slice as either a bounded delayed contrast answer or a reverse-wet
+  anticipation swell on the second kick-withheld bar before recovery, without
+  resampling, new events, another bus, or cross-bar delay state;
 - one unified phrase-composition layer that can resample an exact app-owned
   percussion source, resolve every step of an 8/16-note arpeggio, render four
   simultaneous pad voices, and carry the accepted pad voicing across phrase
@@ -55,7 +56,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one scheduled-output master-headroom path mapping app-owned mixer PCM to an
   exact phrase occurrence, analyzing one fixed three-second window off the
   callback, and applying a primary-accepted attenuation only to future PCM;
-- canonical engine v23, quality-contract schema 24, candidate-vector schema 22,
+- canonical engine v24, quality-contract schema 25, candidate-vector schema 23,
   and candidate-transaction schema 4
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax and debt-to-recovery climax arc,
@@ -63,7 +64,8 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   tail clearance,
   score-owned instrument, acid-operator, spectral-cluster, tonal-envelope, and
   protagonist spectral-reveal and Resonant Mono nonlinear-core consequence,
-  score-owned gated percussion texture, shared pulse-echo return-drive,
+  score-owned gated/anticipatory percussion-return texture, shared pulse-echo
+  return-drive,
   score-owned spatial-FDN configuration and wet consequence,
   score-owned upper-role timing, graph, and
   pre/post upper-timbre evidence;
@@ -73,13 +75,13 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - phrase-wide and live-window ITU-R BS.1770-5 loudness, Annex 2 true peak,
   physical-time spectral/trajectory evidence, rate-normalized transient
   detection, explicit bounded working memory, and a complete-checkpoint
-  Professional Evidence v8 report bank;
+  Professional Evidence v9 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
 
-The app now installs one exact-engine calibrated primary evaluator v5 from the
-current profile v5 derived from 28 complete journeys, a passing v6 adversarial
+The app now installs one exact-engine calibrated primary evaluator v6 from the
+current profile v6 derived from 28 complete journeys, a passing v7 adversarial
 suite, and a disjoint four-journey holdout qualification. Each boundary owns one
 canonical plan and one terminal decision. The evaluator may request one same-
 plan home-timbre correction, for two render passes maximum. Missing artifacts
@@ -134,28 +136,29 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 24, candidate-vector schema 22, and candidate-
+Quality-contract schema 25, candidate-vector schema 23, and candidate-
 transaction schema 4 now bind a versioned transaction across canonical engine
-v23, quality policy, evaluator, candidate
+v24, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 upper-percussion tail-clearance,
 instrument, acid-operator, TPT/ADAA nonlinear-core, spectral-cluster, and tonal-envelope,
 protagonist spectral-reveal,
-gated percussion texture, pulse-echo return-drive, spatial-FDN, and upper-role timing,
+gated/anticipatory percussion-return texture, pulse-echo return-drive,
+spatial-FDN, and upper-role timing,
 including foreground lead performance,
 projections, unified phrase composition, plus exact paid-debt-to-release climax
 provenance, make each
 score-to-PCM consequence explicit for the calibrated primary policy. The modal
 foundation projection additionally binds every empty and active bar, score-owned
 articulation, exact dry PCM, protected routing, continuation, pitch, envelope,
-spectral, masking, and pole-stability evidence. Professional Evidence v8 adds
+spectral, masking, and pole-stability evidence. Professional Evidence v9 adds
 standards-based phrase loudness/true peak, bounded streaming
 physical-time spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
 complete role attribution. The repository now carries a deterministic,
 non-reconstructable 44.1/48 kHz diverse profile, relational rate/trajectory
-guardrails, a passing 25-case v6 adversarial suite, and a disjoint holdout report
+guardrails, a passing 26-case v7 adversarial suite, and a disjoint holdout report
 covering 56/56 observations with zero relationship failures. Short-program
 EBU-style loudness range remains descriptive because its gated percentile is
 discontinuous at small populations; integrated, momentary, short-term, and true-
@@ -166,8 +169,8 @@ local and untracked.
 
 The runtime now records one complete plan, one initial attempt, and at most one
 home-timbre correction, then atomically carries the terminal evidence, decision,
-and controller state into continuation. The exact engine-v23 profile v5,
-passing v6 adversarial suite, disjoint holdout qualification, non-compensable
+and controller state into continuation. The exact engine-v24 profile v6,
+passing v7 adversarial suite, disjoint holdout qualification, non-compensable
 checkpoint policy, and transaction replay are the app path. The former
 single-journey generalization blocker is closed: 28 development journeys and
 four disjoint replacement holdouts pass at 44.1 and 48 kHz. A missing artifact,

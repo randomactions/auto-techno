@@ -382,45 +382,80 @@ package enum KickSyntaxRole: String, CaseIterable, Sendable {
 /// One bounded input-window -> delay -> output-window relationship on the
 /// existing percussion role. The score chooses only geometry; renderer-owned
 /// filter, feedback, gain, and boundary fades remain one canonical contract.
+package enum PercussionEchoTextureRelation: String, CaseIterable, Sendable {
+    case gatedEcho
+    case anticipationSwell
+}
+
 package struct PercussionEchoTextureArticulation: Equatable, Sendable {
+    package let relation: PercussionEchoTextureRelation
     package let inputStep: Int
     package let outputStartStep: Int
     package let outputEndStep: Int
 
-    package init(inputStep: Int, outputStartStep: Int, outputEndStep: Int) {
+    package init(
+        relation: PercussionEchoTextureRelation = .gatedEcho,
+        inputStep: Int,
+        outputStartStep: Int,
+        outputEndStep: Int
+    ) {
+        self.relation = relation
         self.inputStep = inputStep
         self.outputStartStep = outputStartStep
         self.outputEndStep = outputEndStep
     }
 }
 
-/// Resolves the gated percussion return after ensemble arbitration so the
-/// input window always owns an audible, already-resolved percussion event.
-/// It adds no onset and never captures or resamples PCM for later reuse.
+/// Resolves the percussion return after ensemble arbitration so every active
+/// relation owns an audible, already-resolved percussion event. The established
+/// contrast relation remains a later gated echo; the final withheld release bar
+/// may reinterpret the same wet tail as a bounded anticipation swell.
 package enum PercussionEchoTextureResolver {
     package static let inputWindowLengthInSteps = 1
     package static let outputDelayInSteps = 4
     package static let outputWindowLengthInSteps = 4
     package static let latestInputStep = 7
+    package static let anticipationSwellMacroPosition = 14
+    package static let anticipationSwellOutputEndStep = 16
+    package static let minimumAnticipationRiseDB = 3.0
 
     package static func articulation(
         ensemble: EnsembleContext,
         kind: AutonomousPhraseKind,
         character: PerformanceCharacter,
-        gesture: ArrangementGesture
+        gesture: ArrangementGesture,
+        kickSyntaxRole: KickSyntaxRole = .grounded,
+        absoluteBar: Int? = nil
     ) -> PercussionEchoTextureArticulation? {
-        guard kind == .contrast,
-              character == .brokenSuspension,
-              gesture == .gearShift,
-              let source = eligibleSourceEvents(in: ensemble).first else {
+        guard let source = eligibleSourceEvents(in: ensemble).first else {
             return nil
         }
-        return PercussionEchoTextureArticulation(
-            inputStep: source.step,
-            outputStartStep: source.step + outputDelayInSteps,
-            outputEndStep: source.step + outputDelayInSteps +
-                outputWindowLengthInSteps
-        )
+        if kind == .contrast,
+           character == .brokenSuspension,
+           gesture == .gearShift,
+           kickSyntaxRole == .grounded {
+            return PercussionEchoTextureArticulation(
+                relation: .gatedEcho,
+                inputStep: source.step,
+                outputStartStep: source.step + outputDelayInSteps,
+                outputEndStep: source.step + outputDelayInSteps +
+                    outputWindowLengthInSteps
+            )
+        }
+        if kind == .energyRelease,
+           (character == .peakDrive || character == .acidPressure),
+           gesture == .steady,
+           kickSyntaxRole == .withheld,
+           let absoluteBar,
+           positiveModulo(absoluteBar, 16) == anticipationSwellMacroPosition {
+            return PercussionEchoTextureArticulation(
+                relation: .anticipationSwell,
+                inputStep: source.step,
+                outputStartStep: source.step + inputWindowLengthInSteps,
+                outputEndStep: anticipationSwellOutputEndStep
+            )
+        }
+        return nil
     }
 
     package static func eligibleSourceEvents(
@@ -446,6 +481,11 @@ package enum PercussionEchoTextureResolver {
 
     private static func voiceOrder(_ voice: EnsembleVoice) -> Int {
         EnsembleVoice.allCases.firstIndex(of: voice) ?? Int.max
+    }
+
+    private static func positiveModulo(_ value: Int, _ divisor: Int) -> Int {
+        let remainder = value % divisor
+        return remainder >= 0 ? remainder : remainder + divisor
     }
 }
 
@@ -737,7 +777,14 @@ package enum KickSyntaxResolver {
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative,
             kickSyntaxRole: role,
-            percussionEchoTexture: resolved.percussionEchoTexture
+            percussionEchoTexture: PercussionEchoTextureResolver.articulation(
+                ensemble: ensemble,
+                kind: phraseKind,
+                character: resolved.performanceCharacter,
+                gesture: resolved.arrangementGesture,
+                kickSyntaxRole: role,
+                absoluteBar: resolved.performance.bar
+            )
         )
     }
 }
@@ -1632,7 +1679,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 ensemble: ensemble,
                 kind: kind,
                 character: character,
-                gesture: gesture
+                gesture: gesture,
+                absoluteBar: absoluteBar
             )
             let echoEnabled = pulseEchoEnabled(
                 scene: scene, bar: bar, kind: kind,

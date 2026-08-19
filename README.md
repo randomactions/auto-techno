@@ -30,6 +30,9 @@ account.
 - one post-arbitration upper-percussion tail policy that reuses the existing
   clap, open-hat, and metallic voices, preserves their attack, and shortens
   their release only when another score role owns the foreground;
+- one score-owned percussion-return relation that reuses the existing weak
+  percussion as either a later gated answer or a bounded pre-release
+  anticipation swell, without adding a track, instrument, or effect bus;
 - one score-owned eight-line stereo FDN late field with bounded decay, damping,
   continuation, protected low end, and exact per-bar consequence evidence;
 - one scheduled-output live-feedback path that maps app-owned mixer PCM to the

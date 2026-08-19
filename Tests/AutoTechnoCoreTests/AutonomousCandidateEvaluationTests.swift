@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 22)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 23)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -616,7 +616,8 @@ struct AutonomousCandidateEvaluationTests {
         #expect(forged.playbackGateEvidence == baseline.playbackGateEvidence)
     }
 
-    @Test("Gated percussion texture evidence is compact, causal, and playback-gate-neutral")
+    @MainActor
+    @Test("Percussion texture evidence is compact, causal, and playback-gate-neutral")
     func percussionEchoTextureEvidenceContract() throws {
         let neutral = fixtureVector(
             phraseKind: .contrast
@@ -629,11 +630,37 @@ struct AutonomousCandidateEvaluationTests {
 
         #expect(activeRecord.isComplete(
             sampleRate: 8_000,
-            phraseKind: .contrast        ))
+            phraseKind: .contrast
+        ))
         #expect(active.isComplete)
         #expect(active.isFinite)
         #expect(active.fingerprint != neutral.fingerprint)
         #expect(active.playbackGateEvidence == neutral.playbackGateEvidence)
+
+        let swellRecord = fixturePercussionEchoTexture(
+            bar: PercussionEchoTextureResolver.anticipationSwellMacroPosition,
+            relation: .anticipationSwell
+        )
+        #expect(swellRecord.isComplete(
+            sampleRate: 8_000,
+            phraseKind: .energyRelease
+        ))
+        var flatSwellObject = try #require(
+            JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(swellRecord)
+            ) as? [String: Any]
+        )
+        flatSwellObject["lateOutputRMS"] = swellRecord.earlyOutputRMS
+        flatSwellObject["lateToEarlyDB"] = 0.0
+        let flatSwell = try JSONDecoder().decode(
+            AutonomousPercussionEchoTextureBarEvidence.self,
+            from: JSONSerialization.data(withJSONObject: flatSwellObject)
+        )
+        #expect(!flatSwell.isComplete(
+            sampleRate: 8_000,
+            phraseKind: .energyRelease
+        ))
+        #expect(flatSwell.isFinite)
 
         let data = try active.deterministicJSON()
         let object = try #require(
@@ -644,12 +671,14 @@ struct AutonomousCandidateEvaluationTests {
         )
         let serialized = try #require(bars.first)
         #expect(Set(serialized.keys) == Set([
-            "bar", "performanceCharacter", "arrangementGesture", "active",
+            "bar", "performanceCharacter", "arrangementGesture",
+            "kickSyntaxRole", "active", "relation",
             "eligibleSourceStepMask", "inputStep", "outputStartStep",
             "outputEndStep", "renderedFrameCount", "inputWindowFrameCount",
             "outputWindowFrameCount", "delayFrameCount",
             "transitionFrameCount", "inputSampleHash", "returnSampleHash",
             "inputPeak", "inputRMS", "returnPeak", "returnRMS",
+            "earlyOutputRMS", "lateOutputRMS", "lateToEarlyDB",
             "inputNonzeroSampleCount", "returnNonzeroSampleCount",
             "outOfWindowNonzeroSampleCount", "firstOutputSampleBitPattern",
             "lastOutputSampleBitPattern", "renderPassesMatch", "bindingValid",
@@ -1221,10 +1250,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 22)
-        #expect(QualityQualificationContract.schemaVersion == 24)
+        #expect(vector.schemaVersion == 23)
+        #expect(QualityQualificationContract.schemaVersion == 25)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v23")
+                "autotechno-canonical-engine.v24")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3528,7 +3557,7 @@ struct AutonomousCandidateEvaluationTests {
         }
 
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
-                "7d7225767edbec51")
+                "d7cdac65103a52e6")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -3536,7 +3565,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "e603fb4d045127fb")
+                "4d00ca38fbc71687")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -4164,25 +4193,41 @@ struct AutonomousCandidateEvaluationTests {
     }
 
     private func fixturePercussionEchoTexture(
-        bar: Int = 0
+        bar: Int = 0,
+        relation: PercussionEchoTextureRelation = .gatedEcho
     ) -> AutonomousPercussionEchoTextureBarEvidence {
         let sampleRate = 8_000.0
         let renderedFrameCount = Int((
             240.0 / AutonomousSessionDirector.bpm * sampleRate
         ).rounded())
         let inputStep = 3
-        let outputStartStep = inputStep +
-            PercussionEchoTextureResolver.outputDelayInSteps
-        let outputEndStep = outputStartStep +
-            PercussionEchoTextureResolver.outputWindowLengthInSteps
+        let outputStartStep: Int
+        let outputEndStep: Int
+        switch relation {
+        case .gatedEcho:
+            outputStartStep = inputStep +
+                PercussionEchoTextureResolver.outputDelayInSteps
+            outputEndStep = outputStartStep +
+                PercussionEchoTextureResolver.outputWindowLengthInSteps
+        case .anticipationSwell:
+            outputStartStep = inputStep +
+                PercussionEchoTextureResolver.inputWindowLengthInSteps
+            outputEndStep = PercussionEchoTextureResolver
+                .anticipationSwellOutputEndStep
+        }
         func frame(_ step: Int) -> Int {
             Int((Double(step) * Double(renderedFrameCount) / 16.0).rounded())
         }
         let inputWindowFrameCount = frame(inputStep + 1) - frame(inputStep)
         let outputWindowFrameCount = frame(outputEndStep) -
             frame(outputStartStep)
+        let earlyOutputRMS = 0.01
+        let lateOutputRMS = relation == .anticipationSwell ? 0.02 : 0.01
+        let lateToEarlyDB = relation == .anticipationSwell
+            ? 20 * (log10(lateOutputRMS) - log10(earlyOutputRMS)) : 0
         let evidence = PercussionEchoTextureRenderEvidence(
             active: true,
+            relation: relation,
             bpm: AutonomousSessionDirector.bpm,
             sampleRate: sampleRate,
             inputStep: inputStep,
@@ -4205,6 +4250,9 @@ struct AutonomousCandidateEvaluationTests {
             inputRMS: 0.02,
             returnPeak: 0.04,
             returnRMS: 0.01,
+            earlyOutputRMS: earlyOutputRMS,
+            lateOutputRMS: lateOutputRMS,
+            lateToEarlyDB: lateToEarlyDB,
             inputNonzeroSampleCount: 100,
             returnNonzeroSampleCount: 300,
             outOfWindowNonzeroSampleCount: 0,
@@ -4215,8 +4263,12 @@ struct AutonomousCandidateEvaluationTests {
         return AutonomousPercussionEchoTextureBarEvidence(
             evidence,
             bar: bar,
-            performanceCharacter: .brokenSuspension,
-            arrangementGesture: .gearShift,
+            performanceCharacter: relation == .anticipationSwell
+                ? .peakDrive : .brokenSuspension,
+            arrangementGesture: relation == .anticipationSwell
+                ? .steady : .gearShift,
+            kickSyntaxRole: relation == .anticipationSwell
+                ? .withheld : .grounded,
             eligibleSourceStepMask: UInt16(1 << inputStep),
             renderPassesMatch: true,
             bindingValid: true

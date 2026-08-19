@@ -8,7 +8,7 @@ package enum VoiceKind: String, CaseIterable, Sendable {
 
 package enum EffectKind: String, CaseIterable, Sendable {
     case busEQ, maskingGuard, saturation, phaser, chorus, comb, unsyncedEcho, pulseEcho
-    case gatedPercussionEcho, reverb, spatialFDN, glue, master
+    case percussionEchoTexture, reverb, spatialFDN, glue, master
 }
 
 package struct EffectState: Equatable, Sendable {
@@ -684,11 +684,12 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
     }
 }
 
-/// Same-pass evidence for the bounded score-owned percussion input gate,
-/// delayed return, and later output gate. Only reduced geometry, hashes, and
-/// scalar signal facts survive detached preparation; no captured slice does.
+/// Same-pass evidence for the bounded score-owned percussion input window and
+/// its gated-echo or anticipation-swell return. Only reduced geometry, hashes,
+/// and scalar signal facts survive detached preparation; no captured slice does.
 package struct PercussionEchoTextureRenderEvidence: Equatable, Sendable {
     package let active: Bool
+    package let relation: PercussionEchoTextureRelation?
     package let bpm: Double
     package let sampleRate: Double
     package let inputStep: Int
@@ -705,6 +706,9 @@ package struct PercussionEchoTextureRenderEvidence: Equatable, Sendable {
     package let inputRMS: Double
     package let returnPeak: Double
     package let returnRMS: Double
+    package let earlyOutputRMS: Double
+    package let lateOutputRMS: Double
+    package let lateToEarlyDB: Double
     package let inputNonzeroSampleCount: Int
     package let returnNonzeroSampleCount: Int
     package let outOfWindowNonzeroSampleCount: Int
@@ -1624,7 +1628,7 @@ package enum AutonomousPhraseRenderer {
                 EffectState(kind: effectKind($0.kind), amount: $0.amount, active: $0.mix > 0)
             } + [
                 EffectState(
-                    kind: .gatedPercussionEcho,
+                    kind: .percussionEchoTexture,
                     amount: PercussionEchoTextureVoice.returnGain,
                     active: protectedRhythm
                         .percussionEchoTextureRenderEvidence.active
