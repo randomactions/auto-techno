@@ -644,52 +644,43 @@ struct InstrumentPaletteTests {
 
     @Test("Canonical journey reaches a prepared rising-cluster transition")
     func preparedSpectralClusterEvidence() throws {
-        let fixture = try #require(activeSpectralClusterPlanFixture())
-        var incomingRenderState = RenderState()
-        incomingRenderState.barIndex = fixture.state.memory.totalBars
-        let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
-            plan: fixture.plan,
-            sessionSeed: fixture.state.rootSeed,
-            memory: fixture.state.memory,
-            sampleRate: 8_000,
-            incomingRenderState: incomingRenderState,
-            incomingGraphState: GeneratedDSPContinuationState(),
-            previousGraph: nil,
-            incomingQualityState: fixture.state.quality,
-            evaluator: AcceptingPrimaryTestEvaluator(),
-            cancellationRequested: { false }
-        )
-        let prepared = try #require(preparedResult)
-        #expect(prepared.candidateEvaluation.isComplete)
-        #expect(prepared.selectedCandidateEvidence.isComplete)
-        #expect(prepared.commitEligible)
-
-        let clusters = prepared.selectedCandidateEvidence.instruments
-            .flatMap(\.architectures)
-            .compactMap(\.spectralTextureCluster)
-        #expect(!clusters.isEmpty)
-        #expect(clusters.allSatisfy { cluster in
-            cluster.isComplete(
-                assignments: prepared.selectedCandidateEvidence.instruments
-                    .flatMap(\.architectures)
-                    .first { $0.spectralTextureCluster == cluster }?
-                    .assignments ?? [],
-                architectureEventCount:
-                    prepared.selectedCandidateEvidence.instruments
-                    .flatMap(\.architectures)
-                    .first { $0.spectralTextureCluster == cluster }?
-                    .eventCount ?? -1,
-                sampleRate: 8_000
-            )
-        })
+        let projection = try #require(preparedSpectralClusterProjection())
+        #expect(projection.candidateEvaluationComplete)
+        #expect(projection.selectedEvidenceComplete)
+        #expect(projection.commitEligible)
+        #expect(projection.clusterCount > 0)
+        #expect(projection.clustersComplete)
     }
 
     @Test("Prepared evidence binds the selected acid score to its operator consequence")
     func preparedAcidRelationEvidence() throws {
-        let fixture = try #require(activeAcidPlanFixture())
+        let projection = try #require(preparedAcidRelationProjection())
+        #expect(projection.candidateEvaluationComplete)
+        #expect(projection.selectedEvidenceComplete)
+        #expect(projection.commitEligible)
+        #expect(projection.sourceBarCountMatches)
+        #expect(projection.instrumentBarCountMatches)
+        #expect(projection.acidArchitectureCount > 0)
+        #expect(projection.acidArchitecturesComplete)
+    }
+
+    /// Keep complete phrase plans, render state, and candidate evidence out of
+    /// Swift Testing's bounded cooperative-task frame. The returned values are
+    /// the same assertions reduced to small immutable scalars.
+    @inline(never)
+    private func preparedSpectralClusterProjection() -> (
+        candidateEvaluationComplete: Bool,
+        selectedEvidenceComplete: Bool,
+        commitEligible: Bool,
+        clusterCount: Int,
+        clustersComplete: Bool
+    )? {
+        guard let fixture = activeSpectralClusterPlanFixture() else {
+            return nil
+        }
         var incomingRenderState = RenderState()
         incomingRenderState.barIndex = fixture.state.memory.totalBars
-        let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
+        guard let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
             plan: fixture.plan,
             sessionSeed: fixture.state.rootSeed,
             memory: fixture.state.memory,
@@ -700,39 +691,94 @@ struct InstrumentPaletteTests {
             incomingQualityState: fixture.state.quality,
             evaluator: AcceptingPrimaryTestEvaluator(),
             cancellationRequested: { false }
+        ) else {
+            return nil
+        }
+        let architectures = prepared.selectedCandidateEvidence.instruments
+            .flatMap(\.architectures)
+        let clusters = architectures.compactMap(\.spectralTextureCluster)
+        return (
+            candidateEvaluationComplete:
+                prepared.candidateEvaluation.isComplete,
+            selectedEvidenceComplete:
+                prepared.selectedCandidateEvidence.isComplete,
+            commitEligible: prepared.commitEligible,
+            clusterCount: clusters.count,
+            clustersComplete: clusters.allSatisfy { cluster in
+                let architecture = architectures.first {
+                    $0.spectralTextureCluster == cluster
+                }
+                return cluster.isComplete(
+                    assignments: architecture?.assignments ?? [],
+                    architectureEventCount: architecture?.eventCount ?? -1,
+                    sampleRate: 8_000
+                )
+            }
         )
-        let prepared = try #require(preparedResult)
+    }
 
-        #expect(prepared.candidateEvaluation.isComplete)
-        #expect(prepared.selectedCandidateEvidence.isComplete)
-        #expect(prepared.commitEligible)
-
+    @inline(never)
+    private func preparedAcidRelationProjection() -> (
+        candidateEvaluationComplete: Bool,
+        selectedEvidenceComplete: Bool,
+        commitEligible: Bool,
+        sourceBarCountMatches: Bool,
+        instrumentBarCountMatches: Bool,
+        acidArchitectureCount: Int,
+        acidArchitecturesComplete: Bool
+    )? {
+        guard let fixture = activeAcidPlanFixture() else {
+            return nil
+        }
+        var incomingRenderState = RenderState()
+        incomingRenderState.barIndex = fixture.state.memory.totalBars
+        guard let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            plan: fixture.plan,
+            sessionSeed: fixture.state.rootSeed,
+            memory: fixture.state.memory,
+            sampleRate: 8_000,
+            incomingRenderState: incomingRenderState,
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            incomingQualityState: fixture.state.quality,
+            evaluator: AcceptingPrimaryTestEvaluator(),
+            cancellationRequested: { false }
+        ) else {
+            return nil
+        }
         let evidence = prepared.selectedCandidateEvidence
-        #expect(evidence.sourceInstrumentBarCount ==
-                fixture.plan.resolvedBars.count)
-        #expect(evidence.instruments.count == evidence.sourceInstrumentBarCount)
         let acidArchitectures = evidence.instruments.flatMap(\.architectures).filter {
             $0.resonantMonoModulation != nil
         }
-        #expect(!acidArchitectures.isEmpty)
-        #expect(acidArchitectures.allSatisfy { architecture in
-            guard architecture.architecture ==
-                    InstrumentArchitecture.resonantMono.rawValue,
-                  let nonlinearCore = architecture.nonlinearCore,
-                  let modulation = architecture.resonantMonoModulation else {
-                return false
+        return (
+            candidateEvaluationComplete:
+                prepared.candidateEvaluation.isComplete,
+            selectedEvidenceComplete: evidence.isComplete,
+            commitEligible: prepared.commitEligible,
+            sourceBarCountMatches:
+                evidence.sourceInstrumentBarCount == fixture.plan.resolvedBars.count,
+            instrumentBarCountMatches:
+                evidence.instruments.count == evidence.sourceInstrumentBarCount,
+            acidArchitectureCount: acidArchitectures.count,
+            acidArchitecturesComplete: acidArchitectures.allSatisfy { architecture in
+                guard architecture.architecture ==
+                        InstrumentArchitecture.resonantMono.rawValue,
+                      let nonlinearCore = architecture.nonlinearCore,
+                      let modulation = architecture.resonantMonoModulation else {
+                    return false
+                }
+                return architecture.isComplete(sampleRate: 8_000) &&
+                    nonlinearCore.isComplete(
+                        architectureAssignmentCount: architecture.assignments.count,
+                        architectureEventCount: architecture.eventCount,
+                        sampleRate: 8_000
+                    ) &&
+                    modulation.isComplete(
+                        assignments: architecture.assignments,
+                        architectureEventCount: architecture.eventCount
+                    )
             }
-            return architecture.isComplete(sampleRate: 8_000) &&
-                nonlinearCore.isComplete(
-                    architectureAssignmentCount: architecture.assignments.count,
-                    architectureEventCount: architecture.eventCount,
-                    sampleRate: 8_000
-                ) &&
-                modulation.isComplete(
-                    assignments: architecture.assignments,
-                    architectureEventCount: architecture.eventCount
-                )
-        })
+        )
     }
 
     private func activeAcidPlanFixture() -> (

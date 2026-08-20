@@ -256,11 +256,17 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter InstrumentPaletteTests.canonicalAcidRelationEvidence
 
-      - name: Run prepared instrument evidence
+      - name: Run prepared spectral-cluster evidence
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter 'InstrumentPaletteTests.(preparedSpectralClusterEvidence|preparedAcidRelationEvidence)'
+          --filter InstrumentPaletteTests.preparedSpectralClusterEvidence
+
+      - name: Run prepared acid-relation evidence
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter InstrumentPaletteTests.preparedAcidRelationEvidence
 
       - name: Run kick source dynamics tests
         run: >-
