@@ -1585,3 +1585,87 @@ optimized `AutoTechno` product build. Publication and exact-head CI remain
 separate pending gates. Listening, app/route/interruption QA, latency or peak-
 memory measurement, and hardware-output soak were not performed and are not
 implied.
+
+## Source 27: source-local kick dynamics — 2026-08-20
+
+Source ID `27` used YouTube video `2P_Opp4a6iY`, *Why your mixes sound thin and
+weak (probably)*, from Underdog Electronic Music School, published 2022-03-14
+with a 6:36 duration. The clean-room capture used unauthenticated yt-dlp
+`2026.07.04` for metadata, automatic English captions, and top-ranked comments:
+
+```sh
+/opt/homebrew/bin/yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source27-research.jBZ4jh -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=2P_Opp4a6iY'
+```
+
+No manual subtitle track was available. Automatic `en` and `en-orig` VTTs
+were byte-identical with SHA-256
+`db4f62b114720306fe566903fa6b871e1a2e105c6b95488e5a648f2f1a6f4048`.
+The metadata/comment artifact had SHA-256
+`408ba1ed65a1c23cae16f1089027505770d6d513a77a0a63e5997f0059f1d00e`.
+The capture returned exactly 50 top-ranked top-level comments and 15 replies;
+one top-level item was a channel promotion, leaving 49 independent comments.
+Unauthenticated audio attempts tried the advertised Opus stream, M4A stream,
+and combined MP4 stream, but YouTube returned HTTP 403 for every media request,
+so the two introductory sound demonstrations were not heard or measured. No
+cookies, signed-in session, account, CAPTCHA, or browser state was used.
+Captions, comments, metadata, and research files remain untracked.
+
+The bounded caption paraphrase is: `0:00...1:12` uses a kick waveform to show
+that a narrow transient can consume limiter headroom before the audible body is
+reached; `1:17...2:40` contrasts equal peak readings with unequal perceived
+loudness and connects the difference to spectral distribution and upper-mid
+sensitivity; `2:42...4:35` argues that source creation, mixing, and terminal
+mastering are related stages and that the last stage should make only small
+corrections; `4:36...5:09` returns to the kick and recommends controlling it at
+the source rather than asking the master limiter to remove a large spike;
+`5:09...5:43` asks for sufficient, balanced upper-mid presence rather than a
+globally muffled mix; and `5:43...5:56` describes terminal EQ/limiting as small
+finishing moves. The video's displayed meters and spoken decibel examples are
+illustrative, not portable numeric targets.
+
+Independent comments converged on two durable points. Multiple experienced
+mix/mastering comments agreed that terminal mastering cannot rescue poor source
+or mix decisions. At least three independent comments separately described the
+crest-factor trade-off: unmanaged spikes consume headroom, some transient must
+remain for punch, and light source compression/limiting/saturation is more
+effective than heavy terminal processing. A low-mid-headroom comment and an
+upper-frequency-saturation comment were useful but did not establish a
+three-comment numeric or spectral target. No comment convergence justifies a
+new kick sample, drum layer, mastering preset, compressor bus, or brightness
+control.
+
+Repository reconciliation considered both reuse and expansion. The canonical
+engine already owns one resolved kick, pre-fader detector and post-fader audible
+buses, kick-syntax absence/recovery, automatic mix, protected center routing,
+linked two-band glue, terminal safety, first-order ADAA, exact per-bar hashes,
+and a single primary evaluator. The kick body is locally saturated, but its
+final body + sub + click sum reaches those buses without one complete-source
+conditioning or pre/post source evidence. Source 27 therefore adds one fixed,
+state-bounded first-order ADAA conditioner at that exact instrument boundary.
+It does not add a track, instrument, effect return, master chain, candidate,
+continuation buffer, or user control.
+
+The same-pass evidence streams the event-local pre/post source without
+retaining PCM and binds version/order, score/render count and masks, exact
+hashes, peak/RMS/crest, physical-time attack/body RMS, upper-mid energy, full/
+protected equality, detector/audible scaling, and explicit withheld silence.
+Professional observation retains source crest, attack/body, spectral-presence,
+and crest-reduction dimensions; a non-compensable transient-spike attack keeps
+the single primary contract causal. The later master remains safety and glue,
+not the owner of this correction.
+
+The durable intention and replacement boundary are recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). The v1 fixed
+curve may later be replaced in place with oversampling or higher-order
+antialiasing, transient-aware upward/parallel dynamics, a multiband source
+contour, or richer physical kick synthesis only when calibrated source crest,
+attack/body, upper-mid translation, alias, or master-work evidence exposes a
+repeatable deficit. The replacement must preserve kick score/event geometry,
+detector/audible ownership, protected center routing, exact withheld silence,
+and one primary evaluator; it must not coexist with another kick track or
+dynamics chain.
+
+Implementation, calibration, validation, publication, and exact-head CI remain
+pending. No listening, app/route/interruption QA, latency or peak-memory
+measurement, physical-output soak, or claim that the inaccessible source audio
+was heard is made.
