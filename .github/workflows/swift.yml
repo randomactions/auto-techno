@@ -274,6 +274,12 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter KickSourceDynamicsTests
 
+      - name: Run prepared percussion-echo evidence
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter PercussionEchoTexturePreparedEvidenceTests.testPreparedProductEvidence
+
       - name: Run core and evidence tests
         run: >-
           swift test --no-parallel

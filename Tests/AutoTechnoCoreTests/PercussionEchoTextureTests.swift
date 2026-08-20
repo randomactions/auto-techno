@@ -2,6 +2,7 @@ import AutoTechnoCore
 @testable import AutoTechnoDSP
 import Foundation
 import Testing
+import XCTest
 
 @Suite("Score-owned percussion echo texture")
 struct PercussionEchoTextureTests {
@@ -219,44 +220,6 @@ struct PercussionEchoTextureTests {
         #expect(prepared == nil)
     }
 
-    @Test("Prepared transaction retains the exact score to protected-return consequence")
-    func preparedProductEvidence() throws {
-        let fixture = try #require(activePlanFixture())
-        let prepared = try #require(prepare(
-            fixture.plan,
-            state: fixture.state
-        ))
-
-        #expect(prepared.candidateEvaluation.isComplete)
-        #expect(prepared.selectedCandidateEvidence.isComplete)
-        #expect(prepared.commitEligible)
-
-        let evidence = prepared.selectedCandidateEvidence
-        let selected = fixture.plan
-        #expect(evidence.percussionEchoTexture.count == selected.resolvedBars.count)
-        #expect(evidence.percussionEchoTexture.map(\.bar) ==
-                selected.resolvedBars.map { $0.performance.bar })
-        #expect(evidence.percussionEchoTexture.allSatisfy {
-            $0.renderPassesMatch && $0.bindingValid && $0.finite
-        })
-        let active = evidence.percussionEchoTexture.filter(\.active)
-        #expect(!active.isEmpty)
-        #expect(active.allSatisfy {
-            $0.inputPeak > 0 && $0.inputRMS > 0 &&
-                $0.returnPeak > 0 && $0.returnRMS > 0 &&
-                $0.inputNonzeroSampleCount > 0 &&
-                $0.returnNonzeroSampleCount > 0 &&
-                $0.outOfWindowNonzeroSampleCount == 0 &&
-                $0.firstOutputSampleBitPattern & 0x7fff_ffff == 0 &&
-                $0.lastOutputSampleBitPattern & 0x7fff_ffff == 0
-        })
-        #expect(prepared.blocks.contains { block in
-            block.effects.contains {
-                $0.kind == .percussionEchoTexture && $0.active
-            }
-        })
-    }
-
     @Test("The final withheld release bar resolves one anticipation swell")
     func anticipationSwellScoreArc() throws {
         let first = try #require(releaseFixture())
@@ -447,7 +410,7 @@ struct PercussionEchoTextureTests {
         #expect(prepare(forged, state: fixture.state) == nil)
     }
 
-    private func activePlanFixture() -> (
+    fileprivate func activePlanFixture() -> (
         state: AutonomousSessionState,
         plan: AutonomousPhrasePlan
     )? {
@@ -614,7 +577,7 @@ struct PercussionEchoTextureTests {
         return result
     }
 
-    private func prepare(
+    fileprivate func prepare(
         _ plan: AutonomousPhrasePlan,
         state: AutonomousSessionState
     ) -> PreparedAutonomousPhrase? {
@@ -682,5 +645,54 @@ struct PercussionEchoTextureTests {
             endingNarrativeState: source.endingNarrativeState,
             harmonicContinuation: source.incomingHarmonicContinuation
         )
+    }
+}
+
+/// Swift Testing executes `@Test` bodies on a bounded cooperative-task stack.
+/// This synchronous end-to-end preparation intentionally exercises the full
+/// canonical transaction and therefore runs on XCTest's normal test thread.
+/// The production path and every asserted contract remain unchanged.
+final class PercussionEchoTexturePreparedEvidenceTests: XCTestCase {
+    func testPreparedProductEvidence() throws {
+        let helper = PercussionEchoTextureTests()
+        let fixture = try XCTUnwrap(helper.activePlanFixture())
+        let prepared = try XCTUnwrap(helper.prepare(
+            fixture.plan,
+            state: fixture.state
+        ))
+
+        XCTAssertTrue(prepared.candidateEvaluation.isComplete)
+        XCTAssertTrue(prepared.selectedCandidateEvidence.isComplete)
+        XCTAssertTrue(prepared.commitEligible)
+
+        let evidence = prepared.selectedCandidateEvidence
+        let selected = fixture.plan
+        XCTAssertEqual(
+            evidence.percussionEchoTexture.count,
+            selected.resolvedBars.count
+        )
+        XCTAssertEqual(
+            evidence.percussionEchoTexture.map(\.bar),
+            selected.resolvedBars.map { $0.performance.bar }
+        )
+        XCTAssertTrue(evidence.percussionEchoTexture.allSatisfy {
+            $0.renderPassesMatch && $0.bindingValid && $0.finite
+        })
+        let active = evidence.percussionEchoTexture.filter(\.active)
+        XCTAssertFalse(active.isEmpty)
+        XCTAssertTrue(active.allSatisfy {
+            $0.inputPeak > 0 && $0.inputRMS > 0 &&
+                $0.returnPeak > 0 && $0.returnRMS > 0 &&
+                $0.inputNonzeroSampleCount > 0 &&
+                $0.returnNonzeroSampleCount > 0 &&
+                $0.outOfWindowNonzeroSampleCount == 0 &&
+                $0.firstOutputSampleBitPattern & 0x7fff_ffff == 0 &&
+                $0.lastOutputSampleBitPattern & 0x7fff_ffff == 0
+        })
+        XCTAssertTrue(prepared.blocks.contains { block in
+            block.effects.contains {
+                $0.kind == .percussionEchoTexture && $0.active
+            }
+        })
     }
 }
