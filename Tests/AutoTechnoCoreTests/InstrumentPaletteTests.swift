@@ -3,6 +3,16 @@ import AutoTechnoCore
 import Foundation
 import Testing
 
+private final class PreparedInstrumentPlanFixture {
+    let state: AutonomousSessionState
+    let plan: AutonomousPhrasePlan
+
+    init(state: AutonomousSessionState, plan: AutonomousPhrasePlan) {
+        self.state = state
+        self.plan = plan
+    }
+}
+
 @Suite("Canonical instrument palette")
 struct InstrumentPaletteTests {
     @Test("The catalog is complete, compatible, bounded, and deterministic")
@@ -678,42 +688,17 @@ struct InstrumentPaletteTests {
         guard let fixture = activeSpectralClusterPlanFixture() else {
             return nil
         }
-        var incomingRenderState = RenderState()
-        incomingRenderState.barIndex = fixture.state.memory.totalBars
-        guard let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
-            plan: fixture.plan,
-            sessionSeed: fixture.state.rootSeed,
-            memory: fixture.state.memory,
-            sampleRate: 8_000,
-            incomingRenderState: incomingRenderState,
-            incomingGraphState: GeneratedDSPContinuationState(),
-            previousGraph: nil,
-            incomingQualityState: fixture.state.quality,
-            evaluator: AcceptingPrimaryTestEvaluator(),
-            cancellationRequested: { false }
-        ) else {
+        guard let prepared = prepareInstrumentFixture(fixture) else {
             return nil
         }
-        let architectures = prepared.selectedCandidateEvidence.instruments
-            .flatMap(\.architectures)
-        let clusters = architectures.compactMap(\.spectralTextureCluster)
+        let status = preparedInstrumentStatus(prepared)
+        let clusters = preparedSpectralClusterFacts(prepared)
         return (
-            candidateEvaluationComplete:
-                prepared.candidateEvaluation.isComplete,
-            selectedEvidenceComplete:
-                prepared.selectedCandidateEvidence.isComplete,
-            commitEligible: prepared.commitEligible,
+            candidateEvaluationComplete: status.candidateEvaluationComplete,
+            selectedEvidenceComplete: status.selectedEvidenceComplete,
+            commitEligible: status.commitEligible,
             clusterCount: clusters.count,
-            clustersComplete: clusters.allSatisfy { cluster in
-                let architecture = architectures.first {
-                    $0.spectralTextureCluster == cluster
-                }
-                return cluster.isComplete(
-                    assignments: architecture?.assignments ?? [],
-                    architectureEventCount: architecture?.eventCount ?? -1,
-                    sampleRate: 8_000
-                )
-            }
+            clustersComplete: clusters.complete
         )
     }
 
@@ -730,9 +715,32 @@ struct InstrumentPaletteTests {
         guard let fixture = activeAcidPlanFixture() else {
             return nil
         }
+        guard let prepared = prepareInstrumentFixture(fixture) else {
+            return nil
+        }
+        let status = preparedInstrumentStatus(prepared)
+        let acid = preparedAcidFacts(
+            prepared,
+            expectedBarCount: fixture.plan.resolvedBars.count
+        )
+        return (
+            candidateEvaluationComplete: status.candidateEvaluationComplete,
+            selectedEvidenceComplete: status.selectedEvidenceComplete,
+            commitEligible: status.commitEligible,
+            sourceBarCountMatches: acid.sourceBarCountMatches,
+            instrumentBarCountMatches: acid.instrumentBarCountMatches,
+            acidArchitectureCount: acid.count,
+            acidArchitecturesComplete: acid.complete
+        )
+    }
+
+    @inline(never)
+    private func prepareInstrumentFixture(
+        _ fixture: PreparedInstrumentPlanFixture
+    ) -> PreparedAutonomousPhrase? {
         var incomingRenderState = RenderState()
         incomingRenderState.barIndex = fixture.state.memory.totalBars
-        guard let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
+        return AutonomousPhrasePreparer.prepareIfNotCancelled(
             plan: fixture.plan,
             sessionSeed: fixture.state.rootSeed,
             memory: fixture.state.memory,
@@ -743,31 +751,76 @@ struct InstrumentPaletteTests {
             incomingQualityState: fixture.state.quality,
             evaluator: AcceptingPrimaryTestEvaluator(),
             cancellationRequested: { false }
-        ) else {
-            return nil
-        }
-        let evidence = prepared.selectedCandidateEvidence
-        let acidArchitectures = evidence.instruments.flatMap(\.architectures).filter {
-            $0.resonantMonoModulation != nil
-        }
+        )
+    }
+
+    @inline(never)
+    private func preparedInstrumentStatus(
+        _ prepared: PreparedAutonomousPhrase
+    ) -> (
+        candidateEvaluationComplete: Bool,
+        selectedEvidenceComplete: Bool,
+        commitEligible: Bool
+    ) {
         return (
             candidateEvaluationComplete:
                 prepared.candidateEvaluation.isComplete,
-            selectedEvidenceComplete: evidence.isComplete,
-            commitEligible: prepared.commitEligible,
-            sourceBarCountMatches:
-                evidence.sourceInstrumentBarCount == fixture.plan.resolvedBars.count,
-            instrumentBarCountMatches:
-                evidence.instruments.count == evidence.sourceInstrumentBarCount,
-            acidArchitectureCount: acidArchitectures.count,
-            acidArchitecturesComplete: acidArchitectures.allSatisfy { architecture in
+            selectedEvidenceComplete:
+                prepared.selectedCandidateEvidence.isComplete,
+            commitEligible: prepared.commitEligible
+        )
+    }
+
+    @inline(never)
+    private func preparedSpectralClusterFacts(
+        _ prepared: PreparedAutonomousPhrase
+    ) -> (count: Int, complete: Bool) {
+        var count = 0
+        var complete = true
+        for bar in prepared.selectedCandidateEvidence.instruments {
+            for architecture in bar.architectures {
+                guard let cluster = architecture.spectralTextureCluster else {
+                    continue
+                }
+                count += 1
+                complete = complete && cluster.isComplete(
+                    assignments: architecture.assignments,
+                    architectureEventCount: architecture.eventCount,
+                    sampleRate: 8_000
+                )
+            }
+        }
+        return (count: count, complete: complete)
+    }
+
+    @inline(never)
+    private func preparedAcidFacts(
+        _ prepared: PreparedAutonomousPhrase,
+        expectedBarCount: Int
+    ) -> (
+        sourceBarCountMatches: Bool,
+        instrumentBarCountMatches: Bool,
+        count: Int,
+        complete: Bool
+    ) {
+        let evidence = prepared.selectedCandidateEvidence
+        var count = 0
+        var complete = true
+        for bar in evidence.instruments {
+            for architecture in bar.architectures {
+                guard architecture.resonantMonoModulation != nil else {
+                    continue
+                }
+                count += 1
                 guard architecture.architecture ==
                         InstrumentArchitecture.resonantMono.rawValue,
                       let nonlinearCore = architecture.nonlinearCore,
                       let modulation = architecture.resonantMonoModulation else {
-                    return false
+                    complete = false
+                    continue
                 }
-                return architecture.isComplete(sampleRate: 8_000) &&
+                complete = complete &&
+                    architecture.isComplete(sampleRate: 8_000) &&
                     nonlinearCore.isComplete(
                         architectureAssignmentCount: architecture.assignments.count,
                         architectureEventCount: architecture.eventCount,
@@ -778,13 +831,19 @@ struct InstrumentPaletteTests {
                         architectureEventCount: architecture.eventCount
                     )
             }
+        }
+        return (
+            sourceBarCountMatches:
+                evidence.sourceInstrumentBarCount == expectedBarCount,
+            instrumentBarCountMatches:
+                evidence.instruments.count == evidence.sourceInstrumentBarCount,
+            count: count,
+            complete: complete
         )
     }
 
-    private func activeAcidPlanFixture() -> (
-        state: AutonomousSessionState,
-        plan: AutonomousPhrasePlan
-    )? {
+    @inline(never)
+    private func activeAcidPlanFixture() -> PreparedInstrumentPlanFixture? {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
         for _ in 0..<64 {
@@ -798,17 +857,16 @@ struct InstrumentPaletteTests {
             if synth.bars.flatMap(\.upperNotes).contains(where: {
                 $0.instrument.resonantMonoSpectralRelation != nil
             }) {
-                return (state, plan)
+                return PreparedInstrumentPlanFixture(state: state, plan: plan)
             }
             state.advancePlanning(using: plan)
         }
         return nil
     }
 
-    private func activeSpectralClusterPlanFixture() -> (
-        state: AutonomousSessionState,
-        plan: AutonomousPhrasePlan
-    )? {
+    @inline(never)
+    private func activeSpectralClusterPlanFixture() ->
+        PreparedInstrumentPlanFixture? {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
         for _ in 0..<96 {
@@ -822,7 +880,7 @@ struct InstrumentPaletteTests {
             if synth.bars.flatMap(\.upperNotes).contains(where: {
                 $0.instrument.spectralTextureClusterRelation != nil
             }) {
-                return (state, plan)
+                return PreparedInstrumentPlanFixture(state: state, plan: plan)
             }
             state.advancePlanning(using: plan)
         }
