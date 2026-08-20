@@ -660,13 +660,21 @@ struct AdaptiveAutonomousSessionTests {
                     resolvedBars: plan.resolvedBars
                 )
                 for (resolved, synthBar) in zip(plan.resolvedBars, synth.bars) {
-                    switch resolved.foundationBehavior {
-                    case .point:
+                    if resolved.foundationRhythmicRelation ==
+                            .dottedThreeSixteenth {
+                        #expect(resolved.foundationBehavior == .monotone)
                         #expect(synthBar.foundationInstrument.patch == .bassPluck)
-                    case .subPulse, .monotone, .pump:
-                        #expect(synthBar.foundationInstrument.patch == .bassPulse)
-                    case .kickTail, .tunedPercussive, .absent:
-                        #expect(!resolved.ensemble.events.contains { $0.voice == .bass })
+                    } else {
+                        switch resolved.foundationBehavior {
+                        case .point:
+                            #expect(synthBar.foundationInstrument.patch == .bassPluck)
+                        case .subPulse, .monotone, .pump:
+                            #expect(synthBar.foundationInstrument.patch == .bassPulse)
+                        case .kickTail, .tunedPercussive, .absent:
+                            #expect(!resolved.ensemble.events.contains {
+                                $0.voice == .bass
+                            })
+                        }
                     }
                     if character == .acidPressure {
                         #expect(synthBar.upperNotes.filter {
