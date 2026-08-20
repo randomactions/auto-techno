@@ -22,14 +22,16 @@ mistaken for a completed feedback system.
    kick grammar must remain compatible with that phrase character; identity
    return resolves to the hypnotic home.
    A derived `PhraseCompositionBar` then coordinates phrase-local slice
-   triggers, arpeggiator notes, pad voicing, and voice-leading from that same
-   score and modal identity; it never admits a role independently.
+   triggers, arpeggiator notes, pad voicing, harmonic-disclosure stage, and
+   voice-leading from that same score and modal identity; it never admits a
+   role independently. The dependent arpeggiator follows the disclosed chord
+   without changing its existing onset, duration, velocity, or instrument.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 27, candidate-
-   vector schema 25, candidate-transaction schema 4, and canonical engine
-   identity `autotechno-canonical-engine.v26`. Each
+   primary-evaluation transaction under quality-contract schema 28, candidate-
+   vector schema 26, candidate-transaction schema 4, and canonical engine
+   identity `autotechno-canonical-engine.v27`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -39,8 +41,9 @@ mistaken for a completed feedback system.
    score-owned gated/anticipatory percussion-return texture, shared pulse-echo
    return-drive,
    score-bound spatial-FDN,
-   phrase-local slice source/output PCM, arpeggiator geometry, polyphonic pad
-   PCM, pad rhythmic-modulation consequence, and voice-leading movement,
+   phrase-local slice source/output PCM, arpeggiator geometry and exact
+   score/render pitch identity, polyphonic pad PCM, harmonic-disclosure
+   stage/function, pad rhythmic-modulation consequence, and voice-leading movement,
    score-owned upper-role timing—including a bounded foreground lead-performance
    relation—graph, and pre/post upper-timbre evidence.
    Instrument records bind each resolved architecture, patch, use, automation,
@@ -119,12 +122,12 @@ mistaken for a completed feedback system.
    windows with zero-padded radix-two FFT geometry, actual spectral
    centroid/bandwidth/flatness/rolloff, positive flux,
    RMS trajectory, active-window counts, and bounded working-memory provenance.
-   A deterministic Professional Evidence v11
+   A deterministic Professional Evidence v12
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
    observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v26 profile v8, adversarial suite v9, and disjoint holdout
-   qualification v7.
+   engine-v27 profile v9, adversarial suite v10, and disjoint holdout
+   qualification v8.
    The profile derives from 28 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
    relationships. Its evaluator maps the Core-owned plan checkpoint into the
@@ -347,7 +350,7 @@ return behavior.
 Each full bar emits same-pass bar/BPM/delay/render geometry, score and drive
 eligibility, bounded source and applied amount, current-send RMS, exact pre/post
 sample hashes, pre/post peak, RMS, and low-band RMS, difference RMS, and finite
-status. Candidate-vector schema 25 binds these observations to the score bar,
+status. Candidate-vector schema 26 binds these observations to the score bar,
 phrase kind, route rate, and matching instrument effect access. Neutral drive
 requires exact pre/post identity and zero difference. Active drive remains
 outside feedback, binds exact changed-frame and peak witnesses, and permits only
@@ -355,6 +358,29 @@ the transfer's bounded low-level lift up to `3.2x` RMS. The implementation is
 present, and its exact-source local structural, signal, protected-routing, and
 release-build matrix passed. This evidence remains one non-compensable input; it
 does not alone establish professional quality.
+
+## Implemented pad harmonic-disclosure slice
+
+The canonical phrase-composition resolver now owns a bounded disclosure stage
+for its single pad capability. An eligible lock bar must already carry the
+atmosphere role; it is realized with that existing four-voice pad rather than a
+new role or track. A lock phrase begins with exact tonic-only
+concealment, then exposes a tonic-to-modal-color partial relation; a major break
+uses the established four-function arc as the revealed payoff. Other eligible
+phrases retain the established legacy arc, and identity return is exactly
+neutral. The dependent arpeggiator reads the same disclosed function, so the
+pad and melodic line cannot tell different harmonic stories.
+
+No track, instrument, effect, sequencer clock, continuation buffer, or callback
+work is added. The existing four-voice pad, arpeggiator, modal vocabulary,
+renderer, and continuation remain canonical. Candidate evidence binds phrase
+geometry and disclosure stage/function to exact score/render arpeggiator pitch
+fingerprints and the existing pad PCM/voice-leading record. Professional
+observation retains revealed-bar prevalence and the bounded number of disclosed
+functions; a five-function adversarial attack is non-compensable. The particular
+four-function voicing realization remains replaceable as the synthesis and
+mixing stack matures, while progressive harmonic revelation and its causal
+score-to-render proof remain durable.
 
 ## Implemented pad rhythmic-modulation slice
 
@@ -388,7 +414,7 @@ callback are unchanged; incomplete or ineligible pairs stay established.
 
 Detached same-pass evidence reduces relation, pair phase, score/render counts
 and masks, actual start frames, dry hash/peak/RMS, patch assignment, and
-full/protected pass equality into candidate-vector schema 25. Professional
+full/protected pass equality into candidate-vector schema 26. Professional
 observation retains active prevalence and crest factor under the current
 exact-engine profile. A later implementation may replace the integer-grid
 projection only while preserving this score owner, two-bar reset, exact neutral
@@ -407,7 +433,7 @@ Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
 requested gate end, and renderer-applied gate end. Separate anchor, shadow, and
 response dry taps retain finite role-local hash, peak, and RMS evidence. Current
-candidate-vector schema 25 reduces those tuples into exact score/render and
+candidate-vector schema 26 reduces those tuples into exact score/render and
 renderer-applied-gate fingerprints, relation-specific offset facts, protected-
 role neutrality, cascade-aperture or lead-pattern replay, and route-derived
 frame geometry. The calibrated evaluator judges this evidence as part of the

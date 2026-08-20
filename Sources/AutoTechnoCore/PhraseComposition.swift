@@ -107,6 +107,15 @@ package enum PadHarmonicFunction: String, CaseIterable, Sendable {
     case returnPull
 }
 
+/// How much of the existing harmonic vocabulary one bar is allowed to reveal.
+/// This is phrase geometry, not a second progression or renderer-side state.
+package enum PadHarmonicDisclosureStage: String, CaseIterable, Sendable {
+    case established
+    case concealed
+    case partial
+    case revealed
+}
+
 /// Bar-resolved rhythmic motion for one already-sustained pad. The relation is
 /// semantic score data rather than a renderer-local LFO: absolute-bar phase
 /// continues the three-sixteenth cell across phrase boundaries, while neutral
@@ -182,6 +191,7 @@ package struct PadVoicing: Equatable, Sendable {
     package static let voiceCount = 4
 
     package let function: PadHarmonicFunction
+    package let harmonicDisclosureStage: PadHarmonicDisclosureStage
     package let onsetStep: Int
     package let durationInSteps: Double
     package let voices: [PadVoice]
@@ -192,12 +202,15 @@ package struct PadVoicing: Equatable, Sendable {
     package let instrument: InstrumentAssignment
     package let rhythmicModulation: PadRhythmicModulation
 
-    package init(function: PadHarmonicFunction, onsetStep: Int,
+    package init(function: PadHarmonicFunction,
+                 harmonicDisclosureStage: PadHarmonicDisclosureStage = .established,
+                 onsetStep: Int,
                  durationInSteps: Double, voices: [PadVoice],
                  previousVoices: [PadVoice],
                  instrument: InstrumentAssignment,
                  rhythmicModulation: PadRhythmicModulation = .neutral) {
         self.function = function
+        self.harmonicDisclosureStage = harmonicDisclosureStage
         self.onsetStep = min(15, max(0, onsetStep))
         self.durationInSteps = min(
             ResolvedUpperNote.maximumDurationInSteps,
@@ -459,11 +472,25 @@ package enum PhraseCompositionResolver {
         let character = resolved.performanceCharacter
         let eligible = resolved.performance.roles.contains(.atmosphere) && (
             character == .ambientDrift || character == .melodicGlow ||
-                kind == .majorBreak || resolved.interlockChapter == .breath
+                kind == .lock || kind == .majorBreak ||
+                resolved.interlockChapter == .breath
         )
         guard eligible else { return nil }
         let bar = resolved.performance.bar
-        let current = harmonicFunction(character: character, absoluteBar: bar)
+        let disclosureStage = harmonicDisclosureStage(
+            kind: kind,
+            localBar: resolved.performance.localBar,
+            phraseLength: resolved.performance.phraseLength
+        )
+        let current = disclosedHarmonicFunction(
+            established: harmonicFunction(
+                character: character,
+                absoluteBar: bar
+            ),
+            kind: kind,
+            localBar: resolved.performance.localBar,
+            phraseLength: resolved.performance.phraseLength
+        )
         let voices = canonicalVoicing(
             dna: dna,
             function: current,
@@ -483,6 +510,7 @@ package enum PhraseCompositionResolver {
         )
         return PadVoicing(
             function: current,
+            harmonicDisclosureStage: disclosureStage,
             onsetStep: 0,
             durationInSteps: 16,
             voices: voices,
@@ -495,6 +523,51 @@ package enum PhraseCompositionResolver {
                 resolved: resolved
             )
         )
+    }
+
+    package static func harmonicDisclosureStage(
+        kind: AutonomousPhraseKind,
+        localBar: Int,
+        phraseLength: Int
+    ) -> PadHarmonicDisclosureStage {
+        guard phraseLength > 0,
+              localBar >= 0,
+              localBar < phraseLength else { return .established }
+        switch kind {
+        case .lock:
+            return localBar < phraseLength / 2 ? .concealed : .partial
+        case .majorBreak:
+            return .revealed
+        case .contrast, .energyRelease, .identityReturn:
+            return .established
+        }
+    }
+
+    package static func disclosedHarmonicFunction(
+        established: PadHarmonicFunction,
+        kind: AutonomousPhraseKind,
+        localBar: Int,
+        phraseLength: Int
+    ) -> PadHarmonicFunction {
+        switch harmonicDisclosureStage(
+            kind: kind,
+            localBar: localBar,
+            phraseLength: phraseLength
+        ) {
+        case .concealed:
+            return .tonic
+        case .partial:
+            let start = phraseLength / 2
+            let length = phraseLength - start
+            let index = localBar - start
+            return index * 2 < length ? .tonic : .modalColor
+        case .revealed:
+            return [
+                .tonic, .modalColor, .subdominant, .returnPull,
+            ][localBar % 4]
+        case .established:
+            return established
+        }
     }
 
     private static func padRhythmicModulation(

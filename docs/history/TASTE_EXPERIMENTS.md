@@ -1536,16 +1536,19 @@ Lock pads expose a tonic/modal-colour relation, and Major Break pads reveal the
 existing four-function vocabulary. The next Lock contracts to tonic again from
 phrase geometry alone.
 
-Only the existing pad function, connected four-voice voicing, and pitch ratios
-in the already pad-derived arpeggiator may change. Pad count, onset, duration,
-instrument, rhythmic modulation, spatial topology, arpeggiator rhythm and
-articulation, every non-composition role, protected rhythm, transport, random
-draws, and the realtime callback remain unchanged. The stage is typed score
-data; compact candidate evidence replays its phrase-local geometry, allowed
-function, and an exact score-to-render arpeggiator pitch fingerprint while the
-established pad ratio/hash/RMS/peak record remains the causal renderer
-consequence. Professional evidence retains revealed-bar prevalence and distinct
-function count, with a non-compensable attack against impossible overpopulation.
+Eligible Lock bars with an already admitted atmosphere role now receive the
+same single four-voice pad capability used elsewhere; they do not admit a new
+role or track. The disclosure changes that pad's function, connected voicing,
+and pitch ratios in its dependent arpeggiator. Each bar still has at most one
+pad with the existing onset, duration, instrument, rhythmic-modulation, and
+spatial topology contract. Arpeggiator rhythm/articulation, every
+non-composition role, protected rhythm, transport, random draws, and the
+realtime callback remain unchanged. The stage is typed score data; compact
+candidate evidence replays its phrase-local geometry, allowed function, and an
+exact score-to-render arpeggiator pitch fingerprint while the established pad
+ratio/hash/RMS/peak record remains the causal renderer consequence.
+Professional evidence retains revealed-bar prevalence and distinct function
+count, with a non-compensable attack against impossible overpopulation.
 
 The durable intention and replacement boundary are recorded in
 [`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). This discrete
@@ -1558,7 +1561,27 @@ four explicit voices, accepted continuation, deterministic disclosure arc,
 exact neutral path, and one primary evaluator; it must not coexist with another
 progression or pad lane.
 
-Validation and publication evidence is appended only after the exact source
-snapshot passes its isolated local matrix and exact-head CI. No listening,
-app/route/interruption QA, latency or peak-memory measurement, hardware-output
-soak, or claim that the inaccessible source demonstration was heard is made.
+Local validation evidence is appended only after the exact source snapshot
+passes its isolated matrix; publication evidence remains gated on exact-head
+CI. No listening, app/route/interruption QA, latency or peak-memory measurement,
+hardware-output soak, or claim that the inaccessible source demonstration was
+heard is made.
+
+Release-mode qualification regenerated the v9 primary artifacts from 32
+complete cached 44.1/48 kHz trajectories. The resulting profile accepted
+392/392 development observations from 28 journeys, the v10 adversarial suite
+rejected all 29 cases for their exact expected reasons, and the disjoint
+four-journey v8 holdout accepted 56/56 observations with zero relationship
+failures and zero source-bank overlap. The shipping identities are profile
+`94a506391e349fbb`, adversarial suite `2a243887182f60ca`, and holdout
+qualification `0fcc5af37485633a`.
+
+The exact local source snapshot passed the focused disclosure PCM, score, and
+evidence tests; complete current-runtime, calibration, primary-readiness,
+candidate-tampering, live-feedback, correction, route, rate, continuation,
+modal, adaptive-session, Core/evidence, preparation-preflight, and protected-
+routing groups; the debug and release callback-producer symbol audits; and the
+optimized `AutoTechno` product build. Publication and exact-head CI remain
+separate pending gates. Listening, app/route/interruption QA, latency or peak-
+memory measurement, and hardware-output soak were not performed and are not
+implied.

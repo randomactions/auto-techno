@@ -68,8 +68,8 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 27, candidate-vector schema 25, candidate-transaction
-schema 4, and canonical engine v26 provide the current transaction-level
+Quality-contract schema 28, candidate-vector schema 26, candidate-transaction
+schema 4, and canonical engine v27 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
@@ -77,7 +77,8 @@ event-local groove-pulse, ordinary closed-hat, score-owned modal foundation,
 score-owned instrument and its acid/nonlinear-core/cluster/envelope consequence,
 score-owned gated/anticipatory percussion-return texture,
 shared pulse-echo return-drive, score-owned spatial-FDN, score-owned upper-role timing,
-score-owned phrase slicing, arpeggiator geometry, polyphonic pad signal,
+score-owned phrase slicing, arpeggiator geometry and exact score/render pitch
+identity, polyphonic pad signal, harmonic-disclosure stage/function,
 pad rhythmic-modulation consequence, and voice-leading continuation,
 graph, and pre/post upper-timbre vector for every retained attempt. Groove-pulse
 evidence must cover every bar
@@ -263,9 +264,9 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v11 bank must contain every canonical checkpoint for
+The Professional Evidence v12 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v26 primary evaluator v8 and pinned profile v8/adversarial/holdout
+engine-v27 primary evaluator v9 and pinned profile v9/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 28.
 Holdouts must be source-disjoint, contain at
@@ -327,7 +328,7 @@ or PCM.
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
 composition, spatial-FDN, and nonlinear-core evidence carried by quality-contract
-schema 27 change detached preparation only. The implemented master-headroom path
+schema 28 change detached preparation only. The implemented master-headroom path
 is the sole scheduled-output feedback responsibility and does not move those
 feature analyzers or decisions onto the callback. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
@@ -383,11 +384,11 @@ phrase lengths, maximum two-pass path, and route
 rebuild at representative 44.1 and 48 kHz devices. Record median, high-percentile,
 and worst observed times plus peak working memory.
 
-The exact-engine v8 artifact loader, route-local primary evaluator, unavailable-rate
+The exact-engine v9 artifact loader, route-local primary evaluator, unavailable-rate
 gate, one-correction transaction order, and reason-coded replay require
 deterministic tests at 44.1 and 48 kHz. The deterministic numeric-storage estimate
 must remain below the declared 128 MiB ceiling. The profile derives from 28
-complete journeys and passes the 28-case v9 adversarial suite plus four disjoint
+complete journeys and passes the 29-case v10 adversarial suite plus four disjoint
 holdouts at both rates. See [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md) and
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 

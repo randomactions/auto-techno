@@ -318,7 +318,11 @@ struct PhraseCompositionTests {
                 #expect(record.padSpatialSendDifferenceRMS > 0)
                 #expect(record.padSpatialSendRMS > 0)
                 #expect(record.bindingValid && record.finite)
-                #expect(record.isComplete(phraseKind: plan.kind.rawValue))
+                #expect(record.isComplete(
+                    phraseKind: plan.kind.rawValue,
+                    expectedLocalBar: index,
+                    expectedPhraseLength: plan.barCount
+                ))
             }
 
             let activeRecords = activeIndexes.map {
@@ -350,6 +354,16 @@ struct PhraseCompositionTests {
                             $0.padSpatialSendRMS
                         )
                     }.reduce(0, +) / Double(activeRecords.count))
+            #expect(observation[.padHarmonicDisclosureRevealedBarRatio] ==
+                    Double(vector.phraseComposition.filter {
+                        $0.padActive && $0.padHarmonicDisclosureStage ==
+                            PadHarmonicDisclosureStage.revealed.rawValue
+                    }.count) / Double(plan.barCount))
+            #expect(observation[
+                .padHarmonicDisclosureDistinctFunctionCount
+            ] == Double(Set(vector.phraseComposition.filter(\.padActive).map {
+                $0.padFunction
+            }).count))
 
             let record = vector.phraseComposition[try #require(activeIndexes.first)]
             let encoded = try JSONEncoder().encode(record)
@@ -358,7 +372,10 @@ struct PhraseCompositionTests {
             )
             let keys = Set(json.keys)
             #expect(keys.isSuperset(of: [
-                "section", "arrangementGesture",
+                "localBar", "phraseLength", "section", "arrangementGesture",
+                "arpeggiatorScorePitchFingerprint",
+                "arpeggiatorRenderPitchFingerprint",
+                "padHarmonicDisclosureStage",
                 "padRhythmicModulationRelation",
                 "padRhythmicModulationPhaseOffset",
                 "padRhythmicModulationPatternFingerprint",
@@ -405,11 +422,19 @@ struct PhraseCompositionTests {
                 ]),
                 forged("padRhythmicModulationPatternFingerprint",
                        "0000000000000000"),
+                forged("localBar", record.localBar + 1),
+                forged("phraseLength", record.phraseLength + 1),
+                forged("padHarmonicDisclosureStage",
+                       PadHarmonicDisclosureStage.concealed.rawValue),
                 forged("padFilterModulationDifferenceRMS", 0),
                 forged("padSpatialSendDifferenceRMS", 0),
             ]
             #expect(tampered.allSatisfy {
-                !$0.isComplete(phraseKind: plan.kind.rawValue)
+                !$0.isComplete(
+                    phraseKind: plan.kind.rawValue,
+                    expectedLocalBar: record.localBar,
+                    expectedPhraseLength: record.phraseLength
+                )
             })
             return
         }
@@ -461,6 +486,259 @@ struct PhraseCompositionTests {
         }
         #expect(Set(composition.compactMap { $0.padVoicing?.function }).count >= 3)
         #expect(Set(composition.compactMap { $0.arpeggiator?.direction }).count >= 2)
+    }
+
+    @Test("Harmonic disclosure conceals, previews, reveals, and contracts")
+    func harmonicDisclosureGeometry() {
+        for phraseLength in 4...16 {
+            let lockStages = (0..<phraseLength).map { localBar in
+                PhraseCompositionResolver.harmonicDisclosureStage(
+                    kind: .lock,
+                    localBar: localBar,
+                    phraseLength: phraseLength
+                )
+            }
+            #expect(lockStages.prefix(phraseLength / 2).allSatisfy {
+                $0 == .concealed
+            })
+            #expect(lockStages.dropFirst(phraseLength / 2).allSatisfy {
+                $0 == .partial
+            })
+
+            let lockFunctions = (0..<phraseLength).map { localBar in
+                PhraseCompositionResolver.disclosedHarmonicFunction(
+                    established: .subdominant,
+                    kind: .lock,
+                    localBar: localBar,
+                    phraseLength: phraseLength
+                )
+            }
+            #expect(lockFunctions.prefix(phraseLength / 2).allSatisfy {
+                $0 == .tonic
+            })
+            #expect(Set(lockFunctions).isSubset(of: [.tonic, .modalColor]))
+            #expect(lockFunctions.last == .modalColor)
+
+            let revealed = (0..<phraseLength).map { localBar in
+                PhraseCompositionResolver.disclosedHarmonicFunction(
+                    established: .returnPull,
+                    kind: .majorBreak,
+                    localBar: localBar,
+                    phraseLength: phraseLength
+                )
+            }
+            #expect(revealed == (0..<phraseLength).map { localBar in
+                [PadHarmonicFunction.tonic, .modalColor, .subdominant,
+                 .returnPull][localBar % 4]
+            })
+            #expect((0..<phraseLength).allSatisfy { localBar in
+                PhraseCompositionResolver.harmonicDisclosureStage(
+                    kind: .majorBreak,
+                    localBar: localBar,
+                    phraseLength: phraseLength
+                ) == .revealed
+            })
+
+            for kind in [AutonomousPhraseKind.contrast, .energyRelease,
+                         .identityReturn] {
+                #expect((0..<phraseLength).allSatisfy { localBar in
+                    PhraseCompositionResolver.harmonicDisclosureStage(
+                        kind: kind,
+                        localBar: localBar,
+                        phraseLength: phraseLength
+                    ) == .established &&
+                    PhraseCompositionResolver.disclosedHarmonicFunction(
+                        established: .subdominant,
+                        kind: kind,
+                        localBar: localBar,
+                        phraseLength: phraseLength
+                    ) == .subdominant
+                })
+            }
+        }
+    }
+
+    @Test("One disclosed chord changes only its existing tonal carriers")
+    func harmonicDisclosurePCMIsolation() throws {
+        let scene = fixtureScene()
+        let dna = SceneDNA(scene: scene)
+        let resolved = fixtureResolved(
+            bar: 2,
+            section: .groove,
+            character: .melodicGlow,
+            roles: [.motif, .atmosphere, .percussion],
+            events: [
+                EnsembleResolvedEvent(
+                    voice: .motif, step: 2,
+                    intensity: 0.72, relocated: false
+                ),
+                EnsembleResolvedEvent(
+                    voice: .atmosphere, step: 0,
+                    intensity: 0.54, relocated: false
+                ),
+                EnsembleResolvedEvent(
+                    voice: .percussion, step: 1,
+                    intensity: 0.64, relocated: false
+                ),
+            ],
+            arrangementGesture: .steady,
+            interlockChapter: .breath
+        )
+        let disclosedComposition = try #require(
+            PhraseCompositionResolver.resolve(
+                scene: scene, dna: dna, kind: .lock,
+                resolvedBars: [resolved]
+            ).first
+        )
+        let legacyComposition = try #require(
+            PhraseCompositionResolver.resolve(
+                scene: scene, dna: dna, kind: .contrast,
+                resolvedBars: [resolved]
+            ).first
+        )
+        let disclosedPad = try #require(disclosedComposition.padVoicing)
+        let legacyPad = try #require(legacyComposition.padVoicing)
+        #expect(disclosedPad.harmonicDisclosureStage == .concealed)
+        #expect(disclosedPad.function == .tonic)
+        #expect(legacyPad.function == .subdominant)
+
+        let establishedPad = PadVoicing(
+            function: legacyPad.function,
+            harmonicDisclosureStage: .established,
+            onsetStep: disclosedPad.onsetStep,
+            durationInSteps: disclosedPad.durationInSteps,
+            voices: legacyPad.voices,
+            previousVoices: legacyPad.voices,
+            instrument: disclosedPad.instrument,
+            rhythmicModulation: disclosedPad.rhythmicModulation
+        )
+        let establishedComposition = PhraseCompositionBar(
+            bar: disclosedComposition.bar,
+            audioSlice: disclosedComposition.audioSlice,
+            arpeggiator: legacyComposition.arpeggiator,
+            padVoicing: establishedPad
+        )
+        let disclosedSynth = SynthPerformancePlan(
+            scene: scene, dna: dna, kind: .lock,
+            resolvedBars: [resolved],
+            compositionBars: [disclosedComposition]
+        )
+        let establishedSynth = SynthPerformancePlan(
+            scene: scene, dna: dna, kind: .lock,
+            resolvedBars: [resolved],
+            compositionBars: [establishedComposition]
+        )
+        let disclosedBar = try #require(disclosedSynth.bars.first)
+        let establishedBar = try #require(establishedSynth.bars.first)
+        let disclosedAnchors = disclosedBar.upperNotes.filter {
+            $0.role == .anchor
+        }
+        let establishedAnchors = establishedBar.upperNotes.filter {
+            $0.role == .anchor
+        }
+        #expect(disclosedAnchors.map(\.onsetStep) ==
+                establishedAnchors.map(\.onsetStep))
+        #expect(disclosedAnchors.map(\.durationInSteps) ==
+                establishedAnchors.map(\.durationInSteps))
+        #expect(disclosedAnchors.map(\.velocity) ==
+                establishedAnchors.map(\.velocity))
+        #expect(disclosedAnchors.map(\.startFrequencyRatio) !=
+                establishedAnchors.map(\.startFrequencyRatio))
+        #expect(disclosedBar.upperNotes.filter { $0.role != .anchor } ==
+                establishedBar.upperNotes.filter { $0.role != .anchor })
+
+        func render(_ synth: SynthPerformancePlan,
+                    _ bar: SynthPerformanceBar) -> RenderedBar {
+            var state = RenderState()
+            var workspace = RenderWorkspace()
+            return VoiceRenderer.renderBar(
+                scene: scene,
+                sampleRate: 8_000,
+                state: &state,
+                dna: dna,
+                resolved: resolved,
+                synthWorld: synth.world,
+                synthPerformance: bar,
+                workspace: &workspace,
+                layer: .full
+            )
+        }
+        let disclosed = render(disclosedSynth, disclosedBar)
+        let established = render(establishedSynth, establishedBar)
+        #expect(disclosed.leftSamples != established.leftSamples)
+        #expect(disclosed.rightSamples != established.rightSamples)
+        #expect(disclosed.polyphonicPadRenderEvidence.outputSampleHash !=
+                established.polyphonicPadRenderEvidence.outputSampleHash)
+        #expect(disclosed.resonantAnchorSamples !=
+                established.resonantAnchorSamples)
+        #expect(disclosed.detunedCompanionSamples ==
+                established.detunedCompanionSamples)
+        #expect(disclosed.dryFoundationSampleHash ==
+                established.dryFoundationSampleHash)
+        #expect(disclosed.foundationRhythmRenderEvidence ==
+                established.foundationRhythmRenderEvidence)
+        #expect(disclosed.dryPercussionSampleHash ==
+                established.dryPercussionSampleHash)
+        #expect(disclosed.dryModalPercussionSampleHash ==
+                established.dryModalPercussionSampleHash)
+        #expect(disclosed.groovePulseRenderEvidence ==
+                established.groovePulseRenderEvidence)
+        #expect(disclosed.kickMix == established.kickMix)
+    }
+
+    @MainActor
+    @Test("Candidate evidence binds every arpeggiator pitch to the renderer")
+    func arpeggiatorPitchEvidence() throws {
+        let director = AutonomousSessionDirector()
+        var state = director.initialState()
+        for _ in 0..<128 {
+            let plan = director.plan(from: state)
+            guard let index = plan.phraseComposition.firstIndex(where: {
+                $0.arpeggiator != nil
+            }) else {
+                state.advancePlanning(using: plan)
+                continue
+            }
+            var renderState = RenderState()
+            renderState.barIndex = state.memory.totalBars
+            let prepared = AutonomousPhrasePreparer.prepare(
+                plan: plan,
+                sessionSeed: state.rootSeed,
+                memory: state.memory,
+                sampleRate: 8_000,
+                incomingRenderState: renderState,
+                incomingGraphState: GeneratedDSPContinuationState(),
+                previousGraph: nil,
+                incomingQualityState: state.quality,
+                evaluator: AcceptingPrimaryTestEvaluator()
+            )
+            let record = prepared.selectedCandidateEvidence
+                .phraseComposition[index]
+            #expect(record.arpeggiatorActive)
+            #expect(record.arpeggiatorScorePitchFingerprint ==
+                    record.arpeggiatorRenderPitchFingerprint)
+            #expect(record.isComplete(
+                phraseKind: plan.kind.rawValue,
+                expectedLocalBar: index,
+                expectedPhraseLength: plan.barCount
+            ))
+            let encoded = try JSONEncoder().encode(record)
+            var json = try #require(
+                JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+            )
+            json["arpeggiatorRenderPitchFingerprint"] = "0000000000000000"
+            let forged = try JSONDecoder().decode(
+                AutonomousPhraseCompositionBarEvidence.self,
+                from: JSONSerialization.data(withJSONObject: json)
+            )
+            #expect(!forged.isComplete(
+                phraseKind: plan.kind.rawValue,
+                expectedLocalBar: index,
+                expectedPhraseLength: plan.barCount
+            ))
+            return
+        }
+        Issue.record("Expected a naturally reachable arpeggiated phrase")
     }
 
     @Test("Identity-return plans neutralize all four capabilities")
@@ -572,6 +850,9 @@ struct PhraseCompositionTests {
         var arpeggiatorBars = 0
         var padBars = 0
         var rhythmicallyModulatedPadBars = 0
+        var disclosureStages = Set<PadHarmonicDisclosureStage>()
+        var revealedBeforeContraction = false
+        var sawContractionAfterReveal = false
         var breakBars = 0
         var breakPercussionBars = 0
         var breakSourceBars = 0
@@ -592,6 +873,13 @@ struct PhraseCompositionTests {
                 if composition.arpeggiator != nil { arpeggiatorBars += 1 }
                 if let pad = composition.padVoicing {
                     padBars += 1
+                    disclosureStages.insert(pad.harmonicDisclosureStage)
+                    if pad.harmonicDisclosureStage == .revealed {
+                        revealedBeforeContraction = true
+                    } else if revealedBeforeContraction &&
+                                pad.harmonicDisclosureStage == .concealed {
+                        sawContractionAfterReveal = true
+                    }
                     if pad.rhythmicModulation.active {
                         rhythmicallyModulatedPadBars += 1
                     }
@@ -615,6 +903,10 @@ struct PhraseCompositionTests {
         #expect(arpeggiatorBars > 0)
         #expect(padBars > 0)
         #expect(rhythmicallyModulatedPadBars > 0)
+        #expect(disclosureStages.isSuperset(of: [
+            .concealed, .partial, .revealed,
+        ]))
+        #expect(sawContractionAfterReveal)
     }
 
     @Test("Broken major breaks resample their exact rendered percussion source")

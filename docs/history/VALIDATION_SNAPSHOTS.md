@@ -1540,3 +1540,49 @@ for quality schema 27, candidate vector 25, canonical engine v26, and primary
 evaluator v8. Publication and exact-head CI are still separate gates. Listening,
 app/route/interruption QA, latency/peak-memory measurement, and hardware-output
 soak were not performed and are not implied.
+
+## Source 26 progressive harmonic disclosure — 2026-08-20
+
+Source 26 extends the existing four-voice pad and its dependent arpeggiator
+with one score-owned phrase-local disclosure stage. Lock phrases move from a
+concealed tonic through a two-function preview, Major Break reveals the existing
+four-function vocabulary, and later Lock material contracts again. It adds no
+track, instrument, progression identity, effect chain, continuation buffer,
+callback work, or user control; established and identity paths remain the exact
+fallback.
+
+Candidate-vector schema 26 retains exact local-bar/phrase-length geometry,
+disclosure stage and function, pad consequence evidence, and equal typed score
+and renderer arpeggiator-pitch fingerprints. Professional Evidence v12 adds
+revealed-bar prevalence and distinct-function count, and the 29-case v10
+adversarial suite includes one non-compensable impossible-overpopulation attack.
+Quality-contract schema 28, canonical engine v27, primary evaluator/profile v9,
+and the v8 disjoint holdout bind the change as one exact primary contract.
+
+Release-mode artifact generation accepted 392/392 development observations
+from 28 journeys, rejected 29/29 adversarial cases for their exact expected
+reasons, and accepted 56/56 observations from four disjoint holdout journeys
+with zero relationship failures. The shipping artifacts are:
+
+- profile `94a506391e349fbb`, JSON SHA-256
+  `baf022d8b34b58c043ac75ad59925144e82fb6da7dbd0f18176e18ff9580c96f`;
+- adversarial suite `2a243887182f60ca`, JSON SHA-256
+  `83b46a8002f2f9cfe3ec476cf7b22f10568b356674224671921722d2fff797be`;
+- holdout qualification `0fcc5af37485633a`, JSON SHA-256
+  `a94de1f67cdb535dba8de4776426ab5590e13a36933be99b76ef97282a3d1ae0`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+isolated caches and serial process boundaries. It passed the Source 26 causal
+slice 3/3; current-runtime/repository surface 11/11; full professional
+calibration 17/17; primary readiness 7/7; upper score 3/3; callback queue 7/7;
+live analyzer/controller/trim 41/41; app live-feedback 32/32; candidate evidence
+and tampering 28/28; atomic commit, unavailable-route, correction, rate,
+continuation, and exact-fingerprint gates; modal Core/DSP 15/15; adaptive
+session 25/25; Core/evidence 125/125; preparation preflight 24/24; and protected
+routing 14/14. Both debug and release realtime-producer objects exposed only an
+allowed copy primitive. The optimized `AutoTechno` product built in 71.40
+seconds, and `git diff --check` remained clean.
+
+Publication and exact-head CI remain separate pending gates. Listening,
+app/route/interruption QA, latency/peak-memory measurement, and physical-output
+soak were not performed and are not implied.

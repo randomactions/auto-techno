@@ -3104,9 +3104,24 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
 /// One bounded score-to-PCM record for the unified phrase-composition layer.
 /// Harmonic planning stays in Core; only reduced renderer consequences cross
 /// the preparation boundary.
+private enum PhraseCompositionArpeggiatorPitchFingerprint {
+    static func make(_ pitches: [(step: Int, frequency: Double)]) -> String {
+        var sink = StreamingFNV1a()
+        sink.domain("phrase-composition-arpeggiator-pitches.typed.v1")
+        sink.collection(pitches.count)
+        for pitch in pitches {
+            sink.int(pitch.step)
+            sink.double(pitch.frequency)
+        }
+        return fixedWidthFingerprintHex(sink.value)
+    }
+}
+
 package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         Sendable {
     package let bar: Int
+    package let localBar: Int
+    package let phraseLength: Int
     package let section: String
     package let arrangementGesture: String
     package let sliceActive: Bool
@@ -3123,8 +3138,11 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
     package let arpeggiatorRateInSteps: Int
     package let arpeggiatorOctaveSpan: Int
     package let arpeggiatorStepCount: Int
+    package let arpeggiatorScorePitchFingerprint: String
+    package let arpeggiatorRenderPitchFingerprint: String
     package let padActive: Bool
     package let padFunction: String
+    package let padHarmonicDisclosureStage: String
     package let padVoiceCount: Int
     package let padCommonToneCount: Int
     package let padTotalMovement: Int
@@ -3153,7 +3171,19 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         let arpeggiator = composition.arpeggiator
         let pad = composition.padVoicing
         let padRender = block.polyphonicPadRenderEvidence
+        let scorePitches = arpeggiator?.steps.map { step in
+            (step: step.onsetStep,
+             frequency: block.synthWorld.rootFrequency * step.frequencyRatio)
+        } ?? []
+        let renderedAnchors = block.upperNoteRenderEvidence
+            .filter { $0.role == .anchor }
+            .sorted { lhs, rhs in lhs.onsetFrame < rhs.onsetFrame }
+        let renderPitches = zip(scorePitches, renderedAnchors).map {
+            (step: $0.0.step, frequency: $0.1.requestedStartFrequency)
+        }
         bar = block.bar
+        localBar = block.resolvedPerformance.performance.localBar
+        phraseLength = block.resolvedPerformance.performance.phraseLength
         section = block.resolvedPerformance.performance.section.rawValue
         arrangementGesture = block.resolvedPerformance.arrangementGesture.rawValue
         sliceActive = slice.active
@@ -3170,8 +3200,14 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         arpeggiatorRateInSteps = arpeggiator?.rateInSteps ?? 0
         arpeggiatorOctaveSpan = arpeggiator?.octaveSpan ?? 0
         arpeggiatorStepCount = arpeggiator?.steps.count ?? 0
+        arpeggiatorScorePitchFingerprint = arpeggiator == nil ? "" :
+            PhraseCompositionArpeggiatorPitchFingerprint.make(scorePitches)
+        arpeggiatorRenderPitchFingerprint = arpeggiator == nil ? "" :
+            PhraseCompositionArpeggiatorPitchFingerprint.make(renderPitches)
         padActive = padRender.active
         padFunction = pad?.function.rawValue ?? ""
+        padHarmonicDisclosureStage =
+            pad?.harmonicDisclosureStage.rawValue ?? ""
         padVoiceCount = padRender.voiceCount
         padCommonToneCount = pad?.commonToneCount ?? 0
         padTotalMovement = pad?.totalMovementInSemitones ?? 0
@@ -3200,6 +3236,10 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
             slice.triggerCount == (composition.audioSlice?.triggers.count ?? 0) &&
             slice.sourceKind == composition.audioSlice?.sourceKind &&
             arpeggiatorStepCount == (arpeggiator?.steps.count ?? 0) &&
+            (arpeggiator == nil ||
+                (renderedAnchors.count == scorePitches.count &&
+                    arpeggiatorScorePitchFingerprint ==
+                        arpeggiatorRenderPitchFingerprint)) &&
             padRender.active == (pad != nil) &&
             padRender.voiceCount == (pad?.voices.count ?? 0) &&
             padRender.requestedFrequencyRatios ==
@@ -3228,6 +3268,8 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
     package static func neutral(bar: Int) -> Self {
         Self(
             bar: bar,
+            localBar: 0,
+            phraseLength: 1,
             section: SectionKind.groove.rawValue,
             arrangementGesture: ArrangementGesture.steady.rawValue,
             sliceActive: false,
@@ -3244,8 +3286,11 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
             arpeggiatorRateInSteps: 0,
             arpeggiatorOctaveSpan: 0,
             arpeggiatorStepCount: 0,
+            arpeggiatorScorePitchFingerprint: "",
+            arpeggiatorRenderPitchFingerprint: "",
             padActive: false,
             padFunction: "",
+            padHarmonicDisclosureStage: "",
             padVoiceCount: 0,
             padCommonToneCount: 0,
             padTotalMovement: 0,
@@ -3271,14 +3316,19 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
     }
 
     private init(
-        bar: Int, section: String, arrangementGesture: String,
+        bar: Int, localBar: Int, phraseLength: Int,
+        section: String, arrangementGesture: String,
         sliceActive: Bool, sliceTriggerCount: Int,
         sliceReverseTriggerCount: Int, sliceMinimumRate: Double,
         sliceMaximumRate: Double, sliceSourceKind: String, sliceSourceHash: String,
         sliceOutputHash: String, sliceOutputRMS: Double,
         arpeggiatorActive: Bool, arpeggiatorDirection: String,
         arpeggiatorRateInSteps: Int, arpeggiatorOctaveSpan: Int,
-        arpeggiatorStepCount: Int, padActive: Bool, padFunction: String,
+        arpeggiatorStepCount: Int,
+        arpeggiatorScorePitchFingerprint: String,
+        arpeggiatorRenderPitchFingerprint: String,
+        padActive: Bool, padFunction: String,
+        padHarmonicDisclosureStage: String,
         padVoiceCount: Int, padCommonToneCount: Int, padTotalMovement: Int,
         padMaximumLeap: Int,
         padRhythmicModulationRelation: String,
@@ -3294,6 +3344,8 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         finite: Bool
     ) {
         self.bar = bar
+        self.localBar = localBar
+        self.phraseLength = phraseLength
         self.section = section
         self.arrangementGesture = arrangementGesture
         self.sliceActive = sliceActive
@@ -3310,8 +3362,13 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         self.arpeggiatorRateInSteps = arpeggiatorRateInSteps
         self.arpeggiatorOctaveSpan = arpeggiatorOctaveSpan
         self.arpeggiatorStepCount = arpeggiatorStepCount
+        self.arpeggiatorScorePitchFingerprint =
+            arpeggiatorScorePitchFingerprint
+        self.arpeggiatorRenderPitchFingerprint =
+            arpeggiatorRenderPitchFingerprint
         self.padActive = padActive
         self.padFunction = padFunction
+        self.padHarmonicDisclosureStage = padHarmonicDisclosureStage
         self.padVoiceCount = padVoiceCount
         self.padCommonToneCount = padCommonToneCount
         self.padTotalMovement = padTotalMovement
@@ -3338,8 +3395,17 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         self.finite = finite
     }
 
-    package func isComplete(phraseKind: String) -> Bool {
+    package func isComplete(
+        phraseKind: String,
+        expectedLocalBar: Int,
+        expectedPhraseLength: Int
+    ) -> Bool {
         guard bar >= 0, renderPassesMatch, bindingValid, finite,
+              localBar == expectedLocalBar,
+              phraseLength == expectedPhraseLength,
+              phraseLength > 0,
+              localBar >= 0,
+              localBar < phraseLength,
               SectionKind(rawValue: section) != nil,
               ArrangementGesture(rawValue: arrangementGesture) != nil,
               sliceTriggerCount >= 0,
@@ -3383,13 +3449,26 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
             guard ArpeggiatorDirection(rawValue: arpeggiatorDirection) != nil,
                   (1...4).contains(arpeggiatorRateInSteps),
                   (1...2).contains(arpeggiatorOctaveSpan),
-                  arpeggiatorStepCount >= 4 else { return false }
+                  arpeggiatorStepCount >= 4,
+                  isHash(arpeggiatorScorePitchFingerprint),
+                  arpeggiatorScorePitchFingerprint ==
+                    arpeggiatorRenderPitchFingerprint else { return false }
         } else if !arpeggiatorDirection.isEmpty || arpeggiatorRateInSteps != 0 ||
-                    arpeggiatorOctaveSpan != 0 || arpeggiatorStepCount != 0 {
+                    arpeggiatorOctaveSpan != 0 || arpeggiatorStepCount != 0 ||
+                    !arpeggiatorScorePitchFingerprint.isEmpty ||
+                    !arpeggiatorRenderPitchFingerprint.isEmpty {
             return false
         }
         if padActive {
-            guard PadHarmonicFunction(rawValue: padFunction) != nil,
+            guard let resolvedPhraseKind = AutonomousPhraseKind(
+                    rawValue: phraseKind
+                  ),
+                  let resolvedFunction = PadHarmonicFunction(
+                    rawValue: padFunction
+                  ),
+                  let disclosureStage = PadHarmonicDisclosureStage(
+                    rawValue: padHarmonicDisclosureStage
+                  ),
                   let modulationRelation = PadRhythmicModulationRelation(
                     rawValue: padRhythmicModulationRelation
                   ),
@@ -3398,6 +3477,25 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
                   padSpatialSendRMS > 0,
                   isHash(padSpatialSendSampleHash),
                   padMaximumLeap <= 12 else { return false }
+            let expectedDisclosureStage = PhraseCompositionResolver
+                .harmonicDisclosureStage(
+                    kind: resolvedPhraseKind,
+                    localBar: localBar,
+                    phraseLength: phraseLength
+                )
+            guard disclosureStage == expectedDisclosureStage else {
+                return false
+            }
+            if disclosureStage != .established {
+                let expectedFunction = PhraseCompositionResolver
+                    .disclosedHarmonicFunction(
+                        established: .tonic,
+                        kind: resolvedPhraseKind,
+                        localBar: localBar,
+                        phraseLength: phraseLength
+                    )
+                guard resolvedFunction == expectedFunction else { return false }
+            }
             let modulation = PadRhythmicModulation(
                 relation: modulationRelation,
                 phaseOffset: padRhythmicModulationPhaseOffset
@@ -3447,7 +3545,9 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
                     shouldApplyRhythmicModulation else {
                 return false
             }
-        } else if !padFunction.isEmpty || padVoiceCount != 0 ||
+        } else if !padFunction.isEmpty ||
+                    !padHarmonicDisclosureStage.isEmpty ||
+                    padVoiceCount != 0 ||
                     padCommonToneCount != 0 || padTotalMovement != 0 ||
                     padMaximumLeap != 0 || !padSampleHash.isEmpty ||
                     !padRhythmicModulationRelation.isEmpty ||
@@ -4719,7 +4819,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 25
+    package static let schemaVersion = 26
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -7230,12 +7330,19 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     private func phraseCompositionEvidenceIsComplete(
         expectedBars: Set<Int>
     ) -> Bool {
-        Set(phraseComposition.map { $0.bar }) == expectedBars &&
-            phraseComposition.map(\.bar) == fullMix.bars.map(\.bar) &&
-            phraseComposition.count == fullMix.sourceBarCount &&
-            phraseComposition.allSatisfy {
-                $0.isComplete(phraseKind: symbolic.phraseKind)
-            }
+        guard Set(phraseComposition.map { $0.bar }) == expectedBars,
+              phraseComposition.map(\.bar) == fullMix.bars.map(\.bar),
+              phraseComposition.count == fullMix.sourceBarCount else {
+            return false
+        }
+        let phraseLength = phraseComposition.count
+        return phraseComposition.enumerated().allSatisfy { index, evidence in
+            evidence.isComplete(
+                phraseKind: symbolic.phraseKind,
+                expectedLocalBar: index,
+                expectedPhraseLength: phraseLength
+            )
+        }
     }
 
     @inline(never)

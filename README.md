@@ -22,7 +22,8 @@ account.
 - six phrase-scale performance characters coordinating foundation, rhythm,
   role-compatible patches, and automation under one persistent identity;
 - one score-owned phrase-composition layer with bounded true percussion
-  resampling, 8–16-step modal arpeggiation, four-voice pads, and cross-bar
+  resampling, 8–16-step modal arpeggiation, four-voice pads, progressive
+  harmonic disclosure with exact arpeggiator pitch binding, and cross-bar
   minimal-motion voice-leading;
 - one score-owned six-mode modal-percussion foundation voice with bounded
   four-slot continuation, protected routing, and rate-normalized pitch,

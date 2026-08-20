@@ -11,7 +11,10 @@ is missing that disclosure syntax, not another source of tonal material.
 
 ## Vertical slice
 
-- Core adds one `PadHarmonicDisclosureStage` to each existing `PadVoicing`.
+- Core adds one `PadHarmonicDisclosureStage` to the canonical `PadVoicing`
+  owner. An eligible Lock bar must already contain the atmosphere role; the
+  resolver realizes that role with the existing single pad capability rather
+  than admitting a new role or track.
 - Eligible first-half Lock pads are `concealed` and retain only the tonic
   function. Second-half Lock pads are `partial` and expose a deterministic
   tonic/modal-colour relation across that half of the phrase. Major Break pads
@@ -21,11 +24,12 @@ is missing that disclosure syntax, not another source of tonal material.
   function resolver. Identity Return remains composition-neutral. When the
   journey returns from a Major Break to Lock, the next phrase contracts to the
   concealed stage without adding continuation state.
-- Only the pad's existing harmonic function, its four connected voices, and
-  pitch ratios in the already pad-derived arpeggiator may change. Pad count,
-  onset, duration, instrument, rhythmic modulation, spatial send, arpeggiator
-  count/onsets/durations/velocities/direction/rate, non-composition score,
-  route topology, transport, and random draws remain exact.
+- Only the pad's harmonic function, four connected voices, and pitch ratios in
+  the dependent arpeggiator may change. Eligible Lock atmosphere bars gain one
+  canonical pad, still bounded to one pad per bar; onset, duration, instrument,
+  rhythmic modulation, spatial send, arpeggiator onsets/durations/velocities/
+  direction/rate, non-composition score, route topology, transport, and random
+  draws remain exact.
 - The typed plan binds the stage. Existing same-pass pad ratios and PCM
   hash/RMS/peak remain the renderer consequence; compact candidate evidence
   additionally replays local phrase geometry, stage, allowed function, and an
@@ -46,7 +50,8 @@ receives only immutable scheduled buffers.
 - exact concealed/partial/revealed geometry for every supported phrase length;
 - natural journey reachability, contraction after a reveal, determinism, and
   phrase-split harmonic continuation;
-- unchanged pad density, onset, duration, instrument, rhythmic modulation,
+- at most one pad per eligible atmosphere bar, unchanged onset, duration,
+  instrument, rhythmic modulation,
   spatial topology, arpeggiator rhythm/articulation, non-composition score, and
   protected rhythm, with every arpeggiator pitch still in the disclosed chord;
 - same-bar active-versus-established rendering that isolates changed requested

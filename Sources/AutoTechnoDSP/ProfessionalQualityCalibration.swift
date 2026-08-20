@@ -113,6 +113,10 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         "pad-rhythmic-filter-difference-to-pad-db-mean"
     case padRhythmicSpatialDifferenceToSendDBMean =
         "pad-rhythmic-spatial-difference-to-send-db-mean"
+    case padHarmonicDisclosureRevealedBarRatio =
+        "pad-harmonic-disclosure-revealed-bar-ratio"
+    case padHarmonicDisclosureDistinctFunctionCount =
+        "pad-harmonic-disclosure-distinct-function-count"
 
     package var acceptsSaferValuesBelowCalibration: Bool {
         switch self {
@@ -517,9 +521,9 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 8
+    package static let schemaVersion = 9
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v8"
+        "autotechno-professional-quality-observation.v9"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -731,6 +735,13 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         let phraseCompositionDivisor = Double(
             max(1, vector.phraseComposition.count)
         )
+        let revealedPadBars = vector.phraseComposition.filter {
+            $0.padActive && $0.padHarmonicDisclosureStage ==
+                PadHarmonicDisclosureStage.revealed.rawValue
+        }
+        let distinctPadFunctionCount = Set(
+            vector.phraseComposition.filter(\.padActive).map(\.padFunction)
+        ).count
 
         var kickFoundationDifferences: [Double] = []
         for stemBar in vector.stems {
@@ -953,6 +964,15 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                         $0.padSpatialSendRMS
                     )
                 })
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .padHarmonicDisclosureRevealedBarRatio,
+                value: Double(revealedPadBars.count) /
+                    phraseCompositionDivisor
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .padHarmonicDisclosureDistinctFunctionCount,
+                value: Double(distinctPadFunctionCount)
             ),
         ]
         try self.init(
@@ -1203,9 +1223,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 8
+    package static let schemaVersion = 9
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v8"
+        "autotechno-professional-quality-profile.v9"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1656,6 +1676,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         case .modalPercussionEventCountMean,
                 .modalPercussionActiveBarRatio:
             absoluteFloor = 0.25
+        case .padHarmonicDisclosureDistinctFunctionCount:
+            absoluteFloor = 1
         case .modalPercussionPitchErrorCentsMaximum:
             absoluteFloor = 15
         case .modalPercussionAttackToBodyDBMean,
@@ -1762,7 +1784,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .upperSpectralRevealActiveEventRatio,
                 .upperSpectralRevealAppliedCutoffRatioMean,
                 .percussionAnticipationSwellActiveBarRatio,
-                .padRhythmicModulationActiveBarRatio:
+                .padRhythmicModulationActiveBarRatio,
+                .padHarmonicDisclosureRevealedBarRatio:
             return 0...1
         case .stereoCorrelation, .lowStereoCorrelation:
             return -1...1
@@ -1795,6 +1818,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             return 0...2
         case .modalPercussionPitchErrorCentsMaximum:
             return 0...1_200
+        case .padHarmonicDisclosureDistinctFunctionCount:
+            return 0...Double(PadHarmonicFunction.allCases.count)
         }
     }
 

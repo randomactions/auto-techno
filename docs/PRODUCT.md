@@ -128,9 +128,14 @@ an exact already-rendered percussion or kick window at bounded forward or revers
 Eligible motif bars resolve a complete 8- or 16-step modal arpeggio in the score,
 not from a free-running DSP clock. Atmosphere bars may render one four-voice pad
 whose inversion is chosen against the last accepted voicing; that compact
-harmonic state continues across phrase boundaries. One per-bar evidence record
-binds those intentions to their exact slice and pad PCM, arpeggiator geometry,
-and voice-leading movement. In the latter half of an eligible major break, that
+harmonic state continues across phrase boundaries. The same pad now owns a
+phrase-local disclosure stage: Lock conceals the progression behind tonic,
+previews tonic/modal colour in its second half, and Major Break reveals the
+existing four-function vocabulary before a later Lock contracts again. Its
+dependent arpeggiator remains on the same onsets while following the disclosed
+chord. One per-bar evidence record binds those intentions to their exact slice
+and pad PCM, arpeggiator geometry and rendered pitch fingerprint, disclosure
+stage/function, and voice-leading movement. In the latter half of an eligible major break, that
 same pad may reuse its existing low-pass and spatial send under one score-owned
 three-sixteenth modulation relation; it adds no note, instrument, sequencer, or
 effect bus. Identity-return paths remain exactly neutral.
@@ -160,7 +165,7 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v11 supplies
+policy and its operational gates pass. Professional Evidence v12 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation and live-controller consequence, explicit
 analysis-memory provenance, and complete canonical-journey report-bank
