@@ -16,6 +16,9 @@ account.
   automation and exact score-to-PCM evidence;
 - one shared Resonant Mono TPT/ADAA nonlinear core with bounded semantic
   modulation, exact continuation, and same-pass input/output evidence;
+- one fixed first-order ADAA source conditioner on the existing complete kick
+  body, sub, and click sum, before the canonical detector/audible buses, with
+  same-pass pre/post transient and spectrum evidence;
 - one score-owned protagonist spectral reveal that reuses the existing
   Resonant Mono or Tonal Motion anchor filter, preserves exact home PCM, and
   retains independent score/render plus isolated-anchor evidence;

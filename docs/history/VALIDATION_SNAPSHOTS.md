@@ -1586,3 +1586,51 @@ seconds, and `git diff --check` remained clean.
 Publication and exact-head CI remain separate pending gates. Listening,
 app/route/interruption QA, latency/peak-memory measurement, and physical-output
 soak were not performed and are not implied.
+
+## Source 27 source-local kick dynamics — 2026-08-20
+
+Source 27 extends the existing canonical kick at one instrument-local boundary:
+the complete body + sub + click sum passes through a fixed first-order ADAA tanh
+conditioner before the existing detector and audible buses. It adds no score
+event, track, instrument, return, master processor, continuation buffer,
+callback work, or user control. The exact unconditioned path remains documented
+as the replacement baseline rather than running beside the new path.
+
+Candidate-vector schema 27 retains event-local pre/post hashes, peak, RMS,
+crest, physical-time attack/body RMS, upper-mid energy, score/render counts and
+masks, exact withheld silence, detector/audible scaling, and full/protected pass
+agreement. Professional Evidence v13 adds kick output crest, attack/body ratio,
+upper-mid ratio, and crest reduction. The 30-case v11 adversarial suite includes
+one non-compensable kick-source transient-spike attack. Quality-contract schema
+29, canonical engine v28, and primary evaluator/profile v10 bind the change as
+one exact installed contract.
+
+Release-mode artifact generation accepted 392/392 development observations
+from 28 journeys, rejected 30/30 adversarial cases for their exact expected
+reasons, and accepted 56/56 observations from four disjoint holdout journeys
+with zero relationship failures. A second generation from the same 32 cached
+journeys was byte-identical. The shipping artifacts are:
+
+- profile `6a16588407657191`, JSON SHA-256
+  `2f228a4eb86fc61c0abaec6cbca9cab0e858498b4c1e03a59227c1db88b39c86`;
+- adversarial suite `3a9e13af0380a49b`, JSON SHA-256
+  `8314a2811e0e63ff77df3ab2db83edc30ed5bfac763db10427854636f61c67aa`;
+- holdout qualification `c190edafab079602`, JSON SHA-256
+  `6004226c7670aa3424bb59c1b7069c23937e113f2297f6fac9d499a3ec0ccf08`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated
+caches and serial process boundaries. The selected matrix passed the source DSP
+3/3; exact artifacts/runtime 13/13; candidate/live tampering 28/28;
+adversarial qualification 2/2; calibrated policy 10/10; disjoint holdout 1/1;
+Core/evidence 113/113; preparation preflight 24/24; protected routing 14/14;
+instrument workflow partitions 12/12; and realtime queue 7/7. The two complete
+artifact generations also passed, both debug and release realtime-producer
+objects exposed only an allowed copy primitive, and the optimized `AutoTechno`
+product built in 73.54 seconds. Some selected filters intentionally overlap;
+these counts describe executions rather than distinct test declarations.
+
+This local snapshot proves the Source 27 score-to-render evidence, source-DSP
+causality, regenerated artifacts, holdout, adversarial, preparation, and
+realtime-producer contracts. Publication and exact-head CI are separate pending
+gates. Listening, app/route/interruption QA, latency/peak-memory measurement,
+and physical-output soak were not performed and are not implied.

@@ -68,8 +68,8 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 28, candidate-vector schema 26, candidate-transaction
-schema 4, and canonical engine v27 provide the current transaction-level
+Quality-contract schema 29, candidate-vector schema 27, candidate-transaction
+schema 4, and canonical engine v28 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
@@ -145,6 +145,17 @@ protected render passes, detector-to-audible scaling, automatic-mix gain, and
 all hashes must agree. Missing bars, forged roles, arbitrary kick deletion,
 nonzero withheld signal, silent recovery, or a changed non-kick score make the
 candidate incomplete; the primary evaluator cannot qualify incomplete evidence.
+
+Kick-source evidence inside every kick-syntax record must bind every rendered
+kick event and its bounded processed-sample count to exact pre/post hashes,
+finite peak/RMS/crest, physical attack/body RMS, and 1--4 kHz energy ratios.
+Focused rate tests must independently reconstruct the legacy body + sub + click
+source at 8, 44.1, 48, 96, and 192 kHz; prove its input evidence is exact; prove
+the fixed first-order ADAA conditioner changes active kick PCM while preserving
+event geometry, protected/full agreement, and exact empty-withheld evidence;
+and reject version, count, hash, scalar, or finiteness tampering. The calibrated
+profile must independently bound conditioned crest, attack/body balance,
+upper-mid energy, and crest reduction, with a transient-spike adversarial case.
 
 Upper-percussion-tail evidence must cover every resolved clap, open-hat, and
 metallic event with no duplicate or retargeted score index. Canonical replay
@@ -264,9 +275,9 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v12 bank must contain every canonical checkpoint for
+The Professional Evidence v13 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v27 primary evaluator v9 and pinned profile v9/adversarial/holdout
+engine-v28 primary evaluator v10 and pinned profile v10/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 28.
 Holdouts must be source-disjoint, contain at
@@ -328,7 +339,7 @@ or PCM.
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
 composition, spatial-FDN, and nonlinear-core evidence carried by quality-contract
-schema 28 change detached preparation only. The implemented master-headroom path
+schema 29 change detached preparation only. The implemented master-headroom path
 is the sole scheduled-output feedback responsibility and does not move those
 feature analyzers or decisions onto the callback. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
@@ -384,11 +395,11 @@ phrase lengths, maximum two-pass path, and route
 rebuild at representative 44.1 and 48 kHz devices. Record median, high-percentile,
 and worst observed times plus peak working memory.
 
-The exact-engine v9 artifact loader, route-local primary evaluator, unavailable-rate
+The exact-engine v10 artifact loader, route-local primary evaluator, unavailable-rate
 gate, one-correction transaction order, and reason-coded replay require
 deterministic tests at 44.1 and 48 kHz. The deterministic numeric-storage estimate
 must remain below the declared 128 MiB ceiling. The profile derives from 28
-complete journeys and passes the 29-case v10 adversarial suite plus four disjoint
+complete journeys and passes the 30-case v11 adversarial suite plus four disjoint
 holdouts at both rates. See [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md) and
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 

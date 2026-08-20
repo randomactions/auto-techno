@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 26)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 27)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -474,6 +474,26 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!roleForged.isComplete)
         #expect(roleForged.recordIsStructurallyValid)
         #expect(roleForged.playbackGateEvidence == baseline.playbackGateEvidence)
+
+        var dynamicsForgedObject = object
+        var dynamicsForgedBars = try #require(
+            dynamicsForgedObject["kickSyntax"] as? [[String: Any]]
+        )
+        var dynamics = try #require(
+            dynamicsForgedBars[0]["sourceDynamics"] as? [String: Any]
+        )
+        dynamics["outputSampleHash"] = dynamics["inputSampleHash"]
+        dynamicsForgedBars[0]["sourceDynamics"] = dynamics
+        dynamicsForgedObject["kickSyntax"] = dynamicsForgedBars
+        let dynamicsForged = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: dynamicsForgedObject)
+        )
+        #expect(!dynamicsForged.isComplete)
+        #expect(dynamicsForged.isFinite)
+        #expect(dynamicsForged.recordIsStructurallyValid)
+        #expect(dynamicsForged.playbackGateEvidence ==
+                baseline.playbackGateEvidence)
 
         var missingObject = object
         missingObject["sourceKickSyntaxBarCount"] = 0
@@ -1250,10 +1270,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 26)
-        #expect(QualityQualificationContract.schemaVersion == 28)
+        #expect(vector.schemaVersion == 27)
+        #expect(QualityQualificationContract.schemaVersion == 29)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v27")
+                "autotechno-canonical-engine.v28")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3565,7 +3585,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "16b1dfab4def008b")
+            "3cb3b8520e0da9cf")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -4209,9 +4229,45 @@ struct AutonomousCandidateEvaluationTests {
             audibleSampleHash: audibleSampleHash,
             detectorNonzeroSampleCount: detectorNonzeroSampleCount,
             audibleNonzeroSampleCount: audibleNonzeroSampleCount,
+            sourceDynamics: fixtureKickSourceDynamics(
+                renderedEventCount: renderedKickEventCount
+            ),
             detectorToAudibleScaleMatches: detectorToAudibleScaleMatches,
             renderPassesMatch: renderPassesMatch,
             bindingValid: bindingValid
+        )
+    }
+
+    private func fixtureKickSourceDynamics(
+        renderedEventCount: Int = 1
+    ) -> AutonomousKickSourceDynamicsEvidence {
+        if renderedEventCount == 0 {
+            return AutonomousKickSourceDynamicsEvidence(
+                render: KickSourceDynamicsRenderEvidence.empty
+            )
+        }
+        return AutonomousKickSourceDynamicsEvidence(
+            render: KickSourceDynamicsRenderEvidence(
+                version: KickSourceDynamicsContract.version,
+                antialiasOrder: KickSourceDynamicsContract.antialiasOrder,
+                renderedEventCount: renderedEventCount,
+                processedSampleCount: 2_560,
+                inputSampleHash: "1111111111111111",
+                outputSampleHash: "2222222222222222",
+                inputPeak: 0.6,
+                inputRMS: 0.12,
+                inputCrestFactor: 5,
+                outputPeak: 0.5,
+                outputRMS: 0.13,
+                outputCrestFactor: 0.5 / 0.13,
+                inputAttackRMS: 0.2,
+                outputAttackRMS: 0.18,
+                inputBodyRMS: 0.1,
+                outputBodyRMS: 0.11,
+                inputUpperMidEnergyRatio: 0.1,
+                outputUpperMidEnergyRatio: 0.12,
+                finite: true
+            )
         )
     }
 

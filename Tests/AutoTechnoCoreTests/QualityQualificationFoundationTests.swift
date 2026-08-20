@@ -500,7 +500,7 @@ struct QualityQualificationFoundationTests {
         }
     }
 
-    @Test("Professional Evidence v12 bank requires every journey checkpoint and unavailable policy")
+    @Test("Professional Evidence v13 bank requires every journey checkpoint and unavailable policy")
     func professionalEvidenceReportBank() throws {
         let reports = try qualificationReports()
 
@@ -1063,6 +1063,30 @@ struct QualityQualificationFoundationTests {
                 audibleSampleHash: "fedcba9876543210",
                 detectorNonzeroSampleCount: 1_024,
                 audibleNonzeroSampleCount: 1_024,
+                sourceDynamics: AutonomousKickSourceDynamicsEvidence(
+                    render: KickSourceDynamicsRenderEvidence(
+                        version: KickSourceDynamicsContract.version,
+                        antialiasOrder:
+                            KickSourceDynamicsContract.antialiasOrder,
+                        renderedEventCount: 1,
+                        processedSampleCount: 2_560,
+                        inputSampleHash: "1111111111111111",
+                        outputSampleHash: "2222222222222222",
+                        inputPeak: 0.6,
+                        inputRMS: 0.12,
+                        inputCrestFactor: 5,
+                        outputPeak: 0.5,
+                        outputRMS: 0.13,
+                        outputCrestFactor: 0.5 / 0.13,
+                        inputAttackRMS: 0.2,
+                        outputAttackRMS: 0.18,
+                        inputBodyRMS: 0.1,
+                        outputBodyRMS: 0.11,
+                        inputUpperMidEnergyRatio: 0.1,
+                        outputUpperMidEnergyRatio: 0.12,
+                        finite: true
+                    )
+                ),
                 detectorToAudibleScaleMatches: true,
                 renderPassesMatch: true,
                 bindingValid: true

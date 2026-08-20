@@ -139,7 +139,7 @@ only.
 
 Identity return, force-home correction, missing source material, and ineligible
 role/character combinations resolve every new feature to exact neutral.
-Candidate schema 26 binds per-bar score geometry to source and
+Candidate schema 27 binds per-bar score geometry to source and
 output hashes, trigger/rate counts, pad frequency ratios and PCM, arpeggiator
 counts and exact score/render pitches, harmonic-disclosure stage/function, and
 voice-leading bounds. This is causal structural evidence rather than a

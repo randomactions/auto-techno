@@ -693,8 +693,121 @@ package struct AutonomousAutomaticMixEvidence: Codable, Equatable, Sendable {
 
 /// One bounded record per rendered bar binds the score-owned kick syntax to the
 /// exact detector and post-fader kick consequences from detached preparation.
-/// It retains no PCM and does not participate in the shipping selector while
-/// the professional-quality policy remains uncalibrated.
+/// It retains no PCM; its reduced dimensions participate only through the
+/// exact installed professional-quality profile and primary evaluator.
+package struct AutonomousKickSourceDynamicsEvidence: Codable, Equatable,
+        Sendable {
+    package let version: String
+    package let antialiasOrder: Int
+    package let renderedEventCount: Int
+    package let processedSampleCount: Int
+    package let inputSampleHash: String
+    package let outputSampleHash: String
+    package let inputPeak: Double
+    package let inputRMS: Double
+    package let inputCrestFactor: Double
+    package let outputPeak: Double
+    package let outputRMS: Double
+    package let outputCrestFactor: Double
+    package let inputAttackRMS: Double
+    package let outputAttackRMS: Double
+    package let inputBodyRMS: Double
+    package let outputBodyRMS: Double
+    package let inputUpperMidEnergyRatio: Double
+    package let outputUpperMidEnergyRatio: Double
+    package let finite: Bool
+
+    package init(render: KickSourceDynamicsRenderEvidence) {
+        version = render.version
+        antialiasOrder = render.antialiasOrder
+        renderedEventCount = render.renderedEventCount
+        processedSampleCount = render.processedSampleCount
+        inputSampleHash = render.inputSampleHash
+        outputSampleHash = render.outputSampleHash
+        inputPeak = render.inputPeak
+        inputRMS = render.inputRMS
+        inputCrestFactor = render.inputCrestFactor
+        outputPeak = render.outputPeak
+        outputRMS = render.outputRMS
+        outputCrestFactor = render.outputCrestFactor
+        inputAttackRMS = render.inputAttackRMS
+        outputAttackRMS = render.outputAttackRMS
+        inputBodyRMS = render.inputBodyRMS
+        outputBodyRMS = render.outputBodyRMS
+        inputUpperMidEnergyRatio = render.inputUpperMidEnergyRatio
+        outputUpperMidEnergyRatio = render.outputUpperMidEnergyRatio
+        finite = render.finite
+    }
+
+    package var isFinite: Bool {
+        [
+            inputPeak, inputRMS, inputCrestFactor, outputPeak, outputRMS,
+            outputCrestFactor, inputAttackRMS, outputAttackRMS, inputBodyRMS,
+            outputBodyRMS, inputUpperMidEnergyRatio,
+            outputUpperMidEnergyRatio,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func isComplete(
+        sampleRate: Double,
+        expectedEventCount: Int
+    ) -> Bool {
+        guard version == KickSourceDynamicsContract.version,
+              antialiasOrder == KickSourceDynamicsContract.antialiasOrder,
+              renderedEventCount == expectedEventCount,
+              (0...KickSourceDynamicsContract.maximumEventsPerBar)
+                .contains(renderedEventCount),
+              processedSampleCount >= 0,
+              processedSampleCount <= KickSourceDynamicsContract
+                .maximumProcessedSampleCount(sampleRate: sampleRate),
+              Self.isSampleHash(inputSampleHash),
+              Self.isSampleHash(outputSampleHash),
+              finite, isFinite,
+              inputPeak >= 0,
+              inputPeak <= Double(Float.greatestFiniteMagnitude),
+              inputRMS >= 0, inputRMS <= inputPeak,
+              outputPeak >= 0,
+              outputPeak <= Double(Float(KickSourceDynamicsContract.outputGain)),
+              outputRMS >= 0, outputRMS <= outputPeak,
+              inputCrestFactor >= 0,
+              outputCrestFactor >= 0,
+              inputAttackRMS >= 0, outputAttackRMS >= 0,
+              inputBodyRMS >= 0, outputBodyRMS >= 0,
+              (0...1).contains(inputUpperMidEnergyRatio),
+              (0...1).contains(outputUpperMidEnergyRatio) else {
+            return false
+        }
+        if renderedEventCount == 0 {
+            let empty = KickSourceDynamicsRenderEvidence.empty
+            return processedSampleCount == 0 &&
+                inputSampleHash == empty.inputSampleHash &&
+                outputSampleHash == empty.outputSampleHash &&
+                inputPeak.bitPattern == 0 && inputRMS.bitPattern == 0 &&
+                inputCrestFactor.bitPattern == 0 &&
+                outputPeak.bitPattern == 0 && outputRMS.bitPattern == 0 &&
+                outputCrestFactor.bitPattern == 0 &&
+                inputAttackRMS.bitPattern == 0 &&
+                outputAttackRMS.bitPattern == 0 &&
+                inputBodyRMS.bitPattern == 0 &&
+                outputBodyRMS.bitPattern == 0 &&
+                inputUpperMidEnergyRatio.bitPattern == 0 &&
+                outputUpperMidEnergyRatio.bitPattern == 0
+        }
+        return processedSampleCount > 0 && inputPeak > 0 && inputRMS > 0 &&
+            outputPeak > 0 && outputRMS > 0 && inputAttackRMS > 0 &&
+            outputAttackRMS > 0 && inputBodyRMS > 0 && outputBodyRMS > 0 &&
+            inputSampleHash != outputSampleHash &&
+            inputCrestFactor == inputPeak / inputRMS &&
+            outputCrestFactor == outputPeak / outputRMS
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.utf8.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 package struct AutonomousKickSyntaxBarEvidence: Codable, Equatable, Sendable {
     package let bar: Int
     package let role: String
@@ -713,6 +826,7 @@ package struct AutonomousKickSyntaxBarEvidence: Codable, Equatable, Sendable {
     package let audibleSampleHash: String
     package let detectorNonzeroSampleCount: Int
     package let audibleNonzeroSampleCount: Int
+    package let sourceDynamics: AutonomousKickSourceDynamicsEvidence
     package let detectorToAudibleScaleMatches: Bool
     package let renderPassesMatch: Bool
     package let bindingValid: Bool
@@ -735,6 +849,7 @@ package struct AutonomousKickSyntaxBarEvidence: Codable, Equatable, Sendable {
         audibleSampleHash: String,
         detectorNonzeroSampleCount: Int,
         audibleNonzeroSampleCount: Int,
+        sourceDynamics: AutonomousKickSourceDynamicsEvidence,
         detectorToAudibleScaleMatches: Bool,
         renderPassesMatch: Bool,
         bindingValid: Bool
@@ -756,6 +871,7 @@ package struct AutonomousKickSyntaxBarEvidence: Codable, Equatable, Sendable {
         self.audibleSampleHash = audibleSampleHash
         self.detectorNonzeroSampleCount = detectorNonzeroSampleCount
         self.audibleNonzeroSampleCount = audibleNonzeroSampleCount
+        self.sourceDynamics = sourceDynamics
         self.detectorToAudibleScaleMatches = detectorToAudibleScaleMatches
         self.renderPassesMatch = renderPassesMatch
         self.bindingValid = bindingValid
@@ -801,6 +917,10 @@ package struct AutonomousKickSyntaxBarEvidence: Codable, Equatable, Sendable {
               duckingEnvelopePeak >= 0,
               duckingEnvelopePeak <= detectorPeak,
               detectorNonzeroSampleCount == audibleNonzeroSampleCount,
+              sourceDynamics.isComplete(
+                sampleRate: sampleRate,
+                expectedEventCount: renderedKickEventCount
+              ),
               detectorToAudibleScaleMatches,
               renderPassesMatch,
               bindingValid else {
@@ -4819,7 +4939,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 26
+    package static let schemaVersion = 27
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -5296,6 +5416,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 audibleSampleHash: mix.audibleSampleHash,
                 detectorNonzeroSampleCount: mix.detectorNonzeroSampleCount,
                 audibleNonzeroSampleCount: mix.audibleNonzeroSampleCount,
+                sourceDynamics: AutonomousKickSourceDynamicsEvidence(
+                    render: mix.sourceDynamics
+                ),
                 detectorToAudibleScaleMatches:
                     mix.detectorToAudibleScaleMatches,
                 renderPassesMatch: block.kickRenderPassesMatch,
@@ -7416,9 +7539,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             postGraphUpperTimbreEvidence.candidateValuesAreFinite
     }
 
-    /// The current shipping playback gate, kept separate from completeness of
-    /// the larger descriptive vector. New evidence can block future calibrated
-    /// acceptance without silently changing uncalibrated playback behavior.
+    /// The core signal/structure subset. Passing this alone never authorizes a
+    /// commit; the primary evaluator also requires the complete vector and its
+    /// installed-profile verdict.
     package var playbackHardGatesPassed: Bool {
         hardGates.passed && hardGateEvidenceIsConsistent
     }
@@ -7601,7 +7724,13 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 $0.detectorNonzeroSampleCount >= 0 &&
                 $0.detectorNonzeroSampleCount <= $0.renderedFrameCount &&
                 $0.audibleNonzeroSampleCount >= 0 &&
-                $0.audibleNonzeroSampleCount <= $0.renderedFrameCount
+                $0.audibleNonzeroSampleCount <= $0.renderedFrameCount &&
+                (0...KickSourceDynamicsContract.maximumEventsPerBar)
+                    .contains($0.sourceDynamics.renderedEventCount) &&
+                (0...KickSourceDynamicsContract.maximumProcessedSampleCount(
+                    sampleRate: QualityQualificationContract
+                        .maximumSupportedSampleRate
+                )).contains($0.sourceDynamics.processedSampleCount)
         }
     }
 

@@ -852,7 +852,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v27")
+                "autotechno-canonical-engine.v28")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -2677,11 +2677,18 @@ struct AutonomousPreparationPreflightTests {
             #expect(renderedKickSteps == resolvedKickSteps)
         }
 
-        let regularUnitRMS = Double(regular.kickMix.detectorRMS) /
+        let regularInputUnitRMS =
+            regular.kickMix.sourceDynamics.inputRMS /
             KickMixBalance.regularDetectorLevel
-        let breakdownUnitRMS = Double(breakdown.kickMix.detectorRMS) /
+        let breakdownInputUnitRMS =
+            breakdown.kickMix.sourceDynamics.inputRMS /
             KickMixBalance.breakdownDetectorLevel
-        #expect(abs(regularUnitRMS - breakdownUnitRMS) < 0.000_001)
+        #expect(abs(regularInputUnitRMS - breakdownInputUnitRMS) < 0.000_001)
+        let regularTransfer = regular.kickMix.sourceDynamics.outputRMS /
+            regular.kickMix.sourceDynamics.inputRMS
+        let breakdownTransfer = breakdown.kickMix.sourceDynamics.outputRMS /
+            breakdown.kickMix.sourceDynamics.inputRMS
+        #expect(regularTransfer < breakdownTransfer)
     }
 
     @Test("Role stems reconstruct the dry buses and report actual levels")

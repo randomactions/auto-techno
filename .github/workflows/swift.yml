@@ -104,7 +104,7 @@ jobs:
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(harmonicDisclosurePrimaryIdentityContract|primaryResourcesAreV9Only|bundledV9ArtifactsAreReady|primaryArtifacts|legacyPolicyJSONIsRejected|serializedLiveObservationProvenanceIsRejected|generateRepresentativeProfile|calibrationCacheRejectsSwappedOrUnboundedBanks|RepositorySurfaceTests)'
+          --filter '(kickSourceDynamicsPrimaryIdentityContract|primaryResourcesAreV10Only|bundledV10ArtifactsAreReady|primaryArtifacts|legacyPolicyJSONIsRejected|serializedLiveObservationProvenanceIsRejected|generateRepresentativeProfile|calibrationCacheRejectsSwappedOrUnboundedBanks|RepositorySurfaceTests)'
 
       - name: Run primary calibration adversarial challenge
         run: >-
@@ -238,11 +238,35 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter AdaptiveAutonomousSessionTests
 
-      - name: Run instrument palette tests
+      - name: Run lightweight instrument palette tests
         run: >-
-          swift test --no-parallel
+          swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter InstrumentPaletteTests
+          --filter 'InstrumentPaletteTests.(catalogContract|correctionHomeContract|foundationBehaviorPCM|architectureAutomationPCM|resonantMonoAcidRelations|spectralTextureRisingCluster|tonalTailContinuation|tonalPatchBoundary)'
+
+      - name: Run instrument renderer evidence
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter InstrumentPaletteTests.canonicalRendererEvidence
+
+      - name: Run canonical acid relation evidence
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter InstrumentPaletteTests.canonicalAcidRelationEvidence
+
+      - name: Run prepared instrument evidence
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter 'InstrumentPaletteTests.(preparedSpectralClusterEvidence|preparedAcidRelationEvidence)'
+
+      - name: Run kick source dynamics tests
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter KickSourceDynamicsTests
 
       - name: Run core and evidence tests
         run: >-

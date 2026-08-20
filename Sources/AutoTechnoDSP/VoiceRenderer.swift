@@ -682,6 +682,7 @@ package enum VoiceRenderer {
         var random = SeededGenerator(seed: performance.eventSeed)
         var renderedKickEventCount = 0
         var renderedKickStepMask: UInt16 = 0
+        var kickSourceDynamics = KickSourceDynamicsEvidenceAccumulator()
         var renderedBassEventCount = 0
         var renderedBassStepMask: UInt16 = 0
         var renderedBassStartFrames: [Int] = []
@@ -703,7 +704,8 @@ package enum VoiceRenderer {
                 let detectorLevel = KickMixBalance.detectorLevel(for: section) * accent
                 if (0..<16).contains(event.step),
                    kick(&kickDetectorBus, start: start, sampleRate: sampleRate,
-                        level: detectorLevel, seed: scene.seed, step: event.step) {
+                        level: detectorLevel, seed: scene.seed, step: event.step,
+                        sourceDynamics: &kickSourceDynamics) {
                     // Count only events that produced a bounded render window,
                     // rather than inferring production from score membership.
                     renderedKickEventCount += 1
@@ -1476,6 +1478,7 @@ package enum VoiceRenderer {
             audibleSampleHash: audibleKickFingerprint.fingerprint,
             detectorNonzeroSampleCount: detectorNonzeroSampleCount,
             audibleNonzeroSampleCount: audibleNonzeroSampleCount,
+            sourceDynamics: kickSourceDynamics.evidence,
             detectorToAudibleScaleMatches: detectorToAudibleScaleMatches
         )
         let pulseEchoEvidenceFrameCount = Double(max(1, frames))
@@ -2718,10 +2721,14 @@ package enum VoiceRenderer {
     @discardableResult
     private static func kick(_ output: inout [Float], start: Int,
                              sampleRate: Double, level: Double,
-                             seed: UInt64, step: Int) -> Bool {
+                             seed: UInt64, step: Int,
+                             sourceDynamics:
+                                inout KickSourceDynamicsEvidenceAccumulator) -> Bool {
         guard start >= 0, start < output.count else { return false }
         let frames = min(Int(sampleRate * 0.32), output.count - start)
         guard frames > 0 else { return false }
+        sourceDynamics.beginEvent(sampleRate: sampleRate)
+        var dynamicsState = AntiderivativeAntialiasedTanhState()
         var random = SeededGenerator(seed: seed ^ UInt64(step + 1) ^ 0x9E3779B97F4A7C15)
         var bodyPhase = 0.0
         var subPhase = 0.0
@@ -2740,7 +2747,13 @@ package enum VoiceRenderer {
             let transient = i < Int(sampleRate * 0.0045)
                 ? ((random.unit() * 2 - 1) * 0.08 + sin(2 * .pi * 2_800 * t) * 0.055) * transientEnvelope
                 : 0
-            output[start + i] += Float((body + sub + transient) * level)
+            let sourceSample = Float((body + sub + transient) * level)
+            let renderedSample = KickSourceDynamicsContract.process(
+                sourceSample,
+                state: &dynamicsState
+            )
+            output[start + i] += renderedSample
+            sourceDynamics.append(input: sourceSample, output: renderedSample)
         }
         return true
     }

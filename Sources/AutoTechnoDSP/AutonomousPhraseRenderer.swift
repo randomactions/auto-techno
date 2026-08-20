@@ -128,6 +128,9 @@ package struct KickMixEvidence: Equatable, Sendable {
     package let audibleSampleHash: String
     package let detectorNonzeroSampleCount: Int
     package let audibleNonzeroSampleCount: Int
+    /// Same-pass evidence for the complete kick source before later detector,
+    /// mix, ducking, and terminal processing.
+    package let sourceDynamics: KickSourceDynamicsRenderEvidence
     /// True only when every post-fader dry kick sample is the exact two-stage
     /// Float scaling of the detector sample used by sidechain ducking.
     package let detectorToAudibleScaleMatches: Bool

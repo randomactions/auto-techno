@@ -1665,7 +1665,25 @@ detector/audible ownership, protected center routing, exact withheld silence,
 and one primary evaluator; it must not coexist with another kick track or
 dynamics chain.
 
-Implementation, calibration, validation, publication, and exact-head CI remain
-pending. No listening, app/route/interruption QA, latency or peak-memory
-measurement, physical-output soak, or claim that the inaccessible source audio
-was heard is made.
+Implementation, calibration, and local validation are complete. Release-mode
+artifact generation accepted 392/392 development observations from 28
+journeys, rejected all 30 adversarial cases for their exact expected reasons,
+and accepted 56/56 observations from four disjoint holdout journeys with zero
+relationship failures. Independent generation against the same 32 cached
+journeys produced byte-identical artifacts. The installed primary artifacts
+are profile `6a16588407657191`, adversarial suite `3a9e13af0380a49b`, and
+holdout qualification `c190edafab079602`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated
+caches and serial process boundaries. It covered the independent source-DSP
+oracle; exact artifact/runtime identity; candidate reduction and tampering;
+adversarial, calibrated-policy, and disjoint-holdout qualification; Core and
+evidence; preparation preflight; protected routing; instrument-render
+partitions; realtime queue behavior and producer-symbol audits; and an
+optimized product build. The hosted workflow was also divided into bounded
+instrument-suite processes after a prior accumulated-process signal 10, without
+changing the test contracts.
+
+Publication and exact-head CI remain separate pending gates. No listening,
+app/route/interruption QA, latency or peak-memory measurement, physical-output
+soak, or claim that the inaccessible source audio was heard is made.

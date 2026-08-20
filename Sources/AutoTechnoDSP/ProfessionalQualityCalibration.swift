@@ -75,6 +75,14 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
     case kickAudibleToDetectorDBMean = "kick-audible-to-detector-db-mean"
     case kickDuckingEnvelopeRatioMean = "kick-ducking-envelope-ratio-mean"
     case kickAudibleGainMean = "kick-audible-gain-mean"
+    case kickSourceOutputCrestFactorDBMean =
+        "kick-source-output-crest-factor-db-mean"
+    case kickSourceAttackToBodyDBMean =
+        "kick-source-attack-to-body-db-mean"
+    case kickSourceUpperMidEnergyRatioMean =
+        "kick-source-upper-mid-energy-ratio-mean"
+    case kickSourceCrestReductionDBMean =
+        "kick-source-crest-reduction-db-mean"
     case foundationDottedRhythmActiveBarRatio =
         "foundation-dotted-rhythm-active-bar-ratio"
     case foundationDottedRhythmCrestFactorDBMean =
@@ -147,7 +155,10 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
                 .upperPercussionTailRenderedTailToAttackDBMean,
                 .percussionAnticipationSwellLateToEarlyDBMean,
                 .padRhythmicFilterDifferenceToPadDBMean,
-                .padRhythmicSpatialDifferenceToSendDBMean:
+                .padRhythmicSpatialDifferenceToSendDBMean,
+                .kickSourceOutputCrestFactorDBMean,
+                .kickSourceAttackToBodyDBMean,
+                .kickSourceCrestReductionDBMean:
             return -120
         default: return 0
         }
@@ -521,9 +532,9 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 9
+    package static let schemaVersion = 10
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v9"
+        "autotechno-professional-quality-observation.v10"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -856,6 +867,39 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 })),
             ProfessionalQualityMetricValue(metric: .kickAudibleGainMean,
                 value: mean(kickSyntax.map(\.audibleGain))),
+            ProfessionalQualityMetricValue(
+                metric: .kickSourceOutputCrestFactorDBMean,
+                value: mean(activeKickSyntax.map {
+                    decibels(
+                        $0.sourceDynamics.outputPeak,
+                        $0.sourceDynamics.outputRMS
+                    )
+                })
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .kickSourceAttackToBodyDBMean,
+                value: mean(activeKickSyntax.map {
+                    decibels(
+                        $0.sourceDynamics.outputAttackRMS,
+                        $0.sourceDynamics.outputBodyRMS
+                    )
+                })
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .kickSourceUpperMidEnergyRatioMean,
+                value: mean(activeKickSyntax.map {
+                    $0.sourceDynamics.outputUpperMidEnergyRatio
+                })
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .kickSourceCrestReductionDBMean,
+                value: mean(activeKickSyntax.map {
+                    decibels(
+                        $0.sourceDynamics.inputCrestFactor,
+                        $0.sourceDynamics.outputCrestFactor
+                    )
+                })
+            ),
             ProfessionalQualityMetricValue(
                 metric: .foundationDottedRhythmActiveBarRatio,
                 value: Double(activeFoundationRhythm.count) /
@@ -1223,9 +1267,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 9
+    package static let schemaVersion = 10
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v9"
+        "autotechno-professional-quality-profile.v10"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1777,6 +1821,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .kickGroundedBarRatio, .kickWithheldBarRatio,
                 .kickRecoveryBarRatio, .kickDuckingEnvelopeRatioMean,
                 .kickAudibleGainMean, .modalPercussionActiveBarRatio,
+                .kickSourceUpperMidEnergyRatioMean,
                 .foundationDottedRhythmActiveBarRatio,
                 .modalPercussionMaskingMaximumOverlap,
                 .modalPercussionMaximumPoleRadius,
@@ -1799,7 +1844,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .barLoudnessSpanLU, .barTransientDensityMean,
                 .barTransientDensitySpan, .barCrestFactorMean,
                 .barCrestFactorSpan,
-                .foundationDottedRhythmCrestFactorDBMean:
+                .foundationDottedRhythmCrestFactorDBMean,
+                .kickSourceOutputCrestFactorDBMean:
             return 0...120
         case .kickOverFoundationActiveDBMean:
             return -120...120
@@ -1808,7 +1854,9 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .upperPercussionTailRenderedTailToAttackDBMean,
                 .percussionAnticipationSwellLateToEarlyDBMean,
                 .padRhythmicFilterDifferenceToPadDBMean,
-                .padRhythmicSpatialDifferenceToSendDBMean:
+                .padRhythmicSpatialDifferenceToSendDBMean,
+                .kickSourceAttackToBodyDBMean,
+                .kickSourceCrestReductionDBMean:
             return -120...120
         case .kickAudibleToDetectorDBMean:
             return -120...0

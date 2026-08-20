@@ -8,8 +8,8 @@ Mono architecture. `InstrumentAssignment` and its existing semantic `color`,
 owners. `ResonantMonoState` owns continuation. The primitive does not choose a
 patch, add an event, run a separate controller, or expose a user setting.
 
-Engine identity `autotechno-canonical-engine.v27`, quality-contract schema 28,
-candidate-vector schema 26, and candidate-transaction schema 4 identify the
+Engine identity `autotechno-canonical-engine.v28`, quality-contract schema 29,
+candidate-vector schema 27, and candidate-transaction schema 4 identify the
 current realization containing this unchanged core. The calibrated primary
 evaluator consumes the record as one non-compensable part of its terminal
 decision.
@@ -28,6 +28,13 @@ coefficient-based one-pole states and private rational saturator. It does not
 silently rewrite the separate Alien Analog or generated-graph nonlinear paths;
 those require their own measured deficit, replacement, evidence, and engine
 revision.
+
+The same first-order ADAA primitive is now also reused by the kick's one
+source-local conditioner. That stage processes the complete existing body,
+sub, and click sum before either kick bus; it is not part of the Resonant Mono
+filter continuation and does not create a shared dynamics chain or a new
+instrument. Its fixed transfer and separate evidence are described by the
+kick-source contract in `SOUND_QUALITY.md`.
 
 Applied bounds are deterministic and route-rate aware:
 

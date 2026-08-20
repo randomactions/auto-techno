@@ -23,8 +23,8 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v27 profile v9, adversarial suite v10, and disjoint holdout qualification
-v8. The profile derives from 28 complete
+engine-v28 profile v10, adversarial suite v11, and disjoint holdout qualification
+v9. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
 relationship gate.
 
@@ -48,6 +48,10 @@ be synthesized as disconnected compact evidence.
 Phrase-composition evidence also retains the harmonic-disclosure revealed-bar
 ratio and bounded distinct-function count. A five-function overpopulation
 attack proves that a disconnected harmonic vocabulary cannot be compensated by
+unrelated strengths.
+Four kick-source dimensions retain conditioned crest, attack-to-body balance,
+upper-mid energy, and measured crest reduction. A dedicated transient-spike
+attack proves a disconnected or regressed kick conditioner cannot hide behind
 unrelated strengths.
 
 The app preloads artifacts away from the audio callback and creates a route-local
