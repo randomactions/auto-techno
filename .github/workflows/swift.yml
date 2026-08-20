@@ -260,13 +260,13 @@ jobs:
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter InstrumentPaletteTests.preparedSpectralClusterEvidence
+          --filter InstrumentPalettePreparedEvidenceTests.testPreparedSpectralClusterEvidence
 
       - name: Run prepared acid-relation evidence
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter InstrumentPaletteTests.preparedAcidRelationEvidence
+          --filter InstrumentPalettePreparedEvidenceTests.testPreparedAcidRelationEvidence
 
       - name: Run kick source dynamics tests
         run: >-

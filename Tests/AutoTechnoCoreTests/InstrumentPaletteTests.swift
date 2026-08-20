@@ -2,8 +2,9 @@
 import AutoTechnoCore
 import Foundation
 import Testing
+import XCTest
 
-private final class PreparedInstrumentPlanFixture {
+fileprivate final class PreparedInstrumentPlanFixture {
     let state: AutonomousSessionState
     let plan: AutonomousPhrasePlan
 
@@ -652,90 +653,26 @@ struct InstrumentPaletteTests {
         #expect(graphState == replayGraphState)
     }
 
-    @Test("Canonical journey reaches a prepared rising-cluster transition")
-    func preparedSpectralClusterEvidence() throws {
-        let projection = try #require(preparedSpectralClusterProjection())
-        #expect(projection.candidateEvaluationComplete)
-        #expect(projection.selectedEvidenceComplete)
-        #expect(projection.commitEligible)
-        #expect(projection.clusterCount > 0)
-        #expect(projection.clustersComplete)
-    }
-
-    @Test("Prepared evidence binds the selected acid score to its operator consequence")
-    func preparedAcidRelationEvidence() throws {
-        let projection = try #require(preparedAcidRelationProjection())
-        #expect(projection.candidateEvaluationComplete)
-        #expect(projection.selectedEvidenceComplete)
-        #expect(projection.commitEligible)
-        #expect(projection.sourceBarCountMatches)
-        #expect(projection.instrumentBarCountMatches)
-        #expect(projection.acidArchitectureCount > 0)
-        #expect(projection.acidArchitecturesComplete)
-    }
-
-    /// Keep complete phrase plans, render state, and candidate evidence out of
-    /// Swift Testing's bounded cooperative-task frame. The returned values are
-    /// the same assertions reduced to small immutable scalars.
+    /// Return only reference-backed preparation after every large score and
+    /// render-state value has left the bounded test invocation frame.
     @inline(never)
-    private func preparedSpectralClusterProjection() -> (
-        candidateEvaluationComplete: Bool,
-        selectedEvidenceComplete: Bool,
-        commitEligible: Bool,
-        clusterCount: Int,
-        clustersComplete: Bool
-    )? {
+    fileprivate func preparedSpectralClusterPhrase() -> PreparedAutonomousPhrase? {
         guard let fixture = activeSpectralClusterPlanFixture() else {
             return nil
         }
-        guard let prepared = prepareInstrumentFixture(fixture) else {
-            return nil
-        }
-        let status = preparedInstrumentStatus(prepared)
-        let clusters = preparedSpectralClusterFacts(prepared)
-        return (
-            candidateEvaluationComplete: status.candidateEvaluationComplete,
-            selectedEvidenceComplete: status.selectedEvidenceComplete,
-            commitEligible: status.commitEligible,
-            clusterCount: clusters.count,
-            clustersComplete: clusters.complete
-        )
+        return prepareInstrumentFixture(fixture)
     }
 
     @inline(never)
-    private func preparedAcidRelationProjection() -> (
-        candidateEvaluationComplete: Bool,
-        selectedEvidenceComplete: Bool,
-        commitEligible: Bool,
-        sourceBarCountMatches: Bool,
-        instrumentBarCountMatches: Bool,
-        acidArchitectureCount: Int,
-        acidArchitecturesComplete: Bool
-    )? {
+    fileprivate func preparedAcidRelationPhrase() -> PreparedAutonomousPhrase? {
         guard let fixture = activeAcidPlanFixture() else {
             return nil
         }
-        guard let prepared = prepareInstrumentFixture(fixture) else {
-            return nil
-        }
-        let status = preparedInstrumentStatus(prepared)
-        let acid = preparedAcidFacts(
-            prepared,
-            expectedBarCount: fixture.plan.resolvedBars.count
-        )
-        return (
-            candidateEvaluationComplete: status.candidateEvaluationComplete,
-            selectedEvidenceComplete: status.selectedEvidenceComplete,
-            commitEligible: status.commitEligible,
-            sourceBarCountMatches: acid.sourceBarCountMatches,
-            instrumentBarCountMatches: acid.instrumentBarCountMatches,
-            acidArchitectureCount: acid.count,
-            acidArchitecturesComplete: acid.complete
-        )
+        return prepareInstrumentFixture(fixture)
     }
 
     @inline(never)
-    private func prepareInstrumentFixture(
+    fileprivate func prepareInstrumentFixture(
         _ fixture: PreparedInstrumentPlanFixture
     ) -> PreparedAutonomousPhrase? {
         var incomingRenderState = RenderState()
@@ -755,24 +692,28 @@ struct InstrumentPaletteTests {
     }
 
     @inline(never)
-    private func preparedInstrumentStatus(
+    fileprivate func preparedCandidateEvaluationIsComplete(
         _ prepared: PreparedAutonomousPhrase
-    ) -> (
-        candidateEvaluationComplete: Bool,
-        selectedEvidenceComplete: Bool,
-        commitEligible: Bool
-    ) {
-        return (
-            candidateEvaluationComplete:
-                prepared.candidateEvaluation.isComplete,
-            selectedEvidenceComplete:
-                prepared.selectedCandidateEvidence.isComplete,
-            commitEligible: prepared.commitEligible
-        )
+    ) -> Bool {
+        prepared.candidateEvaluation.isComplete
     }
 
     @inline(never)
-    private func preparedSpectralClusterFacts(
+    fileprivate func preparedSelectedEvidenceIsComplete(
+        _ prepared: PreparedAutonomousPhrase
+    ) -> Bool {
+        prepared.selectedCandidateEvidence.isComplete
+    }
+
+    @inline(never)
+    fileprivate func preparedCommitIsEligible(
+        _ prepared: PreparedAutonomousPhrase
+    ) -> Bool {
+        prepared.commitEligible
+    }
+
+    @inline(never)
+    fileprivate func preparedSpectralClusterFacts(
         _ prepared: PreparedAutonomousPhrase
     ) -> (count: Int, complete: Bool) {
         var count = 0
@@ -794,7 +735,7 @@ struct InstrumentPaletteTests {
     }
 
     @inline(never)
-    private func preparedAcidFacts(
+    fileprivate func preparedAcidFacts(
         _ prepared: PreparedAutonomousPhrase,
         expectedBarCount: Int
     ) -> (
@@ -803,10 +744,9 @@ struct InstrumentPaletteTests {
         count: Int,
         complete: Bool
     ) {
-        let evidence = prepared.selectedCandidateEvidence
         var count = 0
         var complete = true
-        for bar in evidence.instruments {
+        for bar in prepared.selectedCandidateEvidence.instruments {
             for architecture in bar.architectures {
                 guard architecture.resonantMonoModulation != nil else {
                     continue
@@ -834,16 +774,18 @@ struct InstrumentPaletteTests {
         }
         return (
             sourceBarCountMatches:
-                evidence.sourceInstrumentBarCount == expectedBarCount,
+                prepared.selectedCandidateEvidence.sourceInstrumentBarCount ==
+                    expectedBarCount,
             instrumentBarCountMatches:
-                evidence.instruments.count == evidence.sourceInstrumentBarCount,
+                prepared.selectedCandidateEvidence.instruments.count ==
+                    prepared.selectedCandidateEvidence.sourceInstrumentBarCount,
             count: count,
             complete: complete
         )
     }
 
     @inline(never)
-    private func activeAcidPlanFixture() -> PreparedInstrumentPlanFixture? {
+    fileprivate func activeAcidPlanFixture() -> PreparedInstrumentPlanFixture? {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
         for _ in 0..<64 {
@@ -865,7 +807,7 @@ struct InstrumentPaletteTests {
     }
 
     @inline(never)
-    private func activeSpectralClusterPlanFixture() ->
+    fileprivate func activeSpectralClusterPlanFixture() ->
         PreparedInstrumentPlanFixture? {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
@@ -1007,5 +949,48 @@ struct InstrumentPaletteTests {
             relationalSteps: Array(repeating: .neutral, count: 16),
             upperNotes: []
         )
+    }
+}
+
+/// Swift Testing executes `@Test` bodies on a bounded cooperative-task stack.
+/// These two synchronous end-to-end preparations intentionally exercise the
+/// full canonical transaction and therefore run on XCTest's normal test
+/// thread. The production path and every asserted contract remain unchanged.
+final class InstrumentPalettePreparedEvidenceTests: XCTestCase {
+    func testPreparedSpectralClusterEvidence() throws {
+        let helper = InstrumentPaletteTests()
+        let prepared = try XCTUnwrap(helper.preparedSpectralClusterPhrase())
+        let candidateEvaluationComplete =
+            helper.preparedCandidateEvaluationIsComplete(prepared)
+        let selectedEvidenceComplete =
+            helper.preparedSelectedEvidenceIsComplete(prepared)
+        let commitEligible = helper.preparedCommitIsEligible(prepared)
+        let clusters = helper.preparedSpectralClusterFacts(prepared)
+        XCTAssertTrue(candidateEvaluationComplete)
+        XCTAssertTrue(selectedEvidenceComplete)
+        XCTAssertTrue(commitEligible)
+        XCTAssertGreaterThan(clusters.count, 0)
+        XCTAssertTrue(clusters.complete)
+    }
+
+    func testPreparedAcidRelationEvidence() throws {
+        let helper = InstrumentPaletteTests()
+        let prepared = try XCTUnwrap(helper.preparedAcidRelationPhrase())
+        let candidateEvaluationComplete =
+            helper.preparedCandidateEvaluationIsComplete(prepared)
+        let selectedEvidenceComplete =
+            helper.preparedSelectedEvidenceIsComplete(prepared)
+        let commitEligible = helper.preparedCommitIsEligible(prepared)
+        let acid = helper.preparedAcidFacts(
+            prepared,
+            expectedBarCount: prepared.plan.resolvedBars.count
+        )
+        XCTAssertTrue(candidateEvaluationComplete)
+        XCTAssertTrue(selectedEvidenceComplete)
+        XCTAssertTrue(commitEligible)
+        XCTAssertTrue(acid.sourceBarCountMatches)
+        XCTAssertTrue(acid.instrumentBarCountMatches)
+        XCTAssertGreaterThan(acid.count, 0)
+        XCTAssertTrue(acid.complete)
     }
 }
