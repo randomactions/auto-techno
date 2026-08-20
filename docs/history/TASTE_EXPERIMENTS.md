@@ -1480,3 +1480,85 @@ Validation and publication evidence is appended only after the exact source
 snapshot passes its isolated local matrix and exact-head CI. No listening,
 app/route/interruption QA, latency or peak-memory measurement, hardware-output
 soak, or claim that the inaccessible source demonstration was heard is made.
+
+## Source 26: progressive harmonic disclosure — 2026-08-20
+
+Source ID `26` used YouTube video `ppYfaPp6YLM`, *How to hit people in the
+feelings*, from Underdog Electronic Music School, published 2022-03-28 with a
+7:48 duration. The clean-room capture used unauthenticated yt-dlp `2026.07.04`
+for metadata, automatic English captions, and top-ranked comments:
+
+```sh
+/opt/homebrew/bin/yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source26-research.Nqz52f -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=ppYfaPp6YLM'
+```
+
+No manual subtitle track was available. Automatic `en` and `en-orig` VTTs
+were byte-identical with SHA-256
+`f96cb415c3a734e8247b5442d767eda928065dc25966f025abc02321da464385`.
+The metadata/comment artifact had SHA-256
+`dca8c6bdae1a4979eb0b7a6ca9ba72c6cf9e6820ea187863cfb80624bc394f0b`.
+The capture returned exactly 50 top-ranked top-level comments and 15 replies;
+one top-level item was a channel promotion, leaving 49 independent comments.
+Unauthenticated audio-to-WAV attempts resolved the public format list and tried
+the advertised Opus stream, M4A stream, and combined MP4 stream, but YouTube
+returned HTTP 403 for every media request, so this source has no audio-demo
+measurement. No cookies, signed-in session, account, or browser state was used.
+Captions, comments, metadata, and research files remain untracked.
+
+The bounded caption paraphrase is: `0:00...0:32` proposes hiding a harmonic
+progression and revealing it in progressively more informative stages;
+`1:34...2:39` treats a multi-function chord backbone as shared harmonic context
+without requiring every synth to play every chord tone; `4:27...5:28` keeps an
+early tonic-stable introduction legible for mixing; `5:28...5:58` exposes a
+two-state intermediate relation; `5:59...6:29` reveals the complete progression
+for the emotional payoff; `6:30...6:51` permits bounded second-cycle variation;
+and `6:51...7:10` contracts the harmonic information again when returning to a
+beat-led section. The video's literal chord-number recipe is an example rather
+than a portable harmonic target.
+
+Two independent comments specifically connected the arrangement method to
+escaping same-loop repetition and creating a journey, and one noted the value
+of a stable introduction for DJ mixing. An isolated voicing comment suggested
+spreading chord tones while avoiding spectral overlap, which the existing
+four-voice minimal-motion pad already owns. Another isolated suggestion proposed
+a separate second-cycle progression; it does not justify a parallel harmonic
+identity. The sample did not contain three-comment technical convergence on a
+numeric target, chord recipe, voicing, synth, or effect.
+
+Repository reconciliation explicitly considered reuse and expansion. The
+canonical engine already owns modal harmonic functions, one four-voice pad,
+bounded inversions, minimal-motion voice leading, accepted harmonic
+continuation, exact pad ratios, and same-pass pad PCM evidence. A new pad track,
+instrument, chord sequencer, progression identity, or effect chain would
+duplicate those owners. Source 26 instead adds one bounded disclosure stage to
+the existing `PadVoicing`: first-half Lock pads retain tonic only, second-half
+Lock pads expose a tonic/modal-colour relation, and Major Break pads reveal the
+existing four-function vocabulary. The next Lock contracts to tonic again from
+phrase geometry alone.
+
+Only the existing pad function, connected four-voice voicing, and pitch ratios
+in the already pad-derived arpeggiator may change. Pad count, onset, duration,
+instrument, rhythmic modulation, spatial topology, arpeggiator rhythm and
+articulation, every non-composition role, protected rhythm, transport, random
+draws, and the realtime callback remain unchanged. The stage is typed score
+data; compact candidate evidence replays its phrase-local geometry, allowed
+function, and an exact score-to-render arpeggiator pitch fingerprint while the
+established pad ratio/hash/RMS/peak record remains the causal renderer
+consequence. Professional evidence retains revealed-bar prevalence and distinct
+function count, with a non-compensable attack against impossible overpopulation.
+
+The durable intention and replacement boundary are recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). This discrete
+v1 disclosure projection is provisional. A later serious harmony pass may
+replace it with longer functional syntax, suspensions, passing tones,
+tension-aware inversions, or a shared multi-role harmonic frame only after
+calibrated predictability, tonal-tension, masking, or repetition evidence
+exposes a repeatable deficit. The replacement must preserve the existing pad,
+four explicit voices, accepted continuation, deterministic disclosure arc,
+exact neutral path, and one primary evaluator; it must not coexist with another
+progression or pad lane.
+
+Validation and publication evidence is appended only after the exact source
+snapshot passes its isolated local matrix and exact-head CI. No listening,
+app/route/interruption QA, latency or peak-memory measurement, hardware-output
+soak, or claim that the inaccessible source demonstration was heard is made.
