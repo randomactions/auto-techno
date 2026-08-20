@@ -23,8 +23,8 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v25 profile v7, adversarial suite v8, and disjoint holdout qualification
-v6. The profile derives from 28 complete
+engine-v26 profile v8, adversarial suite v9, and disjoint holdout qualification
+v7. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
 relationship gate.
 
@@ -42,6 +42,9 @@ the release consequence cannot be compensated by unrelated strengths. The
 profile also retains protagonist-reveal activity and applied-cutoff ratios; a
 dedicated runaway-cutoff attack proves that the reveal cannot escape its
 exact-engine envelope and be compensated by unrelated strengths.
+It additionally retains dotted-foundation active prevalence and active crest
+factor; an impossible-prevalence attack proves the two-bar score relation cannot
+be synthesized as disconnected compact evidence.
 
 The app preloads artifacts away from the audio callback and creates a route-local
 evaluator for detached preparation. Missing artifacts and rates outside 44.1 or

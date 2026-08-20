@@ -1496,3 +1496,47 @@ primitive, the optimized `AutoTechno` product built in 79.44 seconds, and
 Publication and exact-head remote CI remain separate pending gates. Listening
 observation, app/route and interruption QA, latency/peak-memory measurement,
 and physical-output soak have not been performed and are not implied.
+
+## Source 25 dotted foundation rhythm — 2026-08-20
+
+Source 25 adds one score-owned, post-arbitration two-bar dotted foundation
+relation to the existing Bass Pluck on the protected foundation lane. It
+replaces only eligible bass onsets with complementary masks `0x8248` and
+`0x4824`; it adds no track, instrument architecture, spatial return,
+continuation state, callback work, or user control. Exact established behavior
+remains the fallback.
+
+Same-pass candidate evidence binds pair phase, score/render event counts and
+occupied-step masks, exact rendered start frames, dry foundation hash/peak/RMS,
+patch assignment, plan identity, and full/protected pass equality. Professional
+Evidence v11 adds active-bar prevalence and mean active foundation crest factor;
+the 28-case adversarial suite includes a non-compensable overpopulation attack.
+
+Release-mode artifact generation accepted 392/392 development observations
+from 28 journeys, rejected 28/28 adversarial cases for their exact expected
+reasons, and accepted 56/56 observations from four disjoint holdout journeys
+with zero relationship failures. The shipping v8 identities are:
+
+- profile `8c7496b6aa65dc3f`, JSON SHA-256
+  `b88b4efb556b452098c296a87043160961de9dfa163a4444d653cdfc8b82b178`;
+- adversarial suite `c5da152a1423b07e`, JSON SHA-256
+  `3b6a972d5a37e27b24a896934bf59bfe8e130f99fca8eb1055be168a333a0ae9`;
+- holdout qualification `08902600240f622a`, JSON SHA-256
+  `758835ec24529d79762d937f923c5d551f4ab5972326003ae8c1445282c2b921`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated
+caches and serial process boundaries. A clean optimized rebuild preceded seven
+selected groups: Source 25 6/6, exact artifacts/runtime 13/13, candidate evidence
+27/27, runtime/calibration/quality 47/47, Core/evidence 122/122, preparation
+preflight 24/24, and protected routing 14/14. These total 253 successful selected
+executions with deliberate overlap between some groups. The optimized
+`AutoTechno` product built in 77.96 seconds. The realtime producer
+undefined-symbol audit exposed only the permitted `memcpy` primitive, and
+`git diff --check` was clean.
+
+This local snapshot proves the Source 25 score, PCM, evidence, regenerated
+artifacts, holdout, adversarial, preparation, and realtime-producer contracts
+for quality schema 27, candidate vector 25, canonical engine v26, and primary
+evaluator v8. Publication and exact-head CI are still separate gates. Listening,
+app/route/interruption QA, latency/peak-memory measurement, and hardware-output
+soak were not performed and are not implied.

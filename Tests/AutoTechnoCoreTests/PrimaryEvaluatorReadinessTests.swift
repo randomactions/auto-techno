@@ -6,18 +6,18 @@ import Testing
 struct PrimaryEvaluatorReadinessTests {
     @Test("Modal evidence is non-compensable before the primary policy")
     func modalEvidencePrecedesPrimaryPolicy() {
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 24)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 25)
         #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 2)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 10)
-        #expect(ProfessionalQualityObservation.schemaVersion == 7)
-        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 7)
-        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 8)
-        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 6)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 11)
+        #expect(ProfessionalQualityObservation.schemaVersion == 8)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 8)
+        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 9)
+        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 7)
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v7")
+                "autotechno-quality.primary-calibrated.v8")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v7")
+                "autotechno-candidate-evaluator.primary-calibrated.v8")
         #expect(AutonomousCandidateCompletenessFailure.upperPercussionTailEvidence
             .rawValue == "upper-percussion-tail-evidence")
         #expect(AutonomousCandidateCompletenessFailure.modalPercussionEvidence
@@ -41,14 +41,14 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("Bundled v7 artifacts activate only the exact schema-26 engine")
-    func bundledV7ArtifactsAreReady() throws {
+    @Test("Bundled v8 artifacts activate only the exact schema-27 engine")
+    func bundledV8ArtifactsAreReady() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(artifacts.profile.engineVersion ==
                 QualityQualificationContract.engineVersion)
-        #expect(artifacts.profile.schemaVersion == 7)
-        #expect(artifacts.adversarialSuite.schemaVersion == 8)
-        #expect(artifacts.holdoutQualification.schemaVersion == 6)
+        #expect(artifacts.profile.schemaVersion == 8)
+        #expect(artifacts.adversarialSuite.schemaVersion == 9)
+        #expect(artifacts.holdoutQualification.schemaVersion == 7)
         for sampleRate in [44_100.0, 48_000.0] {
             #expect(ProfessionalQualityPreparationEvaluator(
                 sampleRate: sampleRate,
@@ -57,7 +57,7 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("An 8 kHz route with exact v7 artifacts is unsupported")
+    @Test("An 8 kHz route with exact v8 artifacts is unsupported")
     func unsupported8KRouteStaysUnavailable() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(
@@ -66,7 +66,7 @@ struct PrimaryEvaluatorReadinessTests {
         ).availability == .unsupportedSampleRate)
     }
 
-    @Test("A 12 kHz route with exact v7 artifacts is unsupported")
+    @Test("A 12 kHz route with exact v8 artifacts is unsupported")
     func unsupported12KRouteStaysUnavailable() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(

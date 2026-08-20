@@ -828,6 +828,37 @@ package struct SpatialFDNRenderEvidence: Equatable, Sendable {
     )
 }
 
+/// Same-pass evidence from the exact existing foundation render calls. The
+/// transient start-frame list is reduced into a compact binding during
+/// detached preparation and never reaches scheduling or the callback.
+package struct FoundationRhythmRenderEvidence: Equatable, Sendable {
+    package let bar: Int
+    package let relation: FoundationRhythmicRelation
+    package let sampleRate: Double
+    package let renderedFrameCount: Int
+    package let renderedBassEventCount: Int
+    package let renderedBassStepMask: UInt16
+    package let renderedStartFrames: [Int]
+    package let dryFoundationSampleHash: String
+    package let peak: Double
+    package let rms: Double
+    package let finite: Bool
+
+    package static let neutral = FoundationRhythmRenderEvidence(
+        bar: -1,
+        relation: .established,
+        sampleRate: 0,
+        renderedFrameCount: 0,
+        renderedBassEventCount: 0,
+        renderedBassStepMask: 0,
+        renderedStartFrames: [],
+        dryFoundationSampleHash: "",
+        peak: 0,
+        rms: 0,
+        finite: false
+    )
+}
+
 package struct RenderedBar: Equatable, Sendable {
     package let sampleRate: Double
     package let samples: [Float]
@@ -845,6 +876,7 @@ package struct RenderedBar: Equatable, Sendable {
     /// Reduced fingerprints of the exact post-fader dry taps used by role
     /// analysis. No stem PCM leaves detached preparation.
     package let dryFoundationSampleHash: String
+    package let foundationRhythmRenderEvidence: FoundationRhythmRenderEvidence
     package let dryPercussionSampleHash: String
     package let dryModalPercussionSampleHash: String
     package let modalPercussionRenderEvidence: ModalPercussionBarRenderEvidence
@@ -876,6 +908,7 @@ package struct RenderedBar: Equatable, Sendable {
                 automaticMix: AutomaticMixPlan,
                 stemReconstruction: StemReconstructionEvidence,
                 dryFoundationSampleHash: String,
+                foundationRhythmRenderEvidence: FoundationRhythmRenderEvidence,
                 dryPercussionSampleHash: String,
                 dryModalPercussionSampleHash: String,
                 modalPercussionRenderEvidence: ModalPercussionBarRenderEvidence,
@@ -919,6 +952,7 @@ package struct RenderedBar: Equatable, Sendable {
         self.automaticMix = automaticMix
         self.stemReconstruction = stemReconstruction
         self.dryFoundationSampleHash = dryFoundationSampleHash
+        self.foundationRhythmRenderEvidence = foundationRhythmRenderEvidence
         self.dryPercussionSampleHash = dryPercussionSampleHash
         self.dryModalPercussionSampleHash = dryModalPercussionSampleHash
         self.modalPercussionRenderEvidence = modalPercussionRenderEvidence
@@ -983,6 +1017,8 @@ package struct RenderBlock: Equatable, Sendable {
     /// excludes percussion, upper voices, shared effects, and nonlinear mix
     /// interactions.
     package let protectedFoundationSampleHash: String
+    package let foundationRhythmRenderEvidence: FoundationRhythmRenderEvidence
+    package let foundationRhythmRenderPassesMatch: Bool
     /// Bit-exact fingerprint of the dry percussion tap used for audible output,
     /// masking evidence, and the drum reverb send.
     package let percussionSampleHash: String
@@ -1047,6 +1083,8 @@ package struct RenderBlock: Equatable, Sendable {
                 automaticMix: AutomaticMixPlan,
                 stemReconstruction: StemReconstructionEvidence,
                 protectedFoundationSampleHash: String,
+                foundationRhythmRenderEvidence: FoundationRhythmRenderEvidence = .neutral,
+                foundationRhythmRenderPassesMatch: Bool = true,
                 percussionSampleHash: String,
                 protectedRhythmSampleHash: String,
                 dryModalPercussionSampleHash: String,
@@ -1090,6 +1128,9 @@ package struct RenderBlock: Equatable, Sendable {
         self.automaticMix = automaticMix
         self.stemReconstruction = stemReconstruction
         self.protectedFoundationSampleHash = protectedFoundationSampleHash
+        self.foundationRhythmRenderEvidence = foundationRhythmRenderEvidence
+        self.foundationRhythmRenderPassesMatch =
+            foundationRhythmRenderPassesMatch
         self.percussionSampleHash = percussionSampleHash
         self.protectedRhythmSampleHash = protectedRhythmSampleHash
         self.dryModalPercussionSampleHash = dryModalPercussionSampleHash
@@ -1663,6 +1704,11 @@ package enum AutonomousPhraseRenderer {
                 automaticMix: rendered.automaticMix,
                 stemReconstruction: rendered.stemReconstruction,
                 protectedFoundationSampleHash: protectedRhythm.dryFoundationSampleHash,
+                foundationRhythmRenderEvidence:
+                    protectedRhythm.foundationRhythmRenderEvidence,
+                foundationRhythmRenderPassesMatch:
+                    protectedRhythm.foundationRhythmRenderEvidence ==
+                        rendered.foundationRhythmRenderEvidence,
                 percussionSampleHash: protectedRhythm.dryPercussionSampleHash,
                 protectedRhythmSampleHash: ExactPCMFingerprint.stereo(
                     left: protectedRhythm.leftSamples,

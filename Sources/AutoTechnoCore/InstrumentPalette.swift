@@ -276,9 +276,26 @@ package enum InstrumentPalette {
         kind: AutonomousPhraseKind,
         gesture: SynthGesture,
         mutationAmount: Double,
-        foundationBehavior: FoundationBehavior? = nil
+        foundationBehavior: FoundationBehavior? = nil,
+        foundationRhythmicRelation: FoundationRhythmicRelation = .established
     ) -> InstrumentAssignment {
         if let foundationBehavior {
+            if foundationRhythmicRelation == .dottedThreeSixteenth {
+                guard foundationBehavior.companion == .bass else {
+                    return safeFoundation()
+                }
+                return assignment(
+                    use: .foundationBass,
+                    patch: .bassPluck,
+                    automation: InstrumentAutomation(
+                        color: 0.40 + mutationAmount * 0.18,
+                        shape: 0.84,
+                        motion: 0.22 + mutationAmount * 0.14,
+                        space: 0
+                    ),
+                    pulseEchoEnabled: false
+                )
+            }
             let patch: InstrumentPatch
             let automation: InstrumentAutomation
             switch foundationBehavior {

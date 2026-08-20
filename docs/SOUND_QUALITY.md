@@ -11,9 +11,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 26, candidate-vector schema 24,
+candidate uses quality-contract schema 27, candidate-vector schema 25,
 candidate-transaction schema 4, and canonical engine identity
-`autotechno-canonical-engine.v25`. It preserves
+`autotechno-canonical-engine.v26`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
@@ -22,6 +22,7 @@ architecture-local dry-
 PCM, acid-operator, TPT/ADAA nonlinear-core, rising spectral-cluster, and tonal-envelope-expansion
 evidence, score-owned gated and anticipatory
 percussion-return texture,
+score-owned dotted foundation rhythm and exact dry Bass Pluck consequence,
 shared pulse-echo return-drive,
 score-owned spatial-FDN configuration and exact stereo wet consequence,
 score-bound phrase composition covering true percussion resampling,
@@ -204,6 +205,19 @@ adversarial case rejects a disconnected filter consequence. The discrete v1
 scale sequence is a replaceable engineering
 realization, not the durable definition of rhythmic motion.
 
+Foundation-rhythm evidence covers every rendered bar without creating a second
+bass lane or effect chain. Eligible four-bar-aligned Lock pairs replace only
+their existing bass events with complementary two-bar `0x8248` / `0x4824`
+masks, preserving the kick, protected foundation route, score swing, and dry
+center placement. Each record binds relation and pair phase, score/render event
+counts and masks, exact applied start-frame fingerprint, dry foundation
+hash/peak/RMS, Bass Pluck assignment, and full/protected pass equality.
+Ineligible and incomplete pairs remain exact established behavior.
+Professional dimensions retain active-bar prevalence and mean active crest
+factor; a dedicated adversarial case rejects impossible prevalence. The
+integer-grid masks and current Bass Pluck realization are replaceable DSP, not
+the durable definition of cross-bar foundation timing.
+
 Spatial-FDN evidence retains one compact record for every rendered bar. It
 binds the existing score-owned depth/carrier/send/filter articulation and the
 scene-derived eight-line configuration to exact input and stereo wet hashes,
@@ -215,11 +229,11 @@ identity. The record is required for structural completeness and changes the
 transaction fingerprint. See [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md) for the
 signal and replacement contract.
 
-`ProfessionalEvidenceReportBank` v10 accepts a bank only when every canonical
+`ProfessionalEvidenceReportBank` v11 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v7 from the v7 profile, v8 adversarial suite,
-and v6 disjoint holdout. It judges every
+exact-engine primary evaluator v8 from the v8 profile, v9 adversarial suite,
+and v7 disjoint holdout. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.
@@ -304,7 +318,7 @@ sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
 status. It also retains exact first/last sample bit patterns, the pre-drive peak
 frame, the exact input/amount witness at the post-drive peak, and a replayable
 changed-frame witness together with that frame's exact input bits.
-Candidate-vector schema 24 binds that record to the matching instrument effect
+Candidate-vector schema 25 binds that record to the matching instrument effect
 access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
 sample-rate-normalized boundary transition. Neutral drive requires the no-change
 sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
@@ -333,7 +347,7 @@ uses half depth, response uses full depth, and the full displacement is capped
 at `0.12` of one sixteenth. Note count, base step, pitch, velocity, instrument,
 requested duration, gate, and every protected-rhythm event remain unchanged.
 
-Candidate-vector schema 24 retains one compact record per full rendered bar. It
+Candidate-vector schema 25 retains one compact record per full rendered bar. It
 binds route-derived frame geometry, score and actual renderer onset facts,
 requested gate end, bounded renderer-owned applied gate end, causal role counts,
 exact protected/role offset relationships, and separate shadow/response dry
@@ -386,8 +400,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 26, candidate-vector schema 24,
-candidate-transaction schema 4, and canonical engine v25, the versioned
+Under quality-contract schema 27, candidate-vector schema 25,
+candidate-transaction schema 4, and canonical engine v26, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

@@ -1397,3 +1397,86 @@ local debug and release objects, and the optimized `AutoTechno` product built in
 79.44 seconds. Publication and exact-head CI remain separate gates. No listening,
 app/route/interruption QA, latency or peak-memory measurement, hardware-output
 soak, or claim that the inaccessible source demonstration was heard is made.
+
+## Source 25: dotted foundation rhythm — 2026-08-19
+
+Source ID `25` used YouTube video `uVUjCXacvt0`, *Dotted basslines for deep
+grooves*, from Underdog Electronic Music School, published 2022-09-12 with a
+15:23 duration. The clean-room capture used unauthenticated yt-dlp `2026.07.04`
+for metadata, automatic English captions, and top-ranked comments:
+
+```sh
+/opt/homebrew/bin/yt-dlp --skip-download --write-auto-subs --sub-langs 'en.*,en' --sub-format vtt --write-info-json --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source25-research.vGWBQ3 -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=uVUjCXacvt0'
+```
+
+No manual subtitle track was available. Automatic `en` and `en-orig` VTTs
+were byte-identical with SHA-256
+`56bf55e624c80afa39a67b844a34ad88bcd57092b4ee1fcabccdae247ed14170`.
+The metadata/comment artifact had SHA-256
+`2fbfbf8f49f5b6b5760d084e6dd74db00e4f1fc68745ead47c6419b79f16913f`.
+The capture returned exactly 50 top-ranked top-level comments and ten replies;
+one top-level item was a channel promotion, leaving 49 independent comments.
+The advertised YouTube audio formats returned HTTP 403 during an unauthenticated
+best-audio-to-WAV attempt, so this source has no audio-demo measurement. No
+cookies, signed-in session, account, or browser state was used. Captions,
+comments, metadata, and research files remain untracked.
+
+The bounded caption paraphrase is: `0:00...0:42` introduces a dotted bass
+relationship under an established four-to-the-floor frame; `0:42...1:36`
+defines the durable timing relation as three sixteenth-note positions;
+`2:02...3:12` separates that onset relationship from sound choice and favours
+short, legible notes; `3:25...4:29` lets the relation cross the bar while
+requiring a two-bar downbeat reset rather than a free-running clock;
+`4:36...6:10` adds root and phrase-end harmonic variation without changing the
+rhythmic identity; `6:21...7:35` treats swing and velocity as optional
+articulation rather than prerequisites; `7:36...12:30` demonstrates several
+possible sound realizations; and `12:30...13:35` keeps any spatial repeats out
+of the sub range and distinct from the note cycle. No displayed oscillator,
+filter, modulation, glide, unison, drive, delay, or mix setting is portable.
+
+The comment sample converged on the dotted-eighth/three-sixteenth identity and
+on filtering spatial repeats away from the low foundation. One isolated
+layered-polymeter suggestion did not justify another bass track. The durable
+hypothesis is therefore a bounded two-bar onset relationship on the existing
+foundation, not a new instrument, sequencer, delay, reverb, or user-facing
+mode.
+
+Repository reconciliation explicitly considered both reuse and expansion.
+The protected foundation route, Resonant Mono architecture, Bass Pluck patch,
+score swing, TPT filter, ADAA nonlinear core, and private foundation evidence
+already own the necessary sound and safety behavior. Source 25 adds one
+`FoundationRhythmicRelation` to the canonical resolved score. Eligible
+four-bar-aligned Lock pairs replace only their existing bass events with
+complementary two-bar masks `0x8248` and `0x4824`, producing a continuous
+three-sixteenth relation whose second bar restores the phrase boundary. Kick,
+weak percussion, upper notes, transport, harmony, route topology, spatial
+returns, continuation state, random draws, and the realtime callback are not
+changed. Ineligible, incomplete, conservative, non-bass, non-foundation-focus,
+omit, and occupied-step paths remain exact established behavior.
+
+The existing Bass Pluck renders the relation dry and centered. Same-pass
+evidence binds absolute bar and pair phase, score/render event counts and masks,
+exact rendered start frames, dry foundation hash/peak/RMS, patch assignment,
+full/protected pass equality, and candidate-plan identity. Candidate validation
+requires either all-established bars or exact adjacent active pairs at the
+canonical boundary. Professional observation retains active-bar prevalence and
+mean active foundation crest factor; a non-compensable adversarial case rejects
+impossible overpopulation. The primary evaluator remains the single canonical
+decision owner.
+
+The durable intention and replacement boundary are recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). The current
+integer-grid onset projection is provisional. A later serious renderer may
+replace it in place with sub-sample event scheduling, tempo-aware articulation,
+more expressive score-owned pitch or envelope trajectories, improved Bass Pluck
+synthesis, or carefully filtered spatial reinforcement only after calibrated
+timing, masking, translation, repetition, or artifact evidence exposes a
+repeatable deficit. The replacement must preserve the protected foundation
+owner, two-bar phrase reset, exact neutral path, deterministic evidence, and one
+primary decision; it must not coexist with a second bass sequencer or parallel
+foundation track.
+
+Validation and publication evidence is appended only after the exact source
+snapshot passes its isolated local matrix and exact-head CI. No listening,
+app/route/interruption QA, latency or peak-memory measurement, hardware-output
+soak, or claim that the inaccessible source demonstration was heard is made.

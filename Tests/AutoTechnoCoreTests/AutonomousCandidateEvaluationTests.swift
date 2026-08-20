@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 24)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 25)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -1250,10 +1250,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 24)
-        #expect(QualityQualificationContract.schemaVersion == 26)
+        #expect(vector.schemaVersion == 25)
+        #expect(QualityQualificationContract.schemaVersion == 27)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v25")
+                "autotechno-canonical-engine.v26")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3557,7 +3557,7 @@ struct AutonomousCandidateEvaluationTests {
         }
 
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
-                "1ce5c85e242e6663")
+            "26a404b65f265cd8")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -3565,7 +3565,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-                "2c74f4a41f22e06b")
+            "6e9873a01ed88477")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3917,6 +3917,28 @@ struct AutonomousCandidateEvaluationTests {
         )
         let livePhraseHash = AutonomousCandidateEvaluationVector
             .liveMasterPhrasePCMFingerprint([liveBlockHash])
+        let foundationRhythm = AutonomousFoundationRhythmBarEvidence(
+            bar: evidenceBar,
+            relation: .established,
+            pairPhase: FoundationRhythmicRelationContract.pairPhase(
+                absoluteBar: evidenceBar
+            ),
+            scoreBassEventCount: 0,
+            scoreBassStepMask: 0,
+            renderedBassEventCount: 0,
+            renderedBassStepMask: 0,
+            renderedFrameCount: 14_769,
+            renderedStartFrameFingerprint:
+                AutonomousFoundationRhythmBarEvidence
+                    .startFrameFingerprint([]),
+            dryFoundationSampleHash: "0123456789abcdef",
+            peak: 0,
+            rms: 0,
+            bassPluckAssigned: false,
+            renderPassesMatch: true,
+            bindingValid: true,
+            finite: true
+        )
         return AutonomousCandidateEvaluationVector(
             planFingerprint: planFingerprint,
             graphFingerprint: graphFingerprint,
@@ -3942,6 +3964,7 @@ struct AutonomousCandidateEvaluationTests {
                 targetKickOverFoundationDB: nil
             )],
             kickSyntax: [kickSyntaxBar ?? fixtureKickSyntax(bar: evidenceBar)],
+            foundationRhythm: [foundationRhythm],
             climaxArc: climaxArc ?? .inactive(releaseStartBar: evidenceBar),
             groovePulse: [groovePulseBar ?? AutonomousGroovePulseBarEvidence(
                 bar: evidenceBar,

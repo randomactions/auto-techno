@@ -75,6 +75,10 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
     case kickAudibleToDetectorDBMean = "kick-audible-to-detector-db-mean"
     case kickDuckingEnvelopeRatioMean = "kick-ducking-envelope-ratio-mean"
     case kickAudibleGainMean = "kick-audible-gain-mean"
+    case foundationDottedRhythmActiveBarRatio =
+        "foundation-dotted-rhythm-active-bar-ratio"
+    case foundationDottedRhythmCrestFactorDBMean =
+        "foundation-dotted-rhythm-crest-factor-db-mean"
     case modalPercussionActiveBarRatio =
         "modal-percussion-active-bar-ratio"
     case modalPercussionEventCountMean =
@@ -513,9 +517,9 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 7
+    package static let schemaVersion = 8
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v7"
+        "autotechno-professional-quality-observation.v8"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -668,6 +672,12 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             $0.detectorRMS > 0 && $0.audibleRMS > 0
         }
         let kickDivisor = Double(max(1, kickSyntax.count))
+        let foundationRhythm = vector.foundationRhythm
+        let activeFoundationRhythm = foundationRhythm.filter {
+            $0.relation ==
+                FoundationRhythmicRelation.dottedThreeSixteenth.rawValue
+        }
+        let foundationRhythmDivisor = Double(max(1, foundationRhythm.count))
 
         let modalBars = vector.modalPercussion
         let activeModalBars = modalBars.filter {
@@ -835,6 +845,17 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 })),
             ProfessionalQualityMetricValue(metric: .kickAudibleGainMean,
                 value: mean(kickSyntax.map(\.audibleGain))),
+            ProfessionalQualityMetricValue(
+                metric: .foundationDottedRhythmActiveBarRatio,
+                value: Double(activeFoundationRhythm.count) /
+                    foundationRhythmDivisor
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .foundationDottedRhythmCrestFactorDBMean,
+                value: mean(activeFoundationRhythm.map {
+                    decibels($0.peak, $0.rms)
+                })
+            ),
             ProfessionalQualityMetricValue(
                 metric: .modalPercussionActiveBarRatio,
                 value: Double(activeModalBars.count) / modalDivisor
@@ -1182,9 +1203,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 7
+    package static let schemaVersion = 8
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v7"
+        "autotechno-professional-quality-profile.v8"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1615,7 +1636,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .truePeakDBTP, .crestFactorDB, .rmsTrajectoryDeltaMeanDB,
                 .rmsTrajectoryDeltaPeakDB, .barLoudnessSpanLU,
                 .kickOverFoundationActiveDBMean,
-                .kickAudibleToDetectorDBMean:
+                .kickAudibleToDetectorDBMean,
+                .foundationDottedRhythmCrestFactorDBMean:
             absoluteFloor = 0.75
         case .spectralCentroidMeanHz, .spectralCentroidSpreadHz,
                 .spectralBandwidthMeanHz, .spectralRolloff85MeanHz,
@@ -1733,6 +1755,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .kickGroundedBarRatio, .kickWithheldBarRatio,
                 .kickRecoveryBarRatio, .kickDuckingEnvelopeRatioMean,
                 .kickAudibleGainMean, .modalPercussionActiveBarRatio,
+                .foundationDottedRhythmActiveBarRatio,
                 .modalPercussionMaskingMaximumOverlap,
                 .modalPercussionMaximumPoleRadius,
                 .upperPercussionTailClearanceEventRatio,
@@ -1752,7 +1775,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .rmsTrajectoryDeltaMeanDB, .rmsTrajectoryDeltaPeakDB,
                 .barLoudnessSpanLU, .barTransientDensityMean,
                 .barTransientDensitySpan, .barCrestFactorMean,
-                .barCrestFactorSpan:
+                .barCrestFactorSpan,
+                .foundationDottedRhythmCrestFactorDBMean:
             return 0...120
         case .kickOverFoundationActiveDBMean:
             return -120...120

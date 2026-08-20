@@ -880,6 +880,126 @@ package struct AutonomousKickSyntaxBarEvidence: Codable, Equatable, Sendable {
 
 }
 
+/// One bounded record per rendered bar binds the score-owned two-bar
+/// foundation relation to the exact existing Resonant Mono render calls and
+/// dry foundation consequence. No sample arrays survive reduction.
+package struct AutonomousFoundationRhythmBarEvidence: Codable, Equatable, Sendable {
+    package let bar: Int
+    package let relation: String
+    package let pairPhase: Int
+    package let scoreBassEventCount: Int
+    package let scoreBassStepMask: UInt16
+    package let renderedBassEventCount: Int
+    package let renderedBassStepMask: UInt16
+    package let renderedFrameCount: Int
+    package let renderedStartFrameFingerprint: String
+    package let dryFoundationSampleHash: String
+    package let peak: Double
+    package let rms: Double
+    package let bassPluckAssigned: Bool
+    package let renderPassesMatch: Bool
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(
+        bar: Int,
+        relation: FoundationRhythmicRelation,
+        pairPhase: Int,
+        scoreBassEventCount: Int,
+        scoreBassStepMask: UInt16,
+        renderedBassEventCount: Int,
+        renderedBassStepMask: UInt16,
+        renderedFrameCount: Int,
+        renderedStartFrameFingerprint: String,
+        dryFoundationSampleHash: String,
+        peak: Double,
+        rms: Double,
+        bassPluckAssigned: Bool,
+        renderPassesMatch: Bool,
+        bindingValid: Bool,
+        finite: Bool
+    ) {
+        self.bar = bar
+        self.relation = relation.rawValue
+        self.pairPhase = pairPhase
+        self.scoreBassEventCount = scoreBassEventCount
+        self.scoreBassStepMask = scoreBassStepMask
+        self.renderedBassEventCount = renderedBassEventCount
+        self.renderedBassStepMask = renderedBassStepMask
+        self.renderedFrameCount = renderedFrameCount
+        self.renderedStartFrameFingerprint = renderedStartFrameFingerprint
+        self.dryFoundationSampleHash = dryFoundationSampleHash
+        self.peak = peak
+        self.rms = rms
+        self.bassPluckAssigned = bassPluckAssigned
+        self.renderPassesMatch = renderPassesMatch
+        self.bindingValid = bindingValid
+        self.finite = finite
+    }
+
+    package var isFinite: Bool {
+        finite && peak.isFinite && rms.isFinite
+    }
+
+    package func isComplete(sampleRate: Double) -> Bool {
+        guard let resolvedRelation = FoundationRhythmicRelation(
+                rawValue: relation
+              ),
+              bar >= 0,
+              pairPhase == FoundationRhythmicRelationContract.pairPhase(
+                absoluteBar: bar
+              ),
+              sampleRate.isFinite,
+              (QualityQualificationContract.minimumSupportedSampleRate...QualityQualificationContract.maximumSupportedSampleRate)
+                .contains(sampleRate),
+              renderedFrameCount == Int(
+                (240.0 / AutonomousSessionDirector.bpm * sampleRate).rounded()
+              ),
+              (0...16).contains(scoreBassEventCount),
+              (0...16).contains(renderedBassEventCount),
+              scoreBassEventCount == renderedBassEventCount,
+              scoreBassStepMask == renderedBassStepMask,
+              scoreBassEventCount == 0
+                ? scoreBassStepMask == 0
+                : scoreBassStepMask.nonzeroBitCount > 0 &&
+                    scoreBassStepMask.nonzeroBitCount <= scoreBassEventCount,
+              Self.isSampleHash(renderedStartFrameFingerprint),
+              Self.isSampleHash(dryFoundationSampleHash),
+              peak >= 0,
+              peak <= Double(Float.greatestFiniteMagnitude),
+              rms >= 0,
+              rms <= peak,
+              isFinite,
+              renderPassesMatch,
+              bindingValid else {
+            return false
+        }
+        switch resolvedRelation {
+        case .established:
+            return scoreBassEventCount == 0 || (peak > 0 && rms > 0)
+        case .dottedThreeSixteenth:
+            return scoreBassEventCount == 4 && bassPluckAssigned &&
+                scoreBassStepMask == FoundationRhythmicRelationContract
+                    .stepMask(pairPhase: pairPhase) &&
+                peak > 0 && rms > 0
+        }
+    }
+
+    package static func startFrameFingerprint(_ frames: [Int]) -> String {
+        var sink = StreamingFNV1a()
+        sink.domain("foundation-rhythm-start-frames.typed.v1")
+        sink.collection(frames.count)
+        for frame in frames { sink.int(frame) }
+        return fixedWidthFingerprintHex(sink.value)
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 package enum AutonomousClimaxArcRelation: String, Codable, Equatable, Sendable {
     case none
     case dramaticDebtRelease = "dramatic-debt-release"
@@ -4556,6 +4676,7 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
     case stemEvidence = "stem-evidence"
     case automaticMixEvidence = "automatic-mix-evidence"
     case kickSyntaxEvidence = "kick-syntax-evidence"
+    case foundationRhythmEvidence = "foundation-rhythm-evidence"
     case climaxArcEvidence = "climax-arc-evidence"
     case groovePulseEvidence = "groove-pulse-evidence"
     case closedHatEvidence = "closed-hat-evidence"
@@ -4598,7 +4719,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 24
+    package static let schemaVersion = 25
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -4625,6 +4746,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let automaticMix: [AutonomousAutomaticMixEvidence]
     package let sourceKickSyntaxBarCount: Int
     package let kickSyntax: [AutonomousKickSyntaxBarEvidence]
+    package let sourceFoundationRhythmBarCount: Int
+    package let foundationRhythm: [AutonomousFoundationRhythmBarEvidence]
     package let climaxArc: AutonomousClimaxArcEvidence
     package let sourceGroovePulseBarCount: Int
     package let groovePulse: [AutonomousGroovePulseBarEvidence]
@@ -4686,6 +4809,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         stems: [AutonomousStemBarEvidence],
         automaticMix: [AutonomousAutomaticMixEvidence],
         kickSyntax: [AutonomousKickSyntaxBarEvidence],
+        foundationRhythm: [AutonomousFoundationRhythmBarEvidence],
         climaxArc: AutonomousClimaxArcEvidence,
         groovePulse: [AutonomousGroovePulseBarEvidence],
         closedHat: [AutonomousClosedHatBarEvidence] = [],
@@ -4736,6 +4860,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.automaticMix = Array(automaticMix.prefix(Self.maximumBarCount))
         sourceKickSyntaxBarCount = kickSyntax.count
         self.kickSyntax = Array(kickSyntax.prefix(Self.maximumBarCount))
+        sourceFoundationRhythmBarCount = foundationRhythm.count
+        self.foundationRhythm = Array(
+            foundationRhythm.prefix(Self.maximumBarCount)
+        )
         self.climaxArc = climaxArc
         sourceGroovePulseBarCount = groovePulse.count
         self.groovePulse = Array(groovePulse.prefix(Self.maximumBarCount))
@@ -5073,6 +5201,63 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 renderPassesMatch: block.kickRenderPassesMatch,
                 bindingValid: bindingValid
             ))
+        }
+        let foundationRhythm = boundedBlocks.enumerated().map { index, block in
+            let resolved = block.resolvedPerformance
+            let render = block.foundationRhythmRenderEvidence
+            let scoreBassEvents = resolved.ensemble.events.filter {
+                $0.voice == .bass
+            }
+            let scoreBassSteps = scoreBassEvents.map(\.step)
+            let scoreMask = stepMaskAllowingDuplicates(scoreBassSteps)
+            let stepFrames = Double(block.left.count) / 16.0
+            let expectedStartFrames = scoreBassEvents.map { event in
+                let offset = VoiceRenderer.timingOffsetInSteps(
+                    for: .bass,
+                    step: event.step,
+                    dna: plan.dna
+                )
+                return Int(((Double(event.step) + offset) * stepFrames).rounded())
+            }
+            let planBarMatches = plan.resolvedBars.indices.contains(index) &&
+                plan.resolvedBars[index] == resolved &&
+                resolved.performance.bar == block.bar
+            let assignment = block.synthPerformance.foundationInstrument
+            let bindingValid = planBarMatches &&
+                block.section == resolved.performance.section &&
+                block.left.count == block.right.count &&
+                render.bar == block.bar &&
+                render.relation == resolved.foundationRhythmicRelation &&
+                render.sampleRate == sampleRate &&
+                render.renderedFrameCount == block.left.count &&
+                render.renderedBassEventCount == scoreBassEvents.count &&
+                (scoreMask.map { render.renderedBassStepMask == $0 } ?? false) &&
+                render.renderedStartFrames == expectedStartFrames &&
+                assignment.use == .foundationBass &&
+                assignment.isValid &&
+                block.foundationRhythmRenderPassesMatch
+            return AutonomousFoundationRhythmBarEvidence(
+                bar: block.bar,
+                relation: resolved.foundationRhythmicRelation,
+                pairPhase: FoundationRhythmicRelationContract.pairPhase(
+                    absoluteBar: block.bar
+                ),
+                scoreBassEventCount: scoreBassEvents.count,
+                scoreBassStepMask: scoreMask ?? 0,
+                renderedBassEventCount: render.renderedBassEventCount,
+                renderedBassStepMask: render.renderedBassStepMask,
+                renderedFrameCount: render.renderedFrameCount,
+                renderedStartFrameFingerprint:
+                    AutonomousFoundationRhythmBarEvidence
+                        .startFrameFingerprint(render.renderedStartFrames),
+                dryFoundationSampleHash: render.dryFoundationSampleHash,
+                peak: render.peak,
+                rms: render.rms,
+                bassPluckAssigned: assignment.patch == .bassPluck,
+                renderPassesMatch: block.foundationRhythmRenderPassesMatch,
+                bindingValid: bindingValid,
+                finite: render.finite
+            )
         }
         let climaxArc = makeClimaxArcEvidence(
             plan: plan,
@@ -5416,6 +5601,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             stems: stems,
             automaticMix: automaticMix,
             kickSyntax: kickSyntax,
+            foundationRhythm: foundationRhythm,
             climaxArc: climaxArc,
             groovePulse: groovePulse,
             closedHat: closedHat,
@@ -5741,6 +5927,18 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             let bit = UInt16(1) << UInt16(step)
             guard result & bit == 0 else { return nil }
             result |= bit
+        }
+        return result
+    }
+
+    /// Foundation arbitration may retain more than one bass proposal at the
+    /// same step. The count and ordered start-frame fingerprint preserve that
+    /// multiplicity; this mask binds only the occupied sixteenth positions.
+    private static func stepMaskAllowingDuplicates(_ steps: [Int]) -> UInt16? {
+        var result: UInt16 = 0
+        for step in steps {
+            guard (0..<16).contains(step) else { return nil }
+            result |= UInt16(1) << UInt16(step)
         }
         return result
     }
@@ -6309,6 +6507,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             stems.allSatisfy { $0.isFinite } &&
             automaticMix.allSatisfy { $0.isFinite } &&
             kickSyntax.allSatisfy { $0.isFinite } &&
+            foundationRhythm.allSatisfy { $0.isFinite } &&
             groovePulse.allSatisfy { $0.isFinite } &&
             closedHat.allSatisfy { $0.isFinite } &&
             upperPercussionTail.allSatisfy { $0.isFinite } &&
@@ -6357,6 +6556,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         }
         if !kickSyntaxEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.kickSyntaxEvidence)
+        }
+        if !foundationRhythmEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.foundationRhythmEvidence)
         }
         if !climaxArcEvidenceIsComplete() {
             failures.append(.climaxArcEvidence)
@@ -6411,6 +6613,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
               graph.isComplete, routeContinuation.isComplete,
               sourceInstrumentBarCount == instruments.count,
               instruments.count == fullMix.sourceBarCount,
+              sourceFoundationRhythmBarCount == foundationRhythm.count,
+              foundationRhythm.count == fullMix.sourceBarCount,
               sourceModalPercussionBarCount == modalPercussion.count,
               modalPercussion.count == fullMix.sourceBarCount,
               sourcePercussionEchoTextureBarCount ==
@@ -6654,6 +6858,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceStemBarCount == stems.count &&
             sourceAutomaticMixBarCount == automaticMix.count &&
             sourceKickSyntaxBarCount == kickSyntax.count &&
+            sourceFoundationRhythmBarCount == foundationRhythm.count &&
             sourceGroovePulseBarCount == groovePulse.count &&
             sourceClosedHatBarCount == closedHat.count &&
             sourceUpperPercussionTailBarCount == upperPercussionTail.count &&
@@ -6669,6 +6874,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             stems.count == fullMix.sourceBarCount &&
             automaticMix.count == fullMix.sourceBarCount &&
             kickSyntax.count == fullMix.sourceBarCount &&
+            foundationRhythm.count == fullMix.sourceBarCount &&
             groovePulse.count == fullMix.sourceBarCount &&
             closedHat.count == fullMix.sourceBarCount &&
             upperPercussionTail.count == fullMix.sourceBarCount &&
@@ -6803,6 +7009,86 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 FoundationCompanion.bass.rawValue else {
                 return false
             }
+        }
+        return true
+    }
+
+    @inline(never)
+    private func foundationRhythmEvidenceIsComplete(
+        expectedBars: Set<Int>
+    ) -> Bool {
+        guard let phraseKind = AutonomousPhraseKind(rawValue: symbolic.phraseKind),
+              Set(foundationRhythm.map { $0.bar }) == expectedBars,
+              foundationRhythm.map({ $0.bar }) == fullMix.bars.map({ $0.bar }),
+              foundationRhythm.count == fullMix.sourceBarCount else {
+            return false
+        }
+        for index in foundationRhythm.indices {
+            let rhythm = foundationRhythm[index]
+            let stem = stems[index]
+            let mix = automaticMix[index]
+            let instrument = instruments[index]
+            guard rhythm.bar == stem.bar,
+                  rhythm.bar == mix.bar,
+                  rhythm.bar == instrument.bar,
+                  rhythm.isComplete(
+                    sampleRate: routeContinuation.sampleRate
+                  ),
+                  let foundationStem = stem.roles.first(where: {
+                    $0.role == MixRole.foundation.rawValue
+                  }) else {
+                return false
+            }
+            guard FoundationRhythmicRelation(rawValue: rhythm.relation) ==
+                    .dottedThreeSixteenth else {
+                continue
+            }
+            let assignmentIsPresent = instrument.architectures.contains {
+                architecture in
+                architecture.assignments.contains {
+                    $0.use == InstrumentUse.foundationBass.rawValue &&
+                        $0.patch == InstrumentPatch.bassPluck.rawValue
+                }
+            }
+            guard phraseKind == .lock,
+                  mix.foundationCompanion == FoundationCompanion.bass.rawValue,
+                  assignmentIsPresent,
+                  foundationStem.peak > 0,
+                  foundationStem.rms > 0,
+                  foundationStem.activeRMS > 0,
+                  foundationStem.occupancy > 0 else {
+                return false
+            }
+        }
+        return foundationRhythmArcIsCanonical()
+    }
+
+    @inline(never)
+    private func foundationRhythmArcIsCanonical() -> Bool {
+        var index = 0
+        while index < foundationRhythm.count {
+            let current = foundationRhythm[index]
+            guard let relation = FoundationRhythmicRelation(
+                rawValue: current.relation
+            ) else { return false }
+            if relation == .established {
+                index += 1
+                continue
+            }
+            guard current.pairPhase == 0,
+                  foundationRhythm.indices.contains(index + 1) else {
+                return false
+            }
+            let next = foundationRhythm[index + 1]
+            guard next.relation ==
+                    FoundationRhythmicRelation.dottedThreeSixteenth.rawValue,
+                  next.pairPhase == 1,
+                  current.bar < Int.max,
+                  next.bar == current.bar + 1,
+                  Self.macroPosition(current.bar).isMultiple(of: 4) else {
+                return false
+            }
+            index += 2
         }
         return true
     }
@@ -7082,6 +7368,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceAutomaticMixBarCount >= automaticMix.count &&
             sourceKickSyntaxBarCount >= kickSyntax.count &&
             sourceKickSyntaxBarCount <= Self.maximumBarCount &&
+            sourceFoundationRhythmBarCount >= foundationRhythm.count &&
+            sourceFoundationRhythmBarCount <= Self.maximumBarCount &&
             sourceGroovePulseBarCount >= groovePulse.count &&
             sourceClosedHatBarCount >= closedHat.count &&
             sourceUpperPercussionTailBarCount >= upperPercussionTail.count &&
@@ -7126,6 +7414,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             stems.count <= Self.maximumBarCount &&
             automaticMix.count <= Self.maximumBarCount &&
             kickSyntax.count <= Self.maximumBarCount &&
+            foundationRhythm.count <= Self.maximumBarCount &&
             groovePulse.count <= Self.maximumBarCount &&
             closedHat.count <= Self.maximumBarCount &&
             upperPercussionTail.count <= Self.maximumBarCount &&
@@ -7154,6 +7443,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     private func recordCollectionsAreBounded() -> Bool {
         maskingRecordsAreBounded() && stemRecordsAreBounded() &&
             automaticMixRecordsAreBounded() && kickSyntaxRecordsAreBounded() &&
+            foundationRhythmRecordsAreBounded() &&
             groovePulseRecordsAreBounded() &&
             closedHatRecordsAreBounded() &&
             upperPercussionTailRecordsAreBounded() &&
@@ -7206,6 +7496,16 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 $0.audibleNonzeroSampleCount >= 0 &&
                 $0.audibleNonzeroSampleCount <= $0.renderedFrameCount
         }
+    }
+
+    @inline(never)
+    private func foundationRhythmRecordsAreBounded() -> Bool {
+        foundationRhythm.map({ $0.bar }) == fullMix.bars.map({ $0.bar }) &&
+            foundationRhythm.allSatisfy {
+                (0...16).contains($0.scoreBassEventCount) &&
+                    (0...16).contains($0.renderedBassEventCount) &&
+                    $0.renderedFrameCount >= 0
+            }
     }
 
     @inline(never)
@@ -7694,6 +7994,7 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
         correction.symbolic == initial.symbolic &&
             correction.graph == initial.graph &&
             correction.kickSyntax == initial.kickSyntax &&
+            correction.foundationRhythm == initial.foundationRhythm &&
             correction.climaxArc == initial.climaxArc &&
             correction.modalPercussion == initial.modalPercussion &&
             correction.incomingLiveMasterRevision ==

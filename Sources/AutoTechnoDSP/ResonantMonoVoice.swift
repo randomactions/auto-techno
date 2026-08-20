@@ -98,6 +98,7 @@ struct ResonantMonoState: Equatable, Sendable {
 /// protected foundation and eligible upper sequences. It runs only during
 /// detached preparation; its bounded continuation lives in `RenderState`.
 enum ResonantMonoVoice {
+    @discardableResult
     static func renderFoundation(
         _ output: inout [Float],
         measurement: inout [Float],
@@ -113,12 +114,12 @@ enum ResonantMonoVoice {
         state: inout ResonantMonoState,
         nonlinearCoreEvidence:
             inout TPTAntialiasedNonlinearCoreEvidenceAccumulator
-    ) {
+    ) -> Int {
         guard assignment.architecture == .resonantMono,
-              assignment.use == .foundationBass else { return }
+              assignment.use == .foundationBass else { return 0 }
         let duration = 0.16 + assignment.automation.shape * 0.18
         var noModulationMeasurement: [Float] = []
-        _ = renderEvent(
+        let result = renderEvent(
             output: &output,
             roleMeasurement: &measurement,
             architectureMeasurement: &architectureMeasurement,
@@ -138,6 +139,7 @@ enum ResonantMonoVoice {
             modulationMeasurement: &noModulationMeasurement,
             nonlinearCoreEvidence: &nonlinearCoreEvidence
         )
+        return result.renderedFrameCount
     }
 
     static func renderUpper(

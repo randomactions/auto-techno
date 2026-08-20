@@ -27,6 +27,9 @@ account.
 - one score-owned six-mode modal-percussion foundation voice with bounded
   four-slot continuation, protected routing, and rate-normalized pitch,
   envelope, spectral, masking, and stability evidence;
+- one bounded two-bar dotted foundation relation that reuses the protected
+  Bass Pluck path, preserves the kick clock, and returns at the phrase boundary
+  without adding another bass track, sequencer, or spatial return;
 - one post-arbitration upper-percussion tail policy that reuses the existing
   clap, open-hat, and metallic voices, preserves their attack, and shortens
   their release only when another score role owns the foreground;

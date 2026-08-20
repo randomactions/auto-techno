@@ -500,7 +500,7 @@ struct QualityQualificationFoundationTests {
         }
     }
 
-    @Test("Professional Evidence v10 bank requires every journey checkpoint and unavailable policy")
+    @Test("Professional Evidence v11 bank requires every journey checkpoint and unavailable policy")
     func professionalEvidenceReportBank() throws {
         let reports = try qualificationReports()
 
@@ -986,6 +986,30 @@ struct QualityQualificationFoundationTests {
         )
         let livePhraseHash = AutonomousCandidateEvaluationVector
             .liveMasterPhrasePCMFingerprint([liveBlockHash])
+        let foundationRhythm = AutonomousFoundationRhythmBarEvidence(
+            bar: 0,
+            relation: .established,
+            pairPhase: FoundationRhythmicRelationContract.pairPhase(
+                absoluteBar: 0
+            ),
+            scoreBassEventCount: 0,
+            scoreBassStepMask: 0,
+            renderedBassEventCount: 0,
+            renderedBassStepMask: 0,
+            renderedFrameCount: Int((
+                240.0 / AutonomousSessionDirector.bpm * evidence.sampleRate
+            ).rounded()),
+            renderedStartFrameFingerprint:
+                AutonomousFoundationRhythmBarEvidence
+                    .startFrameFingerprint([]),
+            dryFoundationSampleHash: "0123456789abcdef",
+            peak: 0,
+            rms: 0,
+            bassPluckAssigned: false,
+            renderPassesMatch: true,
+            bindingValid: true,
+            finite: true
+        )
         let vector = AutonomousCandidateEvaluationVector(
             planFingerprint: planFingerprint,
             graphFingerprint: graphFingerprint,
@@ -1043,6 +1067,7 @@ struct QualityQualificationFoundationTests {
                 renderPassesMatch: true,
                 bindingValid: true
             )],
+            foundationRhythm: [foundationRhythm],
             climaxArc: .inactive(releaseStartBar: 0),
             groovePulse: [AutonomousGroovePulseBarEvidence(
                 bar: 0,

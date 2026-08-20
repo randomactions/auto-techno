@@ -682,6 +682,10 @@ package enum VoiceRenderer {
         var random = SeededGenerator(seed: performance.eventSeed)
         var renderedKickEventCount = 0
         var renderedKickStepMask: UInt16 = 0
+        var renderedBassEventCount = 0
+        var renderedBassStepMask: UInt16 = 0
+        var renderedBassStartFrames: [Int] = []
+        renderedBassStartFrames.reserveCapacity(6)
         var scheduledModalPercussion: [ScheduledModalPercussionEvent] = []
         scheduledModalPercussion.reserveCapacity(
             resolved.modalPercussionArticulations.count
@@ -709,7 +713,7 @@ package enum VoiceRenderer {
                 let frequency = relationalBassFrequency(
                     dna: dna, step: event.step, tension: performance.tension
                 )
-                ResonantMonoVoice.renderFoundation(
+                let renderedBassFrames = ResonantMonoVoice.renderFoundation(
                     &output,
                     measurement: &foundationStem,
                     architectureMeasurement: &resonantMonoInstrumentStem,
@@ -724,6 +728,11 @@ package enum VoiceRenderer {
                     state: &state.resonantFoundationState,
                     nonlinearCoreEvidence: &resonantMonoNonlinearCoreEvidence
                 )
+                if renderedBassFrames > 0, (0..<16).contains(event.step) {
+                    renderedBassEventCount += 1
+                    renderedBassStepMask |= UInt16(1) << UInt16(event.step)
+                    renderedBassStartFrames.append(start)
+                }
             case .rumble:
                 rumble(&output, measurement: &foundationStem,
                        start: start, sampleRate: sampleRate,
@@ -836,6 +845,29 @@ package enum VoiceRenderer {
             sampleRate: sampleRate,
             events: scheduledModalPercussion,
             state: &state.modalPercussionState
+        )
+        let foundationPeak = foundationStem.reduce(0.0) {
+            max($0, abs(Double($1)))
+        }
+        let foundationEnergy = foundationStem.reduce(0.0) {
+            $0 + Double($1) * Double($1)
+        }
+        let foundationRMS = sqrt(
+            foundationEnergy / Double(max(1, foundationStem.count))
+        )
+        let foundationRhythmRenderEvidence = FoundationRhythmRenderEvidence(
+            bar: performance.bar,
+            relation: resolved.foundationRhythmicRelation,
+            sampleRate: sampleRate,
+            renderedFrameCount: frames,
+            renderedBassEventCount: renderedBassEventCount,
+            renderedBassStepMask: renderedBassStepMask,
+            renderedStartFrames: renderedBassStartFrames,
+            dryFoundationSampleHash: ExactPCMFingerprint.mono(foundationStem),
+            peak: foundationPeak,
+            rms: foundationRMS,
+            finite: foundationPeak.isFinite && foundationRMS.isFinite &&
+                foundationStem.allSatisfy(\.isFinite)
         )
         for index in 0..<frames {
             let modalSample = modalPercussionStem[index]
@@ -1650,6 +1682,8 @@ package enum VoiceRenderer {
                                    dryFoundationSampleHash: ExactPCMFingerprint.mono(
                                     maskingFoundationBus
                                    ),
+                                   foundationRhythmRenderEvidence:
+                                    foundationRhythmRenderEvidence,
                                    dryPercussionSampleHash: ExactPCMFingerprint.mono(
                                     percussionStem
                                    ),

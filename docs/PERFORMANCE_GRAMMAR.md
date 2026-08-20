@@ -59,6 +59,12 @@ Foundation events continue to avoid kick collisions. Foundation assignments
 remain centered with zero spatial automation and stay inside the protected
 low-end route.
 
+One bounded Lock-only relationship may reinterpret an already present bass pair
+as complementary two-bar dotted masks. It changes no kick, harmony, non-bass
+event, transport, or effect route; incomplete and occupied-step pairs remain on
+their established behavior. The second mask restores the phrase boundary, so
+the relation is canonical score data rather than a free-running sequencer.
+
 ## Selection and continuation
 
 Phrase kind bounds the available character set:
@@ -87,6 +93,12 @@ It requires exact score/render kick masks, exact-zero detector, audible, and ste
 signal during both withheld bars, positive step-zero recovery evidence, and the
 unchanged weak-pulse carrier. This evidence remains a hard provenance boundary
 inside the calibrated policy.
+
+Foundation-rhythm evidence separately binds relation and pair phase, exact
+score/render bass masks and start frames, Bass Pluck assignment, dry foundation
+hash/peak/RMS, and full/protected pass equality. The professional vector retains
+bounded active prevalence and crest factor; these remain non-compensable
+evidence rather than a new style selector.
 
 The existing instrument evidence then records the exact resolved patch,
 automation, effect access, architecture-local dry-PCM hash, event count, peak,

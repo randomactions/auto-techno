@@ -53,6 +53,11 @@ filter. It owns the protected bass foundation and can reinterpret eligible
 motif, shadow, and response sequences. Bass assignments keep spatial automation
 at zero and remain in the protected low-end route.
 
+An eligible dotted foundation pair reuses the existing Bass Pluck home with
+bounded color/shape/motion coordinates and literal zero space. The relationship
+is selected in the resolved score; Resonant Mono receives ordinary scheduled
+events and owns no independent rhythm clock.
+
 ### Tonal Motion
 
 The continuing tonal voice: coupled oscillators, bounded detune and modulation,

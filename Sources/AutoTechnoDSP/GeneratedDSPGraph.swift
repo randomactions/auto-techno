@@ -1613,8 +1613,13 @@ package enum AutonomousPhrasePreparer {
                     )
             )
         }
-        return KickSyntaxResolver.resolve(
+        let rhythmicFoundation = FoundationRhythmicRelationResolver.resolve(
             resolvedBars: baseline,
+            kind: plan.kind,
+            dna: plan.dna
+        )
+        return KickSyntaxResolver.resolve(
+            resolvedBars: rhythmicFoundation,
             kind: plan.kind,
             paidDebtIDs: plan.paidDebtIDs
         )
@@ -1641,6 +1646,8 @@ package enum AutonomousPhrasePreparer {
             let syntaxGroovePulsesMatch = actualBar.kickSyntaxRole == .grounded ||
                 actualBar.groovePulses == canonicalBar.groovePulses
             return actualBar.kickSyntaxRole == canonicalBar.kickSyntaxRole &&
+                actualBar.foundationRhythmicRelation ==
+                    canonicalBar.foundationRhythmicRelation &&
                 actualBar.ensemble.kickAnchors == canonicalBar.ensemble.kickAnchors &&
                 actualKickEvents == canonicalKickEvents &&
                 actualNonKickEvents == canonicalNonKickEvents &&

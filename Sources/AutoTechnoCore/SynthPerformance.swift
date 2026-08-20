@@ -576,7 +576,9 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     kind: kind,
                     gesture: gesture,
                     mutationAmount: mutation,
-                    foundationBehavior: resolved.foundationBehavior
+                    foundationBehavior: resolved.foundationBehavior,
+                    foundationRhythmicRelation:
+                        resolved.foundationRhythmicRelation
                 ),
                 relationalSteps: relationalSteps,
                 upperNotes: upperNotes,

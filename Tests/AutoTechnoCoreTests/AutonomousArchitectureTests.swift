@@ -844,7 +844,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v25")
+                "autotechno-canonical-engine.v26")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -3078,6 +3078,9 @@ struct AutonomousPreparationPreflightTests {
             ensemble: source.ensemble,
             arrangementGesture: source.arrangementGesture,
             percussionGear: source.percussionGear,
+            performanceCharacter: source.performanceCharacter,
+            foundationBehavior: source.foundationBehavior,
+            foundationRhythmicRelation: source.foundationRhythmicRelation,
             foundationCompanion: source.foundationCompanion,
             pulseEchoEnabled: source.pulseEchoEnabled,
             interlockChapter: source.interlockChapter,
@@ -3126,6 +3129,9 @@ struct AutonomousPreparationPreflightTests {
             ),
             arrangementGesture: source.arrangementGesture,
             percussionGear: source.percussionGear,
+            performanceCharacter: source.performanceCharacter,
+            foundationBehavior: source.foundationBehavior,
+            foundationRhythmicRelation: source.foundationRhythmicRelation,
             foundationCompanion: source.foundationCompanion,
             pulseEchoEnabled: source.pulseEchoEnabled,
             interlockChapter: source.interlockChapter,
@@ -3565,6 +3571,9 @@ struct AutonomousPreparationPreflightTests {
             ensemble: source.ensemble,
             arrangementGesture: source.arrangementGesture,
             percussionGear: source.percussionGear,
+            performanceCharacter: source.performanceCharacter,
+            foundationBehavior: source.foundationBehavior,
+            foundationRhythmicRelation: source.foundationRhythmicRelation,
             foundationCompanion: source.foundationCompanion,
             pulseEchoEnabled: source.pulseEchoEnabled,
             interlockChapter: source.interlockChapter,

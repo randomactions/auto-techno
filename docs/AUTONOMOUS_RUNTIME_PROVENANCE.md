@@ -27,14 +27,15 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 26, candidate-
-   vector schema 24, candidate-transaction schema 4, and canonical engine
-   identity `autotechno-canonical-engine.v25`. Each
+   primary-evaluation transaction under quality-contract schema 27, candidate-
+   vector schema 25, candidate-transaction schema 4, and canonical engine
+   identity `autotechno-canonical-engine.v26`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
    event-local groove-pulse,
    ordinary closed-hat, score-owned modal-foundation, score-owned instrument,
+   score-owned dotted foundation-rhythm,
    score-owned gated/anticipatory percussion-return texture, shared pulse-echo
    return-drive,
    score-bound spatial-FDN,
@@ -118,12 +119,12 @@ mistaken for a completed feedback system.
    windows with zero-padded radix-two FFT geometry, actual spectral
    centroid/bandwidth/flatness/rolloff, positive flux,
    RMS trajectory, active-window counts, and bounded working-memory provenance.
-   A deterministic Professional Evidence v10
+   A deterministic Professional Evidence v11
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
    observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v25 profile v7, adversarial suite v8, and disjoint holdout
-   qualification v6.
+   engine-v26 profile v8, adversarial suite v9, and disjoint holdout
+   qualification v7.
    The profile derives from 28 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
    relationships. Its evaluator maps the Core-owned plan checkpoint into the
@@ -346,7 +347,7 @@ return behavior.
 Each full bar emits same-pass bar/BPM/delay/render geometry, score and drive
 eligibility, bounded source and applied amount, current-send RMS, exact pre/post
 sample hashes, pre/post peak, RMS, and low-band RMS, difference RMS, and finite
-status. Candidate-vector schema 24 binds these observations to the score bar,
+status. Candidate-vector schema 25 binds these observations to the score bar,
 phrase kind, route rate, and matching instrument effect access. Neutral drive
 requires exact pre/post identity and zero difference. Active drive remains
 outside feedback, binds exact changed-frame and peak witnesses, and permits only
@@ -374,6 +375,25 @@ non-compensable. This v1 scale projection is replaceable DSP; the score-owned
 held-sound rhythmic intention, absolute phase, neutral path, and evidence remain
 the durable boundary.
 
+## Implemented dotted foundation-rhythm slice
+
+The canonical director extends the existing resolved foundation score rather
+than adding a bass track or renderer-side clock. Eligible four-bar-aligned Lock
+pairs replace only their existing bass events with complementary two-bar masks
+whose onsets continue at three-sixteenth intervals and reset at the phrase
+boundary. The existing protected foundation route, score swing, Resonant Mono
+architecture, Bass Pluck patch, TPT/ADAA core, and dry center placement remain
+authoritative. Kick, non-bass events, harmony, effects, continuation, and the
+callback are unchanged; incomplete or ineligible pairs stay established.
+
+Detached same-pass evidence reduces relation, pair phase, score/render counts
+and masks, actual start frames, dry hash/peak/RMS, patch assignment, and
+full/protected pass equality into candidate-vector schema 25. Professional
+observation retains active prevalence and crest factor under the current
+exact-engine profile. A later implementation may replace the integer-grid
+projection only while preserving this score owner, two-bar reset, exact neutral
+path, and causal evidence.
+
 ## Implemented upper-role timing slice
 
 The current implementation extends the existing resolved upper-note score and
@@ -387,7 +407,7 @@ Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
 requested gate end, and renderer-applied gate end. Separate anchor, shadow, and
 response dry taps retain finite role-local hash, peak, and RMS evidence. Current
-candidate-vector schema 24 reduces those tuples into exact score/render and
+candidate-vector schema 25 reduces those tuples into exact score/render and
 renderer-applied-gate fingerprints, relation-specific offset facts, protected-
 role neutrality, cascade-aperture or lead-pattern replay, and route-derived
 frame geometry. The calibrated evaluator judges this evidence as part of the

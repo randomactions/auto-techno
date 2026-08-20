@@ -104,6 +104,12 @@ engine or renderer-side pitch choice. Same-pass evidence binds score event,
 requested and measured pitch, attack/body/tail relation, spectral centroid,
 masking, pole stability, continuation, render-pass equality, and exact dry PCM.
 
+Eligible Lock pairs may also reinterpret only their existing bass onsets as one
+bounded dotted three-sixteenth relationship across two bars. The established
+protected foundation route, Bass Pluck patch, dry center placement, kick clock,
+and score swing remain authoritative. This is a resolved-score relationship,
+not a second bass track, independent sequencer, spatial return, or user mode.
+
 The percussion-return path keeps the same ownership boundary. One eligible
 existing percussion event opens a bounded score-owned input slice. A contrast
 bar admits its filtered tail inside a later gate; the final withheld bar before
@@ -154,7 +160,7 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v10 supplies
+policy and its operational gates pass. Professional Evidence v11 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation and live-controller consequence, explicit
 analysis-memory provenance, and complete canonical-journey report-bank

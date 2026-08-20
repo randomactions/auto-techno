@@ -499,6 +499,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let percussionGear: PercussionGear
     package let performanceCharacter: PerformanceCharacter
     package let foundationBehavior: FoundationBehavior
+    package let foundationRhythmicRelation: FoundationRhythmicRelation
     package let foundationCompanion: FoundationCompanion
     package let pulseEchoEnabled: Bool
     package let interlockChapter: InterlockChapter
@@ -516,6 +517,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
                  arrangementGesture: ArrangementGesture, percussionGear: PercussionGear,
                  performanceCharacter: PerformanceCharacter? = nil,
                  foundationBehavior: FoundationBehavior? = nil,
+                 foundationRhythmicRelation: FoundationRhythmicRelation = .established,
                  foundationCompanion: FoundationCompanion, pulseEchoEnabled: Bool,
                  interlockChapter: InterlockChapter,
                  groovePulses: [GroovePulseArticulation] = [],
@@ -542,6 +544,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         }
         self.performanceCharacter = performanceCharacter ?? derivedPerformanceCharacter
         self.foundationBehavior = resolvedFoundationBehavior
+        self.foundationRhythmicRelation = foundationRhythmicRelation
         self.foundationCompanion = foundationCompanion
         self.pulseEchoEnabled = pulseEchoEnabled && foundationCompanion != .monoRumble
         self.interlockChapter = interlockChapter
@@ -763,6 +766,7 @@ package enum KickSyntaxResolver {
             percussionGear: resolved.percussionGear,
             performanceCharacter: resolved.performanceCharacter,
             foundationBehavior: resolved.foundationBehavior,
+            foundationRhythmicRelation: resolved.foundationRhythmicRelation,
             foundationCompanion: resolved.foundationCompanion,
             pulseEchoEnabled: resolved.pulseEchoEnabled,
             interlockChapter: resolved.interlockChapter,
@@ -1736,6 +1740,11 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             openedDebt = nil
         }
         let paidDebtIDs = kind == .energyRelease ? state.memory.openDebts.map(\.id) : []
+        resolvedBars = FoundationRhythmicRelationResolver.resolve(
+            resolvedBars: resolvedBars,
+            kind: kind,
+            dna: dna
+        )
         resolvedBars = KickSyntaxResolver.resolve(
             resolvedBars: resolvedBars,
             kind: kind,
