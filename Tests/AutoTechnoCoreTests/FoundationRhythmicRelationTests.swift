@@ -276,14 +276,20 @@ struct FoundationRhythmicRelationTests {
                     engineVersion: QualityQualificationContract.engineVersion,
                     checkpoint: checkpoint
                 )
+                let expectedActiveRatio = Double(activeRecords.count) /
+                    Double(plan.barCount)
+                let activeCrestFactorSum = activeRecords.reduce(0.0) {
+                    partial, record in
+                    partial + 20 * (log10(record.peak) - log10(record.rms))
+                }
+                let expectedCrestFactor = activeCrestFactorSum /
+                    Double(activeRecords.count)
                 #expect(observation[
                     .foundationDottedRhythmActiveBarRatio
-                ] == Double(activeRecords.count) / Double(plan.barCount))
+                ] == expectedActiveRatio)
                 #expect(observation[
                     .foundationDottedRhythmCrestFactorDBMean
-                ] == activeRecords.map {
-                    20 * (log10($0.peak) - log10($0.rms))
-                }.reduce(0, +) / Double(activeRecords.count))
+                ] == expectedCrestFactor)
             }
 
             let record = try #require(activeRecords.first)
