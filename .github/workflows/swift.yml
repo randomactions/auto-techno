@@ -284,7 +284,13 @@ jobs:
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(ClimaxHangTests|FoundationRhythmicRelationTests|GeneratedDSPTopologyTests|FeedbackDelayNetworkTests|IdentityReturnContinuationTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|UpperPercussionTailDSPTests|UpperPercussionTailTests|UpperSpectralRevealDSPTests|UpperSpectralRevealTests|UpperTimbreDSPTests|UpperTimbrePlanningTests|fixedSessionIdentity|currentPlanningIsDeterministic)'
+          --filter '(ClimaxHangTests|FoundationRhythmicRelationTests|GeneratedDSPTopologyTests|FeedbackDelayNetworkTests|IdentityReturnContinuationTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|fixedSessionIdentity|currentPlanningIsDeterministic)'
+
+      - name: Run upper timbre and tail tests
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(UpperPercussionTailDSPTests|UpperPercussionTailTests|UpperSpectralRevealDSPTests|UpperSpectralRevealTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
 
       - name: Run preparation preflight tests
         run: >-
