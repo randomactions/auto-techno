@@ -94,10 +94,34 @@ struct ResonantMonoState: Equatable, Sendable {
     }
 }
 
+package struct ResonantMonoFoundationRenderResult: Equatable, Sendable {
+    package let naturalFrameCount: Int
+    package let appliedFrameCount: Int
+    package let terminalReleaseApplied: Bool
+
+    package static let neutral = ResonantMonoFoundationRenderResult(
+        naturalFrameCount: 0,
+        appliedFrameCount: 0,
+        terminalReleaseApplied: false
+    )
+}
+
 /// A mono, accent- and slide-aware resonant instrument used by both the
 /// protected foundation and eligible upper sequences. It runs only during
 /// detached preparation; its bounded continuation lives in `RenderState`.
 enum ResonantMonoVoice {
+    static func terminalReleaseGain(
+        frameIndex: Int,
+        release: Range<Int>?
+    ) -> Double {
+        guard let release else { return 1 }
+        if frameIndex < release.lowerBound { return 1 }
+        if frameIndex >= release.upperBound { return 0 }
+        let progress = Double(frameIndex - release.lowerBound) /
+            Double(release.count)
+        return 0.5 + 0.5 * cos(.pi * progress)
+    }
+
     @discardableResult
     static func renderFoundation(
         _ output: inout [Float],
@@ -111,13 +135,27 @@ enum ResonantMonoVoice {
         frequency: Double,
         assignment: InstrumentAssignment,
         velocity: Double,
+        terminalReleaseStartFrame: Int? = nil,
+        terminalReleaseEndFrame: Int? = nil,
         state: inout ResonantMonoState,
         nonlinearCoreEvidence:
             inout TPTAntialiasedNonlinearCoreEvidenceAccumulator
-    ) -> Int {
+    ) -> ResonantMonoFoundationRenderResult {
         guard assignment.architecture == .resonantMono,
-              assignment.use == .foundationBass else { return 0 }
+              assignment.use == .foundationBass else { return .neutral }
         let duration = 0.16 + assignment.automation.shape * 0.18
+        let durationFrames = max(1, Int((sampleRate * duration).rounded()))
+        let naturalFrameCount = start >= 0 && start < output.count
+            ? min(durationFrames, output.count - start) : 0
+        let terminalRelease: Range<Int>? = {
+            guard let terminalReleaseStartFrame,
+                  let terminalReleaseEndFrame else { return nil }
+            let lower = terminalReleaseStartFrame - start
+            let upper = terminalReleaseEndFrame - start
+            guard lower > 0, lower < upper,
+                  upper < naturalFrameCount else { return nil }
+            return lower..<upper
+        }()
         var noModulationMeasurement: [Float] = []
         let result = renderEvent(
             output: &output,
@@ -126,7 +164,7 @@ enum ResonantMonoVoice {
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             start: start,
-            durationFrames: max(1, Int((sampleRate * duration).rounded())),
+            durationFrames: durationFrames,
             sampleRate: sampleRate,
             level: level,
             startFrequency: frequency,
@@ -137,9 +175,18 @@ enum ResonantMonoVoice {
             spectralReveal: .home,
             state: &state,
             modulationMeasurement: &noModulationMeasurement,
+            terminalRelease: terminalRelease,
             nonlinearCoreEvidence: &nonlinearCoreEvidence
         )
-        return result.renderedFrameCount
+        if terminalRelease != nil {
+            state.envelope = 0
+        }
+        return ResonantMonoFoundationRenderResult(
+            naturalFrameCount: result.renderedFrameCount,
+            appliedFrameCount: terminalRelease?.upperBound ??
+                result.renderedFrameCount,
+            terminalReleaseApplied: terminalRelease != nil
+        )
     }
 
     static func renderUpper(
@@ -188,6 +235,7 @@ enum ResonantMonoVoice {
                 spectralReveal: note.spectralReveal,
                 state: &state,
                 modulationMeasurement: &modulationMeasurement,
+                terminalRelease: nil,
                 nonlinearCoreEvidence: &nonlinearCoreEvidence
             )
             let requestedEnd = note.startFrame.addingReportingOverflow(note.durationFrames)
@@ -241,6 +289,7 @@ enum ResonantMonoVoice {
         spectralReveal: UpperSpectralRevealArticulation,
         state: inout ResonantMonoState,
         modulationMeasurement: inout [Float],
+        terminalRelease: Range<Int>?,
         nonlinearCoreEvidence:
             inout TPTAntialiasedNonlinearCoreEvidenceAccumulator
     ) -> (renderedFrameCount: Int,
@@ -406,8 +455,13 @@ enum ResonantMonoVoice {
             let dcBlocked = shaped - state.dcInput + 0.995 * state.dcOutput
             state.dcInput = shaped
             state.dcOutput = dcBlocked
+            let terminalGain = terminalReleaseGain(
+                frameIndex: index,
+                release: terminalRelease
+            )
             let sample = Float(
-                dcBlocked * state.envelope * boundedVelocity * max(0, level)
+                dcBlocked * state.envelope * boundedVelocity * max(0, level) *
+                    terminalGain
             )
             let frame = start + index
             output[frame] += sample

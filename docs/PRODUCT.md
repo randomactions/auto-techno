@@ -110,6 +110,13 @@ protected foundation route, Bass Pluck patch, dry center placement, kick clock,
 and score swing remain authoritative. This is a resolved-score relationship,
 not a second bass track, independent sequencer, spatial return, or user mode.
 
+When the dotted score places an existing Bass Pluck one sixteenth before an
+already-owned kick, the same resolved relationship now shortens only that event
+with a bounded terminal release and leaves an exact dry-foundation pocket before
+the kick. The score owns the event, release geometry, and kick boundary; no
+sidechain detector, global filter, extra bus, track, controller, or callback
+decision is introduced.
+
 The percussion-return path keeps the same ownership boundary. One eligible
 existing percussion event opens a bounded score-owned input slice. A contrast
 bar admits its filtered tail inside a later gate; the final withheld bar before
@@ -165,9 +172,10 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v13 supplies
+policy and its operational gates pass. Professional Evidence v14 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
-evidence, modal-foundation and live-controller consequence, explicit
+evidence, modal-foundation, pre-kick foundation-pocket, and live-controller
+consequence, explicit
 analysis-memory provenance, and complete canonical-journey report-bank
 validation. A non-reconstructable diverse profile, passing
 adversarial suite, and disjoint holdout report now qualify complete 44.1/48 kHz

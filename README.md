@@ -34,6 +34,9 @@ account.
 - one bounded two-bar dotted foundation relation that reuses the protected
   Bass Pluck path, preserves the kick clock, and returns at the phrase boundary
   without adding another bass track, sequencer, or spatial return;
+- one score-derived terminal release on the eligible dotted Bass Pluck event
+  immediately before an owned kick, creating a bounded exact-zero dry-
+  foundation pocket without a sidechain, EQ, new track, or callback control;
 - one post-arbitration upper-percussion tail policy that reuses the existing
   clap, open-hat, and metallic voices, preserves their attack, and shortens
   their release only when another score role owns the foreground;

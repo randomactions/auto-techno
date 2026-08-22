@@ -68,12 +68,13 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 29, candidate-vector schema 27, candidate-transaction
-schema 4, and canonical engine v28 provide the current transaction-level
+Quality-contract schema 30, candidate-vector schema 28, candidate-transaction
+schema 4, and canonical engine v29 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
 event-local groove-pulse, ordinary closed-hat, score-owned modal foundation,
+score-owned dotted foundation rhythm and pre-kick pocket,
 score-owned instrument and its acid/nonlinear-core/cluster/envelope consequence,
 score-owned gated/anticipatory percussion-return texture,
 shared pulse-echo return-drive, score-owned spatial-FDN, score-owned upper-role timing,
@@ -244,6 +245,21 @@ established PCM at 8/44.1/48/96/192 kHz, exact prepared candidate binding,
 decoded mask/hash/role tamper rejection, canonical preflight replay, and
 non-compensable rejection of impossible professional active prevalence.
 
+Each eligible dotted bar must additionally carry exactly one nested pre-kick-
+pocket record for bass step 3 before kick 4 or bass step 11 before kick 12. The
+record must bind the resolved score index and Bass Pluck assignment, prove that
+the natural event would cross the kick, and satisfy
+`eventStart < releaseStart < releaseEnd < kick <= renderedFrameCount` with
+positive release and silence counts. The exact same-pass dry-foundation window
+`[releaseEnd, kick)` must be finite with exact-zero peak and RMS and must match
+between full and protected renders. Established, malformed, and ineligible
+paths must retain one exact neutral sentinel. A home-upper correction must
+replay the same score-derived pocket and protected foundation evidence exactly.
+Tests must cover both
+pair phases, 8/44.1/48/96/192 kHz route projection, monotone bounded release,
+active-versus-neutral PCM, candidate JSON/fingerprint/tamper rejection, the
+upper-only safer metric, and a non-compensable contamination attack.
+
 Pulse-echo return-drive evidence must cover every full rendered bar and bind the
 bar, fixed BPM, route-derived three-sixteenth delay-frame count, rendered-frame
 count, score eligibility, drive eligibility, bounded `machineTexture`, applied
@@ -275,9 +291,9 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v13 bank must contain every canonical checkpoint for
+The Professional Evidence v14 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v28 primary evaluator v10 and pinned profile v10/adversarial/holdout
+engine-v29 primary evaluator v11 and pinned profile v11/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 28.
 Holdouts must be source-disjoint, contain at
@@ -338,8 +354,8 @@ or PCM.
 ## Scheduled-output feedback and callback isolation
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
-composition, spatial-FDN, and nonlinear-core evidence carried by quality-contract
-schema 29 change detached preparation only. The implemented master-headroom path
+composition, spatial-FDN, nonlinear-core, and foundation-pocket evidence carried
+by quality-contract schema 30 change detached preparation only. The implemented master-headroom path
 is the sole scheduled-output feedback responsibility and does not move those
 feature analyzers or decisions onto the callback. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
@@ -395,11 +411,11 @@ phrase lengths, maximum two-pass path, and route
 rebuild at representative 44.1 and 48 kHz devices. Record median, high-percentile,
 and worst observed times plus peak working memory.
 
-The exact-engine v10 artifact loader, route-local primary evaluator, unavailable-rate
+The exact-engine v11 artifact loader, route-local primary evaluator, unavailable-rate
 gate, one-correction transaction order, and reason-coded replay require
 deterministic tests at 44.1 and 48 kHz. The deterministic numeric-storage estimate
 must remain below the declared 128 MiB ceiling. The profile derives from 28
-complete journeys and passes the 30-case v11 adversarial suite plus four disjoint
+complete journeys and passes the 31-case v12 adversarial suite plus four disjoint
 holdouts at both rates. See [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md) and
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 

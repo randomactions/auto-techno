@@ -1687,3 +1687,105 @@ changing the test contracts.
 Publication and exact-head CI remain separate pending gates. No listening,
 app/route/interruption QA, latency or peak-memory measurement, physical-output
 soak, or claim that the inaccessible source audio was heard is made.
+
+## Source 28: foundation pre-kick pocket — 2026-08-22
+
+Source ID `28` used YouTube video `RKw-d6A4GOc`, *Rookie mistakes in techno*,
+from Underdog Electronic Music School, published 2022-02-07 with a 22:48
+duration. The clean-room capture used unauthenticated yt-dlp `2026.07.04` for
+metadata, description, automatic English captions, thumbnail, and top-ranked
+comments:
+
+```sh
+/opt/homebrew/bin/yt-dlp --skip-download --write-auto-subs --sub-langs 'en,en-orig' --sub-format vtt --write-info-json --write-description --write-thumbnail --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source28-research.fjYFWU -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=RKw-d6A4GOc'
+```
+
+No manual subtitle track was available. Automatic `en` and `en-orig` VTTs
+were byte-identical with SHA-256
+`1a578e244e3d1079d5204c6e18330901278f357c9dd5d8bf69a3642fbfffb329`.
+The metadata/comment artifact had SHA-256
+`886d805075e419a6a7c96776611379c60a83a9dba05ca02dc6f25414e69a0cae`.
+The sample contained 50 top-ranked top-level comments and 11 replies across
+four substantive threads. Direct unauthenticated best-audio retrieval returned
+HTTP 403. The retry used the yt-dlp EJS provider release 1.3.2 at exact commit
+`7511309af023b09788dc8f2efc96cc3671291e6c` through a temporary localhost
+provider, selected the advertised `251-8` media format, and converted it to
+48 kHz stereo WAV. The resulting 1367.808-second local audio file had SHA-256
+`2928571094ab7542fc2c1039dd1078f48eaef517803edc0bccf02313ae84a902`.
+The provider, media, captions, comments, thumbnail, and analysis images remain
+temporary and untracked; no account, browser cookie, or CAPTCHA was used.
+
+The bounded caption paraphrase is: the opening material distinguishes tonal
+balance from level balance; the central arrangement examples ask every element
+to support one shared groove and make emphasized versus de-emphasized beats
+coherent; a later low-end example uses a short absence before the kick to make
+its priority clear; and the filtering discussion warns that indiscriminate
+high-pass filtering can remove needed body. Literal meter positions, plug-in
+moves, and monitoring advice are examples rather than portable runtime targets.
+Machine inspection of the relevant local demonstration found sustained low-band
+occupancy around the demonstrated kick. This is descriptive source evidence,
+not a human listening or promotion claim.
+
+Independent discussion converged on groove and role priority. Multiple comments
+valued the explanation that a strong global pulse depends on relationships
+between emphasized and de-emphasized events. A separate technically specific
+thread cautioned that routine high-pass filtering can thin sources and weaken
+the intended balance. The discussion did not converge on a numeric EQ target,
+reference spectrum, new instrument, sidechain setting, or master preset.
+Monitoring-room recommendations describe a development environment and are not
+standalone-product runtime requirements.
+
+Repository reconciliation considered both reuse and expansion. The canonical
+engine already owns one kick clock, one protected Resonant Mono foundation,
+exact complementary dotted masks, Bass Pluck, score swing, TPT/ADAA processing,
+role-local masking/spectral evidence, and one primary evaluator. The dotted
+Bass Pluck one sixteenth before kick 4 or 12 has a nominal body long enough to
+cross the kick, so its PCM can erase the score's intended low-end pocket. A new
+track, instrument, sidechain compressor, EQ, effect bus, controller, or master
+target would duplicate those owners and contradict the source's contextual-
+filtering caution. Source 28 therefore extends the existing dotted relation
+with one Core-owned terminal-release articulation for that exact event.
+
+The v1 release begins `0.1875` score step before the kick and reaches exact zero
+`0.0625` step before it, leaving a positive route-derived dry-foundation
+silence interval while preserving the onset mask, kick, every other role, and
+the protected path. The curve is state-free and executes only during detached
+rendering; it adds no random draw, buffer, persistent continuation, scheduler,
+or callback work. Same-pass evidence binds the exact score event, natural end,
+release/kick geometry, silence hash/peak/RMS, Bass Pluck assignment, and full/
+protected equality. One upper-only safer professional metric and one
+non-compensable contamination attack prevent unrelated strengths from hiding a
+filled pocket.
+
+The durable intention and replacement boundary are recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). A later serious
+renderer may replace the v1 two-point curve and exact-zero proxy in place with
+envelope-phase-aware note shortening, transient-conditioned ducking,
+fractional-step articulation, or a richer foundation model only after
+calibrated masking, low-end hierarchy, or transient evidence exposes a
+repeatable deficit. It must preserve the dotted score owner, exact neutral
+fallback, protected route, deterministic continuation, causal evidence, and one
+primary evaluator; it must not coexist with another bass or sidechain path.
+
+Implementation, calibration, and local validation are complete. Release-mode
+artifact generation accepted 392/392 development observations from 28
+journeys, rejected all 31 adversarial cases for their exact expected reasons,
+and accepted 56/56 observations from four disjoint holdout journeys with zero
+relationship failures. A second invocation against the same 32 cached journeys
+produced byte-identical artifacts. The installed primary artifacts are profile
+`63b4173f9d08fdba`, adversarial suite `8fb2813d62791ba5`, and holdout
+qualification `411b1fdd09995453`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated
+caches and serial process boundaries. It covered the same-event active-versus-
+neutral PCM oracle and exact correction replay; fresh bundled-artifact identity;
+candidate reduction and tampering; adversarial, calibrated-policy, and disjoint-
+holdout qualification; atomic commit, unavailable-route, cancellation,
+correction, rejected-attempt, representative-rate, resource, and continuation
+gates; the 117-test Core/evidence bank; 24 preparation-preflight tests; 14
+protected-routing regressions; realtime producer-symbol audit; and an optimized
+product build.
+
+Publication and exact-head CI remain separate pending gates. No listening,
+app/route/interruption QA, latency or peak-memory measurement, physical-output
+soak, or claim that the source demonstration was heard by a person is made.

@@ -29,6 +29,8 @@ package enum ProfessionalQualityAdversarialScenario: String, CaseIterable,
         "pad-harmonic-disclosure-overpopulation"
     case foundationDottedRhythmOverpopulation =
         "foundation-dotted-rhythm-overpopulation"
+    case foundationPreKickPocketContamination =
+        "foundation-pre-kick-pocket-contamination"
     case kickSourceTransientSpike = "kick-source-transient-spike"
     case forgedPreTerminalScaling = "forged-pre-terminal-scaling"
     case forgedPostTerminalScaling = "forged-post-terminal-scaling"
@@ -427,9 +429,9 @@ package struct ProfessionalQualityLiveCandidateChain: Equatable, Sendable {
 /// evidence. Every scenario must be rejected independently.
 package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 11
+    package static let schemaVersion = 12
     package static let suiteVersion =
-        "autotechno-professional-quality-adversarial.v11"
+        "autotechno-professional-quality-adversarial.v12"
 
     package let schemaVersion: Int
     package let suiteVersion: String
@@ -797,6 +799,17 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                 .foundationDottedRhythmActiveBarRatio,
                 with: outside(
                     .foundationDottedRhythmActiveBarRatio,
+                    preferLower: false
+                )
+            ),
+            expected: [.metricOutOfRange]
+        )
+        append(
+            .foundationPreKickPocketContamination,
+            observation: try baseline.replacing(
+                .foundationPreKickPocketSilenceRMSMaximum,
+                with: outside(
+                    .foundationPreKickPocketSilenceRMSMaximum,
                     preferLower: false
                 )
             ),

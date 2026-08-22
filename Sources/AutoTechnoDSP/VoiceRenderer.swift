@@ -614,6 +614,38 @@ package enum VoiceRenderer {
         let section = performance.section
         let frames = max(1, Int((240.0 / scene.bpm * sampleRate).rounded()))
         let stepFrames = Double(frames) / 16.0
+        let preKickPocketGeometry: (
+            articulation: FoundationPreKickPocketArticulation,
+            releaseStartFrame: Int,
+            releaseEndFrame: Int,
+            kickFrame: Int
+        )? = FoundationPreKickPocketResolver.articulation(in: resolved).flatMap {
+            articulation in
+            let kickOffset = timingOffsetInSteps(
+                for: .kick,
+                step: articulation.kickStep,
+                dna: dna
+            )
+            let kickFrame = Int((
+                (Double(articulation.kickStep) + kickOffset) * stepFrames
+            ).rounded())
+            let releaseStartFrame = Int(((
+                articulation.releaseStartStep + kickOffset
+            ) * stepFrames).rounded())
+            let releaseEndFrame = Int(((
+                articulation.releaseEndStep + kickOffset
+            ) * stepFrames).rounded())
+            guard releaseStartFrame > 0,
+                  releaseStartFrame < releaseEndFrame,
+                  releaseEndFrame < kickFrame,
+                  kickFrame <= frames else { return nil }
+            return (
+                articulation,
+                releaseStartFrame,
+                releaseEndFrame,
+                kickFrame
+            )
+        }
         var checkedOut = workspace.checkout(
             frameCount: frames,
             includeUpperRoleTaps: layer == .full
@@ -687,6 +719,10 @@ package enum VoiceRenderer {
         var renderedBassStepMask: UInt16 = 0
         var renderedBassStartFrames: [Int] = []
         renderedBassStartFrames.reserveCapacity(6)
+        var preKickPocketFoundationResult: (
+            eventStartFrame: Int,
+            render: ResonantMonoFoundationRenderResult
+        )?
         var scheduledModalPercussion: [ScheduledModalPercussionEvent] = []
         scheduledModalPercussion.reserveCapacity(
             resolved.modalPercussionArticulations.count
@@ -715,7 +751,11 @@ package enum VoiceRenderer {
                 let frequency = relationalBassFrequency(
                     dna: dna, step: event.step, tension: performance.tension
                 )
-                let renderedBassFrames = ResonantMonoVoice.renderFoundation(
+                let pocket = preKickPocketGeometry.flatMap { geometry in
+                    geometry.articulation.scoreEventIndex == scoreEventIndex
+                        ? geometry : nil
+                }
+                let renderedBass = ResonantMonoVoice.renderFoundation(
                     &output,
                     measurement: &foundationStem,
                     architectureMeasurement: &resonantMonoInstrumentStem,
@@ -727,10 +767,19 @@ package enum VoiceRenderer {
                     frequency: frequency,
                     assignment: synthPerformance.foundationInstrument,
                     velocity: accent,
+                    terminalReleaseStartFrame: pocket?.releaseStartFrame,
+                    terminalReleaseEndFrame: pocket?.releaseEndFrame,
                     state: &state.resonantFoundationState,
                     nonlinearCoreEvidence: &resonantMonoNonlinearCoreEvidence
                 )
-                if renderedBassFrames > 0, (0..<16).contains(event.step) {
+                if pocket != nil {
+                    preKickPocketFoundationResult = (
+                        eventStartFrame: start,
+                        render: renderedBass
+                    )
+                }
+                if renderedBass.naturalFrameCount > 0,
+                   (0..<16).contains(event.step) {
                     renderedBassEventCount += 1
                     renderedBassStepMask |= UInt16(1) << UInt16(event.step)
                     renderedBassStartFrames.append(start)
@@ -857,6 +906,56 @@ package enum VoiceRenderer {
         let foundationRMS = sqrt(
             foundationEnergy / Double(max(1, foundationStem.count))
         )
+        let preKickPocketRenderEvidence: FoundationPreKickPocketRenderEvidence = {
+            guard let geometry = preKickPocketGeometry,
+                  let result = preKickPocketFoundationResult,
+                  geometry.releaseEndFrame <= foundationStem.count,
+                  geometry.kickFrame <= foundationStem.count else {
+                return .neutral
+            }
+            let silenceFrameCount = geometry.kickFrame -
+                geometry.releaseEndFrame
+            var fingerprint = ExactPCMFingerprint.MonoAccumulator(
+                sampleCount: silenceFrameCount
+            )
+            var silencePeak = 0.0
+            var silenceEnergy = 0.0
+            var finite = silenceFrameCount > 0
+            if silenceFrameCount > 0 {
+                for frame in geometry.releaseEndFrame..<geometry.kickFrame {
+                    let sample = foundationStem[frame]
+                    fingerprint.append(sample)
+                    let value = Double(sample)
+                    finite = finite && value.isFinite
+                    silencePeak = max(silencePeak, abs(value))
+                    silenceEnergy += value * value
+                }
+            }
+            let silenceRMS = silenceFrameCount > 0
+                ? sqrt(silenceEnergy / Double(silenceFrameCount)) : 0
+            return FoundationPreKickPocketRenderEvidence(
+                relation: geometry.articulation.relation,
+                scoreEventIndex: geometry.articulation.scoreEventIndex,
+                bassStep: geometry.articulation.bassStep,
+                kickStep: geometry.articulation.kickStep,
+                eventStartFrame: result.eventStartFrame,
+                naturalEndFrame: result.eventStartFrame +
+                    result.render.naturalFrameCount,
+                releaseStartFrame: geometry.releaseStartFrame,
+                releaseEndFrame: geometry.releaseEndFrame,
+                kickFrame: geometry.kickFrame,
+                releaseFrameCount: geometry.releaseEndFrame -
+                    geometry.releaseStartFrame,
+                silenceFrameCount: silenceFrameCount,
+                silenceSampleHash: fingerprint.fingerprint,
+                silencePeak: silencePeak,
+                silenceRMS: silenceRMS,
+                applied: result.render.terminalReleaseApplied &&
+                    result.eventStartFrame + result.render.appliedFrameCount ==
+                        geometry.releaseEndFrame,
+                finite: finite && silencePeak.isFinite && silenceRMS.isFinite
+            )
+        }()
         let foundationRhythmRenderEvidence = FoundationRhythmRenderEvidence(
             bar: performance.bar,
             relation: resolved.foundationRhythmicRelation,
@@ -868,6 +967,7 @@ package enum VoiceRenderer {
             dryFoundationSampleHash: ExactPCMFingerprint.mono(foundationStem),
             peak: foundationPeak,
             rms: foundationRMS,
+            preKickPocket: preKickPocketRenderEvidence,
             finite: foundationPeak.isFinite && foundationRMS.isFinite &&
                 foundationStem.allSatisfy(\.isFinite)
         )

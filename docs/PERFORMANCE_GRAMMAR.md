@@ -65,6 +65,14 @@ event, transport, or effect route; incomplete and occupied-step pairs remain on
 their established behavior. The second mask restores the phrase boundary, so
 the relation is canonical score data rather than a free-running sequencer.
 
+Inside each eligible dotted bar, the score additionally identifies the single
+existing Bass Pluck exactly one step before kick step 4 or 12. It owns a
+terminal release from `kick - 0.1875 step` to exact zero at
+`kick - 0.0625 step`, leaving a positive dry-foundation pocket while retaining
+the unchanged onset mask. Established and malformed relations remain literal
+neutral; no second bass lane, sidechain, or renderer-owned musical choice is
+created.
+
 ## Selection and continuation
 
 Phrase kind bounds the available character set:
@@ -99,6 +107,13 @@ score/render bass masks and start frames, Bass Pluck assignment, dry foundation
 hash/peak/RMS, and full/protected pass equality. The professional vector retains
 bounded active prevalence and crest factor; these remain non-compensable
 evidence rather than a new style selector.
+
+The nested pre-kick-pocket record binds the exact score event, bass/kick steps,
+natural event end, route-derived release and kick frames, and same-pass dry-
+foundation hash/peak/RMS for the exact-zero interval. Candidate completeness
+requires the natural event to cross the kick, positive release and silence
+windows, exact full/protected equality, and literal neutral evidence everywhere
+the score is ineligible.
 
 The existing instrument evidence then records the exact resolved patch,
 automation, effect access, architecture-local dry-PCM hash, event count, peak,
@@ -139,7 +154,7 @@ only.
 
 Identity return, force-home correction, missing source material, and ineligible
 role/character combinations resolve every new feature to exact neutral.
-Candidate schema 27 binds per-bar score geometry to source and
+Candidate schema 28 binds per-bar score geometry to source and
 output hashes, trigger/rate counts, pad frequency ratios and PCM, arpeggiator
 counts and exact score/render pitches, harmonic-disclosure stage/function, and
 voice-leading bounds. This is causal structural evidence rather than a

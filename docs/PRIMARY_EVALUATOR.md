@@ -23,8 +23,8 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v28 profile v10, adversarial suite v11, and disjoint holdout qualification
-v9. The profile derives from 28 complete
+engine-v29 profile v11, adversarial suite v12, and disjoint holdout qualification
+v10. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
 relationship gate.
 
@@ -44,7 +44,10 @@ dedicated runaway-cutoff attack proves that the reveal cannot escape its
 exact-engine envelope and be compensated by unrelated strengths.
 It additionally retains dotted-foundation active prevalence and active crest
 factor; an impossible-prevalence attack proves the two-bar score relation cannot
-be synthesized as disconnected compact evidence.
+be synthesized as disconnected compact evidence. One upper-only safer dimension
+also retains the maximum same-pass RMS inside every eligible score-owned
+pre-kick foundation pocket; the corresponding contamination attack prevents an
+otherwise good phrase from compensating for a filled pocket.
 Phrase-composition evidence also retains the harmonic-disclosure revealed-bar
 ratio and bounded distinct-function count. A five-function overpopulation
 attack proves that a disconnected harmonic vocabulary cannot be compensated by

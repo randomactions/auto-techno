@@ -1003,6 +1003,100 @@ package struct AutonomousKickSyntaxBarEvidence: Codable, Equatable, Sendable {
 /// One bounded record per rendered bar binds the score-owned two-bar
 /// foundation relation to the exact existing Resonant Mono render calls and
 /// dry foundation consequence. No sample arrays survive reduction.
+package struct AutonomousFoundationPreKickPocketEvidence:
+    Codable, Equatable, Sendable
+{
+    package let relation: String?
+    package let scoreEventIndex: Int
+    package let bassStep: Int
+    package let kickStep: Int
+    package let eventStartFrame: Int
+    package let naturalEndFrame: Int
+    package let releaseStartFrame: Int
+    package let releaseEndFrame: Int
+    package let kickFrame: Int
+    package let releaseFrameCount: Int
+    package let silenceFrameCount: Int
+    package let silenceSampleHash: String
+    package let silencePeak: Double
+    package let silenceRMS: Double
+    package let applied: Bool
+    package let finite: Bool
+
+    package init(render: FoundationPreKickPocketRenderEvidence) {
+        relation = render.relation?.rawValue
+        scoreEventIndex = render.scoreEventIndex
+        bassStep = render.bassStep
+        kickStep = render.kickStep
+        eventStartFrame = render.eventStartFrame
+        naturalEndFrame = render.naturalEndFrame
+        releaseStartFrame = render.releaseStartFrame
+        releaseEndFrame = render.releaseEndFrame
+        kickFrame = render.kickFrame
+        releaseFrameCount = render.releaseFrameCount
+        silenceFrameCount = render.silenceFrameCount
+        silenceSampleHash = render.silenceSampleHash
+        silencePeak = render.silencePeak
+        silenceRMS = render.silenceRMS
+        applied = render.applied
+        finite = render.finite
+    }
+
+    package static let neutral = AutonomousFoundationPreKickPocketEvidence(
+        render: .neutral
+    )
+
+    package func isComplete(
+        sampleRate: Double,
+        renderedFrameCount: Int
+    ) -> Bool {
+        guard relation != nil else { return self == .neutral }
+        guard FoundationPreKickPocketRelation(rawValue: relation ?? "") ==
+                .preKickClearance,
+              sampleRate.isFinite,
+              sampleRate > 0,
+              (0..<64).contains(scoreEventIndex),
+              (0..<15).contains(bassStep),
+              kickStep == bassStep + 1,
+              FoundationRhythmicRelationContract.requiredKickSteps.contains(
+                kickStep
+              ),
+              eventStartFrame >= 0,
+              eventStartFrame < releaseStartFrame,
+              releaseStartFrame < releaseEndFrame,
+              releaseEndFrame < kickFrame,
+              naturalEndFrame > kickFrame,
+              kickFrame <= renderedFrameCount,
+              releaseFrameCount == releaseEndFrame - releaseStartFrame,
+              releaseFrameCount > 0,
+              silenceFrameCount == kickFrame - releaseEndFrame,
+              silenceFrameCount > 0,
+              silenceSampleHash.count == 16,
+              silenceSampleHash.utf8.allSatisfy({ byte in
+                  (48...57).contains(byte) || (97...102).contains(byte)
+              }),
+              silencePeak == 0,
+              silenceRMS == 0,
+              applied,
+              finite else {
+            return false
+        }
+        let stepFrames = Double(renderedFrameCount) / 16.0
+        let expectedKickFrame = Int((Double(kickStep) * stepFrames).rounded())
+        let expectedReleaseStart = Int(((
+            Double(kickStep) -
+                FoundationPreKickPocketContract.releaseLeadInSteps
+        ) * stepFrames).rounded())
+        let expectedReleaseEnd = Int(((
+            Double(kickStep) -
+                FoundationPreKickPocketContract.silenceLeadInSteps
+        ) * stepFrames).rounded())
+        return kickFrame == expectedKickFrame &&
+            releaseStartFrame == expectedReleaseStart &&
+            releaseEndFrame == expectedReleaseEnd
+    }
+}
+
 package struct AutonomousFoundationRhythmBarEvidence: Codable, Equatable, Sendable {
     package let bar: Int
     package let relation: String
@@ -1017,6 +1111,7 @@ package struct AutonomousFoundationRhythmBarEvidence: Codable, Equatable, Sendab
     package let peak: Double
     package let rms: Double
     package let bassPluckAssigned: Bool
+    package let preKickPocket: AutonomousFoundationPreKickPocketEvidence
     package let renderPassesMatch: Bool
     package let bindingValid: Bool
     package let finite: Bool
@@ -1035,6 +1130,7 @@ package struct AutonomousFoundationRhythmBarEvidence: Codable, Equatable, Sendab
         peak: Double,
         rms: Double,
         bassPluckAssigned: Bool,
+        preKickPocket: AutonomousFoundationPreKickPocketEvidence = .neutral,
         renderPassesMatch: Bool,
         bindingValid: Bool,
         finite: Bool
@@ -1052,13 +1148,16 @@ package struct AutonomousFoundationRhythmBarEvidence: Codable, Equatable, Sendab
         self.peak = peak
         self.rms = rms
         self.bassPluckAssigned = bassPluckAssigned
+        self.preKickPocket = preKickPocket
         self.renderPassesMatch = renderPassesMatch
         self.bindingValid = bindingValid
         self.finite = finite
     }
 
     package var isFinite: Bool {
-        finite && peak.isFinite && rms.isFinite
+        finite && peak.isFinite && rms.isFinite &&
+            preKickPocket.silencePeak.isFinite &&
+            preKickPocket.silenceRMS.isFinite
     }
 
     package func isComplete(sampleRate: Double) -> Bool {
@@ -1096,12 +1195,19 @@ package struct AutonomousFoundationRhythmBarEvidence: Codable, Equatable, Sendab
         }
         switch resolvedRelation {
         case .established:
-            return scoreBassEventCount == 0 || (peak > 0 && rms > 0)
+            return preKickPocket == .neutral &&
+                (scoreBassEventCount == 0 || (peak > 0 && rms > 0))
         case .dottedThreeSixteenth:
             return scoreBassEventCount == 4 && bassPluckAssigned &&
                 scoreBassStepMask == FoundationRhythmicRelationContract
                     .stepMask(pairPhase: pairPhase) &&
-                peak > 0 && rms > 0
+                peak > 0 && rms > 0 &&
+                preKickPocket.isComplete(
+                    sampleRate: sampleRate,
+                    renderedFrameCount: renderedFrameCount
+                ) &&
+                preKickPocket.bassStep == (pairPhase == 0 ? 3 : 11) &&
+                preKickPocket.kickStep == (pairPhase == 0 ? 4 : 12)
         }
     }
 
@@ -4939,7 +5045,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 27
+    package static let schemaVersion = 28
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -5446,6 +5552,58 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 plan.resolvedBars[index] == resolved &&
                 resolved.performance.bar == block.bar
             let assignment = block.synthPerformance.foundationInstrument
+            let preKickPocketBindingValid: Bool = {
+                let score = FoundationPreKickPocketResolver.articulation(
+                    in: resolved
+                )
+                let pocket = render.preKickPocket
+                guard let score else { return pocket == .neutral }
+                guard resolved.ensemble.events.indices.contains(
+                        score.scoreEventIndex
+                      ) else { return false }
+                let event = resolved.ensemble.events[score.scoreEventIndex]
+                let offset = VoiceRenderer.timingOffsetInSteps(
+                    for: event.voice,
+                    step: event.step,
+                    dna: plan.dna
+                )
+                let eventStartFrame = Int((
+                    (Double(event.step) + offset) * stepFrames
+                ).rounded())
+                let naturalFrameCount = min(
+                    max(1, Int((sampleRate * (
+                        0.16 + assignment.automation.shape * 0.18
+                    )).rounded())),
+                    max(0, block.left.count - eventStartFrame)
+                )
+                let kickOffset = VoiceRenderer.timingOffsetInSteps(
+                    for: .kick,
+                    step: score.kickStep,
+                    dna: plan.dna
+                )
+                let kickFrame = Int(((
+                    Double(score.kickStep) + kickOffset
+                ) * stepFrames).rounded())
+                let releaseStartFrame = Int(((
+                    score.releaseStartStep + kickOffset
+                ) * stepFrames).rounded())
+                let releaseEndFrame = Int(((
+                    score.releaseEndStep + kickOffset
+                ) * stepFrames).rounded())
+                return event.voice == .bass &&
+                    event.step == score.bassStep &&
+                    pocket.relation == score.relation &&
+                    pocket.scoreEventIndex == score.scoreEventIndex &&
+                    pocket.bassStep == score.bassStep &&
+                    pocket.kickStep == score.kickStep &&
+                    pocket.eventStartFrame == eventStartFrame &&
+                    pocket.naturalEndFrame == eventStartFrame +
+                        naturalFrameCount &&
+                    pocket.releaseStartFrame == releaseStartFrame &&
+                    pocket.releaseEndFrame == releaseEndFrame &&
+                    pocket.kickFrame == kickFrame &&
+                    pocket.applied && pocket.finite
+            }()
             let bindingValid = planBarMatches &&
                 block.section == resolved.performance.section &&
                 block.left.count == block.right.count &&
@@ -5458,6 +5616,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 render.renderedStartFrames == expectedStartFrames &&
                 assignment.use == .foundationBass &&
                 assignment.isValid &&
+                preKickPocketBindingValid &&
                 block.foundationRhythmRenderPassesMatch
             return AutonomousFoundationRhythmBarEvidence(
                 bar: block.bar,
@@ -5477,6 +5636,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 peak: render.peak,
                 rms: render.rms,
                 bassPluckAssigned: assignment.patch == .bassPluck,
+                preKickPocket: AutonomousFoundationPreKickPocketEvidence(
+                    render: render.preKickPocket
+                ),
                 renderPassesMatch: block.foundationRhythmRenderPassesMatch,
                 bindingValid: bindingValid,
                 finite: render.finite
@@ -7740,7 +7902,27 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             foundationRhythm.allSatisfy {
                 (0...16).contains($0.scoreBassEventCount) &&
                     (0...16).contains($0.renderedBassEventCount) &&
-                    $0.renderedFrameCount >= 0
+                    $0.renderedFrameCount >= 0 &&
+                    ($0.preKickPocket == .neutral || (
+                        (0..<64).contains(
+                            $0.preKickPocket.scoreEventIndex
+                        ) &&
+                        $0.preKickPocket.eventStartFrame >= 0 &&
+                        $0.preKickPocket.naturalEndFrame >= 0 &&
+                        $0.preKickPocket.naturalEndFrame <=
+                            $0.renderedFrameCount &&
+                        $0.preKickPocket.releaseStartFrame >= 0 &&
+                        $0.preKickPocket.releaseEndFrame >= 0 &&
+                        $0.preKickPocket.kickFrame >= 0 &&
+                        $0.preKickPocket.kickFrame <=
+                            $0.renderedFrameCount &&
+                        $0.preKickPocket.releaseFrameCount >= 0 &&
+                        $0.preKickPocket.releaseFrameCount <=
+                            $0.renderedFrameCount &&
+                        $0.preKickPocket.silenceFrameCount >= 0 &&
+                        $0.preKickPocket.silenceFrameCount <=
+                            $0.renderedFrameCount
+                    ))
             }
     }
 

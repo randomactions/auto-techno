@@ -136,6 +136,8 @@ struct ProfessionalQualityCalibrationTests {
             (.modalRateDrift, .modalPercussionSpectralCentroidMeanHz),
             (.upperPercussionTailRegression,
              .upperPercussionTailRenderedTailToAttackDBMean),
+            (.foundationPreKickPocketContamination,
+             .foundationPreKickPocketSilenceRMSMaximum),
         ] {
             let attacked = try #require(suite.cases.first {
                 $0.scenario == scenario
@@ -318,27 +320,28 @@ struct ProfessionalQualityCalibrationTests {
 
     @Test("Musical consequence metrics are versioned and non-compensable")
     func modalMetricContract() {
-        #expect(ProfessionalQualityObservation.schemaVersion == 10)
+        #expect(ProfessionalQualityMetric.allCases.count == 65)
+        #expect(ProfessionalQualityObservation.schemaVersion == 11)
         #expect(ProfessionalQualityObservation.observationVersion ==
-                "autotechno-professional-quality-observation.v10")
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 13)
+                "autotechno-professional-quality-observation.v11")
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 14)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v13")
+                "autotechno-professional-evidence.v14")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v10")
+                "autotechno-quality.primary-calibrated.v11")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v10")
+                "autotechno-candidate-evaluator.primary-calibrated.v11")
         #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
-                "autotechno-professional-quality-profile.v10")
-        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 10)
+                "autotechno-professional-quality-profile.v11")
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 11)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v10")
-        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 11)
+                "autotechno-professional-quality-profile.v11")
+        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 12)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
-                "autotechno-professional-quality-adversarial.v11")
-        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 9)
+                "autotechno-professional-quality-adversarial.v12")
+        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 10)
         #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
-                "autotechno-professional-quality-holdout.v9")
+                "autotechno-professional-quality-holdout.v10")
 
         for metric in [
             ProfessionalQualityMetric.modalPercussionPitchErrorCentsMaximum,
@@ -395,6 +398,12 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalQualityMetric
             .foundationDottedRhythmCrestFactorDBMean
             .participatesInQualification)
+        #expect(ProfessionalQualityMetric
+            .foundationPreKickPocketSilenceRMSMaximum
+            .participatesInQualification)
+        #expect(ProfessionalQualityMetric
+            .foundationPreKickPocketSilenceRMSMaximum
+            .acceptsSaferValuesBelowCalibration)
         #expect(ProfessionalQualityMetric
             .padRhythmicFilterDifferenceToPadDBMean.semanticMinimum == -120)
         #expect(ProfessionalQualityMetric
@@ -521,7 +530,7 @@ struct ProfessionalQualityCalibrationTests {
         ).allSatisfy { $0.metric != .loudnessRangeLU })
     }
 
-    @Test("Constructed v10 artifacts activate only the single primary policy")
+    @Test("Constructed v11 artifacts activate only the single primary policy")
     func primaryCandidatePolicy() throws {
         let artifacts = try diverseArtifacts()
         #expect(artifacts.profile.profileVersion ==
@@ -611,9 +620,9 @@ struct ProfessionalQualityCalibrationTests {
         let oldObservationJSON = try replacingJSONIdentity(
             currentObservationJSON,
             replacements: [
-                "\"schemaVersion\":10": "\"schemaVersion\":9",
-                "autotechno-professional-quality-observation.v10":
-                    "autotechno-professional-quality-observation.v9",
+                "\"schemaVersion\":11": "\"schemaVersion\":10",
+                "autotechno-professional-quality-observation.v11":
+                    "autotechno-professional-quality-observation.v10",
             ]
         )
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
@@ -625,9 +634,9 @@ struct ProfessionalQualityCalibrationTests {
         let oldProfileJSON = try replacingJSONIdentity(
             artifacts.profile.deterministicJSON(),
             replacements: [
-                "\"schemaVersion\":10": "\"schemaVersion\":9",
-                "autotechno-professional-quality-profile.v10":
-                    "autotechno-professional-quality-profile.v9",
+                "\"schemaVersion\":11": "\"schemaVersion\":10",
+                "autotechno-professional-quality-profile.v11":
+                    "autotechno-professional-quality-profile.v10",
             ]
         )
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
@@ -639,9 +648,9 @@ struct ProfessionalQualityCalibrationTests {
         let oldAdversarialJSON = try replacingJSONIdentity(
             artifacts.adversarial.deterministicJSON(),
             replacements: [
-                "\"schemaVersion\":11": "\"schemaVersion\":10",
-                "autotechno-professional-quality-adversarial.v11":
-                    "autotechno-professional-quality-adversarial.v10",
+                "\"schemaVersion\":12": "\"schemaVersion\":11",
+                "autotechno-professional-quality-adversarial.v12":
+                    "autotechno-professional-quality-adversarial.v11",
             ]
         )
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
@@ -653,11 +662,11 @@ struct ProfessionalQualityCalibrationTests {
         let oldHoldoutJSON = try replacingJSONIdentity(
             artifacts.holdout.deterministicJSON(),
             replacements: [
-                "\"schemaVersion\":9": "\"schemaVersion\":8",
-                "autotechno-professional-quality-holdout.v9":
-                    "autotechno-professional-quality-holdout.v8",
-                "autotechno-professional-quality-holdout-evaluator.v9":
-                    "autotechno-professional-quality-holdout-evaluator.v8",
+                "\"schemaVersion\":10": "\"schemaVersion\":9",
+                "autotechno-professional-quality-holdout.v10":
+                    "autotechno-professional-quality-holdout.v9",
+                "autotechno-professional-quality-holdout-evaluator.v10":
+                    "autotechno-professional-quality-holdout-evaluator.v9",
             ]
         )
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
@@ -696,7 +705,7 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Bundled v10 primary artifacts activate the exact v10 evaluator")
+    @Test("Bundled v11 primary artifacts activate the exact v11 evaluator")
     func primaryArtifacts() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(artifacts.profile.fingerprint ==
@@ -802,7 +811,7 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Primary preparation remains unavailable without v10 artifacts")
+    @Test("Primary preparation remains unavailable without v11 artifacts")
     func preparationEvaluatorAvailability() {
         let representativeRate = ProfessionalQualityPreparationEvaluator(
             sampleRate: 48_000,

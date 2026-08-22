@@ -59,10 +59,13 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one score-owned modal-percussion foundation voice replacing the root-only
   realization with six stable modes, four fixed continuation slots,
   protected routing, and exact same-pass evidence;
+- one score-derived pre-kick terminal release on the eligible dotted Bass
+  Pluck, with route-derived geometry, an exact-zero protected-foundation pocket,
+  and non-compensable contamination evidence;
 - one scheduled-output master-headroom path mapping app-owned mixer PCM to an
   exact phrase occurrence, analyzing one fixed three-second window off the
   callback, and applying a primary-accepted attenuation only to future PCM;
-- canonical engine v28, quality-contract schema 29, candidate-vector schema 27,
+- canonical engine v29, quality-contract schema 30, candidate-vector schema 28,
   and candidate-transaction schema 4
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax and debt-to-recovery climax arc,
@@ -73,6 +76,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   dynamics consequence,
   score-owned gated/anticipatory percussion-return texture, shared pulse-echo
   return-drive,
+  score-owned dotted foundation rhythm and pre-kick-pocket consequence,
   score-owned spatial-FDN configuration and wet consequence,
   score-owned upper-role timing, graph, and
   pre/post upper-timbre evidence;
@@ -82,13 +86,13 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - phrase-wide and live-window ITU-R BS.1770-5 loudness, Annex 2 true peak,
   physical-time spectral/trajectory evidence, rate-normalized transient
   detection, explicit bounded working memory, and a complete-checkpoint
-  Professional Evidence v13 report bank;
+  Professional Evidence v14 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
 
-The app now installs one exact-engine calibrated primary evaluator v10 from the
-current profile v10 derived from 28 complete journeys, a passing v11 adversarial
+The app now installs one exact-engine calibrated primary evaluator v11 from the
+current profile v11 derived from 28 complete journeys, a passing v12 adversarial
 suite, and a disjoint four-journey holdout qualification. Each boundary owns one
 canonical plan and one terminal decision. The evaluator may request one same-
 plan home-timbre correction, for two render passes maximum. Missing artifacts
@@ -143,9 +147,9 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 29, candidate-vector schema 27, and candidate-
+Quality-contract schema 30, candidate-vector schema 28, and candidate-
 transaction schema 4 now bind a versioned transaction across canonical engine
-v28, quality policy, evaluator, candidate
+v29, quality policy, evaluator, candidate
 plans, route, incoming continuation, attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 upper-percussion tail-clearance,
@@ -161,13 +165,13 @@ provenance, make each
 score-to-PCM consequence explicit for the calibrated primary policy. The modal
 foundation projection additionally binds every empty and active bar, score-owned
 articulation, exact dry PCM, protected routing, continuation, pitch, envelope,
-spectral, masking, and pole-stability evidence. Professional Evidence v13 adds
+spectral, masking, and pole-stability evidence. Professional Evidence v14 adds
 standards-based phrase loudness/true peak, bounded streaming
 physical-time spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
 complete role attribution. The repository now carries a deterministic,
 non-reconstructable 44.1/48 kHz diverse profile, relational rate/trajectory
-guardrails, a passing 30-case v11 adversarial suite, and a disjoint holdout report
+guardrails, a passing 31-case v12 adversarial suite, and a disjoint holdout report
 covering 56/56 observations with zero relationship failures. Short-program
 EBU-style loudness range remains descriptive because its gated percentile is
 discontinuous at small populations; integrated, momentary, short-term, and true-
@@ -178,8 +182,8 @@ local and untracked.
 
 The runtime now records one complete plan, one initial attempt, and at most one
 home-timbre correction, then atomically carries the terminal evidence, decision,
-and controller state into continuation. The exact engine-v28 profile v10,
-passing v11 adversarial suite, disjoint holdout qualification, non-compensable
+and controller state into continuation. The exact engine-v29 profile v11,
+passing v12 adversarial suite, disjoint holdout qualification, non-compensable
 checkpoint policy, and transaction replay are the app path. The former
 single-journey generalization blocker is closed: 28 development journeys and
 four disjoint replacement holdouts pass at 44.1 and 48 kHz. A missing artifact,

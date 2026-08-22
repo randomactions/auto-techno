@@ -1634,3 +1634,57 @@ causality, regenerated artifacts, holdout, adversarial, preparation, and
 realtime-producer contracts. Publication and exact-head CI are separate pending
 gates. Listening, app/route/interruption QA, latency/peak-memory measurement,
 and physical-output soak were not performed and are not implied.
+
+## Source 28 foundation pre-kick pocket — 2026-08-22
+
+Source 28 extends the existing dotted Bass Pluck relation with one Core-owned
+terminal-release articulation on the event immediately before kick 4 or 12.
+The raised-cosine release begins `0.1875` score step before the kick, reaches
+exact zero `0.0625` step before it, and leaves every onset, other role, protected
+route, and neutral fallback unchanged. It adds no track, instrument, sidechain,
+effect chain, continuation state, callback work, or user control.
+
+Candidate-vector schema 28 retains the exact score event, natural event end,
+release and kick geometry, dry-foundation silence hash/peak/RMS, Bass Pluck
+assignment, and full/protected render agreement. Professional Evidence v14 adds
+the upper-only-safer foundation pre-kick silence RMS maximum. The 31-case
+adversarial suite includes one non-compensable contaminated-pocket attack.
+Quality-contract schema 30, canonical engine v29, primary evaluator/profile
+v11, adversarial schema 12, and holdout schema 10 bind the change as one exact
+installed contract.
+
+Release-mode artifact generation accepted 392/392 development observations
+from 28 journeys, rejected 31/31 adversarial cases for their exact expected
+reasons, and accepted 56/56 observations from four disjoint holdout journeys
+with zero relationship failures. An independent second invocation against the
+same 32 cached journeys produced byte-identical JSON. The shipping artifacts
+are:
+
+- profile `63b4173f9d08fdba`, JSON SHA-256
+  `b65e15456e287461c2d8c9737c3da2689c60b84b750a0470a9edbe2f62321335`;
+- adversarial suite `8fb2813d62791ba5`, JSON SHA-256
+  `1dac45b96e6fa6fcaeee60d3d7b78a9be591e8531920c2858c350701a08549ce`;
+- holdout qualification `411b1fdd09995453`, JSON SHA-256
+  `852044c5cdd117f848fbea207a9e357fb7984a91e26241701e2bd61515e2cef2`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated
+caches and serial process boundaries. Source 28 passed 11/11 causal and
+correction tests; the fresh-bundle v11-only check passed after discarding one
+reused-bundle run that still contained copied v10 resources; the candidate/live
+tamper matrix passed its 27 unaffected cases and the intentionally updated
+quality-state fingerprint passed 1/1 after exact-golden correction; adversarial
+qualification passed 2/2; calibrated policy 10/10; disjoint holdout 1/1; atomic
+commit 1/1; unsupported 8 and 12 kHz gates 1/1 each; unavailable-route commit
+1/1; cancellation 1/1; correction order 2/2; rejected-attempt isolation 1/1;
+representative-rate evidence 1/1; prepared device rates 1/1; resource envelope
+2/2; continuation replay 1/1; Core/evidence 117/117; preparation preflight
+24/24; and protected routing 14/14. The debug realtime-producer object exposed
+only the allowed `memcpy_chk` copy primitive, and the optimized `AutoTechno`
+product built in 73.76 seconds. `git diff --check` was clean before publication.
+
+This local snapshot proves deterministic score-to-render causality, exact
+neutral/correction behavior, regenerated primary artifacts, adversarial and
+disjoint-holdout qualification, preparation, and realtime-producer safety.
+Publication and exact-head CI are separate pending gates. Listening,
+app/route/interruption QA, latency/peak-memory measurement, and physical-output
+soak were not performed and are not implied.

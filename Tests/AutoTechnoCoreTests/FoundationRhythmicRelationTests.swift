@@ -18,6 +18,205 @@ struct FoundationRhythmicRelationTests {
         #expect(FoundationRhythmicRelationContract.stepMask(pairPhase: 1) == 0x4824)
     }
 
+    @Test("Dotted score owns one bounded in-bar pre-kick pocket per phase")
+    func preKickPocketScoreOwnership() throws {
+        let plan = try #require(firstDottedPlan())
+        let activeBars = plan.resolvedBars.filter {
+            $0.foundationRhythmicRelation == .dottedThreeSixteenth
+        }
+        #expect(!activeBars.isEmpty)
+
+        for resolved in activeBars {
+            let articulation = try #require(
+                FoundationPreKickPocketResolver.articulation(in: resolved)
+            )
+            let phase = FoundationRhythmicRelationContract.pairPhase(
+                absoluteBar: resolved.performance.bar
+            )
+            let expectedBassStep = phase == 0 ? 3 : 11
+            let expectedKickStep = phase == 0 ? 4 : 12
+            #expect(articulation.relation == .preKickClearance)
+            #expect(articulation.bassStep == expectedBassStep)
+            #expect(articulation.kickStep == expectedKickStep)
+            #expect(articulation.releaseStartStep ==
+                    Double(expectedKickStep) -
+                        FoundationPreKickPocketContract.releaseLeadInSteps)
+            #expect(articulation.releaseEndStep ==
+                    Double(expectedKickStep) -
+                        FoundationPreKickPocketContract.silenceLeadInSteps)
+            #expect(resolved.ensemble.events.indices.contains(
+                articulation.scoreEventIndex
+            ))
+            #expect(resolved.ensemble.events[articulation.scoreEventIndex].voice == .bass)
+            #expect(resolved.ensemble.events[articulation.scoreEventIndex].step ==
+                    expectedBassStep)
+            #expect(resolved.ensemble.kickAnchors.contains(expectedKickStep))
+        }
+    }
+
+    @Test("Established and malformed foundation relations remain pocket-neutral")
+    func preKickPocketNeutralFallback() throws {
+        let plan = try #require(firstDottedPlan())
+        let active = try #require(plan.resolvedBars.first {
+            $0.foundationRhythmicRelation == .dottedThreeSixteenth
+        })
+        #expect(FoundationPreKickPocketResolver.articulation(
+            in: replacingRelation(in: active, with: .established)
+        ) == nil)
+
+        let malformedEnsemble = EnsembleContext(
+            focusRole: active.ensemble.focusRole,
+            events: active.ensemble.events.filter {
+                !($0.voice == .bass && $0.step + 1 == 4)
+            },
+            kickAnchors: active.ensemble.kickAnchors,
+            intentionalPileup: active.ensemble.intentionalPileup
+        )
+        #expect(FoundationPreKickPocketResolver.articulation(
+            in: replacingRelation(
+                in: active,
+                with: .dottedThreeSixteenth,
+                ensemble: malformedEnsemble
+            )
+        ) == nil)
+    }
+
+    @Test("Pre-kick terminal release is bounded, monotone, and exactly neutral")
+    func preKickPocketReleaseCurve() {
+        let release = 4..<12
+        #expect(ResonantMonoVoice.terminalReleaseGain(
+            frameIndex: 0,
+            release: nil
+        ) == 1)
+        #expect(ResonantMonoVoice.terminalReleaseGain(
+            frameIndex: release.lowerBound - 1,
+            release: release
+        ) == 1)
+        #expect(ResonantMonoVoice.terminalReleaseGain(
+            frameIndex: release.lowerBound,
+            release: release
+        ) == 1)
+        #expect(ResonantMonoVoice.terminalReleaseGain(
+            frameIndex: release.upperBound,
+            release: release
+        ) == 0)
+        let gains = (release.lowerBound...release.upperBound).map {
+            ResonantMonoVoice.terminalReleaseGain(
+                frameIndex: $0,
+                release: release
+            )
+        }
+        #expect(gains.allSatisfy { (0...1).contains($0) })
+        #expect(zip(gains, gains.dropFirst()).allSatisfy { pair in
+            pair.0 >= pair.1
+        })
+    }
+
+    @Test("Pre-kick release changes only the same foundation event tail")
+    func preKickPocketSameEventPCMOracle() throws {
+        let plan = try #require(firstDottedPlan())
+        let active = try #require(plan.resolvedBars.first {
+            $0.foundationRhythmicRelation == .dottedThreeSixteenth
+        })
+        let articulation = try #require(
+            FoundationPreKickPocketResolver.articulation(in: active)
+        )
+        let event = active.ensemble.events[articulation.scoreEventIndex]
+        let sampleRate = 48_000.0
+        let frameCount = Int((
+            240.0 / AutonomousSessionDirector.bpm * sampleRate
+        ).rounded())
+        let stepFrames = Double(frameCount) / 16.0
+        let eventOffset = VoiceRenderer.timingOffsetInSteps(
+            for: event.voice,
+            step: event.step,
+            dna: plan.dna
+        )
+        let eventStartFrame = Int((
+            (Double(event.step) + eventOffset) * stepFrames
+        ).rounded())
+        let kickOffset = VoiceRenderer.timingOffsetInSteps(
+            for: .kick,
+            step: articulation.kickStep,
+            dna: plan.dna
+        )
+        let releaseStartFrame = Int(((
+            articulation.releaseStartStep + kickOffset
+        ) * stepFrames).rounded())
+        let releaseEndFrame = Int(((
+            articulation.releaseEndStep + kickOffset
+        ) * stepFrames).rounded())
+        let kickFrame = Int(((
+            Double(articulation.kickStep) + kickOffset
+        ) * stepFrames).rounded())
+        let synth = SynthPerformancePlan(
+            scene: plan.scene,
+            dna: plan.dna,
+            kind: plan.kind,
+            resolvedBars: [active]
+        )
+
+        func render(
+            releaseStart: Int?,
+            releaseEnd: Int?
+        ) -> (
+            samples: [Float],
+            measurement: [Float],
+            result: ResonantMonoFoundationRenderResult
+        ) {
+            var output = [Float](repeating: 0, count: frameCount)
+            var measurement = [Float](repeating: 0, count: frameCount)
+            var architecture = [Float](repeating: 0, count: frameCount)
+            var pulseEcho = [Float](repeating: 0, count: frameCount)
+            var reverb = [Float](repeating: 0, count: frameCount)
+            var state = ResonantMonoState()
+            var nonlinearCoreEvidence =
+                TPTAntialiasedNonlinearCoreEvidenceAccumulator()
+            let result = ResonantMonoVoice.renderFoundation(
+                &output,
+                measurement: &measurement,
+                architectureMeasurement: &architecture,
+                pulseEchoSend: &pulseEcho,
+                spatialReverbSend: &reverb,
+                start: eventStartFrame,
+                sampleRate: sampleRate,
+                level: 0.12,
+                frequency: 110,
+                assignment: synth.bars[0].foundationInstrument,
+                velocity: 0.82,
+                terminalReleaseStartFrame: releaseStart,
+                terminalReleaseEndFrame: releaseEnd,
+                state: &state,
+                nonlinearCoreEvidence: &nonlinearCoreEvidence
+            )
+            return (output, measurement, result)
+        }
+
+        let neutral = render(releaseStart: nil, releaseEnd: nil)
+        let pocket = render(
+            releaseStart: releaseStartFrame,
+            releaseEnd: releaseEndFrame
+        )
+        #expect(!neutral.result.terminalReleaseApplied)
+        #expect(pocket.result.terminalReleaseApplied)
+        #expect(neutral.result.naturalFrameCount ==
+                pocket.result.naturalFrameCount)
+        #expect(eventStartFrame + neutral.result.naturalFrameCount > kickFrame)
+        #expect(eventStartFrame + pocket.result.appliedFrameCount ==
+                releaseEndFrame)
+        #expect(Array(neutral.samples[..<releaseStartFrame]) ==
+                Array(pocket.samples[..<releaseStartFrame]))
+        #expect(pocket.samples[releaseEndFrame..<kickFrame].allSatisfy {
+            $0 == 0
+        })
+        #expect(neutral.samples[releaseEndFrame..<kickFrame].contains {
+            $0 != 0
+        })
+        #expect(pocket.samples != neutral.samples)
+        #expect(pocket.measurement == pocket.samples)
+        #expect(neutral.measurement == neutral.samples)
+    }
+
     @Test("Established evidence retains same-step bass multiplicity")
     func establishedEvidenceMultiplicity() {
         let duplicateStepMask = UInt16(1) << UInt16(5)
@@ -192,8 +391,42 @@ struct FoundationRhythmicRelationTests {
             #expect(evidence.peak > 0 && evidence.rms > 0)
             #expect(evidence.peak >= evidence.rms)
             #expect(evidence.finite)
+            let pocket = evidence.preKickPocket
+            let expectedBassStep = phase == 0 ? 3 : 11
+            let expectedKickStep = phase == 0 ? 4 : 12
+            let expectedKickFrame = Int((
+                Double(expectedKickStep) * Double(expectedFrames) / 16.0
+            ).rounded())
+            let expectedReleaseStart = Int(((
+                Double(expectedKickStep) -
+                    FoundationPreKickPocketContract.releaseLeadInSteps
+            ) * Double(expectedFrames) / 16.0).rounded())
+            let expectedReleaseEnd = Int(((
+                Double(expectedKickStep) -
+                    FoundationPreKickPocketContract.silenceLeadInSteps
+            ) * Double(expectedFrames) / 16.0).rounded())
+            #expect(pocket.relation == .preKickClearance)
+            #expect(pocket.bassStep == expectedBassStep)
+            #expect(pocket.kickStep == expectedKickStep)
+            #expect(pocket.eventStartFrame == evidence.renderedStartFrames.first {
+                $0 < expectedKickFrame && $0 >= Int(Double(expectedBassStep) *
+                    Double(expectedFrames) / 16.0)
+            })
+            #expect(pocket.naturalEndFrame > pocket.kickFrame)
+            #expect(pocket.releaseStartFrame == expectedReleaseStart)
+            #expect(pocket.releaseEndFrame == expectedReleaseEnd)
+            #expect(pocket.kickFrame == expectedKickFrame)
+            #expect(pocket.releaseFrameCount ==
+                    expectedReleaseEnd - expectedReleaseStart)
+            #expect(pocket.silenceFrameCount ==
+                    expectedKickFrame - expectedReleaseEnd)
+            #expect(pocket.silenceSampleHash.count == 16)
+            #expect(pocket.silencePeak == 0)
+            #expect(pocket.silenceRMS == 0)
+            #expect(pocket.applied && pocket.finite)
             #expect(evidence.dryFoundationSampleHash !=
                     neutral.foundation.dryFoundationSampleHash)
+            #expect(neutral.foundation.preKickPocket == .neutral)
             #expect(activeProtected.kickMix == neutral.kickMix)
             #expect(activeProtected.dryPercussionSampleHash ==
                     neutral.dryPercussionSampleHash)
@@ -202,6 +435,37 @@ struct FoundationRhythmicRelationTests {
             #expect(activeProtected.closedHatRenderEvidence ==
                     neutral.closedHatRenderEvidence)
         }
+    }
+
+    @Test("Home-upper correction preserves the score-owned foundation pocket")
+    func correctionPreservesPreKickPocket() throws {
+        let plan = try #require(firstDottedPlan())
+        let active = try #require(plan.resolvedBars.first {
+            $0.foundationRhythmicRelation == .dottedThreeSixteenth
+        })
+        let initial = renderProjection(
+            resolved: active,
+            plan: plan,
+            sampleRate: 48_000,
+            layer: .full
+        )
+        let correction = renderProjection(
+            resolved: active,
+            plan: plan,
+            sampleRate: 48_000,
+            layer: .full,
+            forceHomeUpperTimbre: true
+        )
+
+        #expect(initial.foundation.preKickPocket.applied)
+        #expect(initial.foundation == correction.foundation)
+        #expect(initial.kickMix == correction.kickMix)
+        #expect(initial.dryPercussionSampleHash ==
+                correction.dryPercussionSampleHash)
+        #expect(initial.groovePulseRenderEvidence ==
+                correction.groovePulseRenderEvidence)
+        #expect(initial.closedHatRenderEvidence ==
+                correction.closedHatRenderEvidence)
     }
 
     @MainActor
@@ -261,6 +525,14 @@ struct FoundationRhythmicRelationTests {
                 #expect(record.scoreBassStepMask == record.renderedBassStepMask)
                 #expect(record.peak > 0 && record.rms > 0)
                 #expect(record.bassPluckAssigned)
+                #expect(record.preKickPocket.relation ==
+                        FoundationPreKickPocketRelation.preKickClearance.rawValue)
+                #expect(record.preKickPocket.silencePeak == 0)
+                #expect(record.preKickPocket.silenceRMS == 0)
+                #expect(record.preKickPocket.isComplete(
+                    sampleRate: 8_000,
+                    renderedFrameCount: record.renderedFrameCount
+                ))
                 #expect(record.renderPassesMatch && record.bindingValid)
                 #expect(record.isComplete(sampleRate: 8_000))
             }
@@ -290,6 +562,9 @@ struct FoundationRhythmicRelationTests {
                 #expect(observation[
                     .foundationDottedRhythmCrestFactorDBMean
                 ] == expectedCrestFactor)
+                #expect(observation[
+                    .foundationPreKickPocketSilenceRMSMaximum
+                ] == 0)
             }
 
             let record = try #require(activeRecords.first)
@@ -303,7 +578,7 @@ struct FoundationRhythmicRelationTests {
                 "renderedBassStepMask", "renderedFrameCount",
                 "renderedStartFrameFingerprint", "dryFoundationSampleHash",
                 "peak", "rms", "bassPluckAssigned", "renderPassesMatch",
-                "bindingValid", "finite",
+                "preKickPocket", "bindingValid", "finite",
             ])
             func forged(_ key: String, _ value: Any) throws
                     -> AutonomousFoundationRhythmBarEvidence {
@@ -328,6 +603,18 @@ struct FoundationRhythmicRelationTests {
                 forged("finite", false),
             ]
             #expect(invalid.allSatisfy { !$0.isComplete(sampleRate: 8_000) })
+
+            var contaminatedJSON = json
+            var contaminatedPocket = try #require(
+                contaminatedJSON["preKickPocket"] as? [String: Any]
+            )
+            contaminatedPocket["silenceRMS"] = 0.01
+            contaminatedJSON["preKickPocket"] = contaminatedPocket
+            let contaminated = try JSONDecoder().decode(
+                AutonomousFoundationRhythmBarEvidence.self,
+                from: JSONSerialization.data(withJSONObject: contaminatedJSON)
+            )
+            #expect(!contaminated.isComplete(sampleRate: 8_000))
 
             let activeFingerprint = AutonomousCandidateFingerprint.plan(plan)
             var changedBars = plan.resolvedBars
@@ -386,13 +673,15 @@ struct FoundationRhythmicRelationTests {
         resolved: ResolvedPerformanceBar,
         plan: AutonomousPhrasePlan,
         sampleRate: Double,
-        layer: RenderLayer
+        layer: RenderLayer,
+        forceHomeUpperTimbre: Bool = false
     ) -> RenderProjection {
         let synth = SynthPerformancePlan(
             scene: plan.scene,
             dna: plan.dna,
             kind: plan.kind,
-            resolvedBars: [resolved]
+            resolvedBars: [resolved],
+            forceHomeUpperTimbre: forceHomeUpperTimbre
         )
         var state = RenderState()
         state.barIndex = resolved.performance.bar

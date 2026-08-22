@@ -11,9 +11,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 29, candidate-vector schema 27,
+candidate uses quality-contract schema 30, candidate-vector schema 28,
 candidate-transaction schema 4, and canonical engine identity
-`autotechno-canonical-engine.v28`. It preserves
+`autotechno-canonical-engine.v29`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
@@ -22,7 +22,8 @@ architecture-local dry-
 PCM, acid-operator, TPT/ADAA nonlinear-core, rising spectral-cluster, and tonal-envelope-expansion
 evidence, score-owned gated and anticipatory
 percussion-return texture,
-score-owned dotted foundation rhythm and exact dry Bass Pluck consequence,
+score-owned dotted foundation rhythm, its pre-kick pocket, and exact dry Bass
+Pluck consequence,
 shared pulse-echo return-drive,
 score-owned spatial-FDN configuration and exact stereo wet consequence,
 score-bound phrase composition covering true percussion resampling,
@@ -120,7 +121,7 @@ sample counts, pre/post typed hashes, peak/RMS/crest, physical attack/body RMS,
 1--4 kHz energy ratios, finiteness, score/render geometry, detector/audible
 scaling, and protected/full equality. Four Professional Evidence dimensions
 retain output crest, attack-to-body balance, upper-mid energy, and crest
-reduction; the v11 adversarial suite includes a source-local transient spike.
+reduction; the v12 adversarial suite retains a source-local transient spike.
 The present fixed curve is a bounded realization, not a permanent kick target.
 
 The existing Tonal Motion architecture also carries one durable
@@ -231,6 +232,16 @@ factor; a dedicated adversarial case rejects impossible prevalence. The
 integer-grid masks and current Bass Pluck realization are replaceable DSP, not
 the durable definition of cross-bar foundation timing.
 
+Eligible dotted bars also retain one nested pre-kick-pocket record for the
+existing Bass Pluck immediately before kick step 4 or 12. It binds the Core-
+owned articulation, exact score event and route frames, natural event crossing,
+bounded terminal release, and exact dry-foundation silence window. Candidate
+completeness requires positive release and silence intervals, exact-zero peak
+and RMS, finite state, and full/protected equality; established or ineligible
+bars retain one canonical neutral sentinel. The 65th professional dimension,
+`foundation-pre-kick-pocket-silence-rms-maximum`, is upper-only safer with a
+near-zero guard. A dedicated contamination attack must fail independently.
+
 Spatial-FDN evidence retains one compact record for every rendered bar. It
 binds the existing score-owned depth/carrier/send/filter articulation and the
 scene-derived eight-line configuration to exact input and stereo wet hashes,
@@ -242,11 +253,11 @@ identity. The record is required for structural completeness and changes the
 transaction fingerprint. See [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md) for the
 signal and replacement contract.
 
-`ProfessionalEvidenceReportBank` v13 accepts a bank only when every canonical
+`ProfessionalEvidenceReportBank` v14 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v10 from the v10 profile, v11 adversarial suite,
-and v9 disjoint holdout. It judges every
+exact-engine primary evaluator v11 from the v11 profile, v12 adversarial suite,
+and v10 disjoint holdout. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.
@@ -331,7 +342,7 @@ sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
 status. It also retains exact first/last sample bit patterns, the pre-drive peak
 frame, the exact input/amount witness at the post-drive peak, and a replayable
 changed-frame witness together with that frame's exact input bits.
-Candidate-vector schema 27 binds that record to the matching instrument effect
+Candidate-vector schema 28 binds that record to the matching instrument effect
 access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
 sample-rate-normalized boundary transition. Neutral drive requires the no-change
 sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
@@ -360,7 +371,7 @@ uses half depth, response uses full depth, and the full displacement is capped
 at `0.12` of one sixteenth. Note count, base step, pitch, velocity, instrument,
 requested duration, gate, and every protected-rhythm event remain unchanged.
 
-Candidate-vector schema 27 retains one compact record per full rendered bar. It
+Candidate-vector schema 28 retains one compact record per full rendered bar. It
 binds route-derived frame geometry, score and actual renderer onset facts,
 requested gate end, bounded renderer-owned applied gate end, causal role counts,
 exact protected/role offset relationships, and separate shadow/response dry
@@ -413,8 +424,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 29, candidate-vector schema 27,
-candidate-transaction schema 4, and canonical engine v28, the versioned
+Under quality-contract schema 30, candidate-vector schema 28,
+candidate-transaction schema 4, and canonical engine v29, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

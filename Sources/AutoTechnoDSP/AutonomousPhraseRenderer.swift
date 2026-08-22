@@ -834,6 +834,44 @@ package struct SpatialFDNRenderEvidence: Equatable, Sendable {
 /// Same-pass evidence from the exact existing foundation render calls. The
 /// transient start-frame list is reduced into a compact binding during
 /// detached preparation and never reaches scheduling or the callback.
+package struct FoundationPreKickPocketRenderEvidence: Equatable, Sendable {
+    package let relation: FoundationPreKickPocketRelation?
+    package let scoreEventIndex: Int
+    package let bassStep: Int
+    package let kickStep: Int
+    package let eventStartFrame: Int
+    package let naturalEndFrame: Int
+    package let releaseStartFrame: Int
+    package let releaseEndFrame: Int
+    package let kickFrame: Int
+    package let releaseFrameCount: Int
+    package let silenceFrameCount: Int
+    package let silenceSampleHash: String
+    package let silencePeak: Double
+    package let silenceRMS: Double
+    package let applied: Bool
+    package let finite: Bool
+
+    package static let neutral = FoundationPreKickPocketRenderEvidence(
+        relation: nil,
+        scoreEventIndex: -1,
+        bassStep: -1,
+        kickStep: -1,
+        eventStartFrame: -1,
+        naturalEndFrame: -1,
+        releaseStartFrame: -1,
+        releaseEndFrame: -1,
+        kickFrame: -1,
+        releaseFrameCount: 0,
+        silenceFrameCount: 0,
+        silenceSampleHash: "",
+        silencePeak: 0,
+        silenceRMS: 0,
+        applied: false,
+        finite: true
+    )
+}
+
 package struct FoundationRhythmRenderEvidence: Equatable, Sendable {
     package let bar: Int
     package let relation: FoundationRhythmicRelation
@@ -845,6 +883,7 @@ package struct FoundationRhythmRenderEvidence: Equatable, Sendable {
     package let dryFoundationSampleHash: String
     package let peak: Double
     package let rms: Double
+    package let preKickPocket: FoundationPreKickPocketRenderEvidence
     package let finite: Bool
 
     package static let neutral = FoundationRhythmRenderEvidence(
@@ -858,6 +897,7 @@ package struct FoundationRhythmRenderEvidence: Equatable, Sendable {
         dryFoundationSampleHash: "",
         peak: 0,
         rms: 0,
+        preKickPocket: .neutral,
         finite: false
     )
 }
