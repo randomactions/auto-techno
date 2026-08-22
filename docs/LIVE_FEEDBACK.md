@@ -9,9 +9,9 @@ unscheduled future phrase, and commits that change only when the one calibrated
 primary evaluator accepts the resulting canonical candidate.
 
 This is an implementation and automated-qualification statement for canonical
-engine `autotechno-canonical-engine.v30`, quality-contract schema 31,
-candidate-vector schema 29, candidate-transaction schema 4, Professional
-Evidence v15, professional profile v12, and primary policy/evaluator v12. It is not
+engine `autotechno-canonical-engine.v31`, quality-contract schema 32,
+candidate-vector schema 30, candidate-transaction schema 4, Professional
+Evidence v16, professional profile v13, and primary policy/evaluator v13. It is not
 evidence that a physical device, route change, interruption, listening session,
 or 60-minute output soak passed.
 
@@ -96,14 +96,14 @@ reorders, or estimates samples.
 
 The window reuses the canonical ITU-R BS.1770-5 K-weighting and gating code and
 the Annex 2 four-phase FIR true-peak implementation. Evidence binds exact PCM,
-source occurrence, sample range, route, engine, Professional Evidence v15,
+source occurrence, sample range, route, engine, Professional Evidence v16,
 policy/evaluator/controller versions, frame and packet counts, drop/reject
 counters, analysis memory, integrated/momentary/short-term loudness, true peak,
 and applicable checkpoints. Only maximum short-term loudness and maximum true
 peak drive the controller; integrated loudness remains descriptive for the
 fixed window.
 
-The controller reads those two bounds from the exact installed profile v12.
+The controller reads those two bounds from the exact installed profile v13.
 When several checkpoints apply, each metric uses the strictest applicable upper
 bound and the lower bound paired with that same checkpoint. An ordinary lock
 phrase uses the calibrated `longContinuation` envelope. Unsupported rates,
@@ -224,10 +224,10 @@ additional evaluator, renderer, controller, or correction search.
 
 ## Qualification boundaries
 
-The bundled v12 profile, v13 adversarial suite, and v11 disjoint holdout are the only
+The bundled v13 profile, v14 adversarial suite, and v12 disjoint holdout are the only
 shipping primary artifacts. Their automated qualification, queue tests,
 callback-symbol audit, controller/candidate tamper tests, and deterministic
-replay establish implementation and offline policy evidence for engine v30.
+replay establish implementation and offline policy evidence for engine v31.
 
 The following remain separate states and must be reported separately:
 

@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 29)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 30)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -1304,10 +1304,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 29)
-        #expect(QualityQualificationContract.schemaVersion == 31)
+        #expect(vector.schemaVersion == 30)
+        #expect(QualityQualificationContract.schemaVersion == 32)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v30")
+                "autotechno-canonical-engine.v31")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3619,7 +3619,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "9d868bfea30116bf")
+            "297d7678d90b1ddb")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7

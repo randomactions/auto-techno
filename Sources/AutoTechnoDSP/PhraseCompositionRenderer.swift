@@ -131,6 +131,17 @@ package struct PolyphonicPadRenderEvidence: Equatable, Sendable {
     package let maximumFilterScale: Double
     package let minimumSpatialSendScale: Double
     package let maximumSpatialSendScale: Double
+    package let minimumAmplitudeGateGain: Double
+    package let maximumAmplitudeGateGain: Double
+    package let amplitudeGateTransitionFrameCount: Int
+    package let amplitudeGateOpenFrameCount: Int
+    package let amplitudeGateClosedFrameCount: Int
+    package let preAmplitudeGateOutputSampleHash: String
+    package let preAmplitudeGateSpatialSendSampleHash: String
+    package let amplitudeGateDifferenceRMS: Double
+    package let spatialAmplitudeGateDifferenceRMS: Double
+    package let amplitudeGateClosedOutputRMS: Double
+    package let amplitudeGateClosedSpatialSendRMS: Double
     package let filterModulationDifferenceRMS: Double
     package let spatialSendDifferenceRMS: Double
     package let spatialSendSampleHash: String
@@ -152,6 +163,17 @@ package struct PolyphonicPadRenderEvidence: Equatable, Sendable {
         maximumFilterScale: 1,
         minimumSpatialSendScale: 1,
         maximumSpatialSendScale: 1,
+        minimumAmplitudeGateGain: 1,
+        maximumAmplitudeGateGain: 1,
+        amplitudeGateTransitionFrameCount: 0,
+        amplitudeGateOpenFrameCount: 0,
+        amplitudeGateClosedFrameCount: 0,
+        preAmplitudeGateOutputSampleHash: "",
+        preAmplitudeGateSpatialSendSampleHash: "",
+        amplitudeGateDifferenceRMS: 0,
+        spatialAmplitudeGateDifferenceRMS: 0,
+        amplitudeGateClosedOutputRMS: 0,
+        amplitudeGateClosedSpatialSendRMS: 0,
         filterModulationDifferenceRMS: 0,
         spatialSendDifferenceRMS: 0,
         spatialSendSampleHash: "",
@@ -176,6 +198,8 @@ struct PolyphonicPadState: Equatable, Sendable {
 /// A fixed four-voice tonal pad. All storage and voice count are bounded, and
 /// it runs only during detached phrase preparation.
 enum PolyphonicPadVoice {
+    static let amplitudeGateTransitionSeconds = 0.006
+
     static func render(
         _ output: inout [Float],
         measurement: inout [Float],
@@ -229,10 +253,31 @@ enum PolyphonicPadVoice {
         let maximumFilterScale = filterScales.max() ?? 1
         let minimumSpatialSendScale = spatialScales.min() ?? 1
         let maximumSpatialSendScale = spatialScales.max() ?? 1
+        let amplitudeGateTargets = (0..<PadRhythmicModulation.stepCount).map {
+            modulation.amplitudeGateTarget(atStep: $0)
+        }
+        let minimumAmplitudeGateGain = amplitudeGateTargets.min() ?? 1
+        let maximumAmplitudeGateGain = amplitudeGateTargets.max() ?? 1
+        let amplitudeGateTransitionFrameCount = modulation.active
+            ? max(2, Int((
+                sampleRate * amplitudeGateTransitionSeconds
+            ).rounded())) : 0
         var neutralLowPass = state.lowPass
         var filterDifferenceEnergy = 0.0
         var spatialDifferenceEnergy = 0.0
+        var amplitudeGateDifferenceEnergy = 0.0
+        var spatialAmplitudeGateDifferenceEnergy = 0.0
+        var amplitudeGateClosedOutputEnergy = 0.0
+        var amplitudeGateClosedSpatialSendEnergy = 0.0
+        var amplitudeGateOpenFrameCount = 0
+        var amplitudeGateClosedFrameCount = 0
         var spatialEnergy = 0.0
+        var preGateOutputFingerprint = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frames
+        )
+        var preGateSpatialFingerprint = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frames
+        )
         var spatialFingerprint = ExactPCMFingerprint.MonoAccumulator(
             sampleCount: frames
         )
@@ -242,12 +287,35 @@ enum PolyphonicPadVoice {
         var peak = 0.0
         var finite = rootFrequency.isFinite && level.isFinite
         for index in 0..<frames {
+            let relativeStep = min(
+                PadRhythmicModulation.stepCount - 1,
+                max(0, Int(Double(index) / stepFrames))
+            )
             let localStep = min(
                 PadRhythmicModulation.stepCount - 1,
-                max(0, voicing.onsetStep + Int(Double(index) / stepFrames))
+                max(0, voicing.onsetStep + relativeStep)
             )
             let filterScale = modulation.filterScale(atStep: localStep)
             let spatialSendScale = modulation.spatialSendScale(atStep: localStep)
+            let amplitudeGateTarget = modulation.amplitudeGateTarget(
+                atStep: localStep
+            )
+            let amplitudeGateGain = modulation.active
+                ? rhythmicAmplitudeGateGain(
+                    frame: index,
+                    step: relativeStep,
+                    totalFrameCount: frames,
+                    stepFrames: stepFrames,
+                    transitionFrameCount: amplitudeGateTransitionFrameCount,
+                    target: amplitudeGateTarget
+                ) : 1
+            if modulation.active {
+                if amplitudeGateTarget == 1 {
+                    amplitudeGateOpenFrameCount += 1
+                } else {
+                    amplitudeGateClosedFrameCount += 1
+                }
+            }
             let appliedCoefficient = modulation.active
                 ? min(0.36, 1 - exp(
                     -2 * .pi * cutoff * filterScale / sampleRate
@@ -295,21 +363,33 @@ enum PolyphonicPadVoice {
                 }
             }
             let driven = tanh(mixed * (1.08 + automation.shape * 0.32))
-            let sample = Float(driven * max(0, level))
+            let preGateSample = Float(driven * max(0, level))
+            preGateOutputFingerprint.append(preGateSample)
+            let sample = modulation.active
+                ? Float(Double(preGateSample) * amplitudeGateGain)
+                : preGateSample
             if modulation.active {
                 let neutralDriven = tanh(
                     neutralMixed * (1.08 + automation.shape * 0.32)
                 )
-                let difference = Double(sample) -
+                let difference = Double(preGateSample) -
                     Double(Float(neutralDriven * max(0, level)))
                 filterDifferenceEnergy += difference * difference
+                let gateDifference = Double(sample) - Double(preGateSample)
+                amplitudeGateDifferenceEnergy += gateDifference * gateDifference
             }
             let frame = start + index
             output[frame] += sample
             measurement[frame] += sample
             let neutralSpatialSend = (mixed * 0.72 + spatial * 0.12) *
                 min(0.48, 0.16 + automation.space * 0.32) * max(0, level)
-            let padSpatialSend = Float(neutralSpatialSend * spatialSendScale)
+            let preGatePadSpatialSend = Float(
+                neutralSpatialSend * spatialSendScale
+            )
+            preGateSpatialFingerprint.append(preGatePadSpatialSend)
+            let padSpatialSend = modulation.active
+                ? Float(Double(preGatePadSpatialSend) * amplitudeGateGain)
+                : preGatePadSpatialSend
             spatialReverbSend[frame] += padSpatialSend
             spatialFingerprint.append(padSpatialSend)
             let spatialValue = Double(padSpatialSend)
@@ -318,9 +398,22 @@ enum PolyphonicPadVoice {
                 ? (neutralMixed * 0.72 + neutralSpatial * 0.12) *
                     min(0.48, 0.16 + automation.space * 0.32) * max(0, level)
                 : neutralSpatialSend
-            let spatialDifference = spatialValue -
+            let spatialDifference = Double(preGatePadSpatialSend) -
                 Double(Float(neutralReferenceSend))
             spatialDifferenceEnergy += spatialDifference * spatialDifference
+            if modulation.active {
+                let gateDifference = spatialValue -
+                    Double(preGatePadSpatialSend)
+                spatialAmplitudeGateDifferenceEnergy +=
+                    gateDifference * gateDifference
+                if amplitudeGateTarget == 0 {
+                    let outputValue = Double(sample)
+                    amplitudeGateClosedOutputEnergy +=
+                        outputValue * outputValue
+                    amplitudeGateClosedSpatialSendEnergy +=
+                        spatialValue * spatialValue
+                }
+            }
             let value = Double(sample)
             energy += value * value
             peak = max(peak, abs(value))
@@ -339,6 +432,31 @@ enum PolyphonicPadVoice {
             maximumFilterScale: maximumFilterScale,
             minimumSpatialSendScale: minimumSpatialSendScale,
             maximumSpatialSendScale: maximumSpatialSendScale,
+            minimumAmplitudeGateGain: minimumAmplitudeGateGain,
+            maximumAmplitudeGateGain: maximumAmplitudeGateGain,
+            amplitudeGateTransitionFrameCount:
+                amplitudeGateTransitionFrameCount,
+            amplitudeGateOpenFrameCount: amplitudeGateOpenFrameCount,
+            amplitudeGateClosedFrameCount: amplitudeGateClosedFrameCount,
+            preAmplitudeGateOutputSampleHash:
+                preGateOutputFingerprint.fingerprint,
+            preAmplitudeGateSpatialSendSampleHash:
+                preGateSpatialFingerprint.fingerprint,
+            amplitudeGateDifferenceRMS: sqrt(
+                amplitudeGateDifferenceEnergy / Double(max(1, frames))
+            ),
+            spatialAmplitudeGateDifferenceRMS: sqrt(
+                spatialAmplitudeGateDifferenceEnergy /
+                    Double(max(1, frames))
+            ),
+            amplitudeGateClosedOutputRMS: sqrt(
+                amplitudeGateClosedOutputEnergy /
+                    Double(max(1, amplitudeGateClosedFrameCount))
+            ),
+            amplitudeGateClosedSpatialSendRMS: sqrt(
+                amplitudeGateClosedSpatialSendEnergy /
+                    Double(max(1, amplitudeGateClosedFrameCount))
+            ),
             filterModulationDifferenceRMS: sqrt(
                 filterDifferenceEnergy / Double(max(1, frames))
             ),
@@ -350,8 +468,48 @@ enum PolyphonicPadVoice {
             outputSampleHash: ExactPCMFingerprint.mono(measurement),
             outputRMS: sqrt(energy / Double(max(1, frames))),
             outputPeak: peak,
-            finite: finite && energy.isFinite && peak.isFinite
+            finite: finite && energy.isFinite && peak.isFinite &&
+                amplitudeGateDifferenceEnergy.isFinite &&
+                spatialAmplitudeGateDifferenceEnergy.isFinite &&
+                amplitudeGateClosedOutputEnergy.isFinite &&
+                amplitudeGateClosedSpatialSendEnergy.isFinite
         )
+    }
+
+    private static func rhythmicAmplitudeGateGain(
+        frame: Int,
+        step: Int,
+        totalFrameCount: Int,
+        stepFrames: Double,
+        transitionFrameCount: Int,
+        target: Double
+    ) -> Double {
+        guard target == 1,
+              totalFrameCount > 0,
+              stepFrames.isFinite,
+              stepFrames > 0 else { return 0 }
+        let stepStart = min(
+            totalFrameCount,
+            max(0, Int(ceil(Double(step) * stepFrames)))
+        )
+        let stepEnd = min(
+            totalFrameCount,
+            max(stepStart, Int(ceil(Double(step + 1) * stepFrames)))
+        )
+        let count = stepEnd - stepStart
+        guard count > 1, frame >= stepStart, frame < stepEnd else { return 0 }
+        let edgeCount = min(max(2, transitionFrameCount), max(2, count / 2))
+        let offset = frame - stepStart
+        let remaining = stepEnd - 1 - frame
+        if offset < edgeCount {
+            let progress = Double(offset) / Double(max(1, edgeCount - 1))
+            return 0.5 - 0.5 * cos(.pi * progress)
+        }
+        if remaining < edgeCount {
+            let progress = Double(remaining) / Double(max(1, edgeCount - 1))
+            return 0.5 - 0.5 * cos(.pi * progress)
+        }
+        return 1
     }
 
     private static func wrap(_ phase: Double) -> Double {
@@ -367,6 +525,7 @@ enum PadRhythmicModulationFingerprint {
         for step in 0..<PadRhythmicModulation.stepCount {
             samples.append(Float(modulation.filterScale(atStep: step)))
             samples.append(Float(modulation.spatialSendScale(atStep: step)))
+            samples.append(Float(modulation.amplitudeGateTarget(atStep: step)))
         }
         return ExactPCMFingerprint.mono(samples)
     }

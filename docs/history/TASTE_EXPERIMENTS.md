@@ -1908,3 +1908,79 @@ changed, and exact-head CI remains the publication gate.
 Publication and exact-head CI remain separate pending gates. No listening,
 app/route/interruption QA, latency or peak-memory measurement, physical-output
 soak, or claim that the source demonstration was heard by a person is made.
+
+## Source 30: score-owned pad amplitude gate — 2026-08-22
+
+Source 30 analyzed Underdog Electronic Music School's *The trance gate
+technique* (`DxyQNgNKUf8`). `yt-dlp` 2026.08.19 retrieved byte-identical
+automatic-English VTT captions with SHA-256
+`0fa8fc4f1ee49c4b24bfebb768ff9cd4cd1585e4c9926904ab7b0853bb4d28f1`,
+structured JSON3 captions with SHA-256
+`001a988bb693e413a8a14523bd78f3c84e03979ea21900426413a93507475fce`,
+50 top-level comments plus 12 replies, and direct audio. The decoded 48 kHz
+stereo WAV was 547.392 seconds with SHA-256
+`56eb5ffbbb18b207fe5aa2f06d17c0c5d5916057193015c25e63b0707cae0f7e`.
+The local Deno JavaScript runtime solved extraction without an account, cookie,
+browser session, CAPTCHA, or token provider. All reconstructable source media
+and discussion captures remain temporary and untracked.
+
+The portable idea is independent amplitude rhythm applied to a sustained
+space-filling source, with release controlling whether cells feel separated or
+connected and effect placement determining how much space survives. Machine
+inspection supported strong repeated level contrast but did not establish a
+portable timing, threshold, pattern, release, or loudness target. Discussion
+supported independently controllable rhythm and a retained spatial response;
+it did not justify an audible trigger track, plug-in, or sidechain dependency.
+This is source inspection, not a human listening or promotion claim.
+
+Repository reconciliation selected the existing score-owned
+`PadRhythmicModulation.threeStepPulse` rather than a new instrument, track,
+sequencer, bus, or generic gate. Eligible latter-half major-break pads now use
+the same absolute-time three-sixteenth relation for filter, existing spatial
+send, and a closed/open/closed amplitude target. One route-derived 6 ms
+raised-cosine edge stays inside the open sixteenth. Closed dry and send samples
+are exact zero while all pad, filter, envelope, and spatial continuation keeps
+advancing; neutral, home-correction, and ineligible paths preserve the prior
+identity.
+
+An initial disjoint-holdout pilot rejected the implementation because the
+maximum of overlapping RMS-trajectory windows moved from `47.7546` to
+`57.1160` dB across 44.1/48 kHz for seed `161803` at `majorBreak`, exceeding
+the learned `7.6891` dB relationship bound. Changing the gate edge and lowering
+the analyzer floor did not remove the drift, while the corresponding mean was
+stable near `4.886`/`4.883` dB. Widening the bound from the seen holdout was
+rejected. The policy instead retains the peak as a strict local and within-rate
+trajectory dimension and uses the mean for cross-rate consistency; dedicated
+causal evidence continues to require exact closed-step silence. Because that
+pilot informed policy semantics, its holdout corpus was discarded and replaced
+with four previously unseen seeds.
+
+The replacement holdouts have source fingerprints `67231f6b675b5a6b`,
+`9310a28010b2983a`, `98da9a98dd956daa`, and `0028f9f35214fa00` with no overlap
+against the 28-journey calibration corpus. Release-mode generation accepted
+392/392 development observations, rejected all 33 adversarial cases for their
+exact expected reasons, and accepted 56/56 holdout observations with zero
+relationship failures. A second generation from the complete cache produced
+byte-identical profile, adversarial, and holdout resources. The installed
+fingerprints are `e1fdcbe7241f9f50`, `8973cc31505dfb7c`, and
+`b52070f9cb2231b4`.
+
+All 376 workflow-selected local test executions ultimately passed across
+serial process boundaries, including 83/83 Core/evidence tests, 38/38 upper
+tests split into six fresh processes, 24/24 preparation preflight tests, and
+14/14 protected-routing tests. Candidate tampering first exposed one stale
+quality-state golden after the version advance; its 27 functional cases had
+passed, and the exact corrected identity then passed 1/1. Both debug and release
+realtime-producer objects imported only an allowed copy primitive, and the
+optimized app built in 95.33 seconds. Publication, exact-head CI, listening,
+app/route QA, and physical-output soak remain separate gates.
+
+The durable intention and in-place replacement rule live in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). Higher-resolution
+control envelopes, tempo-aware duty, transient-conditioned edges, multiband or
+stereo-linked gating, nonlinear colour, and denser diffusion remain future
+directions only when calibrated motion, masking, transition, or translation
+evidence exposes a repeatable deficit. A mature rewrite must preserve the same
+pad and three-step score owner, absolute phase, advancing continuation, exact
+neutral behavior, causal evidence, and single primary evaluator; it supersedes
+this projection rather than adding another trigger lane or gate effect.

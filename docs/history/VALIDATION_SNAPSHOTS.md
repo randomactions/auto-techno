@@ -1752,3 +1752,57 @@ preparation, and realtime-producer safety. Publication and exact-head CI are
 separate pending gates. Listening, app/route/interruption QA, latency or
 peak-memory measurement, and physical-output soak were not performed and are
 not implied.
+
+## Source 30 pad amplitude gate calibration — 2026-08-22
+
+Candidate-vector schema 30 binds the existing three-step pad relation to
+route-derived amplitude-transition geometry, open/closed counts, exact closed
+dry/send silence, pre/post hashes, same-pass difference RMS, existing
+filter/spatial consequences, and full/protected equality. Professional Evidence
+v16 and the 67-metric primary vector add the level-relative amplitude-gate
+consequence; adversarial suite v14 adds the non-compensable disconnected-gate
+case. Quality-contract schema 32, canonical engine v31, profile v13, and holdout
+v12 bind the slice as one exact installed contract.
+
+The first disjoint pilot correctly failed one cross-rate relationship:
+seed `161803`, `majorBreak`, RMS-trajectory peak `47.7545970362` at 44.1 kHz
+versus `57.1159838385` at 48 kHz, delta `9.3613868022` above bound
+`7.6890716369`. Focused edge/floor diagnostics showed that an overlapping-window
+maximum was sample-grid sensitive while its mean stayed stable. The peak remains
+locally and within-rate evaluative; only the mean participates in cross-rate
+relationships. The pilot corpus was not reused as proof.
+
+Four replacement unseen holdouts accepted 56/56 observations with zero local,
+trajectory, or rate-consistency failures and zero source overlap. The 28
+development journeys accepted 392/392 observations; all 33 adversarial cases
+rejected for their exact expected reasons. A second cache-backed invocation
+produced byte-identical artifacts:
+
+- profile `e1fdcbe7241f9f50`, JSON SHA-256
+  `7b1072efacffec30cf4023e2c1d0f131578635f138fd2b09019a9fa96ab79081`;
+- adversarial suite `8973cc31505dfb7c`, JSON SHA-256
+  `b8e2a9e23a4e885b17353e9067a142e1566910377c9186d5aa2bcbd54dbfdf08`;
+- holdout qualification `b52070f9cb2231b4`, JSON SHA-256
+  `258696445ba1516ffedb33340786842a7898835c9516500d9af320dea7d04850`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated
+caches and serial process boundaries. The workflow-selected filters passed all
+376 test executions: upper score 3/3; realtime queue 7/7; live analyzer/
+controller 41/41; App coordination 32/32; candidate/live tampering 28/28
+(27 unaffected cases plus the corrected exact quality-state golden 1/1); exact
+artifacts 13/13; deterministic profile/adversarial 2/2; calibrated policy
+11/11; disjoint holdout 1/1; atomic commit 1/1; lightweight primary/evidence
+4/4; unsupported routes 2/2; focused evidence tampering 4/4; transaction/rate/
+resource/continuation gates 12/12; modal Core/DSP 15/15; adaptive session 25/25;
+instrument partitions 12/12; kick source 3/3; prepared percussion echo 1/1;
+Core/evidence 83/83; six isolated upper suites 38/38; preparation preflight
+24/24; and protected routing 14/14. The debug and release realtime-producer
+objects exposed only an allowed copy primitive. The optimized `AutoTechno`
+product built in 95.33 seconds (97.51 seconds wall).
+
+This snapshot proves score-to-render causality, exact closed-step silence,
+neutral/correction/continuation behavior, artifact generation, adversarial
+rejection, disjoint unseen-holdout qualification, byte determinism, preparation,
+protected routing, and realtime-producer safety. Publication and exact-head CI
+are separate gates. Listening, app/route/interruption QA, physical-output soak,
+and a professional-quality claim are not implied.

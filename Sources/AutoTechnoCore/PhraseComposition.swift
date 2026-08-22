@@ -166,6 +166,14 @@ package struct PadRhythmicModulation: Equatable, Sendable {
         }
     }
 
+    /// The sustained pad opens for the same cell stage that owns the maximum
+    /// filter aperture. Renderer-owned edge shaping makes this target click
+    /// safe; the score owns only the exact closed/open relationship.
+    package func amplitudeGateTarget(atStep step: Int) -> Double {
+        guard active else { return 1 }
+        return cellIndex(atStep: step) == 1 ? 1 : 0
+    }
+
     private func cellIndex(atStep step: Int) -> Int {
         let boundedStep = min(Self.stepCount - 1, max(0, step))
         return (boundedStep + phaseOffset) % Self.cellLength

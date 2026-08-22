@@ -68,8 +68,8 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 31, candidate-vector schema 29, candidate-transaction
-schema 4, and canonical engine v30 provide the current transaction-level
+Quality-contract schema 32, candidate-vector schema 30, candidate-transaction
+schema 4, and canonical engine v31 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
@@ -302,16 +302,19 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v15 bank must contain every canonical checkpoint for
+The Professional Evidence v16 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v30 primary evaluator v12 and pinned profile v12/adversarial/holdout
+engine-v31 primary evaluator v13 and pinned profile v13/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 28.
 Holdouts must be source-disjoint, contain at
 least four complete journeys, accept every checkpoint/rate observation, and
 produce no trajectory or rate-consistency failure. Short-program EBU-style LRA
 must remain descriptive; stable BS.1770 loudness and true-peak dimensions remain
-evaluative. Runtime commit tests must use that exact profile identity.
+evaluative. RMS-trajectory peak remains locally and within-rate evaluative, but
+its overlapping-window maximum is excluded from cross-rate relationships;
+RMS-trajectory mean is the stable cross-rate dimension. Runtime commit tests
+must use that exact profile identity.
 
 ## Determinism and sample-rate consistency
 
@@ -366,7 +369,7 @@ or PCM.
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
 composition, spatial-FDN, nonlinear-core, and foundation-pocket evidence carried
-by quality-contract schema 31 change detached preparation only. The implemented master-headroom path
+by quality-contract schema 32 change detached preparation only. The implemented master-headroom path
 is the sole scheduled-output feedback responsibility and does not move those
 feature analyzers or decisions onto the callback. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
@@ -422,11 +425,11 @@ phrase lengths, maximum two-pass path, and route
 rebuild at representative 44.1 and 48 kHz devices. Record median, high-percentile,
 and worst observed times plus peak working memory.
 
-The exact-engine v12 artifact loader, route-local primary evaluator, unavailable-rate
+The exact-engine v13 artifact loader, route-local primary evaluator, unavailable-rate
 gate, one-correction transaction order, and reason-coded replay require
 deterministic tests at 44.1 and 48 kHz. The deterministic numeric-storage estimate
 must remain below the declared 128 MiB ceiling. The profile derives from 28
-complete journeys and passes the 32-case v13 adversarial suite plus four disjoint
+complete journeys and passes the 33-case v14 adversarial suite plus four disjoint
 holdouts at both rates. See [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md) and
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 

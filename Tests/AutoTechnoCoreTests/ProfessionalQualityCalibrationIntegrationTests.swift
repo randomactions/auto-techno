@@ -11,7 +11,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         66_666, 70_707, 77_777, 80_808, 88_888, 90_909, 99_999,
         123_456, 135_791, 19, 44_444, 121_212, 246_810,
     ]
-    private let holdoutSeeds: [UInt64] = [161_803, 271_828, 314_159, 424_242]
+    private let holdoutSeeds: [UInt64] = [112_358, 141_421, 173_205, 223_606]
 
     /// This deliberately expensive, explicit calibration harness renders the
     /// complete canonical journey at 44.1 and 48 kHz. Normal CI validates the
@@ -35,6 +35,12 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         let holdoutCorpus = try ProfessionalQualityCalibrationCorpus(
             trajectories: holdoutTrajectories
         )
+        for (seed, trajectory) in zip(holdoutSeeds, holdoutTrajectories) {
+            progress(
+                "holdout-seed=\(seed) source=" +
+                trajectory.sourceBankFingerprint
+            )
+        }
         try printLeaveTwoOutResults(
             seeds: calibrationSeeds + holdoutSeeds,
             trajectories: calibrationTrajectories + holdoutTrajectories
@@ -195,7 +201,9 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                     "holdout-relationship-detail=\(failure.kind.rawValue):" +
                     "\(failure.metric.rawValue) value=" +
                     "\(failure.observedDelta) bounds=" +
-                    "\(failure.lowerBound)...\(failure.upperBound)"
+                    "\(failure.lowerBound)...\(failure.upperBound) " +
+                    "checkpoint=" +
+                    (failure.checkpoint?.rawValue ?? "none")
                 )
             }
         }
@@ -222,16 +230,16 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                     ProfessionalQualityCalibrationProfile.requiredSampleRates.count)
         #expect(profile.isComplete)
         #expect(profile.usesDiverseCalibration)
-        #expect(profile.schemaVersion == 12)
+        #expect(profile.schemaVersion == 13)
         #expect(profile.observationVersion ==
                 ProfessionalQualityObservation.observationVersion)
         #expect(profile.sourceTrajectoryCount == calibrationSeeds.count)
         #expect(adversarial.passed)
-        #expect(adversarial.schemaVersion == 13)
+        #expect(adversarial.schemaVersion == 14)
         #expect(adversarial.cases.count ==
                 ProfessionalQualityAdversarialScenario.allCases.count)
         #expect(holdout.qualified)
-        #expect(holdout.schemaVersion == 11)
+        #expect(holdout.schemaVersion == 12)
         #expect(holdout.holdoutTrajectoryCount == holdoutSeeds.count)
         #expect(holdout.overlappingSourceBankCount == 0)
         #expect(primaryEvaluator.policyVersion.contains(profile.fingerprint))
@@ -265,6 +273,27 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         print("AUTOTECHNO_CALIBRATION_PROFILE_FINGERPRINT=\(profile.fingerprint)")
         print("AUTOTECHNO_ADVERSARIAL_SUITE_FINGERPRINT=\(adversarial.fingerprint)")
         print("AUTOTECHNO_HOLDOUT_QUALIFICATION_FINGERPRINT=\(holdout.fingerprint)")
+    }
+
+    @Test("Render one explicitly selected calibration diagnostic journey")
+    func renderSelectedDiagnosticJourney() throws {
+        guard let rawSeed = ProcessInfo.processInfo.environment[
+            "AUTOTECHNO_CALIBRATION_DIAGNOSTIC_SEED"
+        ], let seed = UInt64(rawSeed) else { return }
+
+        let trajectory = try renderTrajectory(seed: seed)
+        for observation in trajectory.observations {
+            guard let peak = observation[.rmsTrajectoryDeltaPeakDB],
+                  let mean = observation[.rmsTrajectoryDeltaMeanDB] else {
+                continue
+            }
+            progress(
+                "diagnostic-seed=\(seed) checkpoint=" +
+                "\(observation.checkpoint.rawValue) rate=" +
+                "\(Int(observation.sampleRate)) rms-trajectory-mean-db=" +
+                "\(mean) rms-trajectory-peak-db=\(peak)"
+            )
+        }
     }
 
     private func renderTrajectory(seed: UInt64) throws

@@ -25,6 +25,8 @@ package enum ProfessionalQualityAdversarialScenario: String, CaseIterable,
         "percussion-anticipation-swell-flattened"
     case padRhythmicModulationDisconnected =
         "pad-rhythmic-modulation-disconnected"
+    case padRhythmicAmplitudeGateDisconnected =
+        "pad-rhythmic-amplitude-gate-disconnected"
     case padHarmonicDisclosureOverpopulation =
         "pad-harmonic-disclosure-overpopulation"
     case foundationDottedRhythmOverpopulation =
@@ -430,9 +432,9 @@ package struct ProfessionalQualityLiveCandidateChain: Equatable, Sendable {
 /// evidence. Every scenario must be rejected independently.
 package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 13
+    package static let schemaVersion = 14
     package static let suiteVersion =
-        "autotechno-professional-quality-adversarial.v13"
+        "autotechno-professional-quality-adversarial.v14"
 
     package let schemaVersion: Int
     package let suiteVersion: String
@@ -793,6 +795,25 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                 with: max(-120, padRhythmBounds.lower - max(
                     1,
                     abs(padRhythmBounds.upper - padRhythmBounds.lower) * 0.1
+                ))
+            ),
+            expected: [.metricOutOfRange]
+        )
+        guard let padAmplitudeGateBounds = profile[.majorBreak]?[
+            .padRhythmicAmplitudeGateDifferenceToPadDBMean
+        ], padAmplitudeGateBounds.lower > -120 else {
+            throw ProfessionalQualityCalibrationError.invalidMetricSet
+        }
+        append(
+            .padRhythmicAmplitudeGateDisconnected,
+            observation: try majorBreakBaseline.replacing(
+                .padRhythmicAmplitudeGateDifferenceToPadDBMean,
+                with: max(-120, padAmplitudeGateBounds.lower - max(
+                    1,
+                    abs(
+                        padAmplitudeGateBounds.upper -
+                            padAmplitudeGateBounds.lower
+                    ) * 0.1
                 ))
             ),
             expected: [.metricOutOfRange]

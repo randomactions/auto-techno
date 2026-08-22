@@ -5,16 +5,16 @@ import Foundation
 /// their deterministic identities, adversarial gate, and disjoint holdout.
 package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     package static let profileResource =
-        "professional-quality-primary-profile-v12"
+        "professional-quality-primary-profile-v13"
     package static let adversarialResource =
-        "professional-quality-primary-adversarial-suite-v12"
+        "professional-quality-primary-adversarial-suite-v13"
     package static let holdoutResource =
-        "professional-quality-primary-holdout-v12"
-    package static let expectedProfileFingerprint = "7bb19b3a5572bb39"
+        "professional-quality-primary-holdout-v13"
+    package static let expectedProfileFingerprint = "e1fdcbe7241f9f50"
     package static let expectedAdversarialSuiteFingerprint =
-        "81f1cb944e9de091"
+        "8973cc31505dfb7c"
     package static let expectedHoldoutQualificationFingerprint =
-        "b9274bf9c29d2858"
+        "b52070f9cb2231b4"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport

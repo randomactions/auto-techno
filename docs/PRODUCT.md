@@ -142,10 +142,12 @@ existing four-function vocabulary before a later Lock contracts again. Its
 dependent arpeggiator remains on the same onsets while following the disclosed
 chord. One per-bar evidence record binds those intentions to their exact slice
 and pad PCM, arpeggiator geometry and rendered pitch fingerprint, disclosure
-stage/function, and voice-leading movement. In the latter half of an eligible major break, that
-same pad may reuse its existing low-pass and spatial send under one score-owned
-three-sixteenth modulation relation; it adds no note, instrument, sequencer, or
-effect bus. Identity-return paths remain exactly neutral.
+stage/function, and voice-leading movement. In the latter half of an eligible
+major break, that same pad may reuse its existing low-pass and spatial send under
+one score-owned three-sixteenth modulation relation, including a click-safe
+amplitude pattern that leaves underlying continuation advancing; it adds no
+note, instrument, sequencer, or effect bus. Identity-return paths remain exactly
+neutral.
 
 ## Professional-sound objective
 
@@ -172,7 +174,7 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v15 supplies
+policy and its operational gates pass. Professional Evidence v16 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation, pre-kick foundation-pocket, terminal climax-hang,
 and live-controller consequence, explicit

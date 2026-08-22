@@ -138,6 +138,9 @@ struct PhraseCompositionTests {
         #expect(modulations[0].filterScale(atStep: 1) == 0.38)
         #expect(modulations[0].filterScale(atStep: 2) == 1)
         #expect(modulations[0].spatialSendScale(atStep: 0) == 1.28)
+        #expect((0..<6).map {
+            modulations[0].amplitudeGateTarget(atStep: $0)
+        } == [0, 0, 1, 0, 0, 1])
 
         let first = PhraseCompositionResolver.resolve(
             scene: scene, dna: dna, kind: .majorBreak,
@@ -171,7 +174,7 @@ struct PhraseCompositionTests {
         }
     }
 
-    @Test("Pad rhythmic motion changes only existing pad filter and spatial send")
+    @Test("Pad rhythmic motion gates only the existing pad and spatial send")
     func rhythmicPadPCMAndNeutralIdentity() {
         let voices = [0, 3, 7, 10].map {
             PadVoice(modalDegree: $0, semitone: $0)
@@ -239,6 +242,16 @@ struct PhraseCompositionTests {
             #expect(baseline.3.rhythmicModulationRelation == .neutral)
             #expect(baseline.3.filterModulationDifferenceRMS == 0)
             #expect(baseline.3.spatialSendDifferenceRMS == 0)
+            #expect(baseline.3.minimumAmplitudeGateGain == 1)
+            #expect(baseline.3.maximumAmplitudeGateGain == 1)
+            #expect(baseline.3.amplitudeGateTransitionFrameCount == 0)
+            #expect(baseline.3.amplitudeGateClosedFrameCount == 0)
+            #expect(baseline.3.amplitudeGateDifferenceRMS == 0)
+            #expect(baseline.3.spatialAmplitudeGateDifferenceRMS == 0)
+            #expect(baseline.3.preAmplitudeGateOutputSampleHash ==
+                    baseline.3.outputSampleHash)
+            #expect(baseline.3.preAmplitudeGateSpatialSendSampleHash ==
+                    baseline.3.spatialSendSampleHash)
 
             #expect(modulated.0 != baseline.0)
             #expect(modulated.1 != baseline.1)
@@ -251,6 +264,24 @@ struct PhraseCompositionTests {
             #expect(modulated.3.maximumSpatialSendScale == 1.28)
             #expect(modulated.3.filterModulationDifferenceRMS > 0)
             #expect(modulated.3.spatialSendDifferenceRMS > 0)
+            #expect(modulated.3.minimumAmplitudeGateGain == 0)
+            #expect(modulated.3.maximumAmplitudeGateGain == 1)
+            #expect(modulated.3.amplitudeGateTransitionFrameCount == max(
+                2,
+                Int((sampleRate * PolyphonicPadVoice
+                    .amplitudeGateTransitionSeconds).rounded())
+            ))
+            #expect(modulated.3.amplitudeGateOpenFrameCount > 0)
+            #expect(modulated.3.amplitudeGateClosedFrameCount >
+                    modulated.3.amplitudeGateOpenFrameCount)
+            #expect(modulated.3.amplitudeGateDifferenceRMS > 0)
+            #expect(modulated.3.spatialAmplitudeGateDifferenceRMS > 0)
+            #expect(modulated.3.amplitudeGateClosedOutputRMS == 0)
+            #expect(modulated.3.amplitudeGateClosedSpatialSendRMS == 0)
+            #expect(modulated.3.preAmplitudeGateOutputSampleHash !=
+                    modulated.3.outputSampleHash)
+            #expect(modulated.3.preAmplitudeGateSpatialSendSampleHash !=
+                    modulated.3.spatialSendSampleHash)
             #expect(modulated.3.spatialSendRMS > 0)
             #expect(modulated.3.outputSampleHash != baseline.3.outputSampleHash)
             #expect(modulated.3.spatialSendSampleHash !=
@@ -258,6 +289,18 @@ struct PhraseCompositionTests {
             #expect(modulated.3.finite)
             #expect(modulated.0.allSatisfy { $0.isFinite })
             #expect(modulated.1.allSatisfy { $0.isFinite })
+            for index in modulated.0.indices {
+                let step = min(
+                    PadRhythmicModulation.stepCount - 1,
+                    Int(Double(index) / (Double(frameCount) / 16))
+                )
+                if active.rhythmicModulation.amplitudeGateTarget(
+                    atStep: step
+                ) == 0 {
+                    #expect(modulated.0[index].bitPattern & 0x7fff_ffff == 0)
+                    #expect(modulated.1[index].bitPattern & 0x7fff_ffff == 0)
+                }
+            }
         }
     }
 
@@ -316,12 +359,27 @@ struct PhraseCompositionTests {
                         PadRhythmicModulationFingerprint.make(score))
                 #expect(record.padFilterModulationDifferenceRMS > 0)
                 #expect(record.padSpatialSendDifferenceRMS > 0)
+                #expect(record.padMinimumAmplitudeGateGain == 0)
+                #expect(record.padMaximumAmplitudeGateGain == 1)
+                #expect(record.padAmplitudeGateTransitionFrameCount > 1)
+                #expect(record.padAmplitudeGateOpenFrameCount > 0)
+                #expect(record.padAmplitudeGateClosedFrameCount >
+                        record.padAmplitudeGateOpenFrameCount)
+                #expect(record.padAmplitudeGateDifferenceRMS > 0)
+                #expect(record.padSpatialAmplitudeGateDifferenceRMS > 0)
+                #expect(record.padAmplitudeGateClosedOutputRMS == 0)
+                #expect(record.padAmplitudeGateClosedSpatialSendRMS == 0)
+                #expect(record.padPreAmplitudeGateOutputSampleHash !=
+                        record.padSampleHash)
+                #expect(record.padPreAmplitudeGateSpatialSendSampleHash !=
+                        record.padSpatialSendSampleHash)
                 #expect(record.padSpatialSendRMS > 0)
                 #expect(record.bindingValid && record.finite)
                 #expect(record.isComplete(
                     phraseKind: plan.kind.rawValue,
                     expectedLocalBar: index,
-                    expectedPhraseLength: plan.barCount
+                    expectedPhraseLength: plan.barCount,
+                    expectedSampleRate: 8_000
                 ))
             }
 
@@ -354,6 +412,14 @@ struct PhraseCompositionTests {
                             $0.padSpatialSendRMS
                         )
                     }.reduce(0, +) / Double(activeRecords.count))
+            #expect(observation[
+                .padRhythmicAmplitudeGateDifferenceToPadDBMean
+            ] == activeRecords.map {
+                decibels(
+                    $0.padAmplitudeGateDifferenceRMS,
+                    $0.padRMS
+                )
+            }.reduce(0, +) / Double(activeRecords.count))
             #expect(observation[.padHarmonicDisclosureRevealedBarRatio] ==
                     Double(vector.phraseComposition.filter {
                         $0.padActive && $0.padHarmonicDisclosureStage ==
@@ -381,6 +447,17 @@ struct PhraseCompositionTests {
                 "padRhythmicModulationPatternFingerprint",
                 "padFilterModulationDifferenceRMS",
                 "padSpatialSendDifferenceRMS",
+                "padMinimumAmplitudeGateGain",
+                "padMaximumAmplitudeGateGain",
+                "padAmplitudeGateTransitionFrameCount",
+                "padAmplitudeGateOpenFrameCount",
+                "padAmplitudeGateClosedFrameCount",
+                "padPreAmplitudeGateOutputSampleHash",
+                "padPreAmplitudeGateSpatialSendSampleHash",
+                "padAmplitudeGateDifferenceRMS",
+                "padSpatialAmplitudeGateDifferenceRMS",
+                "padAmplitudeGateClosedOutputRMS",
+                "padAmplitudeGateClosedSpatialSendRMS",
                 "padSpatialSendSampleHash", "padSpatialSendRMS",
             ]))
 
@@ -428,12 +505,26 @@ struct PhraseCompositionTests {
                        PadHarmonicDisclosureStage.concealed.rawValue),
                 forged("padFilterModulationDifferenceRMS", 0),
                 forged("padSpatialSendDifferenceRMS", 0),
+                forged("padMinimumAmplitudeGateGain", 0.1),
+                forged("padMaximumAmplitudeGateGain", 0.9),
+                forged("padAmplitudeGateTransitionFrameCount", 0),
+                forged("padAmplitudeGateOpenFrameCount", 0),
+                forged("padAmplitudeGateClosedFrameCount", 0),
+                forged("padPreAmplitudeGateOutputSampleHash",
+                       record.padSampleHash),
+                forged("padPreAmplitudeGateSpatialSendSampleHash",
+                       record.padSpatialSendSampleHash),
+                forged("padAmplitudeGateDifferenceRMS", 0),
+                forged("padSpatialAmplitudeGateDifferenceRMS", 0),
+                forged("padAmplitudeGateClosedOutputRMS", 0.1),
+                forged("padAmplitudeGateClosedSpatialSendRMS", 0.1),
             ]
             #expect(tampered.allSatisfy {
                 !$0.isComplete(
                     phraseKind: plan.kind.rawValue,
                     expectedLocalBar: record.localBar,
-                    expectedPhraseLength: record.phraseLength
+                    expectedPhraseLength: record.phraseLength,
+                    expectedSampleRate: 8_000
                 )
             })
             return
@@ -720,7 +811,8 @@ struct PhraseCompositionTests {
             #expect(record.isComplete(
                 phraseKind: plan.kind.rawValue,
                 expectedLocalBar: index,
-                expectedPhraseLength: plan.barCount
+                expectedPhraseLength: plan.barCount,
+                expectedSampleRate: 8_000
             ))
             let encoded = try JSONEncoder().encode(record)
             var json = try #require(
@@ -734,7 +826,8 @@ struct PhraseCompositionTests {
             #expect(!forged.isComplete(
                 phraseKind: plan.kind.rawValue,
                 expectedLocalBar: index,
-                expectedPhraseLength: plan.barCount
+                expectedPhraseLength: plan.barCount,
+                expectedSampleRate: 8_000
             ))
             return
         }

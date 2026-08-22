@@ -28,6 +28,9 @@ account.
   resampling, 8–16-step modal arpeggiation, four-voice pads, progressive
   harmonic disclosure with exact arpeggiator pitch binding, and cross-bar
   minimal-motion voice-leading;
+- one score-owned three-sixteenth pad rhythm that reuses the existing pad,
+  filter, and spatial send, including a click-safe closed/open/closed amplitude
+  projection with exact neutral and closed-step silence evidence;
 - one score-owned six-mode modal-percussion foundation voice with bounded
   four-slot continuation, protected routing, and rate-normalized pitch,
   envelope, spectral, masking, and stability evidence;

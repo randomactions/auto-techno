@@ -3506,6 +3506,17 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
     package let padMaximumFilterScale: Double
     package let padMinimumSpatialSendScale: Double
     package let padMaximumSpatialSendScale: Double
+    package let padMinimumAmplitudeGateGain: Double
+    package let padMaximumAmplitudeGateGain: Double
+    package let padAmplitudeGateTransitionFrameCount: Int
+    package let padAmplitudeGateOpenFrameCount: Int
+    package let padAmplitudeGateClosedFrameCount: Int
+    package let padPreAmplitudeGateOutputSampleHash: String
+    package let padPreAmplitudeGateSpatialSendSampleHash: String
+    package let padAmplitudeGateDifferenceRMS: Double
+    package let padSpatialAmplitudeGateDifferenceRMS: Double
+    package let padAmplitudeGateClosedOutputRMS: Double
+    package let padAmplitudeGateClosedSpatialSendRMS: Double
     package let padFilterModulationDifferenceRMS: Double
     package let padSpatialSendDifferenceRMS: Double
     package let padSpatialSendSampleHash: String
@@ -3574,6 +3585,24 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         padMaximumFilterScale = padRender.maximumFilterScale
         padMinimumSpatialSendScale = padRender.minimumSpatialSendScale
         padMaximumSpatialSendScale = padRender.maximumSpatialSendScale
+        padMinimumAmplitudeGateGain = padRender.minimumAmplitudeGateGain
+        padMaximumAmplitudeGateGain = padRender.maximumAmplitudeGateGain
+        padAmplitudeGateTransitionFrameCount =
+            padRender.amplitudeGateTransitionFrameCount
+        padAmplitudeGateOpenFrameCount = padRender.amplitudeGateOpenFrameCount
+        padAmplitudeGateClosedFrameCount =
+            padRender.amplitudeGateClosedFrameCount
+        padPreAmplitudeGateOutputSampleHash =
+            padRender.preAmplitudeGateOutputSampleHash
+        padPreAmplitudeGateSpatialSendSampleHash =
+            padRender.preAmplitudeGateSpatialSendSampleHash
+        padAmplitudeGateDifferenceRMS = padRender.amplitudeGateDifferenceRMS
+        padSpatialAmplitudeGateDifferenceRMS =
+            padRender.spatialAmplitudeGateDifferenceRMS
+        padAmplitudeGateClosedOutputRMS =
+            padRender.amplitudeGateClosedOutputRMS
+        padAmplitudeGateClosedSpatialSendRMS =
+            padRender.amplitudeGateClosedSpatialSendRMS
         padFilterModulationDifferenceRMS =
             padRender.filterModulationDifferenceRMS
         padSpatialSendDifferenceRMS = padRender.spatialSendDifferenceRMS
@@ -3612,6 +3641,12 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
             padMaximumFilterScale.isFinite &&
             padMinimumSpatialSendScale.isFinite &&
             padMaximumSpatialSendScale.isFinite &&
+            padMinimumAmplitudeGateGain.isFinite &&
+            padMaximumAmplitudeGateGain.isFinite &&
+            padAmplitudeGateDifferenceRMS.isFinite &&
+            padSpatialAmplitudeGateDifferenceRMS.isFinite &&
+            padAmplitudeGateClosedOutputRMS.isFinite &&
+            padAmplitudeGateClosedSpatialSendRMS.isFinite &&
             padFilterModulationDifferenceRMS.isFinite &&
             padSpatialSendDifferenceRMS.isFinite &&
             padSpatialSendRMS.isFinite
@@ -3654,6 +3689,17 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
             padMaximumFilterScale: 1,
             padMinimumSpatialSendScale: 1,
             padMaximumSpatialSendScale: 1,
+            padMinimumAmplitudeGateGain: 1,
+            padMaximumAmplitudeGateGain: 1,
+            padAmplitudeGateTransitionFrameCount: 0,
+            padAmplitudeGateOpenFrameCount: 0,
+            padAmplitudeGateClosedFrameCount: 0,
+            padPreAmplitudeGateOutputSampleHash: "",
+            padPreAmplitudeGateSpatialSendSampleHash: "",
+            padAmplitudeGateDifferenceRMS: 0,
+            padSpatialAmplitudeGateDifferenceRMS: 0,
+            padAmplitudeGateClosedOutputRMS: 0,
+            padAmplitudeGateClosedSpatialSendRMS: 0,
             padFilterModulationDifferenceRMS: 0,
             padSpatialSendDifferenceRMS: 0,
             padSpatialSendSampleHash: "",
@@ -3688,6 +3734,17 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         padRhythmicModulationPatternFingerprint: String,
         padMinimumFilterScale: Double, padMaximumFilterScale: Double,
         padMinimumSpatialSendScale: Double, padMaximumSpatialSendScale: Double,
+        padMinimumAmplitudeGateGain: Double,
+        padMaximumAmplitudeGateGain: Double,
+        padAmplitudeGateTransitionFrameCount: Int,
+        padAmplitudeGateOpenFrameCount: Int,
+        padAmplitudeGateClosedFrameCount: Int,
+        padPreAmplitudeGateOutputSampleHash: String,
+        padPreAmplitudeGateSpatialSendSampleHash: String,
+        padAmplitudeGateDifferenceRMS: Double,
+        padSpatialAmplitudeGateDifferenceRMS: Double,
+        padAmplitudeGateClosedOutputRMS: Double,
+        padAmplitudeGateClosedSpatialSendRMS: Double,
         padFilterModulationDifferenceRMS: Double,
         padSpatialSendDifferenceRMS: Double,
         padSpatialSendSampleHash: String, padSpatialSendRMS: Double,
@@ -3734,6 +3791,24 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         self.padMaximumFilterScale = padMaximumFilterScale
         self.padMinimumSpatialSendScale = padMinimumSpatialSendScale
         self.padMaximumSpatialSendScale = padMaximumSpatialSendScale
+        self.padMinimumAmplitudeGateGain = padMinimumAmplitudeGateGain
+        self.padMaximumAmplitudeGateGain = padMaximumAmplitudeGateGain
+        self.padAmplitudeGateTransitionFrameCount =
+            padAmplitudeGateTransitionFrameCount
+        self.padAmplitudeGateOpenFrameCount = padAmplitudeGateOpenFrameCount
+        self.padAmplitudeGateClosedFrameCount =
+            padAmplitudeGateClosedFrameCount
+        self.padPreAmplitudeGateOutputSampleHash =
+            padPreAmplitudeGateOutputSampleHash
+        self.padPreAmplitudeGateSpatialSendSampleHash =
+            padPreAmplitudeGateSpatialSendSampleHash
+        self.padAmplitudeGateDifferenceRMS = padAmplitudeGateDifferenceRMS
+        self.padSpatialAmplitudeGateDifferenceRMS =
+            padSpatialAmplitudeGateDifferenceRMS
+        self.padAmplitudeGateClosedOutputRMS =
+            padAmplitudeGateClosedOutputRMS
+        self.padAmplitudeGateClosedSpatialSendRMS =
+            padAmplitudeGateClosedSpatialSendRMS
         self.padFilterModulationDifferenceRMS =
             padFilterModulationDifferenceRMS
         self.padSpatialSendDifferenceRMS = padSpatialSendDifferenceRMS
@@ -3750,9 +3825,12 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
     package func isComplete(
         phraseKind: String,
         expectedLocalBar: Int,
-        expectedPhraseLength: Int
+        expectedPhraseLength: Int,
+        expectedSampleRate: Double
     ) -> Bool {
         guard bar >= 0, renderPassesMatch, bindingValid, finite,
+              expectedSampleRate.isFinite,
+              expectedSampleRate > 0,
               localBar == expectedLocalBar,
               phraseLength == expectedPhraseLength,
               phraseLength > 0,
@@ -3776,6 +3854,20 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
               padMinimumFilterScale <= padMaximumFilterScale,
               padMinimumSpatialSendScale > 0,
               padMinimumSpatialSendScale <= padMaximumSpatialSendScale,
+              (0...1).contains(padMinimumAmplitudeGateGain),
+              padMinimumAmplitudeGateGain <= padMaximumAmplitudeGateGain,
+              (0...1).contains(padMaximumAmplitudeGateGain),
+              padAmplitudeGateTransitionFrameCount >= 0,
+              padAmplitudeGateOpenFrameCount >= 0,
+              padAmplitudeGateClosedFrameCount >= 0,
+              padAmplitudeGateDifferenceRMS >= 0,
+              padAmplitudeGateDifferenceRMS <= 2,
+              padSpatialAmplitudeGateDifferenceRMS >= 0,
+              padSpatialAmplitudeGateDifferenceRMS <= 2,
+              padAmplitudeGateClosedOutputRMS >= 0,
+              padAmplitudeGateClosedOutputRMS <= 2,
+              padAmplitudeGateClosedSpatialSendRMS >= 0,
+              padAmplitudeGateClosedSpatialSendRMS <= 2,
               padFilterModulationDifferenceRMS >= 0,
               padFilterModulationDifferenceRMS <= 2,
               padSpatialSendDifferenceRMS >= 0,
@@ -3863,6 +3955,18 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
                       padMaximumFilterScale == 1,
                       padMinimumSpatialSendScale == 1,
                       padMaximumSpatialSendScale == 1,
+                      padMinimumAmplitudeGateGain == 1,
+                      padMaximumAmplitudeGateGain == 1,
+                      padAmplitudeGateTransitionFrameCount == 0,
+                      padAmplitudeGateOpenFrameCount == 0,
+                      padAmplitudeGateClosedFrameCount == 0,
+                      padPreAmplitudeGateOutputSampleHash == padSampleHash,
+                      padPreAmplitudeGateSpatialSendSampleHash ==
+                        padSpatialSendSampleHash,
+                      padAmplitudeGateDifferenceRMS.bitPattern == 0,
+                      padSpatialAmplitudeGateDifferenceRMS.bitPattern == 0,
+                      padAmplitudeGateClosedOutputRMS.bitPattern == 0,
+                      padAmplitudeGateClosedSpatialSendRMS.bitPattern == 0,
                       padFilterModulationDifferenceRMS.bitPattern == 0,
                       padSpatialSendDifferenceRMS.bitPattern == 0 else {
                     return false
@@ -3882,6 +3986,34 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
                       padMaximumFilterScale == 1,
                       padMinimumSpatialSendScale == 0.72,
                       padMaximumSpatialSendScale == 1.28,
+                      padMinimumAmplitudeGateGain == 0,
+                      padMaximumAmplitudeGateGain == 1,
+                      padAmplitudeGateTransitionFrameCount == max(
+                        2,
+                        Int((expectedSampleRate *
+                            PolyphonicPadVoice.amplitudeGateTransitionSeconds)
+                            .rounded())
+                      ),
+                      padAmplitudeGateOpenFrameCount > 0,
+                      padAmplitudeGateClosedFrameCount >
+                        padAmplitudeGateOpenFrameCount,
+                      padAmplitudeGateOpenFrameCount +
+                        padAmplitudeGateClosedFrameCount == max(
+                            1,
+                            Int((
+                                240.0 / AutonomousSessionDirector.bpm *
+                                    expectedSampleRate
+                            ).rounded())
+                        ),
+                      isHash(padPreAmplitudeGateOutputSampleHash),
+                      isHash(padPreAmplitudeGateSpatialSendSampleHash),
+                      padPreAmplitudeGateOutputSampleHash != padSampleHash,
+                      padPreAmplitudeGateSpatialSendSampleHash !=
+                        padSpatialSendSampleHash,
+                      padAmplitudeGateDifferenceRMS > 0,
+                      padSpatialAmplitudeGateDifferenceRMS > 0,
+                      padAmplitudeGateClosedOutputRMS.bitPattern == 0,
+                      padAmplitudeGateClosedSpatialSendRMS.bitPattern == 0,
                       padFilterModulationDifferenceRMS > 0,
                       padSpatialSendDifferenceRMS > 0 else {
                     return false
@@ -3909,6 +4041,17 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
                     padMaximumFilterScale != 1 ||
                     padMinimumSpatialSendScale != 1 ||
                     padMaximumSpatialSendScale != 1 ||
+                    padMinimumAmplitudeGateGain != 1 ||
+                    padMaximumAmplitudeGateGain != 1 ||
+                    padAmplitudeGateTransitionFrameCount != 0 ||
+                    padAmplitudeGateOpenFrameCount != 0 ||
+                    padAmplitudeGateClosedFrameCount != 0 ||
+                    !padPreAmplitudeGateOutputSampleHash.isEmpty ||
+                    !padPreAmplitudeGateSpatialSendSampleHash.isEmpty ||
+                    padAmplitudeGateDifferenceRMS.bitPattern != 0 ||
+                    padSpatialAmplitudeGateDifferenceRMS.bitPattern != 0 ||
+                    padAmplitudeGateClosedOutputRMS.bitPattern != 0 ||
+                    padAmplitudeGateClosedSpatialSendRMS.bitPattern != 0 ||
                     padFilterModulationDifferenceRMS.bitPattern != 0 ||
                     padSpatialSendDifferenceRMS.bitPattern != 0 ||
                     !padSpatialSendSampleHash.isEmpty ||
@@ -5171,7 +5314,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 29
+    package static let schemaVersion = 30
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -7826,7 +7969,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             evidence.isComplete(
                 phraseKind: symbolic.phraseKind,
                 expectedLocalBar: index,
-                expectedPhraseLength: phraseLength
+                expectedPhraseLength: phraseLength,
+                expectedSampleRate: routeContinuation.sampleRate
             )
         }
     }

@@ -23,8 +23,8 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v30 profile v12, adversarial suite v13, and disjoint holdout qualification
-v11. The profile derives from 28 complete
+engine-v31 profile v13, adversarial suite v14, and disjoint holdout qualification
+v12. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
 relationship gate.
 
@@ -32,6 +32,11 @@ Every applicable journey checkpoint is judged independently across the
 versioned professional-quality vector. Dimensions never compensate for one
 another. An ordinary lock phrase without a named checkpoint uses the calibrated
 `longContinuation` envelope so every primary phrase receives a judgment.
+The maximum overlapping RMS-trajectory delta is retained for strict local and
+within-rate trajectory qualification. Its window selection can move on a
+different route sample grid, so the paired mean trajectory delta—not that
+maximum—owns cross-rate consistency. Exact score-owned silence remains covered
+by separate causal evidence and upper-only-safer dimensions.
 The vector includes eight modal-foundation dimensions: active-bar ratio,
 event density, pitch error, attack/body and tail/body relationships, spectral
 centroid, masking overlap, and maximum pole radius. Four dedicated attacks prove

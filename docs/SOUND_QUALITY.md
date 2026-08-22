@@ -11,9 +11,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 31, candidate-vector schema 29,
+candidate uses quality-contract schema 32, candidate-vector schema 30,
 candidate-transaction schema 4, and canonical engine identity
-`autotechno-canonical-engine.v30`. It preserves
+`autotechno-canonical-engine.v31`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
@@ -121,7 +121,7 @@ sample counts, pre/post typed hashes, peak/RMS/crest, physical attack/body RMS,
 1--4 kHz energy ratios, finiteness, score/render geometry, detector/audible
 scaling, and protected/full equality. Four Professional Evidence dimensions
 retain output crest, attack-to-body balance, upper-mid energy, and crest
-reduction; the v13 adversarial suite retains a source-local transient spike.
+reduction; the v14 adversarial suite retains a source-local transient spike.
 The present fixed curve is a bounded realization, not a permanent kick target.
 
 The existing Tonal Motion architecture also carries one durable
@@ -216,15 +216,21 @@ Pad rhythmic-modulation evidence extends the existing phrase-composition record;
 it does not create another synth, sequencer, or effect return. A naturally
 resolved latter-half major-break pad may carry one three-sixteenth relation whose
 phase derives from absolute bar time. The detached renderer applies it to the
-pad's existing low-pass cutoff and existing spatial-reverb send. Each active
-record retains the exact relation, phase and 16-step pattern fingerprint,
-applied filter/send extrema, pad and send hashes/RMS, and streamed same-pass
-active-versus-neutral difference RMS. Ineligible and identity paths are literal
+pad's existing low-pass cutoff and existing spatial-reverb send. The same
+relation supplies a closed/open/closed amplitude target. One route-derived 6 ms
+raised-cosine attack and release stays inside each open sixteenth, gates both
+dry pad and its existing send, and leaves synth/filter/spatial continuation
+advancing under exact closed-step zeros. Each active record retains the exact
+relation, phase and 16-step pattern fingerprint, applied filter/send/gate
+extrema, transition geometry, open/closed counts, pre/post dry and send hashes,
+closed-step silence RMS, and streamed same-pass filter, spatial-scale, and
+amplitude-gate difference RMS. Ineligible and identity paths are literal
 neutral. Professional dimensions retain active-bar ratio plus level-relative
-filter-difference-to-pad and spatial-difference-to-send means in dB; a dedicated
-adversarial case rejects a disconnected filter consequence. The discrete v1
-scale sequence is a replaceable engineering
-realization, not the durable definition of rhythmic motion.
+filter and spatial consequences in dB. The 67th professional dimension retains
+the amplitude-gate consequence; independent adversarial
+cases reject disconnected filter and amplitude-gate consequences. The discrete
+v1 scale and amplitude mask are replaceable engineering realizations, not the
+durable definition of rhythmic motion.
 
 Foundation-rhythm evidence covers every rendered bar without creating a second
 bass lane or effect chain. Eligible four-bar-aligned Lock pairs replace only
@@ -260,11 +266,11 @@ identity. The record is required for structural completeness and changes the
 transaction fingerprint. See [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md) for the
 signal and replacement contract.
 
-`ProfessionalEvidenceReportBank` v15 accepts a bank only when every canonical
+`ProfessionalEvidenceReportBank` v16 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v12 from the v12 profile, v13 adversarial suite,
-and v11 disjoint holdout. It judges every
+exact-engine primary evaluator v13 from the v13 profile, v14 adversarial suite,
+and v12 disjoint holdout. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.
@@ -349,7 +355,7 @@ sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
 status. It also retains exact first/last sample bit patterns, the pre-drive peak
 frame, the exact input/amount witness at the post-drive peak, and a replayable
 changed-frame witness together with that frame's exact input bits.
-Candidate-vector schema 29 binds that record to the matching instrument effect
+Candidate-vector schema 30 binds that record to the matching instrument effect
 access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
 sample-rate-normalized boundary transition. Neutral drive requires the no-change
 sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
@@ -378,7 +384,7 @@ uses half depth, response uses full depth, and the full displacement is capped
 at `0.12` of one sixteenth. Note count, base step, pitch, velocity, instrument,
 requested duration, gate, and every protected-rhythm event remain unchanged.
 
-Candidate-vector schema 29 retains one compact record per full rendered bar. It
+Candidate-vector schema 30 retains one compact record per full rendered bar. It
 binds route-derived frame geometry, score and actual renderer onset facts,
 requested gate end, bounded renderer-owned applied gate end, causal role counts,
 exact protected/role offset relationships, and separate shadow/response dry
@@ -431,8 +437,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 31, candidate-vector schema 29,
-candidate-transaction schema 4, and canonical engine v30, the versioned
+Under quality-contract schema 32, candidate-vector schema 30,
+candidate-transaction schema 4, and canonical engine v31, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

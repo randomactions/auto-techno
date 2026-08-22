@@ -500,7 +500,7 @@ struct QualityQualificationFoundationTests {
         }
     }
 
-    @Test("Professional Evidence v15 bank requires every journey checkpoint and unavailable policy")
+    @Test("Professional Evidence v16 bank requires every journey checkpoint and unavailable policy")
     func professionalEvidenceReportBank() throws {
         let reports = try qualificationReports()
 

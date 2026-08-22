@@ -163,11 +163,14 @@ only.
 
 Identity return, force-home correction, missing source material, and ineligible
 role/character combinations resolve every new feature to exact neutral.
-Candidate schema 29 binds per-bar score geometry to source and
+Candidate schema 30 binds per-bar score geometry to source and
 output hashes, trigger/rate counts, pad frequency ratios and PCM, arpeggiator
-counts and exact score/render pitches, harmonic-disclosure stage/function, and
-voice-leading bounds. This is causal structural evidence rather than a
-professional-quality claim by itself.
+counts and exact score/render pitches, harmonic-disclosure stage/function,
+voice-leading bounds, and the existing pad rhythm's filter, send, and
+closed/open/closed amplitude consequences. The gate uses route-derived
+raised-cosine edges while oscillator/filter/envelope/spatial state advances; it
+adds no trigger track or callback work. This is causal structural evidence
+rather than a professional-quality claim by itself.
 
 Deliberate remaining boundaries are cross-bar/sample-library slicing, granular
 time stretching, arbitrary MIDI import/export, more than four simultaneous pad

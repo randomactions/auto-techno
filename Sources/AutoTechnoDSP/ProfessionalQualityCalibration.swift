@@ -123,6 +123,8 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         "pad-rhythmic-modulation-active-bar-ratio"
     case padRhythmicFilterDifferenceToPadDBMean =
         "pad-rhythmic-filter-difference-to-pad-db-mean"
+    case padRhythmicAmplitudeGateDifferenceToPadDBMean =
+        "pad-rhythmic-amplitude-gate-difference-to-pad-db-mean"
     case padRhythmicSpatialDifferenceToSendDBMean =
         "pad-rhythmic-spatial-difference-to-send-db-mean"
     case padHarmonicDisclosureRevealedBarRatio =
@@ -154,6 +156,14 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         self != .loudnessRangeLU
     }
 
+    /// One maximum selected from overlapping RMS windows is intentionally
+    /// retained as a strict local and trajectory dimension, but its exact
+    /// window can move with the sample grid. The mean trajectory delta remains
+    /// the physical-rate relationship gate for this signal family.
+    package var participatesInRateConsistency: Bool {
+        participatesInQualification && self != .rmsTrajectoryDeltaPeakDB
+    }
+
     package var semanticMinimum: Double {
         switch self {
         case .truePeakDBTP, .modalPercussionAttackToBodyDBMean,
@@ -161,6 +171,7 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
                 .upperPercussionTailRenderedTailToAttackDBMean,
                 .percussionAnticipationSwellLateToEarlyDBMean,
                 .padRhythmicFilterDifferenceToPadDBMean,
+                .padRhythmicAmplitudeGateDifferenceToPadDBMean,
                 .padRhythmicSpatialDifferenceToSendDBMean,
                 .kickSourceOutputCrestFactorDBMean,
                 .kickSourceAttackToBodyDBMean,
@@ -538,9 +549,9 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 12
+    package static let schemaVersion = 13
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v12"
+        "autotechno-professional-quality-observation.v13"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -1019,6 +1030,15 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 })
             ),
             ProfessionalQualityMetricValue(
+                metric: .padRhythmicAmplitudeGateDifferenceToPadDBMean,
+                value: mean(rhythmicPadBars.map {
+                    decibels(
+                        $0.padAmplitudeGateDifferenceRMS,
+                        $0.padRMS
+                    )
+                })
+            ),
+            ProfessionalQualityMetricValue(
                 metric: .padRhythmicSpatialDifferenceToSendDBMean,
                 value: mean(rhythmicPadBars.map {
                     decibels(
@@ -1285,9 +1305,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 12
+    package static let schemaVersion = 13
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v12"
+        "autotechno-professional-quality-profile.v13"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1746,6 +1766,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .modalPercussionTailToBodyDBMean,
                 .upperPercussionTailRenderedTailToAttackDBMean,
                 .padRhythmicFilterDifferenceToPadDBMean,
+                .padRhythmicAmplitudeGateDifferenceToPadDBMean,
                 .padRhythmicSpatialDifferenceToSendDBMean:
             absoluteFloor = 1
         case .modalPercussionSpectralCentroidMeanHz:
@@ -1877,6 +1898,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .upperPercussionTailRenderedTailToAttackDBMean,
                 .percussionAnticipationSwellLateToEarlyDBMean,
                 .padRhythmicFilterDifferenceToPadDBMean,
+                .padRhythmicAmplitudeGateDifferenceToPadDBMean,
                 .padRhythmicSpatialDifferenceToSendDBMean,
                 .kickSourceAttackToBodyDBMean,
                 .kickSourceCrestReductionDBMean:
@@ -1979,7 +2001,7 @@ package enum ProfessionalQualityRelationshipEvaluator {
             }
         }
         for bounds in profile.rateConsistency
-            where bounds.metric.participatesInQualification {
+            where bounds.metric.participatesInRateConsistency {
             let values = profile.sampleRates.compactMap { sampleRate in
                 observations.first {
                     $0.sampleRate == sampleRate &&
