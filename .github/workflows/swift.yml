@@ -286,11 +286,41 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(ClimaxHangTests|FoundationRhythmicRelationTests|GeneratedDSPTopologyTests|FeedbackDelayNetworkTests|IdentityReturnContinuationTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|fixedSessionIdentity|currentPlanningIsDeterministic)'
 
-      - name: Run upper timbre and tail tests
+      - name: Run upper-percussion tail DSP tests
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(UpperPercussionTailDSPTests|UpperPercussionTailTests|UpperSpectralRevealDSPTests|UpperSpectralRevealTests|UpperTimbreDSPTests|UpperTimbrePlanningTests)'
+          --filter UpperPercussionTailDSPTests
+
+      - name: Run upper-percussion tail score tests
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter UpperPercussionTailTests
+
+      - name: Run upper spectral-reveal DSP tests
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter UpperSpectralRevealDSPTests
+
+      - name: Run upper spectral-reveal score tests
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter UpperSpectralRevealTests
+
+      - name: Run upper-timbre DSP tests
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter UpperTimbreDSPTests
+
+      - name: Run upper-timbre planning tests
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter UpperTimbrePlanningTests
 
       - name: Run preparation preflight tests
         run: >-
