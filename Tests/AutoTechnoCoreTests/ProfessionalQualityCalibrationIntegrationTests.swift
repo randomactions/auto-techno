@@ -70,6 +70,24 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 "local=\(localFailures.joined(separator: ";")) " +
                 "relationships=\(relationshipFailures.count)"
             )
+            for observation in trajectory.observations {
+                let verdict = ProfessionalQualityProfileEvaluator.evaluate(
+                    observation,
+                    against: profile
+                )
+                for metric in verdict.failedMetrics {
+                    guard let value = observation[metric],
+                          let bounds = profile[observation.checkpoint]?[metric]
+                    else { continue }
+                    progress(
+                        "calibration-local-detail=\(metric.rawValue) " +
+                        "value=\(value) bounds=\(bounds.lower)..." +
+                        "\(bounds.upper) checkpoint=" +
+                        "\(observation.checkpoint.rawValue) rate=" +
+                        "\(Int(observation.sampleRate))"
+                    )
+                }
+            }
         }
         let liveCandidates = try renderLiveAdversarialCandidates()
         progress("live-candidates-ready causal=\(liveCandidates.isCausal)")
@@ -204,16 +222,16 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                     ProfessionalQualityCalibrationProfile.requiredSampleRates.count)
         #expect(profile.isComplete)
         #expect(profile.usesDiverseCalibration)
-        #expect(profile.schemaVersion == 11)
+        #expect(profile.schemaVersion == 12)
         #expect(profile.observationVersion ==
                 ProfessionalQualityObservation.observationVersion)
         #expect(profile.sourceTrajectoryCount == calibrationSeeds.count)
         #expect(adversarial.passed)
-        #expect(adversarial.schemaVersion == 12)
+        #expect(adversarial.schemaVersion == 13)
         #expect(adversarial.cases.count ==
                 ProfessionalQualityAdversarialScenario.allCases.count)
         #expect(holdout.qualified)
-        #expect(holdout.schemaVersion == 10)
+        #expect(holdout.schemaVersion == 11)
         #expect(holdout.holdoutTrajectoryCount == holdoutSeeds.count)
         #expect(holdout.overlappingSourceBankCount == 0)
         #expect(primaryEvaluator.policyVersion.contains(profile.fingerprint))

@@ -43,6 +43,9 @@ account.
 - one score-owned percussion-return relation that reuses the existing weak
   percussion as either a later gated answer or a bounded pre-release
   anticipation swell, without adding a track, instrument, or effect bus;
+- one score-owned terminal climax hang that fades the final withheld bar into
+  an exact one-beat absence while canonical DSP state advances underneath and
+  the unchanged recovery remains on the next structural boundary;
 - one score-owned eight-line stereo FDN late field with bounded decay, damping,
   continuation, protected low end, and exact per-bar consequence evidence;
 - one scheduled-output live-feedback path that maps app-owned mixer PCM to the

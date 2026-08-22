@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 28)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 29)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -546,6 +546,22 @@ struct AutonomousCandidateEvaluationTests {
             fixtureKickSyntax(bar: 142, role: .withheld),
             fixtureKickSyntax(bar: 143, role: .recovery),
         ]
+        let sampleRate = 48_000.0
+        let frameCount = Int((
+            240.0 / AutonomousSessionDirector.bpm * sampleRate
+        ).rounded())
+        let hangRender = ClimaxHangRenderer.render(
+            left: Array(repeating: 0.2, count: frameCount),
+            right: Array(repeating: -0.2, count: frameCount),
+            articulation: ClimaxHangArticulation(),
+            sampleRate: sampleRate
+        ).evidence
+        let hang = AutonomousClimaxHangEvidence(
+            render: hangRender,
+            bar: 142,
+            postHangMatchesLiveMasterInput: true,
+            bindingValid: true
+        )
         let evidence = AutonomousClimaxArcEvidence(
             relation: .dramaticDebtRecovery,
             paidDebtCount: 2,
@@ -561,6 +577,7 @@ struct AutonomousCandidateEvaluationTests {
             firstWithheldBar: 141,
             secondWithheldBar: 142,
             recoveryBar: 143,
+            hang: hang,
             bindingValid: true
         )
         #expect(evidence.recordIsStructurallyValid)
@@ -568,8 +585,21 @@ struct AutonomousCandidateEvaluationTests {
             phraseKind: AutonomousPhraseKind.energyRelease.rawValue,
             startBar: 128,
             declaredBarCount: 16,
-            kickSyntax: syntax
+            kickSyntax: syntax,
+            sampleRate: sampleRate
         ))
+        var hangObject = try #require(
+            JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(hang)
+            ) as? [String: Any]
+        )
+        hangObject["silenceStereoSampleHash"] = "aaaaaaaaaaaaaaaa"
+        let forgedHang = try JSONDecoder().decode(
+            AutonomousClimaxHangEvidence.self,
+            from: JSONSerialization.data(withJSONObject: hangObject)
+        )
+        #expect(!forgedHang.isComplete(sampleRate: sampleRate))
+
         let releaseOnly = AutonomousClimaxArcEvidence(
             relation: .dramaticDebtRelease,
             paidDebtCount: 2,
@@ -584,6 +614,7 @@ struct AutonomousCandidateEvaluationTests {
             firstWithheldBar: nil,
             secondWithheldBar: nil,
             recoveryBar: nil,
+            hang: .neutral,
             bindingValid: true
         )
         #expect(releaseOnly.isComplete(
@@ -592,7 +623,8 @@ struct AutonomousCandidateEvaluationTests {
             declaredBarCount: 16,
             kickSyntax: (128..<144).map {
                 fixtureKickSyntax(bar: $0, role: .grounded)
-            }
+            },
+            sampleRate: sampleRate
         ))
 
         let wrongGeometry = AutonomousClimaxArcEvidence(
@@ -609,13 +641,15 @@ struct AutonomousCandidateEvaluationTests {
             firstWithheldBar: 141,
             secondWithheldBar: 143,
             recoveryBar: 143,
+            hang: hang,
             bindingValid: true
         )
         #expect(!wrongGeometry.isComplete(
             phraseKind: AutonomousPhraseKind.energyRelease.rawValue,
             startBar: 128,
             declaredBarCount: 16,
-            kickSyntax: syntax
+            kickSyntax: syntax,
+            sampleRate: sampleRate
         ))
 
         let baseline = fixtureVector()
@@ -1270,10 +1304,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 28)
-        #expect(QualityQualificationContract.schemaVersion == 30)
+        #expect(vector.schemaVersion == 29)
+        #expect(QualityQualificationContract.schemaVersion == 31)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v29")
+                "autotechno-canonical-engine.v30")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3577,7 +3611,7 @@ struct AutonomousCandidateEvaluationTests {
         }
 
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
-            "5787aabcd6b6be93")
+            "1673f64c932f6b7f")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -3585,7 +3619,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "df50c2b847b6ba5b")
+            "9d868bfea30116bf")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7

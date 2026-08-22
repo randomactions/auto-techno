@@ -53,9 +53,12 @@ struct KickSyntaxTests {
                 ) == .pullback)
                 #expect(resolved.ensemble.events.allSatisfy { $0.voice != .kick })
                 #expect(resolved.ensemble.kickAnchors.isEmpty)
-                #expect(resolved.groovePulses.map(\.step) ==
-                        KickSyntaxResolver.canonicalWeakPulseSteps)
-                #expect(resolved.ensemble.events.contains { $0.voice == .motif })
+                let expectedPulseSteps = index == indexes.secondWithheld
+                    ? ClimaxHangContract.preHangWeakPulseSteps
+                    : KickSyntaxResolver.canonicalWeakPulseSteps
+                #expect(resolved.groovePulses.map(\.step) == expectedPulseSteps)
+                #expect(index == indexes.secondWithheld ||
+                        resolved.ensemble.events.contains { $0.voice == .motif })
                 #expect(!resolved.ensemble.events.contains {
                     $0.voice != .kick && $0.step == 0
                 })
@@ -67,14 +70,58 @@ struct KickSyntaxTests {
                         ClosedHatDecayResolver.articulations(from: resolved.ensemble))
             }
 
+            let firstWithheld = plan.resolvedBars[indexes.firstWithheld]
+            #expect(firstWithheld.climaxHang == nil)
+
+            let finalWithheld = plan.resolvedBars[indexes.secondWithheld]
+            let hang = try #require(finalWithheld.climaxHang)
+            #expect(hang.relation == .terminalRecoveryDelay)
+            #expect(hang.startStep == ClimaxHangContract.startStep)
+            #expect(hang.endStep == ClimaxHangContract.endStep)
+            #expect(finalWithheld.performance.localBar == 14)
+            #expect(finalWithheld.ensemble.events.allSatisfy {
+                $0.step < hang.startStep
+            })
+            #expect(finalWithheld.groovePulses.map(\.step) ==
+                    ClimaxHangContract.preHangWeakPulseSteps)
+
+            let noMotifEnsemble = EnsembleContext(
+                focusRole: finalWithheld.ensemble.focusRole,
+                events: finalWithheld.ensemble.events.filter {
+                    $0.voice != .motif
+                },
+                kickAnchors: finalWithheld.ensemble.kickAnchors,
+                intentionalPileup: finalWithheld.ensemble.intentionalPileup
+            )
+            var noMotifHangBars = plan.resolvedBars
+            noMotifHangBars[indexes.secondWithheld] = replacingBar(
+                finalWithheld,
+                ensemble: noMotifEnsemble
+            )
+            let noMotifHangEvidence = PerformanceCharacterEvidence(
+                resolvedBars: noMotifHangBars,
+                kind: plan.kind,
+                paidDebtIDs: plan.paidDebtIDs
+            )
+            #expect(noMotifHangEvidence.valid)
+
             let recovery = plan.resolvedBars[indexes.recovery]
+            #expect(recovery.climaxHang == nil)
             #expect(recovery.performance.signatureEvent == .displacedKickRecovery)
             #expect(recovery.ensemble.events.contains {
                 $0.voice == .kick && $0.step == 0
             })
-            #expect(zip(plan.resolvedBars, baseline).allSatisfy { actual, original in
-                actual.ensemble.events.filter { $0.voice != .kick } ==
-                    original.ensemble.events.filter { $0.voice != .kick } &&
+            #expect(zip(plan.resolvedBars, baseline).enumerated().allSatisfy {
+                index, pair in
+                let actual = pair.0
+                let original = pair.1
+                let expectedNonKick = original.ensemble.events.filter {
+                    $0.voice != .kick &&
+                        (index != indexes.secondWithheld ||
+                         $0.step < ClimaxHangContract.startStep)
+                }
+                return actual.ensemble.events.filter { $0.voice != .kick } ==
+                    expectedNonKick &&
                     actual.performanceCharacter == original.performanceCharacter &&
                     actual.foundationBehavior == original.foundationBehavior
             })
@@ -105,7 +152,7 @@ struct KickSyntaxTests {
         #expect(noDebt.kind == .energyRelease)
         #expect(noDebt.paidDebtIDs.isEmpty)
         #expect(noDebt.resolvedBars.allSatisfy {
-            $0.kickSyntaxRole == .grounded
+            $0.kickSyntaxRole == .grounded && $0.climaxHang == nil
         })
 
         let marker = try #require(baseline.firstIndex {
@@ -239,12 +286,22 @@ struct KickSyntaxTests {
                 source.resolvedBars[indexes.secondWithheld].performance.bar)
         #expect(evidence.climaxArc.recoveryBar ==
                 source.resolvedBars[indexes.recovery].performance.bar)
+        #expect(evidence.climaxArc.hang.active)
+        #expect(evidence.climaxArc.hang.bar ==
+                source.resolvedBars[indexes.secondWithheld].performance.bar)
+        #expect(evidence.climaxArc.hang.relation ==
+                ClimaxHangRelation.terminalRecoveryDelay.rawValue)
+        #expect(evidence.climaxArc.hang.silencePeak == 0)
+        #expect(evidence.climaxArc.hang.silenceRMS == 0)
+        #expect(evidence.climaxArc.hang.silenceNonzeroSampleCount == 0)
+        #expect(evidence.climaxArc.hang.postHangMatchesLiveMasterInput)
         #expect(evidence.climaxArc.bindingValid)
         #expect(evidence.climaxArc.isComplete(
             phraseKind: evidence.symbolic.phraseKind,
             startBar: evidence.symbolic.startBar,
             declaredBarCount: evidence.symbolic.declaredBarCount,
-            kickSyntax: evidence.kickSyntax
+            kickSyntax: evidence.kickSyntax,
+            sampleRate: evidence.routeContinuation.sampleRate
         ))
 
         for index in [indexes.firstWithheld, indexes.secondWithheld] {
@@ -268,14 +325,21 @@ struct KickSyntaxTests {
             #expect(syntax.audibleRMS.bitPattern == 0)
             #expect(kickStem.peak.bitPattern == 0)
             #expect(kickStem.rms.bitPattern == 0)
+            let isTerminalHang = index == indexes.secondWithheld
             #expect(evidence.groovePulse[index].events.map(\.step) ==
-                    KickSyntaxResolver.canonicalWeakPulseSteps)
+                    (isTerminalHang
+                        ? ClimaxHangContract.preHangWeakPulseSteps
+                        : KickSyntaxResolver.canonicalWeakPulseSteps))
             #expect(evidence.groovePulse[index].events.allSatisfy {
                 $0.sourceRMS > 0 && $0.finite
             })
-            #expect(evidence.instruments[index].architectures.contains {
-                $0.assignments.contains { $0.use == InstrumentUse.motif.rawValue }
-            })
+            if !isTerminalHang {
+                #expect(evidence.instruments[index].architectures.contains {
+                    $0.assignments.contains {
+                        $0.use == InstrumentUse.motif.rawValue
+                    }
+                })
+            }
         }
 
         let recovery = evidence.kickSyntax[indexes.recovery]
@@ -602,7 +666,9 @@ struct KickSyntaxTests {
                 source.upperPercussionTailArticulations,
             spatialContrast: source.spatialContrast,
             narrative: source.narrative,
-            kickSyntaxRole: kickSyntaxRole ?? source.kickSyntaxRole
+            kickSyntaxRole: kickSyntaxRole ?? source.kickSyntaxRole,
+            climaxHang: source.climaxHang,
+            percussionEchoTexture: source.percussionEchoTexture
         )
     }
 

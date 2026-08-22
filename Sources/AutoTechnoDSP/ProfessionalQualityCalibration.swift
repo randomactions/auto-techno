@@ -89,6 +89,8 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         "foundation-dotted-rhythm-crest-factor-db-mean"
     case foundationPreKickPocketSilenceRMSMaximum =
         "foundation-pre-kick-pocket-silence-rms-maximum"
+    case climaxHangSilenceRMSMaximum =
+        "climax-hang-silence-rms-maximum"
     case modalPercussionActiveBarRatio =
         "modal-percussion-active-bar-ratio"
     case modalPercussionEventCountMean =
@@ -136,7 +138,8 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
                 .modalPercussionPitchErrorCentsMaximum,
                 .modalPercussionMaskingMaximumOverlap,
                 .modalPercussionMaximumPoleRadius,
-                .foundationPreKickPocketSilenceRMSMaximum:
+                .foundationPreKickPocketSilenceRMSMaximum,
+                .climaxHangSilenceRMSMaximum:
             return true
         default:
             return false
@@ -535,9 +538,9 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 11
+    package static let schemaVersion = 12
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v11"
+        "autotechno-professional-quality-observation.v12"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -699,6 +702,7 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         let activeFoundationPreKickPockets = activeFoundationRhythm.map(
             \.preKickPocket
         )
+        let climaxHang = vector.climaxArc.hang
 
         let modalBars = vector.modalPercussion
         let activeModalBars = modalBars.filter {
@@ -920,6 +924,10 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             ProfessionalQualityMetricValue(
                 metric: .foundationPreKickPocketSilenceRMSMaximum,
                 value: activeFoundationPreKickPockets.map(\.silenceRMS).max() ?? 0
+            ),
+            ProfessionalQualityMetricValue(
+                metric: .climaxHangSilenceRMSMaximum,
+                value: climaxHang.active ? climaxHang.silenceRMS : 0
             ),
             ProfessionalQualityMetricValue(
                 metric: .modalPercussionActiveBarRatio,
@@ -1277,9 +1285,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 11
+    package static let schemaVersion = 12
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v11"
+        "autotechno-professional-quality-profile.v12"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1744,7 +1752,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             absoluteFloor = 60
         case .modalPercussionMaximumPoleRadius:
             absoluteFloor = 0.000_5
-        case .foundationPreKickPocketSilenceRMSMaximum:
+        case .foundationPreKickPocketSilenceRMSMaximum,
+                .climaxHangSilenceRMSMaximum:
             absoluteFloor = 0.000_001
         default:
             absoluteFloor = 0.04
@@ -1836,6 +1845,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .kickSourceUpperMidEnergyRatioMean,
                 .foundationDottedRhythmActiveBarRatio,
                 .foundationPreKickPocketSilenceRMSMaximum,
+                .climaxHangSilenceRMSMaximum,
                 .modalPercussionMaskingMaximumOverlap,
                 .modalPercussionMaximumPoleRadius,
                 .upperPercussionTailClearanceEventRatio,

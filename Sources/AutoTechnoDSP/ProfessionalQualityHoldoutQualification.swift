@@ -23,11 +23,11 @@ package struct ProfessionalQualityHoldoutTrajectoryResult: Codable, Equatable,
 /// still offline evidence: it makes no listening, hardware, or shipping claim.
 package struct ProfessionalQualityHoldoutQualification: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 10
+    package static let schemaVersion = 11
     package static let qualificationVersion =
-        "autotechno-professional-quality-holdout.v10"
+        "autotechno-professional-quality-holdout.v11"
     package static let evaluatorVersion =
-        "autotechno-professional-quality-holdout-evaluator.v10"
+        "autotechno-professional-quality-holdout-evaluator.v11"
     package static let minimumHoldoutTrajectoryCount = 4
 
     package let schemaVersion: Int

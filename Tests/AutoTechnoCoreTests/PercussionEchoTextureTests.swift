@@ -243,7 +243,8 @@ struct PercussionEchoTextureTests {
         #expect(bar.performance.localBar == 14)
         #expect(articulation.inputStep == source.step)
         #expect(articulation.outputStartStep == source.step + 1)
-        #expect(articulation.outputEndStep == 16)
+        #expect(articulation.outputEndStep == ClimaxHangContract.startStep)
+        #expect(bar.climaxHang == ClimaxHangArticulation())
         #expect(first.plan.resolvedBars[first.firstWithheld]
             .percussionEchoTexture == nil)
         #expect(first.plan.resolvedBars[first.recovery]
@@ -497,7 +498,7 @@ struct PercussionEchoTextureTests {
                 relation: .anticipationSwell,
                 inputStep: inputStep,
                 outputStartStep: inputStep + 1,
-                outputEndStep: 16
+                outputEndStep: ClimaxHangContract.startStep
             ),
             bpm: AutonomousSessionDirector.bpm,
             sampleRate: sampleRate
@@ -620,6 +621,7 @@ struct PercussionEchoTextureTests {
             spatialContrast: source.spatialContrast,
             narrative: source.narrative,
             kickSyntaxRole: source.kickSyntaxRole,
+            climaxHang: source.climaxHang,
             percussionEchoTexture: articulation
         )
     }

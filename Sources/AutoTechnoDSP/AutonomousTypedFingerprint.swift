@@ -710,6 +710,14 @@ private extension AutonomousTypedFingerprint {
         sink.field("performance"); encode(value.performance, into: &sink)
         sink.field("ensemble"); encode(value.ensemble, into: &sink)
         sink.field("kickSyntaxRole"); sink.raw(value.kickSyntaxRole.rawValue)
+        sink.field("climaxHang")
+        sink.presence(value.climaxHang != nil)
+        if let hang = value.climaxHang {
+            sink.aggregate("ClimaxHangArticulation")
+            sink.field("relation"); sink.raw(hang.relation.rawValue)
+            sink.field("startStep"); sink.int(hang.startStep)
+            sink.field("endStep"); sink.int(hang.endStep)
+        }
         sink.field("arrangementGesture"); sink.raw(value.arrangementGesture.rawValue)
         sink.field("percussionGear"); sink.raw(value.percussionGear.rawValue)
         sink.field("performanceCharacter"); sink.raw(value.performanceCharacter.rawValue)

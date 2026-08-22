@@ -68,11 +68,12 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 30, candidate-vector schema 28, candidate-transaction
-schema 4, and canonical engine v29 provide the current transaction-level
+Quality-contract schema 31, candidate-vector schema 29, candidate-transaction
+schema 4, and canonical engine v30 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
+score-owned terminal climax-hang,
 event-local groove-pulse, ordinary closed-hat, score-owned modal foundation,
 score-owned dotted foundation rhythm and pre-kick pocket,
 score-owned instrument and its acid/nonlinear-core/cluster/envelope consequence,
@@ -146,6 +147,16 @@ protected render passes, detector-to-audible scaling, automatic-mix gain, and
 all hashes must agree. Missing bars, forged roles, arbitrary kick deletion,
 nonzero withheld signal, silent recovery, or a changed non-kick score make the
 candidate incomplete; the primary evaluator cannot qualify incomplete evidence.
+
+On the final withheld bar only, terminal-hang validation must additionally bind
+macro position 14, the exact `[3, 7, 11]` pre-hang weak pulses, step-12/16 score
+geometry, positive route-derived release and silence counts, an 8 ms release,
+exact-zero silence peak/RMS/nonzero count, pre/post/silence hashes, and equality
+between post-hang PCM and the pre-live-master buffer. The next recovery remains
+positive at step zero. Tampered geometry, unexpected active evidence, signal in
+the silence interval, continuation mismatch, or an earlier withheld-bar hang
+must fail candidate completeness. Focused tests must cover 44.1 and 48 kHz and
+prove bit-identical output for every neutral bar.
 
 Kick-source evidence inside every kick-syntax record must bind every rendered
 kick event and its bounded processed-sample count to exact pre/post hashes,
@@ -291,9 +302,9 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v14 bank must contain every canonical checkpoint for
+The Professional Evidence v15 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v29 primary evaluator v11 and pinned profile v11/adversarial/holdout
+engine-v30 primary evaluator v12 and pinned profile v12/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 28.
 Holdouts must be source-disjoint, contain at
@@ -355,7 +366,7 @@ or PCM.
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
 composition, spatial-FDN, nonlinear-core, and foundation-pocket evidence carried
-by quality-contract schema 30 change detached preparation only. The implemented master-headroom path
+by quality-contract schema 31 change detached preparation only. The implemented master-headroom path
 is the sole scheduled-output feedback responsibility and does not move those
 feature analyzers or decisions onto the callback. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
@@ -411,11 +422,11 @@ phrase lengths, maximum two-pass path, and route
 rebuild at representative 44.1 and 48 kHz devices. Record median, high-percentile,
 and worst observed times plus peak working memory.
 
-The exact-engine v11 artifact loader, route-local primary evaluator, unavailable-rate
+The exact-engine v12 artifact loader, route-local primary evaluator, unavailable-rate
 gate, one-correction transaction order, and reason-coded replay require
 deterministic tests at 44.1 and 48 kHz. The deterministic numeric-storage estimate
 must remain below the declared 128 MiB ceiling. The profile derives from 28
-complete journeys and passes the 31-case v12 adversarial suite plus four disjoint
+complete journeys and passes the 32-case v13 adversarial suite plus four disjoint
 holdouts at both rates. See [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md) and
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 

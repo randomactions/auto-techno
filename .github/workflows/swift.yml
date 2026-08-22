@@ -104,7 +104,7 @@ jobs:
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(foundationPocketPrimaryIdentityContract|primaryResourcesAreV11Only|bundledV11ArtifactsAreReady|primaryArtifacts|legacyPolicyJSONIsRejected|serializedLiveObservationProvenanceIsRejected|generateRepresentativeProfile|calibrationCacheRejectsSwappedOrUnboundedBanks|RepositorySurfaceTests)'
+          --filter '(climaxHangPrimaryIdentityContract|primaryResourcesAreV12Only|bundledV12ArtifactsAreReady|primaryArtifacts|legacyPolicyJSONIsRejected|serializedLiveObservationProvenanceIsRejected|generateRepresentativeProfile|calibrationCacheRejectsSwappedOrUnboundedBanks|RepositorySurfaceTests)'
 
       - name: Run primary calibration adversarial challenge
         run: >-
@@ -284,7 +284,7 @@ jobs:
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(FoundationRhythmicRelationTests|GeneratedDSPTopologyTests|FeedbackDelayNetworkTests|IdentityReturnContinuationTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|UpperPercussionTailDSPTests|UpperPercussionTailTests|UpperSpectralRevealDSPTests|UpperSpectralRevealTests|UpperTimbreDSPTests|UpperTimbrePlanningTests|fixedSessionIdentity|currentPlanningIsDeterministic)'
+          --filter '(ClimaxHangTests|FoundationRhythmicRelationTests|GeneratedDSPTopologyTests|FeedbackDelayNetworkTests|IdentityReturnContinuationTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|UpperPercussionTailDSPTests|UpperPercussionTailTests|UpperSpectralRevealDSPTests|UpperSpectralRevealTests|UpperTimbreDSPTests|UpperTimbrePlanningTests|fixedSessionIdentity|currentPlanningIsDeterministic)'
 
       - name: Run preparation preflight tests
         run: >-

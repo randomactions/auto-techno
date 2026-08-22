@@ -120,6 +120,28 @@ struct StreamingPerceptualEvidenceTests {
         #expect(changedEvidence.spectralCentroidSpreadHz > 3_000)
     }
 
+    @Test("Normalized flux remains bounded across exact silence")
+    func normalizedFluxBounds() throws {
+        for sampleRate in [44_100.0, 48_000.0] {
+            let silence = [Float](
+                repeating: 0,
+                count: Int(sampleRate * 0.5)
+            )
+            let onset = deterministicNoise(
+                frameCount: Int(sampleRate * 0.5),
+                amplitude: 0.2
+            )
+            let measured = try evidence(
+                silence + onset,
+                sampleRate: sampleRate
+            )
+
+            #expect(measured.isComplete)
+            #expect((0...1).contains(measured.positiveSpectralFluxMean))
+            #expect((0...1).contains(measured.positiveSpectralFluxPeak))
+        }
+    }
+
     @Test("Working memory is fixed while phrase window count grows")
     func boundedWorkingMemory() throws {
         let sampleRate = 96_000.0

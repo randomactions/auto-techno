@@ -172,10 +172,10 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v14 supplies
+policy and its operational gates pass. Professional Evidence v15 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
-evidence, modal-foundation, pre-kick foundation-pocket, and live-controller
-consequence, explicit
+evidence, modal-foundation, pre-kick foundation-pocket, terminal climax-hang,
+and live-controller consequence, explicit
 analysis-memory provenance, and complete canonical-journey report-bank
 validation. A non-reconstructable diverse profile, passing
 adversarial suite, and disjoint holdout report now qualify complete 44.1/48 kHz

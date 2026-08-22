@@ -1688,3 +1688,59 @@ disjoint-holdout qualification, preparation, and realtime-producer safety.
 Publication and exact-head CI are separate pending gates. Listening,
 app/route/interruption QA, latency/peak-memory measurement, and physical-output
 soak were not performed and are not implied.
+
+## Source 29 terminal climax hang — 2026-08-22
+
+Source 29 extends the existing paid-debt energy-release climax at one terminal
+score boundary. Only the final kick-withheld bar at macro position 14 owns a
+`terminalRecoveryDelay`: existing weak pulses stop after steps `[3, 7, 11]`,
+the existing anticipation return ends at step 12, and one 8 ms raised-cosine
+full-mix release reaches exact zero for steps 12--16. Canonical voice, graph,
+effect, and continuation state advances underneath, so the already-owned
+step-zero recovery remains unchanged. The slice adds no track, instrument,
+effect chain, break sequencer, persistent state, callback work, or user control.
+
+Candidate-vector schema 29 binds the score relation, macro and kick-syntax
+owners, weak-pulse geometry, route-derived release/silence frames,
+pre/post/silence hashes, release input RMS, exact-zero peak/RMS/nonzero count,
+post-hang/pre-live-master identity, and recovery. Professional Evidence v15
+adds an upper-only-safer hang-silence RMS maximum. The 32-case v13 adversarial
+suite includes one non-compensable hang-contamination attack. Quality-contract
+schema 31, canonical engine v30, and primary evaluator/profile v12 bind the
+change as one exact installed contract.
+
+Release-mode artifact generation accepted 392/392 development observations
+from 28 journeys, rejected 32/32 adversarial cases for their exact expected
+reasons, and accepted 56/56 observations from four disjoint holdout journeys
+with zero relationship failures. A second invocation against the same 32
+cached journeys produced byte-identical JSON. The shipping artifacts are:
+
+- profile `7bb19b3a5572bb39`, JSON SHA-256
+  `f9e2981ebac800c3682722b1c70bd735b7a1dfe6e519416df5bcd30f485a55a5`;
+- adversarial suite `81f1cb944e9de091`, JSON SHA-256
+  `bbf2b1c13099b6db20e7440fe673bb1787415d9a7f5628a4b583e45d8ef3b502`;
+- holdout qualification `b9274bf9c29d2858`, JSON SHA-256
+  `5d5628ec5fd4692c863e1eff3b0875f2d3de9511618462bb98bd84abcf55d84d`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated
+caches and serial process boundaries. The release-mode Source 29 focus passed
+21/21. The CI-equivalent matrix passed all 375 selected test executions across
+38 processes: upper score 3/3; callback queue 7/7; live analyzer/controller
+41/41; App coordination 32/32; candidate/live tampering 28/28; exact artifacts
+13/13; deterministic profile/adversarial 2/2; calibrated policy 10/10;
+disjoint holdout 1/1; atomic commit 1/1; correction/evidence overlap 4/4;
+unsupported-rate and focused tamper gates 6/6; transaction/rate/resource/
+continuation gates 12/12; modal Core/DSP 15/15; adaptive session 25/25;
+instrument workflow partitions 12/12; kick source 3/3; prepared percussion
+echo 1/1; Core/evidence 121/121; preparation preflight 24/24; and protected
+routing 14/14. Both debug and release realtime-producer objects exposed only an
+allowed copy primitive. The optimized `AutoTechno` product built in 79.02
+seconds, and `git diff --check` remained clean.
+
+This local snapshot proves the Source 29 score-to-render consequence, exact
+terminal silence, neutral and malformed-input behavior, regenerated primary
+artifacts, adversarial and disjoint-holdout qualification, future-boundary
+preparation, and realtime-producer safety. Publication and exact-head CI are
+separate pending gates. Listening, app/route/interruption QA, latency or
+peak-memory measurement, and physical-output soak were not performed and are
+not implied.

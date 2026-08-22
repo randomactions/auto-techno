@@ -5,9 +5,9 @@ import Foundation
 /// scratch buffers; it never constructs a phrase-sized mono or spectrogram
 /// array.
 package final class StreamingPerceptualEvidence: Codable, Equatable, Sendable {
-    package static let schemaVersion = 2
+    package static let schemaVersion = 3
     package static let analyzerVersion =
-        "autotechno-streaming-perceptual-evidence.v2"
+        "autotechno-streaming-perceptual-evidence.v3"
 
     package let schemaVersion: Int
     package let analyzerVersion: String
@@ -115,7 +115,9 @@ package final class StreamingPerceptualEvidence: Codable, Equatable, Sendable {
             maximumBufferedFrameCount == min(
                 sourceFrameCount, analysisFrameCount
             ) &&
-            peakWorkingByteCount > 0
+            peakWorkingByteCount > 0 &&
+            (0...1).contains(positiveSpectralFluxMean) &&
+            (0...1).contains(positiveSpectralFluxPeak)
     }
 }
 
@@ -365,8 +367,12 @@ package enum StreamingPerceptualEvidenceAnalyzer {
             flatnessSum += flatness
             rolloffSum += rolloff
             if analyzedWindowCount > 1 {
-                fluxSum += flux
-                fluxPeak = max(fluxPeak, flux)
+                // The positive L1 difference between normalized spectra is
+                // theoretically bounded by one. Floating accumulation can
+                // overshoot by a few ulps at hard-silence boundaries.
+                let boundedFlux = min(1, max(0, flux))
+                fluxSum += boundedFlux
+                fluxPeak = max(fluxPeak, boundedFlux)
                 fluxTransitionCount += 1
             }
             return true

@@ -23,8 +23,8 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v29 profile v11, adversarial suite v12, and disjoint holdout qualification
-v10. The profile derives from 28 complete
+engine-v30 profile v12, adversarial suite v13, and disjoint holdout qualification
+v11. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
 relationship gate.
 

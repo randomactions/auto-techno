@@ -29,9 +29,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 30, candidate-
-   vector schema 28, candidate-transaction schema 4, and canonical engine
-   identity `autotechno-canonical-engine.v29`. Each
+   primary-evaluation transaction under quality-contract schema 31, candidate-
+   vector schema 29, candidate-transaction schema 4, and canonical engine
+   identity `autotechno-canonical-engine.v30`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -92,7 +92,13 @@ mistaken for a completed feedback system.
    dramatic debts paid by an energy release, retains their source classes and
    temporal bounds and, when present, cross-checks the rendered four-bar kick
    recovery.
-   It adds no score event, PCM, controller, or callback work. The transaction
+   The final withheld bar at macro position 14 may also own one bounded
+   `terminal-recovery-delay` hang: existing weak pulses stop after step 11, an
+   8 ms output release reaches exact zero at step 12, and the last beat remains
+   silent while every underlying renderer continuation advances. The next-bar
+   recovery remains the exact established score and PCM consequence. It adds
+   no onset, lane, instrument, effect, clock, controller, callback work, or
+   persistent state. The transaction
    binds the one plan fingerprint, engine/policy/evaluator versions,
    attempt-local reasons, and correction provenance. It permits one initial
    render plus one same-plan home-timbre correction, with two render passes
@@ -127,16 +133,16 @@ mistaken for a completed feedback system.
    windows with zero-padded radix-two FFT geometry, actual spectral
    centroid/bandwidth/flatness/rolloff, positive flux,
    RMS trajectory, active-window counts, and bounded working-memory provenance.
-   A deterministic Professional Evidence v14
+   A deterministic Professional Evidence v15
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
    observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v29 profile v11, adversarial suite v12, and disjoint holdout
-   qualification v10.
+   engine-v30 profile v12, adversarial suite v13, and disjoint holdout
+   qualification v11.
    The profile derives from 28 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
    relationships. Its evaluator maps the Core-owned plan checkpoint into the
-   same 65-metric observation and rejects dimensions independently. The eight
+   same 66-metric observation and rejects dimensions independently. The eight
    modal dimensions cover active-bar ratio, event density, pitch error,
    attack/body and tail/body relationships, spectral centroid, masking, and
    maximum pole radius.
@@ -355,7 +361,7 @@ return behavior.
 Each full bar emits same-pass bar/BPM/delay/render geometry, score and drive
 eligibility, bounded source and applied amount, current-send RMS, exact pre/post
 sample hashes, pre/post peak, RMS, and low-band RMS, difference RMS, and finite
-status. Candidate-vector schema 28 binds these observations to the score bar,
+status. Candidate-vector schema 29 binds these observations to the score bar,
 phrase kind, route rate, and matching instrument effect access. Neutral drive
 requires exact pre/post identity and zero difference. Active drive remains
 outside feedback, binds exact changed-frame and peak witnesses, and permits only
@@ -419,7 +425,7 @@ callback are unchanged; incomplete or ineligible pairs stay established.
 
 Detached same-pass evidence reduces relation, pair phase, score/render counts
 and masks, actual start frames, dry hash/peak/RMS, patch assignment, and
-full/protected pass equality into candidate-vector schema 28. Professional
+full/protected pass equality into candidate-vector schema 29. Professional
 observation retains active prevalence and crest factor under the current
 exact-engine profile. A later implementation may replace the integer-grid
 projection only while preserving this score owner, two-bar reset, exact neutral
@@ -440,8 +446,8 @@ The same pass records the natural event end, release and kick frames, positive
 release/silence counts, and a streamed hash/peak/RMS of the exact dry-
 foundation silence interval. Candidate completeness cross-binds that record to
 the resolved event and Bass Pluck assignment and requires full/protected
-equality. Professional Evidence v14 adds one upper-only safer silence-RMS
-dimension and adversarial suite v12 adds one non-compensable contamination
+equality. Professional Evidence v15 adds one upper-only safer silence-RMS
+dimension and adversarial suite v13 adds one non-compensable contamination
 attack. The present curve and exact-zero proxy are replaceable in place; the
 dotted score owner, protected route, neutral fallback, and causal evidence are
 durable.
@@ -459,7 +465,7 @@ Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
 requested gate end, and renderer-applied gate end. Separate anchor, shadow, and
 response dry taps retain finite role-local hash, peak, and RMS evidence. Current
-candidate-vector schema 28 reduces those tuples into exact score/render and
+candidate-vector schema 29 reduces those tuples into exact score/render and
 renderer-applied-gate fingerprints, relation-specific offset facts, protected-
 role neutrality, cascade-aperture or lead-pattern replay, and route-derived
 frame geometry. The calibrated evaluator judges this evidence as part of the

@@ -1094,6 +1094,9 @@ package struct RenderBlock: Equatable, Sendable {
     package let polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence
     package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
     package let spatialFDNRenderEvidence: SpatialFDNRenderEvidence
+    /// Score-owned terminal absence applied after the canonical graph and
+    /// before the existing live-master scalar.
+    package let climaxHangRenderEvidence: ClimaxHangRenderEvidence
     /// Terminal-only attenuation proof. All role and protected-routing evidence
     /// above is measured before this gain is applied.
     package let liveMasterTrimRenderEvidence: LiveMasterTrimRenderEvidence
@@ -1148,6 +1151,7 @@ package struct RenderBlock: Equatable, Sendable {
                 polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence = .neutral,
                 pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
                 spatialFDNRenderEvidence: SpatialFDNRenderEvidence = .neutral,
+                climaxHangRenderEvidence: ClimaxHangRenderEvidence = .neutral,
                 liveMasterTrimRenderEvidence: LiveMasterTrimRenderEvidence,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 upperTimingRenderEvidence: UpperTimingRenderEvidence,
@@ -1204,6 +1208,7 @@ package struct RenderBlock: Equatable, Sendable {
         self.polyphonicPadRenderEvidence = polyphonicPadRenderEvidence
         self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
         self.spatialFDNRenderEvidence = spatialFDNRenderEvidence
+        self.climaxHangRenderEvidence = climaxHangRenderEvidence
         self.liveMasterTrimRenderEvidence = liveMasterTrimRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.upperTimingRenderEvidence = upperTimingRenderEvidence
@@ -1287,6 +1292,13 @@ enum ExactPCMFingerprint {
 
     static func stereo(left: [Float], right: [Float]) -> String {
         hash([left, right])
+    }
+
+    /// Exact detached-evidence digest for a known stereo zero window. This is
+    /// used only during bounded candidate validation, never on the callback.
+    static func stereoZero(sampleCount: Int) -> String {
+        let zeros = [Float](repeating: 0, count: max(0, sampleCount))
+        return hash([zeros, zeros])
     }
 
     private static func hash(_ channels: [[Float]]) -> String {
@@ -1689,9 +1701,15 @@ package enum AutonomousPhraseRenderer {
                 protectedRhythm.rightSamples,
                 generated.1
             ).map { outputSafety($0 + $1) }
-            let terminalOutput = applyLiveMasterTrim(
+            let climaxOutput = ClimaxHangRenderer.render(
                 left: preLiveFeedbackLeft,
                 right: preLiveFeedbackRight,
+                articulation: resolved.climaxHang,
+                sampleRate: sampleRate
+            )
+            let terminalOutput = applyLiveMasterTrim(
+                left: climaxOutput.left,
+                right: climaxOutput.right,
                 state: state.liveMasterHeadroomState
             )
             let outputLeft = terminalOutput.left
@@ -1791,6 +1809,7 @@ package enum AutonomousPhraseRenderer {
                     rendered.pulseEchoReturnDriveRenderEvidence,
                 spatialFDNRenderEvidence:
                     rendered.spatialFDNRenderEvidence,
+                climaxHangRenderEvidence: climaxOutput.evidence,
                 liveMasterTrimRenderEvidence: terminalOutput.evidence,
                 upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,
                 upperTimingRenderEvidence: rendered.upperTimingRenderEvidence,

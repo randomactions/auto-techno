@@ -31,6 +31,7 @@ package enum ProfessionalQualityAdversarialScenario: String, CaseIterable,
         "foundation-dotted-rhythm-overpopulation"
     case foundationPreKickPocketContamination =
         "foundation-pre-kick-pocket-contamination"
+    case climaxHangContamination = "climax-hang-contamination"
     case kickSourceTransientSpike = "kick-source-transient-spike"
     case forgedPreTerminalScaling = "forged-pre-terminal-scaling"
     case forgedPostTerminalScaling = "forged-post-terminal-scaling"
@@ -429,9 +430,9 @@ package struct ProfessionalQualityLiveCandidateChain: Equatable, Sendable {
 /// evidence. Every scenario must be rejected independently.
 package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 12
+    package static let schemaVersion = 13
     package static let suiteVersion =
-        "autotechno-professional-quality-adversarial.v12"
+        "autotechno-professional-quality-adversarial.v13"
 
     package let schemaVersion: Int
     package let suiteVersion: String
@@ -747,6 +748,17 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         let releaseBaseline = try Self.baseline(
             checkpoint: .release,
             observations: sourceObservations
+        )
+        append(
+            .climaxHangContamination,
+            observation: try releaseBaseline.replacing(
+                .climaxHangSilenceRMSMaximum,
+                with: outside(
+                    .climaxHangSilenceRMSMaximum,
+                    preferLower: false
+                )
+            ),
+            expected: [.metricOutOfRange]
         )
         guard let anticipationBounds = profile[.release]?[
             .percussionAnticipationSwellLateToEarlyDBMean

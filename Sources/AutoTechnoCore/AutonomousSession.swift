@@ -416,7 +416,8 @@ package enum PercussionEchoTextureResolver {
     package static let outputWindowLengthInSteps = 4
     package static let latestInputStep = 7
     package static let anticipationSwellMacroPosition = 14
-    package static let anticipationSwellOutputEndStep = 16
+    package static let anticipationSwellOutputEndStep =
+        ClimaxHangContract.startStep
     package static let minimumAnticipationRiseDB = 3.0
 
     package static func articulation(
@@ -511,6 +512,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let spatialContrast: SpatialContrastArticulation
     package let narrative: NarrativeArticulation
     package let kickSyntaxRole: KickSyntaxRole
+    package let climaxHang: ClimaxHangArticulation?
     package let percussionEchoTexture: PercussionEchoTextureArticulation?
 
     package init(performance: PerformanceBar, ensemble: EnsembleContext,
@@ -528,6 +530,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
                  spatialContrast: SpatialContrastArticulation = .foreground,
                  narrative: NarrativeArticulation = .initial,
                  kickSyntaxRole: KickSyntaxRole = .grounded,
+                 climaxHang: ClimaxHangArticulation? = nil,
                  percussionEchoTexture: PercussionEchoTextureArticulation? = nil) {
         self.performance = performance
         self.ensemble = ensemble
@@ -563,6 +566,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.spatialContrast = spatialContrast
         self.narrative = narrative
         self.kickSyntaxRole = kickSyntaxRole
+        self.climaxHang = climaxHang
         self.percussionEchoTexture = percussionEchoTexture
     }
 
@@ -748,16 +752,30 @@ package enum KickSyntaxResolver {
         role: KickSyntaxRole,
         phraseKind: AutonomousPhraseKind
     ) -> ResolvedPerformanceBar {
+        let hang = ClimaxHangResolver.articulation(
+            kind: phraseKind,
+            character: resolved.performanceCharacter,
+            gesture: resolved.arrangementGesture,
+            kickSyntaxRole: role,
+            absoluteBar: resolved.performance.bar
+        )
         let ensemble: EnsembleContext
         if role == .withheld {
+            let events = resolved.ensemble.events.filter { event in
+                event.voice != .kick &&
+                    (hang.map { event.step < $0.startStep } ?? true)
+            }
             ensemble = EnsembleContext(
                 focusRole: resolved.ensemble.focusRole,
-                events: resolved.ensemble.events.filter { $0.voice != .kick },
+                events: events,
                 kickAnchors: [],
                 intentionalPileup: resolved.ensemble.intentionalPileup
             )
         } else {
             ensemble = resolved.ensemble
+        }
+        let groovePulses = resolved.groovePulses.filter { pulse in
+            hang.map { pulse.step < $0.startStep } ?? true
         }
         return ResolvedPerformanceBar(
             performance: resolved.performance,
@@ -770,7 +788,7 @@ package enum KickSyntaxResolver {
             foundationCompanion: resolved.foundationCompanion,
             pulseEchoEnabled: resolved.pulseEchoEnabled,
             interlockChapter: resolved.interlockChapter,
-            groovePulses: resolved.groovePulses,
+            groovePulses: groovePulses,
             closedHatDecayArticulations: ClosedHatDecayResolver.articulations(from: ensemble),
             upperPercussionTailArticulations:
                 UpperPercussionTailResolver.articulations(
@@ -781,6 +799,7 @@ package enum KickSyntaxResolver {
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative,
             kickSyntaxRole: role,
+            climaxHang: hang,
             percussionEchoTexture: PercussionEchoTextureResolver.articulation(
                 ensemble: ensemble,
                 kind: phraseKind,

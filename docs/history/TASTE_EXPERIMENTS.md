@@ -1789,3 +1789,114 @@ product build.
 Publication and exact-head CI remain separate pending gates. No listening,
 app/route/interruption QA, latency or peak-memory measurement, physical-output
 soak, or claim that the source demonstration was heard by a person is made.
+
+## Source 29: terminal climax hang — 2026-08-22
+
+Source ID `29` used YouTube video `n3lvFEsf1O0`, *Two types of break for
+electronic music*, from Underdog Electronic Music School, published 2021-05-31
+with an 11:48 duration. The clean-room capture used unauthenticated yt-dlp
+`2026.07.04` for metadata, description, automatic English captions, thumbnail,
+and top-ranked comments:
+
+```sh
+/opt/homebrew/bin/yt-dlp --skip-download --write-auto-subs --sub-langs 'en,en-orig' --sub-format vtt --write-info-json --write-description --write-thumbnail --write-comments --no-clean-info-json --extractor-args 'youtube:comment_sort=top;max_comments=65,50,15,3,2' -P /private/tmp/auto-techno-source29-research.2zwH8P -o '%(id)s.%(ext)s' 'https://www.youtube.com/watch?v=n3lvFEsf1O0'
+```
+
+No manual subtitle track was available. Automatic `en` and `en-orig` VTTs
+were byte-identical with SHA-256
+`6d676ac24c73bbecff40510296f1c82c08f18f051f64e77adcb665da7370bf82`.
+The metadata/comment artifact had SHA-256
+`d57644090e0f44907f37f193bfa4dfcbc12ecaf94d5e4fb7b74a1c493d14d74b`.
+The sample contained 50 top-ranked top-level comments and 12 replies across
+seven substantive threads. Direct unauthenticated audio retrieval used the
+yt-dlp EJS provider release 1.3.2 at exact commit
+`7511309af023b09788dc8f2efc96cc3671291e6c` through a temporary localhost
+provider and converted the result to 48 kHz stereo WAV. The resulting
+708.480-second local audio file had SHA-256
+`0e5f5de0846e3dfd8072ad109539388e3ab07c20121fe9db95103856332c8bae`.
+The provider, media, captions, comments, thumbnail, and waveform images remain
+temporary and untracked; no account, browser cookie, or CAPTCHA was used.
+
+The bounded caption paraphrase is: a direct break reduces energy and then
+returns it, while a larger three-part form separates a fall, a rise, and a
+short hang before recovery. The hang is described as a perceptible absence or
+nearly empty canvas after the rise, with the following return receiving the
+structural emphasis. The closing warning is that this is vocabulary rather
+than a formula to repeat indiscriminately. Literal track references, plug-in
+moves, genre examples, and suggested multi-bar durations are examples rather
+than portable runtime requirements. Machine waveform inspection of the local
+linear and three-part demonstration windows found the expected reduced-energy
+middle region followed by a renewed transient pattern; it did not establish a
+universal silence duration or loudness target. This is source inspection, not
+a human listening or promotion claim.
+
+Independent discussion strongly valued the explicit energy-curve explanation
+and the distinction between tension and release. One technically relevant
+thread reported that using fewer existing musical parts made the three-part
+shape more effective than stacking many effects. Another warned that treating
+the shape as a fixed formula creates predictable arrangements. The discussion
+therefore supports a rare score-owned relationship and bounded absence, not a
+new riser library, impact track, break preset, or mandatory phrase template.
+
+Repository reconciliation found that the canonical engine already owns the
+source's fall and rise through dramatic debt, nonconservative energy release,
+two kick-withheld bars, the existing percussion anticipation swell, and the
+unchanged step-zero recovery. Adding another track, instrument, effect chain,
+break sequencer, alternate renderer, or user control would duplicate those
+owners. The missing capability was the hang itself: an explicit terminal
+absence between the already-owned rise and recovery. Source 29 therefore
+extends the existing climax arc rather than introducing another mechanism.
+
+On only the final withheld energy-release bar at macro position 14, Core owns
+one `terminalRecoveryDelay` articulation from score step 12 through 16. The
+existing weak-pulse carrier is bounded to steps `[3, 7, 11]`, the existing
+anticipation return ends at step 12, and detached rendering applies one 8 ms
+raised-cosine full-mix release immediately before the boundary. The final beat
+is exact zero, but voice, generated-graph, effect, and continuation state keep
+advancing underneath; the next bar therefore restores the established recovery
+without a reset or hidden tail discontinuity. All ineligible and evaluator-home
+paths remain bit-identical neutral.
+
+Same-pass evidence binds the exact score relation, macro position, weak-pulse
+geometry, route-derived release and silence frames, pre/post/silence hashes,
+release input RMS, exact-zero peak/RMS/nonzero count, post-hang/pre-live-master
+identity, and recovery. Professional Evidence v15 adds one upper-only-safer
+silence-RMS dimension, and adversarial suite v13 adds one non-compensable
+contamination attack. Quality-contract schema 31, candidate-vector schema 29,
+canonical engine v30, and primary evaluator/profile v12 bind the change as one
+installed contract.
+
+The durable intention and replacement boundary are recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). A later serious
+renderer may replace the v1 output projection in place with role-aware decay
+choreography, transient-conditioned muting, tail-safe spectral evacuation, or a
+higher-resolution tension/recovery envelope only after calibrated transition,
+boundary, or payoff evidence exposes a repeatable deficit. It must preserve the
+paid-debt kick owner, exact terminal absence, advancing continuation, unchanged
+recovery, deterministic score/evidence, neutral fallback, and one primary
+evaluator; it must not coexist with another break, silence, riser, impact, or
+climax mechanism.
+
+Release-mode artifact generation accepted 392/392 development observations
+from 28 journeys, rejected all 32 adversarial cases for their exact expected
+reasons, and accepted 56/56 observations from four disjoint holdout journeys
+with zero relationship failures. A second invocation against the same 32
+cached journeys produced byte-identical artifacts. The installed primary
+artifacts are profile `7bb19b3a5572bb39`, adversarial suite
+`81f1cb944e9de091`, and holdout qualification `b9274bf9c29d2858`.
+
+Full local verification used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with
+isolated caches and serial process boundaries. All 375 workflow-selected test
+executions passed across 38 processes, including upper score, callback queue,
+live analyzer/controller, App coordination, candidate and artifact tampering,
+calibrated primary, adversarial, disjoint holdout, atomic commit, correction,
+unsupported and representative rates, continuation, instrument workflow,
+Core/evidence 121/121, preparation preflight 24/24, and protected routing
+14/14. A separate release-mode Source 29 focus passed 21/21, both debug and
+release realtime-producer objects exposed only an allowed copy primitive, and
+the optimized `AutoTechno` product built in 79.02 seconds. `git diff --check`
+was clean before publication.
+
+Publication and exact-head CI remain separate pending gates. No listening,
+app/route/interruption QA, latency or peak-memory measurement, physical-output
+soak, or claim that the source demonstration was heard by a person is made.

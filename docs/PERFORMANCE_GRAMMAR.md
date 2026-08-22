@@ -102,6 +102,15 @@ signal during both withheld bars, positive step-zero recovery evidence, and the
 unchanged weak-pulse carrier. This evidence remains a hard provenance boundary
 inside the calibrated policy.
 
+The final withheld energy-release bar at macro position 14 may additionally
+own one `terminalRecoveryDelay` climax hang. Its weak-pulse carrier ends at step
+11, the already rendered full mix receives one route-rate 8 ms raised-cosine
+release immediately before step 12, and steps 12 through 16 are exact silence.
+Voice, graph, effect, and continuation state still advance underneath that
+output projection, so the established step-zero recovery on the next bar is
+unchanged. The relation adds no onset, lane, instrument, effect return, clock,
+random draw, or persistent state; every other bar is literal neutral.
+
 Foundation-rhythm evidence separately binds relation and pair phase, exact
 score/render bass masks and start frames, Bass Pluck assignment, dry foundation
 hash/peak/RMS, and full/protected pass equality. The professional vector retains
@@ -154,7 +163,7 @@ only.
 
 Identity return, force-home correction, missing source material, and ineligible
 role/character combinations resolve every new feature to exact neutral.
-Candidate schema 28 binds per-bar score geometry to source and
+Candidate schema 29 binds per-bar score geometry to source and
 output hashes, trigger/rate counts, pad frequency ratios and PCM, arpeggiator
 counts and exact score/render pitches, harmonic-disclosure stage/function, and
 voice-leading bounds. This is causal structural evidence rather than a

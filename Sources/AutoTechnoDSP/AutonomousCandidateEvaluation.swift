@@ -1232,6 +1232,120 @@ package enum AutonomousClimaxArcRelation: String, Codable, Equatable, Sendable {
     case dramaticDebtRecovery = "dramatic-debt-recovery"
 }
 
+/// Compact same-pass proof that the final withheld climax bar closes into an
+/// exact terminal absence before the unchanged recovery boundary.
+package struct AutonomousClimaxHangEvidence: Codable, Equatable, Sendable {
+    package let active: Bool
+    package let relation: String?
+    package let bar: Int?
+    package let sampleRate: Double
+    package let renderedFrameCount: Int
+    package let startStep: Int
+    package let endStep: Int
+    package let releaseStartFrame: Int
+    package let silenceStartFrame: Int
+    package let releaseFrameCount: Int
+    package let silenceFrameCount: Int
+    package let preHangStereoSampleHash: String
+    package let postHangStereoSampleHash: String
+    package let silenceStereoSampleHash: String
+    package let releaseInputRMS: Double
+    package let silencePeak: Double
+    package let silenceRMS: Double
+    package let silenceNonzeroSampleCount: Int
+    package let postHangMatchesLiveMasterInput: Bool
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(
+        render: ClimaxHangRenderEvidence,
+        bar: Int?,
+        postHangMatchesLiveMasterInput: Bool,
+        bindingValid: Bool
+    ) {
+        active = render.active
+        relation = render.relation?.rawValue
+        self.bar = bar
+        sampleRate = render.sampleRate
+        renderedFrameCount = render.renderedFrameCount
+        startStep = render.startStep
+        endStep = render.endStep
+        releaseStartFrame = render.releaseStartFrame
+        silenceStartFrame = render.silenceStartFrame
+        releaseFrameCount = render.releaseFrameCount
+        silenceFrameCount = render.silenceFrameCount
+        preHangStereoSampleHash = render.preHangStereoSampleHash
+        postHangStereoSampleHash = render.postHangStereoSampleHash
+        silenceStereoSampleHash = render.silenceStereoSampleHash
+        releaseInputRMS = render.releaseInputRMS
+        silencePeak = render.silencePeak
+        silenceRMS = render.silenceRMS
+        silenceNonzeroSampleCount = render.silenceNonzeroSampleCount
+        self.postHangMatchesLiveMasterInput = postHangMatchesLiveMasterInput
+        self.bindingValid = bindingValid
+        finite = render.finite
+    }
+
+    package static let neutral = AutonomousClimaxHangEvidence(
+        render: .neutral,
+        bar: nil,
+        postHangMatchesLiveMasterInput: true,
+        bindingValid: true
+    )
+
+    package func isComplete(sampleRate expectedSampleRate: Double) -> Bool {
+        guard active else { return self == .neutral }
+        guard relation == ClimaxHangRelation.terminalRecoveryDelay.rawValue,
+              let bar,
+              bar >= 0,
+              sampleRate == expectedSampleRate,
+              sampleRate.isFinite,
+              sampleRate >=
+                QualityQualificationContract.minimumSupportedSampleRate,
+              sampleRate <=
+                QualityQualificationContract.maximumSupportedSampleRate,
+              renderedFrameCount == Int((
+                240.0 / AutonomousSessionDirector.bpm * sampleRate
+              ).rounded()),
+              startStep == ClimaxHangContract.startStep,
+              endStep == ClimaxHangContract.endStep,
+              releaseStartFrame >= 0,
+              releaseStartFrame < silenceStartFrame,
+              silenceStartFrame == Int((
+                Double(startStep) * Double(renderedFrameCount) / 16
+              ).rounded()),
+              releaseFrameCount == silenceStartFrame - releaseStartFrame,
+              releaseFrameCount == max(
+                1,
+                Int((sampleRate * ClimaxHangRenderer.releaseSeconds).rounded())
+              ),
+              silenceFrameCount == renderedFrameCount - silenceStartFrame,
+              releaseInputRMS > 0,
+              silencePeak == 0,
+              silenceRMS == 0,
+              silenceNonzeroSampleCount == 0,
+              Self.isFingerprint(preHangStereoSampleHash),
+              Self.isFingerprint(postHangStereoSampleHash),
+              Self.isFingerprint(silenceStereoSampleHash),
+              silenceStereoSampleHash == ExactPCMFingerprint.stereoZero(
+                sampleCount: silenceFrameCount
+              ),
+              preHangStereoSampleHash != postHangStereoSampleHash,
+              postHangMatchesLiveMasterInput,
+              bindingValid,
+              finite else {
+            return false
+        }
+        return true
+    }
+
+    private static func isFingerprint(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 /// Compact proof that a committed release pays a previously opened dramatic
 /// obligation and, when present, resolves through the existing kick-syntax
 /// recovery. The record owns no new score or PCM; it binds long-form cause to
@@ -1253,6 +1367,7 @@ package struct AutonomousClimaxArcEvidence: Codable, Equatable, Sendable {
     package let firstWithheldBar: Int?
     package let secondWithheldBar: Int?
     package let recoveryBar: Int?
+    package let hang: AutonomousClimaxHangEvidence
     package let bindingValid: Bool
 
     package init(
@@ -1269,6 +1384,7 @@ package struct AutonomousClimaxArcEvidence: Codable, Equatable, Sendable {
         firstWithheldBar: Int?,
         secondWithheldBar: Int?,
         recoveryBar: Int?,
+        hang: AutonomousClimaxHangEvidence,
         bindingValid: Bool
     ) {
         self.relation = relation.rawValue
@@ -1284,10 +1400,14 @@ package struct AutonomousClimaxArcEvidence: Codable, Equatable, Sendable {
         self.firstWithheldBar = firstWithheldBar
         self.secondWithheldBar = secondWithheldBar
         self.recoveryBar = recoveryBar
+        self.hang = hang
         self.bindingValid = bindingValid
     }
 
-    package static func inactive(releaseStartBar: Int) -> Self {
+    package static func inactive(
+        releaseStartBar: Int,
+        bindingValid: Bool = true
+    ) -> Self {
         Self(
             relation: .none,
             paidDebtCount: 0,
@@ -1302,7 +1422,8 @@ package struct AutonomousClimaxArcEvidence: Codable, Equatable, Sendable {
             firstWithheldBar: nil,
             secondWithheldBar: nil,
             recoveryBar: nil,
-            bindingValid: true
+            hang: .neutral,
+            bindingValid: bindingValid
         )
     }
 
@@ -1326,7 +1447,8 @@ package struct AutonomousClimaxArcEvidence: Codable, Equatable, Sendable {
         phraseKind: String,
         startBar: Int,
         declaredBarCount: Int,
-        kickSyntax: [AutonomousKickSyntaxBarEvidence]
+        kickSyntax: [AutonomousKickSyntaxBarEvidence],
+        sampleRate: Double
     ) -> Bool {
         guard recordIsStructurallyValid, bindingValid,
               releaseStartBar == startBar,
@@ -1347,7 +1469,8 @@ package struct AutonomousClimaxArcEvidence: Codable, Equatable, Sendable {
                 earliestOpenedAtBar == nil && latestOpenedAtBar == nil &&
                 latestDueByBar == nil && setupBar == nil &&
                 firstWithheldBar == nil && secondWithheldBar == nil &&
-                recoveryBar == nil && roles.allSatisfy { $0 == .grounded }
+                recoveryBar == nil && hang == .neutral &&
+                roles.allSatisfy { $0 == .grounded }
         case .dramaticDebtRelease, .dramaticDebtRecovery:
             guard kind == .energyRelease,
                   paidDebtCount > 0,
@@ -1363,6 +1486,7 @@ package struct AutonomousClimaxArcEvidence: Codable, Equatable, Sendable {
             if relation == .dramaticDebtRelease {
                 return setupBar == nil && firstWithheldBar == nil &&
                     secondWithheldBar == nil && recoveryBar == nil &&
+                    hang == .neutral &&
                     roles.allSatisfy { $0 == .grounded }
             }
             guard let setupBar,
@@ -1383,7 +1507,9 @@ package struct AutonomousClimaxArcEvidence: Codable, Equatable, Sendable {
             }), setupIndex <= kickSyntax.count - 4 else {
                 return false
             }
-            return kickSyntax[setupIndex].role == KickSyntaxRole.grounded.rawValue &&
+            return hang.bar == secondWithheldBar &&
+                hang.isComplete(sampleRate: sampleRate) &&
+                kickSyntax[setupIndex].role == KickSyntaxRole.grounded.rawValue &&
                 kickSyntax[setupIndex + 1].bar == firstWithheldBar &&
                 kickSyntax[setupIndex + 1].role == KickSyntaxRole.withheld.rawValue &&
                 kickSyntax[setupIndex + 2].bar == secondWithheldBar &&
@@ -5045,7 +5171,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 28
+    package static let schemaVersion = 29
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -5473,16 +5599,29 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             let kickStemMatches = kickStem.map {
                 $0.peak == mix.audiblePeak && $0.rms == mix.audibleRMS
             } ?? false
-            let withheldContextMatches = role != .withheld || (
-                block.resolvedPerformance.groovePulses.map(\.step) ==
-                    KickSyntaxResolver.canonicalWeakPulseSteps &&
-                block.resolvedPerformance.ensemble.events.contains {
-                    $0.voice == .motif
-                } &&
-                block.instrumentRenderEvidence.contains { architecture in
-                    architecture.assignments.contains { $0.use == .motif }
-                }
-            )
+            let withheldContextMatches: Bool
+            if role != .withheld {
+                withheldContextMatches = true
+            } else if block.resolvedPerformance.climaxHang != nil {
+                withheldContextMatches =
+                    block.resolvedPerformance.groovePulses.map(\.step) ==
+                        ClimaxHangContract.preHangWeakPulseSteps &&
+                    block.resolvedPerformance.ensemble.events.allSatisfy {
+                        $0.step < ClimaxHangContract.startStep
+                    } &&
+                    block.resolvedPerformance.percussionEchoTexture?.relation ==
+                        .anticipationSwell
+            } else {
+                withheldContextMatches =
+                    block.resolvedPerformance.groovePulses.map(\.step) ==
+                        KickSyntaxResolver.canonicalWeakPulseSteps &&
+                    block.resolvedPerformance.ensemble.events.contains {
+                        $0.voice == .motif
+                    } &&
+                    block.instrumentRenderEvidence.contains { architecture in
+                        architecture.assignments.contains { $0.use == .motif }
+                    }
+            }
             let syntaxAuthorizationMatches = role == .grounded || (
                 plan.kind == .energyRelease && !plan.paidDebtIDs.isEmpty
             )
@@ -5647,7 +5786,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         let climaxArc = makeClimaxArcEvidence(
             plan: plan,
             incomingDramaticDebts: incomingDramaticDebts,
-            kickSyntax: kickSyntax
+            kickSyntax: kickSyntax,
+            blocks: boundedBlocks,
+            sampleRate: sampleRate
         )
         let groovePulse = boundedBlocks.map { block in
             let score = block.resolvedPerformance.groovePulses
@@ -6251,11 +6392,19 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     private static func makeClimaxArcEvidence(
         plan: AutonomousPhrasePlan,
         incomingDramaticDebts: [SessionDramaticDebt],
-        kickSyntax: [AutonomousKickSyntaxBarEvidence]
+        kickSyntax: [AutonomousKickSyntaxBarEvidence],
+        blocks: [RenderBlock],
+        sampleRate: Double
     ) -> AutonomousClimaxArcEvidence {
+        let activeHangBlocks = blocks.filter {
+            $0.climaxHangRenderEvidence.active
+        }
         let active = plan.kind == .energyRelease && !plan.paidDebtIDs.isEmpty
         guard active else {
-            return .inactive(releaseStartBar: plan.startBar)
+            return .inactive(
+                releaseStartBar: plan.startBar,
+                bindingValid: activeHangBlocks.isEmpty
+            )
         }
         let sourceDebtsAreBounded = incomingDramaticDebts.count <=
             AutonomousClimaxArcEvidence.maximumDebtCount
@@ -6284,6 +6433,50 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             paidDebts.map(\.id) == plan.paidDebtIDs &&
             paidDebts.count == incomingDramaticDebts.count
         let setupBar = setupIndex.map { kickSyntax[$0].bar }
+        let secondWithheldBar = setupIndex.map { kickSyntax[$0 + 2].bar }
+        let expectedHangBlock = activeHangBlocks.count == 1
+            ? activeHangBlocks.first : nil
+        let hangScoreBindingValid: Bool
+        let hangEvidence: AutonomousClimaxHangEvidence
+        if let expectedHangBlock {
+            let score = expectedHangBlock.resolvedPerformance.climaxHang
+            let texture = expectedHangBlock.resolvedPerformance
+                .percussionEchoTexture
+            let planBarMatches = plan.resolvedBars.contains {
+                $0 == expectedHangBlock.resolvedPerformance &&
+                    $0.performance.bar == expectedHangBlock.bar
+            }
+            hangScoreBindingValid =
+                expectedHangBlock.bar == secondWithheldBar &&
+                score == ClimaxHangArticulation() &&
+                expectedHangBlock.resolvedPerformance.kickSyntaxRole ==
+                    .withheld &&
+                expectedHangBlock.resolvedPerformance.groovePulses.map(\.step) ==
+                    ClimaxHangContract.preHangWeakPulseSteps &&
+                expectedHangBlock.resolvedPerformance.ensemble.events
+                    .allSatisfy { $0.step < ClimaxHangContract.startStep } &&
+                texture?.relation == .anticipationSwell &&
+                texture?.outputEndStep == ClimaxHangContract.startStep &&
+                planBarMatches &&
+                expectedHangBlock.climaxHangRenderEvidence.sampleRate ==
+                    sampleRate &&
+                expectedHangBlock.climaxHangRenderEvidence.renderedFrameCount ==
+                    expectedHangBlock.left.count &&
+                expectedHangBlock.left.count == expectedHangBlock.right.count
+            hangEvidence = AutonomousClimaxHangEvidence(
+                render: expectedHangBlock.climaxHangRenderEvidence,
+                bar: expectedHangBlock.bar,
+                postHangMatchesLiveMasterInput:
+                    expectedHangBlock.climaxHangRenderEvidence
+                        .postHangStereoSampleHash ==
+                    expectedHangBlock.liveMasterTrimRenderEvidence
+                        .preTrimStereoSampleHash,
+                bindingValid: hangScoreBindingValid
+            )
+        } else {
+            hangScoreBindingValid = false
+            hangEvidence = .neutral
+        }
         return AutonomousClimaxArcEvidence(
             relation: setupIndex == nil
                 ? .dramaticDebtRelease : .dramaticDebtRecovery,
@@ -6298,10 +6491,13 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             releaseStartBar: plan.startBar,
             setupBar: setupBar,
             firstWithheldBar: setupIndex.map { kickSyntax[$0 + 1].bar },
-            secondWithheldBar: setupIndex.map { kickSyntax[$0 + 2].bar },
+            secondWithheldBar: secondWithheldBar,
             recoveryBar: setupIndex.map { kickSyntax[$0 + 3].bar },
+            hang: setupIndex == nil ? .neutral : hangEvidence,
             bindingValid: sourcesAreSupported && debtGeometryIsValid &&
-                exactDebtsMatch
+                exactDebtsMatch && (setupIndex == nil
+                    ? activeHangBlocks.isEmpty
+                    : hangScoreBindingValid)
         )
     }
 
@@ -7343,12 +7539,16 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                     kickStem.crestFactor.bitPattern == 0 &&
                     kickStem.occupancy.bitPattern == 0 &&
                     kickStem.bands.allSatisfy { $0.energy.bitPattern == 0 }
+                let isTerminalHang = climaxArc.hang.active &&
+                    climaxArc.hang.bar == syntax.bar
+                let expectedWeakPulseSteps = isTerminalHang
+                    ? ClimaxHangContract.preHangWeakPulseSteps
+                    : KickSyntaxResolver.canonicalWeakPulseSteps
                 let weakPulsesAreAudible =
                     pulse.sourceScoreEventCount ==
-                        KickSyntaxResolver.canonicalWeakPulseSteps.count &&
+                        expectedWeakPulseSteps.count &&
                     pulse.sourceRenderEventCount == pulse.sourceScoreEventCount &&
-                    pulse.events.map(\.step) ==
-                        KickSyntaxResolver.canonicalWeakPulseSteps &&
+                    pulse.events.map(\.step) == expectedWeakPulseSteps &&
                     pulse.events.allSatisfy {
                         $0.intensity > 0 && $0.sourceRMS > 0 && $0.finite
                     }
@@ -7356,7 +7556,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                     $0.assignments.contains { $0.use == InstrumentUse.motif.rawValue }
                 }
                 guard stemIsSilent, weakPulsesAreAudible,
-                      motifAssignmentIsPresent else {
+                      isTerminalHang || motifAssignmentIsPresent else {
                     return false
                 }
             }
@@ -7484,7 +7684,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             phraseKind: symbolic.phraseKind,
             startBar: symbolic.startBar,
             declaredBarCount: symbolic.declaredBarCount,
-            kickSyntax: kickSyntax
+            kickSyntax: kickSyntax,
+            sampleRate: routeContinuation.sampleRate
         )
     }
 

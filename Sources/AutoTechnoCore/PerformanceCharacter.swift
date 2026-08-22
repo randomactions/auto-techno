@@ -226,19 +226,35 @@ package struct PerformanceCharacterEvidence: Equatable, Sendable {
         }
         for index in [firstWithheldIndex, secondWithheldIndex] {
             let bar = resolvedBars[index]
+            let isFinalWithheld = index == secondWithheldIndex
+            let isTerminalHang = isFinalWithheld && bar.climaxHang != nil
+            let expectedGrooveSteps = isTerminalHang
+                ? ClimaxHangContract.preHangWeakPulseSteps
+                : KickSyntaxResolver.canonicalWeakPulseSteps
             let grooveSteps = bar.ensemble.events
                 .filter { $0.voice == .groovePulse }
                 .map(\.step)
                 .sorted()
+            let hangMatches: Bool
+            if isTerminalHang {
+                hangMatches = bar.climaxHang == ClimaxHangArticulation() &&
+                    bar.ensemble.events.allSatisfy {
+                        $0.step < ClimaxHangContract.startStep
+                    }
+            } else {
+                hangMatches = bar.climaxHang == nil
+            }
             guard bar.ensemble.kickAnchors.isEmpty,
                   !bar.ensemble.events.contains(where: { $0.voice == .kick }),
-                  grooveSteps == KickSyntaxResolver.canonicalWeakPulseSteps,
-                  bar.groovePulses.map(\.step) ==
-                    KickSyntaxResolver.canonicalWeakPulseSteps,
-                  bar.ensemble.events.contains(where: { $0.voice == .motif }),
+                  grooveSteps == expectedGrooveSteps,
+                  bar.groovePulses.map(\.step) == expectedGrooveSteps,
+                  isTerminalHang || bar.ensemble.events.contains(where: {
+                      $0.voice == .motif
+                  }),
                   !bar.ensemble.events.contains(where: {
                       $0.voice != .kick && $0.step == 0
-                  }) else {
+                  }),
+                  hangMatches else {
                 return false
             }
         }
