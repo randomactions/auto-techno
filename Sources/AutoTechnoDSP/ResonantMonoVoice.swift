@@ -324,7 +324,8 @@ enum ResonantMonoVoice {
         case .bassPluck: 0.24
         case .acidThread: 0.36
         case .acidSequence: 0.45
-        case .northStar, .darkChord, .glassRunner, .alienNoise, .metalVeil, .dustCloud: 0
+        case .northStar, .darkChord, .glassRunner, .alienNoise, .metalVeil,
+             .dustCloud, .voltageArc: 0
         }
         let sawWeight = assignment.patch == .bassPulse ? 0.18 : 0.46
         let sineWeight = max(0.16, 1 - pulseWeight - sawWeight)
@@ -338,7 +339,7 @@ enum ResonantMonoVoice {
         case .acidSequence:
             0.15 + automation.motion * 0.18
         case .northStar, .darkChord, .glassRunner, .alienNoise, .metalVeil,
-             .dustCloud:
+             .dustCloud, .voltageArc:
             0
         }
         let requestedStart = max(20, startFrequency)

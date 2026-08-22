@@ -72,31 +72,35 @@ struct InstrumentPaletteTests {
                     #expect(foundation.automation.space == 0)
                     selectedPatches.insert(foundation.patch)
                     selectedArchitectures.insert(foundation.architecture)
-                    for role in SynthRole.allCases {
-                        for chapter in InterlockChapter.allCases {
-                            let assignment = InstrumentPalette.resolveUpper(
-                                role: role,
-                                world: world,
-                                kind: kind,
-                                gesture: gesture,
-                                chapter: chapter,
-                                mutationAmount: 0.73,
-                                forceHome: false,
-                                pulseEchoEnabled: true
-                            )
-                            #expect(assignment.isValid)
-                            #expect(assignment == InstrumentPalette.resolveUpper(
-                                role: role,
-                                world: world,
-                                kind: kind,
-                                gesture: gesture,
-                                chapter: chapter,
-                                mutationAmount: 0.73,
-                                forceHome: false,
-                                pulseEchoEnabled: true
-                            ))
-                            selectedPatches.insert(assignment.patch)
-                            selectedArchitectures.insert(assignment.architecture)
+                    for character in PerformanceCharacter.allCases {
+                        for role in SynthRole.allCases {
+                            for chapter in InterlockChapter.allCases {
+                                let assignment = InstrumentPalette.resolveUpper(
+                                    role: role,
+                                    world: world,
+                                    kind: kind,
+                                    gesture: gesture,
+                                    chapter: chapter,
+                                    mutationAmount: 0.73,
+                                    forceHome: false,
+                                    pulseEchoEnabled: true,
+                                    performanceCharacter: character
+                                )
+                                #expect(assignment.isValid)
+                                #expect(assignment == InstrumentPalette.resolveUpper(
+                                    role: role,
+                                    world: world,
+                                    kind: kind,
+                                    gesture: gesture,
+                                    chapter: chapter,
+                                    mutationAmount: 0.73,
+                                    forceHome: false,
+                                    pulseEchoEnabled: true,
+                                    performanceCharacter: character
+                                ))
+                                selectedPatches.insert(assignment.patch)
+                                selectedArchitectures.insert(assignment.architecture)
+                            }
                         }
                     }
                 }
@@ -323,6 +327,119 @@ struct InstrumentPaletteTests {
             #expect(neutral.evidence.first?.spectralTextureCluster == nil)
             #expect(neutral.modulation.allSatisfy { $0.bitPattern == 0 })
         }
+    }
+
+    @Test("Broken Suspension owns one bounded upper-harmonic response patch")
+    func spectralTextureUpperHarmonicTailAssignment() {
+        let world = fixtureWorld(seed: 48_291)
+        let response = InstrumentPalette.resolveUpper(
+            role: .response,
+            world: world,
+            kind: .contrast,
+            gesture: .corrode,
+            chapter: .tone,
+            mutationAmount: 0.74,
+            forceHome: false,
+            pulseEchoEnabled: true,
+            performanceCharacter: .brokenSuspension
+        )
+        #expect(response.patch == .voltageArc)
+        #expect(response.architecture == .spectralTexture)
+        #expect(response.use == .response)
+        #expect(response.spectralTextureHarmonicTailRelation == .drivenUpperBand)
+        #expect(response.effects.contains(.drive))
+        #expect(response.effects.contains(.filteredReverb))
+        #expect(!response.effects.contains(.pulseEcho))
+        #expect(response.isValid)
+
+        let capability = InstrumentPalette.capability(for: .voltageArc)
+        #expect(capability?.eligibleUses == [.response])
+        let invalid = InstrumentAssignment(
+            use: .atmosphere,
+            patch: .voltageArc,
+            automation: .neutral,
+            effects: capability?.compatibleEffects ?? []
+        )
+        #expect(!invalid.isValid)
+        #expect(invalid.spectralTextureHarmonicTailRelation == nil)
+
+        for role in SynthRole.allCases where role != .response {
+            let assignment = InstrumentPalette.resolveUpper(
+                role: role,
+                world: world,
+                kind: .contrast,
+                gesture: .corrode,
+                chapter: .tone,
+                mutationAmount: 0.74,
+                forceHome: false,
+                pulseEchoEnabled: true,
+                performanceCharacter: .brokenSuspension
+            )
+            #expect(assignment.patch != .voltageArc)
+            #expect(assignment.spectralTextureHarmonicTailRelation == nil)
+        }
+    }
+
+    @Test("Voltage Arc isolates a deterministic moving upper harmonic tail")
+    func spectralTextureUpperHarmonicTailDSP() {
+        let voltageAssignment = assignment(
+            patch: .voltageArc,
+            use: .response,
+            automation: InstrumentAutomation(
+                color: 0.76, shape: 0.40, motion: 0.82, space: 0.44
+            )
+        )
+        for sampleRate in [8_000.0, 44_100.0, 48_000.0, 96_000.0, 192_000.0] {
+            let rendered = render(
+                assignment: voltageAssignment,
+                role: .response,
+                sampleRate: sampleRate
+            )
+            let replay = render(
+                assignment: voltageAssignment,
+                role: .response,
+                sampleRate: sampleRate
+            )
+            let evidence = rendered.evidence.first?.spectralTextureHarmonicTail
+            #expect(rendered.samples == replay.samples)
+            #expect(rendered.modulation == replay.modulation)
+            #expect(rendered.evidence == replay.evidence)
+            #expect(evidence?.relation == .drivenUpperBand)
+            #expect((evidence?.minimumFoldedSourceFrequency ?? 0) >=
+                    SpectralTextureHarmonicTailContract.minimumSourceFrequency)
+            #expect((evidence?.maximumFoldedSourceFrequency ?? .infinity) <=
+                    SpectralTextureHarmonicTailContract.maximumSourceFrequency)
+            #expect((evidence?.minimumBandCenterHz ?? 0) >=
+                    SpectralTextureHarmonicTailContract.minimumBandCenterHz(
+                        sampleRate: sampleRate
+                    ))
+            #expect((evidence?.maximumBandCenterHz ?? .infinity) <=
+                    SpectralTextureHarmonicTailContract.maximumBandCenterHz(
+                        sampleRate: sampleRate
+                    ))
+            #expect((evidence?.maximumBandCenterHz ?? 0) >
+                    (evidence?.minimumBandCenterHz ?? .infinity))
+            #expect((evidence?.resonance ?? 0) > 0)
+            #expect((evidence?.prefilterDrive ?? 0) > 1)
+            #expect((evidence?.lfoRateHz ?? 0) > 0)
+            #expect((evidence?.renderedFrameCount ?? 0) > 0)
+            #expect(rendered.modulation == rendered.samples)
+            #expect(rendered.modulation.contains { $0 != 0 })
+            #expect(rendered.samples.allSatisfy { $0.isFinite })
+        }
+
+        let established = assignment(
+            patch: .alienNoise,
+            use: .response,
+            automation: voltageAssignment.automation
+        )
+        let establishedRender = render(
+            assignment: established,
+            role: .response
+        )
+        #expect(establishedRender.evidence.first?
+            .spectralTextureHarmonicTail == nil)
+        #expect(establishedRender.modulation.allSatisfy { $0.bitPattern == 0 })
     }
 
     @Test("A tonal tail retains its resolved patch automation across a silent bar")
@@ -664,6 +781,14 @@ struct InstrumentPaletteTests {
     }
 
     @inline(never)
+    fileprivate func preparedHarmonicTailPhrase() -> PreparedAutonomousPhrase? {
+        guard let fixture = activeHarmonicTailPlanFixture() else {
+            return nil
+        }
+        return prepareInstrumentFixture(fixture)
+    }
+
+    @inline(never)
     fileprivate func preparedAcidRelationPhrase() -> PreparedAutonomousPhrase? {
         guard let fixture = activeAcidPlanFixture() else {
             return nil
@@ -732,6 +857,44 @@ struct InstrumentPaletteTests {
             }
         }
         return (count: count, complete: complete)
+    }
+
+    @inline(never)
+    fileprivate func preparedHarmonicTailFacts(
+        _ prepared: PreparedAutonomousPhrase
+    ) -> (count: Int, complete: Bool, minimumUpperRatio: Double,
+          maximumLowRatio: Double) {
+        var count = 0
+        var complete = true
+        var minimumUpperRatio = Double.infinity
+        var maximumLowRatio = 0.0
+        for bar in prepared.selectedCandidateEvidence.instruments {
+            for architecture in bar.architectures {
+                guard let tail = architecture.spectralTextureHarmonicTail else {
+                    continue
+                }
+                count += 1
+                complete = complete && tail.isComplete(
+                    assignments: architecture.assignments,
+                    architectureEventCount: architecture.eventCount,
+                    sampleRate: 8_000
+                )
+                minimumUpperRatio = min(
+                    minimumUpperRatio,
+                    tail.upperBandEnergyRatio
+                )
+                maximumLowRatio = max(
+                    maximumLowRatio,
+                    tail.lowBandEnergyRatio
+                )
+            }
+        }
+        return (
+            count: count,
+            complete: complete,
+            minimumUpperRatio: minimumUpperRatio,
+            maximumLowRatio: maximumLowRatio
+        )
     }
 
     @inline(never)
@@ -829,6 +992,29 @@ struct InstrumentPaletteTests {
         return nil
     }
 
+    @inline(never)
+    fileprivate func activeHarmonicTailPlanFixture() ->
+        PreparedInstrumentPlanFixture? {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var state = director.initialState()
+        for _ in 0..<128 {
+            let plan = director.plan(from: state)
+            let synth = SynthPerformancePlan(
+                scene: plan.scene,
+                dna: plan.dna,
+                kind: plan.kind,
+                resolvedBars: plan.resolvedBars
+            )
+            if synth.bars.flatMap(\.upperNotes).contains(where: {
+                $0.instrument.spectralTextureHarmonicTailRelation != nil
+            }) {
+                return PreparedInstrumentPlanFixture(state: state, plan: plan)
+            }
+            state.advancePlanning(using: plan)
+        }
+        return nil
+    }
+
     private func assignment(
         patch: InstrumentPatch,
         use: InstrumentUse,
@@ -913,11 +1099,16 @@ struct InstrumentPaletteTests {
             )
         case .spectralTexture:
             var state = SpectralTextureState()
+            var harmonicTailMeasurement = [Float](
+                repeating: 0,
+                count: output.count
+            )
             SpectralTextureVoice.render(
                 &output,
                 measurement: &roleMeasurement,
                 architectureMeasurement: &architectureMeasurement,
                 clusterMeasurement: &modulationMeasurement,
+                harmonicTailMeasurement: &harmonicTailMeasurement,
                 pulseEchoSend: &pulseEcho,
                 spatialReverbSend: &reverb,
                 noteRenderEvidence: &evidence,
@@ -926,6 +1117,9 @@ struct InstrumentPaletteTests {
                 level: 0.08,
                 state: &state
             )
+            if assignment.spectralTextureHarmonicTailRelation != nil {
+                modulationMeasurement = harmonicTailMeasurement
+            }
         }
         #expect(output == roleMeasurement)
         #expect(output == architectureMeasurement)
@@ -957,6 +1151,25 @@ struct InstrumentPaletteTests {
 /// full canonical transaction and therefore run on XCTest's normal test
 /// thread. The production path and every asserted contract remain unchanged.
 final class InstrumentPalettePreparedEvidenceTests: XCTestCase {
+    func testPreparedHarmonicTailEvidence() throws {
+        let helper = InstrumentPaletteTests()
+        let prepared = try XCTUnwrap(helper.preparedHarmonicTailPhrase())
+        XCTAssertTrue(helper.preparedCandidateEvaluationIsComplete(prepared))
+        XCTAssertTrue(helper.preparedSelectedEvidenceIsComplete(prepared))
+        XCTAssertTrue(helper.preparedCommitIsEligible(prepared))
+        let tail = helper.preparedHarmonicTailFacts(prepared)
+        XCTAssertGreaterThan(tail.count, 0)
+        XCTAssertTrue(tail.complete)
+        XCTAssertGreaterThanOrEqual(
+            tail.minimumUpperRatio,
+            SpectralTextureHarmonicTailContract.minimumUpperBandEnergyRatio
+        )
+        XCTAssertLessThanOrEqual(
+            tail.maximumLowRatio,
+            SpectralTextureHarmonicTailContract.maximumLowBandEnergyRatio
+        )
+    }
+
     func testPreparedSpectralClusterEvidence() throws {
         let helper = InstrumentPaletteTests()
         let prepared = try XCTUnwrap(helper.preparedSpectralClusterPhrase())

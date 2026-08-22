@@ -43,6 +43,7 @@ package enum InstrumentPatch: String, CaseIterable, Sendable {
     case alienNoise
     case metalVeil
     case dustCloud
+    case voltageArc
 
     package var architecture: InstrumentArchitecture {
         switch self {
@@ -50,7 +51,7 @@ package enum InstrumentPatch: String, CaseIterable, Sendable {
             .resonantMono
         case .northStar, .darkChord, .glassRunner:
             .tonalMotion
-        case .alienNoise, .metalVeil, .dustCloud:
+        case .alienNoise, .metalVeil, .dustCloud, .voltageArc:
             .spectralTexture
         }
     }
@@ -70,6 +71,13 @@ package enum ResonantMonoSpectralRelation: String, CaseIterable, Sendable {
 /// score meaning, its bounded rise, and its exact neutral state remain.
 package enum SpectralTextureClusterRelation: String, CaseIterable, Sendable {
     case risingAdjacentCluster
+}
+
+/// Durable meaning for a response whose audible material comes from the
+/// isolated upper partials of a low periodic source. The renderer owns the
+/// provisional oscillator, filter, drive, and modulation laws.
+package enum SpectralTextureHarmonicTailRelation: String, CaseIterable, Sendable {
+    case drivenUpperBand
 }
 
 /// Effect stages an assignment is allowed to reach in the existing canonical
@@ -171,7 +179,7 @@ package struct InstrumentAssignment: Equatable, Sendable {
         case .acidThread: .orderedHollow
         case .acidSequence: .metallicTension
         case .bassPulse, .bassPluck, .northStar, .darkChord, .glassRunner,
-             .alienNoise, .metalVeil, .dustCloud: nil
+             .alienNoise, .metalVeil, .dustCloud, .voltageArc: nil
         }
     }
 
@@ -183,6 +191,15 @@ package struct InstrumentAssignment: Equatable, Sendable {
         SpectralTextureClusterRelation? {
         guard patch == .metalVeil, use == .transition else { return nil }
         return .risingAdjacentCluster
+    }
+
+    /// The response-only Voltage Arc patch is the sole score owner of the
+    /// upper-harmonic-tail interpretation. Other uses fail closed even if an
+    /// invalid assignment is constructed manually.
+    package var spectralTextureHarmonicTailRelation:
+        SpectralTextureHarmonicTailRelation? {
+        guard patch == .voltageArc, use == .response else { return nil }
+        return .drivenUpperBand
     }
 }
 
@@ -240,6 +257,11 @@ package enum InstrumentPalette {
             patch: .dustCloud,
             eligibleUses: [.atmosphere, .transition],
             compatibleEffects: upperEffects(core: [], pulseEcho: false)
+        ),
+        InstrumentCapability(
+            patch: .voltageArc,
+            eligibleUses: [.response],
+            compatibleEffects: upperEffects(core: [.drive], pulseEcho: false)
         ),
     ]
 
@@ -395,7 +417,7 @@ package enum InstrumentPalette {
         case (.brokenSuspension, .anchor), (.brokenSuspension, .shadow):
             patch = .glassRunner
         case (.brokenSuspension, .response):
-            patch = .alienNoise
+            patch = .voltageArc
         case (.brokenSuspension, .atmosphere):
             patch = .dustCloud
         case (.brokenSuspension, .transition):
@@ -524,6 +546,8 @@ package enum InstrumentPalette {
             InstrumentAutomation(color: 0.78, shape: 0.32, motion: 0.68, space: 0.52)
         case .dustCloud:
             InstrumentAutomation(color: 0.34, shape: 0.82, motion: 0.42, space: 0.78)
+        case .voltageArc:
+            InstrumentAutomation(color: 0.76, shape: 0.40, motion: 0.82, space: 0.44)
         }
     }
 

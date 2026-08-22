@@ -1984,3 +1984,68 @@ evidence exposes a repeatable deficit. A mature rewrite must preserve the same
 pad and three-step score owner, absolute phase, advancing continuation, exact
 neutral behavior, causal evidence, and single primary evaluator; it supersedes
 this projection rather than adding another trigger lane or gate effect.
+
+## Source 31: response-owned upper harmonic tail — 2026-08-22
+
+Source 31 analyzed Underdog Electronic Music School's published electrical-zap
+Wavetable tutorial (`Fn7paYGwDCQ`). `yt-dlp` 2026.08.19 retrieved byte-identical
+automatic-English VTT captions with SHA-256
+`197265c30a66ba71c54bded4d2fc1cb3c22d769f9501952127d57ecc29f80f64`,
+structured JSON3 captions with SHA-256
+`03342dac0d28da6685f3099fbcab2d10a8904775e7d1d74bfe9a7367af71ac93`,
+50 top-level comments plus 15 replies, and direct audio. The decoded 48 kHz
+stereo WAV was 504.930 seconds with SHA-256
+`9c8ac167a011e1c214f2f3415506139dde4f11035c6124955e5e35bbcf63a139`.
+The local Deno JavaScript runtime solved extraction without an account, cookie,
+browser session, CAPTCHA, or token provider. Reconstructable captions,
+discussion, metadata, images, and source audio remain temporary and untracked.
+
+The portable idea is that a low periodic source has closely spaced upper
+partials that can become an electrical response when a driven resonant band
+isolates only that tail and moves independently of note retrigger. Two technical
+discussion threads independently reinforced the low-source/upper-harmonic
+distinction, while one suggested nonlinear colour. Machine-only 8,192-point
+inspection found approximate centroid/rolloff pairs of 5.0/8.9 kHz in the
+band-pass demonstration, 5.1/9.0 kHz after colour, and 4.8/9.0 kHz in the cold
+spatial example; its approximate energy was 16.2% above 5 kHz and 7.2% above
+8 kHz. Speech, edits, and interface sounds contaminate those windows, so they
+establish no copied cutoff, resonance, drive, modulation, or mix threshold.
+This is source inspection, not human listening or artist imitation.
+
+Repository reconciliation selected one new recognizable patch inside the
+existing Spectral Texture instrument rather than another track, architecture,
+effect chain, or renderer. Broken Suspension now owns the response-only Voltage
+Arc assignment and durable `drivenUpperBand` relation. Its current realization
+octave-folds the resolved note into a bounded low polyBLEP saw, applies bounded
+prefilter colour, isolates the upper tail with a moving TPT state-variable
+band-pass, keeps harmonic/filter/LFO continuation in the existing voice state,
+and reuses the established response envelope and filtered-reverb send.
+
+Same-pass evidence binds exact assignment/event counts, relation, folded-source
+and center extrema, resonance, drive, LFO rate, isolated event/sample hashes,
+peak/RMS/crest, low-band suppression, upper-band energy, and finiteness.
+Candidate completeness fails closed for missing, misplaced, forged, out-of-
+route, low-contaminated, or upper-disconnected evidence. Professional Evidence
+v17 adds a higher-only-safer mean upper-band ratio and adversarial suite v15
+adds one non-compensable disconnected-tail attack. The exact engine v32/profile
+v14/holdout v13 regeneration accepted 392/392 development observations, all
+34 adversarial cases rejected for their exact expected reasons, and 56/56
+disjoint holdout observations with zero relationship failures. A cache-backed
+repeat produced byte-identical artifacts: profile `9ad691f87acdcbaf`
+(SHA-256 `2fe61c2a5fbb1062665bd9e54f2acb6ceafd1822e67812215ea4f6519cd8d772`),
+adversarial suite `df4ec48aa47cfb3a`
+(SHA-256 `716baeed0e320d7f70df0fe520a22d7815972a3fafb899f5b3559e98890079da`),
+and holdout qualification `f0df34e6e76af2a5`
+(SHA-256 `1a624459854c28ac9332aef15ed41eeead752492d187030a29395f9eb695fe72`).
+The full serial validation matrix is recorded separately when complete.
+
+The durable intention and explicit maturation boundary live in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). Oversampled
+oscillator banks, higher-order antialiasing, nonlinear filter models,
+envelope-followed motion, multiband diffusion, and stereo decorrelation are
+future in-place replacements only after the primary evaluator exposes a
+repeatable motion, harshness, masking, translation, or narrative deficit. A
+mature rewrite must preserve the response-owned patch/relation, deterministic
+continuation, exact causal evidence, one canonical renderer, and one primary
+evaluator; it must supersede this v1 realization rather than coexist as a
+generic zap effect.

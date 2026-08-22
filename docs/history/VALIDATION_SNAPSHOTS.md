@@ -1806,3 +1806,55 @@ rejection, disjoint unseen-holdout qualification, byte determinism, preparation,
 protected routing, and realtime-producer safety. Publication and exact-head CI
 are separate gates. Listening, app/route/interruption QA, physical-output soak,
 and a professional-quality claim are not implied.
+
+## Source 31 response-owned upper harmonic tail — 2026-08-23
+
+Broken Suspension now assigns one response-only Voltage Arc patch inside the
+existing Spectral Texture architecture. The canonical renderer folds the
+resolved note into a bounded low polyBLEP source, drives and isolates its upper
+harmonic tail through the shared TPT state-variable core, advances one
+free-running modulation phase, and reuses the existing response envelope and
+filtered-reverb path. Candidate-vector schema 31 binds exact assignment,
+relation, source/filter/modulation bounds, isolated stem hashes and signal
+measurements, protected routing, and continuation. Professional Evidence v17
+adds the higher-only-safer upper-band ratio; adversarial suite v15 adds the
+non-compensable disconnected-tail case. Quality-contract schema 33 and
+canonical engine v32 bind the complete consequence.
+
+The 28 development journeys accepted 392/392 observations. All 34 adversarial
+cases rejected for their exact expected reasons. Four disjoint holdout journeys
+accepted 56/56 observations with zero local, trajectory, or rate-consistency
+failures and zero source overlap. A cache-backed second invocation reproduced
+all three artifacts byte for byte:
+
+- profile `9ad691f87acdcbaf`, JSON SHA-256
+  `2fe61c2a5fbb1062665bd9e54f2acb6ceafd1822e67812215ea4f6519cd8d772`;
+- adversarial suite `df4ec48aa47cfb3a`, JSON SHA-256
+  `716baeed0e320d7f70df0fe520a22d7815972a3fafb899f5b3559e98890079da`;
+- holdout qualification `f0df34e6e76af2a5`, JSON SHA-256
+  `1a624459854c28ac9332aef15ed41eeead752492d187030a29395f9eb695fe72`.
+
+Local validation used Xcode 26.6 (`17F113`) and Apple Swift 6.3.3 with isolated
+caches and serial process boundaries. The release workflow matrix passed all
+379 selected test executions across 45 SwiftPM partitions plus four direct
+XCTest prepared-product cases: upper score 3/3; realtime queue 7/7; live
+analyzer/controller 41/41; App coordination 32/32; candidate/live tampering
+29/29; exact artifacts 13/13; deterministic profile/adversarial 2/2; calibrated
+policy 11/11; disjoint holdout 1/1; atomic commit 1/1; lightweight contracts
+4/4; unsupported routes and focused tamper gates 6/6; transaction/rate/resource/
+continuation gates 12/12; modal Core/DSP 15/15; adaptive session 25/25;
+instrument workflow partitions 15/15; kick source 3/3; prepared percussion echo
+1/1; Core/evidence 83/83; six isolated upper suites 37/37; preparation preflight
+24/24; and protected routing 14/14. The clean current-runtime/repository suite
+also passed 11/11. The release realtime-producer object imported only `memcpy`.
+The optimized `AutoTechno` product built in 84.42 seconds, and
+`git diff --check` remained clean.
+
+This snapshot proves deterministic score-to-render causality, bounded and
+finite upper-tail synthesis, continuation and route ownership, exact causal
+evidence, malformed/tampered-evidence rejection, regenerated primary artifacts,
+adversarial and unseen-holdout qualification, byte determinism, preparation,
+protected routing, and realtime-producer safety. Publication and exact-head CI
+are separate gates. Listening, app/route/interruption QA, latency or peak-memory
+measurement, physical-output soak, and a professional-quality claim are not
+implied.

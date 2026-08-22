@@ -23,8 +23,8 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v31 profile v13, adversarial suite v14, and disjoint holdout qualification
-v12. The profile derives from 28 complete
+engine-v32 profile v14, adversarial suite v15, and disjoint holdout qualification
+v13. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
 relationship gate.
 
@@ -47,6 +47,9 @@ the release consequence cannot be compensated by unrelated strengths. The
 profile also retains protagonist-reveal activity and applied-cutoff ratios; a
 dedicated runaway-cutoff attack proves that the reveal cannot escape its
 exact-engine envelope and be compensated by unrelated strengths.
+The response-owned Spectral Texture harmonic tail adds one higher-only-safer
+upper-band energy ratio. Its disconnected-tail attack proves that patch and
+event claims cannot compensate for a missing isolated upper consequence.
 It additionally retains dotted-foundation active prevalence and active crest
 factor; an impossible-prevalence attack proves the two-bar score relation cannot
 be synthesized as disconnected compact evidence. One upper-only safer dimension

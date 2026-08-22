@@ -671,6 +671,7 @@ package enum VoiceRenderer {
         var tonalEnvelopeExpansionStem: [Float] = []
         var spectralTextureInstrumentStem: [Float] = []
         var spectralTextureClusterStem: [Float] = []
+        var spectralTextureHarmonicTailStem: [Float] = []
         var maskingFoundationBus: [Float] = []
         var synthBus: [Float] = []
         var pulseEchoSendBus: [Float] = []
@@ -707,6 +708,10 @@ package enum VoiceRenderer {
         swap(&tonalEnvelopeExpansionStem, &checkedOut.tonalEnvelopeExpansionStem)
         swap(&spectralTextureInstrumentStem, &checkedOut.spectralTextureInstrumentStem)
         swap(&spectralTextureClusterStem, &checkedOut.spectralTextureClusterStem)
+        swap(
+            &spectralTextureHarmonicTailStem,
+            &checkedOut.spectralTextureHarmonicTailStem
+        )
         swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
         swap(&synthBus, &checkedOut.synth)
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
@@ -1048,6 +1053,8 @@ package enum VoiceRenderer {
                 tonalEnvelopeExpansionStem: &tonalEnvelopeExpansionStem,
                 spectralTextureInstrumentStem: &spectralTextureInstrumentStem,
                 spectralTextureClusterStem: &spectralTextureClusterStem,
+                spectralTextureHarmonicTailStem:
+                    &spectralTextureHarmonicTailStem,
                 polyphonicPadStem: &polyphonicPadStem,
                 polyphonicPadRenderEvidence: &polyphonicPadRenderEvidence,
                 noteRenderEvidence: &upperNoteRenderEvidence,
@@ -1814,7 +1821,9 @@ package enum VoiceRenderer {
                                     tonalEnvelopeExpansion:
                                         tonalEnvelopeExpansionStem,
                                     spectralTexture: spectralTextureInstrumentStem,
-                                    spectralTextureCluster: spectralTextureClusterStem
+                                    spectralTextureCluster: spectralTextureClusterStem,
+                                    spectralTextureHarmonicTail:
+                                        spectralTextureHarmonicTailStem
                                     ),
                                    percussionEchoTextureRenderEvidence:
                                     percussionEchoTextureRenderEvidence,
@@ -1853,6 +1862,10 @@ package enum VoiceRenderer {
         swap(&tonalEnvelopeExpansionStem, &checkedOut.tonalEnvelopeExpansionStem)
         swap(&spectralTextureInstrumentStem, &checkedOut.spectralTextureInstrumentStem)
         swap(&spectralTextureClusterStem, &checkedOut.spectralTextureClusterStem)
+        swap(
+            &spectralTextureHarmonicTailStem,
+            &checkedOut.spectralTextureHarmonicTailStem
+        )
         swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
         swap(&synthBus, &checkedOut.synth)
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
@@ -1877,6 +1890,7 @@ package enum VoiceRenderer {
         tonalEnvelopeExpansionStem: inout [Float],
         spectralTextureInstrumentStem: inout [Float],
         spectralTextureClusterStem: inout [Float],
+        spectralTextureHarmonicTailStem: inout [Float],
         polyphonicPadStem: inout [Float],
         polyphonicPadRenderEvidence: inout PolyphonicPadRenderEvidence,
         noteRenderEvidence: inout [UpperNoteRenderEvidence],
@@ -2056,6 +2070,7 @@ package enum VoiceRenderer {
             measurement: &atmosphereStem,
             architectureMeasurement: &spectralTextureInstrumentStem,
             clusterMeasurement: &spectralTextureClusterStem,
+            harmonicTailMeasurement: &spectralTextureHarmonicTailStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
@@ -2098,6 +2113,7 @@ package enum VoiceRenderer {
             measurement: &responseTimingStem,
             architectureMeasurement: &spectralTextureInstrumentStem,
             clusterMeasurement: &spectralTextureClusterStem,
+            harmonicTailMeasurement: &spectralTextureHarmonicTailStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
@@ -2126,6 +2142,7 @@ package enum VoiceRenderer {
             measurement: &atmosphereStem,
             architectureMeasurement: &spectralTextureInstrumentStem,
             clusterMeasurement: &spectralTextureClusterStem,
+            harmonicTailMeasurement: &spectralTextureHarmonicTailStem,
             pulseEchoSend: &pulseEchoSend,
             spatialReverbSend: &spatialReverbSend,
             noteRenderEvidence: &noteRenderEvidence,
@@ -2154,7 +2171,8 @@ package enum VoiceRenderer {
         tonalMotion: [Float],
         tonalEnvelopeExpansion: [Float],
         spectralTexture: [Float],
-        spectralTextureCluster: [Float]
+        spectralTextureCluster: [Float],
+        spectralTextureHarmonicTail: [Float]
     ) -> [InstrumentArchitectureRenderEvidence] {
         var assignments = upperNoteRenderEvidence.map(\.instrument)
         let audibleBassEvents = resolved.ensemble.events.filter { event in
@@ -2204,6 +2222,13 @@ package enum VoiceRenderer {
                     uniqueAssignments: uniqueAssignments,
                     samples: spectralTextureCluster
                 ) : nil
+            let harmonicTail = architecture == .spectralTexture
+                ? spectralTextureHarmonicTailEvidence(
+                    noteEvidence: upperNoteRenderEvidence,
+                    uniqueAssignments: uniqueAssignments,
+                    samples: spectralTextureHarmonicTail,
+                    sampleRate: sampleRate
+                ) : nil
             let envelopeExpansion = architecture == .tonalMotion
                 ? tonalEnvelopeExpansionEvidence(
                     synthPerformance: synthPerformance,
@@ -2231,6 +2256,7 @@ package enum VoiceRenderer {
                 nonlinearCore: nonlinearCore,
                 resonantMonoModulation: modulation,
                 spectralTextureCluster: cluster,
+                spectralTextureHarmonicTail: harmonicTail,
                 tonalEnvelopeExpansion: envelopeExpansion,
                 upperSpectralReveal: spectralReveal
             )
@@ -2392,6 +2418,21 @@ package enum VoiceRenderer {
         let componentRatios: [Double]
         let startFrequency: Double
         let appliedEndFrequency: Double
+        let renderedFrameCount: Int
+    }
+
+    private struct SpectralTextureHarmonicTailFact {
+        let role: SynthRole
+        let onsetFrame: Int
+        let patch: InstrumentPatch
+        let relation: SpectralTextureHarmonicTailRelation
+        let minimumFoldedSourceFrequency: Double
+        let maximumFoldedSourceFrequency: Double
+        let minimumBandCenterHz: Double
+        let maximumBandCenterHz: Double
+        let resonance: Double
+        let prefilterDrive: Double
+        let lfoRateHz: Double
         let renderedFrameCount: Int
     }
 
@@ -2649,6 +2690,187 @@ package enum VoiceRenderer {
             clusterPeak: peak,
             clusterRMS: rms,
             clusterCrestFactor: crest,
+            bindingValid: bindingValid,
+            finite: finite
+        )
+    }
+
+    @inline(never)
+    private static func spectralTextureHarmonicTailEvidence(
+        noteEvidence: [UpperNoteRenderEvidence],
+        uniqueAssignments: [InstrumentAssignment],
+        samples: [Float],
+        sampleRate: Double
+    ) -> SpectralTextureHarmonicTailRenderEvidence? {
+        let assignments = uniqueAssignments.filter {
+            $0.spectralTextureHarmonicTailRelation != nil
+        }
+        let events = noteEvidence.filter {
+            $0.instrument.spectralTextureHarmonicTailRelation != nil
+        }
+        guard !assignments.isEmpty || !events.isEmpty else { return nil }
+
+        var facts: [SpectralTextureHarmonicTailFact] = []
+        facts.reserveCapacity(events.count)
+        var bindingValid = !assignments.isEmpty && !events.isEmpty
+        for evidence in noteEvidence where
+            evidence.instrument.architecture == .spectralTexture {
+            let expected = SpectralTextureHarmonicTailContract.treatment(
+                for: evidence.instrument,
+                startFrequency: evidence.appliedStartFrequency,
+                endFrequency: evidence.targetEndFrequency,
+                sampleRate: sampleRate
+            )
+            if let expected {
+                guard let actual = evidence.spectralTextureHarmonicTail else {
+                    bindingValid = false
+                    continue
+                }
+                let renderedFrames =
+                    evidence.appliedGateEndFrame - evidence.onsetFrame
+                bindingValid = bindingValid &&
+                    evidence.role == .response &&
+                    actual.relation == expected.relation &&
+                    actual.minimumFoldedSourceFrequency >=
+                        min(
+                            expected.startFoldedSourceFrequency,
+                            expected.endFoldedSourceFrequency
+                        ) &&
+                    actual.maximumFoldedSourceFrequency <=
+                        max(
+                            expected.startFoldedSourceFrequency,
+                            expected.endFoldedSourceFrequency
+                        ) &&
+                    actual.minimumBandCenterHz >=
+                        SpectralTextureHarmonicTailContract.minimumBandCenterHz(
+                            sampleRate: sampleRate
+                        ) &&
+                    actual.maximumBandCenterHz <=
+                        SpectralTextureHarmonicTailContract.maximumBandCenterHz(
+                            sampleRate: sampleRate
+                        ) &&
+                    actual.maximumBandCenterHz > actual.minimumBandCenterHz &&
+                    actual.resonance == expected.resonance &&
+                    actual.prefilterDrive == expected.prefilterDrive &&
+                    actual.lfoRateHz == expected.lfoRateHz &&
+                    actual.renderedFrameCount == renderedFrames
+                facts.append(SpectralTextureHarmonicTailFact(
+                    role: evidence.role,
+                    onsetFrame: evidence.onsetFrame,
+                    patch: evidence.instrument.patch,
+                    relation: actual.relation,
+                    minimumFoldedSourceFrequency:
+                        actual.minimumFoldedSourceFrequency,
+                    maximumFoldedSourceFrequency:
+                        actual.maximumFoldedSourceFrequency,
+                    minimumBandCenterHz: actual.minimumBandCenterHz,
+                    maximumBandCenterHz: actual.maximumBandCenterHz,
+                    resonance: actual.resonance,
+                    prefilterDrive: actual.prefilterDrive,
+                    lfoRateHz: actual.lfoRateHz,
+                    renderedFrameCount: actual.renderedFrameCount
+                ))
+            } else if evidence.spectralTextureHarmonicTail != nil {
+                bindingValid = false
+            }
+        }
+        facts.sort { lhs, rhs in
+            if lhs.onsetFrame != rhs.onsetFrame {
+                return lhs.onsetFrame < rhs.onsetFrame
+            }
+            return lhs.patch.rawValue < rhs.patch.rawValue
+        }
+
+        var sink = StreamingFNV1a()
+        sink.domain("spectral-texture-harmonic-tail-events.typed.v1")
+        sink.collection(facts.count)
+        for fact in facts {
+            sink.aggregate("SpectralTextureHarmonicTailFact")
+            sink.field("role"); sink.raw(fact.role.rawValue)
+            sink.field("onsetFrame"); sink.int(fact.onsetFrame)
+            sink.field("patch"); sink.raw(fact.patch.rawValue)
+            sink.field("relation"); sink.raw(fact.relation.rawValue)
+            sink.field("minimumFoldedSourceFrequency")
+            sink.double(fact.minimumFoldedSourceFrequency)
+            sink.field("maximumFoldedSourceFrequency")
+            sink.double(fact.maximumFoldedSourceFrequency)
+            sink.field("minimumBandCenterHz")
+            sink.double(fact.minimumBandCenterHz)
+            sink.field("maximumBandCenterHz")
+            sink.double(fact.maximumBandCenterHz)
+            sink.field("resonance"); sink.double(fact.resonance)
+            sink.field("prefilterDrive"); sink.double(fact.prefilterDrive)
+            sink.field("lfoRateHz"); sink.double(fact.lfoRateHz)
+            sink.field("renderedFrameCount"); sink.int(fact.renderedFrameCount)
+        }
+
+        let lowCutoff = min(500, sampleRate * 0.04)
+        let upperCutoff = min(5_000, sampleRate * 0.20)
+        let lowCoefficient = min(
+            1,
+            1 - exp(-2 * .pi * lowCutoff / sampleRate)
+        )
+        let upperCoefficient = min(
+            1,
+            1 - exp(-2 * .pi * upperCutoff / sampleRate)
+        )
+        var lowState = 0.0
+        var upperState = 0.0
+        var lowEnergy = 0.0
+        var middleEnergy = 0.0
+        var upperEnergy = 0.0
+        var peak = 0.0
+        var totalEnergy = 0.0
+        var finite = true
+        for sample in samples {
+            let value = Double(sample)
+            lowState += (value - lowState) * lowCoefficient
+            upperState += (value - upperState) * upperCoefficient
+            let middle = upperState - lowState
+            let upper = value - upperState
+            lowEnergy += lowState * lowState
+            middleEnergy += middle * middle
+            upperEnergy += upper * upper
+            peak = max(peak, abs(value))
+            totalEnergy += value * value
+            finite = finite && sample.isFinite && lowState.isFinite &&
+                upperState.isFinite && lowEnergy.isFinite &&
+                middleEnergy.isFinite && upperEnergy.isFinite &&
+                peak.isFinite && totalEnergy.isFinite
+        }
+        let bandEnergy = lowEnergy + middleEnergy + upperEnergy
+        let lowRatio = bandEnergy > 0 ? lowEnergy / bandEnergy : 0
+        let upperRatio = bandEnergy > 0 ? upperEnergy / bandEnergy : 0
+        let rms = sqrt(totalEnergy / Double(max(1, samples.count)))
+        let crest = rms > 0 ? peak / rms : 0
+        finite = finite && lowRatio.isFinite && upperRatio.isFinite &&
+            rms.isFinite && crest.isFinite
+        bindingValid = bindingValid && facts.count == events.count
+        return SpectralTextureHarmonicTailRenderEvidence(
+            sourceAssignmentCount: assignments.count,
+            eventCount: facts.count,
+            relation: .drivenUpperBand,
+            minimumFoldedSourceFrequency:
+                facts.map(\.minimumFoldedSourceFrequency).min() ?? 0,
+            maximumFoldedSourceFrequency:
+                facts.map(\.maximumFoldedSourceFrequency).max() ?? 0,
+            minimumBandCenterHz:
+                facts.map(\.minimumBandCenterHz).min() ?? 0,
+            maximumBandCenterHz:
+                facts.map(\.maximumBandCenterHz).max() ?? 0,
+            minimumResonance: facts.map(\.resonance).min() ?? 0,
+            maximumResonance: facts.map(\.resonance).max() ?? 0,
+            minimumPrefilterDrive: facts.map(\.prefilterDrive).min() ?? 0,
+            maximumPrefilterDrive: facts.map(\.prefilterDrive).max() ?? 0,
+            minimumLFORateHz: facts.map(\.lfoRateHz).min() ?? 0,
+            maximumLFORateHz: facts.map(\.lfoRateHz).max() ?? 0,
+            lowBandEnergyRatio: lowRatio,
+            upperBandEnergyRatio: upperRatio,
+            eventFingerprint: fixedWidthFingerprintHex(sink.value),
+            sampleHash: ExactPCMFingerprint.mono(samples),
+            peak: peak,
+            rms: rms,
+            crestFactor: crest,
             bindingValid: bindingValid,
             finite: finite
         )

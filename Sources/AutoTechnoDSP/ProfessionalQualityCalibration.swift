@@ -115,6 +115,8 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         "upper-spectral-reveal-active-event-ratio"
     case upperSpectralRevealAppliedCutoffRatioMean =
         "upper-spectral-reveal-applied-cutoff-ratio-mean"
+    case spectralHarmonicTailUpperBandEnergyRatioMean =
+        "spectral-harmonic-tail-upper-band-energy-ratio-mean"
     case percussionAnticipationSwellActiveBarRatio =
         "percussion-anticipation-swell-active-bar-ratio"
     case percussionAnticipationSwellLateToEarlyDBMean =
@@ -148,6 +150,10 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         }
     }
 
+    package var acceptsSaferValuesAboveCalibration: Bool {
+        self == .spectralHarmonicTailUpperBandEnergyRatioMean
+    }
+
     /// EBU-style LRA is retained as descriptive phrase evidence. On short
     /// autonomous phrases its relative gate and percentile population can
     /// change discontinuously when one short-term block crosses the gate, so
@@ -178,6 +184,15 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
                 .kickSourceCrestReductionDBMean:
             return -120
         default: return 0
+        }
+    }
+
+    package var semanticMaximum: Double {
+        switch self {
+        case .spectralHarmonicTailUpperBandEnergyRatioMean:
+            return 1
+        default:
+            return .greatestFiniteMagnitude
         }
     }
 }
@@ -549,9 +564,9 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 13
+    package static let schemaVersion = 14
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v13"
+        "autotechno-professional-quality-observation.v14"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -753,6 +768,9 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 $0 + $1.activeEventCount
             }
         let spectralRevealDivisor = Double(max(1, spectralRevealEventCount))
+        let harmonicTailEvidence = vector.instruments.flatMap(
+            \.architectures
+        ).compactMap(\.spectralTextureHarmonicTail)
         let anticipationSwellBars = vector.percussionEchoTexture.filter {
             $0.relation ==
                 PercussionEchoTextureRelation.anticipationSwell.rawValue
@@ -1007,6 +1025,13 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 })
             ),
             ProfessionalQualityMetricValue(
+                metric: .spectralHarmonicTailUpperBandEnergyRatioMean,
+                // An ineligible phrase has no tail to disconnect and therefore
+                // uses the exact higher-is-safer neutral sentinel.
+                value: harmonicTailEvidence.isEmpty ? 1 :
+                    mean(harmonicTailEvidence.map(\.upperBandEnergyRatio))
+            ),
+            ProfessionalQualityMetricValue(
                 metric: .percussionAnticipationSwellActiveBarRatio,
                 value: Double(anticipationSwellBars.count) /
                     anticipationBarDivisor
@@ -1189,6 +1214,9 @@ package struct ProfessionalQualityMetricBounds: Codable, Equatable, Sendable {
         if metric.acceptsSaferValuesBelowCalibration {
             return value >= metric.semanticMinimum && value <= upper
         }
+        if metric.acceptsSaferValuesAboveCalibration {
+            return value >= lower && value <= metric.semanticMaximum
+        }
         return (lower...upper).contains(value)
     }
 }
@@ -1305,9 +1333,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 13
+    package static let schemaVersion = 14
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v13"
+        "autotechno-professional-quality-profile.v14"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1776,6 +1804,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         case .foundationPreKickPocketSilenceRMSMaximum,
                 .climaxHangSilenceRMSMaximum:
             absoluteFloor = 0.000_001
+        case .spectralHarmonicTailUpperBandEnergyRatioMean:
+            absoluteFloor = 0.02
         default:
             absoluteFloor = 0.04
         }
@@ -1872,6 +1902,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 .upperPercussionTailClearanceEventRatio,
                 .upperSpectralRevealActiveEventRatio,
                 .upperSpectralRevealAppliedCutoffRatioMean,
+                .spectralHarmonicTailUpperBandEnergyRatioMean,
                 .percussionAnticipationSwellActiveBarRatio,
                 .padRhythmicModulationActiveBarRatio,
                 .padHarmonicDisclosureRevealedBarRatio:

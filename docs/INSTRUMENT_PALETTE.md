@@ -4,7 +4,7 @@
 
 Auto Techno has one autonomous runtime and one canonical resolved score. Inside
 that runtime, the score may assign a musical job to one of three engine-owned
-synthesis architectures and one of ten recognizable home patches. A patch can
+synthesis architectures and one of eleven recognizable home patches. A patch can
 move through four bounded automation coordinates without losing its identity.
 
 The VSTi analogy is useful for understanding the palette, but these are not
@@ -28,6 +28,7 @@ count or a second arrangement system.
 | Spectral Texture | Alien Noise | Response, atmosphere | Drive, chorus, unsynced echo, filtered reverb, masking guard, glue, master |
 | Spectral Texture | Metal Veil | Response, atmosphere, transition | Drive, chorus, unsynced echo, filtered reverb, masking guard, glue, master |
 | Spectral Texture | Dust Cloud | Atmosphere, transition | Chorus, unsynced echo, filtered reverb, masking guard, glue, master |
+| Spectral Texture | Voltage Arc | Response | Drive, chorus, unsynced echo, filtered reverb, masking guard, glue, master |
 
 “Compatible” means the assignment is allowed to reach that stage in the
 canonical graph. It does not create a separate graph per patch. Pulse echo is
@@ -79,6 +80,13 @@ transition rather than the dominant motif.
 A deterministic ring-modulation and resonator source for alien responses,
 metallic veils, dust-like atmosphere, and transitions. It uses no sample
 library or random callback-time noise.
+
+Voltage Arc adds a distinct response-only home inside this same architecture:
+a low folded polyBLEP saw supplies closely spaced partials, a bounded driven TPT
+band-pass isolates its upper harmonic tail, and one free-running low-depth LFO
+moves that band without retriggering. Broken Suspension owns the authored
+response assignment. The existing filtered-reverb send supplies its spatial
+tail; no track, return, instrument architecture, or parallel renderer is added.
 
 ## Bounded automation
 

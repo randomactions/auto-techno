@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 30)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 31)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -1304,10 +1304,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 30)
-        #expect(QualityQualificationContract.schemaVersion == 32)
+        #expect(vector.schemaVersion == 31)
+        #expect(QualityQualificationContract.schemaVersion == 33)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v31")
+                "autotechno-canonical-engine.v32")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -2119,6 +2119,159 @@ struct AutonomousCandidateEvaluationTests {
             from: JSONSerialization.data(withJSONObject: forgedObject)
         )
         #expect(!outOfRoute.isComplete)
+    }
+
+    @Test("Upper harmonic-tail evidence is causal and playback-gate-neutral")
+    func spectralTextureHarmonicTailEvidenceContract() throws {
+        let assignment = InstrumentAssignment(
+            use: .response,
+            patch: .voltageArc,
+            automation: InstrumentAutomation(
+                color: 0.76, shape: 0.40, motion: 0.82, space: 0.44
+            ),
+            effects: InstrumentPalette.capability(for: .voltageArc)?
+                .compatibleEffects ?? []
+        )
+        let tail = SpectralTextureHarmonicTailRenderEvidence(
+            sourceAssignmentCount: 1,
+            eventCount: 1,
+            relation: .drivenUpperBand,
+            minimumFoldedSourceFrequency: 32,
+            maximumFoldedSourceFrequency: 48,
+            minimumBandCenterHz: 1_800,
+            maximumBandCenterHz: 2_400,
+            minimumResonance: 2.8,
+            maximumResonance: 5.2,
+            minimumPrefilterDrive: 1.4,
+            maximumPrefilterDrive: 2.4,
+            minimumLFORateHz: 3.2,
+            maximumLFORateHz: 4.8,
+            lowBandEnergyRatio: 0.08,
+            upperBandEnergyRatio: 0.42,
+            eventFingerprint: "fedcba9876543210",
+            sampleHash: "0123456789abcdef",
+            peak: 0.20,
+            rms: 0.08,
+            crestFactor: 2.5,
+            bindingValid: true,
+            finite: true
+        )
+        let bar = AutonomousInstrumentBarEvidence(
+            bar: 0,
+            evidence: [InstrumentArchitectureRenderEvidence(
+                architecture: .spectralTexture,
+                assignments: [assignment],
+                patches: [.voltageArc],
+                uses: [.response],
+                effects: assignment.effects,
+                eventCount: 1,
+                sampleHash: "89abcdef01234567",
+                peak: 0.20,
+                rms: 0.08,
+                finite: true,
+                spectralTextureHarmonicTail: tail
+            )]
+        )
+        let vector = fixtureVector(instrumentBar: bar)
+        let baseline = fixtureVector()
+        #expect(bar.isComplete(sampleRate: 8_000))
+        #expect(vector.isComplete)
+        #expect(vector.fingerprint != baseline.fingerprint)
+        #expect(vector.playbackGateEvidence == baseline.playbackGateEvidence)
+
+        let data = try vector.deterministicJSON()
+        var object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        var bars = try #require(object["instruments"] as? [[String: Any]])
+        var architectures = try #require(
+            bars[0]["architectures"] as? [[String: Any]]
+        )
+        var architecture = architectures[0]
+        let serialized = try #require(
+            architecture["spectralTextureHarmonicTail"] as? [String: Any]
+        )
+        #expect(Set(serialized.keys) == Set([
+            "sourceAssignmentCount", "eventCount", "relation",
+            "minimumFoldedSourceFrequency", "maximumFoldedSourceFrequency",
+            "minimumBandCenterHz", "maximumBandCenterHz",
+            "minimumResonance", "maximumResonance",
+            "minimumPrefilterDrive", "maximumPrefilterDrive",
+            "minimumLFORateHz", "maximumLFORateHz", "lowBandEnergyRatio",
+            "upperBandEnergyRatio", "eventFingerprint", "sampleHash",
+            "peak", "rms", "crestFactor", "bindingValid", "finite",
+        ]))
+
+        architecture["spectralTextureHarmonicTail"] = nil
+        architectures[0] = architecture
+        bars[0]["architectures"] = architectures
+        object["instruments"] = bars
+        let disconnected = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        #expect(!disconnected.isComplete)
+
+        var wrongRoleObject = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        var wrongRoleBars = try #require(
+            wrongRoleObject["instruments"] as? [[String: Any]]
+        )
+        var wrongRoleArchitectures = try #require(
+            wrongRoleBars[0]["architectures"] as? [[String: Any]]
+        )
+        var wrongRoleArchitecture = wrongRoleArchitectures[0]
+        var wrongRoleAssignments = try #require(
+            wrongRoleArchitecture["assignments"] as? [[String: Any]]
+        )
+        wrongRoleAssignments[0]["use"] = InstrumentUse.atmosphere.rawValue
+        wrongRoleArchitecture["assignments"] = wrongRoleAssignments
+        wrongRoleArchitectures[0] = wrongRoleArchitecture
+        wrongRoleBars[0]["architectures"] = wrongRoleArchitectures
+        wrongRoleObject["instruments"] = wrongRoleBars
+        let wrongRole = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: wrongRoleObject)
+        )
+        #expect(!wrongRole.isComplete)
+
+        var forgedObject = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        var forgedBars = try #require(
+            forgedObject["instruments"] as? [[String: Any]]
+        )
+        var forgedArchitectures = try #require(
+            forgedBars[0]["architectures"] as? [[String: Any]]
+        )
+        var forgedArchitecture = forgedArchitectures[0]
+        var forgedTail = try #require(
+            forgedArchitecture["spectralTextureHarmonicTail"]
+                as? [String: Any]
+        )
+        forgedTail["lowBandEnergyRatio"] = 0.5
+        forgedArchitecture["spectralTextureHarmonicTail"] = forgedTail
+        forgedArchitectures[0] = forgedArchitecture
+        forgedBars[0]["architectures"] = forgedArchitectures
+        forgedObject["instruments"] = forgedBars
+        let lowContamination = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedObject)
+        )
+        #expect(!lowContamination.isComplete)
+
+        forgedTail["lowBandEnergyRatio"] = 0.08
+        forgedTail["upperBandEnergyRatio"] = 0.01
+        forgedArchitecture["spectralTextureHarmonicTail"] = forgedTail
+        forgedArchitectures[0] = forgedArchitecture
+        forgedBars[0]["architectures"] = forgedArchitectures
+        forgedObject["instruments"] = forgedBars
+        let absentUpperTail = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: forgedObject)
+        )
+        #expect(!absentUpperTail.isComplete)
     }
 
     @Test("Tonal envelope expansion evidence binds the applied wash and stays playback-gate-neutral")
@@ -3619,7 +3772,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "297d7678d90b1ddb")
+            "de087baf0dca5497")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7

@@ -68,8 +68,8 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 32, candidate-vector schema 30, candidate-transaction
-schema 4, and canonical engine v31 provide the current transaction-level
+Quality-contract schema 33, candidate-vector schema 31, candidate-transaction
+schema 4, and canonical engine v32 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
@@ -271,6 +271,17 @@ pair phases, 8/44.1/48/96/192 kHz route projection, monotone bounded release,
 active-versus-neutral PCM, candidate JSON/fingerprint/tamper rejection, the
 upper-only safer metric, and a non-compensable contamination attack.
 
+An eligible Broken Suspension response must resolve exactly one Voltage Arc
+assignment and one `drivenUpperBand` event record. Focused tests at
+8/44.1/48/96/192 kHz must prove finite deterministic PCM, folded-source and
+Nyquist-safe center bounds, positive free-running motion, low-band suppression,
+positive upper energy, score/event/hash binding, candidate fingerprint
+sensitivity, and complete prepared commit evidence. Removing the nested record,
+moving it to another role, forging energy or route bounds, or disconnecting the
+professional upper-band consequence must fail closed. Established Spectral
+Texture patches must retain no harmonic-tail evidence and their existing signal
+path must remain unchanged.
+
 Pulse-echo return-drive evidence must cover every full rendered bar and bind the
 bar, fixed BPM, route-derived three-sixteenth delay-frame count, rendered-frame
 count, score eligibility, drive eligibility, bounded `machineTexture`, applied
@@ -302,9 +313,9 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v16 bank must contain every canonical checkpoint for
+The Professional Evidence v17 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v31 primary evaluator v13 and pinned profile v13/adversarial/holdout
+engine-v32 primary evaluator v14 and pinned profile v14/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 28.
 Holdouts must be source-disjoint, contain at
@@ -369,7 +380,7 @@ or PCM.
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
 composition, spatial-FDN, nonlinear-core, and foundation-pocket evidence carried
-by quality-contract schema 32 change detached preparation only. The implemented master-headroom path
+by quality-contract schema 33 change detached preparation only. The implemented master-headroom path
 is the sole scheduled-output feedback responsibility and does not move those
 feature analyzers or decisions onto the callback. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
@@ -429,7 +440,7 @@ The exact-engine v13 artifact loader, route-local primary evaluator, unavailable
 gate, one-correction transaction order, and reason-coded replay require
 deterministic tests at 44.1 and 48 kHz. The deterministic numeric-storage estimate
 must remain below the declared 128 MiB ceiling. The profile derives from 28
-complete journeys and passes the 33-case v14 adversarial suite plus four disjoint
+complete journeys and passes the 34-case v15 adversarial suite plus four disjoint
 holdouts at both rates. See [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md) and
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 

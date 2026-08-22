@@ -1991,6 +1991,133 @@ package struct AutonomousSpectralTextureClusterEvidence: Codable, Equatable, Sen
     }
 }
 
+package struct AutonomousSpectralTextureHarmonicTailEvidence: Codable,
+        Equatable, Sendable {
+    package let sourceAssignmentCount: Int
+    package let eventCount: Int
+    package let relation: String
+    package let minimumFoldedSourceFrequency: Double
+    package let maximumFoldedSourceFrequency: Double
+    package let minimumBandCenterHz: Double
+    package let maximumBandCenterHz: Double
+    package let minimumResonance: Double
+    package let maximumResonance: Double
+    package let minimumPrefilterDrive: Double
+    package let maximumPrefilterDrive: Double
+    package let minimumLFORateHz: Double
+    package let maximumLFORateHz: Double
+    package let lowBandEnergyRatio: Double
+    package let upperBandEnergyRatio: Double
+    package let eventFingerprint: String
+    package let sampleHash: String
+    package let peak: Double
+    package let rms: Double
+    package let crestFactor: Double
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(_ evidence: SpectralTextureHarmonicTailRenderEvidence) {
+        sourceAssignmentCount = evidence.sourceAssignmentCount
+        eventCount = evidence.eventCount
+        relation = evidence.relation.rawValue
+        minimumFoldedSourceFrequency = evidence.minimumFoldedSourceFrequency
+        maximumFoldedSourceFrequency = evidence.maximumFoldedSourceFrequency
+        minimumBandCenterHz = evidence.minimumBandCenterHz
+        maximumBandCenterHz = evidence.maximumBandCenterHz
+        minimumResonance = evidence.minimumResonance
+        maximumResonance = evidence.maximumResonance
+        minimumPrefilterDrive = evidence.minimumPrefilterDrive
+        maximumPrefilterDrive = evidence.maximumPrefilterDrive
+        minimumLFORateHz = evidence.minimumLFORateHz
+        maximumLFORateHz = evidence.maximumLFORateHz
+        lowBandEnergyRatio = evidence.lowBandEnergyRatio
+        upperBandEnergyRatio = evidence.upperBandEnergyRatio
+        eventFingerprint = evidence.eventFingerprint
+        sampleHash = evidence.sampleHash
+        peak = evidence.peak
+        rms = evidence.rms
+        crestFactor = evidence.crestFactor
+        bindingValid = evidence.bindingValid
+        finite = evidence.finite
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            minimumFoldedSourceFrequency, maximumFoldedSourceFrequency,
+            minimumBandCenterHz, maximumBandCenterHz,
+            minimumResonance, maximumResonance,
+            minimumPrefilterDrive, maximumPrefilterDrive,
+            minimumLFORateHz, maximumLFORateHz,
+            lowBandEnergyRatio, upperBandEnergyRatio,
+            peak, rms, crestFactor,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func isComplete(
+        assignments: [AutonomousInstrumentAssignmentEvidence],
+        architectureEventCount: Int,
+        sampleRate: Double
+    ) -> Bool {
+        let tailAssignments = assignments.filter {
+            $0.patch == InstrumentPatch.voltageArc.rawValue &&
+                $0.use == InstrumentUse.response.rawValue
+        }
+        guard bindingValid, isFinite,
+              sourceAssignmentCount == tailAssignments.count,
+              sourceAssignmentCount > 0,
+              eventCount >= sourceAssignmentCount,
+              eventCount <=
+                AutonomousCandidateEvaluationVector.maximumInstrumentEventsPerBar,
+              architectureEventCount >= eventCount,
+              relation ==
+                SpectralTextureHarmonicTailRelation.drivenUpperBand.rawValue,
+              minimumFoldedSourceFrequency >=
+                SpectralTextureHarmonicTailContract.minimumSourceFrequency,
+              maximumFoldedSourceFrequency >= minimumFoldedSourceFrequency,
+              maximumFoldedSourceFrequency <=
+                SpectralTextureHarmonicTailContract.maximumSourceFrequency,
+              minimumBandCenterHz >=
+                SpectralTextureHarmonicTailContract.minimumBandCenterHz(
+                    sampleRate: sampleRate
+                ),
+              maximumBandCenterHz > minimumBandCenterHz,
+              maximumBandCenterHz <=
+                SpectralTextureHarmonicTailContract.maximumBandCenterHz(
+                    sampleRate: sampleRate
+                ),
+              minimumResonance >= 2.2,
+              maximumResonance >= minimumResonance,
+              maximumResonance <= 6.4,
+              minimumPrefilterDrive > 1,
+              maximumPrefilterDrive >= minimumPrefilterDrive,
+              maximumPrefilterDrive <= 3,
+              minimumLFORateHz >= 2.4,
+              maximumLFORateHz >= minimumLFORateHz,
+              maximumLFORateHz <= 6,
+              lowBandEnergyRatio >=
+                SpectralTextureHarmonicTailContract.minimumLowBandEnergyRatio,
+              lowBandEnergyRatio <=
+                SpectralTextureHarmonicTailContract.maximumLowBandEnergyRatio,
+              upperBandEnergyRatio >=
+                SpectralTextureHarmonicTailContract.minimumUpperBandEnergyRatio,
+              upperBandEnergyRatio <= 1,
+              Self.isSampleHash(eventFingerprint),
+              Self.isSampleHash(sampleHash),
+              peak > 0, rms > 0, rms <= peak,
+              crestFactor == peak / rms,
+              peak <= Double(Float.greatestFiniteMagnitude) else {
+            return false
+        }
+        return true
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 /// Candidate-safe projection of the exact samples and bounded parameters that
 /// passed through the shared TPT/ADAA core. It carries only scalar facts and
 /// fingerprints; no reconstructable PCM or mutable renderer state survives.
@@ -2234,6 +2361,8 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         AutonomousResonantMonoModulationEvidence?
     package let spectralTextureCluster:
         AutonomousSpectralTextureClusterEvidence?
+    package let spectralTextureHarmonicTail:
+        AutonomousSpectralTextureHarmonicTailEvidence?
     package let tonalEnvelopeExpansion:
         AutonomousTonalEnvelopeExpansionEvidence?
     package let upperSpectralReveal:
@@ -2259,6 +2388,9 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         spectralTextureCluster = evidence.spectralTextureCluster.map(
             AutonomousSpectralTextureClusterEvidence.init
         )
+        spectralTextureHarmonicTail = evidence.spectralTextureHarmonicTail.map(
+            AutonomousSpectralTextureHarmonicTailEvidence.init
+        )
         tonalEnvelopeExpansion = evidence.tonalEnvelopeExpansion.map(
             AutonomousTonalEnvelopeExpansionEvidence.init
         )
@@ -2272,6 +2404,7 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
             (nonlinearCore?.isFinite ?? true) &&
             (resonantMonoModulation?.isFinite ?? true) &&
             (spectralTextureCluster?.isFinite ?? true) &&
+            (spectralTextureHarmonicTail?.isFinite ?? true) &&
             (tonalEnvelopeExpansion?.isFinite ?? true) &&
             (upperSpectralReveal?.isFinite ?? true) &&
             assignments.allSatisfy { $0.isFinite }
@@ -2329,6 +2462,21 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
                 sampleRate: sampleRate
             ) else { return false }
         } else if spectralTextureCluster != nil {
+            return false
+        }
+        let hasHarmonicTailAssignment = assignments.contains {
+            $0.patch == InstrumentPatch.voltageArc.rawValue &&
+                $0.use == InstrumentUse.response.rawValue
+        }
+        if hasHarmonicTailAssignment {
+            guard architecture == InstrumentArchitecture.spectralTexture.rawValue,
+                  let spectralTextureHarmonicTail else { return false }
+            guard spectralTextureHarmonicTail.isComplete(
+                assignments: assignments,
+                architectureEventCount: eventCount,
+                sampleRate: sampleRate
+            ) else { return false }
+        } else if spectralTextureHarmonicTail != nil {
             return false
         }
         guard architecture == InstrumentArchitecture.tonalMotion.rawValue ||
@@ -5314,7 +5462,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 30
+    package static let schemaVersion = 31
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5

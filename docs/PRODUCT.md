@@ -42,7 +42,7 @@ become alternative runtimes, independent performance models, or user-facing
 switches.
 
 The current internal instrument palette implements that boundary with three
-engine-owned synthesis architectures and ten score-selected home patches. The
+engine-owned synthesis architectures and eleven score-selected home patches. The
 same four bounded semantic automation coordinates move every patch, while the
 existing ensemble score continues to own audible role density. See
 `INSTRUMENT_PALETTE.md` for the human-readable role and effect matrix.
@@ -94,6 +94,14 @@ correction returns to the previous cutoff path. A new lead track, synth, or
 filter bus would duplicate the protagonist rather than strengthen its arrival.
 Independent score/render identities, actual cutoff facts, and isolated-anchor
 PCM evidence keep the relation attributable and replaceable.
+
+The response-owned harmonic-tail path adds one recognizable home only because
+the three established Spectral Texture patches do not generate a low periodic
+source and isolate its dense upper partials. Broken Suspension selects Voltage
+Arc for an existing response role; the existing Spectral Texture state,
+envelope, filtered-reverb send, routing, and evidence transaction remain the
+owners. The new patch therefore adds a reusable audible capability without a
+track, architecture, effect return, renderer, or user-facing choice.
 
 The tuned-percussive foundation path now resolves up to two bounded modal
 articulations from the same bar, modal DNA, character, and existing foundation
@@ -174,7 +182,7 @@ Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v16 supplies
+policy and its operational gates pass. Professional Evidence v17 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation, pre-kick foundation-pocket, terminal climax-hang,
 and live-controller consequence, explicit

@@ -259,6 +259,8 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         ResonantMonoModulationEventRenderEvidence?
     package let spectralTextureCluster:
         SpectralTextureClusterEventRenderEvidence?
+    package let spectralTextureHarmonicTail:
+        SpectralTextureHarmonicTailEventRenderEvidence?
 
     package init(
         role: SynthRole,
@@ -289,7 +291,9 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         resonantMonoModulation:
             ResonantMonoModulationEventRenderEvidence? = nil,
         spectralTextureCluster:
-            SpectralTextureClusterEventRenderEvidence? = nil
+            SpectralTextureClusterEventRenderEvidence? = nil,
+        spectralTextureHarmonicTail:
+            SpectralTextureHarmonicTailEventRenderEvidence? = nil
     ) {
         self.role = role
         self.onsetFrame = max(0, onsetFrame)
@@ -318,6 +322,7 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         self.instrument = instrument
         self.resonantMonoModulation = resonantMonoModulation
         self.spectralTextureCluster = spectralTextureCluster
+        self.spectralTextureHarmonicTail = spectralTextureHarmonicTail
     }
 }
 
@@ -579,6 +584,34 @@ package struct SpectralTextureClusterRenderEvidence: Equatable, Sendable {
     package let finite: Bool
 }
 
+/// Reduced same-pass proof that the response-only harmonic-tail relation
+/// reached isolated dry PCM. No source or reconstructable samples survive
+/// detached preparation.
+package struct SpectralTextureHarmonicTailRenderEvidence: Equatable, Sendable {
+    package let sourceAssignmentCount: Int
+    package let eventCount: Int
+    package let relation: SpectralTextureHarmonicTailRelation
+    package let minimumFoldedSourceFrequency: Double
+    package let maximumFoldedSourceFrequency: Double
+    package let minimumBandCenterHz: Double
+    package let maximumBandCenterHz: Double
+    package let minimumResonance: Double
+    package let maximumResonance: Double
+    package let minimumPrefilterDrive: Double
+    package let maximumPrefilterDrive: Double
+    package let minimumLFORateHz: Double
+    package let maximumLFORateHz: Double
+    package let lowBandEnergyRatio: Double
+    package let upperBandEnergyRatio: Double
+    package let eventFingerprint: String
+    package let sampleHash: String
+    package let peak: Double
+    package let rms: Double
+    package let crestFactor: Double
+    package let bindingValid: Bool
+    package let finite: Bool
+}
+
 /// Reduced same-pass proof that one score-owned Tonal Motion note used the
 /// sustained-wash envelope relation. Only scalar envelope facts and an
 /// isolated signal fingerprint survive detached preparation.
@@ -642,6 +675,8 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         ResonantMonoModulationRenderEvidence?
     package let spectralTextureCluster:
         SpectralTextureClusterRenderEvidence?
+    package let spectralTextureHarmonicTail:
+        SpectralTextureHarmonicTailRenderEvidence?
     package let tonalEnvelopeExpansion:
         TonalEnvelopeExpansionRenderEvidence?
     package let upperSpectralReveal:
@@ -664,6 +699,8 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
             ResonantMonoModulationRenderEvidence? = nil,
         spectralTextureCluster:
             SpectralTextureClusterRenderEvidence? = nil,
+        spectralTextureHarmonicTail:
+            SpectralTextureHarmonicTailRenderEvidence? = nil,
         tonalEnvelopeExpansion:
             TonalEnvelopeExpansionRenderEvidence? = nil,
         upperSpectralReveal:
@@ -682,6 +719,7 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         self.nonlinearCore = nonlinearCore
         self.resonantMonoModulation = resonantMonoModulation
         self.spectralTextureCluster = spectralTextureCluster
+        self.spectralTextureHarmonicTail = spectralTextureHarmonicTail
         self.tonalEnvelopeExpansion = tonalEnvelopeExpansion
         self.upperSpectralReveal = upperSpectralReveal
     }
@@ -1346,6 +1384,7 @@ struct RenderBuffers {
     var tonalEnvelopeExpansionStem: [Float] = []
     var spectralTextureInstrumentStem: [Float] = []
     var spectralTextureClusterStem: [Float] = []
+    var spectralTextureHarmonicTailStem: [Float] = []
     var maskingFoundation: [Float] = []
     var synth: [Float] = []
     var pulseEchoSend: [Float] = []
@@ -1384,8 +1423,10 @@ struct RenderBuffers {
         reset(&spectralTextureInstrumentStem, frameCount: frameCount)
         if includeUpperRoleTaps {
             reset(&spectralTextureClusterStem, frameCount: frameCount)
+            reset(&spectralTextureHarmonicTailStem, frameCount: frameCount)
         } else {
             spectralTextureClusterStem.removeAll(keepingCapacity: false)
+            spectralTextureHarmonicTailStem.removeAll(keepingCapacity: false)
         }
         reset(&maskingFoundation, frameCount: frameCount)
         reset(&synth, frameCount: frameCount)

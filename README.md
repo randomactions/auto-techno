@@ -43,6 +43,9 @@ account.
 - one post-arbitration upper-percussion tail policy that reuses the existing
   clap, open-hat, and metallic voices, preserves their attack, and shortens
   their release only when another score role owns the foreground;
+- one response-only Voltage Arc patch inside the existing Spectral Texture
+  instrument that folds a low antialiased saw into a moving driven upper
+  harmonic tail, with exact causal energy evidence and no added track or bus;
 - one score-owned percussion-return relation that reuses the existing weak
   percussion as either a later gated answer or a bounded pre-release
   anticipation swell, without adding a track, instrument, or effect bus;

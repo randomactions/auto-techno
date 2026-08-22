@@ -21,6 +21,8 @@ package enum ProfessionalQualityAdversarialScenario: String, CaseIterable,
         "upper-percussion-tail-regression"
     case upperSpectralRevealRunaway =
         "upper-spectral-reveal-runaway"
+    case spectralHarmonicTailDisconnected =
+        "spectral-harmonic-tail-disconnected"
     case percussionAnticipationSwellFlattened =
         "percussion-anticipation-swell-flattened"
     case padRhythmicModulationDisconnected =
@@ -432,9 +434,9 @@ package struct ProfessionalQualityLiveCandidateChain: Equatable, Sendable {
 /// evidence. Every scenario must be rejected independently.
 package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 14
+    package static let schemaVersion = 15
     package static let suiteVersion =
-        "autotechno-professional-quality-adversarial.v14"
+        "autotechno-professional-quality-adversarial.v15"
 
     package let schemaVersion: Int
     package let suiteVersion: String
@@ -743,6 +745,33 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                 with: outside(
                     .upperSpectralRevealAppliedCutoffRatioMean,
                     preferLower: false
+                )
+            ),
+            expected: [.metricOutOfRange]
+        )
+        let harmonicTailCheckpoint = try Self.checkpointWithLargestLowerBound(
+            metric: .spectralHarmonicTailUpperBandEnergyRatioMean,
+            profile: profile
+        )
+        let harmonicTailBaseline = try Self.baseline(
+            checkpoint: harmonicTailCheckpoint,
+            observations: sourceObservations
+        )
+        guard let harmonicTailBounds = profile[harmonicTailCheckpoint]?[
+            .spectralHarmonicTailUpperBandEnergyRatioMean
+        ], harmonicTailBounds.lower > 0 else {
+            throw ProfessionalQualityCalibrationError.invalidBounds
+        }
+        append(
+            .spectralHarmonicTailDisconnected,
+            observation: try harmonicTailBaseline.replacing(
+                .spectralHarmonicTailUpperBandEnergyRatioMean,
+                with: max(
+                    0,
+                    harmonicTailBounds.lower - max(
+                        1e-9,
+                        harmonicTailBounds.lower * 0.5
+                    )
                 )
             ),
             expected: [.metricOutOfRange]

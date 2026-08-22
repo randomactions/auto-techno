@@ -301,7 +301,7 @@ private struct TonalPatchTreatment {
             patchShape = (0.62, 0.68, 0.72, 0.58, 1.28, 1.42, 1.30,
                           1.14, 1.24, 0.72, 0.34, 0.22, 0.34, 0.10)
         case .bassPulse, .bassPluck, .acidThread, .acidSequence,
-             .alienNoise, .metalVeil, .dustCloud:
+             .alienNoise, .metalVeil, .dustCloud, .voltageArc:
             patchShape = (1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.43, 0.24, 0.24, 0.09)
         }
         return TonalPatchTreatment(
