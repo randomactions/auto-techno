@@ -1737,6 +1737,14 @@ routing 14/14. Both debug and release realtime-producer objects exposed only an
 allowed copy primitive. The optimized `AutoTechno` product built in 79.02
 seconds, and `git diff --check` remained clean.
 
+Hosted run `32586400063` then passed the 121-test Core/evidence group and the
+isolated upper-percussion-tail DSP suite before exiting with signal 10 as Swift
+Testing began the tail preflight test. That unchanged contract prepares four
+complete canonical transactions and is now executed on XCTest's normal thread
+instead of a bounded cooperative-task stack. The exact filtered command passed
+6/6 locally after the harness-only move; production sources, PCM, evidence, and
+policy are unchanged. Exact-head CI remains required for closure.
+
 This local snapshot proves the Source 29 score-to-render consequence, exact
 terminal silence, neutral and malformed-input behavior, regenerated primary
 artifacts, adversarial and disjoint-holdout qualification, future-boundary

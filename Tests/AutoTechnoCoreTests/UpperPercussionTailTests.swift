@@ -1,18 +1,23 @@
 import AutoTechnoCore
 @testable import AutoTechnoDSP
 import Testing
+import XCTest
 
 @Suite("Score-owned upper-percussion tail")
 struct UpperPercussionTailTests {
-    @Test("Preflight rejects missing, duplicate, and retargeted tail policy")
-    func preflightRejectsForgedArticulations() throws {
-        let fixture = try #require(fingerprintFixture())
-        #expect(prepare(fixture.plan, state: fixture.state) != nil)
+    fileprivate func forgedPreflightResults() -> (
+        baselineAccepted: Bool,
+        forgedRejected: [Bool]
+    )? {
+        guard let fixture = fingerprintFixture() else { return nil }
+        let baselineAccepted = prepare(
+            fixture.plan,
+            state: fixture.state
+        ) != nil
 
         let sourceBar = fixture.plan.resolvedBars[fixture.barIndex]
-        let source = try #require(
-            sourceBar.upperPercussionTailArticulations.first
-        )
+        guard let source = sourceBar.upperPercussionTailArticulations.first
+        else { return nil }
         let missing = Array(
             sourceBar.upperPercussionTailArticulations.dropFirst()
         )
@@ -25,15 +30,17 @@ struct UpperPercussionTailTests {
             role: source.role
         )
 
-        for forgedArticulations in [missing, duplicate, retargeted] {
+        let forgedRejected = [missing, duplicate, retargeted].map {
+            forgedArticulations in
             var bars = fixture.plan.resolvedBars
             bars[fixture.barIndex] = replacingBar(
                 sourceBar,
                 tailArticulations: forgedArticulations
             )
             let forged = replacingBars(in: fixture.plan, with: bars)
-            #expect(prepare(forged, state: fixture.state) == nil)
+            return prepare(forged, state: fixture.state) == nil
         }
+        return (baselineAccepted, forgedRejected)
     }
 
     @Test("Tail role participates in the typed plan identity")
@@ -291,5 +298,18 @@ struct UpperPercussionTailTests {
             evaluator: AcceptingPrimaryTestEvaluator(),
             cancellationRequested: { false }
         )
+    }
+}
+
+/// Swift Testing executes `@Test` bodies on a bounded cooperative-task stack.
+/// This test intentionally prepares four complete canonical transactions, so
+/// execute it on XCTest's normal thread while preserving the same assertions.
+final class UpperPercussionTailTestsPreflight: XCTestCase {
+    func testPreflightRejectsMissingDuplicateAndRetargetedPolicy() throws {
+        let results = try XCTUnwrap(
+            UpperPercussionTailTests().forgedPreflightResults()
+        )
+        XCTAssertTrue(results.baselineAccepted)
+        XCTAssertEqual(results.forgedRejected, [true, true, true])
     }
 }

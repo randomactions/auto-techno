@@ -1897,6 +1897,14 @@ release realtime-producer objects exposed only an allowed copy primitive, and
 the optimized `AutoTechno` product built in 79.02 seconds. `git diff --check`
 was clean before publication.
 
+Hosted run `32586400063` subsequently passed Core/evidence 121/121 and the
+isolated upper-percussion-tail DSP suite, then exposed a signal-10 harness
+failure as Swift Testing entered a preflight test that prepares four complete
+canonical transactions. The same contract now runs on XCTest's normal thread;
+the filtered upper-tail command passed 6/6 locally after that harness-only
+change. No musical source, rendered PCM, evidence schema, or evaluator policy
+changed, and exact-head CI remains the publication gate.
+
 Publication and exact-head CI remain separate pending gates. No listening,
 app/route/interruption QA, latency or peak-memory measurement, physical-output
 soak, or claim that the source demonstration was heard by a person is made.
