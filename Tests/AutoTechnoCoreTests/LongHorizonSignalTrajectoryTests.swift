@@ -228,6 +228,61 @@ struct LongHorizonSignalTrajectoryTests {
     #expect(first.report == replay.report)
     #expect(try encoder.encode(first.report) == encoder.encode(replay.report))
   }
+
+  @Test("One prepared phrase advances only detached future-adaptation evidence")
+  func preparedPhraseAdvancesFutureAdaptationOffCallback() throws {
+    let artifacts = try qualifiedArtifacts()
+    let policy = try LongHorizonProfessionalPolicy(
+      profile: artifacts.profile,
+      adversarial: artifacts.adversarial,
+      holdout: artifacts.holdout)
+    let sampleRate = try #require(artifacts.profile.sampleRates.first)
+    let director = AutonomousSessionDirector(rootSeed: 48_291)
+    let state = director.initialState()
+    let plan = director.plan(from: state)
+    var renderState = RenderState()
+    renderState.barIndex = state.memory.totalBars
+    let preparedCandidate = AutonomousPhrasePreparer.prepareIfNotCancelled(
+      plan: plan,
+      sessionSeed: state.rootSeed,
+      memory: state.memory,
+      sampleRate: sampleRate,
+      incomingRenderState: renderState,
+      incomingGraphState: GeneratedDSPContinuationState(),
+      previousGraph: nil,
+      incomingQualityState: state.quality,
+      evaluator: AcceptingPrimaryTestEvaluator(),
+      cancellationRequested: { false })
+    let prepared = try #require(preparedCandidate)
+    let initial = try #require(LongHorizonFutureAdaptationState(
+      startingState: state,
+      policy: policy))
+    let replay = try #require(LongHorizonFutureAdaptationState(
+      startingState: state,
+      policy: policy))
+    let first = try #require(initial.observing(
+      prepared: prepared,
+      incomingState: state,
+      policy: policy))
+    let second = try #require(replay.observing(
+      prepared: prepared,
+      incomingState: state,
+      policy: policy))
+
+    #expect(first.decision == nil)
+    #expect(first.state.expectedPhraseIndex == 1)
+    #expect(first.state.expectedBar == plan.barCount)
+    #expect(first.state.fingerprint != initial.fingerprint)
+    #expect(first.state.fingerprint == second.state.fingerprint)
+    #expect(first.state.nextEligibleDecisionBar == 7_200)
+    let invalid = initial.observing(
+      prepared: prepared,
+      incomingState: AutonomousSessionDirector(rootSeed: 90_909)
+        .initialState(),
+      policy: policy
+    )
+    #expect(invalid.map { _ in false } ?? true)
+  }
 }
 
 private func nextPlan(

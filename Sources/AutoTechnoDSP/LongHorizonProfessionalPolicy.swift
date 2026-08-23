@@ -360,7 +360,7 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
     semanticValues.first { $0.metric == metric }?.value
   }
 
-  private static func semanticValues(
+  package static func semanticValues(
     from report: LongHorizonSemanticTrajectoryReport
   ) throws -> [LongHorizonPolicyNamedValue] {
     let periodicity = report.dominantSemanticPeriodicity?.semanticMatchRate ?? 0

@@ -534,7 +534,7 @@ boundary are defined in
 ## Implemented canonical long-horizon continuation state
 
 `TemporalMusicalMemory` now carries
-`autotechno-long-horizon-continuation.v1` as part of the one canonical session
+`autotechno-long-horizon-continuation.v2` as part of the one canonical session
 continuation. A fresh `AutonomousSessionState` binds it to the exact performance
 root and current phrase/bar boundary. Each successful `advancePlanning` first
 applies the committed plan to a proposed hierarchy, then retains the accepted
@@ -557,6 +557,14 @@ control input. Phase 3 now crosses that explicit boundary: the existing director
 may consume only context bound to the exact root, phrase index, and bar for an
 unscheduled future phrase. A discontinuous context cannot override the previous
 conservative policy.
+
+Phase 7 extends the same state with the last exact reason-coded trajectory
+decision and a bounded correction count. It can preserve course or replace only
+the unscheduled successor episode with one existing recover episode. Invalid,
+stale, early, redundant, wrong-root, or overflowed decisions preserve the
+accepted hierarchy. The first exact correction phrase is selected by the same
+director as the existing major-break recovery; no second planner or renderer is
+introduced.
 
 ## Implemented long-horizon episode selection
 
@@ -667,9 +675,43 @@ succeeded.
 
 This reduction runs only after detached preparation. It changes no score,
 renderer, graph, scheduler, route lifecycle, live controller, commit decision,
-or realtime callback. Its report still declares qualification unavailable with
-`no-calibrated-long-horizon-policy`; calibration and a disjoint holdout remain
-the next boundary.
+or realtime callback. Phase 6B binds compatible complete reports to the exact
+immutable engine-v32/primary-v14 development, adversarial, and disjoint-holdout
+artifacts. Raw PCM remains outside the artifacts and runtime observation.
+
+## Implemented bounded long-horizon future adaptation
+
+`AutoTechnoDSP` owns `autotechno-long-horizon-runtime-observation.v1` and a
+fixed-capacity `LongHorizonFutureAdaptationState`. Detached preparation reduces
+only an accepted prepared phrase into semantic, operator/signal, and effect
+evidence. The runtime state validates exact root, phrase/bar continuity, route
+sample rate, and bundled profile identity. It keeps independent signal
+accumulators for every calibrated profile rate, but evaluates only the active
+route rate. A complete runtime decision requires at least 7,200 observed bars,
+twelve signal observations, two realized transitions for every operator at the
+active rate, and the next 256-bar interval. Structural invalidity discards the
+partial runtime state and cannot authorize a decision. The observation contains
+no PCM, samples, waveform, block, stem, renderer continuation, or graph state.
+
+The decision factory emits strict Core schema
+`autotechno-long-horizon-trajectory-decision.v1`. Each non-compensable semantic,
+operator/signal, and effect failure maps to its own reason; a fully qualified
+report maps to `preserve`. A failed report maps to `recover` only when the
+projected canonical continuation can legally accept the future correction.
+Core alone applies that decision to continuation v2.
+
+`TechnoEngine` carries the exact incoming and outgoing adaptation state with the
+one immutable prepared successor. The cache-acceptance guard includes the
+incoming adaptation fingerprint. Phrase acceptance advances session, quality,
+live-master, and long-horizon adaptation state as one transaction. Route
+recovery restores the interrupted phrase's incoming adaptation state, rerenders
+at the active rate, and advances it once; late or stale work cannot double-count
+the interrupted phrase or replay a payoff as new. Shutdown clears the state.
+
+Planning, reduction, artifact evaluation, and decision construction remain in
+detached preparation. No render callback, C handoff, audio buffer, graph,
+renderer, or sample scheduler was changed. The main actor only installs the
+already-immutable accepted result at the existing scheduled phrase boundary.
 
 ## Canonical unified loop
 

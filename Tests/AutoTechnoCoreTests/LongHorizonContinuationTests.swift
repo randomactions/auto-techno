@@ -18,8 +18,8 @@ struct LongHorizonContinuationTests {
 
         #expect(continuation.isBound)
         #expect(continuation.rootSeed == 48_291)
-        #expect(continuation.schemaVersion == 1)
-        #expect(continuation.schemaIdentifier == "autotechno-long-horizon-continuation.v1")
+        #expect(continuation.schemaVersion == 2)
+        #expect(continuation.schemaIdentifier == "autotechno-long-horizon-continuation.v2")
         #expect(continuation.currentEpisode.operatorKind == .maintain)
         #expect(continuation.currentEpisode.startedAtBar == 0)
         #expect(continuation.currentEpisode.minimumHoldUntilBar >= 8 * 16)
@@ -35,6 +35,8 @@ struct LongHorizonContinuationTests {
         #expect(continuation.transformationRecency.count == MusicalTransformation.allCases.count)
         #expect(continuation.lastTrajectoryEvidenceSchema == nil)
         #expect(continuation.lastTrajectoryDecisionReason == "no-calibrated-long-horizon-policy")
+        #expect(continuation.lastTrajectoryDecision == nil)
+        #expect(continuation.trajectoryCorrectionCount == 0)
         #expect(continuation.fingerprint.count == 16)
         #expect(decoded == continuation)
         #expect(try encoder.encode(decoded) == data)
@@ -70,7 +72,7 @@ struct LongHorizonContinuationTests {
         #expect(journey.state.memory.totalBars >= 15_600)
         #expect(journey.completedEpisodes.count == 75)
         #expect(continuation.arcIndex == 16)
-        #expect(continuation.fingerprint == "4dbb1e5925f4db98")
+        #expect(continuation.fingerprint == "f9135b32469ca580")
         #expect(episodeSequenceFingerprint(journey.completedEpisodes) == "ffb454d66004e4bf")
         #expect(operators == Set(LongHorizonEpisodeOperator.allCases))
         #expect(
@@ -124,7 +126,7 @@ struct LongHorizonContinuationTests {
         #expect(first.completedEpisodes == replay.completedEpisodes)
         #expect(first.completedEpisodes.count == 37)
         #expect(first.state.memory.longHorizon.arcIndex == 7)
-        #expect(first.state.memory.longHorizon.fingerprint == "b78c0cca7d89f911")
+        #expect(first.state.memory.longHorizon.fingerprint == "4b0c552337c36de1")
         #expect(episodeSequenceFingerprint(first.completedEpisodes) == "a3929317ea4e86ac")
         #expect(
             try encoder.encode(first.state.memory.longHorizon)
@@ -229,6 +231,149 @@ struct LongHorizonContinuationTests {
         var rejectedAdvance = initial
         rejectedAdvance.advancePlanning(using: shiftedPlan)
         #expect(rejectedAdvance == initial)
+    }
+
+    @Test("One exact failed decision starts only the next eligible recovery episode")
+    func failedDecisionStartsBoundedFutureRecovery() throws {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var state = director.initialState()
+        var sourceState = state
+        var sourcePlan = director.plan(from: state)
+        var preview = state.advance(
+            using: sourcePlan,
+            quality: state.quality,
+            liveMasterHeadroom: state.liveMasterHeadroom
+        )
+        while preview.memory.longHorizon.currentEpisode.startedAtBar
+            != preview.memory.totalBars
+            && preview.memory.totalBars
+                < preview.memory.longHorizon.currentEpisode.minimumHoldUntilBar
+        {
+            state = preview
+            sourceState = state
+            sourcePlan = director.plan(from: state)
+            preview = state.advance(
+                using: sourcePlan,
+                quality: state.quality,
+                liveMasterHeadroom: state.liveMasterHeadroom
+            )
+        }
+        let decision = LongHorizonTrajectoryDecision(
+            rootSeed: sourceState.rootSeed,
+            policyVersion: "test-policy.v1",
+            evidenceSchema: "test-trajectory.v1",
+            evidenceFingerprint: "0123456789abcdef",
+            observedThroughPhraseIndex: sourcePlan.phraseIndex,
+            observedThroughBar: sourcePlan.startBar + sourcePlan.barCount,
+            action: .recover,
+            reasons: [.effectFatigue, .permanentPeak]
+        )
+        let corrected = sourceState.advance(
+            using: sourcePlan,
+            quality: sourceState.quality,
+            liveMasterHeadroom: sourceState.liveMasterHeadroom,
+            longHorizonDecision: decision
+        )
+        let nextPlan = director.plan(from: corrected)
+        let encoded = try JSONEncoder().encode(decision)
+
+        #expect(decision.isComplete)
+        #expect(decision.reasons == [.permanentPeak, .effectFatigue])
+        #expect(
+            try JSONDecoder().decode(
+                LongHorizonTrajectoryDecision.self,
+                from: encoded
+            ) == decision)
+        #expect(corrected.phraseIndex == preview.phraseIndex)
+        #expect(corrected.memory.totalBars == preview.memory.totalBars)
+        #expect(corrected.memory.longHorizon.currentEpisode.operatorKind == .recover)
+        #expect(
+            corrected.memory.longHorizon.currentEpisode.startedAtBar
+                == corrected.memory.totalBars)
+        #expect(corrected.memory.longHorizon.trajectoryCorrectionCount == 1)
+        #expect(corrected.memory.longHorizon.lastTrajectoryDecision == decision)
+        #expect(
+            corrected.memory.longHorizon.lastTrajectoryEvidenceSchema
+                == "test-trajectory.v1")
+        #expect(
+            corrected.memory.longHorizon.lastTrajectoryDecisionReason
+                == "permanent-peak,effect-fatigue")
+        #expect(nextPlan.kind == .majorBreak)
+        #expect(nextPlan.longHorizonSelection.operatorKind == .recover)
+        #expect(nextPlan.longHorizonEnergyCoordination.operatorKind == .recover)
+        #expect(
+            nextPlan.longHorizonEnergyCoordination.target
+                == LongHorizonContinuationState.target(for: .recover))
+    }
+
+    @Test("Qualified, early, and stale decisions preserve accepted continuation")
+    func preservingAndInvalidDecisionsCannotRewriteCurrentAudio() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let plan = director.plan(from: state)
+        let endBar = plan.startBar + plan.barCount
+        let control = state.advance(
+            using: plan,
+            quality: state.quality,
+            liveMasterHeadroom: state.liveMasterHeadroom
+        )
+        let earlyRecovery = LongHorizonTrajectoryDecision(
+            rootSeed: state.rootSeed,
+            policyVersion: "test-policy.v1",
+            evidenceSchema: "test-trajectory.v1",
+            evidenceFingerprint: "0123456789abcdef",
+            observedThroughPhraseIndex: plan.phraseIndex,
+            observedThroughBar: endBar,
+            action: .recover,
+            reasons: [.operatorConsequence]
+        )
+        let qualified = LongHorizonTrajectoryDecision(
+            rootSeed: state.rootSeed,
+            policyVersion: "test-policy.v1",
+            evidenceSchema: "test-trajectory.v1",
+            evidenceFingerprint: "fedcba9876543210",
+            observedThroughPhraseIndex: plan.phraseIndex,
+            observedThroughBar: endBar,
+            action: .preserve,
+            reasons: [.qualified]
+        )
+        let stale = LongHorizonTrajectoryDecision(
+            rootSeed: 9_001,
+            policyVersion: "test-policy.v1",
+            evidenceSchema: "test-trajectory.v1",
+            evidenceFingerprint: "0123456789abcdef",
+            observedThroughPhraseIndex: plan.phraseIndex,
+            observedThroughBar: endBar,
+            action: .recover,
+            reasons: [.identity]
+        )
+        let early = state.advance(
+            using: plan,
+            quality: state.quality,
+            liveMasterHeadroom: state.liveMasterHeadroom,
+            longHorizonDecision: earlyRecovery
+        )
+        let preserved = state.advance(
+            using: plan,
+            quality: state.quality,
+            liveMasterHeadroom: state.liveMasterHeadroom,
+            longHorizonDecision: qualified
+        )
+        let ignored = state.advance(
+            using: plan,
+            quality: state.quality,
+            liveMasterHeadroom: state.liveMasterHeadroom,
+            longHorizonDecision: stale
+        )
+
+        #expect(early == control)
+        #expect(ignored == control)
+        #expect(
+            preserved.memory.longHorizon.currentEpisode
+                == control.memory.longHorizon.currentEpisode)
+        #expect(preserved.memory.longHorizon.trajectoryCorrectionCount == 0)
+        #expect(preserved.memory.longHorizon.lastTrajectoryDecision == qualified)
+        #expect(preserved.memory.longHorizon.lastTrajectoryDecisionReason == "qualified")
     }
 
     @Test("A complete new performance renews every reserve and forgets the prior hierarchy")

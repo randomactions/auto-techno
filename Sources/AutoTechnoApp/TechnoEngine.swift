@@ -61,6 +61,7 @@ package struct PhrasePreparationKey: Hashable, Sendable {
 private struct PhrasePreparationRequest: Sendable {
     let key: PhrasePreparationKey
     let sourceState: AutonomousSessionState
+    let incomingLongHorizonState: LongHorizonFutureAdaptationState?
     let incomingRenderState: RenderState
     let incomingGraphState: GeneratedDSPContinuationState
     let previousGraph: DSPGraphPlan?
@@ -70,6 +71,8 @@ private struct PhrasePreparationRequest: Sendable {
 private struct PreparedPhrase: Sendable {
     let request: PhrasePreparationRequest
     let prepared: PreparedAutonomousPhrase
+    let outgoingLongHorizonState: LongHorizonFutureAdaptationState?
+    let longHorizonDecision: LongHorizonTrajectoryDecision?
     let waveforms: [[Float]]
 }
 
@@ -87,7 +90,9 @@ private struct ScheduledVisual {
 private enum AutonomousPerformancePreparer {
     static func prepare(request: PhrasePreparationRequest,
                         director: AutonomousSessionDirector,
-                        artifacts: ProfessionalQualityPrimaryArtifacts?)
+                        artifacts: ProfessionalQualityPrimaryArtifacts?,
+                        longHorizonArtifacts:
+                            LongHorizonProfessionalPolicyArtifacts?)
         -> PreparedPhrase? {
         guard request.key.sessionSeed == request.sourceState.rootSeed,
               director.rootSeed == request.sourceState.rootSeed else {
@@ -115,6 +120,23 @@ private enum AutonomousPerformancePreparer {
             evaluator: evaluator,
             cancellationRequested: { Task.isCancelled }
         ), !Task.isCancelled else { return nil }
+        let incomingLongHorizon = request.incomingLongHorizonState ??
+            longHorizonArtifacts.flatMap {
+                LongHorizonFutureAdaptationState(
+                    startingState: request.sourceState,
+                    policy: $0.policy
+                )
+            }
+        let longHorizonUpdate: LongHorizonFutureAdaptationUpdate? =
+          if let incomingLongHorizon, let longHorizonArtifacts {
+            incomingLongHorizon.observing(
+                prepared: prepared,
+                incomingState: request.sourceState,
+                policy: longHorizonArtifacts.policy
+            )
+        } else {
+            nil
+        }
         var waveforms: [[Float]] = []
         waveforms.reserveCapacity(prepared.blocks.count)
         for block in prepared.blocks {
@@ -125,7 +147,13 @@ private enum AutonomousPerformancePreparer {
             ))
         }
         guard !Task.isCancelled else { return nil }
-        return PreparedPhrase(request: request, prepared: prepared, waveforms: waveforms)
+        return PreparedPhrase(
+            request: request,
+            prepared: prepared,
+            outgoingLongHorizonState: longHorizonUpdate?.state,
+            longHorizonDecision: longHorizonUpdate?.decision,
+            waveforms: waveforms
+        )
     }
 }
 
@@ -211,6 +239,10 @@ package final class TechnoEngine: ObservableObject {
     /// Loaded once outside detached preparation and never touched by the audio
     /// callback. A failed load leaves professional qualification unavailable.
     private let qualityArtifacts: ProfessionalQualityPrimaryArtifacts?
+    /// Immutable Stage 6 policy identity. Mutable accumulation remains in
+    /// detached preparation and is committed only with its exact phrase.
+    private let longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?
+    private var longHorizonState: LongHorizonFutureAdaptationState?
 
     private var nextBlockIndex = 0
     private var nextScheduleSample: AVAudioFramePosition = 0
@@ -248,6 +280,7 @@ package final class TechnoEngine: ObservableObject {
             rootSeed: sessionSeedSource.nextSeed()
         )
         qualityArtifacts = try? ProfessionalQualityPrimaryArtifacts.load()
+        longHorizonArtifacts = try? LongHorizonProfessionalPolicyArtifacts.load()
         self.sessionSeedSource = sessionSeedSource
         self.director = director
         sessionState = director.initialState()
@@ -324,6 +357,7 @@ package final class TechnoEngine: ObservableObject {
                 liveTargetStartSample: nil
             ),
             sourceState: sessionState,
+            incomingLongHorizonState: longHorizonState,
             incomingRenderState: RenderState(),
             incomingGraphState: GeneratedDSPContinuationState(),
             previousGraph: nil,
@@ -368,6 +402,7 @@ package final class TechnoEngine: ObservableObject {
         activePreparationRequest = nil
         liveFeedbackPreparation.resetSession()
         currentPhrase = nil
+        longHorizonState = nil
         // View disappearance is a complete transport boundary. A later
         // appearance restarts one coherent session instead of pairing an
         // advanced musical memory with reset render/DSP continuation.
@@ -416,11 +451,13 @@ package final class TechnoEngine: ObservableObject {
         activePreparationTaskSerial = taskSerial
         let director = director
         let qualityArtifacts = qualityArtifacts
+        let longHorizonArtifacts = longHorizonArtifacts
         let task = Task.detached(priority: .userInitiated) {
             AutonomousPerformancePreparer.prepare(
                 request: request,
                 director: director,
-                artifacts: qualityArtifacts
+                artifacts: qualityArtifacts,
+                longHorizonArtifacts: longHorizonArtifacts
             )
         }
         preparationTask = task
@@ -455,7 +492,9 @@ package final class TechnoEngine: ObservableObject {
                 phrase.request.sourceState.rootSeed,
               phrase.request.key.sessionSeed == sessionState.rootSeed,
               phrase.prepared.graph.sessionSeed ==
-                phrase.request.key.sessionSeed else { return }
+                phrase.request.key.sessionSeed,
+              phrase.request.incomingLongHorizonState?.fingerprint ==
+                longHorizonState?.fingerprint else { return }
         guard phrase.prepared.commitEligible,
               phrase.prepared.incomingLiveMasterHeadroomState ==
                 phrase.request.sourceState.liveMasterHeadroom else {
@@ -505,18 +544,23 @@ package final class TechnoEngine: ObservableObject {
         }
         guard phrase.request.sourceState.phraseIndex == sessionState.phraseIndex else { return }
 
+        let advancedState = phrase.request.sourceState.advance(
+            using: phrase.prepared.plan,
+            quality: phrase.prepared.qualityContinuationState,
+            liveMasterHeadroom:
+                phrase.prepared.liveMasterHeadroomContinuationState,
+            longHorizonDecision: phrase.longHorizonDecision
+        )
+        guard phrase.longHorizonDecision.map({
+            advancedState.memory.longHorizon.lastTrajectoryDecision == $0
+        }) ?? true else { return }
         currentPhrase = phrase
         let resumesRecoveredPlayback = phrase.request.key.routeRecovery
         if resumesRecoveredPlayback {
             routeRecoveryRequest = nil
         }
-        sessionState = phrase.request.sourceState
-        sessionState = sessionState.advance(
-            using: phrase.prepared.plan,
-            quality: phrase.prepared.qualityContinuationState,
-            liveMasterHeadroom:
-                phrase.prepared.liveMasterHeadroomContinuationState
-        )
+        sessionState = advancedState
+        longHorizonState = phrase.outgoingLongHorizonState
         liveFeedbackRuntime.retainRecentSources(
             currentPhraseIndex: sessionState.phraseIndex
         )
@@ -591,6 +635,7 @@ package final class TechnoEngine: ObservableObject {
                 liveTargetStartSample: liveTargetStartSample
             ),
             sourceState: sessionState,
+            incomingLongHorizonState: longHorizonState,
             incomingRenderState: phrase.prepared.endingRenderState,
             incomingGraphState: phrase.prepared.endingGraphState,
             previousGraph: phrase.prepared.graph,
@@ -773,6 +818,8 @@ package final class TechnoEngine: ObservableObject {
             return PhrasePreparationRequest(
                 key: phrase.request.key,
                 sourceState: committedSource,
+                incomingLongHorizonState:
+                    phrase.request.incomingLongHorizonState,
                 incomingRenderState: incomingRenderState,
                 incomingGraphState: phrase.request.incomingGraphState,
                 previousGraph: phrase.prepared.graph,
@@ -823,6 +870,7 @@ package final class TechnoEngine: ObservableObject {
         }
         ensureLivePCMTransport(format: format)
         sessionState = rebuildingRequest.sourceState
+        longHorizonState = rebuildingRequest.incomingLongHorizonState
         let recoveryRequest = PhrasePreparationRequest(
             key: PhrasePreparationKey(
                 sessionSeed: sessionState.rootSeed,
@@ -845,6 +893,8 @@ package final class TechnoEngine: ObservableObject {
                 liveTargetStartSample: nil
             ),
             sourceState: sessionState,
+            incomingLongHorizonState:
+                rebuildingRequest.incomingLongHorizonState,
             incomingRenderState: rebuildingRequest.incomingRenderState,
             incomingGraphState: rebuildingRequest.incomingGraphState,
             previousGraph: rebuildingRequest.previousGraph,
@@ -1207,6 +1257,8 @@ package final class TechnoEngine: ObservableObject {
         requestPreparation(PhrasePreparationRequest(
             key: correctedKey,
             sourceState: baseRequest.sourceState,
+            incomingLongHorizonState:
+                baseRequest.incomingLongHorizonState,
             incomingRenderState: baseRequest.incomingRenderState,
             incomingGraphState: baseRequest.incomingGraphState,
             previousGraph: baseRequest.previousGraph,
@@ -1360,16 +1412,23 @@ package final class TechnoEngine: ObservableObject {
             if boundaryDecision == .advance &&
                 (pendingLiveMasterBinding == nil &&
                     untrimmedPreparationAllowed || runtimeAllowsAdvance) {
-                guard let next = cachedSuccessor else { return false }
-                currentPhrase = next
-                phrase = next
-                sessionState = next.request.sourceState
-                sessionState = sessionState.advance(
+                guard let next = cachedSuccessor,
+                      next.request.incomingLongHorizonState?.fingerprint ==
+                        longHorizonState?.fingerprint else { return false }
+                let advancedState = next.request.sourceState.advance(
                     using: next.prepared.plan,
                     quality: next.prepared.qualityContinuationState,
                     liveMasterHeadroom:
-                        next.prepared.liveMasterHeadroomContinuationState
+                        next.prepared.liveMasterHeadroomContinuationState,
+                    longHorizonDecision: next.longHorizonDecision
                 )
+                guard next.longHorizonDecision.map({
+                    advancedState.memory.longHorizon.lastTrajectoryDecision == $0
+                }) ?? true else { return false }
+                currentPhrase = next
+                phrase = next
+                sessionState = advancedState
+                longHorizonState = next.outgoingLongHorizonState
                 liveFeedbackRuntime.retainRecentSources(
                     currentPhraseIndex: sessionState.phraseIndex
                 )

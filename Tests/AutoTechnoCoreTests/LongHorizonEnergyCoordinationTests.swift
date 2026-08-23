@@ -201,7 +201,7 @@ struct LongHorizonEnergyCoordinationTests {
     #expect(activeOperators == Set(LongHorizonEpisodeOperator.allCases.map(\.rawValue)))
     #expect(protectedRareEventPhrases == 233)
     #expect(maximumPresenceSlew <= 0.160_001)
-    #expect(state.memory.longHorizon.fingerprint == "b78c0cca7d89f911")
+    #expect(state.memory.longHorizon.fingerprint == "4b0c552337c36de1")
     #expect(distantBarsPerMacro.values.allSatisfy { $0 <= 1 })
   }
 

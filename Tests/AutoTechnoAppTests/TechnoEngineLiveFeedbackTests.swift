@@ -225,8 +225,14 @@ struct TechnoEngineLiveFeedbackTests {
                 "               !untrimmedPreparationAllowed {\n" +
                 "                purgeUntrimmedSuccessor("
         ))
-        let sessionCommit = try #require(source.range(of:
-            "sessionState = next.request.sourceState"
+        let commitSearchRange = admission.lowerBound..<source.endIndex
+        let sessionCommit = try #require(source.range(
+            of: "sessionState = advancedState",
+            range: commitSearchRange
+        ))
+        let longHorizonCommit = try #require(source.range(
+            of: "longHorizonState = next.outgoingLongHorizonState",
+            range: commitSearchRange
         ))
         let proposalCommit = try #require(source.range(of:
             "if next.request.pendingLiveMasterBinding != nil {\n" +
@@ -240,6 +246,7 @@ struct TechnoEngineLiveFeedbackTests {
             purgeCommit,
             stateCommit,
             sessionCommit,
+            longHorizonCommit,
             proposalCommit,
             successorCommit,
         ] {

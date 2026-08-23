@@ -2234,3 +2234,64 @@ resolved score, synth, patch, DSP primitive, effect implementation, bus, graph,
 chain, renderer, App scheduler, route lifecycle, live controller, or callback.
 Long-horizon calibration, automated qualification, listening, app/route QA, and
 physical-output soak remain unrun and are not implied by this snapshot.
+
+## Long-horizon Phase 6B policy and Phase 7 bounded future adaptation — 2026-08-24
+
+Phase 6B binds the existing semantic, realized-signal, and effect-dose evidence
+to immutable exact-engine policy artifacts. Four development roots (`48291`,
+`77777`, `90909`, and `246813`) contribute four-hour journeys at both 44.1 and
+48 kHz. Profile `56231bcba7167e67` accepts all four development journeys,
+adversarial artifact `097371d15a680a5b` rejects all ten independent named
+attacks, and disjoint holdout artifact `b9465548c62c098b` accepts roots `112358`
+and `141421`. Root `135791` remains explicit negative evidence: a bounded search
+of 24 primary-qualified positions produced only one representative payoff
+transition, so it was excluded instead of weakening the two-transition minimum.
+
+Phase 7 adds Core decision schema
+`autotechno-long-horizon-trajectory-decision.v1`, current continuation schema
+`autotechno-long-horizon-continuation.v2`, and DSP runtime-observation schema
+`autotechno-long-horizon-runtime-observation.v1`. Detached preparation advances
+one fixed-capacity semantic/effect state plus independent signal state for each
+calibrated rate, then evaluates only the active route rate. A runtime decision
+requires at least 7,200 observed bars, twelve signal observations, two realized
+transitions for every operator at the active rate, and a 256-bar decision
+interval. Every non-compensable policy dimension retains an independent Core
+reason. A failed report can request only one existing recover/major-break path
+at an eligible unscheduled successor; qualified, short, stale, malformed,
+wrong-root, wrong-rate, and recovery-ineligible evidence preserves the accepted
+continuation.
+
+The App carries exact incoming/outgoing adaptation state with the immutable
+prepared successor. Cache acceptance validates the incoming adaptation
+fingerprint. Phrase acceptance commits musical, primary-quality, live-master,
+and long-horizon state atomically. Route recovery restores the interrupted
+phrase's incoming adaptation state, rerenders at the new active rate, and
+advances it once. Planning, evidence reduction, policy evaluation, and decision
+construction remain detached; the realtime callback, renderer, graph, C
+handoff, and audio-buffer format are unchanged.
+
+Final deterministic evidence and local validation were:
+
+- current v2 four/eight-hour continuation state fingerprints
+  `4b0c552337c36de1` / `f9135b32469ca580`; completed-episode geometry remains
+  `a3929317ea4e86ac` / `ffb454d66004e4bf`;
+- the combined Phase 0-7 long-horizon selection passed 53/53 in 54.657 seconds,
+  including all ten independent decision reasons, artifact identity, exact
+  active-rate consumption, bounded short-evidence preservation, and a real
+  accepted 8 kHz prepared-phrase observation witness;
+- the current runtime, greater-than-eight-hour interlock/unified evolution,
+  TechnoEngine scheduling, and repository-surface selection passed 30/30 in
+  42.772 seconds;
+- strict `swift-format` lint passed for both new Phase 7 production files and
+  `git diff --check` passed; and
+- the optimized `AutoTechno` product built in 98.44 seconds with SHA-256
+  `dc8d1ae4f11e842adb820b235faf9fdb6c260d9d1164f2937895458f3adebc67`.
+
+SwiftPM emitted known read-only user-cache and missing isolated `.pcm` cache
+warnings while every final recorded exit status was green. Phase 7 changes
+future-boundary Core decisions and App preparation/route continuation only. It
+adds no synthesis architecture, preset, patch home, DSP primitive, effect
+implementation, bus, graph stage, chain, renderer, C handoff, audio callback,
+or user control. The sound-capability register promotes nothing. Real app/route
+and interruption QA, listening, and physical-output soak remain separate and
+unrun; this snapshot does not imply those states.

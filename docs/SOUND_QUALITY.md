@@ -308,7 +308,7 @@ trajectories plus malformed and adversarial synthetic journeys, but the report
 has no pass/reject field and always declares qualification unavailable with
 reason `no-calibrated-long-horizon-policy`.
 
-Phase 2 separately embeds `autotechno-long-horizon-continuation.v1` in canonical
+Phase 2 separately embeds current `autotechno-long-horizon-continuation.v2` in canonical
 `TemporalMusicalMemory`. It records committed arc/episode context, fixed-domain
 capability recency, semantic energy start/target coordinates, identity
 landmarks, reserve, and payoff/recovery/recall obligations. It is bounded,
@@ -352,10 +352,23 @@ changes candidate choice, score, audio, or callback work. Invalid rate, order,
 episode re-entry, evidence consistency, or overflow makes the report unavailable
 without partially mutating accepted summaries.
 
-The semantic and realized trajectory reports are not consumed by the current
-primary transaction or controller. A calibrated non-compensable policy must
-still prove direction and consequence before any long-horizon quality claim or
-evidence-driven future adjustment. See
+Phase 6B calibrates independent non-compensable semantic, per-operator signal,
+and effect-family dimensions across four exact four-hour development journeys
+at 44.1/48 kHz. The immutable artifact set rejects ten independent adversarial
+attacks and accepts two disjoint holdout roots. It retains only reduced
+irreversible evidence and binds the exact engine-v32/primary-v14 identity.
+
+Phase 7 consumes that policy only during detached preparation. A fixed-capacity
+active-rate observation requires at least 7,200 bars, twelve signal observations,
+two transitions per operator/rate, and a 256-bar decision interval. Each hard
+failure remains reason-coded and non-compensable. Core may apply one `recover`
+decision only to an eligible unscheduled successor through continuation v2;
+qualified, short, stale, malformed, wrong-root, wrong-rate, and ineligible
+evidence preserves the accepted continuation. The prepared transaction commits
+musical, primary-quality, live-master, and long-horizon state together. Route
+recovery reuses the interrupted phrase's incoming observation so evidence is
+not double-counted. No PCM enters the observation, and no analysis or decision
+runs in the realtime callback. See
 [`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md).
 
 ## Engine ownership

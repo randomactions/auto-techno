@@ -4,8 +4,8 @@ import Foundation
 /// canonical session state. The geometry is planning context, not a calibrated
 /// entertainment threshold or a second arrangement engine.
 package enum LongHorizonContinuationSchema {
-    package static let schemaVersion = 1
-    package static let schemaIdentifier = "autotechno-long-horizon-continuation.v1"
+    package static let schemaVersion = 2
+    package static let schemaIdentifier = "autotechno-long-horizon-continuation.v2"
     package static let recentEpisodeCapacity = 8
     package static let recentOperatorCapacity = 6
     package static let identityLandmarkCapacity = 8
@@ -111,6 +111,7 @@ package struct LongHorizonEnergyTarget: Codable, Equatable, Sendable {
 package enum LongHorizonEpisodeCompletionReason: String, Codable, Sendable {
     case semanticObligationSatisfied = "semantic-obligation-satisfied"
     case maximumDueBoundaryReached = "maximum-due-boundary-reached"
+    case trajectoryCorrectionApplied = "trajectory-correction-applied"
 }
 
 package struct LongHorizonEpisodeIntent: Codable, Equatable, Sendable {
@@ -202,6 +203,11 @@ package enum LongHorizonContinuationUpdateResult: Equatable, Sendable {
     case preserved(LongHorizonContinuationUpdateUnavailableReason)
 }
 
+package enum LongHorizonTrajectoryDecisionApplicationResult: Equatable, Sendable {
+    case accepted(LongHorizonContinuationState)
+    case preserved
+}
+
 /// One compact, renewable hierarchy embedded in `TemporalMusicalMemory`.
 /// It observes only committed plans. Phase 2 does not let this value choose,
 /// reject, correct, or render a phrase.
@@ -227,6 +233,8 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
     package let reserve: LongHorizonReserveState
     package let lastTrajectoryEvidenceSchema: String?
     package let lastTrajectoryDecisionReason: String
+    package let lastTrajectoryDecision: LongHorizonTrajectoryDecision?
+    package let trajectoryCorrectionCount: Int
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
@@ -250,6 +258,8 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         case reserve
         case lastTrajectoryEvidenceSchema
         case lastTrajectoryDecisionReason
+        case lastTrajectoryDecision
+        case trajectoryCorrectionCount
     }
 
     package static func unbound(
@@ -283,7 +293,9 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             obligations: [],
             reserve: .renewed,
             lastTrajectoryEvidenceSchema: nil,
-            lastTrajectoryDecisionReason: "no-calibrated-long-horizon-policy"
+            lastTrajectoryDecisionReason: "no-calibrated-long-horizon-policy",
+            lastTrajectoryDecision: nil,
+            trajectoryCorrectionCount: 0
         )
     }
 
@@ -329,7 +341,9 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             obligations: [],
             reserve: .renewed,
             lastTrajectoryEvidenceSchema: nil,
-            lastTrajectoryDecisionReason: "no-calibrated-long-horizon-policy"
+            lastTrajectoryDecisionReason: "no-calibrated-long-horizon-policy",
+            lastTrajectoryDecision: nil,
+            trajectoryCorrectionCount: 0
         )
     }
 
@@ -352,7 +366,9 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         obligations: [LongHorizonObligation],
         reserve: LongHorizonReserveState,
         lastTrajectoryEvidenceSchema: String?,
-        lastTrajectoryDecisionReason: String
+        lastTrajectoryDecisionReason: String,
+        lastTrajectoryDecision: LongHorizonTrajectoryDecision?,
+        trajectoryCorrectionCount: Int
     ) {
         schemaVersion = LongHorizonContinuationSchema.schemaVersion
         schemaIdentifier = LongHorizonContinuationSchema.schemaIdentifier
@@ -402,6 +418,8 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         self.reserve = reserve
         self.lastTrajectoryEvidenceSchema = lastTrajectoryEvidenceSchema
         self.lastTrajectoryDecisionReason = lastTrajectoryDecisionReason
+        self.lastTrajectoryDecision = lastTrajectoryDecision
+        self.trajectoryCorrectionCount = max(0, trajectoryCorrectionCount)
     }
 
     package init(from decoder: Decoder) throws {
@@ -420,9 +438,27 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
                 debugDescription: "Unsupported long-horizon continuation schema"
             )
         }
+        let decodedDecision = try container.decodeIfPresent(
+            LongHorizonTrajectoryDecision.self,
+            forKey: .lastTrajectoryDecision
+        )
+        let decodedCorrectionCount = try container.decode(
+            Int.self,
+            forKey: .trajectoryCorrectionCount
+        )
+        let decodedRootSeed = try container.decode(UInt64.self, forKey: .rootSeed)
+        guard decodedCorrectionCount >= 0,
+            decodedDecision.map({ $0.rootSeed == decodedRootSeed }) ?? true
+        else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .lastTrajectoryDecision,
+                in: container,
+                debugDescription: "Invalid trajectory-decision continuation"
+            )
+        }
         self.init(
             isBound: try container.decode(Bool.self, forKey: .isBound),
-            rootSeed: try container.decode(UInt64.self, forKey: .rootSeed),
+            rootSeed: decodedRootSeed,
             nextExpectedPhraseIndex: try container.decode(
                 Int.self,
                 forKey: .nextExpectedPhraseIndex
@@ -481,7 +517,9 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             lastTrajectoryDecisionReason: try container.decode(
                 String.self,
                 forKey: .lastTrajectoryDecisionReason
-            )
+            ),
+            lastTrajectoryDecision: decodedDecision,
+            trajectoryCorrectionCount: decodedCorrectionCount
         )
     }
 
@@ -681,8 +719,162 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
                 obligations: proposedObligations,
                 reserve: proposedReserve,
                 lastTrajectoryEvidenceSchema: lastTrajectoryEvidenceSchema,
-                lastTrajectoryDecisionReason: lastTrajectoryDecisionReason
+                lastTrajectoryDecisionReason: lastTrajectoryDecisionReason,
+                lastTrajectoryDecision: lastTrajectoryDecision,
+                trajectoryCorrectionCount: trajectoryCorrectionCount
             ))
+    }
+
+    /// Applies an exact reduced decision only to the unscheduled successor
+    /// boundary. Invalid, stale, early, or redundant recovery requests preserve
+    /// the already accepted episode unchanged.
+    package func applying(
+        trajectoryDecision decision: LongHorizonTrajectoryDecision
+    ) -> LongHorizonTrajectoryDecisionApplicationResult {
+        guard isBound,
+            decision.isApplicable(
+                rootSeed: rootSeed,
+                phraseIndex: nextExpectedPhraseIndex,
+                bar: nextExpectedBar
+            )
+        else { return .preserved }
+
+        let reason = decision.reasons.map(\.rawValue).joined(separator: ",")
+        if decision.action == .preserve {
+            return .accepted(
+                replacingTrajectoryState(
+                    currentEpisode: currentEpisode,
+                    recentEpisodes: recentEpisodes,
+                    recentOperators: recentOperators,
+                    arcIndex: arcIndex,
+                    arcEpisodeCount: arcEpisodeCount,
+                    decision: decision,
+                    decisionReason: reason,
+                    correctionCount: trajectoryCorrectionCount
+                ))
+        }
+
+        let replacesUnstartedEpisode = currentEpisode.startedAtBar == nextExpectedBar
+        guard currentEpisode.operatorKind != .recover,
+            replacesUnstartedEpisode || nextExpectedBar >= currentEpisode.minimumHoldUntilBar,
+            replacesUnstartedEpisode || currentEpisode.episodeIndex < Int.max,
+            trajectoryCorrectionCount < Int.max
+        else { return .preserved }
+
+        var nextArcIndex = arcIndex
+        var nextArcEpisodeCount = arcEpisodeCount
+        var nextEpisodeIndex = replacesUnstartedEpisode
+            ? currentEpisode.episodeIndex : currentEpisode.episodeIndex + 1
+        var nextReserve = reserve
+        var nextObligations = obligations
+        if replacesUnstartedEpisode {
+            nextObligations.removeAll {
+                $0.sourceEpisodeID == currentEpisode.id
+                    && $0.openedAtBar == currentEpisode.startedAtBar
+            }
+            switch currentEpisode.operatorKind {
+            case .payoff: nextReserve.payoffAvailable = true
+            case .reframe: nextReserve.reframeAvailable = true
+            case .recall: nextReserve.recallAvailable = true
+            case .maintain, .rise, .recover: break
+            }
+        }
+        if !replacesUnstartedEpisode && nextEpisodeIndex >= arcEpisodeCount {
+            guard arcIndex < Int.max else { return .preserved }
+            nextArcIndex = arcIndex + 1
+            nextArcEpisodeCount = Self.arcEpisodeCount(
+                rootSeed: rootSeed,
+                arcIndex: nextArcIndex
+            )
+            nextEpisodeIndex = 0
+            nextReserve = .renewed
+        }
+        let recovery = Self.makeEpisode(
+            rootSeed: rootSeed,
+            arcIndex: nextArcIndex,
+            episodeIndex: nextEpisodeIndex,
+            operatorKind: .recover,
+            startingBar: nextExpectedBar,
+            startEnergy: lastSemanticEnergy
+        )
+        var completed = recentEpisodes
+        if !replacesUnstartedEpisode {
+            completed.append(
+                LongHorizonCompletedEpisode(
+                    id: currentEpisode.id,
+                    arcIndex: currentEpisode.arcIndex,
+                    episodeIndex: currentEpisode.episodeIndex,
+                    operatorKind: currentEpisode.operatorKind,
+                    startedAtBar: currentEpisode.startedAtBar,
+                    completedAtBar: nextExpectedBar,
+                    minimumHoldUntilBar: currentEpisode.minimumHoldUntilBar,
+                    dueByBar: currentEpisode.dueByBar,
+                    completionReason: .trajectoryCorrectionApplied
+                ))
+        }
+        completed = Array(
+            completed.suffix(LongHorizonContinuationSchema.recentEpisodeCapacity)
+        )
+        var operators = recentOperators
+        if replacesUnstartedEpisode,
+            operators.last == currentEpisode.operatorKind
+        {
+            operators.removeLast()
+        }
+        operators.append(.recover)
+        operators = Array(
+            operators.suffix(LongHorizonContinuationSchema.recentOperatorCapacity)
+        )
+        return .accepted(
+            replacingTrajectoryState(
+                currentEpisode: recovery,
+                recentEpisodes: completed,
+                recentOperators: operators,
+                arcIndex: nextArcIndex,
+                arcEpisodeCount: nextArcEpisodeCount,
+                reserve: nextReserve,
+                obligations: nextObligations,
+                decision: decision,
+                decisionReason: reason,
+                correctionCount: trajectoryCorrectionCount + 1
+            ))
+    }
+
+    private func replacingTrajectoryState(
+        currentEpisode: LongHorizonEpisodeIntent,
+        recentEpisodes: [LongHorizonCompletedEpisode],
+        recentOperators: [LongHorizonEpisodeOperator],
+        arcIndex: Int,
+        arcEpisodeCount: Int,
+        reserve: LongHorizonReserveState? = nil,
+        obligations: [LongHorizonObligation]? = nil,
+        decision: LongHorizonTrajectoryDecision,
+        decisionReason: String,
+        correctionCount: Int
+    ) -> LongHorizonContinuationState {
+        LongHorizonContinuationState(
+            isBound: isBound,
+            rootSeed: rootSeed,
+            nextExpectedPhraseIndex: nextExpectedPhraseIndex,
+            nextExpectedBar: nextExpectedBar,
+            arcIndex: arcIndex,
+            arcEpisodeCount: arcEpisodeCount,
+            currentEpisode: currentEpisode,
+            lastSemanticEnergy: lastSemanticEnergy,
+            recentEpisodes: recentEpisodes,
+            recentOperators: recentOperators,
+            capabilityRecency: capabilityRecency,
+            characterRecency: characterRecency,
+            harmonicRecency: harmonicRecency,
+            transformationRecency: transformationRecency,
+            identityLandmarks: identityLandmarks,
+            obligations: obligations ?? self.obligations,
+            reserve: reserve ?? self.reserve,
+            lastTrajectoryEvidenceSchema: decision.evidenceSchema,
+            lastTrajectoryDecisionReason: decisionReason,
+            lastTrajectoryDecision: decision,
+            trajectoryCorrectionCount: correctionCount
+        )
     }
 
     package var fingerprint: String {
@@ -717,6 +909,8 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             hasher.combine(obligation.kind.rawValue)
             hasher.combine(obligation.dueByBar)
         }
+        hasher.combine(lastTrajectoryDecision?.fingerprint ?? "none")
+        hasher.combine(trajectoryCorrectionCount)
         return hasher.fingerprint
     }
 

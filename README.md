@@ -105,8 +105,14 @@ sentence evidence without retaining PCM. Detached accepted phrases now also
 reduce their exact PCM into a DSP-owned, fixed-capacity signal trajectory across
 loudness, crest, spectrum, transients, masking, wet/dry relation, stereo, and
 movement while keeping the semantic target separate. These reports are still
-not consumed by the shipped evaluator; calibrated long-horizon qualification
-and adaptation remain unavailable.
+kept separate and judged by the exact engine-v32/primary-v14 long-horizon
+artifacts. Detached preparation carries one fixed-capacity active-rate
+observation with the immutable successor and can emit one reason-coded
+preserve/recover decision for an eligible unscheduled future phrase. The App
+commits that decision with musical, quality, and live continuation state as one
+transaction; route recovery restores the interrupted phrase's incoming
+observation so evidence is not counted twice. No PCM enters the observation and
+no long-horizon analysis or decision runs in the realtime callback.
 
 ## Package
 

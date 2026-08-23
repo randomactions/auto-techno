@@ -236,9 +236,127 @@ struct LongHorizonProfessionalPolicyTests {
         holdoutData: holdoutData)
     }
   }
+
+  @Test("Runtime policy uses one exact calibrated rate and carries no PCM")
+  func runtimeObservationIsReducedAndExactRate() throws {
+    let artifacts = try qualifiedArtifacts()
+    let source = artifacts.holdoutCorpus.observations[0]
+    let observation = try LongHorizonRuntimePolicyObservation(
+      calibrationObservation: source,
+      sampleRate: 8_000)
+    let policy = try LongHorizonProfessionalPolicy(
+      profile: artifacts.profile,
+      adversarial: artifacts.adversarial,
+      holdout: artifacts.holdout)
+    let text = try #require(String(
+      data: observation.deterministicJSON(),
+      encoding: .utf8))
+
+    #expect(observation.isStructurallyComplete)
+    #expect(observation.hasMinimumDecisionEvidence)
+    #expect(observation.sampleRate == 8_000)
+    #expect(
+      observation.operatorDeltas.count
+        == LongHorizonEpisodeOperator.allCases.count
+          * LongHorizonSignalMetric.allCases.count)
+    #expect(policy.evaluate(observation).accepted)
+    #expect(!text.contains(#"\"pcm\":"#))
+    #expect(!text.contains(#"\"samples\":"#))
+    #expect(!text.contains(#"\"sampleData\":"#))
+    #expect(!text.contains(#"\"waveform\":"#))
+    #expect(observation.sourceFingerprint.count == 16)
+  }
+
+  @Test("Every failed dimension maps to one bounded future decision reason")
+  func runtimeDecisionReasonsRemainIndependent() throws {
+    let artifacts = try qualifiedArtifacts()
+    let observation = try LongHorizonRuntimePolicyObservation(
+      calibrationObservation: artifacts.holdoutCorpus.observations[0],
+      sampleRate: 8_000)
+    let expected: [LongHorizonTrajectoryDecisionReason] = [
+      .identity, .duration, .semanticPeriodicity, .permanentPeak,
+      .recoveryStarvation, .identityRecall, .dramaticDebt,
+      .capabilityFatigue, .operatorConsequence, .effectFatigue,
+    ]
+
+    for (dimension, reason) in zip(
+      LongHorizonPolicyFailureDimension.allCases,
+      expected)
+    {
+      let verdict = LongHorizonPolicyVerdict(
+        accepted: false,
+        failedDimensions: [dimension],
+        failedSemanticMetrics: [],
+        failedOperatorDeltas: [],
+        failedEffectFamilies: [])
+      let decision = LongHorizonFutureDecisionFactory.make(
+        observation: observation,
+        verdict: verdict,
+        policyVersion: "test-runtime-policy.v1",
+        observedThroughPhraseIndex: 713,
+        observedThroughBar: observation.observedBarCount,
+        recoveryEligible: true)
+      #expect(decision?.action == .recover)
+      #expect(decision?.reasons == [reason])
+      #expect(decision?.targetPhraseIndex == 714)
+      #expect(decision?.targetBar == observation.observedBarCount)
+    }
+
+    let qualified = LongHorizonFutureDecisionFactory.make(
+      observation: observation,
+      verdict: LongHorizonPolicyVerdict(
+        accepted: true,
+        failedDimensions: [],
+        failedSemanticMetrics: [],
+        failedOperatorDeltas: [],
+        failedEffectFamilies: []),
+      policyVersion: "test-runtime-policy.v1",
+      observedThroughPhraseIndex: 713,
+      observedThroughBar: observation.observedBarCount,
+      recoveryEligible: false)
+    #expect(qualified?.action == .preserve)
+    #expect(qualified?.reasons == [.qualified])
+
+    let deferred = LongHorizonFutureDecisionFactory.make(
+      observation: observation,
+      verdict: LongHorizonPolicyVerdict(
+        accepted: false,
+        failedDimensions: [.effectFatigue],
+        failedSemanticMetrics: [],
+        failedOperatorDeltas: [],
+        failedEffectFamilies: [.generatedGraph]),
+      policyVersion: "test-runtime-policy.v1",
+      observedThroughPhraseIndex: 713,
+      observedThroughBar: observation.observedBarCount,
+      recoveryEligible: false)
+    #expect(deferred == nil)
+  }
+
+  @Test("Short runtime evidence is reason coded but cannot change trajectory")
+  func shortRuntimeEvidenceCannotDecide() throws {
+    let artifacts = try qualifiedArtifacts()
+    let short = makeObservation(rootSeed: 777, observedBarCount: 1_000)
+    let observation = try LongHorizonRuntimePolicyObservation(
+      calibrationObservation: short,
+      sampleRate: 8_000)
+    let evaluator = try LongHorizonProfessionalProfileEvaluator(
+      profile: artifacts.profile)
+    let verdict = evaluator.evaluate(observation)
+
+    #expect(!observation.hasMinimumDecisionEvidence)
+    #expect(verdict.failedDimensions.contains(.duration))
+    #expect(LongHorizonFutureDecisionFactory.make(
+      observation: observation,
+      verdict: verdict,
+      policyVersion: "test-runtime-policy.v1",
+      observedThroughPhraseIndex: 90,
+      observedThroughBar: 1_000,
+      recoveryEligible: true
+    ) == nil)
+  }
 }
 
-private typealias QualifiedLongHorizonArtifacts = (
+typealias QualifiedLongHorizonArtifacts = (
   development: LongHorizonPolicyCalibrationCorpus,
   profile: LongHorizonProfessionalProfile,
   adversarial: LongHorizonAdversarialSuiteReport,
@@ -246,7 +364,7 @@ private typealias QualifiedLongHorizonArtifacts = (
   holdout: LongHorizonHoldoutQualification
 )
 
-private func qualifiedArtifacts() throws -> QualifiedLongHorizonArtifacts {
+func qualifiedArtifacts() throws -> QualifiedLongHorizonArtifacts {
   let development = try LongHorizonPolicyCalibrationCorpus(
     observations: [UInt64(7), 13, 17, 42].map {
       makeObservation(rootSeed: $0)

@@ -1157,16 +1157,26 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
 
     package mutating func record(
         _ plan: AutonomousPhrasePlan,
-        rootSeed: UInt64
+        rootSeed: UInt64,
+        trajectoryDecision: LongHorizonTrajectoryDecision? = nil
     ) -> Bool {
+        let updatedLongHorizon: LongHorizonContinuationState
         switch longHorizon.applying(
             plan: plan,
             rootSeed: rootSeed
         ) {
         case let .accepted(updated):
-            longHorizon = updated
+            updatedLongHorizon = updated
         case .preserved:
             return false
+        }
+        if let trajectoryDecision,
+            case let .accepted(corrected) = updatedLongHorizon.applying(
+                trajectoryDecision: trajectoryDecision)
+        {
+            longHorizon = corrected
+        } else {
+            longHorizon = updatedLongHorizon
         }
         previousPhrase = currentPhrase
         currentPhrase = plan.memoryBars
@@ -1595,7 +1605,8 @@ package struct AutonomousSessionState: Equatable, Sendable {
         self = advance(
             using: plan,
             quality: quality,
-            liveMasterHeadroom: liveMasterHeadroom
+            liveMasterHeadroom: liveMasterHeadroom,
+            longHorizonDecision: nil
         )
     }
 
@@ -1606,7 +1617,8 @@ package struct AutonomousSessionState: Equatable, Sendable {
         using plan: AutonomousPhrasePlan,
         quality acceptedQuality: QualityContinuationState,
         liveMasterHeadroom acceptedLiveMasterHeadroom:
-            LiveMasterHeadroomContinuationState
+            LiveMasterHeadroomContinuationState,
+        longHorizonDecision: LongHorizonTrajectoryDecision? = nil
     ) -> AutonomousSessionState {
         guard acceptedLiveMasterHeadroom == liveMasterHeadroom ||
                 acceptedLiveMasterHeadroom.isImmediateSuccessor(of: liveMasterHeadroom) else {
@@ -1614,7 +1626,11 @@ package struct AutonomousSessionState: Equatable, Sendable {
         }
         guard plan.phraseIndex < Int.max else { return self }
         var nextMemory = memory
-        guard nextMemory.record(plan, rootSeed: rootSeed) else { return self }
+        guard nextMemory.record(
+            plan,
+            rootSeed: rootSeed,
+            trajectoryDecision: longHorizonDecision
+        ) else { return self }
         return AutonomousSessionState(
             rootSeed: rootSeed,
             identitySeed: identitySeed,
@@ -1766,6 +1782,19 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             return .conservative(conservativeKind)
         }
         let episode = continuation.currentEpisode
+        if episode.operatorKind == .recover,
+            episode.startedAtBar == state.memory.totalBars,
+            continuation.lastTrajectoryDecision?.action == .recover,
+            continuation.lastTrajectoryDecision?.targetPhraseIndex == state.phraseIndex,
+            continuation.lastTrajectoryDecision?.targetBar == state.memory.totalBars
+        {
+            return LongHorizonPhraseSelection(
+                episodeID: episode.id,
+                operatorKind: episode.operatorKind,
+                phraseKind: .majorBreak,
+                reason: .episodeOperator
+            )
+        }
         if state.memory.totalBars < episode.minimumHoldUntilBar {
             if episode.operatorKind == .payoff,
                conservativeKind == .energyRelease {

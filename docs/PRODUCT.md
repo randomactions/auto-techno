@@ -220,6 +220,21 @@ owners, with protected rare events and invalid context held neutral. A
 completely new performance root starts it from an empty hierarchy, while pause,
 resume, and ordinary continuation preserve the accepted identity and
 obligations.
+
+Long-horizon Phase 7 now closes the first bounded future-adaptation path. During
+detached preparation, the accepted prepared successor contributes reduced
+semantic, signal, operator, and effect evidence at the active route rate. Only a
+complete observation can produce an exact reason-coded preserve/recover
+decision, and recover can affect only an eligible unscheduled successor through
+the one existing director and major-break vocabulary. The App commits that
+decision with the musical, quality, and live continuation as one immutable
+transaction. Missing, late, stale, short, malformed, wrong-root, wrong-rate, or
+recovery-ineligible evidence preserves the accepted episode. Route recovery
+rolls observation state back to the interrupted phrase's incoming boundary so
+it cannot count or spend the same event twice. This adds no user control,
+alternate engine, renderer, graph, audio buffer, microphone input, or callback
+analysis.
+
 Professional quality remains an unverified release goal until the shipping
 policy and its operational gates pass. Professional Evidence v17 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
