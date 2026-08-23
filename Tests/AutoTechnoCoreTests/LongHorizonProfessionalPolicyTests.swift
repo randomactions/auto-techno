@@ -1,0 +1,343 @@
+import AutoTechnoCore
+import Foundation
+import Testing
+
+@testable import AutoTechnoDSP
+
+@Suite("Long-horizon calibrated professional policy")
+struct LongHorizonProfessionalPolicyTests {
+  @Test("Diverse development, adversarial attacks, and disjoint holdout form one policy")
+  func completeQualificationChain() throws {
+    let artifacts = try qualifiedArtifacts()
+    let policy = try LongHorizonProfessionalPolicy(
+      profile: artifacts.profile,
+      adversarial: artifacts.adversarial,
+      holdout: artifacts.holdout)
+
+    #expect(artifacts.development.observations.count == 4)
+    #expect(artifacts.profile.developmentJourneyCount == 4)
+    #expect(artifacts.profile.sampleRates == [8_000, 12_000])
+    #expect(artifacts.adversarial.passed)
+    #expect(
+      artifacts.adversarial.cases.map(\.attack)
+        == LongHorizonAdversarialAttack.allCases)
+    #expect(artifacts.adversarial.cases.allSatisfy { $0.rejected })
+    #expect(artifacts.holdout.qualified)
+    #expect(artifacts.holdout.journeys.count == 2)
+    #expect(artifacts.holdout.journeys.allSatisfy { $0.verdict.accepted })
+    #expect(
+      policy.policyVersion.hasPrefix(
+        LongHorizonProfessionalPolicySchema.policyFamilyVersion))
+    #expect(policy.evaluate(artifacts.holdoutCorpus.observations[0]).accepted)
+  }
+
+  @Test("Every policy dimension is independent and reason coded")
+  func nonCompensableDimensions() throws {
+    let artifacts = try qualifiedArtifacts()
+    let evaluator = try LongHorizonProfessionalProfileEvaluator(
+      profile: artifacts.profile)
+    let source = artifacts.development.observations[0]
+
+    #expect(evaluator.evaluate(source).accepted)
+    for adversarial in artifacts.adversarial.cases {
+      #expect(adversarial.rejected)
+      #expect(!adversarial.failedDimensions.isEmpty)
+    }
+    #expect(
+      artifacts.adversarial.cases.first(where: {
+        $0.attack == .permanentPeak
+      })?.failedDimensions.contains(.permanentPeak) == true)
+    #expect(
+      artifacts.adversarial.cases.first(where: {
+        $0.attack == .semanticSignalMismatch
+      })?.failedDimensions.contains(.operatorConsequence) == true)
+    #expect(
+      artifacts.adversarial.cases.first(where: {
+        $0.attack == .effectWetnessRatchet
+      })?.failedDimensions.contains(.effectFatigue) == true)
+  }
+
+  @Test("Holdout roots and source identities must be disjoint")
+  func holdoutMustBeDisjoint() throws {
+    let development = try LongHorizonPolicyCalibrationCorpus(
+      observations: [UInt64(7), 13, 17, 42].map {
+        makeObservation(rootSeed: $0)
+      })
+    let profile = try LongHorizonProfessionalProfile(corpus: development)
+    let adversarial = try LongHorizonAdversarialSuiteReport(
+      profile: profile,
+      sourceObservation: development.observations[0])
+    let overlap = try LongHorizonPolicyCalibrationCorpus(
+      observations: [
+        makeObservation(rootSeed: 7),
+        makeObservation(rootSeed: 112_358),
+      ])
+
+    #expect(throws: LongHorizonProfessionalPolicyError.holdoutFailure) {
+      try LongHorizonHoldoutQualification(
+        profile: profile,
+        adversarial: adversarial,
+        developmentCorpus: development,
+        holdoutCorpus: overlap)
+    }
+  }
+
+  @Test("Observed overdue debt is bounded without becoming compensable")
+  func overdueDebtIsCalibratedIndependently() throws {
+    let development = try LongHorizonPolicyCalibrationCorpus(
+      observations: zip([UInt64(7), 13, 17, 42], [2.0, 3.0, 4.0, 5.0]).map {
+        makeObservation(rootSeed: $0.0, overdueDebtCount: $0.1)
+      })
+    let profile = try LongHorizonProfessionalProfile(corpus: development)
+    let evaluator = try LongHorizonProfessionalProfileEvaluator(profile: profile)
+    let representative = makeObservation(rootSeed: 99, overdueDebtCount: 5)
+    let excessive = makeObservation(rootSeed: 100, overdueDebtCount: 12)
+    let noOutstandingAge = makeObservation(
+      rootSeed: 101, overdueDebtCount: 0, oldestDebtAgeBars: 0)
+
+    #expect(evaluator.evaluate(representative).accepted)
+    #expect(evaluator.evaluate(noOutstandingAge).accepted)
+    let verdict = evaluator.evaluate(excessive)
+    #expect(!verdict.accepted)
+    #expect(verdict.failedDimensions == [.dramaticDebt])
+    #expect(verdict.failedSemanticMetrics == [.overdueDebtCount])
+  }
+
+  @Test("Insufficient duration, rate coverage, and journey diversity cannot calibrate")
+  func incompleteEvidenceCannotCalibrate() throws {
+    let twoJourneys = try LongHorizonPolicyCalibrationCorpus(
+      observations: [UInt64(7), 13].map { makeObservation(rootSeed: $0) })
+    #expect(throws: LongHorizonProfessionalPolicyError.insufficientEvidence) {
+      try LongHorizonProfessionalProfile(corpus: twoJourneys)
+    }
+
+    let short = makeObservation(rootSeed: 99, observedBarCount: 1_000)
+    let shortCorpus = try LongHorizonPolicyCalibrationCorpus(
+      observations: [
+        short,
+        makeObservation(rootSeed: 100),
+        makeObservation(rootSeed: 101),
+        makeObservation(rootSeed: 102),
+      ])
+    #expect(throws: LongHorizonProfessionalPolicyError.insufficientEvidence) {
+      try LongHorizonProfessionalProfile(corpus: shortCorpus)
+    }
+
+    let oneRate = makeObservation(rootSeed: 103, sampleRates: [8_000])
+    #expect(!oneRate.isComplete)
+  }
+
+  @Test("Reduced observations and qualification artifacts replay byte for byte")
+  func deterministicReplay() throws {
+    let first = try qualifiedArtifacts()
+    let replay = try qualifiedArtifacts()
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+
+    #expect(first.development == replay.development)
+    #expect(first.profile == replay.profile)
+    #expect(first.adversarial == replay.adversarial)
+    #expect(first.holdout == replay.holdout)
+    #expect(
+      try encoder.encode(first.development)
+        == encoder.encode(replay.development))
+    #expect(try encoder.encode(first.profile) == encoder.encode(replay.profile))
+    #expect(
+      try encoder.encode(first.adversarial)
+        == encoder.encode(replay.adversarial))
+    #expect(try encoder.encode(first.holdout) == encoder.encode(replay.holdout))
+    #expect(
+      try LongHorizonPolicyCalibrationCorpus.decodeDeterministicJSON(
+        first.development.deterministicJSON()) == first.development)
+    #expect(
+      try LongHorizonPolicyObservation.decodeDeterministicJSON(
+        first.development.observations[0].deterministicJSON())
+        == first.development.observations[0])
+  }
+
+  @Test("Bundled Stage 6 artifacts activate only the exact calibrated policy")
+  func bundledArtifacts() throws {
+    let artifacts = try LongHorizonProfessionalPolicyArtifacts.load()
+
+    #expect(
+      artifacts.profile.fingerprint
+        == LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint)
+    #expect(
+      artifacts.adversarial.fingerprint
+        == LongHorizonProfessionalPolicyArtifacts.expectedAdversarialFingerprint)
+    #expect(
+      artifacts.holdout.fingerprint
+        == LongHorizonProfessionalPolicyArtifacts.expectedHoldoutFingerprint)
+    #expect(artifacts.adversarial.passed)
+    #expect(artifacts.holdout.qualified)
+    #expect(
+      artifacts.policy.policyVersion
+        == [
+          LongHorizonProfessionalPolicySchema.policyFamilyVersion,
+          "profile-\(artifacts.profile.fingerprint)",
+          "adversarial-\(artifacts.adversarial.fingerprint)",
+          "holdout-\(artifacts.holdout.fingerprint)",
+        ].joined(separator: "."))
+    for name in [
+      LongHorizonProfessionalPolicyArtifacts.profileResource,
+      LongHorizonProfessionalPolicyArtifacts.adversarialResource,
+      LongHorizonProfessionalPolicyArtifacts.holdoutResource,
+    ] {
+      #expect(
+        LongHorizonProfessionalPolicyArtifacts
+          .containsBundledResource(named: name))
+    }
+  }
+
+  @Test("Bundled policy resources are reduced, canonical, and fail closed")
+  func bundledArtifactsFailClosed() throws {
+    let artifacts = try LongHorizonProfessionalPolicyArtifacts.load()
+    let profileData = try artifacts.profile.deterministicJSON()
+    let adversarialData = try artifacts.adversarial.deterministicJSON()
+    let holdoutData = try artifacts.holdout.deterministicJSON()
+    let texts = try [profileData, adversarialData, holdoutData].map { data in
+      try #require(String(data: data, encoding: .utf8))
+    }
+
+    for text in texts {
+      #expect(!text.contains(#"\"pcm\":"#))
+      #expect(!text.contains(#"\"samples\":"#))
+      #expect(!text.contains(#"\"sampleData\":"#))
+      #expect(!text.contains(#"\"waveform\":"#))
+      #expect(!text.contains(#"\"audioData\":"#))
+    }
+
+    var packagedProfile = profileData
+    packagedProfile.append(0x0A)
+    _ = try LongHorizonProfessionalPolicyArtifacts(
+      profileData: packagedProfile,
+      adversarialData: adversarialData,
+      holdoutData: holdoutData)
+
+    var nonCanonical = Data([0x20])
+    nonCanonical.append(profileData)
+    #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
+      try LongHorizonProfessionalPolicyArtifacts(
+        profileData: nonCanonical,
+        adversarialData: adversarialData,
+        holdoutData: holdoutData)
+    }
+
+    let oldProfile = try #require(
+      texts[0].replacingOccurrences(
+        of: LongHorizonProfessionalPolicySchema.profileVersion,
+        with: "autotechno-long-horizon-professional-profile.v0"
+      )
+      .data(using: .utf8))
+    #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
+      try LongHorizonProfessionalPolicyArtifacts(
+        profileData: oldProfile,
+        adversarialData: adversarialData,
+        holdoutData: holdoutData)
+    }
+  }
+}
+
+private typealias QualifiedLongHorizonArtifacts = (
+  development: LongHorizonPolicyCalibrationCorpus,
+  profile: LongHorizonProfessionalProfile,
+  adversarial: LongHorizonAdversarialSuiteReport,
+  holdoutCorpus: LongHorizonPolicyCalibrationCorpus,
+  holdout: LongHorizonHoldoutQualification
+)
+
+private func qualifiedArtifacts() throws -> QualifiedLongHorizonArtifacts {
+  let development = try LongHorizonPolicyCalibrationCorpus(
+    observations: [UInt64(7), 13, 17, 42].map {
+      makeObservation(rootSeed: $0)
+    })
+  let profile = try LongHorizonProfessionalProfile(corpus: development)
+  let adversarial = try LongHorizonAdversarialSuiteReport(
+    profile: profile,
+    sourceObservation: development.observations[0])
+  let holdoutCorpus = try LongHorizonPolicyCalibrationCorpus(
+    observations: [112_358, 141_421].map { seed in
+      makeObservation(rootSeed: seed, variation: 0.5)
+    })
+  let holdout = try LongHorizonHoldoutQualification(
+    profile: profile,
+    adversarial: adversarial,
+    developmentCorpus: development,
+    holdoutCorpus: holdoutCorpus)
+  return (development, profile, adversarial, holdoutCorpus, holdout)
+}
+
+private func makeObservation(
+  rootSeed: UInt64,
+  observedBarCount: Int = 7_801,
+  sampleRates: [Double] = [8_000, 12_000],
+  variation: Double? = nil,
+  overdueDebtCount: Double = 0,
+  oldestDebtAgeBars: Double? = nil
+) -> LongHorizonPolicyObservation {
+  let offset = variation ?? Double(rootSeed % 4)
+  let semantic: [LongHorizonPolicyNamedValue] = [
+    .init(metric: .highTensionDwellBars, value: 16 + offset),
+    .init(metric: .recoveryBarRatio, value: 0.18 + offset * 0.005),
+    .init(metric: .dominantSemanticPeriodicity, value: 0.42 + offset * 0.01),
+    .init(metric: .eventSignatureRepeatRatio, value: 0.66 + offset * 0.01),
+    .init(metric: .matchedIdentityRecallRatio, value: 0.82 + offset * 0.01),
+    .init(metric: .zeroAgeDebtRatio, value: 0),
+    .init(metric: .overdueDebtCount, value: overdueDebtCount),
+    .init(
+      metric: .oldestDebtAgeBars,
+      value: oldestDebtAgeBars ?? 80 + offset * 2),
+    .init(metric: .maximumCapabilityRunBars, value: 28 + offset),
+  ]
+  let deltas = sampleRates.flatMap { rate in
+    LongHorizonEpisodeOperator.allCases.flatMap { operatorKind in
+      LongHorizonSignalMetric.allCases.map { metric in
+        let operatorIndex = Double(
+          LongHorizonEpisodeOperator.allCases.firstIndex(of: operatorKind) ?? 0)
+        let metricIndex = Double(
+          LongHorizonSignalMetric.allCases.firstIndex(of: metric) ?? 0)
+        return LongHorizonPolicyOperatorDelta(
+          sampleRate: rate,
+          operatorKind: operatorKind,
+          metric: metric,
+          transitionCount: 2,
+          meanDelta: operatorIndex * 0.4 + metricIndex * 0.03
+            + offset * 0.01 + rate / 1_000_000)
+      }
+    }
+  }
+  let effects = LongHorizonEffectFamily.allCases.enumerated().map { index, family in
+    LongHorizonPolicyEffectObservation(
+      family: family,
+      observedBarCount: 96,
+      eligibleBarCount: 24 + index,
+      activeBarCount: 12 + index,
+      tailOnlyBarCount: 2,
+      recoveryCount: 3,
+      maximumActiveRunBars: 5 + index,
+      wetBarOccupancy: Double(12 + index) / 96,
+      maximumReturnToSourceDB: -12 + Double(index))
+  }
+  return LongHorizonPolicyObservation(
+    engineVersion: QualityQualificationContract.engineVersion,
+    primaryPolicyVersion:
+      LongHorizonProfessionalPolicySchema.requiredPrimaryPolicyVersion,
+    rootSeed: rootSeed,
+    semanticFingerprint: fixedPolicyHex(rootSeed &* 17),
+    observedPhraseCount: 714,
+    observedBarCount: observedBarCount,
+    semanticValues: semantic,
+    sampleRates: sampleRates,
+    signalFingerprints: sampleRates.enumerated().map {
+      fixedPolicyHex(rootSeed &* 31 &+ UInt64($0.offset))
+    },
+    signalObservationCounts: sampleRates.map { _ in 12 },
+    signalOmittedPhraseCounts: sampleRates.map { _ in 702 },
+    operatorDeltas: deltas,
+    effects: effects)
+}
+
+private func fixedPolicyHex(_ value: UInt64) -> String {
+  let raw = String(value, radix: 16)
+  return String(repeating: "0", count: max(0, 16 - raw.count)) + raw
+}
