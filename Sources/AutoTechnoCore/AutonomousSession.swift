@@ -1437,6 +1437,7 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let endingHarmonicContinuation: HarmonicContinuationState
     package let longHorizonSelection: LongHorizonPhraseSelection
     package let longHorizonEnergyCoordination: LongHorizonEnergyCoordination
+    package let longHorizonEffectSentence: LongHorizonEffectSentence?
 
     package init(phraseIndex: Int, startBar: Int, barCount: Int,
                  kind: AutonomousPhraseKind, scene: TechnoScene, dna: SceneDNA,
@@ -1500,6 +1501,11 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
             startBar: self.startBar,
             phraseKind: kind,
             selectionReason: resolvedSelection.reason
+        )
+        longHorizonEffectSentence = LongHorizonEffectSentence.resolving(
+            phraseIndex: self.phraseIndex,
+            phraseKind: kind,
+            resolvedBars: self.resolvedBars
         )
     }
 

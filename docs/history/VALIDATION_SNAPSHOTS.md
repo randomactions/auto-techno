@@ -2135,3 +2135,53 @@ graph stage, chain, renderer, App scheduler, route lifecycle, or callback work.
 Long-horizon qualification remains unavailable; effect dose/sentence evidence,
 realized signal trajectory, calibration, listening, app/route/interruption QA,
 and physical-output soak remain unrun and are not implied by this snapshot.
+
+## Long-horizon Phase 5 effect sentences and bounded dose evidence — 2026-08-23
+
+Phase 5 adds strict Core provenance
+`autotechno-long-horizon-effect-sentence.v1` and detached DSP evidence
+`autotechno-long-horizon-effect-dose.v1`. A phrase may carry at most one
+canonical sentence, selected from the existing gated-percussion echo and
+anticipation-swell functions. Detached preparation re-derives the annotation
+from the exact resolved bars; typed candidate-plan fingerprints advance to
+`candidate-plan.typed.v19`. The fixed-capacity accumulator accepts only exact
+root/phrase/bar continuity, records activation, tail-only, and recovery
+geometry, retains the last 16 realized sentences without PCM, and fails closed
+transactionally on invalid evidence. Qualification truthfully remains
+unavailable with `no-calibrated-long-horizon-policy`.
+
+The finalized deterministic evidence is:
+
+- the seed-48,291 four-hour plan retains 7,801 bars, 714 phrases, 711 distinct
+  event signatures, and plan/bar fingerprints `4a56c7cd78fe0184` /
+  `07417d6988caf5ba`;
+- the semantic trajectory/report remains `1a8af31815eb50da` /
+  `ed606658ba2551d9`, and four/eight-hour continuation fingerprints remain
+  `b78c0cca7d89f911` / `4dbb1e5925f4db98`;
+- 63 exact effect sentences occur across four hours: 48 gated-percussion calls
+  and 15 anticipation swells; and
+- the canonical fallback-plan fingerprint under v19 is
+  `b077cf0e5aa4fcdf`.
+
+Final local validation used Xcode-selected Apple Swift with isolated caches,
+`xcrun swift`, `--disable-sandbox`, and serial SwiftPM compilation where
+applicable:
+
+- the combined Phase 0-5 long-horizon suites passed 31/31 in 38.844 seconds,
+  including an exact detached sentence-to-return witness, tail clearance,
+  transactional invalid-causality rejection, and byte-for-byte replay;
+- the greater-than-eight-hour/current-runtime/repository-surface selection
+  passed 13/13 in 46.702 seconds;
+- strict `swift-format` lint passed for all three new Stage 5 files and
+  `git diff --check` passed; and
+- the optimized `AutoTechno` product built in 100.63 seconds with SHA-256
+  `ab1068af86402a69a1078ec1a73e5b7694c4a178b2350ed8b625d6a65714af0a`.
+
+SwiftPM emitted known read-only user-cache and missing isolated `.pcm` warnings
+while every recorded exit status was green. This phase adds Core annotation and
+detached DSP evidence only. It changes no synth, preset, patch home, DSP
+primitive, effect implementation, bus, graph topology, chain, renderer, App
+scheduler, route lifecycle, or callback. Long-horizon qualification remains
+unavailable; calibrated signal-trajectory policy, listening,
+app/route/interruption QA, and physical-output soak remain unrun and are not
+implied by this snapshot.

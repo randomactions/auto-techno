@@ -97,9 +97,13 @@ inside canonical session memory. The one existing director now consumes the
 exact bound episode at an unscheduled phrase boundary, maps it onto the existing
 phrase vocabulary, records versioned selection provenance, and projects the
 episode's eight-coordinate energy target through existing score owners with an
-exact all-hold fallback. The report is still not consumed by the shipped
-evaluator; effect-dose/sentence evidence, realized trajectory qualification,
-and calibrated long-horizon adaptation remain unavailable.
+exact all-hold fallback. Each phrase can now name at most one already-resolved
+gated call/answer or anticipation turnaround, and detached DSP evidence reduces
+the current graph, pulse echo, percussion return, FDN, typed effect access, and
+masking records into fixed-capacity dose, tail, recovery, gap, last-use, and
+sentence evidence without retaining PCM. These reports are still not consumed
+by the shipped evaluator; realized trajectory qualification and calibrated
+long-horizon adaptation remain unavailable.
 
 ## Package
 

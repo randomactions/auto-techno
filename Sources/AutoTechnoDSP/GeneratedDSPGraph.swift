@@ -1416,7 +1416,13 @@ package enum AutonomousPhrasePreparer {
                   startBar: plan.startBar,
                   phraseKind: plan.kind,
                   selection: plan.longHorizonSelection
-              ) else {
+              ),
+              plan.longHorizonEffectSentence ==
+                LongHorizonEffectSentence.resolving(
+                    phraseIndex: plan.phraseIndex,
+                    phraseKind: plan.kind,
+                    resolvedBars: plan.resolvedBars
+                ) else {
             return false
         }
         for (index, resolved) in plan.resolvedBars.enumerated() {

@@ -30,9 +30,10 @@ recency and rare-operator reserve in the canonical continuation. Phase 3
 exercises the existing palette through episode-aware phrase selection. Phase 4
 now coordinates its existing foundation, role, percussion, narrative, harmonic,
 timbral, spatial, and transition choices from the exact episode target. The
-four-hour trajectory exposes no repeatable missing sound capability, so Stage 5
-will add dose/recovery and phrase-sentence evidence without adding an effect.
-Only a trajectory or translation deficit should trigger richer DSP. This
+four-hour trajectory exposes no repeatable missing sound capability. Stage 5
+therefore adds dose/recovery and phrase-sentence evidence without adding an
+effect. The next gate is a compatible realized signal trajectory and calibrated
+policy. Only a repeatable trajectory or translation deficit should trigger richer DSP. This
 prevents speculative variety from hiding a weak director.
 
 The controlling design is
@@ -90,7 +91,7 @@ Status meanings:
 
 ### LH-SND-02 — effect dose, cooldown, and recovery evidence
 
-**Status:** foundation required; evidence-first, no new effect.
+**Status:** implemented foundation; unqualified, no new effect.
 
 - **Canonical owner:** existing effect access, graph, pulse/unsynced echo,
   chorus, comb, filtered returns, gated/anticipatory return, and FDN evidence.
@@ -111,7 +112,7 @@ Status meanings:
 
 ### LH-SND-03 — phrase-level effect sentence
 
-**Status:** foundation required before effect DSP expansion.
+**Status:** implemented foundation; unqualified before effect DSP expansion.
 
 - **Canonical owner:** existing motif, response, transition, percussion-return,
   pulse-echo, and structural-gesture relations.
@@ -290,8 +291,8 @@ or a second graph.
    hierarchy, and Phase 3 one-director operator selection.
 2. Coordinate the existing score vocabulary, then add the compatible DSP-owned
    realized-trajectory schema without letting Core depend on DSP.
-3. Add effect-dose/recovery and phrase-sentence evidence, initially using the
-   current palette, effects, graph, and neutral paths.
+3. Preserve the implemented effect-dose/recovery and phrase-sentence evidence,
+   initially using the current palette, effects, graph, and neutral paths.
 4. Calibrate development, adversarial, and disjoint holdout journeys.
 5. Select the smallest exact capability whose evidence repeatedly fails.
 6. Replace its provisional DSP in one vertical slice and update this register
@@ -303,7 +304,8 @@ or a second graph.
 
 | Date | Change | Implementation state | Qualification state |
 | --- | --- | --- | --- |
-| 2026-08-23 | Completed Phase 4 score-owned energy coordination. The exact episode target now exercises existing character, foundation, role, percussion-gear, narrative, harmonic-disclosure, spatial-carrier, transition-role, pulse-echo-eligibility, and transformation vocabulary under strict all-hold fallback. The four-hour result raises distinct existing event signatures from the Phase 3 historical 575 to 712 without adding sound machinery. No synth, preset, patch home, DSP primitive, effect implementation, bus, graph stage, chain, renderer, or callback was added; no register item is promoted to sound maturation. | Existing Core score choices and detached validation changed; current palette, DSP implementations, graph processing, and realtime path unchanged | Long-horizon qualification remains unavailable; Stage 5 dose/sentence evidence, realized signal trajectory, calibration, listening, app/route QA, and soak unrun |
+| 2026-08-23 | Completed Phase 5 effect-dose and sentence evidence. Core now annotates at most one already-resolved gated call/answer or anticipation turnaround per phrase; DSP reduces the exact accepted graph, pulse echo, percussion return, FDN, instrument-access, and masking records into fixed-capacity activation, wet occupancy, tail-only, recovery, inactive-gap, last-use, level-relationship, and recent-sentence evidence. The four-hour score scan contains 63 existing sentences: 48 gated call/responses and 15 anticipation turnarounds. No synth, preset, patch home, DSP primitive, effect implementation, bus, graph stage, chain, renderer, or callback was added. | Production Core annotation and detached DSP evidence foundation; resolved score, PCM, graph, App scheduling, route lifecycle, and realtime path unchanged | `autotechno-long-horizon-effect-dose.v1` reports qualification unavailable with `no-calibrated-long-horizon-policy`; realized signal trajectory, calibrated policy, listening, app/route QA, and soak remain unrun |
+| 2026-08-23 | Completed Phase 4 score-owned energy coordination. The exact episode target now exercises existing character, foundation, role, percussion-gear, narrative, harmonic-disclosure, spatial-carrier, transition-role, pulse-echo-eligibility, and transformation vocabulary under strict all-hold fallback. The four-hour result raises distinct existing event signatures from the Phase 3 historical 575 to 711 without adding sound machinery. No synth, preset, patch home, DSP primitive, effect implementation, bus, graph stage, chain, renderer, or callback was added; no register item is promoted to sound maturation. | Existing Core score choices and detached validation changed; current palette, DSP implementations, graph processing, and realtime path unchanged | Long-horizon qualification remains unavailable; Stage 5 dose/sentence evidence, realized signal trajectory, calibration, listening, app/route QA, and soak unrun |
 | 2026-08-23 | Completed Phase 3 episode operator selection. The one existing director maps exact bound maintain/rise/recover/reframe/payoff/recall context onto the existing phrase vocabulary, protects minimum holds and rare-event reserve, and establishes dramatic debt before a debtless payoff. Four-hour evidence fulfills all operators with seven payoffs in seven arcs and seven bounded recoveries. No synth, preset, patch, DSP primitive, effect, bus, graph, chain, renderer, or callback was added. | Production Core phrase selection and resulting existing score/PCM choices changed; current sound palette and signal path unchanged | Long-horizon qualification remains unavailable; realized signal trajectory, listening, app/route QA, and soak unrun |
 | 2026-08-23 | Completed Phase 2 hierarchical continuation after a second caption pass emphasized branching cooldowns, variable turnover rate, second-wave reserve, sparse-versus-dense headroom, identity recall, and reframing. The canonical Core memory now records bounded semantic capability recency and rare-operator reserve, but does not yet select music or expose a missing sound capability. No synth, patch, DSP primitive, effect, bus, graph, or chain was added or changed. | Production Core continuation state; phrase plan, resolved score, renderer, DSP, graph, App, and PCM unchanged | Encoded unavailable: no calibrated long-horizon policy; realized signal evidence, listening, app/route QA, and soak unrun |
 | 2026-08-23 | Completed Phase 1 Core semantic trajectory schema and offline harness. Fixed-capacity capability recurrence now describes use/fatigue across canonical and adversarial journeys, but no realized DSP trajectory or repeatable palette deficit exists yet. No synth, patch, DSP primitive, effect, bus, or chain was added. | Production Core evidence schema plus test-only canonical harness; score, renderer, graph, App, and PCM unchanged | Encoded unavailable: no calibrated long-horizon policy; listening and signal qualification unrun |

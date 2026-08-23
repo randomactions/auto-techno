@@ -613,9 +613,35 @@ renderer consumes the already-resolved existing score, and the accepted
 continuation advances only with the same atomic plan transaction. Engine v32 is
 retained because this phase recombines already reachable score and renderer
 behavior without changing a DSP implementation or calibrated primary policy.
-Candidate-plan fingerprint domain `candidate-plan.typed.v18` directly binds the
+Candidate-plan fingerprint domain `candidate-plan.typed.v19` directly binds the
 selection record, energy-coordination record, and every per-bar harmonic
-relationship so provenance-distinct plans cannot share a transaction identity.
+relationship plus the optional effect sentence so provenance-distinct plans
+cannot share a transaction identity.
+
+## Implemented long-horizon effect sentence and dose evidence
+
+The same canonical phrase plan derives at most one immutable
+`autotechno-long-horizon-effect-sentence.v1` from an already-resolved percussion
+return relation. Core owns the musical meaning and exact source/answer geometry;
+it does not authorize a new event or signal path. Detached canonical validation
+re-derives the annotation before rendering.
+
+After the accepted bounded render exists, `AutoTechnoDSP` can expose
+`autotechno-long-horizon-effect-dose.v1`. The reduction joins exact existing
+graph-input/output timbre evidence, typed instrument effect access, pulse echo,
+percussion return, spatial FDN, and masking records by phrase/bar identity. It
+keeps fingerprints, RMS, occupancy, causal flags, and bounded recurrence only;
+the prepared block's left/right PCM arrays never enter the report.
+
+The fixed-capacity accumulator is detached from the callback and observes exact
+root, phrase, and bar continuity transactionally. It distinguishes current-send
+activity, tail-only activity, and a later exact clear bar, retains the last
+sixteen realized sentences, and marks malformed/discontinuous evidence
+unavailable without changing previously accepted counters. It does not affect
+selection, score, rendering, candidate choice, commit eligibility, scheduling,
+route handling, or callback work. Long-horizon qualification remains
+unavailable until a separate calibrated policy consumes compatible realized
+trajectory evidence.
 
 ## Canonical unified loop
 

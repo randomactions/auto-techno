@@ -326,6 +326,19 @@ protagonist slew, percussion-tier movement, role count, and spatial-carrier use.
 It introduces no DSP primitive, effect implementation, graph stage, renderer,
 or callback work.
 
+Phase 5 adds two still-unqualified evidence foundations. Core schema
+`autotechno-long-horizon-effect-sentence.v1` names at most one gated
+call/response or anticipation turnaround already present in the resolved score.
+DSP schema `autotechno-long-horizon-effect-dose.v1` reduces the accepted graph,
+pulse echo, percussion return, FDN, instrument effect access, and masking records
+into per-bar and fixed-capacity session evidence for eligibility, wet occupancy,
+tail-only activity, true recovery, active/inactive runs, last use,
+return-to-source level, and the last sixteen realized sentences. It stores no
+PCM and changes no audio. Invalid causality or discontinuity makes the report
+unavailable without partially changing accepted counters. The report continues
+to declare `no-calibrated-long-horizon-policy`; no current primary-policy bound
+or quality verdict consumes it.
+
 The semantic trajectory report is not consumed by the current primary
 transaction or controller. A later DSP-owned realized-trajectory report and
 calibrated non-compensable policy must prove direction and consequence before

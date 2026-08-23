@@ -65,6 +65,14 @@ committed choices, applies only at a future phrase boundary, and returns to the
 hypnotic home for identity return. See
 `PERFORMANCE_GRAMMAR.md` for the human-readable compatibility matrix.
 
+Long-horizon effect evidence follows the same product boundary. A future phrase
+may annotate at most one effect sentence that is already present in its resolved
+score: either a gated percussion call/answer or an anticipation turnaround.
+Detached DSP reduction measures current graph, echo, percussion-return, FDN,
+effect-access, and masking consequence as bounded hashes and scalars. It adds no
+control, mode, event, send, bus, chain, graph node, or PCM retention, and it does
+not yet qualify hours-long entertainment.
+
 Every new internal parameter must have a demonstrated path through the resolved
 score or renderer into PCM, measurable evidence, and a bounded influence on a
 future decision. Parameters that do not reach that path are removed or connected

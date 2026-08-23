@@ -22,7 +22,7 @@ func fixedWidthFingerprintHex(_ value: UInt64) -> String {
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
-        digest(domain: "candidate-plan.typed.v18") { sink in
+        digest(domain: "candidate-plan.typed.v19") { sink in
             encode(plan, into: &sink)
         }
     }
@@ -468,6 +468,11 @@ private extension AutonomousTypedFingerprint {
         encode(value.longHorizonSelection, into: &sink)
         sink.field("longHorizonEnergyCoordination")
         encode(value.longHorizonEnergyCoordination, into: &sink)
+        sink.field("longHorizonEffectSentence")
+        sink.presence(value.longHorizonEffectSentence != nil)
+        if let sentence = value.longHorizonEffectSentence {
+            encode(sentence, into: &sink)
+        }
         let synthPerformance = SynthPerformancePlan(
             scene: value.scene,
             dna: value.dna,
@@ -819,6 +824,27 @@ private extension AutonomousTypedFingerprint {
         sink.raw(value.target.spatialDistance.rawValue)
         sink.field("transitionExpectation")
         sink.raw(value.target.transitionExpectation.rawValue)
+    }
+
+    static func encode(
+        _ value: LongHorizonEffectSentence,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonEffectSentence")
+        sink.field("schemaVersion"); sink.int(value.schemaVersion)
+        sink.field("schemaIdentifier"); sink.string(value.schemaIdentifier)
+        sink.field("phraseIndex"); sink.int(value.phraseIndex)
+        sink.field("phraseKind"); sink.raw(value.phraseKind.rawValue)
+        sink.field("sourceBar"); sink.int(value.sourceBar)
+        sink.field("sourceVoice"); sink.raw(value.sourceVoice)
+        sink.field("sourceStep"); sink.int(value.sourceStep)
+        sink.field("answerStartStep"); sink.int(value.answerStartStep)
+        sink.field("answerEndStep"); sink.int(value.answerEndStep)
+        sink.field("arrangementGesture"); sink.raw(value.arrangementGesture)
+        sink.field("capability"); sink.raw(value.capability.rawValue)
+        sink.field("function"); sink.raw(value.function.rawValue)
+        sink.field("attentionPriority")
+        sink.raw(value.attentionPriority.rawValue)
     }
 
     static func encode(_ value: PerformanceBar, into sink: inout StreamingFNV1a) {

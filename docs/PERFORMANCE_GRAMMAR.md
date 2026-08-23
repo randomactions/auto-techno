@@ -106,6 +106,22 @@ structural-marker gestures. Identity return remains Hypnotic Lock. Payoff and
 recall minimum holds, debt establishment, and invalid hierarchy context cannot
 spend their rare event early; they use the exact all-hold path.
 
+## Long-horizon effect sentences
+
+After the score is resolved, a phrase may name at most one semantic effect
+sentence that already exists in its bars. A gated percussion echo is a
+supporting call/response; an anticipation swell is a foreground turnaround and
+wins if both candidates exist. The sentence binds exact phrase, source bar,
+source voice/step, answer window, arrangement gesture, capability, function,
+and attention priority. It does not create an event, effect permission, send,
+return, chain, or renderer choice. No eligible relation means no sentence.
+
+Detached DSP evidence must then prove the exact source/return hashes and RMS,
+masking observation, binding, and terminal tail clearance. Missing or forged
+causality cannot be interpreted as a neutral sentence or as successful recovery;
+it makes long-horizon effect evidence unavailable while the existing score and
+audio path remain unchanged.
+
 ## Evidence and qualification boundary
 
 Every phrase retains a `PerformanceCharacterEvidence` record containing the

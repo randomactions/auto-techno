@@ -2338,3 +2338,32 @@ chain, renderer, or callback work. Stage 5 should first measure and orchestrate
 the current effect/capability dose and phrase sentences; long-horizon
 qualification, listening, app/route QA, and physical-output soak remain
 separate and unavailable.
+
+### Phase 5 effect-sentence and dose-evidence addendum — 2026-08-23
+
+The working hypothesis was deliberately conservative: before expanding the
+palette, determine whether the current score and renderer already express rare,
+phrase-shaped effect sentences with measurable source, return, occupancy, and
+clearance. The canonical phrase plan now identifies at most one existing
+sentence: gated-percussion echo as supporting call-and-response, or the
+higher-priority anticipation swell as a foreground turnaround. Each annotation
+is bound to an exact phrase, bar, source voice/step, answer window, gesture,
+capability, function, and priority; it introduces no competing effect planner.
+
+Across the frozen seed-48,291 four-hour plan, 63 phrases carry a sentence: 48
+gated-percussion calls and 15 anticipation swells. Detached evidence binds an
+accepted prepared phrase to exact generated-graph input/output fingerprints,
+source and return levels, wet/dry balance, masking, FDN occupancy, and tail
+clearance. The session accumulator retains only bounded counters plus the last
+16 realized sentences, distinguishes activation, tail-only, and recovery bars,
+and rejects discontinuity or impossible causality transactionally. Adversarial
+witnesses prove that a tail remains active through its exact final occupied bar
+and that invalid evidence cannot mutate accepted counts.
+
+This phase demonstrates that two useful long-horizon sentence functions are
+already present and measurable. It therefore adds no synth, preset, patch home,
+DSP primitive, effect algorithm, bus, graph stage, chain, renderer, scheduler,
+or realtime-callback work. Long-horizon qualification remains unavailable
+without a calibrated policy over compatible realized signal trajectories.
+Listening, app/route/interruption QA, and physical-output soak remain separate
+and unrun; none is implied by deterministic detached evidence.

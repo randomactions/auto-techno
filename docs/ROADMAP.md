@@ -269,20 +269,22 @@ landmarks, and payoff/recovery/recall obligations. It observes committed plans
 and remains bounded and exactly replayable. Phase 3 now maps all six operators
 through the same director onto the existing phrase vocabulary, protects minimum
 holds and rare-event reserve, establishes debt before a debtless payoff, and
-records `autotechno-long-horizon-selection.v1` provenance. The next missing
-slice, Phase 4, now records
+records `autotechno-long-horizon-selection.v1` provenance. Phase 4 records
 `autotechno-long-horizon-energy-coordination.v1` and projects the canonical
 eight-coordinate target through existing score owners with exact all-hold
-fallback and bounded active movement. The next missing slice is effect/capability
-dose and phrase-sentence evidence from the current graph, followed by compatible
-realized-PCM trajectory evidence and a calibrated adversarial policy that can
+fallback and bounded active movement. Phase 5 now adds an at-most-one existing
+effect sentence plus fixed-capacity graph/echo/percussion-return/FDN dose,
+tail, recovery, gap, last-use, and level evidence without retaining PCM or
+changing audio. The next missing slice is compatible realized-PCM trajectory
+evidence and a calibrated adversarial policy that can
 reject fixed-period cycling, permanent peak, ineffective recovery, capability
 fatigue, failed recall, and semantic/PCM direction mismatches.
 
 The associated DSP, synth, patch-family, and effect follow-up register is
 [`LONG_HORIZON_SOUND_CAPABILITIES.md`](LONG_HORIZON_SOUND_CAPABILITIES.md). The
 initial audit selects evidence-first effect-dose, recovery, phrase-sentence, and
-multi-rate modulation foundations; it does not yet justify another synthesis
+multi-rate modulation foundations; the effect-dose and phrase-sentence
+foundations are now implemented but unqualified. They do not justify another synthesis
 architecture, patch family, effect bus, or selectable chain. Any later sound
 expansion must be selected by a repeatable exact-checkpoint deficit and replace
 the affected provisional realization in place.
