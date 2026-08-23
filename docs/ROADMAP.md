@@ -262,12 +262,16 @@ engagement verdict. Phase 1 adds the Core-owned
 `autotechno-long-horizon-semantic.v1` streaming accumulator and machine-readable
 report. Its fixed-capacity occupancy, recurrence, scalar, periodicity, identity,
 capability, and dramatic-debt evidence remains offline and descriptive; real
-four/eight-hour and adversarial tests cannot yet pass or reject music. The next
-missing foundation is one compact hierarchical continuation consumed by the
-existing director, followed by compatible realized-PCM trajectory evidence and
-a calibrated adversarial policy that can reject fixed-period cycling, permanent
-peak, ineffective recovery, capability fatigue, failed recall, and semantic/PCM
-direction mismatches.
+four/eight-hour and adversarial tests cannot yet pass or reject music. Phase 2
+adds `autotechno-long-horizon-continuation.v1` to canonical session memory: one
+renewable arc/episode intention with fixed-domain recency, reserve, identity
+landmarks, and payoff/recovery/recall obligations. It observes committed plans
+and remains bounded and exactly replayable, but deliberately does not yet change
+the next plan. The next missing slice is episode-operator selection through the
+existing director, followed by score-owned energy coordination, compatible
+realized-PCM trajectory evidence, and a calibrated adversarial policy that can
+reject fixed-period cycling, permanent peak, ineffective recovery, capability
+fatigue, failed recall, and semantic/PCM direction mismatches.
 
 The associated DSP, synth, patch-family, and effect follow-up register is
 [`LONG_HORIZON_SOUND_CAPABILITIES.md`](LONG_HORIZON_SOUND_CAPABILITIES.md). The

@@ -1068,7 +1068,7 @@ package struct LongHorizonSemanticTrajectoryAccumulator: Sendable {
         )
     }
 
-    private static func semanticCapabilities(
+    package static func semanticCapabilities(
         resolved: ResolvedPerformanceBar,
         composition: PhraseCompositionBar
     ) -> [LongHorizonSemanticCapability] {

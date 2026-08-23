@@ -25,8 +25,10 @@ sound vocabulary to implement and test the first long-horizon controller:
   and structural recovery relations.
 
 The immediate sound-related foundation is to measure how these capabilities are
-used and recover over time. Only a repeatable trajectory or translation deficit
-should trigger richer DSP. This prevents speculative variety from hiding a weak
+used and recover over time. Phase 2 now records fixed-domain semantic capability
+recency and rare-operator reserve in the canonical continuation, without adding
+or changing audio. Only a repeatable trajectory or translation deficit should
+trigger richer DSP. This prevents speculative variety from hiding a weak
 director.
 
 The controlling design is
@@ -280,10 +282,12 @@ or a second graph.
 
 ## Implementation order
 
-1. Preserve the implemented Phase 1 semantic schema and add the compatible
-   DSP-owned realized-trajectory schema without letting Core depend on DSP.
-2. Add effect-dose/recovery and phrase-sentence evidence without changing PCM.
-3. Operate the hierarchical director using the current palette and effects.
+1. Preserve the implemented Phase 1 semantic schema and Phase 2 canonical
+   hierarchy while the existing director begins consuming episode context.
+2. Coordinate the existing score vocabulary, then add the compatible DSP-owned
+   realized-trajectory schema without letting Core depend on DSP.
+3. Add effect-dose/recovery and phrase-sentence evidence, initially using the
+   current palette, effects, graph, and neutral paths.
 4. Calibrate development, adversarial, and disjoint holdout journeys.
 5. Select the smallest exact capability whose evidence repeatedly fails.
 6. Replace its provisional DSP in one vertical slice and update this register
@@ -295,6 +299,7 @@ or a second graph.
 
 | Date | Change | Implementation state | Qualification state |
 | --- | --- | --- | --- |
+| 2026-08-23 | Completed Phase 2 hierarchical continuation after a second caption pass emphasized branching cooldowns, variable turnover rate, second-wave reserve, sparse-versus-dense headroom, identity recall, and reframing. The canonical Core memory now records bounded semantic capability recency and rare-operator reserve, but does not yet select music or expose a missing sound capability. No synth, patch, DSP primitive, effect, bus, graph, or chain was added or changed. | Production Core continuation state; phrase plan, resolved score, renderer, DSP, graph, App, and PCM unchanged | Encoded unavailable: no calibrated long-horizon policy; realized signal evidence, listening, app/route QA, and soak unrun |
 | 2026-08-23 | Completed Phase 1 Core semantic trajectory schema and offline harness. Fixed-capacity capability recurrence now describes use/fatigue across canonical and adversarial journeys, but no realized DSP trajectory or repeatable palette deficit exists yet. No synth, patch, DSP primitive, effect, bus, or chain was added. | Production Core evidence schema plus test-only canonical harness; score, renderer, graph, App, and PCM unchanged | Encoded unavailable: no calibrated long-horizon policy; listening and signal qualification unrun |
 | 2026-08-23 | Completed Phase 0 with a frozen versioned four-hour Core planning snapshot, canonical JSON, and separate plan/bar fingerprints. It exposed no sound-capability deficit and authorized no DSP, synth, patch, effect, bus, or chain change. | Test-only descriptive evidence; no score, renderer, or PCM change | Encoded unavailable: no calibrated long-horizon policy |
 | 2026-08-23 | Created from the seven-source long-horizon study and current engine audit. Identified evidence-first effect/modulation foundations and conditional maturation paths; selected no new synth, patch, effect, or chain. | Documentation and test-only four-hour planning baseline | Long-horizon qualification unavailable; no PCM change |

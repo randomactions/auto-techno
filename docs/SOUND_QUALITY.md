@@ -308,10 +308,18 @@ trajectories plus malformed and adversarial synthetic journeys, but the report
 has no pass/reject field and always declares qualification unavailable with
 reason `no-calibrated-long-horizon-policy`.
 
-This semantic report is not part of the current primary transaction, runtime
-continuation, or controller. A later DSP-owned realized-trajectory report and
-calibrated non-compensable policy must prove direction and consequence before
-any long-horizon quality claim or automatic future decision. See
+Phase 2 separately embeds `autotechno-long-horizon-continuation.v1` in canonical
+`TemporalMusicalMemory`. It records committed arc/episode context, fixed-domain
+capability recency, semantic energy start/target coordinates, identity
+landmarks, reserve, and payoff/recovery/recall obligations. It is bounded,
+schema-safe, deterministic, and transactionally preserves the accepted episode
+on malformed input. It does not currently choose, reject, correct, render, or
+evaluate music.
+
+Neither long-horizon schema is part of the current primary transaction or
+controller. A later DSP-owned realized-trajectory report and calibrated
+non-compensable policy must prove direction and consequence before any
+long-horizon quality claim or automatic future decision. See
 [`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md).
 
 ## Engine ownership

@@ -531,6 +531,35 @@ can currently select, reject, or adjust music. The hierarchy and next ownership
 boundary are defined in
 [`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md).
 
+## Implemented canonical long-horizon continuation state
+
+`TemporalMusicalMemory` now carries
+`autotechno-long-horizon-continuation.v1` as part of the one canonical session
+continuation. A fresh `AutonomousSessionState` binds it to the exact performance
+root and current phrase/bar boundary. Each successful `advancePlanning` first
+applies the committed plan to a proposed hierarchy, then retains the accepted
+state alongside existing phrase, debt, narrative, interlock, spatial, and
+harmonic memory.
+
+The hierarchy owns one current 8-32-macro episode inside one renewable 3-6-
+episode arc. It stores fixed-domain capability, character, harmony, and
+transformation recency plus bounded recent episodes, recent operators, identity
+landmarks, obligations, and reserve. Its decoder validates the exact schema and
+normalizes all retained capacities. Wrong roots, discontinuous phrase/bar
+boundaries, inconsistent canonical plans, exhausted obligation capacity, and
+counter overflow return a reason-coded preservation result without partially
+advancing the hierarchy. `AutonomousSessionState.advance` treats that result as
+a failed atomic commit and preserves every musical, quality, and controller
+continuation rather than advancing older memories alone.
+
+This is production continuation state but still not a control input. The
+director's plan is currently identical when only the long-horizon context is
+changed behind otherwise identical local memory. It therefore changes neither
+phrase selection nor resolved score, prepared product, renderer, DSP graph, App
+scheduler, route lifecycle, or realtime callback. Stage 3 is the explicit
+boundary where the existing director may begin consuming it for an unscheduled
+future phrase.
+
 ## Canonical unified loop
 
 All future musical development extends one persistent loop:

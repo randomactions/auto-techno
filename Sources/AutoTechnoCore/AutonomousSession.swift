@@ -1078,6 +1078,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
     package private(set) var narrativeEvolution: NarrativeEvolutionState
     package private(set) var recentPerformanceCharacters: [PerformanceCharacter]
     package private(set) var harmonicContinuation: HarmonicContinuationState
+    package private(set) var longHorizon: LongHorizonContinuationState
 
     package init(recentBars: [MusicalMemoryBar] = [], currentPhrase: [MusicalMemoryBar] = [],
                 previousPhrase: [MusicalMemoryBar] = [], dramaticArc: [MusicalMemoryBar] = [],
@@ -1089,7 +1090,8 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
                 spatialContrast: SpatialContrastState = SpatialContrastState(),
                 narrativeEvolution: NarrativeEvolutionState = NarrativeEvolutionState(),
                 recentPerformanceCharacters: [PerformanceCharacter] = [],
-                harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState()) {
+                harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState(),
+                longHorizon: LongHorizonContinuationState? = nil) {
         self.recentBars = Array(recentBars.suffix(4))
         self.currentPhrase = Array(currentPhrase.suffix(16))
         self.previousPhrase = Array(previousPhrase.suffix(16))
@@ -1107,13 +1109,43 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         self.narrativeEvolution = narrativeEvolution
         self.recentPerformanceCharacters = Array(recentPerformanceCharacters.suffix(2))
         self.harmonicContinuation = harmonicContinuation
+        self.longHorizon = longHorizon ?? .unbound(
+            startingPhraseIndex: (currentPhrase.last?.phraseIndex).map {
+                $0 == Int.max ? Int.max : $0 + 1
+            } ?? 0,
+            startingBar: totalBars
+        )
     }
 
     package var barsSinceContrast: Int { distance(since: lastContrastBar) }
     package var barsSinceBreak: Int { distance(since: lastBreakBar) }
     package var barsSinceRelease: Int { distance(since: lastReleaseBar) }
 
-    package mutating func record(_ plan: AutonomousPhrasePlan) {
+    package mutating func bindLongHorizonIfNeeded(
+        rootSeed: UInt64,
+        phraseIndex: Int
+    ) {
+        guard !longHorizon.isBound else { return }
+        longHorizon = .initial(
+            rootSeed: rootSeed,
+            startingPhraseIndex: phraseIndex,
+            startingBar: totalBars
+        )
+    }
+
+    package mutating func record(
+        _ plan: AutonomousPhrasePlan,
+        rootSeed: UInt64
+    ) -> Bool {
+        switch longHorizon.applying(
+            plan: plan,
+            rootSeed: rootSeed
+        ) {
+        case let .accepted(updated):
+            longHorizon = updated
+        case .preserved:
+            return false
+        }
         previousPhrase = currentPhrase
         currentPhrase = plan.memoryBars
         recentBars = Array((recentBars + plan.memoryBars).suffix(4))
@@ -1156,6 +1188,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
             openDebts.removeAll { plan.paidDebtIDs.contains($0.id) }
         }
         if plan.requestsTopologyMutation { topologyRevision += 1 }
+        return true
     }
 
     private func distance(since bar: Int?) -> Int {
@@ -1344,7 +1377,12 @@ package struct AutonomousSessionState: Equatable, Sendable {
         ))
         self.phraseIndex = max(0, phraseIndex)
         self.intent = normalizedIntent
-        self.memory = memory
+        var boundMemory = memory
+        boundMemory.bindLongHorizonIfNeeded(
+            rootSeed: rootSeed,
+            phraseIndex: self.phraseIndex
+        )
+        self.memory = boundMemory
         self.quality = quality
         self.liveMasterHeadroom = liveMasterHeadroom
     }
@@ -1392,8 +1430,9 @@ package struct AutonomousSessionState: Equatable, Sendable {
                 acceptedLiveMasterHeadroom.isImmediateSuccessor(of: liveMasterHeadroom) else {
             return self
         }
+        guard plan.phraseIndex < Int.max else { return self }
         var nextMemory = memory
-        nextMemory.record(plan)
+        guard nextMemory.record(plan, rootSeed: rootSeed) else { return self }
         return AutonomousSessionState(
             rootSeed: rootSeed,
             identitySeed: identitySeed,

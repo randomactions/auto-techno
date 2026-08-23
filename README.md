@@ -91,10 +91,11 @@ Legal reference recordings and external analyzers may be used locally for
 development; neither they nor third-party instruments or effects are runtime
 dependencies.
 
-The first long-horizon implementation slice is an offline, fixed-capacity Core
-semantic-trajectory report. It describes canonical four/eight-hour and
-adversarial journeys but is not consumed by the shipped director or evaluator;
-long-horizon qualification remains unavailable.
+The long-horizon foundation now includes an offline, fixed-capacity Core
+semantic-trajectory report and one compact renewable arc/episode continuation
+inside canonical session memory. The continuation observes committed plans but
+does not yet influence phrase selection; the report is not consumed by the
+shipped director or evaluator. Long-horizon qualification remains unavailable.
 
 ## Package
 

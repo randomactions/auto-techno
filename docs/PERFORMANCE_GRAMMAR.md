@@ -184,5 +184,8 @@ cases, and ordered integration path are defined in
 renderer maturation is tracked separately in
 [`LONG_HORIZON_SOUND_CAPABILITIES.md`](LONG_HORIZON_SOUND_CAPABILITIES.md).
 The implemented Phase 1 Core schema observes this grammar through a bounded
-offline accumulator only. It does not add a character, phrase kind, score lane,
-planner, runtime selector, or quality verdict.
+offline accumulator. Phase 2 adds one compact renewable arc/episode context to
+canonical `TemporalMusicalMemory`, including recency, reserve, landmarks, and
+obligations. It still does not add a character, phrase kind, score lane,
+planner, runtime selector, quality verdict, or plan-selection consequence;
+Stage 3 is the explicit consumption boundary.

@@ -2236,3 +2236,37 @@ callback change. The report still declares long-horizon qualification
 unavailable. The evidence did not expose a missing synthesis or effect
 capability, so the sound-capability register records no synth, patch, DSP,
 effect, bus, chain, or selector expansion.
+
+### Phase 2 hierarchy and variability addendum — 2026-08-23
+
+A second pass over the available captions focused on variability rather than a
+single canonical set shape. It treats maintenance, rise, cooldown, shock, and
+second-wave language as reusable functions, not a fixed order; cooldown is a
+branch point; material turnover can accelerate or slow by context; scarce shock
+requires prior absence; reserve should survive for another wave; familiar
+identity can be recalled or reframed instead of replaced; and sparse passages
+have more additive headroom than already dense ones. These remain bounded
+hypotheses to test against accepted score and PCM consequence, not copied DJ
+rules or listening approval.
+
+The implementation adds `autotechno-long-horizon-continuation.v1` to canonical
+`TemporalMusicalMemory`. Variable 8-32-macro episodes form renewable 3-6-episode
+arcs around maintain, rise, recover, reframe, payoff, and recall context. The
+state records fixed-domain recency, rare-operator reserve, identity landmarks,
+and payoff/recovery/recall obligations. It observes committed plans
+transactionally and remains separate from phrase selection until Stage 3.
+
+The frozen seed-48,291 four-hour hierarchy completes 31 episodes through arc 5,
+with final-state/sequence fingerprints `a3385980ebf276fd` and
+`54ef88de604a159b`. The eight-hour hierarchy completes 63 episodes through arc
+14 and fingerprints to `0f85834770dc03c5` / `76e157416ec6b8f5`. Fixed retained
+capacities, exact replay, fresh-root variation, schema-safe decoding,
+transactional malformed-input preservation, and complete-performance reset all
+pass. Identical local memory with different episode context still yields the
+same next plan, explicitly preserving the Stage 2 boundary.
+
+This context-only slice found no evidence that the existing synthesis,
+instrument homes, effects, or graph cannot express the next controller stage.
+It therefore adds no synth, preset, patch, DSP primitive, effect, bus, chain,
+renderer, or realtime-callback work. Long-horizon quality remains unavailable
+pending director consumption, realized signal evidence, and calibrated policy.

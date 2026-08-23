@@ -190,6 +190,12 @@ phrases.
 Quality qualification is automated. A human observation may identify an
 additional deficit or motivate a policy revision, but listening is optional and
 never the mechanism that selects runtime output or promotes an engine revision.
+Long-form continuation follows the same rule. Canonical session memory now owns
+one bounded, versioned renewable arc/episode context that observes accepted
+plans; it is not a new user mode, playlist, or engine and does not yet influence
+selection. A completely new performance root starts it from an empty hierarchy,
+while pause, resume, and ordinary continuation preserve the accepted identity
+and obligations.
 Professional quality remains an unverified release goal until the shipping
 policy and its operational gates pass. Professional Evidence v17 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory

@@ -1985,3 +1985,54 @@ app/runtime or route/interruption behavior, or physical-output soak. No
 planning, continuation, renderer, DSP, graph, PCM, App, scheduler, route, or
 realtime-callback behavior changed, and the sound-capability register selected
 no synth, patch, effect, bus, or chain expansion.
+
+## Long-horizon Phase 2 hierarchical continuation — 2026-08-23
+
+Phase 2 adds production `AutoTechnoCore` schema
+`autotechno-long-horizon-continuation.v1` inside canonical
+`TemporalMusicalMemory`. It binds one renewable arc/current episode hierarchy to
+the fresh session root and observes only committed phrase plans. The state owns
+semantic energy start/target coordinates, fixed-domain capability/character/
+harmony/transformation recency, bounded identity landmarks, recent episodes and
+operators, rare-operator reserve, and payoff/recovery/recall obligations.
+
+Seed 48,291 completes 31 episodes through arc 5 over four hours. Its frozen
+final-state fingerprint is `a3385980ebf276fd` and completed-episode sequence
+fingerprint is `54ef88de604a159b`. The eight-hour request completes 63 episodes
+through arc 14; its final-state and sequence fingerprints are
+`0f85834770dc03c5` and `76e157416ec6b8f5`. Identical complete state replays
+exactly, a fresh root varies the geometry, and all six episode operator labels
+appear as context during the canonical eight-hour observation.
+
+Retained recent episodes, recent operators, identity landmarks, and obligations
+remain capped at `[8, 6, 8, 8]`; fixed-domain recency tables remain at their enum
+cardinalities. JSON round-trip is exact, unsupported schema is rejected, and an
+oversized encoded retained state is normalized back to these capacities. Wrong
+root, phrase/bar discontinuity, inconsistent plans, obligation exhaustion, and
+counter overflow preserve the previously accepted episode transactionally.
+The canonical session advance also rejects such a plan as one atomic commit,
+preventing phrase/debt memory from moving ahead of the hierarchy.
+
+Focused local validation used Xcode-selected Apple Swift with isolated caches,
+`xcrun swift`, `--disable-sandbox`, and serial execution:
+
+- the final combined Phase 0-2 long-horizon suites: 14/14 passed in 38.063
+  seconds, including the atomic malformed-plan rejection and unchanged frozen
+  planning, semantic, hierarchy-state, and episode-sequence fingerprints;
+- existing greater-than-eight-hour interlock/unified evolution: 2/2 passed in
+  12.420 seconds;
+- current canonical runtime and repository surface: 11/11 passed in 53.355
+  seconds; and
+- a clean pre-atomic-hardening production build completed in 101.83 seconds,
+  and the exact final production build completed in 77.92 seconds. The initial
+  fresh-scratch attempt could not resolve the locked Swift package hosts inside
+  the network-restricted sandbox; the approved retry fetched the same locked
+  versions and changed no dependency declaration.
+
+A context-swap test holds all local phrase memory constant and changes only the
+long-horizon value; the existing director returns the same next plan. This
+proves the hierarchy is represented without implementing Stage 3 selection.
+The slice does not qualify entertainment or professional sound and does not
+change phrase choice, resolved score, renderer, DSP, graph, PCM, App scheduling,
+route lifecycle, or realtime callback. No synth, patch, DSP primitive, effect,
+bus, graph, or chain expansion was selected.

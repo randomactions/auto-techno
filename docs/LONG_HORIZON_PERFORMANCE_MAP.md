@@ -8,14 +8,16 @@ current runtime is entertaining for hours, a new performance mode, or an
 authorization to add unrelated DSP.
 
 The current engine already continues deterministically for more than eight
-hours without unbounded musical state. Phase 1 now supplies an offline,
-Core-owned semantic trajectory report, but the shipped director does not yet
-retain or consume hour-scale journey state and there is no calibrated evaluator
-that can distinguish an earned long-form journey from a safe, finite repetition
-of phrase-scale cycles.
+hours without unbounded musical state. Phase 1 supplies an offline, Core-owned
+semantic trajectory report. Phase 2 now embeds one compact renewable arc/
+episode continuation in the canonical session memory. It observes committed
+plans, but deliberately does not yet influence phrase selection. There is also
+no calibrated evaluator that can distinguish an earned long-form journey from
+a safe, finite repetition of phrase-scale cycles.
 
-The next priority is therefore **hierarchical journey continuation**, followed
-by realized DSP trajectory evidence and calibration—not more presets. The
+The next priority is therefore **episode operator selection through the existing
+director**, followed by score-owned energy coordination, effect/capability dose,
+realized DSP trajectory evidence, and calibration—not more presets. The
 current three synthesis
 architectures, eleven patch homes, six performance characters, resolved score,
 phrase composition, spatial field, and transition vocabulary are sufficient to
@@ -77,17 +79,46 @@ Community convergence remains context, not proof. The James Hype source has no
 caption transcript, and none of the source demonstrations was used as a
 listening or professional-quality verdict.
 
+### Second-pass variability constraints
+
+A second caption pass was performed before implementing Phase 2 so the
+hierarchy would not encode one DJ-template waveform as a rule. It adds these
+bounded hypotheses to the map:
+
+- warm-up, maintain, rise, peak, cooldown, shock, and second-wave language names
+  reusable functions, not a fixed order or duration template;
+- a cooldown is a branch point: the next episode may maintain, rise again, or
+  remain reduced instead of forcing a predictable sawtooth;
+- the rate of material turnover is itself contextual: long maintenance can use
+  slower changes, while a later peak may justify faster related changes;
+- a rare shock or payoff spends reserve and is meaningful only after enough
+  lower-energy absence; recovery must restore reserve rather than perpetuate
+  the peak;
+- an established identity can return after a long absence for recognition, or
+  be reframed through a different relation, without importing unrelated
+  material;
+- sparse material has additive headroom while already dense material should
+  prefer subtraction, replacement, or restraint; and
+- any planned template remains a hypothesis until its committed transition
+  consequence is measured. The engine's analogue of an active observer is its
+  own accepted score and app-owned PCM, never a crowd sensor.
+
+These refinements constrain later operator selection and calibration. Phase 2
+records reserve, recency, obligations, and variable episode geometry but does
+not yet choose music from them.
+
 ## Falsifiable current deficit
 
 **Canonical checkpoint:** the accepted continuation immediately before
 `AutonomousSessionDirector.plan(from:)` proposes the next unscheduled phrase.
 
-**Deficit hypothesis:** current continuation lacks a compact, versioned
-hour-scale account of energy shape, perceptual recurrence, capability use,
-recovery, and reserved contrast. As a result, two four-hour journeys can both be
-finite, deterministic, structurally valid, and primary-accepted while one is a
-repetitive short-cycle treadmill and the other has motivated long-range
-development.
+**Deficit hypothesis:** current continuation now retains a compact, versioned
+hour-scale account of episode intent, semantic energy, recency, obligations, and
+reserved contrast, but the director does not yet consume it and neither semantic
+nor realized evidence can qualify the consequence. As a result, two four-hour
+journeys can both be finite, deterministic, structurally valid, and primary-
+accepted while one is a repetitive short-cycle treadmill and the other has
+motivated long-range development.
 
 **Evidence that should expose it:** the implemented
 `LongHorizonSemanticTrajectoryReport` retains bounded semantic occupancy,
@@ -220,13 +251,51 @@ capacity overflow. No policy consumes those observations yet, so every valid
 report still declares qualification unavailable with reason
 `no-calibrated-long-horizon-policy`.
 
+### Implemented Phase 2 hierarchical continuation
+
+`TemporalMusicalMemory` now owns schema
+`autotechno-long-horizon-continuation.v1`. The state binds to the fresh
+performance root and accepted phrase/bar boundary, then transactionally observes
+each committed canonical plan. It retains one renewable arc intention, one
+current episode, semantic energy start/target coordinates, named capability/
+character/harmony/transformation recency, rare-operator reserve, compact
+identity landmarks, and payoff/recovery/recall obligations.
+
+Episode geometry varies deterministically from 8-32 sixteen-bar macros; arcs
+renew after 3-6 episodes. Recent completed episodes, recent operators, identity
+landmarks, and obligations are capped at `[8, 6, 8, 8]`; fixed-domain recency
+tables cannot grow. Codable decoding verifies the schema, restores canonical
+fixed-domain tables, and clamps oversized retained collections. Wrong roots,
+phrase/bar discontinuities, inconsistent plans, obligation exhaustion, and
+counter overflow preserve the previously accepted episode without partial
+mutation. The canonical session advance also rejects that commit atomically, so
+older phrase/debt memories cannot advance while the hierarchy remains behind.
+
+For seed 48,291, the frozen four-hour continuation completes 31 episodes and
+reaches arc 5. Its final state fingerprints to `a3385980ebf276fd` and its full
+completed-episode geometry sequence to `54ef88de604a159b`. The eight-hour
+journey completes 63 episodes and reaches arc 14, with final state fingerprint
+`0f85834770dc03c5` and episode-sequence fingerprint `76e157416ec6b8f5`.
+Identical complete state replays byte-for-byte, while a fresh root varies
+episode geometry. A test can replace only the long-horizon context behind
+identical local phrase memory and observes a distinct context but an identical
+next plan: this proves Stage 2 is represented and Stage 3 selection has not been
+smuggled in early.
+
+Starting a completely new performance root creates an empty hierarchy with
+renewed reserve; ordinary continuation does not reset it. Phase 2 changes Core
+continuation state only. Phrase choices, resolved score, renderer, DSP, graph,
+PCM, App scheduling, route lifecycle, and realtime callback remain unchanged,
+and long-horizon qualification remains unavailable.
+
 ## Required musical model
 
 ### One hierarchy, not another engine
 
-The current phrase kinds remain the canonical vocabulary. A new compact
-`LongHorizonContinuationState` should give them episode context rather than
-creating another director:
+The current phrase kinds remain the canonical vocabulary. The implemented
+compact `LongHorizonContinuationState` gives them observable episode context
+without creating another director; Stage 3 will let the existing director
+consume it:
 
 ```text
 session identity and accepted continuation
@@ -247,8 +316,8 @@ thresholds, are:
 | Bar | existing 4 beats | Local role, density, timbre, and transition state. |
 | Phrase | existing 4-16 bars | One coherent intention and immutable prepared product. |
 | Macro | existing 16 bars | Gesture resolution, interlock chapter, and local return. |
-| Episode | proposed bounded 8-32 macros, roughly 4-16 minutes | Maintain, rise, recover, reframe, or pay one larger obligation. |
-| Arc | proposed bounded 3-6 episodes | Establish a home, depart, transform, recover, and recall without assuming a final ending. |
+| Episode | implemented bounded 8-32 macros, roughly 4-16 minutes | Maintain, rise, recover, reframe, or pay one larger obligation. |
+| Arc | implemented bounded 3-6 episodes | Establish a home, depart, transform, recover, and recall without assuming a final ending. |
 | Continuing session | renewable arcs | Indefinite performance with compact summaries, no unbounded history and no predetermined close. |
 
 An episode may end early when its obligation is satisfied, but may not drift
@@ -381,7 +450,7 @@ Each slice extends the one canonical owner and leaves a reusable capability.
 | --- | --- | --- | --- | --- | --- |
 | 0. Descriptive baseline — complete locally | Test-only `LongHorizonPlanningBaselineProbe` using `AutonomousSessionDirector` and real continuation | Frozen, versioned four-hour planning snapshot with canonical JSON and separate plan/bar fingerprints | Exact engine-v32 kind/character/tension/signature/debt/memory coverage; encoded qualification unavailability and no engagement verdict | Pure planning; fixture drift requires explicit review; no PCM, runtime selection, or production state change | No second planner, synthetic fixture engine, or unfrozen same-run-only comparison |
 | 1. Trajectory schema and offline harness — complete locally | `AutoTechnoCore` schema `autotechno-long-horizon-semantic.v1` plus existing canonical journey harness | Fixed-capacity semantic trajectory accumulator and machine-readable report | Real four/eight-hour evidence plus adversarial periodicity, peak dwell, capability fatigue, recall, and debt cases; qualification remains unavailable | Offline only; malformed input is unavailable without partial mutation; no runtime selection change | No opaque engagement score, handwritten pass, second planner, DSP type, or PCM retention |
-| 2. Hierarchical continuation | `TemporalMusicalMemory` extended with one compact long-horizon value | Renewable arc/episode intention, capability recency, reserve, and obligations | Demonstrate different episode context from identical local phrase history and exact replay from identical complete state | Applies only before an unscheduled phrase; bounded due/hold; preserve current episode on failure | No second director, playlist, or user mode |
+| 2. Hierarchical continuation — complete locally | `TemporalMusicalMemory` extended with `autotechno-long-horizon-continuation.v1` | Renewable arc/episode intention, fixed-domain recency, rare-operator reserve, identity landmarks, and obligations | Frozen four/eight-hour state and episode-sequence fingerprints; different episode context from identical local history; exact replay and fresh-root variation | Observes only committed plans; bounded due/hold and retained collections; schema-safe decode; preserve current episode on failure | No second director, playlist, user mode, plan selection, score, PCM, or callback change |
 | 3. Episode operator selection | `AutonomousSessionDirector.nextKind` and `makePlan` consume the new context | Maintain/rise/recover/reframe/payoff/recall policy mapped to existing phrase kinds | Planned vector must show motivated contrast, scarce peaks, recovery, and timely debt closure | Candidate count remains one; fallback is current conservative kind/home behavior | No alternative arrangement engine or random style switch |
 | 4. Score-owned energy coordination | Existing resolved roles, character, narrative, foundation, disclosure, and transformations | One coordinated semantic energy target rather than independent layer rolls | Every target coordinate reaches score/renderer or is removed; provenance and exact neutral paths required | Bounded slew and changes only at phrase/macro boundaries | No extra density track or disconnected energy scalar |
 | 5. Effect/capability dose orchestration | Existing instrument effect access, graph, FDN, pulse echo, returns, and transition relations | Recency, cooldown, and sentence-level call/response/turnaround orchestration | Wet occupancy, effect-to-dry intelligibility, tail recovery, and repeated-capability evidence | No new bus initially; force-home and recovery keep existing exact neutral behavior | No orderable plug-in chains or generic FX sequencer |
