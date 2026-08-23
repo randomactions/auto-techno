@@ -50,7 +50,7 @@ struct LongHorizonPlanningBaselineReport: Codable, Equatable, Sendable {
 }
 
 enum LongHorizonPlanningBaselineProbe {
-    static let schemaVersion = "long-horizon-planning-baseline.v1"
+    static let schemaVersion = "long-horizon-planning-baseline.v2"
 
     static func snapshot(
         rootSeed: UInt64,

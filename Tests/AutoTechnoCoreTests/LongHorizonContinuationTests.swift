@@ -68,10 +68,10 @@ struct LongHorizonContinuationTests {
         )
 
         #expect(journey.state.memory.totalBars >= 15_600)
-        #expect(journey.completedEpisodes.count == 63)
-        #expect(continuation.arcIndex == 14)
-        #expect(continuation.fingerprint == "0f85834770dc03c5")
-        #expect(episodeSequenceFingerprint(journey.completedEpisodes) == "76e157416ec6b8f5")
+        #expect(journey.completedEpisodes.count == 75)
+        #expect(continuation.arcIndex == 16)
+        #expect(continuation.fingerprint == "008b96f48b2e955d")
+        #expect(episodeSequenceFingerprint(journey.completedEpisodes) == "ffb454d66004e4bf")
         #expect(operators == Set(LongHorizonEpisodeOperator.allCases))
         #expect(
             journey.completedEpisodes.allSatisfy { episode in
@@ -122,10 +122,10 @@ struct LongHorizonContinuationTests {
 
         #expect(first.state == replay.state)
         #expect(first.completedEpisodes == replay.completedEpisodes)
-        #expect(first.completedEpisodes.count == 31)
-        #expect(first.state.memory.longHorizon.arcIndex == 5)
-        #expect(first.state.memory.longHorizon.fingerprint == "a3385980ebf276fd")
-        #expect(episodeSequenceFingerprint(first.completedEpisodes) == "54ef88de604a159b")
+        #expect(first.completedEpisodes.count == 37)
+        #expect(first.state.memory.longHorizon.arcIndex == 7)
+        #expect(first.state.memory.longHorizon.fingerprint == "9790c22d98b4807e")
+        #expect(episodeSequenceFingerprint(first.completedEpisodes) == "a3929317ea4e86ac")
         #expect(
             try encoder.encode(first.state.memory.longHorizon)
                 == encoder.encode(replay.state.memory.longHorizon))
@@ -140,8 +140,8 @@ struct LongHorizonContinuationTests {
                 != alternate.state.memory.longHorizon.fingerprint)
     }
 
-    @Test("Episode context distinguishes identical local memory without selecting music yet")
-    func episodeContextIsIndependentOfLocalHistory() {
+    @Test("Discontinuous episode context cannot override the local fallback")
+    func discontinuousEpisodeContextFallsBack() {
         let base = journeySnapshot(rootSeed: 48_291, requestedBars: 1_950).state
         let later = journeySnapshot(rootSeed: 48_291, requestedBars: 3_900).state
         let baseMemory = base.memory
@@ -163,9 +163,10 @@ struct LongHorizonContinuationTests {
         #expect(baseMemory.interlockEvolution == swappedMemory.interlockEvolution)
         #expect(baseMemory.narrativeEvolution == swappedMemory.narrativeEvolution)
         #expect(baseMemory.longHorizon != swappedMemory.longHorizon)
-        // Phase 2 represents the distinct context but deliberately does not
-        // consume it until the Stage 3 operator-selection slice.
-        #expect(director.plan(from: base) == director.plan(from: swapped))
+        let basePlan = director.plan(from: base)
+        let swappedPlan = director.plan(from: swapped)
+        #expect(basePlan.kind == swappedPlan.kind)
+        #expect(swappedPlan.longHorizonSelection.reason == .conservativeFallback)
     }
 
     @Test("Malformed or discontinuous updates preserve the accepted episode transactionally")

@@ -16,6 +16,17 @@ struct LongHorizonSemanticTrajectoryTests {
             LongHorizonSemanticTrajectoryReport.self,
             from: firstData
         )
+        print(
+            "LONG_HORIZON_SEMANTIC_4H "
+                + "bars=\(first.observedBarCount) phrases=\(first.observedPhraseCount) "
+                + "trajectory=\(first.trajectoryFingerprint) "
+                + "json=\(stableFingerprint(firstData)) "
+                + "matchedRecall=\(first.identityRecall.matchedHomeSignatureBarCount) "
+                + "unmatchedRecall=\(first.identityRecall.unmatchedHomeSignatureBarCount) "
+                + "openedDebt=\(first.dramaticDebt.openedCount) "
+                + "paidDebt=\(first.dramaticDebt.paidCount) "
+                + "repeatedSignatures=\(first.eventSignatureRecurrence.repeatObservationCount)"
+        )
         #expect(first == replay)
         #expect(firstData == replayData)
         #expect(decoded == first)
@@ -26,14 +37,14 @@ struct LongHorizonSemanticTrajectoryTests {
         #expect(first.unavailableReason == nil)
         #expect(first.qualificationStatus == .unavailable)
         #expect(first.qualificationReason == "no-calibrated-long-horizon-policy")
-        #expect(first.observedBarCount == 7_800)
-        #expect(first.observedPhraseCount == 710)
-        #expect(first.trajectoryFingerprint == "1bee65e3170b3f59")
-        #expect(stableFingerprint(firstData) == "2e41bc115c3d0514")
+        #expect(first.observedBarCount == 7_801)
+        #expect(first.observedPhraseCount == 714)
+        #expect(first.trajectoryFingerprint == "461af2c64f13f52e")
+        #expect(stableFingerprint(firstData) == "6b17c975fc72daa8")
         #expect(first.phraseKindPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.performanceCharacterPhraseCounts.allSatisfy { $0.count > 0 })
-        #expect(first.tensionDwell.highBarCount == 764)
-        #expect(first.tensionDwell.recoveryBarCount == 410)
+        #expect(first.tensionDwell.highBarCount == 670)
+        #expect(first.tensionDwell.recoveryBarCount == 390)
         #expect(first.periodicity.count == 64)
         #expect(first.storage.periodicityLagCapacity == 64)
         #expect(first.storage.recentSemanticBarCapacity == 64)

@@ -186,6 +186,7 @@ renderer maturation is tracked separately in
 The implemented Phase 1 Core schema observes this grammar through a bounded
 offline accumulator. Phase 2 adds one compact renewable arc/episode context to
 canonical `TemporalMusicalMemory`, including recency, reserve, landmarks, and
-obligations. It still does not add a character, phrase kind, score lane,
-planner, runtime selector, quality verdict, or plan-selection consequence;
-Stage 3 is the explicit consumption boundary.
+obligations. Phase 3 is the explicit consumption boundary: the same director
+maps its six operators onto the existing five phrase kinds with one versioned
+selection reason and one conservative fallback. It adds no character, phrase
+kind, score lane, planner, parallel candidate, or quality verdict.

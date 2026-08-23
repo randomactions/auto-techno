@@ -552,13 +552,40 @@ advancing the hierarchy. `AutonomousSessionState.advance` treats that result as
 a failed atomic commit and preserves every musical, quality, and controller
 continuation rather than advancing older memories alone.
 
-This is production continuation state but still not a control input. The
-director's plan is currently identical when only the long-horizon context is
-changed behind otherwise identical local memory. It therefore changes neither
-phrase selection nor resolved score, prepared product, renderer, DSP graph, App
-scheduler, route lifecycle, or realtime callback. Stage 3 is the explicit
-boundary where the existing director may begin consuming it for an unscheduled
-future phrase.
+Phase 2 introduced this as production continuation state without using it as a
+control input. Phase 3 now crosses that explicit boundary: the existing director
+may consume only context bound to the exact root, phrase index, and bar for an
+unscheduled future phrase. A discontinuous context cannot override the previous
+conservative policy.
+
+## Implemented long-horizon episode selection
+
+The one `AutonomousSessionDirector.plan(from:)` call first computes its previous
+conservative phrase kind, validates the bound episode, and produces one
+`LongHorizonPhraseSelection`. Before the episode minimum hold it preserves local
+phrasing while protecting a reserved payoff or recall from early use. At
+eligibility it maps maintain/rise/recover/reframe/payoff/recall onto the existing
+lock/contrast/major-break/energy-release/identity-return vocabulary. A payoff
+without open canonical dramatic debt first chooses contrast, then pays that debt
+on the next plan. No second director, candidate, style engine, or renderer is
+consulted.
+
+The plan retains Codable schema `autotechno-long-horizon-selection.v1` with the
+episode ID, operator, existing phrase kind, and reason-coded path. The selected
+kind reaches the existing resolved score and renderer and therefore can change
+PCM. Unsupported schemas and internally inconsistent decoded selection records
+are rejected, and plan construction replaces phrase-kind-mismatched provenance
+with the conservative record. The new provenance adds no DSP parameter or
+signal path. The hierarchy
+continues to advance only with the committed plan. Wrong-root or discontinuous
+selection uses the conservative fallback, while an inconsistent commit still
+preserves the whole canonical state transactionally.
+
+This phase changes Core phrase selection and its resulting score/PCM, but not
+the render graph, DSP implementation, prepared-product candidate count, App
+scheduler, route lifecycle, or realtime callback. Semantic trajectory evidence
+describes the changed journey offline; it is not yet a feedback input or a
+long-horizon quality verdict.
 
 ## Canonical unified loop
 

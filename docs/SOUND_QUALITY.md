@@ -313,13 +313,16 @@ Phase 2 separately embeds `autotechno-long-horizon-continuation.v1` in canonical
 capability recency, semantic energy start/target coordinates, identity
 landmarks, reserve, and payoff/recovery/recall obligations. It is bounded,
 schema-safe, deterministic, and transactionally preserves the accepted episode
-on malformed input. It does not currently choose, reject, correct, render, or
-evaluate music.
+on malformed input. Phase 3 lets the existing director consume only exact bound
+context and records `autotechno-long-horizon-selection.v1` provenance on the one
+plan. That choice reaches the existing resolved score and renderer through the
+selected phrase kind; no parallel plan, correction, renderer, or quality policy
+was added.
 
-Neither long-horizon schema is part of the current primary transaction or
-controller. A later DSP-owned realized-trajectory report and calibrated
-non-compensable policy must prove direction and consequence before any
-long-horizon quality claim or automatic future decision. See
+The semantic trajectory report is not consumed by the current primary
+transaction or controller. A later DSP-owned realized-trajectory report and
+calibrated non-compensable policy must prove direction and consequence before
+any long-horizon quality claim or evidence-driven future adjustment. See
 [`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md).
 
 ## Engine ownership

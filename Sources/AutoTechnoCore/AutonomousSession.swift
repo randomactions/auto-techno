@@ -1,6 +1,6 @@
 import Foundation
 
-package enum AutonomousPhraseKind: String, CaseIterable, Sendable {
+package enum AutonomousPhraseKind: String, CaseIterable, Codable, Sendable {
     case lock
     case contrast
     case majorBreak
@@ -1265,6 +1265,135 @@ private func weightedEventCount(_ context: EnsembleContext) -> Double {
     }
 }
 
+package enum LongHorizonPhraseSelectionReason: String, Codable, Sendable {
+    case conservativeFallback = "conservative-fallback"
+    case minimumHold = "minimum-hold"
+    case reservedPayoff = "reserved-payoff"
+    case reservedRecall = "reserved-recall"
+    case payoffDebtEstablishment = "payoff-debt-establishment"
+    case episodeOperator = "episode-operator"
+}
+
+package enum LongHorizonPhraseSelectionSchema {
+    package static let schemaVersion = 1
+    package static let schemaIdentifier = "autotechno-long-horizon-selection.v1"
+}
+
+package struct LongHorizonPhraseSelection: Equatable, Codable, Sendable {
+    package let schemaVersion: Int
+    package let schemaIdentifier: String
+    package let episodeID: UInt64?
+    package let operatorKind: LongHorizonEpisodeOperator?
+    package let phraseKind: AutonomousPhraseKind
+    package let reason: LongHorizonPhraseSelectionReason
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case schemaIdentifier
+        case episodeID
+        case operatorKind
+        case phraseKind
+        case reason
+    }
+
+    package init(
+        episodeID: UInt64?,
+        operatorKind: LongHorizonEpisodeOperator?,
+        phraseKind: AutonomousPhraseKind,
+        reason: LongHorizonPhraseSelectionReason
+    ) {
+        self.schemaVersion = LongHorizonPhraseSelectionSchema.schemaVersion
+        self.schemaIdentifier = LongHorizonPhraseSelectionSchema.schemaIdentifier
+        self.episodeID = episodeID
+        self.operatorKind = operatorKind
+        self.phraseKind = phraseKind
+        self.reason = reason
+    }
+
+    package init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        let schemaIdentifier = try container.decode(String.self, forKey: .schemaIdentifier)
+        guard schemaVersion == LongHorizonPhraseSelectionSchema.schemaVersion,
+              schemaIdentifier == LongHorizonPhraseSelectionSchema.schemaIdentifier else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .schemaIdentifier,
+                in: container,
+                debugDescription: "Unsupported long-horizon phrase selection schema"
+            )
+        }
+        let episodeID = try container.decodeIfPresent(UInt64.self, forKey: .episodeID)
+        let operatorKind = try container.decodeIfPresent(
+            LongHorizonEpisodeOperator.self,
+            forKey: .operatorKind
+        )
+        let phraseKind = try container.decode(AutonomousPhraseKind.self, forKey: .phraseKind)
+        let reason = try container.decode(
+            LongHorizonPhraseSelectionReason.self,
+            forKey: .reason
+        )
+        guard Self.isConsistent(
+            episodeID: episodeID,
+            operatorKind: operatorKind,
+            phraseKind: phraseKind,
+            reason: reason
+        ) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .reason,
+                in: container,
+                debugDescription: "Inconsistent long-horizon phrase selection provenance"
+            )
+        }
+        self.schemaVersion = schemaVersion
+        self.schemaIdentifier = schemaIdentifier
+        self.episodeID = episodeID
+        self.operatorKind = operatorKind
+        self.phraseKind = phraseKind
+        self.reason = reason
+    }
+
+    package static func conservative(
+        _ phraseKind: AutonomousPhraseKind
+    ) -> LongHorizonPhraseSelection {
+        LongHorizonPhraseSelection(
+            episodeID: nil,
+            operatorKind: nil,
+            phraseKind: phraseKind,
+            reason: .conservativeFallback
+        )
+    }
+
+    private static func isConsistent(
+        episodeID: UInt64?,
+        operatorKind: LongHorizonEpisodeOperator?,
+        phraseKind: AutonomousPhraseKind,
+        reason: LongHorizonPhraseSelectionReason
+    ) -> Bool {
+        switch reason {
+        case .conservativeFallback:
+            return episodeID == nil && operatorKind == nil
+        case .minimumHold:
+            return episodeID != nil && operatorKind != nil
+        case .reservedPayoff:
+            return episodeID != nil && operatorKind == .payoff && phraseKind == .lock
+        case .reservedRecall:
+            return episodeID != nil && operatorKind == .recall && phraseKind == .lock
+        case .payoffDebtEstablishment:
+            return episodeID != nil && operatorKind == .payoff && phraseKind == .contrast
+        case .episodeOperator:
+            guard episodeID != nil, let operatorKind else { return false }
+            return switch operatorKind {
+            case .maintain: phraseKind == .lock
+            case .rise: phraseKind == .contrast
+            case .recover: phraseKind == .majorBreak
+            case .reframe: phraseKind == .contrast || phraseKind == .majorBreak
+            case .payoff: phraseKind == .energyRelease
+            case .recall: phraseKind == .identityReturn
+            }
+        }
+    }
+}
+
 package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let phraseIndex: Int
     package let startBar: Int
@@ -1284,6 +1413,7 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let incomingHarmonicContinuation: HarmonicContinuationState
     package let phraseComposition: [PhraseCompositionBar]
     package let endingHarmonicContinuation: HarmonicContinuationState
+    package let longHorizonSelection: LongHorizonPhraseSelection
 
     package init(phraseIndex: Int, startBar: Int, barCount: Int,
                  kind: AutonomousPhraseKind, scene: TechnoScene, dna: SceneDNA,
@@ -1293,7 +1423,8 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
                  endingInterlockState: InterlockEvolutionState,
                  endingSpatialContrastState: SpatialContrastState = SpatialContrastState(),
                  endingNarrativeState: NarrativeEvolutionState = NarrativeEvolutionState(),
-                 harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState()) {
+                 harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState(),
+                 longHorizonSelection: LongHorizonPhraseSelection? = nil) {
         self.phraseIndex = phraseIndex
         self.startBar = startBar
         self.barCount = barCount
@@ -1325,6 +1456,9 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
             voices: phraseComposition.compactMap(\.padVoicing).last?.voices ??
                 harmonicContinuation.voices
         )
+        self.longHorizonSelection = longHorizonSelection.flatMap {
+            $0.phraseKind == kind ? $0 : nil
+        } ?? .conservative(kind)
     }
 
     package var memoryBars: [MusicalMemoryBar] {
@@ -1563,11 +1697,83 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
     /// Quality evaluation may correct this same plan once, but it never asks
     /// the director for a parallel substitute.
     package func plan(from state: AutonomousSessionState) -> AutonomousPhrasePlan {
-        let kind = nextKind(state: state)
-        return makePlan(state: state, kind: kind)
+        let selection = nextSelection(state: state)
+        return makePlan(
+            state: state,
+            kind: selection.phraseKind,
+            longHorizonSelection: selection
+        )
     }
 
-    private func nextKind(state: AutonomousSessionState) -> AutonomousPhraseKind {
+    private func nextSelection(
+        state: AutonomousSessionState
+    ) -> LongHorizonPhraseSelection {
+        let conservativeKind = conservativeNextKind(state: state)
+        let continuation = state.memory.longHorizon
+        guard rootSeed == state.rootSeed,
+              continuation.isBound,
+              continuation.rootSeed == state.rootSeed,
+              continuation.nextExpectedPhraseIndex == state.phraseIndex,
+              continuation.nextExpectedBar == state.memory.totalBars else {
+            return .conservative(conservativeKind)
+        }
+        let episode = continuation.currentEpisode
+        if state.memory.totalBars < episode.minimumHoldUntilBar {
+            if episode.operatorKind == .payoff,
+               conservativeKind == .energyRelease {
+                return LongHorizonPhraseSelection(
+                    episodeID: episode.id,
+                    operatorKind: episode.operatorKind,
+                    phraseKind: .lock,
+                    reason: .reservedPayoff
+                )
+            }
+            if episode.operatorKind == .recall,
+               conservativeKind == .identityReturn {
+                return LongHorizonPhraseSelection(
+                    episodeID: episode.id,
+                    operatorKind: episode.operatorKind,
+                    phraseKind: .lock,
+                    reason: .reservedRecall
+                )
+            }
+            return LongHorizonPhraseSelection(
+                episodeID: episode.id,
+                operatorKind: episode.operatorKind,
+                phraseKind: conservativeKind,
+                reason: .minimumHold
+            )
+        }
+
+        if episode.operatorKind == .payoff,
+           state.memory.openDebts.isEmpty {
+            return LongHorizonPhraseSelection(
+                episodeID: episode.id,
+                operatorKind: episode.operatorKind,
+                phraseKind: .contrast,
+                reason: .payoffDebtEstablishment
+            )
+        }
+        let selectedKind: AutonomousPhraseKind = switch episode.operatorKind {
+        case .maintain: .lock
+        case .rise: .contrast
+        case .recover: .majorBreak
+        case .reframe:
+            episode.startEnergy.roleDensity >= 0.5 ? .majorBreak : .contrast
+        case .payoff: .energyRelease
+        case .recall: .identityReturn
+        }
+        return LongHorizonPhraseSelection(
+            episodeID: episode.id,
+            operatorKind: episode.operatorKind,
+            phraseKind: selectedKind,
+            reason: .episodeOperator
+        )
+    }
+
+    private func conservativeNextKind(
+        state: AutonomousSessionState
+    ) -> AutonomousPhraseKind {
         // Each target is fixed for the life of its current interval. If it
         // changed at every phrase boundary, a moving target could postpone a
         // promised structural event indefinitely.
@@ -1587,8 +1793,11 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         return .lock
     }
 
-    private func makePlan(state: AutonomousSessionState,
-                          kind: AutonomousPhraseKind) -> AutonomousPhrasePlan {
+    private func makePlan(
+        state: AutonomousSessionState,
+        kind: AutonomousPhraseKind,
+        longHorizonSelection: LongHorizonPhraseSelection
+    ) -> AutonomousPhrasePlan {
         let start = state.memory.totalBars
         let baseLength = 4 + Int(seed(
             state: state,
@@ -1836,7 +2045,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             endingInterlockState: interlockState,
             endingSpatialContrastState: spatialContrastState,
             endingNarrativeState: endingNarrativeState,
-            harmonicContinuation: state.memory.harmonicContinuation
+            harmonicContinuation: state.memory.harmonicContinuation,
+            longHorizonSelection: longHorizonSelection
         )
     }
 

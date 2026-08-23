@@ -24,7 +24,7 @@ struct LongHorizonTrajectoryBaselineTests {
 
         print("LONG_HORIZON_PLANNING_BASELINE_JSON \(canonicalJSON)")
         #expect(first == replay)
-        #expect(first == Self.expectedV1)
+        #expect(first == Self.expectedV2)
         #expect(canonicalJSON == replayJSON)
         #expect(decoded == first)
         #expect(first.totalBars >= first.requestedBars)
@@ -48,8 +48,8 @@ struct LongHorizonTrajectoryBaselineTests {
         #expect(first.qualificationReason == "no-calibrated-long-horizon-policy")
     }
 
-    private static let expectedV1 = LongHorizonPlanningBaselineReport(
-        schemaVersion: "long-horizon-planning-baseline.v1",
+    private static let expectedV2 = LongHorizonPlanningBaselineReport(
+        schemaVersion: "long-horizon-planning-baseline.v2",
         engineVersion: "autotechno-canonical-engine.v32",
         evidenceClassification: "descriptive-structural-baseline",
         qualificationStatus: "unavailable",
@@ -58,44 +58,44 @@ struct LongHorizonTrajectoryBaselineTests {
         bpm: 130,
         requestedHours: 4,
         requestedBars: 7_800,
-        totalBars: 7_800,
-        phraseCount: 710,
+        totalBars: 7_801,
+        phraseCount: 714,
         phraseKindCounts: [
-            .init(name: "lock", count: 257),
-            .init(name: "contrast", count: 221),
-            .init(name: "majorBreak", count: 97),
-            .init(name: "energyRelease", count: 75),
-            .init(name: "identityReturn", count: 60),
+            .init(name: "lock", count: 303),
+            .init(name: "contrast", count: 192),
+            .init(name: "majorBreak", count: 96),
+            .init(name: "energyRelease", count: 69),
+            .init(name: "identityReturn", count: 54),
         ],
         performanceCharacterCounts: [
-            .init(name: "hypnoticLock", count: 187),
-            .init(name: "acidPressure", count: 119),
-            .init(name: "peakDrive", count: 46),
-            .init(name: "brokenSuspension", count: 126),
-            .init(name: "ambientDrift", count: 52),
-            .init(name: "melodicGlow", count: 180),
+            .init(name: "hypnoticLock", count: 212),
+            .init(name: "acidPressure", count: 98),
+            .init(name: "peakDrive", count: 42),
+            .init(name: "brokenSuspension", count: 106),
+            .init(name: "ambientDrift", count: 63),
+            .init(name: "melodicGlow", count: 193),
         ],
         highTensionObservationFloor: 0.8,
-        highTensionBarCount: 764,
+        highTensionBarCount: 670,
         recoveryTensionObservationCeiling: 0.4,
-        recoveryTensionBarCount: 410,
-        distinctEventSignatureCount: 572,
-        maximumOpenDebtCount: 7,
+        recoveryTensionBarCount: 390,
+        distinctEventSignatureCount: 575,
+        maximumOpenDebtCount: 6,
         maximumMemoryCounts: .init(
             recentBars: 4,
             currentPhrase: 16,
             previousPhrase: 16,
-            dramaticArc: 109,
+            dramaticArc: 128,
             sessionBars: 256
         ),
         finalMemoryCounts: .init(
             recentBars: 4,
-            currentPhrase: 4,
-            previousPhrase: 6,
-            dramaticArc: 56,
+            currentPhrase: 13,
+            previousPhrase: 5,
+            dramaticArc: 57,
             sessionBars: 256
         ),
-        planSequenceFingerprint: "b6642428b9d0fc3e",
-        barEvidenceFingerprint: "ce2054dc1adc6b36"
+        planSequenceFingerprint: "e65f85be9fbf46b6",
+        barEvidenceFingerprint: "ed54cedc5f2c73c0"
     )
 }

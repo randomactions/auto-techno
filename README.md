@@ -93,9 +93,11 @@ dependencies.
 
 The long-horizon foundation now includes an offline, fixed-capacity Core
 semantic-trajectory report and one compact renewable arc/episode continuation
-inside canonical session memory. The continuation observes committed plans but
-does not yet influence phrase selection; the report is not consumed by the
-shipped director or evaluator. Long-horizon qualification remains unavailable.
+inside canonical session memory. The one existing director now consumes the
+exact bound episode at an unscheduled phrase boundary, maps it onto the existing
+phrase vocabulary, and records versioned selection provenance. The report is
+still not consumed by the shipped evaluator, and score-owned vector
+coordination plus realized trajectory qualification remain unavailable.
 
 ## Package
 

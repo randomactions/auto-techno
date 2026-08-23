@@ -2270,3 +2270,37 @@ instrument homes, effects, or graph cannot express the next controller stage.
 It therefore adds no synth, preset, patch, DSP primitive, effect, bus, chain,
 renderer, or realtime-callback work. Long-horizon quality remains unavailable
 pending director consumption, realized signal evidence, and calibrated policy.
+
+### Phase 3 episode-selection addendum — 2026-08-23
+
+The existing `AutonomousSessionDirector` now consumes only long-horizon context
+bound to the exact root, phrase, and bar boundary. Before minimum hold it keeps
+the previous local policy but protects reserved payoff and recall events. At
+eligibility it maps maintain/rise/recover/reframe/payoff/recall onto the existing
+phrase kinds. Debtless payoff first selects contrast to establish real canonical
+debt, then selects energy release to pay it. Invalid context has one
+conservative fallback; there is still one director, one plan, one renderer, and
+one performance vocabulary.
+
+Every plan records Codable `autotechno-long-horizon-selection.v1` provenance.
+Focused cases prove all six mappings, both reserved-event holds, payoff debt
+establishment, invalid-context fallback, exact replay, and JSON round-trip. The
+four-hour causal journey fulfills all six operators, completes seven payoffs in
+seven distinct arcs, and completes seven following recovery episodes; maximum
+payoff-to-recovery completion distance is 268 bars.
+
+This deliberate planning change advances the test-only snapshot to
+`long-horizon-planning-baseline.v2`: 7,801 bars, 714 phrases, plan/bar
+fingerprints `e65f85be9fbf46b6` / `ed54cedc5f2c73c0`. The unchanged semantic
+schema now fingerprints its trajectory/report to `461af2c64f13f52e` /
+`6b17c975fc72daa8`. Four/eight-hour hierarchy state/sequence fingerprints become
+`9790c22d98b4807e` / `a3929317ea4e86ac` and `008b96f48b2e955d` /
+`ffb454d66004e4bf`. The Phase 0-2 values remain historical evidence rather than
+being silently rewritten.
+
+Selection changes the existing phrase kind and therefore its resolved score and
+PCM consequence, but no synthesis architecture, preset, patch, DSP primitive,
+effect, bus, chain, graph, renderer, or callback was added. The palette register
+still finds no justified sound expansion. Long-horizon qualification remains
+unavailable pending score-owned energy coordination, realized signal evidence,
+calibration, listening, app/route QA, and physical-output soak.

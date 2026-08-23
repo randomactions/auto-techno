@@ -266,12 +266,14 @@ four/eight-hour and adversarial tests cannot yet pass or reject music. Phase 2
 adds `autotechno-long-horizon-continuation.v1` to canonical session memory: one
 renewable arc/episode intention with fixed-domain recency, reserve, identity
 landmarks, and payoff/recovery/recall obligations. It observes committed plans
-and remains bounded and exactly replayable, but deliberately does not yet change
-the next plan. The next missing slice is episode-operator selection through the
-existing director, followed by score-owned energy coordination, compatible
-realized-PCM trajectory evidence, and a calibrated adversarial policy that can
-reject fixed-period cycling, permanent peak, ineffective recovery, capability
-fatigue, failed recall, and semantic/PCM direction mismatches.
+and remains bounded and exactly replayable. Phase 3 now maps all six operators
+through the same director onto the existing phrase vocabulary, protects minimum
+holds and rare-event reserve, establishes debt before a debtless payoff, and
+records `autotechno-long-horizon-selection.v1` provenance. The next missing
+slice is score-owned energy coordination, followed by compatible realized-PCM
+trajectory evidence and a calibrated adversarial policy that can reject fixed-
+period cycling, permanent peak, ineffective recovery, capability fatigue,
+failed recall, and semantic/PCM direction mismatches.
 
 The associated DSP, synth, patch-family, and effect follow-up register is
 [`LONG_HORIZON_SOUND_CAPABILITIES.md`](LONG_HORIZON_SOUND_CAPABILITIES.md). The

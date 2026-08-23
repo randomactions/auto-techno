@@ -2036,3 +2036,51 @@ The slice does not qualify entertainment or professional sound and does not
 change phrase choice, resolved score, renderer, DSP, graph, PCM, App scheduling,
 route lifecycle, or realtime callback. No synth, patch, DSP primitive, effect,
 bus, graph, or chain expansion was selected.
+
+## Long-horizon Phase 3 episode operator selection — 2026-08-23
+
+Phase 3 crosses the explicit hierarchy-consumption boundary inside the one
+existing `AutonomousSessionDirector`. Exact bound maintain, rise, recover,
+reframe, payoff, and recall episodes select only the existing phrase kinds.
+Minimum hold protects reserved payoff/recall events, debtless payoff establishes
+canonical dramatic debt before paying it, and wrong-root or discontinuous
+context uses the prior conservative policy. Each plan carries validated Codable
+`autotechno-long-horizon-selection.v1` provenance; unsupported and internally
+inconsistent decoded records fail closed. Plan construction also prevents a
+provenance phrase kind from disagreeing with the actual plan.
+
+The seed-48,291 four-hour causal journey fulfills all six operators. Seven
+payoffs occur in seven distinct arcs, pay real dramatic debt, and are followed
+by seven recovery episodes; the maximum payoff-to-recovery completion span is
+268 bars. The deliberate planning change advances the descriptive test schema
+to `long-horizon-planning-baseline.v2`, with 7,801 bars, 714 phrases, and
+plan/bar fingerprints `e65f85be9fbf46b6` / `ed54cedc5f2c73c0`. The unchanged
+semantic schema fingerprints the new trajectory/report to `461af2c64f13f52e` /
+`6b17c975fc72daa8`. Four/eight-hour hierarchy state/sequence fingerprints are
+`9790c22d98b4807e` / `a3929317ea4e86ac` and `008b96f48b2e955d` /
+`ffb454d66004e4bf`.
+
+Final local validation used Xcode-selected Apple Swift with isolated caches,
+`xcrun swift`, `--disable-sandbox`, and serial execution:
+
+- the combined Phase 0-3 long-horizon suites passed 20/20 in 40.756 seconds;
+- the greater-than-eight-hour interlock/unified evolution pair passed 2/2 in
+  12.552 seconds;
+- the current canonical runtime and repository-surface suites passed 11/11 in
+  53.345 seconds on the final source and prose, followed by a 5/5 repository-
+  surface repeat in 15.359 seconds after the validation record was finalized;
+- the optimized `AutoTechno` product built in 92.49 seconds, a final incremental
+  confirmation completed in 1.70 seconds, and the executable SHA-256 was
+  `b46bbe6856814a0e0e334d44ecaf095c11d0ed5f088b4d42b4ee71a7a03c4cad`;
+- the new Stage 3 test file passed strict `swift-format` lint, and
+  `git diff --check` passed. The established multi-file Swift style is not
+  globally strict-`swift-format` clean and was not mechanically rewritten.
+
+SwiftPM emitted known read-only user-cache and missing isolated `.pcm` cache
+warnings while exit status, tests, and the product build were green. No DSP,
+graph, renderer, App, scheduler, route, or callback source changed. The selected
+existing phrase kind changes the resolved score and PCM reached through the
+canonical renderer, but no synth, preset, patch, DSP primitive, effect, bus, or
+chain was added. Long-horizon qualification remains unavailable; listening,
+app/route/interruption QA, and physical-output soak remain unrun and are not
+implied by this snapshot.
