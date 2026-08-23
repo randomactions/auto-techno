@@ -317,7 +317,14 @@ on malformed input. Phase 3 lets the existing director consume only exact bound
 context and records `autotechno-long-horizon-selection.v1` provenance on the one
 plan. That choice reaches the existing resolved score and renderer through the
 selected phrase kind; no parallel plan, correction, renderer, or quality policy
-was added.
+was added. Phase 4 adds
+`autotechno-long-horizon-energy-coordination.v1` to that same plan and projects
+the exact episode target through existing character, foundation, role,
+percussion, narrative, harmonic, timbral, spatial, and transition owners. The
+all-hold path is frozen exactly; active paths are phrase-boundary only and bound
+protagonist slew, percussion-tier movement, role count, and spatial-carrier use.
+It introduces no DSP primitive, effect implementation, graph stage, renderer,
+or callback work.
 
 The semantic trajectory report is not consumed by the current primary
 transaction or controller. A later DSP-owned realized-trajectory report and

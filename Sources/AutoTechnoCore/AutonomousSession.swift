@@ -192,20 +192,36 @@ package struct SpatialContrastState: Equatable, Sendable {
     package func resolving(ensemble: EnsembleContext,
                            kind: AutonomousPhraseKind,
                            gesture: ArrangementGesture,
-                           absoluteBar: Int) -> (SpatialContrastArticulation, SpatialContrastState) {
+                           absoluteBar: Int,
+                           relationship: LongHorizonEnergyRelationship = .hold)
+        -> (SpatialContrastArticulation, SpatialContrastState) {
+        if relationship == .lower || relationship == .home {
+            return (.foreground, self)
+        }
         let eligibleVoices: [EnsembleVoice]
         let send: Double
-        switch (kind, gesture) {
-        case (.contrast, .turnaround):
-            eligibleVoices = [.response, .transition]
-            send = 0.22
-        case (.majorBreak, .structuralMarker):
-            eligibleVoices = [.transition, .atmosphere]
-            send = 0.30
-        default:
-            // Releases and identity returns are therefore explicitly dry, as
-            // are bars that do not carry an authored spatial contrast.
-            return (.foreground, self)
+        if relationship == .hold {
+            switch (kind, gesture) {
+            case (.contrast, .turnaround):
+                eligibleVoices = [.response, .transition]
+                send = 0.22
+            case (.majorBreak, .structuralMarker):
+                eligibleVoices = [.transition, .atmosphere]
+                send = 0.30
+            default:
+                // Releases and identity returns are therefore explicitly dry,
+                // as are bars without an authored spatial contrast.
+                return (.foreground, self)
+            }
+        } else {
+            guard gesture == .gearShift || gesture == .turnaround ||
+                    gesture == .structuralMarker else {
+                return (.foreground, self)
+            }
+            eligibleVoices = relationship == .raise
+                ? [.atmosphere, .transition, .response]
+                : [.response, .atmosphere, .transition]
+            send = relationship == .raise ? 0.30 : 0.24
         }
 
         let macroIndex = max(0, absoluteBar) / 16
@@ -514,6 +530,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let kickSyntaxRole: KickSyntaxRole
     package let climaxHang: ClimaxHangArticulation?
     package let percussionEchoTexture: PercussionEchoTextureArticulation?
+    package let harmonicDisclosureRelationship: LongHorizonEnergyRelationship
 
     package init(performance: PerformanceBar, ensemble: EnsembleContext,
                  arrangementGesture: ArrangementGesture, percussionGear: PercussionGear,
@@ -531,7 +548,9 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
                  narrative: NarrativeArticulation = .initial,
                  kickSyntaxRole: KickSyntaxRole = .grounded,
                  climaxHang: ClimaxHangArticulation? = nil,
-                 percussionEchoTexture: PercussionEchoTextureArticulation? = nil) {
+                 percussionEchoTexture: PercussionEchoTextureArticulation? = nil,
+                 harmonicDisclosureRelationship:
+                    LongHorizonEnergyRelationship = .hold) {
         self.performance = performance
         self.ensemble = ensemble
         self.arrangementGesture = arrangementGesture
@@ -568,6 +587,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.kickSyntaxRole = kickSyntaxRole
         self.climaxHang = climaxHang
         self.percussionEchoTexture = percussionEchoTexture
+        self.harmonicDisclosureRelationship = harmonicDisclosureRelationship
     }
 
     package func groovePulse(at step: Int) -> GroovePulseArticulation? {
@@ -807,7 +827,9 @@ package enum KickSyntaxResolver {
                 gesture: resolved.arrangementGesture,
                 kickSyntaxRole: role,
                 absoluteBar: resolved.performance.bar
-            )
+            ),
+            harmonicDisclosureRelationship:
+                resolved.harmonicDisclosureRelationship
         )
     }
 }
@@ -1414,6 +1436,7 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let phraseComposition: [PhraseCompositionBar]
     package let endingHarmonicContinuation: HarmonicContinuationState
     package let longHorizonSelection: LongHorizonPhraseSelection
+    package let longHorizonEnergyCoordination: LongHorizonEnergyCoordination
 
     package init(phraseIndex: Int, startBar: Int, barCount: Int,
                  kind: AutonomousPhraseKind, scene: TechnoScene, dna: SceneDNA,
@@ -1424,7 +1447,8 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
                  endingSpatialContrastState: SpatialContrastState = SpatialContrastState(),
                  endingNarrativeState: NarrativeEvolutionState = NarrativeEvolutionState(),
                  harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState(),
-                 longHorizonSelection: LongHorizonPhraseSelection? = nil) {
+                 longHorizonSelection: LongHorizonPhraseSelection? = nil,
+                 longHorizonEnergyCoordination: LongHorizonEnergyCoordination? = nil) {
         self.phraseIndex = phraseIndex
         self.startBar = startBar
         self.barCount = barCount
@@ -1456,9 +1480,27 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
             voices: phraseComposition.compactMap(\.padVoicing).last?.voices ??
                 harmonicContinuation.voices
         )
-        self.longHorizonSelection = longHorizonSelection.flatMap {
+        let resolvedSelection = longHorizonSelection.flatMap {
             $0.phraseKind == kind ? $0 : nil
         } ?? .conservative(kind)
+        self.longHorizonSelection = resolvedSelection
+        let resolvedCoordination = longHorizonEnergyCoordination ?? .neutral(
+            phraseIndex: self.phraseIndex,
+            startBar: self.startBar,
+            phraseKind: kind,
+            selectionReason: resolvedSelection.reason
+        )
+        self.longHorizonEnergyCoordination = resolvedCoordination.isConsistent(
+            phraseIndex: self.phraseIndex,
+            startBar: self.startBar,
+            phraseKind: kind,
+            selection: resolvedSelection
+        ) ? resolvedCoordination : .neutral(
+            phraseIndex: self.phraseIndex,
+            startBar: self.startBar,
+            phraseKind: kind,
+            selectionReason: resolvedSelection.reason
+        )
     }
 
     package var memoryBars: [MusicalMemoryBar] {
@@ -1799,6 +1841,11 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         longHorizonSelection: LongHorizonPhraseSelection
     ) -> AutonomousPhrasePlan {
         let start = state.memory.totalBars
+        let energyCoordination = LongHorizonEnergyCoordination.resolving(
+            state: state,
+            selection: longHorizonSelection
+        )
+        let energyTarget = energyCoordination.target
         let baseLength = 4 + Int(seed(
             state: state,
             domain: 0xF4A5E,
@@ -1831,7 +1878,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             kind: kind,
             rootSeed: state.rootSeed,
             phraseIndex: state.phraseIndex,
-            recentPerformanceCharacters: state.memory.recentPerformanceCharacters
+            recentPerformanceCharacters: state.memory.recentPerformanceCharacters,
+            timbralMotionIntent: energyTarget.timbralMotionIntent
         )
         let focusRole = focus(kind: kind, seed: phraseSeed)
         var resolvedBars: [ResolvedPerformanceBar] = []
@@ -1843,23 +1891,36 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             settlementPending: state.memory.narrativeEvolution.releaseSettlementPending,
             kind: kind,
             startBar: start,
-            length: length
+            length: length,
+            relationship: energyTarget.protagonistPresence
         )
-        var activeSupportingRoles = kind == .majorBreak
+        let baselineSupportingRoles = kind == .majorBreak
             ? [PerformanceRole.atmosphere]
             : state.memory.narrativeEvolution.activeSupportingRoles
+        var activeSupportingRoles = coordinatedSupportingRoles(
+            baselineSupportingRoles,
+            kind: kind,
+            focus: focusRole,
+            target: energyTarget
+        )
 
         for localBar in 0..<length {
             let progress = length == 1 ? 1 : Double(localBar) / Double(length - 1)
             let tension = tension(kind: kind, progress: progress, prior: state.memory.currentPhrase.last?.tension ?? 0.42)
-            let transformations = transformations(kind: kind, localBar: localBar, length: length,
-                                                   seed: phraseSeed)
+            let transformations = transformations(
+                kind: kind,
+                localBar: localBar,
+                length: length,
+                seed: phraseSeed,
+                relationship: energyTarget.timbralMotionIntent
+            )
             let absoluteBar = start + localBar
             let proposedRoles = roles(
                 kind: kind,
                 focus: focusRole,
                 localBar: localBar,
-                length: length
+                length: length,
+                target: energyTarget
             )
             let narrativeStart = localBar == 0
                 ? state.memory.narrativeEvolution.protagonistPresence
@@ -1909,13 +1970,17 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 accentContour: contour
             )
             let gesture = arrangementGesture(kind: kind, absoluteBar: absoluteBar)
-            let gear = percussionGear(absoluteBar: absoluteBar)
+            let gear = percussionGear(
+                absoluteBar: absoluteBar,
+                relationship: energyTarget.percussionActivity
+            )
             let foundation = foundationResolution(
                 character: character,
                 kind: kind,
                 localBar: localBar,
                 length: length,
-                gesture: gesture
+                gesture: gesture,
+                relationship: energyTarget.foundationAuthority
             )
             let ensemble = Self.ensemblePlan(
                 dna: dna, bar: bar, focus: focusRole,
@@ -1955,13 +2020,15 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             )
             let echoEnabled = pulseEchoEnabled(
                 scene: scene, bar: bar, kind: kind,
-                companion: foundation.companion, gesture: gesture
+                companion: foundation.companion, gesture: gesture,
+                relationship: energyTarget.transitionExpectation
             )
             let spatialResolution = spatialContrastState.resolving(
                 ensemble: ensemble,
                 kind: kind,
                 gesture: gesture,
-                absoluteBar: absoluteBar
+                absoluteBar: absoluteBar,
+                relationship: energyTarget.spatialDistance
             )
             let spatialContrast = spatialResolution.0
             spatialContrastState = spatialResolution.1
@@ -1982,7 +2049,9 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 modalPercussionArticulations: modalPercussionArticulations,
                 spatialContrast: spatialContrast,
                 narrative: narrative,
-                percussionEchoTexture: percussionEchoTexture
+                percussionEchoTexture: percussionEchoTexture,
+                harmonicDisclosureRelationship:
+                    energyTarget.harmonicDisclosure
             ))
             activeSupportingRoles = narrativeSupportingRolesAfterBoundary(
                 current: activeSupportingRoles,
@@ -2046,7 +2115,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             endingSpatialContrastState: spatialContrastState,
             endingNarrativeState: endingNarrativeState,
             harmonicContinuation: state.memory.harmonicContinuation,
-            longHorizonSelection: longHorizonSelection
+            longHorizonSelection: longHorizonSelection,
+            longHorizonEnergyCoordination: energyCoordination
         )
     }
 
@@ -2063,7 +2133,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         kind: AutonomousPhraseKind,
         rootSeed: UInt64,
         phraseIndex: Int,
-        recentPerformanceCharacters: [PerformanceCharacter]
+        recentPerformanceCharacters: [PerformanceCharacter],
+        timbralMotionIntent: LongHorizonEnergyRelationship = .hold
     ) -> PerformanceCharacter {
         guard kind != .identityReturn else { return .hypnoticLock }
         let preferred: [PerformanceCharacter] = switch kind {
@@ -2081,7 +2152,32 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             domain: 0x51A7E ^ UInt64(phraseIndex + 1),
             index: 0
         )
-        return choices[Int(phraseSeed % UInt64(choices.count))]
+        let baseline = choices[Int(phraseSeed % UInt64(choices.count))]
+        guard timbralMotionIntent != .hold else { return baseline }
+        switch timbralMotionIntent {
+        case .hold:
+            return baseline
+        case .lower:
+            return switch kind {
+            case .lock: .hypnoticLock
+            case .contrast: .brokenSuspension
+            case .majorBreak: .ambientDrift
+            case .energyRelease: .acidPressure
+            case .identityReturn: .hypnoticLock
+            }
+        case .raise:
+            return switch kind {
+            case .lock: .melodicGlow
+            case .contrast: .acidPressure
+            case .majorBreak: .brokenSuspension
+            case .energyRelease: .peakDrive
+            case .identityReturn: .hypnoticLock
+            }
+        case .change:
+            return preferred.first(where: { $0 != baseline }) ?? baseline
+        case .home:
+            return kind == .identityReturn ? .hypnoticLock : baseline
+        }
     }
 
     private func focus(kind: AutonomousPhraseKind, seed: UInt64) -> PerformanceRole {
@@ -2100,7 +2196,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                                              settlementPending: Bool,
                                              kind: AutonomousPhraseKind,
                                              startBar: Int,
-                                             length: Int) ->
+                                             length: Int,
+                                             relationship: LongHorizonEnergyRelationship = .hold) ->
         (endpoints: [Double], settlementPending: Bool) {
         guard length > 0 else { return ([], settlementPending) }
 
@@ -2121,7 +2218,12 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                     endpoints.append(0.90 + (0.60 - 0.90) * progress)
                 }
             }
-            return (endpoints, settlingBars == 0)
+            return coordinatedNarrativeTrajectory(
+                endpoints: endpoints,
+                settlementPending: settlingBars == 0,
+                initialPresence: initialPresence,
+                relationship: relationship
+            )
         }
 
         let target: Double
@@ -2150,7 +2252,45 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 endpoints.append(initialPresence + (target - initialPresence) * progress)
             }
         }
-        return (endpoints, false)
+        return coordinatedNarrativeTrajectory(
+            endpoints: endpoints,
+            settlementPending: false,
+            initialPresence: initialPresence,
+            relationship: relationship
+        )
+    }
+
+    private func coordinatedNarrativeTrajectory(
+        endpoints: [Double],
+        settlementPending: Bool,
+        initialPresence: Double,
+        relationship: LongHorizonEnergyRelationship
+    ) -> (endpoints: [Double], settlementPending: Bool) {
+        guard relationship != .hold, !endpoints.isEmpty else {
+            return (endpoints, settlementPending)
+        }
+        let changeDirection = initialPresence >= 0.5 ? -1.0 : 1.0
+        var previous = min(0.92, max(0.12, initialPresence))
+        let coordinated = endpoints.enumerated().map { index, endpoint in
+            let progress = Double(index + 1) / Double(endpoints.count)
+            let value: Double = switch relationship {
+            case .hold:
+                endpoint
+            case .lower:
+                endpoint - 0.12 * progress
+            case .raise:
+                endpoint + 0.12 * progress
+            case .change:
+                endpoint + changeDirection * 0.10 * progress
+            case .home:
+                endpoint + (0.58 - endpoint) * progress
+            }
+            let bounded = min(0.92, max(0.12, value))
+            let slewed = min(previous + 0.16, max(previous - 0.16, bounded))
+            previous = slewed
+            return slewed
+        }
+        return (coordinated, settlementPending)
     }
 
     private func narrativeResolvedRoles(proposed: [PerformanceRole],
@@ -2205,7 +2345,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
     }
 
     private func roles(kind: AutonomousPhraseKind, focus: PerformanceRole,
-                       localBar: Int, length: Int) -> [PerformanceRole] {
+                       localBar: Int, length: Int,
+                       target: LongHorizonEnergyTarget = .neutral) -> [PerformanceRole] {
         var result: [PerformanceRole] = [.foundation]
         func append(_ role: PerformanceRole) {
             if !result.contains(role) && result.count < 4 { result.append(role) }
@@ -2224,33 +2365,165 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         case .identityReturn:
             append(.motif); append(.atmosphere)
         }
-        return result
+        guard !target.isNeutral else { return result }
+
+        let baseline = result
+        let desiredCount: Int = switch target.roleDensity {
+        case .lower: max(2, baseline.count - 1)
+        case .raise: min(4, baseline.count + 1)
+        case .hold, .change: baseline.count
+        case .home: min(3, max(2, baseline.count))
+        }
+        func set(_ role: PerformanceRole, included: Bool) {
+            if included {
+                if !result.contains(role) { result.append(role) }
+            } else if role != .foundation && role != focus {
+                result.removeAll { $0 == role }
+            }
+        }
+        func coordinate(
+            _ role: PerformanceRole,
+            relationship: LongHorizonEnergyRelationship,
+            home: Bool,
+            active: Bool = true
+        ) {
+            guard active else { return }
+            switch relationship {
+            case .hold: break
+            case .lower: set(role, included: false)
+            case .raise: set(role, included: true)
+            case .change: set(role, included: !result.contains(role))
+            case .home: set(role, included: home)
+            }
+        }
+        coordinate(
+            .percussion,
+            relationship: target.percussionActivity,
+            home: false
+        )
+        coordinate(
+            .atmosphere,
+            relationship: target.harmonicDisclosure,
+            home: true
+        )
+        coordinate(
+            .transition,
+            relationship: target.transitionExpectation,
+            home: false,
+            active: localBar >= max(0, length / 2)
+        )
+
+        if target.roleDensity == .change {
+            let removable = [PerformanceRole.response, .percussion, .transition, .atmosphere]
+                .first { result.contains($0) && $0 != focus }
+            let replacement = [PerformanceRole.atmosphere, .response, .percussion, .transition]
+                .first { !result.contains($0) }
+            if let removable, let replacement {
+                result.removeAll { $0 == removable }
+                result.append(replacement)
+            }
+        }
+
+        var required: Set<PerformanceRole> = [.foundation, focus]
+        if kind != .majorBreak { required.insert(.motif) }
+        let boundedDesiredCount = max(desiredCount, required.count)
+        let preservingRaisedTransition =
+            target.transitionExpectation == .raise &&
+            localBar >= max(0, length / 2)
+        let removalPriority: [PerformanceRole] = preservingRaisedTransition
+            ? [.response, .atmosphere, .percussion, .transition, .motif]
+            : [.transition, .response, .percussion, .atmosphere, .motif]
+        while result.count > boundedDesiredCount,
+              let removable = removalPriority.first(where: {
+                  result.contains($0) && !required.contains($0)
+              }) {
+            result.removeAll { $0 == removable }
+        }
+        let additionPriority: [PerformanceRole] = [
+            .motif, .percussion, .atmosphere, .response, .transition,
+        ]
+        while result.count < boundedDesiredCount,
+              let addition = additionPriority.first(where: {
+                  !result.contains($0)
+              }) {
+            result.append(addition)
+        }
+        return PerformanceRole.allCases.filter(result.contains).prefix(4).map { $0 }
+    }
+
+    private func coordinatedSupportingRoles(
+        _ baseline: [PerformanceRole],
+        kind: AutonomousPhraseKind,
+        focus: PerformanceRole,
+        target: LongHorizonEnergyTarget
+    ) -> [PerformanceRole] {
+        guard kind != .majorBreak else { return [.atmosphere] }
+        guard !target.isNeutral else { return baseline }
+        let proposed = roles(
+            kind: kind,
+            focus: focus,
+            localBar: 0,
+            length: 1,
+            target: target
+        )
+        let desired = proposed.filter {
+            $0 == .percussion || $0 == .response || $0 == .atmosphere
+        }
+        return NarrativeArticulation.supportingRoles(
+            baseline.filter(desired.contains) + desired
+        )
     }
 
     private func transformations(kind: AutonomousPhraseKind, localBar: Int,
-                                 length: Int, seed: UInt64) -> [MusicalTransformation] {
+                                 length: Int, seed: UInt64,
+                                 relationship: LongHorizonEnergyRelationship = .hold)
+        -> [MusicalTransformation] {
+        let baseline: [MusicalTransformation]
         if localBar == 0 {
-            switch kind {
-            case .energyRelease: return [.restore, .extend]
-            case .identityReturn: return [.restore]
-            case .majorBreak: return [.omit]
-            case .contrast: return [.rotate]
-            case .lock: return [.`repeat`]
+            baseline = switch kind {
+            case .energyRelease: [.restore, .extend]
+            case .identityReturn: [.restore]
+            case .majorBreak: [.omit]
+            case .contrast: [.rotate]
+            case .lock: [.`repeat`]
+            }
+        } else if localBar == length - 1 {
+            baseline = switch kind {
+            case .majorBreak: [.fragment]
+            case .energyRelease, .identityReturn: [.answer]
+            default: [.extend]
+            }
+        } else {
+            let roll = SceneDNA.derivedSeed(
+                scene: seed,
+                domain: 0x72A,
+                index: localBar
+            ) % 100
+            if kind == .majorBreak {
+                baseline = roll < 70 ? [.fragment] : [.omit]
+            } else if roll < 62 {
+                baseline = [.`repeat`]
+            } else if roll < 76 {
+                baseline = [.rotate]
+            } else if roll < 90 {
+                baseline = [.fragment]
+            } else {
+                baseline = [.answer]
             }
         }
-        if localBar == length - 1 {
-            switch kind {
-            case .majorBreak: return [.fragment]
-            case .energyRelease, .identityReturn: return [.answer]
-            default: return [.extend]
-            }
+        switch relationship {
+        case .hold:
+            return baseline
+        case .lower:
+            return localBar == 0 ? [.restore] : [.`repeat`]
+        case .raise:
+            return baseline.contains(where: { $0 != .`repeat` && $0 != .restore })
+                ? baseline : [.rotate]
+        case .change:
+            return baseline.contains(.displace) ? [.rotate] : [.displace]
+        case .home:
+            return localBar == 0 ? [.restore] : [.`repeat`]
         }
-        let roll = SceneDNA.derivedSeed(scene: seed, domain: 0x72A, index: localBar) % 100
-        if kind == .majorBreak { return roll < 70 ? [.fragment] : [.omit] }
-        if roll < 62 { return [.`repeat`] }
-        if roll < 76 { return [.rotate] }
-        if roll < 90 { return [.fragment] }
-        return [.answer]
     }
 
     private func tension(kind: AutonomousPhraseKind, progress: Double, prior: Double) -> Double {
@@ -2475,12 +2748,33 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         }
     }
 
-    private func percussionGear(absoluteBar: Int) -> PercussionGear {
-        switch (absoluteBar % 16) / 4 {
+    private func percussionGear(
+        absoluteBar: Int,
+        relationship: LongHorizonEnergyRelationship = .hold
+    ) -> PercussionGear {
+        let baseline: PercussionGear = switch (absoluteBar % 16) / 4 {
         case 0: .anchor
         case 1: .lift
         case 2: .contrast
         default: .turnaround
+        }
+        guard relationship != .hold else { return baseline }
+        let tiers: [PercussionGear] = [.anchor, .turnaround, .contrast, .lift]
+        let index = tiers.firstIndex(of: baseline) ?? 0
+        switch relationship {
+        case .hold:
+            return baseline
+        case .lower:
+            return tiers[max(0, index - 1)]
+        case .raise:
+            return tiers[min(tiers.count - 1, index + 1)]
+        case .change:
+            if index == 0 { return tiers[1] }
+            if index == tiers.count - 1 { return tiers[index - 1] }
+            let quarter = (max(0, absoluteBar) % 16) / 4
+            return quarter.isMultiple(of: 2) ? tiers[index + 1] : tiers[index - 1]
+        case .home:
+            return tiers[max(0, index - 1)]
         }
     }
 
@@ -2506,13 +2800,15 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         kind: AutonomousPhraseKind,
         localBar: Int,
         length: Int,
-        gesture: ArrangementGesture
+        gesture: ArrangementGesture,
+        relationship: LongHorizonEnergyRelationship = .hold
     ) -> (behavior: FoundationBehavior, companion: FoundationCompanion) {
         let behavior = PerformanceCharacterContract.foundationBehavior(
             for: character,
             gesture: gesture,
             localBar: localBar,
-            phraseLength: length
+            phraseLength: length,
+            energyRelationship: relationship
         )
         precondition(
             PerformanceCharacterContract.foundationIsCompatible(behavior, with: character),
@@ -2524,13 +2820,24 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
     private func pulseEchoEnabled(scene: TechnoScene, bar: PerformanceBar,
                                   kind: AutonomousPhraseKind,
                                   companion: FoundationCompanion,
-                                  gesture: ArrangementGesture) -> Bool {
-        let suitableMaterial = kind == .majorBreak || scene.beatShape > 0.22 ||
-            scene.syncopation > 0.48
+                                  gesture: ArrangementGesture,
+                                  relationship: LongHorizonEnergyRelationship = .hold) -> Bool {
+        let suitableMaterial = relationship == .raise || kind == .majorBreak ||
+            scene.beatShape > 0.22 || scene.syncopation > 0.48
         guard companion != .monoRumble, suitableMaterial else { return false }
         guard gesture == .gearShift || gesture == .turnaround else { return false }
-        return SceneDNA.derivedSeed(scene: bar.eventSeed, domain: 0x3E160EC40, index: bar.bar)
+        let baseline = SceneDNA.derivedSeed(
+            scene: bar.eventSeed,
+            domain: 0x3E160EC40,
+            index: bar.bar
+        )
             .isMultiple(of: 3)
+        switch relationship {
+        case .hold: return baseline
+        case .lower, .home: return false
+        case .raise: return true
+        case .change: return !baseline
+        }
     }
 
     private func accentContour(dna: SceneDNA, absoluteBar: Int,

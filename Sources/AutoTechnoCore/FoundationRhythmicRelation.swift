@@ -202,7 +202,9 @@ package enum FoundationRhythmicRelationResolver {
                 gesture: resolved.arrangementGesture,
                 kickSyntaxRole: resolved.kickSyntaxRole,
                 absoluteBar: resolved.performance.bar
-            )
+            ),
+            harmonicDisclosureRelationship:
+                resolved.harmonicDisclosureRelationship
         )
     }
 

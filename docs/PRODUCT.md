@@ -166,6 +166,17 @@ amplitude pattern that leaves underlying continuation advancing; it adds no
 note, instrument, sequencer, or effect bus. Identity-return paths remain exactly
 neutral.
 
+The continuing session now projects one bound episode-energy target into these
+same score owners before each future phrase is authored. Foundation authority,
+role density, percussion activity, protagonist presence, harmonic disclosure,
+timbral motion, spatial distance, and transition expectation remain separate
+relationships rather than one intensity slider. The projection selects only
+existing compatible characters, foundation behaviors, roles, percussion gears,
+transformations, harmonic functions, spatial carriers, and transition
+eligibility. Invalid context and protected payoff/recall reserve use the exact
+all-hold path. This is internal autonomous behavior: it adds no duration,
+energy, style, synth, preset, or effect control to the one-button UI.
+
 ## Professional-sound objective
 
 The long-term goal is professional release-quality sound produced by engine-owned
@@ -195,9 +206,12 @@ one bounded, versioned renewable arc/episode context that observes accepted
 plans; it is not a new user mode, playlist, or engine. The one existing director
 now consumes it only for an unscheduled future phrase and records whether the
 choice fulfilled an operator, respected a minimum hold, protected a rare event,
-established payoff debt, or used the conservative fallback. A completely new
-performance root starts it from an empty hierarchy, while pause, resume, and
-ordinary continuation preserve the accepted identity and obligations.
+established payoff debt, or used the conservative fallback. The same future
+plan records how the exact episode vector was projected through existing score
+owners, with protected rare events and invalid context held neutral. A
+completely new performance root starts it from an empty hierarchy, while pause,
+resume, and ordinary continuation preserve the accepted identity and
+obligations.
 Professional quality remains an unverified release goal until the shipping
 policy and its operational gates pass. Professional Evidence v17 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory

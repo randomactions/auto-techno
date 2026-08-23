@@ -93,6 +93,19 @@ package struct LongHorizonEnergyTarget: Codable, Equatable, Sendable {
     package let timbralMotionIntent: LongHorizonEnergyRelationship
     package let spatialDistance: LongHorizonEnergyRelationship
     package let transitionExpectation: LongHorizonEnergyRelationship
+
+    package static let neutral = LongHorizonEnergyTarget(
+        foundationAuthority: .hold,
+        roleDensity: .hold,
+        percussionActivity: .hold,
+        protagonistPresence: .hold,
+        harmonicDisclosure: .hold,
+        timbralMotionIntent: .hold,
+        spatialDistance: .hold,
+        transitionExpectation: .hold
+    )
+
+    package var isNeutral: Bool { self == .neutral }
 }
 
 package enum LongHorizonEpisodeCompletionReason: String, Codable, Sendable {
@@ -754,7 +767,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         entries[index].observe(atBar: bar)
     }
 
-    private static func semanticEnergy(
+    package static func semanticEnergy(
         _ plan: AutonomousPhrasePlan
     ) -> LongHorizonSemanticEnergyVector {
         guard plan.barCount > 0 else { return .neutral }
@@ -930,7 +943,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         )
     }
 
-    private static func target(
+    package static func target(
         for operatorKind: LongHorizonEpisodeOperator
     ) -> LongHorizonEnergyTarget {
         switch operatorKind {

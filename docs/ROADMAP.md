@@ -270,10 +270,14 @@ and remains bounded and exactly replayable. Phase 3 now maps all six operators
 through the same director onto the existing phrase vocabulary, protects minimum
 holds and rare-event reserve, establishes debt before a debtless payoff, and
 records `autotechno-long-horizon-selection.v1` provenance. The next missing
-slice is score-owned energy coordination, followed by compatible realized-PCM
-trajectory evidence and a calibrated adversarial policy that can reject fixed-
-period cycling, permanent peak, ineffective recovery, capability fatigue,
-failed recall, and semantic/PCM direction mismatches.
+slice, Phase 4, now records
+`autotechno-long-horizon-energy-coordination.v1` and projects the canonical
+eight-coordinate target through existing score owners with exact all-hold
+fallback and bounded active movement. The next missing slice is effect/capability
+dose and phrase-sentence evidence from the current graph, followed by compatible
+realized-PCM trajectory evidence and a calibrated adversarial policy that can
+reject fixed-period cycling, permanent peak, ineffective recovery, capability
+fatigue, failed recall, and semantic/PCM direction mismatches.
 
 The associated DSP, synth, patch-family, and effect follow-up register is
 [`LONG_HORIZON_SOUND_CAPABILITIES.md`](LONG_HORIZON_SOUND_CAPABILITIES.md). The

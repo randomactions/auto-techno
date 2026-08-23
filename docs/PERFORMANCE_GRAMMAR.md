@@ -88,6 +88,24 @@ characters select the next interpretation. The choice happens during detached
 future preparation. No composition, randomization, allocation, analysis, or
 character switching occurs in the real-time callback.
 
+## Long-horizon energy projection
+
+One versioned phrase-boundary projection now coordinates the existing grammar
+from the current renewable episode. It keeps foundation authority, role density,
+percussion activity, protagonist presence, harmonic disclosure, timbral motion,
+spatial distance, and transition expectation as separate relationships. The
+projection may select only vocabulary already allowed by this document and the
+resolved score; it does not create another character, role lane, density track,
+sequencer, or effect chain.
+
+An all-hold target is literal neutral. Active targets preserve two-to-four roles,
+move percussion gear by at most one tier, slew coordinated protagonist presence
+by at most 0.16 per bar, keep at most one distant carrier per sixteen-bar macro,
+and apply transition changes only at authored gear-shift, turnaround, or
+structural-marker gestures. Identity return remains Hypnotic Lock. Payoff and
+recall minimum holds, debt establishment, and invalid hierarchy context cannot
+spend their rare event early; they use the exact all-hold path.
+
 ## Evidence and qualification boundary
 
 Every phrase retains a `PerformanceCharacterEvidence` record containing the

@@ -74,9 +74,10 @@ package enum PerformanceCharacterContract {
         for character: PerformanceCharacter,
         gesture: ArrangementGesture,
         localBar: Int,
-        phraseLength: Int
+        phraseLength: Int,
+        energyRelationship: LongHorizonEnergyRelationship = .hold
     ) -> FoundationBehavior {
-        switch character {
+        let baseline: FoundationBehavior = switch character {
         case .hypnoticLock:
             gesture == .minimalize ? .subPulse : .monotone
         case .acidPressure:
@@ -89,6 +90,26 @@ package enum PerformanceCharacterContract {
             gesture == .structuralMarker ? .kickTail : .absent
         case .melodicGlow:
             gesture == .turnaround ? .point : .subPulse
+        }
+        let allowed = allowedFoundations(for: character)
+        switch energyRelationship {
+        case .hold:
+            return baseline
+        case .lower:
+            return allowed.first ?? baseline
+        case .raise:
+            return allowed.last ?? baseline
+        case .change:
+            return allowed.first(where: { $0 != baseline }) ?? baseline
+        case .home:
+            return switch character {
+            case .hypnoticLock: .monotone
+            case .acidPressure: .monotone
+            case .peakDrive: .point
+            case .brokenSuspension: .kickTail
+            case .ambientDrift: .absent
+            case .melodicGlow: .subPulse
+            }
         }
     }
 

@@ -296,7 +296,12 @@ package enum PhraseCompositionResolver {
         resolvedBars: [ResolvedPerformanceBar],
         harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState()
     ) -> [PhraseCompositionBar] {
-        guard kind != .identityReturn else {
+        let identityDisclosureIsCoordinated = kind == .identityReturn &&
+            resolvedBars.contains {
+                $0.harmonicDisclosureRelationship == .home ||
+                    $0.harmonicDisclosureRelationship == .change
+            }
+        guard kind != .identityReturn || identityDisclosureIsCoordinated else {
             return resolvedBars.map { .neutral(bar: $0.performance.bar) }
         }
 
@@ -481,7 +486,10 @@ package enum PhraseCompositionResolver {
         let eligible = resolved.performance.roles.contains(.atmosphere) && (
             character == .ambientDrift || character == .melodicGlow ||
                 kind == .lock || kind == .majorBreak ||
-                resolved.interlockChapter == .breath
+                kind == .energyRelease || resolved.interlockChapter == .breath ||
+                resolved.harmonicDisclosureRelationship == .raise ||
+                resolved.harmonicDisclosureRelationship == .change ||
+                resolved.harmonicDisclosureRelationship == .home
         )
         guard eligible else { return nil }
         let bar = resolved.performance.bar

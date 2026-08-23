@@ -24,7 +24,7 @@ struct LongHorizonTrajectoryBaselineTests {
 
         print("LONG_HORIZON_PLANNING_BASELINE_JSON \(canonicalJSON)")
         #expect(first == replay)
-        #expect(first == Self.expectedV2)
+        #expect(first == Self.expectedV3)
         #expect(canonicalJSON == replayJSON)
         #expect(decoded == first)
         #expect(first.totalBars >= first.requestedBars)
@@ -41,15 +41,16 @@ struct LongHorizonTrajectoryBaselineTests {
         #expect(first.maximumMemoryCounts.dramaticArc <= 128)
         #expect(first.maximumMemoryCounts.sessionBars <= 256)
 
-        // These strings are part of the evidence boundary. Phase 0 must not
-        // imply that structural coverage qualifies four-hour entertainment.
+        // These strings are part of the evidence boundary. A descriptive
+        // baseline must not imply that structural coverage qualifies four-hour
+        // entertainment.
         #expect(first.evidenceClassification == "descriptive-structural-baseline")
         #expect(first.qualificationStatus == "unavailable")
         #expect(first.qualificationReason == "no-calibrated-long-horizon-policy")
     }
 
-    private static let expectedV2 = LongHorizonPlanningBaselineReport(
-        schemaVersion: "long-horizon-planning-baseline.v2",
+    private static let expectedV3 = LongHorizonPlanningBaselineReport(
+        schemaVersion: "long-horizon-planning-baseline.v3",
         engineVersion: "autotechno-canonical-engine.v32",
         evidenceClassification: "descriptive-structural-baseline",
         qualificationStatus: "unavailable",
@@ -68,18 +69,18 @@ struct LongHorizonTrajectoryBaselineTests {
             .init(name: "identityReturn", count: 54),
         ],
         performanceCharacterCounts: [
-            .init(name: "hypnoticLock", count: 212),
-            .init(name: "acidPressure", count: 98),
-            .init(name: "peakDrive", count: 42),
-            .init(name: "brokenSuspension", count: 106),
-            .init(name: "ambientDrift", count: 63),
-            .init(name: "melodicGlow", count: 193),
+            .init(name: "hypnoticLock", count: 205),
+            .init(name: "acidPressure", count: 131),
+            .init(name: "peakDrive", count: 44),
+            .init(name: "brokenSuspension", count: 119),
+            .init(name: "ambientDrift", count: 52),
+            .init(name: "melodicGlow", count: 163),
         ],
         highTensionObservationFloor: 0.8,
         highTensionBarCount: 670,
         recoveryTensionObservationCeiling: 0.4,
         recoveryTensionBarCount: 390,
-        distinctEventSignatureCount: 575,
+        distinctEventSignatureCount: 711,
         maximumOpenDebtCount: 6,
         maximumMemoryCounts: .init(
             recentBars: 4,
@@ -95,7 +96,7 @@ struct LongHorizonTrajectoryBaselineTests {
             dramaticArc: 57,
             sessionBars: 256
         ),
-        planSequenceFingerprint: "e65f85be9fbf46b6",
-        barEvidenceFingerprint: "ed54cedc5f2c73c0"
+        planSequenceFingerprint: "4a56c7cd78fe0184",
+        barEvidenceFingerprint: "07417d6988caf5ba"
     )
 }

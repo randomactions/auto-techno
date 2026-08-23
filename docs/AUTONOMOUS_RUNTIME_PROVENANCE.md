@@ -587,6 +587,36 @@ scheduler, route lifecycle, or realtime callback. Semantic trajectory evidence
 describes the changed journey offline; it is not yet a feedback input or a
 long-horizon quality verdict.
 
+## Implemented long-horizon energy coordination
+
+After episode selection, the same director resolves one immutable
+`autotechno-long-horizon-energy-coordination.v1` record for the exact future
+phrase boundary. It binds root-validated episode/operator context indirectly
+through the selected plan provenance, then records phrase index, start bar,
+existing phrase kind, selection reason, coordination reason, and the canonical
+eight-coordinate episode target. Codable decoding rejects unsupported schemas
+and inconsistent reason/target combinations.
+
+The target changes only existing score owners: compatible performance character
+and foundation behavior, two-to-four admitted roles, one-tier percussion gear,
+bounded narrative presence, current harmonic disclosure grammar, existing
+transformations, the one spatial carrier, and transition/pulse-echo eligibility
+at authored gestures. Identity return remains Hypnotic Lock. Fallback,
+payoff/recall reserve, and debt establishment use an explicit all-hold target;
+minimum-hold progression cannot spend those rare events early.
+
+Detached candidate preparation rejects a plan whose coordination does not match
+its selection and boundary, whose character/foundation is not the canonical
+projection, or whose per-bar harmonic relationship diverges. This validation
+adds no renderer choice and does not run in the realtime callback. The canonical
+renderer consumes the already-resolved existing score, and the accepted
+continuation advances only with the same atomic plan transaction. Engine v32 is
+retained because this phase recombines already reachable score and renderer
+behavior without changing a DSP implementation or calibrated primary policy.
+Candidate-plan fingerprint domain `candidate-plan.typed.v18` directly binds the
+selection record, energy-coordination record, and every per-bar harmonic
+relationship so provenance-distinct plans cannot share a transaction identity.
+
 ## Canonical unified loop
 
 All future musical development extends one persistent loop:

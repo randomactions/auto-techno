@@ -1359,7 +1359,9 @@ package enum AutonomousPhrasePreparer {
                 rootSeed: sessionSeed,
                 phraseIndex: plan.phraseIndex,
                 recentPerformanceCharacters:
-                    memory.recentPerformanceCharacters
+                    memory.recentPerformanceCharacters,
+                timbralMotionIntent: plan.longHorizonEnergyCoordination
+                    .target.timbralMotionIntent
             )
         return plan.resolvedBars.allSatisfy { resolved in
             guard resolved.performanceCharacter == expectedCharacter else {
@@ -1370,7 +1372,9 @@ package enum AutonomousPhrasePreparer {
                     for: expectedCharacter,
                     gesture: resolved.arrangementGesture,
                     localBar: resolved.performance.localBar,
-                    phraseLength: resolved.performance.phraseLength
+                    phraseLength: resolved.performance.phraseLength,
+                    energyRelationship: plan.longHorizonEnergyCoordination
+                        .target.foundationAuthority
                 )
             return resolved.foundationBehavior == expectedBehavior &&
                 resolved.foundationCompanion == expectedBehavior.companion
@@ -1406,7 +1410,13 @@ package enum AutonomousPhrasePreparer {
               dna.characteristicSyncopations.count <= 16,
               dna.foregroundPriority.count <= PerformanceRole.allCases.count,
               plan.endingInterlockState.previousChapters.count <= 2,
-              plan.endingNarrativeState.activeSupportingRoles.count <= 3 else {
+              plan.endingNarrativeState.activeSupportingRoles.count <= 3,
+              plan.longHorizonEnergyCoordination.isConsistent(
+                  phraseIndex: plan.phraseIndex,
+                  startBar: plan.startBar,
+                  phraseKind: plan.kind,
+                  selection: plan.longHorizonSelection
+              ) else {
             return false
         }
         for (index, resolved) in plan.resolvedBars.enumerated() {
@@ -1524,6 +1534,8 @@ package enum AutonomousPhrasePreparer {
         return performance.phrase == plan.phraseIndex &&
             performance.localBar == index &&
             performance.phraseLength == plan.barCount &&
+            resolved.harmonicDisclosureRelationship ==
+                plan.longHorizonEnergyCoordination.target.harmonicDisclosure &&
             performance.roles.count <= PerformanceRole.allCases.count &&
             Set(performance.roles).count == performance.roles.count &&
             performance.transformations.count <=
@@ -1610,7 +1622,9 @@ package enum AutonomousPhrasePreparer {
                         character: resolved.performanceCharacter,
                         gesture: resolved.arrangementGesture,
                         absoluteBar: resolved.performance.bar
-                    )
+                    ),
+                harmonicDisclosureRelationship:
+                    resolved.harmonicDisclosureRelationship
             )
         }
         let rhythmicFoundation = FoundationRhythmicRelationResolver.resolve(

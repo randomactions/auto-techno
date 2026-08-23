@@ -22,7 +22,7 @@ func fixedWidthFingerprintHex(_ value: UInt64) -> String {
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
-        digest(domain: "candidate-plan.typed.v17") { sink in
+        digest(domain: "candidate-plan.typed.v18") { sink in
             encode(plan, into: &sink)
         }
     }
@@ -464,6 +464,10 @@ private extension AutonomousTypedFingerprint {
         sink.field("endingSpatialContrastState")
         encode(value.endingSpatialContrastState, into: &sink)
         sink.field("endingNarrativeState"); encode(value.endingNarrativeState, into: &sink)
+        sink.field("longHorizonSelection")
+        encode(value.longHorizonSelection, into: &sink)
+        sink.field("longHorizonEnergyCoordination")
+        encode(value.longHorizonEnergyCoordination, into: &sink)
         let synthPerformance = SynthPerformancePlan(
             scene: value.scene,
             dna: value.dna,
@@ -763,6 +767,58 @@ private extension AutonomousTypedFingerprint {
         }
         sink.field("spatialContrast"); encode(value.spatialContrast, into: &sink)
         sink.field("narrative"); encode(value.narrative, into: &sink)
+        sink.field("harmonicDisclosureRelationship")
+        sink.raw(value.harmonicDisclosureRelationship.rawValue)
+    }
+
+    static func encode(
+        _ value: LongHorizonPhraseSelection,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonPhraseSelection")
+        sink.field("schemaVersion"); sink.int(value.schemaVersion)
+        sink.field("schemaIdentifier"); sink.string(value.schemaIdentifier)
+        sink.field("episodeID"); sink.presence(value.episodeID != nil)
+        if let episodeID = value.episodeID { sink.uint64(episodeID) }
+        sink.field("operatorKind"); sink.presence(value.operatorKind != nil)
+        if let operatorKind = value.operatorKind { sink.raw(operatorKind.rawValue) }
+        sink.field("phraseKind"); sink.raw(value.phraseKind.rawValue)
+        sink.field("reason"); sink.raw(value.reason.rawValue)
+    }
+
+    static func encode(
+        _ value: LongHorizonEnergyCoordination,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonEnergyCoordination")
+        sink.field("schemaVersion"); sink.int(value.schemaVersion)
+        sink.field("schemaIdentifier"); sink.string(value.schemaIdentifier)
+        sink.field("phraseIndex"); sink.int(value.phraseIndex)
+        sink.field("startBar"); sink.int(value.startBar)
+        sink.field("phraseKind"); sink.raw(value.phraseKind.rawValue)
+        sink.field("episodeID"); sink.presence(value.episodeID != nil)
+        if let episodeID = value.episodeID { sink.uint64(episodeID) }
+        sink.field("operatorKind"); sink.presence(value.operatorKind != nil)
+        if let operatorKind = value.operatorKind { sink.raw(operatorKind.rawValue) }
+        sink.field("selectionReason"); sink.raw(value.selectionReason.rawValue)
+        sink.field("reason"); sink.raw(value.reason.rawValue)
+        sink.field("target")
+        sink.aggregate("LongHorizonEnergyTarget")
+        sink.field("foundationAuthority")
+        sink.raw(value.target.foundationAuthority.rawValue)
+        sink.field("roleDensity"); sink.raw(value.target.roleDensity.rawValue)
+        sink.field("percussionActivity")
+        sink.raw(value.target.percussionActivity.rawValue)
+        sink.field("protagonistPresence")
+        sink.raw(value.target.protagonistPresence.rawValue)
+        sink.field("harmonicDisclosure")
+        sink.raw(value.target.harmonicDisclosure.rawValue)
+        sink.field("timbralMotionIntent")
+        sink.raw(value.target.timbralMotionIntent.rawValue)
+        sink.field("spatialDistance")
+        sink.raw(value.target.spatialDistance.rawValue)
+        sink.field("transitionExpectation")
+        sink.raw(value.target.transitionExpectation.rawValue)
     }
 
     static func encode(_ value: PerformanceBar, into sink: inout StreamingFNV1a) {

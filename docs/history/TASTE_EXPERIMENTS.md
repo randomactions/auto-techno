@@ -2304,3 +2304,37 @@ effect, bus, chain, graph, renderer, or callback was added. The palette register
 still finds no justified sound expansion. Long-horizon qualification remains
 unavailable pending score-owned energy coordination, realized signal evidence,
 calibration, listening, app/route QA, and physical-output soak.
+
+### Phase 4 energy-coordination addendum — 2026-08-23
+
+The exact episode vector now becomes one immutable phrase-boundary projection
+under `autotechno-long-horizon-energy-coordination.v1`. It coordinates existing
+foundation behavior, roles, percussion gear, narrative presence, harmonic
+disclosure, performance character/transformation, spatial carrier, and
+transition eligibility. This follows the source hypothesis that energy changes
+can come from small relational changes, sparse material has additive headroom,
+and rare payoffs matter only when reserve is protected; it does not encode a
+fixed DJ-set waveform.
+
+Fallback, early payoff/recall reserve, and debt establishment are exact all-hold
+paths. Active protagonist motion is capped at 0.16 per bar, percussion moves at
+most one existing tier, roles remain between two and four, and the current
+single-carrier spatial constraint remains at one distant bar per macro. Focused
+directional witnesses distinguish recover from rise/payoff and prove that every
+coordinate reaches an existing score consequence. The canonical four-hour run
+uses all six operators and preserves 233 protected rare-event phrases.
+
+The deliberate score drift advances the planning snapshot to v3 with unchanged
+7,801-bar/714-phrase geometry, 711 distinct existing event signatures, and
+plan/bar fingerprints `4a56c7cd78fe0184` / `07417d6988caf5ba`. Semantic
+trajectory/report fingerprints become `1a8af31815eb50da` /
+`ed606658ba2551d9`; four/eight-hour final continuation fingerprints become
+`b78c0cca7d89f911` / `4dbb1e5925f4db98`. These facts establish deterministic
+causality, not entertainment quality.
+
+The experiment exposes no repeatable missing sound family. It adds no synth,
+preset, patch home, DSP primitive, effect implementation, bus, graph stage,
+chain, renderer, or callback work. Stage 5 should first measure and orchestrate
+the current effect/capability dose and phrase sentences; long-horizon
+qualification, listening, app/route QA, and physical-output soak remain
+separate and unavailable.

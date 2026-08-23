@@ -26,11 +26,14 @@ sound vocabulary to implement and test the first long-horizon controller:
 
 The immediate sound-related foundation is to measure how these capabilities are
 used and recover over time. Phase 2 records fixed-domain semantic capability
-recency and rare-operator reserve in the canonical continuation. Phase 3 now
-exercises the existing palette through episode-aware phrase selection and still
-exposes no repeatable missing sound capability. Only a trajectory or translation
-deficit should trigger richer DSP. This prevents speculative variety from hiding
-a weak director.
+recency and rare-operator reserve in the canonical continuation. Phase 3
+exercises the existing palette through episode-aware phrase selection. Phase 4
+now coordinates its existing foundation, role, percussion, narrative, harmonic,
+timbral, spatial, and transition choices from the exact episode target. The
+four-hour trajectory exposes no repeatable missing sound capability, so Stage 5
+will add dose/recovery and phrase-sentence evidence without adding an effect.
+Only a trajectory or translation deficit should trigger richer DSP. This
+prevents speculative variety from hiding a weak director.
 
 The controlling design is
 [`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md). The stable
@@ -300,6 +303,7 @@ or a second graph.
 
 | Date | Change | Implementation state | Qualification state |
 | --- | --- | --- | --- |
+| 2026-08-23 | Completed Phase 4 score-owned energy coordination. The exact episode target now exercises existing character, foundation, role, percussion-gear, narrative, harmonic-disclosure, spatial-carrier, transition-role, pulse-echo-eligibility, and transformation vocabulary under strict all-hold fallback. The four-hour result raises distinct existing event signatures from the Phase 3 historical 575 to 712 without adding sound machinery. No synth, preset, patch home, DSP primitive, effect implementation, bus, graph stage, chain, renderer, or callback was added; no register item is promoted to sound maturation. | Existing Core score choices and detached validation changed; current palette, DSP implementations, graph processing, and realtime path unchanged | Long-horizon qualification remains unavailable; Stage 5 dose/sentence evidence, realized signal trajectory, calibration, listening, app/route QA, and soak unrun |
 | 2026-08-23 | Completed Phase 3 episode operator selection. The one existing director maps exact bound maintain/rise/recover/reframe/payoff/recall context onto the existing phrase vocabulary, protects minimum holds and rare-event reserve, and establishes dramatic debt before a debtless payoff. Four-hour evidence fulfills all operators with seven payoffs in seven arcs and seven bounded recoveries. No synth, preset, patch, DSP primitive, effect, bus, graph, chain, renderer, or callback was added. | Production Core phrase selection and resulting existing score/PCM choices changed; current sound palette and signal path unchanged | Long-horizon qualification remains unavailable; realized signal trajectory, listening, app/route QA, and soak unrun |
 | 2026-08-23 | Completed Phase 2 hierarchical continuation after a second caption pass emphasized branching cooldowns, variable turnover rate, second-wave reserve, sparse-versus-dense headroom, identity recall, and reframing. The canonical Core memory now records bounded semantic capability recency and rare-operator reserve, but does not yet select music or expose a missing sound capability. No synth, patch, DSP primitive, effect, bus, graph, or chain was added or changed. | Production Core continuation state; phrase plan, resolved score, renderer, DSP, graph, App, and PCM unchanged | Encoded unavailable: no calibrated long-horizon policy; realized signal evidence, listening, app/route QA, and soak unrun |
 | 2026-08-23 | Completed Phase 1 Core semantic trajectory schema and offline harness. Fixed-capacity capability recurrence now describes use/fatigue across canonical and adversarial journeys, but no realized DSP trajectory or repeatable palette deficit exists yet. No synth, patch, DSP primitive, effect, bus, or chain was added. | Production Core evidence schema plus test-only canonical harness; score, renderer, graph, App, and PCM unchanged | Encoded unavailable: no calibrated long-horizon policy; listening and signal qualification unrun |

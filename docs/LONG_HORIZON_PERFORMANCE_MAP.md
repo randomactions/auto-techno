@@ -13,13 +13,14 @@ semantic trajectory report. Phase 2 embeds one compact renewable arc/episode
 continuation in canonical session memory. Phase 3 now lets the one existing
 director consume that exact context at an unscheduled phrase boundary and maps
 maintain, rise, recover, reframe, payoff, and recall onto the existing phrase
-vocabulary. There is still no coordinated score-owned energy target, realized
-DSP trajectory report, or calibrated evaluator that can distinguish an earned
-long-form journey from a safe, finite repetition of phrase-scale cycles.
+vocabulary. Phase 4 projects the exact episode target through the existing
+resolved-score owners with bounded, versioned provenance. There is still no
+effect-dose sentence, realized DSP trajectory report, or calibrated evaluator
+that can distinguish an earned long-form journey from a safe, finite repetition
+of phrase-scale cycles.
 
-The next priority is therefore **score-owned energy coordination**, followed by
-effect/capability dose, realized DSP trajectory evidence, and calibration—not
-more presets. The
+The next priority is therefore **effect/capability dose orchestration**, followed
+by realized DSP trajectory evidence and calibration—not more presets. The
 current three synthesis
 architectures, eleven patch homes, six performance characters, resolved score,
 phrase composition, spatial field, and transition vocabulary are sufficient to
@@ -116,13 +117,13 @@ that context without encoding a fixed set order or adding a second planner.
 
 **Deficit hypothesis:** current continuation retains a compact, versioned hour-
 scale account of episode intent, semantic energy, recency, obligations, and
-reserved contrast, and the director now consumes it to select the next existing
-phrase kind. The episode target does not yet coordinate the resolved score's
-individual energy dimensions, however, and neither semantic nor realized
-evidence can qualify the consequence. As a result, two four-hour journeys can
-both be finite, deterministic, structurally valid, and primary-accepted while
-one only labels familiar short-cycle moves and the other produces motivated
-long-range development.
+reserved contrast. The director consumes it to select the next existing phrase
+kind and projects the exact episode target into existing resolved-score owners.
+Semantic evidence describes those consequences, but no compatible realized-DSP
+trajectory or calibrated policy can yet qualify them. As a result, two four-
+hour journeys can both be finite, deterministic, structurally valid, and
+primary-accepted while one only recombines familiar short-cycle moves and the
+other produces motivated long-range development.
 
 **Evidence that should expose it:** the implemented
 `LongHorizonSemanticTrajectoryReport` retains bounded semantic occupancy,
@@ -215,6 +216,15 @@ across 714 phrases. Its plan and bar-evidence fingerprints are
 `[303, 192, 96, 69, 54]` in canonical enum order. The v1 facts remain above and
 in history rather than being rewritten as if the planning change never
 happened. Qualification remains unavailable.
+
+Stage 4 advances the same descriptive snapshot to
+`long-horizon-planning-baseline.v3`. Phrase geometry remains 7,801 bars and 714
+phrases with the same phrase-kind counts, while the coordinated existing
+palette produces character counts `[205, 131, 44, 119, 52, 163]`, 711 distinct
+event signatures, and plan/bar fingerprints `4a56c7cd78fe0184` /
+`07417d6988caf5ba`. This is reviewed intentional score drift. Engine identity
+remains v32 because no renderer, DSP primitive, graph, or qualified policy
+revision was added; qualification remains unavailable.
 
 ### Implemented Phase 1 semantic trajectory
 
@@ -338,6 +348,53 @@ professional quality. No synthesis architecture, preset, patch, DSP primitive,
 effect, bus, chain, graph, renderer, or callback was added; Stage 4 must make
 the vector coordinates themselves coordinated and causal.
 
+### Implemented Phase 4 score-owned energy coordination
+
+Each canonical plan now carries
+`autotechno-long-horizon-energy-coordination.v1`. The immutable record binds the
+exact phrase index, start bar, existing phrase kind, episode ID/operator,
+selection reason, coordination reason, and eight-coordinate target before the
+phrase is authored. Invalid hierarchy context produces the explicit
+conservative all-hold path. Minimum holds may progress maintain, rise, recover,
+or reframe, while payoff and recall reserve remain all-hold until their rare
+event is eligible. Debt establishment is also protected so it cannot spend the
+payoff target early.
+
+The target reaches existing owners rather than a new energy lane:
+
+- foundation authority selects only the character's compatible existing
+  foundation behavior;
+- role density and percussion activity bound existing role admission and move
+  percussion gear by at most one tier;
+- protagonist presence adjusts the existing narrative contour with a maximum
+  coordinated slew of 0.16 per bar;
+- harmonic disclosure changes eligibility inside the existing pad/function
+  grammar;
+- timbral motion selects an existing compatible performance character and
+  transformation relation while identity return remains Hypnotic Lock;
+- spatial distance uses the one existing carrier and at most one distant bar
+  per sixteen-bar macro; and
+- transition expectation uses existing transition-role and pulse-echo
+  eligibility at already-authored structural gestures.
+
+All-hold coordination preserves the previous exact resolved behavior. The
+`candidate-plan.typed.v18` provenance domain fingerprints the selection,
+coordination, and per-bar harmonic relationship, so the frozen fallback fixture
+now fingerprints to `5031677f3075fe88`. Detached preparation
+revalidates coordination, character, foundation, and per-bar harmonic binding
+before rendering. In the seed-48,291 four-hour trajectory all six operators are
+exercised, 233 protected rare-event phrases stay all-hold, and the final
+continuation fingerprints to `b78c0cca7d89f911`; the eight-hour final
+continuation fingerprints to `4dbb1e5925f4db98`. Semantic trajectory/report
+fingerprints move to `1a8af31815eb50da` / `ed606658ba2551d9`, with 202 matched
+and 481 unmatched home-signature bars and 5,130 repeated-signature observations.
+
+These are structural and semantic consequences only. Stage 4 adds no synth,
+patch home, DSP primitive, effect implementation, bus, chain, graph stage,
+renderer, callback work, or qualified policy. The next deficit is truthful
+effect/capability dose and sentence evidence from the current palette, followed
+by compatible realized signal trajectories and calibration.
+
 ## Required musical model
 
 ### One hierarchy, not another engine
@@ -351,7 +408,8 @@ it:
 session identity and accepted continuation
   -> renewable arc intention and outstanding obligations
   -> episode operator and reserved contrast
-  -> existing phrase kind and performance character
+  -> coordinated semantic target
+  -> existing phrase kind, character, roles, and score relations
   -> existing resolved score and renderer
   -> semantic + PCM trajectory evidence
   -> reason-coded update for an unscheduled future phrase
@@ -502,7 +560,7 @@ Each slice extends the one canonical owner and leaves a reusable capability.
 | 1. Trajectory schema and offline harness — complete locally | `AutoTechnoCore` schema `autotechno-long-horizon-semantic.v1` plus existing canonical journey harness | Fixed-capacity semantic trajectory accumulator and machine-readable report | Real four/eight-hour evidence plus adversarial periodicity, peak dwell, capability fatigue, recall, and debt cases; qualification remains unavailable | Offline only; malformed input is unavailable without partial mutation; no runtime selection change | No opaque engagement score, handwritten pass, second planner, DSP type, or PCM retention |
 | 2. Hierarchical continuation — complete locally | `TemporalMusicalMemory` extended with `autotechno-long-horizon-continuation.v1` | Renewable arc/episode intention, fixed-domain recency, rare-operator reserve, identity landmarks, and obligations | Frozen four/eight-hour state and episode-sequence fingerprints; different episode context from identical local history; exact replay and fresh-root variation | Observes only committed plans; bounded due/hold and retained collections; schema-safe decode; preserve current episode on failure | No second director, playlist, user mode, plan selection, score, PCM, or callback change |
 | 3. Episode operator selection — complete locally | `AutonomousSessionDirector` selection and `makePlan` consume exact hierarchy context | Versioned maintain/rise/recover/reframe/payoff/recall provenance mapped to existing phrase kinds | All operators fulfill in the canonical journey; at most one payoff per arc, real debt payment, prompt bounded recovery, frozen planning/semantic/hierarchy drift | Candidate count remains one; minimum hold protects reserved rare events; invalid context uses the previous conservative policy | No alternative arrangement engine, phrase vocabulary, or random style switch |
-| 4. Score-owned energy coordination | Existing resolved roles, character, narrative, foundation, disclosure, and transformations | One coordinated semantic energy target rather than independent layer rolls | Every target coordinate reaches score/renderer or is removed; provenance and exact neutral paths required | Bounded slew and changes only at phrase/macro boundaries | No extra density track or disconnected energy scalar |
+| 4. Score-owned energy coordination — complete locally | Existing resolved roles, character, narrative, foundation, disclosure, transformations, spatial carrier, and transition eligibility | Versioned eight-coordinate target projected through existing score owners | Every coordinate has directional semantic witnesses; exact all-hold fingerprint; four-hour six-operator coverage, bounded roles/slew/space, and protected rare-event reserve | One immutable phrase-boundary target; 0.16 protagonist slew; one percussion tier; one spatial carrier/macro; malformed provenance fails closed | No extra density track, disconnected scalar, synth, patch, DSP primitive, graph stage, or callback path |
 | 5. Effect/capability dose orchestration | Existing instrument effect access, graph, FDN, pulse echo, returns, and transition relations | Recency, cooldown, and sentence-level call/response/turnaround orchestration | Wet occupancy, effect-to-dry intelligibility, tail recovery, and repeated-capability evidence | No new bus initially; force-home and recovery keep existing exact neutral behavior | No orderable plug-in chains or generic FX sequencer |
 | 6. Calibrated long-horizon policy | Primary evaluator and versioned professional evidence | Non-compensable cross-phrase and cross-episode decision dimensions | Diverse development journeys, disjoint holdout journeys, and adversarial long runs | A failed trajectory cannot be corrected by rewriting scheduled audio; repeat accepted material or keep current episode | No parallel permissive evaluator |
 | 7. Bounded future adaptation | Atomic selected commit across musical, quality, render, graph, and live state | Reason-coded trajectory update for the next eligible phrase | Exact replay of plan, evidence, decision, and continuation; stability under missed deadlines and route changes | One bounded correction path at most unless the primary contract is deliberately revised and recalibrated | No independent long-form controller fighting the director |

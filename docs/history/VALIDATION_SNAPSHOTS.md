@@ -2084,3 +2084,54 @@ canonical renderer, but no synth, preset, patch, DSP primitive, effect, bus, or
 chain was added. Long-horizon qualification remains unavailable; listening,
 app/route/interruption QA, and physical-output soak remain unrun and are not
 implied by this snapshot.
+
+## Long-horizon Phase 4 score-owned energy coordination — 2026-08-23
+
+Phase 4 adds strict Core provenance
+`autotechno-long-horizon-energy-coordination.v1` and projects the bound episode
+target through existing resolved-score owners at one future phrase boundary.
+All-hold fallback and protected payoff/recall reserve remain exact. Active
+projection bounds roles to two-to-four, percussion movement to one existing
+gear tier, protagonist slew to 0.16 per bar, and spatial distance to the
+existing one-carrier-per-macro rule. Detached preparation revalidates the
+selection/coordination boundary plus canonical character, foundation, and
+harmonic binding before render.
+
+The finalized seed-48,291 evidence is:
+
+- planning baseline v3: 7,801 bars, 714 phrases, 711 distinct event signatures,
+  plan/bar fingerprints `4a56c7cd78fe0184` / `07417d6988caf5ba`;
+- semantic trajectory/report fingerprints `1a8af31815eb50da` /
+  `ed606658ba2551d9`, with 202 matched and 481 unmatched home-signature bars,
+  288 opened and 284 paid debts, and 5,130 repeated-signature observations;
+- four/eight-hour continuation state fingerprints `b78c0cca7d89f911` /
+  `4dbb1e5925f4db98`, while completed-episode geometry fingerprints remain
+  `a3929317ea4e86ac` / `ffb454d66004e4bf`; and
+- all six operators active, 233 protected rare-event phrases, maximum
+  coordinated protagonist slew 0.16, and exact fallback-plan fingerprint
+  `5031677f3075fe88` under `candidate-plan.typed.v18`.
+
+Final local validation used Xcode-selected Apple Swift with isolated caches,
+`xcrun swift`, `--disable-sandbox`, and serial compilation where applicable:
+
+- the combined Phase 0-4 long-horizon suites passed 25/25 in 35.958 seconds,
+  including an active rise target passing detached canonical preparation and
+  playback/commit hard gates;
+- the greater-than-eight-hour interlock/unified evolution pair plus current
+  canonical runtime and repository surface passed 13/13 in 41.833 seconds,
+  including the preserved atmosphere-only major-break narrative contract and
+  detached render replay from continuation;
+- strict `swift-format` lint passed for both new Stage 4 files and
+  `git diff --check` passed; and
+- the optimized `AutoTechno` product built incrementally in 23.20 seconds with
+  SHA-256
+  `cc3cb730daec248139e41b39ecdcfb6fab7f7f1698752f8fac6dbf99a431908f`.
+
+SwiftPM emitted known read-only user-cache and missing isolated `.pcm` warnings
+while every recorded exit status was green. This phase changes Core score
+choices and adds detached preparation validation, but adds no synthesis
+architecture, preset, patch home, DSP primitive, effect implementation, bus,
+graph stage, chain, renderer, App scheduler, route lifecycle, or callback work.
+Long-horizon qualification remains unavailable; effect dose/sentence evidence,
+realized signal trajectory, calibration, listening, app/route/interruption QA,
+and physical-output soak remain unrun and are not implied by this snapshot.

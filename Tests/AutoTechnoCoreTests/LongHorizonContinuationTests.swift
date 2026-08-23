@@ -70,7 +70,7 @@ struct LongHorizonContinuationTests {
         #expect(journey.state.memory.totalBars >= 15_600)
         #expect(journey.completedEpisodes.count == 75)
         #expect(continuation.arcIndex == 16)
-        #expect(continuation.fingerprint == "008b96f48b2e955d")
+        #expect(continuation.fingerprint == "4dbb1e5925f4db98")
         #expect(episodeSequenceFingerprint(journey.completedEpisodes) == "ffb454d66004e4bf")
         #expect(operators == Set(LongHorizonEpisodeOperator.allCases))
         #expect(
@@ -124,7 +124,7 @@ struct LongHorizonContinuationTests {
         #expect(first.completedEpisodes == replay.completedEpisodes)
         #expect(first.completedEpisodes.count == 37)
         #expect(first.state.memory.longHorizon.arcIndex == 7)
-        #expect(first.state.memory.longHorizon.fingerprint == "9790c22d98b4807e")
+        #expect(first.state.memory.longHorizon.fingerprint == "b78c0cca7d89f911")
         #expect(episodeSequenceFingerprint(first.completedEpisodes) == "a3929317ea4e86ac")
         #expect(
             try encoder.encode(first.state.memory.longHorizon)

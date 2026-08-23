@@ -1,8 +1,8 @@
 import AutoTechnoCore
 import Foundation
 
-/// Phase-0-only evidence produced from the real canonical director. This type
-/// deliberately lives in the test target: it observes planning and cannot
+/// Versioned descriptive evidence produced from the real canonical director.
+/// This type deliberately lives in the test target: it observes planning and cannot
 /// influence runtime selection, continuation, rendering, or PCM.
 struct LongHorizonPlanningBaselineReport: Codable, Equatable, Sendable {
     struct NamedCount: Codable, Equatable, Sendable {
@@ -50,7 +50,7 @@ struct LongHorizonPlanningBaselineReport: Codable, Equatable, Sendable {
 }
 
 enum LongHorizonPlanningBaselineProbe {
-    static let schemaVersion = "long-horizon-planning-baseline.v2"
+    static let schemaVersion = "long-horizon-planning-baseline.v3"
 
     static func snapshot(
         rootSeed: UInt64,

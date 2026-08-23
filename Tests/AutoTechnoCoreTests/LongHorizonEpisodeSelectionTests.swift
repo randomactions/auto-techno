@@ -274,6 +274,9 @@ private func continuation(
       ))
   }
   episode["operatorKind"] = operatorKind.rawValue
+  episode["target"] = try JSONSerialization.jsonObject(
+    with: JSONEncoder().encode(
+      LongHorizonContinuationState.target(for: operatorKind)))
   episode["startedAtBar"] = max(0, nextExpectedBar - 128)
   episode["minimumHoldUntilBar"] = minimumHoldUntilBar
   episode["dueByBar"] = max(minimumHoldUntilBar + 128, nextExpectedBar + 128)

@@ -95,9 +95,11 @@ The long-horizon foundation now includes an offline, fixed-capacity Core
 semantic-trajectory report and one compact renewable arc/episode continuation
 inside canonical session memory. The one existing director now consumes the
 exact bound episode at an unscheduled phrase boundary, maps it onto the existing
-phrase vocabulary, and records versioned selection provenance. The report is
-still not consumed by the shipped evaluator, and score-owned vector
-coordination plus realized trajectory qualification remain unavailable.
+phrase vocabulary, records versioned selection provenance, and projects the
+episode's eight-coordinate energy target through existing score owners with an
+exact all-hold fallback. The report is still not consumed by the shipped
+evaluator; effect-dose/sentence evidence, realized trajectory qualification,
+and calibrated long-horizon adaptation remain unavailable.
 
 ## Package
 
