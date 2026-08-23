@@ -251,6 +251,32 @@ stability, identity, groove, and long-form coherence, plus sufficient preparatio
 headroom and the physical-output soak. Claim professional quality only for an
 exact revision and policy version that pass every gate.
 
+The detailed source-grounded implementation order now lives in
+[`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md). The current
+runtime already proves bounded deterministic planning for more than eight hours,
+and the versioned Phase 0 four-hour planning baseline now freezes exact phrase-
+kind, performance-character, tension, event-signature, dramatic-debt, memory,
+and phrase/bar fingerprint evidence as canonical JSON. It explicitly records
+qualification as unavailable rather than treating those counts as an
+engagement verdict. Phase 1 adds the Core-owned
+`autotechno-long-horizon-semantic.v1` streaming accumulator and machine-readable
+report. Its fixed-capacity occupancy, recurrence, scalar, periodicity, identity,
+capability, and dramatic-debt evidence remains offline and descriptive; real
+four/eight-hour and adversarial tests cannot yet pass or reject music. The next
+missing foundation is one compact hierarchical continuation consumed by the
+existing director, followed by compatible realized-PCM trajectory evidence and
+a calibrated adversarial policy that can reject fixed-period cycling, permanent
+peak, ineffective recovery, capability fatigue, failed recall, and semantic/PCM
+direction mismatches.
+
+The associated DSP, synth, patch-family, and effect follow-up register is
+[`LONG_HORIZON_SOUND_CAPABILITIES.md`](LONG_HORIZON_SOUND_CAPABILITIES.md). The
+initial audit selects evidence-first effect-dose, recovery, phrase-sentence, and
+multi-rate modulation foundations; it does not yet justify another synthesis
+architecture, patch family, effect bus, or selectable chain. Any later sound
+expansion must be selected by a repeatable exact-checkpoint deficit and replace
+the affected provisional realization in place.
+
 ## Non-goals
 
 - restoring retired engines, reference executables, or comparison paths;

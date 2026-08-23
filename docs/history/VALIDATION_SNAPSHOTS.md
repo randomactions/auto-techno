@@ -1896,3 +1896,92 @@ preparation isolation, canonical transaction compatibility, protected routing,
 and realtime-producer safety. Publication and exact-head CI are separate gates.
 No listening, app/route/interruption QA, physical-output soak, or professional-
 quality claim is implied.
+
+## Long-horizon Phase 0 descriptive planning baseline — 2026-08-23
+
+Phase 0 adds only test-target evidence around the unchanged canonical
+`AutonomousSessionDirector`. `LongHorizonPlanningBaselineProbe` advances the
+real fixed-seed continuation for exactly 7,800 bars at 130 BPM, emits sorted
+canonical JSON under `long-horizon-planning-baseline.v1`, and binds the current
+`autotechno-canonical-engine.v32`. The frozen report records all five phrase
+kinds, all six performance characters, descriptive high/recovery tension
+counts, distinct existing event signatures, open-debt maximum, and maximum and
+final fixed-capacity memory counts. Separate fingerprints bind phrase/debt order
+(`b6642428b9d0fc3e`) and the bar-level semantic stream
+(`ce2054dc1adc6b36`).
+
+TDD first rejected placeholder fingerprints and an assumed dramatic-arc
+maximum of 128. The observed maximum was 109; the 128 value remains only the
+hard capacity. Freezing the observed value and exact fingerprints closes the
+same-run-only loophole: later planning drift cannot pass merely because two
+fresh executions drift identically. Canonical JSON round-trip and byte equality
+across replay are also required.
+
+Local validation used Xcode-selected Apple Swift 6.3.3 with isolated caches,
+`xcrun swift`, `--disable-sandbox`, and serial filters:
+
+- Phase 0 frozen four-hour snapshot: 1/1 passed in 3.848 seconds;
+- existing greater-than-eight-hour interlock and unified-evolution contracts:
+  2/2 passed in 7.691 seconds;
+- current canonical runtime and repository-surface contracts: 11/11 passed in
+  55.128 seconds;
+- `git diff --check` passed, and no production source or `Package.swift` file
+  changed.
+
+The report itself encodes `qualificationStatus: unavailable` and reason
+`no-calibrated-long-horizon-policy`. This snapshot proves a reproducible,
+cross-revision descriptive baseline, bounded planning state, canonical-runtime
+isolation, and machine-readable evidence. It does not prove engaging recurrence,
+peak scarcity, recovery quality, four-hour entertainment, signal consequence,
+app/runtime behavior, route/interruption behavior, or physical-output soak. No
+score, renderer, DSP, PCM, quality policy, executable product, or realtime path
+changed.
+
+## Long-horizon Phase 1 semantic trajectory evidence — 2026-08-23
+
+Phase 1 adds production `AutoTechnoCore` schema
+`autotechno-long-horizon-semantic.v1` and a streaming fixed-capacity
+`LongHorizonSemanticTrajectoryAccumulator`. The existing test-only canonical-
+journey harness advances the real director and continuation through the
+accumulator without rendering or feeding evidence back into selection. The
+report is `Codable`, keeps dimensions interpretable, and explicitly declares
+qualification unavailable with reason `no-calibrated-long-horizon-policy`.
+
+The frozen four-hour report contains 7,800 bars and 710 phrases. Its trajectory
+fingerprint is `1bee65e3170b3f59`; its complete sorted-JSON fingerprint is
+`2e41bc115c3d0514`. Replay equality, encoded-byte equality, and JSON round-trip
+all pass. The canonical report also records the unchanged 764 high-tension and
+410 recovery observations, 137 matched and 553 unmatched identity-return bars,
+318 opened and 314 paid debts, and 4,054 repeated event-signature observations.
+These values are descriptive frozen evidence, not calibrated ranges.
+
+The eight-hour request finishes at the next phrase boundary, 15,611 bars, while
+retained recent semantic tokens, periodicity lags, event signatures, identity
+landmarks, and dramatic debts remain bounded to `[64, 64, 64, 16, 16]`.
+Synthetic cases expose an exact 16-bar cycle, 128-bar high-tension dwell,
+128-bar continuous capability use, matched/unmatched recall, zero-age and aged
+debt payoff, mid-session outstanding-debt import, and debt-capacity overflow.
+Wrong seed, invalid scalar, skipped phrase, oversized payoff list, and capacity
+overflow all fail closed without
+partially mutating the rejected observation.
+
+TDD first failed at compile time because the schema, accumulator, and report did
+not exist. After implementation, local validation used Xcode-selected Apple
+Swift 6.3.3 with isolated caches, `xcrun swift`, `--disable-sandbox`, and serial
+filters:
+
+- Phase 1 semantic trajectory suite: 7/7 passed in 9.518 seconds;
+- frozen Phase 0 four-hour snapshot: 1/1 passed in 3.591 seconds;
+- existing greater-than-eight-hour interlock/unified evolution: 2/2 passed in
+  7.387 seconds;
+- current canonical runtime and repository surface: 11/11 passed in 56.241
+  seconds.
+
+This proves schema determinism, bounded retained state, malformed-input
+availability semantics, canonical-harness integration, and the ability to
+describe the named adversarial deficits. It does not establish a calibrated
+long-horizon policy, professional quality, realized PCM direction, listening,
+app/runtime or route/interruption behavior, or physical-output soak. No
+planning, continuation, renderer, DSP, graph, PCM, App, scheduler, route, or
+realtime-callback behavior changed, and the sound-capability register selected
+no synth, patch, effect, bus, or chain expansion.

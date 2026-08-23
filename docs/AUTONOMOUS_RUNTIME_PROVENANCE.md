@@ -499,6 +499,38 @@ role neutrality, cascade-aperture or lead-pattern replay, and route-derived
 frame geometry. The calibrated evaluator judges this evidence as part of the
 single primary transaction.
 
+## Implemented offline long-horizon semantic evidence
+
+`AutoTechnoCore` owns the versioned
+`autotechno-long-horizon-semantic.v1` report and its fixed-capacity streaming
+accumulator. Given an exact canonical phrase plan and incoming
+`AutonomousSessionState`, it validates seed, phrase, bar, resolved-score,
+composition, scalar, and dramatic-debt continuity before atomically retaining
+descriptive occupancy, recurrence, scalar movement, dwell, periodicity,
+capability use, identity recall, and debt lifecycle evidence. Core retains no
+PCM and depends on no DSP type.
+
+The accumulator keeps only fixed enum-domain counters and recurrence slots, 64
+recent semantic tokens, 64 periodicity lags, 64 recently used event signatures,
+16 non-reconstructable identity landmarks, and 16 dramatic debts. Malformed or
+discontinuous input terminates availability with a reason code and cannot
+partially apply the rejected phrase. A mid-session observation window imports
+the exact bounded outstanding-debt ledger before observing successors. Its
+report names the root, starting and
+next phrase/bar boundaries, engine/schema versions, and a deterministic
+trajectory fingerprint.
+
+This is an offline evidence surface, not a shipped control path. The existing
+test-only canonical-journey harness streams the real director and continuation
+through it, while `AutonomousSessionState`, `AutonomousSessionDirector`, the
+prepared-product transaction, renderer, App scheduler, route lifecycle, and
+realtime callback do not consume or mutate it. Valid reports explicitly carry
+`qualificationStatus: unavailable` and
+`qualificationReason: no-calibrated-long-horizon-policy`; no trajectory result
+can currently select, reject, or adjust music. The hierarchy and next ownership
+boundary are defined in
+[`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md).
+
 ## Canonical unified loop
 
 All future musical development extends one persistent loop:

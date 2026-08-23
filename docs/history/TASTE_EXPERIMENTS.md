@@ -2116,3 +2116,123 @@ After the normative prose was finalized, the repository-surface suite reran
 Publication and exact-head CI remain separate gates. No listening,
 app/route/interruption QA, physical-output soak, or professional-quality claim
 is implied.
+
+## Long-horizon performance study: seven DJ-set sources — 2026-08-23
+
+This study used the repository's bounded `yt-dlp` workflow to inspect seven
+videos about set construction and sustaining a dance floor: Resident Advisor's
+*The Art Of DJing: Dr. Rubinstein — Building energy* (`I7LwQV9T7gg`),
+Crossfader's *How To Plan A DJ Set — (10 Ways To Do It)* (`hjkTkb-_7mQ`),
+James Hype's *Planning a DJ set — My secret method* (`3bS8lso9eis`), DJ
+Mentor's *The Secret to Building DJ Sets That Make Sense* (`c0MXfZMy2jc`),
+Karl Thomas's *How To Structure Your DJ Set The RIGHT Way* (`B31PnFJ-Xdc`),
+Valoramous's *DJ Tutorial 58 | How to Set Structure for Four or Five Hour
+Gigs* (`u17CILIYGEg`), and Chris M's *How Pro DJs Keep The Dance Floor Full
+ALL NIGHT* (`b2JvzT2sYhg`). Six sources had manual or automatic English
+captions; the James Hype source exposed no transcript track, so its use was
+limited to metadata, description, and bounded discussion rather than inferred
+spoken claims. Temporary captions, metadata, and comments remain untracked.
+
+The bounded discussion sample contained 240 top-level comments across the
+seven sources. Five technically substantive threads were inspected with at
+most three replies each. Independent discussion converged on four portable
+ideas: plan sections while retaining adaptation, classify material by felt
+energy and function rather than BPM alone, preserve headroom so peaks remain
+perceptible, and prefer rare prepared surprise over continuous novelty. These
+comments were treated as hypothesis support, not authority or taste approval.
+
+The videos collectively describe long performance as nested contrast rather
+than a monotonic climb: maintain, rise, recover, reframe, pay off, and recall
+at different timescales. Small relational changes can move energy without
+replacing the whole texture; sparse passages can accept more layering or
+effect motion than already dense passages; sustained intensity needs breathers;
+and the strongest material should not be spent early or continuously. Because
+Auto Techno is fixed at 130 BPM and cannot read a crowd or microphone, the
+portable translation is a semantic energy vector plus feedback from its own
+committed score and app-owned PCM, never tempo escalation or external sensing.
+
+Repository reconciliation found that the canonical runtime already plans and
+renders indefinitely with bounded continuation, but its explicit dramatic and
+session memories cover only minutes. Existing eight-hour tests prove bounded,
+deterministic evolution, not that energy, recurrence, contrast reserve, or
+capability dose remain entertaining. The falsifiable deficit is therefore the
+absence, before `AutonomousSessionDirector.plan(from:)`, of one compact,
+versioned hour-scale trajectory that can account for those qualities and bind
+them to future decisions and realized evidence.
+
+A new descriptive four-hour probe ran the current fixed seed twice for 7,800
+bars and produced exact replay equality. It planned 710 phrases across all five
+phrase kinds and all six performance characters, with 572 distinct event
+signatures, 764 high-tension bars, 410 recovery-tension bars, at most seven open
+transition debts, and bounded final memory counts `[4, 4, 6, 56, 256]`. These
+figures establish a reproducible baseline only; no thresholds were learned
+from them, and they do not qualify peak scarcity, recurrence timing, arc shape,
+or four-hour entertainment.
+
+The durable implementation and validation map is recorded in
+[`../LONG_HORIZON_PERFORMANCE_MAP.md`](../LONG_HORIZON_PERFORMANCE_MAP.md).
+The separate, updateable synth/DSP/patch/effect register is
+[`../LONG_HORIZON_SOUND_CAPABILITIES.md`](../LONG_HORIZON_SOUND_CAPABILITIES.md).
+The current evidence does not justify another synth architecture, preset pack,
+effect bus, fixed chain, alternate renderer, or user-facing selector. The next
+capability boundary is the compact trajectory schema and descriptive harness;
+sound expansion becomes eligible only when semantic or realized evidence
+exposes a repeatable deficit the existing palette cannot express.
+
+This study changed documentation and added a Core-only baseline test; it made
+no score, renderer, PCM, effect, patch, or realtime-callback change. Focused
+structural validation passed 1/1. Long-horizon automated quality qualification,
+listening, app/route QA, release build validation, and hardware soak remain
+unavailable or unrun and are not implied by the study.
+
+### Phase 0 implementation addendum — 2026-08-23
+
+The preliminary same-run probe was tightened into the test-only
+`LongHorizonPlanningBaselineProbe`. Schema
+`long-horizon-planning-baseline.v1` now emits sorted canonical JSON, binds the
+current `autotechno-canonical-engine.v32`, and freezes the exact four-hour
+snapshot. Phrase/debt order fingerprints to `b6642428b9d0fc3e`; the complete
+bar-level semantic stream fingerprints to `ce2054dc1adc6b36`. Maximum observed
+memory counts were `[4, 16, 16, 109, 256]`, while the final counts remained
+`[4, 4, 6, 56, 256]`.
+
+This closes only the descriptive Phase 0 boundary. The report itself declares
+`qualificationStatus` as `unavailable` with reason
+`no-calibrated-long-horizon-policy`. A later score or planning revision must
+review and deliberately advance the baseline instead of passing by comparing
+two equally changed fresh runs. No metric in this report is a learned quality
+range, no DSP or PCM changed, and no sound-capability expansion became eligible.
+
+### Phase 1 semantic-trajectory addendum — 2026-08-23
+
+Phase 1 converts the map's first evidence requirement into production
+`AutoTechnoCore` schema `autotechno-long-horizon-semantic.v1` without connecting
+it to runtime selection. `LongHorizonSemanticTrajectoryAccumulator` streams one
+canonical plan at a time and retains only fixed-domain counters plus capped
+recurrence, periodicity, event-signature, identity-landmark, and dramatic-debt
+state. The machine-readable report keeps semantic dimensions separate and has
+no opaque engagement score, pass, rejection, adjustment, or future-plan request.
+
+The existing test-only canonical-journey harness now drives the real director
+and continuation through that accumulator. The frozen four-hour seed-48,291
+trajectory covers 7,800 bars and 710 phrases, fingerprints the semantic stream
+to `1bee65e3170b3f59`, and fingerprints the complete sorted report JSON to
+`2e41bc115c3d0514`. It describes 4,054 repeated event-signature observations,
+137 exact home-signature recall bars versus 553 unmatched identity-return bars,
+and 318 opened versus 314 paid dramatic debts. These observations are not
+learned target ranges or listening verdicts.
+
+An eight-hour request finishes its final phrase at 15,611 bars while retained
+semantic tokens, lag states, event signatures, identity landmarks, and debts
+stay within `[64, 64, 64, 16, 16]`. Synthetic inputs establish visibility of an
+exact 16-bar cycle, a 128-bar high-tension dwell, 128-bar continuous capability
+use, failed/exact recall, instant debt payoff, and debt-capacity overflow.
+Malformed seed, scalar, continuity, or debt inputs produce an unavailable report
+without partially committing the rejected phrase.
+
+This implements the reusable evidence surface only. It makes no score,
+continuation, director, renderer, DSP, graph, PCM, App, scheduler, route, or
+callback change. The report still declares long-horizon qualification
+unavailable. The evidence did not expose a missing synthesis or effect
+capability, so the sound-capability register records no synth, patch, DSP,
+effect, bus, chain, or selector expansion.

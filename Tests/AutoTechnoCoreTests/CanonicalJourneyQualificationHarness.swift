@@ -19,6 +19,31 @@ struct CanonicalJourneyQualificationHarness {
     let routeFingerprint: String
     let routeGeneration: Int
 
+    /// Streams the real director and continuation through the Core-owned,
+    /// descriptive trajectory accumulator. It does not render, qualify, or
+    /// feed the report back into phrase selection.
+    func semanticTrajectoryReport(
+        director: AutonomousSessionDirector,
+        startingState: AutonomousSessionState? = nil,
+        requestedBarCount: Int
+    ) -> LongHorizonSemanticTrajectoryReport {
+        var state = startingState ?? director.initialState()
+        var accumulator = LongHorizonSemanticTrajectoryAccumulator(
+            startingState: state
+        )
+        let nonnegativeRequest = max(0, requestedBarCount)
+        let targetBar = state.memory.totalBars > Int.max - nonnegativeRequest
+            ? Int.max : state.memory.totalBars + nonnegativeRequest
+
+        while state.memory.totalBars < targetBar {
+            let plan = director.plan(from: state)
+            guard accumulator.observe(plan: plan, incomingState: state) == .accepted
+            else { return accumulator.report() }
+            state.advancePlanning(using: plan)
+        }
+        return accumulator.report()
+    }
+
     func planCheckpoints(
         director: AutonomousSessionDirector,
         startingState: AutonomousSessionState? = nil,

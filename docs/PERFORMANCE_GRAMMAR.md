@@ -176,3 +176,13 @@ Deliberate remaining boundaries are cross-bar/sample-library slicing, granular
 time stretching, arbitrary MIDI import/export, more than four simultaneous pad
 voices, chromatic reharmonization outside the identity mode, and calibrated
 ranking of harmonic or resampling quality.
+
+Phrase character and composition do not by themselves qualify an hour-scale
+journey. The hierarchy, compact continuation, trajectory evidence, adversarial
+cases, and ordered integration path are defined in
+[`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md); conditional
+renderer maturation is tracked separately in
+[`LONG_HORIZON_SOUND_CAPABILITIES.md`](LONG_HORIZON_SOUND_CAPABILITIES.md).
+The implemented Phase 1 Core schema observes this grammar through a bounded
+offline accumulator only. It does not add a character, phrase kind, score lane,
+planner, runtime selector, or quality verdict.

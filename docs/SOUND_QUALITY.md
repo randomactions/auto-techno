@@ -298,6 +298,22 @@ analyzers retain fixed working-memory ceilings. See
 [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md) and
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
+The separate Phase 1 long-horizon evidence foundation is Core-owned schema
+`autotechno-long-horizon-semantic.v1`. Its streaming accumulator records bounded
+semantic occupancy, recurrence, tension/activity/repetition/density movement,
+1...64-bar periodicity, capability dose, identity return, and dramatic-debt
+lifecycles across committed canonical plans. It stores no PCM and imports no DSP
+type. The offline canonical-journey harness exercises four- and eight-hour
+trajectories plus malformed and adversarial synthetic journeys, but the report
+has no pass/reject field and always declares qualification unavailable with
+reason `no-calibrated-long-horizon-policy`.
+
+This semantic report is not part of the current primary transaction, runtime
+continuation, or controller. A later DSP-owned realized-trajectory report and
+calibrated non-compensable policy must prove direction and consequence before
+any long-horizon quality claim or automatic future decision. See
+[`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md).
+
 ## Engine ownership
 
 The shipped signal path owns its synthesis, effects, mixing, and mastering

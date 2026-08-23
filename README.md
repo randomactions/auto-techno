@@ -91,6 +91,11 @@ Legal reference recordings and external analyzers may be used locally for
 development; neither they nor third-party instruments or effects are runtime
 dependencies.
 
+The first long-horizon implementation slice is an offline, fixed-capacity Core
+semantic-trajectory report. It describes canonical four/eight-hour and
+adversarial journeys but is not consumed by the shipped director or evaluator;
+long-horizon qualification remains unavailable.
+
 ## Package
 
 The Swift package exposes one product:
@@ -121,6 +126,8 @@ revision.
 - [`docs/PRODUCT.md`](docs/PRODUCT.md) — stable product and interaction contract
 - [`docs/INSTRUMENT_PALETTE.md`](docs/INSTRUMENT_PALETTE.md) — internal synth, patch, role, automation, and effect matrix
 - [`docs/PERFORMANCE_GRAMMAR.md`](docs/PERFORMANCE_GRAMMAR.md) — phrase character, foundation behavior, compatibility, and evidence matrix
+- [`docs/LONG_HORIZON_PERFORMANCE_MAP.md`](docs/LONG_HORIZON_PERFORMANCE_MAP.md) — source-grounded hour-scale trajectory, state, evidence, and implementation map
+- [`docs/LONG_HORIZON_SOUND_CAPABILITIES.md`](docs/LONG_HORIZON_SOUND_CAPABILITIES.md) — follow-up DSP, synth, patch-family, and effect maturation register
 - [`docs/SPATIAL_ENGINE.md`](docs/SPATIAL_ENGINE.md) — canonical FDN ownership, bounds, continuation, evidence, and qualification boundary
 - [`docs/NONLINEAR_DSP_CORE.md`](docs/NONLINEAR_DSP_CORE.md) — canonical TPT/ADAA ownership, bounds, evidence, and qualification boundary
 - [`docs/SOUND_QUALITY.md`](docs/SOUND_QUALITY.md) — professional-sound and automated-quality contract
