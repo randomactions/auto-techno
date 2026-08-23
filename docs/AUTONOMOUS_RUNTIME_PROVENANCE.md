@@ -643,6 +643,34 @@ route handling, or callback work. Long-horizon qualification remains
 unavailable until a separate calibrated policy consumes compatible realized
 trajectory evidence.
 
+## Implemented detached long-horizon signal trajectory
+
+After an immutable prepared phrase has passed playback hard gates,
+`AutoTechnoDSP` can derive
+`autotechno-long-horizon-signal-trajectory.v1`. The record binds the exact root,
+phrase/bar boundary, coordination target, typed plan fingerprint, candidate-
+evidence fingerprint, PCM fingerprint, and route sample rate to reduced
+loudness, true-peak, crest, spectrum, transient, masking, wet/dry, stereo, and
+movement dimensions. It joins the already accepted full-mix and effect-dose
+records by exact bar identity. Raw blocks, samples, stems, graph state, and
+renderer continuation never enter the trajectory report.
+
+The fixed-capacity accumulator supports either contiguous accepted phrases or
+representative detached checkpoints. Every skipped phrase and bar is counted so
+sparse renders cannot masquerade as continuous PCM. It retains metric ranges,
+per-operator physical deltas, bounded episode summaries, the latest 32 phrases
+and transitions, and the latest 16 episodes. Root, rate, ordering, episode re-
+entry, evidence consistency, and counter arithmetic fail closed
+transactionally. The semantic target remains distinct from the realized vector;
+the evidence layer does not decide that a rise, recovery, payoff, or recall
+succeeded.
+
+This reduction runs only after detached preparation. It changes no score,
+renderer, graph, scheduler, route lifecycle, live controller, commit decision,
+or realtime callback. Its report still declares qualification unavailable with
+`no-calibrated-long-horizon-policy`; calibration and a disjoint holdout remain
+the next boundary.
+
 ## Canonical unified loop
 
 All future musical development extends one persistent loop:

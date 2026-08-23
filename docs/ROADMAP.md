@@ -275,8 +275,11 @@ eight-coordinate target through existing score owners with exact all-hold
 fallback and bounded active movement. Phase 5 now adds an at-most-one existing
 effect sentence plus fixed-capacity graph/echo/percussion-return/FDN dose,
 tail, recovery, gap, last-use, and level evidence without retaining PCM or
-changing audio. The next missing slice is compatible realized-PCM trajectory
-evidence and a calibrated adversarial policy that can
+changing audio. Phase 6A now adds compatible realized-PCM trajectory evidence:
+exact accepted plan/candidate/PCM provenance, separate semantic targets,
+non-compensable physical dimensions, per-operator transition deltas, explicit
+checkpoint gaps, and bounded episode summaries without retaining PCM. The next
+missing slice is a calibrated adversarial policy that can
 reject fixed-period cycling, permanent peak, ineffective recovery, capability
 fatigue, failed recall, and semantic/PCM direction mismatches.
 

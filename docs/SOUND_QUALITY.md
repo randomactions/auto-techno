@@ -339,10 +339,23 @@ unavailable without partially changing accepted counters. The report continues
 to declare `no-calibrated-long-horizon-policy`; no current primary-policy bound
 or quality verdict consumes it.
 
-The semantic trajectory report is not consumed by the current primary
-transaction or controller. A later DSP-owned realized-trajectory report and
-calibrated non-compensable policy must prove direction and consequence before
-any long-horizon quality claim or evidence-driven future adjustment. See
+Phase 6A adds DSP-owned schema
+`autotechno-long-horizon-signal-trajectory.v1`. It derives one exact signal-only
+phrase observation from the accepted prepared product and binds the plan,
+candidate-evidence, and PCM fingerprints to per-bar and phrase-wide loudness,
+true peak, crest, spectrum, transients, masking, wet/dry, stereo, and movement
+dimensions. The semantic coordination target remains a separate field. A
+fixed-capacity checkpoint accumulator records explicit omitted phrase/bar gaps,
+per-operator transition deltas, episode summaries, metric ranges, and only the
+most recent 32 phrases/transitions and 16 episodes. It never retains PCM or
+changes candidate choice, score, audio, or callback work. Invalid rate, order,
+episode re-entry, evidence consistency, or overflow makes the report unavailable
+without partially mutating accepted summaries.
+
+The semantic and realized trajectory reports are not consumed by the current
+primary transaction or controller. A calibrated non-compensable policy must
+still prove direction and consequence before any long-horizon quality claim or
+evidence-driven future adjustment. See
 [`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md).
 
 ## Engine ownership

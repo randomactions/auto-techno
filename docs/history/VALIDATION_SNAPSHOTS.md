@@ -2185,3 +2185,52 @@ scheduler, route lifecycle, or callback. Long-horizon qualification remains
 unavailable; calibrated signal-trajectory policy, listening,
 app/route/interruption QA, and physical-output soak remain unrun and are not
 implied by this snapshot.
+
+## Long-horizon Phase 6A realized signal-trajectory evidence — 2026-08-23
+
+Phase 6A adds detached DSP schema
+`autotechno-long-horizon-signal-trajectory.v1`. One accepted prepared phrase is
+reduced to exact plan/candidate/PCM/rate provenance, a separate semantic target,
+named phrase and bar physical dimensions, and no PCM. The fixed-capacity
+accumulator records explicit checkpoint gaps, all-time metric summaries, per-
+operator transition-delta summaries, bounded episode summaries, and only the
+latest 32 phrases/transitions and 16 episodes. Root, rate, phrase/bar order,
+episode re-entry, inconsistent evidence, and counter arithmetic fail closed
+transactionally. Qualification remains unavailable with
+`no-calibrated-long-horizon-policy`.
+
+The finalized deterministic evidence is:
+
+- an actual accepted detached 8 kHz phrase binds its exact plan, candidate
+  evidence, PCM fingerprint, per-bar metrics, effect dose, and semantic target;
+- the deterministic eight-hour synthetic consequence harness covers 1,450
+  phrases and 15,608 bars, exercises all six operators, retains exact fixed
+  capacities, and fingerprints to `77ba862325f28aa6`;
+- sparse checkpoints expose nonzero omitted phrase/bar counts, semantic targets
+  remain independent of physical deltas, invalid rate/order is transactional,
+  and reports replay byte-for-byte; and
+- the established four-hour structural, semantic, continuation, and effect-
+  sentence fingerprints remain unchanged.
+
+Final local validation used Xcode-selected Apple Swift with isolated caches,
+`xcrun swift`, `--disable-sandbox`, and serial SwiftPM compilation where
+applicable:
+
+- the combined Phase 0-6A long-horizon suites passed 37/37 in 46.358 seconds;
+- after the final commit-eligibility binding was hardened, the focused Phase 6A
+  suite repeated 6/6 in 26.303 seconds;
+- the greater-than-eight-hour/current-runtime/repository-surface selection
+  passed 13/13 in 42.104 seconds;
+- strict `swift-format` lint passed for both new Phase 6A files and
+  `git diff --check` passed; and
+- the final optimized `AutoTechno` product built in 59.87 seconds with SHA-256
+  `3437c911f724d2e8542984ecf65914bbf2a467ab9e1cb7d7ecb17316886d126c`.
+
+SwiftPM emitted known read-only user-cache and missing isolated `.pcm` warnings
+while every recorded exit status was green. The sporadic Swift compiler
+incremental-metadata decoding diagnostics were non-fatal; all selected test
+modules linked and the final test process exited green. This phase changes no
+resolved score, synth, patch, DSP primitive, effect implementation, bus, graph,
+chain, renderer, App scheduler, route lifecycle, live controller, or callback.
+Long-horizon calibration, automated qualification, listening, app/route QA, and
+physical-output soak remain unrun and are not implied by this snapshot.

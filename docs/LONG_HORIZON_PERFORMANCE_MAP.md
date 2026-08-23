@@ -15,13 +15,14 @@ director consume that exact context at an unscheduled phrase boundary and maps
 maintain, rise, recover, reframe, payoff, and recall onto the existing phrase
 vocabulary. Phase 4 projects the exact episode target through the existing
 resolved-score owners with bounded, versioned provenance. There is still no
-calibrated realized-signal trajectory evaluator that can distinguish an earned
-long-form journey from a safe, finite repetition of phrase-scale cycles. Phase 5
-now supplies the missing effect-dose/recovery and phrase-sentence foundation
-from the current palette without changing audio.
+calibrated long-horizon evaluator that can distinguish an earned long-form
+journey from a safe, finite repetition of phrase-scale cycles. Phase 5 supplies
+the effect-dose/recovery and phrase-sentence foundation from the current palette
+without changing audio. Phase 6A now supplies compatible realized signal
+trajectories while keeping semantic targets and physical consequences separate.
 
-The next priority is therefore **compatible realized signal trajectory evidence
-and calibration**, not more presets. The
+The next priority is therefore **calibrated development, adversarial, and
+disjoint holdout policy**, not more presets. The
 current three synthesis
 architectures, eleven patch homes, six performance characters, resolved score,
 phrase composition, spatial field, and transition vocabulary are sufficient to
@@ -434,8 +435,40 @@ Phase 5 changes no resolved event, score permission, graph, synth, patch, DSP
 primitive, effect implementation, bus, chain, renderer, scheduled PCM, App
 scheduler, route lifecycle, or realtime callback. The current palette already
 expresses both required sentence functions, so no sound-capability expansion is
-justified. The next missing slice is compatible realized signal trajectory
-evidence and a calibrated policy.
+justified. The next missing slice is a calibrated policy over the compatible
+realized signal evidence supplied by Phase 6A.
+
+### Implemented Phase 6A realized signal trajectory evidence
+
+`AutoTechnoDSP` now exposes
+`autotechno-long-horizon-signal-trajectory.v1` from the same accepted prepared
+phrase. It joins the exact typed plan, candidate-evidence, PCM, route-rate,
+full-mix, effect-dose, and per-bar identities, then reduces them to named
+loudness, true-peak, crest, spectrum, transient, masking, wet/dry, stereo, and
+movement dimensions. The semantic energy target remains separate from the
+realized vector; this layer cannot call a declared recovery or rise successful.
+
+The fixed-capacity checkpoint accumulator records metric ranges, each
+operator's physical transition deltas, bounded episode summaries, and only the
+latest 32 phrases/transitions and 16 episodes. Sparse representative renders
+record exact omitted phrase and bar counts rather than pretending to be
+continuous PCM. Root, sample rate, phrase/bar order, episode re-entry,
+inconsistent evidence, and counter arithmetic fail closed without partially
+changing accepted summaries. Raw PCM, render blocks, stems, graph state, and
+renderer continuation are not retained.
+
+An exact detached 8 kHz phrase witness binds the semantic target to accepted PCM
+evidence. A deterministic eight-hour consequence harness covers 1,450 phrases
+and 15,608 bars, exercises all six operators, retains fixed capacities, and
+fingerprints to `77ba862325f28aa6`. Sparse-checkpoint, semantic/physical
+separation, wrong-rate, repeated-phrase, transactional failure, and byte-for-
+byte replay cases pass. This is compatible evidence, not calibration: the
+report still declares `no-calibrated-long-horizon-policy`.
+
+Phase 6A adds no synth, preset, patch home, DSP primitive, effect algorithm,
+bus, graph stage, chain, renderer, scheduler, route lifecycle, or callback work.
+It exposes no repeatable missing sound family. Development/adversarial profile
+calibration and a disjoint holdout remain the next Stage 6 boundary.
 
 ## Required musical model
 
@@ -604,7 +637,7 @@ Each slice extends the one canonical owner and leaves a reusable capability.
 | 3. Episode operator selection — complete locally | `AutonomousSessionDirector` selection and `makePlan` consume exact hierarchy context | Versioned maintain/rise/recover/reframe/payoff/recall provenance mapped to existing phrase kinds | All operators fulfill in the canonical journey; at most one payoff per arc, real debt payment, prompt bounded recovery, frozen planning/semantic/hierarchy drift | Candidate count remains one; minimum hold protects reserved rare events; invalid context uses the previous conservative policy | No alternative arrangement engine, phrase vocabulary, or random style switch |
 | 4. Score-owned energy coordination — complete locally | Existing resolved roles, character, narrative, foundation, disclosure, transformations, spatial carrier, and transition eligibility | Versioned eight-coordinate target projected through existing score owners | Every coordinate has directional semantic witnesses; exact all-hold fingerprint; four-hour six-operator coverage, bounded roles/slew/space, and protected rare-event reserve | One immutable phrase-boundary target; 0.16 protagonist slew; one percussion tier; one spatial carrier/macro; malformed provenance fails closed | No extra density track, disconnected scalar, synth, patch, DSP primitive, graph stage, or callback path |
 | 5. Effect/capability dose evidence — complete locally | Existing instrument effect access, graph, FDN, pulse echo, percussion returns, masking, and transition relations | Versioned phrase sentence plus fixed-capacity activation, occupancy, tail, recovery, gap, last-use, and level evidence | 63 existing four-hour sentences; exact detached source/return binding; adversarial false eligibility, disconnected claims, premature recovery, discontinuity, and replay checks | Annotation and detached reduction only; no PCM retained; invalid evidence is unavailable without partial mutation; current audio remains exact | No new bus, effect, orderable plug-in chain, FX sequencer, renderer, or callback path |
-| 6. Calibrated long-horizon policy | Primary evaluator and versioned professional evidence | Non-compensable cross-phrase and cross-episode decision dimensions | Diverse development journeys, disjoint holdout journeys, and adversarial long runs | A failed trajectory cannot be corrected by rewriting scheduled audio; repeat accepted material or keep current episode | No parallel permissive evaluator |
+| 6. Calibrated long-horizon policy — evidence foundation complete locally; calibration pending | Primary evaluator, versioned professional evidence, and DSP-owned `autotechno-long-horizon-signal-trajectory.v1` | Implemented non-compensable cross-phrase/cross-episode signal dimensions, per-operator deltas, explicit checkpoint gaps, and bounded episode summaries; calibrated decision pending | Exact detached phrase plus deterministic eight-hour evidence pass; diverse development journeys, disjoint holdout journeys, and adversarial long runs remain | Evidence is detached and cannot rewrite scheduled audio; invalid input fails closed; until calibration, repeat accepted material or keep current episode | No parallel permissive evaluator, PCM ledger, or semantic score masquerading as signal consequence |
 | 7. Bounded future adaptation | Atomic selected commit across musical, quality, render, graph, and live state | Reason-coded trajectory update for the next eligible phrase | Exact replay of plan, evidence, decision, and continuation; stability under missed deadlines and route changes | One bounded correction path at most unless the primary contract is deliberately revised and recalibrated | No independent long-form controller fighting the director |
 | 8. Targeted sound maturation | Existing Core intention and affected DSP owner | Only the capability demonstrated missing by Stage 6 evidence | See the separate sound-capability register | Replace provisional DSP in place; exact neutral and protected paths remain | No preset pack, alternative renderer, or speculative chain expansion |
 

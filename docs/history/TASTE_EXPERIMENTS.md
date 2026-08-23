@@ -2367,3 +2367,31 @@ or realtime-callback work. Long-horizon qualification remains unavailable
 without a calibrated policy over compatible realized signal trajectories.
 Listening, app/route/interruption QA, and physical-output soak remain separate
 and unrun; none is implied by deterministic detached evidence.
+
+### Phase 6A realized signal-trajectory addendum — 2026-08-23
+
+The next hypothesis was that the existing accepted prepared product already
+contains enough truthful physical evidence to compare long-form intent and
+consequence without adding another analyzer pass or retaining PCM. The new
+`autotechno-long-horizon-signal-trajectory.v1` reduction binds the exact typed
+plan, candidate evidence, PCM identity, route rate, full mix, effect dose, and
+per-bar geometry. It preserves loudness, true peak, crest, spectrum, transient,
+masking, wet/dry, stereo, and movement as separate dimensions; the semantic
+target is stored beside, never collapsed into, the realized vector.
+
+The fixed-capacity accumulator retains aggregate metric ranges, per-operator
+transition deltas, bounded episode summaries, and only 32 recent phrases, 32
+transitions, and 16 episodes. Sparse checkpoints count every omitted phrase and
+bar, preventing representative renders from being mislabeled as continuous
+audio. An exact detached 8 kHz phrase proves real accepted-PCM binding. A
+deterministic synthetic consequence journey then exercises accumulator geometry
+for 1,450 phrases and 15,608 bars across all six operators, fingerprints to
+`77ba862325f28aa6`, and remains fixed-capacity. It is deliberately a consequence
+and adversarial harness, not audible calibration evidence.
+
+This evidence slice exposes no missing synth, patch, effect, bus, graph stage,
+chain, or renderer. It adds no signal-processing primitive and performs no
+callback work. Qualification stays unavailable until diverse rendered
+development journeys, adversarial attacks, and disjoint rendered holdouts
+calibrate a non-compensable policy. Listening, app/route/interruption QA, and
+physical-output soak remain separate and unrun.

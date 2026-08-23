@@ -101,9 +101,12 @@ exact all-hold fallback. Each phrase can now name at most one already-resolved
 gated call/answer or anticipation turnaround, and detached DSP evidence reduces
 the current graph, pulse echo, percussion return, FDN, typed effect access, and
 masking records into fixed-capacity dose, tail, recovery, gap, last-use, and
-sentence evidence without retaining PCM. These reports are still not consumed
-by the shipped evaluator; realized trajectory qualification and calibrated
-long-horizon adaptation remain unavailable.
+sentence evidence without retaining PCM. Detached accepted phrases now also
+reduce their exact PCM into a DSP-owned, fixed-capacity signal trajectory across
+loudness, crest, spectrum, transients, masking, wet/dry relation, stereo, and
+movement while keeping the semantic target separate. These reports are still
+not consumed by the shipped evaluator; calibrated long-horizon qualification
+and adaptation remain unavailable.
 
 ## Package
 
