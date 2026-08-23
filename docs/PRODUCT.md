@@ -17,12 +17,21 @@ preserve position, identity, and adaptation state. Technical evidence may be
 shown read-only, but no compositional, synthesis, mixing, mastering, or quality
 parameter belongs in the primary UI.
 
+A newly constructed complete performance receives one fresh opaque App-owned
+root seed before planning begins. That seed remains fixed across preparation,
+play, pause, resume, live correction, route recovery, and continuation so the
+set develops coherently. A completed session boundary selects a new seed for
+the next performance. The seed is neither displayed nor selectable; supplying
+the same explicit seed in qualification still reproduces the same score and
+PCM exactly.
+
 ## Shipped experience
 
 - one accessible transport button;
 - explicit preparing, ready, live, paused, recovering, and unavailable states;
 - fixed 130 BPM;
-- one private canonical identity and indefinitely evolving performance;
+- one fresh private canonical identity per complete, indefinitely evolving
+  performance;
 - phrase and bar position plus lightweight read-only visualization;
 - offline operation with no account or cloud dependency.
 

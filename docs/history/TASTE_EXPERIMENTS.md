@@ -2049,3 +2049,70 @@ mature rewrite must preserve the response-owned patch/relation, deterministic
 continuation, exact causal evidence, one canonical renderer, and one primary
 evaluator; it must supersede this v1 realization rather than coexist as a
 generic zap effect.
+
+## Source 32: fresh autonomous session identity — 2026-08-23
+
+Source 32 analyzed Underdog Electronic Music School's *3 approaches to
+subliminal modulation* (`KOVs5AarmUw`). `yt-dlp` 2026.08.19 retrieved
+byte-identical automatic-English VTT captions with SHA-256
+`07158c17072f329945e23779e2173cfdee1962b3ae537b7b2107b996939fe0fa`,
+structured JSON3 captions with SHA-256
+`2171cf2fbeaa6d8a09926681e02e5363254ec0b63fd4f3044fe88cf38efee646`,
+39 top-level comments plus 10 replies, and direct audio. The decoded 48 kHz
+stereo WAV was 749.877 seconds with SHA-256
+`a0fbb03fb07b28e9b5bfe2f932a8c3c381fb90b26dc0fb364526689d46101901`.
+The local Deno JavaScript runtime solved extraction without an account, cookie,
+browser session, CAPTCHA, or token provider. Reconstructable captions,
+discussion, metadata, images, and audio remain temporary and untracked.
+
+The portable concepts are subtle event-property alternation, filter motion
+longer than a short loop, and a restrained moving effect shadow beside a dry
+signal. Machine-only spectral windows described variation in the pitch/release
+and wet-shadow demonstrations, but speech, interface sounds, compression, and
+edits prevent those measurements from establishing a portable rate, amount,
+pitch, filter, effect, or mix target. One technically relevant comment warned
+that excessive subliminal modulation can become incoherent or chaotic. This is
+source inspection, not human listening.
+
+Repository reconciliation found all three in-session idea families already
+owned by the canonical engine: score-derived percussion/groove-pulse
+microvariation, multi-bar relational filter and harmonic movement, and existing
+dry-plus-echo/chorus/FDN paths. Another hat alternator, filter lane, effect
+return, instrument, track, or renderer would duplicate those mechanisms. The
+observable missing capability was instead at the complete-performance
+boundary: `TechnoEngine` constructed the default director seed `48_291` at
+every launch, reproducing the exact first score and PCM.
+
+The App now selects one opaque system-entropy seed before detached preparation
+and installs the corresponding sole director. Pause, resume, live correction,
+timeline reset, route recovery, score continuation, renderer state, and the
+primary evaluator remain deterministic under that seed. Complete shutdown
+selects the next identity; an immediate repeated entropy value is mixed away.
+Every preparation key binds the exact seed, and acceptance cross-checks key,
+source state, current session, and graph identity so stale cached or detached
+work cannot cross sessions. No entropy read, parameter, allocation, lock,
+decision, or branch was added to the realtime callback, and no score/DSP/evidence
+schema or primary artifact changed for a fixed seed.
+
+The durable intention and replacement boundary are recorded in
+[`../SOUND_CONCEPT_MATURITY.md`](../SOUND_CONCEPT_MATURITY.md). A later serious
+system may replace the scalar entropy source with stronger provenance, opt-in
+replay tokens, cross-session novelty memory, or calibrated repetition evidence
+only after a measured collision or creative-range deficit. It must preserve
+explicit-seed reproducibility, within-session coherence, cache isolation,
+future-boundary application, callback silence, and the one canonical engine.
+
+TDD first failed because the seed source, injected engine boundary, and
+seed-bearing preparation identity did not exist. The completed focused App
+matrix passed 36/36, including fixed-seed score/PCM replay and distinct-seed
+score/PCM divergence. The deterministic runtime/repository group passed 36/36,
+canonical preparation preflight passed 24/24, and protected routing passed
+14/14. The optimized product built in 97.53 seconds; its release realtime-
+producer object imported only `_memcpy`. The exact release executable before
+commit had SHA-256
+`dbad5410df65607bd578a445d2053c6d0abdc6de263def2ad98d9290367e0fb7`.
+After the normative prose was finalized, the repository-surface suite reran
+5/5 green.
+Publication and exact-head CI remain separate gates. No listening,
+app/route/interruption QA, physical-output soak, or professional-quality claim
+is implied.

@@ -8,7 +8,9 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 ## Current baseline
 
 - one-button autonomous macOS app at fixed 130 BPM;
-- reproducible single-plan session planning with temporal memory;
+- one fresh opaque App-owned root identity per complete performance, followed
+  by reproducible single-plan session planning with temporal memory and
+  seed-bound preparation caches;
 - resolved bars authoritative for audio and telemetry;
 - engine-owned synthesis and effects with protected low-end routing;
 - exact private role evidence, bounded preparation-time kick/foundation mix
@@ -94,6 +96,14 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
+
+The 32-source video-evidence sweep is complete. Its final source exposed the
+hard-coded startup seed as the smallest measurable creativity deficit: new
+complete performances now receive fresh identity while every accepted session
+remains deterministic and coherent. The source's event alternation, multi-bar
+filter motion, and dry-plus-moving-shadow concepts were reconciled to existing
+score, modulation, echo, chorus, and FDN owners; no duplicate track,
+instrument, modulation lane, or effect chain was added.
 
 The app now installs one exact-engine calibrated primary evaluator v14 from the
 current profile v14 derived from 28 complete journeys, a passing v15 adversarial

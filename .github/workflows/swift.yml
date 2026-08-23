@@ -92,7 +92,7 @@ jobs:
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(LiveFeedbackCoordinatorTests|TechnoEngineLiveFeedbackTests)'
+          --filter '(LiveFeedbackCoordinatorTests|TechnoEngineLiveFeedbackTests|AutonomousSessionIdentityTests)'
 
       - name: Run candidate evidence and live tampering
         run: >-

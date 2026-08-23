@@ -7,8 +7,16 @@ mistaken for a completed feedback system.
 
 ## Current implementation
 
-1. `AutonomousSessionDirector` owns fixed 130 BPM, the private canonical
-   identity, temporal memory, one canonical phrase, and successor planning.
+1. Before detached preparation, `TechnoEngine` obtains one opaque `UInt64` from
+   its App-owned system-entropy source and constructs the sole
+   `AutonomousSessionDirector` for that complete performance. The director owns
+   fixed 130 BPM, that private canonical identity, temporal memory, one
+   canonical phrase, and successor planning. Pause/resume, live correction,
+   playback-timeline reset, route change, and route recovery retain the seed;
+   complete shutdown selects the next seed before a later appearance. Every
+   preparation-cache key binds the exact seed, and stale detached or cached
+   results from another session fail closed. No entropy read reaches detached
+   rendering or the realtime callback.
 2. Each `AutonomousPhrasePlan` carries a complete musical intention, Scene DNA,
    resolved performance bars, outgoing interlock, spatial-contrast, and
    protagonist-narrative state, plus groove-interest evidence. Supporting-role
@@ -556,10 +564,13 @@ The complete contract is [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
 ## Reproducibility and product boundary
 
-The same private initial state and accepted, sample-indexed feedback state must
-reproduce the same plan, decision, graph, samples, controller evolution, and
-outgoing continuation state. Exact observation/proposal identity also requires
-identical packet count and first/last packet sequence, counters, and ranges.
+Fresh-session selection and deterministic replay are separate contracts. A
+complete performance boundary chooses a new opaque root seed; after selection,
+the same explicit seed, private initial state, and accepted, sample-indexed
+feedback state must reproduce the same plan, decision, graph, samples,
+controller evolution, and outgoing continuation state. Exact
+observation/proposal identity also requires identical packet count and
+first/last packet sequence, counters, and ranges.
 Valid alternate packetization of the same contiguous PCM may retain the PCM
 fingerprint, BS.1770 measurements, and numeric controller outcome, but it changes
 evidence and proposal fingerprints. Evaluation inputs and

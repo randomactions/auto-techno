@@ -322,6 +322,9 @@ dimensions and the reason for every rejection, correction, or selection.
 - no invalid graph, runaway tail, discontinuity, or unbounded controller state;
 - deterministic planning, rendering, evidence, and decisions for identical
   versioned inputs;
+- fresh App-owned identity at a complete session boundary, followed by exact
+  deterministic replay for the selected seed and strict preparation-cache
+  isolation from every prior seed;
 - bounded CPU, memory, preparation latency, candidate count, and correction count;
 - uninterrupted sample-time playback and coherent route recovery.
 
@@ -346,6 +349,9 @@ A hard-gate failure cannot be offset by strength in another dimension.
 - persistent identity across variation and internal strategy changes;
 - motivated tension, contrast, release, subtraction, and return;
 - useful repetition without stagnation and variation without random replacement;
+- distinct complete sessions without unbounded in-session randomness: entropy
+  chooses only the root identity before planning, while the canonical score and
+  continuation own every subsequent variation;
 - coherent long-range consequence across phrases, chapters, and route recovery.
 
 Targets are section- and role-aware ranges, relationships, and obligations. They

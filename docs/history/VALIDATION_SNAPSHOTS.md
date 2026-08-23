@@ -1858,3 +1858,41 @@ protected routing, and realtime-producer safety. Publication and exact-head CI
 are separate gates. Listening, app/route/interruption QA, latency or peak-memory
 measurement, physical-output soak, and a professional-quality claim are not
 implied.
+
+## Source 32 fresh autonomous session identity — 2026-08-23
+
+The App now selects one opaque root seed before detached preparation and
+installs it as the sole director identity for a complete performance. Complete
+shutdown selects the next identity; pause/resume, live correction, timeline
+reset, route recovery, and continuation retain the accepted seed. Every
+preparation key binds that seed, and prepared acceptance cross-checks key,
+source state, active session, and generated graph. Fixed-seed score/render
+semantics and all Core/DSP/evaluator/artifact identities remain unchanged.
+
+TDD first produced the expected compile failures for the absent seed source,
+injected engine boundary, session-seed accessor, and seed-bearing preparation
+key. Local validation then passed 110 distinct selected contracts across four
+serial groups:
+
+- App session-identity and live-feedback coordination: 36/36 in 48.661 seconds;
+- current runtime, adaptive session, and repository surface: 36/36 in 101.316
+  seconds;
+- autonomous preparation preflight: 24/24 in 721.544 seconds;
+- protected-routing regressions: 14/14 in 122.688 seconds.
+
+The dedicated session suite proved immediate collision avoidance, shutdown
+rotation, seed-bound cache inequality, exact explicit-seed plan/PCM replay, and
+distinct-seed plan/PCM divergence. The optimized `AutoTechno` product built in
+97.53 seconds with SHA-256
+`dbad5410df65607bd578a445d2053c6d0abdc6de263def2ad98d9290367e0fb7`.
+After normative prose finalization, the five repository-surface contracts
+reran 5/5 green, for 115 total local test executions including that deliberate
+repeat.
+The release realtime-producer object imported only `_memcpy`; no Core, DSP,
+renderer, graph, evaluator, artifact, or callback source changed.
+
+This snapshot proves the bounded App session boundary, deterministic replay,
+preparation isolation, canonical transaction compatibility, protected routing,
+and realtime-producer safety. Publication and exact-head CI are separate gates.
+No listening, app/route/interruption QA, physical-output soak, or professional-
+quality claim is implied.

@@ -4,7 +4,8 @@ import AutoTechnoDSP
 import Combine
 import Foundation
 
-private struct PhrasePreparationKey: Hashable, Sendable {
+package struct PhrasePreparationKey: Hashable, Sendable {
+    let sessionSeed: UInt64
     let phraseIndex: Int
     /// Exact AVAudioFormat route rate. Rounding here would let nearby
     /// fractional hardware rates share provenance while playing at different
@@ -21,6 +22,40 @@ private struct PhrasePreparationKey: Hashable, Sendable {
     let pendingLiveMasterProposalFingerprint: String?
     let liveEarliestEligibleFutureSample: Int64?
     let liveTargetStartSample: Int64?
+
+    package init(
+        sessionSeed: UInt64,
+        phraseIndex: Int,
+        sampleRate: Double,
+        channelCount: Int,
+        routeRecovery: Bool,
+        qualityRevision: Int,
+        qualityPolicyVersion: String,
+        qualityControllerFingerprint: String?,
+        routeGeneration: Int,
+        incomingLiveMasterRevision: Int,
+        incomingLiveMasterStateFingerprint: String,
+        pendingLiveMasterProposalFingerprint: String?,
+        liveEarliestEligibleFutureSample: Int64?,
+        liveTargetStartSample: Int64?
+    ) {
+        self.sessionSeed = sessionSeed
+        self.phraseIndex = phraseIndex
+        self.sampleRate = sampleRate
+        self.channelCount = channelCount
+        self.routeRecovery = routeRecovery
+        self.qualityRevision = qualityRevision
+        self.qualityPolicyVersion = qualityPolicyVersion
+        self.qualityControllerFingerprint = qualityControllerFingerprint
+        self.routeGeneration = routeGeneration
+        self.incomingLiveMasterRevision = incomingLiveMasterRevision
+        self.incomingLiveMasterStateFingerprint =
+            incomingLiveMasterStateFingerprint
+        self.pendingLiveMasterProposalFingerprint =
+            pendingLiveMasterProposalFingerprint
+        self.liveEarliestEligibleFutureSample = liveEarliestEligibleFutureSample
+        self.liveTargetStartSample = liveTargetStartSample
+    }
 }
 
 private struct PhrasePreparationRequest: Sendable {
@@ -54,6 +89,10 @@ private enum AutonomousPerformancePreparer {
                         director: AutonomousSessionDirector,
                         artifacts: ProfessionalQualityPrimaryArtifacts?)
         -> PreparedPhrase? {
+        guard request.key.sessionSeed == request.sourceState.rootSeed,
+              director.rootSeed == request.sourceState.rootSeed else {
+            return nil
+        }
         let plan = director.plan(from: request.sourceState)
         let evaluator = ProfessionalQualityPreparationEvaluator(
             sampleRate: request.key.sampleRate,
@@ -141,7 +180,8 @@ package final class TechnoEngine: ObservableObject {
         PlayingTimeFormatter.string(forWholeSeconds: playingTimeSeconds)
     }
 
-    private let director: AutonomousSessionDirector
+    private let sessionSeedSource: AutonomousSessionSeedSource
+    private var director: AutonomousSessionDirector
     private var sessionState: AutonomousSessionState
     private let audioEngine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
@@ -195,12 +235,20 @@ package final class TechnoEngine: ObservableObject {
     private var isShutDown = false
     private var lifecycleGeneration: UInt64 = 0
 
+    package var currentSessionSeed: UInt64 { sessionState.rootSeed }
+
     package init(
+        sessionSeedSource: AutonomousSessionSeedSource? = nil,
         liveFeedbackOrchestrator: LiveFeedbackEngineOrchestrator? = nil,
         liveFeedbackCaptureLifecycle: LiveFeedbackCaptureLifecycle? = nil
     ) {
-        let director = AutonomousSessionDirector()
+        let sessionSeedSource = sessionSeedSource ??
+            AutonomousSessionSeedSource()
+        let director = AutonomousSessionDirector(
+            rootSeed: sessionSeedSource.nextSeed()
+        )
         qualityArtifacts = try? ProfessionalQualityPrimaryArtifacts.load()
+        self.sessionSeedSource = sessionSeedSource
         self.director = director
         sessionState = director.initialState()
         self.liveFeedbackOrchestrator = liveFeedbackOrchestrator ??
@@ -256,6 +304,7 @@ package final class TechnoEngine: ObservableObject {
         playbackState = .preparing
         requestPreparation(PhrasePreparationRequest(
             key: PhrasePreparationKey(
+                sessionSeed: sessionState.rootSeed,
                 phraseIndex: sessionState.phraseIndex,
                 sampleRate: format.sampleRate,
                 channelCount: Int(format.channelCount),
@@ -322,6 +371,8 @@ package final class TechnoEngine: ObservableObject {
         // View disappearance is a complete transport boundary. A later
         // appearance restarts one coherent session instead of pairing an
         // advanced musical memory with reset render/DSP continuation.
+        let nextSeed = sessionSeedSource.nextSeed(excluding: director.rootSeed)
+        director = AutonomousSessionDirector(rootSeed: nextSeed)
         sessionState = director.initialState()
         resetSchedule()
         resetPlayingTime()
@@ -343,6 +394,8 @@ package final class TechnoEngine: ObservableObject {
 
     private func requestPreparation(_ request: PhrasePreparationRequest) {
         guard !isShutDown else { return }
+        guard request.key.sessionSeed == request.sourceState.rootSeed,
+              request.key.sessionSeed == sessionState.rootSeed else { return }
         if let prepared = liveFeedbackPreparation.removeCachedValue(
             forKey: request.key
         ) {
@@ -396,7 +449,13 @@ package final class TechnoEngine: ObservableObject {
 
     private func acceptPreparedPhrase(_ phrase: PreparedPhrase) {
         guard !isShutDown else { return }
-        guard phrase.request.key.phraseIndex == phrase.request.sourceState.phraseIndex else { return }
+        guard phrase.request.key.phraseIndex ==
+                phrase.request.sourceState.phraseIndex,
+              phrase.request.key.sessionSeed ==
+                phrase.request.sourceState.rootSeed,
+              phrase.request.key.sessionSeed == sessionState.rootSeed,
+              phrase.prepared.graph.sessionSeed ==
+                phrase.request.key.sessionSeed else { return }
         guard phrase.prepared.commitEligible,
               phrase.prepared.incomingLiveMasterHeadroomState ==
                 phrase.request.sourceState.liveMasterHeadroom else {
@@ -510,6 +569,7 @@ package final class TechnoEngine: ObservableObject {
     ) -> PhrasePreparationRequest {
         PhrasePreparationRequest(
             key: PhrasePreparationKey(
+                sessionSeed: sessionState.rootSeed,
                 phraseIndex: sessionState.phraseIndex,
                 sampleRate: phrase.request.key.sampleRate,
                 channelCount: phrase.request.key.channelCount,
@@ -540,7 +600,9 @@ package final class TechnoEngine: ObservableObject {
 
     private func trimPreparedCache() {
         liveFeedbackPreparation.removeCached { key, _ in
-            key.phraseIndex != sessionState.phraseIndex || key.routeRecovery
+            key.sessionSeed != sessionState.rootSeed ||
+                key.phraseIndex != sessionState.phraseIndex ||
+                key.routeRecovery
         }
     }
 
@@ -763,6 +825,7 @@ package final class TechnoEngine: ObservableObject {
         sessionState = rebuildingRequest.sourceState
         let recoveryRequest = PhrasePreparationRequest(
             key: PhrasePreparationKey(
+                sessionSeed: sessionState.rootSeed,
                 phraseIndex: sessionState.phraseIndex,
                 sampleRate: format.sampleRate,
                 channelCount: Int(format.channelCount),
@@ -1120,6 +1183,7 @@ package final class TechnoEngine: ObservableObject {
 
         pendingLiveMasterBinding = result.binding
         let correctedKey = PhrasePreparationKey(
+            sessionSeed: baseRequest.key.sessionSeed,
             phraseIndex: baseRequest.key.phraseIndex,
             sampleRate: baseRequest.key.sampleRate,
             channelCount: baseRequest.key.channelCount,
@@ -1215,6 +1279,7 @@ package final class TechnoEngine: ObservableObject {
         guard var phrase = currentPhrase else { return false }
         if nextBlockIndex >= phrase.prepared.blocks.count {
             let nextKey = PhrasePreparationKey(
+                sessionSeed: sessionState.rootSeed,
                 phraseIndex: sessionState.phraseIndex,
                 sampleRate: phrase.request.key.sampleRate,
                 channelCount: phrase.request.key.channelCount,

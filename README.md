@@ -8,8 +8,10 @@ account.
 
 ## Current runtime
 
-- fixed 130 BPM and one private canonical identity;
-- reproducible musical decisions for the same initial and continuation state;
+- fixed 130 BPM and one private canonical identity per complete performance;
+- one fresh opaque App-owned session seed at each complete performance boundary,
+  with reproducible musical decisions for the same explicit initial and
+  continuation state;
 - one resolved per-bar score shared by planning, audio, and telemetry;
 - phrase-boundary continuation with temporal memory and accepted-PCM hold;
 - three score-selected internal synthesis architectures with bounded patch
