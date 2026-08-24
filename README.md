@@ -2,9 +2,10 @@
 
 Auto Techno is a standalone macOS instrument that continuously performs one
 canonical, indefinitely evolving dark, hypnotic techno set. Its interface has
-one transport button for prepare, play, pause, and resume. Playback requires no
-DAW, plug-in host, VSTi, Audio Unit instrument or effect, cloud model, or
-account.
+one primary transport button for prepare, play, pause, and resume, plus one
+secondary New Set action for an explicit complete-performance boundary.
+Playback requires no DAW, plug-in host, VSTi, Audio Unit instrument or effect,
+cloud model, or account.
 
 ## Current runtime
 
@@ -12,6 +13,9 @@ account.
 - one fresh opaque App-owned session seed at each complete performance boundary,
   with reproducible musical decisions for the same explicit initial and
   continuation state;
+- one accessible New Set action that stops the current performance, invalidates
+  its pending work and feedback, rotates the opaque seed, resets presentation,
+  prepares a fresh canonical session, and starts it when ready;
 - one resolved per-bar score shared by planning, audio, and telemetry;
 - phrase-boundary continuation with temporal memory and accepted-PCM hold;
 - three score-selected internal synthesis architectures with bounded patch

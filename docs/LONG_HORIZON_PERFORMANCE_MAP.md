@@ -30,8 +30,8 @@ failure, and the one sparse-payoff root is an evidence-observability shortfall,
 not a failed render. The valid Stage 8 result is therefore **no sound-machinery
 promotion**.
 
-The next priority is exact-build operational verification and the explicitly
-requested fresh-set boundary, not more presets. The current three synthesis
+With the explicitly requested fresh-set boundary now implemented, the next
+priority is exact-build operational verification, not more presets. The current three synthesis
 architectures, eleven patch homes, six performance characters, resolved score,
 phrase composition, spatial field, and transition vocabulary are sufficient for
 the first calibrated long-horizon loop. Sound-engine expansion remains
@@ -50,6 +50,8 @@ boundary:
   model, or user-selected set shape;
 - pause, resume, route recovery, and a missed preparation deadline continue the
   same identity and obligations;
+- New Set is an explicit complete-performance boundary: it discards the current
+  obligations, rotates the private root, and starts a newly prepared hierarchy;
 - the director plans one bounded future phrase, not an hours-long immutable
   playlist;
 - source observations motivate falsifiable engine hypotheses; only automated
@@ -595,6 +597,31 @@ realtime callback work. The matched-Xcode focused policy suite passed 11/11 and
 replayed the exact artifact identities. App playback, route/interruption QA,
 listening, and physical-output soak remain separate and unrun.
 
+### Implemented explicit fresh-set boundary
+
+The App now exposes one secondary `NEW SET` action, separate from the primary
+play/pause button. From ready, live, paused, recovering, or unavailable state it
+reuses the complete shutdown-safe lifecycle: the player and engine stop,
+producer eligibility is revoked before tap removal and consumer join, pending
+feedback expires, detached preparation is cancelled and invalidated, caches and
+all musical/quality/live/long-horizon continuation are cleared, and the opaque
+root rotates. Read-only position, time, section, and waveform return home.
+
+The same engine then prepares one canonical first phrase for the new root and
+starts it automatically only after the phrase is commit eligible. The control
+is disabled while that preparation is active, carries accessibility identifier
+`transport-new-set`, and uses Command-N. Old tasks, cache entries, packets,
+proposals, route notifications, and accepted-PCM holds cannot authenticate
+against the new lifecycle. No seed is displayed or selectable.
+
+This is an App transport boundary, not a musical mode. It adds no Core
+operator, score relation, synth, preset, DSP primitive, effect, bus, graph,
+renderer, scheduled-buffer format, callback work, or sound-capability
+promotion. Focused local validation passed fresh-session/reset 6/6,
+live-feedback scheduling 17/17, current-runtime/repository-surface 11/11, and
+playing-time 4/4. The optimized product build passed; real button interaction,
+route/interruption QA, and physical-output soak remain separate and unrun.
+
 ## Required musical model
 
 ### One hierarchy, not another engine
@@ -687,10 +714,10 @@ should retain fixed-capacity summaries:
   non-reconstructable score fingerprints rather than audio;
 - the last accepted trajectory-evidence version and reason-coded decision.
 
-Pause and route recovery preserve this value. A complete new performance resets
-it with the new root identity. Late, missing, malformed, or version-mismatched
-evidence keeps the current coherent episode and uses the existing accepted-
-audio fallback; it cannot improvise a new arc.
+Pause and route recovery preserve this value. New Set resets it as part of a
+complete performance boundary with a new root identity. Late, missing,
+malformed, or version-mismatched evidence keeps the current coherent episode
+and uses the existing accepted-audio fallback; it cannot improvise a new arc.
 
 ## Required trajectory evidence
 

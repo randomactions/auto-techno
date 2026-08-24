@@ -405,9 +405,10 @@ dimensions and the reason for every rejection, correction, or selection.
 - no invalid graph, runaway tail, discontinuity, or unbounded controller state;
 - deterministic planning, rendering, evidence, and decisions for identical
   versioned inputs;
-- fresh App-owned identity at a complete session boundary, followed by exact
-  deterministic replay for the selected seed and strict preparation-cache
-  isolation from every prior seed;
+- fresh App-owned identity at a complete session boundary, including the
+  explicit New Set action, followed by exact deterministic replay for the
+  selected seed and strict preparation/cache/feedback isolation from every
+  prior seed;
 - bounded CPU, memory, preparation latency, candidate count, and correction count;
 - uninterrupted sample-time playback and coherent route recovery.
 

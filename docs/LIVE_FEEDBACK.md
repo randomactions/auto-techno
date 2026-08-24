@@ -165,7 +165,8 @@ Route and timeline resets preserve a latched hold and convert any outstanding
 authorized correction into that hold before discarding its worker. A newer
 authenticated occurrence may authorize a new correction but does not itself clear the hold.
 The hold clears only when that corrected successor successfully advances at its
-boundary, or when a complete session reset or shutdown ends the session.
+boundary, or when New Set performs a complete session reset or shutdown ends the
+session.
 
 ## Route, transport, and shutdown lifecycle
 
@@ -188,11 +189,16 @@ boundary, or when a complete session reset or shutdown ends the session.
 - Shutdown removes the tap and producer eligibility before cancellation/join,
   then uses the transport-owned post-join destruction lease before freeing the
   queue. Repeated teardown and stale completions are idempotent.
+- New Set deliberately reuses that complete shutdown ordering, clears the hold
+  and every old occurrence/packet/proposal identity, rotates the musical root,
+  then prepares and starts a new session. No old lifecycle result can
+  authenticate against the fresh root or occurrence epoch.
 
 Route recovery retains committed attenuation, musical identity, and any accepted
 PCM hold. Packets, windows, proposals, and queued main-actor results from the
-previous lifecycle are permanently ineligible. Only complete session reset or
-shutdown clears a hold without a successfully advanced corrected successor.
+previous lifecycle are permanently ineligible. Only New Set's complete session
+reset or shutdown clears a hold without a successfully advanced corrected
+successor.
 
 ## Deterministic replay
 

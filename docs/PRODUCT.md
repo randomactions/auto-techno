@@ -3,9 +3,10 @@
 ## Purpose
 
 Auto Techno is a standalone macOS instrument for starting and sustaining one
-coherent techno performance with one button. It is not a DAW, sequencer editor,
-plug-in host, preset browser, engine selector, or collection of render
-experiments.
+coherent techno performance with one primary transport button. One secondary
+New Set action declares a complete-performance boundary. It is not a DAW,
+sequencer editor, plug-in host, preset browser, engine selector, or collection
+of render experiments.
 
 ## Central invariant
 
@@ -25,9 +26,17 @@ the next performance. The seed is neither displayed nor selectable; supplying
 the same explicit seed in qualification still reproduces the same score and
 PCM exactly.
 
+New Set is the only user-requested identity boundary. It stops the current
+player and engine, quiesces and destroys live-feedback ownership, cancels and
+invalidates detached preparation, clears every cache and musical/quality/live/
+long-horizon continuation, rotates the private root, resets read-only
+presentation, and prepares a new performance. The new set begins automatically
+when its first immutable phrase is ready. Pause and resume never take this path.
+
 ## Shipped experience
 
-- one accessible transport button;
+- one accessible primary play/pause transport button;
+- one accessible secondary New Set action, available outside preparation;
 - explicit preparing, ready, live, paused, recovering, and unavailable states;
 - fixed 130 BPM;
 - one fresh private canonical identity per complete, indefinitely evolving
@@ -183,7 +192,7 @@ existing compatible characters, foundation behaviors, roles, percussion gears,
 transformations, harmonic functions, spatial carriers, and transition
 eligibility. Invalid context and protected payoff/recall reserve use the exact
 all-hold path. This is internal autonomous behavior: it adds no duration,
-energy, style, synth, preset, or effect control to the one-button UI.
+energy, style, synth, preset, or effect control to the transport-only UI.
 
 ## Professional-sound objective
 
@@ -241,7 +250,7 @@ capability-local sound failure. A root with too few representative payoff
 transitions remains insufficient evidence rather than permission to add a synth,
 patch, effect, or chain. Future sound maturation must replace only a repeatedly
 failed provisional DSP in place after independent-root, two-rate causal
-evidence; the current palette and one-button surface remain unchanged.
+evidence; the current palette and sound-control surface remain unchanged.
 
 Professional quality remains an unverified release goal until the shipping
 policy and its operational gates pass. Professional Evidence v17 supplies

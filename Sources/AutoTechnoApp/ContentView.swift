@@ -75,6 +75,29 @@ struct ContentView: View {
             }
             .padding(42)
             .frame(maxWidth: 680)
+
+            Button {
+                engine.startNewSet()
+            } label: {
+                Label("NEW SET", systemImage: "arrow.counterclockwise")
+                    .font(.system(.caption2, design: .monospaced).weight(.semibold))
+                    .tracking(1.2)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background {
+                        Capsule()
+                            .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                    }
+            }
+            .buttonStyle(.plain)
+            .disabled(!engine.newSetEnabled)
+            .opacity(engine.newSetEnabled ? 1 : 0.42)
+            .keyboardShortcut("n", modifiers: [.command])
+            .accessibilityLabel("Start a new set")
+            .accessibilityHint("Ends the current set and starts a fresh performance")
+            .accessibilityIdentifier("transport-new-set")
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         }
         .frame(minWidth: 480, minHeight: 390)
         .preferredColorScheme(.dark)

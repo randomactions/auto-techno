@@ -182,6 +182,9 @@ package final class TechnoEngine: ObservableObject {
     var transportEnabled: Bool {
         playbackState != .preparing && playbackState != .recovering
     }
+    var newSetEnabled: Bool {
+        !isShutDown && playbackState != .preparing
+    }
     var transportTitle: String {
         switch playbackState {
         case .playing: "PAUSE"
@@ -385,6 +388,17 @@ package final class TechnoEngine: ObservableObject {
         }
     }
 
+    /// Ends the complete performance identity, clears every accepted and
+    /// in-flight continuation, and automatically starts the newly prepared
+    /// performance. Teardown and planning remain on the main/detached paths;
+    /// no work is added to the realtime callback.
+    package func startNewSet() {
+        guard !isShutDown else { return }
+        shutdown()
+        requestedPlaybackAfterPreparation = true
+        prepare()
+    }
+
     package func shutdown() {
         guard !isShutDown else { return }
         isShutDown = true
@@ -411,6 +425,7 @@ package final class TechnoEngine: ObservableObject {
         sessionState = director.initialState()
         resetSchedule()
         resetPlayingTime()
+        waveform = Array(repeating: 0.04, count: 64)
         sceneNumber = 1
         currentSection = .groove
         playbackState = .unavailable

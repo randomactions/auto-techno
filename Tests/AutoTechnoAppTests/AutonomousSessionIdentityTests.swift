@@ -1,8 +1,8 @@
-import AutoTechnoApp
 import AutoTechnoCore
 import AutoTechnoDSP
 import Foundation
 import Testing
+@testable import AutoTechnoApp
 
 @Suite("Fresh autonomous session identity", .serialized)
 struct AutonomousSessionIdentityTests {
@@ -18,6 +18,47 @@ struct AutonomousSessionIdentityTests {
         #expect(engine.currentSessionSeed == 42)
         engine.shutdown()
         #expect(engine.currentSessionSeed == 90_909)
+    }
+
+    @MainActor
+    @Test("New Set rotates identity and starts clean preparation")
+    func newSetStartsCompleteSessionBoundary() {
+        var values: [UInt64] = [42, 90_909, 123_456]
+        let source = AutonomousSessionSeedSource {
+            values.removeFirst()
+        }
+        let engine = TechnoEngine(sessionSeedSource: source)
+
+        engine.startNewSet()
+
+        #expect(engine.currentSessionSeed == 90_909)
+        #expect(engine.playbackState == .preparing)
+        #expect(engine.playingTimeSeconds == 0)
+        #expect(engine.sceneNumber == 1)
+        #expect(engine.barWithinScene == 1)
+        #expect(engine.waveform == Array(repeating: 0.04, count: 64))
+
+        engine.shutdown()
+    }
+
+    @Test("The UI exposes New Set as a secondary accessible transport action")
+    func newSetControlIsReachable() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let contentView = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(
+                "Sources/AutoTechnoApp/ContentView.swift"
+            ),
+            encoding: .utf8
+        )
+
+        #expect(contentView.contains("engine.startNewSet()"))
+        #expect(contentView.contains("transport-new-set"))
+        #expect(contentView.contains("Start a new set"))
+        #expect(contentView.contains("keyboardShortcut(\"n\", modifiers: [.command])"))
+        #expect(contentView.contains("transport-play-pause"))
     }
 
     @MainActor

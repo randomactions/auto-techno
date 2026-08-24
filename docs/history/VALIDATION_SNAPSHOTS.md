@@ -2328,3 +2328,43 @@ This is an evidence-backed negative implementation decision, not a claim that
 the current sound is professionally approved by listening. Exact-build app
 playback, physical route/interruption QA, extended runtime verification, human
 listening, and hardware-output soak remain separate and unrun.
+
+## Explicit New Set complete-performance boundary — 2026-08-24
+
+The App now exposes one secondary `NEW SET` action alongside the primary
+play/pause transport. It calls the existing complete shutdown boundary, which
+stops the player/engine, removes producer eligibility and the tap before joining
+the consumer, destroys the queue under its post-join lease, cancels and
+invalidates recovery and detached preparation, clears cache/live/long-horizon
+state and the accepted-PCM hold, rotates the private root, and resets playing
+time, position, section, and waveform. It then prepares one canonical first
+phrase and automatically starts only after that phrase is commit eligible.
+
+The button is disabled during preparation, remains secondary in the lower-right
+transport margin so the fixed central layout keeps its existing default/minimum
+geometry, and exposes accessibility identifier `transport-new-set`, label
+`Start a new set`, an explanatory hint, and Command-N. It adds no seed display,
+musical parameter, mode, score relation, synth, patch, DSP primitive, effect,
+bus, graph, renderer, scheduled-buffer format, or callback work.
+
+Local validation used the matched Xcode 26.6 toolchain with isolated caches:
+
+- fresh autonomous session identity, PCM divergence, reset presentation, and
+  accessible-control contracts: 6/6 passed in 44.190 seconds;
+- production live-feedback scheduling/lifecycle regressions: 17/17 passed in
+  5.123 seconds;
+- current runtime and repository-surface invariants: 11/11 passed in 39.921
+  seconds;
+- playing-time formatting, sample-time, pause, and recovery contracts: 4/4
+  passed in 0.003 seconds;
+- the final lower-right UI placement recompiled and its focused accessibility
+  contract repeated 1/1; and
+- the final optimized `AutoTechno` product built successfully with SHA-256
+  `ba16f4d2d524aba809c15348cefee03596ba6884d3bb2acde995e9ac9abd067b`.
+
+`git diff --check` passed. The first sandboxed App identity attempt could not
+construct macOS `AVAudioPlayerNode` because the AudioUnit component registry was
+unavailable; the same exact test passed outside that restricted process sandbox
+without opening a microphone or launching the app. Real app interaction,
+route/interruption QA, listening, and physical-output soak remain unrun and are
+not implied by these deterministic tests.

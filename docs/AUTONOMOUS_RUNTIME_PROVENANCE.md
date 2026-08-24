@@ -13,10 +13,13 @@ mistaken for a completed feedback system.
    fixed 130 BPM, that private canonical identity, temporal memory, one
    canonical phrase, and successor planning. Pause/resume, live correction,
    playback-timeline reset, route change, and route recovery retain the seed;
-   complete shutdown selects the next seed before a later appearance. Every
-   preparation-cache key binds the exact seed, and stale detached or cached
-   results from another session fail closed. No entropy read reaches detached
-   rendering or the realtime callback.
+   complete shutdown selects the next seed before a later appearance. The
+   secondary New Set action explicitly takes that complete boundary: it
+   quiesces transport/feedback, cancels and invalidates detached work, clears
+   every continuation/cache, selects the next seed, and automatically starts
+   the newly prepared phrase. Every preparation-cache key binds the exact seed,
+   and stale detached or cached results from another session fail closed. No
+   entropy read reaches detached rendering or the realtime callback.
 2. Each `AutonomousPhrasePlan` carries a complete musical intention, Scene DNA,
    resolved performance bars, outgoing interlock, spatial-contrast, and
    protagonist-narrative state, plus groove-interest evidence. Supporting-role

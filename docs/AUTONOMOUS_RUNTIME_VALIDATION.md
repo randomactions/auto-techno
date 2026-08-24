@@ -454,9 +454,13 @@ and stale-result rejection must release bounded background work promptly.
 
 On the exact release build, verify:
 
-- one accessible transport button and coherent preparing, ready, live, paused,
-  recovering, and unavailable states;
+- one accessible primary transport button, one secondary New Set action, and
+  coherent preparing, ready, live, paused, recovering, and unavailable states;
 - prepare, play, pause, resume, and phrase-boundary continuation;
+- New Set from ready, live, paused, recovering, and unavailable states: exact
+  producer-before-consumer teardown, stale-work invalidation, fresh root,
+  empty continuation/cache, zero playing time, and automatic start only after a
+  commit-eligible first phrase;
 - sample-time scheduling, future-boundary controller application, and read-only
   waveform/position reporting;
 - authorized-correction hold after a late successor without silence, premature

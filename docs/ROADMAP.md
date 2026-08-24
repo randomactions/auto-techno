@@ -7,7 +7,8 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 
 ## Current baseline
 
-- one-button autonomous macOS app at fixed 130 BPM;
+- one-primary-button autonomous macOS app at fixed 130 BPM, with one secondary
+  New Set lifecycle action and no musical parameter controls;
 - one fresh opaque App-owned root identity per complete performance, followed
   by reproducible single-plan session planning with temporal memory and
   seed-bound preparation caches;
@@ -125,6 +126,13 @@ occurrence may propose recovery but does not itself clear the hold; successful
 corrected advancement, complete session reset, or shutdown clears it. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md). App/route QA, listening, and physical-
 output soak remain separate evidence states.
+
+The secondary New Set action now makes the complete session reset explicit. It
+uses the existing shutdown-safe teardown order, invalidates detached and cached
+work, clears the accepted-PCM hold and every continuation, rotates the private
+root, resets presentation, prepares one canonical first phrase, and starts only
+after that phrase is commit eligible. It adds no musical parameter, alternate
+engine, renderer, graph, callback work, or selectable seed.
 
 The pulse-echo return-drive code and same-pass reduced evidence are present in
 the current implementation candidate. The exact-source local structural/signal
