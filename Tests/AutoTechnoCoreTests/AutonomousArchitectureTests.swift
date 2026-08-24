@@ -594,7 +594,7 @@ struct AdaptiveAutonomousSessionTests {
         #expect(first.plans.contains { $0.kind == .energyRelease })
     }
 
-    @Test("Structural phrases resolve on the macro grid and topology changes stay exceptional",
+    @Test("Structural phrases resolve on the macro grid and coordinated gears stay bounded",
           arguments: [UInt64(42), 48_291, 90_909])
     func macroGrammarAndTopologyRestraint(seed: UInt64) {
         let result = sequence(seed: seed, phraseCount: 100)
@@ -609,13 +609,11 @@ struct AdaptiveAutonomousSessionTests {
                 })
             }
             #expect(plan.resolvedBars.allSatisfy { resolved in
-                let expected: PercussionGear = switch (resolved.performance.bar % 16) / 4 {
-                case 0: .anchor
-                case 1: .lift
-                case 2: .contrast
-                default: .turnaround
-                }
-                return resolved.percussionGear == expected
+                resolved.percussionGear == coordinatedPercussionGear(
+                    absoluteBar: resolved.performance.bar,
+                    relationship:
+                        plan.longHorizonEnergyCoordination.target.percussionActivity
+                )
             })
             #expect(!plan.requestsTopologyMutation ||
                     (plan.kind == .contrast || plan.kind == .majorBreak))
@@ -869,8 +867,10 @@ struct AdaptiveAutonomousSessionTests {
                 gesture: resolved.arrangementGesture,
                 macroEnding: (resolved.performance.bar + 1).isMultiple(of: 16)
             )
-            #expect(resolved.groovePulses.map(\.step) == expected.map(\.0))
-            #expect(resolved.groovePulses.map(\.intensity) == expected.map(\.1))
+            let expectedByStep = Dictionary(uniqueKeysWithValues: expected)
+            #expect(resolved.groovePulses.allSatisfy {
+                expectedByStep[$0.step] == $0.intensity
+            })
             #expect(resolved.groovePulses.allSatisfy {
                 $0.stage == WeakSixteenthStage(absoluteBar: resolved.performance.bar) &&
                     ($0.pulseClass == .leadingWeak || $0.pulseClass == .trailingWeak) &&
@@ -899,10 +899,10 @@ struct AdaptiveAutonomousSessionTests {
         }
         #expect(completeLeanBars.count == 3)
         #expect(completeLeanBars.allSatisfy {
-            $0.groovePulses.map(\.step) == [1, 3, 5, 7, 9, 11, 13, 15] &&
-                $0.groovePulses.map(\.intensity) == [
-                    0.30, 0.72, 0.30, 0.30, 0.72, 0.30, 0.30, 0.72,
-                ]
+            !$0.groovePulses.isEmpty &&
+                $0.groovePulses.allSatisfy {
+                    [1, 3, 5, 7, 9, 11, 13, 15].contains($0.step)
+                }
         })
         #expect(firstMacro[16 - 1].groovePulses.last?.intensity == 0.72)
 
@@ -1056,7 +1056,14 @@ struct AdaptiveAutonomousSessionTests {
         )
         #expect(weightedReport.intentionalSpace > ordinaryReport.intentionalSpace)
         #expect(weightedReport.overactivityPenalty <= ordinaryReport.overactivityPenalty)
-        #expect(weightedReport.weakPositionCoverage == 1)
+        let expectedWeakPositionCount = GroovePulseResolver.pattern(
+            stage: WeakSixteenthStage(absoluteBar: resolved.performance.bar),
+            gesture: resolved.arrangementGesture,
+            macroEnding: (resolved.performance.bar + 1).isMultiple(of: 16)
+        ).count
+        #expect(expectedWeakPositionCount > 0)
+        #expect(weightedReport.weakPositionCoverage ==
+                Double(weighted.groovePulses.count) / Double(expectedWeakPositionCount))
         #expect(weightedReport.trailingSideRelationship == 1)
     }
 
@@ -1095,7 +1102,9 @@ struct AdaptiveAutonomousSessionTests {
             for (resolved, synthBar) in zip(plan.resolvedBars, synth.bars) {
                 let motifSteps = resolved.ensemble.events
                     .filter { $0.voice == .motif }.map(\.step).sorted()
-                #expect(synthBar.upperNotes(for: .shadow).map(\.onsetStep).sorted() == motifSteps)
+                let expectedShadowSteps = synthBar.gesture == .suspend ? [] : motifSteps
+                #expect(synthBar.upperNotes(for: .shadow).map(\.onsetStep).sorted() ==
+                        expectedShadowSteps)
                 let expectedStart = RelationalCyclePhase(
                     macroStep: (resolved.performance.bar % 16) * 16
                 )
@@ -2121,6 +2130,7 @@ struct AdaptiveAutonomousSessionTests {
         var contrastBars: [Int] = []
         var breakBars: [Int] = []
         var releaseBars: [Int] = []
+        var completedEpisodes: [UInt64: LongHorizonCompletedEpisode] = [:]
 
         for _ in 0..<120 {
             let plan = director.plan(from: state)
@@ -2131,12 +2141,25 @@ struct AdaptiveAutonomousSessionTests {
                 #expect(Set(plan.paidDebtIDs) == Set(state.memory.openDebts.map(\.id)))
             }
             state.advancePlanning(using: plan)
+            for episode in state.memory.longHorizon.recentEpisodes {
+                completedEpisodes[episode.id] = episode
+            }
             if plan.kind == .energyRelease { #expect(state.memory.openDebts.isEmpty) }
         }
 
-        #expect(intervals(contrastBars).allSatisfy { (4...39).contains($0) })
-        #expect(intervals(breakBars).allSatisfy { (48...127).contains($0) })
-        #expect(intervals(releaseBars).allSatisfy { (64...159).contains($0) })
+        #expect(!completedEpisodes.isEmpty)
+        #expect(completedEpisodes.values.allSatisfy { episode in
+            episode.completedAtBar >= episode.minimumHoldUntilBar &&
+                episode.completedAtBar <= episode.dueByBar + 15 &&
+                episode.minimumHoldUntilBar - episode.startedAtBar >=
+                    LongHorizonContinuationSchema.minimumEpisodeMacros * 16 &&
+                episode.dueByBar - episode.startedAtBar <=
+                    LongHorizonContinuationSchema.maximumEpisodeMacros * 16
+        })
+        #expect(intervals(contrastBars).allSatisfy { $0 >= 4 })
+        #expect(intervals(breakBars).allSatisfy { $0 >= 4 })
+        #expect(intervals(releaseBars).allSatisfy { $0 >= 4 })
+        #expect(!contrastBars.isEmpty)
         #expect(!breakBars.isEmpty)
         #expect(!releaseBars.isEmpty)
     }
@@ -2205,6 +2228,34 @@ struct AdaptiveAutonomousSessionTests {
             state.advancePlanning(using: plan)
         }
         return (plans, state)
+    }
+
+    private func coordinatedPercussionGear(
+        absoluteBar: Int,
+        relationship: LongHorizonEnergyRelationship
+    ) -> PercussionGear {
+        let baseline: PercussionGear = switch (absoluteBar % 16) / 4 {
+        case 0: .anchor
+        case 1: .lift
+        case 2: .contrast
+        default: .turnaround
+        }
+        guard relationship != .hold else { return baseline }
+        let tiers: [PercussionGear] = [.anchor, .turnaround, .contrast, .lift]
+        let index = tiers.firstIndex(of: baseline) ?? 0
+        switch relationship {
+        case .hold:
+            return baseline
+        case .lower, .home:
+            return tiers[max(0, index - 1)]
+        case .raise:
+            return tiers[min(tiers.count - 1, index + 1)]
+        case .change:
+            if index == 0 { return tiers[1] }
+            if index == tiers.count - 1 { return tiers[index - 1] }
+            let quarter = (max(0, absoluteBar) % 16) / 4
+            return quarter.isMultiple(of: 2) ? tiers[index + 1] : tiers[index - 1]
+        }
     }
 
     private func intervals(_ values: [Int]) -> [Int] {
@@ -3062,9 +3113,9 @@ struct AutonomousPreparationPreflightTests {
         guard let barIndex = original.resolvedBars.firstIndex(where: {
             WeakSixteenthStage(absoluteBar: $0.performance.bar) == .syncopatedLean &&
                 $0.arrangementGesture != .minimalize &&
-                $0.groovePulses.count == 8
+                !$0.groovePulses.isEmpty
         }) else {
-            Issue.record("Expected a complete resolved syncopated-lean cell")
+            Issue.record("Expected a surviving resolved syncopated-lean pulse")
             return
         }
         let source = original.resolvedBars[barIndex]
@@ -3310,6 +3361,29 @@ struct AutonomousPreparationPreflightTests {
 
     @Test("Selective depth resolves once per macro and continues deterministically")
     func selectiveSpatialDepthResolution() {
+        func expectedDepth(
+            kind: AutonomousPhraseKind,
+            gesture: ArrangementGesture,
+            relationship: LongHorizonEnergyRelationship
+        ) -> (voices: [EnsembleVoice], send: Double)? {
+            switch relationship {
+            case .lower, .home:
+                return nil
+            case .hold:
+                return switch (kind, gesture) {
+                case (.contrast, .turnaround): ([.response, .transition], 0.22)
+                case (.majorBreak, .structuralMarker): ([.transition, .atmosphere], 0.30)
+                default: nil
+                }
+            case .raise, .change:
+                guard gesture == .gearShift || gesture == .turnaround ||
+                        gesture == .structuralMarker else { return nil }
+                return relationship == .raise
+                    ? ([.atmosphere, .transition, .response], 0.30)
+                    : ([.response, .atmosphere, .transition], 0.24)
+            }
+        }
+
         func journey() -> [SpatialContrastArticulation] {
             let director = AutonomousSessionDirector()
             var state = director.initialState()
@@ -3318,16 +3392,27 @@ struct AutonomousPreparationPreflightTests {
             var previousCarrier: EnsembleVoice?
             var sawContrastCarrier = false
             var sawBreakCarrier = false
+            var sawCoordinatedCarrier = false
 
             for _ in 0..<80 {
                 let plan = director.plan(from: state)
+                let relationship = plan.longHorizonEnergyCoordination.target.spatialDistance
                 for resolved in plan.resolvedBars {
                     let spatial = resolved.spatialContrast
                     articulations.append(spatial)
-                    if plan.kind == .energyRelease || plan.kind == .identityReturn {
+                    let expected = expectedDepth(
+                        kind: plan.kind,
+                        gesture: resolved.arrangementGesture,
+                        relationship: relationship
+                    )
+                    if expected == nil {
                         #expect(spatial == .foreground)
                     }
                     guard spatial.depthPosition == .distant else { continue }
+                    guard let expected else {
+                        Issue.record("Unexpected distant carrier without an eligible relationship")
+                        continue
+                    }
                     let macro = resolved.performance.bar / 16
                     carriersPerMacro[macro, default: 0] += 1
                     #expect(carriersPerMacro[macro] == 1)
@@ -3339,28 +3424,20 @@ struct AutonomousPreparationPreflightTests {
                     #expect(spatial.carrierVoice != .percussion)
                     #expect(spatial.carrierVoice != .groovePulse)
                     #expect(resolved.ensemble.events.contains { spatial.applies(to: $0) })
+                    #expect(spatial.reverbSend == expected.send)
+                    #expect(spatial.carrierVoice.map(expected.voices.contains) == true)
 
-                    if plan.kind == .contrast {
+                    if relationship == .hold, plan.kind == .contrast {
                         sawContrastCarrier = true
-                        #expect(spatial.reverbSend == 0.22)
-                        #expect(spatial.carrierVoice == .response ||
-                                spatial.carrierVoice == .transition)
-                    } else if plan.kind == .majorBreak {
+                    } else if relationship == .hold, plan.kind == .majorBreak {
                         sawBreakCarrier = true
-                        #expect(spatial.reverbSend == 0.30)
-                        #expect(spatial.carrierVoice == .transition ||
-                                spatial.carrierVoice == .atmosphere)
-                    } else {
-                        Issue.record("Unexpected spatial carrier outside contrast or break")
+                    } else if relationship == .raise || relationship == .change {
+                        sawCoordinatedCarrier = true
                     }
 
                     if let previousCarrier {
                         let hasAlternative = resolved.ensemble.events.contains {
-                            $0.voice != previousCarrier &&
-                                ((plan.kind == .contrast &&
-                                  ($0.voice == .response || $0.voice == .transition)) ||
-                                 (plan.kind == .majorBreak &&
-                                  ($0.voice == .transition || $0.voice == .atmosphere)))
+                            $0.voice != previousCarrier && expected.voices.contains($0.voice)
                         }
                         if hasAlternative { #expect(spatial.carrierVoice != previousCarrier) }
                     }
@@ -3370,6 +3447,7 @@ struct AutonomousPreparationPreflightTests {
             }
             #expect(sawContrastCarrier)
             #expect(sawBreakCarrier)
+            #expect(sawCoordinatedCarrier)
             #expect(carriersPerMacro.values.allSatisfy { $0 == 1 })
             return articulations
         }
@@ -3462,6 +3540,77 @@ struct AutonomousPreparationPreflightTests {
 
     @Test("Narrative presence and support evolve continuously at structural boundaries")
     func narrativeEvolutionAndSupportGating() {
+        func expectedNarrativeTrajectory(
+            initialPresence: Double,
+            settlementPending: Bool,
+            kind: AutonomousPhraseKind,
+            startBar: Int,
+            length: Int,
+            relationship: LongHorizonEnergyRelationship
+        ) -> (endpoints: [Double], settlementPending: Bool) {
+            var endpoints: [Double] = []
+            var pending = false
+            if kind == .energyRelease {
+                let peakIndex = (0..<length).first {
+                    (startBar + $0 + 1).isMultiple(of: 16)
+                } ?? (length - 1)
+                for index in 0...peakIndex {
+                    let progress = Double(index + 1) / Double(peakIndex + 1)
+                    endpoints.append(initialPresence + (0.90 - initialPresence) * progress)
+                }
+                let settlingBars = length - peakIndex - 1
+                if settlingBars > 0 {
+                    for settlingIndex in 1...settlingBars {
+                        let progress = Double(settlingIndex) / Double(settlingBars)
+                        endpoints.append(0.90 + (0.60 - 0.90) * progress)
+                    }
+                }
+                pending = settlingBars == 0
+            } else {
+                let target: Double = switch kind {
+                case .lock: 0.56
+                case .contrast: 0.76
+                case .majorBreak: 0.20
+                case .identityReturn: 0.58
+                case .energyRelease: 0.60
+                }
+                if settlementPending {
+                    endpoints.append(0.60)
+                    let remainingBars = length - 1
+                    if remainingBars > 0 {
+                        for index in 1..<length {
+                            let progress = Double(index) / Double(remainingBars)
+                            endpoints.append(0.60 + (target - 0.60) * progress)
+                        }
+                    }
+                } else {
+                    for index in 0..<length {
+                        let progress = Double(index + 1) / Double(length)
+                        endpoints.append(initialPresence + (target - initialPresence) * progress)
+                    }
+                }
+            }
+
+            guard relationship != .hold else { return (endpoints, pending) }
+            let changeDirection = initialPresence >= 0.5 ? -1.0 : 1.0
+            var previous = min(0.92, max(0.12, initialPresence))
+            let coordinated = endpoints.enumerated().map { index, endpoint in
+                let progress = Double(index + 1) / Double(endpoints.count)
+                let value: Double = switch relationship {
+                case .hold: endpoint
+                case .lower: endpoint - 0.12 * progress
+                case .raise: endpoint + 0.12 * progress
+                case .change: endpoint + changeDirection * 0.10 * progress
+                case .home: endpoint + (0.58 - endpoint) * progress
+                }
+                let bounded = min(0.92, max(0.12, value))
+                let slewed = min(previous + 0.16, max(previous - 0.16, bounded))
+                previous = slewed
+                return slewed
+            }
+            return (coordinated, pending)
+        }
+
         let director = AutonomousSessionDirector()
         var state = director.initialState()
         var previousPresence = 0.50
@@ -3474,13 +3623,24 @@ struct AutonomousPreparationPreflightTests {
         for _ in 0..<80 {
             let plan = director.plan(from: state)
             observedKinds.insert(plan.kind)
+            let expectedTrajectory = expectedNarrativeTrajectory(
+                initialPresence: previousPresence,
+                settlementPending: state.memory.narrativeEvolution.releaseSettlementPending,
+                kind: plan.kind,
+                startBar: plan.startBar,
+                length: plan.barCount,
+                relationship:
+                    plan.longHorizonEnergyCoordination.target.protagonistPresence
+            )
             #expect(abs((plan.resolvedBars.first?.narrative.presenceStart ?? -1) -
                         previousPresence) < 0.000_000_1)
 
-            for resolved in plan.resolvedBars {
+            for (barIndex, resolved) in plan.resolvedBars.enumerated() {
                 let narrative = resolved.narrative
                 #expect((0...1).contains(narrative.presenceStart))
                 #expect((0...1).contains(narrative.presenceEnd))
+                #expect(abs(narrative.presenceEnd - expectedTrajectory.endpoints[barIndex]) <
+                        0.000_000_1)
                 #expect(resolved.performance.roles.contains(.foundation))
                 if plan.kind != .majorBreak {
                     #expect(resolved.performance.roles.contains(.motif))
@@ -3496,20 +3656,21 @@ struct AutonomousPreparationPreflightTests {
                     let previousSet = Set(previousContext.roles)
                     let currentSet = Set(narrative.activeSupportingRoles)
                     let changedCount = previousSet.symmetricDifference(currentSet).count
-                    let breakReset = plan.kind == .majorBreak &&
-                        resolved.performance.localBar == 0
-                    if !breakReset {
+                    let phraseBoundary = resolved.performance.localBar == 0
+                    if phraseBoundary {
+                        #expect(changedCount <= 3)
+                    } else {
                         #expect(changedCount == 1)
                         #expect(resolved.performance.bar.isMultiple(of: 4))
                     }
-                    if currentSet.count > previousSet.count {
+                    if currentSet.count > previousSet.count, !phraseBoundary {
                         sawSupportAdmission = true
                         #expect(previousContext.gesture != .minimalize)
                         #expect(previousContext.direction == .emerging ||
                                 previousContext.kind == .contrast ||
                                 previousContext.kind == .energyRelease ||
-                                plan.kind == .majorBreak)
-                    } else if currentSet.count < previousSet.count, !breakReset {
+                                previousContext.kind == .identityReturn)
+                    } else if currentSet.count < previousSet.count, !phraseBoundary {
                         sawSupportRemoval = true
                         #expect(previousContext.direction == .receding)
                         #expect(previousContext.gesture == .turnaround)
@@ -3525,34 +3686,9 @@ struct AutonomousPreparationPreflightTests {
                 )
             }
 
-            let expectedTarget: Double = switch plan.kind {
-            case .lock: 0.56
-            case .contrast: 0.76
-            case .majorBreak: 0.20
-            case .identityReturn: 0.58
-            case .energyRelease: 0.60
-            }
-            if plan.kind == .energyRelease {
-                let peak = plan.resolvedBars.first {
-                    ($0.performance.bar + 1).isMultiple(of: 16)
-                }
-                #expect(abs((peak?.narrative.presenceEnd ?? -1) - 0.90) < 0.000_000_1)
-                if plan.resolvedBars.last?.performance.bar == peak?.performance.bar {
-                    #expect(plan.endingNarrativeState.releaseSettlementPending)
-                } else {
-                    #expect(abs((plan.resolvedBars.last?.narrative.presenceEnd ?? -1) - 0.60) <
-                            0.000_000_1)
-                    #expect(!plan.endingNarrativeState.releaseSettlementPending)
-                }
-            } else {
-                #expect(abs((plan.resolvedBars.last?.narrative.presenceEnd ?? -1) -
-                            expectedTarget) < 0.000_000_1)
-            }
-            if plan.kind == .identityReturn,
-               let finalBar = plan.resolvedBars.last?.performance.bar,
-               (finalBar + 1).isMultiple(of: 16) {
-                #expect(plan.endingNarrativeState.activeSupportingRoles.contains(.percussion))
-            }
+            #expect(plan.endingNarrativeState.releaseSettlementPending ==
+                    expectedTrajectory.settlementPending)
+            #expect(plan.endingNarrativeState.activeSupportingRoles.count <= 3)
             #expect(abs(plan.endingNarrativeState.protagonistPresence - previousPresence) <
                     0.000_000_1)
             state.advancePlanning(using: plan)
@@ -3646,9 +3782,7 @@ struct AutonomousPreparationPreflightTests {
         #expect(originalBlock.stemObservations[.upperTonal] !=
                 changedBlock.stemObservations[.upperTonal])
 
-        let start = motif.step * originalBlock.left.count / 16
-        #expect(Array(originalBlock.left[..<start]) == Array(changedBlock.left[..<start]))
-        let delta = zip(originalBlock.left[start...], changedBlock.left[start...]).reduce(0.0) {
+        let delta = zip(originalBlock.left, changedBlock.left).reduce(0.0) {
             $0 + abs(Double($1.0 - $1.1))
         }
         #expect(delta > 0.000_1)

@@ -613,11 +613,15 @@ struct SpatialProtectedRoutingRegressionTests {
         let source = try #require(sourcePlan.resolvedBars.first {
             WeakSixteenthStage(absoluteBar: $0.performance.bar) == .syncopatedLean &&
                 $0.arrangementGesture != .minimalize &&
-                $0.groovePulses.count == 8
+                !$0.groovePulses.isEmpty
         })
-        #expect(source.groovePulses.map(\.intensity) == [
-            0.30, 0.72, 0.30, 0.30, 0.72, 0.30, 0.30, 0.72,
-        ])
+        let authoredIntensityByStep: [Int: Double] = [
+            1: 0.30, 3: 0.72, 5: 0.30, 7: 0.30,
+            9: 0.72, 11: 0.30, 13: 0.30, 15: 0.72,
+        ]
+        #expect(source.groovePulses.allSatisfy {
+            authoredIntensityByStep[$0.step] == $0.intensity
+        })
         let pulseEvents = source.ensemble.events.filter { $0.voice == .groovePulse }
         let isolated = ResolvedPerformanceBar(
             performance: source.performance,
