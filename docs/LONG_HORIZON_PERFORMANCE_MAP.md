@@ -24,14 +24,19 @@ disjoint four-hour holdout journeys. Phase 7 now reduces each accepted prepared
 phrase into one bounded active-rate observation during detached preparation,
 evaluates it with those exact artifacts, and may apply one reason-coded recovery
 only to the unscheduled successor boundary through the canonical continuation.
+Phase 8 has now applied the sound-maturation gate to the exact Stage 6 evidence.
+No development or holdout journey exposes a repeatable capability-local sound
+failure, and the one sparse-payoff root is an evidence-observability shortfall,
+not a failed render. The valid Stage 8 result is therefore **no sound-machinery
+promotion**.
 
-The next priority is therefore **Stage 8 adversarial maturation and operational
-verification**, not more presets. The current three synthesis
+The next priority is exact-build operational verification and the explicitly
+requested fresh-set boundary, not more presets. The current three synthesis
 architectures, eleven patch homes, six performance characters, resolved score,
-phrase composition, spatial field, and transition vocabulary are sufficient to
-exercise the first long-horizon controller. Sound-engine expansion should occur
-only when that controller exposes a repeatable audible deficit. The separate
-follow-up register is
+phrase composition, spatial field, and transition vocabulary are sufficient for
+the first calibrated long-horizon loop. Sound-engine expansion remains
+conditional on a repeatable, causally isolated deficit. The separate follow-up
+register is
 [`LONG_HORIZON_SOUND_CAPABILITIES.md`](LONG_HORIZON_SOUND_CAPABILITIES.md).
 
 ## Product translation
@@ -557,6 +562,39 @@ effect implementation, bus, graph stage, chain, renderer, or callback work. It
 changes only future-boundary decision/continuation and App preparation/route
 state. No sound-capability item is promoted.
 
+### Completed Phase 8 evidence-gated sound maturation
+
+The exact Stage 6 profile, adversarial suite, and disjoint holdout were audited
+against every conditional item in the sound-capability register. All four
+development journeys establish the calibrated bounds, all ten independent
+attacks are rejected, and both disjoint four-hour holdout roots are accepted at
+44.1 and 48 kHz. No accepted journey repeatedly fails a role-local timbre,
+transition, percussion, harmony, spatial, dynamics, resampling, or
+effect-to-dry relationship after the semantic trajectory is valid.
+
+Root `135791` remains intentionally outside calibration. Its bounded
+24-position search produced only one primary-qualified payoff transition, so it
+cannot satisfy the two-transition representative minimum. That fact identifies
+sparse payoff observability in the checkpoint search. It does not identify a
+synth, patch, effect, renderer, or translation failure, and relaxing the
+minimum or adding sound machinery would conceal the missing causal evidence.
+
+The promotion boundary is now explicit: a later sound revision requires the
+same named capability to fail repeatedly across independent roots and both
+representative rates, while the score relationship, primary phrase verdict,
+route identity, and unrelated sound families remain valid. Only then may the
+smallest affected provisional DSP be replaced in place and requalified against
+development, adversarial, and disjoint holdout evidence. A single sparse root,
+semantic failure, policy mismatch, listening preference, or video suggestion
+cannot trigger expansion.
+
+Stage 8 therefore changes documentation and qualification state only. It adds
+no synthesis architecture, preset, patch home, DSP primitive, effect, bus,
+graph stage, chain, renderer, audio buffer, scheduler, route behavior, or
+realtime callback work. The matched-Xcode focused policy suite passed 11/11 and
+replayed the exact artifact identities. App playback, route/interruption QA,
+listening, and physical-output soak remain separate and unrun.
+
 ## Required musical model
 
 ### One hierarchy, not another engine
@@ -726,7 +764,7 @@ Each slice extends the one canonical owner and leaves a reusable capability.
 | 5. Effect/capability dose evidence — complete locally | Existing instrument effect access, graph, FDN, pulse echo, percussion returns, masking, and transition relations | Versioned phrase sentence plus fixed-capacity activation, occupancy, tail, recovery, gap, last-use, and level evidence | 63 existing four-hour sentences; exact detached source/return binding; adversarial false eligibility, disconnected claims, premature recovery, discontinuity, and replay checks | Annotation and detached reduction only; no PCM retained; invalid evidence is unavailable without partial mutation; current audio remains exact | No new bus, effect, orderable plug-in chain, FX sequencer, renderer, or callback path |
 | 6. Calibrated long-horizon policy — complete locally | Primary-v14 evaluator, DSP-owned `autotechno-long-horizon-signal-trajectory.v1`, and immutable Stage 6 artifact loader | Non-compensable cross-phrase/cross-episode semantic, operator/signal, and effect bounds over four exact development journeys | Engine-v32 profile `56231bcba7167e67`; ten attacks rejected by `097371d15a680a5b`; two disjoint four-hour holdouts accepted by `b9465548c62c098b` at 44.1/48 kHz | Reduced detached evidence only; exact identities and canonical JSON fail closed; no PCM retained or scheduled audio rewritten | No parallel permissive evaluator, PCM ledger, aggregate engagement score, or semantic claim masquerading as signal consequence |
 | 7. Bounded future adaptation — complete locally | DSP-owned fixed-capacity runtime observation, Core v2 continuation/decision, and App prepared-successor transaction | Exact active-rate Stage 6 evaluation and one reason-coded preserve/recover update for the next eligible phrase | Exact observation/decision/continuation replay; ten independent reason mappings; real prepared-phrase witness; stale/short/wrong-root/recovery-ineligible preservation; route rollback source contract | Fixed 7,200-bar/12-observation/two-transitions-per-operator minimum and 256-bar interval; immutable prepared state commits atomically; invalid evidence restarts; no callback work | No independent long-form controller, second plan, parallel policy, PCM history, renderer, graph, or callback path |
-| 8. Targeted sound maturation | Existing Core intention and affected DSP owner | Only the capability demonstrated missing by Stage 6 evidence | See the separate sound-capability register | Replace provisional DSP in place; exact neutral and protected paths remain | No preset pack, alternative renderer, or speculative chain expansion |
+| 8. Targeted sound maturation — complete locally with no promotion | Existing Core intention, primary-v14 phrase verdict, and affected DSP evidence owner | Evidence-gated decision found no repeatable capability-local deficit; current machinery remains authoritative | Four development journeys, ten rejected attacks, two accepted disjoint holdouts, and explicit `135791` sparse-observability classification; focused policy replay 11/11 | No PCM change; a future promotion requires repeated independent-root and two-rate causal failure, then replaces only the failed provisional DSP in place | No preset pack, alternative renderer, speculative chain, or machinery added to compensate for missing evidence |
 
 ## Validation matrix
 

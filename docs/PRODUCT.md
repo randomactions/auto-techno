@@ -235,6 +235,14 @@ it cannot count or spend the same event twice. This adds no user control,
 alternate engine, renderer, graph, audio buffer, microphone input, or callback
 analysis.
 
+Long-horizon Phase 8 applies the evidence gate before sound expansion. The exact
+development, adversarial, and disjoint holdout artifacts expose no repeated
+capability-local sound failure. A root with too few representative payoff
+transitions remains insufficient evidence rather than permission to add a synth,
+patch, effect, or chain. Future sound maturation must replace only a repeatedly
+failed provisional DSP in place after independent-root, two-rate causal
+evidence; the current palette and one-button surface remain unchanged.
+
 Professional quality remains an unverified release goal until the shipping
 policy and its operational gates pass. Professional Evidence v17 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory

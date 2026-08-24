@@ -371,6 +371,16 @@ not double-counted. No PCM enters the observation, and no analysis or decision
 runs in the realtime callback. See
 [`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md).
 
+Phase 8 applies the separate sound-maturation gate to those exact artifacts.
+The accepted development and holdout journeys expose no repeated
+capability-local sound failure, while every named adversarial attack remains
+rejected. Root `135791` is excluded because its bounded checkpoint search
+supplies too few representative payoff transitions; that is an observability
+shortfall, not evidence of failed PCM. No synth, patch, DSP primitive, effect,
+bus, chain, renderer, policy, or runtime state changes in Phase 8. A later
+promotion requires repeated independent-root failures at both representative
+rates with valid score, phrase-quality, route, and unrelated-family evidence.
+
 ## Engine ownership
 
 The shipped signal path owns its synthesis, effects, mixing, and mastering

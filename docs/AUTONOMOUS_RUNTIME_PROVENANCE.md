@@ -713,6 +713,23 @@ detached preparation. No render callback, C handoff, audio buffer, graph,
 renderer, or sample scheduler was changed. The main actor only installs the
 already-immutable accepted result at the existing scheduled phrase boundary.
 
+## Completed evidence-gated sound maturation assessment
+
+Phase 8 adds no runtime owner or state. It reconciles the exact engine-v32/
+primary-v14 long-horizon profile, adversarial suite, and disjoint holdout with
+the conditional sound-capability register. Development and holdout journeys
+expose no repeated capability-local sound failure. The excluded root `135791`
+has too few primary-qualified payoff checkpoints to construct representative
+evidence, so it cannot be reclassified as a render, DSP, or translation
+failure.
+
+No Core decision, resolved score, DSP parameter, render graph, prepared product,
+App scheduler, route lifecycle, audio buffer, continuation, or callback changes
+for this assessment. A later sound replacement requires repeated independent-
+root failures at both representative rates while the score, primary phrase
+verdict, route, and unrelated sound-family evidence remain valid. Until then,
+the current renderer and neutral/protected paths remain canonical.
+
 ## Canonical unified loop
 
 All future musical development extends one persistent loop:

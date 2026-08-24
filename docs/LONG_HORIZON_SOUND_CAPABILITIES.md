@@ -41,10 +41,12 @@ preparation, carries one fixed-capacity active-rate observation alongside the
 prepared successor, and can request only one existing recover/major-break path
 at an eligible future boundary. Its focused observation, decision, continuation,
 atomic-commit, and route-rollback evidence exposes no repeatable translation or
-sound-family deficit. Stage 8 therefore remains adversarial maturation and
-operational verification. Only a repeatable trajectory or translation deficit
-should trigger richer DSP. This prevents speculative variety from hiding a weak
-director.
+sound-family deficit. Stage 8 has now applied the maturation gate to every
+conditional item below. The exact development, adversarial, and holdout evidence
+supports no capability-local promotion. Root `135791` remains an insufficient
+payoff-observation case rather than a sound failure. Only a repeated,
+independent-root, two-rate causal deficit may trigger richer DSP. This prevents
+speculative variety from hiding a weak director or an evidence gap.
 
 The controlling design is
 [`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md). The stable
@@ -77,7 +79,7 @@ Status meanings:
 
 ### LH-SND-01 — multi-rate semantic modulation
 
-**Status:** conditional maturation; Stage 6 exposes no current deficit.
+**Status:** conditional maturation; Stage 8 found no promotion trigger.
 
 - **Canonical owner:** the existing score-owned `InstrumentAssignment` color,
   shape, motion, and space coordinates; each current architecture keeps its one
@@ -141,7 +143,7 @@ Status meanings:
 
 ### LH-SND-04 — transition and payoff maturation
 
-**Status:** conditional maturation.
+**Status:** conditional maturation; Stage 8 found no promotion trigger.
 
 - **Canonical owner:** dramatic debt, energy-release phrase, anticipation swell,
   spectral cluster, sustained wash, terminal hang, and unchanged kick recovery.
@@ -161,7 +163,7 @@ Status meanings:
 
 ### LH-SND-05 — percussion material depth
 
-**Status:** conditional maturation.
+**Status:** conditional maturation; Stage 8 found no promotion trigger.
 
 - **Canonical owner:** existing kick, groove-pulse, clap/hat/metallic roles,
   modal-percussion foundation, and their score-owned articulation.
@@ -180,7 +182,7 @@ Status meanings:
 
 ### LH-SND-06 — longer harmonic and motif syntax
 
-**Status:** conditional maturation.
+**Status:** conditional maturation; Stage 8 found no promotion trigger.
 
 - **Canonical owner:** session modal DNA, four-voice pad, accepted harmonic
   continuation, disclosure, arpeggiator, protagonist motif, and identity return.
@@ -199,7 +201,7 @@ Status meanings:
 
 ### LH-SND-07 — evolving spatial scene
 
-**Status:** conditional maturation.
+**Status:** conditional maturation; Stage 8 found no promotion trigger.
 
 - **Canonical owner:** the current score-owned spatial carrier, scene-derived
   eight-line FDN, early reflection, and protected low-end contract.
@@ -218,7 +220,7 @@ Status meanings:
 
 ### LH-SND-08 — dynamics and effect-body maturation
 
-**Status:** conditional maturation.
+**Status:** conditional maturation; Stage 8 found no promotion trigger.
 
 - **Canonical owner:** current kick conditioner, pulse-return drive, role mix,
   output safety, and live master-headroom controller.
@@ -238,7 +240,7 @@ Status meanings:
 
 ### LH-SND-09 — resampling quality and phrase-spanning source choice
 
-**Status:** conditional maturation.
+**Status:** conditional maturation; Stage 8 found no promotion trigger.
 
 - **Canonical owner:** current phrase-composition score and phrase-local
   app-owned percussion resampler.
@@ -295,6 +297,34 @@ the existing shared stages or replace one failed stage in place. It must not add
 per-character chain presets, random chains, user selection, DAW-style routing,
 or a second graph.
 
+## Stage 8 maturation decision
+
+The current decision is deliberately capability-local. Passing the broad
+long-horizon policy does not prove that every provisional DSP is mature, but it
+does prove that this corpus supplies no repeatable failure that authorizes one
+of the replacements below.
+
+| Capability | Evidence checked | Stage 8 classification |
+| --- | --- | --- |
+| LH-SND-01 semantic modulation | per-operator signal deltas at both rates, movement, spectrum, recurrence, and exact home paths | Conditional; no repeated stationary, stepped, or short-period contour failure. |
+| LH-SND-04 transition/payoff | debt/payoff semantics, rise/recovery deltas, effect recovery, and primary-qualified representative phrases | Conditional; development and holdouts pass. Root `135791` has only one observable payoff transition and is insufficient evidence, not a failed transition render. |
+| LH-SND-05 percussion depth | primary-v14 role-local phrase qualification plus long-horizon operator consequence | Conditional; no independent-root attack/body/tail or translation failure cluster. |
+| LH-SND-06 harmonic/motif syntax | identity recall, periodicity, payoff semantics, and realized operator movement | Conditional; no predictable-cycle or failed-recall result survives with otherwise valid evidence. |
+| LH-SND-07 spatial scene | FDN/effect occupancy, tail recovery, stereo and rate-bound phrase qualification | Conditional; no ratchet, uncleared tail, mono/rate, or depth failure cluster. |
+| LH-SND-08 dynamics/effect body | primary-v14 phrase verdicts, crest/loudness/transient deltas, wet/dry bounds, and live-controller provenance | Conditional; no repeated dynamics or effect-intelligibility failure after valid semantics. |
+| LH-SND-09 resampling | primary-v14 phrase evidence at representative breakdown checkpoints and both rates | Conditional; no repeated alias, click, boundary, transient, or source-recurrence failure is demonstrated. |
+| LH-SND-10 additional patches | all existing role, register, character, and capability coverage | Not justified; no missing role/register/episode relationship. |
+| LH-SND-11 another architecture | current three architectures under exact profile and holdouts | Not justified; no surviving synthesis-class deficit. |
+| LH-SND-12 selectable chains | product and one-graph ownership contract | Rejected; long-horizon orchestration remains score-owned and cannot become a chain browser. |
+
+The minimum promotion packet for a future conditional item is: at least two
+independent roots at both 44.1 and 48 kHz; repeated failure of the same named
+capability-local dimensions; valid score, primary phrase verdict, route, and
+unrelated-family evidence; an exact neutral/protected fallback; and a proposed
+in-place replacement with bounded continuation and adversarial cases. Human
+listening or new source material may open that investigation but cannot waive
+the packet.
+
 ## Implementation order
 
 1. Preserve the implemented Phase 1 semantic schema, Phase 2 canonical
@@ -304,9 +334,10 @@ or a second graph.
 3. Preserve the implemented effect-dose/recovery and phrase-sentence evidence,
    initially using the current palette, effects, graph, and neutral paths.
 4. Calibrate development, adversarial, and disjoint holdout journeys.
-5. Select the smallest exact capability whose evidence repeatedly fails.
-6. Replace its provisional DSP in one vertical slice and update this register
-   before and after implementation.
+5. Select the smallest exact capability whose evidence repeatedly fails. Stage
+   8 selected none because the required repeated causal evidence is absent.
+6. Replace its provisional DSP in one vertical slice only after step 5 selects
+   one; update this register before and after implementation.
 7. Report structural/signal validation, automated quality qualification,
    app/runtime verification, and physical-output soak separately.
 
@@ -314,6 +345,7 @@ or a second graph.
 
 | Date | Change | Implementation state | Qualification state |
 | --- | --- | --- | --- |
+| 2026-08-24 | Completed Stage 8 evidence-gated sound maturation with a negative promotion decision. The exact engine-v32/primary-v14 profile, all ten rejected adversarial attacks, and both accepted disjoint four-hour holdouts were reconciled against LH-SND-01 and LH-SND-04...09. No repeatable capability-local deficit survives. Root `135791` remains a bounded checkpoint-observability shortfall—one primary-qualified payoff transition from 24 candidate positions—not evidence of failed PCM or a missing synth/effect family. The future promotion packet now requires repeated independent-root, two-rate causal failures with valid score, primary phrase, route, and unrelated-family evidence. | Documentation and qualification-boundary completion only; no score, synthesis architecture, preset, patch, DSP primitive, effect, bus, graph, chain, renderer, scheduler, route, audio buffer, or callback change | Exact bundled artifacts replayed under the matched Xcode toolchain; focused calibrated-policy suite 11/11 passed. App/runtime playback, route/interruption QA, listening, and physical-output soak remain unrun; no sound-capability item is promoted |
 | 2026-08-23 | Completed Phase 7 bounded future adaptation. Detached preparation reduces accepted prepared phrases into fixed-capacity active-rate evidence and evaluates the exact immutable Stage 6 artifacts. Core records strict `autotechno-long-horizon-trajectory-decision.v1` preserve/recover provenance in continuation v2; the App commits the outgoing observation and musical/quality/live state atomically and rolls route recovery back to the interrupted phrase's incoming observation. Fixed runtime eligibility is 7,200 bars, 12 signal observations, two transitions per operator/rate, and a 256-bar decision interval. No synthesis architecture, preset, patch home, DSP primitive, effect implementation, bus, graph stage, chain, renderer, audio buffer, or callback was added or changed. | Production Core/DSP/App future-boundary integration; current sound palette, render graph, immutable PCM format, and realtime path unchanged | Focused deterministic observation, independent-reason, continuation, real prepared-phrase, atomic-commit, and route-state contracts passed locally; aggregate Stage 7 validation is recorded separately; listening, real app/route QA, and soak remain unrun; no sound-capability item is promoted |
 | 2026-08-23 | Completed Phase 6B calibrated professional policy. Four exact four-hour development journeys at 44.1/48 kHz calibrate independent semantic, per-operator signal, and effect-family bounds; all ten named adversarial attacks are rejected and two disjoint holdout roots are accepted. Bundled fingerprints are profile `56231bcba7167e67`, adversarial `097371d15a680a5b`, and holdout `b9465548c62c098b`. Root `135791` remains explicit negative evidence because a bounded 24-candidate search yielded only one representative primary-qualified payoff transition; the policy was not loosened to absorb it. No synth, preset, patch home, DSP primitive, effect implementation, bus, graph stage, chain, renderer, route, or callback was added. | Immutable reduced DSP policy artifacts and fail-closed loader; current score, rendered PCM, graph, App scheduling, route lifecycle, and realtime path unchanged | Exact engine-v32/primary-v14 Stage 6 development, adversarial, and disjoint holdout qualification passed; Stage 7 local runtime adaptation now passes separately; listening, real app/route QA, and soak remain unrun; no sound-capability item is promoted |
 | 2026-08-23 | Completed Phase 6A realized signal-trajectory evidence. DSP now binds exact accepted plan/candidate/PCM provenance to phrase/bar loudness, true peak, crest, spectrum, transients, masking, wet/dry relation, stereo, and movement; retains separate semantic targets, per-operator transition deltas, explicit checkpoint gaps, fixed-capacity metric/episode summaries, and no PCM. The eight-hour synthetic consequence harness covers 1,450 phrases / 15,608 bars with all six operators and bounded 32-phrase/32-transition/16-episode retention. No synth, preset, patch home, DSP primitive, effect implementation, bus, graph stage, chain, renderer, or callback was added. | Production detached DSP evidence foundation; resolved score, audio, graph, App scheduling, route lifecycle, and realtime path unchanged | `autotechno-long-horizon-signal-trajectory.v1` reports qualification unavailable with `no-calibrated-long-horizon-policy`; calibrated development/adversarial/holdout policy, listening, app/route QA, and soak remain unrun |

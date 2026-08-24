@@ -2295,3 +2295,36 @@ implementation, bus, graph stage, chain, renderer, C handoff, audio callback,
 or user control. The sound-capability register promotes nothing. Real app/route
 and interruption QA, listening, and physical-output soak remain separate and
 unrun; this snapshot does not imply those states.
+
+## Long-horizon Phase 8 evidence-gated sound maturation — 2026-08-24
+
+Phase 8 reconciles the exact Stage 6 artifact set with every conditional item
+in `LONG_HORIZON_SOUND_CAPABILITIES.md`. The profile
+`56231bcba7167e67`, ten-attack adversarial report `097371d15a680a5b`, and
+two-root disjoint holdout `b9465548c62c098b` expose no repeated
+capability-local sound failure. Root `135791` remains excluded because its
+bounded 24-position search produced only one primary-qualified payoff
+transition; that is insufficient representative evidence rather than a failed
+render or missing sound family.
+
+The Stage 8 promotion packet now requires the same named sound capability to
+fail across at least two independent roots and both 44.1/48 kHz rates while its
+score, primary phrase verdict, route, and unrelated-family evidence remain
+valid. No current capability satisfies that gate. The phase therefore promotes
+nothing and changes no score, synthesis architecture, preset, patch, DSP
+primitive, effect, bus, graph, chain, renderer, scheduled buffer, route state,
+controller, or realtime callback.
+
+Local verification used Xcode 26.6 with isolated module caches and SwiftPM
+`--disable-sandbox`. The focused calibrated long-horizon professional-policy
+suite passed 11/11 in 0.195 seconds after a clean isolated dependency build.
+The default Command Line Tools invocation was not used as evidence because its
+selected Swift 6.3.3 compiler and 6.3.2 SDK are mismatched; the installed Xcode
+toolchain is internally matched. Non-fatal Swift macro incremental-metadata JSON
+diagnostics appeared during the first build, but every test module linked and
+the selected process exited green.
+
+This is an evidence-backed negative implementation decision, not a claim that
+the current sound is professionally approved by listening. Exact-build app
+playback, physical route/interruption QA, extended runtime verification, human
+listening, and hardware-output soak remain separate and unrun.

@@ -112,7 +112,10 @@ preserve/recover decision for an eligible unscheduled future phrase. The App
 commits that decision with musical, quality, and live continuation state as one
 transaction; route recovery restores the interrupted phrase's incoming
 observation so evidence is not counted twice. No PCM enters the observation and
-no long-horizon analysis or decision runs in the realtime callback.
+no long-horizon analysis or decision runs in the realtime callback. The Stage 8
+sound-maturation audit found no repeated capability-local deficit in the exact
+development, adversarial, or disjoint holdout evidence, so it promoted no new
+synth, patch, DSP primitive, effect, bus, chain, or renderer.
 
 ## Package
 
