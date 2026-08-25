@@ -2368,3 +2368,67 @@ unavailable; the same exact test passed outside that restricted process sandbox
 without opening a microphone or launching the app. Real app interaction,
 route/interruption QA, listening, and physical-output soak remain unrun and are
 not implied by these deterministic tests.
+
+## Hypnotic channel band-limited slicing and exact-engine renewal — 2026-08-25
+
+The live Hypnotic Techno Production inventory contained 148 videos. The bounded
+`yt-dlp` corpus pass produced 137 English automatic-caption files and eleven
+unavailable original mixes. The checked-in audit table contains exactly 148
+rows with dispositions H7/R129/U12. The reusable transcript indexer compiled
+with Python 3 and reproduced the same inventory, caption, and lexical-category
+totals from the external corpus. Raw captions, comments, metadata, normalized
+transcripts, and source audio remain untracked.
+
+The deterministic 48 kHz alias witness used an 18 kHz source at the existing
+supported 2x slice rate. Retained linear lookup produced a false 12 kHz
+component at amplitude `0.5`; the fixed-radius band-limited renderer produced
+`0.00007865537190809846`, about 76 dB lower. Separate tests passed for in-band
+3-to-6 kHz transposition, unity-rate exact PCM, forward/reverse replay, bounded
+geometry/fades, finite evidence, and neutral invalid-input fallback. The full
+`PhraseCompositionTests` suite passed 19/19.
+
+The first exact engine-v33 regeneration rendered all 32 primary journeys but
+correctly failed its holdout because checkpoint-local neutral sentinels had been
+treated as active calibration evidence. The corrected conditional calibration
+pools active values only when the local checkpoint contains no active example,
+skips activation/deactivation relationship edges, and preserves one-sided safer
+movement while retaining regression attacks. Its focused professional-quality
+suite passed every source-constructed test; the bundled loader was intentionally
+unavailable until the generated fingerprints were installed.
+
+The final primary calibration and cached replay produced byte-identical profile,
+adversarial, and holdout JSON:
+
+- profile v15 `ff7af0095e7ba020` from 28 development journeys;
+- adversarial v15 `66173a58f449a0ca`, with all 34 attacks passed; and
+- holdout v13 `7f0b78b722d9df74`, accepting 56/56 observations from four
+  disjoint journeys with zero relationship failures.
+
+The identity-bound long-horizon regeneration completed in 621.782 seconds and
+accepted roots `48291`, `77777`, `90909`, and `246813` for development plus
+disjoint holdouts `112358` and `141421` at both 44.1 and 48 kHz. Reduced-corpus
+replay reproduced byte-identical v2 profile `064fa15feae8c659`, adversarial
+suite `ae03b76dd06f5a95`, and holdout `caca721cda969d77`.
+
+A fresh release scratch was seeded only with the already resolved Swift package
+repositories because sandbox DNS was unavailable; all Auto Techno objects and
+resource bundles rebuilt from zero in 513.17 seconds. The selected current
+matrix executed 128 tests: 124 passed immediately, while four stale test-only
+identity expectations were corrected—one frozen quality-state fingerprint and
+three obsolete-resource strings that still named current v2 as retired. The two
+owning suites then passed 33/33, so every selected current-source case has a
+green execution. The fresh bundle contained only primary v15 and long-horizon
+v2 resources.
+
+The final post-test optimized `AutoTechno` product built in 88.54 seconds with
+SHA-256
+`e29363ebe6021b1fb7b9ce485686956de0d133edc8d7340f4e9447e6a2e2dcb2`.
+The workflow-equivalent realtime producer audit found exactly one producer
+object and only the allowed `memcpy` undefined symbol. Source reachability also
+keeps the new interpolator inside detached `AudioSliceRenderer` preparation;
+the App and `CAutoTechnoRealtime` do not reference it. `git diff --check` passed.
+
+These results establish deterministic offline qualification and build/readiness
+only. The app was not launched. Listening, real app/route/interruption QA,
+latency observation, extended runtime observation, physical-output soak,
+publication, and exact-head CI remain separate and unrun.

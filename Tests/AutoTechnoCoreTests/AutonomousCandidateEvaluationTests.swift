@@ -1305,9 +1305,9 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
         #expect(vector.schemaVersion == 31)
-        #expect(QualityQualificationContract.schemaVersion == 33)
+        #expect(QualityQualificationContract.schemaVersion == 34)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v32")
+                "autotechno-canonical-engine.v33")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3772,7 +3772,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "de087baf0dca5497")
+            "a844285fd10de68b")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7

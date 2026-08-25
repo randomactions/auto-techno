@@ -33,8 +33,9 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   percussion slice as either a bounded delayed contrast answer or a reverse-wet
   anticipation swell on the second kick-withheld bar before recovery, without
   resampling, new events, another bus, or cross-bar delay state;
-- one unified phrase-composition layer that can resample an exact app-owned
-  percussion source, resolve every step of an 8/16-note arpeggio, render four
+- one unified phrase-composition layer that can band-limit and resample an exact
+  app-owned percussion or kick source at bounded forward/reverse rates, resolve
+  every step of an 8/16-note arpeggio, render four
   simultaneous pad voices, and carry the accepted pad voicing across phrase
   boundaries for minimal-motion harmonic continuation;
 - one score-owned three-sixteenth pad-modulation relation that restores rhythmic
@@ -72,7 +73,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one scheduled-output master-headroom path mapping app-owned mixer PCM to an
   exact phrase occurrence, analyzing one fixed three-second window off the
   callback, and applying a primary-accepted attenuation only to future PCM;
-- canonical engine v32, quality-contract schema 33, candidate-vector schema 31,
+- canonical engine v33, quality-contract schema 34, candidate-vector schema 31,
   and candidate-transaction schema 4
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax, debt-to-recovery climax arc and terminal hang,
@@ -106,8 +107,8 @@ filter motion, and dry-plus-moving-shadow concepts were reconciled to existing
 score, modulation, echo, chorus, and FDN owners; no duplicate track,
 instrument, modulation lane, or effect chain was added.
 
-The app now installs one exact-engine calibrated primary evaluator v14 from the
-current profile v14 derived from 28 complete journeys, a passing v15 adversarial
+The app now installs one exact-engine calibrated primary evaluator v15 from the
+current profile v15 derived from 28 complete journeys, a passing v15 adversarial
 suite, and a disjoint four-journey holdout qualification v13. Each boundary owns one
 canonical plan and one terminal decision. The evaluator may request one same-
 plan home-timbre correction, for two render passes maximum. Missing artifacts
@@ -169,10 +170,10 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 33, candidate-vector schema 31, and candidate-
+Quality-contract schema 34, candidate-vector schema 31, and candidate-
 transaction schema 4 now bind a versioned transaction across canonical engine
-v32, quality policy, evaluator, candidate
-plans, route, incoming continuation, attempt evidence, selection, and finalized
+v33, quality policy, evaluator, candidate plans, route, incoming continuation,
+attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 upper-percussion tail-clearance,
 instrument, acid-operator, TPT/ADAA nonlinear-core, kick-source dynamics,
@@ -205,7 +206,7 @@ local and untracked.
 
 The runtime now records one complete plan, one initial attempt, and at most one
 home-timbre correction, then atomically carries the terminal evidence, decision,
-and controller state into continuation. The exact engine-v32 profile v14,
+and controller state into continuation. The exact engine-v33 profile v15,
 passing v15 adversarial suite, disjoint holdout qualification v13, non-compensable
 checkpoint policy, and transaction replay are the app path. The former
 single-journey generalization blocker is closed: 28 development journeys and
@@ -242,6 +243,18 @@ input/output fingerprints, and continuation are candidate evidence. Later
 architecture adoption must replace an existing mechanism in place and add its
 own truthful binding; this milestone does not authorize blanket oversampling or
 a second renderer.
+
+The phrase-slice renderer now follows the same in-place maturation discipline.
+The [148-video channel audit](history/HYPNOTIC_TECHNO_PRODUCTION_CHANNEL_AUDIT.md)
+motivates the creative reuse relationship; a fixed-radius Hann-windowed sinc
+kernel replaces the former linear lookup and
+applies deterministic anti-alias bandwidth only when playback is faster than
+unity. The pre-change 18 kHz/2x fold-back measured amplitude `0.5`; the new path
+reduces it by about 76 dB while retaining in-band pitch/gain, unity exactness,
+reverse replay, existing edge fades, and neutral fallback. Future granular or
+sample-position ideas must first expose a separate transient, stereo, latency,
+boundary, or recurrence deficit; they cannot add another renderer or imported
+sample dependency.
 
 The complete existing kick source now also has one source-local first-order
 ADAA conditioner before its detector and audible buses. It reuses the shared

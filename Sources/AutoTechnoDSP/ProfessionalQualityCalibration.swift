@@ -154,6 +154,30 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         self == .spectralHarmonicTailUpperBandEnergyRatioMean
     }
 
+    /// Capability-local one-sided metrics use an exact safe value when the
+    /// owning sound is absent. That sentinel is not an active measurement and
+    /// must not make a checkpoint with no development examples reject a valid
+    /// active holdout or invent a cross-checkpoint quality trajectory.
+    package var conditionalNeutralSentinel: Double? {
+        switch self {
+        case .modalPercussionPitchErrorCentsMaximum,
+                .modalPercussionMaskingMaximumOverlap,
+                .modalPercussionMaximumPoleRadius,
+                .foundationPreKickPocketSilenceRMSMaximum,
+                .climaxHangSilenceRMSMaximum:
+            return 0
+        case .spectralHarmonicTailUpperBandEnergyRatioMean:
+            return 1
+        default:
+            return nil
+        }
+    }
+
+    package func isConditionalNeutral(_ value: Double) -> Bool {
+        guard let sentinel = conditionalNeutralSentinel else { return false }
+        return abs(value - sentinel) <= 1e-12
+    }
+
     /// EBU-style LRA is retained as descriptive phrase evidence. On short
     /// autonomous phrases its relative gate and percentile population can
     /// change discontinuously when one short-term block crosses the gate, so
@@ -1335,7 +1359,7 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
     package static let schemaVersion = 14
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v14"
+        "autotechno-professional-quality-profile.v15"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1394,13 +1418,12 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             }
             var metricBounds: [ProfessionalQualityMetricBounds] = []
             for metric in ProfessionalQualityMetric.allCases {
-                let values = sources.compactMap { $0[metric] }
+                var values = sources.compactMap { $0[metric] }
                 guard values.count == sources.count,
-                      let minimum = values.min(),
-                      let maximum = values.max() else {
+                      !values.isEmpty else {
                     throw ProfessionalQualityCalibrationError.invalidMetricSet
                 }
-                let crossRateDrifts = try corpus.trajectories.map {
+                var crossRateDrifts = try corpus.trajectories.map {
                     trajectory -> Double in
                     let values = trajectory.observations
                         .filter { $0.checkpoint == checkpoint }
@@ -1412,6 +1435,27 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                             .incompleteCheckpointCoverage
                     }
                     return maximum - minimum
+                }
+                if metric.conditionalNeutralSentinel != nil,
+                   values.allSatisfy({ metric.isConditionalNeutral($0) }) {
+                    let activeValues = corpus.trajectories.flatMap {
+                        $0.observations
+                    }.compactMap { $0[metric] }.filter {
+                        !metric.isConditionalNeutral($0)
+                    }
+                    let activeRateDrifts = try Self
+                        .conditionalActiveRateDrifts(
+                            metric: metric,
+                            corpus: corpus
+                        )
+                    if !activeValues.isEmpty {
+                        values = activeValues
+                        crossRateDrifts = activeRateDrifts
+                    }
+                }
+                guard let minimum = values.min(),
+                      let maximum = values.max() else {
+                    throw ProfessionalQualityCalibrationError.invalidMetricSet
                 }
                 let guardBand = Self.diverseGuardBand(
                     metric: metric,
@@ -1474,7 +1518,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         var rateBounds: [ProfessionalQualityRateConsistencyBounds] = []
         for checkpoint in CanonicalJourneyCheckpoint.allCases {
             for metric in ProfessionalQualityMetric.allCases {
-                let absoluteDeltas = try corpus.trajectories.map {
+                var absoluteDeltas = try corpus.trajectories.map {
                     trajectory -> Double in
                     let values = trajectory.observations
                         .filter { $0.checkpoint == checkpoint }
@@ -1486,6 +1530,23 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                             .incompleteCheckpointCoverage
                     }
                     return maximum - minimum
+                }
+                if metric.conditionalNeutralSentinel != nil {
+                    let checkpointValues = corpus.trajectories.flatMap {
+                        $0.observations.filter { $0.checkpoint == checkpoint }
+                    }.compactMap { $0[metric] }
+                    if checkpointValues.allSatisfy({
+                        metric.isConditionalNeutral($0)
+                    }) {
+                        let activeRateDrifts = try Self
+                            .conditionalActiveRateDrifts(
+                                metric: metric,
+                                corpus: corpus
+                            )
+                        if !activeRateDrifts.isEmpty {
+                            absoluteDeltas = activeRateDrifts
+                        }
+                    }
                 }
                 guard let maximum = absoluteDeltas.max() else {
                     throw ProfessionalQualityCalibrationError.invalidMetricSet
@@ -1812,6 +1873,34 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         return max(absoluteFloor, observedRateDrift * 2, centerMagnitude * 0.08)
     }
 
+    private static func conditionalActiveRateDrifts(
+        metric: ProfessionalQualityMetric,
+        corpus: ProfessionalQualityCalibrationCorpus
+    ) throws -> [Double] {
+        guard metric.conditionalNeutralSentinel != nil else { return [] }
+        var drifts: [Double] = []
+        for trajectory in corpus.trajectories {
+            for checkpoint in CanonicalJourneyCheckpoint.allCases {
+                let values = trajectory.observations
+                    .filter { $0.checkpoint == checkpoint }
+                    .compactMap { $0[metric] }
+                guard values.count == Self.requiredSampleRates.count else {
+                    throw ProfessionalQualityCalibrationError
+                        .incompleteCheckpointCoverage
+                }
+                guard values.allSatisfy({
+                    !metric.isConditionalNeutral($0)
+                }) else { continue }
+                guard let minimum = values.min(),
+                      let maximum = values.max() else {
+                    throw ProfessionalQualityCalibrationError.invalidMetricSet
+                }
+                drifts.append(maximum - minimum)
+            }
+        }
+        return drifts
+    }
+
     /// Transient density counts discrete events per second. At fixed 130 BPM,
     /// one changed event in one four-beat bar is the smallest physically
     /// meaningful difference; representative-rate frame rounding makes the
@@ -2017,8 +2106,22 @@ package enum ProfessionalQualityRelationshipEvaluator {
                       let to = observations.first(where: {
                           $0.sampleRate == sampleRate && $0.checkpoint == pair.to
                       })?[bounds.metric] else { continue }
+                if bounds.metric.conditionalNeutralSentinel != nil,
+                   bounds.metric.isConditionalNeutral(from) !=
+                   bounds.metric.isConditionalNeutral(to) {
+                    continue
+                }
                 let delta = to - from
-                if !(bounds.lowerDelta...bounds.upperDelta).contains(delta) {
+                let accepted: Bool
+                if bounds.metric.acceptsSaferValuesBelowCalibration {
+                    accepted = delta <= bounds.upperDelta
+                } else if bounds.metric.acceptsSaferValuesAboveCalibration {
+                    accepted = delta >= bounds.lowerDelta
+                } else {
+                    accepted = (bounds.lowerDelta...bounds.upperDelta)
+                        .contains(delta)
+                }
+                if !accepted {
                     failures.append(ProfessionalQualityRelationshipFailure(
                         kind: .trajectory,
                         trajectory: bounds.trajectory,

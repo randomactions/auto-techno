@@ -5,6 +5,178 @@ import Testing
 
 @Suite("Unified phrase composition")
 struct PhraseCompositionTests {
+    @Test("Band-limited slicing rejects rate-induced alias energy")
+    func bandLimitedSliceRejectsAliasEnergy() {
+        let sampleRate = 48_000.0
+        let frameCount = 16_384
+        let stepFrames = 4_096.0
+        let sourceFrequency = 18_000.0
+        var source = [Float](repeating: 0, count: frameCount)
+        for index in source.indices {
+            source[index] = Float(
+                sin(2 * .pi * sourceFrequency * Double(index) / sampleRate)
+            )
+        }
+        let plan = AudioSlicePlan(
+            sourceStartStep: 0,
+            sourceLengthInSteps: 2,
+            triggers: [
+                AudioSliceTrigger(
+                    onsetStep: 0,
+                    playbackRate: 2,
+                    direction: .forward,
+                    gain: 0.5
+                ),
+            ]
+        )
+        var output = [Float](repeating: 0, count: frameCount)
+        _ = AudioSliceRenderer.render(
+            source: source,
+            output: &output,
+            plan: plan,
+            stepFrames: stepFrames,
+            sampleRate: sampleRate
+        )
+
+        var legacyLinear = [Float](repeating: 0, count: frameCount)
+        let fadeFrames = Int((sampleRate * AudioSliceRenderer.edgeFadeSeconds).rounded())
+        for index in 0..<4_096 {
+            let fadeIn = min(1, Double(index + 1) / Double(fadeFrames))
+            let fadeOut = min(1, Double(4_096 - index) / Double(fadeFrames))
+            legacyLinear[index] = source[index * 2] * Float(
+                0.5 * min(fadeIn, fadeOut)
+            )
+        }
+        let measurementRange = 512..<3_584
+        let aliasFrequency = 12_000.0
+        func projectedAmplitude(_ signal: [Float]) -> Double {
+            let projection = measurementRange.reduce(
+                into: (sine: 0.0, cosine: 0.0)
+            ) { partial, index in
+                let phase = 2 * Double.pi * aliasFrequency *
+                    Double(index) / sampleRate
+                partial.sine += Double(signal[index]) * sin(phase)
+                partial.cosine += Double(signal[index]) * cos(phase)
+            }
+            return 2 * hypot(projection.sine, projection.cosine) /
+                Double(measurementRange.count)
+        }
+        let legacyAliasAmplitude = projectedAmplitude(legacyLinear)
+        let bandLimitedAliasAmplitude = projectedAmplitude(output)
+        let rejectionDB = 20 * log10(
+            bandLimitedAliasAmplitude / legacyAliasAmplitude
+        )
+
+        #expect(abs(legacyAliasAmplitude - 0.5) < 1e-12)
+        #expect(bandLimitedAliasAmplitude < 0.005)
+        #expect(rejectionDB < -40)
+    }
+
+    @Test("Band-limited slicing retains an in-band transposed tone")
+    func bandLimitedSliceRetainsPassband() {
+        let sampleRate = 48_000.0
+        let frameCount = 16_384
+        let stepFrames = 4_096.0
+        var source = [Float](repeating: 0, count: frameCount)
+        for index in source.indices {
+            source[index] = Float(
+                sin(2 * .pi * 3_000 * Double(index) / sampleRate)
+            )
+        }
+        let plan = AudioSlicePlan(
+            sourceStartStep: 0,
+            sourceLengthInSteps: 2,
+            triggers: [
+                AudioSliceTrigger(onsetStep: 0, playbackRate: 2,
+                                  direction: .forward, gain: 0.5),
+            ]
+        )
+        var output = [Float](repeating: 0, count: frameCount)
+        let evidence = AudioSliceRenderer.render(
+            source: source,
+            output: &output,
+            plan: plan,
+            stepFrames: stepFrames,
+            sampleRate: sampleRate
+        )
+        let measurementRange = 512..<3_584
+        let projection = measurementRange.reduce(
+            into: (sine: 0.0, cosine: 0.0)
+        ) { partial, index in
+            let phase = 2 * Double.pi * 6_000 * Double(index) / sampleRate
+            partial.sine += Double(output[index]) * sin(phase)
+            partial.cosine += Double(output[index]) * cos(phase)
+        }
+        let amplitude = 2 * hypot(projection.sine, projection.cosine) /
+            Double(measurementRange.count)
+
+        #expect(evidence.active && evidence.finite)
+        #expect(abs(amplitude - 0.5) < 0.01)
+    }
+
+    @Test("Unity-rate slicing preserves the exact existing PCM path")
+    func unityRateSliceIsExact() {
+        let sampleRate = 8_000.0
+        let frameCount = 4_096
+        let stepFrames = 512.0
+        let source = (0..<frameCount).map { index in
+            Float(sin(Double(index) * 0.071) * 0.73)
+        }
+        let plan = AudioSlicePlan(
+            sourceStartStep: 0,
+            sourceLengthInSteps: 1,
+            triggers: [
+                AudioSliceTrigger(onsetStep: 0, playbackRate: 1,
+                                  direction: .forward, gain: 0.5),
+            ]
+        )
+        var output = [Float](repeating: 0, count: frameCount)
+        let evidence = AudioSliceRenderer.render(
+            source: source,
+            output: &output,
+            plan: plan,
+            stepFrames: stepFrames,
+            sampleRate: sampleRate
+        )
+        let fadeFrames = Int((sampleRate * AudioSliceRenderer.edgeFadeSeconds).rounded())
+        var expected = [Float](repeating: 0, count: frameCount)
+        for index in 0..<512 {
+            let fadeIn = min(1, Double(index + 1) / Double(fadeFrames))
+            let fadeOut = min(1, Double(512 - index) / Double(fadeFrames))
+            expected[index] = Float(
+                Double(source[index]) * 0.5 * min(fadeIn, fadeOut)
+            )
+        }
+
+        #expect(output == expected)
+        #expect(evidence.active && evidence.finite)
+        #expect(evidence.minimumPlaybackRate == 1)
+        #expect(evidence.maximumPlaybackRate == 1)
+    }
+
+    @Test("Invalid slice input remains an exact neutral fallback")
+    func invalidSliceInputIsNeutral() {
+        let plan = AudioSlicePlan(
+            sourceStartStep: 0,
+            sourceLengthInSteps: 1,
+            triggers: [
+                AudioSliceTrigger(onsetStep: 0, playbackRate: 2,
+                                  direction: .reverse, gain: 0.5),
+            ]
+        )
+        var output = [Float](repeating: 0, count: 64)
+        let evidence = AudioSliceRenderer.render(
+            source: [0],
+            output: &output,
+            plan: plan,
+            stepFrames: 8,
+            sampleRate: 8_000
+        )
+
+        #expect(evidence == .neutral)
+        #expect(output.allSatisfy { $0 == 0 })
+    }
+
     @Test("True slice playback reads rendered PCM at bounded rates and directions")
     func trueAudioSlicing() throws {
         let sampleRate = 8_000.0

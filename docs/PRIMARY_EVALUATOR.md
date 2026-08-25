@@ -23,10 +23,11 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v32 profile v14, adversarial suite v15, and disjoint holdout qualification
+engine-v33 profile v15, adversarial suite v15, and disjoint holdout qualification
 v13. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
-relationship gate.
+relationship gate. The pinned fingerprints are profile `ff7af0095e7ba020`,
+adversarial suite `66173a58f449a0ca`, and holdout `7f0b78b722d9df74`.
 
 Every applicable journey checkpoint is judged independently across the
 versioned professional-quality vector. Dimensions never compensate for one

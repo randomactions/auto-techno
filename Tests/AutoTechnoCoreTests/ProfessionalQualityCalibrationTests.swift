@@ -330,14 +330,14 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v17")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v14")
+                "autotechno-quality.primary-calibrated.v15")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v14")
+                "autotechno-candidate-evaluator.primary-calibrated.v15")
         #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
-                "autotechno-professional-quality-profile.v14")
+                "autotechno-professional-quality-profile.v15")
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 14)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v14")
+                "autotechno-professional-quality-profile.v15")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 15)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
                 "autotechno-professional-quality-adversarial.v15")
@@ -516,6 +516,121 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
+    @Test("Conditional metrics pool active evidence and ignore activation edges")
+    func conditionalMetricCalibration() throws {
+        let trajectories = try (0..<24).map { index in
+            let observations = try representativeObservations().map {
+                observation in
+                let modalMasking = observation.checkpoint == .chapterChange
+                    ? (observation.sampleRate == 48_000 ? 0.72 : 0.70)
+                    : 0
+                let harmonicTail = observation.checkpoint == .contrast
+                    ? (observation.sampleRate == 48_000 ? 0.62 : 0.60)
+                    : 1
+                return try observation
+                    .replacing(
+                        .modalPercussionMaskingMaximumOverlap,
+                        with: modalMasking
+                    )
+                    .replacing(
+                        .spectralHarmonicTailUpperBandEnergyRatioMean,
+                        with: harmonicTail
+                    )
+            }
+            return try ProfessionalQualityCalibrationTrajectory(
+                sourceBankFingerprint: "conditional-calibration-\(index)",
+                observations: observations
+            )
+        }
+        let profile = try ProfessionalQualityCalibrationProfile(
+            corpus: ProfessionalQualityCalibrationCorpus(
+                trajectories: trajectories
+            )
+        )
+        let release = try #require(profile[.release])
+        #expect(try #require(release[
+            .modalPercussionMaskingMaximumOverlap
+        ]).contains(0.72))
+        let longContinuation = try #require(profile[.longContinuation])
+        #expect(try #require(longContinuation[
+            .spectralHarmonicTailUpperBandEnergyRatioMean
+        ]).contains(0.60))
+
+        let holdout = try representativeObservations().map { observation in
+            let modalMasking = observation.checkpoint == .release
+                ? (observation.sampleRate == 48_000 ? 0.72 : 0.70)
+                : 0
+            let harmonicTail = observation.checkpoint == .longContinuation
+                ? (observation.sampleRate == 48_000 ? 0.62 : 0.60)
+                : 1
+            return try observation
+                .replacing(
+                    .modalPercussionMaskingMaximumOverlap,
+                    with: modalMasking
+                )
+                .replacing(
+                    .spectralHarmonicTailUpperBandEnergyRatioMean,
+                    with: harmonicTail
+                )
+        }
+        #expect(holdout.allSatisfy {
+            ProfessionalQualityProfileEvaluator.evaluate(
+                $0,
+                against: profile
+            ).accepted
+        })
+        let relationshipFailures =
+            ProfessionalQualityRelationshipEvaluator.evaluate(
+                observations: holdout,
+                against: profile
+            )
+        #expect(relationshipFailures.allSatisfy {
+            $0.metric != .modalPercussionMaskingMaximumOverlap &&
+                $0.metric !=
+                .spectralHarmonicTailUpperBandEnergyRatioMean
+        })
+    }
+
+    @Test("Relationship bounds preserve one-sided safer movement")
+    func directionalRelationshipBounds() throws {
+        let observations = try representativeObservations()
+        let profile = try ProfessionalQualityCalibrationProfile(
+            engineVersion: QualityQualificationContract.engineVersion,
+            sourceBankFingerprint: "directional-relationship-test",
+            sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
+            observations: observations
+        )
+        let improved = try observations.map { observation in
+            observation.checkpoint == .longContinuation
+                ? try observation.replacing(
+                    .maskingMaximumOverlap,
+                    with: ProfessionalQualityMetric.maskingMaximumOverlap
+                        .semanticMinimum
+                )
+                : observation
+        }
+        #expect(ProfessionalQualityRelationshipEvaluator.evaluate(
+            observations: improved,
+            against: profile
+        ).allSatisfy { $0.metric != .maskingMaximumOverlap })
+
+        let regressed = try observations.map { observation in
+            observation.checkpoint == .longContinuation
+                ? try observation.replacing(
+                    .maskingMaximumOverlap,
+                    with: 0.90
+                )
+                : observation
+        }
+        #expect(ProfessionalQualityRelationshipEvaluator.evaluate(
+            observations: regressed,
+            against: profile
+        ).contains {
+            $0.kind == .trajectory &&
+                $0.metric == .maskingMaximumOverlap
+        })
+    }
+
     @Test("Short-phrase loudness range remains descriptive")
     func descriptiveLoudnessRange() throws {
         let observations = try representativeObservations()
@@ -578,7 +693,7 @@ struct ProfessionalQualityCalibrationTests {
         })
     }
 
-    @Test("Constructed v14 artifacts activate only the single primary policy")
+    @Test("Constructed v15 artifacts activate only the single primary policy")
     func primaryCandidatePolicy() throws {
         let artifacts = try diverseArtifacts()
         #expect(artifacts.profile.profileVersion ==
@@ -683,8 +798,8 @@ struct ProfessionalQualityCalibrationTests {
             artifacts.profile.deterministicJSON(),
             replacements: [
                 "\"schemaVersion\":14": "\"schemaVersion\":13",
-                "autotechno-professional-quality-profile.v14":
-                    "autotechno-professional-quality-profile.v13",
+                "autotechno-professional-quality-profile.v15":
+                    "autotechno-professional-quality-profile.v14",
             ]
         )
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
@@ -753,7 +868,7 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Bundled v14 primary artifacts activate the exact v14 evaluator")
+    @Test("Bundled v15 primary artifacts activate the exact v15 evaluator")
     func primaryArtifacts() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(artifacts.profile.fingerprint ==
@@ -859,7 +974,7 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Primary preparation remains unavailable without v14 artifacts")
+    @Test("Primary preparation remains unavailable without v15 artifacts")
     func preparationEvaluatorAvailability() {
         let representativeRate = ProfessionalQualityPreparationEvaluator(
             sampleRate: 48_000,

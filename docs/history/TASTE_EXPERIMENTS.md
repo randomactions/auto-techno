@@ -2395,3 +2395,62 @@ callback work. Qualification stays unavailable until diverse rendered
 development journeys, adversarial attacks, and disjoint rendered holdouts
 calibrate a non-compensable policy. Listening, app/route/interruption QA, and
 physical-output soak remain separate and unrun.
+
+## Hypnotic Techno Production channel sweep — 2026-08-25
+
+The repository's bounded `yt-dlp` workflow inventoried all 148 videos visible on
+the live Hypnotic Techno Production videos page. Metadata, descriptions, and
+English caption candidates were captured for every item; 137 produced usable
+automatic English text and eleven original mixes did not. One additional
+original mix exposed only two nontechnical fragments, so none of the twelve
+mixes supplies a production claim. Raw captions, normalized transcripts,
+comments, and source metadata remain local and untracked. The durable 148-row
+disposition and extraction method are recorded in
+[`HYPNOTIC_TECHNO_PRODUCTION_CHANNEL_AUDIT.md`](HYPNOTIC_TECHNO_PRODUCTION_CHANNEL_AUDIT.md).
+
+Seven independent tutorials repeatedly suggested the same portable relation:
+reuse existing material through short slices, bounded rate/pitch movement,
+reverse direction, and source-position movement, then use the result as a
+supporting texture. The other 129 technical videos reconciled to current score,
+synthesis, effect, spatial, mix, evaluator, or standalone-product owners; twelve
+original mixes supplied no technical evidence. A four-video bounded discussion
+sample contained 21 top-level comments and 15 replies, but no technical point
+reached the three-independent-comment convergence threshold.
+
+Repository reconciliation rejected a granular side engine, imported sample
+lane, fixed rack, or parameter collection. `AudioSlicePlan` already owns the
+source, trigger, rate, reverse, gain, and future phrase boundary, while
+`AudioSliceRenderer` already binds the exact source/output PCM. The repeatable
+deficit was lower-level: at 48 kHz, its linear interpolation turned an 18 kHz
+source at the supported 2x rate into a false 12 kHz component at amplitude
+`0.5`. A fixed-radius, stateless Hann-windowed sinc lookup now replaces that
+one sample read during detached preparation. The same probe measures
+`0.00007865537190809846`, roughly 76 dB less alias energy, while an in-band
+3 kHz source reaches the expected 6 kHz result, unity playback remains exact,
+and invalid input remains neutral.
+
+The first exact-engine primary regeneration also exposed a qualification
+methodology deficit rather than a sound failure. A checkpoint containing only
+the exact neutral value for an absent conditional capability had learned a
+near-neutral envelope, then rejected valid active holdout evidence. Conditional
+one-sided metrics now pool active evidence across checkpoints when the local
+development set contains only the neutral sentinel, ignore non-comparable
+activation/deactivation trajectory edges, and preserve genuinely safer
+one-sided movement. Focused adversarial tests retain regression rejection.
+
+Engine v33 / quality schema 34 primary artifacts replay byte for byte as profile
+`ff7af0095e7ba020`, adversarial suite `66173a58f449a0ca`, and holdout
+`7f0b78b722d9df74`. All 28 development journeys and 56/56 observations from
+four disjoint holdouts pass with zero relationship failures. Because the
+long-horizon policy binds those identities, its v2 profile
+`064fa15feae8c659`, adversarial suite `ae03b76dd06f5a95`, and holdout
+`caca721cda969d77` were regenerated and replayed byte for byte; all four
+development and two disjoint holdout roots pass at 44.1 and 48 kHz.
+
+Repeated frequency-shifter tutorials remain a future falsifiable lead, not an
+implementation result: current Spectral Texture already owns inharmonic and
+ring-modulated movement, and this sweep found no distinct measured deficit.
+No new synth architecture, preset, patch, effect, bus, fixed chain, renderer,
+user selector, route behavior, or realtime-callback work was added. Automated
+qualification does not imply listening approval, real app/route QA, latency
+observation, or physical-output soak; those stages remain separate and unrun.

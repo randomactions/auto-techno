@@ -15,9 +15,9 @@ struct PrimaryEvaluatorReadinessTests {
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 15)
         #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 13)
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v14")
+                "autotechno-quality.primary-calibrated.v15")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v14")
+                "autotechno-candidate-evaluator.primary-calibrated.v15")
         #expect(AutonomousCandidateCompletenessFailure.upperPercussionTailEvidence
             .rawValue == "upper-percussion-tail-evidence")
         #expect(AutonomousCandidateCompletenessFailure.modalPercussionEvidence
@@ -41,8 +41,8 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("Bundled v14 artifacts activate only the exact schema-33 engine")
-    func bundledV14ArtifactsAreReady() throws {
+    @Test("Bundled v15 artifacts activate only the exact schema-34 engine")
+    func bundledV15ArtifactsAreReady() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(artifacts.profile.engineVersion ==
                 QualityQualificationContract.engineVersion)
@@ -57,7 +57,7 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("An 8 kHz route with exact v14 artifacts is unsupported")
+    @Test("An 8 kHz route with exact v15 artifacts is unsupported")
     func unsupported8KRouteStaysUnavailable() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(
@@ -66,7 +66,7 @@ struct PrimaryEvaluatorReadinessTests {
         ).availability == .unsupportedSampleRate)
     }
 
-    @Test("A 12 kHz route with exact v14 artifacts is unsupported")
+    @Test("A 12 kHz route with exact v15 artifacts is unsupported")
     func unsupported12KRouteStaysUnavailable() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(

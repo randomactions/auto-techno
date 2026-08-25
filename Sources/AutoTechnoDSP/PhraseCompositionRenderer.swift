@@ -83,11 +83,11 @@ package enum AudioSliceRenderer {
                 )
                 let directedPosition = trigger.direction == .forward
                     ? sourcePosition : Double(sourceCount - 1) - sourcePosition
-                let lower = min(sourceCount - 1, max(0, Int(floor(directedPosition))))
-                let upper = min(sourceCount - 1, lower + 1)
-                let fraction = directedPosition - Double(lower)
-                let interpolated = Double(sourceWindow[lower]) +
-                    (Double(sourceWindow[upper]) - Double(sourceWindow[lower])) * fraction
+                let interpolated = BandLimitedInterpolator.sample(
+                    sourceWindow,
+                    at: directedPosition,
+                    playbackRate: trigger.playbackRate
+                )
                 let fadeIn = min(1, Double(index + 1) / Double(fadeFrames))
                 let fadeOut = min(1, Double(boundedCount - index) / Double(fadeFrames))
                 let window = min(fadeIn, fadeOut)

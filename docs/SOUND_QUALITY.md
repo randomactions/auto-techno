@@ -11,9 +11,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 33, candidate-vector schema 31,
+candidate uses quality-contract schema 34, candidate-vector schema 31,
 candidate-transaction schema 4, and canonical engine identity
-`autotechno-canonical-engine.v32`. It preserves
+`autotechno-canonical-engine.v33`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
@@ -27,7 +27,7 @@ score-owned dotted foundation rhythm, its pre-kick pocket, and exact dry Bass
 Pluck consequence,
 shared pulse-echo return-drive,
 score-owned spatial-FDN configuration and exact stereo wet consequence,
-score-bound phrase composition covering true percussion resampling,
+score-bound phrase composition covering band-limited percussion/kick resampling,
 arpeggiation, four-voice pad PCM, score-owned harmonic disclosure and exact
 arpeggiator pitch binding, score-owned pad rhythmic modulation, and quantified
 voice-leading,
@@ -213,6 +213,18 @@ denser diffusion, or controlled nonlinear colour only if the same answer-or-
 anticipation semantics, release boundary, deterministic score, exact neutral
 and gated behavior, and score-to-PCM evidence remain intact.
 
+Phrase-slice resampling evidence remains on the existing phrase-composition
+record. Its resolved source kind, source/output hashes, trigger/reverse counts,
+rate extrema, finite RMS, binding, and protected/full pass equality are produced
+by the same detached render that consumes the score. A deterministic spectral
+A/B additionally guards the reusable interpolation primitive: the historical
+linear 18 kHz/2x path produces a 12 kHz alias at amplitude `0.5`; the current
+fixed-radius windowed-sinc path must reject that component by at least 40 dB
+while retaining an in-band transposition, exact unity PCM, reverse replay, edge
+fades, and neutral invalid-input fallback. These focused facts establish the
+causal DSP repair but cannot replace the exact-engine development, adversarial,
+holdout, route, cancellation, and resource gates.
+
 Pad rhythmic-modulation evidence extends the existing phrase-composition record;
 it does not create another synth, sequencer, or effect return. A naturally
 resolved latter-half major-break pad may carry one three-sixteenth relation whose
@@ -282,7 +294,7 @@ signal and replacement contract.
 `ProfessionalEvidenceReportBank` v17 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v14 from the v14 profile, v15 adversarial suite,
+exact-engine primary evaluator v15 from the v15 profile, v15 adversarial suite,
 and v13 disjoint holdout. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
@@ -356,7 +368,7 @@ Phase 6B calibrates independent non-compensable semantic, per-operator signal,
 and effect-family dimensions across four exact four-hour development journeys
 at 44.1/48 kHz. The immutable artifact set rejects ten independent adversarial
 attacks and accepts two disjoint holdout roots. It retains only reduced
-irreversible evidence and binds the exact engine-v32/primary-v14 identity.
+irreversible evidence and binds the exact engine-v33/primary-v15 identity.
 
 Phase 7 consumes that policy only during detached preparation. A fixed-capacity
 active-rate observation requires at least 7,200 bars, twelve signal observations,
@@ -540,8 +552,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 33, candidate-vector schema 31,
-candidate-transaction schema 4, and canonical engine v32, the versioned
+Under quality-contract schema 34, candidate-vector schema 31,
+candidate-transaction schema 4, and canonical engine v33, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

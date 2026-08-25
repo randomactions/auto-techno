@@ -30,8 +30,8 @@ cloud model, or account.
   retains independent score/render plus isolated-anchor evidence;
 - six phrase-scale performance characters coordinating foundation, rhythm,
   role-compatible patches, and automation under one persistent identity;
-- one score-owned phrase-composition layer with bounded true percussion
-  resampling, 8–16-step modal arpeggiation, four-voice pads, progressive
+- one score-owned phrase-composition layer with bounded band-limited percussion
+  or kick resampling, 8–16-step modal arpeggiation, four-voice pads, progressive
   harmonic disclosure with exact arpeggiator pitch binding, and cross-bar
   minimal-motion voice-leading;
 - one score-owned three-sixteenth pad rhythm that reuses the existing pad,
@@ -109,7 +109,7 @@ sentence evidence without retaining PCM. Detached accepted phrases now also
 reduce their exact PCM into a DSP-owned, fixed-capacity signal trajectory across
 loudness, crest, spectrum, transients, masking, wet/dry relation, stereo, and
 movement while keeping the semantic target separate. These reports are still
-kept separate and judged by the exact engine-v32/primary-v14 long-horizon
+kept separate and judged by the exact engine-v33/primary-v15 long-horizon
 artifacts. Detached preparation carries one fixed-capacity active-rate
 observation with the immutable successor and can emit one reason-coded
 preserve/recover decision for an eligible unscheduled future phrase. The App

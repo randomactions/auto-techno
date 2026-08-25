@@ -4,12 +4,12 @@ import Foundation
 package enum QualityQualificationContract {
     /// Version 22 binds app-owned scheduled live PCM, exact mixer-to-player
     /// clock mapping, live BS.1770 evidence, bounded terminal attenuation, and
-    /// its atomic commit at an unscheduled future boundary. Quality schema 33
-    /// adds the score-owned Spectral Texture harmonic-tail relation and its
-    /// same-pass causal evidence, advancing PCM and calibrated identities.
-    package static let schemaVersion = 33
+    /// its atomic commit at an unscheduled future boundary. Quality schema 34
+    /// replaces phrase-slice linear interpolation with bounded band-limited
+    /// conversion, advancing PCM and calibrated identities in place.
+    package static let schemaVersion = 34
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v32"
+    package static let engineVersion = "autotechno-canonical-engine.v33"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

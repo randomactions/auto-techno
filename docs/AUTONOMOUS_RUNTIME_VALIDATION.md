@@ -57,6 +57,14 @@ Sample hashes remain regression evidence, not a musical-quality score. An
 intentional hash change requires a new exact-head qualification record; unchanged
 hashes do not waive the other checks.
 
+The phrase-local resampler has an additional causal A/B gate. A 48 kHz 18 kHz
+source played by the supported 2x path must reduce the historical linear
+12 kHz fold-back by at least 40 dB. A separate in-band source must retain the
+expected transposed frequency and gain; unity-rate PCM, forward/reverse
+determinism, edge fades, finite evidence, and neutral invalid-input fallback
+must remain exact. Passing this focused gate does not waive complete exact-
+engine primary or long-horizon artifact regeneration.
+
 The canonical late field has its own deterministic DSP and integration gate.
 Tests cover eight ordered odd route-derived delays, strictly sub-unity
 delay-proportional gains, high-frequency damping bounds, diffuse and decaying
@@ -68,8 +76,8 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 33, candidate-vector schema 31, candidate-transaction
-schema 4, and canonical engine v32 provide the current transaction-level
+Quality-contract schema 34, candidate-vector schema 31, candidate-transaction
+schema 4, and canonical engine v33 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
@@ -315,7 +323,7 @@ correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
 The Professional Evidence v17 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v32 primary evaluator v14 and pinned profile v14/adversarial/holdout
+engine-v33 primary evaluator v15 and pinned profile v15/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 28.
 Holdouts must be source-disjoint, contain at
@@ -380,7 +388,7 @@ or PCM.
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
 composition, spatial-FDN, nonlinear-core, and foundation-pocket evidence carried
-by quality-contract schema 33 change detached preparation only. The implemented master-headroom path
+by quality-contract schema 34 change detached preparation only. The implemented master-headroom path
 is the sole scheduled-output feedback responsibility and does not move those
 feature analyzers or decisions onto the callback. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).

@@ -187,6 +187,15 @@ struct LongHorizonProfessionalPolicyTests {
         LongHorizonProfessionalPolicyArtifacts
           .containsBundledResource(named: name))
     }
+    for obsoleteName in [
+      "long-horizon-professional-profile-v1",
+      "long-horizon-adversarial-suite-v1",
+      "long-horizon-holdout-v1",
+    ] {
+      #expect(
+        !LongHorizonProfessionalPolicyArtifacts
+          .containsBundledResource(named: obsoleteName))
+    }
   }
 
   @Test("Bundled policy resources are reduced, canonical, and fail closed")

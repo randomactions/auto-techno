@@ -339,13 +339,13 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let directory = try outputDirectory()
     try profile.deterministicJSON().write(
       to: directory.appendingPathComponent(
-        "long-horizon-professional-profile-v1.json"))
+        "\(LongHorizonProfessionalPolicyArtifacts.profileResource).json"))
     try adversarial.deterministicJSON().write(
       to: directory.appendingPathComponent(
-        "long-horizon-adversarial-suite-v1.json"))
+        "\(LongHorizonProfessionalPolicyArtifacts.adversarialResource).json"))
     try holdout.deterministicJSON().write(
       to: directory.appendingPathComponent(
-        "long-horizon-holdout-v1.json"))
+        "\(LongHorizonProfessionalPolicyArtifacts.holdoutResource).json"))
   }
 
   private func progress(_ message: String) {
