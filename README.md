@@ -17,7 +17,8 @@ cloud model, or account.
   its pending work and feedback, rotates the opaque seed, resets presentation,
   prepares a fresh canonical session, and starts it when ready;
 - one resolved per-bar score shared by planning, audio, and telemetry;
-- phrase-boundary continuation with temporal memory and accepted-PCM hold;
+- phrase-boundary continuation with temporal memory and bounded accepted-PCM
+  recovery;
 - three score-selected internal synthesis architectures with bounded patch
   automation and exact score-to-PCM evidence;
 - one shared Resonant Mono TPT/ADAA nonlinear core with bounded semantic

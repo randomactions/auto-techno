@@ -125,7 +125,7 @@ struct CurrentRuntimeTests {
         #expect(artifacts.evaluator.evaluatorVersion ==
                 ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier)
         #expect(LiveMasterHeadroomController.version ==
-                "autotechno-live-master-headroom-controller.v1")
+                "autotechno-live-master-headroom-controller.v2")
         #expect(LiveMasterHeadroomController.minimumTrimDB == -3)
         #expect(LiveMasterHeadroomController.maximumTrimDB == 0)
         #expect(LiveMasterHeadroomController.attackStepDB == 0.25)
@@ -396,8 +396,9 @@ struct RepositorySurfaceTests {
             "occurrence epoch",
             "Late evidence alone does not latch the hold",
             "Route and timeline resets preserve a latched hold",
-            "does not itself clear the hold",
-            "complete session reset or shutdown",
+            "cannot authorize another correction while recovery",
+            "preserve-course successor",
+            "live corrections remain quarantined until advance",
             "packet count and first/last packet sequence",
             "Different valid packetization metadata changes the evidence and proposal fingerprints",
             "## Route, transport, and shutdown lifecycle",
@@ -428,8 +429,11 @@ struct RepositorySurfaceTests {
                     "\(document) omits late-evidence hold isolation")
             #expect(contents.contains("route and timeline resets"),
                     "\(document) omits hold-preserving route reset")
-            #expect(contents.contains("newer authenticated occurrence"),
-                    "\(document) omits authenticated recovery")
+            #expect(
+                contents.contains("newer authenticated occurrence") ||
+                    contents.contains("preserve-course"),
+                "\(document) omits authenticated recovery"
+            )
             #expect(contents.contains("complete session reset"),
                     "\(document) omits explicit hold reset")
             #expect(contents.contains("shutdown"),

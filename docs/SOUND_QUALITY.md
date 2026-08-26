@@ -634,7 +634,10 @@ phrase. It cannot rewrite a playing buffer, mutate scheduled audio, or block the
 scheduler. Late evidence alone is ignored or deferred when its exact target is
 no longer unscheduled; it does not latch a repeat. Only an already-authorized
 correction that is rejected, unavailable, or misses its first eligible boundary
-enters the accepted-PCM hold and repeats accepted immutable PCM. See
+enters the accepted-PCM hold and repeats accepted immutable PCM. At the next
+matching boundary, recovery releases a preserve-course successor under the
+committed controller state; it remains subject to the same primary qualification
+and further live corrections are quarantined until the score advances. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md) for clock mapping, occurrence epochs,
 invalidation, hold, lifecycle, and replay details.
 

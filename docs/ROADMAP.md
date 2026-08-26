@@ -122,9 +122,11 @@ One authenticated scheduled occurrence can invalidate one unscheduled successor,
 and its proposal commits only with the primary-accepted candidate.
 Late evidence alone is ignored or deferred. An authorized correction that is
 rejected, unavailable, or misses its first boundary latches the accepted-PCM
-hold. Route and timeline resets preserve that hold. A newer authenticated
-occurrence may propose recovery but does not itself clear the hold; successful
-corrected advancement, complete session reset, or shutdown clears it. See
+hold. Route and timeline resets preserve that hold. At the next matching
+boundary, the canonical primary-qualified preserve-course path is released and
+new corrections remain quarantined until it advances; successful corrected or
+preserve-course advancement, complete session reset, or shutdown clears the
+hold. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md). App/route QA, listening, and physical-
 output soak remain separate evidence states.
 

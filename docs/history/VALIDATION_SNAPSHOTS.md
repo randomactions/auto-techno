@@ -2507,3 +2507,47 @@ build/readiness, publication, and process/path launch verification. They do not
 constitute listening approval. Real route/interruption QA, latency observation,
 extended runtime observation, and physical-output soak remain separate and
 unclaimed.
+
+## Bounded accepted-PCM phrase recovery — 2026-08-26
+
+The elapsed playing-time display exposed a transport defect rather than a long
+canonical phrase: phrase 4 remained current for several minutes even though the
+resolved phrase vocabulary is bounded to 4...16 bars. A missed or rejected
+live-master corrected successor latched an accepted-PCM hold that forbade the
+ordinary successor indefinitely, and repeated live observations could keep
+replacing recovery ownership.
+
+Controller policy v2 retains the fail-safe accepted PCM and frozen topology,
+then releases exactly one preserve-course preparation at the next matching
+phrase boundary. The successor remains on the existing detached canonical
+prepare-and-primary-qualify path under the already committed controller state.
+An already qualified ordinary successor is preserved while a correction is in
+flight, later live corrections are quarantined while recovery owns the
+source-to-target transition, and the hold clears only after the canonical score
+actually advances. No director, score, renderer, graph, audio-buffer format,
+route owner, UI control, or callback operation was added.
+
+Final focused component runs passed 65 tests: 15 scheduled-window coordinator,
+17 TechnoEngine scheduling, six current-runtime, five repository-surface, 12
+live-feedback Core, six fresh-session identity, and four playing-time tests.
+The regression proves corrected-proposal expiry, the initial coherent repeat,
+one-shot preserve-course release, recovery quarantine, route/lifecycle
+continuity, preserved qualified preparation, and advance-owned hold clearing.
+
+The matched-Xcode optimized `AutoTechno` build completed in 119.07 seconds with
+SHA-256
+`ddc402130632827649f9c4ec578e6ec4b0461bef93f7cacea64a8c6fa50ff276`.
+The release callback producer object retained exactly one undefined symbol, the
+allowed `memcpy`. The exact executable and current DSP resources were packaged
+into `/private/tmp/AutoTechnoPhraseRecovery.app`; ad-hoc signing produced the
+expected signed-executable SHA-256
+`5f6a858157957663c64a0f5cc81b610444054fa57aeeda0c2aa9b766633fc999`.
+That bundle launched as PID 88934 and remained alive beyond two minutes.
+`git diff --check` passed.
+
+These results establish the local scheduling fix, deterministic contract
+coverage, callback isolation, optimized build readiness, and exact local app
+launch. Listening confirmation past the former phrase-4 stall, real
+route/interruption QA, latency observation, extended runtime observation,
+physical-output soak, publication, and exact-head CI remain separate and
+unclaimed.

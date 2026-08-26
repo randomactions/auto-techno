@@ -2,7 +2,7 @@ import Foundation
 
 package enum LiveFeedbackContract {
     package static let controllerPolicyVersion =
-        "autotechno-live-master-headroom-controller.v1"
+        "autotechno-live-master-headroom-controller.v2"
 }
 
 package enum LiveFeedbackProposalOutcome: String, Codable, Equatable, Sendable {

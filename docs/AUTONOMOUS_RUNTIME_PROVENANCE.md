@@ -845,19 +845,25 @@ not own. Each observation names its source range, occurrence epoch, route,
 controller revision, plan, exact installed profile, and earliest eligible future
 boundary. One authenticated scheduled occurrence may invalidate one still-
 unscheduled successor. A repeated phrase at a newer authenticated range is a
-different occurrence. A decision may affect only that immutable future candidate
-and is applied at its declared sample boundary after primary acceptance.
+different occurrence unless preserve-course recovery already owns that
+source-to-target relationship. A decision may affect only that immutable future
+candidate and is applied at its declared sample boundary after primary
+acceptance.
 Late evidence is ignored or deferred unless the source is the exact playing
 occurrence and the target is still unscheduled; late evidence alone never
 latches an accepted-PCM hold. That hold begins only when an already authorized
-correction is rejected, unavailable, or misses its first boundary.
+correction is rejected, unavailable, or misses its first boundary. The next
+matching boundary releases canonical preserve-course preparation under the
+already committed controller state; the candidate remains primary-qualified
+and no later correction can replace recovery before score advance.
 
 Route, pause/resume, and timeline reset rotate lifecycle identity and discard
 stale packets/results. Route and timeline resets preserve an existing hold and
 latch an outstanding authorized correction. A newer authenticated occurrence
-may authorize another correction without clearing the hold. Only a successfully
-advanced corrected successor, complete session reset, or shutdown clears it. No
-analysis rewrites the current buffer or a scheduled bar.
+cannot authorize another correction while recovery owns the transition. Only a
+successfully advanced corrected or preserve-course successor, complete session
+reset, or shutdown clears it. No analysis rewrites the current buffer or a
+scheduled bar.
 The complete contract is [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
 ## Reproducibility and product boundary

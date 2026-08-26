@@ -289,6 +289,20 @@ package struct AcceptedPCMHold: Equatable, Sendable {
     package let sourceOccurrence: ScheduledPhraseRange
     package let targetPhraseIndex: Int
     package let proposalFingerprint: String
+    package var preserveCoursePreparationReleased: Bool
+
+    package init(
+        sourceOccurrence: ScheduledPhraseRange,
+        targetPhraseIndex: Int,
+        proposalFingerprint: String,
+        preserveCoursePreparationReleased: Bool = false
+    ) {
+        self.sourceOccurrence = sourceOccurrence
+        self.targetPhraseIndex = targetPhraseIndex
+        self.proposalFingerprint = proposalFingerprint
+        self.preserveCoursePreparationReleased =
+            preserveCoursePreparationReleased
+    }
 
     package var sourcePhraseIndex: Int { sourceOccurrence.phraseIndex }
 }
@@ -501,22 +515,12 @@ package final class LiveFeedbackRuntimeCoordinator {
             return .deferAlreadyScheduledSuccessor
         }
 
-        if let hold = acceptedPCMHold {
-            let isAuthenticatedNewerOccurrence =
-                sourceOccurrence.phraseIndex == hold.sourcePhraseIndex &&
-                (sourceOccurrence.occurrenceEpoch >
-                    hold.sourceOccurrence.occurrenceEpoch ||
-                 sourceOccurrence.occurrenceEpoch ==
-                    hold.sourceOccurrence.occurrenceEpoch &&
-                 (sourceOccurrence.routeGeneration >
-                    hold.sourceOccurrence.routeGeneration ||
-                 sourceOccurrence.routeGeneration ==
-                    hold.sourceOccurrence.routeGeneration &&
-                 sourceOccurrence.playerSampleRange.lowerBound >
-                    hold.sourceOccurrence.playerSampleRange.lowerBound))
-            guard isAuthenticatedNewerOccurrence else {
-                return .duplicateSourcePhrase
-            }
+        // Once an authorized correction fails, preserve-course recovery owns
+        // this source-to-target transition. Re-admitting a correction for a
+        // repeated occurrence could continuously replace that recovery and
+        // strand the transport on one phrase.
+        guard acceptedPCMHold == nil else {
+            return .duplicateSourcePhrase
         }
         guard invalidatedSourceOccurrences.insert(sourceOccurrence).inserted else {
             return .duplicateSourcePhrase
@@ -581,9 +585,15 @@ package final class LiveFeedbackRuntimeCoordinator {
             return
         }
         if relationshipMatches,
-           acceptedPCMHold?.sourcePhraseIndex == sourcePhraseIndex,
-           acceptedPCMHold?.targetPhraseIndex == targetPhraseIndex {
+           var hold = acceptedPCMHold,
+           hold.sourcePhraseIndex == sourcePhraseIndex,
+           hold.targetPhraseIndex == targetPhraseIndex {
             repeatAcceptedPCM()
+            if !hold.preserveCoursePreparationReleased {
+                hold.preserveCoursePreparationReleased = true
+                acceptedPCMHold = hold
+                requestUntrimmedSuccessor()
+            }
             return
         }
         repeatAcceptedPCM()
@@ -595,9 +605,28 @@ package final class LiveFeedbackRuntimeCoordinator {
         targetPhraseIndex: Int
     ) -> Bool {
         !(acceptedPCMHold?.sourcePhraseIndex == sourcePhraseIndex &&
-            acceptedPCMHold?.targetPhraseIndex == targetPhraseIndex) &&
+            acceptedPCMHold?.targetPhraseIndex == targetPhraseIndex &&
+            acceptedPCMHold?.preserveCoursePreparationReleased == false) &&
             !(authorizedCorrection?.sourcePhraseIndex == sourcePhraseIndex &&
                 authorizedCorrection?.targetPhraseIndex == targetPhraseIndex)
+    }
+
+    /// Clears recovery ownership only after the canonical session actually
+    /// advances to the primary-qualified target. Preparing a candidate alone
+    /// is never sufficient to release the hold.
+    package func completeSourceAdvance(
+        sourcePhraseIndex: Int,
+        targetPhraseIndex: Int
+    ) {
+        guard targetPhraseIndex == sourcePhraseIndex + 1 else { return }
+        if acceptedPCMHold?.sourcePhraseIndex == sourcePhraseIndex,
+           acceptedPCMHold?.targetPhraseIndex == targetPhraseIndex {
+            acceptedPCMHold = nil
+        }
+        if authorizedCorrection?.sourcePhraseIndex == sourcePhraseIndex,
+           authorizedCorrection?.targetPhraseIndex == targetPhraseIndex {
+            authorizedCorrection = nil
+        }
     }
 
     package func retainRecentSources(currentPhraseIndex: Int) {
@@ -986,6 +1015,16 @@ package final class LiveFeedbackEngineOrchestrator {
         targetPhraseIndex: Int
     ) -> Bool {
         runtime.allowsUntrimmedPreparation(
+            sourcePhraseIndex: sourcePhraseIndex,
+            targetPhraseIndex: targetPhraseIndex
+        )
+    }
+
+    package func completeSourceAdvance(
+        sourcePhraseIndex: Int,
+        targetPhraseIndex: Int
+    ) {
+        runtime.completeSourceAdvance(
             sourcePhraseIndex: sourcePhraseIndex,
             targetPhraseIndex: targetPhraseIndex
         )

@@ -11,9 +11,9 @@ primary evaluator accepts the resulting canonical candidate.
 This is an implementation and automated-qualification statement for canonical
 engine `autotechno-canonical-engine.v35`, quality-contract schema 36,
 candidate-vector schema 33, candidate-transaction schema 4, Professional
-Evidence v19, professional profile v17, and primary policy/evaluator v17. It is not
-evidence that a physical device, route change, interruption, listening session,
-or 60-minute output soak passed.
+Evidence v19, professional profile v17, primary policy/evaluator v17, and live
+controller policy v2. It is not evidence that a physical device, route change,
+interruption, listening session, or 60-minute output soak passed.
 
 ## Ownership
 
@@ -148,25 +148,35 @@ At most one feedback-driven invalidation per authenticated scheduled occurrence
 is permitted. The complete `ScheduledPhraseRange`—including route, occurrence
 epoch, mapped sample ranges, plan, policy, controller, and boundary—is the key;
 repeating the same phrase at a newer authenticated occurrence can therefore
-earn its own one transition. An authorized transition can cancel only an
-unscheduled successor preparation or cache entry. Playing and queued buffers are
-immutable. The proposal expires after the first complete successor boundary for
-which it was eligible; it is not rolled forward across multiple occurrences.
+earn its own one transition when preserve-course recovery does not already own
+that source-to-target relationship. An authorized transition can cancel only an
+unscheduled corrected-successor preparation or cache entry. A previously
+primary-qualified preserve-course successor may remain cached or finish its
+detached preparation, but it is ineligible while the correction owns the
+boundary. Playing and queued buffers are immutable. The proposal expires after
+the first complete successor boundary for which it was eligible; it is not
+rolled forward across multiple occurrences.
 
 Late evidence alone does not latch the hold. Evidence is ignored or deferred
 unless it authenticates the exact playing occurrence and a still-unscheduled
 target. The deterministic accepted PCM hold is latched only after an authorized
 correction becomes unavailable, is rejected, or misses its first eligible
 boundary. Transport then repeats the already accepted immutable phrase with
-frozen controller and topology; it does not request an untrimmed preparation or
-schedule a substitute.
+frozen controller and topology. At the next matching phrase boundary the hold
+repeats that accepted PCM once more and releases exactly one preserve-course
+preparation under the already committed controller state. That successor still
+must pass the canonical primary evaluator; the hold does not schedule an
+unevaluated substitute. If preparation is still incomplete, transport continues
+coherent repeats while the normal bounded preparation path remains active.
 
 Route and timeline resets preserve a latched hold and convert any outstanding
 authorized correction into that hold before discarding its worker. A newer
-authenticated occurrence may authorize a new correction but does not itself clear the hold.
-The hold clears only when that corrected successor successfully advances at its
-boundary, or when New Set performs a complete session reset or shutdown ends the
-session.
+authenticated occurrence cannot authorize another correction while recovery
+owns the source-to-target transition. This quarantine prevents live feedback
+from repeatedly replacing the preserve-course preparation. The hold clears only
+when either the corrected successor or the preserve-course successor
+successfully advances at its boundary, or when New Set performs a complete
+session reset or shutdown ends the session.
 
 ## Route, transport, and shutdown lifecycle
 
@@ -197,7 +207,7 @@ session.
 Route recovery retains committed attenuation, musical identity, and any accepted
 PCM hold. Packets, windows, proposals, and queued main-actor results from the
 previous lifecycle are permanently ineligible. Only New Set's complete session
-reset or shutdown clears a hold without a successfully advanced corrected
+reset or shutdown clears a hold without a successfully advanced canonical
 successor.
 
 ## Deterministic replay
@@ -226,7 +236,9 @@ saturation are all reason-coded off the callback. Every failure holds the last
 committed controller state and preserves playing audio. Late or unauthenticated
 evidence is ignored without latching an accepted PCM hold; only a failed already
 authorized correction latches that transport hold. No failure starts an
-additional evaluator, renderer, controller, or correction search.
+additional evaluator, renderer, controller, or correction search. A latched
+hold releases only the existing canonical primary-qualified preparation path at
+the next matching boundary; live corrections remain quarantined until advance.
 
 ## Qualification boundaries
 

@@ -607,8 +607,9 @@ package final class TechnoEngine: ObservableObject {
                 sourcePhraseIndex: phrase.prepared.plan.phraseIndex,
                 targetPhraseIndex: phrase.prepared.plan.phraseIndex + 1
            ) {
-            // A hold may retain a plan-owned target reference and a detached
-            // preparation recipe, but it never submits that untrimmed recipe.
+            // Initial hold quarantine retains the plan-owned target recipe
+            // without submitting it. The boundary owner releases this same
+            // canonical path after one coherent repeat.
             _ = liveFeedbackPreparation.rebindTargetPayload(
                 sourcePlan: phrase.prepared.plan,
                 routeGeneration: request.key.routeGeneration,
@@ -1229,23 +1230,6 @@ package final class TechnoEngine: ObservableObject {
             proposalFingerprint: result.binding.proposal.fingerprint
         ) == .invalidateUnscheduledSuccessor else { return }
 
-        liveFeedbackPreparation.removeCached { key, value in
-            key.phraseIndex == targetPhraseIndex &&
-                key.pendingLiveMasterProposalFingerprint == nil &&
-                value.request.sourceState.liveMasterHeadroom ==
-                    sessionState.liveMasterHeadroom
-        }
-        if activePreparationRequest?.key == baseRequest.key {
-            preparationTask?.cancel()
-            preparationTask = nil
-            activePreparationTaskSerial = nil
-            preparingKey = nil
-            activePreparationRequest = nil
-        }
-        if queuedPreparationRequest?.key == baseRequest.key {
-            queuedPreparationRequest = nil
-        }
-
         pendingLiveMasterBinding = result.binding
         let correctedKey = PhrasePreparationKey(
             sessionSeed: baseRequest.key.sessionSeed,
@@ -1302,8 +1286,8 @@ package final class TechnoEngine: ObservableObject {
         pendingLiveMasterBinding = nil
     }
 
-    /// A live-corrected target may never silently reappear as an untrimmed
-    /// cache entry or preparation after its accepted-PCM hold is latched.
+    /// Once a live-corrected target is accepted for its exact boundary, its
+    /// stale preserve-course candidate may never reappear afterward.
     private func purgeUntrimmedSuccessor(targetPhraseIndex: Int) {
         liveFeedbackPreparation.removeCached { key, _ in
             key.phraseIndex == targetPhraseIndex &&
@@ -1394,6 +1378,7 @@ package final class TechnoEngine: ObservableObject {
                 actualStartSample: Int64(nextScheduleSample)
             )
             if correctedBoundaryDecision == .advance,
+               nextKey.pendingLiveMasterProposalFingerprint != nil,
                !untrimmedPreparationAllowed {
                 purgeUntrimmedSuccessor(targetPhraseIndex: targetPhraseIndex)
             }
@@ -1412,9 +1397,6 @@ package final class TechnoEngine: ObservableObject {
                     correctedSuccessorAvailable: cachedSuccessor != nil,
                     expireCorrectedSuccessor: {
                         self.expirePendingLiveFeedbackAtBoundary()
-                        self.purgeUntrimmedSuccessor(
-                            targetPhraseIndex: targetPhraseIndex
-                        )
                     },
                     advanceCorrectedSuccessor: {
                         runtimeAllowsAdvance = true
@@ -1449,6 +1431,10 @@ package final class TechnoEngine: ObservableObject {
                 )
                 liveFeedbackPreparation.completeSourceAdvance(
                     sourcePhraseIndex: sourcePhraseIndex
+                )
+                liveFeedbackOrchestrator.completeSourceAdvance(
+                    sourcePhraseIndex: sourcePhraseIndex,
+                    targetPhraseIndex: targetPhraseIndex
                 )
                 if next.request.pendingLiveMasterBinding != nil {
                     pendingLiveMasterBinding = nil

@@ -205,11 +205,29 @@ struct TechnoEngineLiveFeedbackTests {
         #expect(source.contains(
             "liveFeedbackPreparation.completeSourceAdvance("
         ))
+        #expect(source.contains(
+            "liveFeedbackOrchestrator.completeSourceAdvance("
+        ))
         #expect(!source.contains(
             "holdCorrectedSuccessorAtBoundaryMismatch("
         ))
         #expect(!source.contains(
             "liveTargetStartSample: nextTarget.partialValue"
+        ))
+        let feedbackHandler = try #require(source.range(
+            of: "private func handleLiveFeedbackResult("
+        ))
+        let feedbackExpiration = try #require(source.range(
+            of: "private func expirePendingLiveFeedbackAtBoundary("
+        ))
+        let feedbackHandlerBody = source[
+            feedbackHandler.lowerBound..<feedbackExpiration.lowerBound
+        ]
+        #expect(!feedbackHandlerBody.contains(
+            "liveFeedbackPreparation.removeCached {"
+        ))
+        #expect(!feedbackHandlerBody.contains(
+            "preparationTask?.cancel()"
         ))
         let admission = try #require(source.range(of:
             "let correctedBoundaryDecision = LiveCorrectedSuccessorBoundaryPolicy.decide("
@@ -222,6 +240,7 @@ struct TechnoEngineLiveFeedbackTests {
         ))
         let purgeCommit = try #require(source.range(of:
             "if correctedBoundaryDecision == .advance,\n" +
+                "               nextKey.pendingLiveMasterProposalFingerprint != nil,\n" +
                 "               !untrimmedPreparationAllowed {\n" +
                 "                purgeUntrimmedSuccessor("
         ))
@@ -318,6 +337,12 @@ struct TechnoEngineLiveFeedbackTests {
         #expect(repeatCount == 1)
         #expect(owner.runtime.acceptedPCMHold?.proposalFingerprint ==
                 proposalFingerprint)
+        #expect(owner.runtime.acceptedPCMHold?
+            .preserveCoursePreparationReleased == false)
+        #expect(!owner.allowsUntrimmedPreparation(
+            sourcePhraseIndex: 6,
+            targetPhraseIndex: 7
+        ))
 
         owner.runtime.performBoundary(
             sourcePhraseIndex: 6,
@@ -332,50 +357,20 @@ struct TechnoEngineLiveFeedbackTests {
         )
         #expect(expirationCount == 1)
         #expect(repeatCount == 2)
-        #expect(secondRequestCount == 0)
+        #expect(secondRequestCount == 1)
         #expect(cache.cachedCount == 0)
-
-        #expect(owner.playbackTimelineReset(routeGeneration: 12))
-        _ = owner.observeClock(
-            probe(mixer: 0, player: 0),
-            startCapture: { _, _, _ in true }
-        )
-        _ = owner.observeClock(
-            probe(mixer: 1_024, player: 1_024),
-            startCapture: { _, identity, runtime in
-                runtime.consumerDidStart(identity: identity) &&
-                    runtime.producerDidStart(identity: identity)
-            }
-        )
-        let fresh = try #require(owner.stageOccurrence(draft(
-            phraseIndex: 6,
-            startSample: 500_000,
-            routeGeneration: 12,
-            occurrenceEpoch: owner.runtime.occurrenceEpoch
-        )))
-        let freshIdentity = try #require(owner.runtime.activeIdentity)
-        #expect(owner.authorize(
-            identity: freshIdentity,
-            sourceOccurrence: fresh,
-            targetPhraseIndex: 7,
-            proposalFingerprint: "fresh-proposal"
-        ) == .invalidateUnscheduledSuccessor)
-        cache.insertCachedValue("fresh-corrected", forKey: 7)
-        pendingProposal = "fresh-proposal"
-        owner.performBoundary(
+        #expect(owner.runtime.acceptedPCMHold?
+            .preserveCoursePreparationReleased == true)
+        #expect(owner.allowsUntrimmedPreparation(
             sourcePhraseIndex: 6,
-            targetPhraseIndex: 7,
-            correctedSuccessorAvailable: true,
-            expireCorrectedSuccessor: {},
-            advanceCorrectedSuccessor: {
-                currentPhraseIndex = 7
-                sessionRevision += 1
-                pendingProposal = nil
-                _ = cache.removeCachedValue(forKey: 7)
-            },
-            repeatAcceptedPCM: {
-                Issue.record("fresh correction should advance")
-            }
+            targetPhraseIndex: 7
+        ))
+
+        currentPhraseIndex = 7
+        sessionRevision += 1
+        owner.completeSourceAdvance(
+            sourcePhraseIndex: 6,
+            targetPhraseIndex: 7
         )
         #expect(currentPhraseIndex == 7)
         #expect(sessionRevision == 5)
@@ -412,8 +407,8 @@ struct TechnoEngineLiveFeedbackTests {
     }
 
     @MainActor
-    @Test("Route reset preserves committed trim and hold until an exact newer live occurrence")
-    func routeResetPreservesHoldUntilAuthenticatedRepeat() {
+    @Test("Route reset preserves committed trim and releases preserve-course recovery at a boundary")
+    func routeResetPreservesTrimAndReleasesRecoveryAtBoundary() {
         let owner = activeOwner(routeGeneration: 3)
         let source = owner.stageOccurrence(draft(
             phraseIndex: 7,
@@ -473,26 +468,39 @@ struct TechnoEngineLiveFeedbackTests {
             sourceOccurrence: repeated,
             targetPhraseIndex: 8,
             proposalFingerprint: "proposal-b"
-        ) == .invalidateUnscheduledSuccessor)
+        ) == .duplicateSourcePhrase)
         #expect(owner.runtime.acceptedPCMHold != nil)
 
-        var advanced = 0
-        owner.performBoundary(
+        var repeats = 0
+        var preserveCourseRequests = 0
+        owner.runtime.performBoundary(
             sourcePhraseIndex: 7,
             targetPhraseIndex: 8,
-            correctedSuccessorAvailable: true,
+            correctedSuccessorAvailable: false,
             expireCorrectedSuccessor: {},
-            advanceCorrectedSuccessor: { advanced += 1 },
-            repeatAcceptedPCM: {}
+            advanceCorrectedSuccessor: {
+                Issue.record("a rejected correction cannot advance")
+            },
+            repeatAcceptedPCM: { repeats += 1 },
+            requestUntrimmedSuccessor: { preserveCourseRequests += 1 }
         )
-        #expect(advanced == 1)
+        #expect(repeats == 1)
+        #expect(preserveCourseRequests == 1)
+        #expect(owner.allowsUntrimmedPreparation(
+            sourcePhraseIndex: 7,
+            targetPhraseIndex: 8
+        ))
+
+        owner.completeSourceAdvance(
+            sourcePhraseIndex: 7,
+            targetPhraseIndex: 8
+        )
         #expect(owner.runtime.acceptedPCMHold == nil)
     }
 
     @MainActor
-    @Test("Held accepted PCM retains only a target reference for a later corrected successor")
-    func heldRepeatCanProduceAnotherRealCorrection() throws {
-        let qualityPolicyVersion = testLiveQualityPolicyVersion
+    @Test("Held accepted PCM preserves the qualified target recipe for course recovery")
+    func heldRepeatPreservesQualifiedTargetRecipe() throws {
         let plans = sourceAndTargetPlans()
         let preparation = LiveFeedbackPreparationOwner<
             TestPreparationKey,
@@ -513,181 +521,76 @@ struct TechnoEngineLiveFeedbackTests {
         ))
 
         let owner = activeOwner(routeGeneration: 3)
-        let firstRange = scheduledRange(
+        let sourceRange = scheduledRange(
             plan: plans.source,
             incoming: plans.incoming,
             startSample: 800_000,
             routeGeneration: 3,
-            qualityPolicyVersion: qualityPolicyVersion
+            qualityPolicyVersion: testLiveQualityPolicyVersion
         )
-        let first = try #require(owner.stageOccurrence(
-            LiveFeedbackScheduledOccurrenceDraft(copying: firstRange)
-        ))
-        let firstContext = try #require(preparation.analysisContext(
-            sourceRange: first,
-            sourcePlan: plans.source,
-            incomingState: plans.incoming,
-            controllerStateFingerprint: plans.incoming.fingerprint,
-            qualityPolicyVersion: qualityPolicyVersion
-        ))
-        let firstBinding = try #require(realBinding(
-            context: firstContext
+        let source = try #require(owner.stageOccurrence(
+            LiveFeedbackScheduledOccurrenceDraft(copying: sourceRange)
         ))
         let identity = try #require(owner.runtime.activeIdentity)
         #expect(owner.authorize(
             identity: identity,
-            sourceOccurrence: first,
+            sourceOccurrence: source,
             targetPhraseIndex: plans.target.phraseIndex,
-            proposalFingerprint: firstBinding.proposal.fingerprint
+            proposalFingerprint: "proposal-a"
         ) == .invalidateUnscheduledSuccessor)
 
-        preparation.removeCached { key, _ in
-            key.phraseIndex == plans.target.phraseIndex &&
-                key.proposalFingerprint == nil
-        }
         var expired = 0
         owner.rejectCorrectedSuccessor(
-            sourceOccurrence: first,
+            sourceOccurrence: source,
             targetPhraseIndex: plans.target.phraseIndex,
-            proposalFingerprint: firstBinding.proposal.fingerprint,
+            proposalFingerprint: "proposal-a",
             expireCorrectedSuccessor: { expired += 1 }
         )
         var repeats = 0
-        owner.performBoundary(
+        var preserveCourseRequests = 0
+        owner.runtime.performBoundary(
             sourcePhraseIndex: plans.source.phraseIndex,
             targetPhraseIndex: plans.target.phraseIndex,
             correctedSuccessorAvailable: false,
             expireCorrectedSuccessor: { expired += 1 },
             advanceCorrectedSuccessor: {},
-            repeatAcceptedPCM: { repeats += 1 }
+            repeatAcceptedPCM: { repeats += 1 },
+            requestUntrimmedSuccessor: { preserveCourseRequests += 1 }
         )
         #expect(expired == 1)
         #expect(repeats == 1)
-        #expect(preparation.cachedCount == 0)
+        #expect(preserveCourseRequests == 1)
+        #expect(preparation.firstCached(where: { key, _ in
+            key == baseKey
+        })?.value == 1)
         #expect(preparation.hasTargetReference)
         #expect(preparation.hasCurrentTargetPayload)
-        #expect(!owner.allowsUntrimmedPreparation(
+        #expect(owner.allowsUntrimmedPreparation(
             sourcePhraseIndex: plans.source.phraseIndex,
             targetPhraseIndex: plans.target.phraseIndex
         ))
 
-        // Recovery resets the player to a low sample position. The accepted
-        // payload stays detached from scheduling and is rebound only to the
-        // newly authenticated occurrence epoch used by TechnoEngine.
-        #expect(owner.playbackTimelineReset(routeGeneration: 3))
-        #expect(preparation.rebindTargetOccurrence(
-            sourcePlan: plans.source,
-            routeGeneration: 3,
-            occurrenceEpoch: owner.runtime.occurrenceEpoch
-        ))
-        #expect(preparation.analysisContext(
-            sourceRange: first,
-            sourcePlan: plans.source,
-            incomingState: plans.incoming,
-            controllerStateFingerprint: plans.incoming.fingerprint,
-            qualityPolicyVersion: qualityPolicyVersion
-        ) == nil)
-        #expect(preparation.cachedCount == 0)
-
-        _ = owner.observeClock(
-            probe(mixer: 0, player: 0),
-            startCapture: { _, _, _ in true }
-        )
-        _ = owner.observeClock(
-            probe(mixer: 1_024, player: 1_024),
-            startCapture: { _, identity, runtime in
-                runtime.consumerDidStart(identity: identity) &&
-                    runtime.producerDidStart(identity: identity)
-            }
-        )
-
-        let repeatedRange = scheduledRange(
-            plan: plans.source,
-            incoming: plans.incoming,
-            startSample: 200_000,
-            routeGeneration: 3,
-            occurrenceEpoch: owner.runtime.occurrenceEpoch,
-            qualityPolicyVersion: qualityPolicyVersion
-        )
-        let repeated = try #require(owner.stageOccurrence(
-            LiveFeedbackScheduledOccurrenceDraft(copying: repeatedRange)
-        ))
-        owner.promote(playerSample: repeated.playerSampleRange.lowerBound)
-        let repeatedContext = try #require(preparation.analysisContext(
-            sourceRange: repeated,
-            sourcePlan: plans.source,
-            incomingState: plans.incoming,
-            controllerStateFingerprint: plans.incoming.fingerprint,
-            qualityPolicyVersion: qualityPolicyVersion
-        ))
-        let repeatedBinding = try #require(realBinding(
-            context: repeatedContext
-        ))
-        let recoveredIdentity = try #require(owner.runtime.activeIdentity)
-
         #expect(owner.authorize(
             identity: identity,
-            sourceOccurrence: first,
+            sourceOccurrence: source,
             targetPhraseIndex: plans.target.phraseIndex,
-            proposalFingerprint: repeatedBinding.proposal.fingerprint
-        ) == .invalidPhraseRelationship)
-        #expect(owner.authorize(
-            identity: recoveredIdentity,
-            sourceOccurrence: first,
-            targetPhraseIndex: plans.target.phraseIndex,
-            proposalFingerprint: repeatedBinding.proposal.fingerprint
-        ) == .invalidPhraseRelationship)
-        #expect(preparation.correctionPayload(
-            sourceRange: repeated,
-            eligibleTargetIdentity: LiveOutputPlanSourceIdentity(
-                plan: plans.source
-            )
-        ) == nil)
-        #expect(owner.authorize(
-            identity: recoveredIdentity,
-            sourceOccurrence: repeated,
-            targetPhraseIndex: plans.target.phraseIndex,
-            proposalFingerprint: repeatedBinding.proposal.fingerprint
-        ) == .invalidateUnscheduledSuccessor)
-        #expect(preparation.correctionPayload(
-            sourceRange: repeated,
-            eligibleTargetIdentity: repeatedBinding.eligibleTarget.planIdentity
-        ) == "base-request")
+            proposalFingerprint: "proposal-b"
+        ) == .duplicateSourcePhrase)
 
-        let correctedKey = TestPreparationKey(
-            phraseIndex: plans.target.phraseIndex,
-            proposalFingerprint: repeatedBinding.proposal.fingerprint
-        )
-        preparation.insertCachedValue(2, forKey: correctedKey)
-        var advances = 0
-        owner.performBoundary(
+        preparation.completeSourceAdvance(
             sourcePhraseIndex: plans.source.phraseIndex,
-            targetPhraseIndex: plans.target.phraseIndex,
-            correctedSuccessorAvailable: true,
-            expireCorrectedSuccessor: {},
-            advanceCorrectedSuccessor: {
-                advances += 1
-                preparation.completeSourceAdvance(
-                    sourcePhraseIndex: plans.source.phraseIndex
-                )
-            },
-            repeatAcceptedPCM: {}
         )
-        #expect(advances == 1)
+        owner.completeSourceAdvance(
+            sourcePhraseIndex: plans.source.phraseIndex,
+            targetPhraseIndex: plans.target.phraseIndex
+        )
         #expect(owner.runtime.acceptedPCMHold == nil)
         #expect(!preparation.hasTargetReference)
-        #expect(preparation.firstCached(where: { key, _ in
-            key == correctedKey
-        })?.value == 2)
-        #expect(preparation.firstCached(where: { key, _ in
-            key.phraseIndex == plans.target.phraseIndex &&
-                key.proposalFingerprint == nil
-        }) == nil)
     }
 
     @MainActor
-    @Test("A missed corrected successor enters an accepted-PCM hold without fallback preparation")
-    func missedCorrectedSuccessorHoldsWithoutFallback() {
+    @Test("A missed corrected successor releases one preserve-course preparation")
+    func missedCorrectedSuccessorReleasesPreserveCoursePreparation() {
         let runtime = activeRuntime(routeGeneration: 8)
         let identity = try! #require(runtime.activeIdentity)
         #expect(runtime.authorizeCorrection(
@@ -702,40 +605,83 @@ struct TechnoEngineLiveFeedbackTests {
         var acceptedPCMRepeatCount = 0
         var fallbackPreparationCount = 0
         var correctedExpirationCount = 0
-        var cachedUntrimmedTargets: Set<Int> = []
-        var preparingUntrimmedTarget: Int?
-        for _ in 0..<3 {
-            runtime.performBoundary(
-                sourcePhraseIndex: 4,
-                targetPhraseIndex: 5,
-                correctedSuccessorAvailable: false,
-                expireCorrectedSuccessor: { correctedExpirationCount += 1 },
-                advanceCorrectedSuccessor: {},
-                repeatAcceptedPCM: { acceptedPCMRepeatCount += 1 },
-                requestUntrimmedSuccessor: {
-                    fallbackPreparationCount += 1
-                    cachedUntrimmedTargets.insert(5)
-                    preparingUntrimmedTarget = 5
-                }
-            )
-            #expect(cachedUntrimmedTargets.isEmpty)
-            #expect(preparingUntrimmedTarget == nil)
-        }
+        runtime.performBoundary(
+            sourcePhraseIndex: 4,
+            targetPhraseIndex: 5,
+            correctedSuccessorAvailable: false,
+            expireCorrectedSuccessor: { correctedExpirationCount += 1 },
+            advanceCorrectedSuccessor: {},
+            repeatAcceptedPCM: { acceptedPCMRepeatCount += 1 },
+            requestUntrimmedSuccessor: { fallbackPreparationCount += 1 }
+        )
 
         #expect(runtime.acceptedPCMHold?.sourcePhraseIndex == 4)
         #expect(runtime.acceptedPCMHold?.targetPhraseIndex == 5)
+        #expect(runtime.acceptedPCMHold?
+            .preserveCoursePreparationReleased == false)
         #expect(correctedExpirationCount == 1)
-        #expect(acceptedPCMRepeatCount == 3)
+        #expect(acceptedPCMRepeatCount == 1)
         #expect(fallbackPreparationCount == 0)
         #expect(!runtime.allowsUntrimmedPreparation(
             sourcePhraseIndex: 4,
             targetPhraseIndex: 5
         ))
+
+        runtime.performBoundary(
+            sourcePhraseIndex: 4,
+            targetPhraseIndex: 5,
+            correctedSuccessorAvailable: false,
+            expireCorrectedSuccessor: { correctedExpirationCount += 1 },
+            advanceCorrectedSuccessor: {},
+            repeatAcceptedPCM: { acceptedPCMRepeatCount += 1 },
+            requestUntrimmedSuccessor: { fallbackPreparationCount += 1 }
+        )
+        #expect(correctedExpirationCount == 1)
+        #expect(acceptedPCMRepeatCount == 2)
+        #expect(fallbackPreparationCount == 1)
+        #expect(runtime.acceptedPCMHold?
+            .preserveCoursePreparationReleased == true)
+        #expect(runtime.allowsUntrimmedPreparation(
+            sourcePhraseIndex: 4,
+            targetPhraseIndex: 5
+        ))
+
+        runtime.performBoundary(
+            sourcePhraseIndex: 4,
+            targetPhraseIndex: 5,
+            correctedSuccessorAvailable: false,
+            expireCorrectedSuccessor: { correctedExpirationCount += 1 },
+            advanceCorrectedSuccessor: {},
+            repeatAcceptedPCM: { acceptedPCMRepeatCount += 1 },
+            requestUntrimmedSuccessor: { fallbackPreparationCount += 1 }
+        )
+        #expect(correctedExpirationCount == 1)
+        #expect(acceptedPCMRepeatCount == 3)
+        #expect(fallbackPreparationCount == 1)
+
+        #expect(runtime.authorizeCorrection(
+            identity: identity,
+            sourceOccurrence: occurrence(
+                phraseIndex: 4,
+                startSample: 200_000,
+                routeGeneration: 8
+            ),
+            targetPhraseIndex: 5,
+            proposalFingerprint: "proposal-b",
+            sourceIsExactPlayingOccurrence: true,
+            targetHasScheduledSamples: false
+        ) == .duplicateSourcePhrase)
+
+        runtime.completeSourceAdvance(
+            sourcePhraseIndex: 4,
+            targetPhraseIndex: 5
+        )
+        #expect(runtime.acceptedPCMHold == nil)
     }
 
     @MainActor
-    @Test("A rejected corrected candidate expires and holds until an explicit authorized release")
-    func rejectedCorrectionRequiresExplicitRelease() {
+    @Test("A rejected corrected candidate survives lifecycle reset and releases bounded recovery")
+    func rejectedCorrectionReleasesBoundedRecovery() {
         let runtime = activeRuntime(routeGeneration: 3)
         let identity = try! #require(runtime.activeIdentity)
         #expect(runtime.authorizeCorrection(
@@ -775,19 +721,26 @@ struct TechnoEngineLiveFeedbackTests {
             proposalFingerprint: "proposal-b",
             sourceIsExactPlayingOccurrence: true,
             targetHasScheduledSamples: false
-        ) == .invalidateUnscheduledSuccessor)
-        #expect(runtime.acceptedPCMHold != nil)
-        runtime.rejectCorrectedSuccessor(
-            sourceOccurrence: occurrence(phraseIndex: 7, startSample: 200_000, routeGeneration: 3),
-            targetPhraseIndex: 8,
-            proposalFingerprint: "proposal-b",
-            expireCorrectedSuccessor: {}
-        )
+        ) == .duplicateSourcePhrase)
         #expect(runtime.acceptedPCMHold != nil)
 
         runtime.routeReset(routeGeneration: 4)
         #expect(runtime.acceptedPCMHold != nil)
-        #expect(!runtime.allowsUntrimmedPreparation(
+        var repeats = 0
+        var preserveCourseRequests = 0
+        runtime.performBoundary(
+            sourcePhraseIndex: 7,
+            targetPhraseIndex: 8,
+            correctedSuccessorAvailable: false,
+            expireCorrectedSuccessor: { expired += 1 },
+            advanceCorrectedSuccessor: {},
+            repeatAcceptedPCM: { repeats += 1 },
+            requestUntrimmedSuccessor: { preserveCourseRequests += 1 }
+        )
+        #expect(expired == 1)
+        #expect(repeats == 1)
+        #expect(preserveCourseRequests == 1)
+        #expect(runtime.allowsUntrimmedPreparation(
             sourcePhraseIndex: 7,
             targetPhraseIndex: 8
         ))

@@ -308,7 +308,10 @@ unscheduled future phrase. Late evidence alone is ignored or deferred when its
 exact target is no longer unscheduled; it does not latch a repeat. Only an
 already-authorized correction that is rejected, unavailable, or misses its
 first eligible boundary enters the accepted-PCM hold and repeats accepted
-immutable PCM. No failure can enable a substitute. See
+immutable PCM. The next matching boundary releases a preserve-course successor
+under the committed controller state while later correction results remain
+quarantined; that successor must still pass primary qualification before it can
+advance the canonical score. No failure can enable an unevaluated substitute. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
 ## Hard constraints
@@ -324,7 +327,10 @@ immutable PCM. No failure can enable a substitute. See
 - The single plan, at most one corrective pass, and analysis work remain
   explicitly bounded. Late analysis is ignored or deferred after its exact
   target is no longer unscheduled; only an already-authorized correction that
-  fails its first eligible boundary can enter the accepted-PCM hold.
+  fails its first eligible boundary can enter the accepted-PCM hold. That hold
+  cannot suppress canonical successor preparation indefinitely: the next
+  matching boundary releases preserve-course preparation and blocks correction
+  re-entry until score advance.
 - Route changes rebuild at the active sample rate without silently changing the
   musical identity or corrupting adaptation state.
 - Finite output, peak/DC/boundary limits, low-end compatibility, masking,
