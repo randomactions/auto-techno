@@ -16,7 +16,7 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             RadialGradient(
-                colors: [Color.orange.opacity(engine.isPlaying ? 0.10 : 0.035), .clear],
+                colors: [Color.purple.opacity(engine.isPlaying ? 0.10 : 0.035), .clear],
                 center: .center,
                 startRadius: 20,
                 endRadius: 360
@@ -55,13 +55,13 @@ struct ContentView: View {
                 .background {
                     Capsule()
                         .fill(selectedView == .renderInspector
-                            ? Color.orange.opacity(0.12)
+                            ? Color.purple.opacity(0.12)
                             : Color.clear)
                         .overlay {
                             Capsule()
                                 .stroke(
                                     selectedView == .renderInspector
-                                        ? Color.orange.opacity(0.55)
+                                        ? Color.purple.opacity(0.55)
                                         : Color.white.opacity(0.22),
                                     lineWidth: 1
                                 )
@@ -122,7 +122,7 @@ struct ContentView: View {
                 Text(engine.statusTitle)
                     .font(.system(.caption2, design: .monospaced).weight(.semibold))
                     .tracking(1.7)
-                    .foregroundStyle(engine.isPlaying ? Color.orange : Color.secondary)
+                    .foregroundStyle(engine.isPlaying ? Color.purple : Color.secondary)
             }
 
             PerformanceWaveform(
@@ -138,7 +138,7 @@ struct ContentView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(engine.isPlaying ? Color.orange : Color.white)
+                        .fill(engine.isPlaying ? Color.purple : Color.white)
                         .frame(width: 94, height: 94)
                     Image(systemName: engine.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 28, weight: .bold))
@@ -198,7 +198,7 @@ private struct PerformanceWaveform: View {
                 )
                 let played = x <= progressX
                 let color = played && active
-                    ? Color.orange.opacity(0.88)
+                    ? Color.purple.opacity(0.88)
                     : Color.white.opacity(active ? 0.24 : 0.13)
                 context.fill(
                     Path(roundedRect: rect, cornerRadius: rect.width * 0.5),
