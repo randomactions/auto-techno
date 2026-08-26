@@ -1757,6 +1757,11 @@ package enum PhraseInterestEvaluator {
 package struct AutonomousSessionDirector: Equatable, Sendable {
     package static let bpm = 130.0
     package static let defaultSeed: UInt64 = 48_291
+    /// One rejected candidate may be replaced only at a later repeated phrase
+    /// boundary. The bounded ordinal keeps those serial proposals replayable
+    /// and prevents a deterministic rejection from resubmitting identical PCM.
+    package static let maximumQualityRetryOrdinal =
+        AutonomousQualityRetryContinuation.maximumOrdinal
     package let rootSeed: UInt64
 
     package init(rootSeed: UInt64 = Self.defaultSeed) {
@@ -1771,11 +1776,26 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
     /// Quality evaluation may correct this same plan once, but it never asks
     /// the director for a parallel substitute.
     package func plan(from state: AutonomousSessionState) -> AutonomousPhrasePlan {
+        plan(from: state, qualityRetryOrdinal: 0)
+    }
+
+    /// Resolves one serial post-rejection proposal. Ordinal zero is exactly the
+    /// original plan. Positive ordinals preserve session identity, structural
+    /// intent, debt, and long-horizon ownership while varying only deterministic
+    /// phrase-local realization. No two candidates coexist or compete.
+    package func plan(
+        from state: AutonomousSessionState,
+        qualityRetryOrdinal: Int
+    ) -> AutonomousPhrasePlan {
         let selection = nextSelection(state: state)
         return makePlan(
             state: state,
             kind: selection.phraseKind,
-            longHorizonSelection: selection
+            longHorizonSelection: selection,
+            qualityRetryOrdinal: min(
+                Self.maximumQualityRetryOrdinal,
+                max(0, qualityRetryOrdinal)
+            )
         )
     }
 
@@ -1883,7 +1903,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
     private func makePlan(
         state: AutonomousSessionState,
         kind: AutonomousPhraseKind,
-        longHorizonSelection: LongHorizonPhraseSelection
+        longHorizonSelection: LongHorizonPhraseSelection,
+        qualityRetryOrdinal: Int
     ) -> AutonomousPhrasePlan {
         let start = state.memory.totalBars
         let energyCoordination = LongHorizonEnergyCoordination.resolving(
@@ -1894,7 +1915,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         let baseLength = 4 + Int(seed(
             state: state,
             domain: 0xF4A5E,
-            index: 0
+            index: qualityRetryOrdinal
         ) % 13)
         let structuralKind = kind == .majorBreak || kind == .energyRelease || kind == .identityReturn
         let barsToMacroBoundary = 16 - (start % 16)
@@ -1910,7 +1931,11 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         case .energyRelease: mutationAmount = 0.07
         case .identityReturn: mutationAmount = 0.045
         }
-        let phraseSeed = seed(state: state, domain: 0x51A7E, index: 0)
+        let phraseSeed = seed(
+            state: state,
+            domain: 0x51A7E,
+            index: qualityRetryOrdinal
+        )
         let intent = MusicalIntent.mutated(state.intent, seed: phraseSeed, amount: mutationAmount)
             .preservingCorrelations()
         let scene = TechnoScene(intent: intent, seed: state.identitySeed, bpm: Self.bpm)

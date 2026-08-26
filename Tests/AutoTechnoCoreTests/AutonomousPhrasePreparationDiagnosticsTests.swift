@@ -143,4 +143,69 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
                 CanonicalJourneyCheckpoint.longContinuation)
         #expect(observation.isComplete)
     }
+
+    @Test("Rejected candidates receive bounded deterministic serial plans")
+    func qualityRetryPlanIsBoundedAndIdentityPreserving() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let baseline = director.plan(from: state)
+        let retry = director.plan(from: state, qualityRetryOrdinal: 1)
+        let replay = director.plan(from: state, qualityRetryOrdinal: 1)
+        let maximum = director.plan(
+            from: state,
+            qualityRetryOrdinal:
+                AutonomousSessionDirector.maximumQualityRetryOrdinal
+        )
+        let clamped = director.plan(from: state, qualityRetryOrdinal: Int.max)
+
+        #expect(retry == replay)
+        #expect(retry != baseline)
+        #expect(maximum == clamped)
+        #expect(baseline == director.plan(
+            from: state,
+            qualityRetryOrdinal: -1
+        ))
+        #expect(retry.phraseIndex == baseline.phraseIndex)
+        #expect(retry.startBar == baseline.startBar)
+        #expect(retry.kind == baseline.kind)
+        #expect(retry.scene.seed == baseline.scene.seed)
+        #expect(retry.dna == baseline.dna)
+        #expect(retry.longHorizonSelection == baseline.longHorizonSelection)
+        #expect(retry.paidDebtIDs == baseline.paidDebtIDs)
+    }
+
+    @Test("Only calibrated rejection advances bounded retry continuation")
+    func retryContinuationRejectsInvalidAdaptationInputs() {
+        let calibratedRejection = QualityDecision(
+            policyVersion: "test-calibrated-policy",
+            outcome: .rejected,
+            reasonCodes: [.guardrailRegressionV1]
+        )
+        let hardGateRejection = QualityDecision(
+            policyVersion: "test-calibrated-policy",
+            outcome: .rejected,
+            reasonCodes: [.hardGateFailedV1]
+        )
+        var continuation = AutonomousQualityRetryContinuation()
+
+        #expect(continuation.recordingCalibratedRejection(
+            decision: hardGateRejection,
+            targetPhraseIndex: 4
+        ) == continuation)
+        let maximumOrdinal = AutonomousQualityRetryContinuation.maximumOrdinal
+        for expectedOrdinal in 1...maximumOrdinal {
+            continuation = continuation.recordingCalibratedRejection(
+                decision: calibratedRejection,
+                targetPhraseIndex: 4
+            )
+            #expect(continuation.ordinal(for: 4) == expectedOrdinal)
+            #expect(!continuation.exhausted)
+        }
+        continuation = continuation.recordingCalibratedRejection(
+            decision: calibratedRejection,
+            targetPhraseIndex: 4
+        )
+        #expect(continuation.isExhausted(for: 4))
+        #expect(continuation.ordinal(for: 5) == 0)
+    }
 }

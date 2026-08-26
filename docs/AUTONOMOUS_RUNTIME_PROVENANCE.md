@@ -302,13 +302,20 @@ mistaken for a completed feedback system.
    The main actor separately projects the existing successor task, cache, and
    phrase-boundary fallback into one read-only next-phrase status. It reports
    held, queued, preparing, qualified-and-cached, or retrying state together
-   with actual preparation attempts, coherent phrase repeats, and one concise
-   last-failure stage/code. The detached pipeline preserves a bounded list of
-   exact failed guards or calibrated metric names, and the main actor writes
+   with actual preparation attempts, coherent phrase repeats, one concise
+   last-failure stage/code, and an explicit blocked state after all eight
+   calibrated retry variants are rejected. The detached pipeline preserves a
+   bounded list of exact failed guards or calibrated metric values and bounds,
+   and the main actor writes
    that non-PCM context to the local unified log under the
    `successor-preparation` category. These diagnostics observe the canonical
    scheduler only; they do not authorize a plan, alter a deadline, feed quality
    evidence, retain a root seed or PCM, or execute on the callback.
+   A calibrated quality rejection may increment one bounded serial retry ordinal
+   only at a later coherent repeat boundary. The same director and incoming
+   state retain identity, structural kind, debt, and long-horizon ownership while
+   deriving a new phrase-local realization. Ordinal zero remains the original
+   plan; no variants coexist, rank one another, or bypass primary qualification.
    It also owns one scheduled-output feedback coordinator. After an exact
    two-probe mixer/player clock map succeeds, the main-mixer callback copies only
    bounded app-owned native-stereo packets into the preallocated C11 queue. A

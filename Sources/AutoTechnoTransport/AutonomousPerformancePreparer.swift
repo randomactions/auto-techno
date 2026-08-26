@@ -13,6 +13,7 @@ package struct PhrasePreparationKey: Hashable, Sendable {
     package let sampleRate: Double
     package let channelCount: Int
     package let routeRecovery: Bool
+    package let qualityRetryOrdinal: Int
     package let qualityRevision: Int
     package let qualityPolicyVersion: String
     package let qualityControllerFingerprint: String?
@@ -37,13 +38,18 @@ package struct PhrasePreparationKey: Hashable, Sendable {
         incomingLiveMasterStateFingerprint: String,
         pendingLiveMasterProposalFingerprint: String?,
         liveEarliestEligibleFutureSample: Int64?,
-        liveTargetStartSample: Int64?
+        liveTargetStartSample: Int64?,
+        qualityRetryOrdinal: Int = 0
     ) {
         self.sessionSeed = sessionSeed
         self.phraseIndex = phraseIndex
         self.sampleRate = sampleRate
         self.channelCount = channelCount
         self.routeRecovery = routeRecovery
+        self.qualityRetryOrdinal = min(
+            AutonomousSessionDirector.maximumQualityRetryOrdinal,
+            max(0, qualityRetryOrdinal)
+        )
         self.qualityRevision = qualityRevision
         self.qualityPolicyVersion = qualityPolicyVersion
         self.qualityControllerFingerprint = qualityControllerFingerprint
@@ -177,7 +183,11 @@ package enum AutonomousPerformancePreparer {
                 details: requestFailures
             ))
         }
-        let plan = director.plan(from: request.sourceState)
+        let plan = director.plan(
+            from: request.sourceState,
+            qualityRetryOrdinal: request.key.routeRecovery
+                ? 0 : request.key.qualityRetryOrdinal
+        )
         let evaluator = ProfessionalQualityPreparationEvaluator(
             sampleRate: request.key.sampleRate,
             artifacts: artifacts

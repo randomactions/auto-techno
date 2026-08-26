@@ -5,8 +5,19 @@
 Auto Techno proposes one canonical `AutonomousPhrasePlan` at each phrase
 boundary. Detached preparation renders that plan once, reduces its complete
 symbolic and signal evidence, and asks one exact-engine calibrated evaluator for
-the terminal verdict. There is no second plan, comparator, musical substitute,
+the terminal verdict. There is no parallel plan, comparator, musical substitute,
 selector, or permissive shipping evaluator.
+
+If that terminal verdict is a calibrated quality rejection, a later coherent
+repeat boundary may ask the same director for one serial retry ordinal. The
+ordinal preserves incoming session identity, structural kind, debt, long-horizon
+ownership, and continuation while varying deterministic phrase-local realization.
+Ordinal zero is the original plan; at most eight serial variants may be tried.
+Each variant has its own plan, PCM, evidence, and terminal verdict, and the prior
+variant is discarded before the next is proposed. Unavailable evaluation,
+invalid evidence, hard-gate failure, and commit-provenance failure cannot enable
+this adaptation. Eight rejected variants produce an explicit blocked state and
+stop preparation work while transport continues repeating accepted PCM.
 
 The evaluator may request one bounded home-upper-timbre correction. That second
 pass rerenders the same plan from the same incoming render, graph, route, and

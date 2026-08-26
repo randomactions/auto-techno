@@ -68,6 +68,66 @@ package enum QualityDecisionOutcome: String, Codable, Equatable, Sendable {
     case adjusted
 }
 
+/// Ephemeral but replayable continuation for serial proposals after a terminal
+/// calibrated rejection. It is distinct from accepted quality continuation:
+/// rejected evidence never mutates the committed session state.
+package struct AutonomousQualityRetryContinuation: Codable, Equatable, Sendable {
+    package static let schemaVersion = 1
+    package static let maximumOrdinal = 8
+
+    package let schemaVersion: Int
+    package let targetPhraseIndex: Int?
+    package let ordinal: Int
+    package let exhausted: Bool
+
+    package init(
+        targetPhraseIndex: Int? = nil,
+        ordinal: Int = 0,
+        exhausted: Bool = false
+    ) {
+        schemaVersion = Self.schemaVersion
+        self.targetPhraseIndex = targetPhraseIndex.map { max(0, $0) }
+        self.ordinal = min(Self.maximumOrdinal, max(0, ordinal))
+        self.exhausted = exhausted &&
+            self.ordinal == Self.maximumOrdinal &&
+            self.targetPhraseIndex != nil
+    }
+
+    package func ordinal(for targetPhraseIndex: Int) -> Int {
+        self.targetPhraseIndex == targetPhraseIndex ? ordinal : 0
+    }
+
+    package func recordingCalibratedRejection(
+        decision: QualityDecision,
+        targetPhraseIndex: Int
+    ) -> Self {
+        guard targetPhraseIndex >= 0,
+              decision.outcome == .rejected,
+              decision.reasonCodes.contains(.guardrailRegressionV1),
+              !decision.reasonCodes.contains(.hardGateFailedV1),
+              !decision.reasonCodes.contains(.evidenceMissingV1),
+              !decision.reasonCodes.contains(.evidenceNonFiniteV1) else {
+            return self
+        }
+        let current = self.targetPhraseIndex == targetPhraseIndex ? ordinal : 0
+        guard current < Self.maximumOrdinal else {
+            return Self(
+                targetPhraseIndex: targetPhraseIndex,
+                ordinal: Self.maximumOrdinal,
+                exhausted: true
+            )
+        }
+        return Self(
+            targetPhraseIndex: targetPhraseIndex,
+            ordinal: current + 1
+        )
+    }
+
+    package func isExhausted(for targetPhraseIndex: Int) -> Bool {
+        self.targetPhraseIndex == targetPhraseIndex && exhausted
+    }
+}
+
 /// Versioned, durable reason identifiers. Raw values are report wire values;
 /// adding a materially different meaning requires a new suffixed case rather
 /// than silently reinterpreting an existing one.

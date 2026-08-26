@@ -80,10 +80,15 @@ struct AutonomousSessionIdentityTests {
         let first = preparationKey(sessionSeed: 42)
         let replay = preparationKey(sessionSeed: 42)
         let fresh = preparationKey(sessionSeed: 90_909)
+        let adapted = preparationKey(
+            sessionSeed: 42,
+            qualityRetryOrdinal: 1
+        )
 
         #expect(first == replay)
         #expect(first != fresh)
-        #expect(Set([first, replay, fresh]).count == 2)
+        #expect(first != adapted)
+        #expect(Set([first, replay, fresh, adapted]).count == 3)
     }
 
     @Test("Explicit seeds reproduce exactly while fresh seeds change score and PCM")
@@ -97,7 +102,10 @@ struct AutonomousSessionIdentityTests {
         #expect(first.stereoPCMHash != fresh.stereoPCMHash)
     }
 
-    private func preparationKey(sessionSeed: UInt64) -> PhrasePreparationKey {
+    private func preparationKey(
+        sessionSeed: UInt64,
+        qualityRetryOrdinal: Int = 0
+    ) -> PhrasePreparationKey {
         PhrasePreparationKey(
             sessionSeed: sessionSeed,
             phraseIndex: 0,
@@ -112,7 +120,8 @@ struct AutonomousSessionIdentityTests {
             incomingLiveMasterStateFingerprint: "test-live-state",
             pendingLiveMasterProposalFingerprint: nil,
             liveEarliestEligibleFutureSample: nil,
-            liveTargetStartSample: nil
+            liveTargetStartSample: nil,
+            qualityRetryOrdinal: qualityRetryOrdinal
         )
     }
 

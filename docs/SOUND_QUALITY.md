@@ -574,9 +574,13 @@ The target loop is bounded and persistent:
 4. The quality policy evaluates the surviving multidimensional evidence.
 5. The evaluator may request one deterministic home-timbre correction of that
    same plan; otherwise it reaches a terminal verdict after the first pass.
-6. The committed plan, reason-coded evidence, controller state, and policy version
+6. A calibrated rejection may inform one later, serial director proposal after
+   a coherent accepted-PCM repeat. The bounded retry ordinal preserves identity,
+   structural intent, debt, and long-horizon ownership; no proposals coexist or
+   compete, and eight rejected variants stop in an explicit blocked state.
+7. The committed plan, reason-coded evidence, controller state, and policy version
    become continuation input for future preparation.
-7. Final immutable blocks receive a second safety check before scheduling.
+8. Final immutable blocks receive a second safety check before scheduling.
 
 The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
@@ -595,6 +599,9 @@ continuation state. Rejected attempts remain attempt-local.
 
 The production evaluator judges the primary plan directly; qualified or adjusted
 decisions may commit, while rejected or unavailable decisions may not.
+Only a reason-coded calibrated rejection can advance the later serial retry
+ordinal. Unavailable evaluation, hard-gate failure, invalid provenance, and
+commit mismatch repeat accepted PCM without changing the proposal.
 Phrase analysis now streams within an explicit working-memory envelope, with
 independent DFT, chunk-parity, representative-rate, cancellation, and optimized
 fixture evidence. The diverse profile, adversarial suite, and holdout

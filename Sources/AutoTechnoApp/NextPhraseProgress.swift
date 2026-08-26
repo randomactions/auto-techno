@@ -46,6 +46,7 @@ package struct NextPhraseProgress: Equatable, Sendable {
         case preparing
         case ready
         case retrying
+        case blocked
     }
 
     package let stage: Stage
@@ -99,6 +100,20 @@ package struct NextPhraseProgress: Equatable, Sendable {
         )
     }
 
+    package func blocked(
+        targetPhraseNumber: Int,
+        failure: NextPhraseFailure
+    ) -> Self {
+        let counts = counts(for: targetPhraseNumber)
+        return Self(
+            stage: .blocked,
+            targetPhraseNumber: targetPhraseNumber,
+            attemptCount: counts.attempts,
+            repeatCount: counts.repeats,
+            lastFailure: failure
+        )
+    }
+
     package func repeated(targetPhraseNumber: Int) -> Self {
         let counts = counts(for: targetPhraseNumber)
         let retainedStage: Stage = switch stage {
@@ -106,6 +121,7 @@ package struct NextPhraseProgress: Equatable, Sendable {
         case .queued: .queued
         case .held: .held
         case .waiting, .ready, .retrying: .retrying
+        case .blocked: .blocked
         }
         return Self(
             stage: retainedStage,
@@ -139,6 +155,11 @@ package struct NextPhraseProgress: Equatable, Sendable {
             if let lastFailure {
                 parts.append(lastFailure.conciseLabel)
             }
+        case .blocked:
+            parts.append("PREPARATION BLOCKED")
+            if let lastFailure {
+                parts.append(lastFailure.conciseLabel)
+            }
         }
         if attemptCount > 0, stage != .ready || attemptCount > 1 {
             parts.append("TRY \(attemptCount)")
@@ -161,6 +182,7 @@ package struct NextPhraseProgress: Equatable, Sendable {
         case .preparing: "PREPARING"
         case .ready: "READY"
         case .retrying: "RETRYING"
+        case .blocked: "BLOCKED"
         }
     }
 

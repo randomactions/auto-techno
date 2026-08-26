@@ -181,6 +181,8 @@ package final class TechnoEngine: ObservableObject {
     private var activePreparationRequest: PhrasePreparationRequest?
     private var queuedPreparationRequest: PhrasePreparationRequest?
     private var preparationEpoch = AutonomousPreparationEpoch()
+    private var qualityRetryContinuation =
+        AutonomousQualityRetryContinuation()
     private var requestedPlaybackAfterPreparation = false
     /// Survives repeated configuration notifications while the prior detached
     /// task is cancelling, so the interrupted phrase remains the recovery
@@ -375,6 +377,7 @@ package final class TechnoEngine: ObservableObject {
         waveform = Array(repeating: 0.04, count: 64)
         liveRenderSnapshot = .waiting
         nextPhraseProgress = .waiting
+        qualityRetryContinuation = AutonomousQualityRetryContinuation()
         sceneNumber = 1
         currentSection = .groove
         playbackState = .unavailable
@@ -399,7 +402,11 @@ package final class TechnoEngine: ObservableObject {
             forKey: request.key
         ) {
             if let failure = acceptPreparedPhrase(prepared) {
-                markNextPhraseRejected(for: request, failure: failure)
+                markNextPhraseRejected(
+                    for: request,
+                    failure: failure,
+                    qualityDecision: prepared.prepared.qualityDecision
+                )
             }
             return
         }
@@ -442,7 +449,9 @@ package final class TechnoEngine: ObservableObject {
                     if let failure = self.acceptPreparedPhrase(prepared) {
                         self.markNextPhraseRejected(
                             for: request,
-                            failure: failure
+                            failure: failure,
+                            qualityDecision:
+                                prepared.prepared.qualityDecision
                         )
                     }
                 } else if self.queuedPreparationRequest == nil,
@@ -595,6 +604,7 @@ package final class TechnoEngine: ObservableObject {
         }
         sessionState = advancedState
         longHorizonState = phrase.outgoingLongHorizonState
+        qualityRetryContinuation = AutonomousQualityRetryContinuation()
         liveFeedbackRuntime.retainRecentSources(
             currentPhraseIndex: sessionState.phraseIndex
         )
@@ -672,7 +682,10 @@ package final class TechnoEngine: ObservableObject {
                     pendingBinding?.proposal.fingerprint,
                 liveEarliestEligibleFutureSample:
                     pendingBinding?.proposal.earliestEligibleFutureSample,
-                liveTargetStartSample: liveTargetStartSample
+                liveTargetStartSample: liveTargetStartSample,
+                qualityRetryOrdinal: qualityRetryOrdinal(
+                    for: sessionState.phraseIndex
+                )
             ),
             sourceState: sessionState,
             incomingLongHorizonState: longHorizonState,
@@ -693,6 +706,10 @@ package final class TechnoEngine: ObservableObject {
             return nil
         }
         return request.key.phraseIndex + 1
+    }
+
+    private func qualityRetryOrdinal(for phraseIndex: Int) -> Int {
+        qualityRetryContinuation.ordinal(for: phraseIndex)
     }
 
     private func markNextPhraseHeld(for request: PhrasePreparationRequest) {
@@ -725,22 +742,49 @@ package final class TechnoEngine: ObservableObject {
         )
         if let recoveredFailure {
             Self.successorPreparationLogger.notice(
-                "Successor recovered phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) previous-stage=\(recoveredFailure.stage, privacy: .public) previous-code=\(recoveredFailure.code, privacy: .public)"
+                "Successor recovered phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) retry-variant=\(request.key.qualityRetryOrdinal, privacy: .public) previous-stage=\(recoveredFailure.stage, privacy: .public) previous-code=\(recoveredFailure.code, privacy: .public)"
             )
         }
     }
 
     private func markNextPhraseRejected(
         for request: PhrasePreparationRequest,
-        failure: NextPhraseFailure
+        failure: NextPhraseFailure,
+        qualityDecision: QualityDecision? = nil
     ) {
         guard let phraseNumber = nextPhraseNumber(for: request) else { return }
-        nextPhraseProgress = nextPhraseProgress.rejected(
-            targetPhraseNumber: phraseNumber,
-            failure: failure
+        if let qualityDecision {
+            qualityRetryContinuation = qualityRetryContinuation
+                .recordingCalibratedRejection(
+                    decision: qualityDecision,
+                    targetPhraseIndex: request.key.phraseIndex
+                )
+        }
+        let retriesExhausted = qualityRetryContinuation.isExhausted(
+            for: request.key.phraseIndex
         )
+        let terminalQualityFailure = qualityDecision.map {
+            $0.outcome == .qualificationUnavailable ||
+                ($0.outcome == .rejected &&
+                    !qualityRetryContinuation.isExhausted(
+                        for: request.key.phraseIndex
+                    ) &&
+                    qualityRetryContinuation.ordinal(
+                        for: request.key.phraseIndex
+                    ) == request.key.qualityRetryOrdinal)
+        } ?? false
+        let preparationBlocked = retriesExhausted || terminalQualityFailure
+        nextPhraseProgress = preparationBlocked
+            ? nextPhraseProgress.blocked(
+                targetPhraseNumber: phraseNumber,
+                failure: failure
+            )
+            : nextPhraseProgress.rejected(
+                targetPhraseNumber: phraseNumber,
+                failure: failure
+            )
         Self.successorPreparationLogger.error(
-            "Successor failed phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) stage=\(failure.stage, privacy: .public) code=\(failure.code, privacy: .public) details=\(failure.logDetails, privacy: .public)"
+            "Successor failed phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) retry-variant=\(request.key.qualityRetryOrdinal, privacy: .public) blocked=\(preparationBlocked, privacy: .public) exhausted=\(retriesExhausted, privacy: .public) stage=\(failure.stage, privacy: .public) code=\(failure.code, privacy: .public) details=\(failure.logDetails, privacy: .public)"
         )
     }
 
@@ -951,6 +995,7 @@ package final class TechnoEngine: ObservableObject {
         currentPhrase = nil
         liveRenderSnapshot = .waiting
         nextPhraseProgress = .waiting
+        qualityRetryContinuation = AutonomousQualityRetryContinuation()
         queuedPreparationRequest = nil
         resetSchedule()
         playbackState = .preparing
@@ -1338,7 +1383,8 @@ package final class TechnoEngine: ObservableObject {
             liveEarliestEligibleFutureSample:
                 result.binding.proposal.earliestEligibleFutureSample,
             liveTargetStartSample:
-                result.sourceRange.playerSampleRange.upperBound
+                result.sourceRange.playerSampleRange.upperBound,
+            qualityRetryOrdinal: baseRequest.key.qualityRetryOrdinal
         )
         requestPreparation(PhrasePreparationRequest(
             key: correctedKey,
@@ -1440,7 +1486,10 @@ package final class TechnoEngine: ObservableObject {
                 liveTargetStartSample:
                     pendingLiveMasterBinding == nil
                         ? nil
-                        : Int64(nextScheduleSample)
+                        : Int64(nextScheduleSample),
+                qualityRetryOrdinal: qualityRetryOrdinal(
+                    for: sessionState.phraseIndex
+                )
             )
             let sourcePhraseIndex = phrase.prepared.plan.phraseIndex
             let targetPhraseIndex = sourcePhraseIndex + 1
@@ -1513,6 +1562,8 @@ package final class TechnoEngine: ObservableObject {
                 phrase = next
                 sessionState = advancedState
                 longHorizonState = next.outgoingLongHorizonState
+                qualityRetryContinuation =
+                    AutonomousQualityRetryContinuation()
                 liveFeedbackRuntime.retainRecentSources(
                     currentPhraseIndex: sessionState.phraseIndex
                 )
@@ -1537,7 +1588,8 @@ package final class TechnoEngine: ObservableObject {
                 nextPhraseProgress = nextPhraseProgress.repeated(
                     targetPhraseNumber: targetPhraseIndex + 1
                 )
-                if pendingLiveMasterBinding == nil {
+                if pendingLiveMasterBinding == nil,
+                   nextPhraseProgress.stage != .blocked {
                     requestSuccessor(after: phrase)
                 }
             } else {

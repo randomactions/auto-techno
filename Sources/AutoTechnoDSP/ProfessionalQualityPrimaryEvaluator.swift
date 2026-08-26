@@ -296,17 +296,13 @@ package struct ProfessionalQualityPrimaryEvaluator:
             )
         }
         guard result.accepted else {
-            let reportDetails = result.verdicts.flatMap { verdict in
-                verdict.reasons.map {
-                    "\(verdict.checkpoint.rawValue):reason=\($0.rawValue)"
-                } + verdict.failedMetrics.map {
-                    "\(verdict.checkpoint.rawValue):metric=\($0.rawValue)"
-                }
-            }
             return AutonomousCandidatePolicyVerdict(
                 outcome: .rejected,
                 reasonCodes: [.guardrailRegressionV1],
-                diagnosticDetails: reportDetails
+                diagnosticDetails: rejectionDiagnostics(
+                    candidate: selected,
+                    assessment: result
+                )
             )
         }
         return AutonomousCandidatePolicyVerdict(
@@ -345,6 +341,43 @@ package struct ProfessionalQualityPrimaryEvaluator:
             }
         }
         return Array(details.prefix(20))
+    }
+
+    private func rejectionDiagnostics(
+        candidate: AutonomousCandidateEvaluationVector,
+        assessment: ProfessionalQualityCandidateAssessment
+    ) -> [String] {
+        var details: [String] = []
+        for verdict in assessment.verdicts {
+            let checkpointName = verdict.checkpoint.rawValue
+            details.append(contentsOf: verdict.reasons.map {
+                "\(checkpointName):reason=\($0.rawValue)"
+            })
+            let observation = try? ProfessionalQualityObservation(
+                candidate: candidate,
+                engineVersion: QualityQualificationContract.engineVersion,
+                checkpoint: verdict.checkpoint
+            )
+            let checkpointProfile = profile[verdict.checkpoint]
+            for metric in verdict.failedMetrics {
+                guard let value = observation?[metric],
+                      let bounds = checkpointProfile?[metric] else {
+                    details.append(
+                        "\(checkpointName):\(metric.rawValue)=unavailable"
+                    )
+                    continue
+                }
+                let lower = metric.acceptsSaferValuesBelowCalibration
+                    ? metric.semanticMinimum : bounds.lower
+                let upper = metric.acceptsSaferValuesAboveCalibration
+                    ? metric.semanticMaximum : bounds.upper
+                details.append(
+                    "\(checkpointName):\(metric.rawValue)=\(value)" +
+                    " outside \(lower)...\(upper)"
+                )
+            }
+        }
+        return Array(details.prefix(24))
     }
 
     private static func diagnosticDetails(

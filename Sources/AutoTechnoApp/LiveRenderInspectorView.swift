@@ -69,8 +69,7 @@ struct LiveRenderInspectorView: View {
     private var nextPhraseBadge: some View {
         HStack(spacing: 7) {
             Circle()
-                .fill(nextPhraseProgress.stage == .ready
-                    ? Color.green : Color.purple)
+                .fill(nextPhraseColor)
                 .frame(width: 6, height: 6)
             VStack(alignment: .leading, spacing: 1) {
                 Text(nextPhraseProgress.headline)
@@ -86,14 +85,21 @@ struct LiveRenderInspectorView: View {
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
         .background(
-            (nextPhraseProgress.stage == .ready ? Color.green : Color.purple)
-                .opacity(0.10),
+            nextPhraseColor.opacity(0.10),
             in: Capsule()
         )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Next phrase preparation")
         .accessibilityValue(nextPhraseProgress.accessibilityValue)
         .accessibilityIdentifier("next-phrase-progress")
+    }
+
+    private var nextPhraseColor: Color {
+        switch nextPhraseProgress.stage {
+        case .ready: .green
+        case .blocked: .red
+        case .waiting, .held, .queued, .preparing, .retrying: .purple
+        }
     }
 
     private var musicalStatePanel: some View {

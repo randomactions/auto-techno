@@ -43,6 +43,24 @@ struct NextPhraseProgressTests {
         #expect(progress.detail.contains("TRY 2"))
     }
 
+    @Test("Exhausted quality retries become explicitly blocked")
+    func exhaustedRetriesAreBlocked() {
+        let failure = NextPhraseFailure(
+            stage: "commit",
+            code: "quality-rejected"
+        )
+        let progress = NextPhraseProgress.waiting
+            .preparing(targetPhraseNumber: 9)
+            .blocked(targetPhraseNumber: 9, failure: failure)
+            .repeated(targetPhraseNumber: 9)
+
+        #expect(progress.stage == .blocked)
+        #expect(progress.headline == "NEXT P9 · BLOCKED")
+        #expect(progress.detail.contains("PREPARATION BLOCKED"))
+        #expect(progress.detail.contains("COMMIT: QUALITY REJECTED"))
+        #expect(progress.repeatCount == 1)
+    }
+
     @Test("A newly targeted phrase resets old attempts and repeats")
     func newTargetResetsCounters() {
         let previousTarget = NextPhraseProgress.waiting
