@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 31)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 32)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -1304,10 +1304,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 31)
-        #expect(QualityQualificationContract.schemaVersion == 34)
+        #expect(vector.schemaVersion == 32)
+        #expect(QualityQualificationContract.schemaVersion == 35)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v33")
+                "autotechno-canonical-engine.v34")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -1693,7 +1693,7 @@ struct AutonomousCandidateEvaluationTests {
         let events = try #require(bars.first?["events"] as? [[String: Any]])
         let serializedEvent = try #require(events.first)
         #expect(Set(serializedEvent.keys) == Set([
-            "scoreEventIndex", "voice", "step", "role", "intensity",
+            "scoreEventIndex", "voice", "step", "role", "body", "intensity",
             "timingOffsetInSteps", "relocated", "renderedFrameCount",
             "attackFrameCount", "appliedFinalMultiplier", "baseSampleHash",
             "renderedSampleHash", "baseAttackSampleHash",
@@ -1776,6 +1776,12 @@ struct AutonomousCandidateEvaluationTests {
             renderedSampleHash: "fedcba9876543210"
         ).isComplete(sampleRate: 8_000))
         #expect(!fixtureUpperPercussionTailEvent(voice: .percussion)
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureUpperPercussionTailEvent(body: .snare)
+            .isComplete(sampleRate: 8_000))
+        #expect(!fixtureUpperPercussionTailEvent(voice: .clap, body: .native)
+            .isComplete(sampleRate: 8_000))
+        #expect(fixtureUpperPercussionTailEvent(voice: .clap, body: .snare)
             .isComplete(sampleRate: 8_000))
         #expect(!fixtureUpperPercussionTailEvent(baseRMS: .nan).isFinite)
         #expect(!AutonomousUpperPercussionTailBarEvidence(
@@ -3764,7 +3770,7 @@ struct AutonomousCandidateEvaluationTests {
         }
 
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
-            "0faacc38392edc96")
+            "f8e1fb7f6bdd3424")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -3772,7 +3778,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "a844285fd10de68b")
+            "3cb87b7387710407")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -4429,14 +4435,43 @@ struct AutonomousCandidateEvaluationTests {
         renderedEventCount: Int = 1
     ) -> AutonomousKickSourceDynamicsEvidence {
         if renderedEventCount == 0 {
+            let morphology = KickMorphologyResolver.articulation(
+                sessionSeed: 1,
+                absoluteBar: 0
+            )
             return AutonomousKickSourceDynamicsEvidence(
-                render: KickSourceDynamicsRenderEvidence.empty
+                render: KickSourceDynamicsRenderEvidence.empty(
+                    morphology: morphology
+                )
             )
         }
+        let morphology = KickMorphologyResolver.articulation(
+            sessionSeed: 1,
+            absoluteBar: 0
+        )
         return AutonomousKickSourceDynamicsEvidence(
             render: KickSourceDynamicsRenderEvidence(
                 version: KickSourceDynamicsContract.version,
                 antialiasOrder: KickSourceDynamicsContract.antialiasOrder,
+                morphologyVersion: morphology.version,
+                morphologyScoreHash:
+                    KickSourceDynamicsContract.morphologyScoreHash(morphology),
+                morphologyFromHome: morphology.fromHome.rawValue,
+                morphologyToHome: morphology.toHome.rawValue,
+                morphologyStartProgress: morphology.startProgress,
+                morphologyEndProgress: morphology.endProgress,
+                fundamentalStartHz: morphology.start.fundamentalHz,
+                fundamentalEndHz: morphology.end.fundamentalHz,
+                pitchDepthStartHz: morphology.start.pitchDepthHz,
+                pitchDepthEndHz: morphology.end.pitchDepthHz,
+                bodyDecayStartPerSecond:
+                    morphology.start.bodyDecayPerSecond,
+                bodyDecayEndPerSecond: morphology.end.bodyDecayPerSecond,
+                clickLevelStart: morphology.start.noiseClickLevel,
+                clickLevelEnd: morphology.end.noiseClickLevel,
+                bodyDriveStart: morphology.start.bodyDrive,
+                bodyDriveEnd: morphology.end.bodyDrive,
+                morphologyBound: true,
                 renderedEventCount: renderedEventCount,
                 processedSampleCount: 2_560,
                 inputSampleHash: "1111111111111111",
@@ -4721,6 +4756,7 @@ struct AutonomousCandidateEvaluationTests {
         voice: EnsembleVoice = .metallic,
         step: Int = 7,
         role: UpperPercussionTailRole = .foregroundClearance,
+        body: UpperPercussionBody? = nil,
         intensity: Double = 0.6,
         timingOffsetInSteps: Double = 0.08,
         relocated: Bool = false,
@@ -4749,6 +4785,7 @@ struct AutonomousCandidateEvaluationTests {
             voice: voice.rawValue,
             step: step,
             role: role.rawValue,
+            body: (body ?? (voice == .clap ? .clap : .native)).rawValue,
             intensity: intensity,
             timingOffsetInSteps: timingOffsetInSteps,
             relocated: relocated,

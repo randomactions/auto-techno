@@ -41,6 +41,7 @@ reproducible with:
 
 ```bash
 python3 scripts/analyze_youtube_transcripts.py CORPUS_DIRECTORY \
+  --source 'https://www.youtube.com/@hypnotictechnoproduction/videos' \
   --access-date 2026-08-25
 ```
 

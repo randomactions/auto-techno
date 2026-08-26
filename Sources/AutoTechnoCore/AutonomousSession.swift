@@ -531,6 +531,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let climaxHang: ClimaxHangArticulation?
     package let percussionEchoTexture: PercussionEchoTextureArticulation?
     package let harmonicDisclosureRelationship: LongHorizonEnergyRelationship
+    package let kickMorphology: KickMorphologyArticulation
 
     package init(performance: PerformanceBar, ensemble: EnsembleContext,
                  arrangementGesture: ArrangementGesture, percussionGear: PercussionGear,
@@ -550,7 +551,8 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
                  climaxHang: ClimaxHangArticulation? = nil,
                  percussionEchoTexture: PercussionEchoTextureArticulation? = nil,
                  harmonicDisclosureRelationship:
-                    LongHorizonEnergyRelationship = .hold) {
+                    LongHorizonEnergyRelationship = .hold,
+                 kickMorphology: KickMorphologyArticulation? = nil) {
         self.performance = performance
         self.ensemble = ensemble
         self.arrangementGesture = arrangementGesture
@@ -577,7 +579,8 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
             upperPercussionTailArticulations ??
             UpperPercussionTailResolver.articulations(
                 from: ensemble,
-                phraseKind: .identityReturn
+                phraseKind: .identityReturn,
+                performanceCharacter: self.performanceCharacter
             )
         self.modalPercussionArticulations = modalPercussionArticulations.sorted {
             $0.scoreEventIndex < $1.scoreEventIndex
@@ -588,6 +591,11 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.climaxHang = climaxHang
         self.percussionEchoTexture = percussionEchoTexture
         self.harmonicDisclosureRelationship = harmonicDisclosureRelationship
+        self.kickMorphology = kickMorphology ??
+            KickMorphologyResolver.legacyAnchor(
+                sessionSeed: performance.eventSeed,
+                absoluteBar: performance.bar
+            )
     }
 
     package func groovePulse(at step: Int) -> GroovePulseArticulation? {
@@ -813,7 +821,8 @@ package enum KickSyntaxResolver {
             upperPercussionTailArticulations:
                 UpperPercussionTailResolver.articulations(
                     from: ensemble,
-                    phraseKind: phraseKind
+                    phraseKind: phraseKind,
+                    performanceCharacter: resolved.performanceCharacter
                 ),
             modalPercussionArticulations: resolved.modalPercussionArticulations,
             spatialContrast: resolved.spatialContrast,
@@ -829,7 +838,8 @@ package enum KickSyntaxResolver {
                 absoluteBar: resolved.performance.bar
             ),
             harmonicDisclosureRelationship:
-                resolved.harmonicDisclosureRelationship
+                resolved.harmonicDisclosureRelationship,
+            kickMorphology: resolved.kickMorphology
         )
     }
 }
@@ -2044,7 +2054,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             let upperPercussionTailArticulations =
                 UpperPercussionTailResolver.articulations(
                     from: ensemble,
-                    phraseKind: kind
+                    phraseKind: kind,
+                    performanceCharacter: character
                 )
             let percussionEchoTexture = PercussionEchoTextureResolver.articulation(
                 ensemble: ensemble,
@@ -2086,7 +2097,11 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 narrative: narrative,
                 percussionEchoTexture: percussionEchoTexture,
                 harmonicDisclosureRelationship:
-                    energyTarget.harmonicDisclosure
+                    energyTarget.harmonicDisclosure,
+                kickMorphology: KickMorphologyResolver.articulation(
+                    sessionSeed: scene.seed,
+                    absoluteBar: absoluteBar
+                )
             ))
             activeSupportingRoles = narrativeSupportingRolesAfterBoundary(
                 current: activeSupportingRoles,

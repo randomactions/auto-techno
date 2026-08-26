@@ -79,7 +79,9 @@ Status meanings:
 
 ### LH-SND-01 — multi-rate semantic modulation
 
-**Status:** conditional maturation; Stage 8 found no promotion trigger.
+**Status:** partially implemented; AudioReakt promoted the kick-source
+trajectory only; exact engine-v34 primary-v16 and long-horizon-v3 qualification
+passed, while app/runtime verification remains separate.
 
 - **Canonical owner:** the existing score-owned `InstrumentAssignment` color,
   shape, motion, and space coordinates; each current architecture keeps its one
@@ -100,6 +102,11 @@ Status meanings:
   lane, or renderer-side musical choice.
 - **Supersedes if implemented:** the affected architecture's stepped scalar
   projection in place; it must not run beside it.
+
+The implemented `KickMorphologyResolver` is the first bounded realization of
+this capability. It interpolates only the existing kick source across 128-bar
+segments, retains exact endpoint/home evidence, and leaves instrument
+automation maturation conditional.
 
 ### LH-SND-02 — effect dose, cooldown, and recovery evidence
 
@@ -143,7 +150,10 @@ Status meanings:
 
 ### LH-SND-04 — transition and payoff maturation
 
-**Status:** conditional maturation; Stage 8 found no promotion trigger.
+**Status:** partially implemented; AudioReakt promoted kick morphology and
+contextual clap/snare/rim articulation; exact engine-v34 primary-v16 and
+long-horizon-v3 qualification passed, while app/runtime verification remains
+separate.
 
 - **Canonical owner:** dramatic debt, energy-release phrase, anticipation swell,
   spectral cluster, sustained wash, terminal hang, and unchanged kick recovery.
@@ -179,6 +189,12 @@ Status meanings:
 - **Fallback:** current deterministic voice and neutral articulation.
 - **Supersedes:** the affected provisional voice or curve; never add a duplicate
   percussion lane or sample-library dependency.
+
+The implementation replaces the session-static kick parameter set with one
+continuous score trajectory and expands the existing clap event in place with
+three bounded physical bodies. Richer coupled resonators, rolls, material MSEGs,
+and additional percussion voices remain conditional and are not authorized by
+the source sweep.
 
 ### LH-SND-06 — longer harmonic and motif syntax
 
@@ -309,21 +325,21 @@ long-horizon policy does not prove that every provisional DSP is mature, but it
 does prove that this corpus supplies no repeatable failure that authorizes one
 of the replacements below.
 
-The current engine-v33/primary-v15 regeneration pins long-horizon v2 profile
-`064fa15feae8c659`, adversarial suite `ae03b76dd06f5a95`, and disjoint holdout
-`caca721cda969d77`. The earlier engine-v32/primary-v14 fingerprints remain
+The current engine-v34/primary-v16 regeneration pins long-horizon v3 profile
+`3c6b7dfeaa63bd76`, adversarial suite `a0a461a53be020fc`, and disjoint holdout
+`e23e50e67b2dccf7`. Earlier policy fingerprints remain
 historical evidence only. The present channel sweep promotes only LH-SND-09's
 interpolation primitive from a direct 76 dB alias-rejection witness; it does not
 promote a granular side engine, another architecture, or a selectable chain.
 
 | Capability | Evidence checked | Stage 8 classification |
 | --- | --- | --- |
-| LH-SND-01 semantic modulation | per-operator signal deltas at both rates, movement, spectrum, recurrence, and exact home paths | Conditional; no repeated stationary, stepped, or short-period contour failure. |
+| LH-SND-01 semantic modulation | full AudioReakt kick/rumble caption convergence plus minute-three/minute-fifty exact source PCM, endpoint continuity, and multi-rate oracle tests | Kick-source trajectory promoted in place; general instrument modulation remains conditional. |
 | LH-SND-04 transition/payoff | debt/payoff semantics, rise/recovery deltas, effect recovery, and primary-qualified representative phrases | Conditional; development and holdouts pass. Root `135791` has only one observable payoff transition and is insufficient evidence, not a failed transition render. |
-| LH-SND-05 percussion depth | primary-v15 role-local phrase qualification plus long-horizon operator consequence | Conditional; no independent-root attack/body/tail or translation failure cluster. |
+| LH-SND-05 percussion depth | repeated AudioReakt kick and snare/clap technical explanations, prior session-static source probe, distinct deterministic body PCM, and attack/body/tail evidence | Kick morphology plus clap/snare/rim articulation promoted in place; additional percussion lanes and sample dependencies rejected. |
 | LH-SND-06 harmonic/motif syntax | identity recall, periodicity, payoff semantics, and realized operator movement | Conditional; no predictable-cycle or failed-recall result survives with otherwise valid evidence. |
 | LH-SND-07 spatial scene | FDN/effect occupancy, tail recovery, stereo and rate-bound phrase qualification | Conditional; no ratchet, uncleared tail, mono/rate, or depth failure cluster. |
-| LH-SND-08 dynamics/effect body | primary-v15 phrase verdicts, crest/loudness/transient deltas, wet/dry bounds, and live-controller provenance | Conditional; no repeated dynamics or effect-intelligibility failure after valid semantics. |
+| LH-SND-08 dynamics/effect body | primary-v16 phrase verdicts, crest/loudness/transient deltas, wet/dry bounds, and live-controller provenance | Conditional; no repeated dynamics or effect-intelligibility failure after valid semantics. |
 | LH-SND-09 resampling | synthetic A/B alias and passband probes plus exact-engine phrase evidence at representative breakdown checkpoints and both rates | Band-limited interpolation promoted in place from direct alias evidence; click, boundary, transient, latency, stereo-grain, and source-recurrence maturation remains conditional. |
 | LH-SND-10 additional patches | all existing role, register, character, and capability coverage | Not justified; no missing role/register/episode relationship. |
 | LH-SND-11 another architecture | current three architectures under exact profile and holdouts | Not justified; no surviving synthesis-class deficit. |
@@ -347,7 +363,8 @@ the packet.
    initially using the current palette, effects, graph, and neutral paths.
 4. Calibrate development, adversarial, and disjoint holdout journeys.
 5. Select the smallest exact capability whose evidence repeatedly fails. Stage
-   8 selected none because the required repeated causal evidence is absent.
+   8 selected none; the later AudioReakt corpus selected only the fixed kick
+   source and fixed clap body.
 6. Replace its provisional DSP in one vertical slice only after step 5 selects
    one; update this register before and after implementation.
 7. Report structural/signal validation, automated quality qualification,
@@ -357,6 +374,7 @@ the packet.
 
 | Date | Change | Implementation state | Qualification state |
 | --- | --- | --- | --- |
+| 2026-08-26 | Audited all 362 current AudioReakt videos through the authorized transcript workflow. Repeated kick/rumble explanations and cross-corpus snare/clap contexts survived reconciliation; all other synth, preset, effect, chain, automation, and style suggestions map to existing owners or the standalone boundary. Added one continuous four-home kick morphology and contextual clap/snare/rim bodies to existing score events. | `AutoTechnoCore` score decisions plus state-free `AutoTechnoDSP` rendering/evidence; one director, score, kick/clap event loops, graph, App scheduler, route lifecycle, immutable buffer format, and callback contract preserved | Focused Core/DSP multi-rate oracle, continuity, contextual-body, exact PCM, candidate binding, and protected-route tests pass. Primary-v16 `710ec815fed989fb` / `45b2744234e137d8` / `b95f68a1a4771560` and long-horizon-v3 `3c6b7dfeaa63bd76` / `a0a461a53be020fc` / `e23e50e67b2dccf7` regenerated and replayed byte for byte; all 455 serialized release tests pass and the exact release app launches. Listening, route/interruption QA, latency observation, and hardware soak remain separate unclaimed gates |
 | 2026-08-25 | Audited all 148 videos on the live Hypnotic Techno Production page with the bounded `yt-dlp` transcript workflow. Seven videos independently motivated transforming existing material through bounded short slicing/rate/reverse motion. The canonical slice score already owned every creative coordinate, while a direct 18 kHz-at-2x probe exposed linear interpolation folding to a false 12 kHz component at amplitude `0.5`. Replaced that lookup in place with fixed-radius band-limited interpolation; the false component fell to `0.00007865537190809846` without adding a synth, preset, track, effect chain, renderer, selector, or callback work. | `AutoTechnoDSP` detached `AudioSliceRenderer` implementation only, plus exact-engine qualification methodology for conditional neutral evidence; canonical score, continuation, App scheduler, route lifecycle, graph ownership, and realtime handoff unchanged | Primary v15 profile/adversarial/holdout `ff7af0095e7ba020` / `66173a58f449a0ca` / `7f0b78b722d9df74` passed 28 development journeys and 56/56 disjoint holdout observations with zero relationship failures. Long-horizon v2 `064fa15feae8c659` / `ae03b76dd06f5a95` / `caca721cda969d77` accepted four development and two disjoint holdout roots at both rates. Both artifact families replayed byte for byte; listening, real app/route QA, latency observation, and physical soak remain unrun |
 | 2026-08-24 | Added the explicit New Set complete-performance boundary requested for the long-horizon UI. The secondary action reuses the existing shutdown-safe App lifecycle: it stops and quiesces audio/feedback, cancels and invalidates detached work, clears caches and all musical/quality/live/long-horizon continuation, rotates the private root, resets presentation, prepares one fresh canonical phrase, and starts when ready. | App transport/lifecycle and read-only presentation only; resolved score vocabulary, synthesis architectures, patches, DSP, effects, buses, graph, renderer, scheduled-buffer format, and callback unchanged | Focused fresh-session identity/reset suite passed locally; source-level accessible control contract and broader App/scheduling tests are recorded separately. No sound-capability item is promoted; real app/route QA and physical soak remain unrun |
 | 2026-08-24 | Completed Stage 8 evidence-gated sound maturation with a negative promotion decision. The exact engine-v32/primary-v14 profile, all ten rejected adversarial attacks, and both accepted disjoint four-hour holdouts were reconciled against LH-SND-01 and LH-SND-04...09. No repeatable capability-local deficit survives. Root `135791` remains a bounded checkpoint-observability shortfall—one primary-qualified payoff transition from 24 candidate positions—not evidence of failed PCM or a missing synth/effect family. The future promotion packet now requires repeated independent-root, two-rate causal failures with valid score, primary phrase, route, and unrelated-family evidence. | Documentation and qualification-boundary completion only; no score, synthesis architecture, preset, patch, DSP primitive, effect, bus, graph, chain, renderer, scheduler, route, audio buffer, or callback change | Exact bundled artifacts replayed under the matched Xcode toolchain; focused calibrated-policy suite 11/11 passed. App/runtime playback, route/interruption QA, listening, and physical-output soak remain unrun; no sound-capability item is promoted |

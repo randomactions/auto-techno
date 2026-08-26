@@ -6,8 +6,8 @@ import Testing
 
 @Suite("Representative long-horizon policy calibration", .serialized)
 struct LongHorizonPolicyCalibrationIntegrationTests {
-  private let developmentRoots: [UInt64] = [48_291, 77_777, 90_909, 246_813]
-  private let holdoutRoots: [UInt64] = [112_358, 141_421]
+  private let developmentRoots: [UInt64] = [48_291, 77_777, 90_909, 112_358, 246_813]
+  private let holdoutRoots: [UInt64] = [141_421, 173_205]
 
   /// Deliberately expensive and opt-in. Each root supplies a complete
   /// four-hour canonical semantic journey plus exact primary-qualified,
@@ -197,10 +197,10 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     var effectPhrases: [LongHorizonEffectDosePhraseEvidence] = []
     for checkpoint in journey.checkpoints {
       if let operatorKind = checkpoint.plan.longHorizonEnergyCoordination.operatorKind,
-        transitionCount(for: operatorKind, in: signal44.report)
-          >= LongHorizonProfessionalPolicySchema.minimumOperatorTransitionCount,
-        transitionCount(for: operatorKind, in: signal48.report)
-          >= LongHorizonProfessionalPolicySchema.minimumOperatorTransitionCount
+        hasCompleteMetricCoverage(
+          for: operatorKind, in: signal44.report),
+        hasCompleteMetricCoverage(
+          for: operatorKind, in: signal48.report)
       {
         continue
       }
@@ -266,6 +266,10 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
         report.operatorTransitions.allSatisfy {
           $0.transitionCount
             >= LongHorizonProfessionalPolicySchema.minimumOperatorTransitionCount
+            && $0.metricDeltas.allSatisfy {
+              $0.observationCount
+                >= LongHorizonProfessionalPolicySchema.minimumOperatorTransitionCount
+            }
         })
       progress(
         "complete root=\(rootSeed) rate=\(Int(report.sampleRate)) "
@@ -319,16 +323,27 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       && report.operatorTransitions.allSatisfy {
         $0.transitionCount
           >= LongHorizonProfessionalPolicySchema.minimumOperatorTransitionCount
+          && $0.metricDeltas.allSatisfy {
+            $0.observationCount
+              >= LongHorizonProfessionalPolicySchema.minimumOperatorTransitionCount
+          }
       }
   }
 
-  private func transitionCount(
+  private func hasCompleteMetricCoverage(
     for operatorKind: LongHorizonEpisodeOperator,
     in report: LongHorizonSignalTrajectoryReport
-  ) -> Int {
-    report.operatorTransitions.first {
+  ) -> Bool {
+    guard let transition = report.operatorTransitions.first(where: {
       $0.operatorKind == operatorKind
-    }?.transitionCount ?? 0
+    }) else { return false }
+    return transition.transitionCount
+      >= LongHorizonProfessionalPolicySchema.minimumOperatorTransitionCount
+      && transition.metricDeltas.count == LongHorizonSignalMetric.allCases.count
+      && transition.metricDeltas.allSatisfy {
+        $0.observationCount
+          >= LongHorizonProfessionalPolicySchema.minimumOperatorTransitionCount
+      }
   }
 
   private func writeArtifacts(

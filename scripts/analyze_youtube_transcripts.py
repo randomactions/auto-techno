@@ -45,8 +45,25 @@ CATEGORY_TERMS: dict[str, tuple[str, ...]] = {
         "euclidean", "probability",
     ),
     "percussion": (
-        "hi-hat", "hi hat", "hat", "percussion", "drum", "kick", "clap", "rim",
-        "shaker", "tom", "ride", "cymbal", "transient",
+        "hi-hat", "hi hat", "hat", "percussion", "drum", "kick", "snare", "clap",
+        "rim", "rimshot", "shaker", "tom", "conga", "bongo", "ride", "cymbal",
+        "transient",
+    ),
+    "kick_foundation": (
+        "kick", "rumble", "reverb kick", "kick bass", "kick and bass", "kick drum",
+        "punch", "thump", "click layer", "body layer", "kick tail",
+    ),
+    "snare_clap": (
+        "snare", "clap", "rimshot", "rim shot", "snare wire", "snare body",
+        "snare noise",
+    ),
+    "tonal_voice": (
+        "lead", "stab", "pluck", "chord", "pad", "horn", "acid", "303", "arp",
+        "arpeggio", "drone", "sequence", "sequenced synth",
+    ),
+    "timbre_layering": (
+        "layering", "layer", "effect chain", "fx chain", "parallel", "resample",
+        "resampling", "morph", "variation", "texture", "noise layer",
     ),
     "low_end": (
         "bassline", "bass line", "sub bass", "sub-bass", "low end", "low-end", "rumble",
@@ -219,10 +236,53 @@ def find_file(video_dir: Path, suffix: str) -> Path | None:
     return matches[0] if matches else None
 
 
-def metadata_fields(path: Path | None) -> dict[str, object]:
+def load_metadata(path: Path | None) -> dict[str, object]:
     if path is None:
         return {}
-    data = json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def select_english_caption(
+    video_dir: Path,
+    metadata: dict[str, object],
+) -> tuple[Path | None, str | None, str | None]:
+    """Prefer manual English, then original-language automatic English.
+
+    yt-dlp may write both ``.en.vtt`` and ``.en-orig.vtt`` for the same
+    automatic track. Metadata, rather than the filename, is the authority for
+    whether a track is manual or automatic.
+    """
+
+    subtitles = metadata.get("subtitles") or {}
+    automatic = metadata.get("automatic_captions") or {}
+    if not isinstance(subtitles, dict):
+        subtitles = {}
+    if not isinstance(automatic, dict):
+        automatic = {}
+
+    manual_languages = sorted(
+        language for language in subtitles if language == "en" or language.startswith("en-")
+    )
+    automatic_languages = sorted(
+        (language for language in automatic if language == "en" or language.startswith("en-")),
+        key=lambda language: (language != "en-orig", language != "en", language),
+    )
+
+    for kind, languages in (("manual", manual_languages), ("automatic", automatic_languages)):
+        for language in languages:
+            caption = find_file(video_dir, f".{language}.vtt")
+            if caption is not None:
+                return caption, kind, language
+
+    # Preserve bounded coverage for older corpora whose info JSON did not keep
+    # caption dictionaries. This fallback is explicitly reported as unknown.
+    fallback = find_file(video_dir, ".en-orig.vtt") or find_file(video_dir, ".en.vtt")
+    return fallback, "unknown" if fallback else None, "en" if fallback else None
+
+
+def metadata_fields(data: dict[str, object]) -> dict[str, object]:
+    if not data:
+        return {}
     return {
         "upload_date": data.get("upload_date"),
         "timestamp": data.get("timestamp"),
@@ -233,7 +293,7 @@ def metadata_fields(path: Path | None) -> dict[str, object]:
     }
 
 
-def analyze(corpus: Path, access_date: str) -> dict[str, object]:
+def analyze(corpus: Path, access_date: str, source: str) -> dict[str, object]:
     rows = load_inventory(corpus / "inventory.tsv")
     normalized = corpus / "normalized"
     normalized.mkdir(parents=True, exist_ok=True)
@@ -245,8 +305,9 @@ def analyze(corpus: Path, access_date: str) -> dict[str, object]:
         video_id = str(row["id"])
         video_dirs = sorted((corpus / "videos").glob(f"{index:03d}-{video_id}"))
         video_dir = video_dirs[0] if video_dirs else corpus / "__missing__"
-        vtt = find_file(video_dir, ".en.vtt")
         info = find_file(video_dir, ".info.json")
+        metadata = load_metadata(info)
+        vtt, caption_kind, caption_language = select_english_caption(video_dir, metadata)
         cues = parse_vtt(vtt) if vtt else []
         counts: Counter[str] = Counter()
         for cue in cues:
@@ -268,8 +329,10 @@ def analyze(corpus: Path, access_date: str) -> dict[str, object]:
         videos.append(
             {
                 **row,
-                **metadata_fields(info),
+                **metadata_fields(metadata),
                 "caption_status": "english" if cues else "unavailable",
+                "caption_kind": caption_kind if cues else None,
+                "caption_language": caption_language if cues else None,
                 "caption_path": str(vtt.relative_to(corpus)) if vtt else None,
                 "normalized_path": (
                     str(transcript_path.relative_to(corpus)) if cues else None
@@ -283,8 +346,8 @@ def analyze(corpus: Path, access_date: str) -> dict[str, object]:
         )
 
     return {
-        "schema": "autotechno-video-transcript-audit.v1",
-        "source": "https://www.youtube.com/@hypnotictechnoproduction/videos",
+        "schema": "autotechno-video-transcript-audit.v2",
+        "source": source,
         "access_date": access_date,
         "inventory_count": len(rows),
         "english_caption_count": sum(v["caption_status"] == "english" for v in videos),
@@ -299,6 +362,11 @@ def main() -> None:
     parser.add_argument("corpus", type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument(
+        "--source",
+        required=True,
+        help="Canonical channel or playlist URL used to create the inventory",
+    )
+    parser.add_argument(
         "--access-date",
         required=True,
         help="UTC/local research date in YYYY-MM-DD form",
@@ -307,7 +375,7 @@ def main() -> None:
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", args.access_date):
         parser.error("--access-date must use YYYY-MM-DD")
     output = args.output or args.corpus / "audit.json"
-    report = analyze(args.corpus, args.access_date)
+    report = analyze(args.corpus, args.access_date, args.source)
     output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(json.dumps({key: report[key] for key in report if key != "videos"}, indent=2))
 

@@ -755,6 +755,8 @@ private extension AutonomousTypedFingerprint {
             sink.int(articulation.step)
             sink.field("role")
             sink.raw(articulation.role.rawValue)
+            sink.field("body")
+            sink.raw(articulation.body.rawValue)
         }
         sink.field("modalPercussionArticulations")
         sink.collection(value.modalPercussionArticulations.count)
@@ -774,6 +776,48 @@ private extension AutonomousTypedFingerprint {
         sink.field("narrative"); encode(value.narrative, into: &sink)
         sink.field("harmonicDisclosureRelationship")
         sink.raw(value.harmonicDisclosureRelationship.rawValue)
+        sink.field("kickMorphology")
+        encode(value.kickMorphology, into: &sink)
+    }
+
+    static func encode(
+        _ value: KickMorphologyArticulation,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("KickMorphologyArticulation")
+        sink.field("version"); sink.string(value.version)
+        sink.field("absoluteBar"); sink.int(value.absoluteBar)
+        sink.field("segmentIndex"); sink.int(value.segmentIndex)
+        sink.field("fromHome"); sink.raw(value.fromHome.rawValue)
+        sink.field("toHome"); sink.raw(value.toHome.rawValue)
+        sink.field("startProgress"); sink.double(value.startProgress)
+        sink.field("endProgress"); sink.double(value.endProgress)
+        sink.field("start"); encode(value.start, into: &sink)
+        sink.field("end"); encode(value.end, into: &sink)
+    }
+
+    static func encode(
+        _ value: KickMorphologyParameters,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("KickMorphologyParameters")
+        sink.field("fundamentalHz"); sink.double(value.fundamentalHz)
+        sink.field("pitchDepthHz"); sink.double(value.pitchDepthHz)
+        sink.field("fastPitchDepthHz"); sink.double(value.fastPitchDepthHz)
+        sink.field("pitchDecayPerSecond")
+        sink.double(value.pitchDecayPerSecond)
+        sink.field("fastPitchDecayPerSecond")
+        sink.double(value.fastPitchDecayPerSecond)
+        sink.field("bodyDecayPerSecond")
+        sink.double(value.bodyDecayPerSecond)
+        sink.field("subDecayPerSecond"); sink.double(value.subDecayPerSecond)
+        sink.field("secondHarmonicLevel")
+        sink.double(value.secondHarmonicLevel)
+        sink.field("bodyDrive"); sink.double(value.bodyDrive)
+        sink.field("subLevel"); sink.double(value.subLevel)
+        sink.field("noiseClickLevel"); sink.double(value.noiseClickLevel)
+        sink.field("tonalClickLevel"); sink.double(value.tonalClickLevel)
+        sink.field("clickFrequencyHz"); sink.double(value.clickFrequencyHz)
     }
 
     static func encode(

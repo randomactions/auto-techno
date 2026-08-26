@@ -75,7 +75,8 @@ struct UpperPercussionTailDSPTests {
                 scoreEventIndex: $0.scoreEventIndex,
                 voice: $0.voice,
                 step: $0.step,
-                role: .naturalBody
+                role: .naturalBody,
+                body: $0.body
             )
         }
         let neutralBar = replacingTail(
@@ -138,6 +139,62 @@ struct UpperPercussionTailDSPTests {
         #expect(active.closedHatRenderEvidence == neutral.closedHatRenderEvidence)
         #expect(active.instrumentRenderEvidence == neutral.instrumentRenderEvidence)
         #expect(active.dryPercussionSampleHash != neutral.dryPercussionSampleHash)
+    }
+
+    @Test("Clap, snare, and rim bodies produce distinct deterministic PCM")
+    func bodyPCMConsequences() throws {
+        let fixture = try #require(clapResolvedBar())
+        func bar(_ body: UpperPercussionBody) -> ResolvedPerformanceBar {
+            replacingTail(
+                in: fixture.resolved,
+                with: fixture.resolved.upperPercussionTailArticulations.map {
+                    UpperPercussionTailArticulation(
+                        scoreEventIndex: $0.scoreEventIndex,
+                        voice: $0.voice,
+                        step: $0.step,
+                        role: .naturalBody,
+                        body: $0.voice == .clap ? body : .native
+                    )
+                }
+            )
+        }
+        let clap = render(
+            plan: fixture.plan,
+            resolved: bar(.clap),
+            sampleRate: 48_000
+        )
+        let snare = render(
+            plan: fixture.plan,
+            resolved: bar(.snare),
+            sampleRate: 48_000
+        )
+        let rim = render(
+            plan: fixture.plan,
+            resolved: bar(.rim),
+            sampleRate: 48_000
+        )
+        let replay = render(
+            plan: fixture.plan,
+            resolved: bar(.snare),
+            sampleRate: 48_000
+        )
+        let bodies = [clap, snare, rim].compactMap {
+            $0.upperPercussionTailRenderEvidence.first { $0.voice == .clap }
+        }
+
+        #expect(bodies.map(\.body) == [.clap, .snare, .rim])
+        #expect(Set(bodies.map(\.baseSampleHash)).count == 3)
+        #expect(Set([clap.dryPercussionSampleHash,
+                     snare.dryPercussionSampleHash,
+                     rim.dryPercussionSampleHash]).count == 3)
+        #expect(bodies.allSatisfy {
+            $0.finite && $0.basePeak > 0 && $0.baseRMS > 0 &&
+                $0.baseAttackRMS > 0 && $0.baseTailRMS > 0 &&
+                $0.baseSampleHash == $0.renderedSampleHash
+        })
+        #expect(snare.dryPercussionSampleHash == replay.dryPercussionSampleHash)
+        #expect(snare.upperPercussionTailRenderEvidence ==
+                replay.upperPercussionTailRenderEvidence)
     }
 
     @Test("Clearance preserves an 8 ms attack and reaches the bounded tail")
@@ -274,6 +331,25 @@ struct UpperPercussionTailDSPTests {
         return nil
     }
 
+    private func clapResolvedBar() -> (
+        seed: UInt64,
+        plan: AutonomousPhrasePlan,
+        resolved: ResolvedPerformanceBar
+    )? {
+        for seed in UInt64(1)...128 {
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            let plan = director.plan(from: director.initialState())
+            if let resolved = plan.resolvedBars.first(where: { bar in
+                bar.upperPercussionTailArticulations.contains {
+                    $0.voice == .clap
+                }
+            }) {
+                return (seed, plan, resolved)
+            }
+        }
+        return nil
+    }
+
     private func replacingTail(
         in source: ResolvedPerformanceBar,
         with articulations: [UpperPercussionTailArticulation]
@@ -295,7 +371,10 @@ struct UpperPercussionTailDSPTests {
             spatialContrast: source.spatialContrast,
             narrative: source.narrative,
             kickSyntaxRole: source.kickSyntaxRole,
-            percussionEchoTexture: source.percussionEchoTexture
+            percussionEchoTexture: source.percussionEchoTexture,
+            harmonicDisclosureRelationship:
+                source.harmonicDisclosureRelationship,
+            kickMorphology: source.kickMorphology
         )
     }
 

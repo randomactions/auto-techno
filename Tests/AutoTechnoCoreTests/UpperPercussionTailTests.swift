@@ -27,7 +27,8 @@ struct UpperPercussionTailTests {
             scoreEventIndex: source.scoreEventIndex,
             voice: source.voice == .clap ? .openHat : .clap,
             step: source.step,
-            role: source.role
+            role: source.role,
+            body: source.voice == .clap ? .native : .clap
         )
 
         let forgedRejected = [missing, duplicate, retargeted].map {
@@ -56,7 +57,8 @@ struct UpperPercussionTailTests {
             voice: source.voice,
             step: source.step,
             role: source.role == .naturalBody ?
-                .foregroundClearance : .naturalBody
+                .foregroundClearance : .naturalBody,
+            body: source.body
         )
         var changedBars = plan.resolvedBars
         changedBars[barIndex] = replacingBar(
@@ -80,7 +82,8 @@ struct UpperPercussionTailTests {
             for resolved in plan.resolvedBars {
                 let expected = UpperPercussionTailResolver.articulations(
                     from: resolved.ensemble,
-                    phraseKind: plan.kind
+                    phraseKind: plan.kind,
+                    performanceCharacter: resolved.performanceCharacter
                 )
                 #expect(resolved.upperPercussionTailArticulations == expected)
                 sawForegroundClearance = sawForegroundClearance || expected.contains {
@@ -117,6 +120,39 @@ struct UpperPercussionTailTests {
         #expect(articulations.allSatisfy {
             $0.role == .foregroundClearance
         })
+    }
+
+    @Test("One clap event resolves contextual clap, snare, and rim bodies")
+    func contextualBodyVocabulary() {
+        let ensemble = context(
+            focusRole: .percussion,
+            events: [event(.clap, step: 4), event(.openHat, step: 10)]
+        )
+        let clap = UpperPercussionTailResolver.articulations(
+            from: ensemble,
+            phraseKind: .lock,
+            performanceCharacter: .hypnoticLock
+        )
+        let snare = UpperPercussionTailResolver.articulations(
+            from: ensemble,
+            phraseKind: .energyRelease,
+            performanceCharacter: .peakDrive
+        )
+        let rim = UpperPercussionTailResolver.articulations(
+            from: ensemble,
+            phraseKind: .majorBreak,
+            performanceCharacter: .brokenSuspension
+        )
+        let identity = UpperPercussionTailResolver.articulations(
+            from: ensemble,
+            phraseKind: .identityReturn,
+            performanceCharacter: .peakDrive
+        )
+
+        #expect(clap.map(\.body) == [.clap, .native])
+        #expect(snare.map(\.body) == [.snare, .native])
+        #expect(rim.map(\.body) == [.rim, .native])
+        #expect(identity.map(\.body) == [.clap, .native])
     }
 
     @Test("Featured, piled-up, and identity material stays natural")

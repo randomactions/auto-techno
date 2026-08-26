@@ -181,7 +181,8 @@ package enum FoundationRhythmicRelationResolver {
             upperPercussionTailArticulations:
                 UpperPercussionTailResolver.articulations(
                     from: ensemble,
-                    phraseKind: phraseKind
+                    phraseKind: phraseKind,
+                    performanceCharacter: resolved.performanceCharacter
                 ),
             modalPercussionArticulations:
                 ModalPercussionResolver.foundationArticulations(
@@ -204,7 +205,8 @@ package enum FoundationRhythmicRelationResolver {
                 absoluteBar: resolved.performance.bar
             ),
             harmonicDisclosureRelationship:
-                resolved.harmonicDisclosureRelationship
+                resolved.harmonicDisclosureRelationship,
+            kickMorphology: resolved.kickMorphology
         )
     }
 

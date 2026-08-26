@@ -1010,6 +1010,10 @@ struct QualityQualificationFoundationTests {
             bindingValid: true,
             finite: true
         )
+        let kickMorphology = KickMorphologyResolver.articulation(
+            sessionSeed: 1,
+            absoluteBar: 0
+        )
         let vector = AutonomousCandidateEvaluationVector(
             planFingerprint: planFingerprint,
             graphFingerprint: graphFingerprint,
@@ -1068,6 +1072,33 @@ struct QualityQualificationFoundationTests {
                         version: KickSourceDynamicsContract.version,
                         antialiasOrder:
                             KickSourceDynamicsContract.antialiasOrder,
+                        morphologyVersion: kickMorphology.version,
+                        morphologyScoreHash:
+                            KickSourceDynamicsContract.morphologyScoreHash(
+                                kickMorphology
+                            ),
+                        morphologyFromHome:
+                            kickMorphology.fromHome.rawValue,
+                        morphologyToHome: kickMorphology.toHome.rawValue,
+                        morphologyStartProgress:
+                            kickMorphology.startProgress,
+                        morphologyEndProgress: kickMorphology.endProgress,
+                        fundamentalStartHz:
+                            kickMorphology.start.fundamentalHz,
+                        fundamentalEndHz: kickMorphology.end.fundamentalHz,
+                        pitchDepthStartHz:
+                            kickMorphology.start.pitchDepthHz,
+                        pitchDepthEndHz: kickMorphology.end.pitchDepthHz,
+                        bodyDecayStartPerSecond:
+                            kickMorphology.start.bodyDecayPerSecond,
+                        bodyDecayEndPerSecond:
+                            kickMorphology.end.bodyDecayPerSecond,
+                        clickLevelStart:
+                            kickMorphology.start.noiseClickLevel,
+                        clickLevelEnd: kickMorphology.end.noiseClickLevel,
+                        bodyDriveStart: kickMorphology.start.bodyDrive,
+                        bodyDriveEnd: kickMorphology.end.bodyDrive,
+                        morphologyBound: true,
                         renderedEventCount: 1,
                         processedSampleCount: 2_560,
                         inputSampleHash: "1111111111111111",

@@ -70,6 +70,7 @@ package struct UpperPercussionTailRenderEvidence: Equatable, Sendable {
     package let voice: EnsembleVoice
     package let step: Int
     package let role: UpperPercussionTailRole
+    package let body: UpperPercussionBody
     package let eventIntensity: Double
     package let timingOffsetInSteps: Double
     package let relocated: Bool
@@ -209,6 +210,7 @@ struct UpperPercussionTailEvidenceAccumulator {
             voice: articulation.voice,
             step: articulation.step,
             role: articulation.role,
+            body: articulation.body,
             eventIntensity: event.intensity,
             timingOffsetInSteps: timingOffsetInSteps,
             relocated: event.relocated,

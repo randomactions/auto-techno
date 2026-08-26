@@ -20,12 +20,12 @@ independently randomizing layers. Identity return resolves to Hypnotic Lock.
 
 | Character | Structural use | Foundation behaviors | Coordinated foreground | Rhythmic consequence |
 | --- | --- | --- | --- | --- |
-| Hypnotic Lock | Lock and identity return | Sub Pulse, Monotone | Stable motif with restrained support | Session-identity kick cell |
-| Acid Pressure | Contrast or release | Monotone, Point | Acid Sequence protagonist, Acid Thread shadow, bounded response | Stable four-on-floor pressure |
-| Peak Drive | Energy release | Point, Pump | Bright single hook applied to the narrative's admitted foreground | Quarter-note kick authority, bounded turnaround pickup |
-| Broken Suspension | Contrast or major break | Kick Tail, Tuned Percussive | Existing admitted roles use broken percussion and dust/metal interpretations | Existing two-step/jungle vocabulary, thinned inside major breaks |
-| Ambient Drift | Major break | Absent, Kick Tail | The existing break atmosphere and transition use Dust Cloud interpretations | Sparse downbeat, with a bounded structural return marker |
-| Melodic Glow | Lock or contrast | Sub Pulse, Point | North Star melody, Dark Chord shadow/atmosphere, bounded response | Session-identity kick cell beneath the tonal protagonist |
+| Hypnotic Lock | Lock and identity return | Sub Pulse, Monotone | Stable motif with restrained support | Session-identity kick cell; clap body when present |
+| Acid Pressure | Contrast or release | Monotone, Point | Acid Sequence protagonist, Acid Thread shadow, bounded response | Stable four-on-floor pressure; clap body when present |
+| Peak Drive | Energy release | Point, Pump | Bright single hook applied to the narrative's admitted foreground | Quarter-note kick authority, bounded turnaround pickup, snare body when present |
+| Broken Suspension | Contrast or major break | Kick Tail, Tuned Percussive | Existing admitted roles use broken percussion and dust/metal interpretations | Existing two-step/jungle vocabulary and rim body, thinned inside major breaks |
+| Ambient Drift | Major break | Absent, Kick Tail | The existing break atmosphere and transition use Dust Cloud interpretations | Sparse downbeat and rim body, with a bounded structural return marker |
+| Melodic Glow | Lock or contrast | Sub Pulse, Point | North Star melody, Dark Chord shadow/atmosphere, bounded response | Session-identity kick cell and clap beneath the tonal protagonist |
 
 Energy release has one narrow score-owned exception to the otherwise per-bar
 kick requirement. When an open dramatic debt, the canonical pullback weak-pulse
@@ -34,6 +34,15 @@ may keep a grounded setup, withhold only kick events and anchors for the next
 two bars, then restore the unchanged step-zero kick as recovery. The phrase
 character, foundation behavior, every non-kick event, transport grid, and
 continuation stay unchanged. No other kickless bar is character-compatible.
+
+Kick timbre is a separate slow score trajectory under every character. Four
+bounded morphology homes move the one existing source through pitch fall,
+body/sub decay, harmonic body, drive, and click coordinates over 128-bar
+segments. The character never selects a kick preset, and the trajectory never
+changes event geometry, foundation ownership, or the protected low-end route.
+Identity remains recognizable because adjacent segments are continuous and
+each complete session deterministically derives the same trajectory from its
+root seed.
 
 The matrix is a compatibility contract. The score does not independently roll
 an acid patch, busy rhythm, dense pad, and peak foundation. A candidate is
@@ -197,7 +206,7 @@ only.
 
 Identity return, force-home correction, missing source material, and ineligible
 role/character combinations resolve every new feature to exact neutral.
-Candidate schema 30 binds per-bar score geometry to source and
+Candidate schema 32 binds per-bar score geometry to source and
 output hashes, trigger/rate counts, pad frequency ratios and PCM, arpeggiator
 counts and exact score/render pitches, harmonic-disclosure stage/function,
 voice-leading bounds, and the existing pad rhythm's filter, send, and

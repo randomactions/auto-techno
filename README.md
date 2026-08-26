@@ -25,6 +25,9 @@ cloud model, or account.
 - one fixed first-order ADAA source conditioner on the existing complete kick
   body, sub, and click sum, before the canonical detector/audible buses, with
   same-pass pre/post transient and spectrum evidence;
+- one score-owned long-horizon kick-morphology trajectory that continuously
+  moves the existing source through bounded pitch, body, sub, drive, harmonic,
+  and click coordinates while retaining exact score-to-PCM evidence;
 - one score-owned protagonist spectral reveal that reuses the existing
   Resonant Mono or Tonal Motion anchor filter, preserves exact home PCM, and
   retains independent score/render plus isolated-anchor evidence;
@@ -49,6 +52,9 @@ cloud model, or account.
 - one post-arbitration upper-percussion tail policy that reuses the existing
   clap, open-hat, and metallic voices, preserves their attack, and shortens
   their release only when another score role owns the foreground;
+- one contextual body vocabulary on that same clap event: identity/hypnotic
+  clap, peak-drive pitched-noise snare, or broken/ambient damped rim, with no
+  added sequencer, track, voice, selector, or callback state;
 - one response-only Voltage Arc patch inside the existing Spectral Texture
   instrument that folds a low antialiased saw into a moving driven upper
   harmonic tail, with exact causal energy evidence and no added track or bus;
@@ -109,7 +115,7 @@ sentence evidence without retaining PCM. Detached accepted phrases now also
 reduce their exact PCM into a DSP-owned, fixed-capacity signal trajectory across
 loudness, crest, spectrum, transients, masking, wet/dry relation, stereo, and
 movement while keeping the semantic target separate. These reports are still
-kept separate and judged by the exact engine-v33/primary-v15 long-horizon
+kept separate and judged by the exact engine-v34/primary-v16 long-horizon
 artifacts. Detached preparation carries one fixed-capacity active-rate
 observation with the immutable successor and can emit one reason-coded
 preserve/recover decision for an eligible unscheduled future phrase. The App
@@ -117,9 +123,10 @@ commits that decision with musical, quality, and live continuation state as one
 transaction; route recovery restores the interrupted phrase's incoming
 observation so evidence is not counted twice. No PCM enters the observation and
 no long-horizon analysis or decision runs in the realtime callback. The Stage 8
-sound-maturation audit found no repeated capability-local deficit in the exact
-development, adversarial, or disjoint holdout evidence, so it promoted no new
-synth, patch, DSP primitive, effect, bus, chain, or renderer.
+promotion boundary remains active. The later complete AudioReakt audit supplied
+repeated technical claims and deterministic local deficits only for the fixed
+session-long kick source and fixed clap body; both were expanded in place
+without adding an engine, bus, renderer, selector, or fixed arrangement.
 
 ## Package
 

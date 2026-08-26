@@ -73,7 +73,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one scheduled-output master-headroom path mapping app-owned mixer PCM to an
   exact phrase occurrence, analyzing one fixed three-second window off the
   callback, and applying a primary-accepted attenuation only to future PCM;
-- canonical engine v33, quality-contract schema 34, candidate-vector schema 31,
+- canonical engine v34, quality-contract schema 35, candidate-vector schema 32,
   and candidate-transaction schema 4
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax, debt-to-recovery climax arc and terminal hang,
@@ -94,7 +94,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - phrase-wide and live-window ITU-R BS.1770-5 loudness, Annex 2 true peak,
   physical-time spectral/trajectory evidence, rate-normalized transient
   detection, explicit bounded working memory, and a complete-checkpoint
-  Professional Evidence v17 report bank;
+  Professional Evidence v18 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
@@ -107,8 +107,8 @@ filter motion, and dry-plus-moving-shadow concepts were reconciled to existing
 score, modulation, echo, chorus, and FDN owners; no duplicate track,
 instrument, modulation lane, or effect chain was added.
 
-The app now installs one exact-engine calibrated primary evaluator v15 from the
-current profile v15 derived from 28 complete journeys, a passing v15 adversarial
+The app now installs one exact-engine calibrated primary evaluator v16 from the
+current profile v16 derived from 28 complete journeys, a passing v15 adversarial
 suite, and a disjoint four-journey holdout qualification v13. Each boundary owns one
 canonical plan and one terminal decision. The evaluator may request one same-
 plan home-timbre correction, for two render passes maximum. Missing artifacts
@@ -170,9 +170,9 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 34, candidate-vector schema 31, and candidate-
+Quality-contract schema 35, candidate-vector schema 32, and candidate-
 transaction schema 4 now bind a versioned transaction across canonical engine
-v33, quality policy, evaluator, candidate plans, route, incoming continuation,
+v34, quality policy, evaluator, candidate plans, route, incoming continuation,
 attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 upper-percussion tail-clearance,
@@ -189,7 +189,7 @@ provenance, make each
 score-to-PCM consequence explicit for the calibrated primary policy. The modal
 foundation projection additionally binds every empty and active bar, score-owned
 articulation, exact dry PCM, protected routing, continuation, pitch, envelope,
-spectral, masking, and pole-stability evidence. Professional Evidence v17 adds
+spectral, masking, and pole-stability evidence. Professional Evidence v18 adds
 standards-based phrase loudness/true peak, bounded streaming
 physical-time spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
@@ -206,7 +206,7 @@ local and untracked.
 
 The runtime now records one complete plan, one initial attempt, and at most one
 home-timbre correction, then atomically carries the terminal evidence, decision,
-and controller state into continuation. The exact engine-v33 profile v15,
+and controller state into continuation. The exact engine-v34 profile v16,
 passing v15 adversarial suite, disjoint holdout qualification v13, non-compensable
 checkpoint policy, and transaction replay are the app path. The former
 single-journey generalization blocker is closed: 28 development journeys and
@@ -263,6 +263,14 @@ control, and retains exact pre/post transient and spectral evidence. A later
 oversampled, multiband, transient-aware, or richer physical kick implementation
 must replace this fixed curve in place under the same score, routing, and
 primary-evidence contract.
+
+The [362-video AudioReakt audit](history/AUDIOREAKT_CHANNEL_AUDIT.md) then
+promoted two bounded deficits only. The same kick source now follows a slow
+four-home score morphology, and the same clap event can resolve clap, snare, or
+rim bodies by performance character. Both paths bind score identity to distinct
+same-pass PCM evidence. Acid, trancy/melodic, hard/schranz, industrial,
+organic/ritual, presets, chains, and automation tutorials reconcile to existing
+owners and do not authorize another engine, track, selector, or template.
 
 ### 6. Qualify long-horizon professional sound
 

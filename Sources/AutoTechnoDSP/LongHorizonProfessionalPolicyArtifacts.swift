@@ -6,14 +6,14 @@ import Foundation
 /// future-boundary adaptation may consume the policy.
 package struct LongHorizonProfessionalPolicyArtifacts: Sendable {
   package static let profileResource =
-    "long-horizon-professional-profile-v2"
+    "long-horizon-professional-profile-v3"
   package static let adversarialResource =
-    "long-horizon-adversarial-suite-v2"
+    "long-horizon-adversarial-suite-v3"
   package static let holdoutResource =
-    "long-horizon-holdout-v2"
-  package static let expectedProfileFingerprint = "064fa15feae8c659"
-  package static let expectedAdversarialFingerprint = "ae03b76dd06f5a95"
-  package static let expectedHoldoutFingerprint = "caca721cda969d77"
+    "long-horizon-holdout-v3"
+  package static let expectedProfileFingerprint = "3c6b7dfeaa63bd76"
+  package static let expectedAdversarialFingerprint = "a0a461a53be020fc"
+  package static let expectedHoldoutFingerprint = "e23e50e67b2dccf7"
 
   package let profile: LongHorizonProfessionalProfile
   package let adversarial: LongHorizonAdversarialSuiteReport

@@ -40,7 +40,7 @@ struct KickSourceDynamicsTests {
         ) == 0)
     }
 
-    @Test("Rendered kick source matches an independent legacy oracle at every rate")
+    @Test("Rendered kick source matches an independent morphology oracle at every rate")
     func renderedEvidenceAcrossRates() throws {
         let director = AutonomousSessionDirector(rootSeed: 1)
         let plan = director.plan(from: director.initialState())
@@ -113,7 +113,81 @@ struct KickSourceDynamicsTests {
         )
         #expect(rendered.kickMix.renderedKickEventCount == 0)
         #expect(rendered.kickMix.sourceDynamics ==
-                KickSourceDynamicsRenderEvidence.empty)
+                KickSourceDynamicsRenderEvidence.empty(
+                    morphology: withoutKick.kickMorphology
+                ))
+    }
+
+    @Test("Minute-three and minute-fifty morphology change exact kick PCM at every route rate")
+    func longHorizonMorphologyChangesPCM() throws {
+        let director = AutonomousSessionDirector(rootSeed: 42)
+        let plan = director.plan(from: director.initialState())
+        let source = try #require(plan.resolvedBars.first { bar in
+            bar.ensemble.events.contains { $0.voice == .kick }
+        })
+        let minuteThreeBar = Int((3.0 * plan.scene.bpm / 4.0).rounded())
+        let minuteFiftyBar = Int((50.0 * plan.scene.bpm / 4.0).rounded())
+        let earlyMorphology = KickMorphologyResolver.articulation(
+            sessionSeed: plan.scene.seed,
+            absoluteBar: minuteThreeBar
+        )
+        let lateMorphology = KickMorphologyResolver.articulation(
+            sessionSeed: plan.scene.seed,
+            absoluteBar: minuteFiftyBar
+        )
+        #expect(earlyMorphology != lateMorphology)
+
+        for sampleRate in [8_000.0, 44_100, 48_000, 96_000] {
+            let early = render(
+                resolved: replacingMorphology(source, with: earlyMorphology),
+                plan: plan,
+                sampleRate: sampleRate,
+                layer: .protectedRhythm
+            )
+            let late = render(
+                resolved: replacingMorphology(source, with: lateMorphology),
+                plan: plan,
+                sampleRate: sampleRate,
+                layer: .protectedRhythm
+            )
+            #expect(early.kickMix.sourceDynamics.inputSampleHash !=
+                    late.kickMix.sourceDynamics.inputSampleHash)
+            #expect(early.kickMix.sourceDynamics.outputSampleHash !=
+                    late.kickMix.sourceDynamics.outputSampleHash)
+            #expect(early.kickMix.sourceDynamics.morphologyScoreHash ==
+                    KickSourceDynamicsContract.morphologyScoreHash(
+                        earlyMorphology
+                    ))
+            #expect(late.kickMix.sourceDynamics.morphologyScoreHash ==
+                    KickSourceDynamicsContract.morphologyScoreHash(
+                        lateMorphology
+                    ))
+            #expect(early.leftSamples.allSatisfy { $0.isFinite })
+            #expect(late.leftSamples.allSatisfy { $0.isFinite })
+        }
+    }
+
+    @Test("Morphology trajectory is deterministic, bounded, and continuous across bars")
+    func morphologyTrajectoryContract() {
+        for seed in [UInt64(1), 42, 1_357_91, UInt64.max] {
+            var previous: KickMorphologyArticulation?
+            for bar in 0..<512 {
+                let first = KickMorphologyResolver.articulation(
+                    sessionSeed: seed,
+                    absoluteBar: bar
+                )
+                let replay = KickMorphologyResolver.articulation(
+                    sessionSeed: seed,
+                    absoluteBar: bar
+                )
+                #expect(first == replay)
+                #expect(first.isComplete)
+                if let previous {
+                    #expect(previous.end == first.start)
+                }
+                previous = first
+            }
+        }
     }
 
     private struct LegacyOracle {
@@ -175,26 +249,44 @@ struct KickSourceDynamicsTests {
             )
             var bodyPhase = 0.0
             var subPhase = 0.0
-            let fundamental = 44.0 + Double(scene.seed % 5) * 0.7
             let level = KickMixBalance.detectorLevel(
                 for: resolved.performance.section
             ) * resolved.performance.accent(at: event.step) * event.intensity
             for frame in 0..<frameCount {
                 let time = Double(frame) / sampleRate
-                let pitch = fundamental + 205 * exp(-time * 48) +
-                    28 * exp(-time * 150)
+                let barDurationSeconds = 240.0 / scene.bpm
+                let barProgress = min(
+                    1,
+                    max(0, Double(event.step) / 16.0 +
+                        time / barDurationSeconds)
+                )
+                let parameters = resolved.kickMorphology.parameters(
+                    atBarProgress: barProgress
+                )
+                let pitch = parameters.fundamentalHz +
+                    parameters.pitchDepthHz * exp(
+                        -time * parameters.pitchDecayPerSecond
+                    ) + parameters.fastPitchDepthHz * exp(
+                        -time * parameters.fastPitchDecayPerSecond
+                    )
                 bodyPhase += 2 * .pi * pitch / sampleRate
-                subPhase += 2 * .pi * fundamental / sampleRate
+                subPhase += 2 * .pi * parameters.fundamentalHz / sampleRate
                 let attack = min(1, time / 0.0012)
-                let bodyEnvelope = attack * exp(-time * 17.5)
-                let subEnvelope = min(1, time / 0.006) * exp(-time * 12.5)
+                let bodyEnvelope = attack * exp(
+                    -time * parameters.bodyDecayPerSecond
+                )
+                let subEnvelope = min(1, time / 0.006) * exp(
+                    -time * parameters.subDecayPerSecond
+                )
                 let body = tanh((sin(bodyPhase) +
-                    sin(bodyPhase * 2) * 0.075) * 1.22) * bodyEnvelope
-                let sub = sin(subPhase) * subEnvelope * 0.22
+                    sin(bodyPhase * 2) * parameters.secondHarmonicLevel) *
+                    parameters.bodyDrive) * bodyEnvelope
+                let sub = sin(subPhase) * subEnvelope * parameters.subLevel
                 let transientEnvelope = exp(-time * 1_050)
                 let transient = frame < Int(sampleRate * 0.0045)
-                    ? ((random.unit() * 2 - 1) * 0.08 +
-                        sin(2 * .pi * 2_800 * time) * 0.055) *
+                    ? ((random.unit() * 2 - 1) * parameters.noiseClickLevel +
+                        sin(2 * .pi * parameters.clickFrequencyHz * time) *
+                            parameters.tonalClickLevel) *
                         transientEnvelope
                     : 0
                 let sample = Float((body + sub + transient) * level)
@@ -312,6 +404,37 @@ struct KickSourceDynamicsTests {
             narrative: source.narrative,
             kickSyntaxRole: .withheld,
             percussionEchoTexture: source.percussionEchoTexture
+        )
+    }
+
+    private func replacingMorphology(
+        _ source: ResolvedPerformanceBar,
+        with morphology: KickMorphologyArticulation
+    ) -> ResolvedPerformanceBar {
+        ResolvedPerformanceBar(
+            performance: source.performance,
+            ensemble: source.ensemble,
+            arrangementGesture: source.arrangementGesture,
+            percussionGear: source.percussionGear,
+            performanceCharacter: source.performanceCharacter,
+            foundationBehavior: source.foundationBehavior,
+            foundationRhythmicRelation: source.foundationRhythmicRelation,
+            foundationCompanion: source.foundationCompanion,
+            pulseEchoEnabled: source.pulseEchoEnabled,
+            interlockChapter: source.interlockChapter,
+            groovePulses: source.groovePulses,
+            closedHatDecayArticulations: source.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                source.upperPercussionTailArticulations,
+            modalPercussionArticulations: source.modalPercussionArticulations,
+            spatialContrast: source.spatialContrast,
+            narrative: source.narrative,
+            kickSyntaxRole: source.kickSyntaxRole,
+            climaxHang: source.climaxHang,
+            percussionEchoTexture: source.percussionEchoTexture,
+            harmonicDisclosureRelationship:
+                source.harmonicDisclosureRelationship,
+            kickMorphology: morphology
         )
     }
 }

@@ -720,6 +720,7 @@ package enum VoiceRenderer {
         var renderedKickEventCount = 0
         var renderedKickStepMask: UInt16 = 0
         var kickSourceDynamics = KickSourceDynamicsEvidenceAccumulator()
+        kickSourceDynamics.bind(morphology: resolved.kickMorphology)
         var renderedBassEventCount = 0
         var renderedBassStepMask: UInt16 = 0
         var renderedBassStartFrames: [Int] = []
@@ -746,6 +747,8 @@ package enum VoiceRenderer {
                 if (0..<16).contains(event.step),
                    kick(&kickDetectorBus, start: start, sampleRate: sampleRate,
                         level: detectorLevel, seed: scene.seed, step: event.step,
+                        barDurationSeconds: 240.0 / scene.bpm,
+                        morphology: resolved.kickMorphology,
                         sourceDynamics: &kickSourceDynamics) {
                     // Count only events that produced a bounded render window,
                     // rather than inferring production from score membership.
@@ -3044,6 +3047,8 @@ package enum VoiceRenderer {
     private static func kick(_ output: inout [Float], start: Int,
                              sampleRate: Double, level: Double,
                              seed: UInt64, step: Int,
+                             barDurationSeconds: Double,
+                             morphology: KickMorphologyArticulation,
                              sourceDynamics:
                                 inout KickSourceDynamicsEvidenceAccumulator) -> Bool {
         guard start >= 0, start < output.count else { return false }
@@ -3054,20 +3059,36 @@ package enum VoiceRenderer {
         var random = SeededGenerator(seed: seed ^ UInt64(step + 1) ^ 0x9E3779B97F4A7C15)
         var bodyPhase = 0.0
         var subPhase = 0.0
-        let fundamental = 44.0 + Double(seed % 5) * 0.7
         for i in 0..<frames {
             let t = Double(i) / sampleRate
-            let pitch = fundamental + 205 * exp(-t * 48) + 28 * exp(-t * 150)
+            let barProgress = min(
+                1,
+                max(0, Double(step) / 16.0 + t / barDurationSeconds)
+            )
+            let parameters = morphology.parameters(atBarProgress: barProgress)
+            let pitch = parameters.fundamentalHz +
+                parameters.pitchDepthHz * exp(
+                    -t * parameters.pitchDecayPerSecond
+                ) +
+                parameters.fastPitchDepthHz * exp(
+                    -t * parameters.fastPitchDecayPerSecond
+                )
             bodyPhase += 2 * Double.pi * pitch / sampleRate
-            subPhase += 2 * Double.pi * fundamental / sampleRate
+            subPhase += 2 * Double.pi * parameters.fundamentalHz / sampleRate
             let attack = min(1, t / 0.0012)
-            let bodyEnvelope = attack * exp(-t * 17.5)
-            let subEnvelope = min(1, t / 0.006) * exp(-t * 12.5)
-            let body = tanh((sin(bodyPhase) + sin(bodyPhase * 2) * 0.075) * 1.22) * bodyEnvelope
-            let sub = sin(subPhase) * subEnvelope * 0.22
+            let bodyEnvelope = attack * exp(-t * parameters.bodyDecayPerSecond)
+            let subEnvelope = min(1, t / 0.006) *
+                exp(-t * parameters.subDecayPerSecond)
+            let body = tanh((
+                sin(bodyPhase) +
+                    sin(bodyPhase * 2) * parameters.secondHarmonicLevel
+            ) * parameters.bodyDrive) * bodyEnvelope
+            let sub = sin(subPhase) * subEnvelope * parameters.subLevel
             let transientEnvelope = exp(-t * 1_050)
             let transient = i < Int(sampleRate * 0.0045)
-                ? ((random.unit() * 2 - 1) * 0.08 + sin(2 * .pi * 2_800 * t) * 0.055) * transientEnvelope
+                ? ((random.unit() * 2 - 1) * parameters.noiseClickLevel +
+                    sin(2 * .pi * parameters.clickFrequencyHz * t) *
+                        parameters.tonalClickLevel) * transientEnvelope
                 : 0
             let sourceSample = Float((body + sub + transient) * level)
             let renderedSample = KickSourceDynamicsContract.process(
@@ -3217,7 +3238,8 @@ package enum VoiceRenderer {
         event: EnsembleResolvedEvent,
         timingOffsetInSteps: Double
     ) -> UpperPercussionTailRenderEvidence? {
-        let frames = min(Int(sampleRate * 0.16), output.count - start)
+        let durationSeconds = articulation.body == .rim ? 0.08 : 0.16
+        let frames = min(Int(sampleRate * durationSeconds), output.count - start)
         guard frames > 0 else { return nil }
         var evidence = UpperPercussionTailEvidenceAccumulator(
             articulation: articulation,
@@ -3238,9 +3260,28 @@ package enum VoiceRenderer {
             }
             let tail = t > 0.026 ? exp(-(t - 0.026) * 25) * 0.34 : 0
             let body = sin(2 * .pi * 185 * t) * exp(-t * 31) * 0.22
-            let baseSample = Float(
+            let clapSample =
                 ((noise - low * 0.72) * (burstEnvelope * 0.46 + tail) + body) * level
-            )
+            let baseSample: Float = switch articulation.body {
+            case .snare:
+                Float(snareBodySample(
+                    time: t,
+                    noise: noise,
+                    lowNoise: low,
+                    brightness: brightness,
+                    level: level
+                ))
+            case .rim:
+                Float(rimBodySample(
+                    time: t,
+                    noise: noise,
+                    lowNoise: low,
+                    brightness: brightness,
+                    level: level
+                ))
+            case .native, .clap:
+                Float(clapSample)
+            }
             let renderedSample = UpperPercussionTailDSPContract.process(
                 sample: baseSample,
                 role: articulation.role,
@@ -3253,6 +3294,48 @@ package enum VoiceRenderer {
             evidence.append(frame: i, base: baseSample, rendered: renderedSample)
         }
         return evidence.evidence
+    }
+
+    /// A bounded pitched membrane plus filtered wire noise. The analytic phase
+    /// is the integral of a 220-to-168 Hz exponential pitch fall, keeping the
+    /// articulation sample-rate independent and state free.
+    private static func snareBodySample(
+        time: Double,
+        noise: Double,
+        lowNoise: Double,
+        brightness: Double,
+        level: Double
+    ) -> Double {
+        let pitchFall = 52.0
+        let pitchRate = 75.0
+        let phase = 2 * .pi * (
+            168 * time + pitchFall * (1 - exp(-pitchRate * time)) / pitchRate
+        )
+        let membrane = sin(phase) * exp(-time * 24) * 0.58
+        let overtone = sin(phase * 1.93 + 0.42) * exp(-time * 38) * 0.16
+        let wireAttack = min(1, time / 0.000_8)
+        let wire = (noise - lowNoise * 0.78) * wireAttack *
+            exp(-time * (17 - brightness * 3)) * 0.62
+        let transient = (noise - lowNoise) * exp(-time * 145) * 0.24
+        return (membrane + overtone + wire + transient) * level
+    }
+
+    /// A short damped shell/edge articulation. It is deliberately leaner than
+    /// the snare so suspension chapters can imply ritual syncopation without
+    /// introducing a second percussion scheduler.
+    private static func rimBodySample(
+        time: Double,
+        noise: Double,
+        lowNoise: Double,
+        brightness: Double,
+        level: Double
+    ) -> Double {
+        let envelope = min(1, time / 0.000_45) * exp(-time * 66)
+        let shell = sin(2 * .pi * (430 + brightness * 36) * time) * 0.66 +
+            sin(2 * .pi * (1_120 + brightness * 180) * time + 0.54) * 0.31 +
+            sin(2 * .pi * 2_480 * time + 1.1) * 0.13
+        let edge = (noise - lowNoise * 0.86) * exp(-time * 115) * 0.32
+        return (shell * envelope + edge) * level
     }
 
     private static func metallicPercussion(

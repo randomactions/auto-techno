@@ -657,6 +657,8 @@ package struct AutonomousAutomaticMixEvidence: Codable, Equatable, Sendable {
     package let gains: [AutonomousRoleGainEvidence]
     package let measuredKickOverFoundationDB: Double?
     package let targetKickOverFoundationDB: Double?
+    package let sourceKickRMS: Double?
+    package let sourceKickActiveRMS: Double?
 
     package init(
         bar: Int,
@@ -664,7 +666,9 @@ package struct AutonomousAutomaticMixEvidence: Codable, Equatable, Sendable {
         foundationCompanion: String,
         gains: [AutonomousRoleGainEvidence],
         measuredKickOverFoundationDB: Double?,
-        targetKickOverFoundationDB: Double?
+        targetKickOverFoundationDB: Double?,
+        sourceKickRMS: Double? = nil,
+        sourceKickActiveRMS: Double? = nil
     ) {
         self.bar = bar
         self.section = section
@@ -673,12 +677,16 @@ package struct AutonomousAutomaticMixEvidence: Codable, Equatable, Sendable {
         self.gains = Array(gains.prefix(MixRole.allCases.count))
         self.measuredKickOverFoundationDB = measuredKickOverFoundationDB
         self.targetKickOverFoundationDB = targetKickOverFoundationDB
+        self.sourceKickRMS = sourceKickRMS
+        self.sourceKickActiveRMS = sourceKickActiveRMS
     }
 
     package var isFinite: Bool {
         gains.allSatisfy { $0.isFinite } &&
             (measuredKickOverFoundationDB?.isFinite ?? true) &&
-            (targetKickOverFoundationDB?.isFinite ?? true)
+            (targetKickOverFoundationDB?.isFinite ?? true) &&
+            (sourceKickRMS?.isFinite ?? true) &&
+            (sourceKickActiveRMS?.isFinite ?? true)
     }
 
     package var isComplete: Bool {
@@ -687,7 +695,19 @@ package struct AutonomousAutomaticMixEvidence: Codable, Equatable, Sendable {
             sourceGainCount == gains.count && gains.count == MixRole.allCases.count &&
             gains.allSatisfy { $0.isComplete } &&
             Set(gains.map { $0.role }) == Set(MixRole.allCases.map { $0.rawValue }) &&
-            (measuredKickOverFoundationDB == nil) == (targetKickOverFoundationDB == nil)
+            (
+                [
+                    measuredKickOverFoundationDB,
+                    targetKickOverFoundationDB,
+                    sourceKickRMS,
+                    sourceKickActiveRMS,
+                ].allSatisfy { $0 == nil } || (
+                    measuredKickOverFoundationDB != nil &&
+                    targetKickOverFoundationDB != nil &&
+                    (sourceKickRMS ?? 0) > 0 &&
+                    (sourceKickActiveRMS ?? 0) > 0
+                )
+            )
     }
 }
 
@@ -699,6 +719,23 @@ package struct AutonomousKickSourceDynamicsEvidence: Codable, Equatable,
         Sendable {
     package let version: String
     package let antialiasOrder: Int
+    package let morphologyVersion: String
+    package let morphologyScoreHash: String
+    package let morphologyFromHome: String
+    package let morphologyToHome: String
+    package let morphologyStartProgress: Double
+    package let morphologyEndProgress: Double
+    package let fundamentalStartHz: Double
+    package let fundamentalEndHz: Double
+    package let pitchDepthStartHz: Double
+    package let pitchDepthEndHz: Double
+    package let bodyDecayStartPerSecond: Double
+    package let bodyDecayEndPerSecond: Double
+    package let clickLevelStart: Double
+    package let clickLevelEnd: Double
+    package let bodyDriveStart: Double
+    package let bodyDriveEnd: Double
+    package let morphologyBound: Bool
     package let renderedEventCount: Int
     package let processedSampleCount: Int
     package let inputSampleHash: String
@@ -720,6 +757,23 @@ package struct AutonomousKickSourceDynamicsEvidence: Codable, Equatable,
     package init(render: KickSourceDynamicsRenderEvidence) {
         version = render.version
         antialiasOrder = render.antialiasOrder
+        morphologyVersion = render.morphologyVersion
+        morphologyScoreHash = render.morphologyScoreHash
+        morphologyFromHome = render.morphologyFromHome
+        morphologyToHome = render.morphologyToHome
+        morphologyStartProgress = render.morphologyStartProgress
+        morphologyEndProgress = render.morphologyEndProgress
+        fundamentalStartHz = render.fundamentalStartHz
+        fundamentalEndHz = render.fundamentalEndHz
+        pitchDepthStartHz = render.pitchDepthStartHz
+        pitchDepthEndHz = render.pitchDepthEndHz
+        bodyDecayStartPerSecond = render.bodyDecayStartPerSecond
+        bodyDecayEndPerSecond = render.bodyDecayEndPerSecond
+        clickLevelStart = render.clickLevelStart
+        clickLevelEnd = render.clickLevelEnd
+        bodyDriveStart = render.bodyDriveStart
+        bodyDriveEnd = render.bodyDriveEnd
+        morphologyBound = render.morphologyBound
         renderedEventCount = render.renderedEventCount
         processedSampleCount = render.processedSampleCount
         inputSampleHash = render.inputSampleHash
@@ -744,7 +798,11 @@ package struct AutonomousKickSourceDynamicsEvidence: Codable, Equatable,
             inputPeak, inputRMS, inputCrestFactor, outputPeak, outputRMS,
             outputCrestFactor, inputAttackRMS, outputAttackRMS, inputBodyRMS,
             outputBodyRMS, inputUpperMidEnergyRatio,
-            outputUpperMidEnergyRatio,
+            outputUpperMidEnergyRatio, morphologyStartProgress,
+            morphologyEndProgress, fundamentalStartHz, fundamentalEndHz,
+            pitchDepthStartHz, pitchDepthEndHz, bodyDecayStartPerSecond,
+            bodyDecayEndPerSecond, clickLevelStart, clickLevelEnd,
+            bodyDriveStart, bodyDriveEnd,
         ].allSatisfy(\.isFinite)
     }
 
@@ -754,6 +812,25 @@ package struct AutonomousKickSourceDynamicsEvidence: Codable, Equatable,
     ) -> Bool {
         guard version == KickSourceDynamicsContract.version,
               antialiasOrder == KickSourceDynamicsContract.antialiasOrder,
+              morphologyVersion == KickMorphologyResolver.version,
+              Self.isSampleHash(morphologyScoreHash),
+              KickMorphologyHome(rawValue: morphologyFromHome) != nil,
+              KickMorphologyHome(rawValue: morphologyToHome) != nil,
+              morphologyFromHome != morphologyToHome,
+              morphologyBound,
+              (0...1).contains(morphologyStartProgress),
+              (0...1).contains(morphologyEndProgress),
+              morphologyEndProgress >= morphologyStartProgress,
+              (38...52).contains(fundamentalStartHz),
+              (38...52).contains(fundamentalEndHz),
+              (140...300).contains(pitchDepthStartHz),
+              (140...300).contains(pitchDepthEndHz),
+              (13...24).contains(bodyDecayStartPerSecond),
+              (13...24).contains(bodyDecayEndPerSecond),
+              (0.045...0.11).contains(clickLevelStart),
+              (0.045...0.11).contains(clickLevelEnd),
+              (1.05...1.42).contains(bodyDriveStart),
+              (1.05...1.42).contains(bodyDriveEnd),
               renderedEventCount == expectedEventCount,
               (0...KickSourceDynamicsContract.maximumEventsPerBar)
                 .contains(renderedEventCount),
@@ -2672,6 +2749,7 @@ package struct AutonomousUpperPercussionTailEventEvidence:
     package let voice: String
     package let step: Int
     package let role: String
+    package let body: String
     package let intensity: Double
     package let timingOffsetInSteps: Double
     package let relocated: Bool
@@ -2700,6 +2778,7 @@ package struct AutonomousUpperPercussionTailEventEvidence:
         voice: String,
         step: Int,
         role: String,
+        body: String,
         intensity: Double,
         timingOffsetInSteps: Double,
         relocated: Bool,
@@ -2727,6 +2806,7 @@ package struct AutonomousUpperPercussionTailEventEvidence:
         self.voice = voice
         self.step = step
         self.role = role
+        self.body = body
         self.intensity = intensity
         self.timingOffsetInSteps = timingOffsetInSteps
         self.relocated = relocated
@@ -2757,6 +2837,7 @@ package struct AutonomousUpperPercussionTailEventEvidence:
             voice: evidence.voice.rawValue,
             step: evidence.step,
             role: evidence.role.rawValue,
+            body: evidence.body.rawValue,
             intensity: evidence.eventIntensity,
             timingOffsetInSteps: evidence.timingOffsetInSteps,
             relocated: evidence.relocated,
@@ -2799,6 +2880,7 @@ package struct AutonomousUpperPercussionTailEventEvidence:
               resolvedVoice == .clap || resolvedVoice == .openHat ||
                 resolvedVoice == .metallic,
               let resolvedRole = UpperPercussionTailRole(rawValue: role),
+              let resolvedBody = UpperPercussionBody(rawValue: body),
               (0..<(16 * 6)).contains(scoreEventIndex),
               (0..<16).contains(step),
               (0...1).contains(intensity),
@@ -2840,6 +2922,12 @@ package struct AutonomousUpperPercussionTailEventEvidence:
               baseAttackSampleHash == renderedAttackSampleHash,
               baseAttackRMS == renderedAttackRMS,
               isFinite else {
+            return false
+        }
+
+        guard resolvedVoice == .clap
+            ? resolvedBody == .clap || resolvedBody == .snare || resolvedBody == .rim
+            : resolvedBody == .native else {
             return false
         }
 
@@ -5462,7 +5550,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 31
+    package static let schemaVersion = 32
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -5859,7 +5947,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                     )
                 },
                 measuredKickOverFoundationDB: block.automaticMix.measuredKickOverFoundationDB,
-                targetKickOverFoundationDB: block.automaticMix.targetKickOverFoundationDB
+                targetKickOverFoundationDB: block.automaticMix.targetKickOverFoundationDB,
+                sourceKickRMS: block.automaticMix.sourceKickRMS,
+                sourceKickActiveRMS: block.automaticMix.sourceKickActiveRMS
             )
         }
         var kickSyntax: [AutonomousKickSyntaxBarEvidence] = []
@@ -5931,6 +6021,11 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 mix.renderedKickEventCount == scoreKickSteps.count &&
                 kickMaskMatches &&
                 mix.audibleGain == expectedAudibleGain &&
+                mix.sourceDynamics.morphologyScoreHash ==
+                    KickSourceDynamicsContract.morphologyScoreHash(
+                        block.resolvedPerformance.kickMorphology
+                    ) &&
+                mix.sourceDynamics.morphologyBound &&
                 mix.detectorToAudibleScaleMatches &&
                 block.kickRenderPassesMatch && kickStemMatches &&
                 withheldContextMatches && syntaxAuthorizationMatches
@@ -6202,7 +6297,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             } == resolved
             let replayed = UpperPercussionTailResolver.articulations(
                 from: resolved.ensemble,
-                phraseKind: plan.kind
+                phraseKind: plan.kind,
+                performanceCharacter: resolved.performanceCharacter
             )
             let matched = rendered.compactMap {
                 evidence -> AutonomousUpperPercussionTailEventEvidence? in
@@ -6224,6 +6320,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                       evidence.voice == event.voice,
                       evidence.step == event.step,
                       evidence.role == articulation.role,
+                      evidence.body == articulation.body,
                       evidence.eventIntensity == event.intensity,
                       evidence.timingOffsetInSteps == expectedTiming,
                       evidence.relocated == event.relocated else {
@@ -7683,15 +7780,22 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             section != .breakdown && companion != .empty &&
             foundation.activeRMS > 0.000_001 && foundation.occupancy >= 0.02
         if let measured = mix.measuredKickOverFoundationDB,
-           let target = mix.targetKickOverFoundationDB {
+           let target = mix.targetKickOverFoundationDB,
+           let sourceKickRMS = mix.sourceKickRMS,
+           let sourceKickActiveRMS = mix.sourceKickActiveRMS {
             guard controllerShouldMeasure,
-                  target == expectedKickTarget(for: companion) else {
+                  target == expectedKickTarget(for: companion),
+                  sourceKickRMS > 0,
+                  sourceKickActiveRMS > 0 else {
                 return false
             }
             let expectedMeasured =
-                20 * log10(max(kick.activeRMS, 0.000_000_001)) - actualKick -
+                20 * log10(max(sourceKickActiveRMS, 0.000_000_001)) -
                 20 * log10(max(foundation.activeRMS, 0.000_000_001))
-            guard abs(measured - expectedMeasured) <= 1e-6 else {
+            let expectedPostRMS = sourceKickRMS * pow(10, actualKick / 20)
+            let postRMSTolerance = max(1e-12, expectedPostRMS * 1e-6)
+            guard abs(measured - expectedMeasured) <= 1e-12,
+                  abs(kick.rms - expectedPostRMS) <= postRMSTolerance else {
                 return false
             }
             let error = target - (measured + expectedKick)

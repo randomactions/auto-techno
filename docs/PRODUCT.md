@@ -111,6 +111,21 @@ only the existing tail; it does not add a track, source, send, or effect chain.
 Same-pass event evidence and calibrated clearance/tail dimensions keep that
 contextual decision attributable.
 
+That same articulation now gives the already-arbitrated clap event a bounded
+contextual body. Hypnotic and identity material keeps the established
+three-burst clap; peak-drive material uses a pitched membrane plus filtered
+wire-noise snare; broken or ambient suspension uses a short damped rim. Hats and
+metallic events remain native. The body is part of the resolved score, typed
+identity, exact PCM evidence, and primary transaction. It adds no event type,
+track, sequencer, preset, user control, or realtime state.
+
+The existing kick source similarly receives a score-owned long-horizon
+morphology rather than a second kick or preset bank. Four bounded homes move
+pitch fall, body/sub decay, harmonic body, source drive, and click coordinates
+continuously across 128-bar segments. Minute-three and minute-fifty source PCM
+therefore differ deterministically while adjacent bar endpoints remain
+continuous and the protected kick route stays canonical.
+
 The protagonist spectral-reveal path follows the same reuse-or-expand rule.
 When an existing anchor is already narratively emerging in a lock or contrast
 phrase, the score may veil and disclose that exact Resonant Mono or Tonal
@@ -250,16 +265,16 @@ it cannot count or spend the same event twice. This adds no user control,
 alternate engine, renderer, graph, audio buffer, microphone input, or callback
 analysis.
 
-Long-horizon Phase 8 applies the evidence gate before sound expansion. The exact
-development, adversarial, and disjoint holdout artifacts expose no repeated
-capability-local sound failure. A root with too few representative payoff
-transitions remains insufficient evidence rather than permission to add a synth,
-patch, effect, or chain. Future sound maturation must replace only a repeatedly
-failed provisional DSP in place after independent-root, two-rate causal
-evidence; the current palette and sound-control surface remain unchanged.
+Long-horizon Phase 8 applies the evidence gate before sound expansion. The
+AudioReakt study crossed that gate only for a fixed session-long kick source and
+a fixed clap body, with repeated caption evidence plus direct deterministic
+probes. Other requested styles and techniques reconcile to current owners and
+remain insufficient permission to add another synth, patch, effect, or chain.
+Future sound maturation must still replace only a repeatedly failed provisional
+DSP in place after independent-root, two-rate causal evidence.
 
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v17 supplies
+policy and its operational gates pass. Professional Evidence v18 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation, pre-kick foundation-pocket, terminal climax-hang,
 and live-controller consequence, explicit

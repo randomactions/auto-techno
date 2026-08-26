@@ -326,18 +326,18 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalQualityObservation.schemaVersion == 14)
         #expect(ProfessionalQualityObservation.observationVersion ==
                 "autotechno-professional-quality-observation.v14")
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 17)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 18)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v17")
+                "autotechno-professional-evidence.v18")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v15")
+                "autotechno-quality.primary-calibrated.v16")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v15")
+                "autotechno-candidate-evaluator.primary-calibrated.v16")
         #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
-                "autotechno-professional-quality-profile.v15")
+                "autotechno-professional-quality-profile.v16")
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 14)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v15")
+                "autotechno-professional-quality-profile.v16")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 15)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
                 "autotechno-professional-quality-adversarial.v15")
@@ -798,8 +798,8 @@ struct ProfessionalQualityCalibrationTests {
             artifacts.profile.deterministicJSON(),
             replacements: [
                 "\"schemaVersion\":14": "\"schemaVersion\":13",
-                "autotechno-professional-quality-profile.v15":
-                    "autotechno-professional-quality-profile.v14",
+                "autotechno-professional-quality-profile.v16":
+                    "autotechno-professional-quality-profile.v15",
             ]
         )
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
@@ -868,7 +868,7 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Bundled v15 primary artifacts activate the exact v15 evaluator")
+    @Test("Bundled v16 primary artifacts activate the exact v16 evaluator")
     func primaryArtifacts() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(artifacts.profile.fingerprint ==

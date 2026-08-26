@@ -1113,7 +1113,10 @@ struct SpatialProtectedRoutingRegressionTests {
             spatialContrast: spatialContrast ?? resolved.spatialContrast,
             narrative: resolved.narrative,
             kickSyntaxRole: resolved.kickSyntaxRole,
-            percussionEchoTexture: resolved.percussionEchoTexture
+            percussionEchoTexture: resolved.percussionEchoTexture,
+            harmonicDisclosureRelationship:
+                resolved.harmonicDisclosureRelationship,
+            kickMorphology: resolved.kickMorphology
         )
     }
 

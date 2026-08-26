@@ -622,7 +622,10 @@ struct PercussionEchoTextureTests {
             narrative: source.narrative,
             kickSyntaxRole: source.kickSyntaxRole,
             climaxHang: source.climaxHang,
-            percussionEchoTexture: articulation
+            percussionEchoTexture: articulation,
+            harmonicDisclosureRelationship:
+                source.harmonicDisclosureRelationship,
+            kickMorphology: source.kickMorphology
         )
     }
 

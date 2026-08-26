@@ -850,7 +850,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v33")
+                "autotechno-canonical-engine.v34")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -2820,6 +2820,8 @@ struct AutonomousPreparationPreflightTests {
         #expect(first.gainsDB[.kick] == -1.35)
         #expect(first.measuredKickOverFoundationDB != nil)
         #expect(first.targetKickOverFoundationDB == 27.5)
+        #expect(first.sourceKickRMS == excessive[.kick]?.rms)
+        #expect(first.sourceKickActiveRMS == excessive[.kick]?.activeRMS)
 
         let beforeBreak = state
         let breakPlan = AutomaticMixBalancer.resolve(
@@ -2830,6 +2832,8 @@ struct AutonomousPreparationPreflightTests {
         )
         #expect(state == beforeBreak)
         #expect(breakPlan.gainsDB[.kick] == beforeBreak.kickCorrectionDB)
+        #expect(breakPlan.sourceKickRMS == nil)
+        #expect(breakPlan.sourceKickActiveRMS == nil)
 
         for _ in 0..<1_024 {
             _ = AutomaticMixBalancer.resolve(
@@ -2980,7 +2984,8 @@ struct AutonomousPreparationPreflightTests {
             interlockChapter: sourceResolved.interlockChapter,
             groovePulses: sourceResolved.groovePulses,
             spatialContrast: sourceResolved.spatialContrast,
-            narrative: sourceResolved.narrative
+            narrative: sourceResolved.narrative,
+            kickMorphology: sourceResolved.kickMorphology
         )
         var changedBars = original.resolvedBars
         changedBars[barIndex] = changedResolved
@@ -3064,7 +3069,8 @@ struct AutonomousPreparationPreflightTests {
             interlockChapter: source.interlockChapter,
             groovePulses: source.groovePulses,
             spatialContrast: source.spatialContrast,
-            narrative: source.narrative
+            narrative: source.narrative,
+            kickMorphology: source.kickMorphology
         )
         var changedBars = original.resolvedBars
         changedBars[barIndex] = changedResolved
@@ -3152,7 +3158,8 @@ struct AutonomousPreparationPreflightTests {
             interlockChapter: source.interlockChapter,
             groovePulses: changedPulses,
             spatialContrast: source.spatialContrast,
-            narrative: source.narrative
+            narrative: source.narrative,
+            kickMorphology: source.kickMorphology
         )
         var changedBars = original.resolvedBars
         changedBars[barIndex] = changedResolved
@@ -3203,7 +3210,8 @@ struct AutonomousPreparationPreflightTests {
             interlockChapter: source.interlockChapter,
             groovePulses: intensityPulses,
             spatialContrast: source.spatialContrast,
-            narrative: source.narrative
+            narrative: source.narrative,
+            kickMorphology: source.kickMorphology
         )
         var intensityBars = original.resolvedBars
         intensityBars[barIndex] = intensityResolved
@@ -3493,7 +3501,8 @@ struct AutonomousPreparationPreflightTests {
             interlockChapter: source.interlockChapter,
             groovePulses: source.groovePulses,
             spatialContrast: .foreground,
-            narrative: source.narrative
+            narrative: source.narrative,
+            kickMorphology: source.kickMorphology
         )
         var dryBars = original.resolvedBars
         dryBars[barIndex] = dryResolved
@@ -3730,7 +3739,8 @@ struct AutonomousPreparationPreflightTests {
             interlockChapter: source.interlockChapter,
             groovePulses: source.groovePulses,
             spatialContrast: source.spatialContrast,
-            narrative: changedNarrative
+            narrative: changedNarrative,
+            kickMorphology: source.kickMorphology
         )
         var changedBars = original.resolvedBars
         changedBars[barIndex] = changedResolved
@@ -3830,12 +3840,28 @@ struct AutonomousPreparationPreflightTests {
             ensemble: source.ensemble,
             arrangementGesture: source.arrangementGesture,
             percussionGear: source.percussionGear,
+            performanceCharacter: source.performanceCharacter,
+            foundationBehavior: source.foundationBehavior,
+            foundationRhythmicRelation:
+                source.foundationRhythmicRelation,
             foundationCompanion: source.foundationCompanion,
             pulseEchoEnabled: source.pulseEchoEnabled,
             interlockChapter: .home,
             groovePulses: source.groovePulses,
+            closedHatDecayArticulations:
+                source.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                source.upperPercussionTailArticulations,
+            modalPercussionArticulations:
+                source.modalPercussionArticulations,
             spatialContrast: source.spatialContrast,
-            narrative: source.narrative
+            narrative: source.narrative,
+            kickSyntaxRole: source.kickSyntaxRole,
+            climaxHang: source.climaxHang,
+            percussionEchoTexture: source.percussionEchoTexture,
+            harmonicDisclosureRelationship:
+                source.harmonicDisclosureRelationship,
+            kickMorphology: source.kickMorphology
         )
         var neutralBars = original.resolvedBars
         neutralBars[barIndex] = neutralResolved

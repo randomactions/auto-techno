@@ -1502,7 +1502,8 @@ package enum AutonomousPhrasePreparer {
         let canonicalUpperPercussionTail =
             UpperPercussionTailResolver.articulations(
                 from: resolved.ensemble,
-                phraseKind: plan.kind
+                phraseKind: plan.kind,
+                performanceCharacter: resolved.performanceCharacter
             )
         let upperPercussionTailIsCanonical =
             resolved.upperPercussionTailArticulations.count <=
@@ -1607,7 +1608,8 @@ package enum AutonomousPhrasePreparer {
                 upperPercussionTailArticulations:
                     UpperPercussionTailResolver.articulations(
                         from: ensemble,
-                        phraseKind: plan.kind
+                        phraseKind: plan.kind,
+                        performanceCharacter: resolved.performanceCharacter
                     ),
                 modalPercussionArticulations:
                     ModalPercussionResolver.foundationArticulations(
@@ -1630,7 +1632,11 @@ package enum AutonomousPhrasePreparer {
                         absoluteBar: resolved.performance.bar
                     ),
                 harmonicDisclosureRelationship:
-                    resolved.harmonicDisclosureRelationship
+                    resolved.harmonicDisclosureRelationship,
+                kickMorphology: KickMorphologyResolver.articulation(
+                    sessionSeed: plan.scene.seed,
+                    absoluteBar: resolved.performance.bar
+                )
             )
         }
         let rhythmicFoundation = FoundationRhythmicRelationResolver.resolve(

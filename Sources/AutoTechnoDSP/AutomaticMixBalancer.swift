@@ -59,15 +59,25 @@ package struct AutomaticMixPlan: Equatable, Sendable {
     package let gainsDB: [MixRole: Double]
     package let measuredKickOverFoundationDB: Double?
     package let targetKickOverFoundationDB: Double?
+    /// Exact pre-fader source measurements used by the controller. Active RMS
+    /// is not invertible from the post-fader stem because its activity gate can
+    /// change sample membership after Float gain; ungated RMS binds the source
+    /// measurement to the rendered post-fader stem instead.
+    package let sourceKickRMS: Double?
+    package let sourceKickActiveRMS: Double?
 
     package init(gainsDB: [MixRole: Double] = [:],
                  measuredKickOverFoundationDB: Double? = nil,
-                 targetKickOverFoundationDB: Double? = nil) {
+                 targetKickOverFoundationDB: Double? = nil,
+                 sourceKickRMS: Double? = nil,
+                 sourceKickActiveRMS: Double? = nil) {
         self.gainsDB = Dictionary(uniqueKeysWithValues: MixRole.allCases.map {
             ($0, gainsDB[$0] ?? 0)
         })
         self.measuredKickOverFoundationDB = measuredKickOverFoundationDB
         self.targetKickOverFoundationDB = targetKickOverFoundationDB
+        self.sourceKickRMS = sourceKickRMS
+        self.sourceKickActiveRMS = sourceKickActiveRMS
     }
 
     package static let unity = AutomaticMixPlan()
@@ -122,7 +132,9 @@ package enum AutomaticMixBalancer {
         return AutomaticMixPlan(
             gainsDB: [.kick: state.kickCorrectionDB],
             measuredKickOverFoundationDB: measuredDifference,
-            targetKickOverFoundationDB: targetDifference
+            targetKickOverFoundationDB: targetDifference,
+            sourceKickRMS: kick.rms,
+            sourceKickActiveRMS: kick.activeRMS
         )
     }
 
