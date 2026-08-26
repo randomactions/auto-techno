@@ -2494,8 +2494,16 @@ The release-mode realtime producer object has exactly one undefined symbol,
 the allowed `memcpy`. `git diff --check` passed and no generated Python bytecode
 remained.
 
-These results establish deterministic offline qualification and optimized
-build/readiness. Publication and exact published-head launch are subsequent
-repository/runtime actions. Listening, real route/interruption QA, latency
-observation, extended runtime observation, and physical-output soak remain
-separate and unclaimed.
+Feature release commit `9d0956a00e9ed19ae8991b794a72020bd05265c9` was
+published directly to `origin/main` and independently verified from the remote
+ref. The exact optimized executable was then launched as PID 82947 from
+`/private/tmp/auto-techno-mordio-release-20260826/arm64-apple-macosx/release/AutoTechno`;
+the previous AudioReakt-build process was stopped by its verified PID first.
+This follow-up records publication/runtime state only and changes no executable
+source or generated artifact.
+
+These results establish deterministic offline qualification, optimized
+build/readiness, publication, and process/path launch verification. They do not
+constitute listening approval. Real route/interruption QA, latency observation,
+extended runtime observation, and physical-output soak remain separate and
+unclaimed.

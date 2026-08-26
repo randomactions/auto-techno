@@ -1,7 +1,7 @@
 # MORDIO granular-memory sound maturation
 
 Date: 2026-08-26
-Status: exact-engine and release validated locally; publication pending
+Status: exact-engine and release validated; feature release published to `origin/main` as `9d0956a`
 
 ## Source and deficit
 
