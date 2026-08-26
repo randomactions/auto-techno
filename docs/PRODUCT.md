@@ -2,11 +2,13 @@
 
 ## Purpose
 
-Auto Techno is a standalone macOS instrument for starting and sustaining one
+Auto Techno is a standalone desktop instrument for starting and sustaining one
 coherent techno performance with one primary transport button. One secondary
-New Set action declares a complete-performance boundary. It is not a DAW,
-sequencer editor, plug-in host, preset browser, engine selector, or collection
-of render experiments.
+New Set action declares a complete-performance boundary on the promoted app
+surface. macOS remains promoted; the native Windows x64 host is a buildable
+release candidate until its feature-parity, app/runtime, and physical-output
+gates pass. It is not a DAW, sequencer editor, plug-in host, preset browser,
+engine selector, or collection of render experiments.
 
 ## Central invariant
 
@@ -346,7 +348,12 @@ advance the canonical score. No failure can enable an unevaluated substitute. Se
 
 ## Product boundary
 
-The package exposes only the `AutoTechno` executable. Core and DSP targets have
-no supported external consumers or source-compatibility promise. Retired
-reference engines, comparison executables, old scene APIs, render profiles, and
-selectable performance models remain outside the product.
+The package exposes only the host-selected `AutoTechno` executable. macOS and
+Windows hosts share the same package-internal preparation, core, and DSP targets;
+they are presentation/output adapters around one score and renderer, not separate
+products. The Windows candidate is not promoted until it also proves the current
+session-boundary, read-only inspection, scheduled-output feedback, route, and soak
+contracts rather than silently defining a reduced second runtime. Core, DSP, and
+transport targets have no supported external consumers or source-compatibility
+promise. Retired reference engines, comparison executables, old scene APIs,
+render profiles, and selectable performance models remain outside the product.

@@ -1,5 +1,6 @@
 import AutoTechnoCore
 @testable import AutoTechnoDSP
+import AutoTechnoTransport
 import Foundation
 import Testing
 
@@ -265,6 +266,55 @@ struct CurrentRuntimeTests {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .deletingLastPathComponent()
+    }
+
+    @Test("Shared platform transport rejects cross-session stale work")
+    func platformTransportPreparation() {
+        let director = AutonomousSessionDirector(rootSeed: 42)
+        let state = director.initialState()
+        let request = PhrasePreparationRequest(
+            key: PhrasePreparationKey(
+                sessionSeed: state.rootSeed &+ 1,
+                phraseIndex: state.phraseIndex,
+                sampleRate: 8_000,
+                channelCount:
+                    QualityQualificationContract.requiredRouteChannelCount,
+                routeRecovery: false,
+                qualityRevision: state.quality.revision,
+                qualityPolicyVersion: state.quality.policyVersion,
+                qualityControllerFingerprint: nil,
+                routeGeneration: 0,
+                incomingLiveMasterRevision:
+                    state.liveMasterHeadroom.revision,
+                incomingLiveMasterStateFingerprint:
+                    state.liveMasterHeadroom.fingerprint,
+                pendingLiveMasterProposalFingerprint: nil,
+                liveEarliestEligibleFutureSample: nil,
+                liveTargetStartSample: nil
+            ),
+            sourceState: state,
+            incomingLongHorizonState: nil,
+            incomingRenderState: RenderState(),
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            pendingLiveMasterBinding: nil
+        )
+
+        let first = AutonomousPerformancePreparer.prepare(
+            request: request,
+            director: director,
+            artifacts: nil,
+            longHorizonArtifacts: nil
+        )
+        let second = AutonomousPerformancePreparer.prepare(
+            request: request,
+            director: director,
+            artifacts: nil,
+            longHorizonArtifacts: nil
+        )
+
+        #expect(first == nil)
+        #expect(second == nil)
     }
 }
 
@@ -620,6 +670,51 @@ struct RepositorySurfaceTests {
             #expect(maturity.contains(required), "Maturity register omits \(required)")
         }
         #expect(roadmap.contains("SOUND_CONCEPT_MATURITY.md"))
+    }
+
+    @Test("Windows audio completion remains fixed atomic work")
+    func windowsCompletionCallbackIsolation() throws {
+        let sourceURL = repositoryRoot
+            .appendingPathComponent("Sources")
+            .appendingPathComponent("AutoTechnoWindowsPlatform")
+            .appendingPathComponent("AutoTechnoWindowsPlatform.c")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let start = try #require(source.range(of: "static void CALLBACK at_wave_out_callback"))
+        let end = try #require(source.range(
+            of: "static void at_remove_audio_node",
+            range: start.upperBound..<source.endIndex
+        ))
+        let callback = String(source[start.lowerBound..<end.lowerBound])
+
+        #expect(callback.contains("InterlockedExchange"))
+        #expect(callback.contains("InterlockedAdd64"))
+        #expect(callback.contains("InterlockedDecrement"))
+        for forbidden in [
+            "malloc(", "calloc(", "free(", "EnterCriticalSection",
+            "WaitFor", "Sleep(", "PostMessage", "waveOutWrite", "printf(",
+        ] {
+            #expect(!callback.contains(forbidden), "Callback contains forbidden work: \(forbidden)")
+        }
+    }
+
+    @Test("Both desktop hosts invoke the shared preparation owner")
+    func desktopHostsUseSharedPreparation() throws {
+        let sources = repositoryRoot.appendingPathComponent("Sources")
+        let macHost = try String(
+            contentsOf: sources
+                .appendingPathComponent("AutoTechnoApp")
+                .appendingPathComponent("TechnoEngine.swift"),
+            encoding: .utf8
+        )
+        let windowsHost = try String(
+            contentsOf: sources
+                .appendingPathComponent("AutoTechnoWindows")
+                .appendingPathComponent("main.swift"),
+            encoding: .utf8
+        )
+        for host in [macHost, windowsHost] {
+            #expect(host.contains("AutonomousPerformancePreparer.prepare("))
+        }
     }
 
     private var repositoryRoot: URL {

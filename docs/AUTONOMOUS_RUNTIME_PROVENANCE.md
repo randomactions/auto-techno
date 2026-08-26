@@ -313,6 +313,18 @@ mistaken for a completed feedback system.
    Only an unscheduled successor can consume that proposal, and only the primary
    evaluator can commit its future controller state. See
    [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
+8. `AutoTechnoTransport` owns the platform-neutral detached planning, rendering,
+   installed-policy evaluation, long-horizon update, and waveform transaction.
+   The macOS app adds only its bounded Render Info projection before scheduling.
+   The Windows host consumes the same immutable prepared phrase through fixed
+   waveOut lookahead. Its completion callback performs only fixed-size atomic
+   bookkeeping; allocation, conversion, submission, cleanup, preparation,
+   continuation, logging, and UI work remain on non-callback queues.
+9. The Windows target is a buildable distribution candidate, not a promoted
+   runtime claim. Promotion still requires native verification of New Set and
+   read-only inspection parity, scheduled-output feedback ownership or the exact
+   canonical fallback contract, route/interruption behavior, clean-machine
+   redistribution, accessibility, and physical-output soak.
 
 ## Implemented percussion-return-texture slice
 

@@ -1,0 +1,56 @@
+name: Windows Distribution
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-distribution-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows-distribution:
+    name: Windows x64 distribution
+    runs-on: windows-2025
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Swift 6.3.3
+        shell: pwsh
+        run: |
+          winget install --id Swift.Toolchain --exact --version 6.3.3 --source winget --accept-package-agreements --accept-source-agreements
+          $swift = Get-ChildItem @("$env:ProgramFiles\Swift", "$env:LocalAppData\Programs\Swift") -Filter swift.exe -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.DirectoryName -match "usr\\bin$" } |
+            Select-Object -First 1
+          if ($null -eq $swift) { throw "Unable to locate swift.exe after installation." }
+          $swift.DirectoryName | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: winget install --id JRSoftware.InnoSetup --exact --source winget --accept-package-agreements --accept-source-agreements
+
+      - name: Show toolchain
+        shell: pwsh
+        run: swift --version
+
+      - name: Build, test, and package
+        shell: pwsh
+        run: .\scripts\build-windows.ps1 -Installer
+
+      - name: Upload Windows distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoTechno-Windows-x64
+          path: |
+            dist/windows/AutoTechno-Windows-x64-*.zip
+            dist/windows/AutoTechno-Windows-x64-Setup.exe
+            dist/windows/AutoTechno-Windows-x64-Setup.exe.sha256
+          if-no-files-found: error
+          retention-days: 14

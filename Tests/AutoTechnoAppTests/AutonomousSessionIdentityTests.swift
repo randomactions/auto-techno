@@ -1,5 +1,6 @@
 import AutoTechnoCore
 import AutoTechnoDSP
+import AutoTechnoTransport
 import Foundation
 import Testing
 @testable import AutoTechnoApp

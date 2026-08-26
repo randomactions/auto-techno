@@ -1,72 +1,9 @@
 import AVFoundation
 import AutoTechnoCore
 import AutoTechnoDSP
+import AutoTechnoTransport
 import Combine
 import Foundation
-
-package struct PhrasePreparationKey: Hashable, Sendable {
-    let sessionSeed: UInt64
-    let phraseIndex: Int
-    /// Exact AVAudioFormat route rate. Rounding here would let nearby
-    /// fractional hardware rates share provenance while playing at different
-    /// speeds.
-    let sampleRate: Double
-    let channelCount: Int
-    let routeRecovery: Bool
-    let qualityRevision: Int
-    let qualityPolicyVersion: String
-    let qualityControllerFingerprint: String?
-    let routeGeneration: Int
-    let incomingLiveMasterRevision: Int
-    let incomingLiveMasterStateFingerprint: String
-    let pendingLiveMasterProposalFingerprint: String?
-    let liveEarliestEligibleFutureSample: Int64?
-    let liveTargetStartSample: Int64?
-
-    package init(
-        sessionSeed: UInt64,
-        phraseIndex: Int,
-        sampleRate: Double,
-        channelCount: Int,
-        routeRecovery: Bool,
-        qualityRevision: Int,
-        qualityPolicyVersion: String,
-        qualityControllerFingerprint: String?,
-        routeGeneration: Int,
-        incomingLiveMasterRevision: Int,
-        incomingLiveMasterStateFingerprint: String,
-        pendingLiveMasterProposalFingerprint: String?,
-        liveEarliestEligibleFutureSample: Int64?,
-        liveTargetStartSample: Int64?
-    ) {
-        self.sessionSeed = sessionSeed
-        self.phraseIndex = phraseIndex
-        self.sampleRate = sampleRate
-        self.channelCount = channelCount
-        self.routeRecovery = routeRecovery
-        self.qualityRevision = qualityRevision
-        self.qualityPolicyVersion = qualityPolicyVersion
-        self.qualityControllerFingerprint = qualityControllerFingerprint
-        self.routeGeneration = routeGeneration
-        self.incomingLiveMasterRevision = incomingLiveMasterRevision
-        self.incomingLiveMasterStateFingerprint =
-            incomingLiveMasterStateFingerprint
-        self.pendingLiveMasterProposalFingerprint =
-            pendingLiveMasterProposalFingerprint
-        self.liveEarliestEligibleFutureSample = liveEarliestEligibleFutureSample
-        self.liveTargetStartSample = liveTargetStartSample
-    }
-}
-
-private struct PhrasePreparationRequest: Sendable {
-    let key: PhrasePreparationKey
-    let sourceState: AutonomousSessionState
-    let incomingLongHorizonState: LongHorizonFutureAdaptationState?
-    let incomingRenderState: RenderState
-    let incomingGraphState: GeneratedDSPContinuationState
-    let previousGraph: DSPGraphPlan?
-    let pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding?
-}
 
 private struct PreparedPhrase: Sendable {
     let request: PhrasePreparationRequest
@@ -88,80 +25,35 @@ private struct ScheduledVisual {
 }
 
 /// Preparation remains entirely outside the audio callback. It produces the
-/// immutable blocks and cheap waveform envelopes consumed by the scheduler.
-private enum AutonomousPerformancePreparer {
+/// immutable inspector projection consumed by the macOS presentation layer;
+/// planning, rendering, quality evaluation, and waveform preparation remain in
+/// the shared platform-neutral transport owner.
+private enum AppPerformancePreparer {
     static func prepare(request: PhrasePreparationRequest,
                         director: AutonomousSessionDirector,
                         artifacts: ProfessionalQualityPrimaryArtifacts?,
                         longHorizonArtifacts:
                             LongHorizonProfessionalPolicyArtifacts?)
         -> PreparedPhrase? {
-        guard request.key.sessionSeed == request.sourceState.rootSeed,
-              director.rootSeed == request.sourceState.rootSeed else {
-            return nil
-        }
-        let plan = director.plan(from: request.sourceState)
-        let evaluator = ProfessionalQualityPreparationEvaluator(
-            sampleRate: request.key.sampleRate,
-            artifacts: artifacts
-        )
-        guard let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
-            plan: plan,
-            sessionSeed: request.sourceState.rootSeed,
-            memory: request.sourceState.memory,
-            sampleRate: request.key.sampleRate,
-            incomingRenderState: request.incomingRenderState,
-            incomingGraphState: request.incomingGraphState,
-            previousGraph: request.previousGraph,
-            incomingQualityState: request.sourceState.quality,
-            routeRecovery: request.key.routeRecovery,
-            routeChannelCount: request.key.channelCount,
-            routeGeneration: request.key.routeGeneration,
-            pendingLiveMasterBinding: request.pendingLiveMasterBinding,
-            liveTargetStartSample: request.key.liveTargetStartSample,
-            evaluator: evaluator,
-            cancellationRequested: { Task.isCancelled }
-        ), !Task.isCancelled else { return nil }
-        let incomingLongHorizon = request.incomingLongHorizonState ??
-            longHorizonArtifacts.flatMap {
-                LongHorizonFutureAdaptationState(
-                    startingState: request.sourceState,
-                    policy: $0.policy
-                )
-            }
-        let longHorizonUpdate: LongHorizonFutureAdaptationUpdate? =
-          if let incomingLongHorizon, let longHorizonArtifacts {
-            incomingLongHorizon.observing(
-                prepared: prepared,
-                incomingState: request.sourceState,
-                policy: longHorizonArtifacts.policy
-            )
-        } else {
-            nil
-        }
-        var waveforms: [[Float]] = []
-        waveforms.reserveCapacity(prepared.blocks.count)
-        for block in prepared.blocks {
-            guard !Task.isCancelled else { return nil }
-            waveforms.append(WaveformEnvelope.fixedDB(
-                left: block.left,
-                right: block.right
-            ))
-        }
-        guard !Task.isCancelled else { return nil }
+        guard let shared = AutonomousPerformancePreparer.prepare(
+            request: request,
+            director: director,
+            artifacts: artifacts,
+            longHorizonArtifacts: longHorizonArtifacts
+        ) else { return nil }
         let inspectorSnapshots = LiveRenderSnapshot.make(
-            prepared: prepared,
+            prepared: shared.prepared,
             sampleRate: request.key.sampleRate,
             channelCount: request.key.channelCount
         )
-        guard inspectorSnapshots.count == prepared.blocks.count,
+        guard inspectorSnapshots.count == shared.prepared.blocks.count,
               !Task.isCancelled else { return nil }
         return PreparedPhrase(
             request: request,
-            prepared: prepared,
-            outgoingLongHorizonState: longHorizonUpdate?.state,
-            longHorizonDecision: longHorizonUpdate?.decision,
-            waveforms: waveforms,
+            prepared: shared.prepared,
+            outgoingLongHorizonState: shared.outgoingLongHorizonState,
+            longHorizonDecision: shared.longHorizonDecision,
+            waveforms: shared.waveforms,
             inspectorSnapshots: inspectorSnapshots
         )
     }
@@ -486,7 +378,7 @@ package final class TechnoEngine: ObservableObject {
         let qualityArtifacts = qualityArtifacts
         let longHorizonArtifacts = longHorizonArtifacts
         let task = Task.detached(priority: .userInitiated) {
-            AutonomousPerformancePreparer.prepare(
+            AppPerformancePreparer.prepare(
                 request: request,
                 director: director,
                 artifacts: qualityArtifacts,

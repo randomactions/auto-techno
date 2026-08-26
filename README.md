@@ -7,6 +7,11 @@ secondary New Set action for an explicit complete-performance boundary.
 Playback requires no DAW, plug-in host, VSTi, Audio Unit instrument or effect,
 cloud model, or account.
 
+A native Windows x64 distribution target now reuses the same canonical Swift
+director, renderer, continuation state, and prepared PCM. It remains a
+release-candidate surface until an exact Windows build passes app/runtime and
+physical-output validation; it is not a second engine or render profile.
+
 ## Current runtime
 
 - fixed 130 BPM and one private canonical identity per complete performance;
@@ -134,13 +139,16 @@ without adding an engine, bus, renderer, selector, or fixed arrangement.
 
 ## Package
 
-The Swift package exposes one product:
+The Swift package exposes one host-selected product:
 
 ```text
 AutoTechno (executable)
 ```
 
 `AutoTechnoCore` and `AutoTechnoDSP` are package-internal implementation targets.
+`AutoTechnoTransport` is the shared detached-preparation boundary. macOS selects
+the SwiftUI/AVFoundation host; Windows selects the Win32/waveOut host while
+keeping the product name and runtime identity unchanged.
 
 ## Build and test
 
@@ -156,6 +164,23 @@ graphs, role routing, signal safety, and the single-product surface. Professiona
 quality is not established until every automated, app/runtime, and
 physical-output gate in the validation contract passes for the exact release
 revision.
+
+### One-click Windows distribution
+
+On a 64-bit Windows build machine, run the one-time prerequisite installer and
+then the distribution builder:
+
+```text
+scripts\setup-windows-build.cmd
+scripts\build-windows.cmd
+```
+
+The second command tests the canonical engine, builds the native Windows
+executable, bundles the required official Swift and app-local Microsoft C++
+runtime DLLs, writes build and SHA-256 manifests, creates a portable ZIP, and
+creates one installer executable.
+See [`docs/WINDOWS_DISTRIBUTION.md`](docs/WINDOWS_DISTRIBUTION.md) for the local
+and GitHub Actions workflows and the remaining Windows release gates.
 
 ## Product documents
 
@@ -174,6 +199,7 @@ revision.
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — ordered engine-evolution outcomes
 - [`docs/AUTONOMOUS_RUNTIME_PROVENANCE.md`](docs/AUTONOMOUS_RUNTIME_PROVENANCE.md) — runtime ownership and feedback flow
 - [`docs/AUTONOMOUS_RUNTIME_VALIDATION.md`](docs/AUTONOMOUS_RUNTIME_VALIDATION.md) — current validation and release gates
+- [`docs/WINDOWS_DISTRIBUTION.md`](docs/WINDOWS_DISTRIBUTION.md) — native Windows build, packaging, and validation
 - [`docs/VIDEO_ANALYSIS_PROTOCOL.md`](docs/VIDEO_ANALYSIS_PROTOCOL.md) — source-evidence protocol for video-derived hypotheses
 - [`docs/history/MORDIO_MUSIC_CHANNEL_AUDIT.md`](docs/history/MORDIO_MUSIC_CHANNEL_AUDIT.md) — complete 276-video device, effect, chain, automation, and disposition audit
 - [`docs/history/TASTE_EXPERIMENTS.md`](docs/history/TASTE_EXPERIMENTS.md) — non-normative historical experiments

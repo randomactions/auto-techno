@@ -24,6 +24,19 @@ Record the exact commit, toolchain, fixture/continuation state, sample rates, an
 quality-contract revision. A result from another head or an unidentified state is
 not release evidence.
 
+For a Windows distribution, run on 64-bit Windows with the official Swift and
+Windows SDK toolchains:
+
+```powershell
+.\scripts\build-windows.ps1 -Installer
+```
+
+That command must pass `swift test`, build the host-selected `AutoTechno`
+release product, bundle the runtime reported by `swiftc -print-target-info`, and
+produce both the portable ZIP and installer with SHA-256 manifests. A macOS
+compile of the Windows Swift target exercises shared source and non-Windows C
+stubs only; it is not Windows compilation or runtime evidence.
+
 ## Automated quality qualification
 
 The canonical session must qualify at named structural checkpoints, including
@@ -477,6 +490,13 @@ On the exact release build, verify:
 - no recording permission prompt, microphone device access, or external audio
   dependency.
 
+Repeat the applicable checks separately on each promoted platform. Windows must
+also verify installer/uninstaller behavior as a standard user, native button
+keyboard/accessibility behavior, float-output and 16-bit fallback devices,
+lookahead refill under maximum preparation work, pause/resume without queue
+loss, default-device failure, window close during queued playback, and clean
+redistribution on a machine without a Swift toolchain installed.
+
 ## Physical-output soak
 
 Before claiming release readiness, run for at least 60 minutes on physical output.
@@ -485,8 +505,10 @@ During the run:
 1. pause and resume repeatedly;
 2. change output routes and sample rates;
 3. trigger and recover from an interruption;
-4. sleep and wake the Mac;
-5. exercise normal, one-correction, rejection, unavailable, and missed-analysis-deadline paths;
+4. sleep and wake the host;
+5. exercise normal, one-correction, rejection, unavailable, and
+   missed-analysis-deadline paths on every platform claiming live-feedback
+   promotion;
 6. confirm continuous phrase progression, bounded controller state, stable CPU and
    memory, and no clicks, gaps, runaway tails, oscillating balance, crashes, or
    disabled transport.

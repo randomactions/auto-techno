@@ -1,8 +1,10 @@
 .DS_Store
 .build/
+.build-windows/
 .swiftpm/
 xcuserdata/
 DerivedData/
+dist/
 
 # Locally generated listening artifacts; keep source reports/manifests tracked.
 docs/reference/*.wav
