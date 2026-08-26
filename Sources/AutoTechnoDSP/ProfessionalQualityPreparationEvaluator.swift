@@ -68,7 +68,8 @@ package struct ProfessionalQualityPreparationEvaluator:
         }
         return AutonomousCandidatePolicyVerdict(
             outcome: .qualificationUnavailable,
-            reasonCodes: [.evaluatorUnavailableV1]
+            reasonCodes: [.evaluatorUnavailableV1],
+            diagnosticDetails: ["preparation=\(availability.rawValue)"]
         )
     }
 }

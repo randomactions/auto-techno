@@ -302,9 +302,13 @@ mistaken for a completed feedback system.
    The main actor separately projects the existing successor task, cache, and
    phrase-boundary fallback into one read-only next-phrase status. It reports
    held, queued, preparing, qualified-and-cached, or retrying state together
-   with actual preparation attempts and coherent phrase repeats. These counters
-   observe the canonical scheduler only; they do not authorize a plan, alter a
-   deadline, feed quality evidence, or execute on the callback.
+   with actual preparation attempts, coherent phrase repeats, and one concise
+   last-failure stage/code. The detached pipeline preserves a bounded list of
+   exact failed guards or calibrated metric names, and the main actor writes
+   that non-PCM context to the local unified log under the
+   `successor-preparation` category. These diagnostics observe the canonical
+   scheduler only; they do not authorize a plan, alter a deadline, feed quality
+   evidence, retain a root seed or PCM, or execute on the callback.
    It also owns one scheduled-output feedback coordinator. After an exact
    two-probe mixer/player clock map succeeds, the main-mixer callback copies only
    bounded app-owned native-stereo packets into the preallocated C11 queue. A

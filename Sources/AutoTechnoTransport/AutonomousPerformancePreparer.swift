@@ -108,6 +108,37 @@ package struct PreparedPerformancePhrase: Sendable {
     }
 }
 
+/// Bounded, non-PCM reason metadata shared by every platform transport.
+package struct PhrasePreparationFailure: Error, Equatable, Sendable {
+    package let stage: String
+    package let code: String
+    package let details: [String]
+
+    package init(stage: String, code: String, details: [String] = []) {
+        self.stage = stage
+        self.code = code
+        var seen: Set<String> = []
+        self.details = details.filter { seen.insert($0).inserted }
+            .prefix(24)
+            .map { $0 }
+    }
+}
+
+package enum PerformancePreparationOutcome: Sendable {
+    case prepared(PreparedPerformancePhrase)
+    case failed(PhrasePreparationFailure)
+
+    package var preparedPhrase: PreparedPerformancePhrase? {
+        guard case let .prepared(prepared) = self else { return nil }
+        return prepared
+    }
+
+    package var failure: PhrasePreparationFailure? {
+        guard case let .failed(failure) = self else { return nil }
+        return failure
+    }
+}
+
 /// The single platform-neutral preparation path. It never executes on an audio
 /// callback: it plans, renders immutable future audio, applies the installed
 /// deterministic quality policy, and derives cheap read-only waveform
@@ -119,16 +150,39 @@ package enum AutonomousPerformancePreparer {
         artifacts: ProfessionalQualityPrimaryArtifacts?,
         longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?
     ) -> PreparedPerformancePhrase? {
-        guard request.key.sessionSeed == request.sourceState.rootSeed,
-              director.rootSeed == request.sourceState.rootSeed else {
-            return nil
+        prepareDiagnosing(
+            request: request,
+            director: director,
+            artifacts: artifacts,
+            longHorizonArtifacts: longHorizonArtifacts
+        ).preparedPhrase
+    }
+
+    package static func prepareDiagnosing(
+        request: PhrasePreparationRequest,
+        director: AutonomousSessionDirector,
+        artifacts: ProfessionalQualityPrimaryArtifacts?,
+        longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?
+    ) -> PerformancePreparationOutcome {
+        let requestFailures = [
+            request.key.sessionSeed == request.sourceState.rootSeed
+                ? nil : "request-source-root",
+            director.rootSeed == request.sourceState.rootSeed
+                ? nil : "director-source-root",
+        ].compactMap { $0 }
+        guard requestFailures.isEmpty else {
+            return .failed(PhrasePreparationFailure(
+                stage: "request-validation",
+                code: "identity-mismatch",
+                details: requestFailures
+            ))
         }
         let plan = director.plan(from: request.sourceState)
         let evaluator = ProfessionalQualityPreparationEvaluator(
             sampleRate: request.key.sampleRate,
             artifacts: artifacts
         )
-        guard let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
+        let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
             plan: plan,
             sessionSeed: request.sourceState.rootSeed,
             memory: request.sourceState.memory,
@@ -144,7 +198,26 @@ package enum AutonomousPerformancePreparer {
             liveTargetStartSample: request.key.liveTargetStartSample,
             evaluator: evaluator,
             cancellationRequested: { Task.isCancelled }
-        ), !Task.isCancelled else { return nil }
+        )
+        guard case let .prepared(prepared) = outcome else {
+            let failure = outcome.failure.map {
+                PhrasePreparationFailure(
+                    stage: $0.stage.rawValue,
+                    code: $0.code.rawValue,
+                    details: $0.details
+                )
+            } ?? PhrasePreparationFailure(
+                stage: "transaction",
+                code: "unknown-failure"
+            )
+            return .failed(failure)
+        }
+        guard !Task.isCancelled else {
+            return .failed(PhrasePreparationFailure(
+                stage: "transaction",
+                code: "cancelled"
+            ))
+        }
 
         let incomingLongHorizon = request.incomingLongHorizonState ??
             longHorizonArtifacts.flatMap {
@@ -167,19 +240,29 @@ package enum AutonomousPerformancePreparer {
         var waveforms: [[Float]] = []
         waveforms.reserveCapacity(prepared.blocks.count)
         for block in prepared.blocks {
-            guard !Task.isCancelled else { return nil }
+            guard !Task.isCancelled else {
+                return .failed(PhrasePreparationFailure(
+                    stage: "presentation",
+                    code: "cancelled"
+                ))
+            }
             waveforms.append(WaveformEnvelope.fixedDB(
                 left: block.left,
                 right: block.right
             ))
         }
-        guard !Task.isCancelled else { return nil }
-        return PreparedPerformancePhrase(
+        guard !Task.isCancelled else {
+            return .failed(PhrasePreparationFailure(
+                stage: "presentation",
+                code: "cancelled"
+            ))
+        }
+        return .prepared(PreparedPerformancePhrase(
             request: request,
             prepared: prepared,
             outgoingLongHorizonState: longHorizonUpdate?.state,
             longHorizonDecision: longHorizonUpdate?.decision,
             waveforms: waveforms
-        )
+        ))
     }
 }

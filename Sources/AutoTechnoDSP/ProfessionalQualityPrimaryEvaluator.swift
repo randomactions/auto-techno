@@ -227,38 +227,74 @@ package struct ProfessionalQualityPrimaryEvaluator:
         selected: AutonomousCandidateEvaluationVector,
         transaction: AutonomousCandidateEvaluationTransaction
     ) -> AutonomousCandidatePolicyVerdict {
-        guard transaction.isComplete,
-              transaction.engineVersion == profile.engineVersion,
-              transaction.policyVersion == policyVersion,
-              transaction.evaluatorVersion == evaluatorVersion,
-              transaction.planFingerprint == selected.planFingerprint,
-              transaction.selectedAttemptIndex.map({
-                  transaction.attempts[$0].vector == selected
-              }) == true,
-              transaction.liveProposalFingerprint ==
-                selected.liveProposalFingerprint else {
+        let selectedAttemptMatches = transaction.selectedAttemptIndex.flatMap {
+            transaction.attempts.indices.contains($0)
+                ? transaction.attempts[$0].vector == selected : nil
+        } == true
+        let transactionFailures = [
+            transaction.isComplete ? nil : "transaction-incomplete",
+            transaction.engineVersion == profile.engineVersion
+                ? nil : "engine-version",
+            transaction.policyVersion == policyVersion
+                ? nil : "policy-version",
+            transaction.evaluatorVersion == evaluatorVersion
+                ? nil : "evaluator-version",
+            transaction.planFingerprint == selected.planFingerprint
+                ? nil : "plan-fingerprint",
+            selectedAttemptMatches ? nil : "selected-attempt",
+            transaction.liveProposalFingerprint ==
+                selected.liveProposalFingerprint
+                ? nil : "live-proposal-fingerprint",
+        ].compactMap { $0 }
+        guard transactionFailures.isEmpty else {
             return AutonomousCandidatePolicyVerdict(
                 outcome: .rejected,
-                reasonCodes: [.guardrailRegressionV1]
+                reasonCodes: [.guardrailRegressionV1],
+                diagnosticDetails: transactionFailures
             )
         }
         guard selected.hardGatesPassed else {
+            let hardGateFailures = [
+                selected.isComplete ? nil : "candidate-incomplete",
+                selected.isFinite ? nil : "candidate-nonfinite",
+                selected.hardGates.passed ? nil : "candidate-hard-gates",
+                selected.symbolic.interestValid ? nil : "symbolic-interest",
+                selected.graph.validationValid ? nil : "graph-validation",
+                selected.fullMix.signalSafetyValid ? nil : "signal-safety",
+                selected.liveProposalOutcome != .unavailable
+                    ? nil : "live-proposal-unavailable",
+                selected.postGraphUpperTimbreEvidence.finite
+                    ? nil : "upper-timbre-nonfinite",
+            ].compactMap { $0 }
             return AutonomousCandidatePolicyVerdict(
                 outcome: .rejected,
-                reasonCodes: [.hardGateFailedV1]
+                reasonCodes: [.hardGateFailedV1],
+                diagnosticDetails: hardGateFailures
             )
         }
         let result = assessment(of: selected)
         guard result.availability == .available else {
             return AutonomousCandidatePolicyVerdict(
                 outcome: .qualificationUnavailable,
-                reasonCodes: [.evaluatorUnavailableV1]
+                reasonCodes: [.evaluatorUnavailableV1],
+                diagnosticDetails: [
+                    "assessment=\(result.availability.rawValue)",
+                    "checkpoints=\(result.checkpoints.map(\.rawValue).joined(separator: ","))",
+                ]
             )
         }
         guard result.accepted else {
+            let reportDetails = result.verdicts.flatMap { verdict in
+                verdict.reasons.map {
+                    "\(verdict.checkpoint.rawValue):reason=\($0.rawValue)"
+                } + verdict.failedMetrics.map {
+                    "\(verdict.checkpoint.rawValue):metric=\($0.rawValue)"
+                }
+            }
             return AutonomousCandidatePolicyVerdict(
                 outcome: .rejected,
-                reasonCodes: [.guardrailRegressionV1]
+                reasonCodes: [.guardrailRegressionV1],
+                diagnosticDetails: reportDetails
             )
         }
         return AutonomousCandidatePolicyVerdict(

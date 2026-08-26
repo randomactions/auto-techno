@@ -698,6 +698,9 @@ package final class PreparedAutonomousPhrase: Sendable {
     package let candidateEvaluationFingerprint: String
     package let commitProvenance: AutonomousPreparedCommitProvenance
     package let qualityDecision: QualityDecision
+    /// Bounded, non-PCM evaluator context retained only for read-only runtime
+    /// diagnostics. It never participates in candidate selection or commit.
+    package let qualityDiagnosticDetails: [String]
     package let incomingQualityState: QualityContinuationState
     package let qualityContinuationState: QualityContinuationState
     package let incomingLiveMasterHeadroomState:
@@ -723,6 +726,7 @@ package final class PreparedAutonomousPhrase: Sendable {
         boundCandidateEvaluation: BoundCandidateEvaluation,
         commitProvenance: AutonomousPreparedCommitProvenance,
         qualityDecision: QualityDecision,
+        qualityDiagnosticDetails: [String],
         incomingQualityState: QualityContinuationState,
         qualityContinuationState: QualityContinuationState,
         incomingLiveMasterHeadroomState:
@@ -745,6 +749,9 @@ package final class PreparedAutonomousPhrase: Sendable {
         candidateEvaluationFingerprint = boundCandidateEvaluation.fingerprint
         self.commitProvenance = commitProvenance
         self.qualityDecision = qualityDecision
+        self.qualityDiagnosticDetails = Array(
+            qualityDiagnosticDetails.prefix(24)
+        )
         self.incomingQualityState = incomingQualityState
         self.qualityContinuationState = qualityContinuationState
         self.incomingLiveMasterHeadroomState =
@@ -773,33 +780,49 @@ package final class PreparedAutonomousPhrase: Sendable {
     /// Only a calibrated, hard-valid judgment of the one primary phrase may
     /// cross the atomic commit boundary.
     package var commitEligible: Bool {
-        guard let liveTargetStart = AutonomousLiveTargetStartEvidence.derived(
-                  incomingRevision:
-                    incomingLiveMasterHeadroomState.revision,
-                  outgoingRevision:
-                    liveMasterHeadroomContinuationState.revision,
-                  targetStartSample: liveTargetStartSample
-              ),
-              candidateEvaluation.isComplete,
-              commitProvenance.candidateEvaluationFingerprint ==
-                candidateEvaluationFingerprint,
-              let selectedIndex = candidateEvaluation.selectedAttemptIndex,
-              candidateEvaluation.attempts.indices.contains(selectedIndex),
-              candidateEvaluation.attempts[selectedIndex].vector ==
-                selectedCandidateEvidence,
-              selectedCandidateEvidence.fullMix.sampleHash ==
-                audioPreflight.quality.sampleHash,
-              selectedCandidateEvidence.postGraphUpperTimbreEvidence ==
-                upperTimbreEvidence,
-              selectedCandidateEvidence.incomingLiveMasterStateFingerprint ==
-                incomingLiveMasterHeadroomState.fingerprint,
-              selectedCandidateEvidence.outgoingLiveMasterStateFingerprint ==
-                liveMasterHeadroomContinuationState.fingerprint,
-              qualityContinuationState.observedControllerStateFingerprint ==
+        commitFailureDiagnostics.isEmpty
+    }
+
+    package var commitFailureDiagnostics: [String] {
+        let liveTargetStart = AutonomousLiveTargetStartEvidence.derived(
+            incomingRevision: incomingLiveMasterHeadroomState.revision,
+            outgoingRevision: liveMasterHeadroomContinuationState.revision,
+            targetStartSample: liveTargetStartSample
+        )
+        let selectedAttempt = candidateEvaluation.selectedAttemptIndex.flatMap {
+            candidateEvaluation.attempts.indices.contains($0)
+                ? candidateEvaluation.attempts[$0] : nil
+        }
+        var failures = [
+            liveTargetStart == nil ? "live-target-start" : nil,
+            candidateEvaluation.isComplete ? nil : "candidate-evaluation",
+            commitProvenance.candidateEvaluationFingerprint ==
+                candidateEvaluationFingerprint
+                ? nil : "commit-evaluation-fingerprint",
+            selectedAttempt == nil ? "selected-attempt" : nil,
+            selectedAttempt?.vector == selectedCandidateEvidence
+                ? nil : "selected-evidence",
+            selectedCandidateEvidence.fullMix.sampleHash ==
+                audioPreflight.quality.sampleHash
+                ? nil : "sample-hash",
+            selectedCandidateEvidence.postGraphUpperTimbreEvidence ==
+                upperTimbreEvidence
+                ? nil : "upper-timbre-evidence",
+            selectedCandidateEvidence.incomingLiveMasterStateFingerprint ==
+                incomingLiveMasterHeadroomState.fingerprint
+                ? nil : "incoming-live-master-fingerprint",
+            selectedCandidateEvidence.outgoingLiveMasterStateFingerprint ==
+                liveMasterHeadroomContinuationState.fingerprint
+                ? nil : "outgoing-live-master-fingerprint",
+            qualityContinuationState.observedControllerStateFingerprint ==
                 selectedCandidateEvidence.routeContinuation
-                    .controllerStateFingerprint,
-              qualityDecision.evidenceFingerprint == candidateEvaluationFingerprint,
-              commitProvenance.matches(
+                    .controllerStateFingerprint
+                ? nil : "quality-controller-fingerprint",
+            qualityDecision.evidenceFingerprint == candidateEvaluationFingerprint
+                ? nil : "quality-evidence-fingerprint",
+        ].compactMap { $0 }
+        if let liveTargetStart,
+           !commitProvenance.matches(
                 candidateEvaluationFingerprint: candidateEvaluationFingerprint,
                 selectedSampleHash: audioPreflight.quality.sampleHash,
                 outgoingRenderDSPFingerprint:
@@ -812,10 +835,10 @@ package final class PreparedAutonomousPhrase: Sendable {
                     liveMasterHeadroomContinuationState.revision -
                         incomingLiveMasterHeadroomState.revision,
                 liveTargetStart: liveTargetStart
-              ) else {
-            return false
+           ) {
+            failures.append("commit-provenance")
         }
-        return AutonomousCommitPolicy.isEligible(
+        failures.append(contentsOf: AutonomousCommitPolicy.failureDiagnostics(
             playbackHardGatesPassed: playbackHardGatesPassed,
             evaluationHardGatesPassed: selectedCandidateEvidence.hardGatesPassed,
             decision: qualityDecision,
@@ -825,7 +848,64 @@ package final class PreparedAutonomousPhrase: Sendable {
             controllerStateFingerprint:
                 selectedCandidateEvidence.routeContinuation
                     .controllerStateFingerprint
-        )
+        ))
+        return Array(failures.prefix(24))
+    }
+}
+
+/// Bounded reason-coded result for detached preparation. The App may present
+/// and log this immutable metadata after work completes; no instance crosses
+/// the real-time callback or retains rendered PCM.
+package struct AutonomousPhrasePreparationFailure: Error, Equatable, Sendable {
+    package enum Stage: String, Equatable, Sendable {
+        case inputValidation = "input-validation"
+        case continuation = "continuation"
+        case initialRender = "initial-render"
+        case correctionRender = "correction-render"
+        case transaction = "transaction"
+        case finalization = "finalization"
+    }
+
+    package enum Code: String, Equatable, Sendable {
+        case cancelled
+        case invalidInput = "invalid-input"
+        case continuationUnavailable = "continuation-unavailable"
+        case renderBudgetUnavailable = "render-budget-unavailable"
+        case graphInvalid = "graph-invalid"
+        case rendererUnavailable = "renderer-unavailable"
+        case audioPreflightUnavailable = "audio-preflight-unavailable"
+        case renderFingerprintUnavailable = "render-fingerprint-unavailable"
+        case evidenceVectorUnavailable = "evidence-vector-unavailable"
+        case transactionIncomplete = "transaction-incomplete"
+        case liveTargetInvalid = "live-target-invalid"
+    }
+
+    package let stage: Stage
+    package let code: Code
+    package let details: [String]
+
+    package init(stage: Stage, code: Code, details: [String] = []) {
+        self.stage = stage
+        self.code = code
+        var seen: Set<String> = []
+        self.details = details.filter { seen.insert($0).inserted }
+            .prefix(24)
+            .map { $0 }
+    }
+}
+
+package enum AutonomousPhrasePreparationOutcome: Sendable {
+    case prepared(PreparedAutonomousPhrase)
+    case failed(AutonomousPhrasePreparationFailure)
+
+    package var preparedPhrase: PreparedAutonomousPhrase? {
+        guard case let .prepared(prepared) = self else { return nil }
+        return prepared
+    }
+
+    package var failure: AutonomousPhrasePreparationFailure? {
+        guard case let .failed(failure) = self else { return nil }
+        return failure
     }
 }
 
@@ -839,32 +919,58 @@ package enum AutonomousCommitPolicy {
         evidenceFingerprint: String,
         controllerStateFingerprint: String
     ) -> Bool {
-        guard playbackHardGatesPassed,
-              !controllerStateFingerprint.isEmpty,
-              !decision.policyVersion.trimmingCharacters(
+        failureDiagnostics(
+            playbackHardGatesPassed: playbackHardGatesPassed,
+            evaluationHardGatesPassed: evaluationHardGatesPassed,
+            decision: decision,
+            continuationState: continuationState,
+            candidateFingerprint: candidateFingerprint,
+            evidenceFingerprint: evidenceFingerprint,
+            controllerStateFingerprint: controllerStateFingerprint
+        ).isEmpty
+    }
+
+    package static func failureDiagnostics(
+        playbackHardGatesPassed: Bool,
+        evaluationHardGatesPassed: Bool,
+        decision: QualityDecision,
+        continuationState: QualityContinuationState,
+        candidateFingerprint: String,
+        evidenceFingerprint: String,
+        controllerStateFingerprint: String
+    ) -> [String] {
+        [
+            playbackHardGatesPassed ? nil : "playback-hard-gates",
+            controllerStateFingerprint.isEmpty
+                ? "controller-fingerprint-empty" : nil,
+            decision.policyVersion.trimmingCharacters(
                 in: .whitespacesAndNewlines
-              ).isEmpty,
-              decision.hasOutcomeConsistentReasonCodes,
-              continuationState.lastDecision == decision,
-              continuationState.acceptanceProvenanceComplete,
-              decision.candidateFingerprint == candidateFingerprint,
-              decision.evidenceFingerprint == evidenceFingerprint,
-              continuationState.observedCandidateFingerprint == candidateFingerprint,
-              continuationState.observedEvidenceFingerprint == evidenceFingerprint,
-              continuationState.observedControllerStateFingerprint ==
-                controllerStateFingerprint,
-              !decision.isAcceptanceOutcome ||
+            ).isEmpty ? "policy-version-empty" : nil,
+            decision.hasOutcomeConsistentReasonCodes
+                ? nil : "decision-reason-codes",
+            continuationState.lastDecision == decision
+                ? nil : "continuation-decision",
+            continuationState.acceptanceProvenanceComplete
+                ? nil : "acceptance-provenance",
+            decision.candidateFingerprint == candidateFingerprint
+                ? nil : "decision-candidate-fingerprint",
+            decision.evidenceFingerprint == evidenceFingerprint
+                ? nil : "decision-evidence-fingerprint",
+            continuationState.observedCandidateFingerprint == candidateFingerprint
+                ? nil : "observed-candidate-fingerprint",
+            continuationState.observedEvidenceFingerprint == evidenceFingerprint
+                ? nil : "observed-evidence-fingerprint",
+            continuationState.observedControllerStateFingerprint ==
+                controllerStateFingerprint
+                ? nil : "observed-controller-fingerprint",
+            !decision.isAcceptanceOutcome ||
                 continuationState.acceptedControllerStateFingerprint ==
-                    controllerStateFingerprint else {
-            return false
-        }
-        guard evaluationHardGatesPassed else { return false }
-        switch decision.outcome {
-        case .qualified, .adjusted:
-            return true
-        case .qualificationUnavailable, .rejected:
-            return false
-        }
+                    controllerStateFingerprint
+                ? nil : "accepted-controller-fingerprint",
+            evaluationHardGatesPassed ? nil : "evaluation-hard-gates",
+            decision.outcome == .qualified || decision.outcome == .adjusted
+                ? nil : "quality-outcome-\(decision.outcome.rawValue)",
+        ].compactMap { $0 }
     }
 }
 
@@ -914,15 +1020,22 @@ package struct AutonomousRenderPassBudget: Equatable, Sendable {
 package struct AutonomousCandidatePolicyVerdict: Equatable, Sendable {
     package let outcome: QualityDecisionOutcome
     package let reasonCodes: [QualityReasonCode]
+    package let diagnosticDetails: [String]
 
     package init(
         outcome: QualityDecisionOutcome,
-        reasonCodes: [QualityReasonCode]
+        reasonCodes: [QualityReasonCode],
+        diagnosticDetails: [String] = []
     ) {
         self.outcome = outcome
         self.reasonCodes = Array(Set(reasonCodes)).sorted {
             $0.rawValue < $1.rawValue
         }
+        var seen: Set<String> = []
+        self.diagnosticDetails = diagnosticDetails
+            .filter { seen.insert($0).inserted }
+            .prefix(24)
+            .map { $0 }
     }
 }
 
@@ -1078,7 +1191,7 @@ package enum AutonomousPhrasePreparer {
             liveTargetStartSample: liveTargetStartSample,
             evaluator: evaluator,
             cancellationRequested: { false }
-        ) else {
+        ).preparedPhrase else {
             preconditionFailure("Non-cancellable preparation stopped unexpectedly")
         }
         return prepared
@@ -1101,6 +1214,44 @@ package enum AutonomousPhrasePreparer {
         evaluator: E,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> PreparedAutonomousPhrase? {
+        prepareDiagnosingIfNotCancelled(
+            plan: plan,
+            sessionSeed: sessionSeed,
+            memory: memory,
+            sampleRate: sampleRate,
+            incomingRenderState: incomingRenderState,
+            incomingGraphState: incomingGraphState,
+            previousGraph: previousGraph,
+            incomingQualityState: incomingQualityState,
+            routeRecovery: routeRecovery,
+            routeChannelCount: routeChannelCount,
+            routeGeneration: routeGeneration,
+            pendingLiveMasterBinding: pendingLiveMasterBinding,
+            liveTargetStartSample: liveTargetStartSample,
+            evaluator: evaluator,
+            cancellationRequested: cancellationRequested
+        ).preparedPhrase
+    }
+
+    package static func prepareDiagnosingIfNotCancelled<
+        E: AutonomousCandidateEvaluating
+    >(
+        plan: AutonomousPhrasePlan,
+        sessionSeed: UInt64,
+        memory: TemporalMusicalMemory,
+        sampleRate: Double,
+        incomingRenderState: RenderState,
+        incomingGraphState: GeneratedDSPContinuationState,
+        previousGraph: DSPGraphPlan?,
+        incomingQualityState: QualityContinuationState = QualityContinuationState(),
+        routeRecovery: Bool = false,
+        routeChannelCount: Int = 2,
+        routeGeneration: Int = 0,
+        pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding? = nil,
+        liveTargetStartSample: Int64? = nil,
+        evaluator: E,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> AutonomousPhrasePreparationOutcome {
         prepareTransaction(
             plan: plan,
             sessionSeed: sessionSeed,
@@ -1136,7 +1287,7 @@ package enum AutonomousPhrasePreparer {
         liveTargetStartSample: Int64?,
         evaluator: E,
         cancellationRequested: @escaping @Sendable () -> Bool
-    ) -> PreparedAutonomousPhrase? {
+    ) -> AutonomousPhrasePreparationOutcome {
         let incomingControllerFingerprint = combinedControllerFingerprint(
             incomingRenderState,
             liveMasterHeadroomState:
@@ -1153,36 +1304,58 @@ package enum AutonomousPhrasePreparer {
                     LiveMasterHeadroomContinuationState()
             : incomingQualityState.observedControllerStateFingerprint ==
                 incomingControllerFingerprint
-        guard !cancellationRequested(), sampleRate.isFinite,
-              sampleRate >= QualityQualificationContract.minimumSupportedSampleRate,
-              sampleRate <= QualityQualificationContract.maximumSupportedSampleRate,
-              routeChannelCount ==
-                QualityQualificationContract.requiredRouteChannelCount,
-              routeGeneration >= 0,
-              memory.topologyRevision < Int.max,
-              plan.startBar == memory.totalBars,
-              plan.startBar == incomingRenderState.barIndex,
-              plan.phraseIndex <
-                Int.max - memory.topologyRevision,
-              sessionSeed &+ 17 == plan.scene.seed,
-              incomingQualityState.acceptanceProvenanceComplete,
-              incomingControllerStateIsCoherent,
-              candidateDebtsMatchMemory(plan, memory: memory),
-              candidateInputIsBounded(plan),
-              candidateCharacterMatchesSession(
-                  plan,
-                  memory: memory,
-                  sessionSeed: sessionSeed
-              ),
-              continuationInputsAreBounded(
-                  renderState: incomingRenderState,
-                  graphState: incomingGraphState,
-                  previousGraph: previousGraph,
-                  sessionSeed: sessionSeed,
-                  routeRecovery: routeRecovery,
-                  phraseIndex: plan.phraseIndex
-              ) else {
-            return nil
+        guard !cancellationRequested() else {
+            return .failed(.init(
+                stage: .inputValidation,
+                code: .cancelled
+            ))
+        }
+        let phraseTopologyLimit = Int.max.subtractingReportingOverflow(
+            memory.topologyRevision
+        )
+        let inputFailures = [
+            sampleRate.isFinite ? nil : "sample-rate-nonfinite",
+            sampleRate >= QualityQualificationContract.minimumSupportedSampleRate &&
+                sampleRate <= QualityQualificationContract.maximumSupportedSampleRate
+                ? nil : "sample-rate-unsupported",
+            routeChannelCount ==
+                QualityQualificationContract.requiredRouteChannelCount
+                ? nil : "route-channel-count",
+            routeGeneration >= 0 ? nil : "route-generation",
+            memory.topologyRevision < Int.max ? nil : "topology-overflow",
+            plan.startBar == memory.totalBars ? nil : "memory-start-bar",
+            plan.startBar == incomingRenderState.barIndex
+                ? nil : "render-start-bar",
+            !phraseTopologyLimit.overflow &&
+                plan.phraseIndex < phraseTopologyLimit.partialValue
+                ? nil : "phrase-topology-overflow",
+            sessionSeed &+ 17 == plan.scene.seed ? nil : "scene-seed",
+            incomingQualityState.acceptanceProvenanceComplete
+                ? nil : "quality-provenance",
+            incomingControllerStateIsCoherent ? nil : "controller-state",
+            candidateDebtsMatchMemory(plan, memory: memory)
+                ? nil : "dramatic-debts",
+            candidateInputIsBounded(plan) ? nil : "candidate-bounds",
+            candidateCharacterMatchesSession(
+                plan,
+                memory: memory,
+                sessionSeed: sessionSeed
+            ) ? nil : "session-character",
+            continuationInputsAreBounded(
+                renderState: incomingRenderState,
+                graphState: incomingGraphState,
+                previousGraph: previousGraph,
+                sessionSeed: sessionSeed,
+                routeRecovery: routeRecovery,
+                phraseIndex: plan.phraseIndex
+            ) ? nil : "continuation-inputs",
+        ].compactMap { $0 }
+        guard inputFailures.isEmpty else {
+            return .failed(.init(
+                stage: .inputValidation,
+                code: .invalidInput,
+                details: inputFailures
+            ))
         }
         let planFingerprint = AutonomousCandidateFingerprint.plan(plan)
         let liveBinding = liveMasterBinding(
@@ -1205,7 +1378,13 @@ package enum AutonomousPhrasePreparer {
                 previousGraphFingerprint: previousGraphFingerprint,
                 routeRecovery: routeRecovery,
                 cancellationRequested: cancellationRequested
-            )?.combined else { return nil }
+            )?.combined else {
+            return .failed(.init(
+                stage: .continuation,
+                code: cancellationRequested()
+                    ? .cancelled : .continuationUnavailable
+            ))
+        }
         let incomingQualityStateFingerprint =
             AutonomousCandidateFingerprint.qualityState(incomingQualityState)
         let routeFingerprint = AutonomousCandidateFingerprint.route(
@@ -1244,12 +1423,19 @@ package enum AutonomousPhrasePreparer {
             plan: AutonomousPhrasePlan,
             kind: AutonomousCandidateAttemptKind = .initialRender,
             forceHomeUpperTimbre: Bool = false
-        ) -> CandidateRenderProduct? {
-            guard !renderContext.cancellationRequested(),
-                  renderPassBudget.claim() else {
-                return nil
+        ) -> Result<CandidateRenderProduct, AutonomousPhrasePreparationFailure> {
+            let stage: AutonomousPhrasePreparationFailure.Stage =
+                kind == .initialRender ? .initialRender : .correctionRender
+            guard !renderContext.cancellationRequested() else {
+                return .failure(.init(stage: stage, code: .cancelled))
             }
-            guard let rendered = renderAttempt(
+            guard renderPassBudget.claim() else {
+                return .failure(.init(
+                    stage: stage,
+                    code: .renderBudgetUnavailable
+                ))
+            }
+            let result = renderAttempt(
                 plan: plan,
                 kind: kind,
                 sessionSeed: renderContext.sessionSeed,
@@ -1282,11 +1468,20 @@ package enum AutonomousPhrasePreparer {
                     renderContext.liveTargetStartSample,
                 forceHomeUpperTimbre: forceHomeUpperTimbre,
                 cancellationRequested: renderContext.cancellationRequested
-            ) else { return nil }
-            return renderContext.cancellationRequested() ? nil : rendered
+            )
+            guard !renderContext.cancellationRequested() else {
+                return .failure(.init(stage: stage, code: .cancelled))
+            }
+            return result
         }
 
-        guard let initialPrimary = product(plan: plan) else { return nil }
+        let initialPrimary: CandidateRenderProduct
+        switch product(plan: plan) {
+        case let .success(rendered):
+            initialPrimary = rendered
+        case let .failure(failure):
+            return .failed(failure)
+        }
         attempts.append(initialPrimary.attempt)
         var selected = initialPrimary
         var selectedAttemptIndex = 0
@@ -1295,18 +1490,34 @@ package enum AutonomousPhrasePreparer {
            evaluator.requestsHomeUpperTimbreCorrection(
                for: initialPrimary.vector
            ), correctionBudget.claim() {
-            guard let corrected = product(
+            let correctedResult = product(
                 plan: plan,
                 kind: .correctionRender,
                 forceHomeUpperTimbre: true
-            ) else { return nil }
+            )
+            guard case let .success(corrected) = correctedResult else {
+                guard case let .failure(failure) = correctedResult else {
+                    preconditionFailure("Unreachable candidate-render result")
+                }
+                return .failed(failure)
+            }
             attempts.append(corrected.attempt)
             selected = corrected
             selectedAttemptIndex = attempts.count - 1
         }
 
-        guard !cancellationRequested(), attempts.count == renderPassBudget.used else {
-            return nil
+        guard !cancellationRequested() else {
+            return .failed(.init(stage: .transaction, code: .cancelled))
+        }
+        guard attempts.count == renderPassBudget.used else {
+            return .failed(.init(
+                stage: .transaction,
+                code: .transactionIncomplete,
+                details: [
+                    "attempts=\(attempts.count)",
+                    "render-passes=\(renderPassBudget.used)",
+                ]
+            ))
         }
         let transaction = AutonomousCandidateEvaluationTransaction(
             engineVersion: QualityQualificationContract.engineVersion,
@@ -1959,8 +2170,12 @@ package enum AutonomousPhrasePreparer {
         liveTargetStartSample: Int64?,
         forceHomeUpperTimbre: Bool = false,
         cancellationRequested: @escaping @Sendable () -> Bool
-    ) -> CandidateRenderProduct? {
-        guard !cancellationRequested() else { return nil }
+    ) -> Result<CandidateRenderProduct, AutonomousPhrasePreparationFailure> {
+        let stage: AutonomousPhrasePreparationFailure.Stage =
+            kind == .initialRender ? .initialRender : .correctionRender
+        guard !cancellationRequested() else {
+            return .failure(.init(stage: stage, code: .cancelled))
+        }
         let graph = DSPGraphGenerator.plan(
             sessionSeed: sessionSeed,
             phrase: plan,
@@ -1968,7 +2183,9 @@ package enum AutonomousPhrasePreparer {
             previous: previousGraph,
             routeRecovery: routeRecovery
         )
-        guard DSPGraphValidator.validate(graph).valid else { return nil }
+        guard DSPGraphValidator.validate(graph).valid else {
+            return .failure(.init(stage: stage, code: .graphInvalid))
+        }
         var renderState = incomingRenderState
         renderState.liveMasterHeadroomState = outgoingLiveMasterState
         var graphState = incomingGraphState
@@ -1977,29 +2194,52 @@ package enum AutonomousPhrasePreparer {
             state: &renderState, graphState: &graphState,
             forceHomeUpperTimbre: forceHomeUpperTimbre,
             cancellationRequested: cancellationRequested
-        ) else { return nil }
-        guard !cancellationRequested() else { return nil }
+        ) else {
+            return .failure(.init(
+                stage: stage,
+                code: cancellationRequested() ? .cancelled : .rendererUnavailable
+            ))
+        }
+        guard !cancellationRequested() else {
+            return .failure(.init(stage: stage, code: .cancelled))
+        }
         guard let audioPreflight = PhraseAudioPreflight(
             blocks: blocks,
             sampleRate: sampleRate,
             cancellationRequested: cancellationRequested
-        ) else { return nil }
+        ) else {
+            return .failure(.init(
+                stage: stage,
+                code: cancellationRequested()
+                    ? .cancelled : .audioPreflightUnavailable
+            ))
+        }
         let timbreEvidence = UpperTimbreEvidence.aggregating(
             blocks.map(\.postGraphRemainderTimbreEvidence)
         )
-        guard !cancellationRequested() else { return nil }
+        guard !cancellationRequested() else {
+            return .failure(.init(stage: stage, code: .cancelled))
+        }
         guard let outgoingRenderDSPFingerprint =
             AutonomousCandidateFingerprint.renderDSPContinuation(
                 renderState: renderState,
                 generatedDSPState: graphState,
                 cancellationRequested: cancellationRequested
-            ) else { return nil }
+            ) else {
+            return .failure(.init(
+                stage: stage,
+                code: cancellationRequested()
+                    ? .cancelled : .renderFingerprintUnavailable
+            ))
+        }
         let controllerFingerprint = combinedControllerFingerprint(
             renderState,
             liveMasterHeadroomState: outgoingLiveMasterState
         )
         let graphFingerprint = AutonomousCandidateFingerprint.graph(graph)
-        guard !cancellationRequested() else { return nil }
+        guard !cancellationRequested() else {
+            return .failure(.init(stage: stage, code: .cancelled))
+        }
         guard let vector = AutonomousCandidateEvaluationVector.make(
             plan: plan,
             graph: graph,
@@ -2027,8 +2267,16 @@ package enum AutonomousPhrasePreparer {
             liveTargetStartSample: liveTargetStartSample,
             incomingDramaticDebts: memory.openDebts,
             cancellationRequested: cancellationRequested
-        ) else { return nil }
-        guard !cancellationRequested() else { return nil }
+        ) else {
+            return .failure(.init(
+                stage: stage,
+                code: cancellationRequested()
+                    ? .cancelled : .evidenceVectorUnavailable
+            ))
+        }
+        guard !cancellationRequested() else {
+            return .failure(.init(stage: stage, code: .cancelled))
+        }
         let attempt = AutonomousCandidateAttempt(
             kind: kind,
             forceHomeUpperTimbre: forceHomeUpperTimbre,
@@ -2041,7 +2289,7 @@ package enum AutonomousPhrasePreparer {
             ),
             vector: vector
         )
-        return CandidateRenderProduct(
+        return .success(CandidateRenderProduct(
             plan: plan,
             graph: graph,
             blocks: blocks,
@@ -2050,7 +2298,7 @@ package enum AutonomousPhrasePreparer {
             audioPreflight: audioPreflight,
             vector: vector,
             attempt: attempt
-        )
+        ))
     }
 
     private static func attemptReasonCodes(
@@ -2138,7 +2386,7 @@ package enum AutonomousPhrasePreparer {
         incomingLiveMasterState: LiveMasterHeadroomContinuationState,
         outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
         evaluator: E
-    ) -> PreparedAutonomousPhrase? {
+    ) -> AutonomousPhrasePreparationOutcome {
         let verdict = evaluator.terminalVerdict(
             selected: selected.vector,
             transaction: transaction
@@ -2175,7 +2423,12 @@ package enum AutonomousPhrasePreparer {
             incomingRevision: selected.vector.incomingLiveMasterRevision,
             outgoingRevision: selected.vector.outgoingLiveMasterRevision,
             targetStartSample: selected.vector.liveAppliedFutureSample
-        ) else { return nil }
+        ) else {
+            return .failed(.init(
+                stage: .finalization,
+                code: .liveTargetInvalid
+            ))
+        }
         let commitProvenance = AutonomousPreparedCommitProvenance(
             candidateEvaluationFingerprint: transactionFingerprint,
             selectedSampleHash: selected.vector.fullMix.sampleHash,
@@ -2188,7 +2441,7 @@ package enum AutonomousPhrasePreparer {
                     selected.vector.incomingLiveMasterRevision,
             liveTargetStart: liveTargetStart
         )
-        return PreparedAutonomousPhrase(
+        return .prepared(PreparedAutonomousPhrase(
             plan: selected.plan,
             graph: selected.graph,
             blocks: selected.blocks,
@@ -2200,6 +2453,7 @@ package enum AutonomousPhrasePreparer {
             boundCandidateEvaluation: boundCandidateEvaluation,
             commitProvenance: commitProvenance,
             qualityDecision: outgoingQuality.lastDecision,
+            qualityDiagnosticDetails: verdict.diagnosticDetails,
             incomingQualityState: incomingQualityState,
             qualityContinuationState: outgoingQuality,
             incomingLiveMasterHeadroomState: incomingLiveMasterState,
@@ -2207,6 +2461,6 @@ package enum AutonomousPhrasePreparer {
             liveTargetStartSample: selected.vector.liveAppliedFutureSample,
             correctionRenderCount: transaction.correctionCount,
             usedHomeTimbreCorrection: selected.attempt.forceHomeUpperTimbre
-        )
+        ))
     }
 }

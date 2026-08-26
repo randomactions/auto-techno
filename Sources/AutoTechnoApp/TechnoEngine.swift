@@ -4,6 +4,7 @@ import AutoTechnoDSP
 import AutoTechnoTransport
 import Combine
 import Foundation
+import OSLog
 
 private struct PreparedPhrase: Sendable {
     let request: PhrasePreparationRequest
@@ -12,6 +13,19 @@ private struct PreparedPhrase: Sendable {
     let longHorizonDecision: LongHorizonTrajectoryDecision?
     let waveforms: [[Float]]
     let inspectorSnapshots: [LiveRenderSnapshot]
+}
+
+private struct PhrasePreparationResult: Sendable {
+    let prepared: PreparedPhrase?
+    let failure: NextPhraseFailure?
+
+    static func success(_ prepared: PreparedPhrase) -> Self {
+        Self(prepared: prepared, failure: nil)
+    }
+
+    static func failed(_ failure: NextPhraseFailure) -> Self {
+        Self(prepared: nil, failure: failure)
+    }
 }
 
 private struct ScheduledVisual {
@@ -34,28 +48,53 @@ private enum AppPerformancePreparer {
                         artifacts: ProfessionalQualityPrimaryArtifacts?,
                         longHorizonArtifacts:
                             LongHorizonProfessionalPolicyArtifacts?)
-        -> PreparedPhrase? {
-        guard let shared = AutonomousPerformancePreparer.prepare(
+        -> PhrasePreparationResult {
+        let outcome = AutonomousPerformancePreparer.prepareDiagnosing(
             request: request,
             director: director,
             artifacts: artifacts,
             longHorizonArtifacts: longHorizonArtifacts
-        ) else { return nil }
+        )
+        guard let shared = outcome.preparedPhrase else {
+            let failure = outcome.failure ?? PhrasePreparationFailure(
+                stage: "transaction",
+                code: "unknown-failure"
+            )
+            return .failed(NextPhraseFailure(
+                stage: failure.stage,
+                code: failure.code,
+                details: failure.details
+            ))
+        }
         let inspectorSnapshots = LiveRenderSnapshot.make(
             prepared: shared.prepared,
             sampleRate: request.key.sampleRate,
             channelCount: request.key.channelCount
         )
-        guard inspectorSnapshots.count == shared.prepared.blocks.count,
-              !Task.isCancelled else { return nil }
-        return PreparedPhrase(
+        guard inspectorSnapshots.count == shared.prepared.blocks.count else {
+            return .failed(NextPhraseFailure(
+                stage: "presentation",
+                code: "snapshot-count",
+                details: [
+                    "blocks=\(shared.prepared.blocks.count)",
+                    "snapshots=\(inspectorSnapshots.count)",
+                ]
+            ))
+        }
+        guard !Task.isCancelled else {
+            return .failed(NextPhraseFailure(
+                stage: "presentation",
+                code: "cancelled"
+            ))
+        }
+        return .success(PreparedPhrase(
             request: request,
             prepared: shared.prepared,
             outgoingLongHorizonState: shared.outgoingLongHorizonState,
             longHorizonDecision: shared.longHorizonDecision,
             waveforms: shared.waveforms,
             inspectorSnapshots: inspectorSnapshots
-        )
+        ))
     }
 }
 
@@ -71,6 +110,10 @@ package final class TechnoEngine: ObservableObject {
     }
 
     static let bpm = AutonomousSessionDirector.bpm
+    private static let successorPreparationLogger = Logger(
+        subsystem: "com.randomactions.AutoTechnoInspector",
+        category: "successor-preparation"
+    )
 
     @Published private(set) var playbackState: PlaybackState = .preparing
     @Published private(set) var waveform: [Float] = Array(repeating: 0.04, count: 64)
@@ -131,7 +174,7 @@ package final class TechnoEngine: ObservableObject {
         PreparedPhrase,
         PhrasePreparationRequest
     >()
-    private var preparationTask: Task<PreparedPhrase?, Never>?
+    private var preparationTask: Task<PhrasePreparationResult, Never>?
     private var preparationTaskSerial: UInt64 = 0
     private var activePreparationTaskSerial: UInt64?
     private var preparingKey: PhrasePreparationKey?
@@ -355,8 +398,8 @@ package final class TechnoEngine: ObservableObject {
         if let prepared = liveFeedbackPreparation.removeCachedValue(
             forKey: request.key
         ) {
-            if !acceptPreparedPhrase(prepared) {
-                markNextPhraseRejected(for: request)
+            if let failure = acceptPreparedPhrase(prepared) {
+                markNextPhraseRejected(for: request, failure: failure)
             }
             return
         }
@@ -387,7 +430,7 @@ package final class TechnoEngine: ObservableObject {
         }
         preparationTask = task
         Task { @MainActor [weak self] in
-            let prepared = await task.value
+            let result = await task.value
             guard let self else { return }
             guard self.activePreparationTaskSerial == taskSerial else { return }
             self.preparationTask = nil
@@ -395,15 +438,21 @@ package final class TechnoEngine: ObservableObject {
             self.preparingKey = nil
             self.activePreparationRequest = nil
             if self.preparationEpoch.accepts(generation) {
-                if let prepared {
-                    if !self.acceptPreparedPhrase(prepared) {
-                        self.markNextPhraseRejected(for: request)
+                if let prepared = result.prepared {
+                    if let failure = self.acceptPreparedPhrase(prepared) {
+                        self.markNextPhraseRejected(
+                            for: request,
+                            failure: failure
+                        )
                     }
                 } else if self.queuedPreparationRequest == nil,
                           self.currentPhrase == nil {
                     self.playbackState = .unavailable
-                } else if prepared == nil {
-                    self.markNextPhraseRejected(for: request)
+                } else if let failure = result.failure {
+                    self.markNextPhraseRejected(
+                        for: request,
+                        failure: failure
+                    )
                 }
             }
             if let queued = self.queuedPreparationRequest {
@@ -413,21 +462,44 @@ package final class TechnoEngine: ObservableObject {
         }
     }
 
-    @discardableResult
-    private func acceptPreparedPhrase(_ phrase: PreparedPhrase) -> Bool {
-        guard !isShutDown else { return false }
-        guard phrase.request.key.phraseIndex ==
-                phrase.request.sourceState.phraseIndex,
-              phrase.request.key.sessionSeed ==
-                phrase.request.sourceState.rootSeed,
-              phrase.request.key.sessionSeed == sessionState.rootSeed,
-              phrase.prepared.graph.sessionSeed ==
-                phrase.request.key.sessionSeed,
-              phrase.request.incomingLongHorizonState?.fingerprint ==
-                longHorizonState?.fingerprint else { return false }
-        guard phrase.prepared.commitEligible,
-              phrase.prepared.incomingLiveMasterHeadroomState ==
-                phrase.request.sourceState.liveMasterHeadroom else {
+    /// Returns a bounded diagnostic only when the immutable candidate cannot
+    /// cross the main-actor commit boundary.
+    private func acceptPreparedPhrase(
+        _ phrase: PreparedPhrase
+    ) -> NextPhraseFailure? {
+        guard !isShutDown else {
+            return NextPhraseFailure(
+                stage: "commit",
+                code: "engine-shutdown"
+            )
+        }
+        let identityFailures = [
+            phrase.request.key.phraseIndex ==
+                phrase.request.sourceState.phraseIndex
+                ? nil : "request-phrase-index",
+            phrase.request.key.sessionSeed ==
+                phrase.request.sourceState.rootSeed
+                ? nil : "request-source-root",
+            phrase.request.key.sessionSeed == sessionState.rootSeed
+                ? nil : "session-root",
+            phrase.prepared.graph.sessionSeed ==
+                phrase.request.key.sessionSeed
+                ? nil : "graph-root",
+            phrase.request.incomingLongHorizonState?.fingerprint ==
+                longHorizonState?.fingerprint
+                ? nil : "long-horizon-state",
+        ].compactMap { $0 }
+        guard identityFailures.isEmpty else {
+            return NextPhraseFailure(
+                stage: "commit",
+                code: "identity-mismatch",
+                details: identityFailures
+            )
+        }
+        let liveMasterMatches =
+            phrase.prepared.incomingLiveMasterHeadroomState ==
+                phrase.request.sourceState.liveMasterHeadroom
+        guard phrase.prepared.commitEligible, liveMasterMatches else {
             if let rejectedProposal = phrase.request
                 .pendingLiveMasterBinding?.proposal.fingerprint,
                pendingLiveMasterBinding?.proposal.fingerprint ==
@@ -447,7 +519,24 @@ package final class TechnoEngine: ObservableObject {
                 }
             }
             if currentPhrase == nil { playbackState = .unavailable }
-            return false
+            var details = phrase.prepared.qualityDecision.reasonCodes.map {
+                "quality=\($0.rawValue)"
+            }
+            details.append(contentsOf: phrase.prepared.qualityDiagnosticDetails)
+            details.append(contentsOf: phrase.prepared.commitFailureDiagnostics)
+            if !liveMasterMatches {
+                details.append("live-master-state")
+            }
+            let code = switch phrase.prepared.qualityDecision.outcome {
+            case .rejected: "quality-rejected"
+            case .qualificationUnavailable: "quality-unavailable"
+            case .qualified, .adjusted: "commit-provenance"
+            }
+            return NextPhraseFailure(
+                stage: "commit",
+                code: code,
+                details: details
+            )
         }
         guard currentPhrase == nil else {
             if phrase.request.sourceState.phraseIndex == sessionState.phraseIndex {
@@ -470,12 +559,18 @@ package final class TechnoEngine: ObservableObject {
                 trimPreparedCache()
                 refreshLiveFeedbackContexts()
                 markNextPhraseReady(for: phrase.request)
-                return true
+                return nil
             }
-            return false
+            return NextPhraseFailure(
+                stage: "commit",
+                code: "stale-source-state"
+            )
         }
         guard phrase.request.sourceState.phraseIndex == sessionState.phraseIndex else {
-            return false
+            return NextPhraseFailure(
+                stage: "commit",
+                code: "stale-source-state"
+            )
         }
 
         let advancedState = phrase.request.sourceState.advance(
@@ -487,7 +582,12 @@ package final class TechnoEngine: ObservableObject {
         )
         guard phrase.longHorizonDecision.map({
             advancedState.memory.longHorizon.lastTrajectoryDecision == $0
-        }) ?? true else { return false }
+        }) ?? true else {
+            return NextPhraseFailure(
+                stage: "commit",
+                code: "long-horizon-commit"
+            )
+        }
         currentPhrase = phrase
         let resumesRecoveredPlayback = phrase.request.key.routeRecovery
         if resumesRecoveredPlayback {
@@ -514,7 +614,7 @@ package final class TechnoEngine: ObservableObject {
                 resetPlayingTime: !resumesRecoveredPlayback
             )
         }
-        return true
+        return nil
     }
 
     private func requestSuccessor(
@@ -618,15 +718,29 @@ package final class TechnoEngine: ObservableObject {
 
     private func markNextPhraseReady(for request: PhrasePreparationRequest) {
         guard let phraseNumber = nextPhraseNumber(for: request) else { return }
+        let recoveredFailure = nextPhraseProgress.targetPhraseNumber == phraseNumber
+            ? nextPhraseProgress.lastFailure : nil
         nextPhraseProgress = nextPhraseProgress.ready(
             targetPhraseNumber: phraseNumber
         )
+        if let recoveredFailure {
+            Self.successorPreparationLogger.notice(
+                "Successor recovered phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) previous-stage=\(recoveredFailure.stage, privacy: .public) previous-code=\(recoveredFailure.code, privacy: .public)"
+            )
+        }
     }
 
-    private func markNextPhraseRejected(for request: PhrasePreparationRequest) {
+    private func markNextPhraseRejected(
+        for request: PhrasePreparationRequest,
+        failure: NextPhraseFailure
+    ) {
         guard let phraseNumber = nextPhraseNumber(for: request) else { return }
         nextPhraseProgress = nextPhraseProgress.rejected(
-            targetPhraseNumber: phraseNumber
+            targetPhraseNumber: phraseNumber,
+            failure: failure
+        )
+        Self.successorPreparationLogger.error(
+            "Successor failed phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) stage=\(failure.stage, privacy: .public) code=\(failure.code, privacy: .public) details=\(failure.logDetails, privacy: .public)"
         )
     }
 

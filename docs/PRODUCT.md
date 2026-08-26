@@ -48,7 +48,8 @@ when its first immutable phrase is ready. Pause and resume never take this path.
   resolved score, synth assignments, semantic automation, graph, effects, mix,
   and already-computed render evidence, plus the next phrase's detached
   preparation state, attempt count, coherent-repeat count, and qualified-cache
-  readiness;
+  readiness; a failed attempt adds one concise stage/code while bounded exact
+  guard or calibrated-metric details remain in the local unified log;
 - offline operation with no account or cloud dependency.
 
 ## One autonomous mechanism
