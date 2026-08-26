@@ -32,7 +32,8 @@ struct ContentView: View {
                     LiveRenderInspectorView(
                         snapshot: engine.liveRenderSnapshot,
                         statusTitle: engine.statusTitle,
-                        playingTimeText: engine.playingTimeText
+                        playingTimeText: engine.playingTimeText,
+                        nextPhraseProgress: engine.nextPhraseProgress
                     )
                 }
             }

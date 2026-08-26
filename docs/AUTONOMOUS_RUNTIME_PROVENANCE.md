@@ -299,6 +299,12 @@ mistaken for a completed feedback system.
    accepted bar in the ready state, then publishes a new snapshot only when its
    matching scheduled bar becomes current. The snapshot contains no PCM and
    causes no callback analysis, allocation, or UI work.
+   The main actor separately projects the existing successor task, cache, and
+   phrase-boundary fallback into one read-only next-phrase status. It reports
+   held, queued, preparing, qualified-and-cached, or retrying state together
+   with actual preparation attempts and coherent phrase repeats. These counters
+   observe the canonical scheduler only; they do not authorize a plan, alter a
+   deadline, feed quality evidence, or execute on the callback.
    It also owns one scheduled-output feedback coordinator. After an exact
    two-probe mixer/player clock map succeeds, the main-mixer callback copies only
    bounded app-owned native-stereo packets into the preallocated C11 queue. A

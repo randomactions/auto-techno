@@ -44,7 +44,9 @@ when its first immutable phrase is ready. Pause and resume never take this path.
 - phrase and bar position plus lightweight read-only visualization;
 - one optional read-only Render Info view for the current immutable bar's
   resolved score, synth assignments, semantic automation, graph, effects, mix,
-  and already-computed render evidence;
+  and already-computed render evidence, plus the next phrase's detached
+  preparation state, attempt count, coherent-repeat count, and qualified-cache
+  readiness;
 - offline operation with no account or cloud dependency.
 
 ## One autonomous mechanism

@@ -5,6 +5,7 @@ struct LiveRenderInspectorView: View {
     let snapshot: LiveRenderSnapshot
     let statusTitle: String
     let playingTimeText: String
+    let nextPhraseProgress: NextPhraseProgress
 
     private let intentColumns = [
         GridItem(.flexible(), spacing: 10),
@@ -53,6 +54,7 @@ struct LiveRenderInspectorView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 8)
+            nextPhraseBadge
             Text("OFF CALLBACK")
                 .font(.system(size: 9, weight: .bold, design: .monospaced))
                 .tracking(0.7)
@@ -62,6 +64,36 @@ struct LiveRenderInspectorView: View {
                 .background(Color.orange.opacity(0.10), in: Capsule())
         }
         .accessibilityElement(children: .combine)
+    }
+
+    private var nextPhraseBadge: some View {
+        HStack(spacing: 7) {
+            Circle()
+                .fill(nextPhraseProgress.stage == .ready
+                    ? Color.green : Color.orange)
+                .frame(width: 6, height: 6)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(nextPhraseProgress.headline)
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .tracking(0.45)
+                Text(nextPhraseProgress.detail)
+                    .font(.system(size: 7, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.72)
+        }
+        .padding(.horizontal, 9)
+        .padding(.vertical, 5)
+        .background(
+            (nextPhraseProgress.stage == .ready ? Color.green : Color.orange)
+                .opacity(0.10),
+            in: Capsule()
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Next phrase preparation")
+        .accessibilityValue(nextPhraseProgress.accessibilityValue)
+        .accessibilityIdentifier("next-phrase-progress")
     }
 
     private var musicalStatePanel: some View {

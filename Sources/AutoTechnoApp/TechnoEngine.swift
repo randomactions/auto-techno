@@ -188,6 +188,7 @@ package final class TechnoEngine: ObservableObject {
     @Published private(set) var barWithinScene = 1
     @Published private(set) var currentSection: SectionKind = .groove
     @Published private(set) var liveRenderSnapshot: LiveRenderSnapshot = .waiting
+    @Published private(set) var nextPhraseProgress: NextPhraseProgress = .waiting
 
     var isPlaying: Bool { playbackState == .playing }
     var transportEnabled: Bool {
@@ -438,6 +439,7 @@ package final class TechnoEngine: ObservableObject {
         resetPlayingTime()
         waveform = Array(repeating: 0.04, count: 64)
         liveRenderSnapshot = .waiting
+        nextPhraseProgress = .waiting
         sceneNumber = 1
         currentSection = .groove
         playbackState = .unavailable
@@ -461,15 +463,19 @@ package final class TechnoEngine: ObservableObject {
         if let prepared = liveFeedbackPreparation.removeCachedValue(
             forKey: request.key
         ) {
-            acceptPreparedPhrase(prepared)
+            if !acceptPreparedPhrase(prepared) {
+                markNextPhraseRejected(for: request)
+            }
             return
         }
         if preparingKey == request.key { return }
         guard preparationTask == nil else {
             queuedPreparationRequest = request
+            markNextPhraseQueued(for: request)
             return
         }
 
+        markNextPhrasePreparing(for: request)
         preparingKey = request.key
         activePreparationRequest = request
         let generation = preparationEpoch.value
@@ -498,10 +504,14 @@ package final class TechnoEngine: ObservableObject {
             self.activePreparationRequest = nil
             if self.preparationEpoch.accepts(generation) {
                 if let prepared {
-                    self.acceptPreparedPhrase(prepared)
+                    if !self.acceptPreparedPhrase(prepared) {
+                        self.markNextPhraseRejected(for: request)
+                    }
                 } else if self.queuedPreparationRequest == nil,
                           self.currentPhrase == nil {
                     self.playbackState = .unavailable
+                } else if prepared == nil {
+                    self.markNextPhraseRejected(for: request)
                 }
             }
             if let queued = self.queuedPreparationRequest {
@@ -511,8 +521,9 @@ package final class TechnoEngine: ObservableObject {
         }
     }
 
-    private func acceptPreparedPhrase(_ phrase: PreparedPhrase) {
-        guard !isShutDown else { return }
+    @discardableResult
+    private func acceptPreparedPhrase(_ phrase: PreparedPhrase) -> Bool {
+        guard !isShutDown else { return false }
         guard phrase.request.key.phraseIndex ==
                 phrase.request.sourceState.phraseIndex,
               phrase.request.key.sessionSeed ==
@@ -521,7 +532,7 @@ package final class TechnoEngine: ObservableObject {
               phrase.prepared.graph.sessionSeed ==
                 phrase.request.key.sessionSeed,
               phrase.request.incomingLongHorizonState?.fingerprint ==
-                longHorizonState?.fingerprint else { return }
+                longHorizonState?.fingerprint else { return false }
         guard phrase.prepared.commitEligible,
               phrase.prepared.incomingLiveMasterHeadroomState ==
                 phrase.request.sourceState.liveMasterHeadroom else {
@@ -544,7 +555,7 @@ package final class TechnoEngine: ObservableObject {
                 }
             }
             if currentPhrase == nil { playbackState = .unavailable }
-            return
+            return false
         }
         guard currentPhrase == nil else {
             if phrase.request.sourceState.phraseIndex == sessionState.phraseIndex {
@@ -566,10 +577,14 @@ package final class TechnoEngine: ObservableObject {
                 }
                 trimPreparedCache()
                 refreshLiveFeedbackContexts()
+                markNextPhraseReady(for: phrase.request)
+                return true
             }
-            return
+            return false
         }
-        guard phrase.request.sourceState.phraseIndex == sessionState.phraseIndex else { return }
+        guard phrase.request.sourceState.phraseIndex == sessionState.phraseIndex else {
+            return false
+        }
 
         let advancedState = phrase.request.sourceState.advance(
             using: phrase.prepared.plan,
@@ -580,7 +595,7 @@ package final class TechnoEngine: ObservableObject {
         )
         guard phrase.longHorizonDecision.map({
             advancedState.memory.longHorizon.lastTrajectoryDecision == $0
-        }) ?? true else { return }
+        }) ?? true else { return false }
         currentPhrase = phrase
         let resumesRecoveredPlayback = phrase.request.key.routeRecovery
         if resumesRecoveredPlayback {
@@ -607,6 +622,7 @@ package final class TechnoEngine: ObservableObject {
                 resetPlayingTime: !resumesRecoveredPlayback
             )
         }
+        return true
     }
 
     private func requestSuccessor(
@@ -632,6 +648,7 @@ package final class TechnoEngine: ObservableObject {
                 occurrenceEpoch: liveFeedbackRuntime.occurrenceEpoch,
                 basePayload: request
             )
+            markNextPhraseHeld(for: request)
             return
         }
         requestPreparation(request)
@@ -671,6 +688,53 @@ package final class TechnoEngine: ObservableObject {
             incomingGraphState: phrase.prepared.endingGraphState,
             previousGraph: phrase.prepared.graph,
             pendingLiveMasterBinding: pendingBinding
+        )
+    }
+
+    private func nextPhraseNumber(
+        for request: PhrasePreparationRequest
+    ) -> Int? {
+        guard currentPhrase != nil,
+              !request.key.routeRecovery,
+              request.key.sessionSeed == sessionState.rootSeed,
+              request.key.phraseIndex == sessionState.phraseIndex else {
+            return nil
+        }
+        return request.key.phraseIndex + 1
+    }
+
+    private func markNextPhraseHeld(for request: PhrasePreparationRequest) {
+        guard let phraseNumber = nextPhraseNumber(for: request) else { return }
+        nextPhraseProgress = nextPhraseProgress.holding(
+            targetPhraseNumber: phraseNumber
+        )
+    }
+
+    private func markNextPhraseQueued(for request: PhrasePreparationRequest) {
+        guard let phraseNumber = nextPhraseNumber(for: request) else { return }
+        nextPhraseProgress = nextPhraseProgress.queued(
+            targetPhraseNumber: phraseNumber
+        )
+    }
+
+    private func markNextPhrasePreparing(for request: PhrasePreparationRequest) {
+        guard let phraseNumber = nextPhraseNumber(for: request) else { return }
+        nextPhraseProgress = nextPhraseProgress.preparing(
+            targetPhraseNumber: phraseNumber
+        )
+    }
+
+    private func markNextPhraseReady(for request: PhrasePreparationRequest) {
+        guard let phraseNumber = nextPhraseNumber(for: request) else { return }
+        nextPhraseProgress = nextPhraseProgress.ready(
+            targetPhraseNumber: phraseNumber
+        )
+    }
+
+    private func markNextPhraseRejected(for request: PhrasePreparationRequest) {
+        guard let phraseNumber = nextPhraseNumber(for: request) else { return }
+        nextPhraseProgress = nextPhraseProgress.rejected(
+            targetPhraseNumber: phraseNumber
         )
     }
 
@@ -880,6 +944,7 @@ package final class TechnoEngine: ObservableObject {
         liveFeedbackPreparation.removeAllCached(keepingCapacity: false)
         currentPhrase = nil
         liveRenderSnapshot = .waiting
+        nextPhraseProgress = .waiting
         queuedPreparationRequest = nil
         resetSchedule()
         playbackState = .preparing
@@ -1463,6 +1528,9 @@ package final class TechnoEngine: ObservableObject {
                 // coherent current phrase freezes topology and avoids any
                 // rendering or blocking while the successor finishes.
                 nextBlockIndex = 0
+                nextPhraseProgress = nextPhraseProgress.repeated(
+                    targetPhraseNumber: targetPhraseIndex + 1
+                )
                 if pendingLiveMasterBinding == nil {
                     requestSuccessor(after: phrase)
                 }
