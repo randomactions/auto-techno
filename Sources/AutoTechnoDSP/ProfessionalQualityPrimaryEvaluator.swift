@@ -274,13 +274,25 @@ package struct ProfessionalQualityPrimaryEvaluator:
         }
         let result = assessment(of: selected)
         guard result.availability == .available else {
+            var diagnosticDetails = [
+                "assessment=\(result.availability.rawValue)",
+                "checkpoints=\(result.checkpoints.map(\.rawValue).joined(separator: ","))",
+            ]
+            if let sampleRate = result.sampleRate {
+                diagnosticDetails.append("sample-rate=\(sampleRate)")
+            }
+            if result.availability == .invalidEvidence {
+                diagnosticDetails.append(contentsOf:
+                    invalidEvidenceDiagnostics(
+                        candidate: selected,
+                        checkpoints: result.checkpoints
+                    )
+                )
+            }
             return AutonomousCandidatePolicyVerdict(
                 outcome: .qualificationUnavailable,
                 reasonCodes: [.evaluatorUnavailableV1],
-                diagnosticDetails: [
-                    "assessment=\(result.availability.rawValue)",
-                    "checkpoints=\(result.checkpoints.map(\.rawValue).joined(separator: ","))",
-                ]
+                diagnosticDetails: diagnosticDetails
             )
         }
         guard result.accepted else {
@@ -302,5 +314,79 @@ package struct ProfessionalQualityPrimaryEvaluator:
             reasonCodes: transaction.correctionCount == 0
                 ? [.candidateQualifiedV1] : [.candidateAdjustedV1]
         )
+    }
+
+    private func invalidEvidenceDiagnostics(
+        candidate: AutonomousCandidateEvaluationVector,
+        checkpoints: [CanonicalJourneyCheckpoint]
+    ) -> [String] {
+        guard AutonomousPhraseKind(
+            rawValue: candidate.symbolic.phraseKind
+        ) != nil else {
+            return ["observation=phrase-kind"]
+        }
+        var details: [String] = []
+        for checkpoint in checkpoints {
+            do {
+                _ = try ProfessionalQualityObservation(
+                    candidate: candidate,
+                    engineVersion: QualityQualificationContract.engineVersion,
+                    checkpoint: checkpoint
+                )
+            } catch let error as ProfessionalQualityCalibrationError {
+                details.append(contentsOf: Self.diagnosticDetails(
+                    for: error,
+                    checkpoint: checkpoint
+                ))
+            } catch {
+                details.append(
+                    "\(checkpoint.rawValue):observation=unknown-error"
+                )
+            }
+        }
+        return Array(details.prefix(20))
+    }
+
+    private static func diagnosticDetails(
+        for error: ProfessionalQualityCalibrationError,
+        checkpoint: CanonicalJourneyCheckpoint
+    ) -> [String] {
+        let prefix = "\(checkpoint.rawValue):"
+        switch error {
+        case .invalidIdentity:
+            return [prefix + "observation=invalid-identity"]
+        case .incompleteRepresentativeRates:
+            return [prefix + "observation=representative-rates"]
+        case .incompleteCheckpointCoverage:
+            return [prefix + "observation=checkpoint-coverage"]
+        case .duplicateMetric:
+            return [prefix + "observation=duplicate-metric"]
+        case .invalidMetricSet:
+            return [prefix + "observation=metric-set"]
+        case let .nonFiniteMetric(metric):
+            return [prefix + "metric=\(metric.rawValue)-nonfinite"]
+        case .incompleteKickSyntaxEvidence:
+            return [prefix + "observation=kick-syntax"]
+        case let .incompleteStemBarCoverage(_, expected, actual):
+            return [
+                prefix + "observation=stem-bar-coverage",
+                prefix + "expected-stem-bars=\(expected.count)",
+                prefix + "actual-stem-bars=\(actual.count)",
+            ]
+        case let .incompleteStemRoleEvidence(_, failures):
+            return [prefix + "observation=stem-role"] + failures.flatMap {
+                failure in failure.failures.map {
+                    prefix + "stem-role=\(failure.role):\($0.rawValue)"
+                }
+            }
+        case let .incompleteCandidateEvidence(_, failures):
+            return [prefix + "observation=candidate"] + failures.map {
+                prefix + "candidate=\($0.rawValue)"
+            }
+        case .invalidBounds:
+            return [prefix + "observation=bounds"]
+        case .profileMismatch:
+            return [prefix + "observation=profile"]
+        }
     }
 }
