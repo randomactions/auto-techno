@@ -712,8 +712,12 @@ struct RepositorySurfaceTests {
                 .appendingPathComponent("main.swift"),
             encoding: .utf8
         )
+        let sharedPreparationEntrypoints = [
+            "AutonomousPerformancePreparer.prepare(",
+            "AutonomousPerformancePreparer.prepareDiagnosing(",
+        ]
         for host in [macHost, windowsHost] {
-            #expect(host.contains("AutonomousPerformancePreparer.prepare("))
+            #expect(sharedPreparationEntrypoints.contains(where: host.contains))
         }
     }
 
