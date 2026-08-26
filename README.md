@@ -73,6 +73,9 @@ cloud model, or account.
 - engine-owned synthesis, effects, mixing, and output safety;
 - detached preparation followed by sample-time scheduling of immutable buffers;
 - route recovery at the active hardware sample rate;
+- one optional read-only Render Info view that presents the current prepared
+  bar's score, synth assignments, semantic automation, graph, effects, mix, and
+  reduced render evidence without reading or analyzing PCM on the callback;
 - no allocation, locks, logging, file or network I/O, or UI work on the audio
   callback.
 
@@ -159,6 +162,7 @@ revision.
 - [`docs/PRODUCT.md`](docs/PRODUCT.md) — stable product and interaction contract
 - [`docs/INSTRUMENT_PALETTE.md`](docs/INSTRUMENT_PALETTE.md) — internal synth, patch, role, automation, and effect matrix
 - [`docs/PERFORMANCE_GRAMMAR.md`](docs/PERFORMANCE_GRAMMAR.md) — phrase character, foundation behavior, compatibility, and evidence matrix
+- [`docs/SYNTH_TRACK_RENDERING_MATRIX.md`](docs/SYNTH_TRACK_RENDERING_MATRIX.md) — consolidated track-equivalent, synth, patch, automation, effects, graph, and render-settings map
 - [`docs/LONG_HORIZON_PERFORMANCE_MAP.md`](docs/LONG_HORIZON_PERFORMANCE_MAP.md) — source-grounded hour-scale trajectory, state, evidence, and implementation map
 - [`docs/LONG_HORIZON_SOUND_CAPABILITIES.md`](docs/LONG_HORIZON_SOUND_CAPABILITIES.md) — follow-up DSP, synth, patch-family, and effect maturation register
 - [`docs/SPATIAL_ENGINE.md`](docs/SPATIAL_ENGINE.md) — canonical FDN ownership, bounds, continuation, evidence, and qualification boundary

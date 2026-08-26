@@ -3,6 +3,12 @@ import SwiftUI
 @MainActor
 struct ContentView: View {
     @StateObject private var engine = TechnoEngine()
+    @State private var selectedView: AppView = .performance
+
+    private enum AppView: Equatable {
+        case performance
+        case renderInspector
+    }
 
     var body: some View {
         ZStack {
@@ -18,63 +24,63 @@ struct ContentView: View {
             .ignoresSafeArea()
             .animation(.easeOut(duration: 0.8), value: engine.isPlaying)
 
-            VStack(spacing: 34) {
-                VStack(spacing: 7) {
-                    Text("AUTO TECHNO")
-                        .font(.system(size: 29, weight: .black, design: .rounded))
-                        .tracking(-0.8)
-                    Text(engine.statusTitle)
-                        .font(.system(.caption2, design: .monospaced).weight(.semibold))
-                        .tracking(1.7)
-                        .foregroundStyle(engine.isPlaying ? Color.orange : Color.secondary)
-                }
-
-                PerformanceWaveform(
-                    samples: engine.waveform,
-                    playhead: engine.playhead,
-                    active: engine.isPlaying
-                )
-                .frame(height: 118)
-                .accessibilityHidden(true)
-
-                Button {
-                    engine.togglePlayback()
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(engine.isPlaying ? Color.orange : Color.white)
-                            .frame(width: 94, height: 94)
-                        Image(systemName: engine.isPlaying ? "pause.fill" : "play.fill")
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundStyle(Color.black.opacity(0.88))
-                            .offset(x: engine.isPlaying ? 0 : 2)
-                    }
-                    .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .disabled(!engine.transportEnabled)
-                .opacity(engine.transportEnabled ? 1 : 0.42)
-                .keyboardShortcut(.space, modifiers: [])
-                .accessibilityLabel(engine.transportTitle)
-                .accessibilityIdentifier("transport-play-pause")
-
-                VStack(spacing: 7) {
-                    Text(engine.playingTimeText)
-                        .font(.system(size: 18, weight: .semibold, design: .monospaced))
-                        .monospacedDigit()
-                        .foregroundStyle(engine.isPlaying ? Color.white : Color.secondary)
-                        .accessibilityLabel("Playing time")
-                        .accessibilityValue(engine.playingTimeText)
-                        .accessibilityIdentifier("playing-time")
-
-                    Text(engine.positionText)
-                        .font(.system(.caption, design: .monospaced).weight(.medium))
-                        .tracking(0.8)
-                        .foregroundStyle(.secondary)
+            Group {
+                switch selectedView {
+                case .performance:
+                    performanceView
+                case .renderInspector:
+                    LiveRenderInspectorView(
+                        snapshot: engine.liveRenderSnapshot,
+                        statusTitle: engine.statusTitle,
+                        playingTimeText: engine.playingTimeText
+                    )
+                    .padding(.bottom, 56)
                 }
             }
-            .padding(42)
-            .frame(maxWidth: 680)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Button {
+                selectedView = selectedView == .performance
+                    ? .renderInspector : .performance
+            } label: {
+                Label(
+                    selectedView == .performance ? "RENDER INFO" : "PERFORMANCE",
+                    systemImage: selectedView == .performance
+                        ? "waveform.path.ecg" : "play.rectangle"
+                )
+                .font(.system(.caption2, design: .monospaced).weight(.semibold))
+                .tracking(1.0)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background {
+                    Capsule()
+                        .fill(selectedView == .renderInspector
+                            ? Color.orange.opacity(0.12)
+                            : Color.clear)
+                        .overlay {
+                            Capsule()
+                                .stroke(
+                                    selectedView == .renderInspector
+                                        ? Color.orange.opacity(0.55)
+                                        : Color.white.opacity(0.22),
+                                    lineWidth: 1
+                                )
+                        }
+                }
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut("i", modifiers: [.command])
+            .accessibilityLabel(
+                selectedView == .performance
+                    ? "Show live render information"
+                    : "Show performance controls"
+            )
+            .accessibilityHint(
+                "Switches between the transport and read-only current render details"
+            )
+            .accessibilityIdentifier("view-render-inspector")
+            .padding(24)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
 
             Button {
                 engine.startNewSet()
@@ -103,6 +109,66 @@ struct ContentView: View {
         .preferredColorScheme(.dark)
         .onAppear { engine.prepare() }
         .onDisappear { engine.shutdown() }
+    }
+
+    private var performanceView: some View {
+        VStack(spacing: 34) {
+            VStack(spacing: 7) {
+                Text("AUTO TECHNO")
+                    .font(.system(size: 29, weight: .black, design: .rounded))
+                    .tracking(-0.8)
+                Text(engine.statusTitle)
+                    .font(.system(.caption2, design: .monospaced).weight(.semibold))
+                    .tracking(1.7)
+                    .foregroundStyle(engine.isPlaying ? Color.orange : Color.secondary)
+            }
+
+            PerformanceWaveform(
+                samples: engine.waveform,
+                playhead: engine.playhead,
+                active: engine.isPlaying
+            )
+            .frame(height: 118)
+            .accessibilityHidden(true)
+
+            Button {
+                engine.togglePlayback()
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(engine.isPlaying ? Color.orange : Color.white)
+                        .frame(width: 94, height: 94)
+                    Image(systemName: engine.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(Color.black.opacity(0.88))
+                        .offset(x: engine.isPlaying ? 0 : 2)
+                }
+                .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .disabled(!engine.transportEnabled)
+            .opacity(engine.transportEnabled ? 1 : 0.42)
+            .keyboardShortcut(.space, modifiers: [])
+            .accessibilityLabel(engine.transportTitle)
+            .accessibilityIdentifier("transport-play-pause")
+
+            VStack(spacing: 7) {
+                Text(engine.playingTimeText)
+                    .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(engine.isPlaying ? Color.white : Color.secondary)
+                    .accessibilityLabel("Playing time")
+                    .accessibilityValue(engine.playingTimeText)
+                    .accessibilityIdentifier("playing-time")
+
+                Text(engine.positionText)
+                    .font(.system(.caption, design: .monospaced).weight(.medium))
+                    .tracking(0.8)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(42)
+        .frame(maxWidth: 680)
     }
 }
 

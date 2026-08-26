@@ -292,6 +292,13 @@ mistaken for a completed feedback system.
 7. `TechnoEngine` prepares away from the callback and schedules completed buffers
    by sample time. It derives its read-only waveform on a fixed decibel scale and
    owns transport, visual position, and route recovery, not musical composition.
+   The same detached preparation projects each immutable bar into one bounded
+   Render Info snapshot containing score labels, synth assignments, semantic
+   automation, generated-graph values, fixed effect states, automatic-mix
+   values, and already-reduced render evidence. The main actor exposes the first
+   accepted bar in the ready state, then publishes a new snapshot only when its
+   matching scheduled bar becomes current. The snapshot contains no PCM and
+   causes no callback analysis, allocation, or UI work.
    It also owns one scheduled-output feedback coordinator. After an exact
    two-probe mixer/player clock map succeeds, the main-mixer callback copies only
    bounded app-owned native-stereo packets into the preallocated C11 queue. A

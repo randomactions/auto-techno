@@ -42,6 +42,9 @@ when its first immutable phrase is ready. Pause and resume never take this path.
 - one fresh private canonical identity per complete, indefinitely evolving
   performance;
 - phrase and bar position plus lightweight read-only visualization;
+- one optional read-only Render Info view for the current immutable bar's
+  resolved score, synth assignments, semantic automation, graph, effects, mix,
+  and already-computed render evidence;
 - offline operation with no account or cloud dependency.
 
 ## One autonomous mechanism
@@ -64,6 +67,9 @@ engine-owned synthesis architectures and eleven score-selected home patches. The
 same four bounded semantic automation coordinates move every patch, while the
 existing ensemble score continues to own audible role density. See
 `INSTRUMENT_PALETTE.md` for the human-readable role and effect matrix.
+`SYNTH_TRACK_RENDERING_MATRIX.md` consolidates those assignments with the
+track-equivalent voices, DSP topology, effect routing, numeric homes, and
+change boundaries in one descriptive implementation map.
 
 The phrase-scale performance grammar coordinates that palette instead of
 randomizing layers independently. Six internal characters bind compatible

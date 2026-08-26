@@ -74,6 +74,7 @@ private struct PreparedPhrase: Sendable {
     let outgoingLongHorizonState: LongHorizonFutureAdaptationState?
     let longHorizonDecision: LongHorizonTrajectoryDecision?
     let waveforms: [[Float]]
+    let inspectorSnapshots: [LiveRenderSnapshot]
 }
 
 private struct ScheduledVisual {
@@ -83,6 +84,7 @@ private struct ScheduledVisual {
     let bar: Int
     let section: SectionKind
     let waveform: [Float]
+    let inspectorSnapshot: LiveRenderSnapshot
 }
 
 /// Preparation remains entirely outside the audio callback. It produces the
@@ -147,12 +149,20 @@ private enum AutonomousPerformancePreparer {
             ))
         }
         guard !Task.isCancelled else { return nil }
+        let inspectorSnapshots = LiveRenderSnapshot.make(
+            prepared: prepared,
+            sampleRate: request.key.sampleRate,
+            channelCount: request.key.channelCount
+        )
+        guard inspectorSnapshots.count == prepared.blocks.count,
+              !Task.isCancelled else { return nil }
         return PreparedPhrase(
             request: request,
             prepared: prepared,
             outgoingLongHorizonState: longHorizonUpdate?.state,
             longHorizonDecision: longHorizonUpdate?.decision,
-            waveforms: waveforms
+            waveforms: waveforms,
+            inspectorSnapshots: inspectorSnapshots
         )
     }
 }
@@ -177,6 +187,7 @@ package final class TechnoEngine: ObservableObject {
     @Published private(set) var sceneNumber = 1
     @Published private(set) var barWithinScene = 1
     @Published private(set) var currentSection: SectionKind = .groove
+    @Published private(set) var liveRenderSnapshot: LiveRenderSnapshot = .waiting
 
     var isPlaying: Bool { playbackState == .playing }
     var transportEnabled: Bool {
@@ -426,6 +437,7 @@ package final class TechnoEngine: ObservableObject {
         resetSchedule()
         resetPlayingTime()
         waveform = Array(repeating: 0.04, count: 64)
+        liveRenderSnapshot = .waiting
         sceneNumber = 1
         currentSection = .groove
         playbackState = .unavailable
@@ -582,6 +594,9 @@ package final class TechnoEngine: ObservableObject {
         nextBlockIndex = 0
         if let firstWaveform = phrase.waveforms.first {
             waveform = firstWaveform
+        }
+        if let firstInspectorSnapshot = phrase.inspectorSnapshots.first {
+            liveRenderSnapshot = firstInspectorSnapshot
         }
         currentSection = phrase.prepared.blocks.first?.section ?? .groove
         playbackState = .ready
@@ -864,6 +879,7 @@ package final class TechnoEngine: ObservableObject {
         )
         liveFeedbackPreparation.removeAllCached(keepingCapacity: false)
         currentPhrase = nil
+        liveRenderSnapshot = .waiting
         queuedPreparationRequest = nil
         resetSchedule()
         playbackState = .preparing
@@ -1456,7 +1472,10 @@ package final class TechnoEngine: ObservableObject {
         }
 
         guard phrase.prepared.blocks.indices.contains(nextBlockIndex),
-              phrase.waveforms.indices.contains(nextBlockIndex) else { return false }
+              phrase.waveforms.indices.contains(nextBlockIndex),
+              phrase.inspectorSnapshots.indices.contains(nextBlockIndex) else {
+            return false
+        }
         let blockIndex = nextBlockIndex
         let block = phrase.prepared.blocks[blockIndex]
         let format = audioEngine.mainMixerNode.outputFormat(forBus: 0)
@@ -1503,7 +1522,8 @@ package final class TechnoEngine: ObservableObject {
             scenePosition: phrase.prepared.plan.phraseIndex,
             bar: block.performance.localBar,
             section: block.section,
-            waveform: phrase.waveforms[blockIndex]
+            waveform: phrase.waveforms[blockIndex],
+            inspectorSnapshot: phrase.inspectorSnapshots[blockIndex]
         ))
         nextBlockIndex += 1
         return true
@@ -1540,6 +1560,7 @@ package final class TechnoEngine: ObservableObject {
                 sceneNumber = visual.scenePosition + 1
                 barWithinScene = visual.bar + 1
                 currentSection = visual.section
+                liveRenderSnapshot = visual.inspectorSnapshot
             }
             playhead = min(1, max(0,
                 Double(sample - visual.startSample) / Double(max(1, visual.frameLength))))
