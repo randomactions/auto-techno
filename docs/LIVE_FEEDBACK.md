@@ -9,9 +9,9 @@ unscheduled future phrase, and commits that change only when the one calibrated
 primary evaluator accepts the resulting canonical candidate.
 
 This is an implementation and automated-qualification statement for canonical
-engine `autotechno-canonical-engine.v34`, quality-contract schema 35,
-candidate-vector schema 32, candidate-transaction schema 4, Professional
-Evidence v18, professional profile v16, and primary policy/evaluator v16. It is not
+engine `autotechno-canonical-engine.v35`, quality-contract schema 36,
+candidate-vector schema 33, candidate-transaction schema 4, Professional
+Evidence v19, professional profile v17, and primary policy/evaluator v17. It is not
 evidence that a physical device, route change, interruption, listening session,
 or 60-minute output soak passed.
 
@@ -96,14 +96,14 @@ reorders, or estimates samples.
 
 The window reuses the canonical ITU-R BS.1770-5 K-weighting and gating code and
 the Annex 2 four-phase FIR true-peak implementation. Evidence binds exact PCM,
-source occurrence, sample range, route, engine, Professional Evidence v18,
+source occurrence, sample range, route, engine, Professional Evidence v19,
 policy/evaluator/controller versions, frame and packet counts, drop/reject
 counters, analysis memory, integrated/momentary/short-term loudness, true peak,
 and applicable checkpoints. Only maximum short-term loudness and maximum true
 peak drive the controller; integrated loudness remains descriptive for the
 fixed window.
 
-The controller reads those two bounds from the exact installed profile v16.
+The controller reads those two bounds from the exact installed profile v17.
 When several checkpoints apply, each metric uses the strictest applicable upper
 bound and the lower bound paired with that same checkpoint. An ordinary lock
 phrase uses the calibrated `longContinuation` envelope. Unsupported rates,
@@ -233,7 +233,7 @@ additional evaluator, renderer, controller, or correction search.
 The bundled v14 profile, v15 adversarial suite, and v13 disjoint holdout are the only
 shipping primary artifacts. Their automated qualification, queue tests,
 callback-symbol audit, controller/candidate tamper tests, and deterministic
-replay establish implementation and offline policy evidence for engine v34.
+replay establish implementation and offline policy evidence for engine v35.
 
 The following remain separate states and must be reported separately:
 

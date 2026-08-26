@@ -74,6 +74,14 @@ committed choices, applies only at a future phrase boundary, and returns to the
 hypnotic home for identity return. See
 `PERFORMANCE_GRAMMAR.md` for the human-readable compatibility matrix.
 
+Phrase-local sample transformation remains part of that same grammar. Ambient
+Drift may resolve the existing slice owner as deterministic `granular-memory`:
+overlapping bounded micrograins reinterpret only the current bar's already-
+rendered kick or percussion window. Broken Suspension retains the exact whole-
+window `cut` path. The score owns texture and seed; detached DSP owns rate-
+scaled geometry and causal evidence. No recording, retained source PCM,
+alternative sampler, preset choice, or callback work is introduced.
+
 Long-horizon effect evidence follows the same product boundary. A future phrase
 may annotate at most one effect sentence that is already present in its resolved
 score: either a gated percussion call/answer or an anticipation turnaround.
@@ -274,7 +282,7 @@ Future sound maturation must still replace only a repeatedly failed provisional
 DSP in place after independent-root, two-rate causal evidence.
 
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v18 supplies
+policy and its operational gates pass. Professional Evidence v19 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation, pre-kick foundation-pocket, terminal climax-hang,
 and live-controller consequence, explicit

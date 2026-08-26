@@ -3718,6 +3718,12 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
     package let sliceMinimumRate: Double
     package let sliceMaximumRate: Double
     package let sliceSourceKind: String
+    package let sliceTexture: String
+    package let sliceTextureSeedFingerprint: String
+    package let sliceGrainCount: Int
+    package let sliceGrainLengthFrames: Int
+    package let sliceGrainHopFrames: Int
+    package let sliceGrainPositionHash: String
     package let sliceSourceHash: String
     package let sliceOutputHash: String
     package let sliceOutputRMS: Double
@@ -3791,6 +3797,12 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         sliceMinimumRate = slice.minimumPlaybackRate
         sliceMaximumRate = slice.maximumPlaybackRate
         sliceSourceKind = slice.sourceKind?.rawValue ?? ""
+        sliceTexture = slice.texture?.rawValue ?? ""
+        sliceTextureSeedFingerprint = slice.textureSeedFingerprint
+        sliceGrainCount = slice.grainCount
+        sliceGrainLengthFrames = slice.grainLengthFrames
+        sliceGrainHopFrames = slice.grainHopFrames
+        sliceGrainPositionHash = slice.grainSourcePositionHash
         sliceSourceHash = slice.sourceSampleHash
         sliceOutputHash = slice.outputSampleHash
         sliceOutputRMS = slice.outputRMS
@@ -3852,6 +3864,12 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
             slice.active == (composition.audioSlice != nil) &&
             slice.triggerCount == (composition.audioSlice?.triggers.count ?? 0) &&
             slice.sourceKind == composition.audioSlice?.sourceKind &&
+            slice.texture == composition.audioSlice?.texture &&
+            (composition.audioSlice?.texture != .granularMemory ||
+                slice.textureSeedFingerprint ==
+                    AudioSliceRenderer.textureSeedFingerprint(
+                        composition.audioSlice?.textureSeed ?? 0
+                    )) &&
             arpeggiatorStepCount == (arpeggiator?.steps.count ?? 0) &&
             (arpeggiator == nil ||
                 (renderedAnchors.count == scorePitches.count &&
@@ -3901,6 +3919,12 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
             sliceMinimumRate: 1,
             sliceMaximumRate: 1,
             sliceSourceKind: "",
+            sliceTexture: "",
+            sliceTextureSeedFingerprint: "",
+            sliceGrainCount: 0,
+            sliceGrainLengthFrames: 0,
+            sliceGrainHopFrames: 0,
+            sliceGrainPositionHash: "",
             sliceSourceHash: "",
             sliceOutputHash: "",
             sliceOutputRMS: 0,
@@ -3954,7 +3978,11 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         section: String, arrangementGesture: String,
         sliceActive: Bool, sliceTriggerCount: Int,
         sliceReverseTriggerCount: Int, sliceMinimumRate: Double,
-        sliceMaximumRate: Double, sliceSourceKind: String, sliceSourceHash: String,
+        sliceMaximumRate: Double, sliceSourceKind: String,
+        sliceTexture: String, sliceTextureSeedFingerprint: String,
+        sliceGrainCount: Int, sliceGrainLengthFrames: Int,
+        sliceGrainHopFrames: Int, sliceGrainPositionHash: String,
+        sliceSourceHash: String,
         sliceOutputHash: String, sliceOutputRMS: Double,
         arpeggiatorActive: Bool, arpeggiatorDirection: String,
         arpeggiatorRateInSteps: Int, arpeggiatorOctaveSpan: Int,
@@ -3999,6 +4027,12 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         self.sliceMinimumRate = sliceMinimumRate
         self.sliceMaximumRate = sliceMaximumRate
         self.sliceSourceKind = sliceSourceKind
+        self.sliceTexture = sliceTexture
+        self.sliceTextureSeedFingerprint = sliceTextureSeedFingerprint
+        self.sliceGrainCount = sliceGrainCount
+        self.sliceGrainLengthFrames = sliceGrainLengthFrames
+        self.sliceGrainHopFrames = sliceGrainHopFrames
+        self.sliceGrainPositionHash = sliceGrainPositionHash
         self.sliceSourceHash = sliceSourceHash
         self.sliceOutputHash = sliceOutputHash
         self.sliceOutputRMS = sliceOutputRMS
@@ -4078,6 +4112,11 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
               sliceTriggerCount <= AudioSlicePlan.maximumTriggerCount,
               sliceReverseTriggerCount >= 0,
               sliceReverseTriggerCount <= sliceTriggerCount,
+              sliceGrainCount >= 0,
+              sliceGrainCount <= AudioSlicePlan.maximumTriggerCount *
+                AudioSliceRenderer.maximumGrainsPerTrigger,
+              sliceGrainLengthFrames >= 0,
+              sliceGrainHopFrames >= 0,
               arpeggiatorStepCount >= 0,
               arpeggiatorStepCount <= ArpeggiatorPlan.maximumStepCount,
               padVoiceCount >= 0,
@@ -4114,13 +4153,35 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         if sliceActive {
             guard sliceTriggerCount > 0, sliceOutputRMS > 0,
                   AudioSliceSourceKind(rawValue: sliceSourceKind) != nil,
+                  let resolvedTexture = AudioSliceTexture(
+                    rawValue: sliceTexture
+                  ),
                   isHash(sliceSourceHash), isHash(sliceOutputHash),
                   (0.5...2).contains(sliceMinimumRate),
                   (0.5...2).contains(sliceMaximumRate),
                   sliceMinimumRate <= sliceMaximumRate else { return false }
+            switch resolvedTexture {
+            case .cut:
+                guard sliceTextureSeedFingerprint.isEmpty,
+                      sliceGrainCount == 0,
+                      sliceGrainLengthFrames == 0,
+                      sliceGrainHopFrames == 0,
+                      sliceGrainPositionHash.isEmpty else { return false }
+            case .granularMemory:
+                guard isHash(sliceTextureSeedFingerprint),
+                      sliceGrainCount > 0,
+                      sliceGrainLengthFrames >= 2,
+                      sliceGrainHopFrames > 0,
+                      sliceGrainHopFrames <= sliceGrainLengthFrames,
+                      isHash(sliceGrainPositionHash) else { return false }
+            }
         } else if sliceTriggerCount != 0 || sliceReverseTriggerCount != 0 ||
                     sliceMinimumRate != 1 || sliceMaximumRate != 1 ||
-                    !sliceSourceKind.isEmpty ||
+                    !sliceSourceKind.isEmpty || !sliceTexture.isEmpty ||
+                    !sliceTextureSeedFingerprint.isEmpty ||
+                    sliceGrainCount != 0 || sliceGrainLengthFrames != 0 ||
+                    sliceGrainHopFrames != 0 ||
+                    !sliceGrainPositionHash.isEmpty ||
                     !sliceSourceHash.isEmpty || !sliceOutputHash.isEmpty ||
                     sliceOutputRMS.bitPattern != 0 {
             return false
@@ -5550,7 +5611,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 32
+    package static let schemaVersion = 33
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5

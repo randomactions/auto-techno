@@ -11,6 +11,12 @@ package struct AudioSliceRenderEvidence: Equatable, Sendable {
     package let minimumPlaybackRate: Double
     package let maximumPlaybackRate: Double
     package let sourceKind: AudioSliceSourceKind?
+    package let texture: AudioSliceTexture?
+    package let textureSeedFingerprint: String
+    package let grainCount: Int
+    package let grainLengthFrames: Int
+    package let grainHopFrames: Int
+    package let grainSourcePositionHash: String
     package let sourceSampleHash: String
     package let outputSampleHash: String
     package let outputRMS: Double
@@ -26,6 +32,12 @@ package struct AudioSliceRenderEvidence: Equatable, Sendable {
         minimumPlaybackRate: 1,
         maximumPlaybackRate: 1,
         sourceKind: nil,
+        texture: nil,
+        textureSeedFingerprint: "",
+        grainCount: 0,
+        grainLengthFrames: 0,
+        grainHopFrames: 0,
+        grainSourcePositionHash: "",
         sourceSampleHash: "",
         outputSampleHash: "",
         outputRMS: 0,
@@ -35,6 +47,15 @@ package struct AudioSliceRenderEvidence: Equatable, Sendable {
 
 package enum AudioSliceRenderer {
     package static let edgeFadeSeconds = 0.004
+    package static let granularLengthInSteps = 0.375
+    package static let maximumGrainsPerTrigger = 48
+
+    package static func textureSeedFingerprint(_ seed: UInt64) -> String {
+        var sink = StreamingFNV1a()
+        sink.domain("audio-slice-texture-seed.typed.v1")
+        sink.uint64(seed)
+        return fixedWidthFingerprintHex(sink.value)
+    }
 
     package static func render(
         source: [Float],
@@ -67,8 +88,16 @@ package enum AudioSliceRenderer {
         let fadeFrames = max(1, Int((sampleRate * edgeFadeSeconds).rounded()))
         var renderedFrames = 0
         var finite = sourceWindow.allSatisfy(\.isFinite)
+        var grainCount = 0
+        var grainLengthFrames = 0
+        var grainHopFrames = 0
+        var grainPositionSink = StreamingFNV1a()
+        if plan.texture == .granularMemory {
+            grainPositionSink.domain("audio-slice-grain-positions.typed.v1")
+            grainPositionSink.uint64(plan.textureSeed)
+        }
 
-        for trigger in plan.triggers {
+        for (triggerIndex, trigger) in plan.triggers.enumerated() {
             let destination = Int((Double(trigger.onsetStep) * stepFrames).rounded())
             guard destination < output.count else { continue }
             let outputCount = max(
@@ -76,25 +105,104 @@ package enum AudioSliceRenderer {
                 Int((Double(sourceCount) / trigger.playbackRate).rounded())
             )
             let boundedCount = min(outputCount, output.count - destination)
-            for index in 0..<boundedCount {
-                let sourcePosition = min(
-                    Double(sourceCount - 1),
-                    Double(index) * trigger.playbackRate
+            switch plan.texture {
+            case .cut:
+                for index in 0..<boundedCount {
+                    let sourcePosition = min(
+                        Double(sourceCount - 1),
+                        Double(index) * trigger.playbackRate
+                    )
+                    let directedPosition = trigger.direction == .forward
+                        ? sourcePosition : Double(sourceCount - 1) - sourcePosition
+                    let interpolated = BandLimitedInterpolator.sample(
+                        sourceWindow,
+                        at: directedPosition,
+                        playbackRate: trigger.playbackRate
+                    )
+                    let fadeIn = min(1, Double(index + 1) / Double(fadeFrames))
+                    let fadeOut = min(1, Double(boundedCount - index) / Double(fadeFrames))
+                    let window = min(fadeIn, fadeOut)
+                    let sample = Float(interpolated * trigger.gain * window)
+                    output[destination + index] += sample
+                    finite = finite && sample.isFinite
+                    renderedFrames += 1
+                }
+            case .granularMemory:
+                let resolvedLength = min(
+                    boundedCount,
+                    sourceCount,
+                    max(8, Int((stepFrames * granularLengthInSteps).rounded()))
                 )
-                let directedPosition = trigger.direction == .forward
-                    ? sourcePosition : Double(sourceCount - 1) - sourcePosition
-                let interpolated = BandLimitedInterpolator.sample(
-                    sourceWindow,
-                    at: directedPosition,
-                    playbackRate: trigger.playbackRate
-                )
-                let fadeIn = min(1, Double(index + 1) / Double(fadeFrames))
-                let fadeOut = min(1, Double(boundedCount - index) / Double(fadeFrames))
-                let window = min(fadeIn, fadeOut)
-                let sample = Float(interpolated * trigger.gain * window)
-                output[destination + index] += sample
-                finite = finite && sample.isFinite
-                renderedFrames += 1
+                guard resolvedLength >= 2 else { continue }
+                let hop = max(1, resolvedLength / 2)
+                grainLengthFrames = resolvedLength
+                grainHopFrames = hop
+                var grainOutputStart = 0
+                var triggerGrainCount = 0
+                while grainOutputStart < boundedCount &&
+                        triggerGrainCount < maximumGrainsPerTrigger {
+                    let grainFrames = min(
+                        resolvedLength,
+                        boundedCount - grainOutputStart
+                    )
+                    let sourceSpan = min(
+                        sourceCount,
+                        max(2, Int((Double(grainFrames) *
+                            trigger.playbackRate).rounded(.up)))
+                    )
+                    let maximumSourceStart = max(0, sourceCount - sourceSpan)
+                    let entropy = SceneDNA.derivedSeed(
+                        scene: plan.textureSeed,
+                        domain: UInt64(triggerIndex + 1),
+                        index: triggerGrainCount
+                    )
+                    let grainSourceStart = maximumSourceStart == 0 ? 0 :
+                        Int(entropy % UInt64(maximumSourceStart + 1))
+                    grainPositionSink.int(triggerIndex)
+                    grainPositionSink.int(triggerGrainCount)
+                    grainPositionSink.int(grainSourceStart)
+                    for grainIndex in 0..<grainFrames {
+                        let localPosition = min(
+                            Double(sourceSpan - 1),
+                            Double(grainIndex) * trigger.playbackRate
+                        )
+                        let forwardPosition = min(
+                            Double(sourceCount - 1),
+                            Double(grainSourceStart) + localPosition
+                        )
+                        let directedPosition = trigger.direction == .forward
+                            ? forwardPosition
+                            : Double(sourceCount - 1) - forwardPosition
+                        let interpolated = BandLimitedInterpolator.sample(
+                            sourceWindow,
+                            at: directedPosition,
+                            playbackRate: trigger.playbackRate
+                        )
+                        let outputIndex = grainOutputStart + grainIndex
+                        let fadeIn = min(
+                            1,
+                            Double(outputIndex + 1) / Double(fadeFrames)
+                        )
+                        let fadeOut = min(
+                            1,
+                            Double(boundedCount - outputIndex) /
+                                Double(fadeFrames)
+                        )
+                        let phase = Double(grainIndex) + 0.5
+                        let hann = pow(sin(.pi * phase /
+                            Double(resolvedLength)), 2)
+                        let sample = Float(
+                            interpolated * trigger.gain * hann *
+                                min(fadeIn, fadeOut)
+                        )
+                        output[destination + outputIndex] += sample
+                        finite = finite && sample.isFinite
+                    }
+                    grainCount += 1
+                    triggerGrainCount += 1
+                    grainOutputStart += hop
+                }
+                if triggerGrainCount > 0 { renderedFrames += boundedCount }
             }
         }
         let energy = output.reduce(0.0) { $0 + Double($1) * Double($1) }
@@ -111,6 +219,16 @@ package enum AudioSliceRenderer {
             minimumPlaybackRate: rates.min() ?? 1,
             maximumPlaybackRate: rates.max() ?? 1,
             sourceKind: plan.sourceKind,
+            texture: plan.texture,
+            textureSeedFingerprint: plan.texture == .granularMemory
+                ? textureSeedFingerprint(plan.textureSeed) : "",
+            grainCount: grainCount,
+            grainLengthFrames: grainLengthFrames,
+            grainHopFrames: grainHopFrames,
+            grainSourcePositionHash: plan.texture == .granularMemory &&
+                grainCount > 0 ? fixedWidthFingerprintHex(
+                    grainPositionSink.value
+                ) : "",
             sourceSampleHash: ExactPCMFingerprint.mono(sourceWindow),
             outputSampleHash: ExactPCMFingerprint.mono(output),
             outputRMS: sqrt(energy / Double(max(1, output.count))),

@@ -507,6 +507,8 @@ private extension AutonomousTypedFingerprint {
             sink.field("sourceStartStep"); sink.int(slice.sourceStartStep)
             sink.field("sourceLengthInSteps"); sink.double(slice.sourceLengthInSteps)
             sink.field("sourceKind"); sink.raw(slice.sourceKind.rawValue)
+            sink.field("texture"); sink.raw(slice.texture.rawValue)
+            sink.field("textureSeed"); sink.uint64(slice.textureSeed)
             sink.field("triggers"); sink.collection(slice.triggers.count)
             for trigger in slice.triggers {
                 sink.aggregate("AudioSliceTrigger")

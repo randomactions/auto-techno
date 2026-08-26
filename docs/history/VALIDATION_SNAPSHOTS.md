@@ -2432,3 +2432,70 @@ These results establish deterministic offline qualification and build/readiness
 only. The app was not launched. Listening, real app/route/interruption QA,
 latency observation, extended runtime observation, physical-output soak,
 publication, and exact-head CI remain separate and unrun.
+
+## MORDIO complete-channel audit and granular memory — 2026-08-26
+
+The bounded `yt-dlp` inventory contains every one of the 276 videos exposed by
+the MORDIO Music channel at capture time. Original-language captions were
+available for 219 videos; 57 are explicitly unavailable and remain
+title/metadata-only. The checked-in 276-row audit has no unreviewed item and
+records H42/R117/U57/N60 dispositions. It identifies 34 granular/resampling
+contexts and two additional looping/stutter-memory contexts. Replaying the
+versioned analyzer and Markdown renderer against the external corpus reproduced
+the audit JSON and checked-in Markdown byte for byte. Raw metadata, captions,
+normalized transcripts, and source media remain external and untracked.
+
+The repeatable deficit became one extension of the existing phrase slicer:
+Ambient Drift may reinterpret the current accepted bar-owned kick or percussion
+window as deterministic overlapping granular memory, while Broken Suspension
+retains the established exact cut. Each trigger uses 0.375-step Hann grains,
+50% hop, the existing band-limited interpolator, the existing 4 ms outer fade,
+at most 48 grains, and at most six triggers. Texture, score seed, grain geometry,
+source-position hash, source/output PCM identity, bounds, finiteness, and exact
+score/render binding are causal candidate evidence. No source audio is retained,
+and no callback, queue, scheduler, route, or live-feedback path changed.
+
+Exact-engine regeneration and cached replay produced byte-identical primary v17
+artifacts:
+
+- profile `a36ab44f411ae336`, SHA-256
+  `532554aadd2e27238f84bf812583ea5348bae64e9ff81e4f704c0cf0c91f0931`;
+- adversarial suite `4af5f1c100e9aad8`, SHA-256
+  `30272928338a0da71b2acfd03c46244fadf2d6234e70cbd93118fcf1d9434cde`;
+  and
+- disjoint holdout `325acd7e49ed49b6`, SHA-256
+  `6ea72a67fe18faa0ebf80f954c4445f0b92cb75a98528d2646ddb9331bbdc17a`.
+
+The exact long-horizon v4 regeneration accepted all five development roots,
+rejected all ten adversarial attacks, and accepted both disjoint holdout roots
+at 44.1 and 48 kHz. Reduced-corpus replay reproduced the files byte for byte:
+
+- profile `3494dfe4ca7a0413`, SHA-256
+  `9de9f6d680c36fb3e616769b966012303d18b3add7df2ba19161a7b44fa32f47`;
+- adversarial suite `5baaf2e05b0aaf3e`, SHA-256
+  `1dbd43799715b1eae78c8360dc2d511747753cc3dec7e228433bcc850104c73e`;
+  and
+- disjoint holdout `7b6e868f5a92a898`, SHA-256
+  `2de3662401f48ab4a7f10883d9a63c827d905f345b42aca74061e917b99889a3`.
+
+After reviewing and advancing three intentionally serialized engine-identity
+fixtures, a clean matched-Xcode run passed 5/5 XCTest cases and all 456 Swift
+Testing cases. The Swift Testing aggregate completed in 1,561.789 seconds. The
+frozen engine-v35 baselines remained `4a56c7cd78fe0184` for the four-hour plan,
+`07417d6988caf5ba` for bar evidence, `91e27481b9706bd2` for semantic JSON, and
+`8d8add29332c6a9f` for the eight-hour signal trajectory.
+
+A separate fresh production build resolved only the pinned package versions,
+bundled only primary v17 and long-horizon v4 resources, and completed in 104.83
+seconds. The arm64 `AutoTechno` executable has UUID
+`62E47DD1-1553-300C-95DF-62B5C44C03DE` and SHA-256
+`94a3906595ab86a84b2dd02815c170a4ffe89c94a6935338cf402f8a3c1754e0`.
+The release-mode realtime producer object has exactly one undefined symbol,
+the allowed `memcpy`. `git diff --check` passed and no generated Python bytecode
+remained.
+
+These results establish deterministic offline qualification and optimized
+build/readiness. Publication and exact published-head launch are subsequent
+repository/runtime actions. Listening, real route/interruption QA, latency
+observation, extended runtime observation, and physical-output soak remain
+separate and unclaimed.

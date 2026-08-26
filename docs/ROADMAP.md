@@ -73,7 +73,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one scheduled-output master-headroom path mapping app-owned mixer PCM to an
   exact phrase occurrence, analyzing one fixed three-second window off the
   callback, and applying a primary-accepted attenuation only to future PCM;
-- canonical engine v34, quality-contract schema 35, candidate-vector schema 32,
+- canonical engine v35, quality-contract schema 36, candidate-vector schema 33,
   and candidate-transaction schema 4
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax, debt-to-recovery climax arc and terminal hang,
@@ -94,7 +94,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - phrase-wide and live-window ITU-R BS.1770-5 loudness, Annex 2 true peak,
   physical-time spectral/trajectory evidence, rate-normalized transient
   detection, explicit bounded working memory, and a complete-checkpoint
-  Professional Evidence v18 report bank;
+  Professional Evidence v19 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
@@ -107,8 +107,8 @@ filter motion, and dry-plus-moving-shadow concepts were reconciled to existing
 score, modulation, echo, chorus, and FDN owners; no duplicate track,
 instrument, modulation lane, or effect chain was added.
 
-The app now installs one exact-engine calibrated primary evaluator v16 from the
-current profile v16 derived from 28 complete journeys, a passing v15 adversarial
+The app now installs one exact-engine calibrated primary evaluator v17 from the
+current profile v17 derived from 28 complete journeys, a passing v15 adversarial
 suite, and a disjoint four-journey holdout qualification v13. Each boundary owns one
 canonical plan and one terminal decision. The evaluator may request one same-
 plan home-timbre correction, for two render passes maximum. Missing artifacts
@@ -170,9 +170,9 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 35, candidate-vector schema 32, and candidate-
+Quality-contract schema 36, candidate-vector schema 33, and candidate-
 transaction schema 4 now bind a versioned transaction across canonical engine
-v34, quality policy, evaluator, candidate plans, route, incoming continuation,
+v35, quality policy, evaluator, candidate plans, route, incoming continuation,
 attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 upper-percussion tail-clearance,
@@ -189,7 +189,7 @@ provenance, make each
 score-to-PCM consequence explicit for the calibrated primary policy. The modal
 foundation projection additionally binds every empty and active bar, score-owned
 articulation, exact dry PCM, protected routing, continuation, pitch, envelope,
-spectral, masking, and pole-stability evidence. Professional Evidence v18 adds
+spectral, masking, and pole-stability evidence. Professional Evidence v19 adds
 standards-based phrase loudness/true peak, bounded streaming
 physical-time spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
@@ -206,7 +206,7 @@ local and untracked.
 
 The runtime now records one complete plan, one initial attempt, and at most one
 home-timbre correction, then atomically carries the terminal evidence, decision,
-and controller state into continuation. The exact engine-v34 profile v16,
+and controller state into continuation. The exact engine-v35 profile v17,
 passing v15 adversarial suite, disjoint holdout qualification v13, non-compensable
 checkpoint policy, and transaction replay are the app path. The former
 single-journey generalization blocker is closed: 28 development journeys and
@@ -271,6 +271,18 @@ rim bodies by performance character. Both paths bind score identity to distinct
 same-pass PCM evidence. Acid, trancy/melodic, hard/schranz, industrial,
 organic/ritual, presets, chains, and automation tutorials reconcile to existing
 owners and do not authorize another engine, track, selector, or template.
+
+The [276-video Mordio Music audit](history/MORDIO_MUSIC_CHANNEL_AUDIT.md)
+reconciles every detected named synth, hardware device, sequencer, effect,
+chain, and automation technique to a canonical owner or the standalone-product
+boundary. Repeated Granulator, Torso S-4, granular/resampling, and looping-memory
+material exposed one maturation opportunity inside the existing phrase-local
+slicer: Ambient Drift can now replace each resolved slice trigger with a
+score-seeded, bounded cloud of overlapping micrograins, while Broken Suspension
+retains the byte-exact cut path. Exact grain geometry and source-position
+evidence qualify the distinction; no VST, hardware dependency, product clone,
+preset browser, imported sample, cross-bar recorder, second renderer, or
+callback work was added.
 
 ### 6. Qualify long-horizon professional sound
 

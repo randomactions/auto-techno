@@ -5,20 +5,20 @@ import Testing
 
 @Suite("Current autonomous runtime")
 struct CurrentRuntimeTests {
-    @Test("AudioReakt DSP identities advance as one exact contract")
-    func audioReaktDSPPrimaryIdentityContract() {
-        #expect(QualityQualificationContract.schemaVersion == 35)
+    @Test("MORDIO granular-memory identities advance as one exact contract")
+    func mordioGranularMemoryPrimaryIdentityContract() {
+        #expect(QualityQualificationContract.schemaVersion == 36)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v34")
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 32)
+                "autotechno-canonical-engine.v35")
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 33)
         #expect(ProfessionalQualityObservation.schemaVersion == 14)
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 14)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v16")
+                "autotechno-professional-quality-profile.v17")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v16")
+                "autotechno-candidate-evaluator.primary-calibrated.v17")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v16")
+                "autotechno-quality.primary-calibrated.v17")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 15)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
                 "autotechno-professional-quality-adversarial.v15")
@@ -26,20 +26,20 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
                 "autotechno-professional-quality-holdout.v13")
         #expect(CanonicalJourneyQualificationReport.currentEvidenceScope ==
-                "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-live-commit.v17")
+                "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-granular-memory-live-commit.v18")
         #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 2)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 18)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 19)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v18")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v16"))
+                "autotechno-professional-evidence.v19")
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v17"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v16"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v16"))
+            .hasSuffix("-v17"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v17"))
     }
 
-    @Test("Only bundled v16 resources remain")
-    func primaryResourcesAreV16Only() {
+    @Test("Only bundled v17 resources remain")
+    func primaryResourcesAreV17Only() {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
         for stem in ["profile", "adversarial-suite", "holdout"] {
@@ -74,8 +74,10 @@ struct CurrentRuntimeTests {
                 resourceDirectory.appendingPathComponent("\(prefix)-v14.json").path))
             #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v15.json").path))
-            #expect(FileManager.default.fileExists(atPath:
+            #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v16.json").path))
+            #expect(FileManager.default.fileExists(atPath:
+                resourceDirectory.appendingPathComponent("\(prefix)-v17.json").path))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v1"))
             #expect(!ProfessionalQualityPrimaryArtifacts
@@ -106,8 +108,10 @@ struct CurrentRuntimeTests {
                 .containsBundledResource(named: "\(prefix)-v14"))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v15"))
-            #expect(ProfessionalQualityPrimaryArtifacts
+            #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v16"))
+            #expect(ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: "\(prefix)-v17"))
         }
         #expect(throws: Never.self) {
             _ = try ProfessionalQualityPrimaryArtifacts.load()
@@ -511,13 +515,13 @@ struct RepositorySurfaceTests {
         }.joined(separator: "\n").lowercased()
 
         for required in [
-            "autotechno-canonical-engine.v34",
-            "quality-contract schema 35",
-            "candidate-vector schema 32",
+            "autotechno-canonical-engine.v35",
+            "quality-contract schema 36",
+            "candidate-vector schema 33",
             "candidate-transaction schema 4",
-            "professional evidence v18",
-            "profile v16",
-            "evaluator v16",
+            "professional evidence v19",
+            "profile v17",
+            "evaluator v17",
             "live feedback",
             "physical-output soak",
         ] {

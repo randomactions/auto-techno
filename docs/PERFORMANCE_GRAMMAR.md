@@ -182,7 +182,7 @@ section, modal DNA, and ensemble score.
 
 | Capability | Eligible context | Score and PCM consequence |
 | --- | --- | --- |
-| True audio slicing | Broken Suspension or Ambient Drift inside a major-break breakdown with an existing early percussion or kick event | Captures 0.25–2 steps from that bar's exact app-owned dry percussion/kick PCM and schedules at most six forward/reverse triggers at 0.5–2x with boundary fades. No library or cross-session sample storage exists. |
+| True audio slicing | Broken Suspension or Ambient Drift inside a major-break breakdown with an existing early percussion or kick event | Captures 0.25–2 steps from that bar's exact app-owned dry percussion/kick PCM and schedules at most six forward/reverse triggers at 0.5–2x with boundary fades. Broken Suspension keeps the byte-exact cut texture; Ambient Drift resolves each trigger into at most 48 deterministic overlapping 0.375-step Hann grains with score-derived source anchors and the existing band-limited interpolator. No library, cross-bar loop, or cross-session sample storage exists. |
 | Full arpeggiator | Melodic Glow, Acid Pressure, or Peak Drive with an admitted motif outside major breaks, structural markers, and Tone chapters | Replaces sparse anchor notes with 8 or 16 fully resolved notes. Direction, 1/16 or 1/8 rate, octave span, rotation, pitch, duration, and velocity are score-owned. DSP has no free-running sequencer clock; the existing sustained-wash release marker keeps its single long anchor and Tone chapters retain their complementary spectral relation. |
 | Polyphonic pads | Admitted atmosphere during Ambient Drift, Melodic Glow, major breaks, or a Breath chapter | Adds one simultaneous four-voice modal chord through a fixed-state pad voice with bounded filter, drive, spatial send, and exact dry-PCM evidence. Existing atmosphere events remain intact. |
 | Harmonic disclosure | Existing eligible pad material, plus Lock bars that already admit the atmosphere role | A lock phrase realizes the atmosphere with the canonical single pad, conceals the arc as tonic, partially exposes tonic and modal color in its latter half, and a major break reveals the established four-function cycle. Pad and arpeggiator share the same disclosed function; no new role, track, note clock, or instrument is introduced. |
@@ -202,12 +202,15 @@ when present and the resolved kick as the bounded break source otherwise. It
 never captures a microphone, system audio, external file, or scheduled output,
 and it retains no source buffer in continuation. Rendering occurs during
 detached preparation; the callback still schedules immutable completed buffers
-only.
+only. Its texture and seed are resolved score data: the cut path remains exact,
+while granular memory is a bounded alternative realization within the same
+plan, source window, renderer, evidence, future phrase boundary, and fallback.
 
 Identity return, force-home correction, missing source material, and ineligible
 role/character combinations resolve every new feature to exact neutral.
-Candidate schema 32 binds per-bar score geometry to source and
-output hashes, trigger/rate counts, pad frequency ratios and PCM, arpeggiator
+Candidate schema 33 binds per-bar score geometry to source and
+output hashes, slice texture/seed, trigger/rate and grain geometry/source-position
+counts and hashes, pad frequency ratios and PCM, arpeggiator
 counts and exact score/render pitches, harmonic-disclosure stage/function,
 voice-leading bounds, and the existing pad rhythm's filter, send, and
 closed/open/closed amplitude consequences. The gate uses route-derived
@@ -215,8 +218,8 @@ raised-cosine edges while oscillator/filter/envelope/spatial state advances; it
 adds no trigger track or callback work. This is causal structural evidence
 rather than a professional-quality claim by itself.
 
-Deliberate remaining boundaries are cross-bar/sample-library slicing, granular
-time stretching, arbitrary MIDI import/export, more than four simultaneous pad
+Deliberate remaining boundaries are cross-bar/sample-library slicing, unbounded
+granular recording or time stretching, arbitrary MIDI import/export, more than four simultaneous pad
 voices, chromatic reharmonization outside the identity mode, and calibrated
 ranking of harmonic or resampling quality.
 

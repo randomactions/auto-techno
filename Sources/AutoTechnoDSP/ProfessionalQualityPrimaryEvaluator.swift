@@ -44,11 +44,11 @@ package struct ProfessionalQualityCandidateAssessment: Codable, Equatable,
 package struct ProfessionalQualityPrimaryEvaluator:
         AutonomousCandidateEvaluating {
     package static let policyFamilyVersion =
-        "autotechno-quality.primary-calibrated.v16"
+        "autotechno-quality.primary-calibrated.v17"
     package static let evaluatorVersionIdentifier =
-        "autotechno-candidate-evaluator.primary-calibrated.v16"
+        "autotechno-candidate-evaluator.primary-calibrated.v17"
     package static let requiredProfileVersion =
-        "autotechno-professional-quality-profile.v16"
+        "autotechno-professional-quality-profile.v17"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport

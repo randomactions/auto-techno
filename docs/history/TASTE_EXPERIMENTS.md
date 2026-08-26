@@ -2454,3 +2454,45 @@ No new synth architecture, preset, patch, effect, bus, fixed chain, renderer,
 user selector, route behavior, or realtime-callback work was added. Automated
 qualification does not imply listening approval, real app/route QA, latency
 observation, or physical-output soak; those stages remain separate and unrun.
+
+## Mordio Music complete channel sweep — 2026-08-26
+
+The authorized `yt-dlp` workflow inventoried all 276 videos visible on the live
+Mordio Music videos page. Original-language automatic captions were usable for
+219 videos: 166 English, 40 German, and thirteen across Arabic, Spanish, Hindi,
+Italian, Korean, Dutch, Polish, Thai, Turkish, and Vietnamese. Fifty-seven
+videos had no usable original-language caption candidate. Raw metadata,
+captions, and normalized transcripts remain local and untracked; the checked-in
+audit records all 276 titles, caption availability, detected devices and
+techniques, and a reviewable disposition.
+
+The corpus names Ableton instruments and effects, hardware and modular devices,
+sequencers, third-party plug-ins, mobile hosts, and recurring production
+techniques. Each mention was reconciled by behavior rather than brand: existing
+Resonant Mono, Tonal Motion, Spectral Texture, percussion, phrase composition,
+generated graph, FDN, protected returns, and primary evaluator owners cover the
+portable synthesis, modulation, sequencing, spatial, dynamics, saturation, and
+mix relationships. Three caption ambiguities remain explicitly unresolved
+rather than guessed: one Max sequencer name, one free limiter/compressor name,
+and one phone-effects app. Standalone hosts, VSTs, hardware, preset browsers,
+fixed racks, and direct product clones remain outside the one-button product.
+
+Granular/resampling appeared in 34 captioned videos, alongside repeated
+Granulator, Robert Henke, Torso S-4, looping-memory, reverse, and source-position
+techniques. That convergence did not justify another instrument or sampler:
+the canonical `AudioSlicePlan` already owns a bounded, phrase-local app-owned
+source window and its future musical boundary. It instead motivated a new
+score-owned texture inside the same renderer. Ambient Drift resolves each
+existing trigger into overlapping, score-seeded Hann micrograins; Broken
+Suspension retains the exact established cut. The renderer records texture,
+seed, grain count, grain length/hop, and source-position identity, remains
+bounded to 48 grains per trigger, retains no PCM, and executes only during
+detached preparation.
+
+Focused qualification proves identical score/seed replay, changed PCM and
+source-position evidence for another seed, physical grain-duration agreement
+at 8 and 16 kHz, finite bounded output, exact cut-path evidence, integrated
+percussion/kick source use, and exact inactive neutrality. These automated
+results validate deterministic implementation and causal evidence only. They
+do not substitute for listening, real route/interruption QA, latency
+observation, extended runtime observation, or a physical-output soak.

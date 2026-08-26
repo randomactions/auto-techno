@@ -115,7 +115,7 @@ sentence evidence without retaining PCM. Detached accepted phrases now also
 reduce their exact PCM into a DSP-owned, fixed-capacity signal trajectory across
 loudness, crest, spectrum, transients, masking, wet/dry relation, stereo, and
 movement while keeping the semantic target separate. These reports are still
-kept separate and judged by the exact engine-v34/primary-v16 long-horizon
+kept separate and judged by the exact engine-v35/primary-v17 long-horizon
 artifacts. Detached preparation carries one fixed-capacity active-rate
 observation with the immutable successor and can emit one reason-coded
 preserve/recover decision for an eligible unscheduled future phrase. The App
@@ -170,6 +170,7 @@ revision.
 - [`docs/AUTONOMOUS_RUNTIME_PROVENANCE.md`](docs/AUTONOMOUS_RUNTIME_PROVENANCE.md) — runtime ownership and feedback flow
 - [`docs/AUTONOMOUS_RUNTIME_VALIDATION.md`](docs/AUTONOMOUS_RUNTIME_VALIDATION.md) — current validation and release gates
 - [`docs/VIDEO_ANALYSIS_PROTOCOL.md`](docs/VIDEO_ANALYSIS_PROTOCOL.md) — source-evidence protocol for video-derived hypotheses
+- [`docs/history/MORDIO_MUSIC_CHANNEL_AUDIT.md`](docs/history/MORDIO_MUSIC_CHANNEL_AUDIT.md) — complete 276-video device, effect, chain, automation, and disposition audit
 - [`docs/history/TASTE_EXPERIMENTS.md`](docs/history/TASTE_EXPERIMENTS.md) — non-normative historical experiments
 - [`docs/history/VALIDATION_SNAPSHOTS.md`](docs/history/VALIDATION_SNAPSHOTS.md) — non-normative historical validation records
 

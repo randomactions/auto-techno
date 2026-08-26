@@ -17,12 +17,12 @@ package enum ProfessionalQualityPolicyAvailability: String, Codable, Sendable {
 }
 
 /// A deterministic, bounded bank containing every canonical journey checkpoint
-/// for each route rate represented by the bank. Professional Evidence v18 is an
+/// for each route rate represented by the bank. Professional Evidence v19 is an
 /// observation contract only: it has no constructor for a calibrated profile
 /// or adversarial-suite identity, so it cannot claim policy availability.
 package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable {
-    package static let schemaVersion = 18
-    package static let evidenceVersion = "autotechno-professional-evidence.v18"
+    package static let schemaVersion = 19
+    package static let evidenceVersion = "autotechno-professional-evidence.v19"
     package static let maximumReports = 64
     package static let maximumEncodedBytes = 64 * 1_024 * 1_024
 

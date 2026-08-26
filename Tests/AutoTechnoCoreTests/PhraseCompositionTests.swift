@@ -152,6 +152,10 @@ struct PhraseCompositionTests {
         #expect(evidence.active && evidence.finite)
         #expect(evidence.minimumPlaybackRate == 1)
         #expect(evidence.maximumPlaybackRate == 1)
+        #expect(evidence.texture == .cut)
+        #expect(evidence.textureSeedFingerprint.isEmpty)
+        #expect(evidence.grainCount == 0)
+        #expect(evidence.grainSourcePositionHash.isEmpty)
     }
 
     @Test("Invalid slice input remains an exact neutral fallback")
@@ -224,6 +228,81 @@ struct PhraseCompositionTests {
         #expect(firstEvidence.outputRMS > 0)
         #expect(first.allSatisfy { $0.isFinite })
         #expect(first[..<Int(stepFrames * 8)].allSatisfy { $0 == 0 })
+    }
+
+    @Test("Granular memory is deterministic, seed-bound, and rate-scaled")
+    func granularMemoryIsDeterministicAndRateScaled() {
+        func render(sampleRate: Double, seed: UInt64) ->
+                (samples: [Float], evidence: AudioSliceRenderEvidence) {
+            let frameCount = Int(sampleRate * 2)
+            let stepFrames = sampleRate * 60 /
+                AutonomousSessionDirector.bpm / 4
+            let source = (0..<frameCount).map { index in
+                let time = Double(index) / sampleRate
+                return Float(
+                    (sin(2 * .pi * 173 * time) * 0.52) +
+                    (sin(2 * .pi * 431 * time) * 0.19) +
+                    (sin(2 * .pi * 0.7 * time) * 0.08)
+                )
+            }
+            let plan = AudioSlicePlan(
+                sourceStartStep: 0,
+                sourceLengthInSteps: 2,
+                texture: .granularMemory,
+                textureSeed: seed,
+                triggers: [
+                    AudioSliceTrigger(
+                        onsetStep: 2,
+                        playbackRate: 0.75,
+                        direction: .forward,
+                        gain: 0.31
+                    ),
+                    AudioSliceTrigger(
+                        onsetStep: 7,
+                        playbackRate: 1.5,
+                        direction: .reverse,
+                        gain: 0.24
+                    ),
+                ]
+            )
+            var output = [Float](repeating: 0, count: frameCount)
+            let evidence = AudioSliceRenderer.render(
+                source: source,
+                output: &output,
+                plan: plan,
+                stepFrames: stepFrames,
+                sampleRate: sampleRate
+            )
+            return (output, evidence)
+        }
+
+        let first = render(sampleRate: 8_000, seed: 0xA11CE)
+        let replay = render(sampleRate: 8_000, seed: 0xA11CE)
+        let changedSeed = render(sampleRate: 8_000, seed: 0xB0B)
+        let higherRate = render(sampleRate: 16_000, seed: 0xA11CE)
+
+        #expect(first.samples == replay.samples)
+        #expect(first.evidence == replay.evidence)
+        #expect(first.samples != changedSeed.samples)
+        #expect(first.evidence.grainSourcePositionHash !=
+                changedSeed.evidence.grainSourcePositionHash)
+        #expect(first.evidence.active && first.evidence.finite)
+        #expect(first.evidence.texture == .granularMemory)
+        #expect(first.evidence.textureSeedFingerprint.count == 16)
+        #expect(first.evidence.grainCount > 0)
+        #expect(first.evidence.grainCount <=
+                AudioSlicePlan.maximumTriggerCount *
+                    AudioSliceRenderer.maximumGrainsPerTrigger)
+        #expect(first.evidence.grainHopFrames <=
+                first.evidence.grainLengthFrames)
+        #expect(first.evidence.grainSourcePositionHash.count == 16)
+        #expect(first.evidence.outputRMS > 0)
+        #expect(first.samples.allSatisfy { $0.isFinite })
+        let firstDuration = Double(first.evidence.grainLengthFrames) / 8_000
+        let higherRateDuration = Double(
+            higherRate.evidence.grainLengthFrames
+        ) / 16_000
+        #expect(abs(firstDuration - higherRateDuration) < 1 / 8_000)
     }
 
     @Test("Four independent modal pad voices render simultaneous bounded PCM")
@@ -1196,6 +1275,7 @@ struct PhraseCompositionTests {
         )
         let synthBar = try #require(synth.bars.first)
         #expect(synthBar.composition.audioSlice != nil)
+        #expect(synthBar.composition.audioSlice?.texture == .cut)
         var state = RenderState()
         var workspace = RenderWorkspace()
         let rendered = VoiceRenderer.renderBar(
@@ -1211,6 +1291,8 @@ struct PhraseCompositionTests {
         )
         #expect(rendered.audioSliceRenderEvidence.active)
         #expect(rendered.audioSliceRenderEvidence.triggerCount >= 3)
+        #expect(rendered.audioSliceRenderEvidence.texture == .cut)
+        #expect(rendered.audioSliceRenderEvidence.grainCount == 0)
         #expect(rendered.audioSliceRenderEvidence.sourceSampleHash !=
                 rendered.audioSliceRenderEvidence.outputSampleHash)
         #expect(rendered.audioSliceRenderEvidence.outputRMS > 0)
@@ -1240,6 +1322,8 @@ struct PhraseCompositionTests {
         )
         let synthBar = try #require(synth.bars.first)
         #expect(synthBar.composition.audioSlice?.sourceKind == .kick)
+        #expect(synthBar.composition.audioSlice?.texture == .granularMemory)
+        #expect(synthBar.composition.audioSlice?.textureSeed != 0)
         var state = RenderState()
         var workspace = RenderWorkspace()
         let rendered = VoiceRenderer.renderBar(
@@ -1254,6 +1338,9 @@ struct PhraseCompositionTests {
             layer: .full
         )
         #expect(rendered.audioSliceRenderEvidence.active)
+        #expect(rendered.audioSliceRenderEvidence.texture == .granularMemory)
+        #expect(rendered.audioSliceRenderEvidence.grainCount > 0)
+        #expect(rendered.audioSliceRenderEvidence.grainSourcePositionHash.count == 16)
         #expect(rendered.audioSliceRenderEvidence.sourceSampleHash.count == 16)
         #expect(rendered.audioSliceRenderEvidence.outputRMS > 0)
         #expect(rendered.kickMix.renderedKickEventCount == 1)

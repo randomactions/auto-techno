@@ -326,18 +326,18 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalQualityObservation.schemaVersion == 14)
         #expect(ProfessionalQualityObservation.observationVersion ==
                 "autotechno-professional-quality-observation.v14")
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 18)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 19)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v18")
+                "autotechno-professional-evidence.v19")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v16")
+                "autotechno-quality.primary-calibrated.v17")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v16")
+                "autotechno-candidate-evaluator.primary-calibrated.v17")
         #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
-                "autotechno-professional-quality-profile.v16")
+                "autotechno-professional-quality-profile.v17")
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 14)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v16")
+                "autotechno-professional-quality-profile.v17")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 15)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
                 "autotechno-professional-quality-adversarial.v15")
@@ -693,7 +693,7 @@ struct ProfessionalQualityCalibrationTests {
         })
     }
 
-    @Test("Constructed v15 artifacts activate only the single primary policy")
+    @Test("Constructed current artifacts activate only the single primary policy")
     func primaryCandidatePolicy() throws {
         let artifacts = try diverseArtifacts()
         #expect(artifacts.profile.profileVersion ==
@@ -798,8 +798,8 @@ struct ProfessionalQualityCalibrationTests {
             artifacts.profile.deterministicJSON(),
             replacements: [
                 "\"schemaVersion\":14": "\"schemaVersion\":13",
-                "autotechno-professional-quality-profile.v16":
-                    "autotechno-professional-quality-profile.v15",
+                "autotechno-professional-quality-profile.v17":
+                    "autotechno-professional-quality-profile.v16",
             ]
         )
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
@@ -868,7 +868,7 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Bundled v16 primary artifacts activate the exact v16 evaluator")
+    @Test("Bundled v17 primary artifacts activate the exact v17 evaluator")
     func primaryArtifacts() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(artifacts.profile.fingerprint ==
@@ -974,7 +974,7 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Primary preparation remains unavailable without v15 artifacts")
+    @Test("Primary preparation remains unavailable without current artifacts")
     func preparationEvaluatorAvailability() {
         let representativeRate = ProfessionalQualityPreparationEvaluator(
             sampleRate: 48_000,

@@ -13,6 +13,15 @@ package enum AudioSliceSourceKind: String, CaseIterable, Sendable {
     case kick
 }
 
+/// The score-owned interpretation of one already-rendered source window.
+/// `cut` preserves the established whole-window resampler. `granularMemory`
+/// reuses that same window as overlapping deterministic micrograins; it is not
+/// a second sampler, retained recording, or renderer-side musical choice.
+package enum AudioSliceTexture: String, CaseIterable, Sendable {
+    case cut
+    case granularMemory = "granular-memory"
+}
+
 package struct AudioSliceTrigger: Equatable, Sendable {
     package let onsetStep: Int
     package let playbackRate: Double
@@ -34,10 +43,14 @@ package struct AudioSlicePlan: Equatable, Sendable {
     package let sourceStartStep: Int
     package let sourceLengthInSteps: Double
     package let sourceKind: AudioSliceSourceKind
+    package let texture: AudioSliceTexture
+    package let textureSeed: UInt64
     package let triggers: [AudioSliceTrigger]
 
     package init(sourceStartStep: Int, sourceLengthInSteps: Double,
                  sourceKind: AudioSliceSourceKind = .percussion,
+                 texture: AudioSliceTexture = .cut,
+                 textureSeed: UInt64 = 0,
                  triggers: [AudioSliceTrigger]) {
         self.sourceStartStep = min(15, max(0, sourceStartStep))
         self.sourceLengthInSteps = min(
@@ -45,6 +58,8 @@ package struct AudioSlicePlan: Equatable, Sendable {
             max(0.25, sourceLengthInSteps.isFinite ? sourceLengthInSteps : 1)
         )
         self.sourceKind = sourceKind
+        self.texture = texture
+        self.textureSeed = texture == .granularMemory ? textureSeed : 0
         self.triggers = Array(triggers.prefix(Self.maximumTriggerCount)).sorted {
             if $0.onsetStep != $1.onsetStep { return $0.onsetStep < $1.onsetStep }
             if $0.direction != $1.direction { return $0.direction == .forward }
@@ -377,6 +392,13 @@ package enum PhraseCompositionResolver {
             sourceStartStep: source.step,
             sourceLengthInSteps: localBar.isMultiple(of: 2) ? 1 : 0.5,
             sourceKind: sourceKind,
+            texture: resolved.performanceCharacter == .ambientDrift
+                ? .granularMemory : .cut,
+            textureSeed: SceneDNA.derivedSeed(
+                scene: resolved.performance.eventSeed,
+                domain: 0xA0D1_05E,
+                index: resolved.performance.bar
+            ),
             triggers: triggers
         )
     }
