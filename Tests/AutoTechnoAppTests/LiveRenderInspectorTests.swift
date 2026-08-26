@@ -101,12 +101,30 @@ struct LiveRenderInspectorTests {
             ),
             encoding: .utf8
         )
+        let inspector = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(
+                "Sources/AutoTechnoApp/LiveRenderInspectorView.swift"
+            ),
+            encoding: .utf8
+        )
+        let app = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(
+                "Sources/AutoTechnoApp/AutoTechnoApp.swift"
+            ),
+            encoding: .utf8
+        )
 
         #expect(contentView.contains("view-render-inspector"))
         #expect(contentView.contains("Show live render information"))
         #expect(contentView.contains("keyboardShortcut(\"i\", modifiers: [.command])"))
         #expect(!contentView.contains("Slider("))
         #expect(!contentView.contains("Toggle("))
+        #expect(contentView.contains(".padding(.bottom, 34)"))
+        #expect(!inspector.contains("ScrollView"))
+        #expect(!inspector.contains("scrollIndicators"))
+        #expect(inspector.contains("private let visibleAssignmentLimit = 4"))
+        #expect(app.contains(".defaultSize(width: 740, height: 520)"))
+        #expect(app.contains("window.contentMinSize = NSSize(width: 680, height: 480)"))
         #expect(engine.contains("let inspectorSnapshots = LiveRenderSnapshot.make("))
         #expect(engine.contains("Task.detached(priority: .userInitiated)"))
         #expect(engine.contains("liveRenderSnapshot = visual.inspectorSnapshot"))

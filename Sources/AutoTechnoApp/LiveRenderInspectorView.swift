@@ -6,283 +6,254 @@ struct LiveRenderInspectorView: View {
     let statusTitle: String
     let playingTimeText: String
 
-    private let columns = [
-        GridItem(.adaptive(minimum: 132, maximum: 210), spacing: 10),
+    private let intentColumns = [
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10),
     ]
+    private let metricColumns = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+    ]
+    private let visibleAssignmentLimit = 4
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                header
-                if snapshot.available {
-                    intentSection
-                    voicesSection
-                    assignmentsSection
-                    capabilitiesSection
-                    renderSection
-                    graphSection
-                    effectsAndMixSection
-                    provenanceSection
-                } else {
-                    waitingState
+        VStack(alignment: .leading, spacing: 10) {
+            header
+            if snapshot.available {
+                HStack(alignment: .top, spacing: 10) {
+                    musicalStatePanel
+                        .frame(width: 168)
+                    activeSynthsPanel
+                        .frame(maxWidth: .infinity)
+                    renderHealthPanel
+                        .frame(width: 202)
                 }
+                .frame(maxHeight: .infinity)
+            } else {
+                waitingState
             }
-            .padding(.horizontal, 34)
-            .padding(.top, 30)
-            .padding(.bottom, 82)
-            .frame(maxWidth: 760, alignment: .leading)
         }
-        .scrollIndicators(.visible)
+        .padding(.horizontal, 22)
+        .padding(.top, 16)
+        .padding(.bottom, 70)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text("CURRENT RENDER")
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .tracking(-0.5)
-                Spacer(minLength: 12)
-                Text("PREPARED · OFF CALLBACK")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .tracking(0.8)
-                    .foregroundStyle(Color.orange)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.orange.opacity(0.10), in: Capsule())
-            }
+        HStack(alignment: .center, spacing: 12) {
+            Text("CURRENT RENDER")
+                .font(.system(size: 19, weight: .black, design: .rounded))
+                .tracking(-0.3)
             Text(snapshot.available
-                ? "\(statusTitle) · \(playingTimeText) · PHRASE \(snapshot.phraseNumber) · BAR \(snapshot.barNumber)"
-                : "\(statusTitle) · WAITING FOR THE FIRST IMMUTABLE BAR")
-                .font(.system(.caption, design: .monospaced).weight(.semibold))
-                .tracking(0.7)
+                ? "\(statusTitle)  ·  \(playingTimeText)  ·  P\(snapshot.phraseNumber) / B\(snapshot.barNumber)"
+                : "\(statusTitle)  ·  WAITING FOR FIRST BAR")
+                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                .tracking(0.45)
                 .foregroundStyle(.secondary)
-            Text("Values change only when an already-scheduled bar becomes current.")
-                .font(.caption)
-                .foregroundStyle(Color.white.opacity(0.62))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: 8)
+            Text("OFF CALLBACK")
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .tracking(0.7)
+                .foregroundStyle(Color.orange)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(Color.orange.opacity(0.10), in: Capsule())
         }
         .accessibilityElement(children: .combine)
     }
 
-    private var intentSection: some View {
-        InspectorSection(title: "Musical intent") {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
-                InspectorValue(label: "Phrase", value: snapshot.phraseKind)
-                InspectorValue(label: "Section", value: snapshot.section)
-                InspectorValue(label: "Character", value: snapshot.performanceCharacter)
-                InspectorValue(label: "Gesture", value: snapshot.arrangementGesture)
-                InspectorValue(label: "Interlock", value: snapshot.interlockChapter)
-                InspectorValue(label: "Foundation", value: snapshot.foundationBehavior)
-                InspectorValue(label: "Foreground", value: snapshot.focusRole)
-                InspectorValue(label: "Kick syntax", value: snapshot.kickSyntax)
-                InspectorValue(label: "Percussion", value: snapshot.percussionGear)
-                if let signature = snapshot.signatureEvent {
-                    InspectorValue(label: "Signature", value: signature)
-                }
-                if !snapshot.transformations.isEmpty {
-                    InspectorValue(
-                        label: "Transformations",
-                        value: snapshot.transformations.joined(separator: " · ")
-                    )
-                }
+    private var musicalStatePanel: some View {
+        MonitorPanel(title: "Musical state") {
+            LazyVGrid(columns: intentColumns, alignment: .leading, spacing: 10) {
+                CompactValue(label: "Phrase", value: snapshot.phraseKind)
+                CompactValue(label: "Section", value: snapshot.section)
+                CompactValue(label: "Character", value: snapshot.performanceCharacter)
+                CompactValue(label: "Gesture", value: snapshot.arrangementGesture)
+                CompactValue(label: "Foundation", value: snapshot.foundationBehavior)
+                CompactValue(label: "Focus", value: snapshot.focusRole)
+            }
+
+            MonitorDivider()
+
+            MonitorTextBlock(
+                label: "Active voices",
+                value: voiceSummary,
+                lineLimit: 3
+            )
+
+            if !snapshot.capabilities.isEmpty {
+                MonitorTextBlock(
+                    label: "Live features",
+                    value: capabilitySummary,
+                    lineLimit: 3
+                )
+            }
+
+            if let changeSummary {
+                MonitorTextBlock(
+                    label: "Bar change",
+                    value: changeSummary,
+                    lineLimit: 2,
+                    accent: true
+                )
             }
         }
     }
 
-    private var voicesSection: some View {
-        InspectorSection(title: "Active score voices") {
-            FlowLayout(spacing: 8) {
-                ForEach(Array(snapshot.voices.enumerated()), id: \.offset) { _, voice in
-                    HStack(spacing: 6) {
-                        Text(voice.name)
-                        Text("×\(voice.eventCount)")
-                            .foregroundStyle(Color.orange)
-                    }
-                    .font(.system(.caption, design: .monospaced).weight(.medium))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 7)
-                    .background(Color.white.opacity(0.055), in: Capsule())
-                    .accessibilityElement(children: .combine)
-                }
-            }
-        }
-    }
-
-    private var assignmentsSection: some View {
-        InspectorSection(title: "Synth assignments") {
+    private var activeSynthsPanel: some View {
+        MonitorPanel(title: "Active synths") {
             if snapshot.assignments.isEmpty {
-                InspectorEmptyRow(text: "No synth assignment is active in this bar.")
+                Text("No synth assignment is active in this bar.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             } else {
                 VStack(spacing: 0) {
-                    ForEach(snapshot.assignments, id: \.identity) { assignment in
-                        AssignmentRow(assignment: assignment)
-                        if assignment.identity != snapshot.assignments.last?.identity {
-                            Divider().overlay(Color.white.opacity(0.08))
+                    ForEach(Array(snapshot.assignments.prefix(visibleAssignmentLimit)), id: \.identity) {
+                        assignment in
+                        CompactAssignmentRow(assignment: assignment)
+                        if assignment.identity != visibleAssignments.last?.identity {
+                            MonitorDivider()
                         }
                     }
                 }
             }
-        }
-    }
 
-    @ViewBuilder
-    private var capabilitiesSection: some View {
-        if !snapshot.capabilities.isEmpty {
-            InspectorSection(title: "Bar capabilities") {
-                LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
-                    ForEach(Array(snapshot.capabilities.enumerated()), id: \.offset) { _, item in
-                        InspectorValue(label: item.name, value: item.value)
-                    }
-                }
-            }
-        }
-    }
-
-    private var renderSection: some View {
-        InspectorSection(title: "Rendered buffer") {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
-                InspectorValue(label: "Route", value: routeText)
-                InspectorValue(label: "Frames", value: snapshot.frameCount.formatted())
-                InspectorValue(
-                    label: "Duration",
-                    value: String(format: "%.3f s", snapshot.durationSeconds)
-                )
-                InspectorValue(label: "Peak", value: amplitudeDB(snapshot.peak, suffix: "dBFS"))
-                InspectorValue(label: "True peak", value: amplitudeDB(snapshot.truePeak, suffix: "dBTP"))
-                InspectorValue(label: "RMS", value: amplitudeDB(snapshot.rms, suffix: "dBFS"))
-                InspectorValue(
-                    label: "Loudness estimate",
-                    value: String(format: "%.1f dB", snapshot.loudnessEstimate)
-                )
-                InspectorValue(
-                    label: "Stereo correlation",
-                    value: String(format: "%.3f", snapshot.stereoCorrelation)
-                )
-                InspectorValue(
-                    label: "Live master trim",
-                    value: String(format: "%+.2f dB", snapshot.liveMasterTrimDB)
-                )
-                InspectorValue(
-                    label: "Hard gates",
-                    value: snapshot.playbackHardGatesPassed ? "Passed" : "Unavailable"
-                )
-            }
-        }
-    }
-
-    private var graphSection: some View {
-        InspectorSection(title: "Generated upper graph") {
-            HStack(spacing: 18) {
-                InspectorInlineValue(label: "REV", value: "\(snapshot.graphRevision)")
-                InspectorInlineValue(label: "BRANCHES", value: "\(snapshot.graphBranchCount)")
-                InspectorInlineValue(label: "DEPTH", value: "\(snapshot.graphMaximumDepth)")
-                InspectorInlineValue(label: "MUTATION", value: snapshot.graphMutation)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(spacing: 0) {
-                ForEach(snapshot.graphNodes, id: \.identity) { node in
-                    GraphNodeRow(node: node)
-                    if node.identity != snapshot.graphNodes.last?.identity {
-                        Divider().overlay(Color.white.opacity(0.08))
-                    }
-                }
-            }
-        }
-    }
-
-    private var effectsAndMixSection: some View {
-        InspectorSection(title: "Effects and automatic mix") {
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 28) {
-                    effectsList.frame(maxWidth: .infinity, alignment: .leading)
-                    mixList.frame(maxWidth: .infinity, alignment: .leading)
-                }
-                VStack(alignment: .leading, spacing: 18) {
-                    effectsList
-                    mixList
-                }
-            }
-        }
-    }
-
-    private var effectsList: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("ACTIVE STAGES")
-                .inspectorLabelStyle()
-            ForEach(Array(snapshot.effects.enumerated()), id: \.offset) { _, effect in
-                HStack {
-                    Text(effect.name)
-                    Spacer(minLength: 10)
-                    Text(String(format: "%.2f", effect.amount))
-                        .foregroundStyle(Color.orange)
-                        .monospacedDigit()
-                }
-                .font(.system(.caption, design: .monospaced))
-            }
-            if snapshot.effects.isEmpty {
-                Text("No active stage reported")
-                    .font(.caption)
+            if hiddenAssignmentCount > 0 {
+                Text("+\(hiddenAssignmentCount) more assignment\(hiddenAssignmentCount == 1 ? "" : "s") in this bar")
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
         }
     }
 
-    private var mixList: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("ROLE FADERS")
-                .inspectorLabelStyle()
-            ForEach(Array(snapshot.mixGains.enumerated()), id: \.offset) { _, gain in
-                HStack {
-                    Text(gain.role)
-                    Spacer(minLength: 10)
-                    Text(String(format: "%+.2f dB", gain.decibels))
-                        .foregroundStyle(Color.orange)
-                        .monospacedDigit()
-                }
-                .font(.system(.caption, design: .monospaced))
+    private var renderHealthPanel: some View {
+        MonitorPanel(title: "Render health") {
+            HStack(spacing: 7) {
+                Circle()
+                    .fill(snapshot.playbackHardGatesPassed ? Color.green : Color.orange)
+                    .frame(width: 6, height: 6)
+                Text(snapshot.playbackHardGatesPassed ? "QUALIFIED" : "GATES UNAVAILABLE")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .tracking(0.65)
+                Spacer(minLength: 4)
+                Text(snapshot.qualityOutcome.uppercased())
+                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
-            if let measured = snapshot.measuredKickOverFoundationDB,
-               let target = snapshot.targetKickOverFoundationDB {
-                Text(String(
-                    format: "Kick / foundation %.2f dB · target %.2f dB",
-                    measured,
-                    target
-                ))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            }
-        }
-    }
 
-    private var provenanceSection: some View {
-        InspectorSection(title: "Preparation verdict") {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
-                InspectorValue(label: "Outcome", value: snapshot.qualityOutcome)
-                InspectorValue(
-                    label: "Home correction",
-                    value: snapshot.usedHomeTimbreCorrection ? "Applied" : "Not used"
+            LazyVGrid(columns: metricColumns, alignment: .leading, spacing: 9) {
+                CompactValue(label: "Route", value: routeText)
+                CompactValue(label: "Peak", value: amplitudeDB(snapshot.peak, suffix: "dBFS"))
+                CompactValue(label: "True peak", value: amplitudeDB(snapshot.truePeak, suffix: "dBTP"))
+                CompactValue(label: "RMS", value: amplitudeDB(snapshot.rms, suffix: "dBFS"))
+                CompactValue(
+                    label: "Correlation",
+                    value: String(format: "%.3f", snapshot.stereoCorrelation)
                 )
-                InspectorValue(label: "Policy", value: snapshot.qualityPolicyVersion)
+                CompactValue(
+                    label: "Master trim",
+                    value: String(format: "%+.2f dB", snapshot.liveMasterTrimDB)
+                )
             }
+
+            MonitorDivider()
+
+            MonitorTextBlock(
+                label: "Engine graph",
+                value: "R\(snapshot.graphRevision) · \(snapshot.graphBranchCount) branches · depth \(snapshot.graphMaximumDepth) · \(snapshot.graphNodes.count) nodes",
+                lineLimit: 2
+            )
+            if snapshot.graphMutation != "None" {
+                Text(snapshot.graphMutation)
+                    .font(.system(size: 9, design: .monospaced))
+                    .foregroundStyle(Color.orange.opacity(0.86))
+                    .lineLimit(1)
+            }
+
+            MonitorTextBlock(
+                label: "Active FX",
+                value: effectSummary,
+                lineLimit: 3
+            )
+
+            MonitorTextBlock(
+                label: "Automatic mix",
+                value: automaticMixSummary,
+                lineLimit: 3,
+                accent: true
+            )
         }
     }
 
     private var waitingState: some View {
-        HStack(spacing: 12) {
+        VStack(spacing: 13) {
+            Spacer()
             ProgressView()
                 .controlSize(.small)
-            Text("Render information appears when preparation accepts the first bar.")
-                .font(.callout)
-                .foregroundStyle(Color.white.opacity(0.70))
+            Text("Preparing the first immutable bar")
+                .font(.system(.callout, design: .rounded).weight(.semibold))
+            Text("Render information appears after the bar passes automatic qualification.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
         }
-        .padding(.vertical, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
+    }
+
+    private var visibleAssignments: [LiveRenderSnapshot.Assignment] {
+        Array(snapshot.assignments.prefix(visibleAssignmentLimit))
+    }
+
+    private var hiddenAssignmentCount: Int {
+        max(0, snapshot.assignments.count - visibleAssignmentLimit)
+    }
+
+    private var voiceSummary: String {
+        guard !snapshot.voices.isEmpty else { return "No scored voices" }
+        return snapshot.voices.map { "\($0.name) ×\($0.eventCount)" }.joined(separator: " · ")
+    }
+
+    private var capabilitySummary: String {
+        snapshot.capabilities.prefix(3).map { "\($0.name): \($0.value)" }
+            .joined(separator: " · ")
+    }
+
+    private var changeSummary: String? {
+        let details = ([snapshot.signatureEvent].compactMap { $0 } + snapshot.transformations)
+        guard !details.isEmpty else { return nil }
+        return details.prefix(2).joined(separator: " · ")
+    }
+
+    private var effectSummary: String {
+        guard !snapshot.effects.isEmpty else { return "No active stage" }
+        let visible = snapshot.effects.prefix(5).map {
+            "\($0.name) \(String(format: "%.2f", $0.amount))"
+        }
+        let remainder = max(0, snapshot.effects.count - visible.count)
+        return visible.joined(separator: " · ") + (remainder > 0 ? " · +\(remainder)" : "")
+    }
+
+    private var automaticMixSummary: String {
+        let activeGains = snapshot.mixGains.filter { abs($0.decibels) >= 0.005 }
+        let gains = (activeGains.isEmpty ? snapshot.mixGains : activeGains).prefix(3).map {
+            "\($0.role) \(String(format: "%+.2f", $0.decibels))"
+        }
+        var parts = gains
+        if let measured = snapshot.measuredKickOverFoundationDB,
+           let target = snapshot.targetKickOverFoundationDB {
+            parts.append(String(format: "K/F %.1f → %.1f dB", measured, target))
+        }
+        return parts.isEmpty ? "No corrective gain" : parts.joined(separator: " · ")
     }
 
     private var routeText: String {
         let sampleRate = snapshot.sampleRate / 1_000
         let channelText = snapshot.channelCount == 2 ? "stereo" : "\(snapshot.channelCount) ch"
-        return String(format: "%.1f kHz · %@", sampleRate, channelText)
+        return String(format: "%.1f k · %@", sampleRate, channelText)
     }
 
     private func amplitudeDB(_ amplitude: Double, suffix: String) -> String {
@@ -290,7 +261,7 @@ struct LiveRenderInspectorView: View {
     }
 }
 
-private struct InspectorSection<Content: View>: View {
+private struct MonitorPanel<Content: View>: View {
     let title: String
     let content: Content
 
@@ -300,84 +271,94 @@ private struct InspectorSection<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(title.uppercased())
-                .font(.system(.caption2, design: .monospaced).weight(.bold))
-                .tracking(1.2)
-                .foregroundStyle(Color.white.opacity(0.55))
+                .monitorLabelStyle()
             content
+            Spacer(minLength: 0)
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 14))
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
         .overlay {
-            RoundedRectangle(cornerRadius: 14)
+            RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         }
         .accessibilityElement(children: .contain)
     }
 }
 
-private struct InspectorValue: View {
-    let label: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label.uppercased())
-                .inspectorLabelStyle()
-            Text(value)
-                .font(.system(.callout, design: .rounded).weight(.semibold))
-                .foregroundStyle(Color.white.opacity(0.92))
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-private struct InspectorInlineValue: View {
+private struct CompactValue: View {
     let label: String
     let value: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(label).inspectorLabelStyle()
+            Text(label.uppercased())
+                .monitorLabelStyle()
             Text(value)
-                .font(.system(.caption, design: .monospaced).weight(.semibold))
-                .foregroundStyle(Color.white.opacity(0.88))
-                .lineLimit(1)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.white.opacity(0.92))
+                .lineLimit(2)
+                .minimumScaleFactor(0.78)
         }
         .accessibilityElement(children: .combine)
     }
 }
 
-private struct AssignmentRow: View {
+private struct MonitorTextBlock: View {
+    let label: String
+    let value: String
+    let lineLimit: Int
+    var accent = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .monitorLabelStyle()
+            Text(value)
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
+                .foregroundStyle(accent ? Color.orange : Color.white.opacity(0.76))
+                .lineLimit(lineLimit)
+                .minimumScaleFactor(0.78)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct CompactAssignmentRow: View {
     let assignment: LiveRenderSnapshot.Assignment
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(assignment.role)
-                        .font(.system(.body, design: .rounded).weight(.bold))
-                    Text("\(assignment.architecture) · \(assignment.patch) · \(assignment.eventCount) events")
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 8)
-                Text(assignment.effects.joined(separator: " · "))
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.52))
-                    .multilineTextAlignment(.trailing)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(assignment.role)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                Spacer(minLength: 6)
+                Text("×\(assignment.eventCount)")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.orange)
             }
-            HStack(spacing: 18) {
+            Text("\(assignment.architecture) · \(assignment.patch)")
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            HStack(spacing: 10) {
                 ParameterValue(label: "C", value: assignment.color)
                 ParameterValue(label: "S", value: assignment.shape)
                 ParameterValue(label: "M", value: assignment.motion)
-                ParameterValue(label: "SPACE", value: assignment.space)
+                ParameterValue(label: "SP", value: assignment.space)
+            }
+            if !assignment.effects.isEmpty {
+                Text(assignment.effects.prefix(3).joined(separator: " · "))
+                    .font(.system(size: 8, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.48))
+                    .lineLimit(1)
             }
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "\(assignment.role), \(assignment.architecture), \(assignment.patch), " +
@@ -392,116 +373,29 @@ private struct ParameterValue: View {
     let value: Double
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 3) {
             Text(label)
-                .foregroundStyle(Color.white.opacity(0.48))
+                .foregroundStyle(Color.white.opacity(0.43))
             Text(String(format: "%.2f", value))
                 .foregroundStyle(Color.orange)
                 .monospacedDigit()
         }
-        .font(.system(.caption, design: .monospaced).weight(.semibold))
+        .font(.system(size: 9, weight: .semibold, design: .monospaced))
     }
 }
 
-private struct GraphNodeRow: View {
-    let node: LiveRenderSnapshot.GraphNode
-
+private struct MonitorDivider: View {
     var body: some View {
-        HStack(spacing: 12) {
-            Text("B\(node.branch)")
-                .font(.system(.caption2, design: .monospaced).weight(.bold))
-                .foregroundStyle(Color.orange)
-                .frame(width: 24, alignment: .leading)
-            Text(node.name)
-                .font(.system(.caption, design: .rounded).weight(.semibold))
-                .frame(minWidth: 82, maxWidth: .infinity, alignment: .leading)
-            Text(String(format: "A %.2f", node.amount))
-            Text(String(format: "M %.2f", node.mix))
-            if node.feedback > 0 {
-                Text(String(format: "F %.2f", node.feedback))
-            }
-            if node.delayMilliseconds > 0 {
-                Text(String(format: "%.0f ms", node.delayMilliseconds))
-            }
-        }
-        .font(.system(size: 10, design: .monospaced))
-        .foregroundStyle(Color.white.opacity(0.72))
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .combine)
-    }
-}
-
-private struct InspectorEmptyRow: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(.callout)
-            .foregroundStyle(.secondary)
-            .padding(.vertical, 8)
+        Rectangle()
+            .fill(Color.white.opacity(0.08))
+            .frame(height: 1)
     }
 }
 
 private extension View {
-    func inspectorLabelStyle() -> some View {
-        font(.system(size: 9, weight: .bold, design: .monospaced))
-            .tracking(0.8)
+    func monitorLabelStyle() -> some View {
+        font(.system(size: 8, weight: .bold, design: .monospaced))
+            .tracking(0.75)
             .foregroundStyle(Color.white.opacity(0.46))
-    }
-}
-
-private struct FlowLayout: Layout {
-    let spacing: CGFloat
-
-    func sizeThatFits(
-        proposal: ProposedViewSize,
-        subviews: Subviews,
-        cache: inout ()
-    ) -> CGSize {
-        layout(proposal: proposal, subviews: subviews).size
-    }
-
-    func placeSubviews(
-        in bounds: CGRect,
-        proposal: ProposedViewSize,
-        subviews: Subviews,
-        cache: inout ()
-    ) {
-        let result = layout(
-            proposal: ProposedViewSize(width: bounds.width, height: proposal.height),
-            subviews: subviews
-        )
-        for (index, point) in result.points.enumerated() {
-            subviews[index].place(
-                at: CGPoint(x: bounds.minX + point.x, y: bounds.minY + point.y),
-                proposal: .unspecified
-            )
-        }
-    }
-
-    private func layout(
-        proposal: ProposedViewSize,
-        subviews: Subviews
-    ) -> (size: CGSize, points: [CGPoint]) {
-        let width = proposal.width ?? .infinity
-        var points: [CGPoint] = []
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var lineHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > 0, x + size.width > width {
-                x = 0
-                y += lineHeight + spacing
-                lineHeight = 0
-            }
-            points.append(CGPoint(x: x, y: y))
-            x += size.width + spacing
-            lineHeight = max(lineHeight, size.height)
-        }
-        return (
-            CGSize(width: proposal.width ?? max(0, x - spacing), height: y + lineHeight),
-            points
-        )
     }
 }

@@ -34,7 +34,6 @@ struct ContentView: View {
                         statusTitle: engine.statusTitle,
                         playingTimeText: engine.playingTimeText
                     )
-                    .padding(.bottom, 56)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -79,7 +78,8 @@ struct ContentView: View {
                 "Switches between the transport and read-only current render details"
             )
             .accessibilityIdentifier("view-render-inspector")
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 34)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
 
             Button {
@@ -102,10 +102,11 @@ struct ContentView: View {
             .accessibilityLabel("Start a new set")
             .accessibilityHint("Ends the current set and starts a fresh performance")
             .accessibilityIdentifier("transport-new-set")
-            .padding(24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 34)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         }
-        .frame(minWidth: 480, minHeight: 390)
+        .frame(minWidth: 680, minHeight: 480)
         .preferredColorScheme(.dark)
         .onAppear { engine.prepare() }
         .onDisappear { engine.shutdown() }

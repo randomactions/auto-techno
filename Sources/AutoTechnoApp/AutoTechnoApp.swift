@@ -9,7 +9,7 @@ struct AutoTechnoApp: App {
                 .background(WindowConfigurator())
         }
         .windowResizability(.automatic)
-        .defaultSize(width: 640, height: 480)
+        .defaultSize(width: 740, height: 520)
     }
 }
 
@@ -25,7 +25,7 @@ private struct WindowConfigurator: NSViewRepresentable {
     private func configure(_ window: NSWindow?) {
         guard let window else { return }
         window.styleMask.insert(.resizable)
-        window.minSize = NSSize(width: 480, height: 390)
+        window.minSize = NSSize(width: 680, height: 480)
     }
 }
 
@@ -34,7 +34,7 @@ private final class WindowObservingView: NSView {
         super.viewDidMoveToWindow()
         guard let window else { return }
         window.styleMask.insert(.resizable)
-        window.minSize = NSSize(width: 480, height: 390)
-        window.contentMinSize = NSSize(width: 480, height: 390)
+        window.minSize = NSSize(width: 680, height: 480)
+        window.contentMinSize = NSSize(width: 680, height: 480)
     }
 }

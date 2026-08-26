@@ -59,9 +59,12 @@ The architecture types are compiled into the app. The score changes assignments 
 The app's optional **Render Info** view is the live counterpart to this static
 map. For the current already-prepared bar it shows resolved musical intent,
 active score voices, synth architecture and patch assignments, the four
-semantic automation coordinates, eligible effects, generated graph nodes,
-automatic mix values, route geometry, reduced level/stereo evidence, and the
-preparation verdict.
+semantic automation coordinates, active effects, a generated-graph summary,
+the most relevant automatic-mix movement, route geometry, reduced level/stereo
+evidence, and the preparation verdict. This is deliberately a dense one-screen
+monitor with no scrolling; detailed node, policy, frame-count, duration, and
+duplicate loudness rows remain in the underlying bounded snapshot rather than
+competing with the changing values most useful for observation and diagnosis.
 
 The view does not inspect the audio stream. Its bounded, PCM-free snapshot is
 built during detached phrase preparation and published by the main actor only
