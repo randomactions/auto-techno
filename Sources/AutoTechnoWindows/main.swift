@@ -186,16 +186,16 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
             )
             self?.stateQueue.async { [weak self] in
                 guard let self else { return }
-                guard preparingKey == request.key else { return }
-                preparingKey = nil
+                guard self.preparingKey == request.key else { return }
+                self.preparingKey = nil
                 if let result {
-                    acceptPreparedPhrase(result)
-                } else if currentPhrase == nil {
-                    setPlaybackState(.unavailable)
+                    self.acceptPreparedPhrase(result)
+                } else if self.currentPhrase == nil {
+                    self.setPlaybackState(.unavailable)
                 }
-                if let queued = queuedPreparationRequest {
-                    queuedPreparationRequest = nil
-                    requestPreparation(queued)
+                if let queued = self.queuedPreparationRequest {
+                    self.queuedPreparationRequest = nil
+                    self.requestPreparation(queued)
                 }
             }
         }

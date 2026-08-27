@@ -2604,7 +2604,9 @@ is `4a56c7cd78fe0184`.
 
 Focused primary, long-horizon, provenance, runtime-surface, and semantic tests
 passed. The final matched-Xcode optimized gate passed all 482 Swift tests in
-121.647 seconds. After cleaning the build scratch directory, a separate
+121.896 seconds. A CI-equivalent matched-Xcode debug build also compiled and
+linked both desktop hosts, then passed all three selected upper-score slices.
+After cleaning the build scratch directory, a separate
 optimized product build completed in 104.61 seconds and bundled exactly primary
 v18 and long-horizon v5 resources. The arm64 executable has UUID
 `E198A39E-0C7B-3A91-9817-B83451D9E132` and SHA-256
