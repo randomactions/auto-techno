@@ -42,6 +42,12 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
 
+      - name: Verify semantic codebase map
+        run: |
+          python3 -m unittest scripts/test_codebase_map.py
+          python3 scripts/codebase_map.py check \
+            --build-path "$RUNNER_TEMP/auto-techno-tests"
+
       - name: Run realtime queue and callback safety
         run: |
           swift test --no-parallel --skip-build \

@@ -51,3 +51,32 @@ Keep the primary UI one-button and read-only beyond transport. Use
 `.agents/skills/evolve-autonomous-sound` for musical, sound-quality, evaluator,
 or controller changes and `.agents/skills/protect-realtime-audio` whenever the
 render, scheduling, buffer, or live-feedback path changes.
+
+## Semantic codebase map
+
+Read `docs/CODEBASE_MAP.md` before architectural work. It is a navigation map of
+implemented code, not a roadmap or replacement for the normative contracts.
+`docs/codebase-map.json` is its only hand-edited source; never edit the generated
+Markdown directly. Refresh and validate it with:
+
+```sh
+python3 scripts/codebase_map.py generate
+python3 scripts/codebase_map.py check
+```
+
+Update the manifest in the same change whenever work adds, removes, moves, or
+reassigns any of the following:
+
+- source, test, header, resource, or module-dependency ownership;
+- a canonical owner or persistent/continuation state;
+- score, rendering, evidence, evaluation, feedback, or adaptation flow;
+- realtime, detached, actor/thread, route-recovery, fallback, or future-boundary
+  behavior; or
+- contract or test ownership.
+
+A change may leave the map untouched only when all of those navigation semantics
+remain stable; record a concise no-map-impact rationale in the pull request.
+Always run `python3 scripts/codebase_map.py check` before completing repository
+work. If the map conflicts with current code, `Package.swift`, or a canonical
+contract, those sources are authoritative and the map must be repaired in the
+same change.

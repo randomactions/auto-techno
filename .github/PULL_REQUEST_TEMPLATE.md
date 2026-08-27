@@ -27,8 +27,18 @@ Write “Not applicable” for non-musical changes. For a foundational slice who
 required evaluator does not exist yet, write “Unavailable,” name the missing
 gate, and do not claim automated qualification.
 
+## Semantic map impact
+
+- Map impact: Updated / No semantic navigation change
+- Rationale:
+
+Update `docs/codebase-map.json` when files, dependencies, owners, state, flows,
+execution boundaries, contracts, or test ownership move. For no map update,
+state concisely why those navigation semantics remain unchanged.
+
 ## Validation
 
+- [ ] `python3 scripts/codebase_map.py check`
 - [ ] `swift test`
 - [ ] `swift build -c release --product AutoTechno`
 - [ ] Deterministic plan, evidence, decision, state, and PCM remain intact where applicable

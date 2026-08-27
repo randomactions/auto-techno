@@ -187,6 +187,7 @@ and GitHub Actions workflows and the remaining Windows release gates.
 
 ## Product documents
 
+- [`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md) — current implementation ownership, runtime flows, execution boundaries, sources, and tests
 - [`docs/PRODUCT.md`](docs/PRODUCT.md) — stable product and interaction contract
 - [`docs/INSTRUMENT_PALETTE.md`](docs/INSTRUMENT_PALETTE.md) — internal synth, patch, role, automation, and effect matrix
 - [`docs/PERFORMANCE_GRAMMAR.md`](docs/PERFORMANCE_GRAMMAR.md) — phrase character, foundation behavior, compatibility, and evidence matrix

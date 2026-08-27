@@ -33,20 +33,41 @@ single autonomous runtime, deterministic continuation, and safe real-time audio.
    microphone, or invoke UI work from a real-time audio callback.
 7. Keep generated WAVs, stems, reference recordings, build products, credentials,
    machine-specific paths, and personal data out of commits.
-8. Run:
+8. Review the semantic codebase map and update its manifest when ownership,
+   files, dependencies, flows, boundaries, contracts, or test coverage move.
+9. Run:
 
    ```sh
+   python3 scripts/codebase_map.py check
    swift test
    swift build -c release --product AutoTechno
    ```
 
-9. Open a pull request using the repository template. Include exact revision and
+10. Open a pull request using the repository template. Include exact revision and
    policy provenance, reason-coded automated quality evidence, determinism and
    real-time validation, and the duplicate path avoided or removed.
 
 For musical, evaluator, controller, or render changes, read `AGENTS.md`,
 `docs/PRODUCT.md`, `docs/SOUND_QUALITY.md`, and the relevant project skill under
 `.agents/skills/`.
+
+### Semantic codebase map
+
+[`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md) describes current implemented
+ownership, runtime flows, execution boundaries, sources, stable top-level
+symbols, contracts, and tests. Future architecture remains in the roadmap and
+normative contracts. Edit only `docs/codebase-map.json`, then refresh and check
+the generated map:
+
+```sh
+python3 scripts/codebase_map.py generate
+python3 scripts/codebase_map.py check
+```
+
+The check requires a matching Swift/Xcode toolchain and rejects structural
+drift. A change that preserves the map's navigation semantics may omit a map
+edit, but its pull request must state why. If the map conflicts with code,
+`Package.swift`, or a canonical contract, repair the map in the same change.
 
 ## Review and licensing
 
