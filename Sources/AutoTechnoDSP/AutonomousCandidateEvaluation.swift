@@ -8453,6 +8453,23 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         )
     }
 
+    /// True only when the candidate record is complete and finite and every
+    /// graph, signal, route, timbre, buffer, and provenance hard gate passes,
+    /// leaving symbolic phrase interest as the sole rejection. This evidence
+    /// may request a different serial plan; it never makes this PCM playable.
+    package var symbolicInterestIsOnlyHardGateFailure: Bool {
+        isComplete && isFinite &&
+            !symbolic.interestValid && !hardGates.symbolicValid &&
+            hardGates.graphValid && hardGates.audioSafetyValid &&
+            hardGates.fullMixFinite && hardGates.upperTimbreFinite &&
+            hardGates.blocksPresent && hardGates.blockChannelsAligned &&
+            hardGates.allSamplesFinite && hardGates.completeInputs &&
+            graph.validationValid && fullMix.signalSafetyValid &&
+            liveProposalOutcome != .unavailable &&
+            postGraphUpperTimbreEvidence.finite &&
+            postGraphUpperTimbreEvidence.candidateValuesAreFinite
+    }
+
     @inline(never)
     package func hardGatesPassedForTransactionValidation(
         prevalidatedVectorIsComplete: Bool,

@@ -254,23 +254,7 @@ package struct ProfessionalQualityPrimaryEvaluator:
             )
         }
         guard selected.hardGatesPassed else {
-            let hardGateFailures = [
-                selected.isComplete ? nil : "candidate-incomplete",
-                selected.isFinite ? nil : "candidate-nonfinite",
-                selected.hardGates.passed ? nil : "candidate-hard-gates",
-                selected.symbolic.interestValid ? nil : "symbolic-interest",
-                selected.graph.validationValid ? nil : "graph-validation",
-                selected.fullMix.signalSafetyValid ? nil : "signal-safety",
-                selected.liveProposalOutcome != .unavailable
-                    ? nil : "live-proposal-unavailable",
-                selected.postGraphUpperTimbreEvidence.finite
-                    ? nil : "upper-timbre-nonfinite",
-            ].compactMap { $0 }
-            return AutonomousCandidatePolicyVerdict(
-                outcome: .rejected,
-                reasonCodes: [.hardGateFailedV1],
-                diagnosticDetails: hardGateFailures
-            )
+            return Self.hardGateRejectionVerdict(for: selected)
         }
         let result = assessment(of: selected)
         guard result.availability == .available else {
@@ -309,6 +293,37 @@ package struct ProfessionalQualityPrimaryEvaluator:
             outcome: transaction.correctionCount == 0 ? .qualified : .adjusted,
             reasonCodes: transaction.correctionCount == 0
                 ? [.candidateQualifiedV1] : [.candidateAdjustedV1]
+        )
+    }
+
+    /// Deterministic reason reduction for a candidate that already failed the
+    /// primary hard-gate boundary. Keeping this independent of installed
+    /// artifacts preserves fail-closed runtime activation while allowing the
+    /// reason contract itself to be verified when an engine revision has not
+    /// yet been recalibrated.
+    package static func hardGateRejectionVerdict(
+        for selected: AutonomousCandidateEvaluationVector
+    ) -> AutonomousCandidatePolicyVerdict {
+        let hardGateFailures = [
+            selected.isComplete ? nil : "candidate-incomplete",
+            selected.isFinite ? nil : "candidate-nonfinite",
+            selected.hardGates.passed ? nil : "candidate-hard-gates",
+            selected.symbolic.interestValid ? nil : "symbolic-interest",
+            selected.graph.validationValid ? nil : "graph-validation",
+            selected.fullMix.signalSafetyValid ? nil : "signal-safety",
+            selected.liveProposalOutcome != .unavailable
+                ? nil : "live-proposal-unavailable",
+            selected.postGraphUpperTimbreEvidence.finite
+                ? nil : "upper-timbre-nonfinite",
+        ].compactMap { $0 }
+        var reasonCodes: [QualityReasonCode] = [.hardGateFailedV1]
+        if selected.symbolicInterestIsOnlyHardGateFailure {
+            reasonCodes.append(.symbolicInterestFailedV1)
+        }
+        return AutonomousCandidatePolicyVerdict(
+            outcome: .rejected,
+            reasonCodes: reasonCodes,
+            diagnosticDetails: hardGateFailures
         )
     }
 

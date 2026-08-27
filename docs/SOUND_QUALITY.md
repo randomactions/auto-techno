@@ -592,13 +592,17 @@ The target loop is bounded and persistent:
    remains a rejection, while the activation ratio is one-sided higher-is-safer.
 5. The evaluator may request one deterministic home-timbre correction of that
    same plan; otherwise it reaches a terminal verdict after the first pass.
-6. A calibrated rejection may inform one later, serial director proposal after
-   a coherent accepted-PCM repeat. The bounded retry ordinal preserves identity,
-   structural intent, debt, and long-horizon ownership; no proposals coexist or
-   compete. Its score-side vocabulary alternates bounded kick attack/body
-   pressure around the continuous committed morphology trajectory, so this
-   calibrated source metric changes in both directions before eight rejected
-   variants stop in an explicit blocked state.
+6. A calibrated guardrail rejection, or a hard-gate rejection proved to contain
+   only invalid symbolic phrase interest, may inform one later, serial director
+   proposal after a coherent accepted-PCM repeat. The rejected plan and PCM
+   never commit. The bounded retry ordinal preserves identity, structural
+   intent, debt, and long-horizon ownership; no proposals coexist or compete.
+   Its score-side vocabulary alternates bounded kick attack/body pressure around
+   the continuous committed morphology trajectory, so this calibrated source
+   metric changes in both directions before eight rejected variants stop in an
+   explicit blocked state. Missing or non-finite evidence, unavailable policy,
+   graph or signal-safety failure, route/provenance failure, and exhausted
+   variants remain terminal.
 7. The committed plan, reason-coded evidence, controller state, and policy version
    become continuation input for future preparation.
 8. Final immutable blocks receive a second safety check before scheduling.
@@ -620,9 +624,10 @@ continuation state. Rejected attempts remain attempt-local.
 
 The production evaluator judges the primary plan directly; qualified or adjusted
 decisions may commit, while rejected or unavailable decisions may not.
-Only a reason-coded calibrated rejection can advance the later serial retry
-ordinal. Unavailable evaluation, hard-gate failure, invalid provenance, and
-commit mismatch repeat accepted PCM without changing the proposal.
+Only a reason-coded calibrated guardrail rejection or an isolated symbolic-interest
+hard-gate rejection can advance the later serial retry ordinal. Unavailable
+evaluation, every other hard-gate failure, invalid provenance, and commit
+mismatch repeat accepted PCM without changing the proposal.
 Phrase analysis now streams within an explicit working-memory envelope, with
 independent DFT, chunk-parity, representative-rate, cancellation, and optimized
 fixture evidence. The diverse profile, adversarial suite, and holdout

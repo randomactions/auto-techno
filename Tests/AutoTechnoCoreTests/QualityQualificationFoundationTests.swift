@@ -822,6 +822,77 @@ struct QualityQualificationFoundationTests {
         #expect(offlineRelationship.checkpoint == .chapterChange)
     }
 
+    @Test("Only an isolated symbolic-interest hard gate is retry tagged")
+    func isolatedSymbolicInterestFailureIsRetryTagged() {
+        let sampleRate = 48_000.0
+        let frameCount = StreamingPerceptualEvidenceAnalyzer.fftFrameCount(
+            sampleRate: sampleRate
+        )
+        let evidence = UpperTimbreEvidenceAnalyzer.analyze(
+            UpperTimbreAnalysisInput(
+                left: [Float](repeating: 0, count: frameCount),
+                right: [Float](repeating: 0, count: frameCount),
+                sampleRate: sampleRate
+            )
+        )
+        let policyVersion = "test-primary-calibrated.v1"
+        let isolated = reportFixture(
+            evidence: evidence,
+            sampleHash: "symbolic-interest-only",
+            policyVersion: policyVersion,
+            overdueDebtCount: 1
+        )
+
+        #expect(isolated.vector.isComplete)
+        #expect(isolated.vector.isFinite)
+        #expect(!isolated.vector.hardGatesPassed)
+        #expect(isolated.vector.symbolicInterestIsOnlyHardGateFailure)
+        #expect(isolated.transaction.isComplete)
+        let isolatedVerdict = ProfessionalQualityPrimaryEvaluator
+            .hardGateRejectionVerdict(
+                for: isolated.vector
+            )
+        #expect(isolatedVerdict.outcome == .rejected)
+        #expect(Set(isolatedVerdict.reasonCodes) == Set([
+            .hardGateFailedV1,
+            .symbolicInterestFailedV1,
+        ]))
+        #expect(isolatedVerdict.diagnosticDetails.contains("symbolic-interest"))
+        let isolatedDecision = QualityDecision(
+            policyVersion: policyVersion,
+            outcome: isolatedVerdict.outcome,
+            reasonCodes: isolatedVerdict.reasonCodes +
+                isolated.transaction.attempts[0].reasonCodes
+        )
+        #expect(isolatedDecision.isRetryableCandidateRejection)
+
+        let unsafe = reportFixture(
+            evidence: evidence,
+            sampleHash: "symbolic-interest-and-signal-safety",
+            policyVersion: policyVersion,
+            overdueDebtCount: 1,
+            signalSafetyValid: false
+        )
+        #expect(unsafe.vector.isComplete)
+        #expect(unsafe.vector.isFinite)
+        #expect(!unsafe.vector.symbolicInterestIsOnlyHardGateFailure)
+        #expect(unsafe.transaction.isComplete)
+        let unsafeVerdict = ProfessionalQualityPrimaryEvaluator
+            .hardGateRejectionVerdict(
+                for: unsafe.vector
+            )
+        #expect(unsafeVerdict.reasonCodes.contains(.hardGateFailedV1))
+        #expect(!unsafeVerdict.reasonCodes.contains(.symbolicInterestFailedV1))
+        #expect(unsafeVerdict.diagnosticDetails.contains("signal-safety"))
+        let unsafeDecision = QualityDecision(
+            policyVersion: policyVersion,
+            outcome: unsafeVerdict.outcome,
+            reasonCodes: unsafeVerdict.reasonCodes +
+                unsafe.transaction.attempts[0].reasonCodes
+        )
+        #expect(!unsafeDecision.isRetryableCandidateRejection)
+    }
+
     private typealias ReportFixture = (
         vector: AutonomousCandidateEvaluationVector,
         transaction: AutonomousCandidateEvaluationTransaction
@@ -899,7 +970,9 @@ struct QualityQualificationFoundationTests {
         sampleHash: String,
         policyVersion: String = QualityQualificationContract.uncalibratedPolicyVersion,
         checkpoint: CanonicalJourneyCheckpoint = .establishment,
-        modalPercussion: [AutonomousModalPercussionBarEvidence]? = nil
+        modalPercussion: [AutonomousModalPercussionBarEvidence]? = nil,
+        overdueDebtCount: Int = 0,
+        signalSafetyValid: Bool = true
     ) -> ReportFixture {
         let planFingerprint = "plan-primary-\(checkpoint.rawValue)"
         let graphFingerprint = "graph-primary"
@@ -923,7 +996,7 @@ struct QualityQualificationFoundationTests {
             weakPositionCoverage: 0.5,
             trailingSideRelationship: 0.4,
             overactivityPenalty: 0.1,
-            overdueDebtCount: 0
+            overdueDebtCount: overdueDebtCount
         )
         let symbolic = AutonomousSymbolicEvidence(
             planFingerprint: planFingerprint,
@@ -940,16 +1013,16 @@ struct QualityQualificationFoundationTests {
             weakPositionCoverage: 0.5,
             trailingSideRelationship: 0.4,
             overactivityPenalty: 0.1,
-            overdueDebtCount: 0,
+            overdueDebtCount: overdueDebtCount,
             interestScore: interest.score,
             interestValid: interest.valid,
             chapterChanged: checkpoint == .chapterChange,
             boundsValid: true
         )
         let hardGates = AutonomousHardGateEvidence(
-            symbolicValid: true,
+            symbolicValid: interest.valid,
             graphValid: true,
-            audioSafetyValid: evidence.finite,
+            audioSafetyValid: evidence.finite && signalSafetyValid,
             fullMixFinite: evidence.finite,
             upperTimbreFinite: evidence.finite,
             blocksPresent: true,
@@ -979,7 +1052,8 @@ struct QualityQualificationFoundationTests {
             shortTermBlockCount: 0,
             dcOffset: 0,
             stereoCorrelation: 1,
-            lowStereoCorrelation: evidence.finite ? 1 : 0.9,
+            lowStereoCorrelation:
+                evidence.finite && signalSafetyValid ? 1 : 0.9,
             maximumBoundaryDelta: 0.01,
             movementScore: 0,
             analysisPeakWorkingByteCount:

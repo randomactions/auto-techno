@@ -95,9 +95,9 @@ package enum QualityDecisionOutcome: String, Codable, Equatable, Sendable {
     case adjusted
 }
 
-/// Ephemeral but replayable continuation for serial proposals after a terminal
-/// calibrated rejection. It is distinct from accepted quality continuation:
-/// rejected evidence never mutates the committed session state.
+/// Ephemeral but replayable continuation for serial proposals after a
+/// retry-eligible calibrated rejection. It is distinct from accepted quality
+/// continuation: rejected evidence never mutates the committed session state.
 package struct AutonomousQualityRetryContinuation: Codable, Equatable, Sendable {
     package static let schemaVersion = 1
     package static let maximumOrdinal = 8
@@ -129,11 +129,7 @@ package struct AutonomousQualityRetryContinuation: Codable, Equatable, Sendable 
         targetPhraseIndex: Int
     ) -> Self {
         guard targetPhraseIndex >= 0,
-              decision.outcome == .rejected,
-              decision.reasonCodes.contains(.guardrailRegressionV1),
-              !decision.reasonCodes.contains(.hardGateFailedV1),
-              !decision.reasonCodes.contains(.evidenceMissingV1),
-              !decision.reasonCodes.contains(.evidenceNonFiniteV1) else {
+              decision.isRetryableCandidateRejection else {
             return self
         }
         let current = self.targetPhraseIndex == targetPhraseIndex ? ordinal : 0
@@ -164,6 +160,7 @@ package enum QualityReasonCode: String, CaseIterable, Codable, Hashable, Sendabl
     case evidenceNonFiniteV1 = "quality.evidence-non-finite.v1"
     case evaluatorUnavailableV1 = "quality.evaluator-unavailable.v1"
     case hardGateFailedV1 = "quality.hard-gate-failed.v1"
+    case symbolicInterestFailedV1 = "quality.symbolic-interest-failed.v1"
     case guardrailRegressionV1 = "quality.guardrail-regression.v1"
     case candidateQualifiedV1 = "quality.candidate-qualified.v1"
     case candidateAdjustedV1 = "quality.candidate-adjusted.v1"
@@ -257,6 +254,7 @@ package struct QualityDecision: Codable, Equatable, Sendable {
 
     package var hasNonCompensableFailureReason: Bool {
         reasonCodes.contains(.hardGateFailedV1) ||
+            reasonCodes.contains(.symbolicInterestFailedV1) ||
             reasonCodes.contains(.evidenceMissingV1) ||
             reasonCodes.contains(.evidenceNonFiniteV1) ||
             reasonCodes.contains(.evaluatorUnavailableV1) ||
@@ -266,17 +264,55 @@ package struct QualityDecision: Codable, Equatable, Sendable {
             reasonCodes.contains(.evidenceMismatchV1)
     }
 
+    /// A rejected candidate may receive another serial proposal only when the
+    /// installed policy found an ordinary calibrated guardrail regression or
+    /// proved that symbolic interest was the sole failed hard gate. The latter
+    /// never accepts the rejected candidate: it requests a different bounded
+    /// plan while graph, signal, finite-evidence, and provenance failures stay
+    /// terminal.
+    package var isRetryableCandidateRejection: Bool {
+        guard isStructurallyValid,
+              hasOutcomeConsistentReasonCodes,
+              outcome == .rejected,
+              policyVersion != QualityQualificationContract
+                .uncalibratedPolicyVersion,
+              !reasonCodes.contains(.evidenceMissingV1),
+              !reasonCodes.contains(.evidenceNonFiniteV1),
+              !reasonCodes.contains(.evaluatorUnavailableV1),
+              !reasonCodes.contains(.staleEvidenceV1),
+              !reasonCodes.contains(.acceptanceProvenanceMissingV1),
+              !reasonCodes.contains(.evidenceMismatchV1) else {
+            return false
+        }
+        let hardGateFailed = reasonCodes.contains(.hardGateFailedV1)
+        let symbolicInterestFailed = reasonCodes.contains(
+            .symbolicInterestFailedV1
+        )
+        let guardrailRegressed = reasonCodes.contains(.guardrailRegressionV1)
+        let calibratedGuardrailRetry = guardrailRegressed &&
+            !hardGateFailed && !symbolicInterestFailed
+        let symbolicInterestRetry = hardGateFailed &&
+            symbolicInterestFailed && !guardrailRegressed
+        return calibratedGuardrailRetry || symbolicInterestRetry
+    }
+
     /// Durable terminal reason codes must agree with the decision outcome.
     /// Transport continuity is deliberately not a quality-policy outcome.
     package var hasOutcomeConsistentReasonCodes: Bool {
         let qualified = reasonCodes.contains(.candidateQualifiedV1)
         let adjusted = reasonCodes.contains(.candidateAdjustedV1)
+        let hardGateFailed = reasonCodes.contains(.hardGateFailedV1)
+        let symbolicInterestFailed = reasonCodes.contains(
+            .symbolicInterestFailedV1
+        )
         let reportsUncalibrated = reasonCodes.contains(.policyUncalibratedV1)
         let isUncalibrated = policyVersion ==
             QualityQualificationContract.uncalibratedPolicyVersion
         guard !policyVersion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               reportsUncalibrated == isUncalibrated,
-              !isUncalibrated || outcome == .qualificationUnavailable else {
+              !isUncalibrated || outcome == .qualificationUnavailable,
+              !symbolicInterestFailed ||
+                (outcome == .rejected && hardGateFailed) else {
             return false
         }
         switch outcome {

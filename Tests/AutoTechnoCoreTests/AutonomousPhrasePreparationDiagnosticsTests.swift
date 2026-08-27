@@ -174,17 +174,43 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
         #expect(retry.paidDebtIDs == baseline.paidDebtIDs)
     }
 
-    @Test("Only calibrated rejection advances bounded retry continuation")
+    @Test("Only retry-eligible rejection advances bounded continuation")
     func retryContinuationRejectsInvalidAdaptationInputs() {
         let calibratedRejection = QualityDecision(
             policyVersion: "test-calibrated-policy",
             outcome: .rejected,
             reasonCodes: [.guardrailRegressionV1]
         )
+        let symbolicInterestRejection = QualityDecision(
+            policyVersion: "test-calibrated-policy",
+            outcome: .rejected,
+            reasonCodes: [
+                .hardGateFailedV1,
+                .symbolicInterestFailedV1,
+            ]
+        )
         let hardGateRejection = QualityDecision(
             policyVersion: "test-calibrated-policy",
             outcome: .rejected,
             reasonCodes: [.hardGateFailedV1]
+        )
+        let unsafeSymbolicRejection = QualityDecision(
+            policyVersion: "test-calibrated-policy",
+            outcome: .rejected,
+            reasonCodes: [
+                .evidenceNonFiniteV1,
+                .hardGateFailedV1,
+                .symbolicInterestFailedV1,
+            ]
+        )
+        let inconsistentSymbolicRejection = QualityDecision(
+            policyVersion: "test-calibrated-policy",
+            outcome: .rejected,
+            reasonCodes: [
+                .candidateQualifiedV1,
+                .hardGateFailedV1,
+                .symbolicInterestFailedV1,
+            ]
         )
         var continuation = AutonomousQualityRetryContinuation()
 
@@ -192,6 +218,21 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
             decision: hardGateRejection,
             targetPhraseIndex: 4
         ) == continuation)
+        #expect(continuation.recordingCalibratedRejection(
+            decision: unsafeSymbolicRejection,
+            targetPhraseIndex: 4
+        ) == continuation)
+        #expect(continuation.recordingCalibratedRejection(
+            decision: inconsistentSymbolicRejection,
+            targetPhraseIndex: 4
+        ) == continuation)
+        let symbolicRetry = continuation.recordingCalibratedRejection(
+            decision: symbolicInterestRejection,
+            targetPhraseIndex: 4
+        )
+        #expect(symbolicInterestRejection.isRetryableCandidateRejection)
+        #expect(symbolicRetry.ordinal(for: 4) == 1)
+        #expect(!symbolicRetry.exhausted)
         let maximumOrdinal = AutonomousQualityRetryContinuation.maximumOrdinal
         for expectedOrdinal in 1...maximumOrdinal {
             continuation = continuation.recordingCalibratedRejection(

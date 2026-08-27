@@ -321,14 +321,18 @@ mistaken for a completed feedback system.
    preparation from successor work and reports a bounded blocked reason to the
    UI and log instead of collapsing every preparation failure into audio-route
    unavailability.
-   A calibrated quality rejection may increment one bounded serial retry ordinal
-   only at a later coherent repeat boundary. The same director and incoming
-   state retain identity, structural kind, debt, and long-horizon ownership while
-   deriving a new phrase-local realization. The bounded serial vocabulary also
-   alternates kick attack/body pressure around the same continuous score-owned
-   morphology trajectory; the renderer and evaluator must prove the resulting
-   PCM movement. Ordinal zero remains the original plan; no variants coexist,
-   rank one another, or bypass primary qualification.
+   A calibrated guardrail rejection, or a hard-gate rejection for which the
+   evaluator proves symbolic phrase interest is the only failed gate, may
+   increment one bounded serial retry ordinal only at a later coherent repeat
+   boundary. The rejected plan and PCM never commit. The same director and
+   incoming state retain identity, structural kind, debt, and long-horizon
+   ownership while deriving a new phrase-local realization. The bounded serial
+   vocabulary also alternates kick attack/body pressure around the same
+   continuous score-owned morphology trajectory; the renderer and evaluator
+   must prove the resulting PCM movement. Missing/non-finite evidence,
+   unavailable policy, graph or signal-safety failure, invalid route/provenance,
+   and exhaustion remain terminal. Ordinal zero remains the original plan; no
+   variants coexist, rank one another, or bypass primary qualification.
    The same bounded serial retry continuation applies while preparing the first
    phrase, so a calibrated establishment rejection can adapt without requiring
    a user to repeat the identical rejected request.
