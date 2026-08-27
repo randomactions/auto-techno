@@ -457,6 +457,12 @@ package final class TechnoEngine: ObservableObject {
                 } else if self.queuedPreparationRequest == nil,
                           self.currentPhrase == nil {
                     self.playbackState = .unavailable
+                    if let failure = result.failure {
+                        self.markInitialPreparationRejected(
+                            for: request,
+                            failure: failure
+                        )
+                    }
                 } else if let failure = result.failure {
                     self.markNextPhraseRejected(
                         for: request,
@@ -727,6 +733,12 @@ package final class TechnoEngine: ObservableObject {
     }
 
     private func markNextPhrasePreparing(for request: PhrasePreparationRequest) {
+        if let phraseNumber = initialPhraseNumber(for: request) {
+            nextPhraseProgress = nextPhraseProgress.preparingInitial(
+                targetPhraseNumber: phraseNumber
+            )
+            return
+        }
         guard let phraseNumber = nextPhraseNumber(for: request) else { return }
         nextPhraseProgress = nextPhraseProgress.preparing(
             targetPhraseNumber: phraseNumber
@@ -752,6 +764,13 @@ package final class TechnoEngine: ObservableObject {
         failure: NextPhraseFailure,
         qualityDecision: QualityDecision? = nil
     ) {
+        if initialPhraseNumber(for: request) != nil {
+            markInitialPreparationRejected(
+                for: request,
+                failure: failure
+            )
+            return
+        }
         guard let phraseNumber = nextPhraseNumber(for: request) else { return }
         if let qualityDecision {
             qualityRetryContinuation = qualityRetryContinuation
@@ -785,6 +804,32 @@ package final class TechnoEngine: ObservableObject {
             )
         Self.successorPreparationLogger.error(
             "Successor failed phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) retry-variant=\(request.key.qualityRetryOrdinal, privacy: .public) blocked=\(preparationBlocked, privacy: .public) exhausted=\(retriesExhausted, privacy: .public) stage=\(failure.stage, privacy: .public) code=\(failure.code, privacy: .public) details=\(failure.logDetails, privacy: .public)"
+        )
+    }
+
+    private func initialPhraseNumber(
+        for request: PhrasePreparationRequest
+    ) -> Int? {
+        guard currentPhrase == nil,
+              !request.key.routeRecovery,
+              request.key.sessionSeed == sessionState.rootSeed,
+              request.key.phraseIndex == sessionState.phraseIndex else {
+            return nil
+        }
+        return request.key.phraseIndex + 1
+    }
+
+    private func markInitialPreparationRejected(
+        for request: PhrasePreparationRequest,
+        failure: NextPhraseFailure
+    ) {
+        guard let phraseNumber = initialPhraseNumber(for: request) else { return }
+        nextPhraseProgress = nextPhraseProgress.blockedInitial(
+            targetPhraseNumber: phraseNumber,
+            failure: failure
+        )
+        Self.successorPreparationLogger.error(
+            "Initial failed phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) stage=\(failure.stage, privacy: .public) code=\(failure.code, privacy: .public) details=\(failure.logDetails, privacy: .public)"
         )
     }
 

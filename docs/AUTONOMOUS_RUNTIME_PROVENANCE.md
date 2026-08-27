@@ -311,6 +311,10 @@ mistaken for a completed feedback system.
    `successor-preparation` category. These diagnostics observe the canonical
    scheduler only; they do not authorize a plan, alter a deadline, feed quality
    evidence, retain a root seed or PCM, or execute on the callback.
+   Before any bar is accepted, the same projection distinguishes `FIRST P1`
+   preparation from successor work and reports a bounded blocked reason to the
+   UI and log instead of collapsing every preparation failure into audio-route
+   unavailability.
    A calibrated quality rejection may increment one bounded serial retry ordinal
    only at a later coherent repeat boundary. The same director and incoming
    state retain identity, structural kind, debt, and long-horizon ownership while

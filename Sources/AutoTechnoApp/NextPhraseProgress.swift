@@ -51,6 +51,7 @@ package struct NextPhraseProgress: Equatable, Sendable {
 
     package let stage: Stage
     package let targetPhraseNumber: Int?
+    package let isInitialTarget: Bool
     package let attemptCount: Int
     package let repeatCount: Int
     package let lastFailure: NextPhraseFailure?
@@ -58,6 +59,7 @@ package struct NextPhraseProgress: Equatable, Sendable {
     package static let waiting = NextPhraseProgress(
         stage: .waiting,
         targetPhraseNumber: nil,
+        isInitialTarget: false,
         attemptCount: 0,
         repeatCount: 0,
         lastFailure: nil
@@ -72,10 +74,11 @@ package struct NextPhraseProgress: Equatable, Sendable {
     }
 
     package func preparing(targetPhraseNumber: Int) -> Self {
-        let counts = counts(for: targetPhraseNumber)
+        let counts = counts(for: targetPhraseNumber, isInitial: false)
         return Self(
             stage: .preparing,
             targetPhraseNumber: targetPhraseNumber,
+            isInitialTarget: false,
             attemptCount: counts.attempts + 1,
             repeatCount: counts.repeats,
             lastFailure: counts.failure
@@ -94,6 +97,7 @@ package struct NextPhraseProgress: Equatable, Sendable {
         return Self(
             stage: .retrying,
             targetPhraseNumber: targetPhraseNumber,
+            isInitialTarget: false,
             attemptCount: counts.attempts,
             repeatCount: counts.repeats,
             lastFailure: failure
@@ -108,6 +112,7 @@ package struct NextPhraseProgress: Equatable, Sendable {
         return Self(
             stage: .blocked,
             targetPhraseNumber: targetPhraseNumber,
+            isInitialTarget: false,
             attemptCount: counts.attempts,
             repeatCount: counts.repeats,
             lastFailure: failure
@@ -115,7 +120,10 @@ package struct NextPhraseProgress: Equatable, Sendable {
     }
 
     package func repeated(targetPhraseNumber: Int) -> Self {
-        let counts = counts(for: targetPhraseNumber)
+        let counts = counts(
+            for: targetPhraseNumber,
+            isInitial: isInitialTarget
+        )
         let retainedStage: Stage = switch stage {
         case .preparing: .preparing
         case .queued: .queued
@@ -126,6 +134,7 @@ package struct NextPhraseProgress: Equatable, Sendable {
         return Self(
             stage: retainedStage,
             targetPhraseNumber: targetPhraseNumber,
+            isInitialTarget: isInitialTarget,
             attemptCount: counts.attempts,
             repeatCount: counts.repeats + 1,
             lastFailure: counts.failure
@@ -133,8 +142,37 @@ package struct NextPhraseProgress: Equatable, Sendable {
     }
 
     package var headline: String {
-        let target = targetPhraseNumber.map { "NEXT P\($0)" } ?? "NEXT PHRASE"
+        let target = targetPhraseNumber.map {
+            "\(isInitialTarget ? "FIRST" : "NEXT") P\($0)"
+        } ?? "NEXT PHRASE"
         return "\(target) · \(stageTitle)"
+    }
+
+    package func preparingInitial(targetPhraseNumber: Int) -> Self {
+        let counts = counts(for: targetPhraseNumber, isInitial: true)
+        return Self(
+            stage: .preparing,
+            targetPhraseNumber: targetPhraseNumber,
+            isInitialTarget: true,
+            attemptCount: counts.attempts + 1,
+            repeatCount: counts.repeats,
+            lastFailure: counts.failure
+        )
+    }
+
+    package func blockedInitial(
+        targetPhraseNumber: Int,
+        failure: NextPhraseFailure
+    ) -> Self {
+        let counts = counts(for: targetPhraseNumber, isInitial: true)
+        return Self(
+            stage: .blocked,
+            targetPhraseNumber: targetPhraseNumber,
+            isInitialTarget: true,
+            attemptCount: counts.attempts,
+            repeatCount: counts.repeats,
+            lastFailure: failure
+        )
     }
 
     package var detail: String {
@@ -194,6 +232,7 @@ package struct NextPhraseProgress: Equatable, Sendable {
         return Self(
             stage: stage,
             targetPhraseNumber: targetPhraseNumber,
+            isInitialTarget: false,
             attemptCount: counts.attempts,
             repeatCount: counts.repeats,
             lastFailure: counts.failure
@@ -205,7 +244,19 @@ package struct NextPhraseProgress: Equatable, Sendable {
         repeats: Int,
         failure: NextPhraseFailure?
     ) {
-        guard self.targetPhraseNumber == targetPhraseNumber else {
+        counts(for: targetPhraseNumber, isInitial: false)
+    }
+
+    private func counts(
+        for targetPhraseNumber: Int,
+        isInitial: Bool
+    ) -> (
+        attempts: Int,
+        repeats: Int,
+        failure: NextPhraseFailure?
+    ) {
+        guard self.targetPhraseNumber == targetPhraseNumber,
+              isInitialTarget == isInitial else {
             return (0, 0, nil)
         }
         return (attemptCount, repeatCount, lastFailure)

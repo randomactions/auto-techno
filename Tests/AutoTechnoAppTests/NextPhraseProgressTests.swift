@@ -61,6 +61,23 @@ struct NextPhraseProgressTests {
         #expect(progress.repeatCount == 1)
     }
 
+    @Test("Initial preparation failure is explicitly distinguished")
+    func initialFailureIsExplicit() {
+        let failure = NextPhraseFailure(
+            stage: "commit",
+            code: "quality-rejected"
+        )
+        let progress = NextPhraseProgress.waiting
+            .preparingInitial(targetPhraseNumber: 1)
+            .blockedInitial(targetPhraseNumber: 1, failure: failure)
+
+        #expect(progress.stage == .blocked)
+        #expect(progress.isInitialTarget)
+        #expect(progress.headline == "FIRST P1 · BLOCKED")
+        #expect(progress.detail.contains("COMMIT: QUALITY REJECTED"))
+        #expect(progress.attemptCount == 1)
+    }
+
     @Test("A newly targeted phrase resets old attempts and repeats")
     func newTargetResetsCounters() {
         let previousTarget = NextPhraseProgress.waiting
@@ -113,5 +130,6 @@ struct NextPhraseProgressTests {
         #expect(engine.contains("category: \"successor-preparation\""))
         #expect(engine.contains("Successor failed phrase="))
         #expect(engine.contains("Successor recovered phrase="))
+        #expect(engine.contains("Initial failed phrase="))
     }
 }

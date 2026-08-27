@@ -89,7 +89,9 @@ struct LiveRenderInspectorView: View {
             in: Capsule()
         )
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Next phrase preparation")
+        .accessibilityLabel(nextPhraseProgress.isInitialTarget
+            ? "Initial phrase preparation"
+            : "Next phrase preparation")
         .accessibilityValue(nextPhraseProgress.accessibilityValue)
         .accessibilityIdentifier("next-phrase-progress")
     }
