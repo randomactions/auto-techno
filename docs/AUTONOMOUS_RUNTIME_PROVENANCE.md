@@ -326,6 +326,9 @@ mistaken for a completed feedback system.
    never intersected at runtime. Optional active modal evidence can use only
    bounds already calibrated from active modal checkpoints when the selected
    checkpoint retained the exact inactive sentinel envelope.
+   Upper-spectral reveal activation remains conditional on the existing
+   narrative eligibility owner: no eligible score events produce the exact
+   neutral value, while eligible events that fail to render stay rejecting.
    It also owns one scheduled-output feedback coordinator. After an exact
    two-probe mixer/player clock map succeeds, the main-mixer callback copies only
    bounded app-owned native-stereo packets into the preallocated C11 queue. A

@@ -576,6 +576,9 @@ The target loop is bounded and persistent:
    compound offline labels are not intersected into an uncalibrated population.
    Optional modal metrics reuse qualified active bounds when a checkpoint's
    development evidence contains only the exact inactive sentinel.
+   Optional upper spectral reveal records use neutral activation evidence only
+   when the score has no eligible reveal events; eligible but inactive rendering
+   remains a rejection.
 5. The evaluator may request one deterministic home-timbre correction of that
    same plan; otherwise it reaches a terminal verdict after the first pass.
 6. A calibrated rejection may inform one later, serial director proposal after

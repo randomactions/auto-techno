@@ -361,6 +361,12 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalQualityMetric
             .modalPercussionSpectralCentroidMeanHz
             .conditionalNeutralCalibrationEnvelope == 0...60)
+        #expect(ProfessionalQualityMetric
+            .upperSpectralRevealActiveEventRatio
+            .conditionalNeutralSentinel == 1)
+        #expect(ProfessionalQualityMetric
+            .upperSpectralRevealActiveEventRatio
+            .isConditionalNeutral(1))
         for metric in [
             ProfessionalQualityMetric.modalPercussionPitchErrorCentsMaximum,
             .modalPercussionMaskingMaximumOverlap,
@@ -449,6 +455,30 @@ struct ProfessionalQualityCalibrationTests {
             .participatesInRateConsistency)
         #expect(ProfessionalQualityMetric.rmsTrajectoryDeltaMeanDB
             .participatesInRateConsistency)
+    }
+
+    @Test("Spectral reveal absence is neutral but eligible inactivity fails")
+    func conditionalSpectralRevealRatio() {
+        #expect(ProfessionalQualityObservation
+            .upperSpectralRevealActiveEventRatio(
+                eligibleEventCount: 0,
+                activeEventCount: 0
+            ) == 1)
+        #expect(ProfessionalQualityObservation
+            .upperSpectralRevealActiveEventRatio(
+                eligibleEventCount: 4,
+                activeEventCount: 0
+            ) == 0)
+        #expect(ProfessionalQualityObservation
+            .upperSpectralRevealActiveEventRatio(
+                eligibleEventCount: 4,
+                activeEventCount: 3
+            ) == 0.75)
+        #expect(ProfessionalQualityObservation
+            .upperSpectralRevealActiveEventRatio(
+                eligibleEventCount: 0,
+                activeEventCount: 1
+            ) == 0)
     }
 
     @Test("Neutral-only modal checkpoints reuse qualified active bounds")
@@ -1306,12 +1336,15 @@ struct ProfessionalQualityCalibrationTests {
             .modalPercussionSpectralCentroidMeanHz: 620,
             .modalPercussionMaskingMaximumOverlap: 0.2,
             .modalPercussionMaximumPoleRadius: 0.998,
+            .upperSpectralRevealActiveEventRatio: 1,
             .spectralHarmonicTailUpperBandEnergyRatioMean: 0.42,
         ]
         return ProfessionalQualityMetric.allCases.map { metric in
-            let metricRateOffset = metric ==
-                .modalPercussionMaximumPoleRadius
-                ? rateOffset * 0.01 : rateOffset
+            let metricRateOffset: Double = switch metric {
+            case .upperSpectralRevealActiveEventRatio: 0
+            case .modalPercussionMaximumPoleRadius: rateOffset * 0.01
+            default: rateOffset
+            }
             return ProfessionalQualityMetricValue(
                 metric: metric,
                 value: (scalar[metric] ?? 0) + metricRateOffset

@@ -168,6 +168,8 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
             return 0
         case .spectralHarmonicTailUpperBandEnergyRatioMean:
             return 1
+        case .upperSpectralRevealActiveEventRatio:
+            return 1
         default:
             return nil
         }
@@ -807,14 +809,15 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         let activeSpectralRevealEvidence = spectralRevealEvidence.filter(
             \.active
         )
-        let spectralRevealEventCount = spectralRevealEvidence.reduce(0) {
-            $0 + $1.renderedEventCount
-        }
+        let eligibleSpectralRevealEventCount = spectralRevealEvidence
+            .filter(\.eligible)
+            .reduce(0) {
+                $0 + $1.renderedEventCount
+            }
         let activeSpectralRevealEventCount =
             activeSpectralRevealEvidence.reduce(0) {
                 $0 + $1.activeEventCount
             }
-        let spectralRevealDivisor = Double(max(1, spectralRevealEventCount))
         let harmonicTailEvidence = vector.instruments.flatMap(
             \.architectures
         ).compactMap(\.spectralTextureHarmonicTail)
@@ -1061,8 +1064,10 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             ),
             ProfessionalQualityMetricValue(
                 metric: .upperSpectralRevealActiveEventRatio,
-                value: Double(activeSpectralRevealEventCount) /
-                    spectralRevealDivisor
+                value: Self.upperSpectralRevealActiveEventRatio(
+                    eligibleEventCount: eligibleSpectralRevealEventCount,
+                    activeEventCount: activeSpectralRevealEventCount
+                )
             ),
             ProfessionalQualityMetricValue(
                 metric: .upperSpectralRevealAppliedCutoffRatioMean,
@@ -1138,6 +1143,21 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 .candidateDerived(vector),
             metrics: metrics
         )
+    }
+
+    /// Optional score capabilities use the exact higher-is-safer neutral
+    /// sentinel only when the score contains no eligible events. An eligible
+    /// event that did not render stays at zero and remains a quality failure.
+    package static func upperSpectralRevealActiveEventRatio(
+        eligibleEventCount: Int,
+        activeEventCount: Int
+    ) -> Double {
+        guard eligibleEventCount > 0 else {
+            return activeEventCount == 0 ? 1 : 0
+        }
+        guard activeEventCount >= 0,
+              activeEventCount <= eligibleEventCount else { return 0 }
+        return Double(activeEventCount) / Double(eligibleEventCount)
     }
 
     package init(report: CanonicalJourneyQualificationReport) throws {
