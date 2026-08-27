@@ -590,6 +590,30 @@ struct LiveOutputWindowEvidenceTests {
         #expect(target.selectedTruePeakCheckpoint == .longContinuation)
     }
 
+    @Test("A late structural phrase uses long continuation")
+    func lateStructuralPhraseUsesLongContinuation() throws {
+        let signal = testSignal(sampleRate: 44_100)
+        let plan = realDirectorPlan { plan in
+            plan.phraseIndex >= 16 && plan.kind != .lock
+        }
+        let identity = LiveOutputPlanSourceIdentity(plan: plan)
+        let represented = CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: plan.phraseIndex,
+            phraseKind: plan.kind,
+            chapterChanged: identity.chapterChanged
+        )
+        let evidence = try #require(analyze(
+            left: signal,
+            right: signal,
+            sampleRate: 44_100,
+            plan: plan
+        ))
+
+        #expect(represented.contains(.longContinuation))
+        #expect(represented.count >= 2)
+        #expect(evidence.applicableCheckpoints == [.longContinuation])
+    }
+
     @Test("A target rejects every mismatched source-observation pairing")
     func targetRejectsForgedObservationPairing() throws {
         let signal44 = testSignal(sampleRate: 44_100)

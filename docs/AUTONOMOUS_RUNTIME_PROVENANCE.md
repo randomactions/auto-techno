@@ -324,12 +324,13 @@ mistaken for a completed feedback system.
    PCM movement. Ordinal zero remains the original plan; no variants coexist,
    rank one another, or bypass primary qualification.
    Runtime terminal qualification uses one Core-owned checkpoint priority for
-   the complete phrase: establishment, structural kind, then long continuation.
-   An ordinary lock uses the continuation population even when it crosses a
-   chapter boundary, because chapter-change observations may also belong to a
-   structural phrase. Multi-label evidence remains available to offline
-   calibration, but separately calibrated whole-phrase populations are never
-   intersected at runtime. Optional active modal evidence can use only
+   the complete phrase: establishment, long continuation from phrase index 16,
+   otherwise the structural kind. An ordinary lock also uses the continuation
+   population even when it crosses a chapter boundary, because chapter-change
+   observations may belong to a structural phrase. Multi-label evidence remains
+   available to offline calibration, but separately calibrated whole-phrase
+   populations are never intersected at runtime. Optional active modal evidence
+   can use only
    bounds already calibrated from active modal checkpoints when the selected
    checkpoint retained the exact inactive sentinel envelope.
    Upper-spectral reveal activation remains conditional on the existing

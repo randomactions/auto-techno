@@ -37,7 +37,7 @@ struct QualityQualificationFoundationTests {
             phraseIndex: 16,
             phraseKind: .energyRelease,
             chapterChanged: true
-        ) == .release)
+        ) == .longContinuation)
         #expect(CanonicalJourneyCheckpoint.primaryQualification(
             phraseIndex: 7,
             phraseKind: .lock,

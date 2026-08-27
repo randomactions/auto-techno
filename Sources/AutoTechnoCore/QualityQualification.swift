@@ -63,7 +63,9 @@ package enum CanonicalJourneyCheckpoint: String, CaseIterable, Codable, Equatabl
     /// Runtime terminal qualification uses one whole-phrase population. A
     /// structural phrase can still contribute several offline observations,
     /// but intersecting those separately calibrated populations at runtime can
-    /// create an empty envelope. Prefer the most specific semantic owner.
+    /// create an empty envelope. Prefer the most specific temporal owner.
+    /// Once the journey is long-running, use its deliberately broad
+    /// continuation population before any earlier structural population.
     /// Chapter-change remains an offline relationship label because its
     /// calibrated observations may also belong to a structural phrase; an
     /// ordinary lock uses the broad continuation population at runtime.
@@ -74,6 +76,7 @@ package enum CanonicalJourneyCheckpoint: String, CaseIterable, Codable, Equatabl
     ) -> CanonicalJourneyCheckpoint? {
         guard phraseIndex >= 0 else { return nil }
         if phraseIndex == 0 { return .establishment }
+        if phraseIndex >= 16 { return .longContinuation }
         switch phraseKind {
         case .contrast: return .contrast
         case .majorBreak: return .majorBreak
@@ -81,7 +84,6 @@ package enum CanonicalJourneyCheckpoint: String, CaseIterable, Codable, Equatabl
         case .identityReturn: return .identityReturn
         case .lock: break
         }
-        if phraseIndex >= 16 { return .longContinuation }
         return nil
     }
 }
