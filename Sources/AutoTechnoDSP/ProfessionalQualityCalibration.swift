@@ -682,9 +682,16 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             phraseKind: phraseKind,
             chapterChanged: vector.symbolic.chapterChanged
         )
-        let effectiveCheckpoints = explicitlyApplicable.isEmpty
-            ? [.longContinuation] : explicitlyApplicable
-        guard effectiveCheckpoints.contains(checkpoint) else {
+        let primaryCheckpoint = CanonicalJourneyCheckpoint
+            .primaryQualification(
+                phraseIndex: vector.symbolic.phraseIndex,
+                phraseKind: phraseKind,
+                chapterChanged: vector.symbolic.chapterChanged
+            ) ?? .longContinuation
+        let permittedCheckpoints = Set(
+            explicitlyApplicable + [primaryCheckpoint]
+        )
+        guard permittedCheckpoints.contains(checkpoint) else {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
         let sampleRate = vector.routeContinuation.sampleRate

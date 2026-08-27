@@ -779,6 +779,49 @@ struct QualityQualificationFoundationTests {
         }
     }
 
+    @Test("Ordinary chapter locks admit the primary continuation observation")
+    func ordinaryChapterLockObservationUsesContinuation() throws {
+        let sampleRate = 48_000.0
+        let frameCount = StreamingPerceptualEvidenceAnalyzer.fftFrameCount(
+            sampleRate: sampleRate
+        )
+        let evidence = UpperTimbreEvidenceAnalyzer.analyze(
+            UpperTimbreAnalysisInput(
+                left: [Float](repeating: 0, count: frameCount),
+                right: [Float](repeating: 0, count: frameCount),
+                sampleRate: sampleRate
+            )
+        )
+        let fixture = reportFixture(
+            evidence: evidence,
+            sampleHash: "ordinary-chapter-lock",
+            checkpoint: .chapterChange
+        )
+
+        #expect(fixture.vector.symbolic.phraseKind ==
+                AutonomousPhraseKind.lock.rawValue)
+        #expect(fixture.vector.symbolic.chapterChanged)
+        #expect(CanonicalJourneyCheckpoint.primaryQualification(
+            phraseIndex: fixture.vector.symbolic.phraseIndex,
+            phraseKind: .lock,
+            chapterChanged: true
+        ) == nil)
+
+        let primary = try ProfessionalQualityObservation(
+            candidate: fixture.vector,
+            engineVersion: QualityQualificationContract.engineVersion,
+            checkpoint: .longContinuation
+        )
+        let offlineRelationship = try ProfessionalQualityObservation(
+            candidate: fixture.vector,
+            engineVersion: QualityQualificationContract.engineVersion,
+            checkpoint: .chapterChange
+        )
+
+        #expect(primary.checkpoint == .longContinuation)
+        #expect(offlineRelationship.checkpoint == .chapterChange)
+    }
+
     private typealias ReportFixture = (
         vector: AutonomousCandidateEvaluationVector,
         transaction: AutonomousCandidateEvaluationTransaction
