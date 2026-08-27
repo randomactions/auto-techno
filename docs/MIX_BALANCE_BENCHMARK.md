@@ -70,11 +70,11 @@ results, not listening approval or a claim that every bar should have the same
 role balance.
 
 The promoted exact identities are canonical engine v36 / quality schema 37,
-primary-v18 profile `b2580308d0e1111b`, adversarial suite
-`2dd65abc9577bc61`, and holdout `bb7295767d43c2b3`; the dependent
-long-horizon-v5 profile `2d7e266c9a4cfbda` rejects all ten attacks through
-`45fe58353cb86cf3` and accepts both disjoint holdouts through
-`e0547341291bc863`.
+primary-v18 profile `110a3db78e64df40`, adversarial suite
+`d1bf279a4cd021b2`, and holdout `72f08ccf5d7504da`; the dependent
+long-horizon-v5 profile `a819ba51241f0179` rejects all ten attacks through
+`b284b4531f2c3b15` and accepts both disjoint holdouts through
+`c63a928908f0fbb1`.
 
 Controlled listening remains a separate validation stage. EBU Tech 3343
 recommends a consistent reference monitoring level and also notes that

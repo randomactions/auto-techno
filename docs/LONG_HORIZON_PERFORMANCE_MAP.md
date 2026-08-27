@@ -487,20 +487,24 @@ It exposes no repeatable missing sound family.
 ### Implemented Phase 6B calibrated professional policy
 
 `AutoTechnoDSP` now owns the reduced, versioned Stage 6 calibration chain. Five
-development roots (`48291`, `77777`, `90909`, `112358`, `246813`) each contribute a
-canonical four-hour semantic journey and exact primary-qualified representative
-renders at 44.1 and 48 kHz. Each journey supplies at least thirteen signal
-observations per rate and at least two usable measurements for every episode
-operator, signal metric, and rate. Bounds remain named and non-compensable across nine semantic dimensions,
+development roots (`48291`, `77777`, `90909`, `112358`, `246813`) each contribute an
+at-least-four-hour canonical semantic journey and exact primary-qualified
+representative renders at 44.1 and 48 kHz. Only phrase kinds that express their
+named episode operator contribute operator consequences; deterministic serial
+quality retries are followed, and planning may continue to a hard 10,400-bar
+ceiling when four hours do not yet expose two examples of every operator. Each
+journey supplies at least thirteen signal observations per rate and at least two
+usable measurements for every episode operator, signal metric, and rate. Bounds
+remain named and non-compensable across nine semantic dimensions,
 every operator/signal-rate relationship, and every existing effect family; no
 aggregate engagement score can hide a hard failure.
 
-The current v5 development profile `2d7e266c9a4cfbda` rejects all ten required
-attacks through adversarial artifact `45fe58353cb86cf3`: permanent peak, fixed
+The current v5 development profile `a819ba51241f0179` rejects all ten required
+attacks through adversarial artifact `b284b4531f2c3b15`: permanent peak, fixed
 sawtooth, strict alternation, failed recall, periodic rare gesture, wetness
 ratchet, monotonic decline, instant debt payment, semantic/signal mismatch, and
 route identity reset. Disjoint roots `141421` and `173205` are both accepted by
-holdout artifact `e0547341291bc863`. The bundled artifacts enforce canonical
+holdout artifact `c63a928908f0fbb1`. The bundled artifacts enforce canonical
 JSON, exact engine/primary-policy identity, development/holdout disjointness,
 and fail-closed cross-artifact construction. They retain only irreversible
 summaries and fingerprints; PCM, samples, waveforms, and score events are absent.
@@ -793,7 +797,7 @@ Each slice extends the one canonical owner and leaves a reusable capability.
 | 3. Episode operator selection — complete locally | `AutonomousSessionDirector` selection and `makePlan` consume exact hierarchy context | Versioned maintain/rise/recover/reframe/payoff/recall provenance mapped to existing phrase kinds | All operators fulfill in the canonical journey; at most one payoff per arc, real debt payment, prompt bounded recovery, frozen planning/semantic/hierarchy drift | Candidate count remains one; minimum hold protects reserved rare events; invalid context uses the previous conservative policy | No alternative arrangement engine, phrase vocabulary, or random style switch |
 | 4. Score-owned energy coordination — complete locally | Existing resolved roles, character, narrative, foundation, disclosure, transformations, spatial carrier, and transition eligibility | Versioned eight-coordinate target projected through existing score owners | Every coordinate has directional semantic witnesses; exact all-hold fingerprint; four-hour six-operator coverage, bounded roles/slew/space, and protected rare-event reserve | One immutable phrase-boundary target; 0.16 protagonist slew; one percussion tier; one spatial carrier/macro; malformed provenance fails closed | No extra density track, disconnected scalar, synth, patch, DSP primitive, graph stage, or callback path |
 | 5. Effect/capability dose evidence — complete locally | Existing instrument effect access, graph, FDN, pulse echo, percussion returns, masking, and transition relations | Versioned phrase sentence plus fixed-capacity activation, occupancy, tail, recovery, gap, last-use, and level evidence | 63 existing four-hour sentences; exact detached source/return binding; adversarial false eligibility, disconnected claims, premature recovery, discontinuity, and replay checks | Annotation and detached reduction only; no PCM retained; invalid evidence is unavailable without partial mutation; current audio remains exact | No new bus, effect, orderable plug-in chain, FX sequencer, renderer, or callback path |
-| 6. Calibrated long-horizon policy — complete locally | Primary-v18 evaluator, DSP-owned `autotechno-long-horizon-signal-trajectory.v1`, and immutable Stage 6 artifact loader | Non-compensable cross-phrase/cross-episode semantic, operator/signal, and effect bounds over five exact development journeys | Engine-v36 v5 profile `2d7e266c9a4cfbda`; ten attacks rejected by `45fe58353cb86cf3`; two disjoint four-hour holdouts accepted by `e0547341291bc863` at 44.1/48 kHz | Reduced detached evidence only; exact identities and canonical JSON fail closed; no PCM retained or scheduled audio rewritten | No parallel permissive evaluator, PCM ledger, aggregate engagement score, or semantic claim masquerading as signal consequence |
+| 6. Calibrated long-horizon policy — complete locally | Primary-v18 evaluator, DSP-owned `autotechno-long-horizon-signal-trajectory.v1`, and immutable Stage 6 artifact loader | Non-compensable cross-phrase/cross-episode semantic, phrase-kind-consistent operator/signal, and effect bounds over five exact development journeys | Engine-v36 v5 profile `a819ba51241f0179`; ten attacks rejected by `b284b4531f2c3b15`; two disjoint at-least-four-hour holdouts accepted by `c63a928908f0fbb1` at 44.1/48 kHz | Reduced detached evidence only; exact identities and canonical JSON fail closed; no PCM retained or scheduled audio rewritten | No parallel permissive evaluator, PCM ledger, aggregate engagement score, or semantic claim masquerading as signal consequence |
 | 7. Bounded future adaptation — complete locally | DSP-owned fixed-capacity runtime observation, Core v2 continuation/decision, and App prepared-successor transaction | Exact active-rate Stage 6 evaluation and one reason-coded preserve/recover update for the next eligible phrase | Exact observation/decision/continuation replay; ten independent reason mappings; real prepared-phrase witness; stale/short/wrong-root/recovery-ineligible preservation; route rollback source contract | Fixed 7,200-bar/12-observation/two-transitions-per-operator minimum and 256-bar interval; immutable prepared state commits atomically; invalid evidence restarts; no callback work | No independent long-form controller, second plan, parallel policy, PCM history, renderer, graph, or callback path |
 | 8. Targeted sound maturation — complete locally with three bounded promotions | Existing Core kick, upper-percussion, and phrase-composition score intent; primary-v18 phrase verdict; and affected DSP evidence owners | Complete AudioReakt and Mordio source convergence plus exact PCM exposed session-static kick identity, a fixed clap body, and cut-only slice texture; all other proposed machinery reconciled to existing owners | Multi-rate kick morphology, clap/snare/rim, cut-neutral and deterministic granular-memory witnesses; five development journeys, ten rejected attacks, two fresh accepted disjoint holdouts, and byte-identical v5 replay | Score-resolved state-free DSP only; a future promotion still requires repeated independent-root and two-rate causal failure and must replace provisional DSP in place | No preset pack, granular side engine, alternative renderer, speculative chain, genre selector, or duplicate event lane |
 

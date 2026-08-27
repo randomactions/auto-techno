@@ -142,6 +142,85 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             liveCandidateChain: liveCandidates
         )
         progress("adversarial-ready fingerprint=\(adversarial.fingerprint)")
+        for result in adversarial.cases where !result.passed {
+            progress(
+                "adversarial-failure=\(result.scenario.rawValue) " +
+                "rejected=\(result.rejected) expected=" +
+                result.expectedReasons.map(\.rawValue).joined(separator: ",") +
+                " actual=" +
+                result.actualReasons.map(\.rawValue).joined(separator: ",") +
+                " metrics=" +
+                result.failedMetrics.map(\.rawValue).joined(separator: ",")
+            )
+        }
+        for trajectory in holdoutCorpus.trajectories {
+            let relationshipFailures = ProfessionalQualityRelationshipEvaluator
+                .evaluate(
+                    observations: trajectory.observations,
+                    against: profile
+                )
+            for observation in trajectory.observations {
+                let verdict = ProfessionalQualityProfileEvaluator.evaluate(
+                    observation,
+                    against: profile
+                )
+                for metric in verdict.failedMetrics {
+                    guard let value = observation[metric],
+                          let bounds = profile[observation.checkpoint]?[metric]
+                    else { continue }
+                    progress(
+                        "holdout-preflight-local-detail=\(metric.rawValue) " +
+                        "value=\(value) bounds=\(bounds.lower)..." +
+                        "\(bounds.upper) checkpoint=" +
+                        "\(observation.checkpoint.rawValue) rate=" +
+                        "\(Int(observation.sampleRate)) source=" +
+                        trajectory.sourceBankFingerprint
+                    )
+                }
+            }
+            for failure in relationshipFailures {
+                progress(
+                    "holdout-preflight-relationship-detail=" +
+                    "\(failure.kind.rawValue):\(failure.metric.rawValue) " +
+                    "value=\(failure.observedDelta) bounds=" +
+                    "\(failure.lowerBound)...\(failure.upperBound) " +
+                    "checkpoint=" +
+                    (failure.checkpoint?.rawValue ?? "none") +
+                    " source=\(trajectory.sourceBankFingerprint)"
+                )
+            }
+        }
+        let holdoutOverlap = calibrationCorpus.sourceBankFingerprints
+            .intersection(holdoutCorpus.sourceBankFingerprints)
+        progress(
+            "holdout-preflight-contract " +
+            "profile-diverse=\(profile.usesDiverseCalibration) " +
+            "adversarial-schema=" +
+            "\(adversarial.schemaVersion == ProfessionalQualityAdversarialSuiteReport.schemaVersion) " +
+            "adversarial-version=" +
+            "\(adversarial.suiteVersion == ProfessionalQualityAdversarialSuiteReport.suiteVersion) " +
+            "adversarial-passed=\(adversarial.passed) " +
+            "adversarial-profile=" +
+            "\(adversarial.profileFingerprint == profile.fingerprint) " +
+            "calibration-complete=\(calibrationCorpus.isComplete) " +
+            "holdout-complete=\(holdoutCorpus.isComplete) " +
+            "calibration-profile=" +
+            "\(calibrationCorpus.fingerprint == profile.sourceBankFingerprint) " +
+            "calibration-trajectories=" +
+            "\(calibrationCorpus.sourceTrajectoryCount)/\(profile.sourceTrajectoryCount) " +
+            "holdout-trajectories=" +
+            "\(holdoutCorpus.sourceTrajectoryCount)/" +
+            "\(ProfessionalQualityHoldoutQualification.minimumHoldoutTrajectoryCount) " +
+            "calibration-engine=" +
+            "\(calibrationCorpus.engineVersion == profile.engineVersion) " +
+            "holdout-engine=" +
+            "\(holdoutCorpus.engineVersion == profile.engineVersion) " +
+            "calibration-evidence=" +
+            "\(calibrationCorpus.evidenceVersion == profile.evidenceVersion) " +
+            "holdout-evidence=" +
+            "\(holdoutCorpus.evidenceVersion == profile.evidenceVersion) " +
+            "overlap=\(holdoutOverlap.count)"
+        )
         let holdout = try ProfessionalQualityHoldoutQualification(
             profile: profile,
             adversarialSuite: adversarial,

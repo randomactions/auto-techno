@@ -42,8 +42,8 @@ invalid.
 engine-v36 profile v18, adversarial suite v15, and disjoint holdout qualification
 v13. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
-relationship gate. The pinned fingerprints are profile `b2580308d0e1111b`,
-adversarial suite `2dd65abc9577bc61`, and holdout `bb7295767d43c2b3`.
+relationship gate. The pinned fingerprints are profile `110a3db78e64df40`,
+adversarial suite `d1bf279a4cd021b2`, and holdout `72f08ccf5d7504da`.
 
 Offline calibration may retain several checkpoint observations from one
 candidate. Runtime terminal qualification selects one most-specific

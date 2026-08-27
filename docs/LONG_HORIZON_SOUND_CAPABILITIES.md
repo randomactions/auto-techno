@@ -330,8 +330,8 @@ does prove that this corpus supplies no repeatable failure that authorizes one
 of the replacements below.
 
 The current engine-v36/primary-v18 regeneration pins long-horizon v5 profile
-`2d7e266c9a4cfbda`, adversarial suite `45fe58353cb86cf3`, and disjoint holdout
-`e0547341291bc863`. Earlier policy fingerprints remain historical evidence
+`a819ba51241f0179`, adversarial suite `b284b4531f2c3b15`, and disjoint holdout
+`c63a928908f0fbb1`. Earlier policy fingerprints remain historical evidence
 only. The prior Hypnotic sweep promoted LH-SND-09's interpolation primitive from
 a direct 76 dB alias-rejection witness; the complete Mordio sweep adds one
 bounded granular-memory texture within that same canonical renderer. It does

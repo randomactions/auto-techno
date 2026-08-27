@@ -50,6 +50,23 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
           + "operators=\(journey.verdict.failedOperatorDeltas.count) "
           + "effects=\(journey.verdict.failedEffectFamilies.map(\.rawValue).joined(separator: ","))"
       )
+      for delta in journey.verdict.failedOperatorDeltas {
+        let bound = profile.operatorDeltaBounds.first {
+          $0.sampleRate == delta.sampleRate
+            && $0.operatorKind == delta.operatorKind
+            && $0.metric == delta.metric
+        }
+        progress(
+          "holdout-operator-detail root=\(journey.rootSeed) "
+            + "rate=\(Int(delta.sampleRate)) "
+            + "operator=\(delta.operatorKind.rawValue) "
+            + "metric=\(delta.metric.rawValue) "
+            + "transitions=\(delta.transitionCount) "
+            + "value=\(delta.meanDelta) bounds="
+            + "\(bound?.bounds.lower ?? .nan)..."
+            + "\(bound?.bounds.upper ?? .nan)"
+        )
+      }
     }
     let policy = try LongHorizonProfessionalPolicy(
       profile: profile,
@@ -185,6 +202,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     rootSeed: UInt64,
     primary: ProfessionalQualityPrimaryEvaluator
   ) throws -> LongHorizonPolicyObservation {
+    let director = AutonomousSessionDirector(rootSeed: rootSeed)
     let journey = canonicalJourney(rootSeed: rootSeed)
     progress(
       "planned root=\(rootSeed) bars=\(journey.semantic.observedBarCount) "
@@ -209,35 +227,57 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
         var incomingRenderState = RenderState()
         incomingRenderState.barIndex = checkpoint.plan.startBar
         let neverCancelled: @Sendable () -> Bool = { false }
-        let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
-          plan: checkpoint.plan,
-          sessionSeed: rootSeed,
-          memory: checkpoint.state.memory,
-          sampleRate: sampleRate,
-          incomingRenderState: incomingRenderState,
-          incomingGraphState: GeneratedDSPContinuationState(),
-          previousGraph: nil,
-          incomingQualityState: checkpoint.state.quality,
-          evaluator: primary,
-          cancellationRequested: neverCancelled)
-        guard let prepared = preparedResult else {
-          progress(
-            "missing root=\(rootSeed) rate=\(Int(sampleRate)) "
-              + "phrase=\(checkpoint.plan.phraseIndex)")
-          break
-        }
-        let assessment = primary.assessment(
-          of: prepared.selectedCandidateEvidence)
-        if !prepared.commitEligible || !assessment.accepted {
+        var retry = AutonomousQualityRetryContinuation()
+        var accepted: PreparedAutonomousPhrase?
+        for ordinal in 0...AutonomousQualityRetryContinuation.maximumOrdinal {
+          let retryPlan = director.plan(
+            from: checkpoint.state,
+            qualityRetryOrdinal: ordinal)
+          let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            plan: retryPlan,
+            sessionSeed: rootSeed,
+            memory: checkpoint.state.memory,
+            sampleRate: sampleRate,
+            incomingRenderState: incomingRenderState,
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            incomingQualityState: checkpoint.state.quality,
+            evaluator: primary,
+            cancellationRequested: neverCancelled)
+          guard let prepared = preparedResult else {
+            progress(
+              "missing root=\(rootSeed) rate=\(Int(sampleRate)) "
+                + "phrase=\(checkpoint.plan.phraseIndex) retry=\(ordinal)")
+            break
+          }
+          let assessment = primary.assessment(
+            of: prepared.selectedCandidateEvidence)
+          if prepared.commitEligible && assessment.accepted {
+            accepted = prepared
+            if ordinal > 0 {
+              progress(
+                "retry-selected root=\(rootSeed) rate=\(Int(sampleRate)) "
+                  + "phrase=\(checkpoint.plan.phraseIndex) retry=\(ordinal)")
+            }
+            break
+          }
           progress(
             "rejected root=\(rootSeed) rate=\(Int(sampleRate)) "
-              + "phrase=\(checkpoint.plan.phraseIndex) "
+              + "phrase=\(checkpoint.plan.phraseIndex) retry=\(ordinal) "
               + "decision=\(prepared.qualityDecision.outcome.rawValue) "
               + "reasons=\(prepared.qualityDecision.reasonCodes.map(\.rawValue).joined(separator: ",")) "
               + "failed=\(assessment.verdicts.flatMap(\.failedMetrics).map(\.rawValue).joined(separator: ","))"
           )
+          let next = retry.recordingCalibratedRejection(
+            decision: prepared.qualityDecision,
+            targetPhraseIndex: retryPlan.phraseIndex)
+          guard next.ordinal(for: retryPlan.phraseIndex) > ordinal else {
+            break
+          }
+          retry = next
         }
-        preparedByRate.append(prepared)
+        guard let accepted else { break }
+        preparedByRate.append(accepted)
       }
       guard preparedByRate.count == 2,
         preparedByRate.allSatisfy(\.commitEligible),
@@ -248,9 +288,25 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       #expect(signal44.observe(evidence44) == .accepted)
       #expect(signal48.observe(evidence48) == .accepted)
       effectPhrases.append(effect44)
+      let finalKick44 = preparedByRate[0].selectedCandidateEvidence
+        .automaticMix.last?.gains.first { $0.role == MixRole.kick.rawValue }?
+        .gainDB ?? .nan
+      let finalKick48 = preparedByRate[1].selectedCandidateEvidence
+        .automaticMix.last?.gains.first { $0.role == MixRole.kick.rawValue }?
+        .gainDB ?? .nan
       progress(
         "selected root=\(rootSeed) phrase=\(checkpoint.plan.phraseIndex) "
+          + "kind=\(checkpoint.plan.kind.rawValue) "
           + "operator=\(checkpoint.plan.longHorizonEnergyCoordination.operatorKind?.rawValue ?? "none")"
+          + " kick44=\(finalKick44) kick48=\(finalKick48)"
+          + " lufs44=\(evidence44.signal.integratedLoudnessLUFS)"
+          + " crest44=\(evidence44.signal.meanBarCrestFactorDB)"
+          + " transients44=\(evidence44.signal.transientDensityPerSecond)"
+          + " masking44=\(evidence44.signal.maximumMaskingOverlap)"
+          + " lufs48=\(evidence48.signal.integratedLoudnessLUFS)"
+          + " crest48=\(evidence48.signal.meanBarCrestFactorDB)"
+          + " transients48=\(evidence48.signal.transientDensityPerSecond)"
+          + " masking48=\(evidence48.signal.maximumMaskingOverlap)"
       )
       if hasCompleteOperatorCoverage(signal44.report)
         && hasCompleteOperatorCoverage(signal48.report)
@@ -288,6 +344,8 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     semantic: LongHorizonSemanticTrajectoryReport,
     checkpoints: [CalibrationCheckpoint]
   ) {
+    let minimumJourneyBars = 7_800
+    let maximumCoverageBars = 10_400
     let director = AutonomousSessionDirector(rootSeed: rootSeed)
     var state = director.initialState()
     var semantic = LongHorizonSemanticTrajectoryAccumulator(
@@ -295,12 +353,16 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     var checkpoints: [CalibrationCheckpoint] = []
     var operatorCandidateCounts: [LongHorizonEpisodeOperator: Int] = [:]
 
-    while state.memory.totalBars < 7_800 {
+    while state.memory.totalBars < minimumJourneyBars
+      || (state.memory.totalBars < maximumCoverageBars
+        && !hasMinimumOperatorCandidateCoverage(operatorCandidateCounts))
+    {
       let plan = director.plan(from: state)
       let current = CalibrationCheckpoint(state: state, plan: plan)
       #expect(semantic.observe(plan: plan, incomingState: state) == .accepted)
       if plan.phraseIndex >= 16,
         let operatorKind = plan.longHorizonEnergyCoordination.operatorKind,
+        phraseKind(plan.kind, expresses: operatorKind),
         operatorCandidateCounts[operatorKind, default: 0] < 24
       {
         checkpoints.append(current)
@@ -308,11 +370,31 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       }
       state.advancePlanning(using: plan)
     }
-    #expect(
-      LongHorizonEpisodeOperator.allCases.allSatisfy {
-        operatorCandidateCounts[$0, default: 0] >= 2
-      })
+    #expect(hasMinimumOperatorCandidateCoverage(operatorCandidateCounts))
     return (semantic.report(), checkpoints)
+  }
+
+  private func hasMinimumOperatorCandidateCoverage(
+    _ counts: [LongHorizonEpisodeOperator: Int]
+  ) -> Bool {
+    LongHorizonEpisodeOperator.allCases.allSatisfy {
+      counts[$0, default: 0]
+        >= LongHorizonProfessionalPolicySchema.minimumOperatorTransitionCount
+    }
+  }
+
+  private func phraseKind(
+    _ phraseKind: AutonomousPhraseKind,
+    expresses operatorKind: LongHorizonEpisodeOperator
+  ) -> Bool {
+    switch operatorKind {
+    case .maintain: phraseKind == .lock
+    case .rise: phraseKind == .contrast
+    case .recover: phraseKind == .majorBreak
+    case .reframe: phraseKind == .contrast || phraseKind == .majorBreak
+    case .payoff: phraseKind == .energyRelease
+    case .recall: phraseKind == .identityReturn
+    }
   }
 
   private func hasCompleteOperatorCoverage(

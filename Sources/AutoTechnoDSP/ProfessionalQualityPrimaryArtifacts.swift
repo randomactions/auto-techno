@@ -10,11 +10,11 @@ package struct ProfessionalQualityPrimaryArtifacts: Sendable {
         "professional-quality-primary-adversarial-suite-v18"
     package static let holdoutResource =
         "professional-quality-primary-holdout-v18"
-    package static let expectedProfileFingerprint = "b2580308d0e1111b"
+    package static let expectedProfileFingerprint = "110a3db78e64df40"
     package static let expectedAdversarialSuiteFingerprint =
-        "2dd65abc9577bc61"
+        "d1bf279a4cd021b2"
     package static let expectedHoldoutQualificationFingerprint =
-        "bb7295767d43c2b3"
+        "72f08ccf5d7504da"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport

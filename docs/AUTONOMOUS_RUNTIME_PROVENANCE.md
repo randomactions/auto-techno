@@ -841,9 +841,9 @@ already-immutable accepted result at the existing scheduled phrase boundary.
 Phase 8 adds no runtime owner or state. It reconciles the exact engine-v36/
 primary-v18 long-horizon profile, adversarial suite, and disjoint holdout with
 the conditional sound-capability register. Their fingerprints are
-`2d7e266c9a4cfbda`, `45fe58353cb86cf3`, and `e0547341291bc863`. The primary
+`a819ba51241f0179`, `b284b4531f2c3b15`, and `c63a928908f0fbb1`. The primary
 profile, adversarial suite, and holdout are independently pinned as
-`b2580308d0e1111b`, `2dd65abc9577bc61`, and `bb7295767d43c2b3`. All six current
+`110a3db78e64df40`, `d1bf279a4cd021b2`, and `72f08ccf5d7504da`. All six current
 artifacts replay byte for byte. Development and holdout journeys
 expose no repeated capability-local sound failure. The excluded root `135791`
 has too few primary-qualified payoff checkpoints to construct representative

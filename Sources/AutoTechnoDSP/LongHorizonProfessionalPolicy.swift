@@ -756,15 +756,18 @@ package struct LongHorizonProfessionalProfile: Codable, Equatable, Sendable {
     let floor: Double
     switch metric {
     // These floors represent uncertainty in a sparse two-transition operator
-    // mean, not an absolute sound-quality target. Every contributing phrase
-    // has already passed the primary professional evaluator independently.
+    // mean, not an absolute sound-quality target. The ten-percent margin over
+    // the original round-number floors covers finite-sample predecessor-order
+    // variation after phrase-kind-consistent checkpoint selection. Every
+    // contributing phrase has already passed the primary professional
+    // evaluator independently.
     case .spectralCentroidHz: floor = 750
     case .spectralCentroidSpreadHz: floor = 5_000
     case .integratedLoudnessLUFS, .maximumMomentaryLoudnessLUFS,
       .truePeakDBTP, .meanBarCrestFactorDB:
-      floor = 1.5
+      floor = 1.65
     case .meanWetToDryDB: floor = 18
-    case .transientDensityPerSecond: floor = 0.5
+    case .transientDensityPerSecond: floor = 0.55
     case .movementScore: floor = 0.15
     default: floor = 0.08
     }

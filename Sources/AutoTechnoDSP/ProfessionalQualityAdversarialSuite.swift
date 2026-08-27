@@ -492,8 +492,21 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             _ metric: ProfessionalQualityMetric,
             preferLower: Bool
         ) throws -> Double {
-            guard let checkpoint = profile[baseline.checkpoint],
-                  let bounds = checkpoint[metric] else {
+            guard let localBounds = profile[baseline.checkpoint]?[metric] else {
+                throw ProfessionalQualityCalibrationError.invalidMetricSet
+            }
+            let localDistance = max(
+                1e-9,
+                abs(localBounds.upper - localBounds.lower) * 0.1
+            )
+            let localOutside = preferLower
+                ? localBounds.lower - localDistance
+                : localBounds.upper + localDistance
+            guard let bounds = profile.effectiveBounds(
+                for: metric,
+                at: baseline.checkpoint,
+                observedValue: localOutside
+            ) else {
                 throw ProfessionalQualityCalibrationError.invalidMetricSet
             }
             let distance = max(1e-9, abs(bounds.upper - bounds.lower) * 0.1)

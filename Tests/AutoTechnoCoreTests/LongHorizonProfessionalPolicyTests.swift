@@ -103,6 +103,37 @@ struct LongHorizonProfessionalPolicyTests {
     #expect(verdict.failedSemanticMetrics == [.overdueDebtCount])
   }
 
+  @Test("Sparse operator means retain finite-sample uncertainty floors")
+  func sparseOperatorUncertaintyFloors() throws {
+    let development = try LongHorizonPolicyCalibrationCorpus(
+      observations: [UInt64(7), 13, 17, 42].map {
+        makeObservation(rootSeed: $0)
+      })
+    let profile = try LongHorizonProfessionalProfile(corpus: development)
+
+    for (metric, expectedFloor) in [
+      (LongHorizonSignalMetric.integratedLoudnessLUFS, 1.65),
+      (.meanBarCrestFactorDB, 1.65),
+      (.transientDensityPerSecond, 0.55),
+    ] {
+      let values = development.observations.compactMap { observation in
+        observation.operatorDeltas.first {
+          $0.sampleRate == 8_000 && $0.operatorKind == .maintain
+            && $0.metric == metric
+        }?.meanDelta
+      }
+      let lower = try #require(values.min())
+      let upper = try #require(values.max())
+      let calibrated = try #require(profile.operatorDeltaBounds.first {
+        $0.sampleRate == 8_000 && $0.operatorKind == .maintain
+          && $0.metric == metric
+      })
+
+      #expect(calibrated.bounds.lower == lower - expectedFloor)
+      #expect(calibrated.bounds.upper == upper + expectedFloor)
+    }
+  }
+
   @Test("Insufficient duration, rate coverage, and journey diversity cannot calibrate")
   func incompleteEvidenceCannotCalibrate() throws {
     let twoJourneys = try LongHorizonPolicyCalibrationCorpus(

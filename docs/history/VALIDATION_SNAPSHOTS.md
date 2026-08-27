@@ -2576,31 +2576,39 @@ role was added.
 Exact primary-v18 regeneration at 44.1 and 48 kHz accepted all 28 development
 journeys, all 56 checkpoints across four disjoint holdout journeys, every
 trajectory relationship, and the 34-case adversarial suite. Promoted
-fingerprints are profile `b2580308d0e1111b`, adversarial
-`2dd65abc9577bc61`, and holdout `bb7295767d43c2b3`. SHA-256 values for the
+fingerprints are profile `110a3db78e64df40`, adversarial
+`d1bf279a4cd021b2`, and holdout `72f08ccf5d7504da`. SHA-256 values for the
 three reduced bundled resources are respectively
-`e035bde56e5e33a6d1234bbade1246cae4ae61588de8acead93ca894b9b0ec35`,
-`a49d2eecee60d88906aa4a74a268d9d54935731fc4c5cf254c0e2d6354171a70`,
-and `cfac0c011ac01e5a6ae0f6ec22abdc9eaf5e484757f774d5491b76484fe770bc`.
+`4a7215d5cfe93f287eff23c3b1935c0f49ec8eef5ad2823f667e5081a3e05c71`,
+`61ed33ed4d580ee13e8c11075186472e3652c5235fc266a6afef39385ae9fe1e`,
+and `59b584d46dffcc7e6ced1bf451b5d9c9b6b4ba38a4749a2f41a1e942b4a110e5`.
 
 Dependent long-horizon-v5 regeneration accepted all five development roots,
 rejected all ten adversarial attacks, and accepted both disjoint holdout roots
-at both rates. Its profile, adversarial, and holdout fingerprints are
-`2d7e266c9a4cfbda`, `45fe58353cb86cf3`, and `e0547341291bc863`; resource
+at both rates. Operator evidence follows bounded runtime retries, admits only
+phrase kinds that express the named operator, and extends an at-least-four-hour
+journey only until two examples of every operator exist, failing closed at
+10,400 bars. Sparse two-transition predecessor orders retain explicit
+finite-sample uncertainty floors; the calibrated bounds are not widened for
+well-sampled orders. The primary adversarial generator evaluates attacks
+against the active checkpoint bounds rather than an unrelated neutral local
+projection. Its profile, adversarial, and holdout fingerprints are
+`a819ba51241f0179`, `b284b4531f2c3b15`, and `c63a928908f0fbb1`; resource
 SHA-256 values are
-`f93922b1e648740a18516cfba454675016108ae5310f9ca8e7f1cc22f1d39406`,
-`8976edb9c55a2d316f859d37052810f9a784bdc85a48ae0d5a556b5906c5bdb7`,
-and `823469a16c0666192d644ccf896c81f2c727e70eb2709a5559a931894981c4f6`.
+`b75b7b7eada9d231adabe0ec950261da42eeabab2fb115c811c8cb8236ab6004`,
+`c82f2637088f821c5a69958614dd1da457fbcd9bf385effedb1138528b2154e0`,
+and `c20f571c7a4a214f1c709864be7001edac2181dcbaf74a24ed265ac3d1686cbd`.
 The four-hour semantic trajectory remained `1a8af31815eb50da`; its serialized
 engine-v36 evidence is `0ffaaac1d6634015`, and the four-hour planning sequence
 is `4a56c7cd78fe0184`.
 
 Focused primary, long-horizon, provenance, runtime-surface, and semantic tests
-passed. The final matched-Xcode optimized gate passed all 460 Swift tests in
-119.373 seconds. A separate optimized product build bundled exactly primary
+passed. The final matched-Xcode optimized gate passed all 482 Swift tests in
+121.647 seconds. After cleaning the build scratch directory, a separate
+optimized product build completed in 104.61 seconds and bundled exactly primary
 v18 and long-horizon v5 resources. The arm64 executable has UUID
-`915958E3-9C38-3AEE-869D-D46E85926386` and SHA-256
-`95b1309c7f43a284d4a67cf50875392453327139d28e41dcde84521119620720`.
+`E198A39E-0C7B-3A91-9817-B83451D9E132` and SHA-256
+`0c8adbd33ea33c94936b01d1789b407a7b9a29560853bbeb325f08bc6ff84d56`.
 `git diff --check` and the benchmark script syntax check passed.
 
 These results establish deterministic offline qualification and optimized
