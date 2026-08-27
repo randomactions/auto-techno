@@ -1834,6 +1834,7 @@ package struct AutonomousInstrumentAssignmentEvidence: Codable, Equatable, Senda
     package let use: String
     package let architecture: String
     package let patch: String
+    package let pitchIdentity: String
     package let color: Double
     package let shape: Double
     package let motion: Double
@@ -1844,6 +1845,7 @@ package struct AutonomousInstrumentAssignmentEvidence: Codable, Equatable, Senda
         use = assignment.use.rawValue
         architecture = assignment.architecture.rawValue
         patch = assignment.patch.rawValue
+        pitchIdentity = assignment.musicalPitchIdentity.rawValue
         color = assignment.automation.color
         shape = assignment.automation.shape
         motion = assignment.automation.motion
@@ -1871,8 +1873,20 @@ package struct AutonomousInstrumentAssignmentEvidence: Codable, Equatable, Senda
               Set(effects).isSubset(of: Set(capability.compatibleEffects.map { $0.rawValue })) else {
             return false
         }
+        let assignment = InstrumentAssignment(
+            use: use,
+            patch: patch,
+            automation: InstrumentAutomation(
+                color: color,
+                shape: shape,
+                motion: motion,
+                space: space
+            ),
+            effects: effects.compactMap(InstrumentEffect.init(rawValue:))
+        )
         return [color, shape, motion, space].allSatisfy { (0...1).contains($0) } &&
-            (use != .foundationBass || space == 0)
+            (use != .foundationBass || space == 0) &&
+            pitchIdentity == assignment.musicalPitchIdentity.rawValue
     }
 }
 
@@ -2195,6 +2209,82 @@ package struct AutonomousSpectralTextureHarmonicTailEvidence: Codable,
     }
 }
 
+/// Candidate-safe projection of the exact indefinite-pitch render proof.
+/// Completeness fails closed when a texture follows note frequency, retains a
+/// strong periodic fundamental, or lacks isolated dry PCM.
+package struct AutonomousIndefinitePitchEvidence: Codable, Equatable, Sendable {
+    package let evidenceVersion: String
+    package let sourceAssignmentCount: Int
+    package let eventCount: Int
+    package let noteFrequencyInfluenceDisabled: Bool
+    package let eventFingerprint: String
+    package let sampleHash: String
+    package let peak: Double
+    package let rms: Double
+    package let crestFactor: Double
+    package let maximumNormalizedPeriodicity: Double
+    package let analyzedSampleCount: Int
+    package let bindingValid: Bool
+    package let finite: Bool
+
+    package init(_ evidence: IndefinitePitchRenderEvidence) {
+        evidenceVersion = evidence.evidenceVersion
+        sourceAssignmentCount = evidence.sourceAssignmentCount
+        eventCount = evidence.eventCount
+        noteFrequencyInfluenceDisabled =
+            evidence.noteFrequencyInfluenceDisabled
+        eventFingerprint = evidence.eventFingerprint
+        sampleHash = evidence.sampleHash
+        peak = evidence.peak
+        rms = evidence.rms
+        crestFactor = evidence.crestFactor
+        maximumNormalizedPeriodicity =
+            evidence.maximumNormalizedPeriodicity
+        analyzedSampleCount = evidence.analyzedSampleCount
+        bindingValid = evidence.bindingValid
+        finite = evidence.finite
+    }
+
+    package var isFinite: Bool {
+        finite && [
+            peak, rms, crestFactor, maximumNormalizedPeriodicity,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func isComplete(
+        assignments: [AutonomousInstrumentAssignmentEvidence],
+        architectureEventCount: Int
+    ) -> Bool {
+        let indefiniteAssignments = assignments.filter {
+            $0.pitchIdentity == MusicalPitchIdentity.indefinitePitch.rawValue
+        }
+        return bindingValid && isFinite &&
+            evidenceVersion == IndefinitePitchContract.evidenceVersion &&
+            sourceAssignmentCount == indefiniteAssignments.count &&
+            sourceAssignmentCount > 0 &&
+            eventCount >= sourceAssignmentCount &&
+            eventCount <=
+                AutonomousCandidateEvaluationVector.maximumInstrumentEventsPerBar &&
+            architectureEventCount >= eventCount &&
+            noteFrequencyInfluenceDisabled &&
+            Self.isSampleHash(eventFingerprint) &&
+            Self.isSampleHash(sampleHash) &&
+            peak > 0 && rms > 0 && rms <= peak &&
+            crestFactor == peak / rms &&
+            (0...IndefinitePitchContract.maximumNormalizedPeriodicity)
+                .contains(maximumNormalizedPeriodicity) &&
+            analyzedSampleCount >= 128 &&
+            analyzedSampleCount <=
+                IndefinitePitchContract.maximumAnalyzedSampleCount
+    }
+
+    private static func isSampleHash(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+}
+
 /// Candidate-safe projection of the exact samples and bounded parameters that
 /// passed through the shared TPT/ADAA core. It carries only scalar facts and
 /// fingerprints; no reconstructable PCM or mutable renderer state survives.
@@ -2440,6 +2530,7 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         AutonomousSpectralTextureClusterEvidence?
     package let spectralTextureHarmonicTail:
         AutonomousSpectralTextureHarmonicTailEvidence?
+    package let indefinitePitch: AutonomousIndefinitePitchEvidence?
     package let tonalEnvelopeExpansion:
         AutonomousTonalEnvelopeExpansionEvidence?
     package let upperSpectralReveal:
@@ -2468,6 +2559,9 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
         spectralTextureHarmonicTail = evidence.spectralTextureHarmonicTail.map(
             AutonomousSpectralTextureHarmonicTailEvidence.init
         )
+        indefinitePitch = evidence.indefinitePitch.map(
+            AutonomousIndefinitePitchEvidence.init
+        )
         tonalEnvelopeExpansion = evidence.tonalEnvelopeExpansion.map(
             AutonomousTonalEnvelopeExpansionEvidence.init
         )
@@ -2482,6 +2576,7 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
             (resonantMonoModulation?.isFinite ?? true) &&
             (spectralTextureCluster?.isFinite ?? true) &&
             (spectralTextureHarmonicTail?.isFinite ?? true) &&
+            (indefinitePitch?.isFinite ?? true) &&
             (tonalEnvelopeExpansion?.isFinite ?? true) &&
             (upperSpectralReveal?.isFinite ?? true) &&
             assignments.allSatisfy { $0.isFinite }
@@ -2554,6 +2649,19 @@ package struct AutonomousInstrumentArchitectureEvidence: Codable, Equatable, Sen
                 sampleRate: sampleRate
             ) else { return false }
         } else if spectralTextureHarmonicTail != nil {
+            return false
+        }
+        let hasIndefinitePitchAssignment = assignments.contains {
+            $0.pitchIdentity == MusicalPitchIdentity.indefinitePitch.rawValue
+        }
+        if hasIndefinitePitchAssignment {
+            guard architecture == InstrumentArchitecture.spectralTexture.rawValue,
+                  let indefinitePitch,
+                  indefinitePitch.isComplete(
+                    assignments: assignments,
+                    architectureEventCount: eventCount
+                  ) else { return false }
+        } else if indefinitePitch != nil {
             return false
         }
         guard architecture == InstrumentArchitecture.tonalMotion.rawValue ||
@@ -5611,7 +5719,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 33
+    package static let schemaVersion = 34
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -8900,7 +9008,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
 }
 
 package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sendable {
-    package static let schemaVersion = 4
+    package static let schemaVersion = 5
     package static let maximumCorrectionAttempts =
         QualityQualificationContract.maximumCorrectionRenders
     package static let maximumAttemptCount =

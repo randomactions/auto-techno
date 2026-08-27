@@ -1,5 +1,10 @@
 # Single Primary Evaluator
 
+Current engine v37 advances pitch identity and PCM under quality schema 38,
+candidate-vector schema 34, and transaction schema 5. The engine-v36/v18
+measurements below remain immutable historical qualification evidence but do
+not activate for v37; current qualification is unavailable pending regeneration.
+
 ## Runtime contract
 
 Auto Techno proposes one canonical `AutonomousPhrasePlan` at each phrase

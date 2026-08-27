@@ -1,9 +1,8 @@
 import Foundation
 
-/// Immutable calibration artifacts for the current canonical engine's
-/// hour-scale professional policy. Loading validates exact identities, the
-/// complete adversarial gate, and the disjoint accepted holdout before any
-/// future-boundary adaptation may consume the policy.
+/// Immutable calibration artifacts for the last calibrated canonical engine's
+/// hour-scale professional policy. Loading validates exact identities and then
+/// rejects them when their engine no longer matches the current contract.
 package struct LongHorizonProfessionalPolicyArtifacts: Sendable {
   package static let profileResource =
     "long-horizon-professional-profile-v5"

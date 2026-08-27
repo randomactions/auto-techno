@@ -1,8 +1,8 @@
 import Foundation
 
-/// Immutable qualification artifacts for the current canonical engine's
-/// checkpoint-local primary-phrase judge. Loading these resources validates
-/// their deterministic identities, adversarial gate, and disjoint holdout.
+/// Immutable qualification artifacts for the last calibrated canonical
+/// engine. Loading validates their identities and then rejects them when their
+/// engine no longer matches `QualityQualificationContract.engineVersion`.
 package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     package static let profileResource =
         "professional-quality-primary-profile-v18"

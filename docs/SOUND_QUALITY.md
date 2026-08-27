@@ -11,16 +11,19 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 37, candidate-vector schema 33,
-candidate-transaction schema 4, and canonical engine identity
-`autotechno-canonical-engine.v36`. It preserves
+candidate uses quality-contract schema 38, candidate-vector schema 34,
+candidate-transaction schema 5, and canonical engine identity
+`autotechno-canonical-engine.v37`. Its explicit modal, tuned-inharmonic,
+deliberate-dissonance, and indefinite-pitch rules are defined in
+[`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md). It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
 score-owned modal-foundation articulation and same-pass resonator evidence,
 architecture-local dry-
 PCM, acid-operator, TPT/ADAA nonlinear-core, rising spectral-cluster,
-response-owned upper harmonic-tail, and tonal-envelope-expansion
+response-owned upper harmonic-tail, indefinite-pitch periodicity and
+frequency-independence, and tonal-envelope-expansion
 evidence, score-owned gated and anticipatory
 percussion-return texture,
 score-owned dotted foundation rhythm, its pre-kick pocket, and exact dry Bass
@@ -379,7 +382,8 @@ Phase 6B calibrates independent non-compensable semantic, per-operator signal,
 and effect-family dimensions across five exact four-hour development journeys
 at 44.1/48 kHz. The immutable artifact set rejects ten independent adversarial
 attacks and accepts two disjoint holdout roots. It retains only reduced
-irreversible evidence and binds the exact engine-v36/primary-v18 identity.
+irreversible evidence and binds the last engine-v36/primary-v18 identity; that
+artifact set is stale for engine v37 and cannot qualify current PCM.
 
 Phase 7 consumes that policy only during detached preparation. A fixed-capacity
 active-rate observation requires at least 7,200 bars, twelve signal observations,
@@ -473,7 +477,7 @@ start/end values for pitch fall, fundamental, body/sub decay, harmonic body,
 drive, and click. Same-pass source evidence hashes that score record and the
 actual pre/post-conditioned kick PCM while retaining physical attack/body and
 upper-mid consequence. A morphology mismatch, discontinuity, non-finite value,
-out-of-range home, or forged render binding makes candidate-vector schema 33
+out-of-range home, or forged render binding makes candidate-vector schema 34
 incomplete. Minute-three/minute-fifty checks are causal sound tests, not an
 arrangement heuristic.
 
@@ -500,7 +504,7 @@ sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
 status. It also retains exact first/last sample bit patterns, the pre-drive peak
 frame, the exact input/amount witness at the post-drive peak, and a replayable
 changed-frame witness together with that frame's exact input bits.
-Candidate-vector schema 33 binds that record to the matching instrument effect
+Candidate-vector schema 34 binds that record to the matching instrument effect
 access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
 sample-rate-normalized boundary transition. Neutral drive requires the no-change
 sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
@@ -529,7 +533,7 @@ uses half depth, response uses full depth, and the full displacement is capped
 at `0.12` of one sixteenth. Note count, base step, pitch, velocity, instrument,
 requested duration, gate, and every protected-rhythm event remain unchanged.
 
-Candidate-vector schema 33 retains one compact record per full rendered bar. It
+Candidate-vector schema 34 retains one compact record per full rendered bar. It
 binds route-derived frame geometry, score and actual renderer onset facts,
 requested gate end, bounded renderer-owned applied gate end, causal role counts,
 exact protected/role offset relationships, and separate shadow/response dry
@@ -603,8 +607,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 37, candidate-vector schema 33,
-candidate-transaction schema 4, and canonical engine v36, the versioned
+Under quality-contract schema 38, candidate-vector schema 34,
+candidate-transaction schema 5, and canonical engine v37, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

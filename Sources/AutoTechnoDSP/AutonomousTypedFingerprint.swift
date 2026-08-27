@@ -1456,6 +1456,11 @@ private extension AutonomousTypedFingerprint {
     static func encode(_ value: SpectralTextureState, into sink: inout StreamingFNV1a) {
         sink.aggregate("SpectralTextureState")
         sink.field("activePatch"); encode(value.activePatch, into: &sink)
+        sink.field("activePitchIdentity")
+        sink.presence(value.activePitchIdentity != nil)
+        if let identity = value.activePitchIdentity {
+            sink.raw(identity.rawValue)
+        }
         sink.field("phaseA"); sink.double(value.phaseA)
         sink.field("phaseB"); sink.double(value.phaseB)
         sink.field("phaseC"); sink.double(value.phaseC)
@@ -1463,9 +1468,16 @@ private extension AutonomousTypedFingerprint {
         sink.field("band"); sink.double(value.band)
         sink.field("resonator"); sink.double(value.resonator)
         sink.field("previousResonator"); sink.double(value.previousResonator)
+        sink.field("harmonicPhase"); sink.double(value.harmonicPhase)
+        sink.field("harmonicLFOPhase"); sink.double(value.harmonicLFOPhase)
+        sink.field("harmonicBandIntegrator")
+        sink.double(value.harmonicBandIntegrator)
+        sink.field("harmonicLowIntegrator")
+        sink.double(value.harmonicLowIntegrator)
         sink.field("dcInput"); sink.double(value.dcInput)
         sink.field("dcOutput"); sink.double(value.dcOutput)
         sink.field("frequency"); sink.double(value.frequency)
+        sink.field("noiseCursor"); sink.uint64(value.noiseCursor)
     }
 
     static func encode(_ value: InstrumentPatch?, into sink: inout StreamingFNV1a) {
@@ -1480,6 +1492,8 @@ private extension AutonomousTypedFingerprint {
         sink.field("use"); sink.raw(value.use.rawValue)
         sink.field("architecture"); sink.raw(value.architecture.rawValue)
         sink.field("patch"); sink.raw(value.patch.rawValue)
+        sink.field("pitchIdentity")
+        sink.raw(value.musicalPitchIdentity.rawValue)
         sink.field("color"); sink.double(value.automation.color)
         sink.field("shape"); sink.double(value.automation.shape)
         sink.field("motion"); sink.double(value.automation.motion)

@@ -235,6 +235,7 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
     package let requestedGateEndFrame: Int
     package var appliedGateEndFrame: Int
     package let requestedStartFrequency: Double
+    package let requestedEndFrequency: Double
     package let appliedStartFrequency: Double
     package let targetEndFrequency: Double
     package var frequencyAtAppliedGateEnd: Double
@@ -271,6 +272,7 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         appliedStartFrequency: Double,
         targetEndFrequency: Double,
         frequencyAtAppliedGateEnd: Double,
+        requestedEndFrequency: Double? = nil,
         requestedGate: UpperNoteGate,
         appliedGate: UpperNoteGate,
         didRetrigger: Bool,
@@ -300,6 +302,7 @@ package struct UpperNoteRenderEvidence: Equatable, Sendable {
         self.requestedGateEndFrame = max(self.onsetFrame, requestedGateEndFrame)
         self.appliedGateEndFrame = max(self.onsetFrame, appliedGateEndFrame)
         self.requestedStartFrequency = requestedStartFrequency
+        self.requestedEndFrequency = requestedEndFrequency ?? targetEndFrequency
         self.appliedStartFrequency = appliedStartFrequency
         self.targetEndFrequency = targetEndFrequency
         self.frequencyAtAppliedGateEnd = frequencyAtAppliedGateEnd
@@ -612,6 +615,25 @@ package struct SpectralTextureHarmonicTailRenderEvidence: Equatable, Sendable {
     package let finite: Bool
 }
 
+/// Reduced same-pass proof that an indefinite-pitch assignment ignored the
+/// requested melodic frequency and produced an isolated, non-periodic dry
+/// signal. No raw source survives detached preparation.
+package struct IndefinitePitchRenderEvidence: Equatable, Sendable {
+    package let evidenceVersion: String
+    package let sourceAssignmentCount: Int
+    package let eventCount: Int
+    package let noteFrequencyInfluenceDisabled: Bool
+    package let eventFingerprint: String
+    package let sampleHash: String
+    package let peak: Double
+    package let rms: Double
+    package let crestFactor: Double
+    package let maximumNormalizedPeriodicity: Double
+    package let analyzedSampleCount: Int
+    package let bindingValid: Bool
+    package let finite: Bool
+}
+
 /// Reduced same-pass proof that one score-owned Tonal Motion note used the
 /// sustained-wash envelope relation. Only scalar envelope facts and an
 /// isolated signal fingerprint survive detached preparation.
@@ -677,6 +699,7 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         SpectralTextureClusterRenderEvidence?
     package let spectralTextureHarmonicTail:
         SpectralTextureHarmonicTailRenderEvidence?
+    package let indefinitePitch: IndefinitePitchRenderEvidence?
     package let tonalEnvelopeExpansion:
         TonalEnvelopeExpansionRenderEvidence?
     package let upperSpectralReveal:
@@ -701,6 +724,7 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
             SpectralTextureClusterRenderEvidence? = nil,
         spectralTextureHarmonicTail:
             SpectralTextureHarmonicTailRenderEvidence? = nil,
+        indefinitePitch: IndefinitePitchRenderEvidence? = nil,
         tonalEnvelopeExpansion:
             TonalEnvelopeExpansionRenderEvidence? = nil,
         upperSpectralReveal:
@@ -720,6 +744,7 @@ package struct InstrumentArchitectureRenderEvidence: Equatable, Sendable {
         self.resonantMonoModulation = resonantMonoModulation
         self.spectralTextureCluster = spectralTextureCluster
         self.spectralTextureHarmonicTail = spectralTextureHarmonicTail
+        self.indefinitePitch = indefinitePitch
         self.tonalEnvelopeExpansion = tonalEnvelopeExpansion
         self.upperSpectralReveal = upperSpectralReveal
     }
@@ -1385,6 +1410,7 @@ struct RenderBuffers {
     var spectralTextureInstrumentStem: [Float] = []
     var spectralTextureClusterStem: [Float] = []
     var spectralTextureHarmonicTailStem: [Float] = []
+    var spectralTextureIndefinitePitchStem: [Float] = []
     var maskingFoundation: [Float] = []
     var synth: [Float] = []
     var pulseEchoSend: [Float] = []
@@ -1424,9 +1450,11 @@ struct RenderBuffers {
         if includeUpperRoleTaps {
             reset(&spectralTextureClusterStem, frameCount: frameCount)
             reset(&spectralTextureHarmonicTailStem, frameCount: frameCount)
+            reset(&spectralTextureIndefinitePitchStem, frameCount: frameCount)
         } else {
             spectralTextureClusterStem.removeAll(keepingCapacity: false)
             spectralTextureHarmonicTailStem.removeAll(keepingCapacity: false)
+            spectralTextureIndefinitePitchStem.removeAll(keepingCapacity: false)
         }
         reset(&maskingFoundation, frameCount: frameCount)
         reset(&synth, frameCount: frameCount)

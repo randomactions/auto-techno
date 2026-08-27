@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 33)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 34)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -304,7 +304,7 @@ struct AutonomousCandidateEvaluationTests {
             object["liveProposalFingerprint"] = "aaaaaaaaaaaaaaaa"
         }
         #expect(!transaction(correction: changedLiveProposal).isComplete)
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 5)
     }
 
     @Test("Candidate live policy rejects boost forged scaling stale revision and boundary")
@@ -1304,10 +1304,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 33)
-        #expect(QualityQualificationContract.schemaVersion == 37)
+        #expect(vector.schemaVersion == 34)
+        #expect(QualityQualificationContract.schemaVersion == 38)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v36")
+                "autotechno-canonical-engine.v37")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -1872,8 +1872,8 @@ struct AutonomousCandidateEvaluationTests {
         )
         let serializedAssignment = try #require(serializedAssignments.first)
         #expect(Set(serializedAssignment.keys) == Set([
-            "use", "architecture", "patch", "color", "shape", "motion", "space",
-            "effects",
+            "use", "architecture", "patch", "pitchIdentity", "color", "shape",
+            "motion", "space", "effects",
         ]))
         let serializedModulation = try #require(
             serialized["resonantMonoModulation"] as? [String: Any]
@@ -2278,6 +2278,97 @@ struct AutonomousCandidateEvaluationTests {
             from: JSONSerialization.data(withJSONObject: forgedObject)
         )
         #expect(!absentUpperTail.isComplete)
+    }
+
+    @Test("Indefinite-pitch evidence rejects note following and periodic tone")
+    func indefinitePitchEvidenceContract() throws {
+        let assignment = InstrumentAssignment(
+            use: .response,
+            patch: .alienNoise,
+            automation: InstrumentAutomation(
+                color: 0.62, shape: 0.48, motion: 0.74, space: 0.32
+            ),
+            effects: InstrumentPalette.capability(for: .alienNoise)?
+                .compatibleEffects ?? []
+        )
+        let evidence = IndefinitePitchRenderEvidence(
+            evidenceVersion: IndefinitePitchContract.evidenceVersion,
+            sourceAssignmentCount: 1,
+            eventCount: 1,
+            noteFrequencyInfluenceDisabled: true,
+            eventFingerprint: "fedcba9876543210",
+            sampleHash: "0123456789abcdef",
+            peak: 0.20,
+            rms: 0.08,
+            crestFactor: 2.5,
+            maximumNormalizedPeriodicity: 0.12,
+            analyzedSampleCount: 1_024,
+            bindingValid: true,
+            finite: true
+        )
+        let bar = AutonomousInstrumentBarEvidence(
+            bar: 0,
+            evidence: [InstrumentArchitectureRenderEvidence(
+                architecture: .spectralTexture,
+                assignments: [assignment],
+                patches: [.alienNoise],
+                uses: [.response],
+                effects: assignment.effects,
+                eventCount: 1,
+                sampleHash: "89abcdef01234567",
+                peak: 0.20,
+                rms: 0.08,
+                finite: true,
+                indefinitePitch: evidence
+            )]
+        )
+        let vector = fixtureVector(instrumentBar: bar)
+        #expect(assignment.musicalPitchIdentity == .indefinitePitch)
+        #expect(bar.isComplete(sampleRate: 8_000))
+        #expect(vector.isComplete)
+
+        let data = try vector.deterministicJSON()
+        var object = try #require(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        var bars = try #require(object["instruments"] as? [[String: Any]])
+        var architectures = try #require(
+            bars[0]["architectures"] as? [[String: Any]]
+        )
+        var architecture = architectures[0]
+        var serialized = try #require(
+            architecture["indefinitePitch"] as? [String: Any]
+        )
+        #expect(Set(serialized.keys) == Set([
+            "evidenceVersion", "sourceAssignmentCount", "eventCount",
+            "noteFrequencyInfluenceDisabled", "eventFingerprint",
+            "sampleHash", "peak", "rms", "crestFactor",
+            "maximumNormalizedPeriodicity", "analyzedSampleCount",
+            "bindingValid", "finite",
+        ]))
+
+        serialized["noteFrequencyInfluenceDisabled"] = false
+        architecture["indefinitePitch"] = serialized
+        architectures[0] = architecture
+        bars[0]["architectures"] = architectures
+        object["instruments"] = bars
+        let noteFollowing = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        #expect(!noteFollowing.isComplete)
+
+        serialized["noteFrequencyInfluenceDisabled"] = true
+        serialized["maximumNormalizedPeriodicity"] = 0.95
+        architecture["indefinitePitch"] = serialized
+        architectures[0] = architecture
+        bars[0]["architectures"] = architectures
+        object["instruments"] = bars
+        let pitchedTone = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        #expect(!pitchedTone.isComplete)
     }
 
     @Test("Tonal envelope expansion evidence binds the applied wash and stays playback-gate-neutral")
@@ -3770,15 +3861,15 @@ struct AutonomousCandidateEvaluationTests {
         }
 
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
-            "f8e1fb7f6bdd3424")
+            "b62dd95de0f6f0cc")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
-                "76ea36abd37c336e")
+                "4ff617538504b51c")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "80d3fb2171881aef")
+            "081eaf0d187f04bb")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3786,7 +3877,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.renderDSPContinuation(
             renderState: positiveZeroRenderState,
             generatedDSPState: orderedGraphState
-        ) == "e59dba54efa1257d")
+        ) == "53eac7bb4b815a55")
     }
 
     private func realPreparedCandidate() -> PreparedAutonomousPhrase? {

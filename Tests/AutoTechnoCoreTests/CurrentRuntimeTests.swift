@@ -8,10 +8,10 @@ import Testing
 struct CurrentRuntimeTests {
     @Test("MORDIO granular-memory identities advance as one exact contract")
     func mordioGranularMemoryPrimaryIdentityContract() {
-        #expect(QualityQualificationContract.schemaVersion == 37)
+        #expect(QualityQualificationContract.schemaVersion == 38)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v36")
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 33)
+                "autotechno-canonical-engine.v37")
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 34)
         #expect(ProfessionalQualityObservation.schemaVersion == 14)
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 14)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
@@ -28,7 +28,7 @@ struct CurrentRuntimeTests {
                 "autotechno-professional-quality-holdout.v13")
         #expect(CanonicalJourneyQualificationReport.currentEvidenceScope ==
                 "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-granular-memory-live-commit.v18")
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 5)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 2)
         #expect(ProfessionalEvidenceReportBank.schemaVersion == 19)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
@@ -118,17 +118,16 @@ struct CurrentRuntimeTests {
             #expect(ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v18"))
         }
-        #expect(throws: Never.self) {
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
             _ = try ProfessionalQualityPrimaryArtifacts.load()
         }
     }
 
-    @Test("The shipped evaluator and live controller form one exact path")
-    func primaryEvaluatorAndLiveControllerAreCanonical() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-
-        #expect(artifacts.evaluator.evaluatorVersion ==
-                ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier)
+    @Test("Stale evaluator artifacts fail closed and the live controller remains canonical")
+    func primaryEvaluatorAndLiveControllerAreCanonical() {
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            _ = try ProfessionalQualityPrimaryArtifacts.load()
+        }
         #expect(LiveMasterHeadroomController.version ==
                 "autotechno-live-master-headroom-controller.v2")
         #expect(LiveMasterHeadroomController.minimumTrimDB == -3)
@@ -573,10 +572,10 @@ struct RepositorySurfaceTests {
         }.joined(separator: "\n").lowercased()
 
         for required in [
-            "autotechno-canonical-engine.v36",
-            "quality-contract schema 37",
-            "candidate-vector schema 33",
-            "candidate-transaction schema 4",
+            "autotechno-canonical-engine.v37",
+            "quality-contract schema 38",
+            "candidate-vector schema 34",
+            "candidate-transaction schema 5",
             "professional evidence v19",
             "profile v18",
             "evaluator v18",

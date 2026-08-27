@@ -529,12 +529,26 @@ struct ProfessionalQualityCalibrationTests {
     }
 
     @Test("Neutral-only modal checkpoints reuse qualified active bounds")
-    func conditionalModalBoundsFromBundledProfile() throws {
-        let profile = try ProfessionalQualityPrimaryArtifacts.load().profile
+    func conditionalModalBoundsFromCurrentProfile() throws {
+        let observations = try representativeObservations().map { observation in
+            guard observation.checkpoint == .chapterChange else {
+                return observation
+            }
+            return try observation
+                .replacing(.modalPercussionAttackToBodyDBMean, with: 0)
+                .replacing(.modalPercussionTailToBodyDBMean, with: 0)
+                .replacing(.modalPercussionSpectralCentroidMeanHz, with: 0)
+        }
+        let profile = try ProfessionalQualityCalibrationProfile(
+            engineVersion: QualityQualificationContract.engineVersion,
+            sourceBankFingerprint: "conditional-modal-bounds-test",
+            sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
+            observations: observations
+        )
         let examples: [(ProfessionalQualityMetric, Double)] = [
-            (.modalPercussionAttackToBodyDBMean, 6.84811727104065),
-            (.modalPercussionTailToBodyDBMean, -18.31941809630516),
-            (.modalPercussionSpectralCentroidMeanHz, 155.10567980755042),
+            (.modalPercussionAttackToBodyDBMean, 6),
+            (.modalPercussionTailToBodyDBMean, -8),
+            (.modalPercussionSpectralCentroidMeanHz, 620),
         ]
         for (metric, value) in examples {
             let local = try #require(profile[.chapterChange]?[metric])
@@ -994,15 +1008,19 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Bundled v18 primary artifacts activate the exact v18 evaluator")
-    func primaryArtifacts() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(artifacts.profile.fingerprint ==
-                ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
-        #expect(artifacts.adversarialSuite.fingerprint ==
-                ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint)
-        #expect(artifacts.holdoutQualification.fingerprint ==
-                ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint)
+    @Test("Bundled engine-v36 primary artifacts cannot activate engine v37")
+    func stalePrimaryArtifactsFailClosed() {
+        for name in [
+            ProfessionalQualityPrimaryArtifacts.profileResource,
+            ProfessionalQualityPrimaryArtifacts.adversarialResource,
+            ProfessionalQualityPrimaryArtifacts.holdoutResource,
+        ] {
+            #expect(ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: name))
+        }
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            _ = try ProfessionalQualityPrimaryArtifacts.load()
+        }
     }
 
     @Test("Diverse corpus identity is ordered and bounded")

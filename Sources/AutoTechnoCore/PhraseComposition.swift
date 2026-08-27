@@ -648,20 +648,39 @@ package enum PhraseCompositionResolver {
         }
     }
 
+    package static func canonicalChordDegrees(
+        modalIdentity: ModalIdentity,
+        function: PadHarmonicFunction
+    ) -> [Int] {
+        let modalDegrees = modalIdentity.degrees
+        let rootIndex: Int = switch function {
+        case .tonic: 0
+        case .modalColor:
+            // Dorian/Aeolian disclose their contrasting sixth; Phrygian
+            // discloses its defining flat second. Stacking modal thirds keeps
+            // every chord inside one frame without snapping two functions to
+            // the same realized pitch-class set.
+            modalIdentity == .phrygian ? 1 : 5
+        case .subdominant: 3
+        case .returnPull: 6
+        }
+        return stride(from: 0, through: 6, by: 2).map { offset in
+            let scaleIndex = rootIndex + offset
+            let octave = scaleIndex / modalDegrees.count
+            return modalDegrees[scaleIndex % modalDegrees.count] + octave * 12
+        }
+    }
+
     private static func canonicalVoicing(
         dna: SceneDNA,
         function: PadHarmonicFunction,
         previous: [PadVoice]?,
         preferContraryMotion: Bool
     ) -> [PadVoice] {
-        let rootDegree: Int = switch function {
-        case .tonic: 0
-        case .modalColor: 1
-        case .subdominant: 5
-        case .returnPull: 10
-        }
-        let chordDegrees = [rootDegree, rootDegree + 3, rootDegree + 7, rootDegree + 10]
-            .map(dna.nearestModalDegree)
+        let chordDegrees = canonicalChordDegrees(
+            modalIdentity: dna.modalIdentity,
+            function: function
+        )
         let candidates = voicingCandidates(degrees: chordDegrees)
         guard let previous, previous.count == PadVoicing.voiceCount else {
             return candidates.min(by: { voicingSpreadCost($0) < voicingSpreadCost($1) }) ?? []

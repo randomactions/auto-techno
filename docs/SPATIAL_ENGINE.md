@@ -1,5 +1,9 @@
 # Canonical Spatial Engine
 
+The spatial topology remains current, but engine v37 advances global PCM for
+the pitch contract. Engine-v36 qualification statements below are historical
+and remain fail-closed for v37.
+
 ## Outcome
 
 Auto Techno now has one deterministic stereo late field inside the canonical

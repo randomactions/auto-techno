@@ -73,8 +73,9 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one scheduled-output master-headroom path mapping app-owned mixer PCM to an
   exact phrase occurrence, analyzing one fixed three-second window off the
   callback, and applying a primary-accepted attenuation only to future PCM;
-- canonical engine v36, quality-contract schema 37, candidate-vector schema 33,
-  and candidate-transaction schema 4
+- canonical engine v37, quality-contract schema 38, candidate-vector schema 34,
+  and candidate-transaction schema 5, with the explicit
+  [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md)
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax, debt-to-recovery climax arc and terminal hang,
   event-local groove-pulse, ordinary closed-hat, context-owned upper-percussion
@@ -172,9 +173,9 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 37, candidate-vector schema 33, and candidate-
-transaction schema 4 now bind a versioned transaction across canonical engine
-v36, quality policy, evaluator, candidate plans, route, incoming continuation,
+Quality-contract schema 38, candidate-vector schema 34, and candidate-
+transaction schema 5 now bind a versioned transaction across canonical engine
+v37, quality policy, evaluator, candidate plans, route, incoming continuation,
 attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 upper-percussion tail-clearance,
@@ -206,13 +207,15 @@ local and untracked.
 
 ### 3. Operate one calibrated primary evaluator
 
-The runtime now records one complete plan, one initial attempt, and at most one
+The runtime records one complete plan, one initial attempt, and at most one
 home-timbre correction, then atomically carries the terminal evidence, decision,
-and controller state into continuation. The exact engine-v36 profile v18,
-passing v15 adversarial suite, disjoint holdout qualification v13, non-compensable
-checkpoint policy, and transaction replay are the app path. The former
+and controller state into continuation. The last engine-v36 profile v18,
+passing v15 adversarial suite, and disjoint holdout qualification v13 remain
+immutable evidence but are rejected by engine v37. The non-compensable
+checkpoint policy and transaction replay remain the app path; qualification is
+unavailable until the replacement artifact set passes. The former
 single-journey generalization blocker is closed: 28 development journeys and
-four disjoint replacement holdouts pass at 44.1 and 48 kHz. A missing artifact,
+four disjoint replacement holdouts passed at 44.1 and 48 kHz for engine v36. A missing artifact,
 unsupported route, failed gate, or rejected score produces no new commit. See
 [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md).
 

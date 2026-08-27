@@ -1,5 +1,9 @@
 # Canonical Live Feedback
 
+Current engine v37 advances pitch identity and PCM. Any engine-v36 artifact
+identity below is retained as historical evidence and remains unavailable to
+the v37 runtime until complete primary and long-horizon regeneration passes.
+
 ## Status
 
 Live master-headroom feedback is the seventh completed architectural stage of

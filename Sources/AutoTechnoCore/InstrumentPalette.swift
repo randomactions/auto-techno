@@ -8,6 +8,18 @@ package enum InstrumentArchitecture: String, CaseIterable, Sendable {
     case spectralTexture
 }
 
+/// Durable identity for how a source relates to pitch. This is a semantic
+/// contract shared by score and renderer: modal material follows the canonical
+/// harmonic frame, tuned-inharmonic material retains a modal fundamental,
+/// deliberate dissonance remains audibly pitched, and indefinite-pitch
+/// material must not follow a requested note frequency.
+package enum MusicalPitchIdentity: String, CaseIterable, Codable, Sendable {
+    case modalPitched = "modal-pitched"
+    case tunedInharmonic = "tuned-inharmonic"
+    case deliberateDissonance = "deliberate-dissonance"
+    case indefinitePitch = "indefinite-pitch"
+}
+
 /// Musical jobs that may receive an instrument assignment. The names follow
 /// the canonical score rather than DAW track terminology.
 package enum InstrumentUse: String, CaseIterable, Sendable {
@@ -200,6 +212,25 @@ package struct InstrumentAssignment: Equatable, Sendable {
         SpectralTextureHarmonicTailRelation? {
         guard patch == .voltageArc, use == .response else { return nil }
         return .drivenUpperBand
+    }
+
+    /// The assignment is the only owner of this distinction. Renderers may
+    /// realize the identity but may not infer a different one from waveform
+    /// shape or from an arbitrary note-frequency threshold.
+    package var musicalPitchIdentity: MusicalPitchIdentity {
+        if spectralTextureClusterRelation != nil {
+            return .deliberateDissonance
+        }
+        switch patch {
+        case .alienNoise, .dustCloud:
+            return .indefinitePitch
+        case .metalVeil:
+            return use == .transition
+                ? .deliberateDissonance : .indefinitePitch
+        case .bassPulse, .bassPluck, .acidThread, .acidSequence,
+             .northStar, .darkChord, .glassRunner, .voltageArc:
+            return .modalPitched
+        }
     }
 }
 

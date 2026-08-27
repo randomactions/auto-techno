@@ -186,29 +186,8 @@ struct LongHorizonProfessionalPolicyTests {
         == first.development.observations[0])
   }
 
-  @Test("Bundled Stage 6 artifacts activate only the exact calibrated policy")
-  func bundledArtifacts() throws {
-    let artifacts = try LongHorizonProfessionalPolicyArtifacts.load()
-
-    #expect(
-      artifacts.profile.fingerprint
-        == LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint)
-    #expect(
-      artifacts.adversarial.fingerprint
-        == LongHorizonProfessionalPolicyArtifacts.expectedAdversarialFingerprint)
-    #expect(
-      artifacts.holdout.fingerprint
-        == LongHorizonProfessionalPolicyArtifacts.expectedHoldoutFingerprint)
-    #expect(artifacts.adversarial.passed)
-    #expect(artifacts.holdout.qualified)
-    #expect(
-      artifacts.policy.policyVersion
-        == [
-          LongHorizonProfessionalPolicySchema.policyFamilyVersion,
-          "profile-\(artifacts.profile.fingerprint)",
-          "adversarial-\(artifacts.adversarial.fingerprint)",
-          "holdout-\(artifacts.holdout.fingerprint)",
-        ].joined(separator: "."))
+  @Test("Bundled engine-v36 long-horizon artifacts cannot activate engine v37")
+  func staleBundledArtifactsFailClosed() {
     for name in [
       LongHorizonProfessionalPolicyArtifacts.profileResource,
       LongHorizonProfessionalPolicyArtifacts.adversarialResource,
@@ -227,14 +206,17 @@ struct LongHorizonProfessionalPolicyTests {
         !LongHorizonProfessionalPolicyArtifacts
           .containsBundledResource(named: obsoleteName))
     }
+    #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
+      _ = try LongHorizonProfessionalPolicyArtifacts.load()
+    }
   }
 
-  @Test("Bundled policy resources are reduced, canonical, and fail closed")
-  func bundledArtifactsFailClosed() throws {
-    let artifacts = try LongHorizonProfessionalPolicyArtifacts.load()
-    let profileData = try artifacts.profile.deterministicJSON()
-    let adversarialData = try artifacts.adversarial.deterministicJSON()
-    let holdoutData = try artifacts.holdout.deterministicJSON()
+  @Test("Current policy resources are reduced, canonical, and fail closed")
+  func currentPolicyResourcesFailClosed() throws {
+    let generated = try qualifiedArtifacts()
+    let profileData = try generated.profile.deterministicJSON()
+    let adversarialData = try generated.adversarial.deterministicJSON()
+    let holdoutData = try generated.holdout.deterministicJSON()
     let texts = try [profileData, adversarialData, holdoutData].map { data in
       try #require(String(data: data, encoding: .utf8))
     }

@@ -23,6 +23,13 @@ package struct ModalPercussionArticulation: Equatable, Sendable {
     package let eventIntensity: Double
     package let seed: UInt64
 
+    /// Modal percussion is intentionally neither a conventional harmonic
+    /// voice nor indefinite noise: the fundamental remains in the scene mode
+    /// while the physical model may spread upper partials inharmonically.
+    package var musicalPitchIdentity: MusicalPitchIdentity {
+        .tunedInharmonic
+    }
+
     package init(
         scoreEventIndex: Int,
         step: Int,

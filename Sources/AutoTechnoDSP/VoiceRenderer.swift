@@ -672,6 +672,7 @@ package enum VoiceRenderer {
         var spectralTextureInstrumentStem: [Float] = []
         var spectralTextureClusterStem: [Float] = []
         var spectralTextureHarmonicTailStem: [Float] = []
+        var spectralTextureIndefinitePitchStem: [Float] = []
         var maskingFoundationBus: [Float] = []
         var synthBus: [Float] = []
         var pulseEchoSendBus: [Float] = []
@@ -711,6 +712,10 @@ package enum VoiceRenderer {
         swap(
             &spectralTextureHarmonicTailStem,
             &checkedOut.spectralTextureHarmonicTailStem
+        )
+        swap(
+            &spectralTextureIndefinitePitchStem,
+            &checkedOut.spectralTextureIndefinitePitchStem
         )
         swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
         swap(&synthBus, &checkedOut.synth)
@@ -756,8 +761,8 @@ package enum VoiceRenderer {
                     renderedKickStepMask |= UInt16(1) << UInt16(event.step)
                 }
             case .bass where !(performance.signatureEvent == .delayedBassEntry && event.step < 8):
-                let frequency = relationalBassFrequency(
-                    dna: dna, step: event.step, tension: performance.tension
+                let frequency = FoundationPitchResolver.frequency(
+                    dna: dna, step: event.step
                 )
                 let pocket = preKickPocketGeometry.flatMap { geometry in
                     geometry.articulation.scoreEventIndex == scoreEventIndex
@@ -1058,6 +1063,8 @@ package enum VoiceRenderer {
                 spectralTextureClusterStem: &spectralTextureClusterStem,
                 spectralTextureHarmonicTailStem:
                     &spectralTextureHarmonicTailStem,
+                spectralTextureIndefinitePitchStem:
+                    &spectralTextureIndefinitePitchStem,
                 polyphonicPadStem: &polyphonicPadStem,
                 polyphonicPadRenderEvidence: &polyphonicPadRenderEvidence,
                 noteRenderEvidence: &upperNoteRenderEvidence,
@@ -1739,7 +1746,7 @@ package enum VoiceRenderer {
                 let evidenceIndex = unmatchedNoteEvidence.firstIndex { evidence in
                     evidence.role == note.role &&
                         evidence.requestedStartFrequency == requestedStartFrequency &&
-                        evidence.targetEndFrequency == targetEndFrequency &&
+                        evidence.requestedEndFrequency == targetEndFrequency &&
                         evidence.requestedGate == note.gate &&
                         evidence.timbreIntent == note.timbreIntent &&
                         evidence.requestedVelocity == note.velocity &&
@@ -1826,7 +1833,9 @@ package enum VoiceRenderer {
                                     spectralTexture: spectralTextureInstrumentStem,
                                     spectralTextureCluster: spectralTextureClusterStem,
                                     spectralTextureHarmonicTail:
-                                        spectralTextureHarmonicTailStem
+                                        spectralTextureHarmonicTailStem,
+                                    spectralTextureIndefinitePitch:
+                                        spectralTextureIndefinitePitchStem
                                     ),
                                    percussionEchoTextureRenderEvidence:
                                     percussionEchoTextureRenderEvidence,
@@ -1869,6 +1878,10 @@ package enum VoiceRenderer {
             &spectralTextureHarmonicTailStem,
             &checkedOut.spectralTextureHarmonicTailStem
         )
+        swap(
+            &spectralTextureIndefinitePitchStem,
+            &checkedOut.spectralTextureIndefinitePitchStem
+        )
         swap(&maskingFoundationBus, &checkedOut.maskingFoundation)
         swap(&synthBus, &checkedOut.synth)
         swap(&pulseEchoSendBus, &checkedOut.pulseEchoSend)
@@ -1894,6 +1907,7 @@ package enum VoiceRenderer {
         spectralTextureInstrumentStem: inout [Float],
         spectralTextureClusterStem: inout [Float],
         spectralTextureHarmonicTailStem: inout [Float],
+        spectralTextureIndefinitePitchStem: inout [Float],
         polyphonicPadStem: inout [Float],
         polyphonicPadRenderEvidence: inout PolyphonicPadRenderEvidence,
         noteRenderEvidence: inout [UpperNoteRenderEvidence],
@@ -2072,6 +2086,7 @@ package enum VoiceRenderer {
             &output,
             measurement: &atmosphereStem,
             architectureMeasurement: &spectralTextureInstrumentStem,
+            indefinitePitchMeasurement: &spectralTextureIndefinitePitchStem,
             clusterMeasurement: &spectralTextureClusterStem,
             harmonicTailMeasurement: &spectralTextureHarmonicTailStem,
             pulseEchoSend: &pulseEchoSend,
@@ -2115,6 +2130,7 @@ package enum VoiceRenderer {
             &output,
             measurement: &responseTimingStem,
             architectureMeasurement: &spectralTextureInstrumentStem,
+            indefinitePitchMeasurement: &spectralTextureIndefinitePitchStem,
             clusterMeasurement: &spectralTextureClusterStem,
             harmonicTailMeasurement: &spectralTextureHarmonicTailStem,
             pulseEchoSend: &pulseEchoSend,
@@ -2144,6 +2160,7 @@ package enum VoiceRenderer {
             &output,
             measurement: &atmosphereStem,
             architectureMeasurement: &spectralTextureInstrumentStem,
+            indefinitePitchMeasurement: &spectralTextureIndefinitePitchStem,
             clusterMeasurement: &spectralTextureClusterStem,
             harmonicTailMeasurement: &spectralTextureHarmonicTailStem,
             pulseEchoSend: &pulseEchoSend,
@@ -2175,7 +2192,8 @@ package enum VoiceRenderer {
         tonalEnvelopeExpansion: [Float],
         spectralTexture: [Float],
         spectralTextureCluster: [Float],
-        spectralTextureHarmonicTail: [Float]
+        spectralTextureHarmonicTail: [Float],
+        spectralTextureIndefinitePitch: [Float]
     ) -> [InstrumentArchitectureRenderEvidence] {
         var assignments = upperNoteRenderEvidence.map(\.instrument)
         let audibleBassEvents = resolved.ensemble.events.filter { event in
@@ -2232,6 +2250,13 @@ package enum VoiceRenderer {
                     samples: spectralTextureHarmonicTail,
                     sampleRate: sampleRate
                 ) : nil
+            let indefinitePitch = architecture == .spectralTexture
+                ? indefinitePitchEvidence(
+                    noteEvidence: upperNoteRenderEvidence,
+                    uniqueAssignments: uniqueAssignments,
+                    samples: spectralTextureIndefinitePitch,
+                    sampleRate: sampleRate
+                ) : nil
             let envelopeExpansion = architecture == .tonalMotion
                 ? tonalEnvelopeExpansionEvidence(
                     synthPerformance: synthPerformance,
@@ -2260,6 +2285,7 @@ package enum VoiceRenderer {
                 resonantMonoModulation: modulation,
                 spectralTextureCluster: cluster,
                 spectralTextureHarmonicTail: harmonicTail,
+                indefinitePitch: indefinitePitch,
                 tonalEnvelopeExpansion: envelopeExpansion,
                 upperSpectralReveal: spectralReveal
             )
@@ -2587,6 +2613,120 @@ package enum VoiceRenderer {
             tailRMS: tailRMS,
             tailToAttackDB: tailToAttackDB,
             nonzeroSampleCount: nonzero,
+            bindingValid: bindingValid,
+            finite: finite
+        )
+    }
+
+    private struct IndefinitePitchFact {
+        let role: SynthRole
+        let onsetFrame: Int
+        let gateEndFrame: Int
+        let patch: InstrumentPatch
+        let requestedStartFrequency: Double
+        let requestedEndFrequency: Double
+    }
+
+    @inline(never)
+    private static func indefinitePitchEvidence(
+        noteEvidence: [UpperNoteRenderEvidence],
+        uniqueAssignments: [InstrumentAssignment],
+        samples: [Float],
+        sampleRate: Double
+    ) -> IndefinitePitchRenderEvidence? {
+        let assignments = uniqueAssignments.filter {
+            $0.musicalPitchIdentity == .indefinitePitch
+        }
+        let events = noteEvidence.filter {
+            $0.instrument.musicalPitchIdentity == .indefinitePitch
+        }
+        guard !assignments.isEmpty || !events.isEmpty else { return nil }
+
+        var facts: [IndefinitePitchFact] = []
+        facts.reserveCapacity(events.count)
+        var frequencyInfluenceDisabled = true
+        var bindingValid = !assignments.isEmpty && !events.isEmpty
+        for evidence in noteEvidence where
+            evidence.instrument.architecture == .spectralTexture {
+            if evidence.instrument.musicalPitchIdentity == .indefinitePitch {
+                frequencyInfluenceDisabled = frequencyInfluenceDisabled &&
+                    evidence.appliedStartFrequency == 0 &&
+                    evidence.targetEndFrequency == 0 &&
+                    evidence.frequencyAtAppliedGateEnd == 0
+                bindingValid = bindingValid &&
+                    evidence.spectralTextureCluster == nil &&
+                    evidence.spectralTextureHarmonicTail == nil
+                facts.append(IndefinitePitchFact(
+                    role: evidence.role,
+                    onsetFrame: evidence.onsetFrame,
+                    gateEndFrame: evidence.appliedGateEndFrame,
+                    patch: evidence.instrument.patch,
+                    requestedStartFrequency:
+                        evidence.requestedStartFrequency,
+                    requestedEndFrequency: evidence.requestedEndFrequency
+                ))
+            } else {
+                bindingValid = bindingValid &&
+                    evidence.appliedStartFrequency > 0 &&
+                    evidence.targetEndFrequency > 0 &&
+                    evidence.frequencyAtAppliedGateEnd > 0
+            }
+        }
+        facts.sort { lhs, rhs in
+            if lhs.onsetFrame != rhs.onsetFrame {
+                return lhs.onsetFrame < rhs.onsetFrame
+            }
+            if lhs.role != rhs.role {
+                return (SynthRole.allCases.firstIndex(of: lhs.role) ?? 0) <
+                    (SynthRole.allCases.firstIndex(of: rhs.role) ?? 0)
+            }
+            return (InstrumentPatch.allCases.firstIndex(of: lhs.patch) ?? 0) <
+                (InstrumentPatch.allCases.firstIndex(of: rhs.patch) ?? 0)
+        }
+        var sink = StreamingFNV1a()
+        sink.domain("indefinite-pitch-events.typed.v1")
+        sink.collection(facts.count)
+        for fact in facts {
+            sink.aggregate("IndefinitePitchFact")
+            sink.field("role"); sink.raw(fact.role.rawValue)
+            sink.field("onsetFrame"); sink.int(fact.onsetFrame)
+            sink.field("gateEndFrame"); sink.int(fact.gateEndFrame)
+            sink.field("patch"); sink.raw(fact.patch.rawValue)
+            sink.field("requestedStartFrequency")
+            sink.double(fact.requestedStartFrequency)
+            sink.field("requestedEndFrequency")
+            sink.double(fact.requestedEndFrequency)
+        }
+        var peak = 0.0
+        var energy = 0.0
+        var finite = sampleRate.isFinite && sampleRate > 0
+        for sample in samples {
+            let value = Double(sample)
+            peak = max(peak, abs(value))
+            energy += value * value
+            finite = finite && sample.isFinite && peak.isFinite && energy.isFinite
+        }
+        let rms = sqrt(energy / Double(max(1, samples.count)))
+        let crest = rms > 0 ? peak / rms : 0
+        let periodicity = IndefinitePitchContract.normalizedPeriodicity(
+            samples: samples,
+            sampleRate: sampleRate
+        )
+        bindingValid = bindingValid && facts.count == events.count
+        finite = finite && rms.isFinite && crest.isFinite &&
+            periodicity.maximum.isFinite
+        return IndefinitePitchRenderEvidence(
+            evidenceVersion: IndefinitePitchContract.evidenceVersion,
+            sourceAssignmentCount: assignments.count,
+            eventCount: facts.count,
+            noteFrequencyInfluenceDisabled: frequencyInfluenceDisabled,
+            eventFingerprint: fixedWidthFingerprintHex(sink.value),
+            sampleHash: ExactPCMFingerprint.mono(samples),
+            peak: peak,
+            rms: rms,
+            crestFactor: crest,
+            maximumNormalizedPeriodicity: periodicity.maximum,
+            analyzedSampleCount: periodicity.analyzedSampleCount,
             bindingValid: bindingValid,
             finite: finite
         )
@@ -3026,21 +3166,6 @@ package enum VoiceRenderer {
 
     private static func safeMaster(_ sample: Float) -> Float {
         Float(tanh(Double(sample) * 1.12) * 0.78)
-    }
-
-    private static func relationalBassFrequency(dna: SceneDNA, step: Int, tension: Double) -> Double {
-        let index = dna.rhythm.bassSteps.firstIndex(of: step) ?? (step / 2)
-        if dna.modalIdentity == .phrygian {
-            // Phrygian tension belongs to the upper voices. The protected low
-            // end remains on root, fifth, and octave relationships.
-            let foundationDegrees = [0, 7, 0, 12]
-            let degree = foundationDegrees[index % foundationDegrees.count]
-            return 43.65 * pow(2, Double(dna.tonalCenter + degree) / 12.0)
-        }
-        let modalIndex = index % dna.modalDegrees.count
-        var degree = dna.modalDegrees[modalIndex]
-        if tension > 0.72 && modalIndex == dna.modalDegrees.count - 1 { degree += 1 }
-        return 43.65 * pow(2, Double(dna.tonalCenter + degree) / 12.0)
     }
 
     @discardableResult

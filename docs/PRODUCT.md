@@ -14,6 +14,9 @@ engine selector, or collection of render experiments.
 
 Every autonomous decision expresses a musical intention. Its destination,
 transition, and consequence in the continuing performance must remain coherent.
+Pitch-bearing and indefinite-pitch consequences follow the explicit
+[`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md); an out-of-mode note
+must never be presented as atonal texture.
 
 Play asks the instrument to continue its one performance. Pause and resume
 preserve position, identity, and adaptation state. Technical evidence may be

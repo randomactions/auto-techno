@@ -1,5 +1,9 @@
 # Deterministic mix-balance benchmark
 
+The engine-v36 measurements below remain historical benchmark evidence.
+Current engine v37 changes pitch behavior and PCM and is unqualified until its
+complete primary and long-horizon artifact sets are regenerated.
+
 Auto Techno uses two complementary measurement families. Whole-program
 loudness, true peak, loudness range, and momentary/short-term behavior follow
 [ITU-R BS.1770-5](https://www.itu.int/rec/R-REC-BS.1770-5-202311-I) and the

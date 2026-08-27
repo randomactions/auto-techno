@@ -1,5 +1,9 @@
 # Nonlinear DSP Core
 
+The nonlinear topology remains current, but engine v37 advances the global PCM
+identity for the pitch contract. Engine-v36 artifact statements below are
+historical and cannot qualify v37.
+
 ## Purpose and owner
 
 Auto Techno has one shared bounded nonlinear-filter primitive for the Resonant

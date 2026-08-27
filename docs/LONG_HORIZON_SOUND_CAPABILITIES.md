@@ -1,5 +1,9 @@
 # Long-Horizon Sound-Capability Register
 
+Current engine v37 advances pitch identity and PCM. Engine-v36 qualification
+statements below describe the last calibrated artifact set, which remains
+fail-closed for v37 pending complete regeneration.
+
 ## Purpose and current decision
 
 This is the follow-up register for DSP, synthesis, patch-family, effect, and

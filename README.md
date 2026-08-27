@@ -22,6 +22,9 @@ physical-output validation; it is not a second engine or render profile.
   its pending work and feedback, rotates the opaque seed, resets presentation,
   prepares a fresh canonical session, and starts it when ready;
 - one resolved per-bar score shared by planning, audio, and telemetry;
+- one explicit pitch-identity contract separating modal, tuned-inharmonic,
+  deliberate-dissonance, and indefinite-pitch material; see
+  [`docs/PITCH_IDENTITY_CONTRACT.md`](docs/PITCH_IDENTITY_CONTRACT.md);
 - phrase-boundary continuation with temporal memory and bounded accepted-PCM
   recovery;
 - three score-selected internal synthesis architectures with bounded patch
@@ -124,8 +127,8 @@ sentence evidence without retaining PCM. Detached accepted phrases now also
 reduce their exact PCM into a DSP-owned, fixed-capacity signal trajectory across
 loudness, crest, spectrum, transients, masking, wet/dry relation, stereo, and
 movement while keeping the semantic target separate. These reports are still
-kept separate and judged by the exact engine-v36/primary-v18 long-horizon-v5
-artifacts. Detached preparation carries one fixed-capacity active-rate
+kept separate. The last engine-v36/primary-v18 long-horizon-v5 artifacts are
+retained but cannot qualify engine v37. Detached preparation carries one fixed-capacity active-rate
 observation with the immutable successor and can emit one reason-coded
 preserve/recover decision for an eligible unscheduled future phrase. The App
 commits that decision with musical, quality, and live continuation state as one

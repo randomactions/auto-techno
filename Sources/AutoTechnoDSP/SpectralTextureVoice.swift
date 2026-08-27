@@ -127,8 +127,77 @@ package enum SpectralTextureHarmonicTailContract {
     }
 }
 
+/// Bounded pitch-salience probe for exact dry indefinite-pitch PCM. Analysis
+/// runs only during detached preparation. First-difference pre-emphasis keeps
+/// broad spectral color from being mistaken for a periodic fundamental.
+package enum IndefinitePitchContract {
+    package static let evidenceVersion = "indefinite-pitch.render.v1"
+    package static let analysisRate = 6_000.0
+    package static let minimumAnalyzedFrequency = 50.0
+    package static let maximumAnalyzedFrequency = 2_000.0
+    package static let maximumAnalyzedSampleCount = 4_096
+    package static let maximumNormalizedPeriodicity = 0.35
+
+    package static func normalizedPeriodicity(
+        samples: [Float],
+        sampleRate: Double
+    ) -> (maximum: Double, analyzedSampleCount: Int) {
+        guard sampleRate.isFinite, sampleRate > 0,
+              let first = samples.firstIndex(where: { $0 != 0 }),
+              let last = samples.lastIndex(where: { $0 != 0 }),
+              last > first else { return (0, 0) }
+        let stride = max(1, Int((sampleRate / analysisRate).rounded()))
+        let effectiveRate = sampleRate / Double(stride)
+        var emphasized: [Double] = []
+        emphasized.reserveCapacity(maximumAnalyzedSampleCount)
+        var prior = Double(samples[first])
+        var index = first + stride
+        while index <= last && emphasized.count < maximumAnalyzedSampleCount {
+            let value = Double(samples[index])
+            emphasized.append(value - prior)
+            prior = value
+            index += stride
+        }
+        guard emphasized.count >= 128 else {
+            return (0, emphasized.count)
+        }
+        let mean = emphasized.reduce(0, +) / Double(emphasized.count)
+        for index in emphasized.indices { emphasized[index] -= mean }
+        let minimumLag = max(
+            2,
+            Int((effectiveRate / maximumAnalyzedFrequency).rounded())
+        )
+        let maximumLag = min(
+            emphasized.count / 3,
+            Int((effectiveRate / minimumAnalyzedFrequency).rounded())
+        )
+        guard maximumLag >= minimumLag else {
+            return (0, emphasized.count)
+        }
+        var maximum = 0.0
+        for lag in minimumLag...maximumLag {
+            var cross = 0.0
+            var leadingEnergy = 0.0
+            var trailingEnergy = 0.0
+            for index in lag..<emphasized.count {
+                let leading = emphasized[index]
+                let trailing = emphasized[index - lag]
+                cross += leading * trailing
+                leadingEnergy += leading * leading
+                trailingEnergy += trailing * trailing
+            }
+            let denominator = sqrt(leadingEnergy * trailingEnergy)
+            if denominator > 1e-18 {
+                maximum = max(maximum, cross / denominator)
+            }
+        }
+        return (min(1, max(0, maximum)), emphasized.count)
+    }
+}
+
 struct SpectralTextureState: Equatable, Sendable {
     var activePatch: InstrumentPatch?
+    var activePitchIdentity: MusicalPitchIdentity?
     var phaseA = 0.0
     var phaseB = 0.0
     var phaseC = 0.0
@@ -143,10 +212,14 @@ struct SpectralTextureState: Equatable, Sendable {
     var dcInput = 0.0
     var dcOutput = 0.0
     var frequency = 220.0
+    var noiseCursor: UInt64 = 0
 
-    mutating func prepare(patch: InstrumentPatch) {
+    mutating func prepare(assignment: InstrumentAssignment) {
+        let patch = assignment.patch
+        let pitchIdentity = assignment.musicalPitchIdentity
         guard patch.architecture == .spectralTexture else { return }
-        if let activePatch, activePatch != patch {
+        if activePatch != nil &&
+            (activePatch != patch || activePitchIdentity != pitchIdentity) {
             low = 0
             band = 0
             resonator = 0
@@ -157,6 +230,7 @@ struct SpectralTextureState: Equatable, Sendable {
             dcOutput = 0
         }
         activePatch = patch
+        activePitchIdentity = pitchIdentity
     }
 }
 
@@ -168,6 +242,7 @@ enum SpectralTextureVoice {
         _ output: inout [Float],
         measurement: inout [Float],
         architectureMeasurement: inout [Float],
+        indefinitePitchMeasurement: inout [Float],
         clusterMeasurement: inout [Float],
         harmonicTailMeasurement: inout [Float],
         pulseEchoSend: inout [Float],
@@ -181,6 +256,8 @@ enum SpectralTextureVoice {
         guard sampleRate > 0,
               output.count == measurement.count,
               output.count == architectureMeasurement.count,
+              indefinitePitchMeasurement.isEmpty ||
+                output.count == indefinitePitchMeasurement.count,
               clusterMeasurement.isEmpty ||
                 output.count == clusterMeasurement.count,
               harmonicTailMeasurement.isEmpty ||
@@ -191,11 +268,20 @@ enum SpectralTextureVoice {
             $0.instrument.architecture == .spectralTexture &&
                 $0.startFrame < output.count && $0.durationFrames > 0
         }.sorted {
-            $0.startFrame == $1.startFrame ? $0.frequency < $1.frequency :
-                $0.startFrame < $1.startFrame
+            if $0.startFrame != $1.startFrame {
+                return $0.startFrame < $1.startFrame
+            }
+            let lhsRole = SynthRole.allCases.firstIndex(of: $0.role) ?? 0
+            let rhsRole = SynthRole.allCases.firstIndex(of: $1.role) ?? 0
+            if lhsRole != rhsRole { return lhsRole < rhsRole }
+            return (InstrumentPatch.allCases.firstIndex(
+                of: $0.instrument.patch
+            ) ?? 0) < (InstrumentPatch.allCases.firstIndex(
+                of: $1.instrument.patch
+            ) ?? 0)
         }
         for note in scheduled {
-            state.prepare(patch: note.instrument.patch)
+            state.prepare(assignment: note.instrument)
             let frames = min(note.durationFrames, output.count - note.startFrame)
             guard frames > 0 else { continue }
             let automation = note.instrument.automation
@@ -203,9 +289,11 @@ enum SpectralTextureVoice {
             let attackSeconds = 0.008 + automation.shape * 0.28
             let releaseSeconds = 0.08 + automation.shape * 1.12
             let attackFrames = max(1, Int((attackSeconds * sampleRate).rounded()))
-            let targetFrequency = max(45, note.endFrequency)
-            let requestedStart = max(45, note.frequency)
-            state.frequency = requestedStart
+            let indefinitePitch = note.instrument.musicalPitchIdentity ==
+                .indefinitePitch
+            let targetFrequency = indefinitePitch ? 0 : max(45, note.endFrequency)
+            let requestedStart = indefinitePitch ? 0 : max(45, note.frequency)
+            if !indefinitePitch { state.frequency = requestedStart }
             let glide = 1 - exp(-1 / max(1, sampleRate * (0.04 + automation.motion * 0.22)))
             let clusterTreatment = SpectralTextureClusterContract.treatment(
                 for: note.instrument
@@ -223,9 +311,8 @@ enum SpectralTextureVoice {
             var maximumFoldedSourceFrequency = 0.0
             var minimumBandCenterHz = Double.infinity
             var maximumBandCenterHz = 0.0
-            var appliedFrequencyAtEnd = min(
-                sampleRate * 0.12 / maximumRatio,
-                requestedStart
+            var appliedFrequencyAtEnd = indefinitePitch ? 0 : min(
+                sampleRate * 0.12 / maximumRatio, requestedStart
             )
             let patchRatios: (Double, Double, Double)
             if let ratios = clusterTreatment?.componentRatios,
@@ -244,13 +331,61 @@ enum SpectralTextureVoice {
             }
             for index in 0..<frames {
                 let progress = frames > 1 ? Double(index) / Double(frames - 1) : 1
-                let desiredFrequency = requestedStart +
-                    (targetFrequency - requestedStart) * progress
-                state.frequency += (desiredFrequency - state.frequency) * glide
-                let frequency = min(sampleRate * 0.12 / maximumRatio, state.frequency)
-                appliedFrequencyAtEnd = frequency
+                let frequency: Double
+                if indefinitePitch {
+                    frequency = 0
+                } else {
+                    let desiredFrequency = requestedStart +
+                        (targetFrequency - requestedStart) * progress
+                    state.frequency += (desiredFrequency - state.frequency) * glide
+                    frequency = min(
+                        sampleRate * 0.12 / maximumRatio,
+                        state.frequency
+                    )
+                    appliedFrequencyAtEnd = frequency
+                }
                 let colored: Double
-                if let harmonicTailTreatment {
+                if indefinitePitch {
+                    let salt = noiseSalt(for: note.instrument.patch)
+                    let a = deterministicNoise(
+                        index: state.noiseCursor,
+                        salt: salt
+                    )
+                    let b = deterministicNoise(
+                        index: state.noiseCursor &+ 0x9E37_79B9,
+                        salt: salt ^ 0xD1B5_4A32_D192_ED03
+                    )
+                    let c = deterministicNoise(
+                        index: state.noiseCursor &+ 0x85EB_CA6B,
+                        salt: salt ^ 0x94D0_49BB_1331_11EB
+                    )
+                    state.noiseCursor &+= 1
+                    let source = switch note.instrument.patch {
+                    case .alienNoise:
+                        a * 0.64 + (b * c) * 0.36
+                    case .metalVeil:
+                        (a - b) * 0.44 + (b * c) * 0.28
+                    case .dustCloud:
+                        a * 0.48 + b * 0.22 + (a * c) * 0.30
+                    case .voltageArc, .bassPulse, .bassPluck, .acidThread,
+                         .acidSequence, .northStar, .darkChord, .glassRunner:
+                        a
+                    }
+                    let cutoff = min(
+                        sampleRate * 0.34,
+                        1_200 + automation.color * 8_800
+                    )
+                    let coefficient = min(
+                        0.72,
+                        max(0.02, 1 - exp(-2 * .pi * cutoff / sampleRate))
+                    )
+                    state.low += (source - state.low) * coefficient
+                    let high = source - state.low
+                    state.band += (high - state.band) *
+                        min(0.64, coefficient * 0.74)
+                    colored = high * (0.62 - automation.motion * 0.16) +
+                        state.band * (0.38 + automation.motion * 0.16)
+                } else if let harmonicTailTreatment {
                     let sourceFrequency =
                         harmonicTailTreatment.startFoldedSourceFrequency +
                         (harmonicTailTreatment.endFoldedSourceFrequency -
@@ -379,6 +514,9 @@ enum SpectralTextureVoice {
                 output[frame] += sample
                 measurement[frame] += sample
                 architectureMeasurement[frame] += sample
+                if indefinitePitch && !indefinitePitchMeasurement.isEmpty {
+                    indefinitePitchMeasurement[frame] += sample
+                }
                 if clusterTreatment != nil && !clusterMeasurement.isEmpty {
                     clusterMeasurement[frame] += sample
                 }
@@ -405,6 +543,7 @@ enum SpectralTextureVoice {
                 appliedStartFrequency: requestedStart,
                 targetEndFrequency: targetFrequency,
                 frequencyAtAppliedGateEnd: appliedFrequencyAtEnd,
+                requestedEndFrequency: note.endFrequency,
                 requestedGate: note.gate,
                 appliedGate: .retrigger,
                 didRetrigger: true,
@@ -467,5 +606,26 @@ enum SpectralTextureVoice {
             return x * x + x + x + 1
         }
         return 0
+    }
+
+    private static func noiseSalt(for patch: InstrumentPatch) -> UInt64 {
+        switch patch {
+        case .alienNoise: 0xA11E_4E01_5EED_0001
+        case .metalVeil: 0x4D45_5441_4C00_0002
+        case .dustCloud: 0xD057_C10D_5EED_0003
+        case .voltageArc: 0x7017_A6E0_0000_0004
+        case .bassPulse, .bassPluck, .acidThread, .acidSequence,
+             .northStar, .darkChord, .glassRunner:
+            0x5EED_0000_0000_0005
+        }
+    }
+
+    private static func deterministicNoise(index: UInt64, salt: UInt64) -> Double {
+        var value = index &+ salt &+ 0x9E37_79B9_7F4A_7C15
+        value = (value ^ (value >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        value = (value ^ (value >> 27)) &* 0x94D0_49BB_1331_11EB
+        value ^= value >> 31
+        let unit = Double(value >> 11) / 9_007_199_254_740_992
+        return unit * 2 - 1
     }
 }

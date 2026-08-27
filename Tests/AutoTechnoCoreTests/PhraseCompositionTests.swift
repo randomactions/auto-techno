@@ -900,6 +900,74 @@ struct PhraseCompositionTests {
         }
     }
 
+    @Test("Every pad function is a distinct diatonic seventh chord")
+    func modalChordVocabularyIsDistinct() {
+        for mode in ModalIdentity.allCases {
+            let chords = PadHarmonicFunction.allCases.map { function in
+                PhraseCompositionResolver.canonicalChordDegrees(
+                    modalIdentity: mode,
+                    function: function
+                )
+            }
+            for chord in chords {
+                let pitchClasses = chord.map { (($0 % 12) + 12) % 12 }
+                #expect(chord.count == 4)
+                #expect(Set(pitchClasses).count == 4)
+                #expect(pitchClasses.allSatisfy(mode.degrees.contains))
+            }
+            let pitchClassSets = chords.map { chord in
+                Set(chord.map { (($0 % 12) + 12) % 12 })
+            }
+            #expect(Set(pitchClassSets).count == PadHarmonicFunction.allCases.count)
+            #expect(pitchClassSets[0] != pitchClassSets[1])
+            let characteristicDegree = switch mode {
+            case .dorian: 9
+            case .aeolian: 8
+            case .phrygian: 1
+            }
+            #expect(pitchClassSets[1].contains(characteristicDegree))
+        }
+    }
+
+    @Test("Foundation pitches never acquire an unscored chromatic lift")
+    func foundationPitchRemainsModal() throws {
+        for mode in ModalIdentity.allCases {
+            let darkness = switch mode {
+            case .dorian: 0.40
+            case .aeolian: 0.64
+            case .phrygian: 0.82
+            }
+            let dna = try #require((UInt64(0)..<512).lazy.compactMap { seed in
+                let scene = TechnoScene(
+                    intent: MusicalIntent(values: [
+                        .darkness: darkness,
+                        .hypnosis: 0.82,
+                    ]),
+                    seed: seed,
+                    bpm: 130
+                )
+                let candidate = SceneDNA(scene: scene)
+                return candidate.modalIdentity == mode ? candidate : nil
+            }.first)
+            for step in 0..<16 {
+                let degree = FoundationPitchResolver.modalDegree(
+                    dna: dna,
+                    step: step
+                )
+                let pitchClass = ((degree % 12) + 12) % 12
+                #expect(dna.modalDegrees.contains(pitchClass))
+                let expected = 43.65 * pow(
+                    2,
+                    Double(dna.tonalCenter + degree) / 12
+                )
+                #expect(FoundationPitchResolver.frequency(
+                    dna: dna,
+                    step: step
+                ).bitPattern == expected.bitPattern)
+            }
+        }
+    }
+
     @Test("One disclosed chord changes only its existing tonal carriers")
     func harmonicDisclosurePCMIsolation() throws {
         let scene = fixtureScene()

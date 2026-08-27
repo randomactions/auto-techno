@@ -27,6 +27,11 @@ mistaken for a completed feedback system.
    score source for requested onsets, pitches, durations, gates, and articulation.
    Renderer-owned trajectory evidence records the continuation-dependent applied
    start frequency and gate outcome without creating a second score.
+   Pitch semantics are explicit under
+   [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md): tonal material
+   stays in one modal frame, modal percussion retains a tuned inharmonic
+   fundamental, named dissonance remains pitched, and indefinite texture cannot
+   follow a requested note frequency.
    Each future phrase also carries one director-owned performance character.
    Bounded two-character memory avoids immediate character repetition when another
    compatible interpretation exists. Per-bar foundation behavior, role set, and
@@ -43,9 +48,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 37, candidate-
-   vector schema 33, candidate-transaction schema 4, and canonical engine
-   identity `autotechno-canonical-engine.v36`. Each
+   primary-evaluation transaction under quality-contract schema 38, candidate-
+   vector schema 34, candidate-transaction schema 5, and canonical engine
+   identity `autotechno-canonical-engine.v37`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -156,9 +161,10 @@ mistaken for a completed feedback system.
    A deterministic Professional Evidence v19
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
-   observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v36 profile v18, adversarial suite v15, and disjoint holdout
-   qualification v13.
+   observation-only. Bundled `ProfessionalQualityPrimaryArtifacts` retain the
+   last exact engine-v36 profile v18, adversarial suite v15, and disjoint
+   holdout qualification v13. They fail identity validation for engine v37, so
+   current qualification is unavailable pending complete regeneration.
    The profile derives from 28 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
    relationships. Its evaluator maps the Core-owned plan checkpoint into the
@@ -450,7 +456,7 @@ return behavior.
 Each full bar emits same-pass bar/BPM/delay/render geometry, score and drive
 eligibility, bounded source and applied amount, current-send RMS, exact pre/post
 sample hashes, pre/post peak, RMS, and low-band RMS, difference RMS, and finite
-status. Candidate-vector schema 33 binds these observations to the score bar,
+status. Candidate-vector schema 34 binds these observations to the score bar,
 phrase kind, route rate, and matching instrument effect access. Neutral drive
 requires exact pre/post identity and zero difference. Active drive remains
 outside feedback, binds exact changed-frame and peak witnesses, and permits only
@@ -509,7 +515,7 @@ post-attack relationship.
 
 Both capabilities are finite, state-free render functions applied during
 detached phrase preparation. They allocate no additional PCM lane, introduce no
-new continuation owner, and add no callback work. Candidate-vector schema 33
+new continuation owner, and add no callback work. Candidate-vector schema 34
 binds morphology and body to the exact score event, PCM hashes, physical-time
 windows, and scalar consequence. Legacy/out-of-range morphology falls back to
 the anchor; omitted body construction falls back to clap for clap events and
@@ -576,7 +582,7 @@ callback are unchanged; incomplete or ineligible pairs stay established.
 
 Detached same-pass evidence reduces relation, pair phase, score/render counts
 and masks, actual start frames, dry hash/peak/RMS, patch assignment, and
-full/protected pass equality into candidate-vector schema 33. Professional
+full/protected pass equality into candidate-vector schema 34. Professional
 observation retains active prevalence and crest factor under the current
 exact-engine profile. A later implementation may replace the integer-grid
 projection only while preserving this score owner, two-bar reset, exact neutral
@@ -616,7 +622,7 @@ Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
 requested gate end, and renderer-applied gate end. Separate anchor, shadow, and
 response dry taps retain finite role-local hash, peak, and RMS evidence. Current
-candidate-vector schema 33 reduces those tuples into exact score/render and
+candidate-vector schema 34 reduces those tuples into exact score/render and
 renderer-applied-gate fingerprints, relation-specific offset facts, protected-
 role neutrality, cascade-aperture or lead-pattern replay, and route-derived
 frame geometry. The calibrated evaluator judges this evidence as part of the
@@ -799,7 +805,7 @@ succeeded.
 This reduction runs only after detached preparation. It changes no score,
 renderer, graph, scheduler, route lifecycle, live controller, commit decision,
 or realtime callback. Phase 6B binds compatible complete reports to the exact
-immutable engine-v36/primary-v18 development, adversarial, and disjoint-holdout
+last-qualified engine-v36/primary-v18 development, adversarial, and disjoint-holdout
 artifacts. Raw PCM remains outside the artifacts and runtime observation.
 
 ## Implemented bounded long-horizon future adaptation
@@ -838,7 +844,7 @@ already-immutable accepted result at the existing scheduled phrase boundary.
 
 ## Completed evidence-gated sound maturation assessment
 
-Phase 8 adds no runtime owner or state. It reconciles the exact engine-v36/
+Phase 8 adds no runtime owner or state. It records the last exact engine-v36/
 primary-v18 long-horizon profile, adversarial suite, and disjoint holdout with
 the conditional sound-capability register. Their fingerprints are
 `a819ba51241f0179`, `b284b4531f2c3b15`, and `c63a928908f0fbb1`. The primary

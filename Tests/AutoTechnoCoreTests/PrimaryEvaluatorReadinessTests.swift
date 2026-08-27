@@ -6,8 +6,8 @@ import Testing
 struct PrimaryEvaluatorReadinessTests {
     @Test("Modal evidence is non-compensable before the primary policy")
     func modalEvidencePrecedesPrimaryPolicy() {
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 33)
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 4)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 34)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 5)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 2)
         #expect(ProfessionalEvidenceReportBank.schemaVersion == 19)
         #expect(ProfessionalQualityObservation.schemaVersion == 14)
@@ -41,38 +41,31 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("Bundled v18 artifacts activate only the exact schema-37 engine")
+    @Test("Bundled engine-v36 artifacts cannot activate engine v37")
     func bundledV17ArtifactsAreReady() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(artifacts.profile.engineVersion ==
-                QualityQualificationContract.engineVersion)
-        #expect(artifacts.profile.schemaVersion == 14)
-        #expect(artifacts.adversarialSuite.schemaVersion == 15)
-        #expect(artifacts.holdoutQualification.schemaVersion == 13)
-        for sampleRate in [44_100.0, 48_000.0] {
-            #expect(ProfessionalQualityPreparationEvaluator(
-                sampleRate: sampleRate,
-                artifacts: artifacts
-            ).availability == .available)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            _ = try ProfessionalQualityPrimaryArtifacts.load()
         }
+        #expect(ProfessionalQualityPreparationEvaluator(
+            sampleRate: 48_000,
+            artifacts: try? ProfessionalQualityPrimaryArtifacts.load()
+        ).availability == .artifactsUnavailable)
     }
 
     @Test("An 8 kHz route with exact v18 artifacts is unsupported")
     func unsupported8KRouteStaysUnavailable() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(
             sampleRate: 8_000,
-            artifacts: artifacts
-        ).availability == .unsupportedSampleRate)
+            artifacts: try? ProfessionalQualityPrimaryArtifacts.load()
+        ).availability == .artifactsUnavailable)
     }
 
     @Test("A 12 kHz route with exact v18 artifacts is unsupported")
     func unsupported12KRouteStaysUnavailable() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(
             sampleRate: 12_000,
-            artifacts: artifacts
-        ).availability == .unsupportedSampleRate)
+            artifacts: try? ProfessionalQualityPrimaryArtifacts.load()
+        ).availability == .artifactsUnavailable)
     }
 
     @Test("Missing artifacts cannot activate the calibrated primary evaluator")

@@ -4,12 +4,12 @@ import Foundation
 package enum QualityQualificationContract {
     /// Version 22 binds app-owned scheduled live PCM, exact mixer-to-player
     /// clock mapping, live BS.1770 evidence, bounded terminal attenuation, and
-    /// its atomic commit at an unscheduled future boundary. Quality schema 37
-    /// advances the canonical PCM identity for the corpus-benchmarked bounded
-    /// kick/foundation balance correction.
-    package static let schemaVersion = 37
+    /// its atomic commit at an unscheduled future boundary. Quality schema 38
+    /// advances the canonical PCM identity for explicit pitch identities,
+    /// diatonic modal voicing, modal foundation, and indefinite-pitch DSP.
+    package static let schemaVersion = 38
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v36"
+    package static let engineVersion = "autotechno-canonical-engine.v37"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

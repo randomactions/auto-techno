@@ -130,6 +130,146 @@ struct InstrumentPaletteTests {
         }
     }
 
+    @Test("Every source has one explicit and non-ambiguous pitch identity")
+    func pitchIdentityContract() {
+        for capability in InstrumentPalette.capabilities {
+            for use in capability.eligibleUses {
+                let assignment = InstrumentAssignment(
+                    use: use,
+                    patch: capability.patch,
+                    automation: .neutral,
+                    effects: capability.compatibleEffects
+                )
+                let expected: MusicalPitchIdentity
+                switch capability.patch {
+                case .alienNoise, .dustCloud:
+                    expected = .indefinitePitch
+                case .metalVeil:
+                    expected = use == .transition
+                        ? .deliberateDissonance : .indefinitePitch
+                case .bassPulse, .bassPluck, .acidThread, .acidSequence,
+                     .northStar, .darkChord, .glassRunner, .voltageArc:
+                    expected = .modalPitched
+                }
+                #expect(assignment.musicalPitchIdentity == expected)
+            }
+        }
+
+        let modalPercussion = ModalPercussionArticulation(
+            scoreEventIndex: 0,
+            step: 3,
+            use: .foundationCompanion,
+            modalIdentity: .dorian,
+            modalDegree: 9,
+            octave: 1,
+            fundamentalHz: 110,
+            excitation: 0.6,
+            damping: 0.5,
+            brightness: 0.5,
+            inharmonicity: 0.08,
+            eventIntensity: 0.8,
+            seed: 7
+        )
+        #expect(modalPercussion.musicalPitchIdentity == .tunedInharmonic)
+    }
+
+    @Test("Indefinite textures ignore melodic pitch and reject a tonal control")
+    func indefinitePitchDSPContract() {
+        let fixtures: [(InstrumentPatch, InstrumentUse, SynthRole)] = [
+            (.alienNoise, .response, .response),
+            (.metalVeil, .atmosphere, .atmosphere),
+            (.dustCloud, .transition, .transition),
+        ]
+        for sampleRate in [8_000.0, 44_100.0, 48_000.0, 192_000.0] {
+            for fixture in fixtures {
+                let texture = assignment(
+                    patch: fixture.0,
+                    use: fixture.1,
+                    automation: InstrumentAutomation(
+                        color: 0.63,
+                        shape: 0.48,
+                        motion: 0.71,
+                        space: 0.34
+                    )
+                )
+                let lowRequest = render(
+                    assignment: texture,
+                    role: fixture.2,
+                    sampleRate: sampleRate,
+                    frequency: 82.41,
+                    endFrequency: 98
+                )
+                let offKeyRequest = render(
+                    assignment: texture,
+                    role: fixture.2,
+                    sampleRate: sampleRate,
+                    frequency: 151.73,
+                    endFrequency: 233.19
+                )
+                let periodicity = IndefinitePitchContract.normalizedPeriodicity(
+                    samples: lowRequest.indefinitePitch,
+                    sampleRate: sampleRate
+                )
+
+                #expect(texture.musicalPitchIdentity == .indefinitePitch)
+                #expect(lowRequest.samples == offKeyRequest.samples)
+                #expect(lowRequest.indefinitePitch == lowRequest.samples)
+                #expect(lowRequest.indefinitePitch.contains { $0 != 0 })
+                #expect(lowRequest.evidence.first?.requestedStartFrequency ==
+                        82.41)
+                #expect(lowRequest.evidence.first?.appliedStartFrequency == 0)
+                #expect(lowRequest.evidence.first?.targetEndFrequency == 0)
+                #expect(lowRequest.evidence.first?.frequencyAtAppliedGateEnd == 0)
+                #expect(lowRequest.evidence.first?.spectralTextureCluster == nil)
+                #expect(lowRequest.evidence.first?
+                    .spectralTextureHarmonicTail == nil)
+                #expect(periodicity.analyzedSampleCount >= 128)
+                #expect(periodicity.maximum <=
+                        IndefinitePitchContract.maximumNormalizedPeriodicity)
+            }
+
+            let frameCount = max(3_200, Int((sampleRate * 0.2).rounded()))
+            let tonalControl = (0..<frameCount).map { index in
+                Float(sin(2 * .pi * 220 * Double(index) / sampleRate) * 0.08)
+            }
+            let tonalPeriodicity = IndefinitePitchContract.normalizedPeriodicity(
+                samples: tonalControl,
+                sampleRate: sampleRate
+            )
+            #expect(tonalPeriodicity.maximum > 0.9)
+            #expect(tonalPeriodicity.maximum >
+                    IndefinitePitchContract.maximumNormalizedPeriodicity)
+        }
+    }
+
+    @Test("A named dissonant transition remains audibly pitch-dependent")
+    func deliberateDissonanceRemainsPitched() {
+        let transition = assignment(
+            patch: .metalVeil,
+            use: .transition,
+            automation: InstrumentAutomation(
+                color: 0.70, shape: 0.42, motion: 0.82, space: 0.30
+            )
+        )
+        let first = render(
+            assignment: transition,
+            role: .transition,
+            frequency: 110,
+            endFrequency: 146.83
+        )
+        let second = render(
+            assignment: transition,
+            role: .transition,
+            frequency: 123.47,
+            endFrequency: 164.81
+        )
+        #expect(transition.musicalPitchIdentity == .deliberateDissonance)
+        #expect(first.samples != second.samples)
+        #expect(first.indefinitePitch.allSatisfy { $0.bitPattern == 0 })
+        #expect(first.evidence.first?.spectralTextureCluster != nil)
+        #expect((first.evidence.first?.appliedStartFrequency ?? 0) > 0)
+    }
+
     @Test("Foundation behaviors resolve to distinct bounded instrument consequences")
     func foundationBehaviorPCM() {
         let world = fixtureWorld(seed: 48_291)
@@ -1032,9 +1172,11 @@ struct InstrumentPaletteTests {
     private func render(
         assignment: InstrumentAssignment,
         role: SynthRole,
-        sampleRate: Double = 16_000.0
+        sampleRate: Double = 16_000.0,
+        frequency: Double = 174.61,
+        endFrequency: Double = 220
     ) -> (samples: [Float], evidence: [UpperNoteRenderEvidence],
-          modulation: [Float]) {
+          modulation: [Float], indefinitePitch: [Float]) {
         var output = [Float](
             repeating: 0,
             count: max(3_200, Int((sampleRate * 0.2).rounded()))
@@ -1042,14 +1184,21 @@ struct InstrumentPaletteTests {
         var roleMeasurement = [Float](repeating: 0, count: output.count)
         var architectureMeasurement = [Float](repeating: 0, count: output.count)
         var modulationMeasurement = [Float](repeating: 0, count: output.count)
+        var indefinitePitchMeasurement = [Float](
+            repeating: 0,
+            count: output.count
+        )
         var pulseEcho = [Float](repeating: 0, count: output.count)
         var reverb = [Float](repeating: 0, count: output.count)
         var evidence: [UpperNoteRenderEvidence] = []
         let note = AlienVoiceNote(
             startFrame: 96,
-            durationFrames: 2_100,
-            frequency: 174.61,
-            endFrequency: 220,
+            durationFrames: min(
+                output.count - 96,
+                max(2_100, Int((sampleRate * 0.12).rounded()))
+            ),
+            frequency: frequency,
+            endFrequency: endFrequency,
             velocity: 0.82,
             gate: .retrigger,
             timbreIntent: .home,
@@ -1107,6 +1256,7 @@ struct InstrumentPaletteTests {
                 &output,
                 measurement: &roleMeasurement,
                 architectureMeasurement: &architectureMeasurement,
+                indefinitePitchMeasurement: &indefinitePitchMeasurement,
                 clusterMeasurement: &modulationMeasurement,
                 harmonicTailMeasurement: &harmonicTailMeasurement,
                 pulseEchoSend: &pulseEcho,
@@ -1123,7 +1273,12 @@ struct InstrumentPaletteTests {
         }
         #expect(output == roleMeasurement)
         #expect(output == architectureMeasurement)
-        return (output, evidence, modulationMeasurement)
+        return (
+            output,
+            evidence,
+            modulationMeasurement,
+            indefinitePitchMeasurement
+        )
     }
 
     private func fixtureWorld(seed: UInt64) -> SynthWorldDNA {

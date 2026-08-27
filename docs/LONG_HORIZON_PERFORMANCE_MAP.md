@@ -1,5 +1,9 @@
 # Long-Horizon Performance Map
 
+Current engine v37 advances pitch identity and PCM. The engine-v36/v5
+qualification results below remain immutable historical evidence and cannot
+authorize v37 adaptation until the full artifact set is regenerated.
+
 ## Status and verdict
 
 This is the source-grounded implementation map for keeping one Auto Techno
