@@ -161,7 +161,8 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
     /// active holdout or invent a cross-checkpoint quality trajectory.
     package var conditionalNeutralSentinel: Double? {
         switch self {
-        case .modalPercussionPitchErrorCentsMaximum,
+        case .kickOverFoundationActiveDBMean,
+                .modalPercussionPitchErrorCentsMaximum,
                 .modalPercussionMaskingMaximumOverlap,
                 .modalPercussionMaximumPoleRadius,
                 .foundationPreKickPocketSilenceRMSMaximum,
@@ -183,6 +184,8 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
     package var conditionalNeutralCalibrationEnvelope:
             ClosedRange<Double>? {
         switch self {
+        case .kickOverFoundationActiveDBMean:
+            return -0.75...0.75
         case .modalPercussionAttackToBodyDBMean,
                 .modalPercussionTailToBodyDBMean:
             return -1...1
@@ -1239,6 +1242,19 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         )
     }
 
+    /// A conditional detail is judged only when its paired activity metric
+    /// proves that the underlying comparison exists in this phrase.
+    package func measurementIsApplicable(
+        _ metric: ProfessionalQualityMetric
+    ) -> Bool {
+        switch metric {
+        case .kickOverFoundationActiveDBMean:
+            return (self[.activeKickFoundationBarRatio] ?? 0) > 1e-12
+        default:
+            return true
+        }
+    }
+
     package func deterministicJSON() throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
@@ -2188,12 +2204,15 @@ package enum ProfessionalQualityRelationshipEvaluator {
             where bounds.metric.participatesInQualification {
             let pair = bounds.trajectory.checkpoints
             for sampleRate in profile.sampleRates {
-                guard let from = observations.first(where: {
+                guard let fromObservation = observations.first(where: {
                     $0.sampleRate == sampleRate && $0.checkpoint == pair.from
-                })?[bounds.metric],
-                      let to = observations.first(where: {
-                          $0.sampleRate == sampleRate && $0.checkpoint == pair.to
-                      })?[bounds.metric] else { continue }
+                }), let toObservation = observations.first(where: {
+                    $0.sampleRate == sampleRate && $0.checkpoint == pair.to
+                }),
+                      fromObservation.measurementIsApplicable(bounds.metric),
+                      toObservation.measurementIsApplicable(bounds.metric),
+                      let from = fromObservation[bounds.metric],
+                      let to = toObservation[bounds.metric] else { continue }
                 if bounds.metric.conditionalNeutralSentinel != nil,
                    bounds.metric.isConditionalNeutral(from) !=
                    bounds.metric.isConditionalNeutral(to) {
@@ -2224,11 +2243,15 @@ package enum ProfessionalQualityRelationshipEvaluator {
         }
         for bounds in profile.rateConsistency
             where bounds.metric.participatesInRateConsistency {
-            let values = profile.sampleRates.compactMap { sampleRate in
-                observations.first {
+            let values = profile.sampleRates.compactMap {
+                sampleRate -> Double? in
+                guard let observation = observations.first(where: {
                     $0.sampleRate == sampleRate &&
                         $0.checkpoint == bounds.checkpoint
-                }?[bounds.metric]
+                }), observation.measurementIsApplicable(bounds.metric) else {
+                    return nil
+                }
+                return observation[bounds.metric]
             }
             guard let minimum = values.min(), let maximum = values.max(),
                   values.count == profile.sampleRates.count else { continue }
@@ -2316,6 +2339,7 @@ package enum ProfessionalQualityProfileEvaluator {
         }
         for metric in ProfessionalQualityMetric.allCases
             where metric.participatesInQualification {
+            if !observation.measurementIsApplicable(metric) { continue }
             guard let value = observation[metric],
                   let bounds = profile.effectiveBounds(
                     for: metric,

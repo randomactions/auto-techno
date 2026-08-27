@@ -580,6 +580,9 @@ The target loop is bounded and persistent:
    compound offline labels are not intersected into an uncalibrated population.
    Optional modal metrics reuse qualified active bounds when a checkpoint's
    development evidence contains only the exact inactive sentinel.
+   Kick-over-foundation balance is judged only when the paired active-bar ratio
+   proves that at least one audible comparison exists; an absent comparison is
+   neutral rather than a fabricated 0 dB balance.
    Optional upper spectral reveal records use neutral activation evidence only
    when the score has no eligible reveal events; eligible but inactive rendering
    remains a rejection, while the activation ratio is one-sided higher-is-safer.

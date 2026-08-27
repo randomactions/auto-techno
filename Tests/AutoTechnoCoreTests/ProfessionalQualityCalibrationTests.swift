@@ -362,6 +362,12 @@ struct ProfessionalQualityCalibrationTests {
             .modalPercussionSpectralCentroidMeanHz
             .conditionalNeutralCalibrationEnvelope == 0...60)
         #expect(ProfessionalQualityMetric
+            .kickOverFoundationActiveDBMean
+            .conditionalNeutralSentinel == 0)
+        #expect(ProfessionalQualityMetric
+            .kickOverFoundationActiveDBMean
+            .conditionalNeutralCalibrationEnvelope == -0.75...0.75)
+        #expect(ProfessionalQualityMetric
             .upperSpectralRevealActiveEventRatio
             .conditionalNeutralSentinel == 1)
         #expect(ProfessionalQualityMetric
@@ -492,6 +498,34 @@ struct ProfessionalQualityCalibrationTests {
         )
         #expect(activeBounds.contains(1))
         #expect(!activeBounds.contains(0))
+    }
+
+    @Test("Kick-foundation balance requires an active comparison")
+    func conditionalKickFoundationBalance() throws {
+        let observations = try representativeObservations()
+        let active = try #require(observations.first)
+        let noActiveBars = try active.replacing(
+            .activeKickFoundationBarRatio,
+            with: 0
+        )
+        let inactive = try noActiveBars.replacing(
+            .kickOverFoundationActiveDBMean,
+            with: 0
+        )
+
+        #expect(active.measurementIsApplicable(
+            .kickOverFoundationActiveDBMean
+        ))
+        #expect(!inactive.measurementIsApplicable(
+            .kickOverFoundationActiveDBMean
+        ))
+        #expect(inactive[.kickOverFoundationActiveDBMean] == 0)
+        let activeOnlyBounds = try ProfessionalQualityMetricBounds(
+            metric: .kickOverFoundationActiveDBMean,
+            lower: 10,
+            upper: 33
+        )
+        #expect(!activeOnlyBounds.contains(0))
     }
 
     @Test("Neutral-only modal checkpoints reuse qualified active bounds")
