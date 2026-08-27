@@ -61,6 +61,53 @@ package struct KickMorphologyParameters: Equatable, Sendable {
         )
     }
 
+    /// A bounded score-side retry movement for calibrated kick-source
+    /// attack/body misses. Positive pressure shortens the body and raises the
+    /// existing click components slightly; negative pressure explores the
+    /// inverse direction. Zero is exactly identity-preserving.
+    package func qualityRetryAdjusted(
+        pressure requestedPressure: Double
+    ) -> Self {
+        let pressure = min(1, max(-1, requestedPressure))
+        guard pressure != 0 else { return self }
+        func bounded(
+            _ value: Double,
+            scale: Double,
+            range: ClosedRange<Double>
+        ) -> Double {
+            min(range.upperBound, max(range.lowerBound,
+                value * (1 + scale * pressure)
+            ))
+        }
+        return Self(
+            fundamentalHz: fundamentalHz,
+            pitchDepthHz: pitchDepthHz,
+            fastPitchDepthHz: fastPitchDepthHz,
+            pitchDecayPerSecond: pitchDecayPerSecond,
+            fastPitchDecayPerSecond: fastPitchDecayPerSecond,
+            bodyDecayPerSecond: bounded(
+                bodyDecayPerSecond,
+                scale: 0.20,
+                range: 13...24
+            ),
+            subDecayPerSecond: subDecayPerSecond,
+            secondHarmonicLevel: secondHarmonicLevel,
+            bodyDrive: bodyDrive,
+            subLevel: subLevel,
+            noiseClickLevel: bounded(
+                noiseClickLevel,
+                scale: 0.08,
+                range: 0.045...0.11
+            ),
+            tonalClickLevel: bounded(
+                tonalClickLevel,
+                scale: 0.08,
+                range: 0.03...0.075
+            ),
+            clickFrequencyHz: clickFrequencyHz
+        )
+    }
+
     package var isBoundedAndFinite: Bool {
         let values = [
             fundamentalHz, pitchDepthHz, fastPitchDepthHz,
@@ -103,6 +150,21 @@ package struct KickMorphologyArticulation: Equatable, Sendable {
         start.interpolated(to: end, progress: progress)
     }
 
+    package func qualityRetryAdjusted(pressure: Double) -> Self {
+        guard pressure != 0 else { return self }
+        return Self(
+            version: version,
+            absoluteBar: absoluteBar,
+            segmentIndex: segmentIndex,
+            fromHome: fromHome,
+            toHome: toHome,
+            startProgress: startProgress,
+            endProgress: endProgress,
+            start: start.qualityRetryAdjusted(pressure: pressure),
+            end: end.qualityRetryAdjusted(pressure: pressure)
+        )
+    }
+
     package var isComplete: Bool {
         version == KickMorphologyResolver.version && absoluteBar >= 0 &&
             segmentIndex >= 0 && fromHome != toHome &&
@@ -123,12 +185,18 @@ package enum KickMorphologyResolver {
 
     package static func articulation(
         sessionSeed: UInt64,
-        absoluteBar requestedBar: Int
+        absoluteBar requestedBar: Int,
+        qualityRetryOrdinal requestedRetryOrdinal: Int = 0
     ) -> KickMorphologyArticulation {
         let absoluteBar = max(0, requestedBar)
         let segmentIndex = absoluteBar / segmentBarCount
         guard segmentIndex <= maximumSegmentIndex else {
             return legacyAnchor(sessionSeed: sessionSeed, absoluteBar: absoluteBar)
+                .qualityRetryAdjusted(
+                    pressure: qualityRetryPressure(
+                        ordinal: requestedRetryOrdinal
+                    )
+                )
         }
         let startPosition = Double(absoluteBar) / Double(segmentBarCount)
         let endPosition = Double(absoluteBar + 1) / Double(segmentBarCount)
@@ -151,7 +219,25 @@ package enum KickMorphologyResolver {
             endProgress: endProgress,
             start: from.interpolated(to: to, progress: startProgress),
             end: from.interpolated(to: to, progress: endProgress)
+        ).qualityRetryAdjusted(
+            pressure: qualityRetryPressure(ordinal: requestedRetryOrdinal)
         )
+    }
+
+    /// Serial variants alternate around the committed trajectory with
+    /// increasing bounded pressure. This covers both sides of the calibrated
+    /// attack/body interval without retaining or ranking parallel candidates.
+    package static func qualityRetryPressure(
+        ordinal requestedOrdinal: Int
+    ) -> Double {
+        let ordinal = min(
+            AutonomousQualityRetryContinuation.maximumOrdinal,
+            max(0, requestedOrdinal)
+        )
+        guard ordinal > 0 else { return 0 }
+        let magnitude = Double((ordinal + 1) / 2) /
+            Double(AutonomousQualityRetryContinuation.maximumOrdinal / 2)
+        return ordinal.isMultiple(of: 2) ? -magnitude : magnitude
     }
 
     package static func legacyAnchor(

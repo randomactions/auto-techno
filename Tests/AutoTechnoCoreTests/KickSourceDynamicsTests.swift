@@ -190,6 +190,91 @@ struct KickSourceDynamicsTests {
         }
     }
 
+    @Test("Serial retry pressure moves kick attack/body evidence in both bounded directions")
+    func qualityRetryPressureContract() throws {
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 0) == 0)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 1) == 0.25)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 2) == -0.25)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 7) == 1)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 8) == -1)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: Int.max) == -1)
+
+        let seed: UInt64 = 42
+        let baseline = KickMorphologyResolver.articulation(
+            sessionSeed: seed,
+            absoluteBar: 0
+        )
+        let explicitZero = KickMorphologyResolver.articulation(
+            sessionSeed: seed,
+            absoluteBar: 0,
+            qualityRetryOrdinal: 0
+        )
+        let positive = KickMorphologyResolver.articulation(
+            sessionSeed: seed,
+            absoluteBar: 0,
+            qualityRetryOrdinal: 1
+        )
+        let negative = KickMorphologyResolver.articulation(
+            sessionSeed: seed,
+            absoluteBar: 0,
+            qualityRetryOrdinal: 2
+        )
+        #expect(explicitZero == baseline)
+        #expect(positive.isComplete)
+        #expect(negative.isComplete)
+        #expect(positive.start.bodyDecayPerSecond >
+                baseline.start.bodyDecayPerSecond)
+        #expect(negative.start.bodyDecayPerSecond <
+                baseline.start.bodyDecayPerSecond)
+        #expect(positive.start.noiseClickLevel > baseline.start.noiseClickLevel)
+        #expect(negative.start.noiseClickLevel < baseline.start.noiseClickLevel)
+
+        for ordinal in 1...AutonomousQualityRetryContinuation.maximumOrdinal {
+            var previous: KickMorphologyArticulation?
+            for bar in 0..<260 {
+                let articulation = KickMorphologyResolver.articulation(
+                    sessionSeed: seed,
+                    absoluteBar: bar,
+                    qualityRetryOrdinal: ordinal
+                )
+                #expect(articulation.isComplete)
+                if let previous {
+                    #expect(previous.end == articulation.start)
+                }
+                previous = articulation
+            }
+        }
+
+        let director = AutonomousSessionDirector(rootSeed: seed)
+        let plan = director.plan(from: director.initialState())
+        let source = try #require(plan.resolvedBars.first { bar in
+            bar.ensemble.events.contains { $0.voice == .kick }
+        })
+        let renderedBaseline = render(
+            resolved: replacingMorphology(source, with: baseline),
+            plan: plan,
+            sampleRate: 44_100,
+            layer: .protectedRhythm
+        ).kickMix.sourceDynamics
+        let renderedPositive = render(
+            resolved: replacingMorphology(source, with: positive),
+            plan: plan,
+            sampleRate: 44_100,
+            layer: .protectedRhythm
+        ).kickMix.sourceDynamics
+        let baselineAttackToBody = 20 * log10(
+            renderedBaseline.outputAttackRMS /
+                renderedBaseline.outputBodyRMS
+        )
+        let positiveAttackToBody = 20 * log10(
+            renderedPositive.outputAttackRMS /
+                renderedPositive.outputBodyRMS
+        )
+        #expect(renderedPositive.outputSampleHash !=
+                renderedBaseline.outputSampleHash)
+        #expect(positiveAttackToBody - baselineAttackToBody > 0.15)
+    }
+
     private struct LegacyOracle {
         let sampleCount: Int
         let sampleHash: String

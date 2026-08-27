@@ -2125,7 +2125,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                     energyTarget.harmonicDisclosure,
                 kickMorphology: KickMorphologyResolver.articulation(
                     sessionSeed: scene.seed,
-                    absoluteBar: absoluteBar
+                    absoluteBar: absoluteBar,
+                    qualityRetryOrdinal: qualityRetryOrdinal
                 )
             ))
             activeSupportingRoles = narrativeSupportingRolesAfterBoundary(

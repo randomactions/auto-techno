@@ -577,7 +577,10 @@ The target loop is bounded and persistent:
 6. A calibrated rejection may inform one later, serial director proposal after
    a coherent accepted-PCM repeat. The bounded retry ordinal preserves identity,
    structural intent, debt, and long-horizon ownership; no proposals coexist or
-   compete, and eight rejected variants stop in an explicit blocked state.
+   compete. Its score-side vocabulary alternates bounded kick attack/body
+   pressure around the continuous committed morphology trajectory, so this
+   calibrated source metric changes in both directions before eight rejected
+   variants stop in an explicit blocked state.
 7. The committed plan, reason-coded evidence, controller state, and policy version
    become continuation input for future preparation.
 8. Final immutable blocks receive a second safety check before scheduling.

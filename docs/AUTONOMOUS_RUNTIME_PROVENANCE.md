@@ -314,8 +314,11 @@ mistaken for a completed feedback system.
    A calibrated quality rejection may increment one bounded serial retry ordinal
    only at a later coherent repeat boundary. The same director and incoming
    state retain identity, structural kind, debt, and long-horizon ownership while
-   deriving a new phrase-local realization. Ordinal zero remains the original
-   plan; no variants coexist, rank one another, or bypass primary qualification.
+   deriving a new phrase-local realization. The bounded serial vocabulary also
+   alternates kick attack/body pressure around the same continuous score-owned
+   morphology trajectory; the renderer and evaluator must prove the resulting
+   PCM movement. Ordinal zero remains the original plan; no variants coexist,
+   rank one another, or bypass primary qualification.
    It also owns one scheduled-output feedback coordinator. After an exact
    two-probe mixer/player clock map succeeds, the main-mixer callback copies only
    bounded app-owned native-stereo packets into the preallocated C11 queue. A

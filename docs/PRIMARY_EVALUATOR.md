@@ -13,6 +13,11 @@ repeat boundary may ask the same director for one serial retry ordinal. The
 ordinal preserves incoming session identity, structural kind, debt, long-horizon
 ownership, and continuation while varying deterministic phrase-local realization.
 Ordinal zero is the original plan; at most eight serial variants may be tried.
+The serial vocabulary also alternates an increasing, bounded score-side kick
+attack/body pressure around the committed morphology trajectory. This makes a
+calibrated kick-source miss capable of changing the measured PCM in either
+direction while preserving the trajectory, its bar-to-bar continuity, and the
+one canonical kick voice.
 Each variant has its own plan, PCM, evidence, and terminal verdict, and the prior
 variant is discarded before the next is proposed. Unavailable evaluation,
 invalid evidence, hard-gate failure, and commit-provenance failure cannot enable
