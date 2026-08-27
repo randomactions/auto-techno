@@ -306,7 +306,10 @@ package final class TechnoEngine: ObservableObject {
                     sessionState.liveMasterHeadroom.fingerprint,
                 pendingLiveMasterProposalFingerprint: nil,
                 liveEarliestEligibleFutureSample: nil,
-                liveTargetStartSample: nil
+                liveTargetStartSample: nil,
+                qualityRetryOrdinal: qualityRetryOrdinal(
+                    for: sessionState.phraseIndex
+                )
             ),
             sourceState: sessionState,
             incomingLongHorizonState: longHorizonState,
@@ -603,6 +606,14 @@ package final class TechnoEngine: ObservableObject {
                 code: "long-horizon-commit"
             )
         }
+        let recoveredInitial = currentPhrase == nil &&
+            nextPhraseProgress.isInitialTarget
+            ? nextPhraseProgress.lastFailure.map {
+                (
+                    failure: $0,
+                    attemptCount: nextPhraseProgress.attemptCount
+                )
+            } : nil
         currentPhrase = phrase
         let resumesRecoveredPlayback = phrase.request.key.routeRecovery
         if resumesRecoveredPlayback {
@@ -611,6 +622,11 @@ package final class TechnoEngine: ObservableObject {
         sessionState = advancedState
         longHorizonState = phrase.outgoingLongHorizonState
         qualityRetryContinuation = AutonomousQualityRetryContinuation()
+        if let recoveredInitial {
+            Self.successorPreparationLogger.notice(
+                "Initial recovered phrase=\(phrase.prepared.plan.phraseIndex + 1, privacy: .public) attempt=\(recoveredInitial.attemptCount, privacy: .public) retry-variant=\(phrase.request.key.qualityRetryOrdinal, privacy: .public) previous-stage=\(recoveredInitial.failure.stage, privacy: .public) previous-code=\(recoveredInitial.failure.code, privacy: .public)"
+            )
+        }
         liveFeedbackRuntime.retainRecentSources(
             currentPhraseIndex: sessionState.phraseIndex
         )
@@ -767,7 +783,8 @@ package final class TechnoEngine: ObservableObject {
         if initialPhraseNumber(for: request) != nil {
             markInitialPreparationRejected(
                 for: request,
-                failure: failure
+                failure: failure,
+                qualityDecision: qualityDecision
             )
             return
         }
@@ -821,16 +838,39 @@ package final class TechnoEngine: ObservableObject {
 
     private func markInitialPreparationRejected(
         for request: PhrasePreparationRequest,
-        failure: NextPhraseFailure
+        failure: NextPhraseFailure,
+        qualityDecision: QualityDecision? = nil
     ) {
         guard let phraseNumber = initialPhraseNumber(for: request) else { return }
-        nextPhraseProgress = nextPhraseProgress.blockedInitial(
-            targetPhraseNumber: phraseNumber,
-            failure: failure
+        if let qualityDecision {
+            qualityRetryContinuation = qualityRetryContinuation
+                .recordingCalibratedRejection(
+                    decision: qualityDecision,
+                    targetPhraseIndex: request.key.phraseIndex
+                )
+        }
+        let retriesExhausted = qualityRetryContinuation.isExhausted(
+            for: request.key.phraseIndex
         )
+        let retryOrdinal = qualityRetryContinuation.ordinal(
+            for: request.key.phraseIndex
+        )
+        let canRetry = qualityDecision?.outcome == .rejected &&
+            !retriesExhausted &&
+            retryOrdinal > request.key.qualityRetryOrdinal
+        nextPhraseProgress = canRetry
+            ? nextPhraseProgress.rejectedInitial(
+                targetPhraseNumber: phraseNumber,
+                failure: failure
+            )
+            : nextPhraseProgress.blockedInitial(
+                targetPhraseNumber: phraseNumber,
+                failure: failure
+            )
         Self.successorPreparationLogger.error(
-            "Initial failed phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) stage=\(failure.stage, privacy: .public) code=\(failure.code, privacy: .public) details=\(failure.logDetails, privacy: .public)"
+            "Initial failed phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) retry-variant=\(request.key.qualityRetryOrdinal, privacy: .public) blocked=\(!canRetry, privacy: .public) exhausted=\(retriesExhausted, privacy: .public) stage=\(failure.stage, privacy: .public) code=\(failure.code, privacy: .public) details=\(failure.logDetails, privacy: .public)"
         )
+        if canRetry { prepare() }
     }
 
     private func trimPreparedCache() {

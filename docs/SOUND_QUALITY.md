@@ -570,6 +570,8 @@ The target loop is bounded and persistent:
 1. The canonical director proposes one complete plan from the current musical
    and quality state.
 2. Detached preparation renders immutable audio and exact role evidence.
+   Calibrated rejection of the first phrase uses the same bounded serial
+   variants as successor preparation; unavailable or exhausted evidence blocks.
 3. Hard gates reject unsafe or invalid output.
 4. The quality policy evaluates the surviving multidimensional evidence.
    Runtime selects one calibrated whole-phrase checkpoint. Every phrase from

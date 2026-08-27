@@ -323,6 +323,9 @@ mistaken for a completed feedback system.
    morphology trajectory; the renderer and evaluator must prove the resulting
    PCM movement. Ordinal zero remains the original plan; no variants coexist,
    rank one another, or bypass primary qualification.
+   The same bounded serial retry continuation applies while preparing the first
+   phrase, so a calibrated establishment rejection can adapt without requiring
+   a user to repeat the identical rejected request.
    Runtime terminal qualification uses one Core-owned checkpoint priority for
    the complete phrase: establishment, long continuation from phrase index 16,
    otherwise the structural kind. An ordinary lock also uses the continuation

@@ -67,15 +67,32 @@ struct NextPhraseProgressTests {
             stage: "commit",
             code: "quality-rejected"
         )
-        let progress = NextPhraseProgress.waiting
+        var progress = NextPhraseProgress.waiting
             .preparingInitial(targetPhraseNumber: 1)
-            .blockedInitial(targetPhraseNumber: 1, failure: failure)
+
+        progress = progress.rejectedInitial(
+            targetPhraseNumber: 1,
+            failure: failure
+        )
+        #expect(progress.stage == .retrying)
+        #expect(progress.isInitialTarget)
+        #expect(progress.headline == "FIRST P1 · RETRYING")
+        #expect(progress.detail.contains("COMMIT: QUALITY REJECTED"))
+        #expect(progress.attemptCount == 1)
+
+        progress = progress.preparingInitial(targetPhraseNumber: 1)
+        #expect(progress.attemptCount == 2)
+
+        progress = progress.blockedInitial(
+            targetPhraseNumber: 1,
+            failure: failure
+        )
 
         #expect(progress.stage == .blocked)
         #expect(progress.isInitialTarget)
         #expect(progress.headline == "FIRST P1 · BLOCKED")
         #expect(progress.detail.contains("COMMIT: QUALITY REJECTED"))
-        #expect(progress.attemptCount == 1)
+        #expect(progress.attemptCount == 2)
     }
 
     @Test("A newly targeted phrase resets old attempts and repeats")
@@ -131,5 +148,6 @@ struct NextPhraseProgressTests {
         #expect(engine.contains("Successor failed phrase="))
         #expect(engine.contains("Successor recovered phrase="))
         #expect(engine.contains("Initial failed phrase="))
+        #expect(engine.contains("Initial recovered phrase="))
     }
 }

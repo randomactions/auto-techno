@@ -175,6 +175,21 @@ package struct NextPhraseProgress: Equatable, Sendable {
         )
     }
 
+    package func rejectedInitial(
+        targetPhraseNumber: Int,
+        failure: NextPhraseFailure
+    ) -> Self {
+        let counts = counts(for: targetPhraseNumber, isInitial: true)
+        return Self(
+            stage: .retrying,
+            targetPhraseNumber: targetPhraseNumber,
+            isInitialTarget: true,
+            attemptCount: counts.attempts,
+            repeatCount: counts.repeats,
+            lastFailure: failure
+        )
+    }
+
     package var detail: String {
         var parts: [String] = []
         switch stage {
