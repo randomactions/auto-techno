@@ -572,6 +572,10 @@ The target loop is bounded and persistent:
 2. Detached preparation renders immutable audio and exact role evidence.
 3. Hard gates reject unsafe or invalid output.
 4. The quality policy evaluates the surviving multidimensional evidence.
+   Runtime selects the one most-specific calibrated whole-phrase checkpoint;
+   compound offline labels are not intersected into an uncalibrated population.
+   Optional modal metrics reuse qualified active bounds when a checkpoint's
+   development evidence contains only the exact inactive sentinel.
 5. The evaluator may request one deterministic home-timbre correction of that
    same plan; otherwise it reaches a terminal verdict after the first pass.
 6. A calibrated rejection may inform one later, serial director proposal after

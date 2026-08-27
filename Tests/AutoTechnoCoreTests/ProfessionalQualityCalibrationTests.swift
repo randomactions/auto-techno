@@ -350,6 +350,22 @@ struct ProfessionalQualityCalibrationTests {
             .modalPercussionMaskingMaximumOverlap,
             .modalPercussionMaximumPoleRadius,
         ] {
+            #expect(metric.conditionalNeutralSentinel == 0)
+        }
+        #expect(ProfessionalQualityMetric
+            .modalPercussionAttackToBodyDBMean
+            .conditionalNeutralCalibrationEnvelope == -1...1)
+        #expect(ProfessionalQualityMetric
+            .modalPercussionTailToBodyDBMean
+            .conditionalNeutralCalibrationEnvelope == -1...1)
+        #expect(ProfessionalQualityMetric
+            .modalPercussionSpectralCentroidMeanHz
+            .conditionalNeutralCalibrationEnvelope == 0...60)
+        for metric in [
+            ProfessionalQualityMetric.modalPercussionPitchErrorCentsMaximum,
+            .modalPercussionMaskingMaximumOverlap,
+            .modalPercussionMaximumPoleRadius,
+        ] {
             #expect(metric.acceptsSaferValuesBelowCalibration)
             #expect(metric.semanticMinimum == 0)
         }
@@ -433,6 +449,39 @@ struct ProfessionalQualityCalibrationTests {
             .participatesInRateConsistency)
         #expect(ProfessionalQualityMetric.rmsTrajectoryDeltaMeanDB
             .participatesInRateConsistency)
+    }
+
+    @Test("Neutral-only modal checkpoints reuse qualified active bounds")
+    func conditionalModalBoundsFromBundledProfile() throws {
+        let profile = try ProfessionalQualityPrimaryArtifacts.load().profile
+        let examples: [(ProfessionalQualityMetric, Double)] = [
+            (.modalPercussionAttackToBodyDBMean, 6.84811727104065),
+            (.modalPercussionTailToBodyDBMean, -18.31941809630516),
+            (.modalPercussionSpectralCentroidMeanHz, 155.10567980755042),
+        ]
+        for (metric, value) in examples {
+            let local = try #require(profile[.chapterChange]?[metric])
+            #expect(!local.contains(value))
+            let effective = try #require(profile.effectiveBounds(
+                for: metric,
+                at: .chapterChange,
+                observedValue: value
+            ))
+            #expect(effective.contains(value))
+
+            let neutral = try #require(profile.effectiveBounds(
+                for: metric,
+                at: .chapterChange,
+                observedValue: 0
+            ))
+            #expect(neutral == local)
+        }
+        let extreme = try #require(profile.effectiveBounds(
+            for: .modalPercussionAttackToBodyDBMean,
+            at: .chapterChange,
+            observedValue: 100
+        ))
+        #expect(!extreme.contains(100))
     }
 
     @Test("One failed dimension cannot be compensated by centered peers")

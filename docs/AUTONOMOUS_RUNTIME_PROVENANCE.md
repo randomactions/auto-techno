@@ -319,6 +319,13 @@ mistaken for a completed feedback system.
    morphology trajectory; the renderer and evaluator must prove the resulting
    PCM movement. Ordinal zero remains the original plan; no variants coexist,
    rank one another, or bypass primary qualification.
+   Runtime terminal qualification uses one Core-owned checkpoint priority for
+   the complete phrase: establishment, structural kind, ordinary chapter
+   change, then long continuation. Multi-label evidence remains available to
+   offline calibration, but separately calibrated whole-phrase populations are
+   never intersected at runtime. Optional active modal evidence can use only
+   bounds already calibrated from active modal checkpoints when the selected
+   checkpoint retained the exact inactive sentinel envelope.
    It also owns one scheduled-output feedback coordinator. After an exact
    two-probe mixer/player clock map succeeds, the main-mixer callback copies only
    bounded app-owned native-stereo packets into the preallocated C11 queue. A

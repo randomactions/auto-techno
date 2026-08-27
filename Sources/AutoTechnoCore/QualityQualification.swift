@@ -59,6 +59,30 @@ package enum CanonicalJourneyCheckpoint: String, CaseIterable, Codable, Equatabl
         if phraseIndex >= 16 { represented.insert(.longContinuation) }
         return allCases.filter(represented.contains)
     }
+
+    /// Runtime terminal qualification uses one whole-phrase population. A
+    /// structural phrase can still contribute several offline observations,
+    /// but intersecting those separately calibrated populations at runtime can
+    /// create an empty envelope. Prefer the most specific semantic owner;
+    /// ordinary chapter and long-continuation phrases retain their own homes.
+    package static func primaryQualification(
+        phraseIndex: Int,
+        phraseKind: AutonomousPhraseKind,
+        chapterChanged: Bool
+    ) -> CanonicalJourneyCheckpoint? {
+        guard phraseIndex >= 0 else { return nil }
+        if phraseIndex == 0 { return .establishment }
+        switch phraseKind {
+        case .contrast: return .contrast
+        case .majorBreak: return .majorBreak
+        case .energyRelease: return .release
+        case .identityReturn: return .identityReturn
+        case .lock: break
+        }
+        if chapterChanged { return .chapterChange }
+        if phraseIndex >= 16 { return .longContinuation }
+        return nil
+    }
 }
 
 package enum QualityDecisionOutcome: String, Codable, Equatable, Sendable {

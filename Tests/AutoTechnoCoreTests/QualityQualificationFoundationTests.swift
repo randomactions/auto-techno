@@ -32,6 +32,27 @@ struct QualityQualificationFoundationTests {
             phraseKind: .contrast,
             chapterChanged: true
         ).isEmpty)
+
+        #expect(CanonicalJourneyCheckpoint.primaryQualification(
+            phraseIndex: 16,
+            phraseKind: .energyRelease,
+            chapterChanged: true
+        ) == .release)
+        #expect(CanonicalJourneyCheckpoint.primaryQualification(
+            phraseIndex: 7,
+            phraseKind: .lock,
+            chapterChanged: true
+        ) == .chapterChange)
+        #expect(CanonicalJourneyCheckpoint.primaryQualification(
+            phraseIndex: 16,
+            phraseKind: .lock,
+            chapterChanged: false
+        ) == .longContinuation)
+        #expect(CanonicalJourneyCheckpoint.primaryQualification(
+            phraseIndex: 5,
+            phraseKind: .lock,
+            chapterChanged: false
+        ) == nil)
     }
 
     @Test("Core decisions and continuation round-trip deterministically")

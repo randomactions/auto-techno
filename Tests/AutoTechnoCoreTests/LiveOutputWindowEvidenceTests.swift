@@ -480,12 +480,16 @@ struct LiveOutputWindowEvidenceTests {
         ) == nil)
     }
 
-    @Test("Each metric keeps its explicit v3 target checkpoint and bounds")
-    func strictestCheckpointUpperBoundWins() throws {
+    @Test("A compound phrase uses one explicit primary target checkpoint")
+    func compoundPhraseUsesPrimaryCheckpoint() throws {
         let signal = testSignal(sampleRate: 48_000)
-        let plan = realDirectorPlan {
-            LiveOutputPlanSourceIdentity(plan: $0)
-                .applicableCheckpoints.count >= 2
+        let plan = realDirectorPlan { plan in
+            let identity = LiveOutputPlanSourceIdentity(plan: plan)
+            return CanonicalJourneyCheckpoint.applicable(
+                phraseIndex: plan.phraseIndex,
+                phraseKind: plan.kind,
+                chapterChanged: identity.chapterChanged
+            ).count >= 2
         }
         let evidence = try #require(analyze(
             left: signal,
@@ -493,32 +497,36 @@ struct LiveOutputWindowEvidenceTests {
             sampleRate: 48_000,
             plan: plan
         ))
-        let loudnessCheckpoint = try #require(
-            evidence.applicableCheckpoints.last
-        )
-        let truePeakCheckpoint = try #require(
+        let checkpoint = try #require(
             evidence.applicableCheckpoints.first
         )
+        #expect(evidence.applicableCheckpoints == [checkpoint])
+        #expect(checkpoint == CanonicalJourneyCheckpoint.primaryQualification(
+            phraseIndex: plan.phraseIndex,
+            phraseKind: plan.kind,
+            chapterChanged: LiveOutputPlanSourceIdentity(plan: plan)
+                .chapterChanged
+        ))
         let loudnessLower = evidence.maximumShortTermLoudnessLUFS - 3
         let loudnessUpper = evidence.maximumShortTermLoudnessLUFS + 0.75
         let truePeakLower = evidence.truePeakDBTP - 4
         let truePeakUpper = evidence.truePeakDBTP + 0.5
         let target = try #require(LiveFeedbackTestSupport.target(
             evidence: evidence,
-            selectedLoudnessCheckpoint: loudnessCheckpoint,
-            selectedTruePeakCheckpoint: truePeakCheckpoint,
+            selectedLoudnessCheckpoint: checkpoint,
+            selectedTruePeakCheckpoint: checkpoint,
             loudnessLowerLUFS: loudnessLower,
             loudnessUpperLUFS: loudnessUpper,
             truePeakLowerDBTP: truePeakLower,
             truePeakUpperDBTP: truePeakUpper
         ))
 
-        #expect(target.selectedLoudnessCheckpoint == loudnessCheckpoint)
+        #expect(target.selectedLoudnessCheckpoint == checkpoint)
         #expect(target.loudnessLowerLUFS == loudnessLower)
         #expect(target.loudnessUpperLUFS == loudnessUpper)
         #expect(target.loudnessMidpointLUFS ==
                 (loudnessLower + loudnessUpper) / 2)
-        #expect(target.selectedTruePeakCheckpoint == truePeakCheckpoint)
+        #expect(target.selectedTruePeakCheckpoint == checkpoint)
         #expect(target.truePeakLowerDBTP == truePeakLower)
         #expect(target.truePeakUpperDBTP == truePeakUpper)
         #expect(target.truePeakMidpointDBTP ==

@@ -45,9 +45,13 @@ v13. The profile derives from 28 complete
 relationship gate. The pinned fingerprints are profile `710ec815fed989fb`,
 adversarial suite `45b2744234e137d8`, and holdout `b95f68a1a4771560`.
 
-Every applicable journey checkpoint is judged independently across the
-versioned professional-quality vector. Dimensions never compensate for one
-another. An ordinary lock phrase without a named checkpoint uses the calibrated
+Offline calibration may retain several checkpoint observations from one
+candidate. Runtime terminal qualification selects one most-specific
+whole-phrase population: establishment first, then the structural phrase kind,
+then an ordinary chapter change, then long continuation. This avoids
+intersecting separately calibrated phrase populations into an empty envelope.
+Dimensions inside that selected population never compensate for one another.
+An ordinary lock phrase without a named checkpoint uses the calibrated
 `longContinuation` envelope so every primary phrase receives a judgment.
 The maximum overlapping RMS-trajectory delta is retained for strict local and
 within-rate trajectory qualification. Its window selection can move on a

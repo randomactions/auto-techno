@@ -210,14 +210,15 @@ package struct ProfessionalQualityLiveCandidateTransitionEvidence: Equatable,
               let candidateKind = AutonomousPhraseKind(
                 rawValue: candidateStorage.value.symbolic.phraseKind
               ) else { return false }
-        let representedTargetCheckpoints = CanonicalJourneyCheckpoint.applicable(
-            phraseIndex: candidateStorage.value.symbolic.phraseIndex,
-            phraseKind: candidateKind,
-            chapterChanged: candidateStorage.value.symbolic.chapterChanged
-        )
-        let expectedTargetCheckpoints = representedTargetCheckpoints.isEmpty
-            ? [.longContinuation]
-            : representedTargetCheckpoints
+        let primaryTargetCheckpoint = CanonicalJourneyCheckpoint
+            .primaryQualification(
+                phraseIndex: candidateStorage.value.symbolic.phraseIndex,
+                phraseKind: candidateKind,
+                chapterChanged: candidateStorage.value.symbolic.chapterChanged
+            )
+        let expectedTargetCheckpoints = [
+            primaryTargetCheckpoint ?? .longContinuation,
+        ]
         let expectedSourceControllerFingerprint = AutonomousCandidateFingerprint
             .combinedController(
                 kickCorrectionDB: candidateStorage.value.routeContinuation

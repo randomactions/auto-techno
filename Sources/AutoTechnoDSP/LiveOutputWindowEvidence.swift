@@ -143,14 +143,12 @@ package struct LiveOutputPlanSourceIdentity: Equatable, Sendable {
             } == true
         chapterChanged = changesInsidePhrase || changesAtBoundary
 
-        let represented = CanonicalJourneyCheckpoint.applicable(
+        let primary = CanonicalJourneyCheckpoint.primaryQualification(
             phraseIndex: plan.phraseIndex,
             phraseKind: plan.kind,
             chapterChanged: chapterChanged
         )
-        applicableCheckpoints = represented.isEmpty
-            ? [.longContinuation]
-            : represented
+        applicableCheckpoints = [primary ?? .longContinuation]
     }
 }
 
@@ -269,12 +267,12 @@ package struct LiveOutputWindowEvidence: Equatable, Sendable {
     }
 
     private var expectedApplicableCheckpoints: [CanonicalJourneyCheckpoint] {
-        let represented = CanonicalJourneyCheckpoint.applicable(
+        let primary = CanonicalJourneyCheckpoint.primaryQualification(
             phraseIndex: phraseIndex,
             phraseKind: phraseKind,
             chapterChanged: chapterChanged
         )
-        return represented.isEmpty ? [.longContinuation] : represented
+        return [primary ?? .longContinuation]
     }
 
     fileprivate init(

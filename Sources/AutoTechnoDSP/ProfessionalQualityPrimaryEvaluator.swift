@@ -9,9 +9,10 @@ package enum ProfessionalQualityCandidateAssessmentAvailability: String,
 }
 
 /// Replayable per-candidate result under one exact calibrated profile. A
-/// candidate can represent multiple structural checkpoints, and every
-/// applicable checkpoint must pass independently. There is deliberately no
-/// aggregate score or distance-to-center optimization.
+/// A candidate can contribute multiple offline structural observations, while
+/// runtime terminal judgment selects the single most-specific whole-phrase
+/// population. There is deliberately no aggregate score or distance-to-center
+/// optimization.
 package struct ProfessionalQualityCandidateAssessment: Codable, Equatable,
         Sendable {
     package let availability: ProfessionalQualityCandidateAssessmentAvailability
@@ -101,7 +102,7 @@ package struct ProfessionalQualityPrimaryEvaluator:
         ) else {
             return .unavailable(.invalidEvidence)
         }
-        let applicableCheckpoints = CanonicalJourneyCheckpoint.applicable(
+        let primaryCheckpoint = CanonicalJourneyCheckpoint.primaryQualification(
             phraseIndex: candidate.symbolic.phraseIndex,
             phraseKind: phraseKind,
             chapterChanged: candidate.symbolic.chapterChanged
@@ -109,8 +110,7 @@ package struct ProfessionalQualityPrimaryEvaluator:
         // Ordinary lock phrases use the continuation envelope. It is derived
         // from the same engine's later steady-state journey observations and
         // gives every primary phrase a calibrated, non-aggregate judgment.
-        let checkpoints = applicableCheckpoints.isEmpty
-            ? [.longContinuation] : applicableCheckpoints
+        let checkpoints = [primaryCheckpoint ?? .longContinuation]
         let sampleRate = candidate.routeContinuation.sampleRate
         guard !checkpoints.isEmpty else {
             return .unavailable(
@@ -358,10 +358,13 @@ package struct ProfessionalQualityPrimaryEvaluator:
                 engineVersion: QualityQualificationContract.engineVersion,
                 checkpoint: verdict.checkpoint
             )
-            let checkpointProfile = profile[verdict.checkpoint]
             for metric in verdict.failedMetrics {
                 guard let value = observation?[metric],
-                      let bounds = checkpointProfile?[metric] else {
+                      let bounds = profile.effectiveBounds(
+                        for: metric,
+                        at: verdict.checkpoint,
+                        observedValue: value
+                      ) else {
                     details.append(
                         "\(checkpointName):\(metric.rawValue)=unavailable"
                     )

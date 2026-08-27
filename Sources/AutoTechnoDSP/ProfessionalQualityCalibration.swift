@@ -173,6 +173,23 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         }
     }
 
+    /// Exact guard-band envelopes produced when every development observation
+    /// for this optional capability is its neutral sentinel. Older qualified
+    /// profiles can therefore reuse their active bounds from another
+    /// checkpoint without treating the inactive envelope as active evidence.
+    package var conditionalNeutralCalibrationEnvelope:
+            ClosedRange<Double>? {
+        switch self {
+        case .modalPercussionAttackToBodyDBMean,
+                .modalPercussionTailToBodyDBMean:
+            return -1...1
+        case .modalPercussionSpectralCentroidMeanHz:
+            return 0...60
+        default:
+            return nil
+        }
+    }
+
     package func isConditionalNeutral(_ value: Double) -> Bool {
         guard let sentinel = conditionalNeutralSentinel else { return false }
         return abs(value - sentinel) <= 1e-12
@@ -1818,6 +1835,43 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         checkpoints.first { $0.checkpoint == checkpoint }
     }
 
+    /// Resolves the exact bounds used for one observed value. For an already-
+    /// qualified profile whose local checkpoint retained only the neutral
+    /// envelope, reuse the union of its other calibrated active checkpoint
+    /// bounds. No semantic-domain or handwritten threshold is introduced.
+    package func effectiveBounds(
+        for metric: ProfessionalQualityMetric,
+        at checkpoint: CanonicalJourneyCheckpoint,
+        observedValue: Double
+    ) -> ProfessionalQualityMetricBounds? {
+        guard let local = self[checkpoint]?[metric],
+              let neutralEnvelope =
+                metric.conditionalNeutralCalibrationEnvelope,
+              abs(observedValue) > 1e-12,
+              local.lower == neutralEnvelope.lowerBound,
+              local.upper == neutralEnvelope.upperBound else {
+            return self[checkpoint]?[metric]
+        }
+        let active = checkpoints.compactMap { profile ->
+                ProfessionalQualityMetricBounds? in
+            guard let bounds = profile[metric],
+                  bounds.lower != neutralEnvelope.lowerBound ||
+                    bounds.upper != neutralEnvelope.upperBound else {
+                return nil
+            }
+            return bounds
+        }
+        guard let lower = active.map(\.lower).min(),
+              let upper = active.map(\.upper).max() else {
+            return local
+        }
+        return try? ProfessionalQualityMetricBounds(
+            metric: metric,
+            lower: lower,
+            upper: upper
+        )
+    }
+
     private static func guardBand(
         metric: ProfessionalQualityMetric,
         values: [Double],
@@ -2193,7 +2247,7 @@ package enum ProfessionalQualityProfileEvaluator {
         guard profile.isComplete,
               observation.evidenceVersion == profile.evidenceVersion,
               profile.sampleRates.contains(observation.sampleRate),
-              let checkpoint = profile[observation.checkpoint] else {
+              profile[observation.checkpoint] != nil else {
             return ProfessionalQualityVerdict(
                 accepted: false,
                 reasons: [.profileMismatch],
@@ -2235,7 +2289,11 @@ package enum ProfessionalQualityProfileEvaluator {
         for metric in ProfessionalQualityMetric.allCases
             where metric.participatesInQualification {
             guard let value = observation[metric],
-                  let bounds = checkpoint[metric],
+                  let bounds = profile.effectiveBounds(
+                    for: metric,
+                    at: observation.checkpoint,
+                    observedValue: value
+                  ),
                   bounds.contains(value) else {
                 reasons.insert(.metricOutOfRange)
                 failed.insert(metric)
