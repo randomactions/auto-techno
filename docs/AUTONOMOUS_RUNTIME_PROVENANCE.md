@@ -324,8 +324,8 @@ mistaken for a completed feedback system.
    PCM movement. Ordinal zero remains the original plan; no variants coexist,
    rank one another, or bypass primary qualification.
    Runtime terminal qualification uses one Core-owned checkpoint priority for
-   the complete phrase: establishment, structural kind, ordinary chapter
-   change, then long continuation. Multi-label evidence remains available to
+   the complete phrase: establishment, structural kind, long continuation,
+   then an ordinary earlier chapter change. Multi-label evidence remains available to
    offline calibration, but separately calibrated whole-phrase populations are
    never intersected at runtime. Optional active modal evidence can use only
    bounds already calibrated from active modal checkpoints when the selected

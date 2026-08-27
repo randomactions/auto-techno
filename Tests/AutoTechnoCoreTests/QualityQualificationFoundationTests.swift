@@ -49,6 +49,11 @@ struct QualityQualificationFoundationTests {
             chapterChanged: false
         ) == .longContinuation)
         #expect(CanonicalJourneyCheckpoint.primaryQualification(
+            phraseIndex: 16,
+            phraseKind: .lock,
+            chapterChanged: true
+        ) == .longContinuation)
+        #expect(CanonicalJourneyCheckpoint.primaryQualification(
             phraseIndex: 5,
             phraseKind: .lock,
             chapterChanged: false

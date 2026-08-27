@@ -79,8 +79,8 @@ package enum CanonicalJourneyCheckpoint: String, CaseIterable, Codable, Equatabl
         case .identityReturn: return .identityReturn
         case .lock: break
         }
-        if chapterChanged { return .chapterChange }
         if phraseIndex >= 16 { return .longContinuation }
+        if chapterChanged { return .chapterChange }
         return nil
     }
 }
