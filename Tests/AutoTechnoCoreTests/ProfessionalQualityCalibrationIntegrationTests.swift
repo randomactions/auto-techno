@@ -282,16 +282,30 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         ], let seed = UInt64(rawSeed) else { return }
 
         let trajectory = try renderTrajectory(seed: seed)
+        progress(
+            "diagnostic-seed=\(seed) source=" +
+            trajectory.sourceBankFingerprint
+        )
         for observation in trajectory.observations {
             guard let peak = observation[.rmsTrajectoryDeltaPeakDB],
-                  let mean = observation[.rmsTrajectoryDeltaMeanDB] else {
+                  let mean = observation[.rmsTrajectoryDeltaMeanDB],
+                  let activeKickFoundationBarRatio = observation[
+                    .activeKickFoundationBarRatio
+                  ],
+                  let kickOverFoundationActiveDBMean = observation[
+                    .kickOverFoundationActiveDBMean
+                  ] else {
                 continue
             }
             progress(
                 "diagnostic-seed=\(seed) checkpoint=" +
                 "\(observation.checkpoint.rawValue) rate=" +
                 "\(Int(observation.sampleRate)) rms-trajectory-mean-db=" +
-                "\(mean) rms-trajectory-peak-db=\(peak)"
+                "\(mean) rms-trajectory-peak-db=\(peak) " +
+                "active-kick-foundation-bar-ratio=" +
+                "\(activeKickFoundationBarRatio) " +
+                "kick-over-foundation-active-db-mean=" +
+                "\(kickOverFoundationActiveDBMean)"
             )
         }
     }

@@ -1305,9 +1305,9 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
         #expect(vector.schemaVersion == 33)
-        #expect(QualityQualificationContract.schemaVersion == 36)
+        #expect(QualityQualificationContract.schemaVersion == 37)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v35")
+                "autotechno-canonical-engine.v36")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3774,11 +3774,11 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
-                "12769b267dd4f075")
+                "76ea36abd37c336e")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "2d0ac3143260c58b")
+            "80d3fb2171881aef")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3786,7 +3786,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.renderDSPContinuation(
             renderState: positiveZeroRenderState,
             generatedDSPState: orderedGraphState
-        ) == "8b42aaf5ea81e130")
+        ) == "e59dba54efa1257d")
     }
 
     private func realPreparedCandidate() -> PreparedAutonomousPhrase? {
@@ -4071,7 +4071,12 @@ struct AutonomousCandidateEvaluationTests {
         while roles.count < stemRoleCount { roles.append(roles[0]) }
         roles = Array(roles.prefix(stemRoleCount))
         let gains = MixRole.allCases.map {
-            AutonomousRoleGainEvidence(role: $0.rawValue, gainDB: $0 == .kick ? -1 : 0)
+            AutonomousRoleGainEvidence(
+                role: $0.rawValue,
+                gainDB: $0 == .kick
+                    ? AutomaticMixBalancer.homeKickCorrectionDB
+                    : 0
+            )
         }
         let graph = AutonomousGraphEvidence(
             graphFingerprint: graphFingerprint,
@@ -4099,14 +4104,16 @@ struct AutonomousCandidateEvaluationTests {
                 AutonomousCandidateFingerprint.qualityState(
                     QualityContinuationState()
                 ),
-            incomingKickCorrectionDB: -1,
+            incomingKickCorrectionDB:
+                AutomaticMixBalancer.homeKickCorrectionDB,
             incomingTopologyRevision: 0,
             previousGraphFingerprint: "none",
             routeRecovery: false,
             outgoingRenderDSPFingerprint: "outgoing-render-dsp",
             controllerStateFingerprint:
                 AutonomousCandidateFingerprint.combinedController(
-                    kickCorrectionDB: -1,
+                    kickCorrectionDB:
+                        AutomaticMixBalancer.homeKickCorrectionDB,
                     liveMasterHeadroom: LiveMasterHeadroomContinuationState(),
                     proposalFingerprint: nil
                 )

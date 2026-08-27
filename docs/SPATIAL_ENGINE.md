@@ -27,8 +27,8 @@ evidence about the consequence.
    route.
 5. `SpatialFDNRenderEvidence` streams hashes and reduced measurements from the
    exact input and stereo wet samples. Candidate-vector schema 33 binds one
-   record to every rendered bar under quality-contract schema 36, candidate-
-   transaction schema 4, and canonical engine v35.
+   record to every rendered bar under quality-contract schema 37, candidate-
+   transaction schema 4, and canonical engine v36.
 
 No musical choice, analysis, file operation, allocation, or state mutation from
 this path runs on the real-time audio callback. The app schedules the already

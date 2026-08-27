@@ -85,6 +85,23 @@ package struct AutomaticMixPlan: Equatable, Sendable {
     package func gain(for role: MixRole) -> Double {
         pow(10, (gainsDB[role] ?? 0) / 20)
     }
+
+    /// Positive values mean the audible kick remains above the authored
+    /// companion relationship after the current bounded correction. This is a
+    /// preparation-time benchmark over the same measurements that drive the
+    /// fader; it does not add analysis or control work to the audio callback.
+    package var residualKickExcessDB: Double? {
+        guard let measuredKickOverFoundationDB,
+              let targetKickOverFoundationDB else { return nil }
+        return measuredKickOverFoundationDB +
+            (gainsDB[.kick] ?? 0) - targetKickOverFoundationDB
+    }
+
+    package var kickRelationshipIsResolved: Bool? {
+        residualKickExcessDB.map {
+            abs($0) <= AutomaticMixBalancer.deadbandDB
+        }
+    }
 }
 
 /// Bounded continuation for the automatic fader. The current candidate remains
@@ -93,14 +110,27 @@ package struct AutomaticMixPlan: Equatable, Sendable {
 package struct AutomaticMixState: Equatable, Sendable {
     package var kickCorrectionDB: Double
 
-    package init(kickCorrectionDB: Double = -1.0) {
-        self.kickCorrectionDB = min(0, max(-3, kickCorrectionDB))
+    package init(
+        kickCorrectionDB: Double = AutomaticMixBalancer.homeKickCorrectionDB
+    ) {
+        self.kickCorrectionDB = min(
+            0,
+            max(AutomaticMixBalancer.minimumKickCorrectionDB, kickCorrectionDB)
+        )
     }
 }
 
 package enum AutomaticMixBalancer {
-    package static let minimumKickCorrectionDB = -3.0
-    package static let homeKickCorrectionDB = -1.0
+    /// The previous -3 dB limit left 3,401 of 3,408 saturated measurements
+    /// unresolved in the exact engine-v35 32-journey calibration/holdout bank.
+    /// An -8 dB lower bound covers nearly 75% of the measured correction demand
+    /// while remaining attenuation-only and companion-targeted. It also keeps
+    /// the controller from amplifying sample-rate measurement drift into a
+    /// different transient-presence decision near very quiet role boundaries.
+    /// The -2 dB home makes the listening correction immediate without forcing
+    /// the controller to begin near the corpus median before measuring a bar.
+    package static let minimumKickCorrectionDB = -8.0
+    package static let homeKickCorrectionDB = -2.0
     package static let maximumStepDB = 0.35
     package static let deadbandDB = 0.35
 

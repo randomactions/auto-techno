@@ -850,7 +850,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v35")
+                "autotechno-canonical-engine.v36")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -2807,7 +2807,7 @@ struct AutonomousPreparationPreflightTests {
             )
         }
         let excessive: [MixRole: StemObservation] = [
-            .kick: observation(activeRMS: 0.30),
+            .kick: observation(activeRMS: 0.50),
             .foundation: observation(activeRMS: 0.01),
         ]
         var state = AutomaticMixState()
@@ -2817,11 +2817,13 @@ struct AutonomousPreparationPreflightTests {
             section: .groove,
             state: &state
         )
-        #expect(first.gainsDB[.kick] == -1.35)
+        #expect(first.gainsDB[.kick] == -2.35)
         #expect(first.measuredKickOverFoundationDB != nil)
         #expect(first.targetKickOverFoundationDB == 27.5)
         #expect(first.sourceKickRMS == excessive[.kick]?.rms)
         #expect(first.sourceKickActiveRMS == excessive[.kick]?.activeRMS)
+        #expect(first.residualKickExcessDB != nil)
+        #expect(first.kickRelationshipIsResolved == false)
 
         let beforeBreak = state
         let breakPlan = AutomaticMixBalancer.resolve(
@@ -2850,6 +2852,13 @@ struct AutonomousPreparationPreflightTests {
         let targetDifference = first.targetKickOverFoundationDB ?? 0
         #expect(abs(measuredDifference + state.kickCorrectionDB - targetDifference) <=
                 AutomaticMixBalancer.deadbandDB)
+        let settled = AutomaticMixBalancer.resolve(
+            observations: excessive,
+            companion: .monoRumble,
+            section: .groove,
+            state: &state
+        )
+        #expect(settled.kickRelationshipIsResolved == true)
         let settledCorrection = state.kickCorrectionDB
         for _ in 0..<1_024 {
             _ = AutomaticMixBalancer.resolve(
@@ -2873,6 +2882,26 @@ struct AutonomousPreparationPreflightTests {
             state: &state
         )
         #expect(state == held)
+
+        let calibrationOutlier: [MixRole: StemObservation] = [
+            .kick: observation(activeRMS: 0.30),
+            .foundation: observation(activeRMS: 0.001),
+        ]
+        var limitedState = AutomaticMixState()
+        var limitedPlan = AutomaticMixPlan.unity
+        for _ in 0..<1_024 {
+            limitedPlan = AutomaticMixBalancer.resolve(
+                observations: calibrationOutlier,
+                companion: .bass,
+                section: .groove,
+                state: &limitedState
+            )
+        }
+        #expect(limitedState.kickCorrectionDB ==
+                AutomaticMixBalancer.minimumKickCorrectionDB)
+        #expect((limitedPlan.residualKickExcessDB ?? 0) >
+                AutomaticMixBalancer.deadbandDB)
+        #expect(limitedPlan.kickRelationshipIsResolved == false)
     }
 
     @Test("Waveform display retains absolute level relationships")

@@ -89,8 +89,8 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 36, candidate-vector schema 33, candidate-transaction
-schema 4, and canonical engine v35 provide the current transaction-level
+Quality-contract schema 37, candidate-vector schema 33, candidate-transaction
+schema 4, and canonical engine v36 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
@@ -336,7 +336,7 @@ correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
 The Professional Evidence v19 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v35 primary evaluator v17 and pinned profile v17/adversarial/holdout
+engine-v36 primary evaluator v18 and pinned profile v18/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 28.
 Holdouts must be source-disjoint, contain at
@@ -401,7 +401,7 @@ or PCM.
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
 composition, spatial-FDN, nonlinear-core, and foundation-pocket evidence carried
-by quality-contract schema 36 change detached preparation only. The implemented master-headroom path
+by quality-contract schema 37 change detached preparation only. The implemented master-headroom path
 is the sole scheduled-output feedback responsibility and does not move those
 feature analyzers or decisions onto the callback. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).

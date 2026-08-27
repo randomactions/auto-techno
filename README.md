@@ -124,7 +124,7 @@ sentence evidence without retaining PCM. Detached accepted phrases now also
 reduce their exact PCM into a DSP-owned, fixed-capacity signal trajectory across
 loudness, crest, spectrum, transients, masking, wet/dry relation, stereo, and
 movement while keeping the semantic target separate. These reports are still
-kept separate and judged by the exact engine-v35/primary-v17 long-horizon
+kept separate and judged by the exact engine-v36/primary-v18 long-horizon-v5
 artifacts. Detached preparation carries one fixed-capacity active-rate
 observation with the immutable successor and can emit one reason-coded
 preserve/recover decision for an eligible unscheduled future phrase. The App
@@ -188,6 +188,7 @@ and GitHub Actions workflows and the remaining Windows release gates.
 - [`docs/INSTRUMENT_PALETTE.md`](docs/INSTRUMENT_PALETTE.md) — internal synth, patch, role, automation, and effect matrix
 - [`docs/PERFORMANCE_GRAMMAR.md`](docs/PERFORMANCE_GRAMMAR.md) — phrase character, foundation behavior, compatibility, and evidence matrix
 - [`docs/SYNTH_TRACK_RENDERING_MATRIX.md`](docs/SYNTH_TRACK_RENDERING_MATRIX.md) — consolidated track-equivalent, synth, patch, automation, effects, graph, and render-settings map
+- [`docs/MIX_BALANCE_BENCHMARK.md`](docs/MIX_BALANCE_BENCHMARK.md) — reproducible all-role level matrix and bounded kick/foundation controller evidence
 - [`docs/LONG_HORIZON_PERFORMANCE_MAP.md`](docs/LONG_HORIZON_PERFORMANCE_MAP.md) — source-grounded hour-scale trajectory, state, evidence, and implementation map
 - [`docs/LONG_HORIZON_SOUND_CAPABILITIES.md`](docs/LONG_HORIZON_SOUND_CAPABILITIES.md) — follow-up DSP, synth, patch-family, and effect maturation register
 - [`docs/SPATIAL_ENGINE.md`](docs/SPATIAL_ENGINE.md) — canonical FDN ownership, bounds, continuation, evidence, and qualification boundary

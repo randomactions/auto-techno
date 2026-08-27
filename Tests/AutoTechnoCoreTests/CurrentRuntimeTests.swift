@@ -8,18 +8,18 @@ import Testing
 struct CurrentRuntimeTests {
     @Test("MORDIO granular-memory identities advance as one exact contract")
     func mordioGranularMemoryPrimaryIdentityContract() {
-        #expect(QualityQualificationContract.schemaVersion == 36)
+        #expect(QualityQualificationContract.schemaVersion == 37)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v35")
+                "autotechno-canonical-engine.v36")
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 33)
         #expect(ProfessionalQualityObservation.schemaVersion == 14)
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 14)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v17")
+                "autotechno-professional-quality-profile.v18")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v17")
+                "autotechno-candidate-evaluator.primary-calibrated.v18")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v17")
+                "autotechno-quality.primary-calibrated.v18")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 15)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
                 "autotechno-professional-quality-adversarial.v15")
@@ -33,14 +33,14 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalEvidenceReportBank.schemaVersion == 19)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v19")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v17"))
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v18"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v17"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v17"))
+            .hasSuffix("-v18"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v18"))
     }
 
-    @Test("Only bundled v17 resources remain")
-    func primaryResourcesAreV17Only() {
+    @Test("Only bundled v18 resources remain")
+    func primaryResourcesAreV18Only() {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
         for stem in ["profile", "adversarial-suite", "holdout"] {
@@ -77,8 +77,10 @@ struct CurrentRuntimeTests {
                 resourceDirectory.appendingPathComponent("\(prefix)-v15.json").path))
             #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v16.json").path))
-            #expect(FileManager.default.fileExists(atPath:
+            #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v17.json").path))
+            #expect(FileManager.default.fileExists(atPath:
+                resourceDirectory.appendingPathComponent("\(prefix)-v18.json").path))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v1"))
             #expect(!ProfessionalQualityPrimaryArtifacts
@@ -111,8 +113,10 @@ struct CurrentRuntimeTests {
                 .containsBundledResource(named: "\(prefix)-v15"))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v16"))
-            #expect(ProfessionalQualityPrimaryArtifacts
+            #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v17"))
+            #expect(ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: "\(prefix)-v18"))
         }
         #expect(throws: Never.self) {
             _ = try ProfessionalQualityPrimaryArtifacts.load()
@@ -569,13 +573,13 @@ struct RepositorySurfaceTests {
         }.joined(separator: "\n").lowercased()
 
         for required in [
-            "autotechno-canonical-engine.v35",
-            "quality-contract schema 36",
+            "autotechno-canonical-engine.v36",
+            "quality-contract schema 37",
             "candidate-vector schema 33",
             "candidate-transaction schema 4",
             "professional evidence v19",
-            "profile v17",
-            "evaluator v17",
+            "profile v18",
+            "evaluator v18",
             "live feedback",
             "physical-output soak",
         ] {

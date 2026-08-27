@@ -43,9 +43,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 36, candidate-
+   primary-evaluation transaction under quality-contract schema 37, candidate-
    vector schema 33, candidate-transaction schema 4, and canonical engine
-   identity `autotechno-canonical-engine.v35`. Each
+   identity `autotechno-canonical-engine.v36`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -157,7 +157,7 @@ mistaken for a completed feedback system.
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
    observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v35 profile v17, adversarial suite v15, and disjoint holdout
+   engine-v36 profile v18, adversarial suite v15, and disjoint holdout
    qualification v13.
    The profile derives from 28 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
@@ -799,7 +799,7 @@ succeeded.
 This reduction runs only after detached preparation. It changes no score,
 renderer, graph, scheduler, route lifecycle, live controller, commit decision,
 or realtime callback. Phase 6B binds compatible complete reports to the exact
-immutable engine-v35/primary-v17 development, adversarial, and disjoint-holdout
+immutable engine-v36/primary-v18 development, adversarial, and disjoint-holdout
 artifacts. Raw PCM remains outside the artifacts and runtime observation.
 
 ## Implemented bounded long-horizon future adaptation
@@ -838,12 +838,12 @@ already-immutable accepted result at the existing scheduled phrase boundary.
 
 ## Completed evidence-gated sound maturation assessment
 
-Phase 8 adds no runtime owner or state. It reconciles the exact engine-v35/
-primary-v17 long-horizon profile, adversarial suite, and disjoint holdout with
+Phase 8 adds no runtime owner or state. It reconciles the exact engine-v36/
+primary-v18 long-horizon profile, adversarial suite, and disjoint holdout with
 the conditional sound-capability register. Their fingerprints are
-`3c6b7dfeaa63bd76`, `a0a461a53be020fc`, and `e23e50e67b2dccf7`. The primary
+`2d7e266c9a4cfbda`, `45fe58353cb86cf3`, and `e0547341291bc863`. The primary
 profile, adversarial suite, and holdout are independently pinned as
-`710ec815fed989fb`, `45b2744234e137d8`, and `b95f68a1a4771560`. All six current
+`b2580308d0e1111b`, `2dd65abc9577bc61`, and `bb7295767d43c2b3`. All six current
 artifacts replay byte for byte. Development and holdout journeys
 expose no repeated capability-local sound failure. The excluded root `135791`
 has too few primary-qualified payoff checkpoints to construct representative

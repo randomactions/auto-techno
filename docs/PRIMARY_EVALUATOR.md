@@ -39,11 +39,11 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v35 profile v17, adversarial suite v15, and disjoint holdout qualification
+engine-v36 profile v18, adversarial suite v15, and disjoint holdout qualification
 v13. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
-relationship gate. The pinned fingerprints are profile `710ec815fed989fb`,
-adversarial suite `45b2744234e137d8`, and holdout `b95f68a1a4771560`.
+relationship gate. The pinned fingerprints are profile `b2580308d0e1111b`,
+adversarial suite `2dd65abc9577bc61`, and holdout `bb7295767d43c2b3`.
 
 Offline calibration may retain several checkpoint observations from one
 candidate. Runtime terminal qualification selects one most-specific

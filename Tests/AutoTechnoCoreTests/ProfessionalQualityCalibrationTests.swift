@@ -330,14 +330,14 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v19")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v17")
+                "autotechno-quality.primary-calibrated.v18")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v17")
+                "autotechno-candidate-evaluator.primary-calibrated.v18")
         #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
-                "autotechno-professional-quality-profile.v17")
+                "autotechno-professional-quality-profile.v18")
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 14)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v17")
+                "autotechno-professional-quality-profile.v18")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 15)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
                 "autotechno-professional-quality-adversarial.v15")
@@ -924,7 +924,7 @@ struct ProfessionalQualityCalibrationTests {
             artifacts.profile.deterministicJSON(),
             replacements: [
                 "\"schemaVersion\":14": "\"schemaVersion\":13",
-                "autotechno-professional-quality-profile.v17":
+                "autotechno-professional-quality-profile.v18":
                     "autotechno-professional-quality-profile.v16",
             ]
         )
@@ -994,7 +994,7 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Bundled v17 primary artifacts activate the exact v17 evaluator")
+    @Test("Bundled v18 primary artifacts activate the exact v18 evaluator")
     func primaryArtifacts() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(artifacts.profile.fingerprint ==

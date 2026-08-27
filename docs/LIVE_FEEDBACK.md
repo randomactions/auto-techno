@@ -9,9 +9,9 @@ unscheduled future phrase, and commits that change only when the one calibrated
 primary evaluator accepts the resulting canonical candidate.
 
 This is an implementation and automated-qualification statement for canonical
-engine `autotechno-canonical-engine.v35`, quality-contract schema 36,
+engine `autotechno-canonical-engine.v36`, quality-contract schema 37,
 candidate-vector schema 33, candidate-transaction schema 4, Professional
-Evidence v19, professional profile v17, primary policy/evaluator v17, and live
+Evidence v19, professional profile v18, primary policy/evaluator v18, and live
 controller policy v2. It is not evidence that a physical device, route change,
 interruption, listening session, or 60-minute output soak passed.
 
@@ -103,7 +103,7 @@ and applicable checkpoints. Only maximum short-term loudness and maximum true
 peak drive the controller; integrated loudness remains descriptive for the
 fixed window.
 
-The controller reads those two bounds from the exact installed profile v17.
+The controller reads those two bounds from the exact installed profile v18.
 When several checkpoints apply, each metric uses the strictest applicable upper
 bound and the lower bound paired with that same checkpoint. An ordinary lock
 phrase uses the calibrated `longContinuation` envelope. Unsupported rates,
@@ -242,10 +242,10 @@ the next matching boundary; live corrections remain quarantined until advance.
 
 ## Qualification boundaries
 
-The bundled v14 profile, v15 adversarial suite, and v13 disjoint holdout are the only
+The bundled v18 profile, v15 adversarial suite, and v13 disjoint holdout are the only
 shipping primary artifacts. Their automated qualification, queue tests,
 callback-symbol audit, controller/candidate tamper tests, and deterministic
-replay establish implementation and offline policy evidence for engine v35.
+replay establish implementation and offline policy evidence for engine v36.
 
 The following remain separate states and must be reported separately:
 

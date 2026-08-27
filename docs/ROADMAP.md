@@ -73,7 +73,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one scheduled-output master-headroom path mapping app-owned mixer PCM to an
   exact phrase occurrence, analyzing one fixed three-second window off the
   callback, and applying a primary-accepted attenuation only to future PCM;
-- canonical engine v35, quality-contract schema 36, candidate-vector schema 33,
+- canonical engine v36, quality-contract schema 37, candidate-vector schema 33,
   and candidate-transaction schema 4
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax, debt-to-recovery climax arc and terminal hang,
@@ -107,8 +107,8 @@ filter motion, and dry-plus-moving-shadow concepts were reconciled to existing
 score, modulation, echo, chorus, and FDN owners; no duplicate track,
 instrument, modulation lane, or effect chain was added.
 
-The app now installs one exact-engine calibrated primary evaluator v17 from the
-current profile v17 derived from 28 complete journeys, a passing v15 adversarial
+The app now installs one exact-engine calibrated primary evaluator v18 from the
+current profile v18 derived from 28 complete journeys, a passing v15 adversarial
 suite, and a disjoint four-journey holdout qualification v13. Each boundary owns one
 canonical plan and one terminal decision. The evaluator may request one same-
 plan home-timbre correction, for two render passes maximum. Missing artifacts
@@ -172,9 +172,9 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 36, candidate-vector schema 33, and candidate-
+Quality-contract schema 37, candidate-vector schema 33, and candidate-
 transaction schema 4 now bind a versioned transaction across canonical engine
-v35, quality policy, evaluator, candidate plans, route, incoming continuation,
+v36, quality policy, evaluator, candidate plans, route, incoming continuation,
 attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 upper-percussion tail-clearance,
@@ -208,7 +208,7 @@ local and untracked.
 
 The runtime now records one complete plan, one initial attempt, and at most one
 home-timbre correction, then atomically carries the terminal evidence, decision,
-and controller state into continuation. The exact engine-v35 profile v17,
+and controller state into continuation. The exact engine-v36 profile v18,
 passing v15 adversarial suite, disjoint holdout qualification v13, non-compensable
 checkpoint policy, and transaction replay are the app path. The former
 single-journey generalization blocker is closed: 28 development journeys and

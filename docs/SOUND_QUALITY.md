@@ -11,9 +11,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 36, candidate-vector schema 33,
+candidate uses quality-contract schema 37, candidate-vector schema 33,
 candidate-transaction schema 4, and canonical engine identity
-`autotechno-canonical-engine.v35`. It preserves
+`autotechno-canonical-engine.v36`. It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
 event-local groove-pulse,
 ordinary closed-hat, paid-debt climax-arc, score-owned instrument assignment,
@@ -305,7 +305,7 @@ signal and replacement contract.
 `ProfessionalEvidenceReportBank` v19 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v17 from the v17 profile, v15 adversarial suite,
+exact-engine primary evaluator v18 from the v18 profile, v15 adversarial suite,
 and v13 disjoint holdout. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
@@ -379,7 +379,7 @@ Phase 6B calibrates independent non-compensable semantic, per-operator signal,
 and effect-family dimensions across five exact four-hour development journeys
 at 44.1/48 kHz. The immutable artifact set rejects ten independent adversarial
 attacks and accepts two disjoint holdout roots. It retains only reduced
-irreversible evidence and binds the exact engine-v35/primary-v17 identity.
+irreversible evidence and binds the exact engine-v36/primary-v18 identity.
 
 Phase 7 consumes that policy only during detached preparation. A fixed-capacity
 active-rate observation requires at least 7,200 bars, twelve signal observations,
@@ -603,8 +603,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 36, candidate-vector schema 33,
-candidate-transaction schema 4, and canonical engine v35, the versioned
+Under quality-contract schema 37, candidate-vector schema 33,
+candidate-transaction schema 4, and canonical engine v36, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

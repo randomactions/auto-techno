@@ -2551,3 +2551,59 @@ launch. Listening confirmation past the former phrase-4 stall, real
 route/interruption QA, latency observation, extended runtime observation,
 physical-output soak, publication, and exact-head CI remain separate and
 unclaimed.
+
+## Deterministic kick-role balance — 2026-08-27
+
+The listening observation that the kick was too loud was converted into a
+repeatable deficit over the existing preparation-time automatic-mix owner. The
+unchanged 28-development/four-disjoint-holdout primary bank supplied 4,078
+eligible kick/foundation measurements. Engine v35 saturated 3,408 at the old
+`-3 dB` attenuation floor and left 3,401 of those outside the `0.35 dB`
+deadband; residual kick excess had a `+4.02 dB` median and `+3.96 dB` mean.
+
+Canonical engine v36 keeps the authored companion targets, attenuation-only
+behavior, and `0.35 dB` per-prepared-bar bound. It moves the home correction to
+`-2 dB` and the finite lower bound to `-8 dB`. Across the same exact bank,
+median residual excess fell to `+0.13 dB`, mean residual excess to `+0.81 dB`,
+minimum-bound observations to 405, and unresolved minimum-bound observations
+to 271. The median active kick/foundation relation fell from `+21.13 dB` to
+`+16.88 dB`, close to the existing `+16.5 dB` bass-companion target. The
+machine-readable benchmark also retains level, onset, peak, crest, occupancy,
+and all ten active pair relations for all five rendered roles. No new user
+control, alternate renderer, callback analysis, or automatic fader for another
+role was added.
+
+Exact primary-v18 regeneration at 44.1 and 48 kHz accepted all 28 development
+journeys, all 56 checkpoints across four disjoint holdout journeys, every
+trajectory relationship, and the 34-case adversarial suite. Promoted
+fingerprints are profile `b2580308d0e1111b`, adversarial
+`2dd65abc9577bc61`, and holdout `bb7295767d43c2b3`. SHA-256 values for the
+three reduced bundled resources are respectively
+`e035bde56e5e33a6d1234bbade1246cae4ae61588de8acead93ca894b9b0ec35`,
+`a49d2eecee60d88906aa4a74a268d9d54935731fc4c5cf254c0e2d6354171a70`,
+and `cfac0c011ac01e5a6ae0f6ec22abdc9eaf5e484757f774d5491b76484fe770bc`.
+
+Dependent long-horizon-v5 regeneration accepted all five development roots,
+rejected all ten adversarial attacks, and accepted both disjoint holdout roots
+at both rates. Its profile, adversarial, and holdout fingerprints are
+`2d7e266c9a4cfbda`, `45fe58353cb86cf3`, and `e0547341291bc863`; resource
+SHA-256 values are
+`f93922b1e648740a18516cfba454675016108ae5310f9ca8e7f1cc22f1d39406`,
+`8976edb9c55a2d316f859d37052810f9a784bdc85a48ae0d5a556b5906c5bdb7`,
+and `823469a16c0666192d644ccf896c81f2c727e70eb2709a5559a931894981c4f6`.
+The four-hour semantic trajectory remained `1a8af31815eb50da`; its serialized
+engine-v36 evidence is `0ffaaac1d6634015`, and the four-hour planning sequence
+is `4a56c7cd78fe0184`.
+
+Focused primary, long-horizon, provenance, runtime-surface, and semantic tests
+passed. The final matched-Xcode optimized gate passed all 460 Swift tests in
+119.373 seconds. A separate optimized product build bundled exactly primary
+v18 and long-horizon v5 resources. The arm64 executable has UUID
+`915958E3-9C38-3AEE-869D-D46E85926386` and SHA-256
+`95b1309c7f43a284d4a67cf50875392453327139d28e41dcde84521119620720`.
+`git diff --check` and the benchmark script syntax check passed.
+
+These results establish deterministic offline qualification and optimized
+build readiness. They do not constitute listening approval, app/route or
+interruption QA, latency observation, extended runtime observation, or
+physical-output soak; those remain separate and unclaimed.
