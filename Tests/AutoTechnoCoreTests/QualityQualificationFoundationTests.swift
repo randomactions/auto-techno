@@ -42,7 +42,7 @@ struct QualityQualificationFoundationTests {
             phraseIndex: 7,
             phraseKind: .lock,
             chapterChanged: true
-        ) == .chapterChange)
+        ) == nil)
         #expect(CanonicalJourneyCheckpoint.primaryQualification(
             phraseIndex: 16,
             phraseKind: .lock,

@@ -565,6 +565,31 @@ struct LiveOutputWindowEvidenceTests {
         #expect(target.evaluatorVersion == evidence.evaluatorVersion)
     }
 
+    @Test("An ordinary lock crossing a chapter uses continuation")
+    func ordinaryChapterLockUsesLongContinuation() throws {
+        let signal = testSignal(sampleRate: 44_100)
+        let plan = realDirectorPlan { plan in
+            let identity = LiveOutputPlanSourceIdentity(plan: plan)
+            return plan.kind == .lock && plan.phraseIndex > 0 &&
+                plan.phraseIndex < 16 && identity.chapterChanged
+        }
+        let evidence = try #require(analyze(
+            left: signal,
+            right: signal,
+            sampleRate: 44_100,
+            plan: plan
+        ))
+        let target = try #require(LiveFeedbackTestSupport.target(
+            evidence: evidence
+        ))
+
+        #expect(evidence.chapterChanged)
+        #expect(evidence.applicableCheckpoints == [.longContinuation])
+        #expect(target.applicableCheckpoints == [.longContinuation])
+        #expect(target.selectedLoudnessCheckpoint == .longContinuation)
+        #expect(target.selectedTruePeakCheckpoint == .longContinuation)
+    }
+
     @Test("A target rejects every mismatched source-observation pairing")
     func targetRejectsForgedObservationPairing() throws {
         let signal44 = testSignal(sampleRate: 44_100)

@@ -572,8 +572,8 @@ The target loop is bounded and persistent:
 2. Detached preparation renders immutable audio and exact role evidence.
 3. Hard gates reject unsafe or invalid output.
 4. The quality policy evaluates the surviving multidimensional evidence.
-   Runtime selects one calibrated whole-phrase checkpoint, with long-running
-   lock phrases owned by long continuation before an ordinary chapter change;
+   Runtime selects one calibrated whole-phrase checkpoint, with ordinary lock
+   phrases owned by the continuation population even at a chapter boundary;
    compound offline labels are not intersected into an uncalibrated population.
    Optional modal metrics reuse qualified active bounds when a checkpoint's
    development evidence contains only the exact inactive sentinel.

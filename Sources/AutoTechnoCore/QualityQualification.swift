@@ -63,12 +63,14 @@ package enum CanonicalJourneyCheckpoint: String, CaseIterable, Codable, Equatabl
     /// Runtime terminal qualification uses one whole-phrase population. A
     /// structural phrase can still contribute several offline observations,
     /// but intersecting those separately calibrated populations at runtime can
-    /// create an empty envelope. Prefer the most specific semantic owner;
-    /// ordinary chapter and long-continuation phrases retain their own homes.
+    /// create an empty envelope. Prefer the most specific semantic owner.
+    /// Chapter-change remains an offline relationship label because its
+    /// calibrated observations may also belong to a structural phrase; an
+    /// ordinary lock uses the broad continuation population at runtime.
     package static func primaryQualification(
         phraseIndex: Int,
         phraseKind: AutonomousPhraseKind,
-        chapterChanged: Bool
+        chapterChanged _: Bool
     ) -> CanonicalJourneyCheckpoint? {
         guard phraseIndex >= 0 else { return nil }
         if phraseIndex == 0 { return .establishment }
@@ -80,7 +82,6 @@ package enum CanonicalJourneyCheckpoint: String, CaseIterable, Codable, Equatabl
         case .lock: break
         }
         if phraseIndex >= 16 { return .longContinuation }
-        if chapterChanged { return .chapterChange }
         return nil
     }
 }

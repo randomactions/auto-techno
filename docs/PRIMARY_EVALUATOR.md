@@ -48,7 +48,9 @@ adversarial suite `45b2744234e137d8`, and holdout `b95f68a1a4771560`.
 Offline calibration may retain several checkpoint observations from one
 candidate. Runtime terminal qualification selects one most-specific
 whole-phrase population: establishment first, then the structural phrase kind,
-then long continuation, then an ordinary earlier chapter change. This avoids
+then long continuation. An ordinary lock uses the continuation population even
+at a chapter boundary; chapter change remains an offline relationship label
+whose observations may also belong to a structural phrase. This avoids
 intersecting separately calibrated phrase populations into an empty envelope.
 Dimensions inside that selected population never compensate for one another.
 An ordinary lock phrase without a named checkpoint uses the calibrated
