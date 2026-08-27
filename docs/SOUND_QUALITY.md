@@ -578,7 +578,7 @@ The target loop is bounded and persistent:
    development evidence contains only the exact inactive sentinel.
    Optional upper spectral reveal records use neutral activation evidence only
    when the score has no eligible reveal events; eligible but inactive rendering
-   remains a rejection.
+   remains a rejection, while the activation ratio is one-sided higher-is-safer.
 5. The evaluator may request one deterministic home-timbre correction of that
    same plan; otherwise it reaches a terminal verdict after the first pass.
 6. A calibrated rejection may inform one later, serial director proposal after

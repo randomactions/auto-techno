@@ -55,7 +55,8 @@ An ordinary lock phrase without a named checkpoint uses the calibrated
 `longContinuation` envelope so every primary phrase receives a judgment.
 Upper spectral-reveal activation uses its exact higher-is-safer neutral
 sentinel only when the score contains no eligible reveal events. Eligible score
-events that fail to render remain zero and fail the calibrated activation gate.
+events that fail to render remain zero and fail the calibrated activation gate;
+higher activation ratios remain accepted above an older inactive-only envelope.
 The maximum overlapping RMS-trajectory delta is retained for strict local and
 within-rate trajectory qualification. Its window selection can move on a
 different route sample grid, so the paired mean trajectory delta—not that

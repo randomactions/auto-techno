@@ -151,7 +151,8 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
     }
 
     package var acceptsSaferValuesAboveCalibration: Bool {
-        self == .spectralHarmonicTailUpperBandEnergyRatioMean
+        self == .spectralHarmonicTailUpperBandEnergyRatioMean ||
+            self == .upperSpectralRevealActiveEventRatio
     }
 
     /// Capability-local one-sided metrics use an exact safe value when the

@@ -458,7 +458,7 @@ struct ProfessionalQualityCalibrationTests {
     }
 
     @Test("Spectral reveal absence is neutral but eligible inactivity fails")
-    func conditionalSpectralRevealRatio() {
+    func conditionalSpectralRevealRatio() throws {
         #expect(ProfessionalQualityObservation
             .upperSpectralRevealActiveEventRatio(
                 eligibleEventCount: 0,
@@ -479,6 +479,19 @@ struct ProfessionalQualityCalibrationTests {
                 eligibleEventCount: 0,
                 activeEventCount: 1
             ) == 0)
+        let legacyInactiveBounds = try ProfessionalQualityMetricBounds(
+            metric: .upperSpectralRevealActiveEventRatio,
+            lower: 0,
+            upper: 0.04
+        )
+        #expect(legacyInactiveBounds.contains(1))
+        let activeBounds = try ProfessionalQualityMetricBounds(
+            metric: .upperSpectralRevealActiveEventRatio,
+            lower: 0.92,
+            upper: 1
+        )
+        #expect(activeBounds.contains(1))
+        #expect(!activeBounds.contains(0))
     }
 
     @Test("Neutral-only modal checkpoints reuse qualified active bounds")

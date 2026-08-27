@@ -332,7 +332,8 @@ mistaken for a completed feedback system.
    checkpoint retained the exact inactive sentinel envelope.
    Upper-spectral reveal activation remains conditional on the existing
    narrative eligibility owner: no eligible score events produce the exact
-   neutral value, while eligible events that fail to render stay rejecting.
+   neutral value, the ratio is one-sided higher-is-safer, and eligible events
+   that fail to render stay rejecting.
    It also owns one scheduled-output feedback coordinator. After an exact
    two-probe mixer/player clock map succeeds, the main-mixer callback copies only
    bounded app-owned native-stereo packets into the preallocated C11 queue. A
