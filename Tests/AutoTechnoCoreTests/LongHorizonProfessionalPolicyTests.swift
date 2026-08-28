@@ -112,8 +112,9 @@ struct LongHorizonProfessionalPolicyTests {
     let profile = try LongHorizonProfessionalProfile(corpus: development)
 
     for (metric, expectedFloor) in [
+      (LongHorizonSignalMetric.spectralCentroidHz, 2_500),
       (LongHorizonSignalMetric.integratedLoudnessLUFS, 1.65),
-      (.meanBarCrestFactorDB, 1.65),
+      (.meanBarCrestFactorDB, 1.67),
       (.transientDensityPerSecond, 0.55),
     ] {
       let values = development.observations.compactMap { observation in
@@ -186,8 +187,8 @@ struct LongHorizonProfessionalPolicyTests {
         == first.development.observations[0])
   }
 
-  @Test("Bundled engine-v36 long-horizon artifacts cannot activate engine v37")
-  func staleBundledArtifactsFailClosed() {
+  @Test("Bundled v6 long-horizon artifacts activate the exact engine v38 policy")
+  func bundledArtifacts() throws {
     for name in [
       LongHorizonProfessionalPolicyArtifacts.profileResource,
       LongHorizonProfessionalPolicyArtifacts.adversarialResource,
@@ -206,9 +207,18 @@ struct LongHorizonProfessionalPolicyTests {
         !LongHorizonProfessionalPolicyArtifacts
           .containsBundledResource(named: obsoleteName))
     }
-    #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
-      _ = try LongHorizonProfessionalPolicyArtifacts.load()
-    }
+    let artifacts = try LongHorizonProfessionalPolicyArtifacts.load()
+    #expect(
+      artifacts.profile.fingerprint
+        == LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint)
+    #expect(
+      artifacts.adversarial.fingerprint
+        == LongHorizonProfessionalPolicyArtifacts.expectedAdversarialFingerprint)
+    #expect(
+      artifacts.holdout.fingerprint
+        == LongHorizonProfessionalPolicyArtifacts.expectedHoldoutFingerprint)
+    #expect(artifacts.adversarial.passed)
+    #expect(artifacts.holdout.qualified)
   }
 
   @Test("Current policy resources are reduced, canonical, and fail closed")

@@ -64,7 +64,11 @@ events and owns no independent rhythm clock.
 The continuing tonal voice: coupled oscillators, bounded detune and modulation,
 envelopes, filter motion, comb memory, and unsynced echo. North Star, Dark
 Chord, and Glass Runner are substantively different oscillator/envelope/filter
-homes inside this one topology.
+homes inside this one topology. A patch change resets the old filter/envelope
+identity but retains the topology's comb, all-pass, echo, DC, and tail memory.
+Comb and echo coefficients crossfade to the new home over 500 ms, so the old
+field retires behind the new patch instead of being cut at the phrase boundary.
+A route-dependent delay-size change remains the deterministic reset boundary.
 
 Resonant Mono and Tonal Motion share one additional score meaning for existing
 motif anchors: an emerging protagonist may disclose spectral detail through
@@ -102,8 +106,9 @@ their values; each architecture translates them into its own safe DSP bounds.
 
 Coordinates clamp to `0...1`. Foundation bass always has `space = 0`. Patch
 changes reset only the bounded state that would otherwise leak the previous
-patch’s filter, envelope, or resonator identity; oscillator and continuation
-behavior remain deterministic.
+patch’s filter, envelope, or resonator identity. Tonal Motion's existing effect
+memory remains continuation and changes coefficients through the bounded 500 ms
+handoff; oscillator and continuation behavior remain deterministic.
 
 ## Selection and density
 

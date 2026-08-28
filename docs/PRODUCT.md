@@ -297,7 +297,7 @@ Future sound maturation must still replace only a repeatedly failed provisional
 DSP in place after independent-root, two-rate causal evidence.
 
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v19 supplies
+policy and its operational gates pass. Professional Evidence v20 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation, pre-kick foundation-pocket, terminal climax-hang,
 and live-controller consequence, explicit

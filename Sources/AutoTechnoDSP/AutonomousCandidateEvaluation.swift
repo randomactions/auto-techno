@@ -5302,6 +5302,7 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
     package let renderedFrameCount: Int
     package let lineCount: Int
     package let delayFrameCounts: [Int]
+    package let requestedRoomScale: Double
     package let roomScale: Double
     package let decayTimeSeconds: Double
     package let dampingHz: Double
@@ -5309,6 +5310,18 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
     package let synthSendGain: Double
     package let percussionSendGain: Double
     package let wetGain: Double
+    package let geometryRetained: Bool
+    package let parameterTransitionFrameCount: Int
+    package let initialMaximumFeedbackGain: Double
+    package let finalMaximumFeedbackGain: Double
+    package let initialDampingCoefficient: Double
+    package let finalDampingCoefficient: Double
+    package let initialSynthSendGain: Double
+    package let finalSynthSendGain: Double
+    package let initialPercussionSendGain: Double
+    package let finalPercussionSendGain: Double
+    package let initialWetGain: Double
+    package let finalWetGain: Double
     package let spatialDepthPosition: String
     package let carrierVoice: String?
     package let carrierStep: Int?
@@ -5326,6 +5339,10 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
     package let activeInputFrameCount: Int
     package let activeWetFrameCount: Int
     package let firstWetFrameIndex: Int
+    package let openingWindowFrameCount: Int
+    package let openingWetRMS: Double
+    package let terminalWindowFrameCount: Int
+    package let terminalWetRMS: Double
     package let bindingValid: Bool
     package let finite: Bool
 
@@ -5338,6 +5355,7 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
         renderedFrameCount = evidence.renderedFrameCount
         lineCount = evidence.lineCount
         delayFrameCounts = evidence.delayFrameCounts
+        requestedRoomScale = evidence.requestedRoomScale
         roomScale = evidence.roomScale
         decayTimeSeconds = evidence.decayTimeSeconds
         dampingHz = evidence.dampingHz
@@ -5345,6 +5363,20 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
         synthSendGain = evidence.synthSendGain
         percussionSendGain = evidence.percussionSendGain
         wetGain = evidence.wetGain
+        geometryRetained = evidence.geometryRetained
+        parameterTransitionFrameCount =
+            evidence.parameterTransitionFrameCount
+        initialMaximumFeedbackGain =
+            evidence.initialMaximumFeedbackGain
+        finalMaximumFeedbackGain = evidence.finalMaximumFeedbackGain
+        initialDampingCoefficient = evidence.initialDampingCoefficient
+        finalDampingCoefficient = evidence.finalDampingCoefficient
+        initialSynthSendGain = evidence.initialSynthSendGain
+        finalSynthSendGain = evidence.finalSynthSendGain
+        initialPercussionSendGain = evidence.initialPercussionSendGain
+        finalPercussionSendGain = evidence.finalPercussionSendGain
+        initialWetGain = evidence.initialWetGain
+        finalWetGain = evidence.finalWetGain
         spatialDepthPosition = evidence.spatialDepthPosition.rawValue
         carrierVoice = evidence.carrierVoice?.rawValue
         carrierStep = evidence.carrierStep
@@ -5362,6 +5394,10 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
         activeInputFrameCount = evidence.activeInputFrameCount
         activeWetFrameCount = evidence.activeWetFrameCount
         firstWetFrameIndex = evidence.firstWetFrameIndex
+        openingWindowFrameCount = evidence.openingWindowFrameCount
+        openingWetRMS = evidence.openingWetRMS
+        terminalWindowFrameCount = evidence.terminalWindowFrameCount
+        terminalWetRMS = evidence.terminalWetRMS
         self.bindingValid = bindingValid
         finite = evidence.finite
     }
@@ -5390,6 +5426,7 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
                 renderedFrameCount: frameCount,
                 lineCount: FeedbackDelayNetworkConfiguration.lineCount,
                 delayFrameCounts: configuration.delayFrameCounts,
+                requestedRoomScale: configuration.roomScale,
                 roomScale: configuration.roomScale,
                 decayTimeSeconds: configuration.decayTimeSeconds,
                 dampingHz: configuration.dampingHz,
@@ -5397,6 +5434,24 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
                 synthSendGain: configuration.synthSendGain,
                 percussionSendGain: configuration.percussionSendGain,
                 wetGain: configuration.wetGain,
+                geometryRetained: false,
+                parameterTransitionFrameCount: 0,
+                initialMaximumFeedbackGain:
+                    configuration.maximumFeedbackGain,
+                finalMaximumFeedbackGain:
+                    configuration.maximumFeedbackGain,
+                initialDampingCoefficient:
+                    configuration.dampingCoefficient,
+                finalDampingCoefficient:
+                    configuration.dampingCoefficient,
+                initialSynthSendGain: configuration.synthSendGain,
+                finalSynthSendGain: configuration.synthSendGain,
+                initialPercussionSendGain:
+                    configuration.percussionSendGain,
+                finalPercussionSendGain:
+                    configuration.percussionSendGain,
+                initialWetGain: configuration.wetGain,
+                finalWetGain: configuration.wetGain,
                 spatialDepthPosition: .foreground,
                 carrierVoice: nil,
                 carrierStep: nil,
@@ -5414,6 +5469,16 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
                 activeInputFrameCount: 0,
                 activeWetFrameCount: 0,
                 firstWetFrameIndex: -1,
+                openingWindowFrameCount: min(
+                    frameCount,
+                    max(1, Int((sampleRate * 0.25).rounded()))
+                ),
+                openingWetRMS: 0,
+                terminalWindowFrameCount: min(
+                    frameCount,
+                    max(1, Int((sampleRate * 0.25).rounded()))
+                ),
+                terminalWetRMS: 0,
                 finite: true
             ),
             bindingValid: true
@@ -5422,10 +5487,16 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
 
     package var isFinite: Bool {
         finite && [
-            sampleRate, roomScale, decayTimeSeconds, dampingHz,
+            sampleRate, requestedRoomScale, roomScale, decayTimeSeconds, dampingHz,
             maximumFeedbackGain, synthSendGain, percussionSendGain, wetGain,
+            initialMaximumFeedbackGain, finalMaximumFeedbackGain,
+            initialDampingCoefficient, finalDampingCoefficient,
+            initialSynthSendGain, finalSynthSendGain,
+            initialPercussionSendGain, finalPercussionSendGain,
+            initialWetGain, finalWetGain,
             scoreReverbSend, scoreHighPassHz, scoreLowPassHz, inputRMS,
             spatialSendRMS, wetPeak, wetRMS, wetStereoCorrelation,
+            openingWetRMS, terminalWetRMS,
         ].allSatisfy { $0.isFinite }
     }
 
@@ -5450,6 +5521,10 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
               delayFrameCounts == retainedConfiguration.delayFrameCounts,
               maximumFeedbackGain ==
                 retainedConfiguration.maximumFeedbackGain,
+              requestedRoomScale >=
+                FeedbackDelayNetworkConfiguration.minimumRoomScale,
+              requestedRoomScale <=
+                FeedbackDelayNetworkConfiguration.maximumRoomScale,
               zip(
                 delayFrameCounts,
                 delayFrameCounts.dropFirst()
@@ -5470,9 +5545,26 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
               dampingHz >= FeedbackDelayNetworkConfiguration.minimumDampingHz,
               dampingHz <= routeSampleRate * 0.45,
               maximumFeedbackGain > 0, maximumFeedbackGain < 1,
+              initialMaximumFeedbackGain > 0,
+              initialMaximumFeedbackGain < 1,
+              finalMaximumFeedbackGain == maximumFeedbackGain,
+              (0...1).contains(initialDampingCoefficient),
+              finalDampingCoefficient ==
+                retainedConfiguration.dampingCoefficient,
               (0...0.5).contains(synthSendGain),
+              (0...0.5).contains(initialSynthSendGain),
+              finalSynthSendGain == synthSendGain,
               (0...0.16).contains(percussionSendGain),
+              (0...0.16).contains(initialPercussionSendGain),
+              finalPercussionSendGain == percussionSendGain,
               (0...0.24).contains(wetGain),
+              (0...0.24).contains(initialWetGain),
+              finalWetGain == wetGain,
+              parameterTransitionFrameCount >= 0,
+              parameterTransitionFrameCount <= max(1, Int((
+                routeSampleRate *
+                    FeedbackDelayNetworkState.parameterTransitionSeconds
+              ).rounded())),
               let depth = SpatialDepthPosition(rawValue: spatialDepthPosition),
               carrierVoice.flatMap(EnsembleVoice.init(rawValue:)) != nil ||
                 carrierVoice == nil,
@@ -5488,7 +5580,14 @@ package struct AutonomousSpatialFDNBarEvidence: Codable, Equatable, Sendable {
               wetPeak >= 0, wetRMS >= 0, wetRMS <= wetPeak,
               (-1...1).contains(wetStereoCorrelation),
               (0...renderedFrameCount).contains(activeInputFrameCount),
-              (0...renderedFrameCount).contains(activeWetFrameCount) else {
+              (0...renderedFrameCount).contains(activeWetFrameCount),
+              openingWindowFrameCount == min(
+                renderedFrameCount,
+                max(1, Int((routeSampleRate * 0.25).rounded()))
+              ),
+              terminalWindowFrameCount == openingWindowFrameCount,
+              openingWetRMS >= 0, openingWetRMS <= wetPeak,
+              terminalWetRMS >= 0, terminalWetRMS <= wetPeak else {
             return false
         }
         let depthIsCoherent: Bool
@@ -5687,6 +5786,8 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
     case phraseCompositionEvidence = "phrase-composition-evidence"
     case pulseEchoDriveEvidence = "pulse-echo-drive-evidence"
     case spatialFDNEvidence = "spatial-fdn-evidence"
+    case crossPhraseTransitionEvidence =
+        "cross-phrase-transition-evidence"
     case upperTimingEvidence = "upper-timing-evidence"
     case liveMasterEvidence = "live-master-evidence"
 }
@@ -5719,7 +5820,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 34
+    package static let schemaVersion = 35
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -5738,6 +5839,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let symbolic: AutonomousSymbolicEvidence
     package let hardGates: AutonomousHardGateEvidence
     package let fullMix: AutonomousFullMixEvidence
+    package let crossPhraseTransition: CrossPhraseTransitionEvidence
     package let sourceMaskingBarCount: Int
     package let masking: [AutonomousMaskingBarEvidence]
     package let sourceStemBarCount: Int
@@ -5805,6 +5907,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         symbolic: AutonomousSymbolicEvidence,
         hardGates: AutonomousHardGateEvidence,
         fullMix: AutonomousFullMixEvidence,
+        crossPhraseTransition: CrossPhraseTransitionEvidence,
         masking: [AutonomousMaskingBarEvidence],
         stems: [AutonomousStemBarEvidence],
         automaticMix: [AutonomousAutomaticMixEvidence],
@@ -5852,6 +5955,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.symbolic = symbolic
         self.hardGates = hardGates
         self.fullMix = fullMix
+        self.crossPhraseTransition = crossPhraseTransition
         sourceMaskingBarCount = masking.count
         self.masking = Array(masking.prefix(Self.maximumBarCount))
         sourceStemBarCount = stems.count
@@ -5930,6 +6034,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         graphFingerprint: String,
         blocks: [RenderBlock],
         audioPreflight: PhraseAudioPreflight,
+        crossPhraseTransition: CrossPhraseTransitionEvidence,
         upperTimbreEvidence: UpperTimbreEvidence,
         sampleRate: Double,
         routeChannelCount: Int,
@@ -6007,7 +6112,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         let hardGates = AutonomousHardGateEvidence(
             symbolicValid: plan.interest.valid,
             graphValid: graphValidation.valid,
-            audioSafetyValid: audioPreflight.safetyValid,
+            audioSafetyValid: audioPreflight.safetyValid &&
+                crossPhraseTransition.hardGateValid,
             fullMixFinite: audioPreflight.quality.finite,
             upperTimbreFinite: upperTimbreEvidence.finite,
             blocksPresent: !blocks.isEmpty,
@@ -6680,6 +6786,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             symbolic: symbolic,
             hardGates: hardGates,
             fullMix: fullMix,
+            crossPhraseTransition: crossPhraseTransition,
             masking: masking,
             stems: stems,
             automaticMix: automaticMix,
@@ -6903,22 +7010,31 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 break
             }
         }
+        let activeExpectedConfiguration =
+            expectedConfiguration.retainingGeometry(
+                roomScale: evidence.roomScale
+            )
         return planBarMatches &&
             evidence.bar == block.bar &&
             evidence.sampleRate == sampleRate &&
             evidence.renderedFrameCount == block.left.count &&
             evidence.renderedFrameCount == block.right.count &&
             evidence.lineCount == FeedbackDelayNetworkConfiguration.lineCount &&
-            evidence.delayFrameCounts == expectedConfiguration.delayFrameCounts &&
-            evidence.roomScale == expectedConfiguration.roomScale &&
-            evidence.decayTimeSeconds == expectedConfiguration.decayTimeSeconds &&
-            evidence.dampingHz == expectedConfiguration.dampingHz &&
+            evidence.requestedRoomScale == expectedConfiguration.roomScale &&
+            evidence.delayFrameCounts ==
+                activeExpectedConfiguration.delayFrameCounts &&
+            (evidence.geometryRetained ||
+                evidence.roomScale == evidence.requestedRoomScale) &&
+            evidence.decayTimeSeconds ==
+                activeExpectedConfiguration.decayTimeSeconds &&
+            evidence.dampingHz == activeExpectedConfiguration.dampingHz &&
             evidence.maximumFeedbackGain ==
-                expectedConfiguration.maximumFeedbackGain &&
-            evidence.synthSendGain == expectedConfiguration.synthSendGain &&
+                activeExpectedConfiguration.maximumFeedbackGain &&
+            evidence.synthSendGain ==
+                activeExpectedConfiguration.synthSendGain &&
             evidence.percussionSendGain ==
-                expectedConfiguration.percussionSendGain &&
-            evidence.wetGain == expectedConfiguration.wetGain &&
+                activeExpectedConfiguration.percussionSendGain &&
+            evidence.wetGain == activeExpectedConfiguration.wetGain &&
             evidence.spatialDepthPosition == spatial.depthPosition &&
             evidence.carrierVoice == spatial.carrierVoice &&
             evidence.carrierStep == spatial.carrierStep &&
@@ -7641,7 +7757,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     }
 
     package var isFinite: Bool {
-        symbolic.isFinite && fullMix.isFinite && masking.allSatisfy { $0.isFinite } &&
+        symbolic.isFinite && fullMix.isFinite && crossPhraseTransition.finite &&
+            masking.allSatisfy { $0.isFinite } &&
             stems.allSatisfy { $0.isFinite } &&
             automaticMix.allSatisfy { $0.isFinite } &&
             kickSyntax.allSatisfy { $0.isFinite } &&
@@ -7675,6 +7792,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         var failures: [AutonomousCandidateCompletenessFailure] = []
         if !identityAndPrimaryEvidenceAreComplete() {
             failures.append(.identityAndPrimaryEvidence)
+        }
+        if !crossPhraseTransition.isComplete {
+            failures.append(.crossPhraseTransitionEvidence)
         }
         if !symbolicBarCoverageIsComplete() {
             failures.append(.symbolicBarCoverage)
@@ -7748,6 +7868,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
               planFingerprint == symbolic.planFingerprint,
               graphFingerprint == graph.graphFingerprint,
               symbolic.isComplete, hardGates.isComplete, fullMix.isComplete,
+              crossPhraseTransition.isComplete,
               graph.isComplete, routeContinuation.isComplete,
               sourceInstrumentBarCount == instruments.count,
               instruments.count == fullMix.sourceBarCount,
@@ -8479,6 +8600,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         prevalidatedVectorIsComplete && prevalidatedVectorIsFinite &&
             hardGates.passed && symbolic.interestValid &&
             graph.validationValid && prevalidatedSignalSafetyValid &&
+            crossPhraseTransition.hardGateValid &&
             liveProposalOutcome != .unavailable &&
             postGraphUpperTimbreEvidence.finite &&
             postGraphUpperTimbreEvidence.candidateValuesAreFinite
@@ -8493,7 +8615,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
 
     private var hardGateEvidenceIsConsistent: Bool {
         symbolic.interestValid && graph.validationValid &&
-            fullMix.signalSafetyValid && postGraphUpperTimbreEvidence.finite &&
+            fullMix.signalSafetyValid &&
+            crossPhraseTransition.hardGateValid &&
+            postGraphUpperTimbreEvidence.finite &&
             postGraphUpperTimbreEvidence.candidateValuesAreFinite
     }
 
@@ -8850,7 +8974,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     ) -> Bool {
         hardGates.symbolicValid == symbolic.interestValid &&
             hardGates.graphValid == graph.validationValid &&
-            hardGates.audioSafetyValid == prevalidatedSignalSafetyValid &&
+            hardGates.audioSafetyValid == (
+                prevalidatedSignalSafetyValid &&
+                    crossPhraseTransition.hardGateValid
+            ) &&
             hardGates.fullMixFinite == fullMix.isFinite &&
             hardGates.upperTimbreFinite == postGraphUpperTimbreEvidence.finite &&
             hardGates.blocksPresent == (fullMix.sourceBarCount > 0) &&
@@ -9025,7 +9152,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
 }
 
 package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sendable {
-    package static let schemaVersion = 5
+    package static let schemaVersion = 6
     package static let maximumCorrectionAttempts =
         QualityQualificationContract.maximumCorrectionRenders
     package static let maximumAttemptCount =

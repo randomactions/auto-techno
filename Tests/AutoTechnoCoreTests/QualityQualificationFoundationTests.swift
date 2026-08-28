@@ -1163,6 +1163,7 @@ struct QualityQualificationFoundationTests {
             symbolic: symbolic,
             hardGates: hardGates,
             fullMix: fullMix,
+            crossPhraseTransition: .initial,
             masking: [AutonomousMaskingBarEvidence(
                 bar: 0,
                 sourceObservationCount: 12,

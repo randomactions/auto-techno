@@ -660,7 +660,7 @@ struct InstrumentPaletteTests {
         #expect(tail == tailArchitecture)
     }
 
-    @Test("A tonal patch boundary clears prior filter and effect memory")
+    @Test("A tonal patch boundary resets identity while retaining and crossfading effect memory")
     func tonalPatchBoundary() {
         let previous = assignment(
             patch: .northStar,
@@ -672,8 +672,20 @@ struct InstrumentPaletteTests {
             use: .motif,
             automation: .neutral
         )
+        let sampleRate = 16_000.0
+        let world = fixtureWorld(seed: 48_291)
         var state = AlienVoiceState()
-        state.activeInstrument = previous
+        state.prepare(
+            sampleRate: sampleRate,
+            world: world,
+            role: .anchor,
+            instrument: previous
+        )
+        state.beginEffectTransition(
+            combScale: 0.8,
+            echoScale: 1.1,
+            sampleRate: sampleRate
+        )
         state.envelope = 0.8
         state.filter1 = 0.7
         state.previousSource = 0.6
@@ -681,16 +693,19 @@ struct InstrumentPaletteTests {
         state.dcInput = 0.4
         state.dcOutput = 0.3
         state.tailLevel = 0.2
-        state.comb = [0.9, -0.8]
+        state.comb[0] = 0.9
+        state.comb[1] = -0.8
         state.combIndex = 1
-        state.allPass = [0.7, -0.6]
+        state.allPass[0] = 0.7
+        state.allPass[1] = -0.6
         state.allPassIndex = 1
-        state.echo = [0.5, -0.4]
+        state.echo[0] = 0.5
+        state.echo[1] = -0.4
         state.echoIndex = 1
 
         state.prepare(
-            sampleRate: 16_000,
-            world: fixtureWorld(seed: 48_291),
+            sampleRate: sampleRate,
+            world: world,
             role: .anchor,
             instrument: next
         )
@@ -699,16 +714,42 @@ struct InstrumentPaletteTests {
         #expect(state.envelope == 0)
         #expect(state.filter1 == 0)
         #expect(state.previousSource == 0)
-        #expect(state.echoLow == 0)
-        #expect(state.dcInput == 0)
-        #expect(state.dcOutput == 0)
-        #expect(state.tailLevel == 0)
-        #expect(state.comb.allSatisfy { $0 == 0 })
-        #expect(state.combIndex == 0)
-        #expect(state.allPass.allSatisfy { $0 == 0 })
-        #expect(state.allPassIndex == 0)
-        #expect(state.echo.allSatisfy { $0 == 0 })
-        #expect(state.echoIndex == 0)
+        #expect(state.echoLow == 0.5)
+        #expect(state.dcInput == 0.4)
+        #expect(state.dcOutput == 0.3)
+        #expect(state.tailLevel == 0.2)
+        #expect(state.comb[0] == 0.9)
+        #expect(state.comb[1] == -0.8)
+        #expect(state.combIndex == 1)
+        #expect(state.allPass[0] == 0.7)
+        #expect(state.allPass[1] == -0.6)
+        #expect(state.allPassIndex == 1)
+        #expect(state.echo[0] == 0.5)
+        #expect(state.echo[1] == -0.4)
+        #expect(state.echoIndex == 1)
+
+        state.beginEffectTransition(
+            combScale: 1.2,
+            echoScale: 0.6,
+            sampleRate: sampleRate
+        )
+        let transitionFrames = Int((
+            sampleRate * AlienVoiceState.effectTransitionSeconds
+        ).rounded())
+        #expect(state.effectTransitionRemainingFrames == transitionFrames)
+        #expect(state.appliedCombScale == 0.8)
+        #expect(state.appliedEchoScale == 1.1)
+        state.advanceEffectTransition()
+        #expect(state.appliedCombScale > 0.8)
+        #expect(state.appliedCombScale < 1.2)
+        #expect(state.appliedEchoScale < 1.1)
+        #expect(state.appliedEchoScale > 0.6)
+        for _ in 1..<transitionFrames {
+            state.advanceEffectTransition()
+        }
+        #expect(state.effectTransitionRemainingFrames == 0)
+        #expect(state.appliedCombScale == 1.2)
+        #expect(state.appliedEchoScale == 0.6)
     }
 
     @Test("The canonical renderer emits exact architecture-local evidence")

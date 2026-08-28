@@ -1126,6 +1126,10 @@ private extension AutonomousTypedFingerprint {
         }
         sink.field("spatialFDNState")
         encode(value.spatialFDNState, into: &sink)
+        sink.field("spatialSendHighPassState")
+        sink.double(value.spatialSendHighPassState)
+        sink.field("spatialSendLowPassState")
+        sink.double(value.spatialSendLowPassState)
         sink.field("modalPercussionState")
         encode(value.modalPercussionState, into: &sink)
         sink.field("resonantFoundationState")
@@ -1153,6 +1157,8 @@ private extension AutonomousTypedFingerprint {
         encode(value.previousGraphInputRemainderEvidenceFrame, into: &sink)
         sink.field("previousPostGraphRemainderEvidenceFrame")
         encode(value.previousPostGraphRemainderEvidenceFrame, into: &sink)
+        sink.field("outputTransitionState")
+        encode(value.outputTransitionState, into: &sink)
     }
 
     static func encode(
@@ -1170,6 +1176,39 @@ private extension AutonomousTypedFingerprint {
         sink.field("dampingStates")
         sink.collection(value.dampingStates.count)
         for state in value.dampingStates { sink.double(state) }
+        sink.field("routeSampleRate"); sink.double(value.routeSampleRate)
+        sink.field("geometryRoomScale"); sink.double(value.geometryRoomScale)
+        sink.field("appliedFeedbackGains")
+        sink.collection(value.appliedFeedbackGains.count)
+        for gain in value.appliedFeedbackGains { sink.double(gain) }
+        sink.field("targetFeedbackGains")
+        sink.collection(value.targetFeedbackGains.count)
+        for gain in value.targetFeedbackGains { sink.double(gain) }
+        sink.field("feedbackGainSteps")
+        sink.collection(value.feedbackGainSteps.count)
+        for step in value.feedbackGainSteps { sink.double(step) }
+        sink.field("appliedDampingCoefficient")
+        sink.double(value.appliedDampingCoefficient)
+        sink.field("targetDampingCoefficient")
+        sink.double(value.targetDampingCoefficient)
+        sink.field("dampingCoefficientStep")
+        sink.double(value.dampingCoefficientStep)
+        sink.field("appliedSynthSendGain")
+        sink.double(value.appliedSynthSendGain)
+        sink.field("targetSynthSendGain")
+        sink.double(value.targetSynthSendGain)
+        sink.field("synthSendGainStep"); sink.double(value.synthSendGainStep)
+        sink.field("appliedPercussionSendGain")
+        sink.double(value.appliedPercussionSendGain)
+        sink.field("targetPercussionSendGain")
+        sink.double(value.targetPercussionSendGain)
+        sink.field("percussionSendGainStep")
+        sink.double(value.percussionSendGainStep)
+        sink.field("appliedWetGain"); sink.double(value.appliedWetGain)
+        sink.field("targetWetGain"); sink.double(value.targetWetGain)
+        sink.field("wetGainStep"); sink.double(value.wetGainStep)
+        sink.field("parameterTransitionRemainingFrames")
+        sink.int(value.parameterTransitionRemainingFrames)
     }
 
     static func encode(
@@ -1239,6 +1278,55 @@ private extension AutonomousTypedFingerprint {
         sink.field("spatialFDNDampingStates")
         sink.collection(value.spatialFDNState.dampingStates.count)
         for state in value.spatialFDNState.dampingStates { sink.double(state) }
+        sink.field("spatialFDNRouteSampleRate")
+        sink.double(value.spatialFDNState.routeSampleRate)
+        sink.field("spatialFDNGeometryRoomScale")
+        sink.double(value.spatialFDNState.geometryRoomScale)
+        sink.field("spatialFDNAppliedFeedbackGains")
+        sink.collection(value.spatialFDNState.appliedFeedbackGains.count)
+        for gain in value.spatialFDNState.appliedFeedbackGains {
+            sink.double(gain)
+        }
+        sink.field("spatialFDNTargetFeedbackGains")
+        sink.collection(value.spatialFDNState.targetFeedbackGains.count)
+        for gain in value.spatialFDNState.targetFeedbackGains {
+            sink.double(gain)
+        }
+        sink.field("spatialFDNFeedbackGainSteps")
+        sink.collection(value.spatialFDNState.feedbackGainSteps.count)
+        for step in value.spatialFDNState.feedbackGainSteps {
+            sink.double(step)
+        }
+        sink.field("spatialFDNAppliedDampingCoefficient")
+        sink.double(value.spatialFDNState.appliedDampingCoefficient)
+        sink.field("spatialFDNTargetDampingCoefficient")
+        sink.double(value.spatialFDNState.targetDampingCoefficient)
+        sink.field("spatialFDNDampingCoefficientStep")
+        sink.double(value.spatialFDNState.dampingCoefficientStep)
+        sink.field("spatialFDNAppliedSynthSendGain")
+        sink.double(value.spatialFDNState.appliedSynthSendGain)
+        sink.field("spatialFDNTargetSynthSendGain")
+        sink.double(value.spatialFDNState.targetSynthSendGain)
+        sink.field("spatialFDNSynthSendGainStep")
+        sink.double(value.spatialFDNState.synthSendGainStep)
+        sink.field("spatialFDNAppliedPercussionSendGain")
+        sink.double(value.spatialFDNState.appliedPercussionSendGain)
+        sink.field("spatialFDNTargetPercussionSendGain")
+        sink.double(value.spatialFDNState.targetPercussionSendGain)
+        sink.field("spatialFDNPercussionSendGainStep")
+        sink.double(value.spatialFDNState.percussionSendGainStep)
+        sink.field("spatialFDNAppliedWetGain")
+        sink.double(value.spatialFDNState.appliedWetGain)
+        sink.field("spatialFDNTargetWetGain")
+        sink.double(value.spatialFDNState.targetWetGain)
+        sink.field("spatialFDNWetGainStep")
+        sink.double(value.spatialFDNState.wetGainStep)
+        sink.field("spatialFDNParameterTransitionRemainingFrames")
+        sink.int(value.spatialFDNState.parameterTransitionRemainingFrames)
+        sink.field("spatialSendHighPassState")
+        sink.double(value.spatialSendHighPassState)
+        sink.field("spatialSendLowPassState")
+        sink.double(value.spatialSendLowPassState)
         sink.field("modalPercussionState")
         encode(value.modalPercussionState, into: &sink)
         sink.field("resonantFoundationState")
@@ -1291,7 +1379,26 @@ private extension AutonomousTypedFingerprint {
         encode(value.previousGraphInputRemainderEvidenceFrame, into: &sink)
         sink.field("previousPostGraphRemainderEvidenceFrame")
         encode(value.previousPostGraphRemainderEvidenceFrame, into: &sink)
+        sink.field("outputTransitionState")
+        encode(value.outputTransitionState, into: &sink)
         return true
+    }
+
+    static func encode(
+        _ value: OutputTransitionContinuationState?,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.presence(value != nil)
+        guard let value else { return }
+        sink.aggregate("OutputTransitionContinuationState")
+        sink.field("sampleRate"); sink.double(value.sampleRate)
+        sink.field("terminalLeft"); sink.float(value.terminalLeft)
+        sink.field("terminalRight"); sink.float(value.terminalRight)
+        sink.field("terminalOutputRMS"); sink.double(value.terminalOutputRMS)
+        sink.field("terminalSpatialWetRMS")
+        sink.double(value.terminalSpatialWetRMS)
+        sink.field("authoredTerminalSilence")
+        sink.bool(value.authoredTerminalSilence)
     }
 
     static func encode(
@@ -1537,6 +1644,16 @@ private extension AutonomousTypedFingerprint {
         sink.field("allPassIndex"); sink.int(value.allPassIndex)
         sink.field("echo"); encode(value.echo, into: &sink)
         sink.field("echoIndex"); sink.int(value.echoIndex)
+        sink.field("effectParametersInitialized")
+        sink.bool(value.effectParametersInitialized)
+        sink.field("appliedCombScale"); sink.double(value.appliedCombScale)
+        sink.field("targetCombScale"); sink.double(value.targetCombScale)
+        sink.field("combScaleStep"); sink.double(value.combScaleStep)
+        sink.field("appliedEchoScale"); sink.double(value.appliedEchoScale)
+        sink.field("targetEchoScale"); sink.double(value.targetEchoScale)
+        sink.field("echoScaleStep"); sink.double(value.echoScaleStep)
+        sink.field("effectTransitionRemainingFrames")
+        sink.int(value.effectTransitionRemainingFrames)
     }
 
     static func encode(
@@ -1594,6 +1711,16 @@ private extension AutonomousTypedFingerprint {
             cancellationRequested: cancellationRequested
         ) else { return false }
         sink.field("echoIndex"); sink.int(value.echoIndex)
+        sink.field("effectParametersInitialized")
+        sink.bool(value.effectParametersInitialized)
+        sink.field("appliedCombScale"); sink.double(value.appliedCombScale)
+        sink.field("targetCombScale"); sink.double(value.targetCombScale)
+        sink.field("combScaleStep"); sink.double(value.combScaleStep)
+        sink.field("appliedEchoScale"); sink.double(value.appliedEchoScale)
+        sink.field("targetEchoScale"); sink.double(value.targetEchoScale)
+        sink.field("echoScaleStep"); sink.double(value.echoScaleStep)
+        sink.field("effectTransitionRemainingFrames")
+        sink.int(value.effectTransitionRemainingFrames)
         return true
     }
 

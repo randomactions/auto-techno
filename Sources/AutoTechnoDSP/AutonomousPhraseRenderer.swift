@@ -198,6 +198,8 @@ package struct RenderState: Equatable, Sendable {
     package var automaticMixState = AutomaticMixState()
     package var liveMasterHeadroomState = LiveMasterHeadroomContinuationState()
     package var spatialFDNState = FeedbackDelayNetworkState()
+    package var spatialSendHighPassState = 0.0
+    package var spatialSendLowPassState = 0.0
     package var modalPercussionState = ModalPercussionVoiceState()
     var resonantFoundationState = ResonantMonoState()
     var resonantAnchorState = ResonantMonoState()
@@ -216,11 +218,176 @@ package struct RenderState: Equatable, Sendable {
     package var previousDetunedCompanionEvidenceFrame: UpperTimbreStereoFrame?
     package var previousGraphInputRemainderEvidenceFrame: UpperTimbreStereoFrame?
     package var previousPostGraphRemainderEvidenceFrame: UpperTimbreStereoFrame?
+    package var outputTransitionState: OutputTransitionContinuationState?
 
     package init() {}
 
     package mutating func reset() {
         self = RenderState()
+    }
+}
+
+/// Reduced terminal signal facts retained across the canonical phrase
+/// boundary. It contains no reconstructable window: only the final stereo
+/// frame and scalar terminal levels needed to evaluate the next detached
+/// render against the material it actually follows.
+package struct OutputTransitionContinuationState: Equatable, Sendable {
+    package static let outputWindowSeconds = 0.10
+
+    package let sampleRate: Double
+    package let terminalLeft: Float
+    package let terminalRight: Float
+    package let terminalOutputRMS: Double
+    package let terminalSpatialWetRMS: Double
+    package let authoredTerminalSilence: Bool
+
+    package init(
+        sampleRate: Double,
+        terminalLeft: Float,
+        terminalRight: Float,
+        terminalOutputRMS: Double,
+        terminalSpatialWetRMS: Double,
+        authoredTerminalSilence: Bool
+    ) {
+        self.sampleRate = sampleRate
+        self.terminalLeft = terminalLeft
+        self.terminalRight = terminalRight
+        self.terminalOutputRMS = terminalOutputRMS
+        self.terminalSpatialWetRMS = terminalSpatialWetRMS
+        self.authoredTerminalSilence = authoredTerminalSilence
+    }
+
+    package var isFiniteAndBounded: Bool {
+        sampleRate.isFinite && sampleRate > 0 && terminalLeft.isFinite &&
+            abs(terminalLeft) <= 1 && terminalRight.isFinite &&
+            abs(terminalRight) <= 1 && terminalOutputRMS.isFinite &&
+            terminalOutputRMS >= 0 && terminalSpatialWetRMS.isFinite &&
+            terminalSpatialWetRMS >= 0
+    }
+}
+
+/// Cross-phrase seam and surviving-tail evidence. A route reset or initial
+/// phrase is explicitly non-comparable; ordinary continuation must preserve
+/// active FDN geometry and produce nonzero opening wet energy when an audible
+/// inherited tail exists. The level delta is descriptive until calibrated.
+package struct CrossPhraseTransitionEvidence: Codable, Equatable, Sendable {
+    package static let evidenceVersion = "cross-phrase-transition.v1"
+
+    package let predecessorAvailable: Bool
+    package let routeComparable: Bool
+    package let authoredTerminalSilence: Bool
+    package let predecessorLeftBitPattern: UInt32
+    package let predecessorRightBitPattern: UInt32
+    package let successorLeftBitPattern: UInt32
+    package let successorRightBitPattern: UInt32
+    package let maximumBoundaryDelta: Double
+    package let predecessorTerminalOutputRMS: Double
+    package let successorOpeningOutputRMS: Double
+    package let incomingSpatialStorageRMS: Double
+    package let predecessorTerminalSpatialWetRMS: Double
+    package let successorOpeningSpatialWetRMS: Double
+    package let spatialTailLevelChangeDB: Double
+    package let spatialGeometryRetained: Bool
+    package let spatialTailContinuationRequired: Bool
+    package let spatialTailContinuationObserved: Bool
+    package let finite: Bool
+
+    package static let initial = CrossPhraseTransitionEvidence(
+        predecessorAvailable: false,
+        routeComparable: false,
+        authoredTerminalSilence: false,
+        predecessorLeftBitPattern: 0,
+        predecessorRightBitPattern: 0,
+        successorLeftBitPattern: 0,
+        successorRightBitPattern: 0,
+        maximumBoundaryDelta: 0,
+        predecessorTerminalOutputRMS: 0,
+        successorOpeningOutputRMS: 0,
+        incomingSpatialStorageRMS: 0,
+        predecessorTerminalSpatialWetRMS: 0,
+        successorOpeningSpatialWetRMS: 0,
+        spatialTailLevelChangeDB: 0,
+        spatialGeometryRetained: false,
+        spatialTailContinuationRequired: false,
+        spatialTailContinuationObserved: true,
+        finite: true
+    )
+
+    package var hardGateValid: Bool {
+        isComplete && spatialTailContinuationObserved &&
+            (!routeComparable || maximumBoundaryDelta < 0.65)
+    }
+
+    package var isComplete: Bool {
+        guard finite, maximumBoundaryDelta >= 0,
+              predecessorTerminalOutputRMS >= 0,
+              successorOpeningOutputRMS >= 0,
+              incomingSpatialStorageRMS >= 0,
+              predecessorTerminalSpatialWetRMS >= 0,
+              successorOpeningSpatialWetRMS >= 0 else {
+            return false
+        }
+        let predecessorLeft = Float(bitPattern: predecessorLeftBitPattern)
+        let predecessorRight = Float(bitPattern: predecessorRightBitPattern)
+        let successorLeft = Float(bitPattern: successorLeftBitPattern)
+        let successorRight = Float(bitPattern: successorRightBitPattern)
+        guard predecessorLeft.isFinite, predecessorRight.isFinite,
+              successorLeft.isFinite, successorRight.isFinite else {
+            return false
+        }
+        if !predecessorAvailable {
+            return !routeComparable && !spatialTailContinuationRequired &&
+                spatialTailContinuationObserved &&
+                predecessorLeftBitPattern == 0 &&
+                predecessorRightBitPattern == 0 &&
+                successorLeftBitPattern == 0 &&
+                successorRightBitPattern == 0 &&
+                maximumBoundaryDelta == 0 &&
+                predecessorTerminalOutputRMS == 0 &&
+                successorOpeningOutputRMS == 0 &&
+                incomingSpatialStorageRMS == 0 &&
+                predecessorTerminalSpatialWetRMS == 0 &&
+                successorOpeningSpatialWetRMS == 0 &&
+                spatialTailLevelChangeDB == 0 &&
+                !spatialGeometryRetained
+        }
+        if !routeComparable {
+            return maximumBoundaryDelta == 0 &&
+                !spatialTailContinuationRequired &&
+                spatialTailContinuationObserved &&
+                spatialTailLevelChangeDB == 0
+        }
+        let expectedBoundaryDelta = max(
+            abs(Double(successorLeft - predecessorLeft)),
+            abs(Double(successorRight - predecessorRight))
+        )
+        let expectedTailRequired = !authoredTerminalSilence &&
+            incomingSpatialStorageRMS > 0 &&
+            predecessorTerminalSpatialWetRMS > 0
+        let expectedTailObserved = !expectedTailRequired || (
+            spatialGeometryRetained && successorOpeningSpatialWetRMS > 0
+        )
+        guard maximumBoundaryDelta == expectedBoundaryDelta,
+              spatialTailContinuationRequired == expectedTailRequired,
+              spatialTailContinuationObserved == expectedTailObserved else {
+            return false
+        }
+        if expectedTailRequired {
+            let expectedLevelChangeDB = successorOpeningSpatialWetRMS > 0
+                ? 20 * log10(
+                    successorOpeningSpatialWetRMS /
+                        predecessorTerminalSpatialWetRMS
+                ) : 0
+            return !authoredTerminalSilence &&
+                incomingSpatialStorageRMS > 0 &&
+                predecessorTerminalSpatialWetRMS > 0 &&
+                spatialGeometryRetained &&
+                successorOpeningSpatialWetRMS > 0 &&
+                spatialTailContinuationObserved &&
+                spatialTailLevelChangeDB == expectedLevelChangeDB
+        }
+        return spatialTailContinuationObserved &&
+            spatialTailLevelChangeDB == 0
     }
 }
 
@@ -827,13 +994,14 @@ package struct PulseEchoReturnDriveRenderEvidence: Equatable, Sendable {
 /// It binds the score-owned selective send and scene-derived configuration to
 /// exact FDN input/wet PCM without retaining another audio buffer.
 package struct SpatialFDNRenderEvidence: Equatable, Sendable {
-    package static let evidenceVersion = "spatial-fdn.render.v1"
+    package static let evidenceVersion = "spatial-fdn.render.v2"
 
     package let bar: Int
     package let sampleRate: Double
     package let renderedFrameCount: Int
     package let lineCount: Int
     package let delayFrameCounts: [Int]
+    package let requestedRoomScale: Double
     package let roomScale: Double
     package let decayTimeSeconds: Double
     package let dampingHz: Double
@@ -841,6 +1009,18 @@ package struct SpatialFDNRenderEvidence: Equatable, Sendable {
     package let synthSendGain: Double
     package let percussionSendGain: Double
     package let wetGain: Double
+    package let geometryRetained: Bool
+    package let parameterTransitionFrameCount: Int
+    package let initialMaximumFeedbackGain: Double
+    package let finalMaximumFeedbackGain: Double
+    package let initialDampingCoefficient: Double
+    package let finalDampingCoefficient: Double
+    package let initialSynthSendGain: Double
+    package let finalSynthSendGain: Double
+    package let initialPercussionSendGain: Double
+    package let finalPercussionSendGain: Double
+    package let initialWetGain: Double
+    package let finalWetGain: Double
     package let spatialDepthPosition: SpatialDepthPosition
     package let carrierVoice: EnsembleVoice?
     package let carrierStep: Int?
@@ -858,6 +1038,10 @@ package struct SpatialFDNRenderEvidence: Equatable, Sendable {
     package let activeInputFrameCount: Int
     package let activeWetFrameCount: Int
     package let firstWetFrameIndex: Int
+    package let openingWindowFrameCount: Int
+    package let openingWetRMS: Double
+    package let terminalWindowFrameCount: Int
+    package let terminalWetRMS: Double
     package let finite: Bool
 
     package static let neutral = SpatialFDNRenderEvidence(
@@ -866,6 +1050,7 @@ package struct SpatialFDNRenderEvidence: Equatable, Sendable {
         renderedFrameCount: 0,
         lineCount: 0,
         delayFrameCounts: [],
+        requestedRoomScale: 0,
         roomScale: 0,
         decayTimeSeconds: 0,
         dampingHz: 0,
@@ -873,6 +1058,18 @@ package struct SpatialFDNRenderEvidence: Equatable, Sendable {
         synthSendGain: 0,
         percussionSendGain: 0,
         wetGain: 0,
+        geometryRetained: false,
+        parameterTransitionFrameCount: 0,
+        initialMaximumFeedbackGain: 0,
+        finalMaximumFeedbackGain: 0,
+        initialDampingCoefficient: 0,
+        finalDampingCoefficient: 0,
+        initialSynthSendGain: 0,
+        finalSynthSendGain: 0,
+        initialPercussionSendGain: 0,
+        finalPercussionSendGain: 0,
+        initialWetGain: 0,
+        finalWetGain: 0,
         spatialDepthPosition: .foreground,
         carrierVoice: nil,
         carrierStep: nil,
@@ -890,6 +1087,10 @@ package struct SpatialFDNRenderEvidence: Equatable, Sendable {
         activeInputFrameCount: 0,
         activeWetFrameCount: 0,
         firstWetFrameIndex: -1,
+        openingWindowFrameCount: 0,
+        openingWetRMS: 0,
+        terminalWindowFrameCount: 0,
+        terminalWetRMS: 0,
         finite: false
     )
 }
@@ -1889,6 +2090,22 @@ package enum AutonomousPhraseRenderer {
                 synthWorld: synthPlan.world,
                 synthPerformance: synthPerformance
             ))
+            if let terminalLeft = outputLeft.last,
+               let terminalRight = outputRight.last {
+                state.outputTransitionState = OutputTransitionContinuationState(
+                    sampleRate: sampleRate,
+                    terminalLeft: terminalLeft,
+                    terminalRight: terminalRight,
+                    terminalOutputRMS: terminalRMS(
+                        left: outputLeft,
+                        right: outputRight,
+                        sampleRate: sampleRate
+                    ),
+                    terminalSpatialWetRMS:
+                        rendered.spatialFDNRenderEvidence.terminalWetRMS,
+                    authoredTerminalSilence: climaxOutput.evidence.active
+                )
+            }
             state.barIndex = performance.bar + 1
         }
         return cancellationRequested() ? nil : blocks
@@ -1896,6 +2113,29 @@ package enum AutonomousPhraseRenderer {
 
     private static func outputSafety(_ input: Float) -> Float {
         Float(tanh(Double(input) * 1.04) / tanh(1.04) * 0.90)
+    }
+
+    private static func terminalRMS(
+        left: [Float],
+        right: [Float],
+        sampleRate: Double
+    ) -> Double {
+        let count = min(left.count, right.count)
+        guard count > 0, sampleRate.isFinite, sampleRate > 0 else { return 0 }
+        let window = min(
+            count,
+            max(1, Int((
+                sampleRate * OutputTransitionContinuationState.outputWindowSeconds
+            ).rounded()))
+        )
+        let start = count - window
+        var energy = 0.0
+        for index in start..<count {
+            let leftValue = Double(left[index])
+            let rightValue = Double(right[index])
+            energy += leftValue * leftValue + rightValue * rightValue
+        }
+        return sqrt(energy / Double(window * 2))
     }
 
     private static func applyLiveMasterTrim(

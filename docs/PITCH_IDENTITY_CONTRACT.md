@@ -54,9 +54,7 @@ pitch-dependent.
 
 ## Version and qualification state
 
-This PCM-changing contract is canonical engine v37, quality-contract schema
-38, candidate-vector schema 34, and candidate-transaction schema 5. Bundled
-engine-v36 primary-v18 and long-horizon-v5 artifacts are intentionally stale
-for this engine and fail closed. Engine-v37 playback qualification remains
-unavailable until the complete representative-rate calibration, adversarial,
-disjoint-holdout, and long-horizon artifact sets are regenerated and pass.
+This PCM-changing contract is canonical engine v38, quality-contract schema
+39, candidate-vector schema 35, and candidate-transaction schema 6. The exact
+primary-v19 and long-horizon-v6 artifacts bind it together with transition-tail
+continuity; older engine-v36 artifacts remain historical and fail closed.

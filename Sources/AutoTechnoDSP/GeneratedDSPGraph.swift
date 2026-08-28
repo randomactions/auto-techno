@@ -590,10 +590,15 @@ package struct PhraseAudioPreflight: Equatable, Sendable {
     package let safetyValid: Bool
     package let interesting: Bool
 
-    package init(blocks: [RenderBlock], sampleRate: Double) {
+    package init(
+        blocks: [RenderBlock],
+        sampleRate: Double,
+        precedingFrame: UpperTimbreStereoFrame? = nil
+    ) {
         guard let preflight = Self(
             blocks: blocks,
             sampleRate: sampleRate,
+            precedingFrame: precedingFrame,
             cancellationRequested: { false }
         ) else {
             preconditionFailure("Non-cancellable phrase preflight stopped unexpectedly")
@@ -604,11 +609,13 @@ package struct PhraseAudioPreflight: Equatable, Sendable {
     package init?(
         blocks: [RenderBlock],
         sampleRate: Double,
+        precedingFrame: UpperTimbreStereoFrame? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) {
         guard let report = AudioQualityReport(
             blocks: blocks,
             sampleRate: sampleRate,
+            precedingFrame: precedingFrame,
             cancellationRequested: cancellationRequested
         ) else { return nil }
         var barEvidence: [PhraseBarAudioEvidence] = []
@@ -1928,7 +1935,25 @@ package enum AutonomousPhrasePreparer {
                 state.echo.count <= maximumVoiceEchoFrames &&
                 indexIsValid(state.combIndex, for: state.comb.count) &&
                 indexIsValid(state.allPassIndex, for: state.allPass.count) &&
-                indexIsValid(state.echoIndex, for: state.echo.count)
+                indexIsValid(state.echoIndex, for: state.echo.count) &&
+                [
+                    state.appliedCombScale,
+                    state.targetCombScale,
+                    state.combScaleStep,
+                    state.appliedEchoScale,
+                    state.targetEchoScale,
+                    state.echoScaleStep,
+                ].allSatisfy(\.isFinite) &&
+                (0...1.4).contains(state.appliedCombScale) &&
+                (0...1.4).contains(state.targetCombScale) &&
+                abs(state.combScaleStep) <= 1.4 &&
+                (0...1.4).contains(state.appliedEchoScale) &&
+                (0...1.4).contains(state.targetEchoScale) &&
+                abs(state.echoScaleStep) <= 1.4 &&
+                state.effectTransitionRemainingFrames >= 0 &&
+                state.effectTransitionRemainingFrames <= Int(
+                    maximumSampleRate * AlienVoiceState.effectTransitionSeconds
+                ) + 1
         }
         func graphPlanIsBounded(_ graph: DSPGraphPlan?) -> Bool {
             guard let graph else { return true }
@@ -1955,9 +1980,7 @@ package enum AutonomousPhrasePreparer {
             if state.storage.isEmpty || state.lineOffsets.isEmpty ||
                 state.lineLengths.isEmpty || state.writeIndices.isEmpty ||
                 state.dampingStates.isEmpty {
-                return state.storage.isEmpty && state.lineOffsets.isEmpty &&
-                    state.lineLengths.isEmpty && state.writeIndices.isEmpty &&
-                    state.dampingStates.isEmpty
+                return state == FeedbackDelayNetworkState()
             }
             let lineCount = FeedbackDelayNetworkConfiguration.lineCount
             guard state.storage.count <= maximumFDNStorageFrames,
@@ -1965,7 +1988,58 @@ package enum AutonomousPhrasePreparer {
                   state.lineLengths.count == lineCount,
                   state.writeIndices.count == lineCount,
                   state.dampingStates.count == lineCount,
-                  state.dampingStates.allSatisfy(\.isFinite) else {
+                  state.dampingStates.allSatisfy(\.isFinite),
+                  state.routeSampleRate.isFinite,
+                  state.routeSampleRate >=
+                    QualityQualificationContract.minimumSupportedSampleRate,
+                  state.routeSampleRate <= maximumSampleRate,
+                  state.geometryRoomScale >=
+                    FeedbackDelayNetworkConfiguration.minimumRoomScale,
+                  state.geometryRoomScale <=
+                    FeedbackDelayNetworkConfiguration.maximumRoomScale,
+                  state.appliedFeedbackGains.count == lineCount,
+                  state.targetFeedbackGains.count == lineCount,
+                  state.feedbackGainSteps.count == lineCount,
+                  state.appliedFeedbackGains.allSatisfy({
+                    $0.isFinite && $0 > 0 && $0 < 1
+                  }),
+                  state.targetFeedbackGains.allSatisfy({
+                    $0.isFinite && $0 > 0 && $0 < 1
+                  }),
+                  state.feedbackGainSteps.allSatisfy({
+                    $0.isFinite && abs($0) <= 1
+                  }),
+                  [
+                    state.appliedDampingCoefficient,
+                    state.targetDampingCoefficient,
+                    state.dampingCoefficientStep,
+                    state.appliedSynthSendGain,
+                    state.targetSynthSendGain,
+                    state.synthSendGainStep,
+                    state.appliedPercussionSendGain,
+                    state.targetPercussionSendGain,
+                    state.percussionSendGainStep,
+                    state.appliedWetGain,
+                    state.targetWetGain,
+                    state.wetGainStep,
+                  ].allSatisfy(\.isFinite),
+                  (0...1).contains(state.appliedDampingCoefficient),
+                  (0...1).contains(state.targetDampingCoefficient),
+                  abs(state.dampingCoefficientStep) <= 1,
+                  (0...0.5).contains(state.appliedSynthSendGain),
+                  (0...0.5).contains(state.targetSynthSendGain),
+                  abs(state.synthSendGainStep) <= 0.5,
+                  (0...0.16).contains(state.appliedPercussionSendGain),
+                  (0...0.16).contains(state.targetPercussionSendGain),
+                  abs(state.percussionSendGainStep) <= 0.16,
+                  (0...0.24).contains(state.appliedWetGain),
+                  (0...0.24).contains(state.targetWetGain),
+                  abs(state.wetGainStep) <= 0.24,
+                  state.parameterTransitionRemainingFrames >= 0,
+                  state.parameterTransitionRemainingFrames <= Int(
+                    maximumSampleRate *
+                        FeedbackDelayNetworkState.parameterTransitionSeconds
+                  ) + 1 else {
                 return false
             }
             var expectedOffset = 0
@@ -2100,6 +2174,16 @@ package enum AutonomousPhrasePreparer {
                 for: renderState.chorusDelay.count
             ) &&
             spatialFDNStateIsBounded(renderState.spatialFDNState) &&
+            renderState.spatialSendHighPassState.isFinite &&
+            renderState.spatialSendLowPassState.isFinite &&
+            (renderState.outputTransitionState.map {
+                $0.isFiniteAndBounded &&
+                    $0.sampleRate >=
+                        QualityQualificationContract.minimumSupportedSampleRate &&
+                    $0.sampleRate <= maximumSampleRate &&
+                    $0.terminalOutputRMS <= 1 &&
+                    $0.terminalSpatialWetRMS <= 1
+            } ?? true) &&
             (AutomaticMixBalancer.minimumKickCorrectionDB...0).contains(
                 renderState.automaticMixState.kickCorrectionDB
             ) &&
@@ -2186,6 +2270,11 @@ package enum AutonomousPhrasePreparer {
         guard DSPGraphValidator.validate(graph).valid else {
             return .failure(.init(stage: stage, code: .graphInvalid))
         }
+        let incomingOutputTransition =
+            incomingRenderState.outputTransitionState
+        let incomingSpatialStorageRMS = rootMeanSquare(
+            incomingRenderState.spatialFDNState.storage
+        )
         var renderState = incomingRenderState
         renderState.liveMasterHeadroomState = outgoingLiveMasterState
         var graphState = incomingGraphState
@@ -2203,9 +2292,25 @@ package enum AutonomousPhrasePreparer {
         guard !cancellationRequested() else {
             return .failure(.init(stage: stage, code: .cancelled))
         }
+        let crossPhraseTransition = crossPhraseTransitionEvidence(
+            incoming: incomingOutputTransition,
+            incomingSpatialStorageRMS: incomingSpatialStorageRMS,
+            firstBlock: blocks.first,
+            sampleRate: sampleRate,
+            routeRecovery: routeRecovery
+        )
+        let precedingFrame: UpperTimbreStereoFrame? = {
+            guard crossPhraseTransition.routeComparable,
+                  let incomingOutputTransition else { return nil }
+            return UpperTimbreStereoFrame(
+                left: incomingOutputTransition.terminalLeft,
+                right: incomingOutputTransition.terminalRight
+            )
+        }()
         guard let audioPreflight = PhraseAudioPreflight(
             blocks: blocks,
             sampleRate: sampleRate,
+            precedingFrame: precedingFrame,
             cancellationRequested: cancellationRequested
         ) else {
             return .failure(.init(
@@ -2247,6 +2352,7 @@ package enum AutonomousPhrasePreparer {
             graphFingerprint: graphFingerprint,
             blocks: blocks,
             audioPreflight: audioPreflight,
+            crossPhraseTransition: crossPhraseTransition,
             upperTimbreEvidence: timbreEvidence,
             sampleRate: sampleRate,
             routeChannelCount: routeChannelCount,
@@ -2299,6 +2405,138 @@ package enum AutonomousPhrasePreparer {
             vector: vector,
             attempt: attempt
         ))
+    }
+
+    private static func crossPhraseTransitionEvidence(
+        incoming: OutputTransitionContinuationState?,
+        incomingSpatialStorageRMS: Double,
+        firstBlock: RenderBlock?,
+        sampleRate: Double,
+        routeRecovery: Bool
+    ) -> CrossPhraseTransitionEvidence {
+        guard let firstBlock,
+              let successorLeft = firstBlock.left.first,
+              let successorRight = firstBlock.right.first else {
+            return CrossPhraseTransitionEvidence(
+                predecessorAvailable: incoming != nil,
+                routeComparable: false,
+                authoredTerminalSilence:
+                    incoming?.authoredTerminalSilence ?? false,
+                predecessorLeftBitPattern:
+                    incoming?.terminalLeft.bitPattern ?? 0,
+                predecessorRightBitPattern:
+                    incoming?.terminalRight.bitPattern ?? 0,
+                successorLeftBitPattern: 0,
+                successorRightBitPattern: 0,
+                maximumBoundaryDelta: 0,
+                predecessorTerminalOutputRMS:
+                    incoming?.terminalOutputRMS ?? 0,
+                successorOpeningOutputRMS: 0,
+                incomingSpatialStorageRMS: incomingSpatialStorageRMS,
+                predecessorTerminalSpatialWetRMS:
+                    incoming?.terminalSpatialWetRMS ?? 0,
+                successorOpeningSpatialWetRMS: 0,
+                spatialTailLevelChangeDB: 0,
+                spatialGeometryRetained: false,
+                spatialTailContinuationRequired: false,
+                spatialTailContinuationObserved: false,
+                finite: false
+            )
+        }
+        guard let incoming else {
+            return .initial
+        }
+        let comparable = !routeRecovery &&
+            incoming.sampleRate == sampleRate &&
+            incoming.isFiniteAndBounded
+        let successorOpeningOutputRMS = openingRMS(
+            left: firstBlock.left,
+            right: firstBlock.right,
+            sampleRate: sampleRate
+        )
+        let spatial = firstBlock.spatialFDNRenderEvidence
+        let tailRequired = comparable &&
+            !incoming.authoredTerminalSilence &&
+            incomingSpatialStorageRMS > 0 &&
+            incoming.terminalSpatialWetRMS > 0
+        let tailObserved = !tailRequired || (
+            spatial.geometryRetained && spatial.openingWetRMS > 0
+        )
+        let tailLevelChangeDB = tailRequired &&
+            spatial.openingWetRMS > 0
+            ? 20 * log10(
+                spatial.openingWetRMS /
+                    incoming.terminalSpatialWetRMS
+            ) : 0
+        let boundaryDelta = comparable ? max(
+            abs(Double(successorLeft - incoming.terminalLeft)),
+            abs(Double(successorRight - incoming.terminalRight))
+        ) : 0
+        let finite = [
+            incoming.sampleRate,
+            sampleRate,
+            boundaryDelta,
+            incoming.terminalOutputRMS,
+            successorOpeningOutputRMS,
+            incomingSpatialStorageRMS,
+            incoming.terminalSpatialWetRMS,
+            spatial.openingWetRMS,
+            tailLevelChangeDB,
+        ].allSatisfy(\.isFinite) && successorLeft.isFinite &&
+            successorRight.isFinite
+        return CrossPhraseTransitionEvidence(
+            predecessorAvailable: true,
+            routeComparable: comparable,
+            authoredTerminalSilence: incoming.authoredTerminalSilence,
+            predecessorLeftBitPattern: incoming.terminalLeft.bitPattern,
+            predecessorRightBitPattern: incoming.terminalRight.bitPattern,
+            successorLeftBitPattern: successorLeft.bitPattern,
+            successorRightBitPattern: successorRight.bitPattern,
+            maximumBoundaryDelta: boundaryDelta,
+            predecessorTerminalOutputRMS: incoming.terminalOutputRMS,
+            successorOpeningOutputRMS: successorOpeningOutputRMS,
+            incomingSpatialStorageRMS: incomingSpatialStorageRMS,
+            predecessorTerminalSpatialWetRMS:
+                incoming.terminalSpatialWetRMS,
+            successorOpeningSpatialWetRMS: spatial.openingWetRMS,
+            spatialTailLevelChangeDB: tailLevelChangeDB,
+            spatialGeometryRetained: spatial.geometryRetained,
+            spatialTailContinuationRequired: tailRequired,
+            spatialTailContinuationObserved: tailObserved,
+            finite: finite
+        )
+    }
+
+    private static func rootMeanSquare(_ samples: [Float]) -> Double {
+        guard !samples.isEmpty else { return 0 }
+        var energy = 0.0
+        for sample in samples {
+            let value = Double(sample)
+            energy += value * value
+        }
+        return sqrt(energy / Double(samples.count))
+    }
+
+    private static func openingRMS(
+        left: [Float],
+        right: [Float],
+        sampleRate: Double
+    ) -> Double {
+        let count = min(left.count, right.count)
+        guard count > 0, sampleRate.isFinite, sampleRate > 0 else { return 0 }
+        let window = min(
+            count,
+            max(1, Int((
+                sampleRate * OutputTransitionContinuationState.outputWindowSeconds
+            ).rounded()))
+        )
+        var energy = 0.0
+        for index in 0..<window {
+            let leftValue = Double(left[index])
+            let rightValue = Double(right[index])
+            energy += leftValue * leftValue + rightValue * rightValue
+        }
+        return sqrt(energy / Double(window * 2))
     }
 
     private static func attemptReasonCodes(

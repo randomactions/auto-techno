@@ -48,6 +48,8 @@ struct AlienVoiceNote: Equatable, Sendable {
 }
 
 struct AlienVoiceState: Equatable, Sendable {
+    static let effectTransitionSeconds = 0.5
+
     var activeInstrument: InstrumentAssignment?
     var phaseA = 0.0
     var phaseB = 0.0
@@ -81,6 +83,14 @@ struct AlienVoiceState: Equatable, Sendable {
     var allPassIndex = 0
     var echo: [Float] = []
     var echoIndex = 0
+    var effectParametersInitialized = false
+    var appliedCombScale = 0.0
+    var targetCombScale = 0.0
+    var combScaleStep = 0.0
+    var appliedEchoScale = 0.0
+    var targetEchoScale = 0.0
+    var echoScaleStep = 0.0
+    var effectTransitionRemainingFrames = 0
 
     mutating func prepare(sampleRate: Double, world: SynthWorldDNA, role: SynthRole,
                           instrument: InstrumentAssignment) {
@@ -99,16 +109,10 @@ struct AlienVoiceState: Equatable, Sendable {
             mutationLow = 0
             oversampleLow = 0
             previousSource = 0
-            echoLow = 0
-            dcInput = 0
-            dcOutput = 0
-            tailLevel = 0
-            for index in comb.indices { comb[index] = 0 }
-            combIndex = 0
-            for index in allPass.indices { allPass[index] = 0 }
-            allPassIndex = 0
-            for index in echo.indices { echo[index] = 0 }
-            echoIndex = 0
+            // Comb, all-pass, echo, DC, and tail memory deliberately survive
+            // the patch identity reset. Their audible coefficients crossfade
+            // below, allowing the old effect field to retire while the new
+            // patch starts from clean oscillator/filter/envelope identity.
         }
         activeInstrument = instrument
         let roleOffset = SynthRole.allCases.firstIndex(of: role) ?? 0
@@ -133,6 +137,53 @@ struct AlienVoiceState: Equatable, Sendable {
             echo = [Float](repeating: 0, count: echoFrames)
             echoIndex = 0
         }
+    }
+
+    mutating func beginEffectTransition(
+        combScale: Double,
+        echoScale: Double,
+        sampleRate: Double
+    ) {
+        let boundedComb = min(1.4, max(0, combScale))
+        let boundedEcho = min(1.4, max(0, echoScale))
+        guard effectParametersInitialized else {
+            effectParametersInitialized = true
+            appliedCombScale = boundedComb
+            targetCombScale = boundedComb
+            appliedEchoScale = boundedEcho
+            targetEchoScale = boundedEcho
+            combScaleStep = 0
+            echoScaleStep = 0
+            effectTransitionRemainingFrames = 0
+            return
+        }
+        guard targetCombScale != boundedComb ||
+            targetEchoScale != boundedEcho else { return }
+        let frames = max(1, Int((
+            sampleRate * Self.effectTransitionSeconds
+        ).rounded()))
+        targetCombScale = boundedComb
+        targetEchoScale = boundedEcho
+        combScaleStep = (targetCombScale - appliedCombScale) /
+            Double(frames)
+        echoScaleStep = (targetEchoScale - appliedEchoScale) /
+            Double(frames)
+        effectTransitionRemainingFrames = frames
+    }
+
+    mutating func advanceEffectTransition() {
+        guard effectTransitionRemainingFrames > 0 else { return }
+        if effectTransitionRemainingFrames == 1 {
+            appliedCombScale = targetCombScale
+            appliedEchoScale = targetEchoScale
+            combScaleStep = 0
+            echoScaleStep = 0
+            effectTransitionRemainingFrames = 0
+            return
+        }
+        appliedCombScale += combScaleStep
+        appliedEchoScale += echoScaleStep
+        effectTransitionRemainingFrames -= 1
     }
 
     mutating func reset() {
@@ -469,6 +520,11 @@ enum AlienAnalogVoice {
         var activeEvidenceIndex: Int?
         let roleMutation = mutationScale(for: role)
         let patchTreatment = TonalPatchTreatment.resolve(assignment)
+        state.beginEffectTransition(
+            combScale: patchTreatment.combScale,
+            echoScale: patchTreatment.echoScale,
+            sampleRate: sampleRate
+        )
         let mutation = min(
             1,
             bar.mutationAmount * roleMutation * 0.62 +
@@ -812,15 +868,18 @@ enum AlienAnalogVoice {
                 state.filter4 *= 0.94
                 state.oversampleLow *= 0.72
             }
+            state.advanceEffectTransition()
+            let appliedCombScale = state.appliedCombScale
+            let appliedEchoScale = state.appliedEchoScale
             let combRead = Double(state.comb[state.combIndex])
             let combFeedback = min(
                 0.58,
-                (0.16 + mutation * 0.34) * patchTreatment.combScale
+                (0.16 + mutation * 0.34) * appliedCombScale
             )
             state.comb[state.combIndex] = Float(dryVoice + combRead * combFeedback)
             state.combIndex = (state.combIndex + 1) % state.comb.count
             let combVoice = dryVoice + combRead *
-                (0.12 + mutation * 0.38) * patchTreatment.combScale
+                (0.12 + mutation * 0.38) * appliedCombScale
 
             let allPassRead = Double(state.allPass[state.allPassIndex])
             let allPassGain = min(0.68, 0.34 + mutation * 0.24)
@@ -841,7 +900,7 @@ enum AlienAnalogVoice {
             state.echoLow += (echoRead - state.echoLow) * (0.08 + (1 - mutation) * 0.05)
             let filteredEcho = state.echoLow
             let echoSend = (bar.gesture == .suspend
-                ? 0.26 + mutation * 0.34 : 0.035) * patchTreatment.echoScale
+                ? 0.26 + mutation * 0.34 : 0.035) * appliedEchoScale
             let echoFeedback = min(0.69, 0.31 + mutation * 0.31)
             state.echo[state.echoIndex] = Float(coloredVoice * echoSend + filteredEcho * echoFeedback)
             state.echoIndex = (state.echoIndex + 1) % state.echo.count

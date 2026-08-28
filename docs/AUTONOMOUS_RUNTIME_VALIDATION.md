@@ -24,10 +24,9 @@ Record the exact commit, toolchain, fixture/continuation state, sample rates, an
 quality-contract revision. A result from another head or an unidentified state is
 not release evidence.
 
-For engine v37, also validate the deterministic pitch-identity matrix in
-[`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md). Bundled engine-v36
-artifacts are stale and must leave qualification unavailable until complete
-engine-v37 primary and long-horizon regeneration passes.
+For engine v38, also validate the deterministic pitch-identity matrix in
+[`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md) and the transition-
+tail gates in [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md).
 
 For a Windows distribution, run on 64-bit Windows with the official Swift and
 Windows SDK toolchains:
@@ -94,8 +93,8 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 38, candidate-vector schema 34, candidate-transaction
-schema 5, and canonical engine v37 provide the current transaction-level
+Quality-contract schema 39, candidate-vector schema 35, candidate-transaction
+schema 6, and canonical engine v38 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
@@ -104,7 +103,8 @@ event-local groove-pulse, ordinary closed-hat, score-owned modal foundation,
 score-owned dotted foundation rhythm and pre-kick pocket,
 score-owned instrument and its acid/nonlinear-core/cluster/envelope consequence,
 score-owned gated/anticipatory percussion-return texture,
-shared pulse-echo return-drive, score-owned spatial-FDN, score-owned upper-role timing,
+shared pulse-echo return-drive, score-owned spatial-FDN, cross-phrase
+terminal/opening seam and inherited-tail continuity, score-owned upper-role timing,
 score-owned phrase slicing, arpeggiator geometry and exact score/render pitch
 identity, polyphonic pad signal, harmonic-disclosure stage/function,
 pad rhythmic-modulation consequence, and voice-leading continuation,
@@ -339,12 +339,11 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v19 bank must contain every canonical checkpoint for
-every included rate and complete exact-role masking/stem evidence. The next
-exact engine-v37 evaluator and pinned profile/adversarial/holdout identities
-must load and replay through the app path; the bundled engine-v36 set must
-remain rejected. The replacement profile must cover at least 24 complete
-development trajectories; the last engine-v36 profile covered 28.
+The Professional Evidence v20 bank must contain every canonical checkpoint for
+every included rate and complete exact-role masking/stem evidence. The exact
+engine-v38 primary evaluator v19 and pinned profile v19/adversarial/holdout
+identities must load and replay through the app path. The profile must cover at
+least 24 complete development trajectories; the current profile covers 28.
 Holdouts must be source-disjoint, contain at
 least four complete journeys, accept every checkpoint/rate observation, and
 produce no trajectory or rate-consistency failure. Short-program EBU-style LRA
@@ -406,8 +405,8 @@ or PCM.
 ## Scheduled-output feedback and callback isolation
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
-composition, spatial-FDN, nonlinear-core, and foundation-pocket evidence carried
-by quality-contract schema 38 change detached preparation only. The implemented master-headroom path
+composition, spatial-FDN, cross-phrase transition-tail, nonlinear-core, and
+foundation-pocket evidence carried by quality-contract schema 39 change detached preparation only. The implemented master-headroom path
 is the sole scheduled-output feedback responsibility and does not move those
 feature analyzers or decisions onto the callback. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).

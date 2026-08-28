@@ -1,8 +1,7 @@
 # Deterministic mix-balance benchmark
 
-The engine-v36 measurements below remain historical benchmark evidence.
-Current engine v37 changes pitch behavior and PCM and is unqualified until its
-complete primary and long-horizon artifact sets are regenerated.
+The engine-v36 measurements below remain historical benchmark evidence. Current
+engine v38 has complete primary-v19 and long-horizon-v6 qualification artifacts.
 
 Auto Techno uses two complementary measurement families. Whole-program
 loudness, true peak, loudness range, and momentary/short-term behavior follow
@@ -73,12 +72,11 @@ failure. The adversarial suite also passed. These are offline qualification
 results, not listening approval or a claim that every bar should have the same
 role balance.
 
-The promoted exact identities are canonical engine v36 / quality schema 37,
-primary-v18 profile `110a3db78e64df40`, adversarial suite
-`d1bf279a4cd021b2`, and holdout `72f08ccf5d7504da`; the dependent
-long-horizon-v5 profile `a819ba51241f0179` rejects all ten attacks through
-`b284b4531f2c3b15` and accepts both disjoint holdouts through
-`c63a928908f0fbb1`.
+The mix-controller result remains installed in canonical engine v38 / quality
+schema 39. Its current primary-v19 profile, adversarial-suite, and holdout
+fingerprints are recorded by the exact artifact loader.
+Long-horizon identities are pinned separately because later renderer changes
+can require regeneration without changing this measured controller deficit.
 
 Controlled listening remains a separate validation stage. EBU Tech 3343
 recommends a consistent reference monitoring level and also notes that

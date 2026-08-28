@@ -1,8 +1,7 @@
 # Long-Horizon Performance Map
 
-Current engine v37 advances pitch identity and PCM. The engine-v36/v5
-qualification results below remain immutable historical evidence and cannot
-authorize v37 adaptation until the full artifact set is regenerated.
+Current engine v38 binds pitch identity and transition-tail continuity to the
+primary-v19 and long-horizon-v6 qualification sets.
 
 ## Status and verdict
 
@@ -22,7 +21,7 @@ resolved-score owners with bounded, versioned provenance. Phase 5 supplies the
 effect-dose/recovery and phrase-sentence foundation from the current palette
 without changing audio. Phase 6A supplies compatible realized signal
 trajectories while keeping semantic targets and physical consequences separate.
-Phase 6B now binds those dimensions to one exact engine-v36/primary-v18
+Phase 6B now binds those dimensions to one exact engine-v38/primary-v19
 development profile, passes ten independent adversarial attacks, and accepts two
 disjoint four-hour holdout journeys. Phase 7 now reduces each accepted prepared
 phrase into one bounded active-rate observation during detached preparation,
@@ -158,7 +157,7 @@ musical, quality, live-master, and long-horizon continuations together only when
 the accepted prepared successor is scheduled.
 
 Stage 6 offline long-horizon qualification and Stage 7 local runtime integration
-are now **passed** for the exact engine-v36/primary-v18/long-horizon-v5 artifact set. Real
+are now **passed** for the exact engine-v38/primary-v19/long-horizon-v6 artifact set. Real
 app/route QA, listening, and physical-output soak remain separate and
 unverified.
 
@@ -503,12 +502,12 @@ remain named and non-compensable across nine semantic dimensions,
 every operator/signal-rate relationship, and every existing effect family; no
 aggregate engagement score can hide a hard failure.
 
-The current v5 development profile `a819ba51241f0179` rejects all ten required
-attacks through adversarial artifact `b284b4531f2c3b15`: permanent peak, fixed
+The current v6 development profile `8d3aed3bd81f65a7` rejects all ten required
+attacks through adversarial artifact `7e1ac366fd10f20b`: permanent peak, fixed
 sawtooth, strict alternation, failed recall, periodic rare gesture, wetness
 ratchet, monotonic decline, instant debt payment, semantic/signal mismatch, and
 route identity reset. Disjoint roots `141421` and `173205` are both accepted by
-holdout artifact `c63a928908f0fbb1`. The bundled artifacts enforce canonical
+holdout artifact `0489b422f75c993a`. The bundled artifacts enforce canonical
 JSON, exact engine/primary-policy identity, development/holdout disjointness,
 and fail-closed cross-artifact construction. They retain only irreversible
 summaries and fingerprints; PCM, samples, waveforms, and score events are absent.
@@ -523,7 +522,7 @@ capability/evaluator investigation.
 Calibration adjusted only evidence uncertainty, not audio: one-sided semantic
 bounds distinguish absence of debt from excessive debt; sparse two-transition
 means receive explicit metric-unit floors while every contributing phrase still
-must pass the exact primary-v18 evaluator. Phase 6B changes no score, synth,
+must pass the exact primary-v19 evaluator. Phase 6B changes no score, synth,
 preset, patch home, DSP primitive, effect, graph, renderer, scheduler, route
 lifecycle, or realtime callback. The regenerated policy accepts both fresh
 holdouts after the two AudioReakt-derived and one Mordio-derived in-place
@@ -795,15 +794,15 @@ Each slice extends the one canonical owner and leaves a reusable capability.
 
 | Stage | Canonical owner and state | Reusable capability | Automated deficit/evidence | Boundary, continuation, and fallback | Duplicate avoided |
 | --- | --- | --- | --- | --- | --- |
-| 0. Descriptive baseline — complete locally | Test-only `LongHorizonPlanningBaselineProbe` using `AutonomousSessionDirector` and real continuation | Frozen, versioned four-hour planning snapshot with canonical JSON and separate plan/bar fingerprints | Exact engine-v36 kind/character/tension/signature/debt/memory coverage; encoded qualification unavailability and no engagement verdict | Pure planning; fixture drift requires explicit review; no PCM, runtime selection, or production state change | No second planner, synthetic fixture engine, or unfrozen same-run-only comparison |
+| 0. Descriptive baseline — complete locally | Test-only `LongHorizonPlanningBaselineProbe` using `AutonomousSessionDirector` and real continuation | Frozen, versioned four-hour planning snapshot with canonical JSON and separate plan/bar fingerprints | Exact engine-v38 kind/character/tension/signature/debt/memory coverage; encoded qualification unavailability and no engagement verdict | Pure planning; fixture drift requires explicit review; no PCM, runtime selection, or production state change | No second planner, synthetic fixture engine, or unfrozen same-run-only comparison |
 | 1. Trajectory schema and offline harness — complete locally | `AutoTechnoCore` schema `autotechno-long-horizon-semantic.v1` plus existing canonical journey harness | Fixed-capacity semantic trajectory accumulator and machine-readable report | Real four/eight-hour evidence plus adversarial periodicity, peak dwell, capability fatigue, recall, and debt cases; qualification remains unavailable | Offline only; malformed input is unavailable without partial mutation; no runtime selection change | No opaque engagement score, handwritten pass, second planner, DSP type, or PCM retention |
 | 2. Hierarchical continuation — complete locally | `TemporalMusicalMemory` extended with current `autotechno-long-horizon-continuation.v2` | Renewable arc/episode intention, fixed-domain recency, rare-operator reserve, identity landmarks, obligations, and exact last trajectory decision | Frozen four/eight-hour state and episode-sequence fingerprints; different episode context from identical local history; exact replay and fresh-root variation | Observes only committed plans; bounded due/hold and retained collections; schema-safe decode; preserve current episode on failure | No second director, playlist, user mode, plan selection, score, PCM, or callback change |
 | 3. Episode operator selection — complete locally | `AutonomousSessionDirector` selection and `makePlan` consume exact hierarchy context | Versioned maintain/rise/recover/reframe/payoff/recall provenance mapped to existing phrase kinds | All operators fulfill in the canonical journey; at most one payoff per arc, real debt payment, prompt bounded recovery, frozen planning/semantic/hierarchy drift | Candidate count remains one; minimum hold protects reserved rare events; invalid context uses the previous conservative policy | No alternative arrangement engine, phrase vocabulary, or random style switch |
 | 4. Score-owned energy coordination — complete locally | Existing resolved roles, character, narrative, foundation, disclosure, transformations, spatial carrier, and transition eligibility | Versioned eight-coordinate target projected through existing score owners | Every coordinate has directional semantic witnesses; exact all-hold fingerprint; four-hour six-operator coverage, bounded roles/slew/space, and protected rare-event reserve | One immutable phrase-boundary target; 0.16 protagonist slew; one percussion tier; one spatial carrier/macro; malformed provenance fails closed | No extra density track, disconnected scalar, synth, patch, DSP primitive, graph stage, or callback path |
 | 5. Effect/capability dose evidence — complete locally | Existing instrument effect access, graph, FDN, pulse echo, percussion returns, masking, and transition relations | Versioned phrase sentence plus fixed-capacity activation, occupancy, tail, recovery, gap, last-use, and level evidence | 63 existing four-hour sentences; exact detached source/return binding; adversarial false eligibility, disconnected claims, premature recovery, discontinuity, and replay checks | Annotation and detached reduction only; no PCM retained; invalid evidence is unavailable without partial mutation; current audio remains exact | No new bus, effect, orderable plug-in chain, FX sequencer, renderer, or callback path |
-| 6. Calibrated long-horizon policy — complete locally | Primary-v18 evaluator, DSP-owned `autotechno-long-horizon-signal-trajectory.v1`, and immutable Stage 6 artifact loader | Non-compensable cross-phrase/cross-episode semantic, phrase-kind-consistent operator/signal, and effect bounds over five exact development journeys | Engine-v36 v5 profile `a819ba51241f0179`; ten attacks rejected by `b284b4531f2c3b15`; two disjoint at-least-four-hour holdouts accepted by `c63a928908f0fbb1` at 44.1/48 kHz | Reduced detached evidence only; exact identities and canonical JSON fail closed; no PCM retained or scheduled audio rewritten | No parallel permissive evaluator, PCM ledger, aggregate engagement score, or semantic claim masquerading as signal consequence |
+| 6. Calibrated long-horizon policy — complete locally | Primary-v19 evaluator, DSP-owned `autotechno-long-horizon-signal-trajectory.v1`, and immutable Stage 6 artifact loader | Non-compensable cross-phrase/cross-episode semantic, phrase-kind-consistent operator/signal, and effect bounds over five exact development journeys | Engine-v38 v6 profile `8d3aed3bd81f65a7`; ten attacks rejected by `7e1ac366fd10f20b`; two disjoint at-least-four-hour holdouts accepted by `0489b422f75c993a` at 44.1/48 kHz | Reduced detached evidence only; exact identities and canonical JSON fail closed; no PCM retained or scheduled audio rewritten | No parallel permissive evaluator, PCM ledger, aggregate engagement score, or semantic claim masquerading as signal consequence |
 | 7. Bounded future adaptation — complete locally | DSP-owned fixed-capacity runtime observation, Core v2 continuation/decision, and App prepared-successor transaction | Exact active-rate Stage 6 evaluation and one reason-coded preserve/recover update for the next eligible phrase | Exact observation/decision/continuation replay; ten independent reason mappings; real prepared-phrase witness; stale/short/wrong-root/recovery-ineligible preservation; route rollback source contract | Fixed 7,200-bar/12-observation/two-transitions-per-operator minimum and 256-bar interval; immutable prepared state commits atomically; invalid evidence restarts; no callback work | No independent long-form controller, second plan, parallel policy, PCM history, renderer, graph, or callback path |
-| 8. Targeted sound maturation — complete locally with three bounded promotions | Existing Core kick, upper-percussion, and phrase-composition score intent; primary-v18 phrase verdict; and affected DSP evidence owners | Complete AudioReakt and Mordio source convergence plus exact PCM exposed session-static kick identity, a fixed clap body, and cut-only slice texture; all other proposed machinery reconciled to existing owners | Multi-rate kick morphology, clap/snare/rim, cut-neutral and deterministic granular-memory witnesses; five development journeys, ten rejected attacks, two fresh accepted disjoint holdouts, and byte-identical v5 replay | Score-resolved state-free DSP only; a future promotion still requires repeated independent-root and two-rate causal failure and must replace provisional DSP in place | No preset pack, granular side engine, alternative renderer, speculative chain, genre selector, or duplicate event lane |
+| 8. Targeted sound maturation — complete locally with three bounded promotions | Existing Core kick, upper-percussion, and phrase-composition score intent; primary-v19 phrase verdict; and affected DSP evidence owners | Complete AudioReakt and Mordio source convergence plus exact PCM exposed session-static kick identity, a fixed clap body, and cut-only slice texture; all other proposed machinery reconciled to existing owners | Multi-rate kick morphology, clap/snare/rim, cut-neutral and deterministic granular-memory witnesses; five development journeys, ten rejected attacks, two fresh accepted disjoint holdouts, and byte-identical v6 replay | Score-resolved state-free DSP only; a future promotion still requires repeated independent-root and two-rate causal failure and must replace provisional DSP in place | No preset pack, granular side engine, alternative renderer, speculative chain, genre selector, or duplicate event lane |
 
 ## Validation matrix
 

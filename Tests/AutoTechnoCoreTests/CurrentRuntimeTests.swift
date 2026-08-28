@@ -8,39 +8,39 @@ import Testing
 struct CurrentRuntimeTests {
     @Test("MORDIO granular-memory identities advance as one exact contract")
     func mordioGranularMemoryPrimaryIdentityContract() {
-        #expect(QualityQualificationContract.schemaVersion == 38)
+        #expect(QualityQualificationContract.schemaVersion == 39)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v37")
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 34)
-        #expect(ProfessionalQualityObservation.schemaVersion == 14)
-        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 14)
+                "autotechno-canonical-engine.v38")
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 35)
+        #expect(ProfessionalQualityObservation.schemaVersion == 15)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 15)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v18")
+                "autotechno-professional-quality-profile.v19")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v18")
+                "autotechno-candidate-evaluator.primary-calibrated.v19")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v18")
-        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 15)
+                "autotechno-quality.primary-calibrated.v19")
+        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 16)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
-                "autotechno-professional-quality-adversarial.v15")
-        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 13)
+                "autotechno-professional-quality-adversarial.v16")
+        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 14)
         #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
-                "autotechno-professional-quality-holdout.v13")
+                "autotechno-professional-quality-holdout.v14")
         #expect(CanonicalJourneyQualificationReport.currentEvidenceScope ==
-                "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-granular-memory-live-commit.v18")
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 5)
+                "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-granular-memory-pitch-identity-transition-tail-live-commit.v19")
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 6)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 2)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 19)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 20)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v19")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v18"))
+                "autotechno-professional-evidence.v20")
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v19"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v18"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v18"))
+            .hasSuffix("-v19"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v19"))
     }
 
-    @Test("Only bundled v18 resources remain")
-    func primaryResourcesAreV18Only() {
+    @Test("Only bundled v19 primary resources remain")
+    func primaryResourcesAreV19Only() {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
         for stem in ["profile", "adversarial-suite", "holdout"] {
@@ -79,8 +79,10 @@ struct CurrentRuntimeTests {
                 resourceDirectory.appendingPathComponent("\(prefix)-v16.json").path))
             #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v17.json").path))
-            #expect(FileManager.default.fileExists(atPath:
+            #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v18.json").path))
+            #expect(FileManager.default.fileExists(atPath:
+                resourceDirectory.appendingPathComponent("\(prefix)-v19.json").path))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v1"))
             #expect(!ProfessionalQualityPrimaryArtifacts
@@ -115,19 +117,22 @@ struct CurrentRuntimeTests {
                 .containsBundledResource(named: "\(prefix)-v16"))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v17"))
-            #expect(ProfessionalQualityPrimaryArtifacts
+            #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v18"))
+            #expect(ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: "\(prefix)-v19"))
         }
-        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+        #expect(throws: Never.self) {
             _ = try ProfessionalQualityPrimaryArtifacts.load()
         }
     }
 
-    @Test("Stale evaluator artifacts fail closed and the live controller remains canonical")
-    func primaryEvaluatorAndLiveControllerAreCanonical() {
-        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            _ = try ProfessionalQualityPrimaryArtifacts.load()
-        }
+    @Test("The shipped evaluator and live controller form one exact path")
+    func primaryEvaluatorAndLiveControllerAreCanonical() throws {
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+
+        #expect(artifacts.evaluator.evaluatorVersion ==
+                ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier)
         #expect(LiveMasterHeadroomController.version ==
                 "autotechno-live-master-headroom-controller.v2")
         #expect(LiveMasterHeadroomController.minimumTrimDB == -3)
@@ -262,6 +267,24 @@ struct CurrentRuntimeTests {
             blocks: [asymmetricNonFinite],
             sampleRate: 8_000
         ).finite)
+    }
+
+    @Test("Audio safety includes the incoming phrase seam")
+    func incomingPhraseSeamIsMeasured() {
+        let left: [[Float]] = [[0.10, 0.20], [0.25, 0.30]]
+        let right: [[Float]] = [[0.40, 0.35], [0.30, 0.25]]
+        let internalOnly = AudioQualityReport.maximumBoundaryDelta(
+            leftBlocks: left,
+            rightBlocks: right
+        )
+        let includingPredecessor = AudioQualityReport.maximumBoundaryDelta(
+            leftBlocks: left,
+            rightBlocks: right,
+            precedingFrame: UpperTimbreStereoFrame(left: 0.90, right: -0.80)
+        )
+
+        #expect(abs(internalOnly - 0.05) < 0.000_001)
+        #expect(abs(includingPredecessor - 1.20) < 0.000_001)
     }
 
     private var repositoryRoot: URL {
@@ -530,7 +553,7 @@ struct RepositorySurfaceTests {
             contentsOf: repositoryRoot.appendingPathComponent("docs/ROADMAP.md"),
             encoding: .utf8
         )
-        #expect(roadmap.contains("34-case v15 adversarial suite"))
+        #expect(roadmap.contains("34-case v16 adversarial suite"))
         #expect(!roadmap.contains("fourteen-case adversarial suite"))
 
         for document in [
@@ -572,13 +595,13 @@ struct RepositorySurfaceTests {
         }.joined(separator: "\n").lowercased()
 
         for required in [
-            "autotechno-canonical-engine.v37",
-            "quality-contract schema 38",
-            "candidate-vector schema 34",
-            "candidate-transaction schema 5",
-            "professional evidence v19",
-            "profile v18",
-            "evaluator v18",
+            "autotechno-canonical-engine.v38",
+            "quality-contract schema 39",
+            "candidate-vector schema 35",
+            "candidate-transaction schema 6",
+            "professional evidence v20",
+            "profile v19",
+            "evaluator v19",
             "live feedback",
             "physical-output soak",
         ] {

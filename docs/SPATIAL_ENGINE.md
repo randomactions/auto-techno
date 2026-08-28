@@ -1,8 +1,7 @@
 # Canonical Spatial Engine
 
-The spatial topology remains current, but engine v37 advances global PCM for
-the pitch contract. Engine-v36 qualification statements below are historical
-and remain fail-closed for v37.
+The spatial topology is qualified in engine v38 together with the pitch and
+transition-tail contracts.
 
 ## Outcome
 
@@ -27,18 +26,25 @@ evidence about the consequence.
 3. `VoiceRenderer` feeds the existing filtered spatial carrier, upper bus, and
    bounded percussion ambience into the FDN during detached preparation.
 4. `FeedbackDelayNetworkState` continues the late field across bars and phrases.
-   A route-geometry change resets it deterministically before rendering the new
-   route.
+   Ordinary scene and phrase changes retain one route-owned delay geometry;
+   only a route sample-rate change or invalid state rebuilds zeroed storage.
+   Decay, damping, send, and wet targets move through a 120 ms physical-time
+   slew without restarting at render-block boundaries.
 5. `SpatialFDNRenderEvidence` streams hashes and reduced measurements from the
-   exact input and stereo wet samples. Candidate-vector schema 33 binds one
-   record to every rendered bar under quality-contract schema 37, candidate-
-   transaction schema 4, and canonical engine v36.
+   exact input and stereo wet samples. Candidate-vector schema 35 binds one
+   record to every rendered bar under quality-contract schema 39, candidate-
+   transaction schema 6, and canonical engine v38.
+6. `CrossPhraseTransitionEvidence` compares the predecessor's terminal frame
+   and reduced tail facts with the successor's opening. Comparable ordinary
+   continuation must retain FDN geometry and expose nonzero opening wet energy
+   when an audible inherited field exists; initial and route-recovery phrases
+   are explicitly non-comparable.
 
 No musical choice, analysis, file operation, allocation, or state mutation from
 this path runs on the real-time audio callback. The app schedules the already
 rendered immutable buffers exactly as before.
 
-## DSP realization v1
+## DSP realization v2
 
 The network has eight distinct odd-length delay lines. A normalized input sign
 vector injects the mono send, and an orthogonal Householder matrix redistributes
@@ -53,8 +59,10 @@ damping filter. Scene mapping can approach the RT60 ceiling and a 0.24 wet
 ceiling for atmospheric material, preserving phrase-scale continuity without
 restoring the former sparse long echo. At the existing score-owned identity-
 return boundary, the same field keeps its continuation memory but applies a
-0.45 audible-return scale so home identity clears without an abrupt state reset
-or a second reverb mode.
+0.45 audible-return target so home identity clears without an abrupt state
+reset or a second reverb mode. All ordinary decay, damping, send, and return
+changes reach their exact score target after a route-normalized 120 ms linear
+transition; repeating the same target cannot prolong that transition.
 
 The implementation is intentionally bounded:
 
@@ -74,9 +82,14 @@ jobs. The FDN replaces only the old late mono feedback-delay buffer.
 ## Truthful evidence and containment
 
 Each bar records route rate and frame count, all eight delay lengths, resolved
-room/decay/damping and send values, score-owned depth/carrier/filter identity,
-exact input/left-wet/right-wet hashes, RMS and peak, stereo correlation, active
-sample counts, first wet frame, binding, and finiteness. Structural validation
+requested and active room geometry, target decay plus initial/final recursive
+feedback, damping, send and wet values, transition length, score-owned depth/carrier/filter
+identity, exact input/left-wet/right-wet hashes, RMS and peak, stereo
+correlation, active sample counts, first wet frame, 250 ms opening/terminal wet
+RMS, binding, and finiteness. Cross-phrase evidence adds the exact terminal-to-
+opening sample delta, 100 ms terminal/opening output RMS, incoming FDN storage
+RMS, inherited wet-level relation, and required/observed tail status without
+retaining reconstructable PCM. Structural validation
 rejects missing, duplicated, oversized, non-finite, unstable, wrongly bound, or
 malformed records. Spatial evidence changes the primary transaction fingerprint.
 
@@ -84,7 +97,7 @@ The normal score uses foreground depth with no selective carrier send. That does
 not disable scene-owned upper/percussion ambience or abruptly erase a valid
 continuing tail; it removes only the optional distant-carrier articulation.
 Invalid FDN configuration or non-finite input produces silence
-from the late field, and route mismatch rebuilds zeroed bounded state. Kick and
+from the late field, and route-rate mismatch rebuilds zeroed bounded state. Kick and
 foundation never enter the FDN and retain exact protected-role fingerprints.
 
 ## Qualification boundary
@@ -92,7 +105,9 @@ foundation never enter the FDN and retain exact protected-role fingerprints.
 Unit and integration tests can establish configuration bounds, deterministic
 impulse response, density, stereo decorrelation, rate-normalized onset,
 continuation, route reset, score/effect/evidence binding, and exact protected
-role identity. The calibrated primary evaluator may accept, correct, or reject
+role identity. The seam hard gate includes the real predecessor frame; an
+inherited tail that loses geometry or opening wet energy cannot qualify. The
+calibrated primary evaluator may accept, correct, or reject
 the resulting phrase. An app launch for listening is not a physical-output soak
 or a professional-quality claim.
 

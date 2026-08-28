@@ -611,9 +611,9 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 14
+    package static let schemaVersion = 15
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v14"
+        "autotechno-professional-quality-observation.v15"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -1424,9 +1424,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 14
+    package static let schemaVersion = 15
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v18"
+        "autotechno-professional-quality-profile.v19"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1528,7 +1528,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                     metric: metric,
                     values: values,
                     crossRateDrifts: crossRateDrifts
-                )
+                ) + Self.checkpointQuantizationMargin(for: metric)
                 let domain = Self.domain(for: metric)
                 metricBounds.append(try ProfessionalQualityMetricBounds(
                     metric: metric,
@@ -1626,7 +1626,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 rateBounds.append(try ProfessionalQualityRateConsistencyBounds(
                     checkpoint: checkpoint,
                     metric: metric,
-                    maximumAbsoluteDelta: maximum + guardBand
+                    maximumAbsoluteDelta: maximum + guardBand +
+                        Self.rateConsistencyQuantizationMargin(for: metric)
                 ))
             }
         }
@@ -2047,6 +2048,35 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             maximumRateDrift * 2,
             centerMagnitude * 0.08
         )
+    }
+
+    /// Event-density summaries divide integer event counts by route-rounded
+    /// frame durations. One micro-unit covers the final floating-point edge
+    /// without admitting another event or widening unrelated dimensions.
+    private static func checkpointQuantizationMargin(
+        for metric: ProfessionalQualityMetric
+    ) -> Double {
+        switch metric {
+        case .barTransientDensityMean, .barTransientDensitySpan:
+            0.000_001
+        default:
+            0
+        }
+    }
+
+    /// Bar crest summaries reduce Float PCM after route-rounded bar windows.
+    /// A one-hundredth dB allowance covers the measured route quantization
+    /// edge without making an audible crest change compensable or widening
+    /// unrelated rate-consistency dimensions.
+    private static func rateConsistencyQuantizationMargin(
+        for metric: ProfessionalQualityMetric
+    ) -> Double {
+        switch metric {
+        case .barCrestFactorMean, .barCrestFactorSpan:
+            0.01
+        default:
+            0
+        }
     }
 
     private static func metricDeltas(

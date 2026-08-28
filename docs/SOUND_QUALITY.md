@@ -11,9 +11,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 38, candidate-vector schema 34,
-candidate-transaction schema 5, and canonical engine identity
-`autotechno-canonical-engine.v37`. Its explicit modal, tuned-inharmonic,
+candidate uses quality-contract schema 39, candidate-vector schema 35,
+candidate-transaction schema 6, and canonical engine identity
+`autotechno-canonical-engine.v38`. Its explicit modal, tuned-inharmonic,
 deliberate-dissonance, and indefinite-pitch rules are defined in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md). It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
@@ -297,19 +297,31 @@ near-zero guard. A dedicated contamination attack must fail independently.
 Spatial-FDN evidence retains one compact record for every rendered bar. It
 binds the existing score-owned depth/carrier/send/filter articulation and the
 scene-derived eight-line configuration to exact input and stereo wet hashes,
-level, correlation, activity, onset, continuation, and finiteness facts. Delay
-geometry is derived at the route rate, every recursive line gain is strictly
-below unity, and retained continuation is hard-bounded. Kick and foundation do
+level, correlation, activity, onset, continuation, parameter-slew, and
+opening/terminal wet facts. Delay geometry is derived once for the active route
+and retained across ordinary scene/phrase changes; every recursive line gain is
+strictly below unity, and retained continuation is hard-bounded. Kick and foundation do
 not enter this field; exact protected-route regression tests prove their PCM
 identity. The record is required for structural completeness and changes the
 transaction fingerprint. See [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md) for the
 signal and replacement contract.
 
-`ProfessionalEvidenceReportBank` v19 accepts a bank only when every canonical
+Cross-phrase transition evidence retains no PCM window. It stores the
+predecessor's last stereo frame plus reduced 100 ms output and 250 ms FDN-tail
+facts in renderer continuation, then measures the successor's real opening.
+Ordinary same-route preparation includes that seam in the existing `< 0.65`
+sample-delta hard gate. If an audible inherited FDN field exists, candidate
+qualification additionally requires retained delay geometry and nonzero
+opening wet energy. Initial phrases, authored climax silence, and route recovery
+remain explicit rather than being hidden behind a blanket master crossfade.
+Tonal Motion patch boundaries separately retain comb/all-pass/echo memory while
+their patch-owned coefficients crossfade for 500 ms.
+
+`ProfessionalEvidenceReportBank` v20 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v18 from the v18 profile, v15 adversarial suite,
-and v13 disjoint holdout. It judges every
+exact-engine primary evaluator v19 from the v19 profile, v16 adversarial suite,
+and v14 disjoint holdout. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.
@@ -382,8 +394,7 @@ Phase 6B calibrates independent non-compensable semantic, per-operator signal,
 and effect-family dimensions across five exact four-hour development journeys
 at 44.1/48 kHz. The immutable artifact set rejects ten independent adversarial
 attacks and accepts two disjoint holdout roots. It retains only reduced
-irreversible evidence and binds the last engine-v36/primary-v18 identity; that
-artifact set is stale for engine v37 and cannot qualify current PCM.
+irreversible evidence and binds the exact engine-v38/primary-v19 identity.
 
 Phase 7 consumes that policy only during detached preparation. A fixed-capacity
 active-rate observation requires at least 7,200 bars, twelve signal observations,
@@ -427,7 +438,8 @@ dimensions and the reason for every rejection, correction, or selection.
 
 ### Hard gates
 
-- finite samples and bounded sample, true-peak, DC, and block-boundary behavior;
+- finite samples and bounded sample, true-peak, DC, internal block-boundary,
+  and predecessor-to-successor seam behavior;
 - stable low-frequency phase and mono compatibility;
 - no invalid graph, runaway tail, discontinuity, or unbounded controller state;
 - deterministic planning, rendering, evidence, and decisions for identical
@@ -477,7 +489,7 @@ start/end values for pitch fall, fundamental, body/sub decay, harmonic body,
 drive, and click. Same-pass source evidence hashes that score record and the
 actual pre/post-conditioned kick PCM while retaining physical attack/body and
 upper-mid consequence. A morphology mismatch, discontinuity, non-finite value,
-out-of-range home, or forged render binding makes candidate-vector schema 34
+out-of-range home, or forged render binding makes candidate-vector schema 35
 incomplete. Minute-three/minute-fifty checks are causal sound tests, not an
 arrangement heuristic.
 
@@ -504,7 +516,7 @@ sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
 status. It also retains exact first/last sample bit patterns, the pre-drive peak
 frame, the exact input/amount witness at the post-drive peak, and a replayable
 changed-frame witness together with that frame's exact input bits.
-Candidate-vector schema 34 binds that record to the matching instrument effect
+Candidate-vector schema 35 binds that record to the matching instrument effect
 access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
 sample-rate-normalized boundary transition. Neutral drive requires the no-change
 sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
@@ -533,7 +545,7 @@ uses half depth, response uses full depth, and the full displacement is capped
 at `0.12` of one sixteenth. Note count, base step, pitch, velocity, instrument,
 requested duration, gate, and every protected-rhythm event remain unchanged.
 
-Candidate-vector schema 34 retains one compact record per full rendered bar. It
+Candidate-vector schema 35 retains one compact record per full rendered bar. It
 binds route-derived frame geometry, score and actual renderer onset facts,
 requested gate end, bounded renderer-owned applied gate end, causal role counts,
 exact protected/role offset relationships, and separate shadow/response dry
@@ -611,8 +623,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 38, candidate-vector schema 34,
-candidate-transaction schema 5, and canonical engine v37, the versioned
+Under quality-contract schema 39, candidate-vector schema 35,
+candidate-transaction schema 6, and canonical engine v38, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

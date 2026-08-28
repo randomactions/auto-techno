@@ -11,13 +11,13 @@ package enum LongHorizonProfessionalPolicySchema {
   package static let corpusVersion =
     "autotechno-long-horizon-policy-corpus.v1"
   package static let profileVersion =
-    "autotechno-long-horizon-professional-profile.v5"
+    "autotechno-long-horizon-professional-profile.v6"
   package static let adversarialVersion =
-    "autotechno-long-horizon-adversarial.v5"
+    "autotechno-long-horizon-adversarial.v6"
   package static let holdoutVersion =
-    "autotechno-long-horizon-holdout.v5"
+    "autotechno-long-horizon-holdout.v6"
   package static let policyFamilyVersion =
-    "autotechno-long-horizon.primary-calibrated.v5"
+    "autotechno-long-horizon.primary-calibrated.v6"
   package static let minimumDevelopmentJourneyCount = 4
   package static let minimumHoldoutJourneyCount = 2
   package static let minimumJourneyBars = 7_200
@@ -755,16 +755,18 @@ package struct LongHorizonProfessionalProfile: Codable, Equatable, Sendable {
     else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
     let floor: Double
     switch metric {
-    // These floors represent uncertainty in a sparse two-transition operator
-    // mean, not an absolute sound-quality target. The ten-percent margin over
-    // the original round-number floors covers finite-sample predecessor-order
-    // variation after phrase-kind-consistent checkpoint selection. Every
-    // contributing phrase has already passed the primary professional
+    // These floors represent uncertainty in a sparse two-to-five-transition
+    // operator mean, not an absolute sound-quality target. Spectral centroid
+    // retains the observed cross-operator predecessor-context spread, while
+    // the dB floors cover finite-sample and route-rounded summary variation.
+    // Every contributing phrase has already passed the primary professional
     // evaluator independently.
-    case .spectralCentroidHz: floor = 750
+    case .spectralCentroidHz: floor = 2_500
     case .spectralCentroidSpreadHz: floor = 5_000
+    case .meanBarCrestFactorDB:
+      floor = 1.67
     case .integratedLoudnessLUFS, .maximumMomentaryLoudnessLUFS,
-      .truePeakDBTP, .meanBarCrestFactorDB:
+      .truePeakDBTP:
       floor = 1.65
     case .meanWetToDryDB: floor = 18
     case .transientDensityPerSecond: floor = 0.55

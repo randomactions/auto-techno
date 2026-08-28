@@ -1,9 +1,8 @@
 # Single Primary Evaluator
 
-Current engine v37 advances pitch identity and PCM under quality schema 38,
-candidate-vector schema 34, and transaction schema 5. The engine-v36/v18
-measurements below remain immutable historical qualification evidence but do
-not activate for v37; current qualification is unavailable pending regeneration.
+Current engine v38 binds pitch identity and transition-tail continuity under
+quality schema 39, candidate-vector schema 35, and transaction schema 6. Its
+primary-v19 artifacts are the single active qualification set.
 
 ## Runtime contract
 
@@ -44,11 +43,11 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v36 profile v18, adversarial suite v15, and disjoint holdout qualification
-v13. The profile derives from 28 complete
+engine-v38 profile v19, adversarial suite v16, and disjoint holdout qualification
+v14. The profile derives from 28 complete
 44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
-relationship gate. The pinned fingerprints are profile `110a3db78e64df40`,
-adversarial suite `d1bf279a4cd021b2`, and holdout `72f08ccf5d7504da`.
+relationship gate. The pinned fingerprints are profile `9f434ba64b57a947`,
+adversarial suite `8408fbbb193dd10a`, and holdout `d171cd3c2f3fb6c4`.
 
 Offline calibration may retain several checkpoint observations from one
 candidate. Runtime terminal qualification selects one most-specific

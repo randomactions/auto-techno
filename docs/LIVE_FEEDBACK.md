@@ -1,8 +1,7 @@
 # Canonical Live Feedback
 
-Current engine v37 advances pitch identity and PCM. Any engine-v36 artifact
-identity below is retained as historical evidence and remains unavailable to
-the v37 runtime until complete primary and long-horizon regeneration passes.
+Current engine v38 binds pitch identity, retained transition tails, and the
+existing live-feedback path into one exact qualified artifact set.
 
 ## Status
 
@@ -13,9 +12,9 @@ unscheduled future phrase, and commits that change only when the one calibrated
 primary evaluator accepts the resulting canonical candidate.
 
 This is an implementation and automated-qualification statement for canonical
-engine `autotechno-canonical-engine.v36`, quality-contract schema 37,
-candidate-vector schema 33, candidate-transaction schema 4, Professional
-Evidence v19, professional profile v18, primary policy/evaluator v18, and live
+engine `autotechno-canonical-engine.v38`, quality-contract schema 39,
+candidate-vector schema 35, candidate-transaction schema 6, Professional
+Evidence v20, professional profile v19, primary policy/evaluator v19, and live
 controller policy v2. It is not evidence that a physical device, route change,
 interruption, listening session, or 60-minute output soak passed.
 
@@ -100,14 +99,14 @@ reorders, or estimates samples.
 
 The window reuses the canonical ITU-R BS.1770-5 K-weighting and gating code and
 the Annex 2 four-phase FIR true-peak implementation. Evidence binds exact PCM,
-source occurrence, sample range, route, engine, Professional Evidence v19,
+source occurrence, sample range, route, engine, Professional Evidence v20,
 policy/evaluator/controller versions, frame and packet counts, drop/reject
 counters, analysis memory, integrated/momentary/short-term loudness, true peak,
 and applicable checkpoints. Only maximum short-term loudness and maximum true
 peak drive the controller; integrated loudness remains descriptive for the
 fixed window.
 
-The controller reads those two bounds from the exact installed profile v18.
+The controller reads those two bounds from the exact installed profile v19.
 When several checkpoints apply, each metric uses the strictest applicable upper
 bound and the lower bound paired with that same checkpoint. An ordinary lock
 phrase uses the calibrated `longContinuation` envelope. Unsupported rates,

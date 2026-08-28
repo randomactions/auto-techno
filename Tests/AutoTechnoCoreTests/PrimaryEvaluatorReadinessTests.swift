@@ -6,18 +6,18 @@ import Testing
 struct PrimaryEvaluatorReadinessTests {
     @Test("Modal evidence is non-compensable before the primary policy")
     func modalEvidencePrecedesPrimaryPolicy() {
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 34)
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 5)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 35)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 6)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 2)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 19)
-        #expect(ProfessionalQualityObservation.schemaVersion == 14)
-        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 14)
-        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 15)
-        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 13)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 20)
+        #expect(ProfessionalQualityObservation.schemaVersion == 15)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 15)
+        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 16)
+        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 14)
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v18")
+                "autotechno-quality.primary-calibrated.v19")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v18")
+                "autotechno-candidate-evaluator.primary-calibrated.v19")
         #expect(AutonomousCandidateCompletenessFailure.upperPercussionTailEvidence
             .rawValue == "upper-percussion-tail-evidence")
         #expect(AutonomousCandidateCompletenessFailure.modalPercussionEvidence
@@ -41,31 +41,38 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("Bundled engine-v36 artifacts cannot activate engine v37")
-    func bundledV17ArtifactsAreReady() throws {
-        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            _ = try ProfessionalQualityPrimaryArtifacts.load()
+    @Test("Bundled v19 artifacts activate only the exact schema-39 engine")
+    func bundledV19ArtifactsAreReady() throws {
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        #expect(artifacts.profile.engineVersion ==
+                QualityQualificationContract.engineVersion)
+        #expect(artifacts.profile.schemaVersion == 15)
+        #expect(artifacts.adversarialSuite.schemaVersion == 16)
+        #expect(artifacts.holdoutQualification.schemaVersion == 14)
+        for sampleRate in [44_100.0, 48_000.0] {
+            #expect(ProfessionalQualityPreparationEvaluator(
+                sampleRate: sampleRate,
+                artifacts: artifacts
+            ).availability == .available)
         }
-        #expect(ProfessionalQualityPreparationEvaluator(
-            sampleRate: 48_000,
-            artifacts: try? ProfessionalQualityPrimaryArtifacts.load()
-        ).availability == .artifactsUnavailable)
     }
 
-    @Test("An 8 kHz route with exact v18 artifacts is unsupported")
+    @Test("An 8 kHz route with exact v19 artifacts is unsupported")
     func unsupported8KRouteStaysUnavailable() throws {
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(
             sampleRate: 8_000,
-            artifacts: try? ProfessionalQualityPrimaryArtifacts.load()
-        ).availability == .artifactsUnavailable)
+            artifacts: artifacts
+        ).availability == .unsupportedSampleRate)
     }
 
-    @Test("A 12 kHz route with exact v18 artifacts is unsupported")
+    @Test("A 12 kHz route with exact v19 artifacts is unsupported")
     func unsupported12KRouteStaysUnavailable() throws {
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(
             sampleRate: 12_000,
-            artifacts: try? ProfessionalQualityPrimaryArtifacts.load()
-        ).availability == .artifactsUnavailable)
+            artifacts: artifacts
+        ).availability == .unsupportedSampleRate)
     }
 
     @Test("Missing artifacts cannot activate the calibrated primary evaluator")

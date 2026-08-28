@@ -850,7 +850,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v37")
+                "autotechno-canonical-engine.v38")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -2953,6 +2953,21 @@ struct AutonomousPreparationPreflightTests {
         #expect(nextA.blocks == nextB.blocks)
         #expect(nextA.endingRenderState == nextB.endingRenderState)
         #expect(nextA.endingGraphState == nextB.endingGraphState)
+        let transition = nextA.selectedCandidateEvidence.crossPhraseTransition
+        #expect(transition.predecessorAvailable)
+        #expect(transition.routeComparable)
+        #expect(transition.spatialGeometryRetained)
+        #expect(transition.finite)
+        #expect(transition.isComplete)
+        #expect(transition.hardGateValid)
+        #expect(transition.maximumBoundaryDelta <=
+                Double(nextA.audioPreflight.quality.maxBoundaryDelta))
+        #expect(!transition.spatialTailContinuationRequired ||
+                transition.spatialTailContinuationObserved)
+        #expect(nextA.blocks.first?.spatialFDNRenderEvidence.geometryRetained ==
+                true)
+        #expect(nextA.blocks.first?.spatialFDNRenderEvidence.delayFrameCounts ==
+                firstA.endingRenderState.spatialFDNState.lineLengths)
     }
 
     @Test("Different valid topology plans produce audibly distinct sample hashes")

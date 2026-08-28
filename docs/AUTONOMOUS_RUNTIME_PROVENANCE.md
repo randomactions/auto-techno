@@ -48,9 +48,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 38, candidate-
-   vector schema 34, candidate-transaction schema 5, and canonical engine
-   identity `autotechno-canonical-engine.v37`. Each
+   primary-evaluation transaction under quality-contract schema 39, candidate-
+   vector schema 35, candidate-transaction schema 6, and canonical engine
+   identity `autotechno-canonical-engine.v38`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -60,6 +60,7 @@ mistaken for a completed feedback system.
    score-owned gated/anticipatory percussion-return texture, shared pulse-echo
    return-drive,
    score-bound spatial-FDN,
+   cross-phrase terminal/opening seam and inherited-tail continuity,
    phrase-local slice texture/seed/grain geometry/source-position hashes and
    source/output PCM, arpeggiator geometry and exact
    score/render pitch identity, polyphonic pad PCM, harmonic-disclosure
@@ -158,13 +159,12 @@ mistaken for a completed feedback system.
    route sample grid, cross-rate consistency uses the corresponding mean
    trajectory delta; exact silence retains its dedicated causal evidence and
    upper-only-safer professional dimensions.
-   A deterministic Professional Evidence v19
+   A deterministic Professional Evidence v20
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
-   observation-only. Bundled `ProfessionalQualityPrimaryArtifacts` retain the
-   last exact engine-v36 profile v18, adversarial suite v15, and disjoint
-   holdout qualification v13. They fail identity validation for engine v37, so
-   current qualification is unavailable pending complete regeneration.
+   observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
+   engine-v38 profile v19, adversarial suite v16, and disjoint holdout
+   qualification v14.
    The profile derives from 28 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
    relationships. Its evaluator maps the Core-owned plan checkpoint into the
@@ -270,9 +270,15 @@ mistaken for a completed feedback system.
    the same scene and score. It replaces the former 12–20 second mono feedback
    delay while keeping the separate early reflection, rhythmic delay, pulse
    echo, graph diffusion, and gated-percussion return in their existing roles.
-   Flat bounded state continues the tail; route geometry resets it
-   deterministically. Same-pass records bind exact input/stereo-wet hashes and
-   measurements to configuration and score facts without retaining PCM.
+   Flat bounded state continues the tail. Ordinary scene/phrase changes retain
+   the active route's delay geometry while decay, damping, send, and wet targets
+   slew for 120 ms; only a route-rate change or invalid state resets geometry.
+   Same-pass records bind exact input/stereo-wet hashes, initial/final
+   parameters, and 250 ms opening/terminal wet measurements to configuration
+   and score facts without retaining PCM. Renderer continuation retains only
+   the final stereo frame and reduced terminal output/wet RMS; the successor
+   compares those facts with its actual opening and rejects a missing required
+   field or a seam beyond the existing safety limit.
 6. The unchanged pre-fader kick remains the ducking detector. The generated
    graph receives the exact `full - protected-rhythm` remainder, and its output
    is recombined with the protected stereo rhythm route. The protected route
@@ -292,7 +298,10 @@ mistaken for a completed feedback system.
    Score-owned anchor velocity now projects into the authored filter-envelope
    lift (`0.40...1.60`) and in-gate decay (`0.80...1.20`) while every other role
    stays neutral for this response. Retriggers latch the response and legato
-   slides inherit it, preserving persistent tails. The reduced evidence records
+   slides inherit it, preserving persistent tails. Tonal Motion patch changes
+   reset filter/envelope identity but retain comb, all-pass, echo, DC, and tail
+   memory while comb/echo coefficients move through one bounded 500 ms handoff.
+   The reduced evidence records
    applied scales, gain-normalized attack high-band ratio, and tail-to-attack
    ratio; incomplete windows remain explicit and cannot be qualified.
 7. `TechnoEngine` prepares away from the callback and schedules completed buffers
@@ -460,7 +469,7 @@ return behavior.
 Each full bar emits same-pass bar/BPM/delay/render geometry, score and drive
 eligibility, bounded source and applied amount, current-send RMS, exact pre/post
 sample hashes, pre/post peak, RMS, and low-band RMS, difference RMS, and finite
-status. Candidate-vector schema 34 binds these observations to the score bar,
+status. Candidate-vector schema 35 binds these observations to the score bar,
 phrase kind, route rate, and matching instrument effect access. Neutral drive
 requires exact pre/post identity and zero difference. Active drive remains
 outside feedback, binds exact changed-frame and peak witnesses, and permits only
@@ -519,7 +528,7 @@ post-attack relationship.
 
 Both capabilities are finite, state-free render functions applied during
 detached phrase preparation. They allocate no additional PCM lane, introduce no
-new continuation owner, and add no callback work. Candidate-vector schema 34
+new continuation owner, and add no callback work. Candidate-vector schema 35
 binds morphology and body to the exact score event, PCM hashes, physical-time
 windows, and scalar consequence. Legacy/out-of-range morphology falls back to
 the anchor; omitted body construction falls back to clap for clap events and
@@ -586,7 +595,7 @@ callback are unchanged; incomplete or ineligible pairs stay established.
 
 Detached same-pass evidence reduces relation, pair phase, score/render counts
 and masks, actual start frames, dry hash/peak/RMS, patch assignment, and
-full/protected pass equality into candidate-vector schema 34. Professional
+full/protected pass equality into candidate-vector schema 35. Professional
 observation retains active prevalence and crest factor under the current
 exact-engine profile. A later implementation may replace the integer-grid
 projection only while preserving this score owner, two-bar reset, exact neutral
@@ -607,7 +616,7 @@ The same pass records the natural event end, release and kick frames, positive
 release/silence counts, and a streamed hash/peak/RMS of the exact dry-
 foundation silence interval. Candidate completeness cross-binds that record to
 the resolved event and Bass Pluck assignment and requires full/protected
-equality. Professional Evidence v19 adds one upper-only safer silence-RMS
+equality. Professional Evidence v20 adds one upper-only safer silence-RMS
 dimension and adversarial suite v14 adds one non-compensable contamination
 attack. The present curve and exact-zero proxy are replaceable in place; the
 dotted score owner, protected route, neutral fallback, and causal evidence are
@@ -626,7 +635,7 @@ Each rendered bar records bounded score and actual renderer timing tuples,
 including base onset, requested offset, expected and applied onset frame,
 requested gate end, and renderer-applied gate end. Separate anchor, shadow, and
 response dry taps retain finite role-local hash, peak, and RMS evidence. Current
-candidate-vector schema 34 reduces those tuples into exact score/render and
+candidate-vector schema 35 reduces those tuples into exact score/render and
 renderer-applied-gate fingerprints, relation-specific offset facts, protected-
 role neutrality, cascade-aperture or lead-pattern replay, and route-derived
 frame geometry. The calibrated evaluator judges this evidence as part of the
@@ -809,7 +818,7 @@ succeeded.
 This reduction runs only after detached preparation. It changes no score,
 renderer, graph, scheduler, route lifecycle, live controller, commit decision,
 or realtime callback. Phase 6B binds compatible complete reports to the exact
-last-qualified engine-v36/primary-v18 development, adversarial, and disjoint-holdout
+immutable engine-v38/primary-v19 development, adversarial, and disjoint-holdout
 artifacts. Raw PCM remains outside the artifacts and runtime observation.
 
 ## Implemented bounded long-horizon future adaptation
@@ -848,12 +857,12 @@ already-immutable accepted result at the existing scheduled phrase boundary.
 
 ## Completed evidence-gated sound maturation assessment
 
-Phase 8 adds no runtime owner or state. It records the last exact engine-v36/
-primary-v18 long-horizon profile, adversarial suite, and disjoint holdout with
+Phase 8 adds no runtime owner or state. It reconciles the exact engine-v38/
+primary-v19 long-horizon profile, adversarial suite, and disjoint holdout with
 the conditional sound-capability register. Their fingerprints are
-`a819ba51241f0179`, `b284b4531f2c3b15`, and `c63a928908f0fbb1`. The primary
+`8d3aed3bd81f65a7`, `7e1ac366fd10f20b`, and `0489b422f75c993a`. The primary
 profile, adversarial suite, and holdout are independently pinned as
-`110a3db78e64df40`, `d1bf279a4cd021b2`, and `72f08ccf5d7504da`. All six current
+`9f434ba64b57a947`, `8408fbbb193dd10a`, and `d171cd3c2f3fb6c4`. All six current
 artifacts replay byte for byte. Development and holdout journeys
 expose no repeated capability-local sound failure. The excluded root `135791`
 has too few primary-qualified payoff checkpoints to construct representative

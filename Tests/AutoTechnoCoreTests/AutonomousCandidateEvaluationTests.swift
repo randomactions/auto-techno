@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 34)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 35)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -304,7 +304,7 @@ struct AutonomousCandidateEvaluationTests {
             object["liveProposalFingerprint"] = "aaaaaaaaaaaaaaaa"
         }
         #expect(!transaction(correction: changedLiveProposal).isComplete)
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 5)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 6)
     }
 
     @Test("Candidate live policy rejects boost forged scaling stale revision and boundary")
@@ -1304,10 +1304,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 34)
-        #expect(QualityQualificationContract.schemaVersion == 38)
+        #expect(vector.schemaVersion == 35)
+        #expect(QualityQualificationContract.schemaVersion == 39)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v37")
+                "autotechno-canonical-engine.v38")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3605,6 +3605,9 @@ struct AutonomousCandidateEvaluationTests {
             ("delayFrameCounts", [345, 425, 425, 633, 777, 905, 1097, 1305]),
             ("roomScale", 1.1),
             ("maximumFeedbackGain", 1.0),
+            ("finalWetGain", 0.123),
+            ("parameterTransitionFrameCount", 8_001),
+            ("openingWetRMS", 2.0),
             ("bindingValid", false),
             ("wetLeftSampleHash", "not-a-pcm-hash"),
         ]
@@ -3649,6 +3652,50 @@ struct AutonomousCandidateEvaluationTests {
         )
         #expect(oversized.spatialFDN.count == 17)
         #expect(!oversized.recordIsStructurallyValid)
+    }
+
+    @Test("A missing inherited tail cannot pass cross-phrase qualification")
+    func crossPhraseTailContinuityGate() throws {
+        let source = fixtureVector()
+        let decoder = JSONDecoder()
+        var object = try #require(JSONSerialization.jsonObject(
+            with: source.deterministicJSON()
+        ) as? [String: Any])
+        var transition = try #require(
+            object["crossPhraseTransition"] as? [String: Any]
+        )
+        transition["predecessorAvailable"] = true
+        transition["routeComparable"] = true
+        transition["authoredTerminalSilence"] = false
+        transition["predecessorLeftBitPattern"] = 1
+        transition["predecessorRightBitPattern"] = 1
+        transition["successorLeftBitPattern"] = 1
+        transition["successorRightBitPattern"] = 1
+        transition["maximumBoundaryDelta"] = 0
+        transition["predecessorTerminalOutputRMS"] = 0.1
+        transition["successorOpeningOutputRMS"] = 0.1
+        transition["incomingSpatialStorageRMS"] = 0.01
+        transition["predecessorTerminalSpatialWetRMS"] = 0.02
+        transition["successorOpeningSpatialWetRMS"] = 0
+        transition["spatialTailLevelChangeDB"] = 0
+        transition["spatialGeometryRetained"] = true
+        transition["spatialTailContinuationRequired"] = true
+        transition["spatialTailContinuationObserved"] = false
+        transition["finite"] = true
+        object["crossPhraseTransition"] = transition
+
+        let missingTail = try decoder.decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        #expect(!missingTail.crossPhraseTransition.isComplete)
+        #expect(!missingTail.crossPhraseTransition.hardGateValid)
+        #expect(!missingTail.isComplete)
+        #expect(missingTail.completenessFailures.contains(
+            .crossPhraseTransitionEvidence
+        ))
+        #expect(!missingTail.hardGatesPassed)
+        #expect(!missingTail.recordIsStructurallyValid)
     }
 
     @Test("Failed candidate evidence remains structurally retainable")
@@ -3865,11 +3912,11 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "011f35a0373a1e23")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
-                "4ff617538504b51c")
+                "e07e7f964d9987cf")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "081eaf0d187f04bb")
+            "f167126593f3cd1f")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3877,7 +3924,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.renderDSPContinuation(
             renderState: positiveZeroRenderState,
             generatedDSPState: orderedGraphState
-        ) == "53eac7bb4b815a55")
+        ) == "94261d9722b48ff8")
     }
 
     private func realPreparedCandidate() -> PreparedAutonomousPhrase? {
@@ -4256,6 +4303,7 @@ struct AutonomousCandidateEvaluationTests {
             symbolic: symbolic,
             hardGates: hardGates,
             fullMix: fullMix,
+            crossPhraseTransition: .initial,
             masking: [AutonomousMaskingBarEvidence(
                 bar: evidenceBar,
                 sourceObservationCount: maskingSourceCount,

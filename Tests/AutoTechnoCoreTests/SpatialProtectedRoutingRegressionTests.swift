@@ -845,7 +845,17 @@ struct SpatialProtectedRoutingRegressionTests {
         #expect(distantFDN.lineCount ==
                 FeedbackDelayNetworkConfiguration.lineCount)
         #expect(distantFDN.delayFrameCounts == expectedFDN.delayFrameCounts)
+        #expect(distantFDN.requestedRoomScale == expectedFDN.roomScale)
+        #expect(distantFDN.roomScale == expectedFDN.roomScale)
         #expect(distantFDN.maximumFeedbackGain < 1)
+        #expect(distantFDN.finalMaximumFeedbackGain ==
+                distantFDN.maximumFeedbackGain)
+        #expect(distantFDN.finalDampingCoefficient ==
+                expectedFDN.dampingCoefficient)
+        #expect(distantFDN.finalSynthSendGain == distantFDN.synthSendGain)
+        #expect(distantFDN.finalPercussionSendGain ==
+                distantFDN.percussionSendGain)
+        #expect(distantFDN.finalWetGain == distantFDN.wetGain)
         #expect(distantFDN.spatialDepthPosition == .distant)
         #expect(distantFDN.carrierVoice == .transition)
         #expect(distantFDN.carrierStep == carrierStep)
@@ -856,6 +866,10 @@ struct SpatialProtectedRoutingRegressionTests {
         #expect(distantFDN.wetPeak > distantFDN.wetRMS)
         #expect(distantFDN.activeInputFrameCount > 0)
         #expect(distantFDN.activeWetFrameCount > 0)
+        #expect(distantFDN.openingWindowFrameCount == 2_000)
+        #expect(distantFDN.terminalWindowFrameCount == 2_000)
+        #expect(distantFDN.openingWetRMS >= 0)
+        #expect(distantFDN.terminalWetRMS >= 0)
         #expect(distantFDN.inputSampleHash.count == 16)
         #expect(distantFDN.wetLeftSampleHash.count == 16)
         #expect(distantFDN.wetRightSampleHash.count == 16)

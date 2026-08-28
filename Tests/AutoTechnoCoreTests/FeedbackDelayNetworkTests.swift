@@ -218,6 +218,120 @@ struct FeedbackDelayNetworkTests {
         #expect(state == beforeInvalid)
     }
 
+    @Test("Musical changes retain geometry and slew the recursive field")
+    func musicalBoundaryRetainsGeometryAndSlews() {
+        let sampleRate = 8_000.0
+        let first = FeedbackDelayNetworkConfiguration(
+            sampleRate: sampleRate,
+            roomScale: 0.82,
+            decayTimeSeconds: 1.4,
+            dampingHz: 1_500,
+            synthSendGain: 0.2,
+            percussionSendGain: 0.02,
+            wetGain: 0.04
+        )
+        let requestedNext = FeedbackDelayNetworkConfiguration(
+            sampleRate: sampleRate,
+            roomScale: 1.22,
+            decayTimeSeconds: 5.2,
+            dampingHz: 3_500,
+            synthSendGain: 0.48,
+            percussionSendGain: 0.14,
+            wetGain: 0.22
+        )
+        var state = FeedbackDelayNetworkState()
+        var scratch: [Double] = []
+        _ = FeedbackDelayNetwork.process(
+            input: 1,
+            configuration: first,
+            state: &state,
+            scratch: &scratch
+        )
+        for _ in 0...1_200 {
+            _ = FeedbackDelayNetwork.process(
+                input: 0,
+                configuration: first,
+                state: &state,
+                scratch: &scratch
+            )
+        }
+        #expect(state.storage.contains { $0 != 0 })
+        let storageBeforeBoundary = state.storage
+        let lineLengthsBeforeBoundary = state.lineLengths
+        let oldWet = state.appliedWetGain
+        let oldFeedback = state.appliedFeedbackGains
+
+        let resolved = state.resolveConfiguration(for: requestedNext)
+        #expect(resolved.geometryRetained)
+        #expect(resolved.configuration.roomScale == first.roomScale)
+        #expect(state.lineLengths == lineLengthsBeforeBoundary)
+        #expect(state.storage == storageBeforeBoundary)
+        let transitionFrames = state.beginParameterTransition(
+            toward: resolved.configuration
+        )
+        #expect(transitionFrames == Int((
+            sampleRate * FeedbackDelayNetworkState.parameterTransitionSeconds
+        ).rounded()))
+        #expect(state.appliedWetGain == oldWet)
+        #expect(state.appliedFeedbackGains == oldFeedback)
+
+        state.advanceParameterTransition()
+        #expect(state.appliedWetGain > oldWet)
+        #expect(state.appliedWetGain < resolved.configuration.wetGain)
+        #expect(state.appliedFeedbackGains != oldFeedback)
+        #expect(state.appliedFeedbackGains != resolved.configuration.feedbackGains)
+        for _ in 1..<transitionFrames {
+            state.advanceParameterTransition()
+        }
+        #expect(state.parameterTransitionRemainingFrames == 0)
+        #expect(state.appliedFeedbackGains == resolved.configuration.feedbackGains)
+        #expect(state.appliedDampingCoefficient ==
+                resolved.configuration.dampingCoefficient)
+        #expect(state.appliedSynthSendGain ==
+                resolved.configuration.synthSendGain)
+        #expect(state.appliedPercussionSendGain ==
+                resolved.configuration.percussionSendGain)
+        #expect(state.appliedWetGain == resolved.configuration.wetGain)
+        #expect(state.lineLengths == lineLengthsBeforeBoundary)
+        #expect(state.storage == storageBeforeBoundary)
+        #expect(state.isPrepared)
+    }
+
+    @Test("Invalid continuation rebuilds the requested route and clears storage")
+    func invalidContinuationFallsBackToFreshGeometry() {
+        let sampleRate = 8_000.0
+        let first = FeedbackDelayNetworkConfiguration(
+            sampleRate: sampleRate,
+            roomScale: 0.82,
+            decayTimeSeconds: 2,
+            dampingHz: 2_400
+        )
+        let requested = FeedbackDelayNetworkConfiguration(
+            sampleRate: sampleRate,
+            roomScale: 1.22,
+            decayTimeSeconds: 3.8,
+            dampingHz: 3_200,
+            wetGain: 0.18
+        )
+        var state = FeedbackDelayNetworkState()
+        state.prepare(for: first)
+        state.storage[0] = 0.5
+        state.dampingStates[0] = .nan
+        #expect(!state.isPrepared)
+
+        let resolved = state.resolveConfiguration(for: requested)
+
+        #expect(!resolved.geometryRetained)
+        #expect(resolved.configuration == requested)
+        #expect(state.isPrepared)
+        #expect(state.routeSampleRate == sampleRate)
+        #expect(state.geometryRoomScale == requested.roomScale)
+        #expect(state.lineLengths == requested.delayFrameCounts)
+        #expect(state.storage.allSatisfy { $0 == 0 })
+        #expect(state.dampingStates.allSatisfy { $0 == 0 })
+        #expect(state.appliedWetGain == requested.wetGain)
+    }
+
     private func renderImpulse(
         configuration: FeedbackDelayNetworkConfiguration,
         frameCount: Int

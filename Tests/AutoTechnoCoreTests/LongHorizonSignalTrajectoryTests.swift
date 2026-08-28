@@ -90,7 +90,7 @@ struct LongHorizonSignalTrajectoryTests {
       report.qualificationReason
         == "no-calibrated-long-horizon-policy")
     #expect(report.trajectoryFingerprint.count == 16)
-    #expect(report.trajectoryFingerprint == "8d8add29332c6a9f")
+    #expect(report.trajectoryFingerprint == "9cc7545df31f20ff")
     #expect(encoded.count < 500_000)
     print(
       "LONG_HORIZON_SIGNAL_8H observations=\(report.observationCount) "

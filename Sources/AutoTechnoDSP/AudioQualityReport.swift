@@ -23,10 +23,15 @@ package struct AudioQualityReport: Equatable, Sendable {
     /// excluding the immutable source RenderBlocks required for playback.
     package let analysisPeakWorkingByteCount: Int
 
-    package init(blocks: [RenderBlock], sampleRate: Double) {
+    package init(
+        blocks: [RenderBlock],
+        sampleRate: Double,
+        precedingFrame: UpperTimbreStereoFrame? = nil
+    ) {
         guard let report = Self(
             blocks: blocks,
             sampleRate: sampleRate,
+            precedingFrame: precedingFrame,
             cancellationRequested: { false }
         ) else {
             preconditionFailure("Non-cancellable audio report stopped unexpectedly")
@@ -37,6 +42,7 @@ package struct AudioQualityReport: Equatable, Sendable {
     package init?(
         blocks: [RenderBlock],
         sampleRate: Double,
+        precedingFrame: UpperTimbreStereoFrame? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) {
         guard !cancellationRequested() else { return nil }
@@ -139,7 +145,8 @@ package struct AudioQualityReport: Equatable, Sendable {
         )
         maxBoundaryDelta = Self.maximumBoundaryDelta(
             leftBlocks: blocks.map(\.left),
-            rightBlocks: blocks.map(\.right)
+            rightBlocks: blocks.map(\.right),
+            precedingFrame: precedingFrame
         )
         finite = computedFinite
         guard let computedHash = Self.hash(
@@ -168,21 +175,30 @@ package struct AudioQualityReport: Equatable, Sendable {
 
     package static func maximumBoundaryDelta(
         leftBlocks: [[Float]],
-        rightBlocks: [[Float]]
+        rightBlocks: [[Float]],
+        precedingFrame: UpperTimbreStereoFrame? = nil
     ) -> Float {
         let blockCount = min(leftBlocks.count, rightBlocks.count)
-        guard blockCount > 1 else { return 0 }
         var result: Float = 0
-        for index in 1..<blockCount {
-            let leftDelta = abs(
-                (leftBlocks[index].first ?? 0) -
-                    (leftBlocks[index - 1].last ?? 0)
+        if blockCount > 0, let precedingFrame {
+            result = max(
+                result,
+                abs((leftBlocks[0].first ?? 0) - precedingFrame.left),
+                abs((rightBlocks[0].first ?? 0) - precedingFrame.right)
             )
-            let rightDelta = abs(
-                (rightBlocks[index].first ?? 0) -
-                    (rightBlocks[index - 1].last ?? 0)
-            )
-            result = max(result, leftDelta, rightDelta)
+        }
+        if blockCount > 1 {
+            for index in 1..<blockCount {
+                let leftDelta = abs(
+                    (leftBlocks[index].first ?? 0) -
+                        (leftBlocks[index - 1].last ?? 0)
+                )
+                let rightDelta = abs(
+                    (rightBlocks[index].first ?? 0) -
+                        (rightBlocks[index - 1].last ?? 0)
+                )
+                result = max(result, leftDelta, rightDelta)
+            }
         }
         return result
     }

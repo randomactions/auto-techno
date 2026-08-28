@@ -435,9 +435,9 @@ package struct ProfessionalQualityLiveCandidateChain: Equatable, Sendable {
 /// evidence. Every scenario must be rejected independently.
 package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 15
+    package static let schemaVersion = 16
     package static let suiteVersion =
-        "autotechno-professional-quality-adversarial.v15"
+        "autotechno-professional-quality-adversarial.v16"
 
     package let schemaVersion: Int
     package let suiteVersion: String

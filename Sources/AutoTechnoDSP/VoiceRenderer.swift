@@ -1191,12 +1191,28 @@ package enum VoiceRenderer {
         // One canonical eight-line late field replaces the former single long
         // repeating delay. Its immutable configuration is derived from the
         // same score-owned scene and persists through detached continuation.
-        let spatialFDNConfiguration = FeedbackDelayNetworkConfiguration(
+        let requestedSpatialFDNConfiguration = FeedbackDelayNetworkConfiguration(
             scene: scene,
             sampleRate: sampleRate,
             phraseKind: phraseKind
         )
-        state.spatialFDNState.prepare(for: spatialFDNConfiguration)
+        let resolvedSpatialFDN = state.spatialFDNState.resolveConfiguration(
+            for: requestedSpatialFDNConfiguration
+        )
+        let spatialFDNConfiguration = resolvedSpatialFDN.configuration
+        let spatialFDNInitialMaximumFeedbackGain =
+            state.spatialFDNState.appliedFeedbackGains.max() ?? 0
+        let spatialFDNInitialDampingCoefficient =
+            state.spatialFDNState.appliedDampingCoefficient
+        let spatialFDNInitialSynthSendGain =
+            state.spatialFDNState.appliedSynthSendGain
+        let spatialFDNInitialPercussionSendGain =
+            state.spatialFDNState.appliedPercussionSendGain
+        let spatialFDNInitialWetGain = state.spatialFDNState.appliedWetGain
+        let spatialFDNParameterTransitionFrameCount =
+            state.spatialFDNState.beginParameterTransition(
+                toward: spatialFDNConfiguration
+            )
         var spatialFDNScratch = [Double](
             repeating: 0,
             count: FeedbackDelayNetworkConfiguration.lineCount
@@ -1217,10 +1233,19 @@ package enum VoiceRenderer {
         var spatialFDNWetRightEnergy = 0.0
         var spatialFDNWetCrossEnergy = 0.0
         var spatialFDNWetPeak = 0.0
+        let spatialFDNTailWindowFrameCount = min(
+            frames,
+            max(1, Int((sampleRate * 0.25).rounded()))
+        )
+        var spatialFDNOpeningWetEnergy = 0.0
+        var spatialFDNTerminalWetEnergy = 0.0
         var spatialFDNActiveInputFrameCount = 0
         var spatialFDNActiveWetFrameCount = 0
         var spatialFDNFirstWetFrameIndex = -1
-        var spatialFDNFinite = spatialFDNConfiguration.isBoundedAndStable
+        var spatialFDNFinite =
+            requestedSpatialFDNConfiguration.isBoundedAndStable &&
+            spatialFDNConfiguration.isBoundedAndStable &&
+            state.spatialFDNState.isPrepared
         let pulseEchoTexture = synthPerformance.pulseEchoTextureArticulation
         let pulseEchoDriveAmount = layer == .full
             ? pulseEchoTexture.appliedAmount : 0
@@ -1270,8 +1295,6 @@ package enum VoiceRenderer {
         var synthTone = 0.0
         var highEnvelope = 0.0
         var midEnvelope = 0.0
-        var spatialHighPassState = 0.0
-        var spatialLowPassState = 0.0
         let spatialHighPassCoefficient = min(
             0.35,
             1 - exp(-2 * .pi * resolved.spatialContrast.highPassHz / sampleRate)
@@ -1409,17 +1432,21 @@ package enum VoiceRenderer {
             let earlyRead = state.earlyReflectionBuffer[state.earlyReflectionWriteIndex]
             state.earlyReflectionBuffer[state.earlyReflectionWriteIndex] = synthInput * 0.30
             let earlyMix = Float(0.035 + dramaticDistance * 0.08)
+            state.spatialFDNState.advanceParameterTransition()
             let drumSend = percussionStem[index] *
-                Float(spatialFDNConfiguration.percussionSendGain)
+                Float(state.spatialFDNState.appliedPercussionSendGain)
             let rawSpatialSend = Double(spatialReverbSendBus[index])
-            spatialHighPassState +=
-                (rawSpatialSend - spatialHighPassState) * spatialHighPassCoefficient
-            let highPassedSpatialSend = rawSpatialSend - spatialHighPassState
-            spatialLowPassState +=
-                (highPassedSpatialSend - spatialLowPassState) * spatialLowPassCoefficient
+            state.spatialSendHighPassState +=
+                (rawSpatialSend - state.spatialSendHighPassState) *
+                spatialHighPassCoefficient
+            let highPassedSpatialSend = rawSpatialSend -
+                state.spatialSendHighPassState
+            state.spatialSendLowPassState +=
+                (highPassedSpatialSend - state.spatialSendLowPassState) *
+                spatialLowPassCoefficient
             let spatialFDNInput = synthInput *
-                Float(spatialFDNConfiguration.synthSendGain) + drumSend +
-                Float(spatialLowPassState)
+                Float(state.spatialFDNState.appliedSynthSendGain) + drumSend +
+                Float(state.spatialSendLowPassState)
             let spatialFDNFrame = FeedbackDelayNetwork.processPrepared(
                 input: spatialFDNInput,
                 configuration: spatialFDNConfiguration,
@@ -1430,14 +1457,15 @@ package enum VoiceRenderer {
             let spatialFDNInputValue = Double(spatialFDNInput)
             spatialFDNInputEnergy += spatialFDNInputValue * spatialFDNInputValue
             spatialFDNSpatialSendEnergy +=
-                spatialLowPassState * spatialLowPassState
+                state.spatialSendLowPassState * state.spatialSendLowPassState
             if spatialFDNInput.bitPattern != 0 &&
                 spatialFDNInput.bitPattern != 0x8000_0000 {
                 spatialFDNActiveInputFrameCount += 1
             }
             spatialFDNFinite = spatialFDNFinite && spatialFDNInput.isFinite &&
                 spatialFDNFrame.left.isFinite && spatialFDNFrame.right.isFinite &&
-                spatialLowPassState.isFinite
+                state.spatialSendHighPassState.isFinite &&
+                state.spatialSendLowPassState.isFinite
             state.delayWriteIndex = (state.delayWriteIndex + 1) % delayFrames
             state.earlyReflectionWriteIndex = (state.earlyReflectionWriteIndex + 1) % earlyReflectionFrames
             low += (Double(input) - low) * 0.045
@@ -1466,7 +1494,9 @@ package enum VoiceRenderer {
             let reflectionPan = min(1.0, max(0.0, 0.5 - pan * 0.85))
             let reflectionLeft = earlyRead * earlyMix * Float(cos(reflectionPan * Double.pi * 0.5))
             let reflectionRight = earlyRead * earlyMix * Float(sin(reflectionPan * Double.pi * 0.5))
-            let spatialFDNScale = Float(spatialFDNConfiguration.wetGain) * upperDuck
+            let spatialFDNScale = Float(
+                state.spatialFDNState.appliedWetGain
+            ) * upperDuck
             let spatialFDNLeft = spatialFDNFrame.left * spatialFDNScale
             let spatialFDNRight = spatialFDNFrame.right * spatialFDNScale
             spatialFDNWetLeftFingerprint.append(spatialFDNLeft)
@@ -1478,6 +1508,15 @@ package enum VoiceRenderer {
             spatialFDNWetCrossEnergy += spatialFDNLeftValue * spatialFDNRightValue
             spatialFDNWetEnergy += spatialFDNLeftValue * spatialFDNLeftValue +
                 spatialFDNRightValue * spatialFDNRightValue
+            let spatialFDNFrameEnergy =
+                spatialFDNLeftValue * spatialFDNLeftValue +
+                spatialFDNRightValue * spatialFDNRightValue
+            if index < spatialFDNTailWindowFrameCount {
+                spatialFDNOpeningWetEnergy += spatialFDNFrameEnergy
+            }
+            if index >= frames - spatialFDNTailWindowFrameCount {
+                spatialFDNTerminalWetEnergy += spatialFDNFrameEnergy
+            }
             spatialFDNWetPeak = max(
                 spatialFDNWetPeak,
                 abs(spatialFDNLeftValue),
@@ -1680,6 +1719,14 @@ package enum VoiceRenderer {
         let spatialFDNWetRMS = sqrt(
             spatialFDNWetEnergy / (spatialFDNEvidenceFrameCount * 2)
         )
+        let spatialFDNOpeningWetRMS = sqrt(
+            spatialFDNOpeningWetEnergy /
+                Double(max(1, spatialFDNTailWindowFrameCount * 2))
+        )
+        let spatialFDNTerminalWetRMS = sqrt(
+            spatialFDNTerminalWetEnergy /
+                Double(max(1, spatialFDNTailWindowFrameCount * 2))
+        )
         let spatialFDNWetStereoDenominator = sqrt(max(
             0.000_000_000_000_000_001,
             spatialFDNWetLeftEnergy * spatialFDNWetRightEnergy
@@ -1694,6 +1741,8 @@ package enum VoiceRenderer {
             spatialFDNSpatialSendRMS,
             spatialFDNWetPeak,
             spatialFDNWetRMS,
+            spatialFDNOpeningWetRMS,
+            spatialFDNTerminalWetRMS,
             spatialFDNWetStereoCorrelation,
         ].allSatisfy(\.isFinite)
         let spatialFDNRenderEvidence = SpatialFDNRenderEvidence(
@@ -1702,6 +1751,7 @@ package enum VoiceRenderer {
             renderedFrameCount: frames,
             lineCount: FeedbackDelayNetworkConfiguration.lineCount,
             delayFrameCounts: spatialFDNConfiguration.delayFrameCounts,
+            requestedRoomScale: requestedSpatialFDNConfiguration.roomScale,
             roomScale: spatialFDNConfiguration.roomScale,
             decayTimeSeconds: spatialFDNConfiguration.decayTimeSeconds,
             dampingHz: spatialFDNConfiguration.dampingHz,
@@ -1711,6 +1761,25 @@ package enum VoiceRenderer {
             percussionSendGain:
                 spatialFDNConfiguration.percussionSendGain,
             wetGain: spatialFDNConfiguration.wetGain,
+            geometryRetained: resolvedSpatialFDN.geometryRetained,
+            parameterTransitionFrameCount:
+                spatialFDNParameterTransitionFrameCount,
+            initialMaximumFeedbackGain:
+                spatialFDNInitialMaximumFeedbackGain,
+            finalMaximumFeedbackGain:
+                state.spatialFDNState.appliedFeedbackGains.max() ?? 0,
+            initialDampingCoefficient:
+                spatialFDNInitialDampingCoefficient,
+            finalDampingCoefficient:
+                state.spatialFDNState.appliedDampingCoefficient,
+            initialSynthSendGain: spatialFDNInitialSynthSendGain,
+            finalSynthSendGain: state.spatialFDNState.appliedSynthSendGain,
+            initialPercussionSendGain:
+                spatialFDNInitialPercussionSendGain,
+            finalPercussionSendGain:
+                state.spatialFDNState.appliedPercussionSendGain,
+            initialWetGain: spatialFDNInitialWetGain,
+            finalWetGain: state.spatialFDNState.appliedWetGain,
             spatialDepthPosition: resolved.spatialContrast.depthPosition,
             carrierVoice: resolved.spatialContrast.carrierVoice,
             carrierStep: resolved.spatialContrast.carrierStep,
@@ -1728,6 +1797,10 @@ package enum VoiceRenderer {
             activeInputFrameCount: spatialFDNActiveInputFrameCount,
             activeWetFrameCount: spatialFDNActiveWetFrameCount,
             firstWetFrameIndex: spatialFDNFirstWetFrameIndex,
+            openingWindowFrameCount: spatialFDNTailWindowFrameCount,
+            openingWetRMS: spatialFDNOpeningWetRMS,
+            terminalWindowFrameCount: spatialFDNTailWindowFrameCount,
+            terminalWetRMS: spatialFDNTerminalWetRMS,
             finite: spatialFDNFinite
         )
         let upperTimingEvents: [UpperTimingRenderEvent]

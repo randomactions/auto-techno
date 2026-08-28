@@ -73,8 +73,8 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one scheduled-output master-headroom path mapping app-owned mixer PCM to an
   exact phrase occurrence, analyzing one fixed three-second window off the
   callback, and applying a primary-accepted attenuation only to future PCM;
-- canonical engine v37, quality-contract schema 38, candidate-vector schema 34,
-  and candidate-transaction schema 5, with the explicit
+- canonical engine v38, quality-contract schema 39, candidate-vector schema 35,
+  and candidate-transaction schema 6, with the explicit
   [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md)
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax, debt-to-recovery climax arc and terminal hang,
@@ -86,7 +86,8 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
   score-owned gated/anticipatory percussion-return texture, shared pulse-echo
   return-drive,
   score-owned dotted foundation rhythm and pre-kick-pocket consequence,
-  score-owned spatial-FDN configuration and wet consequence,
+  score-owned spatial-FDN configuration and wet consequence, cross-phrase
+  terminal/opening seam and inherited-tail continuity,
   score-owned upper-role timing, graph, and
   pre/post upper-timbre evidence;
 - six phrase-scale performance characters with bounded two-character memory and a
@@ -95,7 +96,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - phrase-wide and live-window ITU-R BS.1770-5 loudness, Annex 2 true peak,
   physical-time spectral/trajectory evidence, rate-normalized transient
   detection, explicit bounded working memory, and a complete-checkpoint
-  Professional Evidence v19 report bank;
+  Professional Evidence v20 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
@@ -108,9 +109,9 @@ filter motion, and dry-plus-moving-shadow concepts were reconciled to existing
 score, modulation, echo, chorus, and FDN owners; no duplicate track,
 instrument, modulation lane, or effect chain was added.
 
-The app now installs one exact-engine calibrated primary evaluator v18 from the
-current profile v18 derived from 28 complete journeys, a passing v15 adversarial
-suite, and a disjoint four-journey holdout qualification v13. Each boundary owns one
+The app now installs one exact-engine calibrated primary evaluator v19 from the
+current profile v19 derived from 28 complete journeys, a passing v16 adversarial
+suite, and a disjoint four-journey holdout qualification v14. Each boundary owns one
 canonical plan and one terminal decision. The evaluator may request one same-
 plan home-timbre correction, for two render passes maximum. Missing artifacts
 and unsupported routes are truthfully unavailable and cannot commit.
@@ -173,9 +174,9 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 38, candidate-vector schema 34, and candidate-
-transaction schema 5 now bind a versioned transaction across canonical engine
-v37, quality policy, evaluator, candidate plans, route, incoming continuation,
+Quality-contract schema 39, candidate-vector schema 35, and candidate-
+transaction schema 6 now bind a versioned transaction across canonical engine
+v38, quality policy, evaluator, candidate plans, route, incoming continuation,
 attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 upper-percussion tail-clearance,
@@ -192,13 +193,13 @@ provenance, make each
 score-to-PCM consequence explicit for the calibrated primary policy. The modal
 foundation projection additionally binds every empty and active bar, score-owned
 articulation, exact dry PCM, protected routing, continuation, pitch, envelope,
-spectral, masking, and pole-stability evidence. Professional Evidence v19 adds
+spectral, masking, and pole-stability evidence. Professional Evidence v20 adds
 standards-based phrase loudness/true peak, bounded streaming
 physical-time spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
 complete role attribution. The repository now carries a deterministic,
 non-reconstructable 44.1/48 kHz diverse profile, relational rate/trajectory
-guardrails, a passing 34-case v15 adversarial suite, and a disjoint holdout report
+guardrails, a passing 34-case v16 adversarial suite, and a disjoint holdout report
 covering 56/56 observations with zero relationship failures. Short-program
 EBU-style loudness range remains descriptive because its gated percentile is
 discontinuous at small populations; integrated, momentary, short-term, and true-
@@ -209,13 +210,11 @@ local and untracked.
 
 The runtime records one complete plan, one initial attempt, and at most one
 home-timbre correction, then atomically carries the terminal evidence, decision,
-and controller state into continuation. The last engine-v36 profile v18,
-passing v15 adversarial suite, and disjoint holdout qualification v13 remain
-immutable evidence but are rejected by engine v37. The non-compensable
-checkpoint policy and transaction replay remain the app path; qualification is
-unavailable until the replacement artifact set passes. The former
+and controller state into continuation. The exact engine-v38 profile v19,
+passing v16 adversarial suite, disjoint holdout qualification v14, non-compensable
+checkpoint policy, and transaction replay are the app path. The former
 single-journey generalization blocker is closed: 28 development journeys and
-four disjoint replacement holdouts passed at 44.1 and 48 kHz for engine v36. A missing artifact,
+four disjoint replacement holdouts pass at 44.1 and 48 kHz. A missing artifact,
 unsupported route, failed gate, or rejected score produces no new commit. See
 [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md).
 
