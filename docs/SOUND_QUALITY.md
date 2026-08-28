@@ -618,9 +618,11 @@ The target loop is bounded and persistent:
    without changing identity, debt, selection, or energy coordination; it
    remains subject to every unchanged gate. No proposals coexist or compete.
    Its score-side vocabulary alternates bounded kick attack/body pressure around
-   the continuous committed morphology trajectory, so this calibrated source
-   metric changes in both directions before nine rejected variants stop in an
-   explicit blocked state. Missing or non-finite evidence, unavailable policy,
+   the continuous committed morphology trajectory. Positive pressure firms the
+   existing body; negative pressure softens the same body drive and sub level as
+   well as its attack/body contour, so both source shape and measured active
+   kick energy move causally before nine rejected variants stop in an explicit
+   blocked state. Missing or non-finite evidence, unavailable policy,
    graph or signal-safety failure, route/provenance failure, and exhausted
    variants remain terminal.
 7. The committed plan, reason-coded evidence, controller state, and policy version

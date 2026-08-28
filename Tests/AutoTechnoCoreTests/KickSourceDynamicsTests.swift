@@ -220,6 +220,11 @@ struct KickSourceDynamicsTests {
             absoluteBar: 0,
             qualityRetryOrdinal: 2
         )
+        let fullNegative = KickMorphologyResolver.articulation(
+            sessionSeed: seed,
+            absoluteBar: 0,
+            qualityRetryOrdinal: 8
+        )
         #expect(explicitZero == baseline)
         #expect(positive.isComplete)
         #expect(negative.isComplete)
@@ -229,6 +234,10 @@ struct KickSourceDynamicsTests {
                 baseline.start.bodyDecayPerSecond)
         #expect(positive.start.noiseClickLevel > baseline.start.noiseClickLevel)
         #expect(negative.start.noiseClickLevel < baseline.start.noiseClickLevel)
+        #expect(positive.start.bodyDrive > baseline.start.bodyDrive)
+        #expect(negative.start.bodyDrive < baseline.start.bodyDrive)
+        #expect(positive.start.subLevel > baseline.start.subLevel)
+        #expect(negative.start.subLevel < baseline.start.subLevel)
 
         for ordinal in 1...AutonomousQualityRetryContinuation.maximumOrdinal {
             #expect(abs(KickMorphologyResolver.qualityRetryPressure(
@@ -254,18 +263,27 @@ struct KickSourceDynamicsTests {
         let source = try #require(plan.resolvedBars.first { bar in
             bar.ensemble.events.contains { $0.voice == .kick }
         })
-        let renderedBaseline = render(
+        let baselineBar = render(
             resolved: replacingMorphology(source, with: baseline),
             plan: plan,
             sampleRate: 44_100,
             layer: .protectedRhythm
-        ).kickMix.sourceDynamics
-        let renderedPositive = render(
+        )
+        let positiveBar = render(
             resolved: replacingMorphology(source, with: positive),
             plan: plan,
             sampleRate: 44_100,
             layer: .protectedRhythm
-        ).kickMix.sourceDynamics
+        )
+        let negativeBar = render(
+            resolved: replacingMorphology(source, with: fullNegative),
+            plan: plan,
+            sampleRate: 44_100,
+            layer: .protectedRhythm
+        )
+        let renderedBaseline = baselineBar.kickMix.sourceDynamics
+        let renderedPositive = positiveBar.kickMix.sourceDynamics
+        let renderedNegative = negativeBar.kickMix.sourceDynamics
         let baselineAttackToBody = 20 * log10(
             renderedBaseline.outputAttackRMS /
                 renderedBaseline.outputBodyRMS
@@ -276,7 +294,52 @@ struct KickSourceDynamicsTests {
         )
         #expect(renderedPositive.outputSampleHash !=
                 renderedBaseline.outputSampleHash)
-        #expect(positiveAttackToBody - baselineAttackToBody > 0.15)
+        #expect(positiveAttackToBody - baselineAttackToBody > 0.05)
+        #expect(renderedNegative.outputSampleHash !=
+                renderedBaseline.outputSampleHash)
+        #expect(20 * log10(
+            renderedNegative.outputRMS / renderedBaseline.outputRMS
+        ) < -0.90)
+        let baselineActive = try #require(
+            baselineBar.stemObservations[.kick]?.activeRMS
+        )
+        let negativeActive = try #require(
+            negativeBar.stemObservations[.kick]?.activeRMS
+        )
+        #expect(20 * log10(negativeActive / baselineActive) < -0.90)
+
+        for absoluteBar in [64, 127, 128, 192, 255] {
+            let trajectoryBaseline = KickMorphologyResolver.articulation(
+                sessionSeed: seed,
+                absoluteBar: absoluteBar
+            )
+            let trajectoryNegative = KickMorphologyResolver.articulation(
+                sessionSeed: seed,
+                absoluteBar: absoluteBar,
+                qualityRetryOrdinal: 8
+            )
+            let trajectoryBaselineBar = render(
+                resolved: replacingMorphology(source, with: trajectoryBaseline),
+                plan: plan,
+                sampleRate: 44_100,
+                layer: .protectedRhythm
+            )
+            let trajectoryNegativeBar = render(
+                resolved: replacingMorphology(source, with: trajectoryNegative),
+                plan: plan,
+                sampleRate: 44_100,
+                layer: .protectedRhythm
+            )
+            let baselineTrajectoryActive = try #require(
+                trajectoryBaselineBar.stemObservations[.kick]?.activeRMS
+            )
+            let negativeTrajectoryActive = try #require(
+                trajectoryNegativeBar.stemObservations[.kick]?.activeRMS
+            )
+            #expect(20 * log10(
+                negativeTrajectoryActive / baselineTrajectoryActive
+            ) < -0.90)
+        }
     }
 
     private struct LegacyOracle {

@@ -61,10 +61,11 @@ package struct KickMorphologyParameters: Equatable, Sendable {
         )
     }
 
-    /// A bounded score-side retry movement for calibrated kick-source
-    /// attack/body misses. Positive pressure shortens the body and raises the
-    /// existing click components slightly; negative pressure explores the
-    /// inverse direction. Zero is exactly identity-preserving.
+    /// A bounded score-side retry movement for calibrated kick-source and
+    /// kick/foundation relationship misses. Positive pressure shortens and
+    /// firms the existing body while raising its click components slightly;
+    /// negative pressure lengthens and softens that same source. Zero is
+    /// exactly identity-preserving.
     package func qualityRetryAdjusted(
         pressure requestedPressure: Double
     ) -> Self {
@@ -87,13 +88,21 @@ package struct KickMorphologyParameters: Equatable, Sendable {
             fastPitchDecayPerSecond: fastPitchDecayPerSecond,
             bodyDecayPerSecond: bounded(
                 bodyDecayPerSecond,
-                scale: 0.20,
+                scale: 0.08,
                 range: 13...24
             ),
             subDecayPerSecond: subDecayPerSecond,
             secondHarmonicLevel: secondHarmonicLevel,
-            bodyDrive: bodyDrive,
-            subLevel: subLevel,
+            bodyDrive: bounded(
+                bodyDrive,
+                scale: 0.26,
+                range: 0.85...1.42
+            ),
+            subLevel: bounded(
+                subLevel,
+                scale: 0.12,
+                range: 0.15...0.30
+            ),
             noiseClickLevel: bounded(
                 noiseClickLevel,
                 scale: 0.08,
@@ -125,7 +134,7 @@ package struct KickMorphologyParameters: Equatable, Sendable {
             (13...24).contains(bodyDecayPerSecond) &&
             (10...16).contains(subDecayPerSecond) &&
             (0.04...0.15).contains(secondHarmonicLevel) &&
-            (1.05...1.42).contains(bodyDrive) &&
+            (0.85...1.42).contains(bodyDrive) &&
             (0.15...0.30).contains(subLevel) &&
             (0.045...0.11).contains(noiseClickLevel) &&
             (0.03...0.075).contains(tonalClickLevel) &&
