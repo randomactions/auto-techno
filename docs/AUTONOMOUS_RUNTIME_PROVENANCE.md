@@ -363,19 +363,22 @@ mistaken for a completed feedback system.
    phrase, so a calibrated establishment rejection can adapt without requiring
    a user to repeat the identical rejected request.
    Ordinary successor delay also owns one bounded presentation-only fallback,
-   `autotechno-repeat-hold-evolution.v1`. Core selects it only from the second
-   coherent repeat when a matching independently qualified sidecar exists. DSP
-   derives that sidecar during detached rendering by filtering only the generated
-   graph remainder through the existing TPT state-variable primitive, with one
-   dry-to-low-pass-to-dry phrase envelope; it then recombines the unchanged
+   `autotechno-repeat-hold-evolution.v2`. Core selects it only from the second
+   coherent repeat when at least one matching independently qualified sidecar
+   exists. DSP derives three pattern families during detached rendering by
+   filtering only the generated graph remainder through the existing TPT
+   state-variable primitive. Deep Breath owns one phrase arch, Twin Pulse owns
+   two smooth arches, and Late Veil owns a delayed final arch; each then
+   recombines the unchanged
    protected rhythm pass before the existing terminal safety and master trim.
    Reduced evidence binds exact endpoints, protected-routing hashes, graph-
    remainder high-band reduction, output safety, level consequence, and primary
-   versus variant PCM fingerprints. The selected primary plan, blocks, candidate
+   versus family-specific variant PCM fingerprints. Core rotates through only
+   the qualified families and exact accepted PCM remains the fallback when none
+   qualify. The selected primary plan, blocks, candidate
    evidence, render/graph continuation, quality decision, and engine-v38
    artifacts remain unchanged. App and Windows transports merely choose the
-   immutable sidecar at a phrase boundary; unavailable or failed evidence falls
-   back to exact accepted PCM, and a ready successor always advances. The
+   immutable family at a phrase boundary, and a ready successor always advances. The
    macOS scheduler does not register sidecar occurrences as canonical live-
    feedback sources, so transformed PCM cannot be attributed to the accepted
    candidate. No filter state, analysis, allocation, decision, log, or UI work

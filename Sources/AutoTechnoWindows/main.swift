@@ -336,8 +336,9 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
                     RepeatHoldEvolutionBoundaryPolicy.decide(
                         coherentRepeatCount: coherentRepeatCount,
                         successorPrepared: false,
-                        qualifiedVariantAvailable:
-                            phrase.prepared.repeatHoldEvolution != nil
+                        qualifiedPatternFamilies:
+                            phrase.prepared
+                                .qualifiedRepeatHoldPatternFamilies
                     )
                 requestSuccessor(after: phrase)
             }
@@ -350,8 +351,10 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
         let blockIndex = nextBlockIndex
         let block = phrase.prepared.blocks[blockIndex]
         let holdEvolutionBlock: RepeatHoldEvolutionRenderBlock?
-        if repeatHoldEvolutionPlaybackMode == .qualifiedLowPass,
-           let variant = phrase.prepared.repeatHoldEvolution,
+        if let patternFamily = repeatHoldEvolutionPlaybackMode.patternFamily,
+           let variant = phrase.prepared.repeatHoldEvolution(
+            for: patternFamily
+           ),
            variant.blocks.indices.contains(blockIndex) {
             holdEvolutionBlock = variant.blocks[blockIndex]
         } else {

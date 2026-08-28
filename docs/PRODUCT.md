@@ -343,16 +343,18 @@ scheduled, hashed, persisted into a set, or admitted to a controller, and it
 survives New Set only as a host-local listening preference.
 
 Prolonged ordinary successor preparation has one versioned, bounded presentation
-fallback: `autotechno-repeat-hold-evolution.v1`. The first coherent repeat stays
-bit-exact. From the second repeat, Core may select one independently qualified
-low-pass movement prepared from the accepted phrase's generated graph remainder;
-the protected foundation and percussion render is recombined unchanged. The
-movement starts and ends at exact dry samples, passes the existing finite,
+fallback: `autotechno-repeat-hold-evolution.v2`. The first coherent repeat stays
+bit-exact. From the second repeat, Core rotates a fixed musical sentence through
+the independently qualified `deep-breath`, `twin-pulse`, and `late-veil`
+low-pass families prepared from the accepted phrase's generated graph remainder;
+the protected foundation and percussion render is recombined unchanged. Every
+family starts and ends at exact dry samples, passes the existing finite,
 true-peak, DC, low-stereo, and boundary limits, proves a real high-band reduction
 in the processed remainder, and cannot raise phrase RMS by more than `0.25 dB`.
-If any evidence is absent or fails, transport keeps the exact accepted PCM. The
-variant never changes primary candidate selection, score or DSP continuation,
-does not participate in canonical live-feedback attribution, and yields to a
+Failure removes only that family from the rotation; if none qualify, transport
+keeps the exact accepted PCM. The variants never change primary candidate
+selection, score or DSP continuation,
+do not participate in canonical live-feedback attribution, and yield to a
 qualified successor at the next phrase boundary. It adds no user control,
 callback work, looper, second clock, or alternate engine.
 

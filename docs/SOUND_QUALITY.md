@@ -637,19 +637,23 @@ The target loop is bounded and persistent:
    become continuation input for future preparation.
 8. Final immutable blocks receive a second safety check before scheduling.
 
-The repeat-hold sidecar is outside primary candidate selection and cannot make a
-rejected phrase playable. During the same detached render, version
-`autotechno-repeat-hold-evolution.v1` applies one phrase-wide low-pass movement
-only to the generated graph remainder and recombines the bit-identical protected
-rhythm pass. A lightweight independent qualifier requires aligned immutable
+The repeat-hold sidecars are outside primary candidate selection and cannot make
+a rejected phrase playable. During the same detached render, version
+`autotechno-repeat-hold-evolution.v2` prepares three phrase-wide low-pass pattern
+families only from the generated graph remainder and recombines the bit-identical
+protected rhythm pass. `deep-breath` closes once across the phrase,
+`twin-pulse` makes two smooth closures, and `late-veil` reserves its closure for
+the final three quarters. A lightweight independent qualifier requires aligned immutable
 blocks, exact phrase endpoints, unchanged protected-routing hashes, changed PCM,
 at least `0.20 dB` high-band reduction in that exact graph remainder, no more
 than `0.25 dB` RMS increase, and the existing finite, `0.95` true-peak,
 `0.05` DC, `0.94` low-stereo-correlation, and `0.65` boundary limits. Failure
-discards the sidecar and preserves exact accepted PCM. At most one sidecar is
-retained for the selected render; a superseded initial sidecar is released
-before a corrective render, and the declared preparation memory budget includes
-that storage. Primary-v19 artifacts and engine-v38 candidate fingerprints remain
+discards only that family; Core rotates through the remaining qualified families
+from the second coherent repeat and preserves exact accepted PCM when none remain.
+At most three sidecars are retained for the selected render; every superseded
+initial sidecar is released before a corrective render, and the declared
+preparation memory budget includes that storage. Primary-v19 artifacts and
+engine-v38 candidate fingerprints remain
 unchanged because the sidecar cannot affect the primary plan, scheduled default
 PCM, evidence transaction, render continuation, or commit decision.
 

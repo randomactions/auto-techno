@@ -819,10 +819,11 @@ package final class TechnoEngine: ObservableObject {
     private func logRepeatHoldEvolutionPreparation(
         _ prepared: PreparedAutonomousPhrase
     ) {
-        let evidence = prepared.repeatHoldEvolutionEvidence
-        Self.successorPreparationLogger.info(
-            "Hold evolution prepared phrase=\(prepared.plan.phraseIndex + 1, privacy: .public) version=\(evidence.version, privacy: .public) qualified=\(evidence.qualified, privacy: .public) failure=\(evidence.conciseFailureCode, privacy: .public) frames=\(evidence.frameCount, privacy: .public) high-band-reduction-db=\(evidence.highBandReductionDB, privacy: .public) loudness-delta-db=\(evidence.loudnessDeltaDB, privacy: .public) endpoints-exact=\(evidence.endpointsExact, privacy: .public) protected-routing-exact=\(evidence.protectedRoutingExact, privacy: .public) safety=\(evidence.signalSafetyValid, privacy: .public) primary=\(evidence.primarySampleHash, privacy: .public) variant=\(evidence.variantSampleHash, privacy: .public)"
-        )
+        for evidence in prepared.repeatHoldEvolutionEvidence {
+            Self.successorPreparationLogger.info(
+                "Hold evolution prepared phrase=\(prepared.plan.phraseIndex + 1, privacy: .public) version=\(evidence.version, privacy: .public) family=\(evidence.patternFamily.rawValue, privacy: .public) qualified=\(evidence.qualified, privacy: .public) failure=\(evidence.conciseFailureCode, privacy: .public) frames=\(evidence.frameCount, privacy: .public) high-band-reduction-db=\(evidence.highBandReductionDB, privacy: .public) loudness-delta-db=\(evidence.loudnessDeltaDB, privacy: .public) endpoints-exact=\(evidence.endpointsExact, privacy: .public) protected-routing-exact=\(evidence.protectedRoutingExact, privacy: .public) safety=\(evidence.signalSafetyValid, privacy: .public) primary=\(evidence.primarySampleHash, privacy: .public) variant=\(evidence.variantSampleHash, privacy: .public)"
+            )
+        }
     }
 
     private func markNextPhraseRejected(
@@ -1581,7 +1582,7 @@ package final class TechnoEngine: ObservableObject {
         nextBlockIndex = 0
         repeatHoldEvolutionPlaybackMode = .exactAcceptedPCM
         nextPhraseProgress = nextPhraseProgress
-            .settingHoldEvolutionActive(false)
+            .settingHoldEvolution(.inactive)
         nextScheduleSample = 0
         currentBarFrames = 1
         scheduledVisuals.removeAll(keepingCapacity: true)
@@ -1700,7 +1701,7 @@ package final class TechnoEngine: ObservableObject {
                 phrase = next
                 repeatHoldEvolutionPlaybackMode = .exactAcceptedPCM
                 nextPhraseProgress = nextPhraseProgress
-                    .settingHoldEvolutionActive(false)
+                    .settingHoldEvolution(.inactive)
                 sessionState = advancedState
                 longHorizonState = next.outgoingLongHorizonState
                 qualityRetryContinuation =
@@ -1734,22 +1735,36 @@ package final class TechnoEngine: ObservableObject {
                         coherentRepeatCount:
                             nextPhraseProgress.repeatCount,
                         successorPrepared: false,
-                        qualifiedVariantAvailable:
-                            phrase.prepared.repeatHoldEvolution != nil,
+                        qualifiedPatternFamilies:
+                            phrase.prepared
+                                .qualifiedRepeatHoldPatternFamilies,
                         exactAcceptedPCMRequired:
                             runtimeRequiresRepeat ||
                             pendingLiveMasterBinding != nil ||
                             !untrimmedPreparationAllowed
                     )
-                let holdEvolutionActive =
-                    repeatHoldEvolutionPlaybackMode == .qualifiedLowPass
-                nextPhraseProgress = nextPhraseProgress
-                    .settingHoldEvolutionActive(holdEvolutionActive)
-                if holdEvolutionActive {
-                    let evidence = phrase.prepared
-                        .repeatHoldEvolutionEvidence
+                let holdEvolutionPatternFamily =
+                    repeatHoldEvolutionPlaybackMode.patternFamily
+                let holdEvolutionPresentation:
+                    NextPhraseProgress.HoldEvolution
+                if let holdEvolutionPatternFamily {
+                    holdEvolutionPresentation = .pattern(
+                        holdEvolutionPatternFamily.rawValue
+                            .replacingOccurrences(of: "-", with: " ")
+                    )
+                } else {
+                    holdEvolutionPresentation = .exactFallback
+                }
+                nextPhraseProgress = nextPhraseProgress.settingHoldEvolution(
+                    holdEvolutionPresentation
+                )
+                if let holdEvolutionPatternFamily,
+                   let variant = phrase.prepared.repeatHoldEvolution(
+                    for: holdEvolutionPatternFamily
+                   ) {
+                    let evidence = variant.evidence
                     Self.successorPreparationLogger.notice(
-                        "Hold evolution active source-phrase=\(sourcePhraseIndex + 1, privacy: .public) target-phrase=\(targetPhraseIndex + 1, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) version=\(evidence.version, privacy: .public) variant=\(evidence.variantSampleHash, privacy: .public) canonical-live-feedback=false"
+                        "Hold evolution active source-phrase=\(sourcePhraseIndex + 1, privacy: .public) target-phrase=\(targetPhraseIndex + 1, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) version=\(evidence.version, privacy: .public) family=\(holdEvolutionPatternFamily.rawValue, privacy: .public) variant=\(evidence.variantSampleHash, privacy: .public) canonical-live-feedback=false"
                     )
                 }
                 if pendingLiveMasterBinding == nil,
@@ -1769,8 +1784,10 @@ package final class TechnoEngine: ObservableObject {
         let blockIndex = nextBlockIndex
         let block = phrase.prepared.blocks[blockIndex]
         let holdEvolutionBlock: RepeatHoldEvolutionRenderBlock?
-        if repeatHoldEvolutionPlaybackMode == .qualifiedLowPass,
-           let variant = phrase.prepared.repeatHoldEvolution,
+        if let patternFamily = repeatHoldEvolutionPlaybackMode.patternFamily,
+           let variant = phrase.prepared.repeatHoldEvolution(
+            for: patternFamily
+           ),
            variant.blocks.indices.contains(blockIndex) {
             holdEvolutionBlock = variant.blocks[blockIndex]
         } else {

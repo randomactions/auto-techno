@@ -446,7 +446,7 @@
     {
       "id": "graph-effects-routing-and-mix",
       "name": "Graph, effects, routing, and mix control",
-      "responsibility": "Plan and render the bounded DSP graph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, one independently qualified repeat-hold sidecar, and read-only waveform envelopes.",
+      "responsibility": "Plan and render the bounded DSP graph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, independently qualified repeat-hold pattern-family sidecars, and read-only waveform envelopes.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -473,7 +473,7 @@
       "outputs": [
         "DSPGraphPlan",
         "processed canonical mix",
-        "PreparedRepeatHoldEvolutionPhrase",
+        "PreparedRepeatHoldEvolutionPhrase families",
         "ending graph and mix state"
       ],
       "evidence": [
@@ -770,7 +770,7 @@
     {
       "id": "macos-transport-and-session-lifecycle",
       "name": "macOS transport and session lifecycle",
-      "responsibility": "Own the active session seed, detached preparation tasks, stale-work epochs, AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, accepted-PCM hold behavior, and boundary-only repeat-hold sidecar playback.",
+      "responsibility": "Own the active session seed, detached preparation tasks, stale-work epochs, AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, accepted-PCM hold behavior, and boundary-only repeat-hold pattern-family playback.",
       "targets": [
         "AutoTechnoApp"
       ],
@@ -806,7 +806,7 @@
       "evidence": [
         "schedule ledger",
         "route/preparation generations",
-        "hold-filter status and successor-preparation logs",
+        "hold pattern-family or exact-fallback status and successor-preparation logs",
         "playing-time state"
       ],
       "sourcePaths": [
@@ -966,7 +966,7 @@
     {
       "id": "windows-transport-and-waveout",
       "name": "Windows transport and waveOut output",
-      "responsibility": "Reuse canonical detached preparation and immutable primary or qualified repeat-hold PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting.",
+      "responsibility": "Reuse canonical detached preparation and immutable primary or qualified repeat-hold pattern-family PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting.",
       "targets": [
         "AutoTechnoWindows",
         "AutoTechnoWindowsPlatform"

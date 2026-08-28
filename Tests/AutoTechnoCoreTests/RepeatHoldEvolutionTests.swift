@@ -5,39 +5,60 @@ import Testing
 
 @Suite("Bounded repeat hold evolution", .serialized)
 struct RepeatHoldEvolutionTests {
-    @Test("Core activates only the qualified fallback after two repeats")
+    @Test("Core rotates only qualified families after two repeats")
     func boundaryPolicyIsBounded() {
+        let allFamilies = RepeatHoldEvolutionPatternFamily.allCases
         #expect(RepeatHoldEvolutionBoundaryPolicy.decide(
             coherentRepeatCount: 1,
             successorPrepared: false,
-            qualifiedVariantAvailable: true
+            qualifiedPatternFamilies: allFamilies
         ) == .exactAcceptedPCM)
         #expect(RepeatHoldEvolutionBoundaryPolicy.decide(
             coherentRepeatCount: 2,
             successorPrepared: false,
-            qualifiedVariantAvailable: true
-        ) == .qualifiedLowPass)
+            qualifiedPatternFamilies: allFamilies
+        ) == .qualifiedPattern(.deepBreath))
+        #expect(RepeatHoldEvolutionBoundaryPolicy.decide(
+            coherentRepeatCount: 3,
+            successorPrepared: false,
+            qualifiedPatternFamilies: allFamilies
+        ) == .qualifiedPattern(.twinPulse))
+        #expect(RepeatHoldEvolutionBoundaryPolicy.decide(
+            coherentRepeatCount: 4,
+            successorPrepared: false,
+            qualifiedPatternFamilies: allFamilies
+        ) == .qualifiedPattern(.lateVeil))
+        #expect(RepeatHoldEvolutionBoundaryPolicy.decide(
+            coherentRepeatCount: 5,
+            successorPrepared: false,
+            qualifiedPatternFamilies: allFamilies
+        ) == .qualifiedPattern(.deepBreath))
+        #expect(RepeatHoldEvolutionBoundaryPolicy.decide(
+            coherentRepeatCount: 3,
+            successorPrepared: false,
+            qualifiedPatternFamilies: [.deepBreath, .lateVeil]
+        ) == .qualifiedPattern(.lateVeil))
         #expect(RepeatHoldEvolutionBoundaryPolicy.decide(
             coherentRepeatCount: 9,
             successorPrepared: true,
-            qualifiedVariantAvailable: true
+            qualifiedPatternFamilies: allFamilies
         ) == .exactAcceptedPCM)
         #expect(RepeatHoldEvolutionBoundaryPolicy.decide(
             coherentRepeatCount: 9,
             successorPrepared: false,
-            qualifiedVariantAvailable: false
+            qualifiedPatternFamilies: []
         ) == .exactAcceptedPCM)
         #expect(RepeatHoldEvolutionBoundaryPolicy.decide(
             coherentRepeatCount: 9,
             successorPrepared: false,
-            qualifiedVariantAvailable: true,
+            qualifiedPatternFamilies: allFamilies,
             exactAcceptedPCMRequired: true
         ) == .exactAcceptedPCM)
-        #expect(!RepeatHoldEvolutionPlaybackMode.qualifiedLowPass
+        #expect(!RepeatHoldEvolutionPlaybackMode.qualifiedPattern(.twinPulse)
             .participatesInCanonicalLiveFeedback)
     }
 
-    @Test("Filter movement is deterministic and exact at phrase endpoints")
+    @Test("Pattern families are deterministic, distinct, and endpoint exact")
     func filterIsDeterministicAndBoundaryNeutral() throws {
         let sampleRate = 48_000.0
         let frameCount = 8_192
@@ -61,42 +82,54 @@ struct RepeatHoldEvolutionTests {
                 highGain: 0.07
             )
         }
-        var first = RepeatHoldEvolutionFilterState(
-            sampleRate: sampleRate,
-            totalFrameCount: frameCount
-        )
-        var second = RepeatHoldEvolutionFilterState(
-            sampleRate: sampleRate,
-            totalFrameCount: frameCount
-        )
         let neverCancelled: @Sendable () -> Bool = { false }
-        let renderedAResult = first.process(
-            left: left,
-            right: right,
-            cancellationRequested: neverCancelled
-        )
-        let renderedBResult = second.process(
-            left: left,
-            right: right,
-            cancellationRequested: neverCancelled
-        )
-        let renderedA = try #require(renderedAResult)
-        let renderedB = try #require(renderedBResult)
+        var patternHashes: Set<String> = []
+        for patternFamily in RepeatHoldEvolutionPatternFamily.allCases {
+            var first = RepeatHoldEvolutionFilterState(
+                patternFamily: patternFamily,
+                sampleRate: sampleRate,
+                totalFrameCount: frameCount
+            )
+            var second = RepeatHoldEvolutionFilterState(
+                patternFamily: patternFamily,
+                sampleRate: sampleRate,
+                totalFrameCount: frameCount
+            )
+            let renderedAResult = first.process(
+                left: left,
+                right: right,
+                cancellationRequested: neverCancelled
+            )
+            let renderedBResult = second.process(
+                left: left,
+                right: right,
+                cancellationRequested: neverCancelled
+            )
+            let renderedA = try #require(renderedAResult)
+            let renderedB = try #require(renderedBResult)
 
-        #expect(renderedA.left == renderedB.left)
-        #expect(renderedA.right == renderedB.right)
-        #expect(renderedA.left.first?.bitPattern == left.first?.bitPattern)
-        #expect(renderedA.right.first?.bitPattern == right.first?.bitPattern)
-        #expect(renderedA.left.last?.bitPattern == left.last?.bitPattern)
-        #expect(renderedA.right.last?.bitPattern == right.last?.bitPattern)
-        #expect(ExactPCMFingerprint.stereo(
-            left: renderedA.left,
-            right: renderedA.right
-        ) != ExactPCMFingerprint.stereo(left: left, right: right))
+            #expect(renderedA.left == renderedB.left)
+            #expect(renderedA.right == renderedB.right)
+            #expect(renderedA.left.first?.bitPattern == left.first?.bitPattern)
+            #expect(renderedA.right.first?.bitPattern == right.first?.bitPattern)
+            #expect(renderedA.left.last?.bitPattern == left.last?.bitPattern)
+            #expect(renderedA.right.last?.bitPattern == right.last?.bitPattern)
+            let patternHash = ExactPCMFingerprint.stereo(
+                left: renderedA.left,
+                right: renderedA.right
+            )
+            #expect(patternHash != ExactPCMFingerprint.stereo(
+                left: left,
+                right: right
+            ))
+            patternHashes.insert(patternHash)
+        }
+        #expect(patternHashes.count ==
+            RepeatHoldEvolutionPatternFamily.allCases.count)
     }
 
-    @Test("Prepared phrase retains one independently qualified hold variant")
-    func preparedVariantIsQualified() throws {
+    @Test("Prepared phrase retains independently qualified pattern families")
+    func preparedVariantsAreQualified() throws {
         // Seed 19 deterministically resolves an upper-rich opening phrase, so
         // the graph-remainder-only filter has a meaningful audible target.
         let director = AutonomousSessionDirector(rootSeed: 19)
@@ -116,28 +149,48 @@ struct RepeatHoldEvolutionTests {
             cancellationRequested: neverCancelled
         )
         let prepared = try #require(preparedResult)
-        let preparationEvidence = prepared.repeatHoldEvolutionEvidence
-        #expect(preparationEvidence.qualified)
-        let variant = try #require(prepared.repeatHoldEvolution)
-        let evidence = variant.evidence
+        #expect(prepared.repeatHoldEvolutionEvidence.count ==
+            RepeatHoldEvolutionPatternFamily.allCases.count)
+        #expect(prepared.repeatHoldEvolutions.count ==
+            RepeatHoldEvolutionPatternFamily.allCases.count)
+        #expect(prepared.qualifiedRepeatHoldPatternFamilies ==
+            RepeatHoldEvolutionPatternFamily.allCases)
+        #expect(Set(prepared.repeatHoldEvolutions.map {
+            $0.evidence.variantSampleHash
+        }).count == RepeatHoldEvolutionPatternFamily.allCases.count)
 
-        #expect(evidence.version == RepeatHoldEvolutionContract.version)
-        #expect(evidence.qualified)
-        #expect(evidence.signalSafetyValid)
-        #expect(evidence.endpointsExact)
-        #expect(evidence.protectedRoutingExact)
-        #expect(evidence.highBandReductionDB >=
-            RepeatHoldEvolutionDSPContract.minimumHighBandReductionDB)
-        #expect(evidence.loudnessDeltaDB <=
-            RepeatHoldEvolutionDSPContract.maximumLoudnessIncreaseDB)
-        #expect(evidence.primarySampleHash ==
-            prepared.audioPreflight.quality.sampleHash)
-        #expect(evidence.variantSampleHash != evidence.primarySampleHash)
-        #expect(variant.blocks.count == prepared.blocks.count)
-        #expect(zip(prepared.blocks, variant.blocks).allSatisfy {
-            $0.0.protectedRhythmSampleHash ==
-                $0.1.protectedRhythmSampleHash
-        })
+        for patternFamily in RepeatHoldEvolutionPatternFamily.allCases {
+            let variant = try #require(prepared.repeatHoldEvolution(
+                for: patternFamily
+            ))
+            let evidence = variant.evidence
+
+            #expect(evidence.version == RepeatHoldEvolutionContract.version)
+            #expect(evidence.patternFamily == patternFamily)
+            #expect(evidence.qualified)
+            #expect(evidence.signalSafetyValid)
+            #expect(evidence.endpointsExact)
+            #expect(evidence.protectedRoutingExact)
+            #expect(evidence.highBandReductionDB >=
+                RepeatHoldEvolutionDSPContract.minimumHighBandReductionDB)
+            #expect(evidence.loudnessDeltaDB <=
+                RepeatHoldEvolutionDSPContract.maximumLoudnessIncreaseDB)
+            #expect(evidence.primarySampleHash ==
+                prepared.audioPreflight.quality.sampleHash)
+            #expect(evidence.variantSampleHash != evidence.primarySampleHash)
+            #expect(variant.blocks.count == prepared.blocks.count)
+            #expect(zip(prepared.blocks, variant.blocks).allSatisfy {
+                $0.0.protectedRhythmSampleHash ==
+                    $0.1.protectedRhythmSampleHash
+            })
+        }
+
+        let budget = try #require(AutonomousPreparationResourceBudget(
+            sampleRate: 48_000,
+            barCount: QualityQualificationContract.maximumPhraseBars,
+            renderPassCount: QualityQualificationContract.maximumRenderPasses
+        ))
+        #expect(budget.withinActivationBound)
     }
 
     private func sample(

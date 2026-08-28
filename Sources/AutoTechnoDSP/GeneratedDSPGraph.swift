@@ -693,11 +693,11 @@ package final class PreparedAutonomousPhrase: Sendable {
     package let plan: AutonomousPhrasePlan
     package let graph: DSPGraphPlan
     package let blocks: [RenderBlock]
-    /// Optional immutable fallback PCM for a prolonged coherent hold. It is
-    /// independently hard-gate-qualified and never changes primary selection,
+    /// Independently hard-gate-qualified immutable fallback families for a
+    /// prolonged coherent hold. They never change primary selection,
     /// continuation, or quality acceptance.
-    package let repeatHoldEvolution: PreparedRepeatHoldEvolutionPhrase?
-    package let repeatHoldEvolutionEvidence: RepeatHoldEvolutionEvidence
+    package let repeatHoldEvolutions: [PreparedRepeatHoldEvolutionPhrase]
+    package let repeatHoldEvolutionEvidence: [RepeatHoldEvolutionEvidence]
     package let endingRenderState: RenderState
     package let endingGraphState: GeneratedDSPContinuationState
     package let audioPreflight: PhraseAudioPreflight
@@ -730,8 +730,8 @@ package final class PreparedAutonomousPhrase: Sendable {
         plan: AutonomousPhrasePlan,
         graph: DSPGraphPlan,
         blocks: [RenderBlock],
-        repeatHoldEvolution: PreparedRepeatHoldEvolutionPhrase?,
-        repeatHoldEvolutionEvidence: RepeatHoldEvolutionEvidence,
+        repeatHoldEvolutions: [PreparedRepeatHoldEvolutionPhrase],
+        repeatHoldEvolutionEvidence: [RepeatHoldEvolutionEvidence],
         endingRenderState: RenderState,
         endingGraphState: GeneratedDSPContinuationState,
         audioPreflight: PhraseAudioPreflight,
@@ -754,7 +754,7 @@ package final class PreparedAutonomousPhrase: Sendable {
         self.plan = plan
         self.graph = graph
         self.blocks = blocks
-        self.repeatHoldEvolution = repeatHoldEvolution
+        self.repeatHoldEvolutions = repeatHoldEvolutions
         self.repeatHoldEvolutionEvidence = repeatHoldEvolutionEvidence
         self.endingRenderState = endingRenderState
         self.endingGraphState = endingGraphState
@@ -777,6 +777,17 @@ package final class PreparedAutonomousPhrase: Sendable {
         self.liveTargetStartSample = liveTargetStartSample
         self.correctionRenderCount = correctionRenderCount
         self.usedHomeTimbreCorrection = usedHomeTimbreCorrection
+    }
+
+    package var qualifiedRepeatHoldPatternFamilies:
+        [RepeatHoldEvolutionPatternFamily] {
+        repeatHoldEvolutions.map(\.patternFamily)
+    }
+
+    package func repeatHoldEvolution(
+        for patternFamily: RepeatHoldEvolutionPatternFamily
+    ) -> PreparedRepeatHoldEvolutionPhrase? {
+        repeatHoldEvolutions.first { $0.patternFamily == patternFamily }
     }
 
     package var combinedScore: Double {
@@ -2217,8 +2228,8 @@ package enum AutonomousPhrasePreparer {
         let plan: AutonomousPhrasePlan
         let graph: DSPGraphPlan
         let blocks: [RenderBlock]
-        private(set) var repeatHoldEvolutionBlocks:
-            [RepeatHoldEvolutionRenderBlock]
+        private(set) var repeatHoldEvolutionCandidates:
+            [RepeatHoldEvolutionRenderCandidate]
         let sampleRate: Double
         let endingRenderState: RenderState
         let endingGraphState: GeneratedDSPContinuationState
@@ -2230,7 +2241,8 @@ package enum AutonomousPhrasePreparer {
             plan: AutonomousPhrasePlan,
             graph: DSPGraphPlan,
             blocks: [RenderBlock],
-            repeatHoldEvolutionBlocks: [RepeatHoldEvolutionRenderBlock],
+            repeatHoldEvolutionCandidates:
+                [RepeatHoldEvolutionRenderCandidate],
             sampleRate: Double,
             endingRenderState: RenderState,
             endingGraphState: GeneratedDSPContinuationState,
@@ -2241,7 +2253,8 @@ package enum AutonomousPhrasePreparer {
             self.plan = plan
             self.graph = graph
             self.blocks = blocks
-            self.repeatHoldEvolutionBlocks = repeatHoldEvolutionBlocks
+            self.repeatHoldEvolutionCandidates =
+                repeatHoldEvolutionCandidates
             self.sampleRate = sampleRate
             self.endingRenderState = endingRenderState
             self.endingGraphState = endingGraphState
@@ -2251,7 +2264,7 @@ package enum AutonomousPhrasePreparer {
         }
 
         func releaseRepeatHoldEvolution() {
-            repeatHoldEvolutionBlocks.removeAll(keepingCapacity: false)
+            repeatHoldEvolutionCandidates.removeAll(keepingCapacity: false)
         }
     }
 
@@ -2428,8 +2441,8 @@ package enum AutonomousPhrasePreparer {
             plan: plan,
             graph: graph,
             blocks: blocks,
-            repeatHoldEvolutionBlocks:
-                renderProduct.repeatHoldEvolutionBlocks,
+            repeatHoldEvolutionCandidates:
+                renderProduct.repeatHoldEvolutionCandidates,
             sampleRate: sampleRate,
             endingRenderState: renderState,
             endingGraphState: graphState,
@@ -2711,17 +2724,25 @@ package enum AutonomousPhrasePreparer {
                     selected.vector.incomingLiveMasterRevision,
             liveTargetStart: liveTargetStart
         )
-        let repeatHoldEvolution = RepeatHoldEvolutionQualifier.qualify(
-            primaryBlocks: selected.blocks,
-            candidateBlocks: selected.repeatHoldEvolutionBlocks,
-            sampleRate: selected.sampleRate
-        )
+        let repeatHoldEvolutionOutcomes =
+            selected.repeatHoldEvolutionCandidates.map { candidate in
+                RepeatHoldEvolutionQualifier.qualify(
+                    patternFamily: candidate.patternFamily,
+                    primaryBlocks: selected.blocks,
+                    candidateBlocks: candidate.blocks,
+                    sampleRate: selected.sampleRate
+                )
+            }
         return .prepared(PreparedAutonomousPhrase(
             plan: selected.plan,
             graph: selected.graph,
             blocks: selected.blocks,
-            repeatHoldEvolution: repeatHoldEvolution.prepared,
-            repeatHoldEvolutionEvidence: repeatHoldEvolution.evidence,
+            repeatHoldEvolutions: repeatHoldEvolutionOutcomes.compactMap {
+                $0.prepared
+            },
+            repeatHoldEvolutionEvidence: repeatHoldEvolutionOutcomes.map {
+                $0.evidence
+            },
             endingRenderState: selected.endingRenderState,
             endingGraphState: selected.endingGraphState,
             audioPreflight: selected.audioPreflight,

@@ -20,10 +20,10 @@ struct NextPhraseProgressTests {
         #expect(progress.detail.contains("REPEATS 1"))
 
         progress = progress.repeated(targetPhraseNumber: 4)
-            .settingHoldEvolutionActive(true)
+            .settingHoldEvolution(.pattern("deep breath"))
         #expect(progress.repeatCount == 2)
-        #expect(progress.detail.contains("HOLD FILTER"))
-        #expect(progress.accessibilityValue.contains("HOLD FILTER"))
+        #expect(progress.detail.contains("HOLD DEEP BREATH"))
+        #expect(progress.accessibilityValue.contains("HOLD DEEP BREATH"))
 
         progress = progress.rejected(
             targetPhraseNumber: 4,
@@ -47,6 +47,18 @@ struct NextPhraseProgressTests {
         #expect(progress.headline == "NEXT P4 · READY")
         #expect(progress.detail.contains("QUALIFIED · CACHED"))
         #expect(progress.detail.contains("TRY 2"))
+    }
+
+    @Test("Exact fallback is explicit when no hold pattern is available")
+    func exactFallbackIsExplicit() {
+        let progress = NextPhraseProgress.waiting
+            .preparing(targetPhraseNumber: 4)
+            .repeated(targetPhraseNumber: 4)
+            .repeated(targetPhraseNumber: 4)
+            .settingHoldEvolution(.exactFallback)
+
+        #expect(progress.detail.contains("HOLD EXACT"))
+        #expect(progress.accessibilityValue.contains("HOLD EXACT"))
     }
 
     @Test("Exhausted quality retries become explicitly blocked")

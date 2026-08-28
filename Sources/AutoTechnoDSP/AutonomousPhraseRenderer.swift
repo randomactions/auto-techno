@@ -1818,13 +1818,15 @@ package enum AutonomousPhraseRenderer {
         let framesPerBar = max(1, Int((
             240.0 / AutonomousSessionDirector.bpm * sampleRate
         ).rounded()))
-        var holdEvolutionState = RepeatHoldEvolutionFilterState(
-            sampleRate: sampleRate,
-            totalFrameCount: framesPerBar * plan.barCount
-        )
-        var holdEvolutionBlocks: [RepeatHoldEvolutionRenderBlock] = []
-        holdEvolutionBlocks.reserveCapacity(plan.barCount)
-        var holdEvolutionAvailable = true
+        var holdEvolutionAccumulators =
+            RepeatHoldEvolutionPatternFamily.allCases.map {
+                RepeatHoldEvolutionRenderAccumulator(
+                    patternFamily: $0,
+                    sampleRate: sampleRate,
+                    totalFrameCount: framesPerBar * plan.barCount,
+                    barCapacity: plan.barCount
+                )
+            }
         for index in plan.resolvedBars.indices {
             guard !cancellationRequested() else { return nil }
             let resolved = plan.resolvedBars[index]
@@ -2081,8 +2083,12 @@ package enum AutonomousPhraseRenderer {
                 left: protectedRhythm.leftSamples,
                 right: protectedRhythm.rightSamples
             )
-            if holdEvolutionAvailable {
-                if let filteredRemainder = holdEvolutionState.process(
+            for accumulatorIndex in holdEvolutionAccumulators.indices {
+                guard holdEvolutionAccumulators[accumulatorIndex].available
+                else { continue }
+                if let filteredRemainder = holdEvolutionAccumulators[
+                    accumulatorIndex
+                ].filterState.process(
                     left: generated.0,
                     right: generated.1,
                     cancellationRequested: cancellationRequested
@@ -2106,7 +2112,7 @@ package enum AutonomousPhraseRenderer {
                         right: holdClimaxOutput.right,
                         state: state.liveMasterHeadroomState
                     )
-                    holdEvolutionBlocks.append(
+                    holdEvolutionAccumulators[accumulatorIndex].blocks.append(
                         RepeatHoldEvolutionRenderBlock(
                             bar: performance.bar,
                             left: holdTerminalOutput.left,
@@ -2122,8 +2128,9 @@ package enum AutonomousPhraseRenderer {
                         )
                     )
                 } else {
-                    holdEvolutionAvailable = false
-                    holdEvolutionBlocks.removeAll(keepingCapacity: false)
+                    holdEvolutionAccumulators[accumulatorIndex].available = false
+                    holdEvolutionAccumulators[accumulatorIndex].blocks
+                        .removeAll(keepingCapacity: false)
                 }
             }
             guard !cancellationRequested() else { return nil }
@@ -2251,8 +2258,15 @@ package enum AutonomousPhraseRenderer {
         guard !cancellationRequested() else { return nil }
         return AutonomousPhraseRenderProduct(
             blocks: blocks,
-            repeatHoldEvolutionBlocks:
-                holdEvolutionAvailable ? holdEvolutionBlocks : []
+            repeatHoldEvolutionCandidates: holdEvolutionAccumulators.compactMap {
+                guard $0.available, $0.blocks.count == plan.barCount else {
+                    return nil
+                }
+                return RepeatHoldEvolutionRenderCandidate(
+                    patternFamily: $0.patternFamily,
+                    blocks: $0.blocks
+                )
+            }
         )
     }
 

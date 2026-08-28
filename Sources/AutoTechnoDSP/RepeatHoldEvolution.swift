@@ -1,19 +1,51 @@
 import AutoTechnoCore
 import Foundation
 
-/// One deterministic, phrase-boundary-safe filter movement for prolonged
-/// accepted-PCM holds. It processes only the generated graph remainder; the
-/// protected foundation and percussion render is recombined unchanged before
-/// the existing terminal safety and live-master stages.
+/// A bounded family of deterministic, phrase-boundary-safe filter movements
+/// for prolonged accepted-PCM holds. Every family processes only the generated
+/// graph remainder; protected foundation and percussion are recombined
+/// unchanged before the existing terminal safety and live-master stages.
 package enum RepeatHoldEvolutionDSPContract {
     package static let version = RepeatHoldEvolutionContract.version
-    package static let maximumPreparedVariantCount = 1
+    package static let maximumPreparedVariantCount =
+        RepeatHoldEvolutionPatternFamily.allCases.count
     package static let highCutoffHz = 9_000.0
-    package static let lowCutoffHz = 2_400.0
     package static let q = 0.707_106_781_186_547_6
-    package static let maximumWetMix = 0.68
     package static let minimumHighBandReductionDB = 0.20
     package static let maximumLoudnessIncreaseDB = 0.25
+
+    package static func lowCutoffHz(
+        for patternFamily: RepeatHoldEvolutionPatternFamily
+    ) -> Double {
+        switch patternFamily {
+        case .deepBreath: 2_100
+        case .twinPulse: 1_600
+        case .lateVeil: 1_300
+        }
+    }
+
+    package static func maximumWetMix(
+        for patternFamily: RepeatHoldEvolutionPatternFamily
+    ) -> Double {
+        switch patternFamily {
+        case .deepBreath: 0.72
+        case .twinPulse: 0.78
+        case .lateVeil: 0.82
+        }
+    }
+}
+
+package struct RepeatHoldEvolutionRenderCandidate: Sendable {
+    package let patternFamily: RepeatHoldEvolutionPatternFamily
+    package let blocks: [RepeatHoldEvolutionRenderBlock]
+
+    package init(
+        patternFamily: RepeatHoldEvolutionPatternFamily,
+        blocks: [RepeatHoldEvolutionRenderBlock]
+    ) {
+        self.patternFamily = patternFamily
+        self.blocks = blocks
+    }
 }
 
 package struct RepeatHoldEvolutionRenderBlock: Equatable, Sendable {
@@ -49,19 +81,22 @@ package struct RepeatHoldEvolutionRenderBlock: Equatable, Sendable {
 
 package struct AutonomousPhraseRenderProduct: Sendable {
     package let blocks: [RenderBlock]
-    package let repeatHoldEvolutionBlocks: [RepeatHoldEvolutionRenderBlock]
+    package let repeatHoldEvolutionCandidates:
+        [RepeatHoldEvolutionRenderCandidate]
 
     package init(
         blocks: [RenderBlock],
-        repeatHoldEvolutionBlocks: [RepeatHoldEvolutionRenderBlock]
+        repeatHoldEvolutionCandidates:
+            [RepeatHoldEvolutionRenderCandidate]
     ) {
         self.blocks = blocks
-        self.repeatHoldEvolutionBlocks = repeatHoldEvolutionBlocks
+        self.repeatHoldEvolutionCandidates = repeatHoldEvolutionCandidates
     }
 }
 
 package struct RepeatHoldEvolutionEvidence: Equatable, Sendable {
     package let version: String
+    package let patternFamily: RepeatHoldEvolutionPatternFamily
     package let qualified: Bool
     package let failureCode: String?
     package let frameCount: Int
@@ -79,20 +114,48 @@ package struct RepeatHoldEvolutionEvidence: Equatable, Sendable {
 }
 
 package struct PreparedRepeatHoldEvolutionPhrase: Equatable, Sendable {
+    package let patternFamily: RepeatHoldEvolutionPatternFamily
     package let blocks: [RepeatHoldEvolutionRenderBlock]
     package let evidence: RepeatHoldEvolutionEvidence
 
     package init(
+        patternFamily: RepeatHoldEvolutionPatternFamily,
         blocks: [RepeatHoldEvolutionRenderBlock],
         evidence: RepeatHoldEvolutionEvidence
     ) {
-        precondition(evidence.qualified)
+        precondition(
+            evidence.qualified && evidence.patternFamily == patternFamily
+        )
+        self.patternFamily = patternFamily
         self.blocks = blocks
         self.evidence = evidence
     }
 }
 
+struct RepeatHoldEvolutionRenderAccumulator: Sendable {
+    let patternFamily: RepeatHoldEvolutionPatternFamily
+    var filterState: RepeatHoldEvolutionFilterState
+    var blocks: [RepeatHoldEvolutionRenderBlock] = []
+    var available = true
+
+    init(
+        patternFamily: RepeatHoldEvolutionPatternFamily,
+        sampleRate: Double,
+        totalFrameCount: Int,
+        barCapacity: Int
+    ) {
+        self.patternFamily = patternFamily
+        filterState = RepeatHoldEvolutionFilterState(
+            patternFamily: patternFamily,
+            sampleRate: sampleRate,
+            totalFrameCount: totalFrameCount
+        )
+        blocks.reserveCapacity(barCapacity)
+    }
+}
+
 struct RepeatHoldEvolutionFilterState: Sendable {
+    private let patternFamily: RepeatHoldEvolutionPatternFamily
     private let sampleRate: Double
     private let totalFrameCount: Int
     private var renderedFrameCount = 0
@@ -101,7 +164,12 @@ struct RepeatHoldEvolutionFilterState: Sendable {
     private var sourceEvidenceLowPass = 0.0
     private var filteredEvidenceLowPass = 0.0
 
-    init(sampleRate: Double, totalFrameCount: Int) {
+    init(
+        patternFamily: RepeatHoldEvolutionPatternFamily,
+        sampleRate: Double,
+        totalFrameCount: Int
+    ) {
+        self.patternFamily = patternFamily
         self.sampleRate = sampleRate
         self.totalFrameCount = max(1, totalFrameCount)
     }
@@ -139,16 +207,22 @@ struct RepeatHoldEvolutionFilterState: Sendable {
             } else {
                 let progress = Double(globalIndex) /
                     Double(max(1, totalFrameCount - 1))
-                let sine = sin(.pi * progress)
-                envelope = sine * sine
+                envelope = Self.envelope(
+                    progress: progress,
+                    patternFamily: patternFamily
+                )
             }
             let cutoff = RepeatHoldEvolutionDSPContract.highCutoffHz -
                 envelope * (
                     RepeatHoldEvolutionDSPContract.highCutoffHz -
-                    RepeatHoldEvolutionDSPContract.lowCutoffHz
+                    RepeatHoldEvolutionDSPContract.lowCutoffHz(
+                        for: patternFamily
+                    )
                 )
             let wet = envelope *
-                RepeatHoldEvolutionDSPContract.maximumWetMix
+                RepeatHoldEvolutionDSPContract.maximumWetMix(
+                    for: patternFamily
+                )
             let dry = 1 - wet
             let leftInput = Double(left[index])
             let rightInput = Double(right[index])
@@ -189,10 +263,34 @@ struct RepeatHoldEvolutionFilterState: Sendable {
             left.count
         )
     }
+
+    /// These sample-indexed curves are the creative vocabulary. Each starts
+    /// and ends at exact dry, and each has zero slope at every internal opening
+    /// so a family change never introduces a step.
+    private static func envelope(
+        progress: Double,
+        patternFamily: RepeatHoldEvolutionPatternFamily
+    ) -> Double {
+        switch patternFamily {
+        case .deepBreath:
+            let sine = sin(.pi * progress)
+            return sine * sine
+        case .twinPulse:
+            let sine = sin(2 * .pi * progress)
+            return sine * sine
+        case .lateVeil:
+            let start = 0.24
+            guard progress > start else { return 0 }
+            let lateProgress = min(1, (progress - start) / (1 - start))
+            let sine = sin(.pi * lateProgress)
+            return sine * sine
+        }
+    }
 }
 
 package enum RepeatHoldEvolutionQualifier {
     package static func qualify(
+        patternFamily: RepeatHoldEvolutionPatternFamily,
         primaryBlocks: [RenderBlock],
         candidateBlocks: [RepeatHoldEvolutionRenderBlock],
         sampleRate: Double,
@@ -211,6 +309,7 @@ package enum RepeatHoldEvolutionQualifier {
             }
         guard shapeValid, !cancellationRequested() else {
             let evidence = unavailableEvidence(
+                patternFamily: patternFamily,
                 code: cancellationRequested() ? "cancelled" : "shape",
                 primaryBlocks: primaryBlocks
             )
@@ -232,6 +331,7 @@ package enum RepeatHoldEvolutionQualifier {
             return (
                 nil,
                 unavailableEvidence(
+                    patternFamily: patternFamily,
                     code: cancellationRequested() ? "cancelled" : "analysis",
                     primaryBlocks: primaryBlocks
                 )
@@ -308,6 +408,7 @@ package enum RepeatHoldEvolutionQualifier {
         }
         let evidence = RepeatHoldEvolutionEvidence(
             version: RepeatHoldEvolutionDSPContract.version,
+            patternFamily: patternFamily,
             qualified: qualified,
             failureCode: failureCode,
             frameCount: candidateMetrics.frameCount,
@@ -321,6 +422,7 @@ package enum RepeatHoldEvolutionQualifier {
         )
         return (
             qualified ? PreparedRepeatHoldEvolutionPhrase(
+                patternFamily: patternFamily,
                 blocks: candidateBlocks,
                 evidence: evidence
             ) : nil,
@@ -353,11 +455,13 @@ package enum RepeatHoldEvolutionQualifier {
     }
 
     private static func unavailableEvidence(
+        patternFamily: RepeatHoldEvolutionPatternFamily,
         code: String,
         primaryBlocks: [RenderBlock]
     ) -> RepeatHoldEvolutionEvidence {
         RepeatHoldEvolutionEvidence(
             version: RepeatHoldEvolutionDSPContract.version,
+            patternFamily: patternFamily,
             qualified: false,
             failureCode: code,
             frameCount: primaryBlocks.reduce(0) {
