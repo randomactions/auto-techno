@@ -548,6 +548,7 @@
         "Sources/AutoTechnoDSP/LiveMasterHeadroomController.swift",
         "Sources/AutoTechnoDSP/LiveOutputWindowEvidence.swift",
         "Sources/AutoTechnoDSP/MusicalQualityMetrics.swift",
+        "Sources/AutoTechnoDSP/PackagedResourceBundle.swift",
         "Sources/AutoTechnoDSP/ProfessionalEvidenceReportBank.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityAdversarialSuite.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityCalibration.swift",
@@ -557,9 +558,9 @@
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityVerdict.swift",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v18.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v18.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v18.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v19.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v19.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v19.json",
         "Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift",
         "Sources/AutoTechnoDSP/StreamingPerceptualEvidence.swift",
         "Sources/AutoTechnoDSP/UpperTimbreEvidence.swift"
@@ -633,9 +634,9 @@
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicy.swift",
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift",
         "Sources/AutoTechnoDSP/LongHorizonSignalTrajectory.swift",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v5.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v5.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v5.json"
+        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v6.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v6.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v6.json"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/LongHorizonEffectDoseTests.swift",

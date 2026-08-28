@@ -48,13 +48,13 @@ package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     }
 
     package static func load() throws -> Self {
-        guard let profileURL = Bundle.module.url(
+        guard let profileURL = PackagedResourceBundle.current.url(
             forResource: profileResource,
             withExtension: "json"
-        ), let adversarialURL = Bundle.module.url(
+        ), let adversarialURL = PackagedResourceBundle.current.url(
             forResource: adversarialResource,
             withExtension: "json"
-        ), let holdoutURL = Bundle.module.url(
+        ), let holdoutURL = PackagedResourceBundle.current.url(
             forResource: holdoutResource,
             withExtension: "json"
         ) else {
@@ -76,7 +76,10 @@ package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     }
 
     package static func containsBundledResource(named name: String) -> Bool {
-        Bundle.module.url(forResource: name, withExtension: "json") != nil
+        PackagedResourceBundle.current.url(
+            forResource: name,
+            withExtension: "json"
+        ) != nil
     }
 
     /// SwiftPM text resources retain the repository's final line feed. Remove

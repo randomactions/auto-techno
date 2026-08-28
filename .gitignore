@@ -2,6 +2,8 @@
 .build/
 .build-windows/
 .swiftpm/
+__pycache__/
+*.py[cod]
 xcuserdata/
 DerivedData/
 dist/
@@ -11,3 +13,6 @@ docs/reference/*.wav
 
 # Local-only sanitized video evidence and low-confidence decisions.
 docs/reference/video-evidence/
+
+# Durable private research and planning notes; intentionally local-only.
+docs/local/
