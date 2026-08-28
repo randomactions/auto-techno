@@ -105,13 +105,15 @@
       "outputs": [
         "AutonomousPhrasePlan",
         "ResolvedPerformanceBar",
-        "advanced session state"
+        "advanced session state",
+        "RepeatHoldEvolutionPlaybackMode"
       ],
       "evidence": [
         "PhraseInterestReport",
         "resolved event and pitch provenance"
       ],
       "sourcePaths": [
+        "Sources/AutoTechnoCore/RepeatHoldEvolutionPolicy.swift",
         "Sources/AutoTechnoCore/AutonomousRuntimeSafety.swift",
         "Sources/AutoTechnoCore/AutonomousSession.swift",
         "Sources/AutoTechnoCore/MusicalIntent.swift",
@@ -444,7 +446,7 @@
     {
       "id": "graph-effects-routing-and-mix",
       "name": "Graph, effects, routing, and mix control",
-      "responsibility": "Plan and render the bounded DSP graph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, and read-only waveform envelopes.",
+      "responsibility": "Plan and render the bounded DSP graph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, one independently qualified repeat-hold sidecar, and read-only waveform envelopes.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -471,22 +473,26 @@
       "outputs": [
         "DSPGraphPlan",
         "processed canonical mix",
+        "PreparedRepeatHoldEvolutionPhrase",
         "ending graph and mix state"
       ],
       "evidence": [
         "graph validation",
         "protected routing reconstruction",
+        "RepeatHoldEvolutionEvidence",
         "mix and spatial evidence"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift",
         "Sources/AutoTechnoDSP/FeedbackDelayNetwork.swift",
         "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
+        "Sources/AutoTechnoDSP/RepeatHoldEvolution.swift",
         "Sources/AutoTechnoDSP/TPTAntialiasedNonlinearCore.swift",
         "Sources/AutoTechnoDSP/WaveformEnvelope.swift"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/FeedbackDelayNetworkTests.swift",
+        "Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift",
         "Tests/AutoTechnoCoreTests/SpatialProtectedRoutingRegressionTests.swift",
         "Tests/AutoTechnoCoreTests/TPTAntialiasedNonlinearCoreTests.swift"
       ],
@@ -764,7 +770,7 @@
     {
       "id": "macos-transport-and-session-lifecycle",
       "name": "macOS transport and session lifecycle",
-      "responsibility": "Own the active session seed, detached preparation tasks, stale-work epochs, AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, and accepted-PCM hold behavior.",
+      "responsibility": "Own the active session seed, detached preparation tasks, stale-work epochs, AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, accepted-PCM hold behavior, and boundary-only repeat-hold sidecar playback.",
       "targets": [
         "AutoTechnoApp"
       ],
@@ -780,32 +786,39 @@
       ],
       "state": [
         "TechnoEngine transport/session state",
+        "MonitoringOutputState",
         "NextPhraseProgress",
+        "RepeatHoldEvolutionPlaybackMode",
         "playing-time sample clock"
       ],
       "inputs": [
         "user transport action",
+        "user monitoring gain action",
         "PreparedPerformancePhrase",
         "route and clock changes"
       ],
       "outputs": [
         "sample-time scheduled immutable buffers",
         "committed successor state",
+        "downstream device-output gain",
         "read-only presentation state"
       ],
       "evidence": [
         "schedule ledger",
         "route/preparation generations",
+        "hold-filter status and successor-preparation logs",
         "playing-time state"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoApp/AutonomousSessionSeedSource.swift",
+        "Sources/AutoTechnoApp/MonitoringOutputState.swift",
         "Sources/AutoTechnoApp/NextPhraseProgress.swift",
         "Sources/AutoTechnoApp/PlayingTime.swift",
         "Sources/AutoTechnoApp/TechnoEngine.swift"
       ],
       "testPaths": [
         "Tests/AutoTechnoAppTests/AutonomousSessionIdentityTests.swift",
+        "Tests/AutoTechnoAppTests/MonitoringOutputTests.swift",
         "Tests/AutoTechnoAppTests/NextPhraseProgressTests.swift",
         "Tests/AutoTechnoAppTests/PlayingTimeTests.swift",
         "Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift",
@@ -824,13 +837,14 @@
       ],
       "boundaries": [
         "future-phrase-commit",
+        "main-actor-presentation",
         "macos-realtime-production"
       ]
     },
     {
       "id": "live-feedback-coordination-and-inspection",
       "name": "Live-feedback coordination and inspection",
-      "responsibility": "Authenticate scheduled occurrences, assemble bounded PCM windows, run cancellable background analysis, coordinate one future correction, manage hold/recovery lifecycle, and expose read-only snapshots.",
+      "responsibility": "Authenticate scheduled occurrences from the canonical capture mixer upstream of monitoring gain, assemble bounded PCM windows, run cancellable background analysis, coordinate one future correction, manage hold/recovery lifecycle, and expose read-only snapshots.",
       "targets": [
         "AutoTechnoApp"
       ],
@@ -897,7 +911,7 @@
     {
       "id": "read-only-ui-and-presentation",
       "name": "Read-only UI and presentation",
-      "responsibility": "Present the one-button transport, secondary New Set action, waveform, status, playing time, and technical inspector without owning musical decisions or callback work.",
+      "responsibility": "Present the one-button transport, secondary New Set action, monitoring-only mute/volume, waveform, status, playing time, and technical inspector without owning musical decisions or callback work.",
       "targets": [
         "AutoTechnoApp"
       ],
@@ -916,11 +930,13 @@
       ],
       "inputs": [
         "transport/presentation snapshot",
-        "user play-pause and New Set actions"
+        "user play-pause and New Set actions",
+        "user monitoring mute and volume actions"
       ],
       "outputs": [
         "accessible desktop presentation",
-        "bounded transport intents"
+        "bounded transport intents",
+        "host-local monitoring gain intent"
       ],
       "evidence": [
         "accessibility labels and read-only inspector formatting"
@@ -932,6 +948,7 @@
       ],
       "testPaths": [
         "Tests/AutoTechnoAppTests/LiveRenderInspectorTests.swift",
+        "Tests/AutoTechnoAppTests/MonitoringOutputTests.swift",
         "Tests/AutoTechnoAppTests/PlayingTimeTests.swift"
       ],
       "contracts": [
@@ -949,7 +966,7 @@
     {
       "id": "windows-transport-and-waveout",
       "name": "Windows transport and waveOut output",
-      "responsibility": "Reuse canonical detached preparation and immutable PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting.",
+      "responsibility": "Reuse canonical detached preparation and immutable primary or qualified repeat-hold PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting.",
       "targets": [
         "AutoTechnoWindows",
         "AutoTechnoWindowsPlatform"
@@ -966,6 +983,7 @@
       ],
       "state": [
         "WindowsAutoTechnoController transport state",
+        "RepeatHoldEvolutionPlaybackMode",
         "waveOut queue and completion counters"
       ],
       "inputs": [

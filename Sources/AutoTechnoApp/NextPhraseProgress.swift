@@ -55,6 +55,7 @@ package struct NextPhraseProgress: Equatable, Sendable {
     package let attemptCount: Int
     package let repeatCount: Int
     package let lastFailure: NextPhraseFailure?
+    package let holdEvolutionActive: Bool
 
     package static let waiting = NextPhraseProgress(
         stage: .waiting,
@@ -62,7 +63,8 @@ package struct NextPhraseProgress: Equatable, Sendable {
         isInitialTarget: false,
         attemptCount: 0,
         repeatCount: 0,
-        lastFailure: nil
+        lastFailure: nil,
+        holdEvolutionActive: false
     )
 
     package func holding(targetPhraseNumber: Int) -> Self {
@@ -81,7 +83,8 @@ package struct NextPhraseProgress: Equatable, Sendable {
             isInitialTarget: false,
             attemptCount: counts.attempts + 1,
             repeatCount: counts.repeats,
-            lastFailure: counts.failure
+            lastFailure: counts.failure,
+            holdEvolutionActive: counts.holdEvolutionActive
         )
     }
 
@@ -100,7 +103,8 @@ package struct NextPhraseProgress: Equatable, Sendable {
             isInitialTarget: false,
             attemptCount: counts.attempts,
             repeatCount: counts.repeats,
-            lastFailure: failure
+            lastFailure: failure,
+            holdEvolutionActive: counts.holdEvolutionActive
         )
     }
 
@@ -115,7 +119,8 @@ package struct NextPhraseProgress: Equatable, Sendable {
             isInitialTarget: false,
             attemptCount: counts.attempts,
             repeatCount: counts.repeats,
-            lastFailure: failure
+            lastFailure: failure,
+            holdEvolutionActive: counts.holdEvolutionActive
         )
     }
 
@@ -137,7 +142,8 @@ package struct NextPhraseProgress: Equatable, Sendable {
             isInitialTarget: isInitialTarget,
             attemptCount: counts.attempts,
             repeatCount: counts.repeats + 1,
-            lastFailure: counts.failure
+            lastFailure: counts.failure,
+            holdEvolutionActive: counts.holdEvolutionActive
         )
     }
 
@@ -156,7 +162,8 @@ package struct NextPhraseProgress: Equatable, Sendable {
             isInitialTarget: true,
             attemptCount: counts.attempts + 1,
             repeatCount: counts.repeats,
-            lastFailure: counts.failure
+            lastFailure: counts.failure,
+            holdEvolutionActive: counts.holdEvolutionActive
         )
     }
 
@@ -171,7 +178,8 @@ package struct NextPhraseProgress: Equatable, Sendable {
             isInitialTarget: true,
             attemptCount: counts.attempts,
             repeatCount: counts.repeats,
-            lastFailure: failure
+            lastFailure: failure,
+            holdEvolutionActive: counts.holdEvolutionActive
         )
     }
 
@@ -186,7 +194,8 @@ package struct NextPhraseProgress: Equatable, Sendable {
             isInitialTarget: true,
             attemptCount: counts.attempts,
             repeatCount: counts.repeats,
-            lastFailure: failure
+            lastFailure: failure,
+            holdEvolutionActive: counts.holdEvolutionActive
         )
     }
 
@@ -220,7 +229,22 @@ package struct NextPhraseProgress: Equatable, Sendable {
         if repeatCount > 0 {
             parts.append("REPEATS \(repeatCount)")
         }
+        if holdEvolutionActive {
+            parts.append("HOLD FILTER")
+        }
         return parts.joined(separator: " · ")
+    }
+
+    package func settingHoldEvolutionActive(_ active: Bool) -> Self {
+        Self(
+            stage: stage,
+            targetPhraseNumber: targetPhraseNumber,
+            isInitialTarget: isInitialTarget,
+            attemptCount: attemptCount,
+            repeatCount: repeatCount,
+            lastFailure: lastFailure,
+            holdEvolutionActive: active
+        )
     }
 
     package var accessibilityValue: String {
@@ -250,14 +274,16 @@ package struct NextPhraseProgress: Equatable, Sendable {
             isInitialTarget: false,
             attemptCount: counts.attempts,
             repeatCount: counts.repeats,
-            lastFailure: counts.failure
+            lastFailure: counts.failure,
+            holdEvolutionActive: counts.holdEvolutionActive
         )
     }
 
     private func counts(for targetPhraseNumber: Int) -> (
         attempts: Int,
         repeats: Int,
-        failure: NextPhraseFailure?
+        failure: NextPhraseFailure?,
+        holdEvolutionActive: Bool
     ) {
         counts(for: targetPhraseNumber, isInitial: false)
     }
@@ -268,12 +294,18 @@ package struct NextPhraseProgress: Equatable, Sendable {
     ) -> (
         attempts: Int,
         repeats: Int,
-        failure: NextPhraseFailure?
+        failure: NextPhraseFailure?,
+        holdEvolutionActive: Bool
     ) {
         guard self.targetPhraseNumber == targetPhraseNumber,
               isInitialTarget == isInitial else {
-            return (0, 0, nil)
+            return (0, 0, nil, false)
         }
-        return (attemptCount, repeatCount, lastFailure)
+        return (
+            attemptCount,
+            repeatCount,
+            lastFailure,
+            holdEvolutionActive
+        )
     }
 }

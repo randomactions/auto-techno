@@ -60,6 +60,9 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
     private var preparingKey: PhrasePreparationKey?
     private var queuedPreparationRequest: PhrasePreparationRequest?
     private var nextBlockIndex = 0
+    private var coherentRepeatCount = 0
+    private var repeatHoldEvolutionPlaybackMode:
+        RepeatHoldEvolutionPlaybackMode = .exactAcceptedPCM
     private var nextScheduleSample: UInt64 = 0
     private var scheduledVisuals: [WindowsScheduledVisual] = []
     private var activeVisualStart: UInt64?
@@ -239,6 +242,8 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
         )
         longHorizonState = phrase.outgoingLongHorizonState
         nextBlockIndex = 0
+        coherentRepeatCount = 0
+        repeatHoldEvolutionPlaybackMode = .exactAcceptedPCM
         if let waveform = phrase.waveforms.first {
             setWaveform(waveform)
         }
@@ -319,11 +324,21 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
                 )
                 longHorizonState = next.outgoingLongHorizonState
                 nextBlockIndex = 0
+                coherentRepeatCount = 0
+                repeatHoldEvolutionPlaybackMode = .exactAcceptedPCM
                 requestSuccessor(after: next)
             case .repeatCurrentWithFrozenTopology:
                 // Keep the device fed with already-qualified immutable audio;
                 // do not prepare, block, or mutate topology in an audio callback.
                 nextBlockIndex = 0
+                coherentRepeatCount += 1
+                repeatHoldEvolutionPlaybackMode =
+                    RepeatHoldEvolutionBoundaryPolicy.decide(
+                        coherentRepeatCount: coherentRepeatCount,
+                        successorPrepared: false,
+                        qualifiedVariantAvailable:
+                            phrase.prepared.repeatHoldEvolution != nil
+                    )
                 requestSuccessor(after: phrase)
             }
         }
@@ -334,11 +349,21 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
         }
         let blockIndex = nextBlockIndex
         let block = phrase.prepared.blocks[blockIndex]
-        let frameCount = min(block.left.count, block.right.count)
+        let holdEvolutionBlock: RepeatHoldEvolutionRenderBlock?
+        if repeatHoldEvolutionPlaybackMode == .qualifiedLowPass,
+           let variant = phrase.prepared.repeatHoldEvolution,
+           variant.blocks.indices.contains(blockIndex) {
+            holdEvolutionBlock = variant.blocks[blockIndex]
+        } else {
+            holdEvolutionBlock = nil
+        }
+        let scheduledLeft = holdEvolutionBlock?.left ?? block.left
+        let scheduledRight = holdEvolutionBlock?.right ?? block.right
+        let frameCount = min(scheduledLeft.count, scheduledRight.count)
         guard frameCount > 0, frameCount <= Int(UInt32.max) else { return false }
 
-        let submitted = block.left.withUnsafeBufferPointer { left in
-            block.right.withUnsafeBufferPointer { right in
+        let submitted = scheduledLeft.withUnsafeBufferPointer { left in
+            scheduledRight.withUnsafeBufferPointer { right in
                 at_windows_audio_submit(
                     left.baseAddress,
                     right.baseAddress,
@@ -468,6 +493,8 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
 
     private func resetSchedule() {
         nextBlockIndex = 0
+        coherentRepeatCount = 0
+        repeatHoldEvolutionPlaybackMode = .exactAcceptedPCM
         nextScheduleSample = 0
         scheduledVisuals.removeAll(keepingCapacity: true)
         activeVisualStart = nil

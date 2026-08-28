@@ -5,7 +5,9 @@
 Auto Techno is a standalone desktop instrument for starting and sustaining one
 coherent techno performance with one primary transport button. One secondary
 New Set action declares a complete-performance boundary on the promoted app
-surface. macOS remains promoted; the native Windows x64 host is a buildable
+surface. One compact monitoring mute and volume control changes only local
+device output after canonical capture; it is not a musical or mix parameter.
+macOS remains promoted; the native Windows x64 host is a buildable
 release candidate until its feature-parity, app/runtime, and physical-output
 gates pass. It is not a DAW, sequencer editor, plug-in host, preset browser,
 engine selector, or collection of render experiments.
@@ -22,6 +24,9 @@ Play asks the instrument to continue its one performance. Pause and resume
 preserve position, identity, and adaptation state. Technical evidence may be
 shown read-only, but no compositional, synthesis, mixing, mastering, or quality
 parameter belongs in the primary UI.
+Monitoring attenuation is the sole exception because it changes only what the
+listener hears from this process. It never changes rendered PCM, evidence,
+qualification, continuation, adaptation, or performance identity.
 
 A newly constructed complete performance receives one fresh opaque App-owned
 root seed before planning begins. That seed remains fixed across preparation,
@@ -42,6 +47,8 @@ when its first immutable phrase is ready. Pause and resume never take this path.
 
 - one accessible primary play/pause transport button;
 - one accessible secondary New Set action, available outside preparation;
+- one accessible monitoring-only mute and volume control, defaulting to full
+  output and remaining outside every musical and quality decision;
 - explicit preparing, ready, live, paused, recovering, and unavailable states;
 - fixed 130 BPM;
 - one fresh private canonical identity per complete, indefinitely evolving
@@ -311,7 +318,7 @@ artifacts and unsupported sample rates remain truthfully unavailable and cannot
 commit. See `PRIMARY_EVALUATOR.md`.
 
 The seventh completed architectural stage closes one scheduled-output
-master-headroom loop. `TechnoEngine` maps app-owned main-mixer PCM to the exact
+master-headroom loop. `TechnoEngine` maps app-owned canonical-capture-mixer PCM to the exact
 scheduled phrase occurrence; a fixed native-stereo C11 handoff copies bounded
 packets; and detached work analyzes the first exact three-second window with the
 same BS.1770-5 and Annex 2 implementation used by candidate evidence. The
@@ -328,6 +335,26 @@ under the committed controller state while later correction results remain
 quarantined; that successor must still pass primary qualification before it can
 advance the canonical score. No failure can enable an unevaluated substitute. See
 [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
+
+The canonical-capture mixer is upstream of the main output mixer. Live feedback
+and its clock map observe the former; the user-facing monitoring mute/volume
+changes only the latter's output gain on the main actor. Monitoring state is not
+scheduled, hashed, persisted into a set, or admitted to a controller, and it
+survives New Set only as a host-local listening preference.
+
+Prolonged ordinary successor preparation has one versioned, bounded presentation
+fallback: `autotechno-repeat-hold-evolution.v1`. The first coherent repeat stays
+bit-exact. From the second repeat, Core may select one independently qualified
+low-pass movement prepared from the accepted phrase's generated graph remainder;
+the protected foundation and percussion render is recombined unchanged. The
+movement starts and ends at exact dry samples, passes the existing finite,
+true-peak, DC, low-stereo, and boundary limits, proves a real high-band reduction
+in the processed remainder, and cannot raise phrase RMS by more than `0.25 dB`.
+If any evidence is absent or fails, transport keeps the exact accepted PCM. The
+variant never changes primary candidate selection, score or DSP continuation,
+does not participate in canonical live-feedback attribution, and yields to a
+qualified successor at the next phrase boundary. It adds no user control,
+callback work, looper, second clock, or alternate engine.
 
 ## Hard constraints
 

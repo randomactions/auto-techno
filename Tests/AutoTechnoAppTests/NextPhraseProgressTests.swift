@@ -19,6 +19,12 @@ struct NextPhraseProgressTests {
         #expect(progress.repeatCount == 1)
         #expect(progress.detail.contains("REPEATS 1"))
 
+        progress = progress.repeated(targetPhraseNumber: 4)
+            .settingHoldEvolutionActive(true)
+        #expect(progress.repeatCount == 2)
+        #expect(progress.detail.contains("HOLD FILTER"))
+        #expect(progress.accessibilityValue.contains("HOLD FILTER"))
+
         progress = progress.rejected(
             targetPhraseNumber: 4,
             failure: NextPhraseFailure(
@@ -34,7 +40,7 @@ struct NextPhraseProgressTests {
 
         progress = progress.preparing(targetPhraseNumber: 4)
         #expect(progress.attemptCount == 2)
-        #expect(progress.repeatCount == 1)
+        #expect(progress.repeatCount == 2)
 
         progress = progress.ready(targetPhraseNumber: 4)
         #expect(progress.stage == .ready)

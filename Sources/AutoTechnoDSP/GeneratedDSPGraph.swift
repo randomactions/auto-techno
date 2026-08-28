@@ -693,6 +693,11 @@ package final class PreparedAutonomousPhrase: Sendable {
     package let plan: AutonomousPhrasePlan
     package let graph: DSPGraphPlan
     package let blocks: [RenderBlock]
+    /// Optional immutable fallback PCM for a prolonged coherent hold. It is
+    /// independently hard-gate-qualified and never changes primary selection,
+    /// continuation, or quality acceptance.
+    package let repeatHoldEvolution: PreparedRepeatHoldEvolutionPhrase?
+    package let repeatHoldEvolutionEvidence: RepeatHoldEvolutionEvidence
     package let endingRenderState: RenderState
     package let endingGraphState: GeneratedDSPContinuationState
     package let audioPreflight: PhraseAudioPreflight
@@ -725,6 +730,8 @@ package final class PreparedAutonomousPhrase: Sendable {
         plan: AutonomousPhrasePlan,
         graph: DSPGraphPlan,
         blocks: [RenderBlock],
+        repeatHoldEvolution: PreparedRepeatHoldEvolutionPhrase?,
+        repeatHoldEvolutionEvidence: RepeatHoldEvolutionEvidence,
         endingRenderState: RenderState,
         endingGraphState: GeneratedDSPContinuationState,
         audioPreflight: PhraseAudioPreflight,
@@ -747,6 +754,8 @@ package final class PreparedAutonomousPhrase: Sendable {
         self.plan = plan
         self.graph = graph
         self.blocks = blocks
+        self.repeatHoldEvolution = repeatHoldEvolution
+        self.repeatHoldEvolutionEvidence = repeatHoldEvolutionEvidence
         self.endingRenderState = endingRenderState
         self.endingGraphState = endingGraphState
         self.audioPreflight = audioPreflight
@@ -1497,6 +1506,10 @@ package enum AutonomousPhrasePreparer {
            evaluator.requestsHomeUpperTimbreCorrection(
                for: initialPrimary.vector
            ), correctionBudget.claim() {
+            // Only the selected render may retain one hold-evolution sidecar.
+            // Release the superseded initial sidecar before the corrective
+            // render claims its bounded PCM storage.
+            initialPrimary.releaseRepeatHoldEvolution()
             let correctedResult = product(
                 plan: plan,
                 kind: .correctionRender,
@@ -2197,10 +2210,16 @@ package enum AutonomousPhrasePreparer {
             graphsBelongToSession && graphBoundaryIsCoherent
     }
 
-    private final class CandidateRenderProduct: Sendable {
+    /// Confined to one detached preparation transaction. The only mutation
+    /// releases a superseded sidecar before a corrective render; no instance
+    /// is shared across tasks or crosses the commit boundary.
+    private final class CandidateRenderProduct: @unchecked Sendable {
         let plan: AutonomousPhrasePlan
         let graph: DSPGraphPlan
         let blocks: [RenderBlock]
+        private(set) var repeatHoldEvolutionBlocks:
+            [RepeatHoldEvolutionRenderBlock]
+        let sampleRate: Double
         let endingRenderState: RenderState
         let endingGraphState: GeneratedDSPContinuationState
         let audioPreflight: PhraseAudioPreflight
@@ -2211,6 +2230,8 @@ package enum AutonomousPhrasePreparer {
             plan: AutonomousPhrasePlan,
             graph: DSPGraphPlan,
             blocks: [RenderBlock],
+            repeatHoldEvolutionBlocks: [RepeatHoldEvolutionRenderBlock],
+            sampleRate: Double,
             endingRenderState: RenderState,
             endingGraphState: GeneratedDSPContinuationState,
             audioPreflight: PhraseAudioPreflight,
@@ -2220,11 +2241,17 @@ package enum AutonomousPhrasePreparer {
             self.plan = plan
             self.graph = graph
             self.blocks = blocks
+            self.repeatHoldEvolutionBlocks = repeatHoldEvolutionBlocks
+            self.sampleRate = sampleRate
             self.endingRenderState = endingRenderState
             self.endingGraphState = endingGraphState
             self.audioPreflight = audioPreflight
             self.vector = vector
             self.attempt = attempt
+        }
+
+        func releaseRepeatHoldEvolution() {
+            repeatHoldEvolutionBlocks.removeAll(keepingCapacity: false)
         }
     }
 
@@ -2278,7 +2305,8 @@ package enum AutonomousPhrasePreparer {
         var renderState = incomingRenderState
         renderState.liveMasterHeadroomState = outgoingLiveMasterState
         var graphState = incomingGraphState
-        guard let blocks = AutonomousPhraseRenderer.renderIfNotCancelled(
+        guard let renderProduct = AutonomousPhraseRenderer
+            .renderProductIfNotCancelled(
             plan: plan, graph: graph, sampleRate: sampleRate,
             state: &renderState, graphState: &graphState,
             forceHomeUpperTimbre: forceHomeUpperTimbre,
@@ -2289,6 +2317,7 @@ package enum AutonomousPhrasePreparer {
                 code: cancellationRequested() ? .cancelled : .rendererUnavailable
             ))
         }
+        let blocks = renderProduct.blocks
         guard !cancellationRequested() else {
             return .failure(.init(stage: stage, code: .cancelled))
         }
@@ -2399,6 +2428,9 @@ package enum AutonomousPhrasePreparer {
             plan: plan,
             graph: graph,
             blocks: blocks,
+            repeatHoldEvolutionBlocks:
+                renderProduct.repeatHoldEvolutionBlocks,
+            sampleRate: sampleRate,
             endingRenderState: renderState,
             endingGraphState: graphState,
             audioPreflight: audioPreflight,
@@ -2679,10 +2711,17 @@ package enum AutonomousPhrasePreparer {
                     selected.vector.incomingLiveMasterRevision,
             liveTargetStart: liveTargetStart
         )
+        let repeatHoldEvolution = RepeatHoldEvolutionQualifier.qualify(
+            primaryBlocks: selected.blocks,
+            candidateBlocks: selected.repeatHoldEvolutionBlocks,
+            sampleRate: selected.sampleRate
+        )
         return .prepared(PreparedAutonomousPhrase(
             plan: selected.plan,
             graph: selected.graph,
             blocks: selected.blocks,
+            repeatHoldEvolution: repeatHoldEvolution.prepared,
+            repeatHoldEvolutionEvidence: repeatHoldEvolution.evidence,
             endingRenderState: selected.endingRenderState,
             endingGraphState: selected.endingGraphState,
             audioPreflight: selected.audioPreflight,

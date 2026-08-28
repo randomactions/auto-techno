@@ -106,11 +106,72 @@ struct ContentView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 34)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+
+            monitoringOutputControl
+                .padding(.bottom, 34)
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: .bottom
+                )
         }
         .frame(minWidth: 680, minHeight: 480)
         .preferredColorScheme(.dark)
         .onAppear { engine.prepare() }
         .onDisappear { engine.shutdown() }
+    }
+
+    private var monitoringOutputControl: some View {
+        HStack(spacing: 9) {
+            Button {
+                engine.toggleMonitoringMute()
+            } label: {
+                Image(systemName: engine.monitoringIsMuted
+                    ? "speaker.slash.fill"
+                    : "speaker.wave.2.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(width: 18, height: 18)
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut("m", modifiers: [.command])
+            .accessibilityLabel(
+                engine.monitoringIsMuted
+                    ? "Unmute monitoring output"
+                    : "Mute monitoring output"
+            )
+            .accessibilityValue(engine.monitoringAccessibilityValue)
+            .accessibilityIdentifier("monitoring-mute")
+            .help(engine.monitoringIsMuted ? "Unmute" : "Mute")
+
+            Slider(
+                value: Binding(
+                    get: { engine.monitoringVolume },
+                    set: { engine.setMonitoringVolume($0) }
+                ),
+                in: 0...1
+            )
+            .controlSize(.mini)
+            .tint(.purple)
+            .frame(width: 88)
+            .accessibilityLabel("Monitoring volume")
+            .accessibilityValue(engine.monitoringAccessibilityValue)
+            .accessibilityIdentifier("monitoring-volume")
+        }
+        .foregroundStyle(
+            engine.monitoringIsMuted
+                ? Color.secondary
+                : Color.white.opacity(0.82)
+        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background {
+            Capsule()
+                .fill(Color.white.opacity(0.035))
+                .overlay {
+                    Capsule()
+                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                }
+        }
     }
 
     private var performanceView: some View {

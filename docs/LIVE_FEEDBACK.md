@@ -33,7 +33,7 @@ interruption, listening session, or 60-minute output soak passed.
   stems, ducking detectors, internal dynamics, or the kick/foundation fader.
 - `TechnoEngine` owns transport, route generation, scheduled occurrences,
   mixer/player clock mapping, feedback lifecycle, future-preparation
-  invalidation, and the accepted PCM hold.
+  invalidation, the accepted PCM hold, and downstream monitoring attenuation.
 - `LiveFeedbackRuntimeCoordinator` is the one transport coordinator.
   `LiveMasterHeadroomController` is the one full-mix feedback controller, and
   `ProfessionalQualityPrimaryEvaluator` is the only terminal quality judge.
@@ -49,7 +49,7 @@ per packet. Its planar PCM capacity is 2,097,152 bytes, plus fixed metadata and
 atomic counters. The queue, packet scratch, and worker window storage are
 allocated before the producer is enabled.
 
-The main-mixer tap may only validate two channel pointers and the bounded frame
+The canonical-capture-mixer tap may only validate two channel pointers and the bounded frame
 count, read the callback-provided mixer sample position, call the C producer,
 and return. It may not allocate, retain a Swift object, lock, wait, dispatch a
 task, analyze, hash, log, perform file or network I/O, access a microphone,
@@ -58,6 +58,13 @@ state. Invalid tap input returns before the C producer is called. A full C queue
 increments its drop counter, while malformed input presented to the C producer
 increments its reject counter. Each path returns immediately and playback
 continues unchanged.
+
+The player feeds that canonical capture mixer, which then feeds the main output
+mixer. The tap and mixer/player clock map remain on the canonical node. The
+main mixer's user-facing output gain is therefore downstream and may be changed
+or muted without altering captured PCM, evidence fingerprints, controller
+decisions, or the accepted-PCM hold. Monitoring changes run on the main actor;
+they add no render-callback work and never enter a preparation key.
 
 The detached serial consumer uses preallocated packet scratch and retains at
 most one active PCM window. It performs all assembly, BS.1770 analysis,
@@ -171,6 +178,17 @@ preparation under the already committed controller state. That successor still
 must pass the canonical primary evaluator; the hold does not schedule an
 unevaluated substitute. If preparation is still incomplete, transport continues
 coherent repeats while the normal bounded preparation path remains active.
+
+The independently qualified repeat-hold filter is not part of this feedback
+hold. An authorized correction or preserve-course hold always keeps exact
+accepted PCM. During ordinary successor delay only, Core may select the
+versioned graph-remainder low-pass sidecar from the second coherent repeat. The
+macOS scheduler deliberately leaves that transformed occurrence out of the
+canonical scheduled-source ledger; captured packets in that range therefore
+cannot authorize or train a correction against the accepted candidate. A later
+exact successor occurrence resumes normal authenticated capture. This evidence
+gap is fail-closed and does not stop successor preparation, the mixer callback,
+or sample-time scheduling.
 
 Route and timeline resets preserve a latched hold and convert any outstanding
 authorized correction into that hold before discarding its worker. A newer

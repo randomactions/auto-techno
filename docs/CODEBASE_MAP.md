@@ -157,15 +157,15 @@ Contracts: [`docs/LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP
 | [`long-horizon-semantic-control`](#long-horizon-semantic-control) | `AutoTechnoCore` | `LongHorizonContinuationState` in [`Sources/AutoTechnoCore/LongHorizonContinuation.swift`](../Sources/AutoTechnoCore/LongHorizonContinuation.swift) | Maintain compact long-range musical continuation, semantic trajectory, episode selection, energy coordination, effect sentences, and bounded future decision eligibility. |
 | [`quality-and-feedback-contracts`](#quality-and-feedback-contracts) | `AutoTechnoCore` | `QualityQualificationContract` in [`Sources/AutoTechnoCore/QualityQualification.swift`](../Sources/AutoTechnoCore/QualityQualification.swift)<br>`LiveMasterHeadroomContinuationState` in [`Sources/AutoTechnoCore/LiveFeedback.swift`](../Sources/AutoTechnoCore/LiveFeedback.swift) | Define reason-coded quality decisions, accepted and observed provenance, live-feedback observations/proposals, revision rules, and fail-closed future-boundary state. |
 | [`voice-and-phrase-rendering`](#voice-and-phrase-rendering) | `AutoTechnoDSP` | `AutonomousPhraseRenderer` in [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift)<br>`VoiceRenderer` in [`Sources/AutoTechnoDSP/VoiceRenderer.swift`](../Sources/AutoTechnoDSP/VoiceRenderer.swift) | Render the canonical resolved score through internal voices, phrase composition, modal percussion, kick/upper articulations, and stable continuation into immutable stereo blocks and role taps. |
-| [`graph-effects-routing-and-mix`](#graph-effects-routing-and-mix) | `AutoTechnoDSP` | `DSPGraphGenerator` in [`Sources/AutoTechnoDSP/GeneratedDSPGraph.swift`](../Sources/AutoTechnoDSP/GeneratedDSPGraph.swift)<br>`AutomaticMixBalancer` in [`Sources/AutoTechnoDSP/AutomaticMixBalancer.swift`](../Sources/AutoTechnoDSP/AutomaticMixBalancer.swift) | Plan and render the bounded DSP graph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, and read-only waveform envelopes. |
+| [`graph-effects-routing-and-mix`](#graph-effects-routing-and-mix) | `AutoTechnoDSP` | `DSPGraphGenerator` in [`Sources/AutoTechnoDSP/GeneratedDSPGraph.swift`](../Sources/AutoTechnoDSP/GeneratedDSPGraph.swift)<br>`AutomaticMixBalancer` in [`Sources/AutoTechnoDSP/AutomaticMixBalancer.swift`](../Sources/AutoTechnoDSP/AutomaticMixBalancer.swift) | Plan and render the bounded DSP graph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, one independently qualified repeat-hold sidecar, and read-only waveform envelopes. |
 | [`evidence-calibration-and-primary-evaluation`](#evidence-calibration-and-primary-evaluation) | `AutoTechnoDSP` | `AutonomousCandidateEvaluationTransaction` in [`Sources/AutoTechnoDSP/AutonomousCandidateEvaluation.swift`](../Sources/AutoTechnoDSP/AutonomousCandidateEvaluation.swift)<br>`ProfessionalQualityPrimaryEvaluator` in [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift) | Construct complete candidate evidence, stream bounded perceptual analysis, validate exact artifacts, run the single calibrated primary evaluator, and bind atomic commit provenance. |
 | [`long-horizon-signal-and-future-adaptation`](#long-horizon-signal-and-future-adaptation) | `AutoTechnoDSP` | `LongHorizonFutureAdaptationState` in [`Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift`](../Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift) | Accumulate realized signal and effect-dose trajectories, apply the calibrated long-horizon policy, and emit one bounded decision for an eligible unscheduled future phrase. |
 | [`shared-detached-preparation`](#shared-detached-preparation) | `AutoTechnoTransport` | `AutonomousPerformancePreparer` in [`Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift`](../Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift) | Own the platform-neutral request, cancellation, candidate preparation, immutable waveform derivation, and success/failure envelope used by both hosts. |
 | [`realtime-pcm-handoff`](#realtime-pcm-handoff) | `CAutoTechnoRealtime` | `ATLivePCMQueueProduceNativeStereo` in [`Sources/CAutoTechnoRealtime/CAutoTechnoRealtimeProducer.c`](../Sources/CAutoTechnoRealtime/CAutoTechnoRealtimeProducer.c) | Copy bounded app-owned native stereo PCM from one realtime producer into a preallocated lock-free SPSC queue for one background consumer. |
-| [`macos-transport-and-session-lifecycle`](#macos-transport-and-session-lifecycle) | `AutoTechnoApp` | `TechnoEngine` in [`Sources/AutoTechnoApp/TechnoEngine.swift`](../Sources/AutoTechnoApp/TechnoEngine.swift)<br>`AutonomousSessionSeedSource` in [`Sources/AutoTechnoApp/AutonomousSessionSeedSource.swift`](../Sources/AutoTechnoApp/AutonomousSessionSeedSource.swift) | Own the active session seed, detached preparation tasks, stale-work epochs, AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, and accepted-PCM hold behavior. |
-| [`live-feedback-coordination-and-inspection`](#live-feedback-coordination-and-inspection) | `AutoTechnoApp` | `LiveFeedbackCoordinator` in [`Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift`](../Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift)<br>`LivePCMTransport` in [`Sources/AutoTechnoApp/LivePCMTransport.swift`](../Sources/AutoTechnoApp/LivePCMTransport.swift) | Authenticate scheduled occurrences, assemble bounded PCM windows, run cancellable background analysis, coordinate one future correction, manage hold/recovery lifecycle, and expose read-only snapshots. |
-| [`read-only-ui-and-presentation`](#read-only-ui-and-presentation) | `AutoTechnoApp` | `ContentView` in [`Sources/AutoTechnoApp/ContentView.swift`](../Sources/AutoTechnoApp/ContentView.swift)<br>`LiveRenderInspectorView` in [`Sources/AutoTechnoApp/LiveRenderInspectorView.swift`](../Sources/AutoTechnoApp/LiveRenderInspectorView.swift) | Present the one-button transport, secondary New Set action, waveform, status, playing time, and technical inspector without owning musical decisions or callback work. |
-| [`windows-transport-and-waveout`](#windows-transport-and-waveout) | `AutoTechnoWindows`<br>`AutoTechnoWindowsPlatform` | `WindowsAutoTechnoController` in [`Sources/AutoTechnoWindows/main.swift`](../Sources/AutoTechnoWindows/main.swift)<br>`at_wave_out_callback` in [`Sources/AutoTechnoWindowsPlatform/AutoTechnoWindowsPlatform.c`](../Sources/AutoTechnoWindowsPlatform/AutoTechnoWindowsPlatform.c) | Reuse canonical detached preparation and immutable PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting. |
+| [`macos-transport-and-session-lifecycle`](#macos-transport-and-session-lifecycle) | `AutoTechnoApp` | `TechnoEngine` in [`Sources/AutoTechnoApp/TechnoEngine.swift`](../Sources/AutoTechnoApp/TechnoEngine.swift)<br>`AutonomousSessionSeedSource` in [`Sources/AutoTechnoApp/AutonomousSessionSeedSource.swift`](../Sources/AutoTechnoApp/AutonomousSessionSeedSource.swift) | Own the active session seed, detached preparation tasks, stale-work epochs, AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, accepted-PCM hold behavior, and boundary-only repeat-hold sidecar playback. |
+| [`live-feedback-coordination-and-inspection`](#live-feedback-coordination-and-inspection) | `AutoTechnoApp` | `LiveFeedbackCoordinator` in [`Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift`](../Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift)<br>`LivePCMTransport` in [`Sources/AutoTechnoApp/LivePCMTransport.swift`](../Sources/AutoTechnoApp/LivePCMTransport.swift) | Authenticate scheduled occurrences from the canonical capture mixer upstream of monitoring gain, assemble bounded PCM windows, run cancellable background analysis, coordinate one future correction, manage hold/recovery lifecycle, and expose read-only snapshots. |
+| [`read-only-ui-and-presentation`](#read-only-ui-and-presentation) | `AutoTechnoApp` | `ContentView` in [`Sources/AutoTechnoApp/ContentView.swift`](../Sources/AutoTechnoApp/ContentView.swift)<br>`LiveRenderInspectorView` in [`Sources/AutoTechnoApp/LiveRenderInspectorView.swift`](../Sources/AutoTechnoApp/LiveRenderInspectorView.swift) | Present the one-button transport, secondary New Set action, monitoring-only mute/volume, waveform, status, playing time, and technical inspector without owning musical decisions or callback work. |
+| [`windows-transport-and-waveout`](#windows-transport-and-waveout) | `AutoTechnoWindows`<br>`AutoTechnoWindowsPlatform` | `WindowsAutoTechnoController` in [`Sources/AutoTechnoWindows/main.swift`](../Sources/AutoTechnoWindows/main.swift)<br>`at_wave_out_callback` in [`Sources/AutoTechnoWindowsPlatform/AutoTechnoWindowsPlatform.c`](../Sources/AutoTechnoWindowsPlatform/AutoTechnoWindowsPlatform.c) | Reuse canonical detached preparation and immutable primary or qualified repeat-hold PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting. |
 
 ## Realtime and future-boundary guardrails
 
@@ -189,7 +189,7 @@ Own the session identity, semantic intent, temporal memory, phrase selection, co
 - Owner anchors: `AutonomousSessionDirector` in [`Sources/AutoTechnoCore/AutonomousSession.swift`](../Sources/AutoTechnoCore/AutonomousSession.swift), `AutonomousSessionState` in [`Sources/AutoTechnoCore/AutonomousSession.swift`](../Sources/AutoTechnoCore/AutonomousSession.swift)
 - Persistent or continuation state: `AutonomousSessionState`<br>`TemporalMusicalMemory`<br>`AutonomousPreparationEpoch`
 - Inputs: `private session seed`<br>`accepted continuation`<br>`qualified future adaptation`<br>`bounded quality retry ordinal`
-- Outputs: `AutonomousPhrasePlan`<br>`ResolvedPerformanceBar`<br>`advanced session state`
+- Outputs: `AutonomousPhrasePlan`<br>`ResolvedPerformanceBar`<br>`advanced session state`<br>`RepeatHoldEvolutionPlaybackMode`
 - Evidence: `PhraseInterestReport`<br>`resolved event and pitch provenance`
 - Depends on: —
 - Boundaries: `future-phrase-commit`
@@ -202,6 +202,7 @@ Sources and stable top-level declarations:
 - [`Sources/AutoTechnoCore/MusicalIntent.swift`](../Sources/AutoTechnoCore/MusicalIntent.swift) — `IntentBranch` (Enumeration), `MusicalControl` (Enumeration), `MusicalIntent` (Structure), `SequencerAmbientKind` (Enumeration)
 - [`Sources/AutoTechnoCore/MusicalIntentMapper.swift`](../Sources/AutoTechnoCore/MusicalIntentMapper.swift) — `MusicalIntentMapper` (Structure)
 - [`Sources/AutoTechnoCore/MusicalPerformance.swift`](../Sources/AutoTechnoCore/MusicalPerformance.swift) — `ArrangementGesture` (Enumeration), `FoundationCompanion` (Enumeration), `ModalIdentity` (Enumeration), `MotifCell` (Structure), `MusicalTransformation` (Enumeration), `PercussionGear` (Enumeration), `PerformanceBar` (Structure), `PerformanceRole` (Enumeration), `RhythmCell` (Structure), `SceneDNA` (Structure), `SignatureEvent` (Enumeration)
+- [`Sources/AutoTechnoCore/RepeatHoldEvolutionPolicy.swift`](../Sources/AutoTechnoCore/RepeatHoldEvolutionPolicy.swift) — `RepeatHoldEvolutionBoundaryPolicy` (Enumeration), `RepeatHoldEvolutionContract` (Enumeration), `RepeatHoldEvolutionPlaybackMode` (Enumeration)
 - [`Sources/AutoTechnoCore/SeededGenerator.swift`](../Sources/AutoTechnoCore/SeededGenerator.swift) — `SeededGenerator` (Structure)
 - [`Sources/AutoTechnoCore/TechnoScene.swift`](../Sources/AutoTechnoCore/TechnoScene.swift) — `BeatShapeBand` (Enumeration), `BeatShapePattern` (Structure), `GrooveProfile` (Structure), `MotifSourceIntent` (Enumeration), `RenderCharacter` (Structure), `SectionKind` (Enumeration), `SequencerEvent` (Structure), `Step` (Structure), `SynthEvent` (Structure), `TechnoScene` (Structure), `TimedEvent` (Structure), `TimedEventKind` (Enumeration)
 
@@ -373,14 +374,14 @@ Tests:
 <a id="graph-effects-routing-and-mix"></a>
 ### Graph, effects, routing, and mix control
 
-Plan and render the bounded DSP graph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, and read-only waveform envelopes.
+Plan and render the bounded DSP graph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, one independently qualified repeat-hold sidecar, and read-only waveform envelopes.
 
 - Targets: `AutoTechnoDSP`
 - Owner anchors: `DSPGraphGenerator` in [`Sources/AutoTechnoDSP/GeneratedDSPGraph.swift`](../Sources/AutoTechnoDSP/GeneratedDSPGraph.swift), `AutomaticMixBalancer` in [`Sources/AutoTechnoDSP/AutomaticMixBalancer.swift`](../Sources/AutoTechnoDSP/AutomaticMixBalancer.swift)
 - Persistent or continuation state: `GeneratedDSPContinuationState`<br>`AutomaticMixState`<br>`FeedbackDelayNetworkState`
 - Inputs: `resolved phrase`<br>`previous graph`<br>`role stems`
-- Outputs: `DSPGraphPlan`<br>`processed canonical mix`<br>`ending graph and mix state`
-- Evidence: `graph validation`<br>`protected routing reconstruction`<br>`mix and spatial evidence`
+- Outputs: `DSPGraphPlan`<br>`processed canonical mix`<br>`PreparedRepeatHoldEvolutionPhrase`<br>`ending graph and mix state`
+- Evidence: `graph validation`<br>`protected routing reconstruction`<br>`RepeatHoldEvolutionEvidence`<br>`mix and spatial evidence`
 - Depends on: `session-director-and-score`
 - Boundaries: `detached-preparation`
 - Contracts: [`docs/SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md), [`docs/NONLINEAR_DSP_CORE.md`](NONLINEAR_DSP_CORE.md), [`docs/MIX_BALANCE_BENCHMARK.md`](MIX_BALANCE_BENCHMARK.md), [`docs/AUTONOMOUS_RUNTIME_PROVENANCE.md`](AUTONOMOUS_RUNTIME_PROVENANCE.md)
@@ -390,12 +391,14 @@ Sources and stable top-level declarations:
 - [`Sources/AutoTechnoDSP/AutomaticMixBalancer.swift`](../Sources/AutoTechnoDSP/AutomaticMixBalancer.swift) — `AutomaticMixBalancer` (Enumeration), `AutomaticMixPlan` (Structure), `AutomaticMixState` (Structure), `MixBand` (Enumeration), `MixRole` (Enumeration), `StemObservation` (Structure), `StemObservationAnalyzer` (Enumeration)
 - [`Sources/AutoTechnoDSP/FeedbackDelayNetwork.swift`](../Sources/AutoTechnoDSP/FeedbackDelayNetwork.swift) — `FeedbackDelayNetwork` (Enumeration), `FeedbackDelayNetworkConfiguration` (Structure), `FeedbackDelayNetworkFrame` (Structure), `FeedbackDelayNetworkState` (Structure)
 - [`Sources/AutoTechnoDSP/GeneratedDSPGraph.swift`](../Sources/AutoTechnoDSP/GeneratedDSPGraph.swift) — `AutonomousCandidateEvaluating` (Protocol), `AutonomousCandidatePolicyVerdict` (Structure), `AutonomousCommitPolicy` (Enumeration), `AutonomousCorrectionBudget` (Structure), `AutonomousPhrasePreparationFailure` (Structure), `AutonomousPhrasePreparationOutcome` (Enumeration), `AutonomousPhrasePreparer` (Enumeration), `AutonomousRenderPassBudget` (Structure), `BoundCandidateEvaluation` (Structure), `DSPGraphGenerator` (Enumeration), `DSPGraphMutation` (Structure), `DSPGraphMutationKind` (Enumeration), `DSPGraphNode` (Structure), `DSPGraphNodeKind` (Enumeration), `DSPGraphNodeState` (Structure), `DSPGraphPlan` (Structure), `DSPGraphValidation` (Structure), `DSPGraphValidator` (Enumeration), `DSPProtectedRouting` (Structure), `GeneratedDSPContinuationState` (Structure), `GeneratedDSPGraphRenderer` (Enumeration), `PhraseAudioPreflight` (Structure), `PhraseBarAudioEvidence` (Structure), `PreparedAutonomousPhrase` (Class), `ProfessionalEvidenceOnlyEvaluator` (Structure)
+- [`Sources/AutoTechnoDSP/RepeatHoldEvolution.swift`](../Sources/AutoTechnoDSP/RepeatHoldEvolution.swift) — `AutonomousPhraseRenderProduct` (Structure), `PreparedRepeatHoldEvolutionPhrase` (Structure), `RepeatHoldEvolutionDSPContract` (Enumeration), `RepeatHoldEvolutionEvidence` (Structure), `RepeatHoldEvolutionFilterState` (Structure), `RepeatHoldEvolutionQualifier` (Enumeration), `RepeatHoldEvolutionRenderBlock` (Structure)
 - [`Sources/AutoTechnoDSP/TPTAntialiasedNonlinearCore.swift`](../Sources/AutoTechnoDSP/TPTAntialiasedNonlinearCore.swift) — `AntiderivativeAntialiasedTanhState` (Structure), `TPTAntialiasedNonlinearCore` (Enumeration), `TPTAntialiasedNonlinearCoreContract` (Enumeration), `TPTAntialiasedNonlinearCoreEvidenceAccumulator` (Structure), `TPTAntialiasedNonlinearCoreRenderEvidence` (Structure), `TPTAntialiasedNonlinearCoreState` (Structure), `TPTStateVariableFilterResponse` (Structure), `TPTStateVariableFilterState` (Structure)
 - [`Sources/AutoTechnoDSP/WaveformEnvelope.swift`](../Sources/AutoTechnoDSP/WaveformEnvelope.swift) — `WaveformEnvelope` (Enumeration)
 
 Tests:
 
 - [`Tests/AutoTechnoCoreTests/FeedbackDelayNetworkTests.swift`](../Tests/AutoTechnoCoreTests/FeedbackDelayNetworkTests.swift)
+- [`Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift`](../Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift)
 - [`Tests/AutoTechnoCoreTests/SpatialProtectedRoutingRegressionTests.swift`](../Tests/AutoTechnoCoreTests/SpatialProtectedRoutingRegressionTests.swift)
 - [`Tests/AutoTechnoCoreTests/TPTAntialiasedNonlinearCoreTests.swift`](../Tests/AutoTechnoCoreTests/TPTAntialiasedNonlinearCoreTests.swift)
 
@@ -543,21 +546,22 @@ Tests:
 <a id="macos-transport-and-session-lifecycle"></a>
 ### macOS transport and session lifecycle
 
-Own the active session seed, detached preparation tasks, stale-work epochs, AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, and accepted-PCM hold behavior.
+Own the active session seed, detached preparation tasks, stale-work epochs, AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, accepted-PCM hold behavior, and boundary-only repeat-hold sidecar playback.
 
 - Targets: `AutoTechnoApp`
 - Owner anchors: `TechnoEngine` in [`Sources/AutoTechnoApp/TechnoEngine.swift`](../Sources/AutoTechnoApp/TechnoEngine.swift), `AutonomousSessionSeedSource` in [`Sources/AutoTechnoApp/AutonomousSessionSeedSource.swift`](../Sources/AutoTechnoApp/AutonomousSessionSeedSource.swift)
-- Persistent or continuation state: `TechnoEngine transport/session state`<br>`NextPhraseProgress`<br>`playing-time sample clock`
-- Inputs: `user transport action`<br>`PreparedPerformancePhrase`<br>`route and clock changes`
-- Outputs: `sample-time scheduled immutable buffers`<br>`committed successor state`<br>`read-only presentation state`
-- Evidence: `schedule ledger`<br>`route/preparation generations`<br>`playing-time state`
+- Persistent or continuation state: `TechnoEngine transport/session state`<br>`MonitoringOutputState`<br>`NextPhraseProgress`<br>`RepeatHoldEvolutionPlaybackMode`<br>`playing-time sample clock`
+- Inputs: `user transport action`<br>`user monitoring gain action`<br>`PreparedPerformancePhrase`<br>`route and clock changes`
+- Outputs: `sample-time scheduled immutable buffers`<br>`committed successor state`<br>`downstream device-output gain`<br>`read-only presentation state`
+- Evidence: `schedule ledger`<br>`route/preparation generations`<br>`hold-filter status and successor-preparation logs`<br>`playing-time state`
 - Depends on: `quality-and-feedback-contracts`, `realtime-pcm-handoff`, `session-director-and-score`, `shared-detached-preparation`
-- Boundaries: `future-phrase-commit`, `macos-realtime-production`
+- Boundaries: `future-phrase-commit`, `main-actor-presentation`, `macos-realtime-production`
 - Contracts: [`docs/PRODUCT.md`](PRODUCT.md), [`docs/LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md), [`docs/AUTONOMOUS_RUNTIME_PROVENANCE.md`](AUTONOMOUS_RUNTIME_PROVENANCE.md)
 
 Sources and stable top-level declarations:
 
 - [`Sources/AutoTechnoApp/AutonomousSessionSeedSource.swift`](../Sources/AutoTechnoApp/AutonomousSessionSeedSource.swift) — `AutonomousSessionSeedSource` (Class)
+- [`Sources/AutoTechnoApp/MonitoringOutputState.swift`](../Sources/AutoTechnoApp/MonitoringOutputState.swift) — `MonitoringOutputState` (Structure)
 - [`Sources/AutoTechnoApp/NextPhraseProgress.swift`](../Sources/AutoTechnoApp/NextPhraseProgress.swift) — `NextPhraseFailure` (Structure), `NextPhraseProgress` (Structure)
 - [`Sources/AutoTechnoApp/PlayingTime.swift`](../Sources/AutoTechnoApp/PlayingTime.swift) — `PlayingTimeClock` (Structure), `PlayingTimeFormatter` (Enumeration)
 - [`Sources/AutoTechnoApp/TechnoEngine.swift`](../Sources/AutoTechnoApp/TechnoEngine.swift) — `AppPerformancePreparer` (Enumeration), `PhrasePreparationResult` (Structure), `PreparedPhrase` (Structure), `ScheduledVisual` (Structure), `TechnoEngine` (Class)
@@ -565,6 +569,7 @@ Sources and stable top-level declarations:
 Tests:
 
 - [`Tests/AutoTechnoAppTests/AutonomousSessionIdentityTests.swift`](../Tests/AutoTechnoAppTests/AutonomousSessionIdentityTests.swift)
+- [`Tests/AutoTechnoAppTests/MonitoringOutputTests.swift`](../Tests/AutoTechnoAppTests/MonitoringOutputTests.swift)
 - [`Tests/AutoTechnoAppTests/NextPhraseProgressTests.swift`](../Tests/AutoTechnoAppTests/NextPhraseProgressTests.swift)
 - [`Tests/AutoTechnoAppTests/PlayingTimeTests.swift`](../Tests/AutoTechnoAppTests/PlayingTimeTests.swift)
 - [`Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift`](../Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift)
@@ -573,7 +578,7 @@ Tests:
 <a id="live-feedback-coordination-and-inspection"></a>
 ### Live-feedback coordination and inspection
 
-Authenticate scheduled occurrences, assemble bounded PCM windows, run cancellable background analysis, coordinate one future correction, manage hold/recovery lifecycle, and expose read-only snapshots.
+Authenticate scheduled occurrences from the canonical capture mixer upstream of monitoring gain, assemble bounded PCM windows, run cancellable background analysis, coordinate one future correction, manage hold/recovery lifecycle, and expose read-only snapshots.
 
 - Targets: `AutoTechnoApp`
 - Owner anchors: `LiveFeedbackCoordinator` in [`Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift`](../Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift), `LivePCMTransport` in [`Sources/AutoTechnoApp/LivePCMTransport.swift`](../Sources/AutoTechnoApp/LivePCMTransport.swift)
@@ -604,13 +609,13 @@ Tests:
 <a id="read-only-ui-and-presentation"></a>
 ### Read-only UI and presentation
 
-Present the one-button transport, secondary New Set action, waveform, status, playing time, and technical inspector without owning musical decisions or callback work.
+Present the one-button transport, secondary New Set action, monitoring-only mute/volume, waveform, status, playing time, and technical inspector without owning musical decisions or callback work.
 
 - Targets: `AutoTechnoApp`
 - Owner anchors: `ContentView` in [`Sources/AutoTechnoApp/ContentView.swift`](../Sources/AutoTechnoApp/ContentView.swift), `LiveRenderInspectorView` in [`Sources/AutoTechnoApp/LiveRenderInspectorView.swift`](../Sources/AutoTechnoApp/LiveRenderInspectorView.swift)
 - Persistent or continuation state: `SwiftUI-observed read-only engine and inspector state`
-- Inputs: `transport/presentation snapshot`<br>`user play-pause and New Set actions`
-- Outputs: `accessible desktop presentation`<br>`bounded transport intents`
+- Inputs: `transport/presentation snapshot`<br>`user play-pause and New Set actions`<br>`user monitoring mute and volume actions`
+- Outputs: `accessible desktop presentation`<br>`bounded transport intents`<br>`host-local monitoring gain intent`
 - Evidence: `accessibility labels and read-only inspector formatting`
 - Depends on: `live-feedback-coordination-and-inspection`, `macos-transport-and-session-lifecycle`
 - Boundaries: `main-actor-presentation`
@@ -625,16 +630,17 @@ Sources and stable top-level declarations:
 Tests:
 
 - [`Tests/AutoTechnoAppTests/LiveRenderInspectorTests.swift`](../Tests/AutoTechnoAppTests/LiveRenderInspectorTests.swift)
+- [`Tests/AutoTechnoAppTests/MonitoringOutputTests.swift`](../Tests/AutoTechnoAppTests/MonitoringOutputTests.swift)
 - [`Tests/AutoTechnoAppTests/PlayingTimeTests.swift`](../Tests/AutoTechnoAppTests/PlayingTimeTests.swift)
 
 <a id="windows-transport-and-waveout"></a>
 ### Windows transport and waveOut output
 
-Reuse canonical detached preparation and immutable PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting.
+Reuse canonical detached preparation and immutable primary or qualified repeat-hold PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting.
 
 - Targets: `AutoTechnoWindows`<br>`AutoTechnoWindowsPlatform`
 - Owner anchors: `WindowsAutoTechnoController` in [`Sources/AutoTechnoWindows/main.swift`](../Sources/AutoTechnoWindows/main.swift), `at_wave_out_callback` in [`Sources/AutoTechnoWindowsPlatform/AutoTechnoWindowsPlatform.c`](../Sources/AutoTechnoWindowsPlatform/AutoTechnoWindowsPlatform.c)
-- Persistent or continuation state: `WindowsAutoTechnoController transport state`<br>`waveOut queue and completion counters`
+- Persistent or continuation state: `WindowsAutoTechnoController transport state`<br>`RepeatHoldEvolutionPlaybackMode`<br>`waveOut queue and completion counters`
 - Inputs: `PreparedPerformancePhrase`<br>`Win32 transport actions`<br>`device state`
 - Outputs: `queued waveOut buffers`<br>`read-only waveform/status presentation`<br>`recovery request`
 - Evidence: `atomic completion counters`<br>`prepared-key and route-generation checks`
@@ -663,6 +669,7 @@ Tests:
 | [`Sources/AutoTechnoApp/LivePCMTransport.swift`](../Sources/AutoTechnoApp/LivePCMTransport.swift) | `AutoTechnoApp` | [`live-feedback-coordination-and-inspection`](#live-feedback-coordination-and-inspection) | `ConsumedLivePCMPacket` (Structure)<br>`LivePCMConsumerLease` (Class)<br>`LivePCMQueueCounterSnapshot` (Structure)<br>`LivePCMTransport` (Class)<br>`MixerPlayerClockMap` (Structure)<br>`MixerPlayerClockProbe` (Structure) |
 | [`Sources/AutoTechnoApp/LiveRenderInspector.swift`](../Sources/AutoTechnoApp/LiveRenderInspector.swift) | `AutoTechnoApp` | [`live-feedback-coordination-and-inspection`](#live-feedback-coordination-and-inspection) | `InspectorLabel` (Enumeration)<br>`LiveRenderSnapshot` (Structure) |
 | [`Sources/AutoTechnoApp/LiveRenderInspectorView.swift`](../Sources/AutoTechnoApp/LiveRenderInspectorView.swift) | `AutoTechnoApp` | [`read-only-ui-and-presentation`](#read-only-ui-and-presentation) | `CompactAssignmentRow` (Structure)<br>`CompactValue` (Structure)<br>`LiveRenderInspectorView` (Structure)<br>`MonitorDivider` (Structure)<br>`MonitorPanel` (Structure)<br>`MonitorTextBlock` (Structure)<br>`ParameterValue` (Structure) |
+| [`Sources/AutoTechnoApp/MonitoringOutputState.swift`](../Sources/AutoTechnoApp/MonitoringOutputState.swift) | `AutoTechnoApp` | [`macos-transport-and-session-lifecycle`](#macos-transport-and-session-lifecycle) | `MonitoringOutputState` (Structure) |
 | [`Sources/AutoTechnoApp/NextPhraseProgress.swift`](../Sources/AutoTechnoApp/NextPhraseProgress.swift) | `AutoTechnoApp` | [`macos-transport-and-session-lifecycle`](#macos-transport-and-session-lifecycle) | `NextPhraseFailure` (Structure)<br>`NextPhraseProgress` (Structure) |
 | [`Sources/AutoTechnoApp/PlayingTime.swift`](../Sources/AutoTechnoApp/PlayingTime.swift) | `AutoTechnoApp` | [`macos-transport-and-session-lifecycle`](#macos-transport-and-session-lifecycle) | `PlayingTimeClock` (Structure)<br>`PlayingTimeFormatter` (Enumeration) |
 | [`Sources/AutoTechnoApp/TechnoEngine.swift`](../Sources/AutoTechnoApp/TechnoEngine.swift) | `AutoTechnoApp` | [`macos-transport-and-session-lifecycle`](#macos-transport-and-session-lifecycle) | `AppPerformancePreparer` (Enumeration)<br>`PhrasePreparationResult` (Structure)<br>`PreparedPhrase` (Structure)<br>`ScheduledVisual` (Structure)<br>`TechnoEngine` (Class) |
@@ -687,6 +694,7 @@ Tests:
 | [`Sources/AutoTechnoCore/PerformanceCharacter.swift`](../Sources/AutoTechnoCore/PerformanceCharacter.swift) | `AutoTechnoCore` | [`performance-grammar-and-composition`](#performance-grammar-and-composition) | `FoundationBehavior` (Enumeration)<br>`PerformanceCharacter` (Enumeration)<br>`PerformanceCharacterContract` (Enumeration)<br>`PerformanceCharacterEvidence` (Structure) |
 | [`Sources/AutoTechnoCore/PhraseComposition.swift`](../Sources/AutoTechnoCore/PhraseComposition.swift) | `AutoTechnoCore` | [`performance-grammar-and-composition`](#performance-grammar-and-composition) | `ArpeggiatorDirection` (Enumeration)<br>`ArpeggiatorPlan` (Structure)<br>`ArpeggiatorStep` (Structure)<br>`AudioSliceDirection` (Enumeration)<br>`AudioSlicePlan` (Structure)<br>`AudioSliceSourceKind` (Enumeration)<br>`AudioSliceTexture` (Enumeration)<br>`AudioSliceTrigger` (Structure)<br>`HarmonicContinuationState` (Structure)<br>`PadHarmonicDisclosureStage` (Enumeration)<br>`PadHarmonicFunction` (Enumeration)<br>`PadRhythmicModulation` (Structure)<br>`PadRhythmicModulationRelation` (Enumeration)<br>`PadVoice` (Structure)<br>`PadVoicing` (Structure)<br>`PhraseCompositionBar` (Structure)<br>`PhraseCompositionResolver` (Enumeration) |
 | [`Sources/AutoTechnoCore/QualityQualification.swift`](../Sources/AutoTechnoCore/QualityQualification.swift) | `AutoTechnoCore` | [`quality-and-feedback-contracts`](#quality-and-feedback-contracts) | `AutonomousQualityRetryContinuation` (Structure)<br>`CanonicalJourneyCheckpoint` (Enumeration)<br>`QualityContinuationState` (Structure)<br>`QualityDecision` (Structure)<br>`QualityDecisionOutcome` (Enumeration)<br>`QualityQualificationContract` (Enumeration)<br>`QualityReasonCode` (Enumeration) |
+| [`Sources/AutoTechnoCore/RepeatHoldEvolutionPolicy.swift`](../Sources/AutoTechnoCore/RepeatHoldEvolutionPolicy.swift) | `AutoTechnoCore` | [`session-director-and-score`](#session-director-and-score) | `RepeatHoldEvolutionBoundaryPolicy` (Enumeration)<br>`RepeatHoldEvolutionContract` (Enumeration)<br>`RepeatHoldEvolutionPlaybackMode` (Enumeration) |
 | [`Sources/AutoTechnoCore/SeededGenerator.swift`](../Sources/AutoTechnoCore/SeededGenerator.swift) | `AutoTechnoCore` | [`session-director-and-score`](#session-director-and-score) | `SeededGenerator` (Structure) |
 | [`Sources/AutoTechnoCore/SynthPerformance.swift`](../Sources/AutoTechnoCore/SynthPerformance.swift) | `AutoTechnoCore` | [`instrument-pitch-and-role-policy`](#instrument-pitch-and-role-policy) | `InterlockChapter` (Enumeration)<br>`InterlockEvolutionState` (Structure)<br>`MotifTimbreFingerprint` (Structure)<br>`PulseEchoTextureArticulation` (Structure)<br>`RelationalArticulation` (Structure)<br>`RelationalCyclePhase` (Structure)<br>`RelationalFollowerStage` (Enumeration)<br>`ResolvedUpperNote` (Structure)<br>`SynthGesture` (Enumeration)<br>`SynthPerformanceBar` (Structure)<br>`SynthPerformancePlan` (Structure)<br>`SynthRole` (Enumeration)<br>`SynthWorldDNA` (Structure)<br>`UpperEnvelopeRelation` (Enumeration)<br>`UpperNoteGate` (Enumeration)<br>`UpperTimbreIntent` (Structure)<br>`UpperTimingRelation` (Enumeration) |
 | [`Sources/AutoTechnoCore/TechnoScene.swift`](../Sources/AutoTechnoCore/TechnoScene.swift) | `AutoTechnoCore` | [`session-director-and-score`](#session-director-and-score) | `BeatShapeBand` (Enumeration)<br>`BeatShapePattern` (Structure)<br>`GrooveProfile` (Structure)<br>`MotifSourceIntent` (Enumeration)<br>`RenderCharacter` (Structure)<br>`SectionKind` (Enumeration)<br>`SequencerEvent` (Structure)<br>`Step` (Structure)<br>`SynthEvent` (Structure)<br>`TechnoScene` (Structure)<br>`TimedEvent` (Structure)<br>`TimedEventKind` (Enumeration) |
@@ -725,6 +733,7 @@ Tests:
 | [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift) | `AutoTechnoDSP` | [`evidence-calibration-and-primary-evaluation`](#evidence-calibration-and-primary-evaluation) | `ProfessionalQualityPrimaryArtifacts` (Structure) |
 | [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift) | `AutoTechnoDSP` | [`evidence-calibration-and-primary-evaluation`](#evidence-calibration-and-primary-evaluation) | `ProfessionalQualityCandidateAssessment` (Structure)<br>`ProfessionalQualityCandidateAssessmentAvailability` (Enumeration)<br>`ProfessionalQualityPrimaryEvaluator` (Structure) |
 | [`Sources/AutoTechnoDSP/ProfessionalQualityVerdict.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityVerdict.swift) | `AutoTechnoDSP` | [`evidence-calibration-and-primary-evaluation`](#evidence-calibration-and-primary-evaluation) | `ProfessionalQualityReportVerdict` (Structure) |
+| [`Sources/AutoTechnoDSP/RepeatHoldEvolution.swift`](../Sources/AutoTechnoDSP/RepeatHoldEvolution.swift) | `AutoTechnoDSP` | [`graph-effects-routing-and-mix`](#graph-effects-routing-and-mix) | `AutonomousPhraseRenderProduct` (Structure)<br>`PreparedRepeatHoldEvolutionPhrase` (Structure)<br>`RepeatHoldEvolutionDSPContract` (Enumeration)<br>`RepeatHoldEvolutionEvidence` (Structure)<br>`RepeatHoldEvolutionFilterState` (Structure)<br>`RepeatHoldEvolutionQualifier` (Enumeration)<br>`RepeatHoldEvolutionRenderBlock` (Structure) |
 | [`Sources/AutoTechnoDSP/ResonantMonoVoice.swift`](../Sources/AutoTechnoDSP/ResonantMonoVoice.swift) | `AutoTechnoDSP` | [`voice-and-phrase-rendering`](#voice-and-phrase-rendering) | `ResonantMonoFoundationRenderResult` (Structure)<br>`ResonantMonoModulationContract` (Enumeration)<br>`ResonantMonoModulationEventRenderEvidence` (Structure)<br>`ResonantMonoModulationTreatment` (Structure)<br>`ResonantMonoState` (Structure)<br>`ResonantMonoVoice` (Enumeration) |
 | [`Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v6.json`](../Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v6.json) | `AutoTechnoDSP` | [`long-horizon-signal-and-future-adaptation`](#long-horizon-signal-and-future-adaptation) | — |
 | [`Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v6.json`](../Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v6.json) | `AutoTechnoDSP` | [`long-horizon-signal-and-future-adaptation`](#long-horizon-signal-and-future-adaptation) | — |
@@ -778,6 +787,7 @@ Tests:
 | [`Tests/AutoTechnoAppTests/AutonomousSessionIdentityTests.swift`](../Tests/AutoTechnoAppTests/AutonomousSessionIdentityTests.swift) | `macos-transport-and-session-lifecycle` | — | `AutonomousSessionIdentityTests` (Structure) |
 | [`Tests/AutoTechnoAppTests/LiveFeedbackCoordinatorTests.swift`](../Tests/AutoTechnoAppTests/LiveFeedbackCoordinatorTests.swift) | `live-feedback-coordination-and-inspection` | `background-live-analysis` | `LiveFeedbackCoordinatorTests` (Structure) |
 | [`Tests/AutoTechnoAppTests/LiveRenderInspectorTests.swift`](../Tests/AutoTechnoAppTests/LiveRenderInspectorTests.swift) | `live-feedback-coordination-and-inspection`<br>`read-only-ui-and-presentation` | `main-actor-presentation` | `LiveRenderInspectorTests` (Structure) |
+| [`Tests/AutoTechnoAppTests/MonitoringOutputTests.swift`](../Tests/AutoTechnoAppTests/MonitoringOutputTests.swift) | `macos-transport-and-session-lifecycle`<br>`read-only-ui-and-presentation` | — | `MonitoringOutputTests` (Structure) |
 | [`Tests/AutoTechnoAppTests/NextPhraseProgressTests.swift`](../Tests/AutoTechnoAppTests/NextPhraseProgressTests.swift) | `macos-transport-and-session-lifecycle` | — | `NextPhraseProgressTests` (Structure) |
 | [`Tests/AutoTechnoAppTests/PlayingTimeTests.swift`](../Tests/AutoTechnoAppTests/PlayingTimeTests.swift) | `macos-transport-and-session-lifecycle`<br>`read-only-ui-and-presentation` | `main-actor-presentation` | `PlayingTimeTests` (Structure) |
 | [`Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift`](../Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift) | `live-feedback-coordination-and-inspection`<br>`macos-transport-and-session-lifecycle` | `future-phrase-commit` | `TechnoEngineLiveFeedbackTests` (Structure) |
@@ -819,6 +829,7 @@ Tests:
 | [`Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift`](../Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift) | `evidence-calibration-and-primary-evaluation` | — | `ProfessionalQualityCalibrationIntegrationTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationTests.swift`](../Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationTests.swift) | `evidence-calibration-and-primary-evaluation` | — | `ProfessionalQualityCalibrationTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/QualityQualificationFoundationTests.swift`](../Tests/AutoTechnoCoreTests/QualityQualificationFoundationTests.swift) | `evidence-calibration-and-primary-evaluation`<br>`quality-and-feedback-contracts` | — | `QualityQualificationFoundationTests` (Structure) |
+| [`Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift`](../Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift) | `graph-effects-routing-and-mix` | — | `RepeatHoldEvolutionTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/SpatialProtectedRoutingRegressionTests.swift`](../Tests/AutoTechnoCoreTests/SpatialProtectedRoutingRegressionTests.swift) | `graph-effects-routing-and-mix` | — | `SpatialProtectedRoutingRegressionTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/SpectrumMaskingAnalyzerTests.swift`](../Tests/AutoTechnoCoreTests/SpectrumMaskingAnalyzerTests.swift) | `evidence-calibration-and-primary-evaluation` | — | `SpectrumMaskingAnalyzerTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/StreamingPerceptualEvidenceTests.swift`](../Tests/AutoTechnoCoreTests/StreamingPerceptualEvidenceTests.swift) | `evidence-calibration-and-primary-evaluation` | — | `StreamingPerceptualEvidenceTests` (Structure) |

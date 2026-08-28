@@ -55,8 +55,10 @@ package struct AutonomousPreparationResourceBudget: Equatable, Sendable {
         phraseFrameCount = framesPerBar * barCount
 
         let floatBytes = MemoryLayout<Float>.stride
-        retainedCandidatePCMByteCount = phraseFrameCount * 2 * floatBytes *
-            renderPassCount
+        retainedCandidatePCMByteCount = phraseFrameCount * 2 * floatBytes * (
+            renderPassCount +
+                RepeatHoldEvolutionDSPContract.maximumPreparedVariantCount
+        )
 
         // Mirrors every bounded variable-length continuation owner validated
         // by AutonomousPhrasePreparer. Both current and retiring graph states

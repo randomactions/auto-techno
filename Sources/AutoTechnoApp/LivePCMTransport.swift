@@ -11,9 +11,10 @@ package final class LivePCMConsumerLease: @unchecked Sendable {
     }
 }
 
-/// Sole owner of the callback-facing C queue and main-mixer tap. Queue storage,
-/// generation updates, tap installation/removal, and destruction are control-
-/// thread work. The callback captures only the immutable C queue address.
+/// Sole owner of the callback-facing C queue and canonical-capture-mixer tap.
+/// Queue storage, generation updates, tap installation/removal, and
+/// destruction are control-thread work. The callback captures only the
+/// immutable C queue address.
 package final class LivePCMTransport: @unchecked Sendable {
     package static let maximumPacketFrameCount = Int(AT_LIVE_PCM_MAX_FRAMES)
     package static let queueCapacity = Int(AT_LIVE_PCM_CAPACITY)
@@ -77,7 +78,7 @@ package final class LivePCMTransport: @unchecked Sendable {
     /// to this closure without rerunning the callback symbol/source audit.
     @discardableResult
     package func installTap(
-        on mainMixer: AVAudioMixerNode,
+        on canonicalMixer: AVAudioMixerNode,
         nativeStereoFormat: AVAudioFormat
     ) -> Bool {
         guard !tapIsInstalled,
@@ -90,7 +91,7 @@ package final class LivePCMTransport: @unchecked Sendable {
                 sampleRate: nativeStereoFormat.sampleRate
               ) else { return false }
 
-        mainMixer.installTap(
+        canonicalMixer.installTap(
             onBus: 0,
             bufferSize: AVAudioFrameCount(AT_LIVE_PCM_MAX_FRAMES),
             format: nativeStereoFormat
@@ -108,7 +109,7 @@ package final class LivePCMTransport: @unchecked Sendable {
                 buffer.frameLength
             )
         }
-        tappedMixer = mainMixer
+        tappedMixer = canonicalMixer
         tapIsInstalled = true
         return true
     }

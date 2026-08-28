@@ -1496,6 +1496,69 @@ package struct RenderBlock: Equatable, Sendable {
         stereoCorrelation = Float(cross / sqrt(max(0.0000001, leftEnergy * rightEnergy)))
     }
 
+    /// Detached-only PCM projection used to run the existing signal-safety
+    /// analyzers over a bounded fallback render. Arrays retain copy-on-write
+    /// storage; no callback or scheduler constructs this value.
+    package func replacingPCM(left: [Float], right: [Float]) -> Self {
+        Self(
+            bar: bar,
+            section: section,
+            left: left,
+            right: right,
+            events: events,
+            modulation: modulation,
+            busStates: busStates,
+            masking: masking,
+            effects: effects,
+            kickMix: kickMix,
+            kickRenderPassesMatch: kickRenderPassesMatch,
+            stemObservations: stemObservations,
+            automaticMix: automaticMix,
+            stemReconstruction: stemReconstruction,
+            protectedFoundationSampleHash: protectedFoundationSampleHash,
+            foundationRhythmRenderEvidence: foundationRhythmRenderEvidence,
+            foundationRhythmRenderPassesMatch:
+                foundationRhythmRenderPassesMatch,
+            percussionSampleHash: percussionSampleHash,
+            protectedRhythmSampleHash: protectedRhythmSampleHash,
+            dryModalPercussionSampleHash: dryModalPercussionSampleHash,
+            modalPercussionRenderEvidence: modalPercussionRenderEvidence,
+            modalPercussionRenderPassesMatch:
+                modalPercussionRenderPassesMatch,
+            modalPercussionFoundationRoutingValid:
+                modalPercussionFoundationRoutingValid,
+            groovePulseRenderEvidence: groovePulseRenderEvidence,
+            closedHatRenderEvidence: closedHatRenderEvidence,
+            upperPercussionTailRenderEvidence:
+                upperPercussionTailRenderEvidence,
+            upperPercussionTailRenderPassesMatch:
+                upperPercussionTailRenderPassesMatch,
+            instrumentRenderEvidence: instrumentRenderEvidence,
+            percussionEchoTextureRenderEvidence:
+                percussionEchoTextureRenderEvidence,
+            percussionEchoTextureRenderPassesMatch:
+                percussionEchoTextureRenderPassesMatch,
+            audioSliceRenderEvidence: audioSliceRenderEvidence,
+            audioSliceRenderPassesMatch: audioSliceRenderPassesMatch,
+            polyphonicPadRenderEvidence: polyphonicPadRenderEvidence,
+            pulseEchoReturnDriveRenderEvidence:
+                pulseEchoReturnDriveRenderEvidence,
+            spatialFDNRenderEvidence: spatialFDNRenderEvidence,
+            climaxHangRenderEvidence: climaxHangRenderEvidence,
+            liveMasterTrimRenderEvidence: liveMasterTrimRenderEvidence,
+            upperNoteRenderEvidence: upperNoteRenderEvidence,
+            upperTimingRenderEvidence: upperTimingRenderEvidence,
+            graphInputRemainderTimbreEvidence:
+                graphInputRemainderTimbreEvidence,
+            postGraphRemainderTimbreEvidence:
+                postGraphRemainderTimbreEvidence,
+            resolvedPerformance: resolvedPerformance,
+            sceneDNA: sceneDNA,
+            synthWorld: synthWorld,
+            synthPerformance: synthPerformance
+        )
+    }
+
     private static func cubicPeak(_ samples: [Float]) -> Float {
         guard samples.count > 1 else { return abs(samples.first ?? 0) }
         var result = samples.reduce(0) { max($0, abs($1)) }
@@ -1722,6 +1785,26 @@ package enum AutonomousPhraseRenderer {
         forceHomeUpperTimbre: Bool = false,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> [RenderBlock]? {
+        renderProductIfNotCancelled(
+            plan: plan,
+            graph: graph,
+            sampleRate: sampleRate,
+            state: &state,
+            graphState: &graphState,
+            forceHomeUpperTimbre: forceHomeUpperTimbre,
+            cancellationRequested: cancellationRequested
+        )?.blocks
+    }
+
+    package static func renderProductIfNotCancelled(
+        plan: AutonomousPhrasePlan,
+        graph: DSPGraphPlan,
+        sampleRate: Double,
+        state: inout RenderState,
+        graphState: inout GeneratedDSPContinuationState,
+        forceHomeUpperTimbre: Bool = false,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> AutonomousPhraseRenderProduct? {
         guard !cancellationRequested() else { return nil }
         let synthPlan = SynthPerformancePlan(
             scene: plan.scene, dna: plan.dna, kind: plan.kind,
@@ -1732,6 +1815,16 @@ package enum AutonomousPhraseRenderer {
         var workspace = RenderWorkspace()
         var blocks: [RenderBlock] = []
         blocks.reserveCapacity(plan.barCount)
+        let framesPerBar = max(1, Int((
+            240.0 / AutonomousSessionDirector.bpm * sampleRate
+        ).rounded()))
+        var holdEvolutionState = RepeatHoldEvolutionFilterState(
+            sampleRate: sampleRate,
+            totalFrameCount: framesPerBar * plan.barCount
+        )
+        var holdEvolutionBlocks: [RepeatHoldEvolutionRenderBlock] = []
+        holdEvolutionBlocks.reserveCapacity(plan.barCount)
+        var holdEvolutionAvailable = true
         for index in plan.resolvedBars.indices {
             guard !cancellationRequested() else { return nil }
             let resolved = plan.resolvedBars[index]
@@ -1984,6 +2077,56 @@ package enum AutonomousPhraseRenderer {
             )
             let outputLeft = terminalOutput.left
             let outputRight = terminalOutput.right
+            let protectedRhythmSampleHash = ExactPCMFingerprint.stereo(
+                left: protectedRhythm.leftSamples,
+                right: protectedRhythm.rightSamples
+            )
+            if holdEvolutionAvailable {
+                if let filteredRemainder = holdEvolutionState.process(
+                    left: generated.0,
+                    right: generated.1,
+                    cancellationRequested: cancellationRequested
+                ) {
+                    let holdPreLiveLeft = zip(
+                        protectedRhythm.leftSamples,
+                        filteredRemainder.left
+                    ).map { outputSafety($0 + $1) }
+                    let holdPreLiveRight = zip(
+                        protectedRhythm.rightSamples,
+                        filteredRemainder.right
+                    ).map { outputSafety($0 + $1) }
+                    let holdClimaxOutput = ClimaxHangRenderer.render(
+                        left: holdPreLiveLeft,
+                        right: holdPreLiveRight,
+                        articulation: resolved.climaxHang,
+                        sampleRate: sampleRate
+                    )
+                    let holdTerminalOutput = applyLiveMasterTrim(
+                        left: holdClimaxOutput.left,
+                        right: holdClimaxOutput.right,
+                        state: state.liveMasterHeadroomState
+                    )
+                    holdEvolutionBlocks.append(
+                        RepeatHoldEvolutionRenderBlock(
+                            bar: performance.bar,
+                            left: holdTerminalOutput.left,
+                            right: holdTerminalOutput.right,
+                            protectedRhythmSampleHash:
+                                protectedRhythmSampleHash,
+                            sourceGraphRemainderHighBandEnergy:
+                                filteredRemainder.sourceHighBandEnergy,
+                            filteredGraphRemainderHighBandEnergy:
+                                filteredRemainder.filteredHighBandEnergy,
+                            graphRemainderEvidenceFrameCount:
+                                filteredRemainder.evidenceFrameCount
+                        )
+                    )
+                } else {
+                    holdEvolutionAvailable = false
+                    holdEvolutionBlocks.removeAll(keepingCapacity: false)
+                }
+            }
+            guard !cancellationRequested() else { return nil }
             let relationalPulseEchoAmount = resolved.ensemble.events
                 .filter { $0.voice == .motif || $0.voice == .response }
                 .map { synthPerformance.articulation(at: $0.step).pulseEchoSend }
@@ -2041,10 +2184,7 @@ package enum AutonomousPhraseRenderer {
                     protectedRhythm.foundationRhythmRenderEvidence ==
                         rendered.foundationRhythmRenderEvidence,
                 percussionSampleHash: protectedRhythm.dryPercussionSampleHash,
-                protectedRhythmSampleHash: ExactPCMFingerprint.stereo(
-                    left: protectedRhythm.leftSamples,
-                    right: protectedRhythm.rightSamples
-                ),
+                protectedRhythmSampleHash: protectedRhythmSampleHash,
                 dryModalPercussionSampleHash:
                     protectedRhythm.dryModalPercussionSampleHash,
                 modalPercussionRenderEvidence:
@@ -2108,7 +2248,12 @@ package enum AutonomousPhraseRenderer {
             }
             state.barIndex = performance.bar + 1
         }
-        return cancellationRequested() ? nil : blocks
+        guard !cancellationRequested() else { return nil }
+        return AutonomousPhraseRenderProduct(
+            blocks: blocks,
+            repeatHoldEvolutionBlocks:
+                holdEvolutionAvailable ? holdEvolutionBlocks : []
+        )
     }
 
     private static func outputSafety(_ input: Float) -> Float {

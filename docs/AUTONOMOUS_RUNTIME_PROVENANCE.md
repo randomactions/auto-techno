@@ -362,6 +362,24 @@ mistaken for a completed feedback system.
    The same bounded serial retry continuation applies while preparing the first
    phrase, so a calibrated establishment rejection can adapt without requiring
    a user to repeat the identical rejected request.
+   Ordinary successor delay also owns one bounded presentation-only fallback,
+   `autotechno-repeat-hold-evolution.v1`. Core selects it only from the second
+   coherent repeat when a matching independently qualified sidecar exists. DSP
+   derives that sidecar during detached rendering by filtering only the generated
+   graph remainder through the existing TPT state-variable primitive, with one
+   dry-to-low-pass-to-dry phrase envelope; it then recombines the unchanged
+   protected rhythm pass before the existing terminal safety and master trim.
+   Reduced evidence binds exact endpoints, protected-routing hashes, graph-
+   remainder high-band reduction, output safety, level consequence, and primary
+   versus variant PCM fingerprints. The selected primary plan, blocks, candidate
+   evidence, render/graph continuation, quality decision, and engine-v38
+   artifacts remain unchanged. App and Windows transports merely choose the
+   immutable sidecar at a phrase boundary; unavailable or failed evidence falls
+   back to exact accepted PCM, and a ready successor always advances. The
+   macOS scheduler does not register sidecar occurrences as canonical live-
+   feedback sources, so transformed PCM cannot be attributed to the accepted
+   candidate. No filter state, analysis, allocation, decision, log, or UI work
+   reaches either audio callback.
    Runtime terminal qualification uses one Core-owned checkpoint priority for
    the complete phrase: establishment, long continuation from phrase index 16,
    otherwise the structural kind. An ordinary lock also uses the continuation
@@ -377,13 +395,17 @@ mistaken for a completed feedback system.
    neutral value, the ratio is one-sided higher-is-safer, and eligible events
    that fail to render stay rejecting.
    It also owns one scheduled-output feedback coordinator. After an exact
-   two-probe mixer/player clock map succeeds, the main-mixer callback copies only
+   two-probe mixer/player clock map succeeds, the canonical-capture-mixer callback copies only
    bounded app-owned native-stereo packets into the preallocated C11 queue. A
    detached worker assembles the first exact three-second phrase window, reuses
    BS.1770-5/Annex 2 evidence, and reduces it to one attenuation-only proposal.
    Only an unscheduled successor can consume that proposal, and only the primary
    evaluator can commit its future controller state. See
    [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
+   The player reaches that canonical mixer before the main output mixer. A
+   host-local mute/volume state changes only the downstream main-mixer output
+   gain on the main actor, so listening attenuation cannot change captured PCM,
+   quality, continuation, adaptation, or the performance identity.
 8. `AutoTechnoTransport` owns the platform-neutral detached planning, rendering,
    installed-policy evaluation, long-horizon update, and waveform transaction.
    The macOS app adds only its bounded Render Info projection before scheduling.
@@ -926,13 +948,18 @@ decisions share one state, bounds, slew policy, and home target.
 ## Scheduled-output feedback boundary
 
 Detached preparation analyzes its rendered buffers directly. The scheduled-
-output path additionally copies app-owned PCM from the main-mixer callback into
+output path additionally copies app-owned PCM from the canonical-capture-mixer callback into
 a fixed-capacity, preallocated C11 single-writer exchange. Invalid tap input
 returns before the producer; valid input performs only pointer/frame guards,
 reads the sample position, calls the bounded producer, and returns. It never
 allocates, locks, waits, analyzes, hashes, logs, performs
 file or network I/O, calls UI code, or changes musical state. If the exchange is
 full, feedback is dropped and the callback continues.
+
+The canonical capture mixer feeds a separate downstream main output mixer.
+Monitoring mute and volume affect only that downstream node; they are excluded
+from scheduled occurrence identity, callback packets, evidence, controller
+state, and deterministic replay.
 
 A bounded background analyzer consumes the first complete three-second
 sample-indexed window of an authenticated scheduled occurrence. It never opens a
