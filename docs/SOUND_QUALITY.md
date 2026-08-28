@@ -613,10 +613,13 @@ The target loop is bounded and persistent:
    deadline, capping only the retry length at that deadline. If no four-bar
    same-kind phrase can remain eligible, the later retry uses the one
    conservative energy-release fallback. Ordinal zero stays the original
-   canonical plan, and no proposals coexist or compete.
+   canonical plan. After the original eight realization variants, one final
+   four-bar same-intent coherence recovery reduces phrase-wide variation
+   without changing identity, debt, selection, or energy coordination; it
+   remains subject to every unchanged gate. No proposals coexist or compete.
    Its score-side vocabulary alternates bounded kick attack/body pressure around
    the continuous committed morphology trajectory, so this calibrated source
-   metric changes in both directions before eight rejected variants stop in an
+   metric changes in both directions before nine rejected variants stop in an
    explicit blocked state. Missing or non-finite evidence, unavailable policy,
    graph or signal-safety failure, route/provenance failure, and exhausted
    variants remain terminal.

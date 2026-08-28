@@ -1949,7 +1949,14 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             ? max(baseLength, barsToMacroBoundary)
             : baseLength
         let length: Int
-        if qualityRetryOrdinal > 0,
+        if qualityRetryOrdinal == Self.maximumQualityRetryOrdinal {
+            // The final serial proposal keeps the same structural selection,
+            // identity, debt, and energy coordination while minimizing the
+            // population seen by phrase-wide variation metrics. It remains a
+            // normal fully rendered candidate and must pass every unchanged
+            // quality gate; failure still blocks instead of bypassing policy.
+            length = 4
+        } else if qualityRetryOrdinal > 0,
            kind != .energyRelease,
            let earliestDeadline = state.memory.openDebts.map(\.dueByBar).min() {
             // Keep the selected structural intent stable after an initial

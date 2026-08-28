@@ -341,8 +341,12 @@ mistaken for a completed feedback system.
    variant cannot become deterministically ineligible. If even four bars no
    longer fit, only the later retry uses the existing conservative
    energy-release fallback, because no same-kind canonical phrase can satisfy
-   the symbolic interest gate. Ordinal zero and the accepted canonical journey
-   remain unchanged. The bounded serial
+   the symbolic interest gate. If the original eight realization variants are
+   all rejected, one final same-intent four-bar coherence recovery minimizes
+   the population seen by phrase-wide variation metrics while retaining the
+   same identity, debt, selection, and energy coordination. It is rendered and
+   evaluated normally and still fails closed if any unchanged gate rejects it.
+   Ordinal zero and the accepted canonical journey remain unchanged. The bounded serial
    vocabulary also alternates kick attack/body pressure around the same
    continuous score-owned morphology trajectory; the renderer and evaluator
    must prove the resulting PCM movement. Missing/non-finite evidence,

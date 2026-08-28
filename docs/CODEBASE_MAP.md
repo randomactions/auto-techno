@@ -151,7 +151,7 @@ Contracts: [`docs/LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP
 
 | Component | Targets | Canonical owner anchors | Responsibility |
 | --- | --- | --- | --- |
-| [`session-director-and-score`](#session-director-and-score) | `AutoTechnoCore` | `AutonomousSessionDirector` in [`Sources/AutoTechnoCore/AutonomousSession.swift`](../Sources/AutoTechnoCore/AutonomousSession.swift)<br>`AutonomousSessionState` in [`Sources/AutoTechnoCore/AutonomousSession.swift`](../Sources/AutoTechnoCore/AutonomousSession.swift) | Own the session identity, semantic intent, temporal memory, phrase selection, complete resolved bars, and deterministic successor state. |
+| [`session-director-and-score`](#session-director-and-score) | `AutoTechnoCore` | `AutonomousSessionDirector` in [`Sources/AutoTechnoCore/AutonomousSession.swift`](../Sources/AutoTechnoCore/AutonomousSession.swift)<br>`AutonomousSessionState` in [`Sources/AutoTechnoCore/AutonomousSession.swift`](../Sources/AutoTechnoCore/AutonomousSession.swift) | Own the session identity, semantic intent, temporal memory, phrase selection, complete resolved bars, deterministic successor state, and bounded same-intent retry fallback. |
 | [`performance-grammar-and-composition`](#performance-grammar-and-composition) | `AutoTechnoCore` | `PhraseCompositionResolver` in [`Sources/AutoTechnoCore/PhraseComposition.swift`](../Sources/AutoTechnoCore/PhraseComposition.swift)<br>`PerformanceCharacter` in [`Sources/AutoTechnoCore/PerformanceCharacter.swift`](../Sources/AutoTechnoCore/PerformanceCharacter.swift) | Resolve performance character, rhythmic relations, phrase-local slices, arpeggiation, pads, structural gestures, and score-owned feature articulations inside the canonical plan. |
 | [`instrument-pitch-and-role-policy`](#instrument-pitch-and-role-policy) | `AutoTechnoCore` | `InstrumentPalette` in [`Sources/AutoTechnoCore/InstrumentPalette.swift`](../Sources/AutoTechnoCore/InstrumentPalette.swift)<br>`FoundationPitchResolver` in [`Sources/AutoTechnoCore/FoundationPitchResolver.swift`](../Sources/AutoTechnoCore/FoundationPitchResolver.swift) | Assign internal architectures and patches, enforce tonal/atonal pitch identity, plan modal percussion, and resolve upper synth performance without creating another engine. |
 | [`long-horizon-semantic-control`](#long-horizon-semantic-control) | `AutoTechnoCore` | `LongHorizonContinuationState` in [`Sources/AutoTechnoCore/LongHorizonContinuation.swift`](../Sources/AutoTechnoCore/LongHorizonContinuation.swift) | Maintain compact long-range musical continuation, semantic trajectory, episode selection, energy coordination, effect sentences, and bounded future decision eligibility. |
@@ -183,12 +183,12 @@ Contracts: [`docs/LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP
 <a id="session-director-and-score"></a>
 ### Session director and resolved score
 
-Own the session identity, semantic intent, temporal memory, phrase selection, complete resolved bars, and deterministic successor state.
+Own the session identity, semantic intent, temporal memory, phrase selection, complete resolved bars, deterministic successor state, and bounded same-intent retry fallback.
 
 - Targets: `AutoTechnoCore`
 - Owner anchors: `AutonomousSessionDirector` in [`Sources/AutoTechnoCore/AutonomousSession.swift`](../Sources/AutoTechnoCore/AutonomousSession.swift), `AutonomousSessionState` in [`Sources/AutoTechnoCore/AutonomousSession.swift`](../Sources/AutoTechnoCore/AutonomousSession.swift)
 - Persistent or continuation state: `AutonomousSessionState`<br>`TemporalMusicalMemory`<br>`AutonomousPreparationEpoch`
-- Inputs: `private session seed`<br>`accepted continuation`<br>`qualified future adaptation`
+- Inputs: `private session seed`<br>`accepted continuation`<br>`qualified future adaptation`<br>`bounded quality retry ordinal`
 - Outputs: `AutonomousPhrasePlan`<br>`ResolvedPerformanceBar`<br>`advanced session state`
 - Evidence: `PhraseInterestReport`<br>`resolved event and pitch provenance`
 - Depends on: —

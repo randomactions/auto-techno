@@ -172,6 +172,53 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
         #expect(retry.dna == baseline.dna)
         #expect(retry.longHorizonSelection == baseline.longHorizonSelection)
         #expect(retry.paidDebtIDs == baseline.paidDebtIDs)
+        #expect(maximum.barCount == 4)
+        #expect(maximum.kind == baseline.kind)
+        #expect(maximum.longHorizonEnergyCoordination ==
+                baseline.longHorizonEnergyCoordination)
+    }
+
+    @Test("Final coherence retry satisfies the calibrated late-phrase crest-span envelope")
+    func finalRetryBoundsLatePhraseCrestSpan() throws {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var state = director.initialState()
+        while state.phraseIndex < 175 {
+            state.advancePlanning(using: director.plan(from: state))
+        }
+        let plan = director.plan(
+            from: state,
+            qualityRetryOrdinal:
+                AutonomousSessionDirector.maximumQualityRetryOrdinal
+        )
+        var renderState = RenderState()
+        renderState.barIndex = plan.startBar
+        let neverCancelled: @Sendable () -> Bool = { false }
+        let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            plan: plan,
+            sessionSeed: state.rootSeed,
+            memory: state.memory,
+            sampleRate: 44_100,
+            incomingRenderState: renderState,
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            incomingQualityState: state.quality,
+            evaluator: AcceptingPrimaryTestEvaluator(),
+            cancellationRequested: neverCancelled
+        )
+        let prepared = try #require(preparedResult)
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        let observation = try ProfessionalQualityObservation(
+            candidate: prepared.selectedCandidateEvidence,
+            engineVersion: QualityQualificationContract.engineVersion,
+            checkpoint: .longContinuation
+        )
+        let value = try #require(observation[.barCrestFactorSpan])
+        let bounds = try #require(
+            artifacts.evaluator.profile[.longContinuation]?[.barCrestFactorSpan]
+        )
+
+        #expect(plan.barCount == 4)
+        #expect(bounds.contains(value))
     }
 
     @Test("Only retry-eligible rejection advances bounded continuation")

@@ -197,7 +197,8 @@ struct KickSourceDynamicsTests {
         #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 2) == -0.25)
         #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 7) == 1)
         #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 8) == -1)
-        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: Int.max) == -1)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 9) == 1)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: Int.max) == 1)
 
         let seed: UInt64 = 42
         let baseline = KickMorphologyResolver.articulation(
@@ -230,6 +231,9 @@ struct KickSourceDynamicsTests {
         #expect(negative.start.noiseClickLevel < baseline.start.noiseClickLevel)
 
         for ordinal in 1...AutonomousQualityRetryContinuation.maximumOrdinal {
+            #expect(abs(KickMorphologyResolver.qualityRetryPressure(
+                ordinal: ordinal
+            )) <= 1)
             var previous: KickMorphologyArticulation?
             for bar in 0..<260 {
                 let articulation = KickMorphologyResolver.articulation(

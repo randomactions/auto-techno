@@ -77,7 +77,7 @@
     {
       "id": "session-director-and-score",
       "name": "Session director and resolved score",
-      "responsibility": "Own the session identity, semantic intent, temporal memory, phrase selection, complete resolved bars, and deterministic successor state.",
+      "responsibility": "Own the session identity, semantic intent, temporal memory, phrase selection, complete resolved bars, deterministic successor state, and bounded same-intent retry fallback.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -99,7 +99,8 @@
       "inputs": [
         "private session seed",
         "accepted continuation",
-        "qualified future adaptation"
+        "qualified future adaptation",
+        "bounded quality retry ordinal"
       ],
       "outputs": [
         "AutonomousPhrasePlan",

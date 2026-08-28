@@ -235,8 +235,10 @@ package enum KickMorphologyResolver {
             max(0, requestedOrdinal)
         )
         guard ordinal > 0 else { return 0 }
-        let magnitude = Double((ordinal + 1) / 2) /
-            Double(AutonomousQualityRetryContinuation.maximumOrdinal / 2)
+        // The first eight variants define the original four-step bipolar
+        // morphology vocabulary. A later score-level coherence recovery reuses
+        // full positive pressure instead of expanding these calibrated bounds.
+        let magnitude = min(1, Double((ordinal + 1) / 2) / 4)
         return ordinal.isMultiple(of: 2) ? -magnitude : magnitude
     }
 

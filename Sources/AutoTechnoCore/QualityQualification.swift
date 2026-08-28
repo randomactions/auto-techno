@@ -100,7 +100,11 @@ package enum QualityDecisionOutcome: String, Codable, Equatable, Sendable {
 /// continuation: rejected evidence never mutates the committed session state.
 package struct AutonomousQualityRetryContinuation: Codable, Equatable, Sendable {
     package static let schemaVersion = 1
-    package static let maximumOrdinal = 8
+    /// Ordinals 1...8 retain the calibrated realization vocabulary. Ordinal 9
+    /// is one final minimum-length coherence recovery before the target fails
+    /// closed, so a late phrase cannot remain permanently blocked merely
+    /// because every longer realization exceeds a phrase-wide variation gate.
+    package static let maximumOrdinal = 9
 
     package let schemaVersion: Int
     package let targetPhraseIndex: Int?
