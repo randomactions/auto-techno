@@ -39,86 +39,94 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            Button {
-                selectedView = selectedView == .performance
-                    ? .renderInspector : .performance
-            } label: {
-                Label(
-                    selectedView == .performance ? "RENDER INFO" : "PERFORMANCE",
-                    systemImage: selectedView == .performance
-                        ? "waveform.path.ecg" : "play.rectangle"
-                )
-                .font(.system(.caption2, design: .monospaced).weight(.semibold))
-                .tracking(1.0)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background {
-                    Capsule()
-                        .fill(selectedView == .renderInspector
-                            ? Color.purple.opacity(0.12)
-                            : Color.clear)
-                        .overlay {
-                            Capsule()
-                                .stroke(
-                                    selectedView == .renderInspector
-                                        ? Color.purple.opacity(0.55)
-                                        : Color.white.opacity(0.22),
-                                    lineWidth: 1
-                                )
-                        }
-                }
-            }
-            .buttonStyle(.plain)
-            .keyboardShortcut("i", modifiers: [.command])
-            .accessibilityLabel(
-                selectedView == .performance
-                    ? "Show live render information"
-                    : "Show performance controls"
-            )
-            .accessibilityHint(
-                "Switches between the transport and read-only current render details"
-            )
-            .accessibilityIdentifier("view-render-inspector")
-            .padding(.horizontal, 24)
-            .padding(.bottom, 34)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-
-            Button {
-                engine.startNewSet()
-            } label: {
-                Label("NEW SET", systemImage: "arrow.counterclockwise")
-                    .font(.system(.caption2, design: .monospaced).weight(.semibold))
-                    .tracking(1.2)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background {
-                        Capsule()
-                            .stroke(Color.white.opacity(0.22), lineWidth: 1)
-                    }
-            }
-            .buttonStyle(.plain)
-            .disabled(!engine.newSetEnabled)
-            .opacity(engine.newSetEnabled ? 1 : 0.42)
-            .keyboardShortcut("n", modifiers: [.command])
-            .accessibilityLabel("Start a new set")
-            .accessibilityHint("Ends the current set and starts a fresh performance")
-            .accessibilityIdentifier("transport-new-set")
-            .padding(.horizontal, 24)
-            .padding(.bottom, 34)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-
-            monitoringOutputControl
-                .padding(.bottom, 34)
-                .frame(
-                    maxWidth: .infinity,
-                    maxHeight: .infinity,
-                    alignment: .bottom
-                )
+            bottomControlBar
         }
         .frame(minWidth: 680, minHeight: 480)
         .preferredColorScheme(.dark)
         .onAppear { engine.prepare() }
         .onDisappear { engine.shutdown() }
+    }
+
+    private var bottomControlBar: some View {
+        HStack(spacing: 16) {
+            inspectorSwitch
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            monitoringOutputControl
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            newSetButton
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 22)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+    }
+
+    private var inspectorSwitch: some View {
+        Button {
+            selectedView = selectedView == .performance
+                ? .renderInspector : .performance
+        } label: {
+            Label(
+                selectedView == .performance ? "RENDER INFO" : "PERFORMANCE",
+                systemImage: selectedView == .performance
+                    ? "waveform.path.ecg" : "play.rectangle"
+            )
+            .font(.system(.caption2, design: .monospaced).weight(.semibold))
+            .tracking(1.0)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background {
+                Capsule()
+                    .fill(selectedView == .renderInspector
+                        ? Color.purple.opacity(0.12)
+                        : Color.clear)
+                    .overlay {
+                        Capsule()
+                            .stroke(
+                                selectedView == .renderInspector
+                                    ? Color.purple.opacity(0.55)
+                                    : Color.white.opacity(0.22),
+                                lineWidth: 1
+                            )
+                    }
+            }
+        }
+        .buttonStyle(.plain)
+        .keyboardShortcut("i", modifiers: [.command])
+        .accessibilityLabel(
+            selectedView == .performance
+                ? "Show live render information"
+                : "Show performance controls"
+        )
+        .accessibilityHint(
+            "Switches between the transport and read-only current render details"
+        )
+        .accessibilityIdentifier("view-render-inspector")
+    }
+
+    private var newSetButton: some View {
+        Button {
+            engine.startNewSet()
+        } label: {
+            Label("NEW SET", systemImage: "arrow.counterclockwise")
+                .font(.system(.caption2, design: .monospaced).weight(.semibold))
+                .tracking(1.2)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background {
+                    Capsule()
+                        .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .disabled(!engine.newSetEnabled)
+        .opacity(engine.newSetEnabled ? 1 : 0.42)
+        .keyboardShortcut("n", modifiers: [.command])
+        .accessibilityLabel("Start a new set")
+        .accessibilityHint("Ends the current set and starts a fresh performance")
+        .accessibilityIdentifier("transport-new-set")
     }
 
     private var monitoringOutputControl: some View {
@@ -215,20 +223,13 @@ struct ContentView: View {
             .accessibilityLabel(engine.transportTitle)
             .accessibilityIdentifier("transport-play-pause")
 
-            VStack(spacing: 7) {
-                Text(engine.playingTimeText)
-                    .font(.system(size: 18, weight: .semibold, design: .monospaced))
-                    .monospacedDigit()
-                    .foregroundStyle(engine.isPlaying ? Color.white : Color.secondary)
-                    .accessibilityLabel("Playing time")
-                    .accessibilityValue(engine.playingTimeText)
-                    .accessibilityIdentifier("playing-time")
-
-                Text(engine.positionText)
-                    .font(.system(.caption, design: .monospaced).weight(.medium))
-                    .tracking(0.8)
-                    .foregroundStyle(.secondary)
-            }
+            Text(engine.playingTimeText)
+                .font(.system(size: 18, weight: .semibold, design: .monospaced))
+                .monospacedDigit()
+                .foregroundStyle(engine.isPlaying ? Color.white : Color.secondary)
+                .accessibilityLabel("Playing time")
+                .accessibilityValue(engine.playingTimeText)
+                .accessibilityIdentifier("playing-time")
         }
         .padding(42)
         .frame(maxWidth: 680)

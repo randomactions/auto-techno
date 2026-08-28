@@ -102,6 +102,9 @@ struct MonitoringOutputTests {
         ))
         #expect(view.contains("monitoring-mute"))
         #expect(view.contains("monitoring-volume"))
+        #expect(view.contains("private var bottomControlBar: some View"))
+        #expect(view.contains(".padding(.bottom, 22)"))
+        #expect(!view.contains("Text(engine.positionText)"))
         #expect(view.contains(
             "keyboardShortcut(\"m\", modifiers: [.command])"
         ))

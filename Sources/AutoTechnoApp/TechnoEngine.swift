@@ -153,9 +153,6 @@ package final class TechnoEngine: ObservableObject {
         case .unavailable: "AUDIO UNAVAILABLE"
         }
     }
-    var positionText: String {
-        "\(Int(Self.bpm)) BPM · PHRASE \(sceneNumber) · BAR \(barWithinScene)"
-    }
     var playingTimeText: String {
         PlayingTimeFormatter.string(forWholeSeconds: playingTimeSeconds)
     }
