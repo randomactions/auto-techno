@@ -48,15 +48,14 @@ struct ContentView: View {
     }
 
     private var bottomControlBar: some View {
-        HStack(spacing: 16) {
-            inspectorSwitch
-                .frame(maxWidth: .infinity, alignment: .leading)
+        ZStack {
+            HStack(spacing: 16) {
+                inspectorSwitch
+                Spacer(minLength: 160)
+                newSetButton
+            }
 
             monitoringOutputControl
-                .frame(maxWidth: .infinity, alignment: .center)
-
-            newSetButton
-                .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 22)
@@ -230,6 +229,7 @@ struct ContentView: View {
                 .accessibilityLabel("Playing time")
                 .accessibilityValue(engine.playingTimeText)
                 .accessibilityIdentifier("playing-time")
+                .padding(.bottom, 28)
         }
         .padding(42)
         .frame(maxWidth: 680)
