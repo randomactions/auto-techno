@@ -81,6 +81,82 @@ struct LongHorizonEpisodeSelectionTests {
     #expect(reservedRecall.longHorizonSelection.reason == .reservedRecall)
   }
 
+  @Test("Debt closer than the minimum phrase resolves through retry fallback")
+  func unavoidableDebtDeadlineOverridesEpisodeHold() throws {
+    let director = AutonomousSessionDirector(rootSeed: 48_291)
+    let state = try state(
+      operatorKind: .payoff,
+      phraseIndex: 135,
+      totalBars: 1_152,
+      eligibleAtBar: 1_280,
+      openDebt: true,
+      debtDueByBar: 1_155
+    )
+
+    let initial = director.plan(from: state)
+    #expect(initial.kind == .lock)
+    #expect(initial.longHorizonSelection.reason == .reservedPayoff)
+    #expect(initial.interest.overdueDebtCount == 1)
+
+    for retryOrdinal in 1...AutonomousSessionDirector.maximumQualityRetryOrdinal {
+      let plan = director.plan(
+        from: state,
+        qualityRetryOrdinal: retryOrdinal
+      )
+
+      #expect(plan.kind == .energyRelease)
+      #expect(plan.longHorizonSelection.reason == .conservativeFallback)
+      #expect(plan.longHorizonSelection.phraseKind == .energyRelease)
+      #expect(plan.paidDebtIDs == [77])
+      #expect(plan.interest.overdueDebtCount == 0)
+    }
+  }
+
+  @Test("Debt within the maximum phrase caps every retry without changing its intent")
+  func debtDeadlineCapsEpisodeHold() throws {
+    let director = AutonomousSessionDirector(rootSeed: 48_291)
+    let state = try state(
+      operatorKind: .payoff,
+      phraseIndex: 135,
+      totalBars: 1_152,
+      eligibleAtBar: 1_280,
+      openDebt: true,
+      debtDueByBar: 1_159
+    )
+
+    for retryOrdinal in 1...AutonomousSessionDirector.maximumQualityRetryOrdinal {
+      let plan = director.plan(
+        from: state,
+        qualityRetryOrdinal: retryOrdinal
+      )
+
+      #expect(plan.kind == .lock)
+      #expect(plan.longHorizonSelection.reason == .reservedPayoff)
+      #expect(plan.barCount <= 7)
+      #expect(plan.interest.overdueDebtCount == 0)
+    }
+  }
+
+  @Test("Debt at the maximum phrase boundary does not preempt an episode hold")
+  func debtAtMaximumBoundaryDoesNotPreemptHold() throws {
+    let director = AutonomousSessionDirector(rootSeed: 48_291)
+    let state = try state(
+      operatorKind: .payoff,
+      phraseIndex: 135,
+      totalBars: 1_152,
+      eligibleAtBar: 1_280,
+      openDebt: true,
+      debtDueByBar: 1_168
+    )
+
+    let plan = director.plan(from: state)
+
+    #expect(plan.kind == .lock)
+    #expect(plan.longHorizonSelection.reason == .reservedPayoff)
+    #expect(plan.paidDebtIDs.isEmpty)
+    #expect(plan.interest.overdueDebtCount == 0)
+  }
+
   @Test("Invalid hierarchy context uses the one conservative fallback")
   func invalidContextFallsBackConservatively() throws {
     let director = AutonomousSessionDirector(rootSeed: 48_291)
@@ -222,6 +298,7 @@ private func state(
   totalBars: Int = 0,
   eligibleAtBar: Int,
   openDebt: Bool,
+  debtDueByBar: Int? = nil,
   continuationBar: Int? = nil
 ) throws -> AutonomousSessionState {
   let continuation = try continuation(
@@ -236,7 +313,7 @@ private func state(
       SessionDramaticDebt(
         id: 77,
         openedAtBar: max(0, totalBars - 64),
-        dueByBar: totalBars + 128,
+        dueByBar: debtDueByBar ?? totalBars + 128,
         source: .contrast
       )
     ]

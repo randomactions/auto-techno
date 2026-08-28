@@ -1780,22 +1780,29 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
     }
 
     /// Resolves one serial post-rejection proposal. Ordinal zero is exactly the
-    /// original plan. Positive ordinals preserve session identity, structural
-    /// intent, debt, and long-horizon ownership while varying only deterministic
-    /// phrase-local realization. No two candidates coexist or compete.
+    /// original plan. Positive ordinals preserve session identity, debt, and
+    /// long-horizon ownership while varying deterministic phrase-local
+    /// realization. Structural intent is preserved unless an outstanding debt
+    /// can no longer fit even the four-bar minimum; that impossible retry uses
+    /// the one canonical release fallback. No two candidates coexist or
+    /// compete.
     package func plan(
         from state: AutonomousSessionState,
         qualityRetryOrdinal: Int
     ) -> AutonomousPhrasePlan {
-        let selection = nextSelection(state: state)
+        let boundedRetryOrdinal = min(
+            Self.maximumQualityRetryOrdinal,
+            max(0, qualityRetryOrdinal)
+        )
+        let originalSelection = nextSelection(state: state)
+        let selection = boundedRetryOrdinal > 0
+            ? debtSafeSelection(originalSelection, state: state)
+            : originalSelection
         return makePlan(
             state: state,
             kind: selection.phraseKind,
             longHorizonSelection: selection,
-            qualityRetryOrdinal: min(
-                Self.maximumQualityRetryOrdinal,
-                max(0, qualityRetryOrdinal)
-            )
+            qualityRetryOrdinal: boundedRetryOrdinal
         )
     }
 
@@ -1878,6 +1885,22 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         )
     }
 
+    private func debtSafeSelection(
+        _ selection: LongHorizonPhraseSelection,
+        state: AutonomousSessionState
+    ) -> LongHorizonPhraseSelection {
+        guard selection.phraseKind != .energyRelease,
+              let earliestDeadline = state.memory.openDebts.map(\.dueByBar).min(),
+              earliestDeadline < state.memory.totalBars + 4 else {
+            return selection
+        }
+        // Four bars is the minimum canonical phrase length. Once a debt is
+        // closer than that, every non-release realization would cross the
+        // deadline and every serial quality retry would be structurally
+        // incapable of passing the interest gate.
+        return .conservative(.energyRelease)
+    }
+
     private func conservativeNextKind(
         state: AutonomousSessionState
     ) -> AutonomousPhraseKind {
@@ -1922,7 +1945,26 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         // Structural phrases always contain the next global sixteen-bar
         // resolution point while retaining the adaptive four-to-sixteen-bar
         // phrase vocabulary.
-        let length = structuralKind ? max(baseLength, barsToMacroBoundary) : baseLength
+        let unconstrainedLength = structuralKind
+            ? max(baseLength, barsToMacroBoundary)
+            : baseLength
+        let length: Int
+        if qualityRetryOrdinal > 0,
+           kind != .energyRelease,
+           let earliestDeadline = state.memory.openDebts.map(\.dueByBar).min() {
+            // Keep the selected structural intent stable after an initial
+            // rejection while preventing a retry realization from crossing
+            // an outstanding dramatic deadline. Ordinal zero retains the
+            // canonical journey unchanged; a deadline closer than the
+            // four-bar minimum was already converted to the release fallback
+            // by debtSafeSelection.
+            length = min(
+                unconstrainedLength,
+                max(4, earliestDeadline - start)
+            )
+        } else {
+            length = unconstrainedLength
+        }
         let mutationAmount: Double
         switch kind {
         case .lock: mutationAmount = 0.035

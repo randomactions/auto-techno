@@ -334,8 +334,15 @@ mistaken for a completed feedback system.
    evaluator proves symbolic phrase interest is the only failed gate, may
    increment one bounded serial retry ordinal only at a later coherent repeat
    boundary. The rejected plan and PCM never commit. The same director and
-   incoming state retain identity, structural kind, debt, and long-horizon
-   ownership while deriving a new phrase-local realization. The bounded serial
+   incoming state retain identity, debt, and long-horizon ownership while
+   deriving a new phrase-local realization. Structural kind is retained while
+   at least the canonical four-bar minimum fits before every open-debt
+   deadline; the retry length is capped at the earliest deadline so a longer
+   variant cannot become deterministically ineligible. If even four bars no
+   longer fit, only the later retry uses the existing conservative
+   energy-release fallback, because no same-kind canonical phrase can satisfy
+   the symbolic interest gate. Ordinal zero and the accepted canonical journey
+   remain unchanged. The bounded serial
    vocabulary also alternates kick attack/body pressure around the same
    continuous score-owned morphology trajectory; the renderer and evaluator
    must prove the resulting PCM movement. Missing/non-finite evidence,

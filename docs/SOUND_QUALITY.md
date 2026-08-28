@@ -607,8 +607,13 @@ The target loop is bounded and persistent:
 6. A calibrated guardrail rejection, or a hard-gate rejection proved to contain
    only invalid symbolic phrase interest, may inform one later, serial director
    proposal after a coherent accepted-PCM repeat. The rejected plan and PCM
-   never commit. The bounded retry ordinal preserves identity, structural
-   intent, debt, and long-horizon ownership; no proposals coexist or compete.
+   never commit. The bounded retry ordinal preserves identity, debt, and
+   long-horizon ownership; it preserves structural intent whenever the
+   canonical four-bar minimum still fits before the earliest open-debt
+   deadline, capping only the retry length at that deadline. If no four-bar
+   same-kind phrase can remain eligible, the later retry uses the one
+   conservative energy-release fallback. Ordinal zero stays the original
+   canonical plan, and no proposals coexist or compete.
    Its score-side vocabulary alternates bounded kick attack/body pressure around
    the continuous committed morphology trajectory, so this calibrated source
    metric changes in both directions before eight rejected variants stop in an
