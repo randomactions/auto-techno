@@ -348,12 +348,14 @@ mistaken for a completed feedback system.
    evaluated normally and still fails closed if any unchanged gate rejects it.
    Ordinal zero and the accepted canonical journey remain unchanged. The bounded serial
    vocabulary also alternates kick attack/body pressure around the same
-   continuous score-owned morphology trajectory. Its negative branch now
-   softens the existing body drive and sub level together with the contour, so
-   the exact post-fader stem can prove a bounded reduction in kick active energy
-   when the calibrated kick/foundation relationship is high; the positive
-   branch remains the inverse exploration. The renderer and evaluator must
-   prove every resulting PCM movement. Missing/non-finite evidence,
+   continuous score-owned morphology trajectory. Its gentle first step handles
+   near-boundary misses without crossing a neighboring source-dynamics gate;
+   later steps retain moderate, broad, and full-range recovery. Its negative
+   branch softens the existing body drive and sub level together with the
+   contour, so the exact post-fader stem can prove a bounded reduction in kick
+   active energy when the calibrated kick/foundation relationship is high; the
+   positive branch remains the inverse exploration. The renderer and evaluator
+   must prove every resulting PCM movement. Missing/non-finite evidence,
    unavailable policy, graph or signal-safety failure, invalid route/provenance,
    and exhaustion remain terminal. Ordinal zero remains the original plan; no
    variants coexist, rank one another, or bypass primary qualification.

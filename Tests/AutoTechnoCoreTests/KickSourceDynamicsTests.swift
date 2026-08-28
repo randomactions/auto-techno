@@ -193,8 +193,12 @@ struct KickSourceDynamicsTests {
     @Test("Serial retry pressure moves kick attack/body evidence in both bounded directions")
     func qualityRetryPressureContract() throws {
         #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 0) == 0)
-        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 1) == 0.25)
-        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 2) == -0.25)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 1) == 0.125)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 2) == -0.125)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 3) == 0.375)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 4) == -0.375)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 5) == 0.625)
+        #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 6) == -0.625)
         #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 7) == 1)
         #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 8) == -1)
         #expect(KickMorphologyResolver.qualityRetryPressure(ordinal: 9) == 1)
@@ -294,9 +298,15 @@ struct KickSourceDynamicsTests {
         )
         #expect(renderedPositive.outputSampleHash !=
                 renderedBaseline.outputSampleHash)
-        #expect(positiveAttackToBody - baselineAttackToBody > 0.05)
+        #expect(positiveAttackToBody - baselineAttackToBody > 0.03)
         #expect(renderedNegative.outputSampleHash !=
                 renderedBaseline.outputSampleHash)
+        #expect(AutonomousKickSourceDynamicsEvidence(
+            render: renderedNegative
+        ).isComplete(
+            sampleRate: 44_100,
+            expectedEventCount: negativeBar.kickMix.renderedKickEventCount
+        ))
         #expect(20 * log10(
             renderedNegative.outputRMS / renderedBaseline.outputRMS
         ) < -0.90)
@@ -340,6 +350,46 @@ struct KickSourceDynamicsTests {
                 negativeTrajectoryActive / baselineTrajectoryActive
             ) < -0.90)
         }
+    }
+
+    @Test("Gentle negative retry remains complete inside neighboring source gates")
+    func gentleNegativeRetryPreservesSourceGateRoom() throws {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var state = director.initialState()
+        for _ in 0..<10 {
+            state.advancePlanning(using: director.plan(from: state))
+        }
+        let plan = director.plan(from: state, qualityRetryOrdinal: 2)
+        #expect(plan.phraseIndex == 10)
+        var attackToBody: [Double] = []
+        var crestReduction: [Double] = []
+        for bar in plan.resolvedBars where
+            bar.ensemble.events.contains(where: { $0.voice == .kick }) {
+            let block = render(
+                resolved: bar,
+                plan: plan,
+                sampleRate: 44_100,
+                layer: .protectedRhythm
+            )
+            let rendered = block.kickMix.sourceDynamics
+            #expect(AutonomousKickSourceDynamicsEvidence(
+                render: rendered
+            ).isComplete(
+                sampleRate: 44_100,
+                expectedEventCount: block.kickMix.renderedKickEventCount
+            ))
+            attackToBody.append(20 * log10(
+                rendered.outputAttackRMS / rendered.outputBodyRMS
+            ))
+            crestReduction.append(20 * log10(
+                rendered.inputCrestFactor / rendered.outputCrestFactor
+            ))
+        }
+        let attack = attackToBody.reduce(0, +) / Double(attackToBody.count)
+        let crest = crestReduction.reduce(0, +) /
+            Double(crestReduction.count)
+        #expect((5.75457012134268...7.962090072628294).contains(attack))
+        #expect((1.207104324665403...1.5078683083490771).contains(crest))
     }
 
     private struct LegacyOracle {

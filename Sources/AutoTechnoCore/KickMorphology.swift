@@ -244,10 +244,13 @@ package enum KickMorphologyResolver {
             max(0, requestedOrdinal)
         )
         guard ordinal > 0 else { return 0 }
-        // The first eight variants define the original four-step bipolar
-        // morphology vocabulary. A later score-level coherence recovery reuses
-        // full positive pressure instead of expanding these calibrated bounds.
-        let magnitude = min(1, Double((ordinal + 1) / 2) / 4)
+        // The first eight variants define a four-step bipolar vocabulary. The
+        // gentle first step can correct a near-boundary miss without crossing
+        // an adjacent source-dynamics guardrail; later steps retain moderate,
+        // broad, and full-range recovery. A later score-level coherence
+        // recovery reuses full positive pressure instead of expanding bounds.
+        let step = (ordinal + 1) / 2
+        let magnitude = step >= 4 ? 1 : Double(step * 2 - 1) / 8
         return ordinal.isMultiple(of: 2) ? -magnitude : magnitude
     }
 
