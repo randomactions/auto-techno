@@ -55,13 +55,7 @@ struct LiveRenderInspectorView: View {
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 8)
             nextPhraseBadge
-            Text("OFF CALLBACK")
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .tracking(0.7)
-                .foregroundStyle(Color.purple)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 5)
-                .background(Color.purple.opacity(0.10), in: Capsule())
+                .layoutPriority(1)
         }
         .accessibilityElement(children: .combine)
     }
@@ -84,6 +78,7 @@ struct LiveRenderInspectorView: View {
         }
         .padding(.horizontal, 9)
         .padding(.vertical, 5)
+        .frame(minWidth: 210, idealWidth: 260, maxWidth: 320, alignment: .leading)
         .background(
             nextPhraseColor.opacity(0.10),
             in: Capsule()
@@ -100,7 +95,7 @@ struct LiveRenderInspectorView: View {
         switch nextPhraseProgress.stage {
         case .ready: .green
         case .blocked: .red
-        case .waiting, .held, .queued, .preparing, .retrying: .purple
+        case .waiting, .held, .queued, .preparing, .retrying: .autoTechnoAccent
         }
     }
 
@@ -172,7 +167,8 @@ struct LiveRenderInspectorView: View {
         MonitorPanel(title: "Render health") {
             HStack(spacing: 7) {
                 Circle()
-                    .fill(snapshot.playbackHardGatesPassed ? Color.green : Color.purple)
+                    .fill(snapshot.playbackHardGatesPassed
+                        ? Color.green : Color.autoTechnoAccent)
                     .frame(width: 6, height: 6)
                 Text(snapshot.playbackHardGatesPassed ? "QUALIFIED" : "GATES UNAVAILABLE")
                     .font(.system(size: 9, weight: .bold, design: .monospaced))
@@ -209,7 +205,7 @@ struct LiveRenderInspectorView: View {
             if snapshot.graphMutation != "None" {
                 Text(snapshot.graphMutation)
                     .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(Color.purple.opacity(0.86))
+                    .foregroundStyle(Color.autoTechnoAccent.opacity(0.86))
                     .lineLimit(1)
             }
 
@@ -358,7 +354,8 @@ private struct MonitorTextBlock: View {
                 .monitorLabelStyle()
             Text(value)
                 .font(.system(size: 10, weight: .medium, design: .monospaced))
-                .foregroundStyle(accent ? Color.purple : Color.white.opacity(0.76))
+                .foregroundStyle(accent
+                    ? Color.autoTechnoAccent : Color.white.opacity(0.76))
                 .lineLimit(lineLimit)
                 .minimumScaleFactor(0.78)
         }
@@ -378,7 +375,7 @@ private struct CompactAssignmentRow: View {
                 Spacer(minLength: 6)
                 Text("×\(assignment.eventCount)")
                     .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(Color.purple)
+                    .foregroundStyle(Color.autoTechnoAccent)
             }
             Text("\(assignment.architecture) · \(assignment.patch)")
                 .font(.system(size: 9, weight: .medium, design: .monospaced))
@@ -417,7 +414,7 @@ private struct ParameterValue: View {
             Text(label)
                 .foregroundStyle(Color.white.opacity(0.43))
             Text(String(format: "%.2f", value))
-                .foregroundStyle(Color.purple)
+                .foregroundStyle(Color.autoTechnoAccent)
                 .monospacedDigit()
         }
         .font(.system(size: 9, weight: .semibold, design: .monospaced))

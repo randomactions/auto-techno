@@ -1,5 +1,9 @@
 import SwiftUI
 
+extension Color {
+    static let autoTechnoAccent = Color(red: 0.56, green: 0.36, blue: 0.85)
+}
+
 @MainActor
 struct ContentView: View {
     @StateObject private var engine = TechnoEngine()
@@ -16,7 +20,7 @@ struct ContentView: View {
                 .ignoresSafeArea()
 
             RadialGradient(
-                colors: [Color.purple.opacity(engine.isPlaying ? 0.10 : 0.035), .clear],
+                colors: [Color.autoTechnoAccent.opacity(engine.isPlaying ? 0.10 : 0.035), .clear],
                 center: .center,
                 startRadius: 20,
                 endRadius: 360
@@ -79,13 +83,13 @@ struct ContentView: View {
             .background {
                 Capsule()
                     .fill(selectedView == .renderInspector
-                        ? Color.purple.opacity(0.12)
+                        ? Color.autoTechnoAccent.opacity(0.12)
                         : Color.clear)
                     .overlay {
                         Capsule()
                             .stroke(
                                 selectedView == .renderInspector
-                                    ? Color.purple.opacity(0.55)
+                                    ? Color.autoTechnoAccent.opacity(0.55)
                                     : Color.white.opacity(0.22),
                                 lineWidth: 1
                             )
@@ -158,7 +162,7 @@ struct ContentView: View {
                 in: 0...1
             )
             .controlSize(.mini)
-            .tint(.purple)
+            .tint(.autoTechnoAccent)
             .frame(width: 88)
             .accessibilityLabel("Monitoring volume")
             .accessibilityValue(engine.monitoringAccessibilityValue)
@@ -190,7 +194,8 @@ struct ContentView: View {
                 Text(engine.statusTitle)
                     .font(.system(.caption2, design: .monospaced).weight(.semibold))
                     .tracking(1.7)
-                    .foregroundStyle(engine.isPlaying ? Color.purple : Color.secondary)
+                    .foregroundStyle(engine.isPlaying
+                        ? Color.autoTechnoAccent : Color.secondary)
             }
 
             PerformanceWaveform(
@@ -206,7 +211,7 @@ struct ContentView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(engine.isPlaying ? Color.purple : Color.white)
+                        .fill(engine.isPlaying ? Color.autoTechnoAccent : Color.white)
                         .frame(width: 94, height: 94)
                     Image(systemName: engine.isPlaying ? "pause.fill" : "play.fill")
                         .font(.system(size: 28, weight: .bold))
@@ -260,7 +265,7 @@ private struct PerformanceWaveform: View {
                 )
                 let played = x <= progressX
                 let color = played && active
-                    ? Color.purple.opacity(0.88)
+                    ? Color.autoTechnoAccent.opacity(0.88)
                     : Color.white.opacity(active ? 0.24 : 0.13)
                 context.fill(
                     Path(roundedRect: rect, cornerRadius: rect.width * 0.5),
