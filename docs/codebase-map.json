@@ -446,7 +446,7 @@
     {
       "id": "graph-effects-routing-and-mix",
       "name": "Graph, effects, routing, and mix control",
-      "responsibility": "Plan and render the bounded DSP graph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, independently qualified repeat-hold pattern-family sidecars, and read-only waveform envelopes.",
+      "responsibility": "Plan and render the bounded DSP graph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, independently qualified repeat-hold DJ-deck chains with full-mix filtering and target-specific loop memories, and read-only waveform envelopes.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -479,7 +479,7 @@
       "evidence": [
         "graph validation",
         "protected routing reconstruction",
-        "RepeatHoldEvolutionEvidence",
+        "RepeatHoldEvolutionEvidence including full-mix routing, spectral consequence, target-specific capture, shortest grid slice, and exact replay provenance",
         "mix and spatial evidence"
       ],
       "sourcePaths": [

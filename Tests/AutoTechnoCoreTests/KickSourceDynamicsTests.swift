@@ -229,6 +229,12 @@ struct KickSourceDynamicsTests {
             absoluteBar: 0,
             qualityRetryOrdinal: 8
         )
+        let transientRecovery = KickMorphologyResolver.articulation(
+            sessionSeed: seed,
+            absoluteBar: 0,
+            qualityRetryOrdinal:
+                AutonomousQualityRetryContinuation.maximumOrdinal
+        )
         #expect(explicitZero == baseline)
         #expect(positive.isComplete)
         #expect(negative.isComplete)
@@ -242,6 +248,14 @@ struct KickSourceDynamicsTests {
         #expect(negative.start.bodyDrive < baseline.start.bodyDrive)
         #expect(positive.start.subLevel > baseline.start.subLevel)
         #expect(negative.start.subLevel < baseline.start.subLevel)
+        #expect(transientRecovery.start.bodyDecayPerSecond >
+                baseline.start.bodyDecayPerSecond)
+        #expect(transientRecovery.start.bodyDrive < baseline.start.bodyDrive)
+        #expect(transientRecovery.start.subLevel < baseline.start.subLevel)
+        #expect(transientRecovery.start.noiseClickLevel >
+                baseline.start.noiseClickLevel)
+        #expect(transientRecovery.start.tonalClickLevel >
+                baseline.start.tonalClickLevel)
 
         for ordinal in 1...AutonomousQualityRetryContinuation.maximumOrdinal {
             #expect(abs(KickMorphologyResolver.qualityRetryPressure(
@@ -285,9 +299,17 @@ struct KickSourceDynamicsTests {
             sampleRate: 44_100,
             layer: .protectedRhythm
         )
+        let transientRecoveryBar = render(
+            resolved: replacingMorphology(source, with: transientRecovery),
+            plan: plan,
+            sampleRate: 44_100,
+            layer: .protectedRhythm
+        )
         let renderedBaseline = baselineBar.kickMix.sourceDynamics
         let renderedPositive = positiveBar.kickMix.sourceDynamics
         let renderedNegative = negativeBar.kickMix.sourceDynamics
+        let renderedTransientRecovery =
+            transientRecoveryBar.kickMix.sourceDynamics
         let baselineAttackToBody = 20 * log10(
             renderedBaseline.outputAttackRMS /
                 renderedBaseline.outputBodyRMS
@@ -310,6 +332,32 @@ struct KickSourceDynamicsTests {
         #expect(20 * log10(
             renderedNegative.outputRMS / renderedBaseline.outputRMS
         ) < -0.90)
+        let baselineCrestReduction = 20 * log10(
+            renderedBaseline.inputCrestFactor /
+                renderedBaseline.outputCrestFactor
+        )
+        let transientAttackToBody = 20 * log10(
+            renderedTransientRecovery.outputAttackRMS /
+                renderedTransientRecovery.outputBodyRMS
+        )
+        let transientCrestReduction = 20 * log10(
+            renderedTransientRecovery.inputCrestFactor /
+                renderedTransientRecovery.outputCrestFactor
+        )
+        #expect(renderedTransientRecovery.outputSampleHash !=
+                renderedBaseline.outputSampleHash)
+        // The reproduced blocked target missed attack/body by 0.331 dB and
+        // exceeded crest reduction by 0.103 dB on its ordinal-zero candidate.
+        // Preserve measured recovery room beyond both exact misses.
+        #expect(transientAttackToBody - baselineAttackToBody > 0.60)
+        #expect(transientCrestReduction < baselineCrestReduction - 0.12)
+        #expect(AutonomousKickSourceDynamicsEvidence(
+            render: renderedTransientRecovery
+        ).isComplete(
+            sampleRate: 44_100,
+            expectedEventCount:
+                transientRecoveryBar.kickMix.renderedKickEventCount
+        ))
         let baselineActive = try #require(
             baselineBar.stemObservations[.kick]?.activeRMS
         )
@@ -390,6 +438,72 @@ struct KickSourceDynamicsTests {
             Double(crestReduction.count)
         #expect((5.75457012134268...7.962090072628294).contains(attack))
         #expect((1.207104324665403...1.5078683083490771).contains(crest))
+    }
+
+    @Test("Final retry corrects the reproduced low-attack high-crest miss")
+    func finalTransientRecoveryCorrectsCoupledSourceMiss() throws {
+        let seed: UInt64 = 42
+        let director = AutonomousSessionDirector(rootSeed: seed)
+        let plan = director.plan(from: director.initialState())
+        let source = try #require(plan.resolvedBars.first { bar in
+            bar.ensemble.events.contains { $0.voice == .kick }
+        })
+
+        // The blocked P12 ordinal-zero candidate was 0.331 dB below the
+        // calibrated attack/body floor and 0.103 dB above the crest-reduction
+        // ceiling. Prove source-local room beyond both misses across the
+        // trajectory homes and segment boundaries on exact 44.1 kHz PCM.
+        for absoluteBar in [0, 64, 127, 128, 192, 255] {
+            let baseline = KickMorphologyResolver.articulation(
+                sessionSeed: seed,
+                absoluteBar: absoluteBar
+            )
+            let recovery = KickMorphologyResolver.articulation(
+                sessionSeed: seed,
+                absoluteBar: absoluteBar,
+                qualityRetryOrdinal:
+                    AutonomousQualityRetryContinuation.maximumOrdinal
+            )
+            let baselineRender = render(
+                resolved: replacingMorphology(source, with: baseline),
+                plan: plan,
+                sampleRate: 44_100,
+                layer: .protectedRhythm
+            ).kickMix.sourceDynamics
+            let recoveryBlock = render(
+                resolved: replacingMorphology(source, with: recovery),
+                plan: plan,
+                sampleRate: 44_100,
+                layer: .protectedRhythm
+            )
+            let recoveryRender = recoveryBlock.kickMix.sourceDynamics
+            let attackLift = 20 * log10(
+                recoveryRender.outputAttackRMS /
+                    recoveryRender.outputBodyRMS
+            ) - 20 * log10(
+                baselineRender.outputAttackRMS /
+                    baselineRender.outputBodyRMS
+            )
+            let crestReductionChange = 20 * log10(
+                recoveryRender.inputCrestFactor /
+                    recoveryRender.outputCrestFactor
+            ) - 20 * log10(
+                baselineRender.inputCrestFactor /
+                    baselineRender.outputCrestFactor
+            )
+            #expect(recovery.isComplete)
+            #expect(recoveryRender.outputSampleHash !=
+                    baselineRender.outputSampleHash)
+            #expect(attackLift > 0.34)
+            #expect(crestReductionChange < -0.105)
+            #expect(AutonomousKickSourceDynamicsEvidence(
+                render: recoveryRender
+            ).isComplete(
+                sampleRate: 44_100,
+                expectedEventCount:
+                    recoveryBlock.kickMix.renderedKickEventCount
+            ))
+        }
     }
 
     private struct LegacyOracle {

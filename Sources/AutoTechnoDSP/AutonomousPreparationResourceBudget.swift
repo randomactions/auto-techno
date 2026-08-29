@@ -27,6 +27,7 @@ package struct AutonomousPreparationResourceBudget: Equatable, Sendable {
     package let framesPerBar: Int
     package let phraseFrameCount: Int
     package let retainedCandidatePCMByteCount: Int
+    package let repeatHoldWorkingPCMByteCount: Int
     package let continuationPCMByteCount: Int
     package let scratchPCMByteCount: Int
     package let analyzerWorkingByteCount: Int
@@ -59,6 +60,13 @@ package struct AutonomousPreparationResourceBudget: Equatable, Sendable {
             renderPassCount +
                 RepeatHoldEvolutionDSPContract.maximumPreparedVariantCount
         )
+        let maximumLooperCaptureFrameCount = Int((
+            sampleRate *
+                RepeatHoldEvolutionDSPContract
+                    .totalMaximumLooperCaptureSeconds
+        ).rounded(.up))
+        repeatHoldWorkingPCMByteCount = maximumLooperCaptureFrameCount * 2 *
+            floatBytes
 
         // Mirrors every bounded variable-length continuation owner validated
         // by AutonomousPhrasePreparer. Both current and retiring graph states
@@ -87,7 +95,8 @@ package struct AutonomousPreparationResourceBudget: Equatable, Sendable {
         reducedEvidenceByteCount =
             CanonicalJourneyQualificationReport.maximumEncodedBytes
         peakWorkingByteCount = retainedCandidatePCMByteCount +
-            continuationPCMByteCount + scratchPCMByteCount +
+            repeatHoldWorkingPCMByteCount + continuationPCMByteCount +
+            scratchPCMByteCount +
             analyzerWorkingByteCount + reducedEvidenceByteCount
     }
 

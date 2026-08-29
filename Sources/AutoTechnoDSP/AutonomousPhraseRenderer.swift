@@ -1203,6 +1203,8 @@ package struct RenderedBar: Equatable, Sendable {
     package let upperTimingRenderEvidence: UpperTimingRenderEvidence
     /// Transient detached-preparation taps. They never cross into RenderBlock
     /// or the scheduler; only reduced evidence survives phrase preparation.
+    package let audibleKickSamples: [Float]
+    package let upperPercussionSamples: [Float]
     package let graphRemainderReferenceLeftSamples: [Float]
     package let graphRemainderReferenceRightSamples: [Float]
     package let resonantAnchorSamples: [Float]
@@ -1233,6 +1235,8 @@ package struct RenderedBar: Equatable, Sendable {
                 spatialFDNRenderEvidence: SpatialFDNRenderEvidence = .neutral,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
                 upperTimingRenderEvidence: UpperTimingRenderEvidence,
+                audibleKickSamples: [Float],
+                upperPercussionSamples: [Float],
                 graphRemainderReferenceLeftSamples: [Float],
                 graphRemainderReferenceRightSamples: [Float],
                 resonantAnchorSamples: [Float],
@@ -1285,6 +1289,8 @@ package struct RenderedBar: Equatable, Sendable {
         self.spatialFDNRenderEvidence = spatialFDNRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
         self.upperTimingRenderEvidence = upperTimingRenderEvidence
+        self.audibleKickSamples = audibleKickSamples
+        self.upperPercussionSamples = upperPercussionSamples
         self.graphRemainderReferenceLeftSamples =
             graphRemainderReferenceLeftSamples
         self.graphRemainderReferenceRightSamples =
@@ -2086,24 +2092,25 @@ package enum AutonomousPhraseRenderer {
             for accumulatorIndex in holdEvolutionAccumulators.indices {
                 guard holdEvolutionAccumulators[accumulatorIndex].available
                 else { continue }
-                if let filteredRemainder = holdEvolutionAccumulators[
+                if let transformedMix = holdEvolutionAccumulators[
                     accumulatorIndex
-                ].filterState.process(
-                    left: generated.0,
-                    right: generated.1,
+                ].process(
+                    input: RepeatHoldEvolutionTransformInput(
+                        wholeMixLeft: preLiveFeedbackLeft,
+                        wholeMixRight: preLiveFeedbackRight,
+                        protectedRhythmLeft: protectedRhythm.leftSamples,
+                        protectedRhythmRight: protectedRhythm.rightSamples,
+                        melodicRemainderLeft: generated.0,
+                        melodicRemainderRight: generated.1,
+                        kick: protectedRhythm.audibleKickSamples,
+                        upperPercussion:
+                            protectedRhythm.upperPercussionSamples
+                    ),
                     cancellationRequested: cancellationRequested
                 ) {
-                    let holdPreLiveLeft = zip(
-                        protectedRhythm.leftSamples,
-                        filteredRemainder.left
-                    ).map { outputSafety($0 + $1) }
-                    let holdPreLiveRight = zip(
-                        protectedRhythm.rightSamples,
-                        filteredRemainder.right
-                    ).map { outputSafety($0 + $1) }
                     let holdClimaxOutput = ClimaxHangRenderer.render(
-                        left: holdPreLiveLeft,
-                        right: holdPreLiveRight,
+                        left: transformedMix.left,
+                        right: transformedMix.right,
                         articulation: resolved.climaxHang,
                         sampleRate: sampleRate
                     )
@@ -2119,12 +2126,33 @@ package enum AutonomousPhraseRenderer {
                             right: holdTerminalOutput.right,
                             protectedRhythmSampleHash:
                                 protectedRhythmSampleHash,
-                            sourceGraphRemainderHighBandEnergy:
-                                filteredRemainder.sourceHighBandEnergy,
-                            filteredGraphRemainderHighBandEnergy:
-                                filteredRemainder.filteredHighBandEnergy,
-                            graphRemainderEvidenceFrameCount:
-                                filteredRemainder.evidenceFrameCount
+                            inputRouting: .fullMixPreClimax,
+                            sourceMixHighBandEnergy:
+                                transformedMix.sourceHighBandEnergy,
+                            transformedMixHighBandEnergy:
+                                transformedMix.transformedHighBandEnergy,
+                            wholeMixEvidenceFrameCount:
+                                transformedMix.evidenceFrameCount,
+                            looperCapturedFrameCount:
+                                transformedMix
+                                    .looperCapturedFrameCount,
+                            looperReplayedFrameCount:
+                                transformedMix
+                                    .looperReplayedFrameCount,
+                            looperExpectedReplayedFrameCount:
+                                transformedMix
+                                    .looperExpectedReplayedFrameCount,
+                            looperBoundaryFrameCount:
+                                transformedMix
+                                    .looperBoundaryFrameCount,
+                            looperExpectedBoundaryFrameCount:
+                                transformedMix
+                                    .looperExpectedBoundaryFrameCount,
+                            looperSourceReuseExact:
+                                transformedMix.looperSourceReuseExact,
+                            looperShortestReplayFrameCount:
+                                transformedMix
+                                    .looperShortestReplayFrameCount
                         )
                     )
                 } else {

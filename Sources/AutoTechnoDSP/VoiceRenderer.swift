@@ -1922,6 +1922,8 @@ package enum VoiceRenderer {
                                     spatialFDNRenderEvidence,
                                    upperNoteRenderEvidence: upperNoteRenderEvidence,
                                    upperTimingRenderEvidence: upperTimingRenderEvidence,
+                                   audibleKickSamples: kickBus,
+                                   upperPercussionSamples: percussionTextureStem,
                                    graphRemainderReferenceLeftSamples:
                                     graphRemainderReferenceLeftSamples,
                                    graphRemainderReferenceRightSamples:

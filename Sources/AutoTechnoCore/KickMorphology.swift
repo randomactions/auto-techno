@@ -117,6 +117,57 @@ package struct KickMorphologyParameters: Equatable, Sendable {
         )
     }
 
+    /// The final serial proposal resolves the coupled source-dynamics miss
+    /// where ordinary positive pressure raises attack/body contrast by driving
+    /// the body harder, but consequently exceeds the calibrated crest-
+    /// reduction ceiling. This bounded articulation instead shortens and
+    /// softens the body while lifting only the existing click components. It
+    /// remains the same kick identity and uses no new renderer-side decision.
+    package func qualityRetryTransientRecoveryAdjusted() -> Self {
+        func bounded(
+            _ value: Double,
+            scale: Double,
+            range: ClosedRange<Double>
+        ) -> Double {
+            min(range.upperBound, max(range.lowerBound, value * scale))
+        }
+        return Self(
+            fundamentalHz: fundamentalHz,
+            pitchDepthHz: pitchDepthHz,
+            fastPitchDepthHz: fastPitchDepthHz,
+            pitchDecayPerSecond: pitchDecayPerSecond,
+            fastPitchDecayPerSecond: fastPitchDecayPerSecond,
+            bodyDecayPerSecond: bounded(
+                bodyDecayPerSecond,
+                scale: 1.10,
+                range: 13...24
+            ),
+            subDecayPerSecond: subDecayPerSecond,
+            secondHarmonicLevel: secondHarmonicLevel,
+            bodyDrive: bounded(
+                bodyDrive,
+                scale: 0.88,
+                range: 0.85...1.42
+            ),
+            subLevel: bounded(
+                subLevel,
+                scale: 0.92,
+                range: 0.15...0.30
+            ),
+            noiseClickLevel: bounded(
+                noiseClickLevel,
+                scale: 1.30,
+                range: 0.045...0.11
+            ),
+            tonalClickLevel: bounded(
+                tonalClickLevel,
+                scale: 1.30,
+                range: 0.03...0.075
+            ),
+            clickFrequencyHz: clickFrequencyHz
+        )
+    }
+
     package var isBoundedAndFinite: Bool {
         let values = [
             fundamentalHz, pitchDepthHz, fastPitchDepthHz,
@@ -174,6 +225,20 @@ package struct KickMorphologyArticulation: Equatable, Sendable {
         )
     }
 
+    package func qualityRetryTransientRecoveryAdjusted() -> Self {
+        Self(
+            version: version,
+            absoluteBar: absoluteBar,
+            segmentIndex: segmentIndex,
+            fromHome: fromHome,
+            toHome: toHome,
+            startProgress: startProgress,
+            endProgress: endProgress,
+            start: start.qualityRetryTransientRecoveryAdjusted(),
+            end: end.qualityRetryTransientRecoveryAdjusted()
+        )
+    }
+
     package var isComplete: Bool {
         version == KickMorphologyResolver.version && absoluteBar >= 0 &&
             segmentIndex >= 0 && fromHome != toHome &&
@@ -200,12 +265,13 @@ package enum KickMorphologyResolver {
         let absoluteBar = max(0, requestedBar)
         let segmentIndex = absoluteBar / segmentBarCount
         guard segmentIndex <= maximumSegmentIndex else {
-            return legacyAnchor(sessionSeed: sessionSeed, absoluteBar: absoluteBar)
-                .qualityRetryAdjusted(
-                    pressure: qualityRetryPressure(
-                        ordinal: requestedRetryOrdinal
-                    )
-                )
+            return retryAdjusted(
+                legacyAnchor(
+                    sessionSeed: sessionSeed,
+                    absoluteBar: absoluteBar
+                ),
+                ordinal: requestedRetryOrdinal
+            )
         }
         let startPosition = Double(absoluteBar) / Double(segmentBarCount)
         let endPosition = Double(absoluteBar + 1) / Double(segmentBarCount)
@@ -218,7 +284,7 @@ package enum KickMorphologyResolver {
         let anchorHz = 44.0 + Double(sessionSeed % 5) * 0.7
         let from = parameters(for: fromHome, anchorHz: anchorHz)
         let to = parameters(for: toHome, anchorHz: anchorHz)
-        return KickMorphologyArticulation(
+        return retryAdjusted(KickMorphologyArticulation(
             version: version,
             absoluteBar: absoluteBar,
             segmentIndex: segmentIndex,
@@ -228,8 +294,22 @@ package enum KickMorphologyResolver {
             endProgress: endProgress,
             start: from.interpolated(to: to, progress: startProgress),
             end: from.interpolated(to: to, progress: endProgress)
-        ).qualityRetryAdjusted(
-            pressure: qualityRetryPressure(ordinal: requestedRetryOrdinal)
+        ), ordinal: requestedRetryOrdinal)
+    }
+
+    private static func retryAdjusted(
+        _ articulation: KickMorphologyArticulation,
+        ordinal requestedOrdinal: Int
+    ) -> KickMorphologyArticulation {
+        let ordinal = min(
+            AutonomousQualityRetryContinuation.maximumOrdinal,
+            max(0, requestedOrdinal)
+        )
+        if ordinal == AutonomousQualityRetryContinuation.maximumOrdinal {
+            return articulation.qualityRetryTransientRecoveryAdjusted()
+        }
+        return articulation.qualityRetryAdjusted(
+            pressure: qualityRetryPressure(ordinal: ordinal)
         )
     }
 
@@ -248,7 +328,9 @@ package enum KickMorphologyResolver {
         // gentle first step can correct a near-boundary miss without crossing
         // an adjacent source-dynamics guardrail; later steps retain moderate,
         // broad, and full-range recovery. A later score-level coherence
-        // recovery reuses full positive pressure instead of expanding bounds.
+        // recovery owns a separate transient-clarity articulation because
+        // more body pressure cannot correct a coupled low-attack/high-crest-
+        // reduction miss.
         let step = (ordinal + 1) / 2
         let magnitude = step >= 4 ? 1 : Double(step * 2 - 1) / 8
         return ordinal.isMultiple(of: 2) ? -magnitude : magnitude

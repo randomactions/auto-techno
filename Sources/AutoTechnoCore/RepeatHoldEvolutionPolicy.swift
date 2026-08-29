@@ -3,18 +3,50 @@
 /// owner: transports only apply this decision to immutable PCM at a phrase
 /// boundary.
 package enum RepeatHoldEvolutionContract {
-    package static let version = "autotechno-repeat-hold-evolution.v2"
+    package static let version = "autotechno-repeat-hold-evolution.v4"
     package static let activationRepeatCount = 2
 }
 
-/// Three deliberately different phrase-scale gestures which reuse the same
-/// protected low-pass capability. Their order describes a coherent long-hold
-/// sentence: first one breath, then a more rhythmic answer, then a late veil.
+package enum RepeatHoldEvolutionEffectKind: String, Codable, Hashable,
+    Sendable {
+    case filter
+    case looper
+    case deckChain = "deck-chain"
+}
+
+package enum RepeatHoldEvolutionTarget: String, Codable, Hashable, Sendable {
+    case wholeMix = "whole-mix"
+    case protectedRhythm = "protected-rhythm"
+    case melodicRemainder = "melodic-remainder"
+    case upperPercussion = "upper-percussion"
+    case kick
+}
+
+/// Five deliberately different deck-scale chains. Every family intersects a
+/// whole-mix filter gesture with a loop on a musically narrower target. Their
+/// order moves from a one-bar full-mix memory through rhythm and melodic cuts
+/// into percussion and kick micro-edits down to one thirty-second note.
 package enum RepeatHoldEvolutionPatternFamily: String, CaseIterable, Codable,
     Hashable, Sendable {
-    case deepBreath = "deep-breath"
-    case twinPulse = "twin-pulse"
-    case lateVeil = "late-veil"
+    case oneBarCarousel = "loop-1-bar-whole-mix-carousel"
+    case halfBarSwitchback = "loop-1-2-bar-rhythm-switchback"
+    case quarterBarMelodyRatchet = "loop-1-4-bar-melody-ratchet"
+    case percussionMicroCascade = "loop-1-8-1-16-1-32-percussion-cascade"
+    case kickPunchCut = "loop-1-16-1-32-kick-punch-cut"
+
+    package var effectKind: RepeatHoldEvolutionEffectKind {
+        .deckChain
+    }
+
+    package var target: RepeatHoldEvolutionTarget {
+        switch self {
+        case .oneBarCarousel: .wholeMix
+        case .halfBarSwitchback: .protectedRhythm
+        case .quarterBarMelodyRatchet: .melodicRemainder
+        case .percussionMicroCascade: .upperPercussion
+        case .kickPunchCut: .kick
+        }
+    }
 }
 
 package enum RepeatHoldEvolutionPlaybackMode: Equatable, Sendable {

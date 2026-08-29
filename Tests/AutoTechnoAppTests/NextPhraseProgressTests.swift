@@ -20,10 +20,12 @@ struct NextPhraseProgressTests {
         #expect(progress.detail.contains("REPEATS 1"))
 
         progress = progress.repeated(targetPhraseNumber: 4)
-            .settingHoldEvolution(.pattern("deep breath"))
+            .settingHoldEvolution(.pattern("loop 1 bar whole mix carousel"))
         #expect(progress.repeatCount == 2)
-        #expect(progress.detail.contains("HOLD DEEP BREATH"))
-        #expect(progress.accessibilityValue.contains("HOLD DEEP BREATH"))
+        #expect(progress.detail.contains("HOLD LOOP 1 BAR WHOLE MIX CAROUSEL"))
+        #expect(progress.accessibilityValue.contains(
+            "HOLD LOOP 1 BAR WHOLE MIX CAROUSEL"
+        ))
 
         progress = progress.rejected(
             targetPhraseNumber: 4,
@@ -59,6 +61,25 @@ struct NextPhraseProgressTests {
 
         #expect(progress.detail.contains("HOLD EXACT"))
         #expect(progress.accessibilityValue.contains("HOLD EXACT"))
+    }
+
+    @Test("Looper family is named explicitly in the inspector")
+    func looperFamilyIsExplicit() {
+        let progress = NextPhraseProgress.waiting
+            .preparing(targetPhraseNumber: 4)
+            .repeated(targetPhraseNumber: 4)
+            .repeated(targetPhraseNumber: 4)
+            .repeated(targetPhraseNumber: 4)
+            .settingHoldEvolution(.pattern(
+                "loop 1 8 1 16 1 32 percussion cascade"
+            ))
+
+        #expect(progress.detail.contains(
+            "HOLD LOOP 1 8 1 16 1 32 PERCUSSION CASCADE"
+        ))
+        #expect(progress.accessibilityValue.contains(
+            "HOLD LOOP 1 8 1 16 1 32 PERCUSSION CASCADE"
+        ))
     }
 
     @Test("Exhausted quality retries become explicitly blocked")

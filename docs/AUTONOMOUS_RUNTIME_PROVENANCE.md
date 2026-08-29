@@ -318,8 +318,9 @@ mistaken for a completed feedback system.
    phrase-boundary fallback into one read-only next-phrase status. It reports
    held, queued, preparing, qualified-and-cached, or retrying state together
    with actual preparation attempts, coherent phrase repeats, one concise
-   last-failure stage/code, and an explicit blocked state after all eight
-   calibrated retry variants are rejected. The detached pipeline preserves a
+   last-failure stage/code, and an explicit blocked state after the original
+   candidate plus all nine bounded serial variants are rejected. The detached
+   pipeline preserves a
    bounded list of exact failed guards or calibrated metric values and bounds,
    and the main actor writes
    that non-PCM context to the local unified log under the
@@ -354,8 +355,13 @@ mistaken for a completed feedback system.
    branch softens the existing body drive and sub level together with the
    contour, so the exact post-fader stem can prove a bounded reduction in kick
    active energy when the calibrated kick/foundation relationship is high; the
-   positive branch remains the inverse exploration. The renderer and evaluator
-   must prove every resulting PCM movement. Missing/non-finite evidence,
+   positive branch remains the inverse exploration. The final four-bar
+   realization replaces further body pressure with one bounded
+   transient-clarity articulation: shorter/softer existing body, lower sub, and
+   stronger existing clicks. Exact 44.1 kHz source evidence must prove that it
+   raises attack/body contrast and lowers crest reduction by more than the
+   reproduced coupled P12 miss. The renderer and evaluator must prove every
+   resulting PCM movement. Missing/non-finite evidence,
    unavailable policy, graph or signal-safety failure, invalid route/provenance,
    and exhaustion remain terminal. Ordinal zero remains the original plan; no
    variants coexist, rank one another, or bypass primary qualification.
@@ -363,17 +369,21 @@ mistaken for a completed feedback system.
    phrase, so a calibrated establishment rejection can adapt without requiring
    a user to repeat the identical rejected request.
    Ordinary successor delay also owns one bounded presentation-only fallback,
-   `autotechno-repeat-hold-evolution.v2`. Core selects it only from the second
+   `autotechno-repeat-hold-evolution.v4`. Core selects it only from the second
    coherent repeat when at least one matching independently qualified sidecar
-   exists. DSP derives three pattern families during detached rendering by
-   filtering only the generated graph remainder through the existing TPT
-   state-variable primitive. Deep Breath owns one phrase arch, Twin Pulse owns
-   two smooth arches, and Late Veil owns a delayed final arch; each then
-   recombines the unchanged
-   protected rhythm pass before the existing terminal safety and master trim.
-   Reduced evidence binds exact endpoints, protected-routing hashes, graph-
-   remainder high-band reduction, output safety, level consequence, and primary
-   versus family-specific variant PCM fingerprints. Core rotates through only
+   exists. DSP derives five deck chains during detached rendering. Each owns a
+   full-mix control-rate-smoothed low-pass gesture plus a grid-locked target memory: one-bar whole
+   mix, half-bar protected rhythm, quarter-bar melodic remainder, percussion
+   one-eighth/one-sixteenth/one-thirty-second, or kick
+   one-sixteenth/one-thirty-second. The kick and percussion role taps are
+   transient preparation inputs and never survive into canonical blocks. The
+   selected target delta intersects the filtered pre-climax mix before existing
+   climax, terminal safety, and master trim. Reduced evidence binds exact phrase
+   endpoints, full-mix input routing and protected-source attribution, output
+   safety, level consequence, whole-mix high-band reduction, primary versus
+   family-specific PCM fingerprints, complete capture count, scheduled replay
+   count, shortest grid slice, loop-dry crossfade boundaries, and exact use of
+   the captured source. Core rotates through only
    the qualified families and exact accepted PCM remains the fallback when none
    qualify. The selected primary plan, blocks, candidate
    evidence, render/graph continuation, quality decision, and engine-v38
@@ -381,8 +391,9 @@ mistaken for a completed feedback system.
    immutable family at a phrase boundary, and a ready successor always advances. The
    macOS scheduler does not register sidecar occurrences as canonical live-
    feedback sources, so transformed PCM cannot be attributed to the accepted
-   candidate. No filter state, analysis, allocation, decision, log, or UI work
-   reaches either audio callback.
+   candidate. Both filter and looper state are phrase-scoped detached work; no
+   state, capture, analysis, allocation, decision, log, or UI work reaches
+   either audio callback.
    Runtime terminal qualification uses one Core-owned checkpoint priority for
    the complete phrase: establishment, long continuation from phrase index 16,
    otherwise the structural kind. An ordinary lock also uses the continuation

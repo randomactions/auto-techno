@@ -622,14 +622,18 @@ The target loop is bounded and persistent:
    four-bar same-intent coherence recovery reduces phrase-wide variation
    without changing identity, debt, selection, or energy coordination; it
    remains subject to every unchanged gate. No proposals coexist or compete.
-   Its score-side vocabulary alternates bounded kick attack/body pressure around
-   the continuous committed morphology trajectory. A gentle first step can
-   correct a near-boundary miss without crossing an adjacent source-dynamics
-   guardrail; later steps retain moderate, broad, and full-range recovery.
-   Positive pressure firms the existing body; negative pressure softens the
-   same body drive and sub level as well as its attack/body contour, so both
-   source shape and measured active kick energy move causally before nine
-   rejected variants stop in an explicit blocked state. Missing or non-finite
+   Its first eight score-side variants alternate bounded kick attack/body
+   pressure around the continuous committed morphology trajectory. A gentle
+   first step can correct a near-boundary miss without crossing an adjacent
+   source-dynamics guardrail; later steps retain moderate, broad, and full-range
+   recovery. Positive pressure firms the existing body; negative pressure
+   softens the same body drive and sub level as well as its attack/body contour,
+   so both source shape and measured active kick energy move causally. The final
+   four-bar recovery owns one bounded transient-clarity articulation: it
+   shortens and softens that same body while lifting its existing click
+   components, covering the coupled low-attack/high-crest-reduction miss that
+   ordinary positive pressure cannot resolve. Ten rejected candidates stop in
+   an explicit blocked state. Missing or non-finite
    evidence, unavailable policy,
    graph or signal-safety failure, route/provenance failure, and exhausted
    variants remain terminal.
@@ -639,20 +643,32 @@ The target loop is bounded and persistent:
 
 The repeat-hold sidecars are outside primary candidate selection and cannot make
 a rejected phrase playable. During the same detached render, version
-`autotechno-repeat-hold-evolution.v2` prepares three phrase-wide low-pass pattern
-families only from the generated graph remainder and recombines the bit-identical
-protected rhythm pass. `deep-breath` closes once across the phrase,
-`twin-pulse` makes two smooth closures, and `late-veil` reserves its closure for
-the final three quarters. A lightweight independent qualifier requires aligned immutable
-blocks, exact phrase endpoints, unchanged protected-routing hashes, changed PCM,
-at least `0.20 dB` high-band reduction in that exact graph remainder, no more
-than `0.25 dB` RMS increase, and the existing finite, `0.95` true-peak,
-`0.05` DC, `0.94` low-stereo-correlation, and `0.65` boundary limits. Failure
-discards only that family; Core rotates through the remaining qualified families
-from the second coherent repeat and preserves exact accepted PCM when none remain.
-At most three sidecars are retained for the selected render; every superseded
+`autotechno-repeat-hold-evolution.v4` prepares five phrase-wide deck chains. A
+sample-indexed, control-rate-smoothed whole-mix low-pass movement is common to every chain, while a
+bounded looper targets one canonical source: one-bar whole mix, half-bar
+protected rhythm, quarter-bar melodic graph remainder, upper percussion at
+one-eighth/one-sixteenth/one-thirty-second, or kick at
+one-sixteenth/one-thirty-second. That intersecting routing deliberately permits
+the filter to move the kick while a different source is being cut. The kick and
+upper-percussion arrays are transient detached-preparation taps; no stem PCM is
+retained in `RenderBlock` or crosses into either scheduler. Each replay reaches
+an at-most `0.98` blend between smooth crossfades bounded to `8 ms`, and its
+first and last frames remain loop-dry while the underlying canonical
+continuation keeps advancing.
+
+A lightweight independent qualifier requires aligned immutable blocks, exact
+phrase endpoints, full-mix pre-climax routing and source attribution, changed
+PCM, no more than `0.25 dB` RMS increase, and the existing finite, `0.95`
+true-peak, `0.05` DC, `0.94` low-stereo-correlation, and `0.65` boundary limits.
+Every deck chain must also prove at least `0.08 dB` whole-mix high-band reduction,
+a non-empty complete capture, the exact scheduled replay count, every loop-dry
+boundary, its shortest intended grid slice, and exact captured-source reuse.
+Failure discards only that family; Core rotates through the
+remaining qualified families from the second coherent repeat and preserves exact
+accepted PCM when none remain. At most five sidecars are retained for the selected render; every superseded
 initial sidecar is released before a corrective render, and the declared
-preparation memory budget includes that storage. Primary-v19 artifacts and
+preparation memory budget includes both that storage and bounded looper capture
+memory. Primary-v19 artifacts and
 engine-v38 candidate fingerprints remain
 unchanged because the sidecar cannot affect the primary plan, scheduled default
 PCM, evidence transaction, render continuation, or commit decision.

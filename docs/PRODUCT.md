@@ -343,20 +343,31 @@ scheduled, hashed, persisted into a set, or admitted to a controller, and it
 survives New Set only as a host-local listening preference.
 
 Prolonged ordinary successor preparation has one versioned, bounded presentation
-fallback: `autotechno-repeat-hold-evolution.v2`. The first coherent repeat stays
-bit-exact. From the second repeat, Core rotates a fixed musical sentence through
-the independently qualified `deep-breath`, `twin-pulse`, and `late-veil`
-low-pass families prepared from the accepted phrase's generated graph remainder;
-the protected foundation and percussion render is recombined unchanged. Every
-family starts and ends at exact dry samples, passes the existing finite,
-true-peak, DC, low-stereo, and boundary limits, proves a real high-band reduction
-in the processed remainder, and cannot raise phrase RMS by more than `0.25 dB`.
-Failure removes only that family from the rotation; if none qualify, transport
-keeps the exact accepted PCM. The variants never change primary candidate
-selection, score or DSP continuation,
-do not participate in canonical live-feedback attribution, and yield to a
-qualified successor at the next phrase boundary. It adds no user control,
-callback work, looper, second clock, or alternate engine.
+fallback: `autotechno-repeat-hold-evolution.v4`. The first coherent repeat stays
+bit-exact. From the second repeat, Core rotates a fixed sentence of five
+independently qualified DJ-deck chains. Every chain intersects a bold whole-mix
+control-rate-smoothed low-pass gesture with a grid-locked memory on a different source: a one-bar
+whole-mix carousel, a half-bar protected-rhythm switchback, a quarter-bar melodic
+ratchet, a percussion cascade from one eighth through one sixteenth to one
+thirty-second, and a kick punch-cut alternating one sixteenth and one
+thirty-second. The filter therefore moves the kick with the complete deck while
+the loop can simultaneously work on a narrower source. Kick and upper-percussion
+taps exist only during detached rendering and never enter canonical blocks or
+the scheduler.
+
+Every family starts and ends at exact dry phrase samples, uses an at-most `0.98`
+loop blend with an `8 ms`-bounded smooth crossfade, passes the existing finite,
+true-peak, DC, low-stereo, and boundary limits, and cannot raise phrase RMS by
+more than `0.25 dB`. Each chain proves a real whole-mix high-band reduction, a
+complete bounded capture, the exact scheduled replay count, dry loop boundaries,
+the shortest intended grid slice, exact source reuse, and full-mix pre-climax
+routing. Failure removes only that family from the rotation; if none qualify,
+transport keeps the exact accepted PCM. The variants never change primary
+candidate selection, score or DSP continuation, do not participate in canonical
+live-feedback attribution, and yield to a qualified successor at the next phrase
+boundary. All filtering, capture, target intersection, and qualification are
+phrase-scoped detached preparation; they add no callback work, user control,
+second clock, or alternate engine.
 
 ## Hard constraints
 
