@@ -331,6 +331,21 @@ mistaken for a completed feedback system.
    preparation from successor work and reports a bounded blocked reason to the
    UI and log instead of collapsing every preparation failure into audio-route
    unavailability.
+   This presentation also defines the canonical progress monitor. Callback
+   continuity, increasing LIVE time, qualified current-render health, and
+   rotating repeat-hold sidecars prove only that accepted PCM remains safely
+   audible. They do not prove that the score advanced. App/runtime and soak
+   evidence must separately retain current phrase/bar, successor target/stage,
+   attempts, coherent repeats, last failure, selected qualified hold or exact
+   fallback, route, and exact process/build identity. `blocked` or `exhausted`
+   is an immediate failed-stall outcome even while accepted PCM continues. An
+   unchanged successor tuple across two checkpoints separated by a complete
+   current-phrase boundary requires detached-log inspection; if no preparation
+   state or log progress occurred, the run is stalled. A ready successor that
+   does not win its next eligible boundary is independently a scheduler defect.
+   New Set or relaunch changes identity and cannot count as recovery evidence
+   for the failed witness. The complete procedure is defined in
+   [`AUTONOMOUS_RUNTIME_VALIDATION.md`](AUTONOMOUS_RUNTIME_VALIDATION.md).
    A calibrated guardrail rejection, or a hard-gate rejection for which the
    evaluator proves symbolic phrase interest is the only failed gate, may
    increment one bounded serial retry ordinal only at a later coherent repeat

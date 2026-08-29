@@ -645,6 +645,32 @@ The target loop is bounded and persistent:
    become continuation input for future preparation.
 8. Final immutable blocks receive a second safety check before scheduling.
 
+### Canonical progress monitoring
+
+Fail-closed candidate rejection and audible fallback are different outcomes.
+Repeating the last qualified phrase, with exact accepted PCM or a qualified
+repeat-hold sidecar, protects realtime output but does not advance the canonical
+score. A terminal `blocked`/`exhausted` successor is therefore the correct safety
+response to unacceptable candidates and, simultaneously, a failed runtime and
+soak result for an indefinitely evolving performance.
+
+Runtime verification must observe both sides of that boundary: route/playing-
+time health and the successor tuple of current phrase, target phrase, stage,
+attempt, coherent repeats, and last reason-coded failure. The same tuple across
+two phrase-boundary checkpoints is a suspected stall; `blocked`, `exhausted`, a
+ready successor missing its boundary, or the same tuple without detached-work
+progress across both checkpoints is a defect. Hold-family rotation, unchanged
+qualified render health, or increasing LIVE time may not be used as evidence of
+canonical progression.
+
+Each reproduced terminal failure must retain the exact engine/profile identity,
+root/phrase witness, primary checkpoint, all retry ordinals, failed metrics with
+observed values and calibrated bounds, and the final block reason. A repair must
+add deterministic coverage for that witness and a bounded ordinal/root sweep;
+starting a fresh set or relaunching only changes the performance identity and
+does not validate the cause. The operational checklist lives in
+[`AUTONOMOUS_RUNTIME_VALIDATION.md`](AUTONOMOUS_RUNTIME_VALIDATION.md).
+
 The repeat-hold sidecars are outside primary candidate selection and cannot make
 a rejected phrase playable. During the same detached render, version
 `autotechno-repeat-hold-evolution.v4` prepares five phrase-wide deck chains. A

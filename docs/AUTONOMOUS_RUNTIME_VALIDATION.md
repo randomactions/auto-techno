@@ -402,6 +402,60 @@ Rejected attempts must not leak their state. Cache keys and route-recovery
 requests must distinguish every state or revision capable of changing selection
 or PCM.
 
+## Successor-progress and blocked-stall monitoring
+
+Audible output is not proof that the autonomous performance is advancing. The
+accepted-PCM fallback and independently qualified repeat-hold sidecars may keep
+the route healthy and musically coherent after successor preparation has
+stopped. Runtime and soak validation must therefore monitor canonical progress
+separately from callback, route, and output health.
+
+Every exact app verification and extended soak must retain the following at
+each meaningful phrase boundary and whenever the attempt, repeat, failure, or
+route state changes:
+
+- exact source commit, local-diff state, bundle identifier, executable hash,
+  PID, and executable path;
+- live playing time, current phrase/bar, target phrase, preparation stage,
+  attempt count, coherent-repeat count, and last failure stage/code;
+- the selected qualified repeat-hold family and target, or the exact accepted-
+  PCM fallback;
+- route generation, sample rate, channel count, monitoring state, RSS, and
+  physical footprint; and
+- bounded `successor-preparation` evidence for each retained attempt, including
+  plan/checkpoint identity, failed guard or metric, observed value, calibrated
+  bounds, retry ordinal, and terminal blocked/exhausted state.
+
+Classify those checkpoints as follows:
+
+- **Healthy:** playing time and bar position advance while work is in flight;
+  successor work changes state or reaches qualified-and-cached; a ready
+  successor wins at the next eligible phrase boundary; the canonical phrase
+  index eventually advances; and repeat count resets after that score advance.
+- **Suspected stall:** the same current phrase and successor target retain the
+  same stage, attempt, and failure across two observer checkpoints separated by
+  at least one complete current-phrase boundary. Inspect detached-preparation
+  logs before classifying slow but advancing work as failed.
+- **Failed stall:** the successor reports `blocked` or `exhausted`; a ready
+  successor fails to commit at its eligible boundary; or the suspected-stall
+  tuple also has no detached preparation/log progress across both checkpoints.
+  A supported stereo route and continuing hold audio do not downgrade this
+  failure.
+
+An unsupported route remains a separate fail-closed route event: pause the
+uninterrupted-soak clock, preserve the canonical identity, and verify recovery
+when a supported 44.1/48 kHz stereo route returns. Process death, non-advancing
+playing time on a supported route, or sustained unbounded memory growth are
+independent failures even if the successor state is not blocked.
+
+For a suspected or failed stall, preserve the live process and monitoring state
+until the exact PID/path/hash, UI tuple, route, memory sample, and all bounded
+attempt diagnostics are captured. New Set or relaunch may restore progression
+with a fresh identity, but it does not close the deterministic defect. Retain a
+root/phrase witness and add a bounded regression spanning every retry ordinal
+before claiming the cause repaired. A listening run containing any blocked
+successor cannot pass app/runtime verification or physical-output soak.
+
 ## Scheduled-output feedback and callback isolation
 
 Upper-timbre evidence schema 3 plus pulse-echo, upper-role timing, phrase-
@@ -516,9 +570,14 @@ During the run:
    promotion;
 6. confirm continuous phrase progression, bounded controller state, stable CPU and
    memory, and no clicks, gaps, runaway tails, oscillating balance, crashes, or
-   disabled transport.
+   disabled transport; and
+7. record the maximum coherent-repeat count, every successor target and terminal
+   stage, and whether each selected hold family had matching qualification
+   evidence or used exact accepted PCM.
 
 Record hardware, OS, sample rates, exact commit, quality-contract revision,
-start/end times, preparation and analysis timing, controller/correction events,
-interventions, and observations. A missing soak is reported as unverified, never
-inferred from unit tests, builds, simulations, or prior snapshots.
+start/end times and phrases, preparation and analysis timing, maximum repeats,
+controller/correction events, interventions, and observations. Continuous audio
+with a non-advancing or blocked successor is a failed soak, not a successful
+long-form run. A missing soak is reported as unverified, never inferred from unit
+tests, builds, simulations, or prior snapshots.

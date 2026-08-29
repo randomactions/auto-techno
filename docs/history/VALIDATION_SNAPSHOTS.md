@@ -2617,3 +2617,42 @@ These results establish deterministic offline qualification and optimized
 build readiness. They do not constitute listening approval, app/route or
 interruption QA, latency observation, extended runtime observation, or
 physical-output soak; those remain separate and unclaimed.
+
+## Repeated successor-exhaustion stalls — 2026-08-29
+
+Two listening incidents established one recurring product failure mode with
+different deterministic causes: accepted PCM and qualified repeat-hold sidecars
+can keep audio healthy after the canonical successor has exhausted every bounded
+proposal. Continuous output therefore masked a non-advancing performance until
+the read-only next-phrase state and unified logs were inspected.
+
+The exact published-baseline app at
+`b3c8c9444e8cf787a70ba1bc5874342e8c228017` exhausted successor P735 after ten
+symbolic-interest rejections while accepted P734 continued. The bounded final-
+retry score recovery was later integrated and published in
+`05d9303dcf26141965cb438114b15712f1ad2215`.
+
+A separate local Material World v39 listening build based on that exact
+`05d9303` remote head then exhausted successor P16 at the calibrated `contrast`
+checkpoint. Its final attempt reported spectral-centroid spread of about
+`1,804.30 Hz` outside `8,243.38...15,846.12 Hz` and kick-source crest reduction
+of about `1.187 dB` below the `1.207 dB` lower bound. The UI reached `BLOCKED`,
+attempt 10, and at least 21 coherent repeats while the route remained qualified
+44.1 kHz stereo and the kick-punch-cut sidecar remained audible. The signed
+bundle identifier was `local.autotechno.materialworld.v39`; its executable
+SHA-256 was
+`9c2d5e8ba181657b930664ba7c7209f2599d6acec7401e48244f0378dc31a04d`.
+
+A fresh fetch found no remote Material World branch: `origin/main` was exactly
+`05d9303`, and the v39 source remained uncommitted local WIP. The published
+symbolic-interest recovery therefore did not cover this later guardrail-
+regression witness. This snapshot records diagnosis only; it does not claim a
+Material World repair, qualification, publication, or successful soak.
+
+The evergreen rule is now explicit in
+[`AUTONOMOUS_RUNTIME_VALIDATION.md`](../AUTONOMOUS_RUNTIME_VALIDATION.md): any
+terminal blocked/exhausted successor is an immediate runtime and soak failure,
+regardless of LIVE time, route health, current-render qualification, or hold
+rotation. A suspected nonterminal stall is the same successor tuple across two
+phrase-boundary checkpoints and must be resolved against detached preparation
+logs before slow but advancing work is classified as failed.
