@@ -4,14 +4,14 @@ import Foundation
 /// canonical session state. The geometry is planning context, not a calibrated
 /// entertainment threshold or a second arrangement engine.
 package enum LongHorizonContinuationSchema {
-    package static let schemaVersion = 2
-    package static let schemaIdentifier = "autotechno-long-horizon-continuation.v2"
+    package static let schemaVersion = 4
+    package static let schemaIdentifier = "autotechno-long-horizon-continuation.v4"
     package static let recentEpisodeCapacity = 8
     package static let recentOperatorCapacity = 6
     package static let identityLandmarkCapacity = 8
     package static let obligationCapacity = 8
     package static let minimumEpisodeMacros = 8
-    package static let maximumEpisodeMacros = 32
+    package static let maximumEpisodeMacros = 16
     package static let minimumArcEpisodes = 3
     package static let maximumArcEpisodes = 6
 }
@@ -124,6 +124,7 @@ package struct LongHorizonEpisodeIntent: Codable, Equatable, Sendable {
     package let dueByBar: Int
     package let startEnergy: LongHorizonSemanticEnergyVector
     package let target: LongHorizonEnergyTarget
+    package let materialWorld: LongHorizonMaterialWorldIntent
 }
 
 package struct LongHorizonCompletedEpisode: Codable, Equatable, Sendable {
@@ -136,6 +137,7 @@ package struct LongHorizonCompletedEpisode: Codable, Equatable, Sendable {
     package let minimumHoldUntilBar: Int
     package let dueByBar: Int
     package let completionReason: LongHorizonEpisodeCompletionReason
+    package let materialWorld: LongHorizonMaterialWorldIntent
 }
 
 package struct LongHorizonNamedUseRecency: Codable, Equatable, Sendable {
@@ -218,6 +220,10 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
     package let rootSeed: UInt64
     package let nextExpectedPhraseIndex: Int
     package let nextExpectedBar: Int
+    /// Presented bar boundary. Unlike `nextExpectedBar`, this
+    /// includes coherent accepted-PCM repeats but carries no fabricated score
+    /// or signal observation.
+    package let nextExpectedPresentationBar: Int
     package let arcIndex: Int
     package let arcEpisodeCount: Int
     package let currentEpisode: LongHorizonEpisodeIntent
@@ -243,6 +249,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         case rootSeed
         case nextExpectedPhraseIndex
         case nextExpectedBar
+        case nextExpectedPresentationBar
         case arcIndex
         case arcEpisodeCount
         case currentEpisode
@@ -271,6 +278,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             rootSeed: 0,
             nextExpectedPhraseIndex: max(0, startingPhraseIndex),
             nextExpectedBar: max(0, startingBar),
+            nextExpectedPresentationBar: max(0, startingBar),
             arcIndex: 0,
             arcEpisodeCount: LongHorizonContinuationSchema.minimumArcEpisodes,
             currentEpisode: placeholderEpisode(startingBar: startingBar),
@@ -312,13 +320,16 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             episodeIndex: 0,
             operatorKind: .maintain,
             startingBar: start,
-            startEnergy: .neutral
+            startEnergy: .neutral,
+            parentWorld: nil,
+            recentWorlds: []
         )
         return LongHorizonContinuationState(
             isBound: true,
             rootSeed: rootSeed,
             nextExpectedPhraseIndex: max(0, startingPhraseIndex),
             nextExpectedBar: start,
+            nextExpectedPresentationBar: start,
             arcIndex: 0,
             arcEpisodeCount: arcCount,
             currentEpisode: episode,
@@ -352,6 +363,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         rootSeed: UInt64,
         nextExpectedPhraseIndex: Int,
         nextExpectedBar: Int,
+        nextExpectedPresentationBar: Int,
         arcIndex: Int,
         arcEpisodeCount: Int,
         currentEpisode: LongHorizonEpisodeIntent,
@@ -376,6 +388,10 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         self.rootSeed = rootSeed
         self.nextExpectedPhraseIndex = max(0, nextExpectedPhraseIndex)
         self.nextExpectedBar = max(0, nextExpectedBar)
+        self.nextExpectedPresentationBar = max(
+            self.nextExpectedBar,
+            nextExpectedPresentationBar
+        )
         self.arcIndex = max(0, arcIndex)
         self.arcEpisodeCount = min(
             LongHorizonContinuationSchema.maximumArcEpisodes,
@@ -464,6 +480,10 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
                 forKey: .nextExpectedPhraseIndex
             ),
             nextExpectedBar: try container.decode(Int.self, forKey: .nextExpectedBar),
+            nextExpectedPresentationBar: try container.decode(
+                Int.self,
+                forKey: .nextExpectedPresentationBar
+            ),
             arcIndex: try container.decode(Int.self, forKey: .arcIndex),
             arcEpisodeCount: try container.decode(Int.self, forKey: .arcEpisodeCount),
             currentEpisode: try container.decode(
@@ -537,10 +557,23 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         guard plan.startBar == nextExpectedBar else {
             return .preserved(.barDiscontinuity)
         }
+        let maximumPresentationGap = max(
+            0,
+            Int.max - nextExpectedPresentationBar
+        )
+        let presentationGap = plan.qualityRecoveryContext.presentedRepeatBars >
+            UInt64(maximumPresentationGap)
+            ? maximumPresentationGap
+            : Int(plan.qualityRecoveryContext.presentedRepeatBars)
+        guard plan.presentationStartBar ==
+                nextExpectedPresentationBar + presentationGap else {
+            return .preserved(.barDiscontinuity)
+        }
         guard plan.barCount > 0 else {
             return .preserved(.inconsistentCanonicalPlan)
         }
-        guard plan.startBar <= Int.max - plan.barCount else {
+        guard plan.startBar <= Int.max - plan.barCount,
+              plan.presentationStartBar <= Int.max - plan.barCount else {
             return .preserved(.counterOverflow)
         }
         guard nextExpectedPhraseIndex < Int.max else {
@@ -553,6 +586,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             plan.scene.seed == suppliedRootSeed &+ 17,
             plan.dna.sceneSeed == suppliedRootSeed &+ 17,
             plan.scene.bpm == AutonomousSessionDirector.bpm,
+            plan.materialWorld.isConsistent(with: currentEpisode),
             let character = plan.resolvedBars.first?.performanceCharacter,
             plan.resolvedBars.indices.allSatisfy({ index in
                 let resolved = plan.resolvedBars[index]
@@ -567,6 +601,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         }
 
         let endBar = plan.startBar + plan.barCount
+        let presentationEndBar = plan.presentationStartBar + plan.barCount
         let energy = Self.semanticEnergy(plan)
         var capabilities = capabilityRecency
         var characters = characterRecency
@@ -601,8 +636,8 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         }
 
         let satisfies = Self.plan(plan, satisfies: currentEpisode, landmarks: landmarks)
-        let held = endBar >= currentEpisode.minimumHoldUntilBar
-        let due = endBar >= currentEpisode.dueByBar
+        let held = presentationEndBar >= currentEpisode.minimumHoldUntilBar
+        let due = presentationEndBar >= currentEpisode.dueByBar
         var nextArcIndex = arcIndex
         var nextArcEpisodeCount = arcEpisodeCount
         var nextEpisode = currentEpisode
@@ -620,10 +655,11 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
                     episodeIndex: currentEpisode.episodeIndex,
                     operatorKind: currentEpisode.operatorKind,
                     startedAtBar: currentEpisode.startedAtBar,
-                    completedAtBar: endBar,
+                    completedAtBar: presentationEndBar,
                     minimumHoldUntilBar: currentEpisode.minimumHoldUntilBar,
                     dueByBar: currentEpisode.dueByBar,
-                    completionReason: reason
+                    completionReason: reason,
+                    materialWorld: currentEpisode.materialWorld
                 ))
             nextRecentEpisodes = Array(
                 nextRecentEpisodes.suffix(
@@ -632,14 +668,14 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             if satisfies {
                 Self.resolveObligation(
                     for: currentEpisode.operatorKind,
-                    atBar: endBar,
+                    atBar: presentationEndBar,
                     obligations: &proposedObligations,
                     landmarks: &landmarks
                 )
                 guard
                     Self.openConsequentObligation(
                         after: currentEpisode,
-                        atBar: endBar,
+                        atBar: presentationEndBar,
                         sourceFingerprint: Self.lastScoreFingerprint(plan),
                         obligations: &proposedObligations
                     )
@@ -681,8 +717,10 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
                 arcIndex: nextArcIndex,
                 episodeIndex: nextEpisodeIndex,
                 operatorKind: nextOperator,
-                startingBar: endBar,
-                startEnergy: energy
+                startingBar: presentationEndBar,
+                startEnergy: energy,
+                parentWorld: currentEpisode.materialWorld,
+                recentWorlds: nextRecentEpisodes.map(\.materialWorld)
             )
             if !Self.openOperatorObligation(
                 for: nextEpisode,
@@ -705,6 +743,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
                 nextExpectedPhraseIndex:
                     longHorizonContinuationSaturatingIncrement(nextExpectedPhraseIndex),
                 nextExpectedBar: endBar,
+                nextExpectedPresentationBar: presentationEndBar,
                 arcIndex: nextArcIndex,
                 arcEpisodeCount: nextArcEpisodeCount,
                 currentEpisode: nextEpisode,
@@ -754,9 +793,13 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
                 ))
         }
 
-        let replacesUnstartedEpisode = currentEpisode.startedAtBar == nextExpectedBar
-        guard currentEpisode.operatorKind != .recover,
-            replacesUnstartedEpisode || nextExpectedBar >= currentEpisode.minimumHoldUntilBar,
+        let correctionOperator: LongHorizonEpisodeOperator =
+            decision.action == .reframeMaterial ? .reframe : .recover
+        let replacesUnstartedEpisode = currentEpisode.startedAtBar ==
+            nextExpectedPresentationBar
+        guard currentEpisode.operatorKind != correctionOperator,
+            replacesUnstartedEpisode ||
+                nextExpectedPresentationBar >= currentEpisode.minimumHoldUntilBar,
             replacesUnstartedEpisode || currentEpisode.episodeIndex < Int.max,
             trajectoryCorrectionCount < Int.max
         else { return .preserved }
@@ -789,13 +832,15 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             nextEpisodeIndex = 0
             nextReserve = .renewed
         }
-        let recovery = Self.makeEpisode(
+        let correctedEpisode = Self.makeEpisode(
             rootSeed: rootSeed,
             arcIndex: nextArcIndex,
             episodeIndex: nextEpisodeIndex,
-            operatorKind: .recover,
-            startingBar: nextExpectedBar,
-            startEnergy: lastSemanticEnergy
+            operatorKind: correctionOperator,
+            startingBar: nextExpectedPresentationBar,
+            startEnergy: lastSemanticEnergy,
+            parentWorld: currentEpisode.materialWorld,
+            recentWorlds: recentEpisodes.map(\.materialWorld)
         )
         var completed = recentEpisodes
         if !replacesUnstartedEpisode {
@@ -806,10 +851,11 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
                     episodeIndex: currentEpisode.episodeIndex,
                     operatorKind: currentEpisode.operatorKind,
                     startedAtBar: currentEpisode.startedAtBar,
-                    completedAtBar: nextExpectedBar,
+                    completedAtBar: nextExpectedPresentationBar,
                     minimumHoldUntilBar: currentEpisode.minimumHoldUntilBar,
                     dueByBar: currentEpisode.dueByBar,
-                    completionReason: .trajectoryCorrectionApplied
+                    completionReason: .trajectoryCorrectionApplied,
+                    materialWorld: currentEpisode.materialWorld
                 ))
         }
         completed = Array(
@@ -821,13 +867,13 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         {
             operators.removeLast()
         }
-        operators.append(.recover)
+        operators.append(correctionOperator)
         operators = Array(
             operators.suffix(LongHorizonContinuationSchema.recentOperatorCapacity)
         )
         return .accepted(
             replacingTrajectoryState(
-                currentEpisode: recovery,
+                currentEpisode: correctedEpisode,
                 recentEpisodes: completed,
                 recentOperators: operators,
                 arcIndex: nextArcIndex,
@@ -857,6 +903,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             rootSeed: rootSeed,
             nextExpectedPhraseIndex: nextExpectedPhraseIndex,
             nextExpectedBar: nextExpectedBar,
+            nextExpectedPresentationBar: nextExpectedPresentationBar,
             arcIndex: arcIndex,
             arcEpisodeCount: arcEpisodeCount,
             currentEpisode: currentEpisode,
@@ -883,6 +930,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         hasher.combine(rootSeed)
         hasher.combine(nextExpectedPhraseIndex)
         hasher.combine(nextExpectedBar)
+        hasher.combine(nextExpectedPresentationBar)
         hasher.combine(arcIndex)
         hasher.combine(arcEpisodeCount)
         hasher.combine(currentEpisode.id)
@@ -890,9 +938,11 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         hasher.combine(currentEpisode.startedAtBar)
         hasher.combine(currentEpisode.minimumHoldUntilBar)
         hasher.combine(currentEpisode.dueByBar)
+        hasher.combine(currentEpisode.materialWorld.fingerprint)
         for episode in recentEpisodes {
             hasher.combine(episode.id)
             hasher.combine(episode.completionReason.rawValue)
+            hasher.combine(episode.materialWorld.fingerprint)
         }
         for entry in capabilityRecency {
             hasher.combine(entry.name)
@@ -915,7 +965,15 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
     }
 
     private static func placeholderEpisode(startingBar: Int) -> LongHorizonEpisodeIntent {
-        LongHorizonEpisodeIntent(
+        let materialWorld = LongHorizonMaterialWorldResolver.make(
+            rootSeed: 0,
+            episodeID: 0,
+            operatorKind: .maintain,
+            parent: nil,
+            recallSource: nil,
+            recentFingerprints: []
+        )
+        return LongHorizonEpisodeIntent(
             id: 0,
             arcIndex: 0,
             episodeIndex: 0,
@@ -924,7 +982,8 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             minimumHoldUntilBar: max(0, startingBar),
             dueByBar: max(0, startingBar),
             startEnergy: .neutral,
-            target: target(for: .maintain)
+            target: target(for: .maintain),
+            materialWorld: materialWorld
         )
     }
 
@@ -1052,6 +1111,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         satisfies episode: LongHorizonEpisodeIntent,
         landmarks: [LongHorizonIdentityLandmarkSummary]
     ) -> Bool {
+        guard plan.materialWorld.isConsistent(with: episode) else { return false }
         switch episode.operatorKind {
         case .maintain:
             return plan.kind == .lock
@@ -1090,42 +1150,30 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         episodeIndex: Int,
         operatorKind: LongHorizonEpisodeOperator,
         startingBar: Int,
-        startEnergy: LongHorizonSemanticEnergyVector
+        startEnergy: LongHorizonSemanticEnergyVector,
+        parentWorld: LongHorizonMaterialWorldIntent?,
+        recentWorlds: [LongHorizonMaterialWorldIntent]
     ) -> LongHorizonEpisodeIntent {
-        let seed = episodeSeed(
+        let minimumMacros = LongHorizonContinuationSchema.minimumEpisodeMacros
+        let dueMacros = LongHorizonContinuationSchema.maximumEpisodeMacros
+        let start = max(0, startingBar)
+        let episodeID = episodeSeed(
             rootSeed: rootSeed,
             arcIndex: arcIndex,
             episodeIndex: episodeIndex,
-            domain: 0xE915_0DE
+            domain: 0x1D
         )
-        let baseRange: ClosedRange<Int> =
-            switch operatorKind {
-            case .maintain: 8...16
-            case .rise: 9...20
-            case .recover: 8...16
-            case .reframe: 8...18
-            case .payoff: 8...12
-            case .recall: 8...16
-            }
-        let baseSpan = baseRange.upperBound - baseRange.lowerBound + 1
-        let minimumMacros = baseRange.lowerBound + Int(seed % UInt64(baseSpan))
-        let extraMaximum = max(
-            4,
-            LongHorizonContinuationSchema.maximumEpisodeMacros - minimumMacros
+        let recallSource = recentWorlds.dropLast().last
+        let materialWorld = LongHorizonMaterialWorldResolver.make(
+            rootSeed: rootSeed,
+            episodeID: episodeID,
+            operatorKind: operatorKind,
+            parent: parentWorld,
+            recallSource: recallSource,
+            recentFingerprints: recentWorlds.map(\.fingerprint)
         )
-        let extra = 4 + Int((seed >> 8) % UInt64(extraMaximum - 3))
-        let dueMacros = min(
-            LongHorizonContinuationSchema.maximumEpisodeMacros,
-            minimumMacros + extra
-        )
-        let start = max(0, startingBar)
         return LongHorizonEpisodeIntent(
-            id: episodeSeed(
-                rootSeed: rootSeed,
-                arcIndex: arcIndex,
-                episodeIndex: episodeIndex,
-                domain: 0x1D
-            ),
+            id: episodeID,
             arcIndex: arcIndex,
             episodeIndex: episodeIndex,
             operatorKind: operatorKind,
@@ -1133,7 +1181,8 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             minimumHoldUntilBar: saturatingAdd(start, minimumMacros * 16),
             dueByBar: saturatingAdd(start, dueMacros * 16),
             startEnergy: startEnergy,
-            target: target(for: operatorKind)
+            target: target(for: operatorKind),
+            materialWorld: materialWorld
         )
     }
 

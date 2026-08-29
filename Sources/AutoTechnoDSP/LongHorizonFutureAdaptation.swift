@@ -6,9 +6,9 @@ import Foundation
 /// runtime verdict uses only the exact current route rate.
 package enum LongHorizonRuntimePolicySchema {
   package static let observationVersion =
-    "autotechno-long-horizon-runtime-observation.v1"
+    "autotechno-long-horizon-runtime-observation.v2"
   package static let adaptationVersion =
-    "autotechno-long-horizon-future-adaptation.v1"
+    "autotechno-long-horizon-future-adaptation.v2"
   package static let minimumDecisionIntervalBars = 256
 }
 
@@ -94,7 +94,13 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
         recoveryCount: family.recoveryCount,
         maximumActiveRunBars: family.maximumActiveRunBars,
         wetBarOccupancy: family.wetBarOccupancy,
-        maximumReturnToSourceDB: family.maximumReturnToSourceDB)
+        maximumReturnToSourceDB: family.maximumReturnToSourceDB,
+        materialWorldCount: family.family == .generatedGraph
+          ? effectReport.materialWorldCount : nil,
+        meanEffectWorldDistance: family.family == .generatedGraph
+          ? effectReport.meanEffectWorldDistance : nil,
+        maximumEffectWorldDistance: family.family == .generatedGraph
+          ? effectReport.maximumEffectWorldDistance : nil)
     }
     self.init(
       engineVersion: semanticReport.engineVersion,
@@ -414,7 +420,8 @@ package enum LongHorizonFutureDecisionFactory {
     policyVersion: String,
     observedThroughPhraseIndex: Int,
     observedThroughBar: Int,
-    recoveryEligible: Bool
+    recoveryEligible: Bool,
+    materialReframeEligible: Bool = false
   ) -> LongHorizonTrajectoryDecision? {
     guard observation.hasMinimumDecisionEvidence,
       observedThroughPhraseIndex >= 0,
@@ -431,7 +438,8 @@ package enum LongHorizonFutureDecisionFactory {
         action: .preserve,
         reasons: [.qualified])
     }
-    guard recoveryEligible, !verdict.failedDimensions.isEmpty else { return nil }
+    guard (recoveryEligible || materialReframeEligible),
+      !verdict.failedDimensions.isEmpty else { return nil }
     let reasons: [LongHorizonTrajectoryDecisionReason] =
       verdict.failedDimensions.map { dimension in
         switch dimension {
@@ -447,6 +455,12 @@ package enum LongHorizonFutureDecisionFactory {
         case .effectFatigue: .effectFatigue
         }
       }
+    let materialDeficit = verdict.failedDimensions.contains(.semanticPeriodicity)
+      || verdict.failedDimensions.contains(.effectFatigue)
+      || verdict.failedDimensions.contains(.capabilityFatigue)
+    let action: LongHorizonTrajectoryDecisionAction =
+      materialDeficit && materialReframeEligible ? .reframeMaterial : .recover
+    guard action != .recover || recoveryEligible else { return nil }
     return LongHorizonTrajectoryDecision(
       rootSeed: observation.rootSeed,
       policyVersion: policyVersion,
@@ -454,7 +468,7 @@ package enum LongHorizonFutureDecisionFactory {
       evidenceFingerprint: observation.sourceFingerprint,
       observedThroughPhraseIndex: observedThroughPhraseIndex,
       observedThroughBar: observedThroughBar,
-      action: .recover,
+      action: action,
       reasons: reasons)
   }
 }
@@ -473,6 +487,7 @@ package struct LongHorizonFutureAdaptationState: Sendable {
   package private(set) var expectedBar: Int
   package private(set) var nextEligibleDecisionBar: Int
   package private(set) var lastDecisionFingerprint: String?
+  package private(set) var lastMaterialReframeGeneration: Int?
 
   private let profileFingerprint: String
   private let primaryPolicyVersion: String
@@ -496,6 +511,7 @@ package struct LongHorizonFutureAdaptationState: Sendable {
       startingState.memory.totalBars,
       LongHorizonProfessionalPolicySchema.minimumJourneyBars)
     lastDecisionFingerprint = nil
+    lastMaterialReframeGeneration = nil
     profileFingerprint = policy.profile.fingerprint
     primaryPolicyVersion = policy.profile.primaryPolicyVersion
     semantic = LongHorizonSemanticTrajectoryAccumulator(
@@ -531,6 +547,7 @@ package struct LongHorizonFutureAdaptationState: Sendable {
       hasher.mix(report.observationCount)
     }
     hasher.mix(lastDecisionFingerprint ?? "none")
+    hasher.mix(lastMaterialReframeGeneration ?? -1)
     return hasher.hex
   }
 
@@ -602,6 +619,10 @@ package struct LongHorizonFutureAdaptationState: Sendable {
       && (continuation.currentEpisode.startedAtBar == continuation.nextExpectedBar
         || continuation.nextExpectedBar
           >= continuation.currentEpisode.minimumHoldUntilBar)
+    let materialGeneration = continuation.currentEpisode.materialWorld.generation
+    let materialReframeEligible =
+      continuation.currentEpisode.startedAtBar == continuation.nextExpectedBar
+      && candidate.lastMaterialReframeGeneration != materialGeneration
     let verdict = policy.evaluate(
       observation,
       expectedRootSeed: incomingState.rootSeed)
@@ -611,7 +632,8 @@ package struct LongHorizonFutureAdaptationState: Sendable {
       policyVersion: policy.policyVersion,
       observedThroughPhraseIndex: prepared.plan.phraseIndex,
       observedThroughBar: end.partialValue,
-      recoveryEligible: recoveryEligible)
+      recoveryEligible: recoveryEligible,
+      materialReframeEligible: materialReframeEligible)
     if let decision {
       let nextEligible = end.partialValue.addingReportingOverflow(
         LongHorizonRuntimePolicySchema.minimumDecisionIntervalBars)
@@ -619,6 +641,9 @@ package struct LongHorizonFutureAdaptationState: Sendable {
         nextEligible.overflow
         ? Int.max : nextEligible.partialValue
       candidate.lastDecisionFingerprint = decision.fingerprint
+      if decision.action == .reframeMaterial {
+        candidate.lastMaterialReframeGeneration = materialGeneration
+      }
     }
     return LongHorizonFutureAdaptationUpdate(
       state: candidate,

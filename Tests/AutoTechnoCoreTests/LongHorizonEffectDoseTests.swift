@@ -229,6 +229,12 @@ private func syntheticPhrase(
     startBar: startBar,
     phraseKind: .lock,
     planFingerprint: "0123456789abcdef",
+    materialWorldFingerprint: phraseIndex.isMultiple(of: 2)
+      ? "1111111111111111" : "2222222222222222",
+    materialWorldGeneration: phraseIndex,
+    graphRevision: phraseIndex,
+    requestedEffectWorld: .neutral,
+    realizedEffectWorld: .neutral,
     plannedSentence: nil,
     realizedSentence: nil,
     bars: bars)

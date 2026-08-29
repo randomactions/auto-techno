@@ -5,6 +5,37 @@ import Testing
 
 @Suite("Professional quality calibration")
 struct ProfessionalQualityCalibrationTests {
+    @Test("Failed metric direction reduces to bounded Core recovery intent")
+    func recoveryIntentReductionIsDirectional() {
+        let low = ProfessionalQualityRecoveryIntentReducer.reduce([
+            ProfessionalQualityRecoveryFailure(
+                metric: .spectralCentroidSpreadHz,
+                value: 1_804,
+                lowerBound: 8_243,
+                upperBound: 15_846
+            ),
+            ProfessionalQualityRecoveryFailure(
+                metric: .kickSourceCrestReductionDBMean,
+                value: 1.187,
+                lowerBound: 1.206,
+                upperBound: 2.4
+            ),
+        ])
+        let highKick = ProfessionalQualityRecoveryIntentReducer.reduce([
+            ProfessionalQualityRecoveryFailure(
+                metric: .kickSourceCrestReductionDBMean,
+                value: 3.0,
+                lowerBound: 1.2,
+                upperBound: 2.4
+            ),
+        ])
+
+        #expect(low.spectralMovement == .increase)
+        #expect(low.kickCrestReduction == .increase)
+        #expect(low.symbolicDensity == .hold)
+        #expect(highKick.kickCrestReduction == .decrease)
+    }
+
     @Test("Representative observations derive a deterministic vector profile")
     func deterministicProfile() throws {
         let observations = try representativeObservations()
@@ -323,27 +354,27 @@ struct ProfessionalQualityCalibrationTests {
     @Test("Musical consequence metrics are versioned and non-compensable")
     func modalMetricContract() {
         #expect(ProfessionalQualityMetric.allCases.count == 68)
-        #expect(ProfessionalQualityObservation.schemaVersion == 15)
+        #expect(ProfessionalQualityObservation.schemaVersion == 16)
         #expect(ProfessionalQualityObservation.observationVersion ==
-                "autotechno-professional-quality-observation.v15")
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 20)
+                "autotechno-professional-quality-observation.v16")
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 21)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v20")
+                "autotechno-professional-evidence.v21")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v19")
+                "autotechno-quality.primary-calibrated.v21")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v19")
+                "autotechno-candidate-evaluator.primary-calibrated.v21")
         #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
-                "autotechno-professional-quality-profile.v19")
-        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 15)
+                "autotechno-professional-quality-profile.v21")
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 16)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v19")
-        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 16)
+                "autotechno-professional-quality-profile.v21")
+        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 17)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
-                "autotechno-professional-quality-adversarial.v16")
-        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 14)
+                "autotechno-professional-quality-adversarial.v17")
+        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 15)
         #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
-                "autotechno-professional-quality-holdout.v14")
+                "autotechno-professional-quality-holdout.v15")
 
         for metric in [
             ProfessionalQualityMetric.modalPercussionPitchErrorCentsMaximum,
@@ -858,6 +889,46 @@ struct ProfessionalQualityCalibrationTests {
         #expect(abs(span.maximumAbsoluteDelta - 0.06) < 0.000_000_001)
     }
 
+    @Test("Kick event bounds include one authored pattern step")
+    func kickEventPatternGuardBand() throws {
+        let trajectories = try (0..<24).map { index in
+            try ProfessionalQualityCalibrationTrajectory(
+                sourceBankFingerprint: "kick-pattern-margin-\(index)",
+                observations: representativeObservations()
+            )
+        }
+        let profile = try ProfessionalQualityCalibrationProfile(
+            corpus: ProfessionalQualityCalibrationCorpus(
+                trajectories: trajectories
+            )
+        )
+        let contrast = try #require(profile[.contrast]?[.kickEventCountMean])
+        #expect(contrast.contains(3))
+        #expect(contrast.contains(5))
+        #expect(!contrast.contains(2.99))
+        #expect(!contrast.contains(5.02))
+    }
+
+    @Test("Masking rate bounds include only normalized overlap quantization")
+    func maskingRateConsistencyQuantizationMargin() throws {
+        let trajectories = try (0..<24).map { index in
+            try ProfessionalQualityCalibrationTrajectory(
+                sourceBankFingerprint: "masking-rate-margin-\(index)",
+                observations: representativeObservations()
+            )
+        }
+        let profile = try ProfessionalQualityCalibrationProfile(
+            corpus: ProfessionalQualityCalibrationCorpus(
+                trajectories: trajectories
+            )
+        )
+        let masking = try #require(profile.rateConsistency.first {
+            $0.checkpoint == .release &&
+                $0.metric == .maskingMaximumOverlap
+        })
+        #expect(abs(masking.maximumAbsoluteDelta - 0.06) < 0.000_000_001)
+    }
+
     @Test("Transient-density bounds include only a floating-point margin")
     func transientDensityCheckpointQuantizationMargin() throws {
         let trajectories = try (0..<24).map { index in
@@ -978,7 +1049,7 @@ struct ProfessionalQualityCalibrationTests {
             currentObservationJSON,
             replacements: [
                 "\"schemaVersion\":15": "\"schemaVersion\":14",
-                "autotechno-professional-quality-observation.v15":
+                "autotechno-professional-quality-observation.v16":
                     "autotechno-professional-quality-observation.v14",
             ]
         )
@@ -992,7 +1063,7 @@ struct ProfessionalQualityCalibrationTests {
             artifacts.profile.deterministicJSON(),
             replacements: [
                 "\"schemaVersion\":15": "\"schemaVersion\":14",
-                "autotechno-professional-quality-profile.v19":
+                "autotechno-professional-quality-profile.v21":
                     "autotechno-professional-quality-profile.v18",
             ]
         )
@@ -1006,7 +1077,7 @@ struct ProfessionalQualityCalibrationTests {
             artifacts.adversarial.deterministicJSON(),
             replacements: [
                 "\"schemaVersion\":16": "\"schemaVersion\":15",
-                "autotechno-professional-quality-adversarial.v16":
+                "autotechno-professional-quality-adversarial.v17":
                     "autotechno-professional-quality-adversarial.v15",
             ]
         )
@@ -1020,9 +1091,9 @@ struct ProfessionalQualityCalibrationTests {
             artifacts.holdout.deterministicJSON(),
             replacements: [
                 "\"schemaVersion\":14": "\"schemaVersion\":13",
-                "autotechno-professional-quality-holdout.v14":
+                "autotechno-professional-quality-holdout.v15":
                     "autotechno-professional-quality-holdout.v13",
-                "autotechno-professional-quality-holdout-evaluator.v14":
+                "autotechno-professional-quality-holdout-evaluator.v15":
                     "autotechno-professional-quality-holdout-evaluator.v13",
             ]
         )
@@ -1062,7 +1133,7 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Bundled v19 primary artifacts activate the exact v19 evaluator")
+    @Test("Bundled v21 primary artifacts activate the exact v21 evaluator")
     func primaryArtifacts() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(artifacts.profile.fingerprint ==

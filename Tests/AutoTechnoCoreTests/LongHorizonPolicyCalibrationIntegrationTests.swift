@@ -6,8 +6,10 @@ import Testing
 
 @Suite("Representative long-horizon policy calibration", .serialized)
 struct LongHorizonPolicyCalibrationIntegrationTests {
-  private let developmentRoots: [UInt64] = [48_291, 77_777, 90_909, 112_358, 246_813]
-  private let holdoutRoots: [UInt64] = [141_421, 173_205]
+  private let developmentRoots: [UInt64] = [
+    48_291, 77_777, 90_909, 112_358, 141_421, 173_205, 246_813,
+  ]
+  private let holdoutRoots: [UInt64] = [271_828, 314_159]
 
   /// Deliberately expensive and opt-in. Each root supplies a complete
   /// four-hour canonical semantic journey plus exact primary-qualified,
@@ -113,7 +115,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     primary: ProfessionalQualityPrimaryEvaluator
   ) throws -> LongHorizonPolicyObservation {
     let url = try outputDirectory().appendingPathComponent(
-      "long-horizon-observation-local-\(rootSeed)-v1.json")
+      "long-horizon-observation-local-\(rootSeed)-v2.json")
     if ProcessInfo.processInfo.environment[
       "AUTOTECHNO_REUSE_LONG_HORIZON_OBSERVATIONS"
     ] == "1", FileManager.default.fileExists(atPath: url.path) {
@@ -142,13 +144,13 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       .decodeDeterministicJSON(
         Data(
           contentsOf: directory.appendingPathComponent(
-            "long-horizon-development-corpus-local-v1.json")))
+            "long-horizon-development-corpus-local-v2.json")))
     let holdout =
       try LongHorizonPolicyCalibrationCorpus
       .decodeDeterministicJSON(
         Data(
           contentsOf: directory.appendingPathComponent(
-            "long-horizon-holdout-corpus-local-v1.json")))
+            "long-horizon-holdout-corpus-local-v2.json")))
     guard development.observations.map(\.rootSeed) == developmentRoots.sorted(),
       holdout.observations.map(\.rootSeed) == holdoutRoots.sorted()
     else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
@@ -164,10 +166,10 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let directory = try outputDirectory()
     try development.deterministicJSON().write(
       to: directory.appendingPathComponent(
-        "long-horizon-development-corpus-local-v1.json"))
+        "long-horizon-development-corpus-local-v2.json"))
     try holdout.deterministicJSON().write(
       to: directory.appendingPathComponent(
-        "long-horizon-holdout-corpus-local-v1.json"))
+        "long-horizon-holdout-corpus-local-v2.json"))
   }
 
   private func outputDirectory() throws -> URL {
@@ -192,6 +194,9 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     let primary = try ProfessionalQualityPrimaryArtifacts.load()
     let observation = try renderObservation(
       rootSeed: rootSeed, primary: primary.evaluator)
+    let url = try outputDirectory().appendingPathComponent(
+      "long-horizon-observation-local-\(rootSeed)-v2.json")
+    try observation.deterministicJSON().write(to: url)
     progress(
       "diagnostic root=\(rootSeed) source=\(observation.sourceFingerprint) "
         + "semantic=\(observation.semanticFingerprint) "

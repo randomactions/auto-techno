@@ -5629,6 +5629,10 @@ package struct AutonomousGraphEvidence: Codable, Equatable, Sendable {
     package let violations: [String]
     package let mutationKind: String?
     package let mutatedNodeCount: Int
+    package let materialWorldFingerprint: String
+    package let requestedEffectWorld: EffectWorldTarget
+    package let realizedEffectWorld: EffectWorldTarget
+    package let effectWorldDistance: Double
 
     package init(
         graphFingerprint: String,
@@ -5642,7 +5646,10 @@ package struct AutonomousGraphEvidence: Codable, Equatable, Sendable {
         sourceViolationCount: Int,
         violations: [String],
         mutationKind: String?,
-        mutatedNodeCount: Int
+        mutatedNodeCount: Int,
+        materialWorldFingerprint: String = "unbound",
+        requestedEffectWorld: EffectWorldTarget = .neutral,
+        realizedEffectWorld: EffectWorldTarget = .neutral
     ) {
         self.graphFingerprint = graphFingerprint
         self.revision = revision
@@ -5656,6 +5663,12 @@ package struct AutonomousGraphEvidence: Codable, Equatable, Sendable {
         self.violations = Array(violations.prefix(Self.maximumViolationCount))
         self.mutationKind = mutationKind
         self.mutatedNodeCount = mutatedNodeCount
+        self.materialWorldFingerprint = materialWorldFingerprint
+        self.requestedEffectWorld = requestedEffectWorld
+        self.realizedEffectWorld = realizedEffectWorld
+        effectWorldDistance = requestedEffectWorld.distance(
+            from: realizedEffectWorld
+        )
     }
 
     package var isComplete: Bool {
@@ -5666,7 +5679,10 @@ package struct AutonomousGraphEvidence: Codable, Equatable, Sendable {
               maximumDepth <= DSPGraphPlan.maximumSerialDepth,
               sourceViolationCount == violations.count,
               sourceViolationCount <= Self.maximumViolationCount,
-              mutatedNodeCount >= 0, mutatedNodeCount <= 2 else {
+              mutatedNodeCount >= 0, mutatedNodeCount <= 2,
+              !materialWorldFingerprint.isEmpty,
+              effectWorldDistance.isFinite,
+              (0...1).contains(effectWorldDistance) else {
             return false
         }
         let summarizedValidationValid = lowEndProtected && protectedRoutingValid &&
@@ -5820,7 +5836,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 35
+    package static let schemaVersion = 37
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -6727,7 +6743,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourceViolationCount: graphValidation.violations.count,
             violations: graphValidation.violations,
             mutationKind: graph.mutation?.kind.rawValue,
-            mutatedNodeCount: graph.mutation?.affectedNodeIDs.count ?? 0
+            mutatedNodeCount: graph.mutation?.affectedNodeIDs.count ?? 0,
+            materialWorldFingerprint: graph.materialWorldFingerprint,
+            requestedEffectWorld: graph.effectWorldTarget,
+            realizedEffectWorld: graph.realizedEffectWorld
         )
         let route = AutonomousRouteContinuationEvidence(
             sampleRate: sampleRate,
@@ -9152,7 +9171,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
 }
 
 package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sendable {
-    package static let schemaVersion = 6
+    package static let schemaVersion = 8
     package static let maximumCorrectionAttempts =
         QualityQualificationContract.maximumCorrectionRenders
     package static let maximumAttemptCount =
@@ -9465,7 +9484,7 @@ package struct AutonomousCandidateContinuationFingerprint: Codable, Equatable, S
             routeRecovery: routeRecovery,
             combined: AutonomousCandidateCanonicalJSON.fingerprint(
                 FingerprintPayload(
-                    version: "candidate-continuation.v2",
+                    version: "candidate-continuation.v3",
                     renderState: render,
                     generatedDSPState: graph,
                     qualityState: quality,
@@ -9561,7 +9580,7 @@ package struct AutonomousLiveTargetStartEvidence: Codable, Equatable, Sendable {
 /// outside the transaction so the finalized quality state can be bound without
 /// creating a self-referential evidence fingerprint.
 package struct AutonomousPreparedCommitProvenance: Codable, Equatable, Sendable {
-    package static let schemaVersion = 2
+    package static let schemaVersion = 3
 
     package let schemaVersion: Int
     package let candidateEvaluationFingerprint: String
@@ -9722,7 +9741,7 @@ package struct AutonomousPreparedCommitProvenance: Codable, Equatable, Sendable 
         liveTargetStart: AutonomousLiveTargetStartEvidence
     ) -> String {
         AutonomousCandidateCanonicalJSON.fingerprint(FingerprintPayload(
-            version: "prepared-commit.v2",
+            version: "prepared-commit.v3",
             candidateEvaluationFingerprint: candidateEvaluationFingerprint,
             selectedSampleHash: selectedSampleHash,
             outgoingRenderDSPFingerprint: outgoingRenderDSPFingerprint,

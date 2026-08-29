@@ -51,7 +51,7 @@ struct LongHorizonTrajectoryBaselineTests {
 
     private static let expectedV3 = LongHorizonPlanningBaselineReport(
         schemaVersion: "long-horizon-planning-baseline.v3",
-        engineVersion: "autotechno-canonical-engine.v38",
+        engineVersion: "autotechno-canonical-engine.v40",
         evidenceClassification: "descriptive-structural-baseline",
         qualificationStatus: "unavailable",
         qualificationReason: "no-calibrated-long-horizon-policy",
@@ -59,29 +59,29 @@ struct LongHorizonTrajectoryBaselineTests {
         bpm: 130,
         requestedHours: 4,
         requestedBars: 7_800,
-        totalBars: 7_801,
-        phraseCount: 714,
+        totalBars: 7_802,
+        phraseCount: 725,
         phraseKindCounts: [
-            .init(name: "lock", count: 303),
-            .init(name: "contrast", count: 192),
-            .init(name: "majorBreak", count: 96),
-            .init(name: "energyRelease", count: 69),
-            .init(name: "identityReturn", count: 54),
+            .init(name: "lock", count: 331),
+            .init(name: "contrast", count: 194),
+            .init(name: "majorBreak", count: 89),
+            .init(name: "energyRelease", count: 65),
+            .init(name: "identityReturn", count: 46),
         ],
         performanceCharacterCounts: [
-            .init(name: "hypnoticLock", count: 205),
-            .init(name: "acidPressure", count: 131),
-            .init(name: "peakDrive", count: 44),
-            .init(name: "brokenSuspension", count: 119),
-            .init(name: "ambientDrift", count: 52),
-            .init(name: "melodicGlow", count: 163),
+            .init(name: "hypnoticLock", count: 77),
+            .init(name: "acidPressure", count: 172),
+            .init(name: "peakDrive", count: 49),
+            .init(name: "brokenSuspension", count: 216),
+            .init(name: "ambientDrift", count: 25),
+            .init(name: "melodicGlow", count: 186),
         ],
         highTensionObservationFloor: 0.8,
-        highTensionBarCount: 670,
+        highTensionBarCount: 629,
         recoveryTensionObservationCeiling: 0.4,
-        recoveryTensionBarCount: 390,
-        distinctEventSignatureCount: 711,
-        maximumOpenDebtCount: 6,
+        recoveryTensionBarCount: 388,
+        distinctEventSignatureCount: 1_040,
+        maximumOpenDebtCount: 7,
         maximumMemoryCounts: .init(
             recentBars: 4,
             currentPhrase: 16,
@@ -91,12 +91,12 @@ struct LongHorizonTrajectoryBaselineTests {
         ),
         finalMemoryCounts: .init(
             recentBars: 4,
-            currentPhrase: 13,
-            previousPhrase: 5,
-            dramaticArc: 57,
+            currentPhrase: 16,
+            previousPhrase: 6,
+            dramaticArc: 99,
             sessionBars: 256
         ),
-        planSequenceFingerprint: "4a56c7cd78fe0184",
-        barEvidenceFingerprint: "07417d6988caf5ba"
+        planSequenceFingerprint: "28d944266dfaa03e",
+        barEvidenceFingerprint: "d57d500f3aa67a0e"
     )
 }

@@ -1,8 +1,9 @@
 # Single Primary Evaluator
 
-Current engine v38 binds pitch identity and transition-tail continuity under
-quality schema 39, candidate-vector schema 35, and transaction schema 6. Its
-primary-v19 artifacts are the single active qualification set.
+Current engine v40 binds material-world/effect-target lineage, pitch identity,
+and transition-tail continuity under quality schema 41, candidate-vector schema
+37, and transaction schema 8. Its primary-v21 artifacts are the single active
+qualification set.
 
 ## Runtime contract
 
@@ -12,25 +13,25 @@ symbolic and signal evidence, and asks one exact-engine calibrated evaluator for
 the terminal verdict. There is no parallel plan, comparator, musical substitute,
 selector, or permissive shipping evaluator.
 
-If that terminal verdict is a calibrated quality rejection, a later coherent
-repeat boundary may ask the same director for one serial retry ordinal. The
-ordinal preserves incoming session identity, structural kind, debt, long-horizon
-ownership, and continuation while varying deterministic phrase-local realization.
-Ordinal zero is the original plan; at most nine serial variants may be tried.
-The serial vocabulary also alternates an increasing, bounded score-side kick
-attack/body pressure around the committed morphology trajectory. This makes a
-calibrated kick-source miss capable of changing the measured PCM in either
-direction while preserving the trajectory, its bar-to-bar continuity, and the
-one canonical kick voice. After the first eight variants, the final same-intent
-four-bar proposal also reuses the existing score-side `minimalize` gesture on
-every ordinary bar while preserving any structural macro marker. This moves
-symbolic density and intentional-space evidence causally without changing the
-calibrated symbolic-interest threshold.
-Each variant has its own plan, PCM, evidence, and terminal verdict, and the prior
-variant is discarded before the next is proposed. Unavailable evaluation,
-invalid evidence, hard-gate failure, and commit-provenance failure cannot enable
-this adaptation. Nine rejected variants produce an explicit blocked state and
-stop preparation work while transport continues repeating accepted PCM.
+If that terminal verdict is a retryable calibrated quality rejection, the DSP
+evaluator reduces the failed fixed-domain metrics into a Core-owned recovery
+intent. Symbolic overactivity decreases density through the existing final
+`minimalize` realization; insufficient spectral spread or movement increases
+existing timbral motion; insufficient kick crest reduction strengthens the
+existing kick body without selecting the high-crest transient articulation.
+The first successor retry waits for one coherent accepted-PCM repeat. Remaining
+ordinals within the finite wave run serially in detached preparation. Wave exhaustion
+yields until the next coherent boundary, advances presentation time, and opens
+a new deterministically salted finite wave. Recovery therefore keeps working
+without unbounded work at one boundary and without bypassing any quality gate.
+Before P1 has accepted PCM, detached preparation opens the next finite wave
+immediately after exhaustion and yields between tasks instead of waiting for a
+boundary that cannot exist.
+Every variant preserves incoming session identity, structural kind, debt,
+long-horizon ownership, and canonical continuation; rejected plans and PCM are
+discarded. Unavailable evaluation, invalid evidence, non-retryable hard-gate
+failure, signal-safety failure, and commit-provenance failure remain fail-closed
+blocked states. Recovery never issues Pause or New Set.
 
 The evaluator may request one bounded home-upper-timbre correction. That second
 pass rerenders the same plan from the same incoming render, graph, route, and
@@ -47,11 +48,11 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v38 profile v19, adversarial suite v16, and disjoint holdout qualification
-v14. The profile derives from 28 complete
-44.1/48 kHz journeys; four disjoint holdout journeys passed every local and
-relationship gate. The pinned fingerprints are profile `9f434ba64b57a947`,
-adversarial suite `8408fbbb193dd10a`, and holdout `d171cd3c2f3fb6c4`.
+engine-v40 profile v21, adversarial suite v17, and disjoint holdout qualification
+v15. The profile derives from 36 complete 44.1/48 kHz journeys; four fresh,
+disjoint holdout journeys passed all 56 local verdicts and every relationship
+gate. The pinned profile, adversarial, and holdout fingerprints are
+`0db15f56c212784d`, `c85ff24879dc3561`, and `1ac200132cfe4010`.
 
 Offline calibration may retain several checkpoint observations from one
 candidate. Runtime terminal qualification selects one most-specific

@@ -1,5 +1,22 @@
 # Performance Character Grammar
 
+## Material-world evolution
+
+Each long-horizon episode is one causal material world, held for eight to
+sixteen sixteen-bar macros (about four to eight minutes at 130 BPM). A child
+retains the session root, tonal centre, and modal ancestry while changing at
+least four of six axes: rhythm, motif, role hierarchy, harmony, timbral
+architecture, and effect world. Rhythm, roles, architecture, and effect are
+mandatory child changes; an exact world fingerprint cannot recur inside the
+last four completed worlds.
+
+Episode operators define the handoff instead of reordering stock phrase types:
+maintain morphs lineage, rise layers activity, recover makes a subtractive
+break, reframe bridges through a transformed function, payoff owns the terminal
+release, and recall transforms a dormant ancestor. The existing generated
+graph approaches the score-owned effect target by at most one node per phrase,
+with protected low end, its existing two-bar transition, and exact route replay.
+
 ## What this is
 
 Auto Techno coordinates phrase-scale musical behavior above its internal

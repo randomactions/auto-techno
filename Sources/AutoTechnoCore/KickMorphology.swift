@@ -260,7 +260,8 @@ package enum KickMorphologyResolver {
     package static func articulation(
         sessionSeed: UInt64,
         absoluteBar requestedBar: Int,
-        qualityRetryOrdinal requestedRetryOrdinal: Int = 0
+        qualityRetryOrdinal requestedRetryOrdinal: Int = 0,
+        qualityRecoveryIntent: AutonomousQualityRecoveryIntent = .neutral
     ) -> KickMorphologyArticulation {
         let absoluteBar = max(0, requestedBar)
         let segmentIndex = absoluteBar / segmentBarCount
@@ -270,7 +271,8 @@ package enum KickMorphologyResolver {
                     sessionSeed: sessionSeed,
                     absoluteBar: absoluteBar
                 ),
-                ordinal: requestedRetryOrdinal
+                ordinal: requestedRetryOrdinal,
+                intent: qualityRecoveryIntent
             )
         }
         let startPosition = Double(absoluteBar) / Double(segmentBarCount)
@@ -294,22 +296,34 @@ package enum KickMorphologyResolver {
             endProgress: endProgress,
             start: from.interpolated(to: to, progress: startProgress),
             end: from.interpolated(to: to, progress: endProgress)
-        ), ordinal: requestedRetryOrdinal)
+        ), ordinal: requestedRetryOrdinal, intent: qualityRecoveryIntent)
     }
 
     private static func retryAdjusted(
         _ articulation: KickMorphologyArticulation,
-        ordinal requestedOrdinal: Int
+        ordinal requestedOrdinal: Int,
+        intent: AutonomousQualityRecoveryIntent
     ) -> KickMorphologyArticulation {
         let ordinal = min(
             AutonomousQualityRetryContinuation.maximumOrdinal,
             max(0, requestedOrdinal)
         )
         if ordinal == AutonomousQualityRetryContinuation.maximumOrdinal {
-            return articulation.qualityRetryTransientRecoveryAdjusted()
+            switch intent.kickCrestReduction {
+            case .increase:
+                return articulation.qualityRetryAdjusted(pressure: 1)
+            case .decrease, .hold:
+                return articulation.qualityRetryTransientRecoveryAdjusted()
+            }
+        }
+        let basePressure = qualityRetryPressure(ordinal: ordinal)
+        let pressure: Double = switch intent.kickCrestReduction {
+        case .hold: basePressure
+        case .increase: abs(basePressure)
+        case .decrease: -abs(basePressure)
         }
         return articulation.qualityRetryAdjusted(
-            pressure: qualityRetryPressure(ordinal: ordinal)
+            pressure: pressure
         )
     }
 

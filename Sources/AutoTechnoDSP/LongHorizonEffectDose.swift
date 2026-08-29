@@ -2,9 +2,9 @@ import AutoTechnoCore
 import Foundation
 
 package enum LongHorizonEffectDoseSchema {
-  package static let schemaVersion = 1
+  package static let schemaVersion = 2
   package static let schemaIdentifier =
-    "autotechno-long-horizon-effect-dose.v1"
+    "autotechno-long-horizon-effect-dose.v2"
   package static let sentenceHistoryCapacity = 16
   package static let qualificationReason =
     "no-calibrated-long-horizon-policy"
@@ -277,6 +277,12 @@ package struct LongHorizonEffectDosePhraseEvidence: Codable, Equatable, Sendable
   package let barCount: Int
   package let phraseKind: AutonomousPhraseKind
   package let planFingerprint: String
+  package let materialWorldFingerprint: String
+  package let materialWorldGeneration: Int
+  package let graphRevision: Int
+  package let requestedEffectWorld: EffectWorldTarget
+  package let realizedEffectWorld: EffectWorldTarget
+  package let effectWorldDistance: Double
   package let plannedSentence: LongHorizonEffectSentence?
   package let realizedSentence: LongHorizonEffectSentenceEvidence?
   package let bars: [LongHorizonEffectDoseBarEvidence]
@@ -288,6 +294,11 @@ package struct LongHorizonEffectDosePhraseEvidence: Codable, Equatable, Sendable
     startBar: Int,
     phraseKind: AutonomousPhraseKind,
     planFingerprint: String,
+    materialWorldFingerprint: String,
+    materialWorldGeneration: Int,
+    graphRevision: Int,
+    requestedEffectWorld: EffectWorldTarget,
+    realizedEffectWorld: EffectWorldTarget,
     plannedSentence: LongHorizonEffectSentence?,
     realizedSentence: LongHorizonEffectSentenceEvidence?,
     bars: [LongHorizonEffectDoseBarEvidence]
@@ -300,6 +311,13 @@ package struct LongHorizonEffectDosePhraseEvidence: Codable, Equatable, Sendable
     barCount = bars.count
     self.phraseKind = phraseKind
     self.planFingerprint = planFingerprint
+    self.materialWorldFingerprint = materialWorldFingerprint
+    self.materialWorldGeneration = max(0, materialWorldGeneration)
+    self.graphRevision = max(0, graphRevision)
+    self.requestedEffectWorld = requestedEffectWorld
+    self.realizedEffectWorld = realizedEffectWorld
+    effectWorldDistance = requestedEffectWorld.distance(
+      from: realizedEffectWorld)
     self.plannedSentence = plannedSentence
     self.realizedSentence = realizedSentence
     self.bars = bars
@@ -320,7 +338,15 @@ package struct LongHorizonEffectDosePhraseEvidence: Codable, Equatable, Sendable
       vector.percussionEchoTexture.count == count,
       vector.pulseEchoDrive.count == count,
       vector.spatialFDN.count == count,
-      vector.masking.count == count
+      vector.masking.count == count,
+      vector.graph.materialWorldFingerprint ==
+        plan.materialWorld.worldFingerprint,
+      vector.graph.materialWorldFingerprint ==
+        prepared.graph.materialWorldFingerprint,
+      vector.graph.requestedEffectWorld ==
+        plan.materialWorld.resolvedAxes.effect,
+      vector.graph.requestedEffectWorld == prepared.graph.effectWorldTarget,
+      vector.graph.realizedEffectWorld == prepared.graph.realizedEffectWorld
     else {
       return nil
     }
@@ -408,6 +434,11 @@ package struct LongHorizonEffectDosePhraseEvidence: Codable, Equatable, Sendable
       startBar: plan.startBar,
       phraseKind: plan.kind,
       planFingerprint: vector.planFingerprint,
+      materialWorldFingerprint: vector.graph.materialWorldFingerprint,
+      materialWorldGeneration: plan.materialWorld.generation,
+      graphRevision: vector.graph.revision,
+      requestedEffectWorld: vector.graph.requestedEffectWorld,
+      realizedEffectWorld: vector.graph.realizedEffectWorld,
       plannedSentence: plan.longHorizonEffectSentence,
       realizedSentence: realized,
       bars: bars
@@ -451,7 +482,13 @@ package struct LongHorizonEffectDosePhraseEvidence: Codable, Equatable, Sendable
       && schemaIdentifier == LongHorizonEffectDoseSchema.schemaIdentifier && phraseIndex >= 0
       && startBar >= 0 && !endBar.overflow && barCount > 0 && barCount == bars.count
       && barCount <= AutonomousCandidateEvaluationVector.maximumBarCount
-      && plannedSentenceConsistent && Self.isFingerprint(planFingerprint) && exactBars
+      && plannedSentenceConsistent && Self.isFingerprint(planFingerprint)
+      && Self.isFingerprint(materialWorldFingerprint)
+      && materialWorldGeneration >= 0 && graphRevision >= 0
+      && effectWorldDistance.isFinite && (0...1).contains(effectWorldDistance)
+      && effectWorldDistance
+        == requestedEffectWorld.distance(from: realizedEffectWorld)
+      && exactBars
       && sentenceComplete && families == Self.familyDoses(from: bars)
   }
 
@@ -627,6 +664,9 @@ package struct LongHorizonEffectDoseReport: Codable, Equatable, Sendable {
   package let rootSeed: UInt64
   package let phraseCount: Int
   package let barCount: Int
+  package let materialWorldCount: Int
+  package let meanEffectWorldDistance: Double?
+  package let maximumEffectWorldDistance: Double?
   package let families: [LongHorizonEffectFamilyReport]
   package let recentSentences: [LongHorizonEffectSentenceEvidence]
 }
@@ -660,6 +700,11 @@ package struct LongHorizonEffectDoseAccumulator: Sendable {
   private var expectedBar: Int
   private var phraseCount = 0
   private var barCount = 0
+  private var materialWorldCount = 0
+  private var lastMaterialWorldFingerprint: String?
+  private var effectWorldDistanceSum = 0.0
+  private var effectWorldDistanceCount = 0
+  private var maximumEffectWorldDistance: Double?
   private var states = LongHorizonEffectFamily.allCases.map { _ in
     FamilyState()
   }
@@ -723,6 +768,10 @@ package struct LongHorizonEffectDoseAccumulator: Sendable {
       rootSeed: rootSeed,
       phraseCount: phraseCount,
       barCount: barCount,
+      materialWorldCount: materialWorldCount,
+      meanEffectWorldDistance: effectWorldDistanceCount == 0
+        ? nil : effectWorldDistanceSum / Double(effectWorldDistanceCount),
+      maximumEffectWorldDistance: maximumEffectWorldDistance,
       families: zip(LongHorizonEffectFamily.allCases, states).map {
         family, state in
         LongHorizonEffectFamilyReport(
@@ -754,6 +803,16 @@ package struct LongHorizonEffectDoseAccumulator: Sendable {
     barCount += evidence.barCount
     expectedPhraseIndex += 1
     expectedBar += evidence.barCount
+    if lastMaterialWorldFingerprint != evidence.materialWorldFingerprint {
+      materialWorldCount += 1
+      lastMaterialWorldFingerprint = evidence.materialWorldFingerprint
+    }
+    effectWorldDistanceSum += evidence.effectWorldDistance
+    effectWorldDistanceCount += 1
+    maximumEffectWorldDistance = max(
+      maximumEffectWorldDistance ?? evidence.effectWorldDistance,
+      evidence.effectWorldDistance
+    )
     if let sentence = evidence.realizedSentence {
       recentSentences.append(sentence)
       if recentSentences.count > LongHorizonEffectDoseSchema.sentenceHistoryCapacity {

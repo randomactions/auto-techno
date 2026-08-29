@@ -1,7 +1,23 @@
 # Long-Horizon Sound-Capability Register
 
-Current engine v38 binds pitch identity and transition-tail continuity to the
-primary-v19 and long-horizon-v6 qualification sets.
+## Material-world lineage and effect-world morph
+
+`LongHorizonContinuationState` owns each episode's material-world identity,
+parent fingerprint, generation, bounded retry, handoff, six axes, and
+four-to-eight-minute geometry. `AutonomousPhrasePlan` carries that exact world
+through score resolution and the typed plan fingerprint.
+
+The existing graph now converges toward five score meanings: spectral focus,
+nonlinear pressure, modulation motion, echo memory, and spatial depth.
+`AutonomousGraphEvidence` binds requested and realized vectors and their
+distance. This consolidates random graph-operation choice; it adds no processor
+family, alternate renderer, fixed chain, or selector. A future policy may issue
+one `reframe-material` action per world, only at an eligible future boundary.
+
+This PCM-changing engine-v40 slice is implemented and offline-qualified by the
+exact primary-v21 and long-horizon-v8 artifact sets. Listening, real app/route
+QA, latency observation, and physical-output soak remain separate unverified
+gates; historical engine-v38 artifacts cannot approve this slice.
 
 ## Purpose and current decision
 
@@ -37,7 +53,7 @@ four-hour trajectory exposes no repeatable missing sound capability. Stage 5
 therefore adds dose/recovery and phrase-sentence evidence without adding an
 effect. Phase 6A supplies compatible realized signal trajectories from the same
 accepted prepared phrase, with the semantic target and physical consequence kept
-separate. Phase 6B now passes five development journeys, ten adversarial attacks,
+separate. Phase 6B now passes seven development journeys, ten adversarial attacks,
 and two disjoint holdouts at 44.1/48 kHz without exposing a repeatable missing
 sound family. Phase 7 now consumes that exact policy during detached
 preparation, carries one fixed-capacity active-rate observation alongside the
@@ -83,7 +99,7 @@ Status meanings:
 ### LH-SND-01 — multi-rate semantic modulation
 
 **Status:** partially implemented; AudioReakt promoted the kick-source
-trajectory only; exact engine-v38 primary-v19 and long-horizon-v6 qualification
+trajectory only; exact engine-v40 primary-v21 and long-horizon-v8 qualification
 passed, while app/runtime verification remains separate.
 
 - **Canonical owner:** the existing score-owned `InstrumentAssignment` color,
@@ -113,7 +129,7 @@ automation maturation conditional.
 
 ### LH-SND-02 — effect dose, cooldown, and recovery evidence
 
-**Status:** implemented foundation; unqualified, no new effect.
+**Status:** implemented and offline-qualified; no new effect.
 
 - **Canonical owner:** existing effect access, graph, pulse/unsynced echo,
   chorus, comb, filtered returns, gated/anticipatory return, and FDN evidence.
@@ -134,7 +150,7 @@ automation maturation conditional.
 
 ### LH-SND-03 — phrase-level effect sentence
 
-**Status:** implemented foundation; unqualified before effect DSP expansion.
+**Status:** implemented and offline-qualified; no new effect DSP.
 
 - **Canonical owner:** existing motif, response, transition, percussion-return,
   pulse-echo, and structural-gesture relations.
@@ -154,8 +170,8 @@ automation maturation conditional.
 ### LH-SND-04 — transition and payoff maturation
 
 **Status:** partially implemented; AudioReakt promoted kick morphology and
-contextual clap/snare/rim articulation; exact engine-v38 primary-v19 and
-long-horizon-v6 qualification passed, while app/runtime verification remains
+contextual clap/snare/rim articulation; exact engine-v40 primary-v21 and
+long-horizon-v8 qualification passed, while app/runtime verification remains
 separate.
 
 - **Canonical owner:** dramatic debt, energy-release phrase, anticipation swell,
@@ -332,10 +348,12 @@ long-horizon policy does not prove that every provisional DSP is mature, but it
 does prove that this corpus supplies no repeatable failure that authorizes one
 of the replacements below.
 
-The current engine-v38/primary-v19 regeneration pins long-horizon v6 profile
-`8d3aed3bd81f65a7`, adversarial suite `7e1ac366fd10f20b`, and disjoint holdout
-`0489b422f75c993a`. Earlier policy fingerprints remain historical evidence
-only. The prior Hypnotic sweep promoted LH-SND-09's interpolation primitive from
+The current engine-v40/primary-v21 regeneration pins long-horizon v8 profile
+`43fe9d315ffce406`, adversarial suite `3b6d6de637e7dc02`, and disjoint holdout
+`a5a6df9d71577a9c`. Earlier policy fingerprints remain historical evidence
+only. Seven development journeys, all ten adversarial attacks, and two fresh
+disjoint holdouts pass at both representative rates. The prior Hypnotic sweep
+promoted LH-SND-09's interpolation primitive from
 a direct 76 dB alias-rejection witness; the complete Mordio sweep adds one
 bounded granular-memory texture within that same canonical renderer. It does
 not promote a granular side engine, another architecture, or a selectable
@@ -348,7 +366,7 @@ chain.
 | LH-SND-05 percussion depth | repeated AudioReakt kick and snare/clap technical explanations, prior session-static source probe, distinct deterministic body PCM, and attack/body/tail evidence | Kick morphology plus clap/snare/rim articulation promoted in place; additional percussion lanes and sample dependencies rejected. |
 | LH-SND-06 harmonic/motif syntax | identity recall, periodicity, payoff semantics, and realized operator movement | Conditional; no predictable-cycle or failed-recall result survives with otherwise valid evidence. |
 | LH-SND-07 spatial scene | FDN/effect occupancy, tail recovery, stereo and rate-bound phrase qualification | Conditional; no ratchet, uncleared tail, mono/rate, or depth failure cluster. |
-| LH-SND-08 dynamics/effect body | primary-v19 phrase verdicts, crest/loudness/transient deltas, wet/dry bounds, transition-tail continuity, and live-controller provenance | Conditional; no repeated dynamics or effect-intelligibility failure after valid semantics. |
+| LH-SND-08 dynamics/effect body | primary-v21 phrase verdicts, crest/loudness/transient deltas, wet/dry bounds, transition-tail continuity, and live-controller provenance | Conditional; no repeated dynamics or effect-intelligibility failure after valid semantics. |
 | LH-SND-09 resampling | synthetic A/B alias and passband probes, all 276 Mordio source dispositions, exact cut-neutral PCM, deterministic grain geometry/source-position evidence, and exact-engine phrase evidence at representative checkpoints and both rates | Band-limited interpolation and one bounded granular-memory texture promoted in the canonical renderer; stereo-grain and phrase-spanning source maturation remains conditional. |
 | LH-SND-10 additional patches | all existing role, register, character, and capability coverage | Not justified; no missing role/register/episode relationship. |
 | LH-SND-11 another architecture | current three architectures under exact profile and holdouts | Not justified; no surviving synthesis-class deficit. |

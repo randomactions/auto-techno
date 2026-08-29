@@ -14,6 +14,7 @@ package struct PhrasePreparationKey: Hashable, Sendable {
     package let channelCount: Int
     package let routeRecovery: Bool
     package let qualityRetryOrdinal: Int
+    package let qualityRecoveryContext: AutonomousQualityRecoveryContext
     package let qualityRevision: Int
     package let qualityPolicyVersion: String
     package let qualityControllerFingerprint: String?
@@ -39,17 +40,18 @@ package struct PhrasePreparationKey: Hashable, Sendable {
         pendingLiveMasterProposalFingerprint: String?,
         liveEarliestEligibleFutureSample: Int64?,
         liveTargetStartSample: Int64?,
-        qualityRetryOrdinal: Int = 0
+        qualityRetryOrdinal: Int = 0,
+        qualityRecoveryContext: AutonomousQualityRecoveryContext? = nil
     ) {
         self.sessionSeed = sessionSeed
         self.phraseIndex = phraseIndex
         self.sampleRate = sampleRate
         self.channelCount = channelCount
         self.routeRecovery = routeRecovery
-        self.qualityRetryOrdinal = min(
-            AutonomousSessionDirector.maximumQualityRetryOrdinal,
-            max(0, qualityRetryOrdinal)
-        )
+        let resolvedRecoveryContext = qualityRecoveryContext ??
+            AutonomousQualityRecoveryContext(ordinal: qualityRetryOrdinal)
+        self.qualityRetryOrdinal = resolvedRecoveryContext.ordinal
+        self.qualityRecoveryContext = resolvedRecoveryContext
         self.qualityRevision = qualityRevision
         self.qualityPolicyVersion = qualityPolicyVersion
         self.qualityControllerFingerprint = qualityControllerFingerprint
@@ -185,8 +187,8 @@ package enum AutonomousPerformancePreparer {
         }
         let plan = director.plan(
             from: request.sourceState,
-            qualityRetryOrdinal: request.key.routeRecovery
-                ? 0 : request.key.qualityRetryOrdinal
+            qualityRecoveryContext: request.key.routeRecovery
+                ? .neutral : request.key.qualityRecoveryContext
         )
         let evaluator = ProfessionalQualityPreparationEvaluator(
             sampleRate: request.key.sampleRate,

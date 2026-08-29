@@ -39,17 +39,73 @@ package struct ProfessionalQualityCandidateAssessment: Codable, Equatable,
     }
 }
 
+package struct ProfessionalQualityRecoveryFailure: Equatable, Sendable {
+    package let metric: ProfessionalQualityMetric
+    package let value: Double
+    package let lowerBound: Double
+    package let upperBound: Double
+
+    package init(
+        metric: ProfessionalQualityMetric,
+        value: Double,
+        lowerBound: Double,
+        upperBound: Double
+    ) {
+        self.metric = metric
+        self.value = value
+        self.lowerBound = lowerBound
+        self.upperBound = upperBound
+    }
+}
+
+package enum ProfessionalQualityRecoveryIntentReducer {
+    package static func reduce(
+        _ failures: [ProfessionalQualityRecoveryFailure]
+    ) -> AutonomousQualityRecoveryIntent {
+        var spectral: AutonomousQualityRecoveryDirection = .hold
+        var kickCrestReduction: AutonomousQualityRecoveryDirection = .hold
+        for failure in failures where failure.value.isFinite &&
+                failure.lowerBound.isFinite && failure.upperBound.isFinite &&
+                failure.lowerBound <= failure.upperBound {
+            let direction: AutonomousQualityRecoveryDirection
+            if failure.value < failure.lowerBound {
+                direction = .increase
+            } else if failure.value > failure.upperBound {
+                direction = .decrease
+            } else {
+                direction = .hold
+            }
+            switch failure.metric {
+            case .spectralCentroidSpreadHz,
+                    .barCentroidSpanHz,
+                    .movementScore,
+                    .positiveSpectralFluxMean,
+                    .positiveSpectralFluxPeak:
+                spectral = spectral.merging(direction)
+            case .kickSourceCrestReductionDBMean:
+                kickCrestReduction = kickCrestReduction.merging(direction)
+            default:
+                break
+            }
+        }
+        return AutonomousQualityRecoveryIntent(
+            spectralMovement: spectral,
+            kickCrestReduction: kickCrestReduction
+        )
+    }
+}
+
 /// Exact-engine calibrated evaluator for the bounded primary preparation
 /// transaction. Construction requires a complete adversarially challenged
 /// profile and qualified holdout produced by the current canonical engine.
 package struct ProfessionalQualityPrimaryEvaluator:
         AutonomousCandidateEvaluating {
     package static let policyFamilyVersion =
-        "autotechno-quality.primary-calibrated.v19"
+        "autotechno-quality.primary-calibrated.v21"
     package static let evaluatorVersionIdentifier =
-        "autotechno-candidate-evaluator.primary-calibrated.v19"
+        "autotechno-candidate-evaluator.primary-calibrated.v21"
     package static let requiredProfileVersion =
-        "autotechno-professional-quality-profile.v19"
+        "autotechno-professional-quality-profile.v21"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport
@@ -286,6 +342,10 @@ package struct ProfessionalQualityPrimaryEvaluator:
                 diagnosticDetails: rejectionDiagnostics(
                     candidate: selected,
                     assessment: result
+                ),
+                recoveryIntent: recoveryIntent(
+                    candidate: selected,
+                    assessment: result
                 )
             )
         }
@@ -323,8 +383,47 @@ package struct ProfessionalQualityPrimaryEvaluator:
         return AutonomousCandidatePolicyVerdict(
             outcome: .rejected,
             reasonCodes: reasonCodes,
-            diagnosticDetails: hardGateFailures
+            diagnosticDetails: hardGateFailures,
+            recoveryIntent: selected.symbolicInterestIsOnlyHardGateFailure
+                ? AutonomousQualityRecoveryIntent(symbolicDensity: .decrease)
+                : .neutral
         )
+    }
+
+    /// Converts exact failed metric direction into the fixed Core-owned
+    /// recovery coordinates. Thresholds and metric identities remain DSP
+    /// implementation details and never cross the module boundary.
+    private func recoveryIntent(
+        candidate: AutonomousCandidateEvaluationVector,
+        assessment: ProfessionalQualityCandidateAssessment
+    ) -> AutonomousQualityRecoveryIntent {
+        var failures: [ProfessionalQualityRecoveryFailure] = []
+        for verdict in assessment.verdicts {
+            guard let observation = try? ProfessionalQualityObservation(
+                candidate: candidate,
+                engineVersion: QualityQualificationContract.engineVersion,
+                checkpoint: verdict.checkpoint
+            ) else { continue }
+            for metric in verdict.failedMetrics {
+                guard let value = observation[metric],
+                      let bounds = profile.effectiveBounds(
+                        for: metric,
+                        at: verdict.checkpoint,
+                        observedValue: value
+                      ) else { continue }
+                let lower = metric.acceptsSaferValuesBelowCalibration
+                    ? metric.semanticMinimum : bounds.lower
+                let upper = metric.acceptsSaferValuesAboveCalibration
+                    ? metric.semanticMaximum : bounds.upper
+                failures.append(ProfessionalQualityRecoveryFailure(
+                    metric: metric,
+                    value: value,
+                    lowerBound: lower,
+                    upperBound: upper
+                ))
+            }
+        }
+        return ProfessionalQualityRecoveryIntentReducer.reduce(failures)
     }
 
     private func invalidEvidenceDiagnostics(

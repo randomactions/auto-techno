@@ -13,7 +13,7 @@ struct LongHorizonSignalTrajectoryTests {
     let plan = director.plan(from: state)
     var renderState = RenderState()
     renderState.barIndex = state.memory.totalBars
-    let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
+    let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
       plan: plan,
       sessionSeed: state.rootSeed,
       memory: state.memory,
@@ -24,7 +24,10 @@ struct LongHorizonSignalTrajectoryTests {
       incomingQualityState: state.quality,
       evaluator: AcceptingPrimaryTestEvaluator(),
       cancellationRequested: { false })
-    let accepted = try #require(prepared)
+    if let failure = outcome.failure {
+      Issue.record("Preparation failed at \(failure.stage.rawValue): \(failure.code.rawValue) \(failure.details)")
+    }
+    let accepted = try #require(outcome.preparedPhrase)
     let evidence = try #require(accepted.longHorizonSignalTrajectoryEvidence)
     let encoded = try JSONEncoder().encode(evidence)
     let json = String(decoding: encoded, as: UTF8.self)
@@ -90,7 +93,7 @@ struct LongHorizonSignalTrajectoryTests {
       report.qualificationReason
         == "no-calibrated-long-horizon-policy")
     #expect(report.trajectoryFingerprint.count == 16)
-    #expect(report.trajectoryFingerprint == "9cc7545df31f20ff")
+    #expect(report.trajectoryFingerprint == "9e39ea3d77b7fb20")
     #expect(encoded.count < 500_000)
     print(
       "LONG_HORIZON_SIGNAL_8H observations=\(report.observationCount) "

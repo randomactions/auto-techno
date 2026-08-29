@@ -82,8 +82,8 @@ struct NextPhraseProgressTests {
         ))
     }
 
-    @Test("Exhausted quality retries become explicitly blocked")
-    func exhaustedRetriesAreBlocked() {
+    @Test("Non-retryable preparation failure remains explicitly blocked")
+    func nonRetryableFailureIsBlocked() {
         let failure = NextPhraseFailure(
             stage: "commit",
             code: "quality-rejected"
@@ -188,5 +188,35 @@ struct NextPhraseProgressTests {
         #expect(engine.contains("Successor recovered phrase="))
         #expect(engine.contains("Initial failed phrase="))
         #expect(engine.contains("Initial recovered phrase="))
+    }
+
+    @Test("Retryable recovery remains persistent without owning user transport")
+    func recoveryDoesNotPauseOrStartANewSet() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let engine = try String(
+            contentsOf: repositoryRoot.appendingPathComponent(
+                "Sources/AutoTechnoApp/TechnoEngine.swift"
+            ),
+            encoding: .utf8
+        )
+        let recoveryStart = try #require(
+            engine.range(of: "private func markNextPhraseRejected")
+        )
+        let recoveryEnd = try #require(
+            engine.range(
+                of: "private func trimPreparedCache",
+                range: recoveryStart.upperBound..<engine.endIndex
+            )
+        )
+        let recovery = engine[recoveryStart.lowerBound..<recoveryEnd.lowerBound]
+
+        #expect(recovery.contains("continueSerially"))
+        #expect(recovery.contains("beginningNextWave"))
+        #expect(recovery.contains("if canRetry { prepare() }"))
+        #expect(!recovery.contains("player.pause"))
+        #expect(!recovery.contains("newSet"))
     }
 }

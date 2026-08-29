@@ -16,6 +16,10 @@ engine selector, or collection of render experiments.
 
 Every autonomous decision expresses a musical intention. Its destination,
 transition, and consequence in the continuing performance must remain coherent.
+Long-form continuation develops causal four-to-eight-minute material worlds;
+it does not simulate evolution by permuting a small fixed set of phrase roles.
+Each child world preserves the performance root while making several audible,
+score-bound structural and effect changes.
 Pitch-bearing and indefinite-pitch consequences follow the explicit
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md); an out-of-mode note
 must never be presented as atonal texture.
@@ -58,9 +62,12 @@ when its first immutable phrase is ready. Pause and resume never take this path.
   resolved score, synth assignments, semantic automation, graph, effects, mix,
   and already-computed render evidence, plus the next phrase's detached
   preparation state, attempt count, coherent-repeat count, and qualified-cache
-  readiness; a failed attempt adds one concise stage/code, exhausted calibrated
-  retries become explicitly blocked, and bounded exact guard or calibrated
-  metric-value/bounds details remain in the local unified log;
+  readiness; a failed attempt adds one concise stage/code, retryable calibrated
+  rejection enters finite deterministic recovery waves without permanently
+  blocking playback, and bounded exact guard or calibrated metric-value/bounds
+  details remain in the local unified log. Missing policy, invalid provenance,
+  route failure, and signal-safety failure still fail closed. Recovery never
+  pauses playback or starts a new set; those remain explicit user actions;
 - offline operation with no account or cloud dependency.
 
 ## One autonomous mechanism
@@ -304,10 +311,10 @@ Future sound maturation must still replace only a repeatedly failed provisional
 DSP in place after independent-root, two-rate causal evidence.
 
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v20 supplies
+policy and its operational gates pass. Professional Evidence v21 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation, pre-kick foundation-pocket, terminal climax-hang,
-and live-controller consequence, explicit
+material-world/effect-target lineage, and live-controller consequence, explicit
 analysis-memory provenance, and complete canonical-journey report-bank
 validation. A non-reconstructable diverse profile, passing
 adversarial suite, and disjoint holdout report now qualify complete 44.1/48 kHz

@@ -7,18 +7,18 @@ import Foundation
 /// cross-episode relationships.
 package enum LongHorizonProfessionalPolicySchema {
   package static let observationVersion =
-    "autotechno-long-horizon-policy-observation.v1"
+    "autotechno-long-horizon-policy-observation.v2"
   package static let corpusVersion =
-    "autotechno-long-horizon-policy-corpus.v1"
+    "autotechno-long-horizon-policy-corpus.v2"
   package static let profileVersion =
-    "autotechno-long-horizon-professional-profile.v6"
+    "autotechno-long-horizon-professional-profile.v8"
   package static let adversarialVersion =
-    "autotechno-long-horizon-adversarial.v6"
+    "autotechno-long-horizon-adversarial.v8"
   package static let holdoutVersion =
-    "autotechno-long-horizon-holdout.v6"
+    "autotechno-long-horizon-holdout.v8"
   package static let policyFamilyVersion =
-    "autotechno-long-horizon.primary-calibrated.v6"
-  package static let minimumDevelopmentJourneyCount = 4
+    "autotechno-long-horizon.primary-calibrated.v8"
+  package static let minimumDevelopmentJourneyCount = 7
   package static let minimumHoldoutJourneyCount = 2
   package static let minimumJourneyBars = 7_200
   package static let minimumSignalObservationCount = 12
@@ -113,6 +113,9 @@ package struct LongHorizonPolicyEffectObservation: Codable, Equatable,
   package let maximumActiveRunBars: Int
   package let wetBarOccupancy: Double
   package let maximumReturnToSourceDB: Double?
+  package let materialWorldCount: Int?
+  package let meanEffectWorldDistance: Double?
+  package let maximumEffectWorldDistance: Double?
 }
 
 package struct LongHorizonPolicyEffectBound: Codable, Equatable, Sendable {
@@ -121,6 +124,9 @@ package struct LongHorizonPolicyEffectBound: Codable, Equatable, Sendable {
   package let maximumTailBarOccupancy: Double
   package let maximumActiveRunBars: Int
   package let maximumReturnToSourceDB: Double?
+  package let minimumMaterialWorldCount: Int?
+  package let maximumMeanEffectWorldDistance: Double?
+  package let maximumEffectWorldDistance: Double?
 }
 
 /// Non-reconstructable reduction of one canonical long journey. Raw PCM and
@@ -330,6 +336,17 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
           && $0.wetBarOccupancy.isFinite
           && (0...1).contains($0.wetBarOccupancy)
           && ($0.maximumReturnToSourceDB?.isFinite ?? true)
+          && ($0.family == .generatedGraph
+            ? ($0.materialWorldCount ?? 0) > 0
+              && ($0.meanEffectWorldDistance.map {
+                $0.isFinite && (0...1).contains($0)
+              } ?? false)
+              && ($0.maximumEffectWorldDistance.map {
+                $0.isFinite && (0...1).contains($0)
+              } ?? false)
+            : $0.materialWorldCount == nil
+              && $0.meanEffectWorldDistance == nil
+              && $0.maximumEffectWorldDistance == nil)
       }
       && sourceFingerprint
         == Self.fingerprint(
@@ -434,7 +451,18 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
         recoveryCount: doses.reduce(0) { $0 + $1.recoveryCount },
         maximumActiveRunBars: doses.map(\.maximumActiveRunBars).max() ?? 0,
         wetBarOccupancy: Double(active) / Double(observedBars),
-        maximumReturnToSourceDB: maximumReturn)
+        maximumReturnToSourceDB: maximumReturn,
+        materialWorldCount: family == .generatedGraph
+          ? phrases.enumerated().reduce(0) { count, entry in
+            let previous = entry.offset == 0
+              ? nil : phrases[entry.offset - 1].materialWorldFingerprint
+            return count + (previous != entry.element.materialWorldFingerprint ? 1 : 0)
+          } : nil,
+        meanEffectWorldDistance: family == .generatedGraph
+          ? phrases.map(\.effectWorldDistance).reduce(0, +)
+            / Double(phrases.count) : nil,
+        maximumEffectWorldDistance: family == .generatedGraph
+          ? phrases.map(\.effectWorldDistance).max() : nil)
       guard observation.wetBarOccupancy.isFinite,
         (0...1).contains(observation.wetBarOccupancy),
         maximumReturn?.isFinite ?? true
@@ -497,6 +525,13 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
       hasher.mix(effect.wetBarOccupancy)
       hasher.mix(
         effect.maximumReturnToSourceDB ?? -Double.greatestFiniteMagnitude)
+      hasher.mix(effect.materialWorldCount ?? -1)
+      hasher.mix(
+        effect.meanEffectWorldDistance ??
+          -Double.greatestFiniteMagnitude)
+      hasher.mix(
+        effect.maximumEffectWorldDistance ??
+          -Double.greatestFiniteMagnitude)
     }
     return hasher.hex
   }
@@ -646,12 +681,28 @@ package struct LongHorizonProfessionalProfile: Codable, Equatable, Sendable {
         }.max() ?? 0) + 0.08)
       let runUpper = (values.map(\.maximumActiveRunBars).max() ?? 0) + 4
       let returnUpper = values.compactMap(\.maximumReturnToSourceDB).max().map { $0 + 6 }
+      let minimumMaterialWorldCount = family == .generatedGraph
+        ? max(1, (values.compactMap(\.materialWorldCount).min() ?? 1) - 1)
+        : nil
+      let maximumMeanEffectWorldDistance = family == .generatedGraph
+        ? min(
+          1,
+          (values.compactMap(\.meanEffectWorldDistance).max() ?? 1) + 0.05
+        ) : nil
+      let maximumEffectWorldDistance = family == .generatedGraph
+        ? min(
+          1,
+          (values.compactMap(\.maximumEffectWorldDistance).max() ?? 1) + 0.08
+        ) : nil
       return LongHorizonPolicyEffectBound(
         family: family,
         maximumWetBarOccupancy: wetUpper,
         maximumTailBarOccupancy: tailUpper,
         maximumActiveRunBars: runUpper,
-        maximumReturnToSourceDB: returnUpper)
+        maximumReturnToSourceDB: returnUpper,
+        minimumMaterialWorldCount: minimumMaterialWorldCount,
+        maximumMeanEffectWorldDistance: maximumMeanEffectWorldDistance,
+        maximumEffectWorldDistance: maximumEffectWorldDistance)
     }
     profileVersion = LongHorizonProfessionalPolicySchema.profileVersion
     engineVersion = corpus.engineVersion
@@ -688,6 +739,20 @@ package struct LongHorizonProfessionalProfile: Codable, Equatable, Sendable {
         == sampleRates.count * LongHorizonEpisodeOperator.allCases.count
         * LongHorizonSignalMetric.allCases.count
       && effectBounds.map(\.family) == LongHorizonEffectFamily.allCases
+      && effectBounds.allSatisfy { bound in
+        if bound.family == .generatedGraph {
+          return (bound.minimumMaterialWorldCount ?? 0) > 0
+            && (bound.maximumMeanEffectWorldDistance.map {
+              $0.isFinite && (0...1).contains($0)
+            } ?? false)
+            && (bound.maximumEffectWorldDistance.map {
+              $0.isFinite && (0...1).contains($0)
+            } ?? false)
+        }
+        return bound.minimumMaterialWorldCount == nil
+          && bound.maximumMeanEffectWorldDistance == nil
+          && bound.maximumEffectWorldDistance == nil
+      }
       && fingerprint
         == Self.makeFingerprint(
           corpusFingerprint: developmentCorpusFingerprint,
@@ -808,6 +873,13 @@ package struct LongHorizonProfessionalProfile: Codable, Equatable, Sendable {
       hasher.mix(bound.maximumActiveRunBars)
       hasher.mix(
         bound.maximumReturnToSourceDB ?? -Double.greatestFiniteMagnitude)
+      hasher.mix(bound.minimumMaterialWorldCount ?? -1)
+      hasher.mix(
+        bound.maximumMeanEffectWorldDistance ??
+          -Double.greatestFiniteMagnitude)
+      hasher.mix(
+        bound.maximumEffectWorldDistance ??
+          -Double.greatestFiniteMagnitude)
     }
     return hasher.hex
   }
@@ -930,10 +1002,26 @@ package struct LongHorizonProfessionalProfileEvaluator: Sendable {
         case (let value?, let upper?): value <= upper
         case (_?, nil): false
         }
+      let materialWorldWithinBound: Bool
+      if effect.family == .generatedGraph {
+        materialWorldWithinBound =
+          (effect.materialWorldCount ?? 0) >=
+            (bound.minimumMaterialWorldCount ?? Int.max)
+          && (effect.meanEffectWorldDistance ?? .infinity) <=
+            (bound.maximumMeanEffectWorldDistance ?? -.infinity)
+          && (effect.maximumEffectWorldDistance ?? .infinity) <=
+            (bound.maximumEffectWorldDistance ?? -.infinity)
+      } else {
+        materialWorldWithinBound =
+          effect.materialWorldCount == nil
+          && effect.meanEffectWorldDistance == nil
+          && effect.maximumEffectWorldDistance == nil
+      }
       if effect.wetBarOccupancy > bound.maximumWetBarOccupancy
         || tailOccupancy > bound.maximumTailBarOccupancy
         || effect.maximumActiveRunBars > bound.maximumActiveRunBars
         || !returnWithinBound
+        || !materialWorldWithinBound
       {
         failedEffects.append(effect.family)
         dimensions.insert(.effectFatigue)
@@ -1277,7 +1365,10 @@ extension LongHorizonPolicyObservation {
           recoveryCount: 0,
           maximumActiveRunBars: bound.maximumActiveRunBars + 8,
           wetBarOccupancy: min(1, bound.maximumWetBarOccupancy + 0.2),
-          maximumReturnToSourceDB: bound.maximumReturnToSourceDB.map { $0 + 6 })
+          maximumReturnToSourceDB: bound.maximumReturnToSourceDB.map { $0 + 6 },
+          materialWorldCount: original.materialWorldCount,
+          meanEffectWorldDistance: original.meanEffectWorldDistance,
+          maximumEffectWorldDistance: original.maximumEffectWorldDistance)
       }
     case .monotonicDecline, .semanticSignalMismatch:
       if let index = deltas.firstIndex(where: { delta in

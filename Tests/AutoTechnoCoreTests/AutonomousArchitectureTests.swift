@@ -608,11 +608,13 @@ struct AdaptiveAutonomousSessionTests {
                         $0.performance.signatureEvent != nil
                 })
             }
+            let expectedPercussionRelationship = structural
+                ? plan.longHorizonEnergyCoordination.target.percussionActivity
+                : plan.materialWorld.resolvedAxes.rhythmRelationship
             #expect(plan.resolvedBars.allSatisfy { resolved in
                 resolved.percussionGear == coordinatedPercussionGear(
                     absoluteBar: resolved.performance.bar,
-                    relationship:
-                        plan.longHorizonEnergyCoordination.target.percussionActivity
+                    relationship: expectedPercussionRelationship
                 )
             })
             #expect(!plan.requestsTopologyMutation ||
@@ -850,7 +852,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v38")
+                "autotechno-canonical-engine.v40")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -2306,7 +2308,7 @@ struct GeneratedDSPTopologyTests {
         }
     }
 
-    @Test("Release suppresses new mutation and recovery preserves the selected target")
+    @Test("Legacy random mutation suppression", .disabled("Replaced by target-directed material-world morph coverage"))
     func mutationSuppression() {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
@@ -2372,7 +2374,7 @@ struct GeneratedDSPTopologyTests {
         #expect(recoveredSelectedTarget.mutation?.affectedNodeIDs == [replaced.id])
     }
 
-    @Test("Rejected mutation freezes topology without retaining stale ownership")
+    @Test("Legacy rejected random mutation", .disabled("Random operation selection was consolidated into bounded target convergence"))
     func rejectedMutationClearsPriorMetadata() throws {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
@@ -3782,8 +3784,19 @@ struct AutonomousPreparationPreflightTests {
             pulseEchoEnabled: source.pulseEchoEnabled,
             interlockChapter: source.interlockChapter,
             groovePulses: source.groovePulses,
+            closedHatDecayArticulations:
+                source.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                source.upperPercussionTailArticulations,
+            modalPercussionArticulations:
+                source.modalPercussionArticulations,
             spatialContrast: source.spatialContrast,
             narrative: changedNarrative,
+            kickSyntaxRole: source.kickSyntaxRole,
+            climaxHang: source.climaxHang,
+            percussionEchoTexture: source.percussionEchoTexture,
+            harmonicDisclosureRelationship:
+                source.harmonicDisclosureRelationship,
             kickMorphology: source.kickMorphology
         )
         var changedBars = original.resolvedBars
@@ -3858,8 +3871,13 @@ struct AutonomousPreparationPreflightTests {
             )
             let candidates = plan.resolvedBars.indices.compactMap { index ->
                 (Int, EnsembleResolvedEvent, Double)? in
-                guard plan.resolvedBars[index].interlockChapter == .tone,
-                      let motif = plan.resolvedBars[index].ensemble.events.first(where: {
+                let resolved = plan.resolvedBars[index]
+                let arpeggiatorEligible = resolved.performanceCharacter == .melodicGlow
+                    || resolved.performanceCharacter == .acidPressure
+                    || resolved.performanceCharacter == .peakDrive
+                guard !arpeggiatorEligible,
+                      resolved.interlockChapter == .tone,
+                      let motif = resolved.ensemble.events.first(where: {
                           $0.voice == .motif
                       }) else { return nil }
                 let articulation = synth.bars[index].articulation(at: motif.step)
@@ -3985,10 +4003,15 @@ struct AutonomousPreparationPreflightTests {
         #expect(sculptedBlock.stemObservations[.upperTonal] !=
                 neutralBlock.stemObservations[.upperTonal])
 
-        let earliestRelationalStep = source.ensemble.events
-            .filter { $0.voice == .motif || $0.voice == .response }
-            .map(\.step).min() ?? motif.step
-        let start = earliestRelationalStep * sculptedBlock.left.count / 16
+        let sculptedUpperOnsets = [SynthRole.anchor, .shadow, .response]
+            .flatMap { sculptedBlock.synthPerformance.upperNotes(for: $0) }
+            .map(\.onsetStep)
+        let neutralUpperOnsets = [SynthRole.anchor, .shadow, .response]
+            .flatMap { neutralBlock.synthPerformance.upperNotes(for: $0) }
+            .map(\.onsetStep)
+        #expect(sculptedUpperOnsets == neutralUpperOnsets)
+        let earliestAffectedStep = sculptedUpperOnsets.min() ?? motif.step
+        let start = earliestAffectedStep * sculptedBlock.left.count / 16
         #expect(Array(sculptedBlock.left[..<start]) == Array(neutralBlock.left[..<start]))
         let delta = zip(sculptedBlock.left[start...], neutralBlock.left[start...]).reduce(0.0) {
             $0 + abs(Double($1.0 - $1.1))
@@ -4565,7 +4588,11 @@ struct AutonomousPreparationPreflightTests {
                 endingInterlockState: plan.endingInterlockState,
                 endingSpatialContrastState: plan.endingSpatialContrastState,
                 endingNarrativeState: plan.endingNarrativeState,
-                harmonicContinuation: plan.incomingHarmonicContinuation
+                harmonicContinuation: plan.incomingHarmonicContinuation,
+                longHorizonSelection: plan.longHorizonSelection,
+                longHorizonEnergyCoordination:
+                    plan.longHorizonEnergyCoordination,
+                materialWorld: plan.materialWorld
             )
         }
         let zeroDrivePlan = replacingScene(in: wetPlan, with: zeroTextureScene)
@@ -5122,7 +5149,11 @@ struct AutonomousPreparationPreflightTests {
             endingInterlockState: plan.endingInterlockState,
             endingSpatialContrastState: plan.endingSpatialContrastState,
             endingNarrativeState: plan.endingNarrativeState,
-            harmonicContinuation: plan.incomingHarmonicContinuation
+            harmonicContinuation: plan.incomingHarmonicContinuation,
+            longHorizonSelection: plan.longHorizonSelection,
+            longHorizonEnergyCoordination:
+                plan.longHorizonEnergyCoordination,
+            materialWorld: plan.materialWorld
         )
     }
 

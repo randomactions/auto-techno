@@ -5,14 +5,14 @@ import Foundation
 /// rejects them when their engine no longer matches the current contract.
 package struct LongHorizonProfessionalPolicyArtifacts: Sendable {
   package static let profileResource =
-    "long-horizon-professional-profile-v6"
+    "long-horizon-professional-profile-v8"
   package static let adversarialResource =
-    "long-horizon-adversarial-suite-v6"
+    "long-horizon-adversarial-suite-v8"
   package static let holdoutResource =
-    "long-horizon-holdout-v6"
-  package static let expectedProfileFingerprint = "8d3aed3bd81f65a7"
-  package static let expectedAdversarialFingerprint = "7e1ac366fd10f20b"
-  package static let expectedHoldoutFingerprint = "0489b422f75c993a"
+    "long-horizon-holdout-v8"
+  package static let expectedProfileFingerprint = "43fe9d315ffce406"
+  package static let expectedAdversarialFingerprint = "3b6d6de637e7dc02"
+  package static let expectedHoldoutFingerprint = "a5a6df9d71577a9c"
 
   package let profile: LongHorizonProfessionalProfile
   package let adversarial: LongHorizonAdversarialSuiteReport

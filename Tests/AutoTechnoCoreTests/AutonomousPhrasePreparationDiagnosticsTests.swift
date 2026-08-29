@@ -296,4 +296,119 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
         #expect(continuation.isExhausted(for: 4))
         #expect(continuation.ordinal(for: 5) == 0)
     }
+
+    @Test("Recovery waves remain finite, persistent, and presentation-bound")
+    func recoveryWavesYieldWithoutBecomingTerminal() {
+        let rejection = QualityDecision(
+            policyVersion: "test-calibrated-policy",
+            outcome: .rejected,
+            reasonCodes: [.guardrailRegressionV1],
+            recoveryIntent: AutonomousQualityRecoveryIntent(
+                spectralMovement: .increase,
+                kickCrestReduction: .increase
+            )
+        )
+        var continuation = AutonomousQualityRetryContinuation()
+        for _ in 0...AutonomousQualityRetryContinuation.maximumOrdinal {
+            continuation = continuation.recordingCalibratedRejection(
+                decision: rejection,
+                targetPhraseIndex: 15
+            )
+        }
+
+        #expect(continuation.isExhausted(for: 15))
+        #expect(AutonomousQualityRecoverySchedulingPolicy.decide(
+            retryable: true,
+            waveExhausted: true,
+            coherentRepeatCount: 1
+        ) == .yieldUntilNextBoundary)
+
+        continuation = continuation.recordingPresentedRepeat(
+            targetPhraseIndex: 15,
+            barCount: 16
+        ).beginningNextWave(targetPhraseIndex: 15)
+
+        #expect(!continuation.isExhausted(for: 15))
+        #expect(continuation.wave == 1)
+        #expect(continuation.ordinal(for: 15) == 0)
+        #expect(continuation.presentedRepeatBars == 16)
+        #expect(continuation.recoveryIntent == rejection.recoveryIntent)
+        #expect(AutonomousQualityRecoverySchedulingPolicy.decide(
+            retryable: true,
+            waveExhausted: false,
+            coherentRepeatCount: 1
+        ) == .continueSerially)
+        #expect(AutonomousQualityRecoverySchedulingPolicy.decide(
+            retryable: true,
+            waveExhausted: false,
+            coherentRepeatCount: 0
+        ) == .awaitFirstCoherentRepeat)
+        #expect(AutonomousQualityRecoverySchedulingPolicy.decide(
+            retryable: false,
+            waveExhausted: false,
+            coherentRepeatCount: 99
+        ) == .failClosed)
+    }
+
+    @Test("Recovery wave and direction change only the unscheduled proposal")
+    func recoveryContextIsDeterministicAndDirectional() {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let intent = AutonomousQualityRecoveryIntent(
+            spectralMovement: .increase,
+            kickCrestReduction: .increase
+        )
+        let first = director.plan(
+            from: state,
+            qualityRecoveryContext: AutonomousQualityRecoveryContext(
+                wave: 0,
+                ordinal: AutonomousQualityRetryContinuation.maximumOrdinal,
+                presentedRepeatBars: 16,
+                intent: intent
+            )
+        )
+        let replay = director.plan(
+            from: state,
+            qualityRecoveryContext: first.qualityRecoveryContext
+        )
+        let nextWave = director.plan(
+            from: state,
+            qualityRecoveryContext: AutonomousQualityRecoveryContext(
+                wave: 1,
+                ordinal: AutonomousQualityRetryContinuation.maximumOrdinal,
+                presentedRepeatBars: 16,
+                intent: intent
+            )
+        )
+
+        #expect(first == replay)
+        #expect(first != nextWave)
+        #expect(first.startBar == state.memory.totalBars)
+        #expect(first.presentationStartBar == 16)
+        #expect(first.scene.seed == state.identitySeed)
+        #expect(first.longHorizonSelection.episodeID ==
+            nextWave.longHorizonSelection.episodeID)
+        #expect(first.resolvedBars.contains {
+            $0.arrangementGesture == .gearShift
+        })
+        #expect(!first.resolvedBars.allSatisfy {
+            $0.arrangementGesture == .minimalize ||
+                $0.arrangementGesture == .structuralMarker
+        })
+
+        let directedKick = KickMorphologyResolver.articulation(
+            sessionSeed: state.identitySeed,
+            absoluteBar: 0,
+            qualityRetryOrdinal:
+                AutonomousQualityRetryContinuation.maximumOrdinal,
+            qualityRecoveryIntent: intent
+        )
+        let legacyHighCrestRecovery = KickMorphologyResolver.articulation(
+            sessionSeed: state.identitySeed,
+            absoluteBar: 0,
+            qualityRetryOrdinal:
+                AutonomousQualityRetryContinuation.maximumOrdinal
+        )
+        #expect(directedKick != legacyHighCrestRecovery)
+    }
 }

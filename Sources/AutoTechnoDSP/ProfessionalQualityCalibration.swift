@@ -611,9 +611,9 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 15
+    package static let schemaVersion = 16
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v15"
+        "autotechno-professional-quality-observation.v16"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -1424,9 +1424,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 15
+    package static let schemaVersion = 16
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v19"
+        "autotechno-professional-quality-profile.v21"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1948,7 +1948,11 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         case .barTransientDensityMean, .barTransientDensitySpan:
             absoluteFloor = transientDensityQuantizationFloor
         case .kickEventCountMean:
-            absoluteFloor = 0.25
+            // A canonical four-on-the-floor bar and its authored turnaround
+            // differ by one event in every bar. Treat that score-level pattern
+            // step as the minimum meaningful calibration variation; smaller
+            // per-phrase means remain covered inside the resulting envelope.
+            absoluteFloor = 1
         case .modalPercussionEventCountMean,
                 .modalPercussionActiveBarRatio:
             absoluteFloor = 0.25
@@ -2064,15 +2068,16 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         }
     }
 
-    /// Bar crest summaries reduce Float PCM after route-rounded bar windows.
-    /// A one-hundredth dB allowance covers the measured route quantization
-    /// edge without making an audible crest change compensable or widening
-    /// unrelated rate-consistency dimensions.
+    /// Bar crest summaries and normalized overlap maxima reduce Float PCM after
+    /// route-rounded analysis windows. A one-hundredth allowance covers their
+    /// measured route quantization edge without widening unrelated dimensions.
     private static func rateConsistencyQuantizationMargin(
         for metric: ProfessionalQualityMetric
     ) -> Double {
         switch metric {
         case .barCrestFactorMean, .barCrestFactorSpan:
+            0.01
+        case .maskingMaximumOverlap:
             0.01
         default:
             0

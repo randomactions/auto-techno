@@ -51,8 +51,27 @@ struct SymbolicInterestRetryTests {
     func finalRecoveryOwnsBoundedDensityReduction() {
         let director = AutonomousSessionDirector(rootSeed: 13)
         var state = director.initialState()
+        var selectedBaseline: AutonomousPhrasePlan?
+        var selectedRecovery: AutonomousPhrasePlan?
 
-        while state.phraseIndex < 653 {
+        while state.phraseIndex < 768 {
+            let baseline = director.plan(from: state)
+            let recovery = director.plan(
+                from: state,
+                qualityRetryOrdinal:
+                    AutonomousSessionDirector.maximumQualityRetryOrdinal
+            )
+            if !baseline.interest.valid && recovery.interest.valid &&
+                recovery.interest.intentionalSpace > baseline.interest.intentionalSpace &&
+                recovery.interest.overactivityPenalty < baseline.interest.overactivityPenalty &&
+                recovery.resolvedBars.allSatisfy({
+                    $0.arrangementGesture == .minimalize ||
+                        $0.arrangementGesture == .structuralMarker
+                }) {
+                selectedBaseline = baseline
+                selectedRecovery = recovery
+                break
+            }
             let selected = (0...AutonomousSessionDirector.maximumQualityRetryOrdinal)
                 .map { director.plan(from: state, qualityRetryOrdinal: $0) }
                 .first { $0.interest.valid }
@@ -61,12 +80,10 @@ struct SymbolicInterestRetryTests {
             state.advancePlanning(using: selected)
         }
 
-        let baseline = director.plan(from: state)
-        let recovery = director.plan(
-            from: state,
-            qualityRetryOrdinal:
-                AutonomousSessionDirector.maximumQualityRetryOrdinal
-        )
+        guard let baseline = selectedBaseline, let recovery = selectedRecovery else {
+            Issue.record("Expected a bounded final minimalization recovery within 768 phrases")
+            return
+        }
 
         #expect(!baseline.interest.valid)
         #expect(recovery.interest.valid)

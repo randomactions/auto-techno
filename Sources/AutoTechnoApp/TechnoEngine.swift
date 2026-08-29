@@ -347,6 +347,9 @@ package final class TechnoEngine: ObservableObject {
                 liveTargetStartSample: nil,
                 qualityRetryOrdinal: qualityRetryOrdinal(
                     for: sessionState.phraseIndex
+                ),
+                qualityRecoveryContext: qualityRecoveryContext(
+                    for: sessionState.phraseIndex
                 )
             ),
             sourceState: sessionState,
@@ -748,6 +751,9 @@ package final class TechnoEngine: ObservableObject {
                 liveTargetStartSample: liveTargetStartSample,
                 qualityRetryOrdinal: qualityRetryOrdinal(
                     for: sessionState.phraseIndex
+                ),
+                qualityRecoveryContext: qualityRecoveryContext(
+                    for: sessionState.phraseIndex
                 )
             ),
             sourceState: sessionState,
@@ -773,6 +779,12 @@ package final class TechnoEngine: ObservableObject {
 
     private func qualityRetryOrdinal(for phraseIndex: Int) -> Int {
         qualityRetryContinuation.ordinal(for: phraseIndex)
+    }
+
+    private func qualityRecoveryContext(
+        for phraseIndex: Int
+    ) -> AutonomousQualityRecoveryContext {
+        qualityRetryContinuation.context(for: phraseIndex)
     }
 
     private func markNextPhraseHeld(for request: PhrasePreparationRequest) {
@@ -860,7 +872,14 @@ package final class TechnoEngine: ObservableObject {
                         for: request.key.phraseIndex
                     ) == request.key.qualityRetryOrdinal)
         } ?? false
-        let preparationBlocked = retriesExhausted || terminalQualityFailure
+        let retryableQualityFailure = qualityDecision?
+            .isRetryableCandidateRejection == true
+        // Exhaustion closes only this finite wave. The next coherent phrase
+        // boundary opens a new deterministic wave; it is never a permanent
+        // transport block. Non-retryable safety/provenance failures remain
+        // fail-closed and require their owning condition to recover.
+        let preparationBlocked = terminalQualityFailure &&
+            !retryableQualityFailure
         nextPhraseProgress = preparationBlocked
             ? nextPhraseProgress.blocked(
                 targetPhraseNumber: phraseNumber,
@@ -871,8 +890,22 @@ package final class TechnoEngine: ObservableObject {
                 failure: failure
             )
         Self.successorPreparationLogger.error(
-            "Successor failed phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) retry-variant=\(request.key.qualityRetryOrdinal, privacy: .public) blocked=\(preparationBlocked, privacy: .public) exhausted=\(retriesExhausted, privacy: .public) stage=\(failure.stage, privacy: .public) code=\(failure.code, privacy: .public) details=\(failure.logDetails, privacy: .public)"
+            "Successor failed phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) presented-repeat-bars=\(request.key.qualityRecoveryContext.presentedRepeatBars, privacy: .public) recovery-wave=\(request.key.qualityRecoveryContext.wave, privacy: .public) retry-variant=\(request.key.qualityRetryOrdinal, privacy: .public) blocked=\(preparationBlocked, privacy: .public) wave-exhausted=\(retriesExhausted, privacy: .public) recovery-symbolic=\(request.key.qualityRecoveryContext.intent.symbolicDensity.rawValue, privacy: .public) recovery-spectral=\(request.key.qualityRecoveryContext.intent.spectralMovement.rawValue, privacy: .public) recovery-kick-crest=\(request.key.qualityRecoveryContext.intent.kickCrestReduction.rawValue, privacy: .public) stage=\(failure.stage, privacy: .public) code=\(failure.code, privacy: .public) details=\(failure.logDetails, privacy: .public)"
         )
+        let recoveryScheduling =
+            AutonomousQualityRecoverySchedulingPolicy.decide(
+                retryable: retryableQualityFailure,
+                waveExhausted: retriesExhausted,
+                coherentRepeatCount: nextPhraseProgress.repeatCount
+            )
+        if recoveryScheduling == .continueSerially,
+           let currentPhrase {
+            // Once one coherent repeat has authorized recovery, finish the
+            // remaining finite ordinals serially in detached work instead of
+            // spending another whole phrase between attempts.
+            queuedPreparationRequest = nil
+            requestSuccessor(after: currentPhrase)
+        }
     }
 
     private func initialPhraseNumber(
@@ -900,15 +933,26 @@ package final class TechnoEngine: ObservableObject {
                     targetPhraseIndex: request.key.phraseIndex
                 )
         }
-        let retriesExhausted = qualityRetryContinuation.isExhausted(
+        let retryableQualityFailure = qualityDecision?
+            .isRetryableCandidateRejection == true
+        let exhaustedWave = qualityRetryContinuation.isExhausted(
             for: request.key.phraseIndex
         )
-        let retryOrdinal = qualityRetryContinuation.ordinal(
+        if retryableQualityFailure && exhaustedWave {
+            // There is no accepted phrase to authorize a coherent boundary
+            // while establishing P1. Yield between detached tasks, but open
+            // the next finite wave immediately so startup cannot become a
+            // permanent retryable-quality block.
+            qualityRetryContinuation = qualityRetryContinuation
+                .beginningNextWave(
+                    targetPhraseIndex: request.key.phraseIndex
+                )
+        }
+        let nextRecoveryContext = qualityRetryContinuation.context(
             for: request.key.phraseIndex
         )
-        let canRetry = qualityDecision?.outcome == .rejected &&
-            !retriesExhausted &&
-            retryOrdinal > request.key.qualityRetryOrdinal
+        let canRetry = retryableQualityFailure &&
+            nextRecoveryContext != request.key.qualityRecoveryContext
         nextPhraseProgress = canRetry
             ? nextPhraseProgress.rejectedInitial(
                 targetPhraseNumber: phraseNumber,
@@ -919,7 +963,7 @@ package final class TechnoEngine: ObservableObject {
                 failure: failure
             )
         Self.successorPreparationLogger.error(
-            "Initial failed phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) retry-variant=\(request.key.qualityRetryOrdinal, privacy: .public) blocked=\(!canRetry, privacy: .public) exhausted=\(retriesExhausted, privacy: .public) stage=\(failure.stage, privacy: .public) code=\(failure.code, privacy: .public) details=\(failure.logDetails, privacy: .public)"
+            "Initial failed phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) recovery-wave=\(request.key.qualityRecoveryContext.wave, privacy: .public) retry-variant=\(request.key.qualityRetryOrdinal, privacy: .public) blocked=\(!canRetry, privacy: .public) wave-exhausted=\(exhaustedWave, privacy: .public) next-wave=\(nextRecoveryContext.wave, privacy: .public) stage=\(failure.stage, privacy: .public) code=\(failure.code, privacy: .public) details=\(failure.logDetails, privacy: .public)"
         )
         if canRetry { prepare() }
     }
@@ -1520,7 +1564,8 @@ package final class TechnoEngine: ObservableObject {
                 result.binding.proposal.earliestEligibleFutureSample,
             liveTargetStartSample:
                 result.sourceRange.playerSampleRange.upperBound,
-            qualityRetryOrdinal: baseRequest.key.qualityRetryOrdinal
+            qualityRetryOrdinal: baseRequest.key.qualityRetryOrdinal,
+            qualityRecoveryContext: baseRequest.key.qualityRecoveryContext
         )
         requestPreparation(PhrasePreparationRequest(
             key: correctedKey,
@@ -1628,6 +1673,9 @@ package final class TechnoEngine: ObservableObject {
                         : Int64(nextScheduleSample),
                 qualityRetryOrdinal: qualityRetryOrdinal(
                     for: sessionState.phraseIndex
+                ),
+                qualityRecoveryContext: qualityRecoveryContext(
+                    for: sessionState.phraseIndex
                 )
             )
             let sourcePhraseIndex = phrase.prepared.plan.phraseIndex
@@ -1730,6 +1778,22 @@ package final class TechnoEngine: ObservableObject {
                 nextPhraseProgress = nextPhraseProgress.repeated(
                     targetPhraseNumber: targetPhraseIndex + 1
                 )
+                qualityRetryContinuation = qualityRetryContinuation
+                    .recordingPresentedRepeat(
+                        targetPhraseIndex: targetPhraseIndex,
+                        barCount: phrase.prepared.plan.barCount
+                    )
+                if qualityRetryContinuation.isExhausted(
+                    for: targetPhraseIndex
+                ) {
+                    qualityRetryContinuation = qualityRetryContinuation
+                        .beginningNextWave(
+                            targetPhraseIndex: targetPhraseIndex
+                        )
+                    Self.successorPreparationLogger.notice(
+                        "Successor recovery wave opened phrase=\(targetPhraseIndex + 1, privacy: .public) wave=\(self.qualityRetryContinuation.wave, privacy: .public) presented-repeat-bars=\(self.qualityRetryContinuation.presentedRepeatBars, privacy: .public)"
+                    )
+                }
                 repeatHoldEvolutionPlaybackMode =
                     RepeatHoldEvolutionBoundaryPolicy.decide(
                         coherentRepeatCount:

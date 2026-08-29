@@ -4,14 +4,15 @@ import Foundation
 /// trajectory evidence. DSP owns evaluation; Core owns the future musical
 /// boundary at which a bounded action may become canonical.
 package enum LongHorizonTrajectoryDecisionSchema {
-  package static let schemaVersion = 1
+  package static let schemaVersion = 2
   package static let schemaIdentifier =
-    "autotechno-long-horizon-trajectory-decision.v1"
+    "autotechno-long-horizon-trajectory-decision.v2"
 }
 
 package enum LongHorizonTrajectoryDecisionAction: String, Codable, Sendable {
   case preserve
   case recover
+  case reframeMaterial = "reframe-material"
 }
 
 /// These reasons mirror interpretable policy dimensions without importing DSP
@@ -92,6 +93,8 @@ package struct LongHorizonTrajectoryDecision: Codable, Equatable, Sendable {
       case .preserve:
         reasons == [.qualified]
       case .recover:
+        !reasons.isEmpty && !reasons.contains(.qualified)
+      case .reframeMaterial:
         !reasons.isEmpty && !reasons.contains(.qualified)
       }
     return schemaVersion == LongHorizonTrajectoryDecisionSchema.schemaVersion

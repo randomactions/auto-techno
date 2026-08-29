@@ -10,8 +10,10 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         30_303, 33_333, 40_404, 48_291, 50_505, 55_555, 60_606,
         66_666, 70_707, 77_777, 80_808, 88_888, 90_909, 99_999,
         123_456, 135_791, 19, 44_444, 121_212, 246_810,
+        112_358, 141_421, 173_205, 223_606,
+        161_803, 264_575, 271_828, 314_159,
     ]
-    private let holdoutSeeds: [UInt64] = [112_358, 141_421, 173_205, 223_606]
+    private let holdoutSeeds: [UInt64] = [577_215, 618_034, 707_106, 866_025]
 
     /// This deliberately expensive, explicit calibration harness renders the
     /// complete canonical journey at 44.1 and 48 kHz. Normal CI validates the
@@ -309,16 +311,16 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                     ProfessionalQualityCalibrationProfile.requiredSampleRates.count)
         #expect(profile.isComplete)
         #expect(profile.usesDiverseCalibration)
-        #expect(profile.schemaVersion == 15)
+        #expect(profile.schemaVersion == 16)
         #expect(profile.observationVersion ==
                 ProfessionalQualityObservation.observationVersion)
         #expect(profile.sourceTrajectoryCount == calibrationSeeds.count)
         #expect(adversarial.passed)
-        #expect(adversarial.schemaVersion == 16)
+        #expect(adversarial.schemaVersion == 17)
         #expect(adversarial.cases.count ==
                 ProfessionalQualityAdversarialScenario.allCases.count)
         #expect(holdout.qualified)
-        #expect(holdout.schemaVersion == 14)
+        #expect(holdout.schemaVersion == 15)
         #expect(holdout.holdoutTrajectoryCount == holdoutSeeds.count)
         #expect(holdout.overlappingSourceBankCount == 0)
         #expect(primaryEvaluator.policyVersion.contains(profile.fingerprint))
@@ -386,6 +388,104 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 "kick-over-foundation-active-db-mean=" +
                 "\(kickOverFoundationActiveDBMean)"
             )
+        }
+    }
+
+    @Test("Render one explicitly selected planned boundary")
+    func renderSelectedPlannedBoundary() throws {
+        guard let rawSeed = ProcessInfo.processInfo.environment[
+            "AUTOTECHNO_CALIBRATION_BOUNDARY_SEED"
+        ], let seed = UInt64(rawSeed),
+        let rawPhrase = ProcessInfo.processInfo.environment[
+            "AUTOTECHNO_CALIBRATION_BOUNDARY_PHRASE"
+        ], let phraseIndex = Int(rawPhrase), phraseIndex >= 0 else { return }
+
+        let director = AutonomousSessionDirector(rootSeed: seed)
+        var state = director.initialState()
+        while state.phraseIndex < phraseIndex {
+            state.advancePlanning(using: director.plan(from: state))
+        }
+        let plan = director.plan(from: state)
+        var renderState = RenderState()
+        renderState.barIndex = plan.startBar
+        let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
+            plan: plan,
+            sessionSeed: seed,
+            memory: state.memory,
+            sampleRate: 44_100,
+            incomingRenderState: renderState,
+            incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil,
+            incomingQualityState: state.quality,
+            evaluator: ProfessionalEvidenceOnlyEvaluator(),
+            cancellationRequested: { false }
+        )
+        if let failure = outcome.failure {
+            progress(
+                "boundary-failed seed=\(seed) phrase=\(phraseIndex) " +
+                "bar=\(plan.startBar) kind=\(plan.kind.rawValue) " +
+                "stage=\(failure.stage.rawValue) code=\(failure.code.rawValue) " +
+                "details=\(failure.details.joined(separator: ","))"
+            )
+        }
+        #expect(outcome.preparedPhrase != nil)
+    }
+
+    @Test("Trace one explicitly selected accumulated journey")
+    func traceSelectedAccumulatedJourney() throws {
+        guard let rawSeed = ProcessInfo.processInfo.environment[
+            "AUTOTECHNO_CALIBRATION_TRACE_SEED"
+        ], let seed = UInt64(rawSeed) else { return }
+
+        let director = AutonomousSessionDirector(rootSeed: seed)
+        var state = director.initialState()
+        var renderState = RenderState()
+        var graphState = GeneratedDSPContinuationState()
+        var previousGraph: DSPGraphPlan?
+        for _ in 0..<32 {
+            let plan = director.plan(from: state)
+            progress(
+                "trace-begin seed=\(seed) phrase=\(plan.phraseIndex) " +
+                    "bar=\(plan.startBar) kind=\(plan.kind.rawValue)"
+            )
+            let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
+                plan: plan,
+                sessionSeed: seed,
+                memory: state.memory,
+                sampleRate: 44_100,
+                incomingRenderState: renderState,
+                incomingGraphState: graphState,
+                previousGraph: previousGraph,
+                incomingQualityState: state.quality,
+                evaluator: ProfessionalEvidenceOnlyEvaluator(),
+                cancellationRequested: { false }
+            )
+            guard let prepared = outcome.preparedPhrase else {
+                if let failure = outcome.failure {
+                    progress(
+                        "trace-failed seed=\(seed) phrase=\(plan.phraseIndex) " +
+                            "bar=\(plan.startBar) kind=\(plan.kind.rawValue) " +
+                            "stage=\(failure.stage.rawValue) " +
+                            "code=\(failure.code.rawValue) " +
+                            "details=\(failure.details.joined(separator: ","))"
+                    )
+                }
+                Issue.record("Accumulated journey preparation failed")
+                return
+            }
+            progress(
+                "trace-pass seed=\(seed) phrase=\(plan.phraseIndex) " +
+                    "graph=\(prepared.graph.revision)"
+            )
+            state = state.advance(
+                using: prepared.plan,
+                quality: prepared.qualityContinuationState,
+                liveMasterHeadroom:
+                    prepared.liveMasterHeadroomContinuationState
+            )
+            renderState = prepared.endingRenderState
+            graphState = prepared.endingGraphState
+            previousGraph = prepared.graph
         }
     }
 
@@ -735,7 +835,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         for _ in 0..<maximumPhrases {
             let plan = director.plan(from: state)
             let neverCancelled: @Sendable () -> Bool = { false }
-            let preparedResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
                 plan: plan,
                 sessionSeed: state.rootSeed,
                 memory: state.memory,
@@ -747,7 +847,16 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 evaluator: ProfessionalEvidenceOnlyEvaluator(),
                 cancellationRequested: neverCancelled
             )
-            let prepared = try #require(preparedResult)
+            if let failure = outcome.failure {
+                progress(
+                    "failed seed=\(seed) rate=\(Int(sampleRate)) " +
+                    "phrase=\(plan.phraseIndex) bar=\(plan.startBar) " +
+                    "kind=\(plan.kind.rawValue) stage=\(failure.stage.rawValue) " +
+                    "code=\(failure.code.rawValue) " +
+                    "details=\(failure.details.joined(separator: ","))"
+                )
+            }
+            let prepared = try #require(outcome.preparedPhrase)
             let checkpoints = checkpoints(
                 plan: plan,
                 previousChapter: previousChapter

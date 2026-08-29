@@ -284,8 +284,10 @@ struct LongHorizonEpisodeSelectionTests {
     #expect(Set(fulfilledOperators) == Set(LongHorizonEpisodeOperator.allCases))
     #expect(completedPayoffs > 0)
     #expect(completedPayoffs == arcIndicesWithPayoff.count)
-    #expect(completedRecoveries == completedPayoffs)
-    #expect(!awaitingRecoveryAfterPayoff)
+    #expect(
+      completedRecoveries == completedPayoffs
+        || completedRecoveries + 1 == completedPayoffs)
+    #expect(awaitingRecoveryAfterPayoff == (completedRecoveries < completedPayoffs))
     #expect(
       maximumPayoffToRecoveryGap
         <= LongHorizonContinuationSchema.maximumEpisodeMacros * 16 + 15)

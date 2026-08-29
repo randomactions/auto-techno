@@ -4,12 +4,13 @@ import Foundation
 package enum QualityQualificationContract {
     /// Version 22 binds app-owned scheduled live PCM, exact mixer-to-player
     /// clock mapping, live BS.1770 evidence, bounded terminal attenuation, and
-    /// its atomic commit at an unscheduled future boundary. Quality schema 39
-    /// binds both explicit pitch identities and the retained effect-tail,
-    /// stable-FDN, smoothed-spatial, and cross-phrase seam consequences.
-    package static let schemaVersion = 39
+    /// its atomic commit at an unscheduled future boundary. Quality schema 41
+    /// binds material-world/effect-target lineage together with explicit pitch
+    /// identities and the retained effect-tail, stable-FDN, smoothed-spatial,
+    /// and cross-phrase seam consequences.
+    package static let schemaVersion = 41
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v38"
+    package static let engineVersion = "autotechno-canonical-engine.v40"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1
@@ -95,30 +96,142 @@ package enum QualityDecisionOutcome: String, Codable, Equatable, Sendable {
     case adjusted
 }
 
+/// A versioned, reduced direction from detached quality evidence to the one
+/// canonical director. It contains no DSP metric type, threshold, sample, or
+/// renderer state. Opposing observations collapse to `.hold` instead of
+/// letting independent recovery gestures fight over the same score owner.
+package enum AutonomousQualityRecoveryDirection: String, Codable, Equatable, Hashable,
+        Sendable {
+    case hold
+    case decrease
+    case increase
+
+    package func merging(_ other: Self) -> Self {
+        if self == .hold { return other }
+        if other == .hold || self == other { return self }
+        return .hold
+    }
+}
+
+/// The complete fixed-domain recovery input permitted to cross from DSP
+/// evaluation into future Core planning. These coordinates name existing
+/// owners rather than authorizing a quality bypass or a second planner.
+package struct AutonomousQualityRecoveryIntent: Codable, Equatable, Hashable,
+        Sendable {
+    package static let schemaVersion = 1
+    package static let neutral = Self()
+
+    package let schemaVersion: Int
+    package let symbolicDensity: AutonomousQualityRecoveryDirection
+    package let spectralMovement: AutonomousQualityRecoveryDirection
+    package let kickCrestReduction: AutonomousQualityRecoveryDirection
+
+    package init(
+        symbolicDensity: AutonomousQualityRecoveryDirection = .hold,
+        spectralMovement: AutonomousQualityRecoveryDirection = .hold,
+        kickCrestReduction: AutonomousQualityRecoveryDirection = .hold
+    ) {
+        schemaVersion = Self.schemaVersion
+        self.symbolicDensity = symbolicDensity
+        self.spectralMovement = spectralMovement
+        self.kickCrestReduction = kickCrestReduction
+    }
+
+    package var isNeutral: Bool {
+        symbolicDensity == .hold && spectralMovement == .hold &&
+            kickCrestReduction == .hold
+    }
+
+    package func merging(_ other: Self) -> Self {
+        Self(
+            symbolicDensity: symbolicDensity.merging(other.symbolicDensity),
+            spectralMovement: spectralMovement.merging(other.spectralMovement),
+            kickCrestReduction:
+                kickCrestReduction.merging(other.kickCrestReduction)
+        )
+    }
+}
+
+/// Replayable planning context for one bounded recovery wave. Repeated
+/// playback is presentation time, not accepted score or signal evidence.
+package struct AutonomousQualityRecoveryContext: Equatable, Hashable, Sendable {
+    package static let neutral = Self()
+
+    package let wave: UInt64
+    package let ordinal: Int
+    package let presentedRepeatBars: UInt64
+    package let intent: AutonomousQualityRecoveryIntent
+
+    package init(
+        wave: UInt64 = 0,
+        ordinal: Int = 0,
+        presentedRepeatBars: UInt64 = 0,
+        intent: AutonomousQualityRecoveryIntent = .neutral
+    ) {
+        self.wave = wave
+        self.ordinal = min(
+            AutonomousQualityRetryContinuation.maximumOrdinal,
+            max(0, ordinal)
+        )
+        self.presentedRepeatBars = presentedRepeatBars
+        self.intent = intent
+    }
+}
+
+package enum AutonomousQualityRecoverySchedulingDecision: Equatable, Sendable {
+    case awaitFirstCoherentRepeat
+    case continueSerially
+    case yieldUntilNextBoundary
+    case failClosed
+}
+
+/// Pure scheduling policy for detached recovery. It bounds one wave without
+/// confusing a wave boundary with a permanent transport terminal.
+package enum AutonomousQualityRecoverySchedulingPolicy {
+    package static func decide(
+        retryable: Bool,
+        waveExhausted: Bool,
+        coherentRepeatCount: Int
+    ) -> AutonomousQualityRecoverySchedulingDecision {
+        guard retryable else { return .failClosed }
+        if waveExhausted { return .yieldUntilNextBoundary }
+        return coherentRepeatCount > 0
+            ? .continueSerially : .awaitFirstCoherentRepeat
+    }
+}
+
 /// Ephemeral but replayable continuation for serial proposals after a
 /// retry-eligible calibrated rejection. It is distinct from accepted quality
 /// continuation: rejected evidence never mutates the committed session state.
 package struct AutonomousQualityRetryContinuation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 1
+    package static let schemaVersion = 2
     /// Ordinals 1...8 retain the calibrated realization vocabulary. Ordinal 9
-    /// is one final minimum-length coherence recovery before the target fails
-    /// closed, so a late phrase cannot remain permanently blocked merely
-    /// because every longer realization exceeds a phrase-wide variation gate.
+    /// is one final direction-aware coherence recovery before the current wave
+    /// yields. A later presentation boundary may open another finite wave.
     package static let maximumOrdinal = 9
 
     package let schemaVersion: Int
     package let targetPhraseIndex: Int?
     package let ordinal: Int
+    package let wave: UInt64
+    package let presentedRepeatBars: UInt64
+    package let recoveryIntent: AutonomousQualityRecoveryIntent
     package let exhausted: Bool
 
     package init(
         targetPhraseIndex: Int? = nil,
         ordinal: Int = 0,
+        wave: UInt64 = 0,
+        presentedRepeatBars: UInt64 = 0,
+        recoveryIntent: AutonomousQualityRecoveryIntent = .neutral,
         exhausted: Bool = false
     ) {
         schemaVersion = Self.schemaVersion
         self.targetPhraseIndex = targetPhraseIndex.map { max(0, $0) }
         self.ordinal = min(Self.maximumOrdinal, max(0, ordinal))
+        self.wave = wave
+        self.presentedRepeatBars = presentedRepeatBars
+        self.recoveryIntent = recoveryIntent
         self.exhausted = exhausted &&
             self.ordinal == Self.maximumOrdinal &&
             self.targetPhraseIndex != nil
@@ -136,22 +249,82 @@ package struct AutonomousQualityRetryContinuation: Codable, Equatable, Sendable 
               decision.isRetryableCandidateRejection else {
             return self
         }
-        let current = self.targetPhraseIndex == targetPhraseIndex ? ordinal : 0
+        let sameTarget = self.targetPhraseIndex == targetPhraseIndex
+        let current = sameTarget ? ordinal : 0
+        let currentWave = sameTarget ? wave : 0
+        let currentPresentedBars = sameTarget ? presentedRepeatBars : 0
+        let intent = (sameTarget ? recoveryIntent : .neutral)
+            .merging(decision.recoveryIntent)
         guard current < Self.maximumOrdinal else {
             return Self(
                 targetPhraseIndex: targetPhraseIndex,
                 ordinal: Self.maximumOrdinal,
+                wave: currentWave,
+                presentedRepeatBars: currentPresentedBars,
+                recoveryIntent: intent,
                 exhausted: true
             )
         }
         return Self(
             targetPhraseIndex: targetPhraseIndex,
-            ordinal: current + 1
+            ordinal: current + 1,
+            wave: currentWave,
+            presentedRepeatBars: currentPresentedBars,
+            recoveryIntent: intent
         )
     }
 
     package func isExhausted(for targetPhraseIndex: Int) -> Bool {
         self.targetPhraseIndex == targetPhraseIndex && exhausted
+    }
+
+    package func recordingPresentedRepeat(
+        targetPhraseIndex: Int,
+        barCount: Int
+    ) -> Self {
+        guard targetPhraseIndex >= 0, barCount > 0 else { return self }
+        let sameTarget = self.targetPhraseIndex == targetPhraseIndex
+        let increment = UInt64(barCount)
+        let prior = sameTarget ? presentedRepeatBars : 0
+        let bars = UInt64.max - prior < increment
+            ? UInt64.max : prior + increment
+        return Self(
+            targetPhraseIndex: targetPhraseIndex,
+            ordinal: sameTarget ? ordinal : 0,
+            wave: sameTarget ? wave : 0,
+            presentedRepeatBars: bars,
+            recoveryIntent: sameTarget ? recoveryIntent : .neutral,
+            exhausted: sameTarget && exhausted
+        )
+    }
+
+    /// Opens the next finite wave only after the prior one has exhausted.
+    /// UInt64 wrapping is deterministic and practically unreachable; it keeps
+    /// recovery operational instead of defining a user-visible terminal state.
+    package func beginningNextWave(targetPhraseIndex: Int) -> Self {
+        guard self.targetPhraseIndex == targetPhraseIndex, exhausted else {
+            return self
+        }
+        return Self(
+            targetPhraseIndex: targetPhraseIndex,
+            ordinal: 0,
+            wave: wave &+ 1,
+            presentedRepeatBars: presentedRepeatBars,
+            recoveryIntent: recoveryIntent
+        )
+    }
+
+    package func context(for targetPhraseIndex: Int) ->
+            AutonomousQualityRecoveryContext {
+        guard self.targetPhraseIndex == targetPhraseIndex else {
+            return .neutral
+        }
+        return AutonomousQualityRecoveryContext(
+            wave: wave,
+            ordinal: ordinal,
+            presentedRepeatBars: presentedRepeatBars,
+            intent: recoveryIntent
+        )
     }
 }
 
@@ -185,6 +358,7 @@ package struct QualityDecision: Codable, Equatable, Sendable {
     package let candidateFingerprint: String?
     package let evidenceFingerprint: String?
     package let eligibleFutureSample: Int64?
+    package let recoveryIntent: AutonomousQualityRecoveryIntent
 
     package init(
         policyVersion: String = QualityQualificationContract.uncalibratedPolicyVersion,
@@ -192,7 +366,8 @@ package struct QualityDecision: Codable, Equatable, Sendable {
         reasonCodes: [QualityReasonCode],
         candidateFingerprint: String? = nil,
         evidenceFingerprint: String? = nil,
-        eligibleFutureSample: Int64? = nil
+        eligibleFutureSample: Int64? = nil,
+        recoveryIntent: AutonomousQualityRecoveryIntent = .neutral
     ) {
         schemaVersion = QualityQualificationContract.schemaVersion
         reasonCodeVersion = QualityQualificationContract.reasonCodeVersion
@@ -212,6 +387,7 @@ package struct QualityDecision: Codable, Equatable, Sendable {
         self.candidateFingerprint = candidateFingerprint
         self.evidenceFingerprint = evidenceFingerprint
         self.eligibleFutureSample = eligibleFutureSample.map { max(0, $0) }
+        self.recoveryIntent = recoveryIntent
     }
 
     package static func qualificationUnavailable(
@@ -253,7 +429,8 @@ package struct QualityDecision: Codable, Equatable, Sendable {
             reasonCodeVersion == QualityQualificationContract.reasonCodeVersion &&
             !policyVersion.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
             reasonCodes == canonicalReasons &&
-            (eligibleFutureSample.map { $0 >= 0 } ?? true)
+            (eligibleFutureSample.map { $0 >= 0 } ?? true) &&
+            (outcome == .rejected || recoveryIntent.isNeutral)
     }
 
     package var hasNonCompensableFailureReason: Bool {

@@ -77,7 +77,7 @@
     {
       "id": "session-director-and-score",
       "name": "Session director and resolved score",
-      "responsibility": "Own the session identity, semantic intent, temporal memory, phrase selection, complete resolved bars, deterministic successor state, and bounded same-intent retry fallback.",
+      "responsibility": "Own the session identity, semantic intent, temporal memory, phrase selection, complete resolved bars, deterministic successor state, structured quality-recovery intent, finite recovery waves, and accepted-versus-presentation time semantics.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -100,7 +100,8 @@
         "private session seed",
         "accepted continuation",
         "qualified future adaptation",
-        "bounded quality retry ordinal"
+        "bounded quality recovery context",
+        "accepted canonical bar and presentation bar"
       ],
       "outputs": [
         "AutonomousPhrasePlan",
@@ -261,7 +262,7 @@
     {
       "id": "long-horizon-semantic-control",
       "name": "Long-horizon semantic control",
-      "responsibility": "Maintain compact long-range musical continuation, semantic trajectory, episode selection, energy coordination, effect sentences, and bounded future decision eligibility.",
+      "responsibility": "Maintain compact long-range musical continuation, causal four-to-eight-minute material-world lineage, semantic trajectory, episode selection, energy coordination, effect sentences, and bounded future decision eligibility.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -273,7 +274,7 @@
       ],
       "state": [
         "LongHorizonContinuationState",
-        "long-horizon episode and energy state"
+        "long-horizon episode, material-world, and energy state"
       ],
       "inputs": [
         "committed phrase semantics",
@@ -282,16 +283,18 @@
       "outputs": [
         "semantic trajectory",
         "episode operator",
-        "future preserve or recover intent"
+        "material-world score plan",
+        "future preserve, recover, or material-reframe intent"
       ],
       "evidence": [
         "long-horizon semantic report",
-        "energy and effect-sentence provenance"
+        "material lineage, energy, and effect-sentence provenance"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/LongHorizonContinuation.swift",
         "Sources/AutoTechnoCore/LongHorizonEffectSentence.swift",
         "Sources/AutoTechnoCore/LongHorizonEnergyCoordination.swift",
+        "Sources/AutoTechnoCore/LongHorizonMaterialWorld.swift",
         "Sources/AutoTechnoCore/LongHorizonSemanticTrajectory.swift",
         "Sources/AutoTechnoCore/LongHorizonTrajectoryDecision.swift"
       ],
@@ -299,6 +302,7 @@
         "Tests/AutoTechnoCoreTests/LongHorizonContinuationTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonEnergyCoordinationTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonEpisodeSelectionTests.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonMaterialWorldTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonPlanningBaselineProbe.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonSemanticTrajectoryTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonTrajectoryBaselineTests.swift"
@@ -447,7 +451,7 @@
     {
       "id": "graph-effects-routing-and-mix",
       "name": "Graph, effects, routing, and mix control",
-      "responsibility": "Plan and render the bounded DSP graph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, independently qualified repeat-hold DJ-deck chains with full-mix filtering and target-specific loop memories, and read-only waveform envelopes.",
+      "responsibility": "Plan and render the bounded target-directed effect-world graph morph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, independently qualified repeat-hold DJ-deck chains with full-mix filtering and target-specific loop memories, and read-only waveform envelopes.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -468,17 +472,20 @@
       ],
       "inputs": [
         "resolved phrase",
+        "score-owned effect-world target",
         "previous graph",
         "role stems"
       ],
       "outputs": [
         "DSPGraphPlan",
+        "bounded one-node effect-world convergence",
         "processed canonical mix",
         "PreparedRepeatHoldEvolutionPhrase families",
         "ending graph and mix state"
       ],
       "evidence": [
         "graph validation",
+        "requested and realized effect-world evidence",
         "protected routing reconstruction",
         "RepeatHoldEvolutionEvidence including full-mix routing, spectral consequence, target-specific capture, shortest grid slice, and exact replay provenance",
         "mix and spatial evidence"
@@ -493,6 +500,7 @@
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/FeedbackDelayNetworkTests.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonMaterialWorldTests.swift",
         "Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift",
         "Tests/AutoTechnoCoreTests/SpatialProtectedRoutingRegressionTests.swift",
         "Tests/AutoTechnoCoreTests/TPTAntialiasedNonlinearCoreTests.swift"
@@ -566,9 +574,9 @@
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityVerdict.swift",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v19.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v19.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v19.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v21.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v21.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v21.json",
         "Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift",
         "Sources/AutoTechnoDSP/StreamingPerceptualEvidence.swift",
         "Sources/AutoTechnoDSP/UpperTimbreEvidence.swift"
@@ -607,7 +615,7 @@
     {
       "id": "long-horizon-signal-and-future-adaptation",
       "name": "Long-horizon signal analysis and future adaptation",
-      "responsibility": "Accumulate realized signal and effect-dose trajectories, apply the calibrated long-horizon policy, and emit one bounded decision for an eligible unscheduled future phrase.",
+      "responsibility": "Accumulate realized signal and effect-dose trajectories, apply the calibrated long-horizon policy, and emit one bounded preserve, recover, or one-per-world material-reframe decision for an eligible unscheduled future phrase.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -619,6 +627,7 @@
       ],
       "state": [
         "LongHorizonFutureAdaptationState",
+        "last material-reframe generation",
         "signal trajectory accumulator",
         "effect-dose accumulator"
       ],
@@ -629,7 +638,7 @@
       ],
       "outputs": [
         "LongHorizonFutureAdaptationUpdate",
-        "qualified preserve or recover observation"
+        "qualified preserve, recover, or material-reframe observation"
       ],
       "evidence": [
         "LongHorizonSignalTrajectory",
@@ -642,9 +651,9 @@
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicy.swift",
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift",
         "Sources/AutoTechnoDSP/LongHorizonSignalTrajectory.swift",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v6.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v6.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v6.json"
+        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v8.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v8.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v8.json"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/LongHorizonEffectDoseTests.swift",
@@ -771,7 +780,7 @@
     {
       "id": "macos-transport-and-session-lifecycle",
       "name": "macOS transport and session lifecycle",
-      "responsibility": "Own the active session seed, detached preparation tasks, stale-work epochs, AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, accepted-PCM hold behavior, and boundary-only repeat-hold pattern-family playback.",
+      "responsibility": "Own the active session seed, detached preparation tasks, stale-work epochs, AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, persistent finite-wave successor recovery, accepted-PCM hold behavior, and boundary-only repeat-hold pattern-family playback.",
       "targets": [
         "AutoTechnoApp"
       ],
@@ -790,6 +799,7 @@
         "MonitoringOutputState",
         "NextPhraseProgress",
         "RepeatHoldEvolutionPlaybackMode",
+        "AutonomousQualityRecoveryContext",
         "playing-time sample clock"
       ],
       "inputs": [
@@ -807,6 +817,7 @@
       "evidence": [
         "schedule ledger",
         "route/preparation generations",
+        "recovery wave, ordinal, presented-repeat bars, and fixed-domain recovery intent",
         "hold pattern-family or exact-fallback status and successor-preparation logs",
         "playing-time state"
       ],

@@ -73,8 +73,8 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one scheduled-output master-headroom path mapping app-owned mixer PCM to an
   exact phrase occurrence, analyzing one fixed three-second window off the
   callback, and applying a primary-accepted attenuation only to future PCM;
-- canonical engine v38, quality-contract schema 39, candidate-vector schema 35,
-  and candidate-transaction schema 6, with the explicit
+- canonical engine v40, quality-contract schema 41, candidate-vector schema 37,
+  and candidate-transaction schema 8, with the explicit
   [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md)
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax, debt-to-recovery climax arc and terminal hang,
@@ -96,7 +96,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - phrase-wide and live-window ITU-R BS.1770-5 loudness, Annex 2 true peak,
   physical-time spectral/trajectory evidence, rate-normalized transient
   detection, explicit bounded working memory, and a complete-checkpoint
-  Professional Evidence v20 report bank;
+  Professional Evidence v21 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
@@ -109,9 +109,9 @@ filter motion, and dry-plus-moving-shadow concepts were reconciled to existing
 score, modulation, echo, chorus, and FDN owners; no duplicate track,
 instrument, modulation lane, or effect chain was added.
 
-The app now installs one exact-engine calibrated primary evaluator v19 from the
-current profile v19 derived from 28 complete journeys, a passing v16 adversarial
-suite, and a disjoint four-journey holdout qualification v14. Each boundary owns one
+The app installs one exact-engine calibrated primary evaluator v21 from the
+current profile v21 derived from 36 complete journeys, a passing v17 adversarial
+suite, and a disjoint four-journey holdout qualification v15. Each boundary owns one
 canonical plan and one terminal decision. The evaluator may request one same-
 plan home-timbre correction, for two render passes maximum. Missing artifacts
 and unsupported routes are truthfully unavailable and cannot commit.
@@ -174,9 +174,9 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 39, candidate-vector schema 35, and candidate-
-transaction schema 6 now bind a versioned transaction across canonical engine
-v38, quality policy, evaluator, candidate plans, route, incoming continuation,
+Quality-contract schema 41, candidate-vector schema 37, and candidate-
+transaction schema 8 now bind a versioned transaction across canonical engine
+v40, quality policy, evaluator, candidate plans, route, incoming continuation,
 attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 upper-percussion tail-clearance,
@@ -193,13 +193,13 @@ provenance, make each
 score-to-PCM consequence explicit for the calibrated primary policy. The modal
 foundation projection additionally binds every empty and active bar, score-owned
 articulation, exact dry PCM, protected routing, continuation, pitch, envelope,
-spectral, masking, and pole-stability evidence. Professional Evidence v20 adds
+spectral, masking, and pole-stability evidence. Professional Evidence v21 adds
 standards-based phrase loudness/true peak, bounded streaming
 physical-time spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
 complete role attribution. The repository now carries a deterministic,
 non-reconstructable 44.1/48 kHz diverse profile, relational rate/trajectory
-guardrails, a passing 34-case v16 adversarial suite, and a disjoint holdout report
+guardrails, a passing 34-case v17 adversarial suite, and a disjoint holdout report
 covering 56/56 observations with zero relationship failures. Short-program
 EBU-style loudness range remains descriptive because its gated percentile is
 discontinuous at small populations; integrated, momentary, short-term, and true-
@@ -210,10 +210,10 @@ local and untracked.
 
 The runtime records one complete plan, one initial attempt, and at most one
 home-timbre correction, then atomically carries the terminal evidence, decision,
-and controller state into continuation. The exact engine-v38 profile v19,
-passing v16 adversarial suite, disjoint holdout qualification v14, non-compensable
+and controller state into continuation. The exact engine-v40 profile v21,
+passing v17 adversarial suite, disjoint holdout qualification v15, non-compensable
 checkpoint policy, and transaction replay are the app path. The former
-single-journey generalization blocker is closed: 28 development journeys and
+single-journey generalization blocker is closed: 36 development journeys and
 four disjoint replacement holdouts pass at 44.1 and 48 kHz. A missing artifact,
 unsupported route, failed gate, or rejected score produces no new commit. See
 [`PRIMARY_EVALUATOR.md`](PRIMARY_EVALUATOR.md).
@@ -307,11 +307,12 @@ engagement verdict. Phase 1 adds the Core-owned
 `autotechno-long-horizon-semantic.v1` streaming accumulator and machine-readable
 report. Its fixed-capacity occupancy, recurrence, scalar, periodicity, identity,
 capability, and dramatic-debt evidence remains offline and descriptive; real
-four/eight-hour and adversarial tests cannot yet pass or reject music. Phase 2
-adds `autotechno-long-horizon-continuation.v1` to canonical session memory: one
-renewable arc/episode intention with fixed-domain recency, reserve, identity
-landmarks, and payoff/recovery/recall obligations. It observes committed plans
-and remains bounded and exactly replayable. Phase 3 now maps all six operators
+four/eight-hour and adversarial tests remain descriptive on that standalone
+report. Phase 2 now carries `autotechno-long-horizon-continuation.v4` in
+canonical session memory: one renewable arc/episode intention, causal material-
+world lineage, fixed-domain recency, reserve, identity landmarks, and payoff/
+recovery/recall obligations. It observes committed plans and remains bounded
+and exactly replayable. Phase 3 maps all six operators
 through the same director onto the existing phrase vocabulary, protects minimum
 holds and rare-event reserve, establishes debt before a debtless payoff, and
 records `autotechno-long-horizon-selection.v1` provenance. Phase 4 records
@@ -320,19 +321,22 @@ eight-coordinate target through existing score owners with exact all-hold
 fallback and bounded active movement. Phase 5 now adds an at-most-one existing
 effect sentence plus fixed-capacity graph/echo/percussion-return/FDN dose,
 tail, recovery, gap, last-use, and level evidence without retaining PCM or
-changing audio. Phase 6A now adds compatible realized-PCM trajectory evidence:
+changing audio. Phase 6A adds compatible realized-PCM trajectory evidence:
 exact accepted plan/candidate/PCM provenance, separate semantic targets,
 non-compensable physical dimensions, per-operator transition deltas, explicit
-checkpoint gaps, and bounded episode summaries without retaining PCM. The next
-missing slice is a calibrated adversarial policy that can
-reject fixed-period cycling, permanent peak, ineffective recovery, capability
-fatigue, failed recall, and semantic/PCM direction mismatches.
+checkpoint gaps, and bounded episode summaries without retaining PCM. Phase 6B
+now binds the exact engine-v40/primary-v21 policy to seven development journeys,
+ten rejected adversarial attacks, and two fresh disjoint holdouts at both
+representative rates. Phase 7 applies reason-coded preserve, recover, or
+reframe-material decisions only to eligible future boundaries. Phase 9 adds
+four-to-eight-minute material-world lineage and gradual five-coordinate effect-
+world convergence through the existing graph.
 
 The associated DSP, synth, patch-family, and effect follow-up register is
 [`LONG_HORIZON_SOUND_CAPABILITIES.md`](LONG_HORIZON_SOUND_CAPABILITIES.md). The
 initial audit selects evidence-first effect-dose, recovery, phrase-sentence, and
 multi-rate modulation foundations; the effect-dose and phrase-sentence
-foundations are now implemented but unqualified. They do not justify another synthesis
+foundations are now implemented and offline-qualified. They do not justify another synthesis
 architecture, patch family, effect bus, or selectable chain. Any later sound
 expansion must be selected by a repeatable exact-checkpoint deficit and replace
 the affected provisional realization in place.

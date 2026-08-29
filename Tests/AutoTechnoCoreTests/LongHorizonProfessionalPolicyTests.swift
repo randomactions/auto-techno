@@ -14,8 +14,12 @@ struct LongHorizonProfessionalPolicyTests {
       adversarial: artifacts.adversarial,
       holdout: artifacts.holdout)
 
-    #expect(artifacts.development.observations.count == 4)
-    #expect(artifacts.profile.developmentJourneyCount == 4)
+    #expect(
+      artifacts.development.observations.count
+        == LongHorizonProfessionalPolicySchema.minimumDevelopmentJourneyCount)
+    #expect(
+      artifacts.profile.developmentJourneyCount
+        == LongHorizonProfessionalPolicySchema.minimumDevelopmentJourneyCount)
     #expect(artifacts.profile.sampleRates == [8_000, 12_000])
     #expect(artifacts.adversarial.passed)
     #expect(
@@ -60,7 +64,7 @@ struct LongHorizonProfessionalPolicyTests {
   @Test("Holdout roots and source identities must be disjoint")
   func holdoutMustBeDisjoint() throws {
     let development = try LongHorizonPolicyCalibrationCorpus(
-      observations: [UInt64(7), 13, 17, 42].map {
+      observations: longHorizonDevelopmentSeeds.map {
         makeObservation(rootSeed: $0)
       })
     let profile = try LongHorizonProfessionalProfile(corpus: development)
@@ -85,7 +89,10 @@ struct LongHorizonProfessionalPolicyTests {
   @Test("Observed overdue debt is bounded without becoming compensable")
   func overdueDebtIsCalibratedIndependently() throws {
     let development = try LongHorizonPolicyCalibrationCorpus(
-      observations: zip([UInt64(7), 13, 17, 42], [2.0, 3.0, 4.0, 5.0]).map {
+      observations: zip(
+        longHorizonDevelopmentSeeds,
+        [2.0, 3.0, 4.0, 5.0, 4.5, 3.5, 2.5]
+      ).map {
         makeObservation(rootSeed: $0.0, overdueDebtCount: $0.1)
       })
     let profile = try LongHorizonProfessionalProfile(corpus: development)
@@ -106,7 +113,7 @@ struct LongHorizonProfessionalPolicyTests {
   @Test("Sparse operator means retain finite-sample uncertainty floors")
   func sparseOperatorUncertaintyFloors() throws {
     let development = try LongHorizonPolicyCalibrationCorpus(
-      observations: [UInt64(7), 13, 17, 42].map {
+      observations: longHorizonDevelopmentSeeds.map {
         makeObservation(rootSeed: $0)
       })
     let profile = try LongHorizonProfessionalProfile(corpus: development)
@@ -150,6 +157,9 @@ struct LongHorizonProfessionalPolicyTests {
         makeObservation(rootSeed: 100),
         makeObservation(rootSeed: 101),
         makeObservation(rootSeed: 102),
+        makeObservation(rootSeed: 103),
+        makeObservation(rootSeed: 104),
+        makeObservation(rootSeed: 105),
       ])
     #expect(throws: LongHorizonProfessionalPolicyError.insufficientEvidence) {
       try LongHorizonProfessionalProfile(corpus: shortCorpus)
@@ -187,7 +197,7 @@ struct LongHorizonProfessionalPolicyTests {
         == first.development.observations[0])
   }
 
-  @Test("Bundled v6 long-horizon artifacts activate the exact engine v38 policy")
+  @Test("Bundled v8 long-horizon artifacts activate the exact engine v40 policy")
   func bundledArtifacts() throws {
     for name in [
       LongHorizonProfessionalPolicyArtifacts.profileResource,
@@ -202,6 +212,12 @@ struct LongHorizonProfessionalPolicyTests {
       "long-horizon-professional-profile-v1",
       "long-horizon-adversarial-suite-v1",
       "long-horizon-holdout-v1",
+      "long-horizon-professional-profile-v6",
+      "long-horizon-adversarial-suite-v6",
+      "long-horizon-holdout-v6",
+      "long-horizon-professional-profile-v7",
+      "long-horizon-adversarial-suite-v7",
+      "long-horizon-holdout-v7",
     ] {
       #expect(
         !LongHorizonProfessionalPolicyArtifacts
@@ -362,6 +378,39 @@ struct LongHorizonProfessionalPolicyTests {
       observedThroughBar: observation.observedBarCount,
       recoveryEligible: false)
     #expect(deferred == nil)
+
+    let materialReframe = LongHorizonFutureDecisionFactory.make(
+      observation: observation,
+      verdict: LongHorizonPolicyVerdict(
+        accepted: false,
+        failedDimensions: [.semanticPeriodicity, .effectFatigue],
+        failedSemanticMetrics: [],
+        failedOperatorDeltas: [],
+        failedEffectFamilies: [.generatedGraph]),
+      policyVersion: "test-runtime-policy.v1",
+      observedThroughPhraseIndex: 713,
+      observedThroughBar: observation.observedBarCount,
+      recoveryEligible: false,
+      materialReframeEligible: true)
+    #expect(materialReframe?.action == .reframeMaterial)
+    #expect(
+      materialReframe?.reasons == [.semanticPeriodicity, .effectFatigue]
+    )
+
+    let nonMaterialDeficit = LongHorizonFutureDecisionFactory.make(
+      observation: observation,
+      verdict: LongHorizonPolicyVerdict(
+        accepted: false,
+        failedDimensions: [.permanentPeak],
+        failedSemanticMetrics: [],
+        failedOperatorDeltas: [],
+        failedEffectFamilies: []),
+      policyVersion: "test-runtime-policy.v1",
+      observedThroughPhraseIndex: 713,
+      observedThroughBar: observation.observedBarCount,
+      recoveryEligible: false,
+      materialReframeEligible: true)
+    #expect(nonMaterialDeficit == nil)
   }
 
   @Test("Short runtime evidence is reason coded but cannot change trajectory")
@@ -396,9 +445,13 @@ typealias QualifiedLongHorizonArtifacts = (
   holdout: LongHorizonHoldoutQualification
 )
 
+private let longHorizonDevelopmentSeeds: [UInt64] = [
+  7, 13, 17, 42, 73, 101, 131,
+]
+
 func qualifiedArtifacts() throws -> QualifiedLongHorizonArtifacts {
   let development = try LongHorizonPolicyCalibrationCorpus(
-    observations: [UInt64(7), 13, 17, 42].map {
+    observations: longHorizonDevelopmentSeeds.map {
       makeObservation(rootSeed: $0)
     })
   let profile = try LongHorizonProfessionalProfile(corpus: development)
@@ -466,7 +519,10 @@ private func makeObservation(
       recoveryCount: 3,
       maximumActiveRunBars: 5 + index,
       wetBarOccupancy: Double(12 + index) / 96,
-      maximumReturnToSourceDB: -12 + Double(index))
+      maximumReturnToSourceDB: -12 + Double(index),
+      materialWorldCount: family == .generatedGraph ? 8 : nil,
+      meanEffectWorldDistance: family == .generatedGraph ? 0.18 : nil,
+      maximumEffectWorldDistance: family == .generatedGraph ? 0.42 : nil)
   }
   return LongHorizonPolicyObservation(
     engineVersion: QualityQualificationContract.engineVersion,

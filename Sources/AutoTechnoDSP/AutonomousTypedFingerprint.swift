@@ -22,7 +22,7 @@ func fixedWidthFingerprintHex(_ value: UInt64) -> String {
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
-        digest(domain: "candidate-plan.typed.v19") { sink in
+        digest(domain: "candidate-plan.typed.v21") { sink in
             encode(plan, into: &sink)
         }
     }
@@ -438,6 +438,7 @@ private extension AutonomousTypedFingerprint {
         sink.aggregate("AutonomousPhrasePlan")
         sink.field("phraseIndex"); sink.int(value.phraseIndex)
         sink.field("startBar"); sink.int(value.startBar)
+        sink.field("presentationStartBar"); sink.int(value.presentationStartBar)
         sink.field("barCount"); sink.int(value.barCount)
         sink.field("kind"); sink.raw(value.kind.rawValue)
         sink.field("scene"); encode(value.scene, into: &sink)
@@ -468,6 +469,22 @@ private extension AutonomousTypedFingerprint {
         encode(value.longHorizonSelection, into: &sink)
         sink.field("longHorizonEnergyCoordination")
         encode(value.longHorizonEnergyCoordination, into: &sink)
+        sink.field("materialWorld")
+        encode(value.materialWorld, into: &sink)
+        sink.field("qualityRecoveryContext")
+        sink.aggregate("AutonomousQualityRecoveryContext")
+        sink.field("wave"); sink.uint64(value.qualityRecoveryContext.wave)
+        sink.field("ordinal"); sink.int(value.qualityRecoveryContext.ordinal)
+        sink.field("presentedRepeatBars")
+        sink.uint64(value.qualityRecoveryContext.presentedRepeatBars)
+        sink.field("intentSchema")
+        sink.int(value.qualityRecoveryContext.intent.schemaVersion)
+        sink.field("symbolicDensity")
+        sink.raw(value.qualityRecoveryContext.intent.symbolicDensity.rawValue)
+        sink.field("spectralMovement")
+        sink.raw(value.qualityRecoveryContext.intent.spectralMovement.rawValue)
+        sink.field("kickCrestReduction")
+        sink.raw(value.qualityRecoveryContext.intent.kickCrestReduction.rawValue)
         sink.field("longHorizonEffectSentence")
         sink.presence(value.longHorizonEffectSentence != nil)
         if let sentence = value.longHorizonEffectSentence {
@@ -496,6 +513,49 @@ private extension AutonomousTypedFingerprint {
             sink.field("notes"); sink.collection(bar.upperNotes.count)
             for note in bar.upperNotes { encode(note, into: &sink) }
         }
+    }
+
+    static func encode(
+        _ value: LongHorizonMaterialWorldPlan,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonMaterialWorldPlan")
+        sink.field("worldID"); sink.uint64(value.worldID)
+        sink.field("worldFingerprint"); sink.raw(value.worldFingerprint)
+        sink.field("parentFingerprint")
+        sink.presence(value.parentFingerprint != nil)
+        if let parent = value.parentFingerprint { sink.raw(parent) }
+        sink.field("generation"); sink.int(value.generation)
+        sink.field("handoff"); sink.raw(value.handoff.rawValue)
+        sink.field("sourceRhythm"); sink.raw(value.sourceAxes.rhythm.rawValue)
+        sink.field("sourceMotif"); sink.raw(value.sourceAxes.motif.rawValue)
+        sink.field("sourceRoles"); sink.raw(value.sourceAxes.roles.rawValue)
+        sink.field("sourceHarmony"); sink.raw(value.sourceAxes.harmony.rawValue)
+        sink.field("sourceArchitecture")
+        sink.raw(value.sourceAxes.architecture.rawValue)
+        sink.field("sourceEffectSpectralFocus")
+        sink.double(value.sourceAxes.effect.spectralFocus)
+        sink.field("sourceEffectNonlinearPressure")
+        sink.double(value.sourceAxes.effect.nonlinearPressure)
+        sink.field("sourceEffectModulationMotion")
+        sink.double(value.sourceAxes.effect.modulationMotion)
+        sink.field("sourceEffectEchoMemory")
+        sink.double(value.sourceAxes.effect.echoMemory)
+        sink.field("sourceEffectSpatialDepth")
+        sink.double(value.sourceAxes.effect.spatialDepth)
+        sink.field("rhythm"); sink.raw(value.axes.rhythm.rawValue)
+        sink.field("motif"); sink.raw(value.axes.motif.rawValue)
+        sink.field("roles"); sink.raw(value.axes.roles.rawValue)
+        sink.field("harmony"); sink.raw(value.axes.harmony.rawValue)
+        sink.field("architecture"); sink.raw(value.axes.architecture.rawValue)
+        sink.field("effectSpectralFocus"); sink.double(value.axes.effect.spectralFocus)
+        sink.field("effectNonlinearPressure")
+        sink.double(value.axes.effect.nonlinearPressure)
+        sink.field("effectModulationMotion")
+        sink.double(value.axes.effect.modulationMotion)
+        sink.field("effectEchoMemory"); sink.double(value.axes.effect.echoMemory)
+        sink.field("effectSpatialDepth"); sink.double(value.axes.effect.spatialDepth)
+        sink.field("progress"); sink.double(value.progress)
     }
 
     static func encode(_ value: PhraseCompositionBar, into sink: inout StreamingFNV1a) {
@@ -1065,6 +1125,19 @@ private extension AutonomousTypedFingerprint {
         if let mutation = value.mutation { encode(mutation, into: &sink) }
         sink.field("lowEndProtected"); sink.bool(value.lowEndProtected)
         sink.field("protectedRouting"); encode(value.protectedRouting, into: &sink)
+        sink.field("materialWorldFingerprint")
+        sink.raw(value.materialWorldFingerprint)
+        sink.field("effectWorldTarget")
+        encode(value.effectWorldTarget, into: &sink)
+    }
+
+    static func encode(_ value: EffectWorldTarget, into sink: inout StreamingFNV1a) {
+        sink.aggregate("EffectWorldTarget")
+        sink.field("spectralFocus"); sink.double(value.spectralFocus)
+        sink.field("nonlinearPressure"); sink.double(value.nonlinearPressure)
+        sink.field("modulationMotion"); sink.double(value.modulationMotion)
+        sink.field("echoMemory"); sink.double(value.echoMemory)
+        sink.field("spatialDepth"); sink.double(value.spatialDepth)
     }
 
     static func encode(_ value: DSPGraphNode, into sink: inout StreamingFNV1a) {

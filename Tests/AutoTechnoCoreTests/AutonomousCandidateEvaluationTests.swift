@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 35)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 37)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -304,7 +304,7 @@ struct AutonomousCandidateEvaluationTests {
             object["liveProposalFingerprint"] = "aaaaaaaaaaaaaaaa"
         }
         #expect(!transaction(correction: changedLiveProposal).isComplete)
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 6)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 8)
     }
 
     @Test("Candidate live policy rejects boost forged scaling stale revision and boundary")
@@ -1304,10 +1304,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 35)
-        #expect(QualityQualificationContract.schemaVersion == 39)
+        #expect(vector.schemaVersion == 37)
+        #expect(QualityQualificationContract.schemaVersion == 41)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v38")
+                "autotechno-canonical-engine.v40")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3908,15 +3908,15 @@ struct AutonomousCandidateEvaluationTests {
         }
 
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
-            "b62dd95de0f6f0cc")
+            "a33ecdd94691219b")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
-                "011f35a0373a1e23")
+                "9191ba1b316d1c03")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
                 "e07e7f964d9987cf")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "f167126593f3cd1f")
+            "1facd14bf0cdbba7")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7

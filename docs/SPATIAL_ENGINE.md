@@ -1,7 +1,7 @@
 # Canonical Spatial Engine
 
-The spatial topology is qualified in engine v38 together with the pitch and
-transition-tail contracts.
+The spatial topology remains part of engine v40 together with material-world
+lineage, pitch, and transition-tail contracts.
 
 ## Outcome
 
@@ -31,9 +31,9 @@ evidence about the consequence.
    Decay, damping, send, and wet targets move through a 120 ms physical-time
    slew without restarting at render-block boundaries.
 5. `SpatialFDNRenderEvidence` streams hashes and reduced measurements from the
-   exact input and stereo wet samples. Candidate-vector schema 35 binds one
-   record to every rendered bar under quality-contract schema 39, candidate-
-   transaction schema 6, and canonical engine v38.
+   exact input and stereo wet samples. Candidate-vector schema 37 binds one
+   record to every rendered bar under quality-contract schema 41, candidate-
+   transaction schema 8, and canonical engine v40.
 6. `CrossPhraseTransitionEvidence` compares the predecessor's terminal frame
    and reduced tail facts with the successor's opening. Comparable ordinary
    continuation must retain FDN geometry and expose nonzero opening wet energy

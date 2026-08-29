@@ -1,5 +1,28 @@
 # Sound Quality Contract
 
+## Engine-v40 material-world and persistent-recovery checkpoint
+
+Engine v40 addresses long-form perceptual sameness caused by recurring
+phrase-role order and randomly chosen graph operations. Structural evidence
+requires four-to-eight-minute worlds, causal lineage, four changed axes
+including effect and two structural axes, no exact fingerprint within four
+worlds, and different ten- and twenty-minute score/graph snapshots without
+using loudness or density alone as proof.
+
+Graph evidence binds the world fingerprint, requested five-coordinate target,
+realized graph vector, distance, protected routing, and at most one changed node
+per phrase. Existing transition-tail and route-recovery contracts remain.
+The exact engine-v40 primary-v21 and long-horizon-v8 development, adversarial,
+and disjoint-holdout artifacts now pass and replace the ineligible v38 set.
+Listening, real app/route QA, latency observation, and physical-output soak
+remain separate unverified gates.
+
+The current qualified offline implementation is
+`autotechno-canonical-engine.v40` under quality-contract schema 41,
+candidate-vector schema 37, candidate-transaction schema 8, and Professional
+Evidence v21. Primary profile/evaluator v21 and long-horizon policy v8 are the
+required exact identities; their artifact loaders fail closed on any mismatch.
+
 ## Status and purpose
 
 Professional release-quality sound is Auto Techno's explicit iterative goal. It
@@ -16,9 +39,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 39, candidate-vector schema 35,
-candidate-transaction schema 6, and canonical engine identity
-`autotechno-canonical-engine.v38`. Its explicit modal, tuned-inharmonic,
+candidate uses quality-contract schema 41, candidate-vector schema 37,
+candidate-transaction schema 8, and canonical engine identity
+`autotechno-canonical-engine.v40`. Its explicit modal, tuned-inharmonic,
 deliberate-dissonance, and indefinite-pitch rules are defined in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md). It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
@@ -322,13 +345,13 @@ remain explicit rather than being hidden behind a blanket master crossfade.
 Tonal Motion patch boundaries separately retain comb/all-pass/echo memory while
 their patch-owned coefficients crossfade for 500 ms.
 
-`ProfessionalEvidenceReportBank` v20 accepts a bank only when every canonical
+`ProfessionalEvidenceReportBank` v21 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v19 from the v19 profile, v16 adversarial suite,
-and v14 disjoint holdout. It judges every
+exact-engine primary evaluator v21 from the v21 profile, v17 adversarial suite,
+and v15 disjoint holdout only after all three exact artifacts replay. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
-derives from 28 complete 44.1/48 kHz journeys; four replacement holdout journeys
+derives from 36 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.
 EBU-style short-program loudness range stays descriptive because its gated
 percentile can change discontinuously when one short-term block crosses the
@@ -351,10 +374,11 @@ trajectories plus malformed and adversarial synthetic journeys, but the report
 has no pass/reject field and always declares qualification unavailable with
 reason `no-calibrated-long-horizon-policy`.
 
-Phase 2 separately embeds current `autotechno-long-horizon-continuation.v2` in canonical
+Phase 2 separately embeds current `autotechno-long-horizon-continuation.v4` in canonical
 `TemporalMusicalMemory`. It records committed arc/episode context, fixed-domain
 capability recency, semantic energy start/target coordinates, identity
-landmarks, reserve, and payoff/recovery/recall obligations. It is bounded,
+landmarks, reserve, payoff/recovery/recall obligations, and bounded material-
+world lineage. It is bounded,
 schema-safe, deterministic, and transactionally preserves the accepted episode
 on malformed input. Phase 3 lets the existing director consume only exact bound
 context and records `autotechno-long-horizon-selection.v1` provenance on the one
@@ -372,7 +396,7 @@ or callback work.
 Phase 5 adds two still-unqualified evidence foundations. Core schema
 `autotechno-long-horizon-effect-sentence.v1` names at most one gated
 call/response or anticipation turnaround already present in the resolved score.
-DSP schema `autotechno-long-horizon-effect-dose.v1` reduces the accepted graph,
+DSP schema `autotechno-long-horizon-effect-dose.v2` reduces the accepted graph,
 pulse echo, percussion return, FDN, instrument effect access, and masking records
 into per-bar and fixed-capacity session evidence for eligibility, wet occupancy,
 tail-only activity, true recovery, active/inactive runs, last use,
@@ -396,10 +420,14 @@ episode re-entry, evidence consistency, or overflow makes the report unavailable
 without partially mutating accepted summaries.
 
 Phase 6B calibrates independent non-compensable semantic, per-operator signal,
-and effect-family dimensions across five exact four-hour development journeys
-at 44.1/48 kHz. The immutable artifact set rejects ten independent adversarial
-attacks and accepts two disjoint holdout roots. It retains only reduced
-irreversible evidence and binds the exact engine-v38/primary-v19 identity.
+and effect-family dimensions across seven exact four-hour development journeys
+at 44.1/48 kHz. The immutable v8 artifact set rejects ten independent
+adversarial attacks and accepts two fresh disjoint holdout roots. Generated-
+graph evidence additionally bounds realized material-world count and requested-
+to-realized effect-world distance. It retains only reduced irreversible
+evidence and binds the exact engine-v40/primary-v21 identity. The pinned
+long-horizon profile, adversarial, and holdout fingerprints are
+`43fe9d315ffce406`, `3b6d6de637e7dc02`, and `a5a6df9d71577a9c`.
 
 Phase 7 consumes that policy only during detached preparation. A fixed-capacity
 active-rate observation requires at least 7,200 bars, twelve signal observations,
@@ -494,7 +522,7 @@ start/end values for pitch fall, fundamental, body/sub decay, harmonic body,
 drive, and click. Same-pass source evidence hashes that score record and the
 actual pre/post-conditioned kick PCM while retaining physical attack/body and
 upper-mid consequence. A morphology mismatch, discontinuity, non-finite value,
-out-of-range home, or forged render binding makes candidate-vector schema 35
+out-of-range home, or forged render binding makes candidate-vector schema 37
 incomplete. Minute-three/minute-fifty checks are causal sound tests, not an
 arrangement heuristic.
 
@@ -521,7 +549,7 @@ sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
 status. It also retains exact first/last sample bit patterns, the pre-drive peak
 frame, the exact input/amount witness at the post-drive peak, and a replayable
 changed-frame witness together with that frame's exact input bits.
-Candidate-vector schema 35 binds that record to the matching instrument effect
+Candidate-vector schema 37 binds that record to the matching instrument effect
 access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
 sample-rate-normalized boundary transition. Neutral drive requires the no-change
 sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
@@ -550,7 +578,7 @@ uses half depth, response uses full depth, and the full displacement is capped
 at `0.12` of one sixteenth. Note count, base step, pitch, velocity, instrument,
 requested duration, gate, and every protected-rhythm event remain unchanged.
 
-Candidate-vector schema 35 retains one compact record per full rendered bar. It
+Candidate-vector schema 37 retains one compact record per full rendered bar. It
 binds route-derived frame geometry, score and actual renderer onset facts,
 requested gate end, bounded renderer-owned applied gate end, causal role counts,
 exact protected/role offset relationships, and separate shadow/response dry
@@ -565,7 +593,7 @@ per covered 44.1/48 kHz route. Missing artifacts and unsupported rates are
 truthfully unavailable and cannot commit. The initial single-journey profile
 failed unseen phrases, and the first two holdout cohorts exposed
 masking/transient/crest and short-program LRA semantics instead of being silently
-absorbed as proof. The final 28-journey profile, adversarial suite, and four
+absorbed as proof. The final 36-journey profile, adversarial suite, and four
 disjoint holdouts pass offline and are the same artifacts used by runtime
 preparation.
 
@@ -592,7 +620,8 @@ The target loop is bounded and persistent:
    and quality state.
 2. Detached preparation renders immutable audio and exact role evidence.
    Calibrated rejection of the first phrase uses the same bounded serial
-   variants as successor preparation; unavailable or exhausted evidence blocks.
+   recovery waves as successor preparation; unavailable policy, invalid
+   provenance, route failure, or signal-safety failure still blocks fail closed.
 3. Hard gates reject unsafe or invalid output.
 4. The quality policy evaluates the surviving multidimensional evidence.
    Runtime selects one calibrated whole-phrase checkpoint. Every phrase from
@@ -610,22 +639,22 @@ The target loop is bounded and persistent:
 5. The evaluator may request one deterministic home-timbre correction of that
    same plan; otherwise it reaches a terminal verdict after the first pass.
 6. A calibrated guardrail rejection, or a hard-gate rejection proved to contain
-   only invalid symbolic phrase interest, may inform one later, serial director
-   proposal after a coherent accepted-PCM repeat. The rejected plan and PCM
-   never commit. The bounded retry ordinal preserves identity, debt, and
-   long-horizon ownership; it preserves structural intent whenever the
+   only invalid symbolic phrase interest, reduces to a fixed-domain recovery
+   intent owned by Core. The rejected plan and PCM never commit. The bounded
+   retry ordinal and finite recovery-wave index preserve identity, debt, and
+   long-horizon ownership; they preserve structural intent whenever the
    canonical four-bar minimum still fits before the earliest open-debt
    deadline, capping only the retry length at that deadline. If no four-bar
    same-kind phrase can remain eligible, the later retry uses the one
    conservative energy-release fallback. Ordinal zero stays the original
-   canonical plan. After the original eight realization variants, one final
-   four-bar same-intent coherence recovery reduces phrase-wide variation and
-   resolves every ordinary bar through the existing score-side `minimalize`
-   gesture while preserving any structural macro marker. This causally lowers
-   symbolic overactivity and creates intentional space without changing
-   identity, debt, selection, energy coordination, or the calibrated
-   symbolic-interest threshold; it remains subject to every unchanged gate.
-   No proposals coexist or compete.
+   canonical plan. Symbolic overactivity directs only the final serial
+   realization to resolve every non-marker bar through the existing score-side
+   `minimalize` gesture. Insufficient spectral spread or movement increases the
+   existing timbral movement path. Insufficient kick crest reduction
+   strengthens the existing kick body and explicitly excludes the high-crest
+   transient-recovery articulation. Opposing directions merge to hold. All
+   variants remain subject to every unchanged gate; no proposals coexist or
+   compete.
    Its first eight score-side variants alternate bounded kick attack/body
    pressure around the continuous committed morphology trajectory. A gentle
    first step can correct a near-boundary miss without crossing an adjacent
@@ -633,14 +662,18 @@ The target loop is bounded and persistent:
    recovery. Positive pressure firms the existing body; negative pressure
    softens the same body drive and sub level as well as its attack/body contour,
    so both source shape and measured active kick energy move causally. The final
-   four-bar recovery owns one bounded transient-clarity articulation: it
+   four-bar high-crest recovery owns one bounded transient-clarity articulation: it
    shortens and softens that same body while lifting its existing click
    components, covering the coupled low-attack/high-crest-reduction miss that
-   ordinary positive pressure cannot resolve. Ten rejected candidates stop in
-   an explicit blocked state. Missing or non-finite
-   evidence, unavailable policy,
-   graph or signal-safety failure, route/provenance failure, and exhausted
-   variants remain terminal.
+   ordinary positive pressure cannot resolve. The first successor retry in a
+   recovery wave waits for one coherent accepted-PCM repeat. Remaining ordinals then run
+   serially in detached preparation. Wave exhaustion yields until the next
+   coherent boundary and opens a new deterministically salted finite wave, so a
+   retryable quality failure cannot make the same phrase play forever with no
+   further recovery work. Before P1 has accepted PCM, the next finite wave opens
+   immediately after exhaustion and detached tasks still yield between waves.
+   Missing or non-finite evidence, unavailable policy,
+   graph or signal-safety failure, and route/provenance failure remain terminal.
 7. The committed plan, reason-coded evidence, controller state, and policy version
    become continuation input for future preparation.
 8. Final immutable blocks receive a second safety check before scheduling.
@@ -650,26 +683,37 @@ The target loop is bounded and persistent:
 Fail-closed candidate rejection and audible fallback are different outcomes.
 Repeating the last qualified phrase, with exact accepted PCM or a qualified
 repeat-hold sidecar, protects realtime output but does not advance the canonical
-score. A terminal `blocked`/`exhausted` successor is therefore the correct safety
-response to unacceptable candidates and, simultaneously, a failed runtime and
-soak result for an indefinitely evolving performance.
+score. Retryable calibrated rejection must keep opening finite deterministic
+recovery waves; it may not become permanently `blocked` or `exhausted` merely
+because one wave failed. A terminal `blocked` successor is reserved for
+non-retryable unavailable-policy, invalid-provenance, route, or signal-safety
+failures and is simultaneously a failed runtime and soak result for an
+indefinitely evolving performance.
 
 Runtime verification must observe both sides of that boundary: route/playing-
 time health and the successor tuple of current phrase, target phrase, stage,
-attempt, coherent repeats, and last reason-coded failure. The same tuple across
-two phrase-boundary checkpoints is a suspected stall; `blocked`, `exhausted`, a
-ready successor missing its boundary, or the same tuple without detached-work
-progress across both checkpoints is a defect. Hold-family rotation, unchanged
-qualified render health, or increasing LIVE time may not be used as evidence of
-canonical progression.
+wave, attempt, coherent repeats, recovery intent, and last reason-coded failure.
+The same tuple across two phrase-boundary checkpoints without detached-work
+progress is a suspected stall; non-retryable `blocked`, a ready successor
+missing its boundary, or a retryable wave that does not yield and advance is a
+defect. Hold-family rotation, unchanged qualified render health, or increasing
+LIVE time may not be used as evidence of canonical progression by themselves.
+Presentation bars must still advance while qualified accepted PCM repeats so a
+later recovered successor inherits the listener's elapsed long-form time.
 
 Each reproduced terminal failure must retain the exact engine/profile identity,
-root/phrase witness, primary checkpoint, all retry ordinals, failed metrics with
-observed values and calibrated bounds, and the final block reason. A repair must
-add deterministic coverage for that witness and a bounded ordinal/root sweep;
-starting a fresh set or relaunching only changes the performance identity and
-does not validate the cause. The operational checklist lives in
+root/phrase witness, primary checkpoint, every wave and retry ordinal, failed
+metrics with observed values and calibrated bounds, and the final reason. A
+repair must add deterministic coverage for that witness and a bounded
+ordinal/root sweep; starting a fresh set or relaunching only changes the
+performance identity and does not validate the cause. The operational checklist lives in
 [`AUTONOMOUS_RUNTIME_VALIDATION.md`](AUTONOMOUS_RUNTIME_VALIDATION.md).
+
+The App never converts recovery into Pause or New Set. Those remain explicit
+user actions. Accepted canonical score/evidence time and presentation time are
+tracked separately: coherent accepted-PCM repeats age long-horizon episodes and
+material worlds by the bars the listener actually heard, but do not fabricate
+accepted plans, evidence use counts, or canonical continuation commits.
 
 The repeat-hold sidecars are outside primary candidate selection and cannot make
 a rejected phrase playable. During the same detached render, version
@@ -698,8 +742,8 @@ remaining qualified families from the second coherent repeat and preserves exact
 accepted PCM when none remain. At most five sidecars are retained for the selected render; every superseded
 initial sidecar is released before a corrective render, and the declared
 preparation memory budget includes both that storage and bounded looper capture
-memory. Primary-v19 artifacts and
-engine-v38 candidate fingerprints remain
+memory. Primary-v21 artifacts and
+engine-v40 candidate fingerprints remain
 unchanged because the sidecar cannot affect the primary plan, scheduled default
 PCM, evidence transaction, render continuation, or commit decision.
 
@@ -707,8 +751,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 39, candidate-vector schema 35,
-candidate-transaction schema 6, and canonical engine v38, the versioned
+Under quality-contract schema 41, candidate-vector schema 37,
+candidate-transaction schema 8, and canonical engine v40, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

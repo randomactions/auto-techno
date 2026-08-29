@@ -104,10 +104,14 @@ package struct DSPGraphPlan: Equatable, Sendable {
     package let mutation: DSPGraphMutation?
     package let lowEndProtected: Bool
     package let protectedRouting: DSPProtectedRouting
+    package let materialWorldFingerprint: String
+    package let effectWorldTarget: EffectWorldTarget
 
     package init(sessionSeed: UInt64, revision: Int, nodes: [DSPGraphNode],
                 mutation: DSPGraphMutation?, lowEndProtected: Bool = true,
-                protectedRouting: DSPProtectedRouting = .fixed) {
+                protectedRouting: DSPProtectedRouting = .fixed,
+                materialWorldFingerprint: String = "unbound",
+                effectWorldTarget: EffectWorldTarget = .neutral) {
         self.sessionSeed = sessionSeed
         self.revision = max(0, revision)
         self.nodes = nodes.sorted {
@@ -118,6 +122,8 @@ package struct DSPGraphPlan: Equatable, Sendable {
         self.mutation = mutation
         self.lowEndProtected = lowEndProtected
         self.protectedRouting = protectedRouting
+        self.materialWorldFingerprint = materialWorldFingerprint
+        self.effectWorldTarget = effectWorldTarget
     }
 
     package var branchCount: Int { (nodes.map(\.branch).max() ?? -1) + 1 }
@@ -127,7 +133,31 @@ package struct DSPGraphPlan: Equatable, Sendable {
 
     package func hasSameTopology(as other: DSPGraphPlan) -> Bool {
         revision == other.revision && nodes == other.nodes &&
-            lowEndProtected == other.lowEndProtected && protectedRouting == other.protectedRouting
+            lowEndProtected == other.lowEndProtected &&
+            protectedRouting == other.protectedRouting
+    }
+
+    package var realizedEffectWorld: EffectWorldTarget {
+        func mean(_ selected: [DSPGraphNode], _ value: (DSPGraphNode) -> Double) -> Double {
+            guard !selected.isEmpty else { return 0 }
+            return selected.reduce(0) { $0 + value($1) } / Double(selected.count)
+        }
+        let spectral = nodes.filter { $0.kind == .toneGuard || $0.kind == .resonator }
+        let nonlinear = nodes.filter { $0.kind == .saturation || $0.kind == .waveFold }
+        let modulation = nodes.filter {
+            $0.kind == .phaser || $0.kind == .chorus || $0.kind == .stereoMotion
+        }
+        let memory = nodes.filter {
+            $0.kind == .comb || $0.kind == .echo || $0.kind == .diffusion
+        }
+        let spatial = nodes.filter { $0.kind == .diffusion || $0.kind == .stereoMotion }
+        return EffectWorldTarget(
+            spectralFocus: mean(spectral) { $0.amount },
+            nonlinearPressure: mean(nonlinear) { ($0.amount + $0.mix) / 2 },
+            modulationMotion: mean(modulation) { ($0.amount + $0.mix) / 2 },
+            echoMemory: mean(memory) { ($0.amount + $0.feedback) / 2 },
+            spatialDepth: mean(spatial) { ($0.amount + $0.mix) / 2 }
+        )
     }
 }
 
@@ -196,78 +226,72 @@ package enum DSPGraphGenerator {
         // metadata so changed-node state is reset exactly as it was on the
         // original render when the topology differs.
         if routeRecovery { return previous }
-        guard phrase.requestsTopologyMutation, phrase.kind != .energyRelease else {
-            return DSPGraphPlan(sessionSeed: sessionSeed, revision: previous.revision,
-                                nodes: previous.nodes, mutation: nil)
+        let target = phrase.materialWorld.resolvedAxes.effect
+        let worldChanged = previous.materialWorldFingerprint !=
+            phrase.materialWorld.worldFingerprint
+        let remainingDistance = target.distance(from: previous.realizedEffectWorld)
+        guard worldChanged || remainingDistance >= 0.035 else {
+            return DSPGraphPlan(
+                sessionSeed: sessionSeed,
+                revision: previous.revision,
+                nodes: previous.nodes,
+                mutation: nil,
+                lowEndProtected: previous.lowEndProtected,
+                protectedRouting: previous.protectedRouting,
+                materialWorldFingerprint: phrase.materialWorld.worldFingerprint,
+                effectWorldTarget: target
+            )
         }
 
         let mutationSeed = SceneDNA.derivedSeed(
-            scene: sessionSeed,
+            scene: sessionSeed ^ phrase.materialWorld.worldID,
             domain: UInt64(phrase.phraseIndex + memory.topologyRevision + 1),
             index: 0
         )
-        let kind = DSPGraphMutationKind.allCases[Int(mutationSeed % UInt64(DSPGraphMutationKind.allCases.count))]
         var nodes = previous.nodes
-        var affected: [Int] = []
-
-        switch kind {
-        case .insert:
-            let id = (nodes.map(\.id).max() ?? -1) + 1
-            let branch = Int((mutationSeed >> 8) % UInt64(max(1, min(3, previous.branchCount))))
-            let descriptor = node(id: id, branch: branch, order: nodes.filter { $0.branch == branch }.count,
-                                  seed: mutationSeed, phrase: phrase)
-            if nodes.count < DSPGraphPlan.maximumNodeCount {
-                nodes.append(descriptor); affected = [id]
-            }
-        case .bypass:
-            if nodes.count > 4 {
-                let index = Int((mutationSeed >> 11) % UInt64(nodes.count))
-                affected = [nodes[index].id]
-                nodes.remove(at: index)
-            }
-        case .replace:
-            let index = Int((mutationSeed >> 13) % UInt64(nodes.count))
+        let realized = previous.realizedEffectWorld
+        let axis = largestEffectDeficit(target: target, realized: realized)
+        let preferredKinds = nodeKinds(for: axis)
+        let existing = nodes.indices.filter { preferredKinds.contains(nodes[$0].kind) }
+        let index: Int
+        if existing.isEmpty {
+            index = Int(mutationSeed % UInt64(nodes.count))
             let old = nodes[index]
-            nodes[index] = node(id: old.id, branch: old.branch, order: old.order,
-                                seed: mutationSeed ^ 0x2E71ACE, phrase: phrase)
-            affected = [old.id]
-        case .reorder:
-            let branch = Int((mutationSeed >> 15) % UInt64(max(1, previous.branchCount)))
-            let indices = nodes.indices.filter { nodes[$0].branch == branch }
-            if indices.count > 1 {
-                let first = indices[Int((mutationSeed >> 18) % UInt64(indices.count))]
-                let secondPosition = (indices.firstIndex(of: first)! + 1) % indices.count
-                let second = indices[secondPosition]
-                let a = nodes[first], b = nodes[second]
-                nodes[first] = DSPGraphNode(id: a.id, kind: a.kind, branch: a.branch, order: b.order,
-                                            amount: a.amount, mix: a.mix, feedback: a.feedback,
-                                            delaySeconds: a.delaySeconds)
-                nodes[second] = DSPGraphNode(id: b.id, kind: b.kind, branch: b.branch, order: a.order,
-                                             amount: b.amount, mix: b.mix, feedback: b.feedback,
-                                             delaySeconds: b.delaySeconds)
-                affected = [a.id, b.id]
-            }
-        case .rerouteSend:
-            let index = Int((mutationSeed >> 20) % UInt64(nodes.count))
-            let old = nodes[index]
-            let nextBranch = (old.branch + 1 + Int((mutationSeed >> 22) % 2)) % 3
-            nodes[index] = DSPGraphNode(id: old.id, kind: old.kind, branch: nextBranch, order: 0,
-                                        amount: old.amount, mix: old.mix, feedback: old.feedback,
-                                        delaySeconds: old.delaySeconds)
-            affected = [old.id]
+            nodes[index] = effectNode(
+                id: old.id,
+                kind: preferredKinds[Int((mutationSeed >> 8) % UInt64(preferredKinds.count))],
+                branch: old.branch,
+                order: old.order,
+                target: target,
+                axis: axis
+            )
+        } else {
+            index = existing[Int((mutationSeed >> 12) % UInt64(existing.count))]
+            nodes[index] = retargeted(
+                nodes[index],
+                target: target,
+                axis: axis
+            )
         }
-
+        let affectedNodeID = nodes[index].id
         nodes = normalized(nodes)
-        let mutation = affected.isEmpty ? nil : DSPGraphMutation(
-            kind: kind, phraseIndex: phrase.phraseIndex, affectedNodeIDs: affected
+        let mutation = DSPGraphMutation(
+            kind: .replace,
+            phraseIndex: phrase.phraseIndex,
+            affectedNodeIDs: [affectedNodeID]
         )
         let candidate = DSPGraphPlan(
             sessionSeed: sessionSeed,
-            revision: previous.revision + (mutation == nil ? 0 : 1),
+            revision: previous.revision + 1,
             nodes: nodes,
-            mutation: mutation
+            mutation: mutation,
+            materialWorldFingerprint: phrase.materialWorld.worldFingerprint,
+            effectWorldTarget: target
         )
-        guard DSPGraphValidator.validate(candidate).valid else {
+        guard DSPGraphValidator.validate(candidate).valid,
+              candidate.effectWorldTarget.distance(
+                from: candidate.realizedEffectWorld
+              ) <= remainingDistance + 1e-12 else {
             // A rejected current-phrase mutation freezes the prior topology,
             // but the prior phrase's mutation metadata is not a new state
             // transition and must not leak into recovery provenance.
@@ -277,7 +301,9 @@ package enum DSPGraphGenerator {
                 nodes: previous.nodes,
                 mutation: nil,
                 lowEndProtected: previous.lowEndProtected,
-                protectedRouting: previous.protectedRouting
+                protectedRouting: previous.protectedRouting,
+                materialWorldFingerprint: phrase.materialWorld.worldFingerprint,
+                effectWorldTarget: target
             )
         }
         return candidate
@@ -293,7 +319,8 @@ package enum DSPGraphGenerator {
                          amount: 0.28, mix: 0.22, delaySeconds: 0.016),
             DSPGraphNode(id: 3, kind: .diffusion, branch: 1, order: 1,
                          amount: 0.30, mix: 0.20, feedback: 0.34, delaySeconds: 0.090),
-        ], mutation: nil)
+        ], mutation: nil, materialWorldFingerprint: "safe",
+           effectWorldTarget: .neutral)
     }
 
     private static func basePlan(sessionSeed: UInt64, phrase: AutonomousPhrasePlan) -> DSPGraphPlan {
@@ -306,7 +333,11 @@ package enum DSPGraphGenerator {
             return node(id: index, branch: branch, order: branchDepth[branch], seed: seed, phrase: phrase)
         }
         let candidate = DSPGraphPlan(sessionSeed: sessionSeed, revision: 0,
-                                     nodes: normalized(nodes), mutation: nil)
+                                     nodes: normalized(nodes), mutation: nil,
+                                     materialWorldFingerprint:
+                                        phrase.materialWorld.worldFingerprint,
+                                     effectWorldTarget:
+                                        phrase.materialWorld.resolvedAxes.effect)
         return DSPGraphValidator.validate(candidate).valid ? candidate : safePlan(sessionSeed: sessionSeed)
     }
 
@@ -314,9 +345,16 @@ package enum DSPGraphGenerator {
                              seed: UInt64, phrase: AutonomousPhrasePlan) -> DSPGraphNode {
         let palette = DSPGraphNodeKind.allCases
         let kind = palette[Int(seed % UInt64(palette.count))]
-        let semanticAmount = min(1, 0.18 + phrase.scene.atmosphere * 0.34 + phrase.scene.textureChaos * 0.30 +
-                                 Double((seed >> 9) % 101) / 500)
-        let feedback = kind.permitsFeedback ? min(0.62, 0.18 + phrase.scene.hypnosis * 0.34) : 0
+        let target = phrase.materialWorld.resolvedAxes.effect
+        let targetAmount = effectAmount(for: kind, target: target)
+        let semanticAmount = min(
+            1,
+            0.08 + targetAmount * 0.72 + phrase.scene.atmosphere * 0.10 +
+                phrase.scene.textureChaos * 0.06 +
+                Double((seed >> 9) % 101) / 1_000
+        )
+        let feedback = kind.permitsFeedback
+            ? min(0.62, 0.10 + target.echoMemory * 0.50) : 0
         let delay: Double
         switch kind {
         case .chorus: delay = 0.010 + Double((seed >> 15) % 12) / 1_000
@@ -328,9 +366,132 @@ package enum DSPGraphGenerator {
         return DSPGraphNode(
             id: id, kind: kind, branch: branch, order: order,
             amount: semanticAmount,
-            mix: min(0.70, 0.12 + semanticAmount * 0.48),
+            mix: min(0.70, 0.08 + semanticAmount * 0.42 + target.spatialDepth * 0.12),
             feedback: feedback,
             delaySeconds: delay
+        )
+    }
+
+    private enum EffectAxis: Int, CaseIterable {
+        case spectral
+        case nonlinear
+        case modulation
+        case memory
+        case spatial
+    }
+
+    private static func largestEffectDeficit(
+        target: EffectWorldTarget,
+        realized: EffectWorldTarget
+    ) -> EffectAxis {
+        let deficits = [
+            abs(target.spectralFocus - realized.spectralFocus),
+            abs(target.nonlinearPressure - realized.nonlinearPressure),
+            abs(target.modulationMotion - realized.modulationMotion),
+            abs(target.echoMemory - realized.echoMemory),
+            abs(target.spatialDepth - realized.spatialDepth),
+        ]
+        return EffectAxis.allCases.max {
+            deficits[$0.rawValue] < deficits[$1.rawValue]
+        } ?? .spectral
+    }
+
+    private static func nodeKinds(for axis: EffectAxis) -> [DSPGraphNodeKind] {
+        switch axis {
+        case .spectral: [.toneGuard, .resonator]
+        case .nonlinear: [.saturation, .waveFold]
+        case .modulation: [.phaser, .chorus, .stereoMotion]
+        case .memory: [.comb, .echo]
+        case .spatial: [.diffusion, .stereoMotion]
+        }
+    }
+
+    private static func effectAmount(
+        for kind: DSPGraphNodeKind,
+        target: EffectWorldTarget
+    ) -> Double {
+        switch kind {
+        case .toneGuard, .resonator: target.spectralFocus
+        case .saturation, .waveFold: target.nonlinearPressure
+        case .phaser, .chorus: target.modulationMotion
+        case .comb, .echo: target.echoMemory
+        case .diffusion: (target.echoMemory + target.spatialDepth) / 2
+        case .stereoMotion: (target.modulationMotion + target.spatialDepth) / 2
+        }
+    }
+
+    private static func targetValue(
+        _ target: EffectWorldTarget,
+        axis: EffectAxis
+    ) -> Double {
+        switch axis {
+        case .spectral: target.spectralFocus
+        case .nonlinear: target.nonlinearPressure
+        case .modulation: target.modulationMotion
+        case .memory: target.echoMemory
+        case .spatial: target.spatialDepth
+        }
+    }
+
+    private static func effectNode(
+        id: Int,
+        kind: DSPGraphNodeKind,
+        branch: Int,
+        order: Int,
+        target: EffectWorldTarget,
+        axis: EffectAxis
+    ) -> DSPGraphNode {
+        let value = targetValue(target, axis: axis)
+        let feedback = kind.permitsFeedback ? min(0.62, value * 0.62) : 0
+        let delay: Double = switch kind {
+        case .chorus: 0.010 + value * 0.012
+        case .comb: 0.018 + value * 0.048
+        case .echo: 0.080 + value * 0.260
+        case .diffusion: 0.045 + value * 0.120
+        default: 0
+        }
+        return DSPGraphNode(
+            id: id,
+            kind: kind,
+            branch: branch,
+            order: order,
+            amount: value,
+            mix: min(0.70, 0.10 + value * 0.56),
+            feedback: feedback,
+            delaySeconds: delay
+        )
+    }
+
+    private static func retargeted(
+        _ node: DSPGraphNode,
+        target: EffectWorldTarget,
+        axis: EffectAxis
+    ) -> DSPGraphNode {
+        let destination = targetValue(target, axis: axis)
+        func step(_ current: Double, toward target: Double, maximum: Double) -> Double {
+            current + min(maximum, max(-maximum, target - current))
+        }
+        let amount = step(node.amount, toward: destination, maximum: 0.18)
+        let desiredMix = min(0.70, 0.10 + destination * 0.56)
+        let mix = step(node.mix, toward: desiredMix, maximum: 0.12)
+        let feedback = node.kind.permitsFeedback
+            ? step(node.feedback, toward: destination * 0.62, maximum: 0.10) : 0
+        let desiredDelay: Double = switch node.kind {
+        case .chorus: 0.010 + destination * 0.012
+        case .comb: 0.018 + destination * 0.048
+        case .echo: 0.080 + destination * 0.260
+        case .diffusion: 0.045 + destination * 0.120
+        default: 0
+        }
+        return DSPGraphNode(
+            id: node.id,
+            kind: node.kind,
+            branch: node.branch,
+            order: node.order,
+            amount: amount,
+            mix: mix,
+            feedback: feedback,
+            delaySeconds: desiredDelay
         )
     }
 
@@ -1048,11 +1209,13 @@ package struct AutonomousCandidatePolicyVerdict: Equatable, Sendable {
     package let outcome: QualityDecisionOutcome
     package let reasonCodes: [QualityReasonCode]
     package let diagnosticDetails: [String]
+    package let recoveryIntent: AutonomousQualityRecoveryIntent
 
     package init(
         outcome: QualityDecisionOutcome,
         reasonCodes: [QualityReasonCode],
-        diagnosticDetails: [String] = []
+        diagnosticDetails: [String] = [],
+        recoveryIntent: AutonomousQualityRecoveryIntent = .neutral
     ) {
         self.outcome = outcome
         self.reasonCodes = Array(Set(reasonCodes)).sorted {
@@ -1063,6 +1226,8 @@ package struct AutonomousCandidatePolicyVerdict: Equatable, Sendable {
             .filter { seen.insert($0).inserted }
             .prefix(24)
             .map { $0 }
+        self.recoveryIntent = outcome == .rejected
+            ? recoveryIntent : .neutral
     }
 }
 
@@ -1362,6 +1527,10 @@ package enum AutonomousPhrasePreparer {
             incomingControllerStateIsCoherent ? nil : "controller-state",
             candidateDebtsMatchMemory(plan, memory: memory)
                 ? nil : "dramatic-debts",
+            (!memory.longHorizon.isBound && plan.materialWorld == .neutral) ||
+                plan.materialWorld.isConsistent(
+                    with: memory.longHorizon.currentEpisode
+                ) ? nil : "material-world",
             candidateInputIsBounded(plan) ? nil : "candidate-bounds",
             candidateCharacterMatchesSession(
                 plan,
@@ -1603,7 +1772,9 @@ package enum AutonomousPhrasePreparer {
                 recentPerformanceCharacters:
                     memory.recentPerformanceCharacters,
                 timbralMotionIntent: plan.longHorizonEnergyCoordination
-                    .target.timbralMotionIntent
+                    .target.timbralMotionIntent,
+                materialArchitecture:
+                    plan.materialWorld.resolvedAxes.architecture
             )
         return plan.resolvedBars.allSatisfy { resolved in
             guard resolved.performanceCharacter == expectedCharacter else {
@@ -1784,7 +1955,7 @@ package enum AutonomousPhrasePreparer {
             performance.localBar == index &&
             performance.phraseLength == plan.barCount &&
             resolved.harmonicDisclosureRelationship ==
-                plan.longHorizonEnergyCoordination.target.harmonicDisclosure &&
+                plan.materialWorld.resolvedAxes.harmonicRelationship &&
             performance.roles.count <= PerformanceRole.allCases.count &&
             Set(performance.roles).count == performance.roles.count &&
             performance.transformations.count <=
@@ -2694,7 +2865,8 @@ package enum AutonomousPhrasePreparer {
             outcome: verdict.outcome,
             reasonCodes: reasonCodes,
             candidateFingerprint: selected.vector.fullMix.sampleHash,
-            evidenceFingerprint: transactionFingerprint
+            evidenceFingerprint: transactionFingerprint,
+            recoveryIntent: verdict.recoveryIntent
         )
         let outgoingQuality = incomingQualityState.recording(
             decision: proposedDecision,

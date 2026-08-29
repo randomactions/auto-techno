@@ -1439,6 +1439,10 @@ package struct LongHorizonPhraseSelection: Equatable, Codable, Sendable {
 package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let phraseIndex: Int
     package let startBar: Int
+    /// Presentation-time bar at which this still-unscheduled phrase would
+    /// begin. It may exceed `startBar` after coherent accepted-PCM
+    /// repeats, but those repeats remain absent from canonical score evidence.
+    package let presentationStartBar: Int
     package let barCount: Int
     package let kind: AutonomousPhraseKind
     package let scene: TechnoScene
@@ -1457,7 +1461,9 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let endingHarmonicContinuation: HarmonicContinuationState
     package let longHorizonSelection: LongHorizonPhraseSelection
     package let longHorizonEnergyCoordination: LongHorizonEnergyCoordination
+    package let materialWorld: LongHorizonMaterialWorldPlan
     package let longHorizonEffectSentence: LongHorizonEffectSentence?
+    package let qualityRecoveryContext: AutonomousQualityRecoveryContext
 
     package init(phraseIndex: Int, startBar: Int, barCount: Int,
                  kind: AutonomousPhraseKind, scene: TechnoScene, dna: SceneDNA,
@@ -1469,9 +1475,20 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
                  endingNarrativeState: NarrativeEvolutionState = NarrativeEvolutionState(),
                  harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState(),
                  longHorizonSelection: LongHorizonPhraseSelection? = nil,
-                 longHorizonEnergyCoordination: LongHorizonEnergyCoordination? = nil) {
+                 longHorizonEnergyCoordination: LongHorizonEnergyCoordination? = nil,
+                 materialWorld: LongHorizonMaterialWorldPlan = .neutral,
+                 qualityRecoveryContext: AutonomousQualityRecoveryContext = .neutral,
+                 presentationStartBar suppliedPresentationStartBar: Int? = nil) {
         self.phraseIndex = phraseIndex
         self.startBar = startBar
+        let maximumOffset = max(0, Int.max - max(0, startBar))
+        let repeatOffset = qualityRecoveryContext.presentedRepeatBars >
+            UInt64(maximumOffset)
+            ? maximumOffset : Int(qualityRecoveryContext.presentedRepeatBars)
+        presentationStartBar = max(
+            max(0, startBar) + repeatOffset,
+            suppliedPresentationStartBar ?? 0
+        )
         self.barCount = barCount
         self.kind = kind
         self.scene = scene
@@ -1522,6 +1539,8 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
             phraseKind: kind,
             selectionReason: resolvedSelection.reason
         )
+        self.materialWorld = materialWorld
+        self.qualityRecoveryContext = qualityRecoveryContext
         longHorizonEffectSentence = LongHorizonEffectSentence.resolving(
             phraseIndex: self.phraseIndex,
             phraseKind: kind,
@@ -1776,7 +1795,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
     /// Quality evaluation may correct this same plan once, but it never asks
     /// the director for a parallel substitute.
     package func plan(from state: AutonomousSessionState) -> AutonomousPhrasePlan {
-        plan(from: state, qualityRetryOrdinal: 0)
+        plan(from: state, qualityRecoveryContext: .neutral)
     }
 
     /// Resolves one serial post-rejection proposal. Ordinal zero is exactly the
@@ -1790,11 +1809,29 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         from state: AutonomousSessionState,
         qualityRetryOrdinal: Int
     ) -> AutonomousPhrasePlan {
-        let boundedRetryOrdinal = min(
-            Self.maximumQualityRetryOrdinal,
-            max(0, qualityRetryOrdinal)
+        plan(
+            from: state,
+            qualityRecoveryContext: AutonomousQualityRecoveryContext(
+                ordinal: qualityRetryOrdinal,
+                intent: qualityRetryOrdinal >=
+                    Self.maximumQualityRetryOrdinal
+                    ? AutonomousQualityRecoveryIntent(
+                        symbolicDensity: .decrease
+                    )
+                    : .neutral
+            )
         )
-        let originalSelection = nextSelection(state: state)
+    }
+
+    package func plan(
+        from state: AutonomousSessionState,
+        qualityRecoveryContext: AutonomousQualityRecoveryContext
+    ) -> AutonomousPhrasePlan {
+        let boundedRetryOrdinal = qualityRecoveryContext.ordinal
+        let originalSelection = nextSelection(
+            state: state,
+            qualityRecoveryContext: qualityRecoveryContext
+        )
         let selection = boundedRetryOrdinal > 0
             ? debtSafeSelection(originalSelection, state: state)
             : originalSelection
@@ -1802,12 +1839,13 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             state: state,
             kind: selection.phraseKind,
             longHorizonSelection: selection,
-            qualityRetryOrdinal: boundedRetryOrdinal
+            qualityRecoveryContext: qualityRecoveryContext
         )
     }
 
     private func nextSelection(
-        state: AutonomousSessionState
+        state: AutonomousSessionState,
+        qualityRecoveryContext: AutonomousQualityRecoveryContext
     ) -> LongHorizonPhraseSelection {
         let conservativeKind = conservativeNextKind(state: state)
         let continuation = state.memory.longHorizon
@@ -1820,7 +1858,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         }
         let episode = continuation.currentEpisode
         if episode.operatorKind == .recover,
-            episode.startedAtBar == state.memory.totalBars,
+            episode.startedAtBar == continuation.nextExpectedPresentationBar,
             continuation.lastTrajectoryDecision?.action == .recover,
             continuation.lastTrajectoryDecision?.targetPhraseIndex == state.phraseIndex,
             continuation.lastTrajectoryDecision?.targetBar == state.memory.totalBars
@@ -1832,7 +1870,13 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 reason: .episodeOperator
             )
         }
-        if state.memory.totalBars < episode.minimumHoldUntilBar {
+        let presentationBoundary = continuation.nextExpectedPresentationBar
+        let maximumOffset = max(0, Int.max - presentationBoundary)
+        let repeatOffset = qualityRecoveryContext.presentedRepeatBars >
+            UInt64(maximumOffset)
+            ? maximumOffset : Int(qualityRecoveryContext.presentedRepeatBars)
+        let presentedBar = presentationBoundary + repeatOffset
+        if presentedBar < episode.minimumHoldUntilBar {
             if episode.operatorKind == .payoff,
                conservativeKind == .energyRelease {
                 return LongHorizonPhraseSelection(
@@ -1927,17 +1971,41 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         state: AutonomousSessionState,
         kind: AutonomousPhraseKind,
         longHorizonSelection: LongHorizonPhraseSelection,
-        qualityRetryOrdinal: Int
+        qualityRecoveryContext: AutonomousQualityRecoveryContext
     ) -> AutonomousPhrasePlan {
+        let qualityRetryOrdinal = qualityRecoveryContext.ordinal
         let start = state.memory.totalBars
+        let continuation = state.memory.longHorizon
+        let presentationBoundary = continuation.isBound &&
+            continuation.rootSeed == state.rootSeed &&
+            continuation.nextExpectedPhraseIndex == state.phraseIndex &&
+            continuation.nextExpectedBar == start
+            ? continuation.nextExpectedPresentationBar : start
+        let maximumOffset = max(0, Int.max - presentationBoundary)
+        let repeatOffset = qualityRecoveryContext.presentedRepeatBars >
+            UInt64(maximumOffset)
+            ? maximumOffset : Int(qualityRecoveryContext.presentedRepeatBars)
+        let presentationStart = presentationBoundary + repeatOffset
+        let materialWorld = continuation.isBound &&
+            continuation.rootSeed == state.rootSeed &&
+            continuation.nextExpectedPhraseIndex == state.phraseIndex &&
+            continuation.nextExpectedBar == start
+            ? LongHorizonMaterialWorldPlan(
+                episode: continuation.currentEpisode,
+                startBar: presentationStart
+            ) : .neutral
         let energyCoordination = LongHorizonEnergyCoordination.resolving(
             state: state,
             selection: longHorizonSelection
         )
         let energyTarget = energyCoordination.target
+        let recoveryDomain = qualityRecoveryDomain(
+            0xF4A5E,
+            wave: qualityRecoveryContext.wave
+        )
         let baseLength = 4 + Int(seed(
             state: state,
-            domain: 0xF4A5E,
+            domain: recoveryDomain,
             index: qualityRetryOrdinal
         ) % 13)
         let structuralKind = kind == .majorBreak || kind == .energyRelease || kind == .identityReturn
@@ -1972,7 +2040,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         } else {
             length = unconstrainedLength
         }
-        let mutationAmount: Double
+        var mutationAmount: Double
         switch kind {
         case .lock: mutationAmount = 0.035
         case .contrast: mutationAmount = 0.13
@@ -1980,9 +2048,17 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         case .energyRelease: mutationAmount = 0.07
         case .identityReturn: mutationAmount = 0.045
         }
+        if qualityRecoveryContext.intent.spectralMovement == .increase {
+            mutationAmount = min(0.20, mutationAmount + 0.07)
+        } else if qualityRecoveryContext.intent.spectralMovement == .decrease {
+            mutationAmount = max(0.02, mutationAmount * 0.6)
+        }
         let phraseSeed = seed(
             state: state,
-            domain: 0x51A7E,
+            domain: qualityRecoveryDomain(
+                0x51A7E,
+                wave: qualityRecoveryContext.wave
+            ),
             index: qualityRetryOrdinal
         )
         let intent = MusicalIntent.mutated(state.intent, seed: phraseSeed, amount: mutationAmount)
@@ -1998,9 +2074,12 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             rootSeed: state.rootSeed,
             phraseIndex: state.phraseIndex,
             recentPerformanceCharacters: state.memory.recentPerformanceCharacters,
-            timbralMotionIntent: energyTarget.timbralMotionIntent
+            timbralMotionIntent: energyTarget.timbralMotionIntent,
+            materialArchitecture: materialWorld.resolvedAxes.architecture
         )
-        let focusRole = focus(kind: kind, seed: phraseSeed)
+        let canonicalFocusRole = focus(kind: kind, seed: phraseSeed)
+        let focusRole = structuralKind
+            ? canonicalFocusRole : materialWorld.resolvedAxes.focusRole
         var resolvedBars: [ResolvedPerformanceBar] = []
         resolvedBars.reserveCapacity(length)
         var interlockState = state.memory.interlockEvolution
@@ -2031,7 +2110,9 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 localBar: localBar,
                 length: length,
                 seed: phraseSeed,
-                relationship: energyTarget.timbralMotionIntent
+                relationship: structuralKind
+                    ? energyTarget.timbralMotionIntent
+                    : materialWorld.resolvedAxes.motifRelationship
             )
             let absoluteBar = start + localBar
             let proposedRoles = roles(
@@ -2085,7 +2166,12 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 roles: resolvedRoles,
                 transformations: transformations,
                 signatureEvent: signature,
-                eventSeed: SceneDNA.derivedSeed(scene: phraseSeed, domain: 0xBA2, index: localBar),
+                eventSeed: SceneDNA.derivedSeed(
+                    scene: structuralKind
+                        ? phraseSeed : phraseSeed ^ materialWorld.worldID,
+                    domain: 0xBA2,
+                    index: localBar
+                ),
                 accentContour: contour
             )
             let canonicalGesture = arrangementGesture(
@@ -2097,13 +2183,23 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             // ordinary bar so density and space move causally, while retaining
             // any debt/identity macro marker exactly. The unchanged interest
             // gate still decides whether this proposal may render and commit.
-            let gesture = qualityRetryOrdinal == Self.maximumQualityRetryOrdinal &&
-                canonicalGesture != .structuralMarker
-                ? ArrangementGesture.minimalize
-                : canonicalGesture
+            let gesture: ArrangementGesture
+            if canonicalGesture == .structuralMarker {
+                gesture = canonicalGesture
+            } else if qualityRetryOrdinal == Self.maximumQualityRetryOrdinal &&
+                        qualityRecoveryContext.intent.symbolicDensity == .decrease {
+                gesture = .minimalize
+            } else if qualityRecoveryContext.intent.spectralMovement == .increase &&
+                        qualityRetryOrdinal > 0 {
+                gesture = .gearShift
+            } else {
+                gesture = canonicalGesture
+            }
             let gear = percussionGear(
                 absoluteBar: absoluteBar,
-                relationship: energyTarget.percussionActivity
+                relationship: structuralKind
+                    ? energyTarget.percussionActivity
+                    : materialWorld.resolvedAxes.rhythmRelationship
             )
             let foundation = foundationResolution(
                 character: character,
@@ -2183,11 +2279,12 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 narrative: narrative,
                 percussionEchoTexture: percussionEchoTexture,
                 harmonicDisclosureRelationship:
-                    energyTarget.harmonicDisclosure,
+                    materialWorld.resolvedAxes.harmonicRelationship,
                 kickMorphology: KickMorphologyResolver.articulation(
                     sessionSeed: scene.seed,
                     absoluteBar: absoluteBar,
-                    qualityRetryOrdinal: qualityRetryOrdinal
+                    qualityRetryOrdinal: qualityRetryOrdinal,
+                    qualityRecoveryIntent: qualityRecoveryContext.intent
                 )
             ))
             activeSupportingRoles = narrativeSupportingRolesAfterBoundary(
@@ -2253,7 +2350,10 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             endingNarrativeState: endingNarrativeState,
             harmonicContinuation: state.memory.harmonicContinuation,
             longHorizonSelection: longHorizonSelection,
-            longHorizonEnergyCoordination: energyCoordination
+            longHorizonEnergyCoordination: energyCoordination,
+            materialWorld: materialWorld,
+            qualityRecoveryContext: qualityRecoveryContext,
+            presentationStartBar: presentationStart
         )
     }
 
@@ -2271,7 +2371,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         rootSeed: UInt64,
         phraseIndex: Int,
         recentPerformanceCharacters: [PerformanceCharacter],
-        timbralMotionIntent: LongHorizonEnergyRelationship = .hold
+        timbralMotionIntent: LongHorizonEnergyRelationship = .hold,
+        materialArchitecture: LongHorizonTimbralArchitecture? = nil
     ) -> PerformanceCharacter {
         guard kind != .identityReturn else { return .hypnoticLock }
         let preferred: [PerformanceCharacter] = switch kind {
@@ -2290,6 +2391,26 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             index: 0
         )
         let baseline = choices[Int(phraseSeed % UInt64(choices.count))]
+        if let materialArchitecture {
+            if kind == .energyRelease {
+                return materialArchitecture == .resonant
+                    ? .acidPressure : .peakDrive
+            }
+            if kind == .majorBreak {
+                return materialArchitecture == .spectral
+                    ? .ambientDrift : .brokenSuspension
+            }
+            return switch materialArchitecture {
+            case .resonant:
+                .acidPressure
+            case .tonalMotion:
+                .melodicGlow
+            case .spectral:
+                .brokenSuspension
+            case .hybrid:
+                baseline
+            }
+        }
         guard timbralMotionIntent != .hold else { return baseline }
         switch timbralMotionIntent {
         case .hold:
@@ -2991,6 +3112,11 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
 
     private func seed(state: AutonomousSessionState, domain: UInt64, index: Int) -> UInt64 {
         SceneDNA.derivedSeed(scene: state.rootSeed, domain: domain ^ UInt64(state.phraseIndex + 1), index: index)
+    }
+
+    private func qualityRecoveryDomain(_ domain: UInt64, wave: UInt64) -> UInt64 {
+        guard wave > 0 else { return domain }
+        return domain ^ (wave &* 0x9E3779B97F4A7C15) ^ 0xA17E_C0DE_5EED
     }
 
     private func thresholdSeed(state: AutonomousSessionState, domain: UInt64,
