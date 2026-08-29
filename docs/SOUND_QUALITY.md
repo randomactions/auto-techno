@@ -619,9 +619,13 @@ The target loop is bounded and persistent:
    same-kind phrase can remain eligible, the later retry uses the one
    conservative energy-release fallback. Ordinal zero stays the original
    canonical plan. After the original eight realization variants, one final
-   four-bar same-intent coherence recovery reduces phrase-wide variation
-   without changing identity, debt, selection, or energy coordination; it
-   remains subject to every unchanged gate. No proposals coexist or compete.
+   four-bar same-intent coherence recovery reduces phrase-wide variation and
+   resolves every ordinary bar through the existing score-side `minimalize`
+   gesture while preserving any structural macro marker. This causally lowers
+   symbolic overactivity and creates intentional space without changing
+   identity, debt, selection, energy coordination, or the calibrated
+   symbolic-interest threshold; it remains subject to every unchanged gate.
+   No proposals coexist or compete.
    Its first eight score-side variants alternate bounded kick attack/body
    pressure around the continuous committed morphology trajectory. A gentle
    first step can correct a near-boundary miss without crossing an adjacent

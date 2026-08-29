@@ -124,7 +124,8 @@
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift",
-        "Tests/AutoTechnoCoreTests/IdentityReturnContinuationTests.swift"
+        "Tests/AutoTechnoCoreTests/IdentityReturnContinuationTests.swift",
+        "Tests/AutoTechnoCoreTests/SymbolicInterestRetryTests.swift"
       ],
       "contracts": [
         "docs/PRODUCT.md",

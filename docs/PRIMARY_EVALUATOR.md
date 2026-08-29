@@ -16,16 +16,20 @@ If that terminal verdict is a calibrated quality rejection, a later coherent
 repeat boundary may ask the same director for one serial retry ordinal. The
 ordinal preserves incoming session identity, structural kind, debt, long-horizon
 ownership, and continuation while varying deterministic phrase-local realization.
-Ordinal zero is the original plan; at most eight serial variants may be tried.
+Ordinal zero is the original plan; at most nine serial variants may be tried.
 The serial vocabulary also alternates an increasing, bounded score-side kick
 attack/body pressure around the committed morphology trajectory. This makes a
 calibrated kick-source miss capable of changing the measured PCM in either
 direction while preserving the trajectory, its bar-to-bar continuity, and the
-one canonical kick voice.
+one canonical kick voice. After the first eight variants, the final same-intent
+four-bar proposal also reuses the existing score-side `minimalize` gesture on
+every ordinary bar while preserving any structural macro marker. This moves
+symbolic density and intentional-space evidence causally without changing the
+calibrated symbolic-interest threshold.
 Each variant has its own plan, PCM, evidence, and terminal verdict, and the prior
 variant is discarded before the next is proposed. Unavailable evaluation,
 invalid evidence, hard-gate failure, and commit-provenance failure cannot enable
-this adaptation. Eight rejected variants produce an explicit blocked state and
+this adaptation. Nine rejected variants produce an explicit blocked state and
 stop preparation work while transport continues repeating accepted PCM.
 
 The evaluator may request one bounded home-upper-timbre correction. That second

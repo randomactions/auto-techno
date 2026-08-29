@@ -2088,7 +2088,19 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 eventSeed: SceneDNA.derivedSeed(scene: phraseSeed, domain: 0xBA2, index: localBar),
                 accentContour: contour
             )
-            let gesture = arrangementGesture(kind: kind, absoluteBar: absoluteBar)
+            let canonicalGesture = arrangementGesture(
+                kind: kind,
+                absoluteBar: absoluteBar
+            )
+            // The final serial retry owns one bounded symbolic-interest
+            // recovery: reuse the existing score-side minimalization on every
+            // ordinary bar so density and space move causally, while retaining
+            // any debt/identity macro marker exactly. The unchanged interest
+            // gate still decides whether this proposal may render and commit.
+            let gesture = qualityRetryOrdinal == Self.maximumQualityRetryOrdinal &&
+                canonicalGesture != .structuralMarker
+                ? ArrangementGesture.minimalize
+                : canonicalGesture
             let gear = percussionGear(
                 absoluteBar: absoluteBar,
                 relationship: energyTarget.percussionActivity

@@ -210,6 +210,7 @@ Tests:
 
 - [`Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift`](../Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift)
 - [`Tests/AutoTechnoCoreTests/IdentityReturnContinuationTests.swift`](../Tests/AutoTechnoCoreTests/IdentityReturnContinuationTests.swift)
+- [`Tests/AutoTechnoCoreTests/SymbolicInterestRetryTests.swift`](../Tests/AutoTechnoCoreTests/SymbolicInterestRetryTests.swift)
 
 <a id="performance-grammar-and-composition"></a>
 ### Performance grammar and phrase composition
@@ -833,6 +834,7 @@ Tests:
 | [`Tests/AutoTechnoCoreTests/SpatialProtectedRoutingRegressionTests.swift`](../Tests/AutoTechnoCoreTests/SpatialProtectedRoutingRegressionTests.swift) | `graph-effects-routing-and-mix` | — | `SpatialProtectedRoutingRegressionTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/SpectrumMaskingAnalyzerTests.swift`](../Tests/AutoTechnoCoreTests/SpectrumMaskingAnalyzerTests.swift) | `evidence-calibration-and-primary-evaluation` | — | `SpectrumMaskingAnalyzerTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/StreamingPerceptualEvidenceTests.swift`](../Tests/AutoTechnoCoreTests/StreamingPerceptualEvidenceTests.swift) | `evidence-calibration-and-primary-evaluation` | — | `StreamingPerceptualEvidenceTests` (Structure) |
+| [`Tests/AutoTechnoCoreTests/SymbolicInterestRetryTests.swift`](../Tests/AutoTechnoCoreTests/SymbolicInterestRetryTests.swift) | `session-director-and-score` | — | `SymbolicInterestRetryTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/TPTAntialiasedNonlinearCoreTests.swift`](../Tests/AutoTechnoCoreTests/TPTAntialiasedNonlinearCoreTests.swift) | `graph-effects-routing-and-mix` | — | `TPTAntialiasedNonlinearCoreTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/UpperPercussionTailDSPTests.swift`](../Tests/AutoTechnoCoreTests/UpperPercussionTailDSPTests.swift) | `voice-and-phrase-rendering` | — | `UpperPercussionTailDSPTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/UpperPercussionTailTests.swift`](../Tests/AutoTechnoCoreTests/UpperPercussionTailTests.swift) | `performance-grammar-and-composition` | — | `UpperPercussionTailTests` (Structure)<br>`UpperPercussionTailTestsPreflight` (Class) |
