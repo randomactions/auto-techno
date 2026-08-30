@@ -3333,7 +3333,14 @@ package enum VoiceRenderer {
                     sin(2 * .pi * parameters.clickFrequencyHz * t) *
                         parameters.tonalClickLevel) * transientEnvelope
                 : 0
-            let sourceSample = Float((body + sub + transient) * level)
+            let authoredSource = body + sub + transient
+            // Balanced is the exact pre-v2 anchor. Avoid inserting even an
+            // identity multiply on that path; softer material presence is
+            // authored before dynamics, detector, ducking, and audible mix.
+            let presenceAdjustedSource = parameters.presenceScale == 1
+                ? authoredSource
+                : authoredSource * parameters.presenceScale
+            let sourceSample = Float(presenceAdjustedSource * level)
             let conditionedSample = KickSourceDynamicsContract.process(
                 sourceSample,
                 state: &dynamicsState

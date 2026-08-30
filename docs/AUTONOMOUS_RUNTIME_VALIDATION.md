@@ -24,7 +24,7 @@ Record the exact commit, toolchain, fixture/continuation state, sample rates, an
 quality-contract revision. A result from another head or an unidentified state is
 not release evidence.
 
-For engine v41, also validate the deterministic material-world contracts in
+For engine v43, also validate the deterministic material-world contracts in
 [`LONG_HORIZON_SOUND_CAPABILITIES.md`](LONG_HORIZON_SOUND_CAPABILITIES.md), the
 pitch-identity matrix in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md) and the transition-
@@ -95,8 +95,8 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 42, candidate-vector schema 37, candidate-transaction
-schema 8, and canonical engine v41 provide the current transaction-level
+Quality-contract schema 44, candidate-vector schema 38, candidate-transaction
+schema 9, and canonical engine v43 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
@@ -352,9 +352,9 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v22 bank must contain every canonical checkpoint for
+The Professional Evidence v24 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v41 primary evaluator v22 and pinned profile v22/adversarial/holdout
+engine-v43 primary evaluator v24 and pinned profile v24/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 36.
 Holdouts must be source-disjoint, contain at

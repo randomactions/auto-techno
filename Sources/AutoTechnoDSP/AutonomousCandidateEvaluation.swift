@@ -721,6 +721,10 @@ package struct AutonomousKickSourceDynamicsEvidence: Codable, Equatable,
     package let antialiasOrder: Int
     package let morphologyVersion: String
     package let morphologyScoreHash: String
+    package let morphologyPresentationBar: Int
+    package let morphologyEpisodeID: UInt64
+    package let morphologyOperatorKind: String
+    package let morphologyEpisodeRelativeBar: Int
     package let morphologyFromHome: String
     package let morphologyToHome: String
     package let morphologyStartProgress: Double
@@ -735,6 +739,8 @@ package struct AutonomousKickSourceDynamicsEvidence: Codable, Equatable,
     package let clickLevelEnd: Double
     package let bodyDriveStart: Double
     package let bodyDriveEnd: Double
+    package let presenceScaleStart: Double
+    package let presenceScaleEnd: Double
     package let morphologyBound: Bool
     package let renderedEventCount: Int
     package let processedSampleCount: Int
@@ -759,6 +765,10 @@ package struct AutonomousKickSourceDynamicsEvidence: Codable, Equatable,
         antialiasOrder = render.antialiasOrder
         morphologyVersion = render.morphologyVersion
         morphologyScoreHash = render.morphologyScoreHash
+        morphologyPresentationBar = render.morphologyPresentationBar
+        morphologyEpisodeID = render.morphologyEpisodeID
+        morphologyOperatorKind = render.morphologyOperatorKind
+        morphologyEpisodeRelativeBar = render.morphologyEpisodeRelativeBar
         morphologyFromHome = render.morphologyFromHome
         morphologyToHome = render.morphologyToHome
         morphologyStartProgress = render.morphologyStartProgress
@@ -773,6 +783,8 @@ package struct AutonomousKickSourceDynamicsEvidence: Codable, Equatable,
         clickLevelEnd = render.clickLevelEnd
         bodyDriveStart = render.bodyDriveStart
         bodyDriveEnd = render.bodyDriveEnd
+        presenceScaleStart = render.presenceScaleStart
+        presenceScaleEnd = render.presenceScaleEnd
         morphologyBound = render.morphologyBound
         renderedEventCount = render.renderedEventCount
         processedSampleCount = render.processedSampleCount
@@ -803,6 +815,7 @@ package struct AutonomousKickSourceDynamicsEvidence: Codable, Equatable,
             pitchDepthStartHz, pitchDepthEndHz, bodyDecayStartPerSecond,
             bodyDecayEndPerSecond, clickLevelStart, clickLevelEnd,
             bodyDriveStart, bodyDriveEnd,
+            presenceScaleStart, presenceScaleEnd,
         ].allSatisfy(\.isFinite)
     }
 
@@ -814,13 +827,16 @@ package struct AutonomousKickSourceDynamicsEvidence: Codable, Equatable,
               antialiasOrder == KickSourceDynamicsContract.antialiasOrder,
               morphologyVersion == KickMorphologyResolver.version,
               Self.isSampleHash(morphologyScoreHash),
+              morphologyPresentationBar >= 0,
+              LongHorizonEpisodeOperator(
+                rawValue: morphologyOperatorKind
+              ) != nil,
+              morphologyEpisodeRelativeBar >= 0,
               KickMorphologyHome(rawValue: morphologyFromHome) != nil,
               KickMorphologyHome(rawValue: morphologyToHome) != nil,
-              morphologyFromHome != morphologyToHome,
               morphologyBound,
               (0...1).contains(morphologyStartProgress),
               (0...1).contains(morphologyEndProgress),
-              morphologyEndProgress >= morphologyStartProgress,
               (38...52).contains(fundamentalStartHz),
               (38...52).contains(fundamentalEndHz),
               (140...300).contains(pitchDepthStartHz),
@@ -831,6 +847,8 @@ package struct AutonomousKickSourceDynamicsEvidence: Codable, Equatable,
               (0.045...0.11).contains(clickLevelEnd),
               (0.85...1.42).contains(bodyDriveStart),
               (0.85...1.42).contains(bodyDriveEnd),
+              (0.45...1).contains(presenceScaleStart),
+              (0.45...1).contains(presenceScaleEnd),
               renderedEventCount == expectedEventCount,
               (0...KickSourceDynamicsContract.maximumEventsPerBar)
                 .contains(renderedEventCount),
@@ -5836,7 +5854,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 37
+    package static let schemaVersion = 38
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -9185,7 +9203,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
 }
 
 package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sendable {
-    package static let schemaVersion = 8
+    package static let schemaVersion = 9
     package static let maximumCorrectionAttempts =
         QualityQualificationContract.maximumCorrectionRenders
     package static let maximumAttemptCount =

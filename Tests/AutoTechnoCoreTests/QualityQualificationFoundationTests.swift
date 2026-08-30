@@ -1221,6 +1221,13 @@ struct QualityQualificationFoundationTests {
                             KickSourceDynamicsContract.morphologyScoreHash(
                                 kickMorphology
                             ),
+                        morphologyPresentationBar:
+                            kickMorphology.presentationBar,
+                        morphologyEpisodeID: kickMorphology.episodeID,
+                        morphologyOperatorKind:
+                            kickMorphology.operatorKind.rawValue,
+                        morphologyEpisodeRelativeBar:
+                            kickMorphology.episodeRelativeBar,
                         morphologyFromHome:
                             kickMorphology.fromHome.rawValue,
                         morphologyToHome: kickMorphology.toHome.rawValue,
@@ -1242,6 +1249,10 @@ struct QualityQualificationFoundationTests {
                         clickLevelEnd: kickMorphology.end.noiseClickLevel,
                         bodyDriveStart: kickMorphology.start.bodyDrive,
                         bodyDriveEnd: kickMorphology.end.bodyDrive,
+                        presenceScaleStart:
+                            kickMorphology.start.presenceScale,
+                        presenceScaleEnd:
+                            kickMorphology.end.presenceScale,
                         morphologyBound: true,
                         renderedEventCount: 1,
                         processedSampleCount: 2_560,

@@ -849,7 +849,11 @@ private extension AutonomousTypedFingerprint {
         sink.aggregate("KickMorphologyArticulation")
         sink.field("version"); sink.string(value.version)
         sink.field("absoluteBar"); sink.int(value.absoluteBar)
+        sink.field("presentationBar"); sink.int(value.presentationBar)
         sink.field("segmentIndex"); sink.int(value.segmentIndex)
+        sink.field("episodeID"); sink.uint64(value.episodeID)
+        sink.field("operatorKind"); sink.raw(value.operatorKind.rawValue)
+        sink.field("episodeRelativeBar"); sink.int(value.episodeRelativeBar)
         sink.field("fromHome"); sink.raw(value.fromHome.rawValue)
         sink.field("toHome"); sink.raw(value.toHome.rawValue)
         sink.field("startProgress"); sink.double(value.startProgress)
@@ -880,6 +884,7 @@ private extension AutonomousTypedFingerprint {
         sink.field("noiseClickLevel"); sink.double(value.noiseClickLevel)
         sink.field("tonalClickLevel"); sink.double(value.tonalClickLevel)
         sink.field("clickFrequencyHz"); sink.double(value.clickFrequencyHz)
+        sink.field("presenceScale"); sink.double(value.presenceScale)
     }
 
     static func encode(

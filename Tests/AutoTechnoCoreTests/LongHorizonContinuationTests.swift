@@ -78,6 +78,10 @@ struct LongHorizonContinuationTests {
         #expect(recovery.startBar == initial.memory.totalBars)
         #expect(recovery.presentationStartBar == 160)
         #expect(recovery.materialWorld.progress > baseline.materialWorld.progress)
+        #expect(baseline.resolvedBars.first?.kickMorphology.presentationBar == 0)
+        #expect(recovery.resolvedBars.first?.kickMorphology.presentationBar == 160)
+        #expect(recovery.resolvedBars.first?.kickMorphology.episodeID ==
+                initial.memory.longHorizon.currentEpisode.id)
         #expect(advanced.memory.totalBars == recovery.barCount)
         #expect(continuation.nextExpectedBar == recovery.barCount)
         #expect(continuation.nextExpectedPresentationBar ==

@@ -1,13 +1,48 @@
 import Foundation
 
-/// Recognizable source homes inside the one canonical kick voice. They are not
-/// genre presets or selectable instruments: the session identity moves between
-/// them through one deterministic, long-horizon trajectory.
+/// Perceptually distinct held materials inside the one canonical kick voice.
+/// They are not genre presets or selectable instruments: the active
+/// long-horizon episode moves the same kick identity between them.
 package enum KickMorphologyHome: String, CaseIterable, Sendable {
-    case anchor
-    case round
-    case taut
-    case hammer
+    case balanced
+    case relaxed
+    case ghostSoft = "ghost-soft"
+    case resonantAccent = "resonant-accent"
+}
+
+/// The already-owned episode coordinates needed to resolve one kick bar. This
+/// is derived from `LongHorizonContinuationState`; it adds no second clock or
+/// persistent controller.
+package struct KickMorphologyEpisodeContext: Equatable, Sendable {
+    package let episodeID: UInt64
+    package let episodeIndex: Int
+    package let operatorKind: LongHorizonEpisodeOperator
+    package let startedAtPresentationBar: Int
+    package let previousOperatorKind: LongHorizonEpisodeOperator?
+
+    package init(
+        episodeID: UInt64,
+        episodeIndex: Int,
+        operatorKind: LongHorizonEpisodeOperator,
+        startedAtPresentationBar: Int,
+        previousOperatorKind: LongHorizonEpisodeOperator?
+    ) {
+        self.episodeID = episodeID
+        self.episodeIndex = max(0, episodeIndex)
+        self.operatorKind = operatorKind
+        self.startedAtPresentationBar = max(0, startedAtPresentationBar)
+        self.previousOperatorKind = previousOperatorKind
+    }
+
+    package init(continuation: LongHorizonContinuationState) {
+        self.init(
+            episodeID: continuation.currentEpisode.id,
+            episodeIndex: continuation.currentEpisode.episodeIndex,
+            operatorKind: continuation.currentEpisode.operatorKind,
+            startedAtPresentationBar: continuation.currentEpisode.startedAtBar,
+            previousOperatorKind: continuation.recentEpisodes.last?.operatorKind
+        )
+    }
 }
 
 /// Complete bounded source parameters consumed by the existing kick renderer.
@@ -27,6 +62,9 @@ package struct KickMorphologyParameters: Equatable, Sendable {
     package let noiseClickLevel: Double
     package let tonalClickLevel: Double
     package let clickFrequencyHz: Double
+    /// Authored source presence applied to the complete body + sub + click sum
+    /// before source dynamics, detector, ducking, and audible mix routing.
+    package let presenceScale: Double
 
     package func interpolated(
         to other: Self,
@@ -57,7 +95,8 @@ package struct KickMorphologyParameters: Equatable, Sendable {
             subLevel: value(subLevel, other.subLevel),
             noiseClickLevel: value(noiseClickLevel, other.noiseClickLevel),
             tonalClickLevel: value(tonalClickLevel, other.tonalClickLevel),
-            clickFrequencyHz: value(clickFrequencyHz, other.clickFrequencyHz)
+            clickFrequencyHz: value(clickFrequencyHz, other.clickFrequencyHz),
+            presenceScale: value(presenceScale, other.presenceScale)
         )
     }
 
@@ -113,7 +152,8 @@ package struct KickMorphologyParameters: Equatable, Sendable {
                 scale: 0.08,
                 range: 0.03...0.075
             ),
-            clickFrequencyHz: clickFrequencyHz
+            clickFrequencyHz: clickFrequencyHz,
+            presenceScale: presenceScale
         )
     }
 
@@ -164,7 +204,8 @@ package struct KickMorphologyParameters: Equatable, Sendable {
                 scale: 1.30,
                 range: 0.03...0.075
             ),
-            clickFrequencyHz: clickFrequencyHz
+            clickFrequencyHz: clickFrequencyHz,
+            presenceScale: presenceScale
         )
     }
 
@@ -174,7 +215,7 @@ package struct KickMorphologyParameters: Equatable, Sendable {
             pitchDecayPerSecond, fastPitchDecayPerSecond,
             bodyDecayPerSecond, subDecayPerSecond, secondHarmonicLevel,
             bodyDrive, subLevel, noiseClickLevel, tonalClickLevel,
-            clickFrequencyHz,
+            clickFrequencyHz, presenceScale,
         ]
         return values.allSatisfy(\.isFinite) &&
             (38...52).contains(fundamentalHz) &&
@@ -189,7 +230,8 @@ package struct KickMorphologyParameters: Equatable, Sendable {
             (0.15...0.30).contains(subLevel) &&
             (0.045...0.11).contains(noiseClickLevel) &&
             (0.03...0.075).contains(tonalClickLevel) &&
-            (1_650...3_600).contains(clickFrequencyHz)
+            (1_650...3_600).contains(clickFrequencyHz) &&
+            (0.45...1).contains(presenceScale)
     }
 }
 
@@ -198,7 +240,11 @@ package struct KickMorphologyParameters: Equatable, Sendable {
 package struct KickMorphologyArticulation: Equatable, Sendable {
     package let version: String
     package let absoluteBar: Int
+    package let presentationBar: Int
     package let segmentIndex: Int
+    package let episodeID: UInt64
+    package let operatorKind: LongHorizonEpisodeOperator
+    package let episodeRelativeBar: Int
     package let fromHome: KickMorphologyHome
     package let toHome: KickMorphologyHome
     package let startProgress: Double
@@ -215,7 +261,11 @@ package struct KickMorphologyArticulation: Equatable, Sendable {
         return Self(
             version: version,
             absoluteBar: absoluteBar,
+            presentationBar: presentationBar,
             segmentIndex: segmentIndex,
+            episodeID: episodeID,
+            operatorKind: operatorKind,
+            episodeRelativeBar: episodeRelativeBar,
             fromHome: fromHome,
             toHome: toHome,
             startProgress: startProgress,
@@ -229,7 +279,11 @@ package struct KickMorphologyArticulation: Equatable, Sendable {
         Self(
             version: version,
             absoluteBar: absoluteBar,
+            presentationBar: presentationBar,
             segmentIndex: segmentIndex,
+            episodeID: episodeID,
+            operatorKind: operatorKind,
+            episodeRelativeBar: episodeRelativeBar,
             fromHome: fromHome,
             toHome: toHome,
             startProgress: startProgress,
@@ -241,61 +295,89 @@ package struct KickMorphologyArticulation: Equatable, Sendable {
 
     package var isComplete: Bool {
         version == KickMorphologyResolver.version && absoluteBar >= 0 &&
-            segmentIndex >= 0 && fromHome != toHome &&
+            presentationBar >= absoluteBar && segmentIndex >= 0 &&
+            episodeRelativeBar >= 0 &&
             (0...1).contains(startProgress) &&
             (0...1).contains(endProgress) &&
-            endProgress >= startProgress && start.isBoundedAndFinite &&
+            start.isBoundedAndFinite &&
             end.isBoundedAndFinite
     }
 }
 
-/// Session-scale owner for a slowly blended kick identity. A 128-bar segment
-/// lasts almost four minutes at 130 BPM. Invalid or implausibly distant bars
-/// fall back to the legacy anchor instead of authoring unbounded work.
+/// Episode-bound owner for audible held kick materials. Ordinary episode
+/// handoffs use one 32-bar raised cosine. Recovery deliberately stages a
+/// relaxed transition, a 32-bar relaxed plateau, a second 32-bar descent, and
+/// then a held ghost-soft state. Missing context fails closed to balanced.
 package enum KickMorphologyResolver {
-    package static let version = "kick-morphology.score-trajectory.v1"
-    package static let segmentBarCount = 128
-    package static let maximumSegmentIndex = 4_096
+    package static let version = "kick-morphology.episode-material.v3"
+    package static let transitionBarCount = 32
+    package static let recoveryRelaxedHoldBarCount = 32
+    package static let recoveryGhostTransitionStartBar =
+        transitionBarCount + recoveryRelaxedHoldBarCount
+    package static let recoveryGhostHoldStartBar =
+        recoveryGhostTransitionStartBar + transitionBarCount
 
     package static func articulation(
         sessionSeed: UInt64,
         absoluteBar requestedBar: Int,
+        presentationBar requestedPresentationBar: Int? = nil,
+        episodeContext: KickMorphologyEpisodeContext? = nil,
         qualityRetryOrdinal requestedRetryOrdinal: Int = 0,
         qualityRecoveryIntent: AutonomousQualityRecoveryIntent = .neutral
     ) -> KickMorphologyArticulation {
         let absoluteBar = max(0, requestedBar)
-        let segmentIndex = absoluteBar / segmentBarCount
-        guard segmentIndex <= maximumSegmentIndex else {
+        let presentationBar = max(
+            absoluteBar,
+            requestedPresentationBar ?? absoluteBar
+        )
+        guard let episodeContext,
+              presentationBar >= episodeContext.startedAtPresentationBar else {
             return retryAdjusted(
-                legacyAnchor(
+                balancedFallback(
                     sessionSeed: sessionSeed,
-                    absoluteBar: absoluteBar
+                    absoluteBar: absoluteBar,
+                    presentationBar: presentationBar
                 ),
                 ordinal: requestedRetryOrdinal,
                 intent: qualityRecoveryIntent
             )
         }
-        let startPosition = Double(absoluteBar) / Double(segmentBarCount)
-        let endPosition = Double(absoluteBar + 1) / Double(segmentBarCount)
-        let fromHome = home(sessionSeed: sessionSeed, boundaryIndex: segmentIndex)
-        let toHome = home(sessionSeed: sessionSeed, boundaryIndex: segmentIndex + 1)
-        let localStart = startPosition - Double(segmentIndex)
-        let localEnd = min(1, endPosition - Double(segmentIndex))
-        let startProgress = raisedCosine(localStart)
-        let endProgress = raisedCosine(localEnd)
+        let relativeBar = presentationBar -
+            episodeContext.startedAtPresentationBar
+        let startState = materialPosition(
+            context: episodeContext,
+            relativeBar: relativeBar
+        )
+        let endState = materialPosition(
+            context: episodeContext,
+            relativeBar: relativeBar == Int.max ? Int.max : relativeBar + 1
+        )
         let anchorHz = 44.0 + Double(sessionSeed % 5) * 0.7
-        let from = parameters(for: fromHome, anchorHz: anchorHz)
-        let to = parameters(for: toHome, anchorHz: anchorHz)
+        let from = parameters(for: startState.from, anchorHz: anchorHz)
+        let to = parameters(for: startState.to, anchorHz: anchorHz)
+        let start = from.interpolated(to: to, progress: startState.progress)
+        let end: KickMorphologyParameters
+        if startState.from == endState.from, startState.to == endState.to {
+            end = from.interpolated(to: to, progress: endState.progress)
+        } else {
+            let endFrom = parameters(for: endState.from, anchorHz: anchorHz)
+            let endTo = parameters(for: endState.to, anchorHz: anchorHz)
+            end = endFrom.interpolated(to: endTo, progress: endState.progress)
+        }
         return retryAdjusted(KickMorphologyArticulation(
             version: version,
             absoluteBar: absoluteBar,
-            segmentIndex: segmentIndex,
-            fromHome: fromHome,
-            toHome: toHome,
-            startProgress: startProgress,
-            endProgress: endProgress,
-            start: from.interpolated(to: to, progress: startProgress),
-            end: from.interpolated(to: to, progress: endProgress)
+            presentationBar: presentationBar,
+            segmentIndex: episodeContext.episodeIndex,
+            episodeID: episodeContext.episodeID,
+            operatorKind: episodeContext.operatorKind,
+            episodeRelativeBar: relativeBar,
+            fromHome: startState.from,
+            toHome: startState.to,
+            startProgress: startState.progress,
+            endProgress: endState.progress,
+            start: start,
+            end: end
         ), ordinal: requestedRetryOrdinal, intent: qualityRecoveryIntent)
     }
 
@@ -350,20 +432,29 @@ package enum KickMorphologyResolver {
         return ordinal.isMultiple(of: 2) ? -magnitude : magnitude
     }
 
-    package static func legacyAnchor(
+    package static func balancedFallback(
         sessionSeed: UInt64,
-        absoluteBar: Int = 0
+        absoluteBar: Int = 0,
+        presentationBar requestedPresentationBar: Int? = nil
     ) -> KickMorphologyArticulation {
         let anchor = parameters(
-            for: .anchor,
+            for: .balanced,
             anchorHz: 44.0 + Double(sessionSeed % 5) * 0.7
         )
+        let boundedAbsoluteBar = max(0, absoluteBar)
         return KickMorphologyArticulation(
             version: version,
-            absoluteBar: max(0, absoluteBar),
-            segmentIndex: max(0, absoluteBar) / segmentBarCount,
-            fromHome: .anchor,
-            toHome: .round,
+            absoluteBar: boundedAbsoluteBar,
+            presentationBar: max(
+                boundedAbsoluteBar,
+                requestedPresentationBar ?? boundedAbsoluteBar
+            ),
+            segmentIndex: 0,
+            episodeID: 0,
+            operatorKind: .maintain,
+            episodeRelativeBar: 0,
+            fromHome: .balanced,
+            toHome: .balanced,
             startProgress: 0,
             endProgress: 0,
             start: anchor,
@@ -371,23 +462,53 @@ package enum KickMorphologyResolver {
         )
     }
 
-    private static func home(
-        sessionSeed: UInt64,
-        boundaryIndex: Int
-    ) -> KickMorphologyHome {
-        guard boundaryIndex > 0 else { return .anchor }
-        let homes = KickMorphologyHome.allCases
-        var selected = 0
-        for boundary in 1...boundaryIndex {
-            let entropy = SceneDNA.derivedSeed(
-                scene: sessionSeed,
-                domain: 0x4B49_434B_4D4F_5250,
-                index: boundary
-            )
-            let offset = 1 + Int(entropy % UInt64(homes.count - 1))
-            selected = (selected + offset) % homes.count
+    private static func materialPosition(
+        context: KickMorphologyEpisodeContext,
+        relativeBar: Int
+    ) -> (from: KickMorphologyHome, to: KickMorphologyHome, progress: Double) {
+        let bar = max(0, relativeBar)
+        let previous = terminalMaterial(
+            for: context.previousOperatorKind ?? .maintain
+        )
+        if context.operatorKind == .recover {
+            if bar < transitionBarCount {
+                return (previous, .relaxed, raisedCosine(
+                    Double(bar) / Double(transitionBarCount)
+                ))
+            }
+            if bar < recoveryGhostTransitionStartBar {
+                return (.relaxed, .relaxed, 1)
+            }
+            if bar < recoveryGhostHoldStartBar {
+                return (.relaxed, .ghostSoft, raisedCosine(
+                    Double(bar - recoveryGhostTransitionStartBar) /
+                        Double(transitionBarCount)
+                ))
+            }
+            return (.ghostSoft, .ghostSoft, 1)
         }
-        return homes[selected]
+        let target = terminalMaterial(for: context.operatorKind)
+        guard previous != target, bar < transitionBarCount else {
+            return (target, target, 1)
+        }
+        return (previous, target, raisedCosine(
+            Double(bar) / Double(transitionBarCount)
+        ))
+    }
+
+    private static func terminalMaterial(
+        for operatorKind: LongHorizonEpisodeOperator
+    ) -> KickMorphologyHome {
+        switch operatorKind {
+        case .maintain, .rise, .recall:
+            return .balanced
+        case .reframe:
+            return .relaxed
+        case .recover:
+            return .ghostSoft
+        case .payoff:
+            return .resonantAccent
+        }
     }
 
     private static func raisedCosine(_ progress: Double) -> Double {
@@ -400,7 +521,7 @@ package enum KickMorphologyResolver {
         anchorHz: Double
     ) -> KickMorphologyParameters {
         switch home {
-        case .anchor:
+        case .balanced:
             return KickMorphologyParameters(
                 fundamentalHz: anchorHz,
                 pitchDepthHz: 205,
@@ -414,55 +535,59 @@ package enum KickMorphologyResolver {
                 subLevel: 0.22,
                 noiseClickLevel: 0.08,
                 tonalClickLevel: 0.055,
-                clickFrequencyHz: 2_800
+                clickFrequencyHz: 2_800,
+                presenceScale: 1
             )
-        case .round:
+        case .relaxed:
             return KickMorphologyParameters(
-                fundamentalHz: anchorHz - 1.4,
-                pitchDepthHz: 165,
+                fundamentalHz: anchorHz - 0.4,
+                pitchDepthHz: 175,
                 fastPitchDepthHz: 22,
-                pitchDecayPerSecond: 42,
-                fastPitchDecayPerSecond: 132,
-                bodyDecayPerSecond: 14.8,
-                subDecayPerSecond: 10.8,
-                secondHarmonicLevel: 0.05,
-                bodyDrive: 1.10,
-                subLevel: 0.285,
-                noiseClickLevel: 0.055,
+                pitchDecayPerSecond: 44,
+                fastPitchDecayPerSecond: 135,
+                bodyDecayPerSecond: 16.5,
+                subDecayPerSecond: 12,
+                secondHarmonicLevel: 0.065,
+                bodyDrive: 1.05,
+                subLevel: 0.20,
+                noiseClickLevel: 0.058,
                 tonalClickLevel: 0.04,
-                clickFrequencyHz: 2_050
+                clickFrequencyHz: 2_300,
+                presenceScale: 0.78
             )
-        case .taut:
+        case .ghostSoft:
             return KickMorphologyParameters(
-                fundamentalHz: anchorHz + 2.1,
-                pitchDepthHz: 238,
-                fastPitchDepthHz: 34,
-                pitchDecayPerSecond: 59,
-                fastPitchDecayPerSecond: 172,
-                bodyDecayPerSecond: 22.4,
-                subDecayPerSecond: 15.2,
-                secondHarmonicLevel: 0.10,
-                bodyDrive: 1.30,
-                subLevel: 0.17,
-                noiseClickLevel: 0.095,
-                tonalClickLevel: 0.067,
-                clickFrequencyHz: 3_350
+                fundamentalHz: anchorHz - 1,
+                pitchDepthHz: 140,
+                fastPitchDepthHz: 16,
+                pitchDecayPerSecond: 40,
+                fastPitchDecayPerSecond: 120,
+                bodyDecayPerSecond: 14,
+                subDecayPerSecond: 11,
+                secondHarmonicLevel: 0.05,
+                bodyDrive: 0.88,
+                subLevel: 0.16,
+                noiseClickLevel: 0.045,
+                tonalClickLevel: 0.03,
+                clickFrequencyHz: 1_800,
+                presenceScale: 0.48
             )
-        case .hammer:
+        case .resonantAccent:
             return KickMorphologyParameters(
-                fundamentalHz: anchorHz - 0.3,
-                pitchDepthHz: 286,
-                fastPitchDepthHz: 39,
-                pitchDecayPerSecond: 70,
-                fastPitchDecayPerSecond: 185,
-                bodyDecayPerSecond: 19.2,
-                subDecayPerSecond: 13.4,
-                secondHarmonicLevel: 0.14,
-                bodyDrive: 1.40,
-                subLevel: 0.19,
-                noiseClickLevel: 0.105,
-                tonalClickLevel: 0.07,
-                clickFrequencyHz: 1_750
+                fundamentalHz: anchorHz - 0.5,
+                pitchDepthHz: 180,
+                fastPitchDepthHz: 23,
+                pitchDecayPerSecond: 43,
+                fastPitchDecayPerSecond: 136,
+                bodyDecayPerSecond: 18.5,
+                subDecayPerSecond: 13,
+                secondHarmonicLevel: 0.15,
+                bodyDrive: 1.22,
+                subLevel: 0.22,
+                noiseClickLevel: 0.08,
+                tonalClickLevel: 0.055,
+                clickFrequencyHz: 1_750,
+                presenceScale: 0.90
             )
         }
     }

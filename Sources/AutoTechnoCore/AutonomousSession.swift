@@ -592,7 +592,7 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.percussionEchoTexture = percussionEchoTexture
         self.harmonicDisclosureRelationship = harmonicDisclosureRelationship
         self.kickMorphology = kickMorphology ??
-            KickMorphologyResolver.legacyAnchor(
+            KickMorphologyResolver.balancedFallback(
                 sessionSeed: performance.eventSeed,
                 absoluteBar: performance.bar
             )
@@ -1994,6 +1994,11 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 episode: continuation.currentEpisode,
                 startBar: presentationStart
             ) : .neutral
+        let kickEpisodeContext = continuation.isBound &&
+            continuation.rootSeed == state.rootSeed &&
+            continuation.nextExpectedPhraseIndex == state.phraseIndex &&
+            continuation.nextExpectedBar == start
+            ? KickMorphologyEpisodeContext(continuation: continuation) : nil
         let energyCoordination = LongHorizonEnergyCoordination.resolving(
             state: state,
             selection: longHorizonSelection
@@ -2115,6 +2120,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                     : materialWorld.resolvedAxes.motifRelationship
             )
             let absoluteBar = start + localBar
+            let presentationBar = presentationStart > Int.max - localBar
+                ? Int.max : presentationStart + localBar
             let proposedRoles = roles(
                 kind: kind,
                 focus: focusRole,
@@ -2283,6 +2290,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 kickMorphology: KickMorphologyResolver.articulation(
                     sessionSeed: scene.seed,
                     absoluteBar: absoluteBar,
+                    presentationBar: presentationBar,
+                    episodeContext: kickEpisodeContext,
                     qualityRetryOrdinal: qualityRetryOrdinal,
                     qualityRecoveryIntent: qualityRecoveryContext.intent
                 )

@@ -197,7 +197,7 @@ struct LongHorizonProfessionalPolicyTests {
         == first.development.observations[0])
   }
 
-  @Test("Bundled v9 long-horizon artifacts activate the exact engine v41 policy")
+  @Test("Bundled v11 long-horizon artifacts activate the exact engine v43 policy")
   func bundledArtifacts() throws {
     for name in [
       LongHorizonProfessionalPolicyArtifacts.profileResource,
@@ -221,6 +221,12 @@ struct LongHorizonProfessionalPolicyTests {
       "long-horizon-professional-profile-v8",
       "long-horizon-adversarial-suite-v8",
       "long-horizon-holdout-v8",
+      "long-horizon-professional-profile-v9",
+      "long-horizon-adversarial-suite-v9",
+      "long-horizon-holdout-v9",
+      "long-horizon-professional-profile-v10",
+      "long-horizon-adversarial-suite-v10",
+      "long-horizon-holdout-v10",
     ] {
       #expect(
         !LongHorizonProfessionalPolicyArtifacts

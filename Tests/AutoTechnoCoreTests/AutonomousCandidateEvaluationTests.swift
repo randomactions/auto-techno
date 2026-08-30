@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 37)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 38)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -304,7 +304,7 @@ struct AutonomousCandidateEvaluationTests {
             object["liveProposalFingerprint"] = "aaaaaaaaaaaaaaaa"
         }
         #expect(!transaction(correction: changedLiveProposal).isComplete)
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 8)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 9)
     }
 
     @Test("Candidate live policy rejects boost forged scaling stale revision and boundary")
@@ -1304,10 +1304,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 37)
-        #expect(QualityQualificationContract.schemaVersion == 42)
+        #expect(vector.schemaVersion == 38)
+        #expect(QualityQualificationContract.schemaVersion == 44)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v41")
+                "autotechno-canonical-engine.v43")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3915,7 +3915,7 @@ struct AutonomousCandidateEvaluationTests {
         }
 
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
-            "a33ecdd94691219b")
+            "ef7be983ff33a2b1")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "9191ba1b316d1c03")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -3923,7 +3923,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "8f08e87770882f0b")
+            "bcdbfeeed100c72b")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -4609,6 +4609,10 @@ struct AutonomousCandidateEvaluationTests {
                 morphologyVersion: morphology.version,
                 morphologyScoreHash:
                     KickSourceDynamicsContract.morphologyScoreHash(morphology),
+                morphologyPresentationBar: morphology.presentationBar,
+                morphologyEpisodeID: morphology.episodeID,
+                morphologyOperatorKind: morphology.operatorKind.rawValue,
+                morphologyEpisodeRelativeBar: morphology.episodeRelativeBar,
                 morphologyFromHome: morphology.fromHome.rawValue,
                 morphologyToHome: morphology.toHome.rawValue,
                 morphologyStartProgress: morphology.startProgress,
@@ -4624,6 +4628,8 @@ struct AutonomousCandidateEvaluationTests {
                 clickLevelEnd: morphology.end.noiseClickLevel,
                 bodyDriveStart: morphology.start.bodyDrive,
                 bodyDriveEnd: morphology.end.bodyDrive,
+                presenceScaleStart: morphology.start.presenceScale,
+                presenceScaleEnd: morphology.end.presenceScale,
                 morphologyBound: true,
                 renderedEventCount: renderedEventCount,
                 processedSampleCount: 2_560,

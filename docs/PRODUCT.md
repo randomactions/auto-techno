@@ -156,12 +156,17 @@ metallic events remain native. The body is part of the resolved score, typed
 identity, exact PCM evidence, and primary transaction. It adds no event type,
 track, sequencer, preset, user control, or realtime state.
 
-The existing kick source similarly receives a score-owned long-horizon
-morphology rather than a second kick or preset bank. Four bounded homes move
-pitch fall, body/sub decay, harmonic body, source drive, and click coordinates
-continuously across 128-bar segments. Minute-three and minute-fifty source PCM
-therefore differ deterministically while adjacent bar endpoints remain
-continuous and the protected kick route stays canonical.
+The existing kick source similarly receives score-owned long-horizon material
+rather than a second kick or preset bank. The current episode and presentation
+clock move one recognizable source among balanced, relaxed, ghost-soft, and
+rare resonant-accent states. Maintain, rise, and recall hold balanced; reframe
+morphs to and holds relaxed; payoff morphs to a resonant body accent; recovery
+morphs to relaxed for 32 bars, holds that midpoint for 32 bars, then morphs to
+and holds ghost-soft. Each handoff uses a 32-bar raised cosine. The complete
+body + sub + click sum receives the score-owned presence scale before source
+dynamics, detector, ducking, and audible routing, while balanced retains the
+prior source PCM exactly. Accepted-PCM repeats age presentation progress without
+fabricating score evidence, and the protected kick route stays canonical.
 
 Bounded percussion windows end through one shared source-local terminal
 contract rather than a master de-clicker. Kick and rumble use 4 ms releases;
@@ -320,7 +325,7 @@ Future sound maturation must still replace only a repeatedly failed provisional
 DSP in place after independent-root, two-rate causal evidence.
 
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v22 supplies
+policy and its operational gates pass. Professional Evidence v24 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation, pre-kick foundation-pocket, terminal climax-hang,
 material-world/effect-target lineage, and live-controller consequence, explicit

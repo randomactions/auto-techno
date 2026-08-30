@@ -6,20 +6,20 @@ import Testing
 
 @Suite("Current autonomous runtime")
 struct CurrentRuntimeTests {
-    @Test("Source-terminal de-click identities advance as one exact contract")
+    @Test("Episode-bound kick identities advance as one exact contract")
     func sourceTerminalDeclickPrimaryIdentityContract() {
-        #expect(QualityQualificationContract.schemaVersion == 42)
+        #expect(QualityQualificationContract.schemaVersion == 44)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v41")
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 37)
+                "autotechno-canonical-engine.v43")
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 38)
         #expect(ProfessionalQualityObservation.schemaVersion == 16)
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 16)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v22")
+                "autotechno-professional-quality-profile.v24")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v22")
+                "autotechno-candidate-evaluator.primary-calibrated.v24")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v22")
+                "autotechno-quality.primary-calibrated.v24")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 17)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
                 "autotechno-professional-quality-adversarial.v17")
@@ -27,20 +27,20 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
                 "autotechno-professional-quality-holdout.v15")
         #expect(CanonicalJourneyQualificationReport.currentEvidenceScope ==
-                "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-granular-memory-pitch-identity-transition-tail-material-world-source-terminal-declick-live-commit-recovery.v22")
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 8)
+                "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-granular-memory-pitch-identity-transition-tail-material-world-source-terminal-declick-live-commit-recovery.v24")
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 9)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 3)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 22)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 24)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v22")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v22"))
+                "autotechno-professional-evidence.v24")
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v24"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v22"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v22"))
+            .hasSuffix("-v24"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v24"))
     }
 
-    @Test("Only bundled v22 primary resources remain")
-    func primaryResourcesAreV22Only() {
+    @Test("Only bundled v24 primary resources remain")
+    func primaryResourcesAreV24Only() {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
         for stem in ["profile", "adversarial-suite", "holdout"] {
@@ -87,8 +87,12 @@ struct CurrentRuntimeTests {
                 resourceDirectory.appendingPathComponent("\(prefix)-v20.json").path))
             #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v21.json").path))
-            #expect(FileManager.default.fileExists(atPath:
+            #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v22.json").path))
+            #expect(!FileManager.default.fileExists(atPath:
+                resourceDirectory.appendingPathComponent("\(prefix)-v23.json").path))
+            #expect(FileManager.default.fileExists(atPath:
+                resourceDirectory.appendingPathComponent("\(prefix)-v24.json").path))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v1"))
             #expect(!ProfessionalQualityPrimaryArtifacts
@@ -131,8 +135,12 @@ struct CurrentRuntimeTests {
                 .containsBundledResource(named: "\(prefix)-v20"))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v21"))
-            #expect(ProfessionalQualityPrimaryArtifacts
+            #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v22"))
+            #expect(!ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: "\(prefix)-v23"))
+            #expect(ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: "\(prefix)-v24"))
         }
         #expect(throws: Never.self) {
             _ = try ProfessionalQualityPrimaryArtifacts.load()
@@ -370,6 +378,20 @@ struct RepositorySurfaceTests {
 
     @Test("Active source and normative prose contain no retired runtime surface")
     func activeSourceHasNoRetiredSurface() throws {
+        func containsRetiredPhrase(
+            _ phrase: String,
+            in normalized: String
+        ) -> Bool {
+            guard phrase.hasSuffix("-v1") else {
+                return normalized.contains(phrase)
+            }
+            let pattern = NSRegularExpression.escapedPattern(for: phrase) +
+                "(?![0-9])"
+            return normalized.range(
+                of: pattern,
+                options: .regularExpression
+            ) != nil
+        }
         let sources = repositoryRoot.appendingPathComponent("Sources")
         let retiredSymbols = [
             "V2", "SceneRenderer", "ReferenceMetrics", "AuthoredSynthVoice",
@@ -417,7 +439,7 @@ struct RepositorySurfaceTests {
             let normalized = contents.lowercased()
             for phrase in retiredPhrases {
                 #expect(
-                    !normalized.contains(phrase),
+                    !containsRetiredPhrase(phrase, in: normalized),
                     "\(phrase) remains in \(file.lastPathComponent)"
                 )
             }
@@ -443,7 +465,10 @@ struct RepositorySurfaceTests {
                 .lowercased()
             for retired in retiredProseSymbols + retiredPhrases {
                 #expect(
-                    !normalized.contains(retired.lowercased()),
+                    !containsRetiredPhrase(
+                        retired.lowercased(),
+                        in: normalized
+                    ),
                     "\(retired) remains in \(file.lastPathComponent)"
                 )
             }
@@ -607,13 +632,13 @@ struct RepositorySurfaceTests {
         }.joined(separator: "\n").lowercased()
 
         for required in [
-            "autotechno-canonical-engine.v41",
-            "quality-contract schema 42",
-            "candidate-vector schema 37",
-            "candidate-transaction schema 8",
-            "professional evidence v22",
-            "profile v22",
-            "evaluator v22",
+            "autotechno-canonical-engine.v43",
+            "quality-contract schema 44",
+            "candidate-vector schema 38",
+            "candidate-transaction schema 9",
+            "professional evidence v24",
+            "profile v24",
+            "evaluator v24",
             "live feedback",
             "physical-output soak",
         ] {

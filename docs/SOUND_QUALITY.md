@@ -1,9 +1,10 @@
 # Sound Quality Contract
 
-## Engine-v41 source-terminal de-click checkpoint
+## Engine-v43 episode-bound kick checkpoint
 
-Engine v41 removes hard-window terminal discontinuities at their source without
-rounding intentional percussion attacks or smoothing the master. Kick and
+Engine v43 retains the source-terminal repair and adds episode-bound kick
+material without rounding intentional percussion attacks or smoothing the
+master. Kick and
 rumble receive a 4 ms raised-cosine terminal release; clap, open hat, and
 metallic percussion receive 2 ms. Every supported source preserves its first
 8 ms bit-for-bit and reaches exact positive zero on the final rendered frame
@@ -26,15 +27,15 @@ score/graph snapshots without using loudness or density alone as proof.
 Graph evidence binds the world fingerprint, requested five-coordinate target,
 realized graph vector, distance, protected routing, and at most one changed node
 per phrase. Existing transition-tail and route-recovery contracts remain.
-The exact engine-v41 primary-v22 and long-horizon-v9 development, adversarial,
+The exact engine-v43 primary-v24 and long-horizon-v11 development, adversarial,
 and disjoint-holdout artifacts now pass and replace the ineligible v38 set.
 Listening, real app/route QA, latency observation, and physical-output soak
 remain separate unverified gates.
 
 The current qualified offline implementation is
-`autotechno-canonical-engine.v41` under quality-contract schema 42,
-candidate-vector schema 37, candidate-transaction schema 8, and Professional
-Evidence v22. Primary profile/evaluator v22 and long-horizon policy v9 are the
+`autotechno-canonical-engine.v43` under quality-contract schema 44,
+candidate-vector schema 38, candidate-transaction schema 9, and Professional
+Evidence v24. Primary profile/evaluator v24 and long-horizon policy v11 are the
 required exact identities; their artifact loaders fail closed on any mismatch.
 
 ## Status and purpose
@@ -53,9 +54,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 42, candidate-vector schema 37,
-candidate-transaction schema 8, and canonical engine identity
-`autotechno-canonical-engine.v41`. Its explicit modal, tuned-inharmonic,
+candidate uses quality-contract schema 44, candidate-vector schema 38,
+candidate-transaction schema 9, and canonical engine identity
+`autotechno-canonical-engine.v43`. Its explicit modal, tuned-inharmonic,
 deliberate-dissonance, and indefinite-pitch rules are defined in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md). It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
@@ -360,10 +361,10 @@ remain explicit rather than being hidden behind a blanket master crossfade.
 Tonal Motion patch boundaries separately retain comb/all-pass/echo memory while
 their patch-owned coefficients crossfade for 500 ms.
 
-`ProfessionalEvidenceReportBank` v22 accepts a bank only when every canonical
+`ProfessionalEvidenceReportBank` v23 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v22 from the v22 profile, v17 adversarial suite,
+exact-engine primary evaluator v24 from the v23 profile, v17 adversarial suite,
 and v15 disjoint holdout only after all three exact artifacts replay. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 36 complete 44.1/48 kHz journeys; four replacement holdout journeys
@@ -436,13 +437,13 @@ without partially mutating accepted summaries.
 
 Phase 6B calibrates independent non-compensable semantic, per-operator signal,
 and effect-family dimensions across seven exact four-hour development journeys
-at 44.1/48 kHz. The immutable v9 artifact set rejects ten independent
+at 44.1/48 kHz. The immutable v11 artifact set rejects ten independent
 adversarial attacks and accepts two fresh disjoint holdout roots. Generated-
 graph evidence additionally bounds realized material-world count and requested-
 to-realized effect-world distance. It retains only reduced irreversible
-evidence and binds the exact engine-v41/primary-v22 identity. The pinned
+evidence and binds the exact engine-v43/primary-v24 identity. The pinned
 long-horizon profile, adversarial, and holdout fingerprints are
-`ff4c5c259a6c6c87`, `ea66cbb3e348476c`, and `0a18bb6d951d4147`.
+`f42b9271579015ba`, `3ff4d0d51c72c99e`, and `d59e4ef6080bbe77`.
 
 Phase 7 consumes that policy only during detached preparation. A fixed-capacity
 active-rate observation requires at least 7,200 bars, twelve signal observations,
@@ -532,14 +533,16 @@ toward the same spectrum or loudness.
 ### Long-form kick and upper-percussion body evidence
 
 The resolved score now binds one kick-morphology record to every bar. The
-record carries bounded source homes, continuous segment progress, and exact
-start/end values for pitch fall, fundamental, body/sub decay, harmonic body,
-drive, and click. Same-pass source evidence hashes that score record and the
-actual pre/post-conditioned kick PCM while retaining physical attack/body and
+record carries the active long-horizon episode/operator, accepted and
+presentation bars, episode-relative position, semantic material endpoints,
+continuous handoff progress, and exact start/end values for source presence,
+pitch fall, fundamental, body/sub decay, harmonic body, drive, and click.
+Same-pass source evidence hashes that score record and the actual
+pre/post-conditioned kick PCM while retaining physical attack/body and
 upper-mid consequence. A morphology mismatch, discontinuity, non-finite value,
-out-of-range home, or forged render binding makes candidate-vector schema 37
-incomplete. Minute-three/minute-fifty checks are causal sound tests, not an
-arrangement heuristic.
+out-of-range material/presence, or forged render binding makes candidate-vector
+schema 38 incomplete. Multi-rate held-material and transition-boundary checks
+are causal sound tests, not arrangement heuristics.
 
 The existing upper-percussion record now also carries the selected physical
 body. Clap events must resolve to clap, snare, or rim; open-hat and metallic
@@ -564,7 +567,7 @@ sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
 status. It also retains exact first/last sample bit patterns, the pre-drive peak
 frame, the exact input/amount witness at the post-drive peak, and a replayable
 changed-frame witness together with that frame's exact input bits.
-Candidate-vector schema 37 binds that record to the matching instrument effect
+Candidate-vector schema 38 binds that record to the matching instrument effect
 access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
 sample-rate-normalized boundary transition. Neutral drive requires the no-change
 sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
@@ -593,7 +596,7 @@ uses half depth, response uses full depth, and the full displacement is capped
 at `0.12` of one sixteenth. Note count, base step, pitch, velocity, instrument,
 requested duration, gate, and every protected-rhythm event remain unchanged.
 
-Candidate-vector schema 37 retains one compact record per full rendered bar. It
+Candidate-vector schema 38 retains one compact record per full rendered bar. It
 binds route-derived frame geometry, score and actual renderer onset facts,
 requested gate end, bounded renderer-owned applied gate end, causal role counts,
 exact protected/role offset relationships, and separate shadow/response dry
@@ -757,8 +760,8 @@ remaining qualified families from the second coherent repeat and preserves exact
 accepted PCM when none remain. At most five sidecars are retained for the selected render; every superseded
 initial sidecar is released before a corrective render, and the declared
 preparation memory budget includes both that storage and bounded looper capture
-memory. Primary-v22 artifacts and
-engine-v41 candidate fingerprints remain
+memory. Primary-v24 artifacts and
+engine-v43 candidate fingerprints remain
 unchanged because the sidecar cannot affect the primary plan, scheduled default
 PCM, evidence transaction, render continuation, or commit decision.
 
@@ -766,8 +769,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 42, candidate-vector schema 37,
-candidate-transaction schema 8, and canonical engine v41, the versioned
+Under quality-contract schema 44, candidate-vector schema 38,
+candidate-transaction schema 9, and canonical engine v43, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

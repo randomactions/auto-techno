@@ -141,7 +141,7 @@
     {
       "id": "performance-grammar-and-composition",
       "name": "Performance grammar and phrase composition",
-      "responsibility": "Resolve performance character, rhythmic relations, phrase-local slices, arpeggiation, pads, structural gestures, and score-owned feature articulations inside the canonical plan.",
+      "responsibility": "Resolve performance character, rhythmic relations, phrase-local slices, arpeggiation, pads, structural gestures, episode-bound kick materials, and score-owned feature articulations inside the canonical plan.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -153,6 +153,10 @@
         {
           "symbol": "PerformanceCharacter",
           "path": "Sources/AutoTechnoCore/PerformanceCharacter.swift"
+        },
+        {
+          "symbol": "KickMorphologyResolver",
+          "path": "Sources/AutoTechnoCore/KickMorphology.swift"
         }
       ],
       "state": [
@@ -163,15 +167,18 @@
       "inputs": [
         "resolved phrase context",
         "modal identity",
-        "performance character"
+        "performance character",
+        "long-horizon episode and presentation bar"
       ],
       "outputs": [
         "PhraseCompositionBar",
         "foundation and kick relations",
-        "upper and percussion articulations"
+        "upper and percussion articulations",
+        "episode-bound kick material articulation"
       ],
       "evidence": [
-        "score-side relation and event fingerprints"
+        "score-side relation and event fingerprints",
+        "kick episode, material, progress, and presence provenance"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/ClimaxHang.swift",
@@ -577,9 +584,9 @@
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityVerdict.swift",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v22.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v22.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v22.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v24.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v24.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v24.json",
         "Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift",
         "Sources/AutoTechnoDSP/StreamingPerceptualEvidence.swift",
         "Sources/AutoTechnoDSP/UpperTimbreEvidence.swift"
@@ -654,9 +661,9 @@
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicy.swift",
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift",
         "Sources/AutoTechnoDSP/LongHorizonSignalTrajectory.swift",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v9.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v9.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v9.json"
+        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v11.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v11.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v11.json"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/LongHorizonEffectDoseTests.swift",

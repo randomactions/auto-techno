@@ -1426,7 +1426,7 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
     package static let schemaVersion = 16
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v22"
+        "autotechno-professional-quality-profile.v24"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 

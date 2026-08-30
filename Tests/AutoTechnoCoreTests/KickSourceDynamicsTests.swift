@@ -129,76 +129,182 @@ struct KickSourceDynamicsTests {
                 ))
     }
 
-    @Test("Minute-three and minute-fifty morphology change exact kick PCM at every route rate")
-    func longHorizonMorphologyChangesPCM() throws {
+    @Test("Held kick materials change exact PCM and authored presence at every route rate")
+    func episodeMaterialsChangePCM() throws {
         let director = AutonomousSessionDirector(rootSeed: 42)
         let plan = director.plan(from: director.initialState())
         let source = try #require(plan.resolvedBars.first { bar in
             bar.ensemble.events.contains { $0.voice == .kick }
         })
-        let minuteThreeBar = Int((3.0 * plan.scene.bpm / 4.0).rounded())
-        let minuteFiftyBar = Int((50.0 * plan.scene.bpm / 4.0).rounded())
-        let earlyMorphology = KickMorphologyResolver.articulation(
-            sessionSeed: plan.scene.seed,
-            absoluteBar: minuteThreeBar
+        let balanced = morphology(
+            seed: plan.scene.seed,
+            operatorKind: .maintain,
+            previousOperatorKind: .maintain,
+            relativeBar: 40
         )
-        let lateMorphology = KickMorphologyResolver.articulation(
-            sessionSeed: plan.scene.seed,
-            absoluteBar: minuteFiftyBar
+        let relaxed = morphology(
+            seed: plan.scene.seed,
+            operatorKind: .reframe,
+            previousOperatorKind: .maintain,
+            relativeBar: 40
         )
-        #expect(earlyMorphology != lateMorphology)
+        let ghost = morphology(
+            seed: plan.scene.seed,
+            operatorKind: .recover,
+            previousOperatorKind: .payoff,
+            relativeBar: 112
+        )
+        let accent = morphology(
+            seed: plan.scene.seed,
+            operatorKind: .payoff,
+            previousOperatorKind: .maintain,
+            relativeBar: 40
+        )
+        #expect(balanced.start.presenceScale == 1)
+        #expect(relaxed.start.presenceScale == 0.78)
+        #expect(ghost.start.presenceScale == 0.48)
+        #expect(accent.start.presenceScale == 0.90)
 
         for sampleRate in [8_000.0, 44_100, 48_000, 96_000] {
-            let early = render(
-                resolved: replacingMorphology(source, with: earlyMorphology),
-                plan: plan,
-                sampleRate: sampleRate,
-                layer: .protectedRhythm
-            )
-            let late = render(
-                resolved: replacingMorphology(source, with: lateMorphology),
-                plan: plan,
-                sampleRate: sampleRate,
-                layer: .protectedRhythm
-            )
-            #expect(early.kickMix.sourceDynamics.inputSampleHash !=
-                    late.kickMix.sourceDynamics.inputSampleHash)
-            #expect(early.kickMix.sourceDynamics.outputSampleHash !=
-                    late.kickMix.sourceDynamics.outputSampleHash)
-            #expect(early.kickMix.sourceDynamics.morphologyScoreHash ==
-                    KickSourceDynamicsContract.morphologyScoreHash(
-                        earlyMorphology
-                    ))
-            #expect(late.kickMix.sourceDynamics.morphologyScoreHash ==
-                    KickSourceDynamicsContract.morphologyScoreHash(
-                        lateMorphology
-                    ))
-            #expect(early.leftSamples.allSatisfy { $0.isFinite })
-            #expect(late.leftSamples.allSatisfy { $0.isFinite })
+            let renders = [balanced, relaxed, ghost, accent].map {
+                render(
+                    resolved: replacingMorphology(source, with: $0),
+                    plan: plan,
+                    sampleRate: sampleRate,
+                    layer: .protectedRhythm
+                )
+            }
+            #expect(Set(renders.map {
+                $0.kickMix.sourceDynamics.inputSampleHash
+            }).count == 4)
+            #expect(Set(renders.map {
+                $0.kickMix.sourceDynamics.outputSampleHash
+            }).count == 4)
+            #expect(renders[2].kickMix.sourceDynamics.outputRMS <
+                    renders[1].kickMix.sourceDynamics.outputRMS)
+            #expect(renders[2].kickMix.sourceDynamics.outputRMS > 0)
+            #expect(renders[1].kickMix.sourceDynamics.outputRMS <
+                    renders[0].kickMix.sourceDynamics.outputRMS)
+            #expect(renders[3].kickMix.sourceDynamics.outputPeak <=
+                    renders[0].kickMix.sourceDynamics.outputPeak)
+            #expect(Set(renders.map {
+                $0.kickMix.renderedKickEventCount
+            }).count == 1)
+            for (rendered, morphology) in zip(
+                renders,
+                [balanced, relaxed, ghost, accent]
+            ) {
+                #expect(rendered.kickMix.sourceDynamics.morphologyScoreHash ==
+                        KickSourceDynamicsContract.morphologyScoreHash(
+                            morphology
+                        ))
+                #expect(rendered.leftSamples.allSatisfy { $0.isFinite })
+                #expect(rendered.sourceTerminalDeclickRenderEvidence
+                    .filter { $0.voice == .kick }
+                    .allSatisfy {
+                        $0.preFadeAttackSampleHash ==
+                            $0.renderedAttackSampleHash
+                    })
+            }
         }
     }
 
-    @Test("Morphology trajectory is deterministic, bounded, and continuous across bars")
-    func morphologyTrajectoryContract() {
+    @Test("Episode trajectory maps operators, stages recovery, and remains continuous")
+    func episodeTrajectoryContract() {
         for seed in [UInt64(1), 42, 1_357_91, UInt64.max] {
-            var previous: KickMorphologyArticulation?
-            for bar in 0..<512 {
-                let first = KickMorphologyResolver.articulation(
-                    sessionSeed: seed,
-                    absoluteBar: bar
-                )
-                let replay = KickMorphologyResolver.articulation(
-                    sessionSeed: seed,
-                    absoluteBar: bar
-                )
-                #expect(first == replay)
-                #expect(first.isComplete)
-                if let previous {
-                    #expect(previous.end == first.start)
+            for operatorKind in LongHorizonEpisodeOperator.allCases {
+                var previous: KickMorphologyArticulation?
+                for bar in 0..<128 {
+                    let first = morphology(
+                        seed: seed,
+                        operatorKind: operatorKind,
+                        previousOperatorKind: .payoff,
+                        relativeBar: bar
+                    )
+                    let replay = morphology(
+                        seed: seed,
+                        operatorKind: operatorKind,
+                        previousOperatorKind: .payoff,
+                        relativeBar: bar
+                    )
+                    #expect(first == replay)
+                    #expect(first.isComplete)
+                    if let previous {
+                        #expect(previous.end == first.start)
+                    }
+                    previous = first
                 }
-                previous = first
             }
         }
+
+        let reframeStart = morphology(
+            operatorKind: .reframe,
+            previousOperatorKind: .maintain,
+            relativeBar: 0
+        )
+        let reframeMid = morphology(
+            operatorKind: .reframe,
+            previousOperatorKind: .maintain,
+            relativeBar: 16
+        )
+        let reframeHeld = morphology(
+            operatorKind: .reframe,
+            previousOperatorKind: .maintain,
+            relativeBar: 32
+        )
+        #expect(reframeStart.fromHome == .balanced)
+        #expect(reframeStart.toHome == .relaxed)
+        #expect(reframeStart.startProgress == 0)
+        #expect(abs(reframeMid.startProgress - 0.5) < 0.000_001)
+        #expect(reframeHeld.fromHome == .relaxed)
+        #expect(reframeHeld.toHome == .relaxed)
+
+        let recoveryBoundaries = [0, 32, 63, 64, 80, 96, 127].map {
+            morphology(
+                operatorKind: .recover,
+                previousOperatorKind: .payoff,
+                relativeBar: $0
+            )
+        }
+        #expect(recoveryBoundaries[0].fromHome == .resonantAccent)
+        #expect(recoveryBoundaries[0].toHome == .relaxed)
+        #expect(recoveryBoundaries[1].fromHome == .relaxed)
+        #expect(recoveryBoundaries[1].toHome == .relaxed)
+        #expect(recoveryBoundaries[2].fromHome == .relaxed)
+        #expect(recoveryBoundaries[2].toHome == .relaxed)
+        #expect(recoveryBoundaries[3].fromHome == .relaxed)
+        #expect(recoveryBoundaries[3].toHome == .ghostSoft)
+        #expect(abs(recoveryBoundaries[4].startProgress - 0.5) < 0.000_001)
+        #expect(recoveryBoundaries[5].fromHome == .ghostSoft)
+        #expect(recoveryBoundaries[5].toHome == .ghostSoft)
+
+        for operatorKind in [
+            LongHorizonEpisodeOperator.maintain, .rise, .recall,
+        ] {
+            let held = morphology(
+                operatorKind: operatorKind,
+                previousOperatorKind: .maintain,
+                relativeBar: 64
+            )
+            #expect(held.fromHome == .balanced)
+            #expect(held.toHome == .balanced)
+        }
+        let payoff = morphology(
+            operatorKind: .payoff,
+            previousOperatorKind: .maintain,
+            relativeBar: 64
+        )
+        #expect(payoff.fromHome == .resonantAccent)
+        #expect(payoff.toHome == .resonantAccent)
+
+        let fallback = KickMorphologyResolver.articulation(
+            sessionSeed: 42,
+            absoluteBar: 9,
+            presentationBar: 1
+        )
+        #expect(fallback.fromHome == .balanced)
+        #expect(fallback.toHome == .balanced)
+        #expect(fallback.presentationBar == 9)
     }
 
     @Test("Serial retry pressure moves kick attack/body evidence in both bounded directions")
@@ -530,6 +636,26 @@ struct KickSourceDynamicsTests {
         let outputRMS: Double
         let outputAttackRMS: Double
         let outputBodyRMS: Double
+    }
+
+    private func morphology(
+        seed: UInt64 = 42,
+        operatorKind: LongHorizonEpisodeOperator,
+        previousOperatorKind: LongHorizonEpisodeOperator?,
+        relativeBar: Int
+    ) -> KickMorphologyArticulation {
+        KickMorphologyResolver.articulation(
+            sessionSeed: seed,
+            absoluteBar: relativeBar,
+            presentationBar: 1_024 + relativeBar,
+            episodeContext: KickMorphologyEpisodeContext(
+                episodeID: 0x4B49_434B,
+                episodeIndex: 3,
+                operatorKind: operatorKind,
+                startedAtPresentationBar: 1_024,
+                previousOperatorKind: previousOperatorKind
+            )
+        )
     }
 
     private func legacyOracle(

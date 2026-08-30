@@ -73,8 +73,8 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - one scheduled-output master-headroom path mapping app-owned mixer PCM to an
   exact phrase occurrence, analyzing one fixed three-second window off the
   callback, and applying a primary-accepted attenuation only to future PCM;
-- canonical engine v41, quality-contract schema 42, candidate-vector schema 37,
-  and candidate-transaction schema 8, with the explicit
+- canonical engine v43, quality-contract schema 44, candidate-vector schema 38,
+  and candidate-transaction schema 9, with the explicit
   [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md)
   with atomic selected-commit provenance across symbolic, full-mix, masking,
   stem, score-owned kick-syntax, debt-to-recovery climax arc and terminal hang,
@@ -96,7 +96,7 @@ not temporary test counts, toolchain snapshots, or pending listening verdicts.
 - phrase-wide and live-window ITU-R BS.1770-5 loudness, Annex 2 true peak,
   physical-time spectral/trajectory evidence, rate-normalized transient
   detection, explicit bounded working memory, and a complete-checkpoint
-  Professional Evidence v22 report bank;
+  Professional Evidence v24 report bank;
 - detached preparation, immutable sample-time scheduling, and route recovery;
 - objective preflight for finite output, peaks, DC, low-end correlation,
   boundaries, and continuation.
@@ -109,8 +109,8 @@ filter motion, and dry-plus-moving-shadow concepts were reconciled to existing
 score, modulation, echo, chorus, and FDN owners; no duplicate track,
 instrument, modulation lane, or effect chain was added.
 
-The app installs one exact-engine calibrated primary evaluator v22 from the
-current profile v22 derived from 36 complete journeys, a passing v17 adversarial
+The app installs one exact-engine calibrated primary evaluator v24 from the
+current profile v24 derived from 36 complete journeys, a passing v17 adversarial
 suite, and a disjoint four-journey holdout qualification v15. Each boundary owns one
 canonical plan and one terminal decision. The evaluator may request one same-
 plan home-timbre correction, for two render passes maximum. Missing artifacts
@@ -174,9 +174,9 @@ that prevents disconnected parameters from appearing integrated.
 
 ### 2. Establish versioned quality evidence
 
-Quality-contract schema 42, candidate-vector schema 37, and candidate-
-transaction schema 8 now bind a versioned transaction across canonical engine
-v41, quality policy, evaluator, candidate plans, route, incoming continuation,
+Quality-contract schema 44, candidate-vector schema 38, and candidate-
+transaction schema 9 now bind a versioned transaction across canonical engine
+v42, quality policy, evaluator, candidate plans, route, incoming continuation,
 attempt evidence, selection, and finalized
 commit provenance. Its bounded kick-syntax, groove-pulse, ordinary closed-hat,
 upper-percussion tail-clearance,
@@ -193,7 +193,7 @@ provenance, make each
 score-to-PCM consequence explicit for the calibrated primary policy. The modal
 foundation projection additionally binds every empty and active bar, score-owned
 articulation, exact dry PCM, protected routing, continuation, pitch, envelope,
-spectral, masking, and pole-stability evidence. Professional Evidence v22 adds
+spectral, masking, and pole-stability evidence. Professional Evidence v24 adds
 standards-based phrase loudness/true peak, bounded streaming
 physical-time spectral and trajectory evidence, analyzer-memory provenance, and a bounded bank
 that requires every canonical checkpoint for each included rate, including
@@ -210,7 +210,7 @@ local and untracked.
 
 The runtime records one complete plan, one initial attempt, and at most one
 home-timbre correction, then atomically carries the terminal evidence, decision,
-and controller state into continuation. The exact engine-v41 profile v22,
+and controller state into continuation. The exact engine-v43 profile v24,
 passing v17 adversarial suite, disjoint holdout qualification v15, non-compensable
 checkpoint policy, and transaction replay are the app path. The former
 single-journey generalization blocker is closed: 36 development journeys and
@@ -325,7 +325,7 @@ changing audio. Phase 6A adds compatible realized-PCM trajectory evidence:
 exact accepted plan/candidate/PCM provenance, separate semantic targets,
 non-compensable physical dimensions, per-operator transition deltas, explicit
 checkpoint gaps, and bounded episode summaries without retaining PCM. Phase 6B
-now binds the exact engine-v41/primary-v22 policy to seven development journeys,
+now binds the exact engine-v43/primary-v24 policy to seven development journeys,
 ten rejected adversarial attacks, and two fresh disjoint holdouts at both
 representative rates. Phase 7 applies reason-coded preserve, recover, or
 reframe-material decisions only to eligible future boundaries. Phase 9 adds

@@ -5,7 +5,7 @@ import Foundation
 /// still owns every kick event; this contract only conditions the already
 /// resolved body + sub + click sum before detector and audible routing.
 package enum KickSourceDynamicsContract {
-    package static let version = "kick-source-dynamics.adaa-tanh.v1"
+    package static let version = "kick-source-dynamics.adaa-tanh.v2"
     package static let antialiasOrder = 1
     package static let drive = 1.35
     package static let outputGain = 0.88
@@ -52,11 +52,15 @@ package enum KickSourceDynamicsContract {
         _ morphology: KickMorphologyArticulation
     ) -> String {
         var fingerprint = StreamingFNV1a()
-        fingerprint.domain("kick-morphology.score.v1")
+        fingerprint.domain("kick-morphology.score.v2")
         fingerprint.aggregate("KickMorphologyArticulation")
         fingerprint.string(morphology.version)
         fingerprint.int(morphology.absoluteBar)
+        fingerprint.int(morphology.presentationBar)
         fingerprint.int(morphology.segmentIndex)
+        fingerprint.uint64(morphology.episodeID)
+        fingerprint.raw(morphology.operatorKind.rawValue)
+        fingerprint.int(morphology.episodeRelativeBar)
         fingerprint.raw(morphology.fromHome.rawValue)
         fingerprint.raw(morphology.toHome.rawValue)
         fingerprint.double(morphology.startProgress)
@@ -83,6 +87,7 @@ package enum KickSourceDynamicsContract {
         fingerprint.double(parameters.noiseClickLevel)
         fingerprint.double(parameters.tonalClickLevel)
         fingerprint.double(parameters.clickFrequencyHz)
+        fingerprint.double(parameters.presenceScale)
     }
 }
 
@@ -91,6 +96,10 @@ package struct KickSourceDynamicsRenderEvidence: Codable, Equatable, Sendable {
     package let antialiasOrder: Int
     package let morphologyVersion: String
     package let morphologyScoreHash: String
+    package let morphologyPresentationBar: Int
+    package let morphologyEpisodeID: UInt64
+    package let morphologyOperatorKind: String
+    package let morphologyEpisodeRelativeBar: Int
     package let morphologyFromHome: String
     package let morphologyToHome: String
     package let morphologyStartProgress: Double
@@ -105,6 +114,8 @@ package struct KickSourceDynamicsRenderEvidence: Codable, Equatable, Sendable {
     package let clickLevelEnd: Double
     package let bodyDriveStart: Double
     package let bodyDriveEnd: Double
+    package let presenceScaleStart: Double
+    package let presenceScaleEnd: Double
     package let morphologyBound: Bool
     package let renderedEventCount: Int
     package let processedSampleCount: Int
@@ -172,7 +183,7 @@ struct KickSourceDynamicsEvidenceAccumulator {
     private var outputFingerprint = StreamingFNV1a()
 
     init() {
-        morphologyFingerprint.domain("kick-morphology.score.v1")
+        morphologyFingerprint.domain("kick-morphology.score.v2")
         inputFingerprint.domain("kick-source-dynamics.input.v1")
         outputFingerprint.domain("kick-source-dynamics.output.v1")
     }
@@ -186,7 +197,11 @@ struct KickSourceDynamicsEvidenceAccumulator {
         morphologyFingerprint.aggregate("KickMorphologyArticulation")
         morphologyFingerprint.string(morphology.version)
         morphologyFingerprint.int(morphology.absoluteBar)
+        morphologyFingerprint.int(morphology.presentationBar)
         morphologyFingerprint.int(morphology.segmentIndex)
+        morphologyFingerprint.uint64(morphology.episodeID)
+        morphologyFingerprint.raw(morphology.operatorKind.rawValue)
+        morphologyFingerprint.int(morphology.episodeRelativeBar)
         morphologyFingerprint.raw(morphology.fromHome.rawValue)
         morphologyFingerprint.raw(morphology.toHome.rawValue)
         morphologyFingerprint.double(morphology.startProgress)
@@ -212,6 +227,7 @@ struct KickSourceDynamicsEvidenceAccumulator {
         morphologyFingerprint.double(parameters.noiseClickLevel)
         morphologyFingerprint.double(parameters.tonalClickLevel)
         morphologyFingerprint.double(parameters.clickFrequencyHz)
+        morphologyFingerprint.double(parameters.presenceScale)
     }
 
     mutating func beginEvent(sampleRate: Double) {
@@ -327,6 +343,8 @@ struct KickSourceDynamicsEvidenceAccumulator {
             morphologyEnd?.noiseClickLevel ?? 0,
             morphologyStart?.bodyDrive ?? 0,
             morphologyEnd?.bodyDrive ?? 0,
+            morphologyStart?.presenceScale ?? 0,
+            morphologyEnd?.presenceScale ?? 0,
         ]
         let scalars = signalScalars + morphologyScalars
         return KickSourceDynamicsRenderEvidence(
@@ -336,6 +354,10 @@ struct KickSourceDynamicsEvidenceAccumulator {
             morphologyScoreHash: fixedWidthFingerprintHex(
                 morphologyFingerprint.value
             ),
+            morphologyPresentationBar: morphology?.presentationBar ?? 0,
+            morphologyEpisodeID: morphology?.episodeID ?? 0,
+            morphologyOperatorKind: morphology?.operatorKind.rawValue ?? "",
+            morphologyEpisodeRelativeBar: morphology?.episodeRelativeBar ?? 0,
             morphologyFromHome: morphology?.fromHome.rawValue ?? "",
             morphologyToHome: morphology?.toHome.rawValue ?? "",
             morphologyStartProgress: morphology?.startProgress ?? 0,
@@ -351,6 +373,8 @@ struct KickSourceDynamicsEvidenceAccumulator {
             clickLevelEnd: morphologyEnd?.noiseClickLevel ?? 0,
             bodyDriveStart: morphologyStart?.bodyDrive ?? 0,
             bodyDriveEnd: morphologyEnd?.bodyDrive ?? 0,
+            presenceScaleStart: morphologyStart?.presenceScale ?? 0,
+            presenceScaleEnd: morphologyEnd?.presenceScale ?? 0,
             morphologyBound: morphology != nil,
             renderedEventCount: renderedEventCount,
             processedSampleCount: processedSampleCount,

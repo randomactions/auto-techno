@@ -1,7 +1,7 @@
 # Deterministic mix-balance benchmark
 
 The engine-v36 measurements below remain historical benchmark evidence. Current
-engine v41 requires primary-v22 and long-horizon-v9 qualification artifacts.
+engine v43 requires primary-v24 and long-horizon-v11 qualification artifacts.
 
 Auto Techno uses two complementary measurement families. Whole-program
 loudness, true peak, loudness range, and momentary/short-term behavior follow
@@ -72,8 +72,8 @@ failure. The adversarial suite also passed. These are offline qualification
 results, not listening approval or a claim that every bar should have the same
 role balance.
 
-The mix-controller result remains installed in canonical engine v41 / quality
-schema 42. Its current primary-v22 profile, adversarial-suite, and holdout
+The mix-controller result remains installed in canonical engine v43 / quality
+schema 44. Its current primary-v24 profile, adversarial-suite, and holdout
 fingerprints are recorded by the exact artifact loader.
 Long-horizon identities are pinned separately because later renderer changes
 can require regeneration without changing this measured controller deficit.
