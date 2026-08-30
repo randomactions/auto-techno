@@ -1,7 +1,7 @@
 # Long-Horizon Performance Map
 
-Current engine v40 binds material-world/effect-target lineage, pitch identity,
-and transition-tail continuity to the primary-v21 and long-horizon-v8
+Current engine v41 binds material-world/effect-target lineage, pitch identity,
+and transition-tail continuity to the primary-v22 and long-horizon-v9
 qualification sets.
 
 ## Status and verdict
@@ -22,7 +22,7 @@ resolved-score owners with bounded, versioned provenance. Phase 5 supplies the
 effect-dose/recovery and phrase-sentence foundation from the current palette
 without changing audio. Phase 6A supplies compatible realized signal
 trajectories while keeping semantic targets and physical consequences separate.
-Phase 6B now binds those dimensions to one exact engine-v40/primary-v21
+Phase 6B now binds those dimensions to one exact engine-v41/primary-v22
 development profile, passes ten independent adversarial attacks, and accepts two
 disjoint four-hour holdout journeys. Phase 7 now reduces each accepted prepared
 phrase into one bounded active-rate observation during detached preparation,
@@ -158,7 +158,7 @@ musical, quality, live-master, and long-horizon continuations together only when
 the accepted prepared successor is scheduled.
 
 Stage 6 offline long-horizon qualification and Stage 7 local runtime integration
-are now **passed** for the exact engine-v40/primary-v21/long-horizon-v8 artifact set. Real
+are now **passed** for the exact engine-v41/primary-v22/long-horizon-v9 artifact set. Real
 app/route QA, listening, and physical-output soak remain separate and
 unverified.
 
@@ -457,7 +457,7 @@ one planned sentence to exact source/return fingerprints, positive RMS,
 masking, and terminal tail clearance. Synthetic active-to-tail-to-clear evidence
 proves a tail is not counted as recovered one bar early. These are provenance
 and dose facts; the report remains an observation rather than a verdict. The
-exact long-horizon-v8 policy consumes its compatible reduced dimensions only
+exact long-horizon-v9 policy consumes its compatible reduced dimensions only
 after primary-qualified preparation.
 
 Phase 5 changes no resolved event, score permission, graph, synth, patch, DSP
@@ -513,12 +513,12 @@ remain named and non-compensable across nine semantic dimensions,
 every operator/signal-rate relationship, and every existing effect family; no
 aggregate engagement score can hide a hard failure.
 
-The current v8 development profile `43fe9d315ffce406` rejects all ten required
-attacks through adversarial artifact `3b6d6de637e7dc02`: permanent peak, fixed
+The current v9 development profile replaces the v8 artifact identity and rejects all ten required
+attacks through adversarial artifact `ea66cbb3e348476c`: permanent peak, fixed
 sawtooth, strict alternation, failed recall, periodic rare gesture, wetness
 ratchet, monotonic decline, instant debt payment, semantic/signal mismatch, and
 route identity reset. Fresh disjoint roots `271828` and `314159` are both
-accepted by holdout artifact `a5a6df9d71577a9c`. The bundled artifacts enforce canonical
+accepted by holdout artifact `0a18bb6d951d4147`. The bundled artifacts enforce canonical
 JSON, exact engine/primary-policy identity, development/holdout disjointness,
 and fail-closed cross-artifact construction. They retain only irreversible
 summaries and fingerprints; PCM, samples, waveforms, and score events are absent.
@@ -526,7 +526,7 @@ summaries and fingerprints; PCM, samples, waveforms, and score events are absent
 Calibration adjusted only evidence uncertainty, not audio: one-sided semantic
 bounds distinguish absence of debt from excessive debt; sparse two-transition
 means receive explicit metric-unit floors while every contributing phrase still
-must pass the exact primary-v21 evaluator. Phase 6B changes no score, synth,
+must pass the exact primary-v22 evaluator. Phase 6B changes no score, synth,
 preset, patch home, DSP primitive, effect, graph, renderer, scheduler, route
 lifecycle, or realtime callback. The regenerated policy accepts both fresh
 holdouts after the two AudioReakt-derived and one Mordio-derived in-place
@@ -797,10 +797,10 @@ Each slice extends the one canonical owner and leaves a reusable capability.
 | 3. Episode operator selection — complete locally | `AutonomousSessionDirector` selection and `makePlan` consume exact hierarchy context | Versioned maintain/rise/recover/reframe/payoff/recall provenance mapped to existing phrase kinds | All operators fulfill in the canonical journey; at most one payoff per arc, real debt payment, prompt bounded recovery, frozen planning/semantic/hierarchy drift | Candidate count remains one; minimum hold protects reserved rare events; invalid context uses the previous conservative policy | No alternative arrangement engine, phrase vocabulary, or random style switch |
 | 4. Score-owned energy coordination — complete locally | Existing resolved roles, character, narrative, foundation, disclosure, transformations, spatial carrier, and transition eligibility | Versioned eight-coordinate target projected through existing score owners | Every coordinate has directional semantic witnesses; exact all-hold fingerprint; four-hour six-operator coverage, bounded roles/slew/space, and protected rare-event reserve | One immutable phrase-boundary target; 0.16 protagonist slew; one percussion tier; one spatial carrier/macro; malformed provenance fails closed | No extra density track, disconnected scalar, synth, patch, DSP primitive, graph stage, or callback path |
 | 5. Effect/capability dose evidence — complete locally | Existing instrument effect access, graph, FDN, pulse echo, percussion returns, masking, and transition relations | Versioned phrase sentence plus fixed-capacity activation, occupancy, tail, recovery, gap, last-use, and level evidence | 63 existing four-hour sentences; exact detached source/return binding; adversarial false eligibility, disconnected claims, premature recovery, discontinuity, and replay checks | Annotation and detached reduction only; no PCM retained; invalid evidence is unavailable without partial mutation; current audio remains exact | No new bus, effect, orderable plug-in chain, FX sequencer, renderer, or callback path |
-| 6. Calibrated long-horizon policy — complete locally | Primary-v21 evaluator, DSP-owned `autotechno-long-horizon-signal-trajectory.v1`, and immutable Stage 6 artifact loader | Non-compensable cross-phrase/cross-episode semantic, phrase-kind-consistent operator/signal, and effect bounds over seven exact development journeys | Engine-v40 v8 profile `43fe9d315ffce406`; ten attacks rejected by `3b6d6de637e7dc02`; two fresh disjoint at-least-four-hour holdouts accepted by `a5a6df9d71577a9c` at 44.1/48 kHz | Reduced detached evidence only; exact identities and canonical JSON fail closed; no PCM retained or scheduled audio rewritten | No parallel permissive evaluator, PCM ledger, aggregate engagement score, or semantic claim masquerading as signal consequence |
+| 6. Calibrated long-horizon policy — complete locally | Primary-v22 evaluator, DSP-owned `autotechno-long-horizon-signal-trajectory.v1`, and immutable Stage 6 artifact loader | Non-compensable cross-phrase/cross-episode semantic, phrase-kind-consistent operator/signal, and effect bounds over seven exact development journeys | Engine-v41 v9 profile, ten rejected attacks, and two fresh disjoint at-least-four-hour holdouts accepted at 44.1/48 kHz | Reduced detached evidence only; exact identities and canonical JSON fail closed; no PCM retained or scheduled audio rewritten | No parallel permissive evaluator, PCM ledger, aggregate engagement score, or semantic claim masquerading as signal consequence |
 | 7. Bounded future adaptation — complete locally | DSP-owned fixed-capacity runtime observation v2, Core continuation v4/decision v2, and App prepared-successor transaction | Exact active-rate Stage 6 evaluation and one reason-coded preserve/recover/reframe-material update for the next eligible phrase | Exact observation/decision/continuation replay; independent reason mappings; real prepared-phrase witness; stale/short/wrong-root/ineligible preservation; route rollback source contract | Fixed 7,200-bar/12-observation/two-transitions-per-operator minimum and 256-bar interval; immutable prepared state commits atomically; invalid evidence restarts; no callback work | No independent long-form controller, second plan, parallel policy, PCM history, renderer, graph, or callback path |
-| 8. Targeted sound maturation — complete locally with three bounded source-driven promotions | Existing Core kick, upper-percussion, and phrase-composition score intent; primary-v21 phrase verdict; and affected DSP evidence owners | Complete AudioReakt and Mordio source convergence plus exact PCM exposed session-static kick identity, a fixed clap body, and cut-only slice texture; all other proposed machinery reconciled to existing owners | Multi-rate kick morphology, clap/snare/rim, cut-neutral and deterministic granular-memory witnesses; current seven-journey development, ten-attack adversarial, and two-holdout v8 replay | Score-resolved state-free DSP only; a future promotion still requires repeated independent-root and two-rate causal failure and must replace provisional DSP in place | No preset pack, granular side engine, alternative renderer, speculative chain, genre selector, or duplicate event lane |
-| 9. Material-world lineage and effect morph — complete and offline-qualified | Core continuation v4 and `AutonomousPhrasePlan`; existing generated graph and evidence transaction | Causal four-to-eight-minute worlds changing rhythm, motif, roles, harmony, timbral architecture, and one five-coordinate effect target; one-node-per-phrase graph convergence | 512-root property sweep, different ten-/twenty-minute snapshots, exact replay and route recovery, primary-v21 qualification, and long-horizon-v8 development/adversarial/fresh-holdout pass | New worlds and reframe-material actions apply only at eligible future boundaries; malformed input preserves the accepted world; graph rejection freezes topology | No random graph-operation roulette, preset bank, selectable FX chain, alternative renderer, or second director |
+| 8. Targeted sound maturation — complete locally with three bounded source-driven promotions | Existing Core kick, upper-percussion, and phrase-composition score intent; primary-v22 phrase verdict; and affected DSP evidence owners | Complete AudioReakt and Mordio source convergence plus exact PCM exposed session-static kick identity, a fixed clap body, and cut-only slice texture; all other proposed machinery reconciled to existing owners | Multi-rate kick morphology, clap/snare/rim, cut-neutral and deterministic granular-memory witnesses; current seven-journey development, ten-attack adversarial, and two-holdout v9 replay | Score-resolved state-free DSP only; a future promotion still requires repeated independent-root and two-rate causal failure and must replace provisional DSP in place | No preset pack, granular side engine, alternative renderer, speculative chain, genre selector, or duplicate event lane |
+| 9. Material-world lineage and effect morph — complete and offline-qualified | Core continuation v4 and `AutonomousPhrasePlan`; existing generated graph and evidence transaction | Causal four-to-eight-minute worlds changing rhythm, motif, roles, harmony, timbral architecture, and one five-coordinate effect target; one-node-per-phrase graph convergence | 512-root property sweep, different ten-/twenty-minute snapshots, exact replay and route recovery, primary-v22 qualification, and long-horizon-v9 development/adversarial/fresh-holdout pass | New worlds and reframe-material actions apply only at eligible future boundaries; malformed input preserves the accepted world; graph rejection freezes topology | No random graph-operation roulette, preset bank, selectable FX chain, alternative renderer, or second director |
 
 ## Validation matrix
 

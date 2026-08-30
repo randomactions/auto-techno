@@ -1,8 +1,8 @@
 # Single Primary Evaluator
 
-Current engine v40 binds material-world/effect-target lineage, pitch identity,
-and transition-tail continuity under quality schema 41, candidate-vector schema
-37, and transaction schema 8. Its primary-v21 artifacts are the single active
+Current engine v41 binds material-world/effect-target lineage, pitch identity,
+and transition-tail continuity under quality schema 42, candidate-vector schema
+37, and transaction schema 8. Its primary-v22 artifacts are the single active
 qualification set.
 
 ## Runtime contract
@@ -33,6 +33,13 @@ discarded. Unavailable evaluation, invalid evidence, non-retryable hard-gate
 failure, signal-safety failure, and commit-provenance failure remain fail-closed
 blocked states. Recovery never issues Pause or New Set.
 
+Signal safety includes one-to-one source-terminal evidence for every rendered
+kick, rumble, clap, open-hat, and metallic event. The detached renderer must
+preserve each event's first 8 ms hash, apply the role's fixed 4 ms or 2 ms
+raised-cosine release, and reach exact zero at the source boundary. Missing,
+retargeted, attack-changing, non-finite, or non-zero-terminal evidence cannot be
+compensated by any calibrated metric.
+
 The evaluator may request one bounded home-upper-timbre correction. That second
 pass rerenders the same plan from the same incoming render, graph, route, and
 quality continuation. The transaction therefore contains either:
@@ -48,11 +55,11 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v40 profile v21, adversarial suite v17, and disjoint holdout qualification
+engine-v41 profile v22, adversarial suite v17, and disjoint holdout qualification
 v15. The profile derives from 36 complete 44.1/48 kHz journeys; four fresh,
 disjoint holdout journeys passed all 56 local verdicts and every relationship
 gate. The pinned profile, adversarial, and holdout fingerprints are
-`0db15f56c212784d`, `c85ff24879dc3561`, and `1ac200132cfe4010`.
+`75213b8e18abd625`, `251cf08359a48e12`, and `9206c72e7bd048fc`.
 
 Offline calibration may retain several checkpoint observations from one
 candidate. Runtime terminal qualification selects one most-specific

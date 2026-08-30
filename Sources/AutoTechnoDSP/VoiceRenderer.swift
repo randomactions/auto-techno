@@ -688,6 +688,11 @@ package enum VoiceRenderer {
         upperPercussionTailRenderEvidence.reserveCapacity(
             resolved.upperPercussionTailArticulations.count
         )
+        var sourceTerminalDeclickRenderEvidence:
+            [SourceTerminalDeclickRenderEvidence] = []
+        sourceTerminalDeclickRenderEvidence.reserveCapacity(
+            resolved.ensemble.events.count
+        )
         var resonantMonoNonlinearCoreEvidence =
             TPTAntialiasedNonlinearCoreEvidenceAccumulator()
         swap(&output, &checkedOut.output)
@@ -750,15 +755,21 @@ package enum VoiceRenderer {
             case .kick:
                 let detectorLevel = KickMixBalance.detectorLevel(for: section) * accent
                 if (0..<16).contains(event.step),
-                   kick(&kickDetectorBus, start: start, sampleRate: sampleRate,
+                   let terminalEvidence = kick(
+                        &kickDetectorBus,
+                        scoreEventIndex: scoreEventIndex,
+                        start: start,
+                        sampleRate: sampleRate,
                         level: detectorLevel, seed: scene.seed, step: event.step,
                         barDurationSeconds: 240.0 / scene.bpm,
                         morphology: resolved.kickMorphology,
-                        sourceDynamics: &kickSourceDynamics) {
+                        sourceDynamics: &kickSourceDynamics
+                   ) {
                     // Count only events that produced a bounded render window,
                     // rather than inferring production from score membership.
                     renderedKickEventCount += 1
                     renderedKickStepMask |= UInt16(1) << UInt16(event.step)
+                    sourceTerminalDeclickRenderEvidence.append(terminalEvidence)
                 }
             case .bass where !(performance.signatureEvent == .delayedBassEntry && event.step < 8):
                 let frequency = FoundationPitchResolver.frequency(
@@ -798,9 +809,18 @@ package enum VoiceRenderer {
                     renderedBassStartFrames.append(start)
                 }
             case .rumble:
-                rumble(&output, measurement: &foundationStem,
-                       start: start, sampleRate: sampleRate,
-                       level: 0.072 * accent, seed: scene.seed, step: event.step)
+                if let terminalEvidence = rumble(
+                    &output,
+                    measurement: &foundationStem,
+                    scoreEventIndex: scoreEventIndex,
+                    start: start,
+                    sampleRate: sampleRate,
+                    level: 0.072 * accent,
+                    seed: scene.seed,
+                    step: event.step
+                ) {
+                    sourceTerminalDeclickRenderEvidence.append(terminalEvidence)
+                }
             case .tunedTom:
                 guard let articulation = resolved.modalPercussion(
                     atEventIndex: scoreEventIndex
@@ -851,6 +871,9 @@ package enum VoiceRenderer {
                     timingOffsetInSteps: offset
                 ) {
                     upperPercussionTailRenderEvidence.append(evidence)
+                    sourceTerminalDeclickRenderEvidence.append(
+                        evidence.terminalDeclick
+                    )
                 }
             case .openHat:
                 guard let articulation = resolved.upperPercussionTail(
@@ -870,6 +893,9 @@ package enum VoiceRenderer {
                     timingOffsetInSteps: offset
                 ) {
                     upperPercussionTailRenderEvidence.append(evidence)
+                    sourceTerminalDeclickRenderEvidence.append(
+                        evidence.terminalDeclick
+                    )
                 }
             case .metallic:
                 guard let articulation = resolved.upperPercussionTail(
@@ -889,6 +915,9 @@ package enum VoiceRenderer {
                     timingOffsetInSteps: offset
                 ) {
                     upperPercussionTailRenderEvidence.append(evidence)
+                    sourceTerminalDeclickRenderEvidence.append(
+                        evidence.terminalDeclick
+                    )
                 }
             case .groovePulse:
                 guard let pulseArticulation else { break }
@@ -1890,6 +1919,8 @@ package enum VoiceRenderer {
                                    closedHatRenderEvidence: closedHatRenderEvidence,
                                    upperPercussionTailRenderEvidence:
                                     upperPercussionTailRenderEvidence,
+                                   sourceTerminalDeclickRenderEvidence:
+                                    sourceTerminalDeclickRenderEvidence,
                                    instrumentRenderEvidence: instrumentEvidence(
                                     resolved: resolved,
                                     synthPerformance: synthPerformance,
@@ -3244,17 +3275,29 @@ package enum VoiceRenderer {
     }
 
     @discardableResult
-    private static func kick(_ output: inout [Float], start: Int,
-                             sampleRate: Double, level: Double,
-                             seed: UInt64, step: Int,
-                             barDurationSeconds: Double,
-                             morphology: KickMorphologyArticulation,
-                             sourceDynamics:
-                                inout KickSourceDynamicsEvidenceAccumulator) -> Bool {
-        guard start >= 0, start < output.count else { return false }
+    private static func kick(
+        _ output: inout [Float],
+        scoreEventIndex: Int,
+        start: Int,
+        sampleRate: Double,
+        level: Double,
+        seed: UInt64,
+        step: Int,
+        barDurationSeconds: Double,
+        morphology: KickMorphologyArticulation,
+        sourceDynamics: inout KickSourceDynamicsEvidenceAccumulator
+    ) -> SourceTerminalDeclickRenderEvidence? {
+        guard start >= 0, start < output.count else { return nil }
         let frames = min(Int(sampleRate * 0.32), output.count - start)
-        guard frames > 0 else { return false }
+        guard frames > 0 else { return nil }
         sourceDynamics.beginEvent(sampleRate: sampleRate)
+        var terminalEvidence = SourceTerminalDeclickEvidenceAccumulator(
+            scoreEventIndex: scoreEventIndex,
+            voice: .kick,
+            step: step,
+            sampleRate: sampleRate,
+            renderedFrameCount: frames
+        )
         var dynamicsState = AntiderivativeAntialiasedTanhState()
         var random = SeededGenerator(seed: seed ^ UInt64(step + 1) ^ 0x9E3779B97F4A7C15)
         var bodyPhase = 0.0
@@ -3291,21 +3334,47 @@ package enum VoiceRenderer {
                         parameters.tonalClickLevel) * transientEnvelope
                 : 0
             let sourceSample = Float((body + sub + transient) * level)
-            let renderedSample = KickSourceDynamicsContract.process(
+            let conditionedSample = KickSourceDynamicsContract.process(
                 sourceSample,
                 state: &dynamicsState
             )
+            let renderedSample = SourceTerminalDeclickContract.process(
+                sample: conditionedSample,
+                voice: .kick,
+                frame: i,
+                renderedFrameCount: frames,
+                sampleRate: sampleRate
+            )
             output[start + i] += renderedSample
             sourceDynamics.append(input: sourceSample, output: renderedSample)
+            terminalEvidence.append(
+                frame: i,
+                preFade: conditionedSample,
+                rendered: renderedSample
+            )
         }
-        return true
+        return terminalEvidence.evidence
     }
 
-    private static func rumble(_ output: inout [Float], measurement: inout [Float],
-                               start: Int, sampleRate: Double,
-                               level: Double, seed: UInt64, step: Int) {
+    private static func rumble(
+        _ output: inout [Float],
+        measurement: inout [Float],
+        scoreEventIndex: Int,
+        start: Int,
+        sampleRate: Double,
+        level: Double,
+        seed: UInt64,
+        step: Int
+    ) -> SourceTerminalDeclickRenderEvidence? {
         let frames = min(Int(sampleRate * 0.68), output.count - start)
-        guard frames > 0 else { return }
+        guard frames > 0 else { return nil }
+        var terminalEvidence = SourceTerminalDeclickEvidenceAccumulator(
+            scoreEventIndex: scoreEventIndex,
+            voice: .rumble,
+            step: step,
+            sampleRate: sampleRate,
+            renderedFrameCount: frames
+        )
         var phase = 0.0
         var noiseLow = 0.0
         var random = SeededGenerator(seed: seed ^ UInt64(step + 1) ^ 0x2A4B1E)
@@ -3320,10 +3389,23 @@ package enum VoiceRenderer {
             let duckedAttack = 1 - exp(-time * 34)
             let envelope = duckedAttack * exp(-time * 5.6)
             let body = sin(phase) * 0.82 + noiseLow * 0.18
-            let renderedSample = Float(tanh(body * 1.12) * envelope * level)
+            let preFadeSample = Float(tanh(body * 1.12) * envelope * level)
+            let renderedSample = SourceTerminalDeclickContract.process(
+                sample: preFadeSample,
+                voice: .rumble,
+                frame: index,
+                renderedFrameCount: frames,
+                sampleRate: sampleRate
+            )
             output[start + index] += renderedSample
             measurement[start + index] += renderedSample
+            terminalEvidence.append(
+                frame: index,
+                preFade: preFadeSample,
+                rendered: renderedSample
+            )
         }
+        return terminalEvidence.evidence
     }
 
     private static func hat(_ output: inout [Float], measurement: inout [Float],
@@ -3482,16 +3564,28 @@ package enum VoiceRenderer {
             case .native, .clap:
                 Float(clapSample)
             }
-            let renderedSample = UpperPercussionTailDSPContract.process(
+            let articulatedSample = UpperPercussionTailDSPContract.process(
                 sample: baseSample,
                 role: articulation.role,
                 frame: i,
                 renderedFrameCount: frames,
                 sampleRate: sampleRate
             )
+            let renderedSample = SourceTerminalDeclickContract.process(
+                sample: articulatedSample,
+                voice: articulation.voice,
+                frame: i,
+                renderedFrameCount: frames,
+                sampleRate: sampleRate
+            )
             output[start + i] += renderedSample
             measurement[start + i] += renderedSample
-            evidence.append(frame: i, base: baseSample, rendered: renderedSample)
+            evidence.append(
+                frame: i,
+                base: baseSample,
+                preTerminalFade: articulatedSample,
+                rendered: renderedSample
+            )
         }
         return evidence.evidence
     }
@@ -3573,16 +3667,28 @@ package enum VoiceRenderer {
             let baseSample = Float(
                 (resonances * 0.72 + (noise - noiseState) * 0.16) * envelope * level
             )
-            let renderedSample = UpperPercussionTailDSPContract.process(
+            let articulatedSample = UpperPercussionTailDSPContract.process(
                 sample: baseSample,
                 role: articulation.role,
                 frame: i,
                 renderedFrameCount: frames,
                 sampleRate: sampleRate
             )
+            let renderedSample = SourceTerminalDeclickContract.process(
+                sample: articulatedSample,
+                voice: articulation.voice,
+                frame: i,
+                renderedFrameCount: frames,
+                sampleRate: sampleRate
+            )
             output[start + i] += renderedSample
             measurement[start + i] += renderedSample
-            evidence.append(frame: i, base: baseSample, rendered: renderedSample)
+            evidence.append(
+                frame: i,
+                base: baseSample,
+                preTerminalFade: articulatedSample,
+                rendered: renderedSample
+            )
         }
         return evidence.evidence
     }
@@ -3619,16 +3725,28 @@ package enum VoiceRenderer {
             let baseSample = Float(
                 (noise - filtered * 0.55 + metallic * 0.16) * envelope * level
             )
-            let renderedSample = UpperPercussionTailDSPContract.process(
+            let articulatedSample = UpperPercussionTailDSPContract.process(
                 sample: baseSample,
                 role: articulation.role,
                 frame: i,
                 renderedFrameCount: frames,
                 sampleRate: sampleRate
             )
+            let renderedSample = SourceTerminalDeclickContract.process(
+                sample: articulatedSample,
+                voice: articulation.voice,
+                frame: i,
+                renderedFrameCount: frames,
+                sampleRate: sampleRate
+            )
             output[start + i] += renderedSample
             measurement[start + i] += renderedSample
-            evidence.append(frame: i, base: baseSample, rendered: renderedSample)
+            evidence.append(
+                frame: i,
+                base: baseSample,
+                preTerminalFade: articulatedSample,
+                rendered: renderedSample
+            )
         }
         return evidence.evidence
     }

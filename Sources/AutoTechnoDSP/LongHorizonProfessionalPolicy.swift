@@ -11,13 +11,13 @@ package enum LongHorizonProfessionalPolicySchema {
   package static let corpusVersion =
     "autotechno-long-horizon-policy-corpus.v2"
   package static let profileVersion =
-    "autotechno-long-horizon-professional-profile.v8"
+    "autotechno-long-horizon-professional-profile.v9"
   package static let adversarialVersion =
-    "autotechno-long-horizon-adversarial.v8"
+    "autotechno-long-horizon-adversarial.v9"
   package static let holdoutVersion =
-    "autotechno-long-horizon-holdout.v8"
+    "autotechno-long-horizon-holdout.v9"
   package static let policyFamilyVersion =
-    "autotechno-long-horizon.primary-calibrated.v8"
+    "autotechno-long-horizon.primary-calibrated.v9"
   package static let minimumDevelopmentJourneyCount = 7
   package static let minimumHoldoutJourneyCount = 2
   package static let minimumJourneyBars = 7_200

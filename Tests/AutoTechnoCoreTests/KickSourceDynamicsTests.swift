@@ -62,6 +62,8 @@ struct KickSourceDynamicsTests {
                 layer: .protectedRhythm
             )
             let source = full.kickMix.sourceDynamics
+            let terminalEvidence = full.sourceTerminalDeclickRenderEvidence
+                .filter { $0.voice == .kick }
             let oracle = legacyOracle(
                 resolved: resolved,
                 scene: plan.scene,
@@ -70,6 +72,15 @@ struct KickSourceDynamicsTests {
             )
 
             #expect(full.kickMix == protected.kickMix)
+            #expect(full.sourceTerminalDeclickRenderEvidence ==
+                    protected.sourceTerminalDeclickRenderEvidence)
+            #expect(terminalEvidence.count ==
+                    full.kickMix.renderedKickEventCount)
+            #expect(terminalEvidence.allSatisfy {
+                $0.isComplete(sampleRate: sampleRate) &&
+                    $0.preFadeAttackSampleHash ==
+                        $0.renderedAttackSampleHash
+            })
             #expect(source.version == KickSourceDynamicsContract.version)
             #expect(source.antialiasOrder == 1)
             #expect(source.renderedEventCount == full.kickMix.renderedKickEventCount)
@@ -609,9 +620,16 @@ struct KickSourceDynamicsTests {
                         transientEnvelope
                     : 0
                 let sample = Float((body + sub + transient) * level)
-                let output = KickSourceDynamicsContract.process(
+                let conditioned = KickSourceDynamicsContract.process(
                     sample,
                     state: &dynamicsState
+                )
+                let output = SourceTerminalDeclickContract.process(
+                    sample: conditioned,
+                    voice: .kick,
+                    frame: frame,
+                    renderedFrameCount: frameCount,
+                    sampleRate: sampleRate
                 )
                 fingerprint.float(sample)
                 outputFingerprint.float(output)

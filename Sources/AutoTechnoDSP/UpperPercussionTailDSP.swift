@@ -92,6 +92,7 @@ package struct UpperPercussionTailRenderEvidence: Equatable, Sendable {
     package let baseTailToAttackDB: Double
     package let renderedTailToAttackDB: Double
     package let differenceRMS: Double
+    package let terminalDeclick: SourceTerminalDeclickRenderEvidence
     package let finite: Bool
 }
 
@@ -117,6 +118,8 @@ struct UpperPercussionTailEvidenceAccumulator {
     private var baseTailEnergy = 0.0
     private var renderedTailEnergy = 0.0
     private var differenceEnergy = 0.0
+    private var terminalDeclickAccumulator:
+        SourceTerminalDeclickEvidenceAccumulator
     private var samplesAreFinite = true
 
     init(
@@ -147,11 +150,28 @@ struct UpperPercussionTailEvidenceAccumulator {
         renderedAttackFingerprint = ExactPCMFingerprint.MonoAccumulator(
             sampleCount: attackFrames
         )
+        terminalDeclickAccumulator = SourceTerminalDeclickEvidenceAccumulator(
+            scoreEventIndex: articulation.scoreEventIndex,
+            voice: articulation.voice,
+            step: articulation.step,
+            sampleRate: sampleRate,
+            renderedFrameCount: renderedFrameCount
+        )
     }
 
-    mutating func append(frame: Int, base: Float, rendered: Float) {
+    mutating func append(
+        frame: Int,
+        base: Float,
+        preTerminalFade: Float,
+        rendered: Float
+    ) {
         baseFingerprint.append(base)
         renderedFingerprint.append(rendered)
+        terminalDeclickAccumulator.append(
+            frame: frame,
+            preFade: preTerminalFade,
+            rendered: rendered
+        )
         let baseValue = Double(base)
         let renderedValue = Double(rendered)
         let difference = renderedValue - baseValue
@@ -232,7 +252,9 @@ struct UpperPercussionTailEvidenceAccumulator {
             baseTailToAttackDB: baseTailToAttackDB,
             renderedTailToAttackDB: renderedTailToAttackDB,
             differenceRMS: differenceRMS,
-            finite: samplesAreFinite && scalars.allSatisfy(\.isFinite)
+            terminalDeclick: terminalDeclickAccumulator.evidence,
+            finite: samplesAreFinite && scalars.allSatisfy(\.isFinite) &&
+                terminalDeclickAccumulator.evidence.finite
         )
     }
 

@@ -104,8 +104,9 @@ struct UpperPercussionTailDSPTests {
         })
         #expect(neutral.upperPercussionTailRenderEvidence.allSatisfy {
             $0.role == .naturalBody && $0.finite &&
-                $0.baseSampleHash == $0.renderedSampleHash &&
-                $0.differenceRMS == 0
+                $0.baseSampleHash != $0.renderedSampleHash &&
+                $0.differenceRMS > 0 &&
+                $0.terminalDeclick.isComplete(sampleRate: 48_000)
         })
 
         for (activeEvent, neutralEvent) in zip(
@@ -190,7 +191,9 @@ struct UpperPercussionTailDSPTests {
         #expect(bodies.allSatisfy {
             $0.finite && $0.basePeak > 0 && $0.baseRMS > 0 &&
                 $0.baseAttackRMS > 0 && $0.baseTailRMS > 0 &&
-                $0.baseSampleHash == $0.renderedSampleHash
+                $0.baseSampleHash != $0.renderedSampleHash &&
+                $0.baseAttackSampleHash == $0.renderedAttackSampleHash &&
+                $0.terminalDeclick.isComplete(sampleRate: 48_000)
         })
         #expect(snare.dryPercussionSampleHash == replay.dryPercussionSampleHash)
         #expect(snare.upperPercussionTailRenderEvidence ==

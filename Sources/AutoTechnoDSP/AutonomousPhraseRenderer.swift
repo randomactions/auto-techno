@@ -1192,6 +1192,8 @@ package struct RenderedBar: Equatable, Sendable {
     package let closedHatRenderEvidence: [ClosedHatRenderEvidence]
     package let upperPercussionTailRenderEvidence:
         [UpperPercussionTailRenderEvidence]
+    package let sourceTerminalDeclickRenderEvidence:
+        [SourceTerminalDeclickRenderEvidence]
     package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
     package let percussionEchoTextureRenderEvidence:
         PercussionEchoTextureRenderEvidence
@@ -1226,6 +1228,8 @@ package struct RenderedBar: Equatable, Sendable {
                 closedHatRenderEvidence: [ClosedHatRenderEvidence] = [],
                 upperPercussionTailRenderEvidence:
                     [UpperPercussionTailRenderEvidence] = [],
+                sourceTerminalDeclickRenderEvidence:
+                    [SourceTerminalDeclickRenderEvidence] = [],
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
                 percussionEchoTextureRenderEvidence:
                     PercussionEchoTextureRenderEvidence,
@@ -1275,6 +1279,10 @@ package struct RenderedBar: Equatable, Sendable {
         }
         self.upperPercussionTailRenderEvidence =
             upperPercussionTailRenderEvidence.sorted {
+                $0.scoreEventIndex < $1.scoreEventIndex
+            }
+        self.sourceTerminalDeclickRenderEvidence =
+            sourceTerminalDeclickRenderEvidence.sorted {
                 $0.scoreEventIndex < $1.scoreEventIndex
             }
         self.instrumentRenderEvidence = instrumentRenderEvidence.sorted {
@@ -1355,6 +1363,11 @@ package struct RenderBlock: Equatable, Sendable {
     package let upperPercussionTailRenderEvidence:
         [UpperPercussionTailRenderEvidence]
     package let upperPercussionTailRenderPassesMatch: Bool
+    /// Event-local hard-window release evidence. Intentional attack samples
+    /// remain exact; only source endings reach zero before the implicit silence.
+    package let sourceTerminalDeclickRenderEvidence:
+        [SourceTerminalDeclickRenderEvidence]
+    package let sourceTerminalDeclickRenderPassesMatch: Bool
     package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
     package let percussionEchoTextureRenderEvidence:
         PercussionEchoTextureRenderEvidence
@@ -1412,6 +1425,9 @@ package struct RenderBlock: Equatable, Sendable {
                 upperPercussionTailRenderEvidence:
                     [UpperPercussionTailRenderEvidence] = [],
                 upperPercussionTailRenderPassesMatch: Bool = true,
+                sourceTerminalDeclickRenderEvidence:
+                    [SourceTerminalDeclickRenderEvidence] = [],
+                sourceTerminalDeclickRenderPassesMatch: Bool = true,
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
                 percussionEchoTextureRenderEvidence:
                     PercussionEchoTextureRenderEvidence,
@@ -1465,6 +1481,12 @@ package struct RenderBlock: Equatable, Sendable {
             }
         self.upperPercussionTailRenderPassesMatch =
             upperPercussionTailRenderPassesMatch
+        self.sourceTerminalDeclickRenderEvidence =
+            sourceTerminalDeclickRenderEvidence.sorted {
+                $0.scoreEventIndex < $1.scoreEventIndex
+            }
+        self.sourceTerminalDeclickRenderPassesMatch =
+            sourceTerminalDeclickRenderPassesMatch
         self.instrumentRenderEvidence = instrumentRenderEvidence.sorted {
             (InstrumentArchitecture.allCases.firstIndex(of: $0.architecture) ?? 0) <
                 (InstrumentArchitecture.allCases.firstIndex(of: $1.architecture) ?? 0)
@@ -1539,6 +1561,10 @@ package struct RenderBlock: Equatable, Sendable {
                 upperPercussionTailRenderEvidence,
             upperPercussionTailRenderPassesMatch:
                 upperPercussionTailRenderPassesMatch,
+            sourceTerminalDeclickRenderEvidence:
+                sourceTerminalDeclickRenderEvidence,
+            sourceTerminalDeclickRenderPassesMatch:
+                sourceTerminalDeclickRenderPassesMatch,
             instrumentRenderEvidence: instrumentRenderEvidence,
             percussionEchoTextureRenderEvidence:
                 percussionEchoTextureRenderEvidence,
@@ -2237,6 +2263,11 @@ package enum AutonomousPhraseRenderer {
                 upperPercussionTailRenderPassesMatch:
                     protectedRhythm.upperPercussionTailRenderEvidence ==
                         rendered.upperPercussionTailRenderEvidence,
+                sourceTerminalDeclickRenderEvidence:
+                    protectedRhythm.sourceTerminalDeclickRenderEvidence,
+                sourceTerminalDeclickRenderPassesMatch:
+                    protectedRhythm.sourceTerminalDeclickRenderEvidence ==
+                        rendered.sourceTerminalDeclickRenderEvidence,
                 instrumentRenderEvidence: rendered.instrumentRenderEvidence,
                 percussionEchoTextureRenderEvidence:
                     protectedRhythm.percussionEchoTextureRenderEvidence,

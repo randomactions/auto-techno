@@ -24,7 +24,7 @@ Record the exact commit, toolchain, fixture/continuation state, sample rates, an
 quality-contract revision. A result from another head or an unidentified state is
 not release evidence.
 
-For engine v40, also validate the deterministic material-world contracts in
+For engine v41, also validate the deterministic material-world contracts in
 [`LONG_HORIZON_SOUND_CAPABILITIES.md`](LONG_HORIZON_SOUND_CAPABILITIES.md), the
 pitch-identity matrix in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md) and the transition-
@@ -95,8 +95,8 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 41, candidate-vector schema 37, candidate-transaction
-schema 8, and canonical engine v40 provide the current transaction-level
+Quality-contract schema 42, candidate-vector schema 37, candidate-transaction
+schema 8, and canonical engine v41 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
@@ -104,6 +104,7 @@ score-owned terminal climax-hang,
 event-local groove-pulse, ordinary closed-hat, score-owned modal foundation,
 score-owned dotted foundation rhythm and pre-kick pocket,
 score-owned instrument and its acid/nonlinear-core/cluster/envelope consequence,
+event-local source-terminal attack/ending evidence,
 score-owned gated/anticipatory percussion-return texture,
 shared pulse-echo return-drive, score-owned spatial-FDN, cross-phrase
 terminal/opening seam and inherited-tail continuity, score-owned upper-role timing,
@@ -201,13 +202,23 @@ Upper-percussion-tail evidence must cover every resolved clap, open-hat, and
 metallic event with no duplicate or retargeted score index. Canonical replay
 must derive `foregroundClearance` only when another role owns focus, the phrase
 is not identity return, and the bar is not an intentional pileup. `naturalBody`
-must preserve every sample bit-for-bit. Clearance must preserve the first 8 ms,
+must remain bit-exact through its articulation stage. The shared terminal repair
+must preserve the first 8 ms for both roles and change only the final 2 ms to
+reach exact zero. Clearance must preserve the first 8 ms,
 remain inside the bounded raised-cosine multiplier range, reduce the rendered
 tail, change the full event hash, retain finite metrics, and match across full
 and protected render passes. Candidate decoding must reject oversized bars,
 wrong role/context, forged attack or tail facts, and missing render evidence.
 The profile must independently bound clearance ratio and rendered tail-to-
 attack mean, and its adversarial suite must reject a runaway clearance tail.
+
+Source-terminal evidence must additionally cover every rendered kick, rumble,
+clap, open-hat, and metallic score event one-to-one. At 44.1 and 48 kHz,
+focused tests must prove a 4 ms kick/rumble and 2 ms upper-percussion
+raised-cosine release, exact first-8-ms hashes, positive changed-sample and
+difference evidence, and an exact-zero final frame/delta. Unsupported voices
+must remain bit-identical. Missing or mismatched protected/full evidence is a
+non-compensable audio-safety failure.
 
 Upper-spectral-reveal evidence must be present on each applicable existing
 Resonant Mono or Tonal Motion motif architecture and forbidden elsewhere.
@@ -341,9 +352,9 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v21 bank must contain every canonical checkpoint for
+The Professional Evidence v22 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v40 primary evaluator v21 and pinned profile v21/adversarial/holdout
+engine-v41 primary evaluator v22 and pinned profile v22/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 36.
 Holdouts must be source-disjoint, contain at

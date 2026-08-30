@@ -60,9 +60,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 41, candidate-
+   primary-evaluation transaction under quality-contract schema 42, candidate-
    vector schema 37, candidate-transaction schema 8, and canonical engine
-   identity `autotechno-canonical-engine.v40`. Each
+   identity `autotechno-canonical-engine.v41`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -117,6 +117,15 @@ mistaken for a completed feedback system.
    and click sum through exact pre/post hashes, peak/RMS/crest, physical attack/
    body RMS, and upper-mid energy. The conditioner executes before both
    canonical kick buses, resets per event, and owns no score or continuation.
+   After all intended source articulation, one shared state-free terminal
+   contract preserves the first 8 ms exactly and releases supported hard-window
+   percussion to exact zero: 4 ms for kick/rumble and 2 ms for clap/open-hat/
+   metallic events. Same-pass evidence binds each supported score event to
+   pre/post full and attack hashes, frame geometry, changed samples, difference
+   RMS, and terminal deltas. The audio-safety gate fails closed on missing,
+   duplicated, retargeted, attack-changing, or non-zero-terminal evidence.
+   This detached step owns no Core decision, continuation, master processor, or
+   realtime callback work.
    Only one debt-owned energy-release arc may
    be grounded, withheld, withheld, then recovered; withheld bars must be silent
    in every kick projection while their canonical weak-pulse carrier remains,
@@ -171,11 +180,11 @@ mistaken for a completed feedback system.
    route sample grid, cross-rate consistency uses the corresponding mean
    trajectory delta; exact silence retains its dedicated causal evidence and
    upper-only-safer professional dimensions.
-   A deterministic Professional Evidence v21
+   A deterministic Professional Evidence v22
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
    observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v40 profile v21, adversarial suite v17, and disjoint holdout
+   engine-v41 profile v22, adversarial suite v17, and disjoint holdout
    qualification v15.
    The profile derives from 36 complete canonical journeys; four untouched
    replacement journeys passed 56/56 local observations and all trajectory/rate
@@ -433,7 +442,7 @@ mistaken for a completed feedback system.
    the captured source. Core rotates through only
    the qualified families and exact accepted PCM remains the fallback when none
    qualify. The selected primary plan, blocks, candidate
-   evidence, render/graph continuation, quality decision, and engine-v40
+   evidence, render/graph continuation, quality decision, and engine-v41
    artifacts remain unchanged. App and Windows transports merely choose the
    immutable family at a phrase boundary, and a ready successor always advances. The
    macOS scheduler does not register sidecar occurrences as canonical live-
@@ -716,7 +725,7 @@ The same pass records the natural event end, release and kick frames, positive
 release/silence counts, and a streamed hash/peak/RMS of the exact dry-
 foundation silence interval. Candidate completeness cross-binds that record to
 the resolved event and Bass Pluck assignment and requires full/protected
-equality. Professional Evidence v21 adds one upper-only safer silence-RMS
+equality. Professional Evidence v22 adds one upper-only safer silence-RMS
 dimension and adversarial suite v14 adds one non-compensable contamination
 attack. The present curve and exact-zero proxy are replaceable in place; the
 dotted score owner, protected route, neutral fallback, and causal evidence are
@@ -769,7 +778,7 @@ prepared-product transaction, renderer, App scheduler, route lifecycle, and
 realtime callback do not consume or mutate this standalone report. Valid reports explicitly carry
 `qualificationStatus: unavailable` and
 `qualificationReason: no-calibrated-long-horizon-policy`; only the compatible
-bounded runtime observation may be judged by the exact v8 policy and applied to
+bounded runtime observation may be judged by the exact v9 policy and applied to
 an eligible future boundary. The hierarchy and next ownership
 boundary are defined in
 [`LONG_HORIZON_PERFORMANCE_MAP.md`](LONG_HORIZON_PERFORMANCE_MAP.md).
@@ -891,7 +900,7 @@ activity, tail-only activity, and a later exact clear bar, retains the last
 sixteen realized sentences, and marks malformed/discontinuous evidence
 unavailable without changing previously accepted counters. It does not affect
 selection, score, rendering, candidate choice, commit eligibility, scheduling,
-route handling, or callback work. The exact v8 calibrated policy consumes only
+route handling, or callback work. The exact v9 calibrated policy consumes only
 compatible realized trajectory evidence after primary qualification.
 
 ## Implemented detached long-horizon signal trajectory
@@ -919,7 +928,7 @@ succeeded.
 This reduction runs only after detached preparation. It changes no score,
 renderer, graph, scheduler, route lifecycle, live controller, commit decision,
 or realtime callback. Phase 6B binds compatible complete reports to the exact
-immutable engine-v40/primary-v21 development, adversarial, and disjoint-holdout
+immutable engine-v41/primary-v22 development, adversarial, and disjoint-holdout
 artifacts. Raw PCM remains outside the artifacts and runtime observation.
 
 ## Implemented bounded long-horizon future adaptation
@@ -958,12 +967,12 @@ already-immutable accepted result at the existing scheduled phrase boundary.
 
 ## Completed evidence-gated sound maturation assessment
 
-Phase 8 adds no runtime owner or state. It reconciles the exact engine-v40/
-primary-v21 long-horizon profile, adversarial suite, and disjoint holdout with
+Phase 8 adds no runtime owner or state. It reconciles the exact engine-v41/
+primary-v22 long-horizon profile, adversarial suite, and disjoint holdout with
 the conditional sound-capability register. Their fingerprints are
-`43fe9d315ffce406`, `3b6d6de637e7dc02`, and `a5a6df9d71577a9c`. The primary
+`ff4c5c259a6c6c87`, `ea66cbb3e348476c`, and `0a18bb6d951d4147`. The primary
 profile, adversarial suite, and holdout are independently pinned as
-`0db15f56c212784d`, `c85ff24879dc3561`, and `1ac200132cfe4010`. All six current
+`75213b8e18abd625`, `251cf08359a48e12`, and `9206c72e7bd048fc`. All six current
 artifacts replay byte for byte. Development and holdout journeys expose no
 repeated capability-local sound failure.
 

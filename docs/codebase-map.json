@@ -380,7 +380,7 @@
     {
       "id": "voice-and-phrase-rendering",
       "name": "Voice and phrase rendering",
-      "responsibility": "Render the canonical resolved score through internal voices, phrase composition, modal percussion, kick/upper articulations, and stable continuation into immutable stereo blocks and role taps.",
+      "responsibility": "Render the canonical resolved score through internal voices, phrase composition, modal percussion, kick/upper articulations, source-local terminal de-clicking, and stable continuation into immutable stereo blocks and role taps.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -410,6 +410,7 @@
       ],
       "evidence": [
         "role-local render evidence",
+        "source-terminal attack and ending evidence",
         "exact PCM fingerprints",
         "score/render correspondence"
       ],
@@ -422,6 +423,7 @@
         "Sources/AutoTechnoDSP/ModalPercussionVoice.swift",
         "Sources/AutoTechnoDSP/PhraseCompositionRenderer.swift",
         "Sources/AutoTechnoDSP/ResonantMonoVoice.swift",
+        "Sources/AutoTechnoDSP/SourceTerminalDeclick.swift",
         "Sources/AutoTechnoDSP/SpectralTextureVoice.swift",
         "Sources/AutoTechnoDSP/UpperPercussionTailDSP.swift",
         "Sources/AutoTechnoDSP/UpperSpectralRevealDSP.swift",
@@ -430,6 +432,7 @@
       "testPaths": [
         "Tests/AutoTechnoCoreTests/KickSourceDynamicsTests.swift",
         "Tests/AutoTechnoCoreTests/ModalPercussionDSPTests.swift",
+        "Tests/AutoTechnoCoreTests/SourceTerminalDeclickTests.swift",
         "Tests/AutoTechnoCoreTests/UpperPercussionTailDSPTests.swift",
         "Tests/AutoTechnoCoreTests/UpperSpectralRevealDSPTests.swift",
         "Tests/AutoTechnoCoreTests/UpperTimbreDSPTests.swift"
@@ -574,9 +577,9 @@
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityVerdict.swift",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v21.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v21.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v21.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v22.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v22.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v22.json",
         "Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift",
         "Sources/AutoTechnoDSP/StreamingPerceptualEvidence.swift",
         "Sources/AutoTechnoDSP/UpperTimbreEvidence.swift"
@@ -651,9 +654,9 @@
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicy.swift",
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift",
         "Sources/AutoTechnoDSP/LongHorizonSignalTrajectory.swift",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v8.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v8.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v8.json"
+        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v9.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v9.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v9.json"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/LongHorizonEffectDoseTests.swift",

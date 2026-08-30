@@ -773,9 +773,13 @@ struct SpatialProtectedRoutingRegressionTests {
                 protected.0.upperPercussionTailRenderEvidence)
         #expect(full.0.upperPercussionTailRenderEvidence.allSatisfy {
             $0.role == .naturalBody &&
-                $0.baseSampleHash == $0.renderedSampleHash &&
-                $0.differenceRMS == 0
+                $0.baseSampleHash != $0.renderedSampleHash &&
+                $0.baseAttackSampleHash == $0.renderedAttackSampleHash &&
+                $0.differenceRMS > 0 &&
+                $0.terminalDeclick.isComplete(sampleRate: 8_000)
         })
+        #expect(full.0.sourceTerminalDeclickRenderEvidence ==
+                protected.0.sourceTerminalDeclickRenderEvidence)
         #expect(full.0.masking.count == 12)
         #expect(protected.0.masking.isEmpty)
         #expect(full.0 == replay.0)

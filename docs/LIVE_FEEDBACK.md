@@ -1,6 +1,6 @@
 # Canonical Live Feedback
 
-Current engine v40 binds material-world/effect-target lineage, pitch identity,
+Current engine v41 binds material-world/effect-target lineage, pitch identity,
 retained transition tails, and the existing live-feedback path into one exact
 qualified artifact set.
 
@@ -13,9 +13,9 @@ unscheduled future phrase, and commits that change only when the one calibrated
 primary evaluator accepts the resulting canonical candidate.
 
 This is an implementation and automated-qualification statement for canonical
-engine `autotechno-canonical-engine.v40`, quality-contract schema 41,
+engine `autotechno-canonical-engine.v41`, quality-contract schema 42,
 candidate-vector schema 37, candidate-transaction schema 8, Professional
-Evidence v21, professional profile v21, primary policy/evaluator v21, and live
+Evidence v22, professional profile v22, primary policy/evaluator v22, and live
 controller policy v2. It is not evidence that a physical device, route change,
 interruption, listening session, or 60-minute output soak passed.
 
@@ -107,14 +107,14 @@ reorders, or estimates samples.
 
 The window reuses the canonical ITU-R BS.1770-5 K-weighting and gating code and
 the Annex 2 four-phase FIR true-peak implementation. Evidence binds exact PCM,
-source occurrence, sample range, route, engine, Professional Evidence v21,
+source occurrence, sample range, route, engine, Professional Evidence v22,
 policy/evaluator/controller versions, frame and packet counts, drop/reject
 counters, analysis memory, integrated/momentary/short-term loudness, true peak,
 and applicable checkpoints. Only maximum short-term loudness and maximum true
 peak drive the controller; integrated loudness remains descriptive for the
 fixed window.
 
-The controller reads those two bounds from the exact installed profile v21.
+The controller reads those two bounds from the exact installed profile v22.
 When several checkpoints apply, each metric uses the strictest applicable upper
 bound and the lower bound paired with that same checkpoint. An ordinary lock
 phrase uses the calibrated `longContinuation` envelope. Unsupported rates,

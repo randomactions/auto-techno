@@ -163,6 +163,15 @@ continuously across 128-bar segments. Minute-three and minute-fifty source PCM
 therefore differ deterministically while adjacent bar endpoints remain
 continuous and the protected kick route stays canonical.
 
+Bounded percussion windows end through one shared source-local terminal
+contract rather than a master de-clicker. Kick and rumble use 4 ms releases;
+clap, open hat, and metallic percussion use 2 ms. The first 8 ms—including the
+kick's intentional click—is bit-preserved, while the final source frame is
+exact zero before silence. Event-local evidence proves score binding, protected
+attack identity, changed release PCM, and terminal continuity at both production
+rates. This detached, state-free repair adds no user control, score choice,
+continuation, output smoothing, or realtime callback work.
+
 The protagonist spectral-reveal path follows the same reuse-or-expand rule.
 When an existing anchor is already narratively emerging in a lock or contrast
 phrase, the score may veil and disclose that exact Resonant Mono or Tonal
@@ -311,7 +320,7 @@ Future sound maturation must still replace only a repeatedly failed provisional
 DSP in place after independent-root, two-rate causal evidence.
 
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v21 supplies
+policy and its operational gates pass. Professional Evidence v22 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation, pre-kick foundation-pocket, terminal climax-hang,
 material-world/effect-target lineage, and live-controller consequence, explicit

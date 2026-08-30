@@ -6,20 +6,20 @@ import Testing
 
 @Suite("Current autonomous runtime")
 struct CurrentRuntimeTests {
-    @Test("MORDIO granular-memory identities advance as one exact contract")
-    func mordioGranularMemoryPrimaryIdentityContract() {
-        #expect(QualityQualificationContract.schemaVersion == 41)
+    @Test("Source-terminal de-click identities advance as one exact contract")
+    func sourceTerminalDeclickPrimaryIdentityContract() {
+        #expect(QualityQualificationContract.schemaVersion == 42)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v40")
+                "autotechno-canonical-engine.v41")
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 37)
         #expect(ProfessionalQualityObservation.schemaVersion == 16)
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 16)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v21")
+                "autotechno-professional-quality-profile.v22")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v21")
+                "autotechno-candidate-evaluator.primary-calibrated.v22")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v21")
+                "autotechno-quality.primary-calibrated.v22")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 17)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
                 "autotechno-professional-quality-adversarial.v17")
@@ -27,20 +27,20 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
                 "autotechno-professional-quality-holdout.v15")
         #expect(CanonicalJourneyQualificationReport.currentEvidenceScope ==
-                "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-granular-memory-pitch-identity-transition-tail-material-world-live-commit-recovery.v21")
+                "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-granular-memory-pitch-identity-transition-tail-material-world-source-terminal-declick-live-commit-recovery.v22")
         #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 8)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 3)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 21)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 22)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v21")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v21"))
+                "autotechno-professional-evidence.v22")
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v22"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v21"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v21"))
+            .hasSuffix("-v22"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v22"))
     }
 
-    @Test("Only bundled v21 primary resources remain")
-    func primaryResourcesAreV21Only() {
+    @Test("Only bundled v22 primary resources remain")
+    func primaryResourcesAreV22Only() {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
         for stem in ["profile", "adversarial-suite", "holdout"] {
@@ -85,8 +85,10 @@ struct CurrentRuntimeTests {
                 resourceDirectory.appendingPathComponent("\(prefix)-v19.json").path))
             #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v20.json").path))
-            #expect(FileManager.default.fileExists(atPath:
+            #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v21.json").path))
+            #expect(FileManager.default.fileExists(atPath:
+                resourceDirectory.appendingPathComponent("\(prefix)-v22.json").path))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v1"))
             #expect(!ProfessionalQualityPrimaryArtifacts
@@ -127,8 +129,10 @@ struct CurrentRuntimeTests {
                 .containsBundledResource(named: "\(prefix)-v19"))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v20"))
-            #expect(ProfessionalQualityPrimaryArtifacts
+            #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v21"))
+            #expect(ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: "\(prefix)-v22"))
         }
         #expect(throws: Never.self) {
             _ = try ProfessionalQualityPrimaryArtifacts.load()
@@ -603,13 +607,13 @@ struct RepositorySurfaceTests {
         }.joined(separator: "\n").lowercased()
 
         for required in [
-            "autotechno-canonical-engine.v40",
-            "quality-contract schema 41",
+            "autotechno-canonical-engine.v41",
+            "quality-contract schema 42",
             "candidate-vector schema 37",
             "candidate-transaction schema 8",
-            "professional evidence v21",
-            "profile v21",
-            "evaluator v21",
+            "professional evidence v22",
+            "profile v22",
+            "evaluator v22",
             "live feedback",
             "physical-output soak",
         ] {

@@ -3042,11 +3042,11 @@ package struct AutonomousUpperPercussionTailEventEvidence:
         switch resolvedRole {
         case .naturalBody:
             return appliedFinalMultiplier == 1 &&
-                baseSampleHash == renderedSampleHash &&
-                basePeak == renderedPeak && baseRMS == renderedRMS &&
-                baseTailRMS == renderedTailRMS &&
-                baseTailToAttackDB == renderedTailToAttackDB &&
-                differenceRMS.bitPattern == 0
+                baseSampleHash != renderedSampleHash &&
+                renderedPeak <= basePeak && renderedRMS < baseRMS &&
+                renderedTailRMS < baseTailRMS &&
+                renderedTailToAttackDB < baseTailToAttackDB &&
+                differenceRMS > 0
         case .foregroundClearance:
             return appliedFinalMultiplier == Double(
                 UpperPercussionTailDSPContract.clearanceFinalMultiplier
@@ -6084,6 +6084,19 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         let channelsAligned = boundedBlocks.allSatisfy {
             !$0.left.isEmpty && $0.left.count == $0.right.count
         }
+        let sourceTerminalDeclickValid = boundedBlocks.allSatisfy { block in
+            let expected = block.resolvedPerformance.ensemble.events.enumerated()
+                .filter { SourceTerminalDeclickContract.supports($0.element.voice) }
+            let rendered = block.sourceTerminalDeclickRenderEvidence
+            guard block.sourceTerminalDeclickRenderPassesMatch,
+                  rendered.count == expected.count else { return false }
+            return zip(expected, rendered).allSatisfy { score, evidence in
+                score.offset == evidence.scoreEventIndex &&
+                    score.element.voice == evidence.voice &&
+                    score.element.step == evidence.step &&
+                    evidence.isComplete(sampleRate: sampleRate)
+            }
+        }
         var samplesFinite = true
         for block in boundedBlocks {
             guard !cancellationRequested() else { return nil }
@@ -6129,7 +6142,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             symbolicValid: plan.interest.valid,
             graphValid: graphValidation.valid,
             audioSafetyValid: audioPreflight.safetyValid &&
-                crossPhraseTransition.hardGateValid,
+                crossPhraseTransition.hardGateValid &&
+                sourceTerminalDeclickValid,
             fullMixFinite: audioPreflight.quality.finite,
             upperTimbreFinite: upperTimbreEvidence.finite,
             blocksPresent: !blocks.isEmpty,

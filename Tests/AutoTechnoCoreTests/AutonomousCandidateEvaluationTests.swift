@@ -1305,9 +1305,9 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
         #expect(vector.schemaVersion == 37)
-        #expect(QualityQualificationContract.schemaVersion == 41)
+        #expect(QualityQualificationContract.schemaVersion == 42)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v40")
+                "autotechno-canonical-engine.v41")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -1623,15 +1623,15 @@ struct AutonomousCandidateEvaluationTests {
             renderedFrameCount: 1_520,
             attackFrameCount: 64,
             appliedFinalMultiplier: 1,
-            renderedSampleHash: "0123456789abcdef",
+            renderedSampleHash: "fedcba9876543210",
             renderedPeak: 0.08,
-            renderedRMS: 0.02,
-            renderedTailRMS: 0.018,
+            renderedRMS: 0.019,
+            renderedTailRMS: 0.017,
             renderedTailToAttackDB: tailToAttackDB(
-                tailRMS: 0.018,
+                tailRMS: 0.017,
                 attackRMS: 0.04
             ),
-            differenceRMS: 0
+            differenceRMS: 0.001
         )
         let activeBar = AutonomousUpperPercussionTailBarEvidence(
             bar: 0,
@@ -1773,7 +1773,14 @@ struct AutonomousCandidateEvaluationTests {
         #expect(!fixtureUpperPercussionTailEvent(
             role: .naturalBody,
             appliedFinalMultiplier: 1,
-            renderedSampleHash: "fedcba9876543210"
+            renderedSampleHash: "0123456789abcdef",
+            renderedRMS: 0.02,
+            renderedTailRMS: 0.018,
+            renderedTailToAttackDB: tailToAttackDB(
+                tailRMS: 0.018,
+                attackRMS: 0.04
+            ),
+            differenceRMS: 0
         ).isComplete(sampleRate: 8_000))
         #expect(!fixtureUpperPercussionTailEvent(voice: .percussion)
             .isComplete(sampleRate: 8_000))
@@ -3916,7 +3923,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "1facd14bf0cdbba7")
+            "8f08e87770882f0b")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7

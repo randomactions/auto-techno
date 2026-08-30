@@ -4,13 +4,13 @@ import Foundation
 package enum QualityQualificationContract {
     /// Version 22 binds app-owned scheduled live PCM, exact mixer-to-player
     /// clock mapping, live BS.1770 evidence, bounded terminal attenuation, and
-    /// its atomic commit at an unscheduled future boundary. Quality schema 41
-    /// binds material-world/effect-target lineage together with explicit pitch
-    /// identities and the retained effect-tail, stable-FDN, smoothed-spatial,
-    /// and cross-phrase seam consequences.
-    package static let schemaVersion = 41
+    /// its atomic commit at an unscheduled future boundary. Quality schema 42
+    /// additionally binds source-local terminal release evidence while keeping
+    /// intentional attack samples exact, alongside material-world/effect-target
+    /// lineage and the retained cross-phrase consequences.
+    package static let schemaVersion = 42
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v40"
+    package static let engineVersion = "autotechno-canonical-engine.v41"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1
