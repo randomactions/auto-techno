@@ -14,8 +14,8 @@ distance. This consolidates random graph-operation choice; it adds no processor
 family, alternate renderer, fixed chain, or selector. A future policy may issue
 one `reframe-material` action per world, only at an eligible future boundary.
 
-This PCM-changing engine-v44 slice is implemented and offline-qualified by the
-exact primary-v25 and long-horizon-v12 artifact sets. Listening, real app/route
+This PCM-changing engine-v45 slice is implemented and offline-qualified by the
+exact primary-v26 and long-horizon-v13 artifact sets. Listening, real app/route
 QA, latency observation, and physical-output soak remain separate unverified
 gates; historical engine-v38 artifacts cannot approve this slice.
 
@@ -99,7 +99,7 @@ Status meanings:
 ### LH-SND-01 — multi-rate semantic modulation
 
 **Status:** partially implemented; AudioReakt promoted the kick-source
-trajectory only; exact engine-v44 primary-v25 and long-horizon-v12 qualification
+trajectory only; exact engine-v45 primary-v26 and long-horizon-v13 qualification
 passed, while app/runtime verification remains separate.
 
 - **Canonical owner:** the existing score-owned `InstrumentAssignment` color,
@@ -170,8 +170,8 @@ automation maturation conditional.
 ### LH-SND-04 — transition and payoff maturation
 
 **Status:** partially implemented; AudioReakt promoted kick morphology and
-contextual clap/snare/rim articulation; exact engine-v44 primary-v25 and
-long-horizon-v12 qualification passed, while app/runtime verification remains
+contextual clap/snare/rim articulation; exact engine-v45 primary-v26 and
+long-horizon-v13 qualification passed, while app/runtime verification remains
 separate.
 
 - **Canonical owner:** dramatic debt, energy-release phrase, anticipation swell,
@@ -192,16 +192,18 @@ separate.
 
 ### LH-SND-05 — percussion material depth
 
-**Status:** conditional maturation; Stage 8 found no promotion trigger.
+**Status:** physical percussion promoted in place; further expansion remains
+conditional.
 
 - **Canonical owner:** existing kick, groove-pulse, clap/hat/metallic roles,
   modal-percussion foundation, and their score-owned articulation.
 - **Deficit trigger:** long-horizon role-local fingerprints and physical metrics
   show perceptually stationary attack/body/tail behavior, or calibrated
   translation repeatedly fails despite appropriate structural variation.
-- **Possible in-place directions:** richer coupled resonators, strike-position
-  excitation, material-aware envelopes, oversampled nonlinear transients, or
-  role-aware excitation and damping.
+- **Promoted in-place direction:** the held rhythm world selects stretched
+  membrane, hollow wood, bronze plate, or ceramic shell, while the existing
+  material architecture supplies bounded coupling. One fixed-capacity voice
+  renders a four-mode body feeding a four-mode shell bank.
 - **Evidence:** event-local score binding, attack/body/tail relationships,
   centroid and band energy, alias/fold evidence, masking, continuation, exact
   protected/full equality, and capability recurrence.
@@ -210,10 +212,10 @@ separate.
   percussion lane or sample-library dependency.
 
 The implementation replaces the session-static kick parameter set with one
-continuous score trajectory and expands the existing clap event in place with
-three bounded physical bodies. Richer coupled resonators, rolls, material MSEGs,
-and additional percussion voices remain conditional and are not authorized by
-the source sweep.
+continuous score trajectory, expands the existing clap event in place with
+three bounded physical bodies, and matures the existing modal foundation into
+four held coupled materials. Rolls, material MSEGs, nonlinear transient stages,
+and additional percussion voices remain conditional.
 
 ### LH-SND-06 — longer harmonic and motif syntax
 
@@ -352,9 +354,9 @@ long-horizon policy does not prove that every provisional DSP is mature, but it
 does prove that this corpus supplies no repeatable failure that authorizes one
 of the replacements below.
 
-The current engine-v44/primary-v25 regeneration pins long-horizon v11 profile
-`f42b9271579015ba`, adversarial suite `3ff4d0d51c72c99e`, and disjoint holdout
-`d59e4ef6080bbe77`. Earlier policy fingerprints remain historical evidence
+The current engine-v45/primary-v26 regeneration pins long-horizon v13 profile
+`6139c62f14150a56`, adversarial suite `41f2f0052adc68b3`, and disjoint holdout
+`9c73ae998d25f693`. Earlier policy fingerprints remain historical evidence
 only. Seven development journeys, all ten adversarial attacks, and two fresh
 disjoint holdouts pass at both representative rates. The prior Hypnotic sweep
 promoted LH-SND-09's interpolation primitive from
@@ -370,7 +372,7 @@ chain.
 | LH-SND-05 percussion depth | repeated AudioReakt kick and snare/clap technical explanations, prior session-static source probe, distinct deterministic body PCM, and attack/body/tail evidence | Kick morphology plus clap/snare/rim articulation promoted in place; additional percussion lanes and sample dependencies rejected. |
 | LH-SND-06 harmonic/motif syntax | identity recall, periodicity, payoff semantics, and realized operator movement | Conditional; no predictable-cycle or failed-recall result survives with otherwise valid evidence. |
 | LH-SND-07 spatial scene | FDN/effect occupancy, tail recovery, stereo and rate-bound phrase qualification | Conditional; no ratchet, uncleared tail, mono/rate, or depth failure cluster. |
-| LH-SND-08 dynamics/effect body | primary-v25 phrase verdicts, crest/loudness/transient deltas, wet/dry bounds, transition-tail continuity, and live-controller provenance | Conditional; no repeated dynamics or effect-intelligibility failure after valid semantics. |
+| LH-SND-08 dynamics/effect body | primary-v26 phrase verdicts, crest/loudness/transient deltas, wet/dry bounds, transition-tail continuity, and live-controller provenance | Conditional; no repeated dynamics or effect-intelligibility failure after valid semantics. |
 | LH-SND-09 resampling | synthetic A/B alias and passband probes, all 276 Mordio source dispositions, exact cut-neutral PCM, deterministic grain geometry/source-position evidence, bounded accepted-only recipe memory, regenerated source/output hashes, and exact-engine phrase evidence at representative checkpoints and both rates | Band-limited interpolation, one bounded granular-memory texture, and four-recipe/256-bar phrase-spanning kick recall promoted in the canonical renderer; stereo-grain maturation remains conditional. |
 | LH-SND-10 additional patches | all existing role, register, character, and capability coverage | Not justified; no missing role/register/episode relationship. |
 | LH-SND-11 another architecture | current three architectures under exact profile and holdouts | Not justified; no surviving synthesis-class deficit. |
@@ -406,6 +408,7 @@ the packet.
 
 | Date | Change | Implementation state | Qualification state |
 | --- | --- | --- | --- |
+| 2026-08-30 | Promoted physical percussion after resampled memory. Held rhythm worlds now produce stretched-membrane, hollow-wood, bronze-plate, and ceramic-shell modal materials. | The existing score articulation binds material and `0...0.6` coupling; the existing four-slot modal voice renders four stable body modes feeding four stable shell modes. Exact material reconstruction, continuation, routing, and candidate evidence are preserved; no lane, sample library, graph, renderer, selector, or callback work was added. | Focused planning/DSP tests pass. Engine-v45 primary-v26 profile/adversarial/holdout `49533dcd68238f05` / `b0733d1aad0de785` / `81f20d011441fa5f` accepts 504/504 development and 56/56 disjoint holdout observations with zero relationship failures and expected adversarial rejection; long-horizon-v13 `6139c62f14150a56` / `41f2f0052adc68b3` / `9c73ae998d25f693` is regenerated. Full suite, publication, CI, listening, app/route QA, and physical soak are reported separately. |
 | 2026-08-30 | Promoted bounded resampled memory as the next single reusable sound capability. Eligible major breaks can recall an earlier accepted kick as transformed cut or granular material. | `TemporalMusicalMemory` owns at most four immutable score recipes with a 256-bar age limit; `PhraseCompositionResolver` selects them; detached `VoiceRenderer` regenerates the canonical kick before the existing slicer. Missing memory falls back to the current source; no PCM, sampler, renderer, graph, selector, or callback path was added. | Focused ownership, capacity/age, deterministic rendering, source/output-hash, and accepted-only commit tests pass. Engine-v44 primary-v25 profile/adversarial/holdout `ac857a95a68ddf5a` / `0a0348237bbaea5a` / `ae358f67747eebf1` passes 36 development and four disjoint holdout trajectories at 44.1/48 kHz; long-horizon-v12 `bf7b41293717bd0e` / `bc52d596ce3a045a` / `4ab0a6201f8d8184` is regenerated. Full suite, publication, CI, listening, app/route QA, and physical soak are reported separately. |
 | 2026-08-26 | Audited all 276 current Mordio Music videos through the authorized transcript workflow: 219 original-language caption tracks analyzed and 57 title/metadata-only records. All detected synths, hardware, instruments, effects, chains, sequencers, and automation techniques were reconciled to existing owners or the standalone boundary. Thirty-four granular/resampling and two looping-memory contexts selected one bounded granular-memory texture inside the existing phrase-local slicer. | `AutoTechnoCore` resolves texture/seed for the existing slice plan; state-free `AutoTechnoDSP` renders at most 48 overlapping grains per trigger and binds texture, seed, grain geometry, source positions, source/output PCM, and fallback. One director, score, renderer, graph, App scheduler, route lifecycle, immutable buffer format, and callback contract are preserved. | Focused deterministic seed, changed-seed, rate-scaling, exact-cut, integrated Ambient/Broken, candidate-binding, and frozen four-hour planning tests pass. Primary-v17 `a36ab44f411ae336` / `4af5f1c100e9aad8` / `325acd7e49ed49b6` and long-horizon-v4 `3494dfe4ca7a0413` / `5baaf2e05b0aaf3e` / `7b6e868f5a92a898` regenerated and replayed byte for byte. Full release tests, exact app launch, publication, listening, route/interruption QA, latency observation, and hardware soak are reported separately. |
 | 2026-08-26 | Audited all 362 current AudioReakt videos through the authorized transcript workflow. Repeated kick/rumble explanations and cross-corpus snare/clap contexts survived reconciliation; all other synth, preset, effect, chain, automation, and style suggestions map to existing owners or the standalone boundary. Added one continuous four-home kick morphology and contextual clap/snare/rim bodies to existing score events. | `AutoTechnoCore` score decisions plus state-free `AutoTechnoDSP` rendering/evidence; one director, score, kick/clap event loops, graph, App scheduler, route lifecycle, immutable buffer format, and callback contract preserved | Focused Core/DSP multi-rate oracle, continuity, contextual-body, exact PCM, candidate binding, and protected-route tests pass. Primary-v16 `710ec815fed989fb` / `45b2744234e137d8` / `b95f68a1a4771560` and long-horizon-v3 `3c6b7dfeaa63bd76` / `a0a461a53be020fc` / `e23e50e67b2dccf7` regenerated and replayed byte for byte; all 455 serialized release tests pass and the exact release app launches. Listening, route/interruption QA, latency observation, and hardware soak remain separate unclaimed gates |

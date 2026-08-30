@@ -1065,6 +1065,8 @@ private extension AutonomousTypedFingerprint {
         sink.field("inharmonicity"); sink.double(value.inharmonicity)
         sink.field("eventIntensity"); sink.double(value.eventIntensity)
         sink.field("seed"); sink.uint64(value.seed)
+        sink.field("material"); sink.raw(value.material.rawValue)
+        sink.field("coupling"); sink.double(value.coupling)
     }
 
     static func encode(_ value: SpatialContrastArticulation, into sink: inout StreamingFNV1a) {
@@ -1564,6 +1566,8 @@ private extension AutonomousTypedFingerprint {
         sink.aggregate("ModalPercussionVoiceSlotState")
         sink.field("active"); sink.bool(value.active)
         sink.field("articulationSeed"); sink.uint64(value.articulationSeed)
+        sink.field("material"); sink.raw(value.material.rawValue)
+        sink.field("coupling"); sink.double(value.coupling)
         sink.field("ageFrames"); sink.int(value.ageFrames)
         sink.field("remainingFrames"); sink.int(value.remainingFrames)
         sink.field("mode0"); encode(value.mode0, into: &sink)
@@ -1572,6 +1576,8 @@ private extension AutonomousTypedFingerprint {
         sink.field("mode3"); encode(value.mode3, into: &sink)
         sink.field("mode4"); encode(value.mode4, into: &sink)
         sink.field("mode5"); encode(value.mode5, into: &sink)
+        sink.field("mode6"); encode(value.mode6, into: &sink)
+        sink.field("mode7"); encode(value.mode7, into: &sink)
     }
 
     static func encode(

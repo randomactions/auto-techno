@@ -1,6 +1,6 @@
 # Nonlinear DSP Core
 
-The nonlinear topology remains current under engine v44, whose exact artifacts
+The nonlinear topology remains current under engine v45, whose exact artifacts
 also bind the pitch and transition-tail contracts.
 
 ## Purpose and owner
@@ -11,8 +11,8 @@ Mono architecture. `InstrumentAssignment` and its existing semantic `color`,
 owners. `ResonantMonoState` owns continuation. The primitive does not choose a
 patch, add an event, run a separate controller, or expose a user setting.
 
-Engine identity `autotechno-canonical-engine.v44`, quality-contract schema 45,
-candidate-vector schema 39, and candidate-transaction schema 10 identify the
+Engine identity `autotechno-canonical-engine.v45`, quality-contract schema 46,
+candidate-vector schema 40, and candidate-transaction schema 11 identify the
 current realization containing this unchanged core. The calibrated primary
 evaluator consumes the record as one non-compensable part of its terminal
 decision.

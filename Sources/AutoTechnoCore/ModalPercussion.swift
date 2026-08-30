@@ -5,6 +5,25 @@ package enum ModalPercussionUse: String, CaseIterable, Codable, Sendable {
     case sparsePercussion = "sparse-percussion"
 }
 
+/// A score-owned physical material for the existing tuned-percussion voice.
+/// The cases are perceptual destinations inside the canonical renderer, not
+/// alternate instruments or a user-selectable sound bank.
+package enum ModalPercussionMaterial: String, CaseIterable, Codable, Sendable {
+    case stretchedMembrane = "stretched-membrane"
+    case hollowWood = "hollow-wood"
+    case bronzePlate = "bronze-plate"
+    case ceramicShell = "ceramic-shell"
+
+    package init(rhythmLanguage: LongHorizonRhythmLanguage) {
+        self = switch rhythmLanguage {
+        case .fourOnFloor: .stretchedMembrane
+        case .brokenGrid: .hollowWood
+        case .crossPulse: .bronzePlate
+        case .negativeSpace: .ceramicShell
+        }
+    }
+}
+
 /// Score-owned physical intent for an existing modal-percussion event. The
 /// record adds no onset; it binds one surviving ensemble event to a bounded
 /// modal pitch and one coherent material frame for the canonical renderer.
@@ -22,6 +41,8 @@ package struct ModalPercussionArticulation: Equatable, Sendable {
     package let inharmonicity: Double
     package let eventIntensity: Double
     package let seed: UInt64
+    package let material: ModalPercussionMaterial
+    package let coupling: Double
 
     /// Modal percussion is intentionally neither a conventional harmonic
     /// voice nor indefinite noise: the fundamental remains in the scene mode
@@ -43,7 +64,9 @@ package struct ModalPercussionArticulation: Equatable, Sendable {
         brightness: Double,
         inharmonicity: Double,
         eventIntensity: Double,
-        seed: UInt64
+        seed: UInt64,
+        material: ModalPercussionMaterial = .stretchedMembrane,
+        coupling: Double = 0.18
     ) {
         self.scoreEventIndex = max(0, scoreEventIndex)
         self.step = Self.normalizedStep(step)
@@ -70,6 +93,8 @@ package struct ModalPercussionArticulation: Equatable, Sendable {
             range: 0...1
         )
         self.seed = seed
+        self.material = material
+        self.coupling = Self.finiteClamp(coupling, neutral: 0.18, range: 0...0.6)
     }
 
     private static func normalizedStep(_ value: Int) -> Int {
@@ -96,7 +121,9 @@ package enum ModalPercussionResolver {
         performance: PerformanceBar,
         character: PerformanceCharacter,
         gesture: ArrangementGesture,
-        behavior: FoundationBehavior
+        behavior: FoundationBehavior,
+        rhythmLanguage: LongHorizonRhythmLanguage = .fourOnFloor,
+        materialArchitecture: LongHorizonTimbralArchitecture = .hybrid
     ) -> [ModalPercussionArticulation] {
         guard behavior == .tunedPercussive,
               performance.roles.contains(.foundation),
@@ -121,6 +148,9 @@ package enum ModalPercussionResolver {
         }
 
         var firstDegree: Int?
+        let physicalMaterial = ModalPercussionMaterial(
+            rhythmLanguage: rhythmLanguage
+        )
         return events.enumerated().map { ordinal, indexedEvent in
             var degree = degrees[ordinal % degrees.count]
             if ordinal == 1, degree == firstDegree {
@@ -145,12 +175,17 @@ package enum ModalPercussionResolver {
                 domain: foundationDomain,
                 index: performance.bar &* 16 &+ scoreEventIndex
             )
-            let material = materialFrame(
+            let frame = materialFrame(
                 seed: seed,
                 character: character,
                 gesture: gesture,
                 macroPosition: macroPosition,
                 eventIntensity: event.intensity
+            )
+            let coupling = materialCoupling(
+                material: physicalMaterial,
+                architecture: materialArchitecture,
+                materialFrame: frame
             )
 
             return ModalPercussionArticulation(
@@ -161,14 +196,39 @@ package enum ModalPercussionResolver {
                 modalDegree: degree,
                 octave: pitch.octave,
                 fundamentalHz: pitch.frequency,
-                excitation: 0.30 + material * 0.60,
-                damping: 0.85 - material * 0.60,
-                brightness: 0.18 + material * 0.72,
-                inharmonicity: 0.01 + material * material * 0.08,
+                excitation: 0.30 + frame * 0.60,
+                damping: 0.85 - frame * 0.60,
+                brightness: 0.18 + frame * 0.72,
+                inharmonicity: 0.01 + frame * frame * 0.08,
                 eventIntensity: event.intensity,
-                seed: seed
+                seed: seed,
+                material: physicalMaterial,
+                coupling: coupling
             )
         }
+    }
+
+    private static func materialCoupling(
+        material: ModalPercussionMaterial,
+        architecture: LongHorizonTimbralArchitecture,
+        materialFrame: Double
+    ) -> Double {
+        let materialBase: Double = switch material {
+        case .stretchedMembrane: 0.14
+        case .hollowWood: 0.26
+        case .bronzePlate: 0.46
+        case .ceramicShell: 0.34
+        }
+        let architectureOffset: Double = switch architecture {
+        case .resonant: 0.05
+        case .tonalMotion: -0.03
+        case .spectral: 0.08
+        case .hybrid: 0
+        }
+        return min(0.6, max(
+            0,
+            materialBase + architectureOffset + (materialFrame - 0.5) * 0.08
+        ))
     }
 
     private static func materialFrame(

@@ -24,7 +24,7 @@ Record the exact commit, toolchain, fixture/continuation state, sample rates, an
 quality-contract revision. A result from another head or an unidentified state is
 not release evidence.
 
-For engine v44, also validate the deterministic material-world contracts in
+For engine v45, also validate the deterministic material-world contracts in
 [`LONG_HORIZON_SOUND_CAPABILITIES.md`](LONG_HORIZON_SOUND_CAPABILITIES.md), the
 pitch-identity matrix in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md) and the transition-
@@ -84,6 +84,16 @@ determinism, edge fades, finite evidence, and neutral invalid-input fallback
 must remain exact. Passing this focused gate does not waive complete exact-
 engine primary or long-horizon artifact regeneration.
 
+Physical percussion has an additional score-to-PCM gate. Planning tests must
+show that the four held rhythm worlds resolve stretched membrane, hollow wood,
+bronze plate, and ceramic shell without phrase-local roulette. DSP tests must
+prove distinct deterministic PCM for those four plans; changed coupling must
+change PCM while retaining excitation and fundamental; all eight poles must
+remain stable and finite at 44.1 and 48 kHz; physical decay, scored fundamental,
+four-slot capacity, protected routing, exact continuation, and candidate
+material/coupling binding must pass. This gate adds no listening claim and does
+not replace complete exact-engine artifact regeneration.
+
 The canonical late field has its own deterministic DSP and integration gate.
 Tests cover eight ordered odd route-derived delays, strictly sub-unity
 delay-proportional gains, high-frequency damping bounds, diffuse and decaying
@@ -95,8 +105,8 @@ bar and reject invalid geometry, gain, hash, count, or score binding. These are
 engineering and provenance results; they are not listening, route-recovery, or
 physical-output-soak results.
 
-Quality-contract schema 44, candidate-vector schema 39, candidate-transaction
-schema 9, and canonical engine v44 provide the current transaction-level
+Quality-contract schema 46, candidate-vector schema 40, candidate-transaction
+schema 11, and canonical engine v45 provide the current transaction-level
 evidence foundation. A complete record
 contains the bounded symbolic, hard-gate, full-mix, per-bar masking, role-stem,
 automatic-mix, score-owned kick-syntax, paid-debt climax-arc,
@@ -352,9 +362,9 @@ The shipping evaluator is the exact-engine calibrated primary policy. It renders
 one primary plan on the healthy path and may request one same-plan home-timbre
 correction. Missing artifacts and unsupported routes must report qualification
 unavailable and may not commit.
-The Professional Evidence v25 bank must contain every canonical checkpoint for
+The Professional Evidence v26 bank must contain every canonical checkpoint for
 every included rate and complete exact-role masking/stem evidence. The exact
-engine-v44 primary evaluator v25 and pinned profile v25/adversarial/holdout
+engine-v45 primary evaluator v26 and pinned profile v26/adversarial/holdout
 identities must load and replay through the app path. The profile must cover at
 least 24 complete development trajectories; the current profile covers 36.
 Holdouts must be source-disjoint, contain at

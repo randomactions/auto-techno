@@ -54,8 +54,8 @@ pitch-dependent.
 
 ## Version and qualification state
 
-This PCM-changing contract remains part of canonical engine v44,
-quality-contract schema 45, candidate-vector schema 39, and
-candidate-transaction schema 10. The exact primary-v25 and long-horizon-v12
+This PCM-changing contract remains part of canonical engine v45,
+quality-contract schema 46, candidate-vector schema 40, and
+candidate-transaction schema 11. The exact primary-v26 and long-horizon-v13
 artifacts bind it together with material-world and transition-tail continuity;
 older engine-v36 artifacts remain historical and fail closed.

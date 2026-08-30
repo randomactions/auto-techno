@@ -1932,7 +1932,9 @@ package enum AutonomousPhrasePreparer {
             performance: performance,
             character: resolved.performanceCharacter,
             gesture: resolved.arrangementGesture,
-            behavior: resolved.foundationBehavior
+            behavior: resolved.foundationBehavior,
+            rhythmLanguage: plan.materialWorld.resolvedAxes.rhythm,
+            materialArchitecture: plan.materialWorld.resolvedAxes.architecture
         )
         let modalPercussionIsCanonical =
             resolved.modalPercussionArticulations.count <= 2 &&
@@ -2031,7 +2033,11 @@ package enum AutonomousPhrasePreparer {
                         performance: resolved.performance,
                         character: resolved.performanceCharacter,
                         gesture: resolved.arrangementGesture,
-                        behavior: resolved.foundationBehavior
+                        behavior: resolved.foundationBehavior,
+                        rhythmLanguage:
+                            plan.materialWorld.resolvedAxes.rhythm,
+                        materialArchitecture:
+                            plan.materialWorld.resolvedAxes.architecture
                     ),
                 spatialContrast: resolved.spatialContrast,
                 narrative: resolved.narrative,
@@ -2055,7 +2061,8 @@ package enum AutonomousPhrasePreparer {
         let rhythmicFoundation = FoundationRhythmicRelationResolver.resolve(
             resolvedBars: baseline,
             kind: plan.kind,
-            dna: plan.dna
+            dna: plan.dna,
+            materialWorld: plan.materialWorld
         )
         return KickSyntaxResolver.resolve(
             resolvedBars: rhythmicFoundation,

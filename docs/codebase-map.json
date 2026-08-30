@@ -222,7 +222,7 @@
     {
       "id": "instrument-pitch-and-role-policy",
       "name": "Instrument, pitch, and role policy",
-      "responsibility": "Assign internal architectures and patches, enforce tonal/atonal pitch identity, plan modal percussion, and resolve upper synth performance without creating another engine.",
+      "responsibility": "Assign internal architectures and patches, enforce tonal/atonal pitch identity, plan material-world-selected coupled modal percussion, and resolve upper synth performance without creating another engine.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -239,20 +239,21 @@
       "state": [
         "SynthWorldDNA",
         "SynthPerformancePlan",
-        "modal percussion articulation"
+        "modal percussion material and coupling articulation"
       ],
       "inputs": [
         "resolved roles",
         "modal identity",
-        "performance character"
+        "performance character",
+        "held material-world rhythm and architecture"
       ],
       "outputs": [
         "instrument assignments",
         "resolved upper notes",
-        "modal foundation plan"
+        "material-bound coupled modal foundation plan"
       ],
       "evidence": [
-        "score-owned assignment, pitch, and automation provenance"
+        "score-owned assignment, pitch, automation, modal material, and coupling provenance"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/FoundationPitchResolver.swift",
@@ -397,7 +398,7 @@
     {
       "id": "voice-and-phrase-rendering",
       "name": "Voice and phrase rendering",
-      "responsibility": "Render the canonical resolved score through internal voices, phrase composition including reconstructed earlier kick recipes, modal percussion, kick/upper articulations, source-local terminal de-clicking, and stable continuation into immutable stereo blocks and role taps.",
+      "responsibility": "Render the canonical resolved score through internal voices, phrase composition including reconstructed earlier kick recipes, coupled-material modal percussion, kick/upper articulations, source-local terminal de-clicking, and stable continuation into immutable stereo blocks and role taps.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -413,7 +414,8 @@
       ],
       "state": [
         "RenderState",
-        "voice and phrase-composition continuation"
+        "voice and phrase-composition continuation",
+        "four-slot modal material, coupling, and eight-mode continuation"
       ],
       "inputs": [
         "AutonomousPhrasePlan",
@@ -429,7 +431,8 @@
         "role-local render evidence",
         "source-terminal attack and ending evidence",
         "exact PCM fingerprints",
-        "score/render correspondence"
+        "score/render correspondence",
+        "modal material, coupling, stability, decay, and pitch evidence"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AlienAnalogVoice.swift",
@@ -594,9 +597,9 @@
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityVerdict.swift",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v25.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v25.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v25.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v26.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v26.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v26.json",
         "Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift",
         "Sources/AutoTechnoDSP/StreamingPerceptualEvidence.swift",
         "Sources/AutoTechnoDSP/UpperTimbreEvidence.swift"
@@ -671,9 +674,9 @@
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicy.swift",
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift",
         "Sources/AutoTechnoDSP/LongHorizonSignalTrajectory.swift",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v12.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v12.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v12.json"
+        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v13.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v13.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v13.json"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/LongHorizonEffectDoseTests.swift",

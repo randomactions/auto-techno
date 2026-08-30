@@ -526,7 +526,7 @@ struct QualityQualificationFoundationTests {
         }
     }
 
-    @Test("Professional Evidence v25 bank requires every journey checkpoint and unavailable policy")
+    @Test("Professional Evidence v26 bank requires every journey checkpoint and unavailable policy")
     func professionalEvidenceReportBank() throws {
         let reports = try qualificationReports()
 
@@ -1493,6 +1493,8 @@ struct QualityQualificationFoundationTests {
             brightness: 0.34,
             inharmonicity: 0.025,
             intensity: 0.58,
+            material: ModalPercussionMaterial.stretchedMembrane.rawValue,
+            coupling: 0.18,
             modeCount: ModalPercussionVoice.modeCount,
             modeRatioFingerprint: "0123456789abcdef",
             minimumModeFrequencyHz: 110,

@@ -3188,6 +3188,8 @@ package struct AutonomousModalPercussionEventEvidence:
     package let brightness: Double
     package let inharmonicity: Double
     package let intensity: Double
+    package let material: String
+    package let coupling: Double
     package let modeCount: Int
     package let modeRatioFingerprint: String
     package let minimumModeFrequencyHz: Double
@@ -3227,6 +3229,8 @@ package struct AutonomousModalPercussionEventEvidence:
         brightness: Double,
         inharmonicity: Double,
         intensity: Double,
+        material: String,
+        coupling: Double,
         modeCount: Int,
         modeRatioFingerprint: String,
         minimumModeFrequencyHz: Double,
@@ -3265,6 +3269,8 @@ package struct AutonomousModalPercussionEventEvidence:
         self.brightness = brightness
         self.inharmonicity = inharmonicity
         self.intensity = intensity
+        self.material = material
+        self.coupling = coupling
         self.modeCount = modeCount
         self.modeRatioFingerprint = modeRatioFingerprint
         self.minimumModeFrequencyHz = minimumModeFrequencyHz
@@ -3294,7 +3300,7 @@ package struct AutonomousModalPercussionEventEvidence:
     package var isFinite: Bool {
         finite && [
             requestedFundamentalHz, appliedFundamentalHz, excitation, damping,
-            brightness, inharmonicity, intensity, minimumModeFrequencyHz,
+            brightness, inharmonicity, intensity, coupling, minimumModeFrequencyHz,
             maximumModeFrequencyHz, maximumPoleRadius, peak, rms, crestFactor,
             attackRMS, bodyRMS, tailRMS, tailToBodyDB, spectralCentroidHz,
         ].allSatisfy(\.isFinite)
@@ -3319,6 +3325,8 @@ package struct AutonomousModalPercussionEventEvidence:
             (0...1).contains(brightness) &&
             (0...0.12).contains(inharmonicity) &&
             (0...1).contains(intensity) &&
+            ModalPercussionMaterial(rawValue: material) != nil &&
+            (0...0.6).contains(coupling) &&
             modeCount == ModalPercussionVoice.modeCount &&
             Self.isFingerprint(modeRatioFingerprint) &&
             minimumModeFrequencyHz >= appliedFundamentalHz &&
@@ -5860,7 +5868,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 39
+    package static let schemaVersion = 40
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -6949,6 +6957,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                         articulation.fundamentalHz &&
                     evidence.appliedFundamentalHz ==
                         articulation.fundamentalHz &&
+                    evidence.material == articulation.material &&
+                    evidence.coupling == articulation.coupling &&
                     evidence.modeCount == ModalPercussionVoice.modeCount &&
                     evidence.stable && evidence.capacityValid
                 return AutonomousModalPercussionEventEvidence(
@@ -6966,6 +6976,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                     brightness: articulation.brightness,
                     inharmonicity: articulation.inharmonicity,
                     intensity: articulation.eventIntensity,
+                    material: articulation.material.rawValue,
+                    coupling: articulation.coupling,
                     modeCount: evidence.modeCount,
                     modeRatioFingerprint: evidence.modeRatioFingerprint,
                     minimumModeFrequencyHz:
@@ -9209,7 +9221,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
 }
 
 package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sendable {
-    package static let schemaVersion = 10
+    package static let schemaVersion = 11
     package static let maximumCorrectionAttempts =
         QualityQualificationContract.maximumCorrectionRenders
     package static let maximumAttemptCount =

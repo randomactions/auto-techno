@@ -40,7 +40,7 @@ struct LongHorizonSemanticTrajectoryTests {
         #expect(first.observedBarCount == 7_802)
         #expect(first.observedPhraseCount == 725)
         #expect(first.trajectoryFingerprint == "cc5e12527ba89b5c")
-        #expect(stableFingerprint(firstData) == "6892787b8dfc986f")
+        #expect(stableFingerprint(firstData) == "f3da138fee91ab1a")
         #expect(first.phraseKindPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.performanceCharacterPhraseCounts.allSatisfy { $0.count > 0 })
         #expect(first.tensionDwell.highBarCount == 629)

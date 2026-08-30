@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 39)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 40)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -304,7 +304,7 @@ struct AutonomousCandidateEvaluationTests {
             object["liveProposalFingerprint"] = "aaaaaaaaaaaaaaaa"
         }
         #expect(!transaction(correction: changedLiveProposal).isComplete)
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 10)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 11)
     }
 
     @Test("Candidate live policy rejects boost forged scaling stale revision and boundary")
@@ -1304,10 +1304,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 39)
-        #expect(QualityQualificationContract.schemaVersion == 45)
+        #expect(vector.schemaVersion == 40)
+        #expect(QualityQualificationContract.schemaVersion == 46)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v44")
+                "autotechno-canonical-engine.v45")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3919,11 +3919,11 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "9191ba1b316d1c03")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
-                "e07e7f964d9987cf")
+                "056bf118d50b79fb")
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "1c70f1598155436f")
+            "99ff92a16aae19db")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -3931,7 +3931,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.renderDSPContinuation(
             renderState: positiveZeroRenderState,
             generatedDSPState: orderedGraphState
-        ) == "94261d9722b48ff8")
+        ) == "68feb06a44033e18")
     }
 
     private func realPreparedCandidate() -> PreparedAutonomousPhrase? {
@@ -4437,6 +4437,8 @@ struct AutonomousCandidateEvaluationTests {
             brightness: 0.34,
             inharmonicity: 0.025,
             intensity: 0.58,
+            material: ModalPercussionMaterial.stretchedMembrane.rawValue,
+            coupling: 0.18,
             modeCount: ModalPercussionVoice.modeCount,
             modeRatioFingerprint: "0123456789abcdef",
             minimumModeFrequencyHz: fundamentalHz,

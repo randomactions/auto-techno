@@ -136,6 +136,16 @@ intensities into one cyclic 3-3-2 accent/ghost relation. The same render produce
 event-local dry-signal evidence. The primary evaluator judges that one canonical
 realization; no legacy alternating candidate or permissive policy remains.
 
+The existing modal-percussion foundation also changes material with the held
+long-horizon rhythm world. Four-on-floor excites a stretched membrane, broken
+grid a hollow wooden body, cross-pulse a bronze plate, and negative space a
+ceramic shell. The resolved score binds that material and a bounded `0...0.6`
+coupling amount. The one fixed-capacity modal voice renders four body modes and
+four feed-forward shell modes, so material changes frequency relationships,
+decay, and coupled resonance without creating another voice, lane, engine, or
+selector. Malformed coupling clamps, canonical reconstruction retains the exact
+world, and the previous stable body bank remains the conservative fallback.
+
 The ordinary closed-hat path uses the same contract. After ensemble arbitration,
 an existing closed hat that shares its resolved onset with the existing open hat
 receives one semantic companion role. The renderer shortens only that closed-hat
@@ -329,7 +339,7 @@ Future sound maturation must still replace only a repeatedly failed provisional
 DSP in place after independent-root, two-rate causal evidence.
 
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v25 supplies
+policy and its operational gates pass. Professional Evidence v26 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation, pre-kick foundation-pocket, terminal climax-hang,
 material-world/effect-target lineage, and live-controller consequence, explicit

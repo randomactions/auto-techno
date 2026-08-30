@@ -32,6 +32,10 @@ struct ModalPercussionPlanningTests {
         #expect(first.allSatisfy { (0.0...1.0).contains($0.damping) })
         #expect(first.allSatisfy { (0.0...1.0).contains($0.brightness) })
         #expect(first.allSatisfy { (0.0...0.12).contains($0.inharmonicity) })
+        #expect(first.allSatisfy {
+            ModalPercussionMaterial.allCases.contains($0.material)
+        })
+        #expect(first.allSatisfy { (0.0...0.6).contains($0.coupling) })
         #expect(first.allSatisfy { articulation in
             fixture.ensemble.events[articulation.scoreEventIndex].intensity ==
                 articulation.eventIntensity
@@ -39,6 +43,31 @@ struct ModalPercussionPlanningTests {
         #expect(first.allSatisfy { articulation in
             fixture.ensemble.events[articulation.scoreEventIndex].step == articulation.step
         })
+    }
+
+    @Test("Held rhythm worlds resolve four distinct physical materials")
+    func rhythmWorldsResolveDistinctPhysicalMaterials() {
+        let fixture = fixture()
+        let expected: [(LongHorizonRhythmLanguage, ModalPercussionMaterial)] = [
+            (.fourOnFloor, .stretchedMembrane),
+            (.brokenGrid, .hollowWood),
+            (.crossPulse, .bronzePlate),
+            (.negativeSpace, .ceramicShell),
+        ]
+        let resolved = expected.map { rhythm, material in
+            let articulations = resolve(
+                fixture,
+                rhythmLanguage: rhythm,
+                materialArchitecture: .hybrid
+            )
+            #expect(articulations.allSatisfy { $0.material == material })
+            return articulations
+        }
+
+        #expect(Set(resolved.compactMap(\.first).map {
+            $0.material.rawValue
+        }).count == 4)
+        #expect(Set(resolved.compactMap(\.first).map(\.coupling)).count == 4)
     }
 
     @Test("Two strikes retain a modal relationship when the motif has one degree")
@@ -108,7 +137,9 @@ struct ModalPercussionPlanningTests {
             brightness: -.infinity,
             inharmonicity: .nan,
             eventIntensity: .nan,
-            seed: 1
+            seed: 1,
+            material: .bronzePlate,
+            coupling: .nan
         )
         #expect(nonFinite.scoreEventIndex == 0)
         #expect(nonFinite.step == 15)
@@ -118,6 +149,8 @@ struct ModalPercussionPlanningTests {
         #expect(nonFinite.brightness.isFinite)
         #expect(nonFinite.inharmonicity.isFinite)
         #expect(nonFinite.eventIntensity.isFinite)
+        #expect(nonFinite.material == .bronzePlate)
+        #expect(nonFinite.coupling == 0.18)
         #expect((48.0...196.0).contains(nonFinite.fundamentalHz))
         #expect((0.0...1.0).contains(nonFinite.excitation))
         #expect((0.0...1.0).contains(nonFinite.damping))
@@ -133,22 +166,30 @@ struct ModalPercussionPlanningTests {
         #expect(below.brightness == 0)
         #expect(below.inharmonicity == 0)
         #expect(below.eventIntensity == 0)
+        #expect(below.coupling == 0)
         #expect(above.fundamentalHz == 196)
         #expect(above.excitation == 1)
         #expect(above.damping == 1)
         #expect(above.brightness == 1)
         #expect(above.inharmonicity == 0.12)
         #expect(above.eventIntensity == 1)
+        #expect(above.coupling == 0.6)
     }
 
-    private func resolve(_ fixture: Fixture) -> [ModalPercussionArticulation] {
+    private func resolve(
+        _ fixture: Fixture,
+        rhythmLanguage: LongHorizonRhythmLanguage = .fourOnFloor,
+        materialArchitecture: LongHorizonTimbralArchitecture = .hybrid
+    ) -> [ModalPercussionArticulation] {
         ModalPercussionResolver.foundationArticulations(
             ensemble: fixture.ensemble,
             dna: fixture.dna,
             performance: fixture.performance,
             character: fixture.character,
             gesture: fixture.gesture,
-            behavior: .tunedPercussive
+            behavior: .tunedPercussive,
+            rhythmLanguage: rhythmLanguage,
+            materialArchitecture: materialArchitecture
         )
     }
 
@@ -223,7 +264,8 @@ struct ModalPercussionPlanningTests {
             brightness: material,
             inharmonicity: material,
             eventIntensity: material,
-            seed: 2
+            seed: 2,
+            coupling: material
         )
     }
 

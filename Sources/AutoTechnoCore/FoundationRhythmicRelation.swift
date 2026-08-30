@@ -45,7 +45,8 @@ package enum FoundationRhythmicRelationResolver {
     package static func resolve(
         resolvedBars: [ResolvedPerformanceBar],
         kind: AutonomousPhraseKind,
-        dna: SceneDNA
+        dna: SceneDNA,
+        materialWorld: LongHorizonMaterialWorldPlan = .neutral
     ) -> [ResolvedPerformanceBar] {
         guard kind == .lock, resolvedBars.count <= 16 else {
             return resolvedBars
@@ -70,13 +71,15 @@ package enum FoundationRhythmicRelationResolver {
                 in: first,
                 with: firstSteps,
                 phraseKind: kind,
-                dna: dna
+                dna: dna,
+                materialWorld: materialWorld
             )
             result[index + 1] = replacingBass(
                 in: second,
                 with: secondSteps,
                 phraseKind: kind,
-                dna: dna
+                dna: dna,
+                materialWorld: materialWorld
             )
             index += 2
         }
@@ -141,7 +144,8 @@ package enum FoundationRhythmicRelationResolver {
         in resolved: ResolvedPerformanceBar,
         with steps: [Int],
         phraseKind: AutonomousPhraseKind,
-        dna: SceneDNA
+        dna: SceneDNA,
+        materialWorld: LongHorizonMaterialWorldPlan
     ) -> ResolvedPerformanceBar {
         let sourceEvents = resolved.ensemble.events
         let firstBassIndex = sourceEvents.firstIndex { $0.voice == .bass } ??
@@ -191,7 +195,10 @@ package enum FoundationRhythmicRelationResolver {
                     performance: resolved.performance,
                     character: resolved.performanceCharacter,
                     gesture: resolved.arrangementGesture,
-                    behavior: resolved.foundationBehavior
+                    behavior: resolved.foundationBehavior,
+                    rhythmLanguage: materialWorld.resolvedAxes.rhythm,
+                    materialArchitecture:
+                        materialWorld.resolvedAxes.architecture
                 ),
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative,

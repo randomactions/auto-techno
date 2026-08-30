@@ -2245,7 +2245,9 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 performance: bar,
                 character: character,
                 gesture: gesture,
-                behavior: foundation.behavior
+                behavior: foundation.behavior,
+                rhythmLanguage: materialWorld.resolvedAxes.rhythm,
+                materialArchitecture: materialWorld.resolvedAxes.architecture
             )
             let groovePulses = GroovePulseResolver.articulations(
                 from: ensemble,
@@ -2337,7 +2339,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         resolvedBars = FoundationRhythmicRelationResolver.resolve(
             resolvedBars: resolvedBars,
             kind: kind,
-            dna: dna
+            dna: dna,
+            materialWorld: materialWorld
         )
         resolvedBars = KickSyntaxResolver.resolve(
             resolvedBars: resolvedBars,

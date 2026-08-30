@@ -5,12 +5,12 @@ import Testing
 
 @Suite("Modal percussion DSP", .serialized)
 struct ModalPercussionDSPTests {
-    @Test("Six modal modes are stable and stay below the route ceiling")
-    func sixModesAreStableAndBelowTheRouteCeiling() throws {
+    @Test("Eight coupled modal modes are stable and stay below the route ceiling")
+    func eightModesAreStableAndBelowTheRouteCeiling() throws {
         let result = render(sampleRate: 44_100)
         let event = try #require(result.evidence.events.first)
 
-        #expect(event.modeCount == 6)
+        #expect(event.modeCount == 8)
         #expect(event.stable)
         #expect(event.finite)
         #expect(event.minimumModeFrequencyHz >= event.appliedFundamentalHz)
@@ -76,6 +76,78 @@ struct ModalPercussionDSPTests {
 
         #expect(first.evidence.dryBarSampleHash != second.evidence.dryBarSampleHash)
         #expect(first.output != second.output)
+    }
+
+    @Test("Coupled materials produce four deterministic rhythmic worlds")
+    func coupledMaterialsProduceDistinctDeterministicPCM() throws {
+        let recipes: [(ModalPercussionMaterial, Double)] = [
+            (.stretchedMembrane, 0.14),
+            (.hollowWood, 0.26),
+            (.bronzePlate, 0.46),
+            (.ceramicShell, 0.34),
+        ]
+        let rendered = recipes.map { material, coupling in
+            render(
+                sampleRate: 48_000,
+                articulation: articulation(
+                    material: material,
+                    coupling: coupling
+                )
+            )
+        }
+
+        #expect(Set(rendered.map(\.evidence.dryBarSampleHash)).count == 4)
+        let events = try rendered.map {
+            try #require($0.evidence.events.first)
+        }
+        #expect(Set(events.map(\.modeRatioFingerprint)).count == 4)
+        #expect(events.map(\.material) == recipes.map { $0.0 })
+        #expect(events.map(\.coupling) == recipes.map { $0.1 })
+        #expect(events.allSatisfy {
+            $0.modeCount == ModalPercussionVoice.modeCount &&
+                $0.stable && $0.finite && $0.peak <= 1
+        })
+
+        let replay = render(
+            sampleRate: 48_000,
+            articulation: articulation(
+                material: .bronzePlate,
+                coupling: 0.46
+            )
+        )
+        #expect(replay.output == rendered[2].output)
+        #expect(replay.evidence == rendered[2].evidence)
+        #expect(replay.state == rendered[2].state)
+    }
+
+    @Test("Body-to-shell coupling changes only the existing bounded voice")
+    func bodyToShellCouplingIsCausalAndBounded() throws {
+        let uncoupled = render(
+            sampleRate: 44_100,
+            articulation: articulation(
+                material: .hollowWood,
+                coupling: 0
+            )
+        )
+        let coupled = render(
+            sampleRate: 44_100,
+            articulation: articulation(
+                material: .hollowWood,
+                coupling: 0.6
+            )
+        )
+        let uncoupledEvent = try #require(uncoupled.evidence.events.first)
+        let coupledEvent = try #require(coupled.evidence.events.first)
+
+        #expect(uncoupled.output != coupled.output)
+        #expect(uncoupledEvent.excitationFingerprint ==
+                coupledEvent.excitationFingerprint)
+        #expect(uncoupledEvent.appliedFundamentalHz ==
+                coupledEvent.appliedFundamentalHz)
+        #expect(uncoupledEvent.coupling == 0)
+        #expect(coupledEvent.coupling == 0.6)
+        #expect(coupled.output.allSatisfy { $0.isFinite })
+        #expect(coupledEvent.peak <= 1)
     }
 
     @Test("Physical decay agrees at 44.1 and 48 kHz")
@@ -306,7 +378,9 @@ struct ModalPercussionDSPTests {
         brightness: Double = 0.34,
         inharmonicity: Double = 0.025,
         intensity: Double = 0.58,
-        seed: UInt64 = 0xA11CE
+        seed: UInt64 = 0xA11CE,
+        material: ModalPercussionMaterial = .stretchedMembrane,
+        coupling: Double = 0.18
     ) -> ModalPercussionArticulation {
         ModalPercussionArticulation(
             scoreEventIndex: 0,
@@ -321,7 +395,9 @@ struct ModalPercussionDSPTests {
             brightness: brightness,
             inharmonicity: inharmonicity,
             eventIntensity: intensity,
-            seed: seed
+            seed: seed,
+            material: material,
+            coupling: coupling
         )
     }
 

@@ -15,6 +15,8 @@ package struct ModalPercussionModeState: Equatable, Sendable {
 package struct ModalPercussionVoiceSlotState: Equatable, Sendable {
     package var active = false
     package var articulationSeed: UInt64 = 0
+    package var material: ModalPercussionMaterial = .stretchedMembrane
+    package var coupling = 0.0
     package var ageFrames = 0
     package var remainingFrames = 0
     package var mode0 = ModalPercussionModeState()
@@ -23,6 +25,8 @@ package struct ModalPercussionVoiceSlotState: Equatable, Sendable {
     package var mode3 = ModalPercussionModeState()
     package var mode4 = ModalPercussionModeState()
     package var mode5 = ModalPercussionModeState()
+    package var mode6 = ModalPercussionModeState()
+    package var mode7 = ModalPercussionModeState()
 
     package init() {}
 }
@@ -62,6 +66,8 @@ package struct ModalPercussionRenderEventEvidence: Equatable, Sendable {
     package let minimumModeFrequencyHz: Double
     package let maximumModeFrequencyHz: Double
     package let maximumPoleRadius: Double
+    package let material: ModalPercussionMaterial
+    package let coupling: Double
     package let excitationFingerprint: String
     package let drySampleHash: String
     package let renderedFrameCount: Int
@@ -99,11 +105,11 @@ package struct ModalPercussionBarRenderEvidence: Equatable, Sendable {
 }
 
 package enum ModalPercussionVoice {
-    package static let modeCount = 6
+    package static let modeCount = 8
     package static let voiceCapacity = 4
     package static let maximumExcitationSeconds = 0.002
 
-    private static let baseModeRatios = [1.0, 1.47, 2.09, 2.77, 3.62, 4.63]
+    private static let coupledModeStart = 4
     private static let excitationDomain: UInt64 = 0x4D4F44414C455843
 
     package static func renderBar(
@@ -331,6 +337,8 @@ package enum ModalPercussionVoice {
         var slot = ModalPercussionVoiceSlotState()
         slot.active = true
         slot.articulationSeed = event.articulation.seed
+        slot.material = event.articulation.material
+        slot.coupling = event.articulation.coupling
         slot.remainingFrames = max(
             1,
             Int((configuration.t60Seconds * sampleRate).rounded(.up))
@@ -355,17 +363,33 @@ package enum ModalPercussionVoice {
         excitation: Double,
         slot: inout ModalPercussionVoiceSlotState
     ) -> Double {
-        var output = 0.0
-        for index in 0..<modeCount {
+        var body = 0.0
+        for index in 0..<coupledModeStart {
             var mode = slot.mode(at: index)
             let next = excitation * mode.weight + mode.coefficient * mode.y1 -
                 mode.poleRadius * mode.poleRadius * mode.y2
             mode.y2 = mode.y1
             mode.y1 = next.isFinite ? next : 0
-            output += mode.y1
+            body += mode.y1
             slot.setMode(mode, at: index)
         }
-        return output
+        // The second stable modal bank is driven only by the first bank's
+        // bounded output. This realizes body-to-shell energy transfer without
+        // a feedback loop between banks, so every constituent pole retains
+        // the same explicit stability proof as the original voice.
+        let coupledExcitation = body * slot.coupling
+        var shell = 0.0
+        for index in coupledModeStart..<modeCount {
+            var mode = slot.mode(at: index)
+            let next = coupledExcitation * mode.weight +
+                mode.coefficient * mode.y1 -
+                mode.poleRadius * mode.poleRadius * mode.y2
+            mode.y2 = mode.y1
+            mode.y1 = next.isFinite ? next : 0
+            shell += mode.y1
+            slot.setMode(mode, at: index)
+        }
+        return body * (1 - slot.coupling * 0.25) + shell
     }
 
     private static func firstInactiveSlot(
@@ -385,13 +409,15 @@ package enum ModalPercussionVoice {
 
     private static func stateFingerprint(_ state: ModalPercussionVoiceState) -> String {
         var sink = StreamingFNV1a()
-        sink.domain("modal-percussion-state.v1")
+        sink.domain("modal-percussion-state.v2")
         sink.field("sampleRate"); sink.double(state.sampleRate)
         for slotIndex in 0..<voiceCapacity {
             let slot = state.slot(at: slotIndex)
             sink.field("slot"); sink.int(slotIndex)
             sink.field("active"); sink.bool(slot.active)
             sink.field("articulationSeed"); sink.uint64(slot.articulationSeed)
+            sink.field("material"); sink.raw(slot.material.rawValue)
+            sink.field("coupling"); sink.double(slot.coupling)
             sink.field("ageFrames"); sink.int(slot.ageFrames)
             sink.field("remainingFrames"); sink.int(slot.remainingFrames)
             for modeIndex in 0..<modeCount {
@@ -417,21 +443,29 @@ package enum ModalPercussionVoice {
         var frequencies: [Double] = []
         var ratios: [Double] = []
         var rawWeights: [Double] = []
-        for (index, baseRatio) in baseModeRatios.enumerated() {
+        let materialRatios = modeRatios(for: articulation.material)
+        for (index, baseRatio) in materialRatios.enumerated() {
             let ratio = baseRatio * (
                 1 + articulation.inharmonicity * Double(index * index) / 25
             )
             ratios.append(ratio)
             frequencies.append(min(routeCeiling, fundamental * ratio))
+            let bankIndex = index % coupledModeStart
             let brightnessBase = 0.18 + articulation.brightness * 0.72
-            rawWeights.append(pow(brightnessBase, Double(index)) / sqrt(baseRatio))
+            let bankScale = index < coupledModeStart ? 1.0 : 0.72
+            rawWeights.append(
+                pow(brightnessBase, Double(bankIndex)) /
+                    sqrt(baseRatio) * bankScale
+            )
         }
         let norm = sqrt(rawWeights.reduce(0) { $0 + $1 * $1 })
         let weights = rawWeights.map { $0 / max(1e-12, norm) }
         let t60Seconds = 0.18 + (0.65 - 0.18) * articulation.damping
         let poleRadius = pow(0.001, 1 / (t60Seconds * sampleRate))
         var ratioSink = StreamingFNV1a()
-        ratioSink.domain("modal-percussion-mode-ratios.v1")
+        ratioSink.domain("modal-percussion-mode-ratios.v2")
+        ratioSink.field("material"); ratioSink.raw(articulation.material.rawValue)
+        ratioSink.field("coupling"); ratioSink.double(articulation.coupling)
         for ratio in ratios { ratioSink.double(ratio) }
         let centroidDenominator = weights.reduce(0) { $0 + $1 * $1 }
         let centroid = zip(frequencies, weights).reduce(0) {
@@ -445,6 +479,21 @@ package enum ModalPercussionVoice {
             ratioFingerprint: fixedWidthFingerprintHex(ratioSink.value),
             centroidHz: centroid
         )
+    }
+
+    private static func modeRatios(
+        for material: ModalPercussionMaterial
+    ) -> [Double] {
+        switch material {
+        case .stretchedMembrane:
+            [1.0, 1.47, 2.09, 2.77, 3.62, 4.63, 5.74, 6.91]
+        case .hollowWood:
+            [1.0, 1.53, 2.32, 3.18, 3.71, 4.86, 6.20, 7.40]
+        case .bronzePlate:
+            [1.0, 1.68, 2.61, 3.84, 4.30, 5.50, 6.90, 8.50]
+        case .ceramicShell:
+            [1.0, 1.46, 2.14, 2.98, 3.85, 5.10, 6.50, 7.90]
+        }
     }
 
     private struct ModeConfiguration {
@@ -509,6 +558,8 @@ package enum ModalPercussionVoice {
                 minimumModeFrequencyHz: configuration.frequencies.min() ?? 0,
                 maximumModeFrequencyHz: configuration.frequencies.max() ?? 0,
                 maximumPoleRadius: configuration.poleRadius,
+                material: event.articulation.material,
+                coupling: event.articulation.coupling,
                 excitationFingerprint: excitationFingerprint,
                 drySampleHash: metrics.sampleHash,
                 renderedFrameCount: frameCount,
@@ -619,7 +670,9 @@ private extension ModalPercussionVoiceSlotState {
         case 2: mode2
         case 3: mode3
         case 4: mode4
-        default: mode5
+        case 5: mode5
+        case 6: mode6
+        default: mode7
         }
     }
 
@@ -630,7 +683,9 @@ private extension ModalPercussionVoiceSlotState {
         case 2: mode2 = mode
         case 3: mode3 = mode
         case 4: mode4 = mode
-        default: mode5 = mode
+        case 5: mode5 = mode
+        case 6: mode6 = mode
+        default: mode7 = mode
         }
     }
 }
