@@ -1,6 +1,6 @@
 # Canonical Spatial Engine
 
-The spatial topology remains part of engine v43 together with material-world
+The spatial topology remains part of engine v44 together with material-world
 lineage, pitch, and transition-tail contracts.
 
 ## Outcome
@@ -32,8 +32,8 @@ evidence about the consequence.
    slew without restarting at render-block boundaries.
 5. `SpatialFDNRenderEvidence` streams hashes and reduced measurements from the
    exact input and stereo wet samples. Candidate-vector schema 38 binds one
-   record to every rendered bar under quality-contract schema 44, candidate-
-   transaction schema 9, and canonical engine v43.
+   record to every rendered bar under quality-contract schema 45, candidate-
+   transaction schema 9, and canonical engine v44.
 6. `CrossPhraseTransitionEvidence` compares the predecessor's terminal frame
    and reduced tail facts with the successor's opening. Comparable ordinary
    continuation must retain FDN geometry and expose nonzero opening wet energy

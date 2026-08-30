@@ -1036,7 +1036,31 @@ package enum VoiceRenderer {
             )
         let audioSlicePlan = synthPerformance.composition.audioSlice
         let audioSliceRenderEvidence: AudioSliceRenderEvidence
-        if audioSlicePlan?.sourceKind == .kick {
+        if let memorySource = audioSlicePlan?.resampledMemorySource {
+            var regeneratedMemory = [Float](repeating: 0, count: frames)
+            var memoryDynamics = KickSourceDynamicsEvidenceAccumulator()
+            memoryDynamics.bind(morphology: memorySource.kickMorphology)
+            _ = kick(
+                &regeneratedMemory,
+                scoreEventIndex: 0,
+                start: Int((Double(memorySource.sourceStep) * stepFrames).rounded()),
+                sampleRate: sampleRate,
+                level: KickMixBalance.detectorLevel(for: memorySource.section) *
+                    memorySource.combinedAccent,
+                seed: memorySource.synthesisSeed,
+                step: memorySource.sourceStep,
+                barDurationSeconds: 240.0 / memorySource.bpm,
+                morphology: memorySource.kickMorphology,
+                sourceDynamics: &memoryDynamics
+            )
+            audioSliceRenderEvidence = AudioSliceRenderer.render(
+                source: regeneratedMemory,
+                output: &audioSliceStem,
+                plan: audioSlicePlan,
+                stepFrames: stepFrames,
+                sampleRate: sampleRate
+            )
+        } else if audioSlicePlan?.sourceKind == .kick {
             audioSliceRenderEvidence = AudioSliceRenderer.render(
                 source: kickDetectorBus,
                 output: &audioSliceStem,

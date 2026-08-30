@@ -45,12 +45,14 @@ package struct AudioSlicePlan: Equatable, Sendable {
     package let sourceKind: AudioSliceSourceKind
     package let texture: AudioSliceTexture
     package let textureSeed: UInt64
+    package let resampledMemorySource: ResampledMemorySource?
     package let triggers: [AudioSliceTrigger]
 
     package init(sourceStartStep: Int, sourceLengthInSteps: Double,
                  sourceKind: AudioSliceSourceKind = .percussion,
                  texture: AudioSliceTexture = .cut,
                  textureSeed: UInt64 = 0,
+                 resampledMemorySource: ResampledMemorySource? = nil,
                  triggers: [AudioSliceTrigger]) {
         self.sourceStartStep = min(15, max(0, sourceStartStep))
         self.sourceLengthInSteps = min(
@@ -60,6 +62,8 @@ package struct AudioSlicePlan: Equatable, Sendable {
         self.sourceKind = sourceKind
         self.texture = texture
         self.textureSeed = texture == .granularMemory ? textureSeed : 0
+        self.resampledMemorySource = resampledMemorySource?.isComplete == true
+            ? resampledMemorySource : nil
         self.triggers = Array(triggers.prefix(Self.maximumTriggerCount)).sorted {
             if $0.onsetStep != $1.onsetStep { return $0.onsetStep < $1.onsetStep }
             if $0.direction != $1.direction { return $0.direction == .forward }
@@ -309,7 +313,9 @@ package enum PhraseCompositionResolver {
         dna: SceneDNA,
         kind: AutonomousPhraseKind,
         resolvedBars: [ResolvedPerformanceBar],
-        harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState()
+        harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState(),
+        resampledMemory: ResampledMemoryContinuationState =
+            ResampledMemoryContinuationState()
     ) -> [PhraseCompositionBar] {
         let identityDisclosureIsCoordinated = kind == .identityReturn &&
             resolvedBars.contains {
@@ -335,7 +341,8 @@ package enum PhraseCompositionResolver {
                 bar: bar,
                 audioSlice: audioSlicePlan(
                     resolved: resolved,
-                    kind: kind
+                    kind: kind,
+                    resampledMemory: resampledMemory
                 ),
                 arpeggiator: arpeggiatorPlan(
                     scene: scene,
@@ -351,7 +358,8 @@ package enum PhraseCompositionResolver {
 
     private static func audioSlicePlan(
         resolved: ResolvedPerformanceBar,
-        kind: AutonomousPhraseKind
+        kind: AutonomousPhraseKind,
+        resampledMemory: ResampledMemoryContinuationState
     ) -> AudioSlicePlan? {
         guard kind == .majorBreak,
               resolved.performanceCharacter == .brokenSuspension ||
@@ -367,9 +375,15 @@ package enum PhraseCompositionResolver {
             .filter { $0.voice == .kick && $0.step <= 7 }
             .sorted { $0.step < $1.step }
             .first
-        guard let source = percussionSource ?? kickSource else { return nil }
-        let sourceKind: AudioSliceSourceKind = percussionSource == nil ? .kick : .percussion
         let localBar = resolved.performance.localBar
+        let memorySource = resampledMemory.source(
+            recalledAt: resolved.performance.bar,
+            rotation: localBar / 2
+        )
+        guard let sourceStep = memorySource?.sourceStep ??
+                (percussionSource ?? kickSource)?.step else { return nil }
+        let sourceKind: AudioSliceSourceKind = memorySource != nil ||
+            percussionSource == nil ? .kick : .percussion
         let patterns: [[(Int, Double, AudioSliceDirection, Double)]] = [
             [(8, 1, .forward, 0.34), (10, 1.5, .forward, 0.29),
              (12, 0.75, .reverse, 0.27), (15, 2, .forward, 0.23)],
@@ -380,7 +394,7 @@ package enum PhraseCompositionResolver {
         ]
         let pattern = patterns[localBar % patterns.count]
         let triggers = pattern.compactMap { onset, rate, direction, gain in
-            onset > source.step ? AudioSliceTrigger(
+            onset > sourceStep ? AudioSliceTrigger(
                 onsetStep: onset,
                 playbackRate: rate,
                 direction: direction,
@@ -389,7 +403,7 @@ package enum PhraseCompositionResolver {
         }
         guard !triggers.isEmpty else { return nil }
         return AudioSlicePlan(
-            sourceStartStep: source.step,
+            sourceStartStep: sourceStep,
             sourceLengthInSteps: localBar.isMultiple(of: 2) ? 1 : 0.5,
             sourceKind: sourceKind,
             texture: resolved.performanceCharacter == .ambientDrift
@@ -399,6 +413,7 @@ package enum PhraseCompositionResolver {
                 domain: 0xA0D1_05E,
                 index: resolved.performance.bar
             ),
+            resampledMemorySource: memorySource,
             triggers: triggers
         )
     }

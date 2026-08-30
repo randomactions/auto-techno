@@ -5,7 +5,7 @@ package enum ProfessionalQualityAdversarialScenario: String, CaseIterable,
         Codable, Sendable {
     case hardGateCompensation = "hard-gate-compensation"
     case truePeakCompensation = "true-peak-compensation"
-    case flattenedTrajectory = "flattened-trajectory"
+    case movementRangeViolation = "movement-range-violation"
     case spectralCollapse = "spectral-collapse"
     case maskingFlood = "masking-flood"
     case lowEndPhaseFailure = "low-end-phase-failure"
@@ -435,9 +435,9 @@ package struct ProfessionalQualityLiveCandidateChain: Equatable, Sendable {
 /// evidence. Every scenario must be rejected independently.
 package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 17
+    package static let schemaVersion = 18
     package static let suiteVersion =
-        "autotechno-professional-quality-adversarial.v17"
+        "autotechno-professional-quality-adversarial.v18"
 
     package let schemaVersion: Int
     package let suiteVersion: String
@@ -662,24 +662,35 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             expected: [.liveProposalMismatch]
         )
 
-        let trajectoryCheckpoint = try Self.checkpointWithLargestLowerBound(
-            metric: .movementScore,
-            profile: profile
-        )
+        let movementAttack = profile.checkpoints.compactMap { checkpoint -> (
+            checkpoint: CanonicalJourneyCheckpoint,
+            bounds: ProfessionalQualityMetricBounds,
+            preferLower: Bool,
+            headroom: Double
+        )? in
+            guard let bounds = checkpoint[.movementScore] else { return nil }
+            let lowerHeadroom = max(0, bounds.lower)
+            let upperHeadroom = max(0, 1 - bounds.upper)
+            return lowerHeadroom >= upperHeadroom
+                ? (checkpoint.checkpoint, bounds, true, lowerHeadroom)
+                : (checkpoint.checkpoint, bounds, false, upperHeadroom)
+        }.max { $0.headroom < $1.headroom }
+        guard let movementAttack, movementAttack.headroom > 0 else {
+            throw ProfessionalQualityCalibrationError.invalidBounds
+        }
+        let trajectoryCheckpoint = movementAttack.checkpoint
         let trajectoryBaseline = try Self.baseline(
             checkpoint: trajectoryCheckpoint,
             observations: sourceObservations
         )
-        guard let trajectoryBounds = profile[trajectoryCheckpoint]?[.movementScore],
-              trajectoryBounds.lower > 0 else {
-            throw ProfessionalQualityCalibrationError.invalidBounds
-        }
+        let trajectoryAttackValue = movementAttack.preferLower
+            ? movementAttack.bounds.lower - movementAttack.headroom * 0.5
+            : movementAttack.bounds.upper + movementAttack.headroom * 0.5
         append(
-            .flattenedTrajectory,
+            .movementRangeViolation,
             observation: try trajectoryBaseline.replacing(
                 .movementScore,
-                with: trajectoryBounds.lower - max(1e-9,
-                    trajectoryBounds.lower * 0.1)
+                with: trajectoryAttackValue
             ),
             expected: [.metricOutOfRange]
         )

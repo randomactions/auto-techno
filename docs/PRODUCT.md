@@ -103,13 +103,17 @@ committed choices, applies only at a future phrase boundary, and returns to the
 hypnotic home for identity return. See
 `PERFORMANCE_GRAMMAR.md` for the human-readable compatibility matrix.
 
-Phrase-local sample transformation remains part of that same grammar. Ambient
-Drift may resolve the existing slice owner as deterministic `granular-memory`:
-overlapping bounded micrograins reinterpret only the current bar's already-
-rendered kick or percussion window. Broken Suspension retains the exact whole-
-window `cut` path. The score owns texture and seed; detached DSP owns rate-
-scaled geometry and causal evidence. No recording, retained source PCM,
-alternative sampler, preset choice, or callback work is introduced.
+Sample transformation remains part of that same grammar. An eligible major
+break first asks accepted session memory for an earlier kick recipe: at most
+four score-owned recipes are retained, recall is limited to the preceding 256
+bars, and no PCM is stored. Detached DSP regenerates that source through the
+canonical kick voice. Ambient Drift then applies deterministic
+`granular-memory`; Broken Suspension retains the exact whole-window `cut` path.
+When no valid earlier recipe exists, the same planner falls back to the current
+bar's kick or percussion window. Only an accepted phrase advances this memory.
+The score owns source identity, texture, and seed; detached DSP owns
+rate-scaled geometry and causal evidence. No recording, alternative sampler,
+preset choice, or callback work is introduced.
 
 Long-horizon effect evidence follows the same product boundary. A future phrase
 may annotate at most one effect sentence that is already present in its resolved
@@ -325,7 +329,7 @@ Future sound maturation must still replace only a repeatedly failed provisional
 DSP in place after independent-root, two-rate causal evidence.
 
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v24 supplies
+policy and its operational gates pass. Professional Evidence v25 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation, pre-kick foundation-pocket, terminal climax-hang,
 material-world/effect-target lineage, and live-controller consequence, explicit

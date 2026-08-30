@@ -1110,6 +1110,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
     package private(set) var narrativeEvolution: NarrativeEvolutionState
     package private(set) var recentPerformanceCharacters: [PerformanceCharacter]
     package private(set) var harmonicContinuation: HarmonicContinuationState
+    package private(set) var resampledMemory: ResampledMemoryContinuationState
     package private(set) var longHorizon: LongHorizonContinuationState
 
     package init(recentBars: [MusicalMemoryBar] = [], currentPhrase: [MusicalMemoryBar] = [],
@@ -1123,6 +1124,8 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
                 narrativeEvolution: NarrativeEvolutionState = NarrativeEvolutionState(),
                 recentPerformanceCharacters: [PerformanceCharacter] = [],
                 harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState(),
+                resampledMemory: ResampledMemoryContinuationState =
+                    ResampledMemoryContinuationState(),
                 longHorizon: LongHorizonContinuationState? = nil) {
         self.recentBars = Array(recentBars.suffix(4))
         self.currentPhrase = Array(currentPhrase.suffix(16))
@@ -1141,6 +1144,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         self.narrativeEvolution = narrativeEvolution
         self.recentPerformanceCharacters = Array(recentPerformanceCharacters.suffix(2))
         self.harmonicContinuation = harmonicContinuation
+        self.resampledMemory = resampledMemory
         self.longHorizon = longHorizon ?? .unbound(
             startingPhraseIndex: (currentPhrase.last?.phraseIndex).map {
                 $0 == Int.max ? Int.max : $0 + 1
@@ -1198,6 +1202,7 @@ package struct TemporalMusicalMemory: Equatable, Sendable {
         spatialContrast = plan.endingSpatialContrastState
         narrativeEvolution = plan.endingNarrativeState
         harmonicContinuation = plan.endingHarmonicContinuation
+        resampledMemory = plan.endingResampledMemory
         if let character = plan.resolvedBars.first?.performanceCharacter {
             recentPerformanceCharacters = Array(
                 (recentPerformanceCharacters + [character]).suffix(2)
@@ -1457,8 +1462,10 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let endingSpatialContrastState: SpatialContrastState
     package let endingNarrativeState: NarrativeEvolutionState
     package let incomingHarmonicContinuation: HarmonicContinuationState
+    package let incomingResampledMemory: ResampledMemoryContinuationState
     package let phraseComposition: [PhraseCompositionBar]
     package let endingHarmonicContinuation: HarmonicContinuationState
+    package let endingResampledMemory: ResampledMemoryContinuationState
     package let longHorizonSelection: LongHorizonPhraseSelection
     package let longHorizonEnergyCoordination: LongHorizonEnergyCoordination
     package let materialWorld: LongHorizonMaterialWorldPlan
@@ -1474,6 +1481,8 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
                  endingSpatialContrastState: SpatialContrastState = SpatialContrastState(),
                  endingNarrativeState: NarrativeEvolutionState = NarrativeEvolutionState(),
                  harmonicContinuation: HarmonicContinuationState = HarmonicContinuationState(),
+                 resampledMemory: ResampledMemoryContinuationState =
+                    ResampledMemoryContinuationState(),
                  longHorizonSelection: LongHorizonPhraseSelection? = nil,
                  longHorizonEnergyCoordination: LongHorizonEnergyCoordination? = nil,
                  materialWorld: LongHorizonMaterialWorldPlan = .neutral,
@@ -1507,16 +1516,22 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
         self.endingSpatialContrastState = endingSpatialContrastState
         self.endingNarrativeState = endingNarrativeState
         incomingHarmonicContinuation = harmonicContinuation
+        incomingResampledMemory = resampledMemory
         phraseComposition = PhraseCompositionResolver.resolve(
             scene: scene,
             dna: dna,
             kind: kind,
             resolvedBars: resolvedBars,
-            harmonicContinuation: harmonicContinuation
+            harmonicContinuation: harmonicContinuation,
+            resampledMemory: resampledMemory
         )
         endingHarmonicContinuation = HarmonicContinuationState(
             voices: phraseComposition.compactMap(\.padVoicing).last?.voices ??
                 harmonicContinuation.voices
+        )
+        endingResampledMemory = resampledMemory.advancing(
+            scene: scene,
+            resolvedBars: resolvedBars
         )
         let resolvedSelection = longHorizonSelection.flatMap {
             $0.phraseKind == kind ? $0 : nil
@@ -2358,6 +2373,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             endingSpatialContrastState: spatialContrastState,
             endingNarrativeState: endingNarrativeState,
             harmonicContinuation: state.memory.harmonicContinuation,
+            resampledMemory: state.memory.resampledMemory,
             longHorizonSelection: longHorizonSelection,
             longHorizonEnergyCoordination: energyCoordination,
             materialWorld: materialWorld,

@@ -197,7 +197,7 @@ struct LongHorizonProfessionalPolicyTests {
         == first.development.observations[0])
   }
 
-  @Test("Bundled v11 long-horizon artifacts activate the exact engine v43 policy")
+  @Test("Bundled v12 long-horizon artifacts activate the exact engine v44 policy")
   func bundledArtifacts() throws {
     for name in [
       LongHorizonProfessionalPolicyArtifacts.profileResource,
@@ -227,6 +227,9 @@ struct LongHorizonProfessionalPolicyTests {
       "long-horizon-professional-profile-v10",
       "long-horizon-adversarial-suite-v10",
       "long-horizon-holdout-v10",
+      "long-horizon-professional-profile-v11",
+      "long-horizon-adversarial-suite-v11",
+      "long-horizon-holdout-v11",
     ] {
       #expect(
         !LongHorizonProfessionalPolicyArtifacts
@@ -252,6 +255,10 @@ struct LongHorizonProfessionalPolicyTests {
     let profileData = try generated.profile.deterministicJSON()
     let adversarialData = try generated.adversarial.deterministicJSON()
     let holdoutData = try generated.holdout.deterministicJSON()
+    try writeLongHorizonArtifactsIfRequested(
+      profile: profileData,
+      adversarial: adversarialData,
+      holdout: holdoutData)
     let texts = try [profileData, adversarialData, holdoutData].map { data in
       try #require(String(data: data, encoding: .utf8))
     }
@@ -292,6 +299,32 @@ struct LongHorizonProfessionalPolicyTests {
         adversarialData: adversarialData,
         holdoutData: holdoutData)
     }
+  }
+
+  private func writeLongHorizonArtifactsIfRequested(
+    profile: Data,
+    adversarial: Data,
+    holdout: Data
+  ) throws {
+    guard let outputDirectory = ProcessInfo.processInfo.environment[
+      "AUTOTECHNO_LONG_HORIZON_RESOURCE_DIRECTORY"
+    ], !outputDirectory.isEmpty else { return }
+    let directory = URL(fileURLWithPath: outputDirectory, isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: directory,
+      withIntermediateDirectories: true)
+    try profile.write(
+      to: directory.appendingPathComponent(
+        "\(LongHorizonProfessionalPolicyArtifacts.profileResource).json"),
+      options: .atomic)
+    try adversarial.write(
+      to: directory.appendingPathComponent(
+        "\(LongHorizonProfessionalPolicyArtifacts.adversarialResource).json"),
+      options: .atomic)
+    try holdout.write(
+      to: directory.appendingPathComponent(
+        "\(LongHorizonProfessionalPolicyArtifacts.holdoutResource).json"),
+      options: .atomic)
   }
 
   @Test("Runtime policy uses one exact calibrated rate and carries no PCM")

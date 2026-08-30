@@ -1414,6 +1414,152 @@ struct PhraseCompositionTests {
         #expect(rendered.kickMix.renderedKickEventCount == 1)
     }
 
+    @Test("Accepted score memory is fixed-capacity, age-bounded, and deterministic")
+    func resampledMemoryContinuationIsBounded() throws {
+        let scene = fixtureScene()
+        var memory = ResampledMemoryContinuationState()
+        for bar in 0..<6 {
+            let source = fixtureResolved(
+                bar: bar,
+                section: .groove,
+                character: .hypnoticLock,
+                roles: [.foundation],
+                events: [EnsembleResolvedEvent(
+                    voice: .kick,
+                    step: bar.isMultiple(of: 2) ? 0 : 4,
+                    intensity: 0.82,
+                    relocated: false
+                )]
+            )
+            memory = memory.advancing(scene: scene, resolvedBars: [source])
+        }
+
+        #expect(memory.sources.count ==
+                ResampledMemoryContinuationState.maximumSourceCount)
+        #expect(memory.sources.map(\.absoluteBar) == [2, 3, 4, 5])
+        let recalled = try #require(memory.source(recalledAt: 12, rotation: 1))
+        #expect(recalled.absoluteBar == 3)
+        #expect(recalled == memory.source(recalledAt: 12, rotation: 5))
+        #expect(recalled.fingerprint == recalled.fingerprint)
+        #expect(memory.source(
+            recalledAt: 5 +
+                ResampledMemoryContinuationState.maximumRecallAgeBars + 1,
+            rotation: 0
+        ) == nil)
+    }
+
+    @Test("Earlier accepted kick recipes return as cut and granular memory")
+    func crossPhraseResampledMemoryPlanningAndRendering() throws {
+        let scene = fixtureScene()
+        let dna = SceneDNA(scene: scene)
+        let sourceBar = fixtureResolved(
+            bar: 0,
+            section: .groove,
+            character: .hypnoticLock,
+            roles: [.foundation],
+            events: [EnsembleResolvedEvent(
+                voice: .kick, step: 0, intensity: 0.91, relocated: false
+            )]
+        )
+        let memory = ResampledMemoryContinuationState().advancing(
+            scene: scene,
+            resolvedBars: [sourceBar]
+        )
+        let source = try #require(memory.sources.first)
+
+        func recalled(
+            bar: Int,
+            character: PerformanceCharacter
+        ) throws -> (
+            resolved: ResolvedPerformanceBar,
+            composition: PhraseCompositionBar
+        ) {
+            let resolved = fixtureResolved(
+                bar: bar,
+                section: .breakdown,
+                character: character,
+                roles: [.atmosphere],
+                events: [EnsembleResolvedEvent(
+                    voice: .atmosphere,
+                    step: 0,
+                    intensity: 0.55,
+                    relocated: false
+                )]
+            )
+            let composition = try #require(PhraseCompositionResolver.resolve(
+                scene: scene,
+                dna: dna,
+                kind: .majorBreak,
+                resolvedBars: [resolved],
+                resampledMemory: memory
+            ).first)
+            return (resolved, composition)
+        }
+
+        let cut = try recalled(bar: 4, character: .brokenSuspension)
+        let granular = try recalled(bar: 5, character: .ambientDrift)
+        #expect(cut.composition.audioSlice?.texture == .cut)
+        #expect(granular.composition.audioSlice?.texture == .granularMemory)
+        #expect(cut.composition.audioSlice?.resampledMemorySource == source)
+        #expect(granular.composition.audioSlice?.resampledMemorySource == source)
+        #expect(cut.resolved.ensemble.events.allSatisfy { $0.voice != .kick })
+
+        let synth = SynthPerformancePlan(
+            scene: scene,
+            dna: dna,
+            kind: .majorBreak,
+            resolvedBars: [granular.resolved],
+            compositionBars: [granular.composition]
+        )
+        let synthBar = try #require(synth.bars.first)
+        func render() -> RenderedBar {
+            var renderState = RenderState()
+            var workspace = RenderWorkspace()
+            return VoiceRenderer.renderBar(
+                scene: scene,
+                sampleRate: 8_000,
+                state: &renderState,
+                dna: dna,
+                resolved: granular.resolved,
+                synthWorld: synth.world,
+                synthPerformance: synthBar,
+                workspace: &workspace,
+                layer: .full,
+                phraseKind: .majorBreak
+            )
+        }
+        let first = render()
+        let replay = render()
+        let evidence = first.audioSliceRenderEvidence
+        #expect(first.samples == replay.samples)
+        #expect(evidence == replay.audioSliceRenderEvidence)
+        #expect(evidence.active && evidence.finite)
+        #expect(synthBar.composition.audioSlice?.resampledMemorySource == source)
+        #expect(source.fingerprint != 0)
+        #expect(evidence.sourceSampleHash.count == 16)
+        #expect(evidence.outputSampleHash.count == 16)
+        #expect(evidence.sourceSampleHash != evidence.outputSampleHash)
+        #expect(evidence.grainCount > 0)
+        #expect(first.kickMix.renderedKickEventCount == 0)
+    }
+
+    @Test("Session memory changes only when a phrase plan is committed")
+    func sessionOwnedResampledMemory() throws {
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        let state = director.initialState()
+        let plan = director.plan(from: state)
+
+        #expect(state.memory.resampledMemory.sources.isEmpty)
+        #expect(!plan.endingResampledMemory.sources.isEmpty)
+        let advanced = state.advance(
+            using: plan,
+            quality: state.quality,
+            liveMasterHeadroom: state.liveMasterHeadroom
+        )
+        #expect(advanced.memory.resampledMemory == plan.endingResampledMemory)
+        #expect(state.memory.resampledMemory.sources.isEmpty)
+    }
+
     private func fixtureScene() -> TechnoScene {
         TechnoScene(
             intent: MusicalIntent(),

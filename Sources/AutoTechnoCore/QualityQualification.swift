@@ -2,16 +2,19 @@ import Foundation
 
 /// Stable versions for the calibrated single-primary quality contract.
 package enum QualityQualificationContract {
-    /// Version 24 binds episode-owned kick materials and authored source
+    /// Version 25 additionally binds bounded score-owned resampled memory:
+    /// earlier accepted kick recipes are regenerated without retaining PCM,
+    /// then transformed by the existing cut or granular slice renderer.
+    /// It retains episode-owned kick materials and authored source
     /// presence to the existing app-owned scheduled live PCM, exact mixer-to-player
     /// clock mapping, live BS.1770 evidence, bounded terminal attenuation, and
     /// its atomic commit at an unscheduled future boundary. Quality schema 44
     /// additionally binds source-local terminal release evidence while keeping
     /// intentional attack samples exact, alongside material-world/effect-target
     /// lineage and the retained cross-phrase consequences.
-    package static let schemaVersion = 44
+    package static let schemaVersion = 45
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v43"
+    package static let engineVersion = "autotechno-canonical-engine.v44"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

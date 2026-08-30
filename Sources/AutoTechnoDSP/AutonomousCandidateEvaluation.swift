@@ -3991,6 +3991,12 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
             slice.triggerCount == (composition.audioSlice?.triggers.count ?? 0) &&
             slice.sourceKind == composition.audioSlice?.sourceKind &&
             slice.texture == composition.audioSlice?.texture &&
+            (composition.audioSlice?.resampledMemorySource.map { source in
+                source.isComplete && source.absoluteBar < block.bar &&
+                    block.bar - source.absoluteBar <=
+                        ResampledMemoryContinuationState.maximumRecallAgeBars &&
+                    composition.audioSlice?.sourceKind == .kick
+            } ?? true) &&
             (composition.audioSlice?.texture != .granularMemory ||
                 slice.textureSeedFingerprint ==
                     AudioSliceRenderer.textureSeedFingerprint(
@@ -5854,7 +5860,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 38
+    package static let schemaVersion = 39
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -9203,7 +9209,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
 }
 
 package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sendable {
-    package static let schemaVersion = 9
+    package static let schemaVersion = 10
     package static let maximumCorrectionAttempts =
         QualityQualificationContract.maximumCorrectionRenders
     package static let maximumAttemptCount =

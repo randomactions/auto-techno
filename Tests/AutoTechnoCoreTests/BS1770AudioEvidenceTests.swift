@@ -2,7 +2,7 @@ import AutoTechnoDSP
 import Foundation
 import Testing
 
-@Suite("Professional Evidence v17 BS.1770")
+@Suite("Professional Evidence v25 BS.1770")
 struct BS1770AudioEvidenceTests {
     @Test("48 kHz K-weighting reproduces the BS.1770-5 coefficient tables")
     func referenceCoefficients() throws {

@@ -96,7 +96,7 @@ struct LongHorizonEnergyCoordinationTests {
     #expect(protected.longHorizonSelection.reason == .reservedPayoff)
     #expect(protected.longHorizonEnergyCoordination.reason == .protectedRareEvent)
     #expect(protected.longHorizonEnergyCoordination.target.isNeutral)
-    #expect(AutonomousTypedFingerprint.plan(fallback) == "de5054dc3dfb291f")
+    #expect(AutonomousTypedFingerprint.plan(fallback) == "8d42fd5d852b8f80")
   }
 
   @Test("Coordination provenance round-trips and rejects unsupported schema")

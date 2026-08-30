@@ -77,7 +77,7 @@
     {
       "id": "session-director-and-score",
       "name": "Session director and resolved score",
-      "responsibility": "Own the session identity, semantic intent, temporal memory, phrase selection, complete resolved bars, deterministic successor state, structured quality-recovery intent, finite recovery waves, and accepted-versus-presentation time semantics.",
+      "responsibility": "Own the session identity, semantic intent, temporal memory including accepted-only resampled source recipes, phrase selection, complete resolved bars, deterministic successor state, structured quality-recovery intent, finite recovery waves, and accepted-versus-presentation time semantics.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -89,11 +89,16 @@
         {
           "symbol": "AutonomousSessionState",
           "path": "Sources/AutoTechnoCore/AutonomousSession.swift"
+        },
+        {
+          "symbol": "ResampledMemoryContinuationState",
+          "path": "Sources/AutoTechnoCore/ResampledMemory.swift"
         }
       ],
       "state": [
         "AutonomousSessionState",
         "TemporalMusicalMemory",
+        "ResampledMemoryContinuationState",
         "AutonomousPreparationEpoch"
       ],
       "inputs": [
@@ -120,6 +125,7 @@
         "Sources/AutoTechnoCore/MusicalIntent.swift",
         "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
         "Sources/AutoTechnoCore/MusicalPerformance.swift",
+        "Sources/AutoTechnoCore/ResampledMemory.swift",
         "Sources/AutoTechnoCore/SeededGenerator.swift",
         "Sources/AutoTechnoCore/TechnoScene.swift"
       ],
@@ -141,7 +147,7 @@
     {
       "id": "performance-grammar-and-composition",
       "name": "Performance grammar and phrase composition",
-      "responsibility": "Resolve performance character, rhythmic relations, phrase-local slices, arpeggiation, pads, structural gestures, episode-bound kick materials, and score-owned feature articulations inside the canonical plan.",
+      "responsibility": "Resolve performance character, rhythmic relations, phrase-local and bounded earlier-source slices, arpeggiation, pads, structural gestures, episode-bound kick materials, and score-owned feature articulations inside the canonical plan.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -161,6 +167,7 @@
       ],
       "state": [
         "HarmonicContinuationState",
+        "ResampledMemorySource",
         "performance-character memory",
         "score-owned structural debts"
       ],
@@ -168,17 +175,20 @@
         "resolved phrase context",
         "modal identity",
         "performance character",
-        "long-horizon episode and presentation bar"
+        "long-horizon episode and presentation bar",
+        "accepted bounded resampled-memory recipes"
       ],
       "outputs": [
         "PhraseCompositionBar",
+        "bounded earlier kick-source recall",
         "foundation and kick relations",
         "upper and percussion articulations",
         "episode-bound kick material articulation"
       ],
       "evidence": [
         "score-side relation and event fingerprints",
-        "kick episode, material, progress, and presence provenance"
+        "kick episode, material, progress, and presence provenance",
+        "resampled source recipe, source hash, and output hash"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/ClimaxHang.swift",
@@ -387,7 +397,7 @@
     {
       "id": "voice-and-phrase-rendering",
       "name": "Voice and phrase rendering",
-      "responsibility": "Render the canonical resolved score through internal voices, phrase composition, modal percussion, kick/upper articulations, source-local terminal de-clicking, and stable continuation into immutable stereo blocks and role taps.",
+      "responsibility": "Render the canonical resolved score through internal voices, phrase composition including reconstructed earlier kick recipes, modal percussion, kick/upper articulations, source-local terminal de-clicking, and stable continuation into immutable stereo blocks and role taps.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -584,9 +594,9 @@
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityVerdict.swift",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v24.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v24.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v24.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v25.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v25.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v25.json",
         "Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift",
         "Sources/AutoTechnoDSP/StreamingPerceptualEvidence.swift",
         "Sources/AutoTechnoDSP/UpperTimbreEvidence.swift"
@@ -661,9 +671,9 @@
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicy.swift",
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift",
         "Sources/AutoTechnoDSP/LongHorizonSignalTrajectory.swift",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v11.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v11.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v11.json"
+        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v12.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v12.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v12.json"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/LongHorizonEffectDoseTests.swift",

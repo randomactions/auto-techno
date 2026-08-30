@@ -27,15 +27,15 @@ score/graph snapshots without using loudness or density alone as proof.
 Graph evidence binds the world fingerprint, requested five-coordinate target,
 realized graph vector, distance, protected routing, and at most one changed node
 per phrase. Existing transition-tail and route-recovery contracts remain.
-The exact engine-v43 primary-v24 and long-horizon-v11 development, adversarial,
+The exact engine-v44 primary-v25 and long-horizon-v12 development, adversarial,
 and disjoint-holdout artifacts now pass and replace the ineligible v38 set.
 Listening, real app/route QA, latency observation, and physical-output soak
 remain separate unverified gates.
 
 The current qualified offline implementation is
-`autotechno-canonical-engine.v43` under quality-contract schema 44,
-candidate-vector schema 38, candidate-transaction schema 9, and Professional
-Evidence v24. Primary profile/evaluator v24 and long-horizon policy v11 are the
+`autotechno-canonical-engine.v44` under quality-contract schema 45,
+candidate-vector schema 39, candidate-transaction schema 10, and Professional
+Evidence v24. Primary profile/evaluator v25 and long-horizon policy v12 are the
 required exact identities; their artifact loaders fail closed on any mismatch.
 
 ## Status and purpose
@@ -54,9 +54,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 44, candidate-vector schema 38,
-candidate-transaction schema 9, and canonical engine identity
-`autotechno-canonical-engine.v43`. Its explicit modal, tuned-inharmonic,
+candidate uses quality-contract schema 45, candidate-vector schema 39,
+candidate-transaction schema 10, and canonical engine identity
+`autotechno-canonical-engine.v44`. Its explicit modal, tuned-inharmonic,
 deliberate-dissonance, and indefinite-pitch rules are defined in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md). It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
@@ -283,6 +283,20 @@ rate-stable; and the cut branch must remain byte-identical. This qualifies one
 bounded texture distinction, not equivalence to a named product or listening
 approval.
 
+Resampled memory extends source choice without retaining samples. Accepted
+session continuation keeps at most four immutable kick recipes and rejects any
+recall older than 256 bars. The typed plan fingerprint binds the chosen recipe;
+detached rendering reconstructs its canonical kick PCM at the current route
+rate before the existing cut or granular renderer runs. Candidate validation
+requires a complete prior-bar recipe, kick source kind, bounded age, and the
+ordinary regenerated source/output hashes. Missing or malformed memory falls
+back to the current bar source and cannot mutate continuation. The engine-v44
+primary-v25 calibration accepts all 36 development trajectories, its 34
+adversarial attacks pass, and all 56 observations from four disjoint holdout
+trajectories pass at 44.1 and 48 kHz; the compatible long-horizon-v12 artifacts
+are regenerated separately. These are automated offline qualifications, not
+listening, app playback, route-recovery, or physical-output proof.
+
 Pad rhythmic-modulation evidence extends the existing phrase-composition record;
 it does not create another synth, sequencer, or effect return. A naturally
 resolved latter-half major-break pad may carry one three-sixteenth relation whose
@@ -361,10 +375,10 @@ remain explicit rather than being hidden behind a blanket master crossfade.
 Tonal Motion patch boundaries separately retain comb/all-pass/echo memory while
 their patch-owned coefficients crossfade for 500 ms.
 
-`ProfessionalEvidenceReportBank` v23 accepts a bank only when every canonical
+`ProfessionalEvidenceReportBank` v25 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v24 from the v23 profile, v17 adversarial suite,
+exact-engine primary evaluator v25 from the v25 profile, v18 adversarial suite,
 and v15 disjoint holdout only after all three exact artifacts replay. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 36 complete 44.1/48 kHz journeys; four replacement holdout journeys
@@ -441,7 +455,7 @@ at 44.1/48 kHz. The immutable v11 artifact set rejects ten independent
 adversarial attacks and accepts two fresh disjoint holdout roots. Generated-
 graph evidence additionally bounds realized material-world count and requested-
 to-realized effect-world distance. It retains only reduced irreversible
-evidence and binds the exact engine-v43/primary-v24 identity. The pinned
+evidence and binds the exact engine-v44/primary-v25 identity. The pinned
 long-horizon profile, adversarial, and holdout fingerprints are
 `f42b9271579015ba`, `3ff4d0d51c72c99e`, and `d59e4ef6080bbe77`.
 
@@ -761,7 +775,7 @@ accepted PCM when none remain. At most five sidecars are retained for the select
 initial sidecar is released before a corrective render, and the declared
 preparation memory budget includes both that storage and bounded looper capture
 memory. Primary-v24 artifacts and
-engine-v43 candidate fingerprints remain
+engine-v44 candidate fingerprints remain
 unchanged because the sidecar cannot affect the primary plan, scheduled default
 PCM, evidence transaction, render continuation, or commit decision.
 
@@ -769,8 +783,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 44, candidate-vector schema 38,
-candidate-transaction schema 9, and canonical engine v43, the versioned
+Under quality-contract schema 45, candidate-vector schema 39,
+candidate-transaction schema 10, and canonical engine v44, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

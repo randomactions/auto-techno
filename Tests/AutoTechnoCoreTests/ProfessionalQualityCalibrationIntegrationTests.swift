@@ -25,6 +25,14 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             "AUTOTECHNO_RUN_PROFILE_CALIBRATION"
         ] == "1" else { return }
 
+        if let requested = ProcessInfo.processInfo.environment[
+            "AUTOTECHNO_CALIBRATION_SINGLE_SEED"
+        ], let seed = UInt64(requested) {
+            _ = try renderTrajectory(seed: seed)
+            progress("single-seed-ready seed=\(seed)")
+            return
+        }
+
         let calibrationTrajectories = try calibrationSeeds.map(
             renderTrajectory(seed:)
         )
@@ -311,16 +319,16 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                     ProfessionalQualityCalibrationProfile.requiredSampleRates.count)
         #expect(profile.isComplete)
         #expect(profile.usesDiverseCalibration)
-        #expect(profile.schemaVersion == 16)
+        #expect(profile.schemaVersion == 17)
         #expect(profile.observationVersion ==
                 ProfessionalQualityObservation.observationVersion)
         #expect(profile.sourceTrajectoryCount == calibrationSeeds.count)
         #expect(adversarial.passed)
-        #expect(adversarial.schemaVersion == 17)
+        #expect(adversarial.schemaVersion == 18)
         #expect(adversarial.cases.count ==
                 ProfessionalQualityAdversarialScenario.allCases.count)
         #expect(holdout.qualified)
-        #expect(holdout.schemaVersion == 15)
+        #expect(holdout.schemaVersion == 16)
         #expect(holdout.holdoutTrajectoryCount == holdoutSeeds.count)
         #expect(holdout.overlappingSourceBankCount == 0)
         #expect(primaryEvaluator.policyVersion.contains(profile.fingerprint))
@@ -834,6 +842,11 @@ struct ProfessionalQualityCalibrationIntegrationTests {
 
         for _ in 0..<maximumPhrases {
             let plan = director.plan(from: state)
+            progress(
+                "prepare-begin seed=\(seed) rate=\(Int(sampleRate)) " +
+                "phrase=\(plan.phraseIndex) bar=\(plan.startBar) " +
+                "kind=\(plan.kind.rawValue)"
+            )
             let neverCancelled: @Sendable () -> Bool = { false }
             let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
                 plan: plan,
@@ -846,6 +859,10 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 incomingQualityState: state.quality,
                 evaluator: ProfessionalEvidenceOnlyEvaluator(),
                 cancellationRequested: neverCancelled
+            )
+            progress(
+                "prepare-end seed=\(seed) rate=\(Int(sampleRate)) " +
+                "phrase=\(plan.phraseIndex)"
             )
             if let failure = outcome.failure {
                 progress(

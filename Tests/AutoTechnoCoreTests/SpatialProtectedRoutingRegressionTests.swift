@@ -1157,7 +1157,8 @@ struct SpatialProtectedRoutingRegressionTests {
             endingInterlockState: plan.endingInterlockState,
             endingSpatialContrastState: plan.endingSpatialContrastState,
             endingNarrativeState: plan.endingNarrativeState,
-            harmonicContinuation: plan.incomingHarmonicContinuation
+            harmonicContinuation: plan.incomingHarmonicContinuation,
+            resampledMemory: plan.incomingResampledMemory
         )
     }
 }

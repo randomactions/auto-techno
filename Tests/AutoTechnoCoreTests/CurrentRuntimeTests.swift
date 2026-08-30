@@ -6,41 +6,41 @@ import Testing
 
 @Suite("Current autonomous runtime")
 struct CurrentRuntimeTests {
-    @Test("Episode-bound kick identities advance as one exact contract")
+    @Test("Resampled-memory identities advance as one exact contract")
     func sourceTerminalDeclickPrimaryIdentityContract() {
-        #expect(QualityQualificationContract.schemaVersion == 44)
+        #expect(QualityQualificationContract.schemaVersion == 45)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v43")
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 38)
-        #expect(ProfessionalQualityObservation.schemaVersion == 16)
-        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 16)
+                "autotechno-canonical-engine.v44")
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 39)
+        #expect(ProfessionalQualityObservation.schemaVersion == 17)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 17)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v24")
+                "autotechno-professional-quality-profile.v25")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v24")
+                "autotechno-candidate-evaluator.primary-calibrated.v25")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v24")
-        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 17)
+                "autotechno-quality.primary-calibrated.v25")
+        #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 18)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
-                "autotechno-professional-quality-adversarial.v17")
-        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 15)
+                "autotechno-professional-quality-adversarial.v18")
+        #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 16)
         #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
-                "autotechno-professional-quality-holdout.v15")
+                "autotechno-professional-quality-holdout.v16")
         #expect(CanonicalJourneyQualificationReport.currentEvidenceScope ==
                 "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-granular-memory-pitch-identity-transition-tail-material-world-source-terminal-declick-live-commit-recovery.v24")
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 9)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 10)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 3)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 24)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 25)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v24")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v24"))
+                "autotechno-professional-evidence.v25")
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v25"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v24"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v24"))
+            .hasSuffix("-v25"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v25"))
     }
 
-    @Test("Only bundled v24 primary resources remain")
-    func primaryResourcesAreV24Only() {
+    @Test("Only bundled v25 primary resources remain")
+    func primaryResourcesAreV25Only() {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
         for stem in ["profile", "adversarial-suite", "holdout"] {
@@ -91,8 +91,10 @@ struct CurrentRuntimeTests {
                 resourceDirectory.appendingPathComponent("\(prefix)-v22.json").path))
             #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v23.json").path))
-            #expect(FileManager.default.fileExists(atPath:
+            #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v24.json").path))
+            #expect(FileManager.default.fileExists(atPath:
+                resourceDirectory.appendingPathComponent("\(prefix)-v25.json").path))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v1"))
             #expect(!ProfessionalQualityPrimaryArtifacts
@@ -139,8 +141,10 @@ struct CurrentRuntimeTests {
                 .containsBundledResource(named: "\(prefix)-v22"))
             #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v23"))
-            #expect(ProfessionalQualityPrimaryArtifacts
+            #expect(!ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v24"))
+            #expect(ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: "\(prefix)-v25"))
         }
         #expect(throws: Never.self) {
             _ = try ProfessionalQualityPrimaryArtifacts.load()
@@ -590,7 +594,7 @@ struct RepositorySurfaceTests {
             contentsOf: repositoryRoot.appendingPathComponent("docs/ROADMAP.md"),
             encoding: .utf8
         )
-        #expect(roadmap.contains("34-case v17 adversarial suite"))
+        #expect(roadmap.contains("34-case v18 adversarial suite"))
         #expect(!roadmap.contains("fourteen-case adversarial suite"))
 
         for document in [
@@ -632,13 +636,13 @@ struct RepositorySurfaceTests {
         }.joined(separator: "\n").lowercased()
 
         for required in [
-            "autotechno-canonical-engine.v43",
-            "quality-contract schema 44",
-            "candidate-vector schema 38",
-            "candidate-transaction schema 9",
-            "professional evidence v24",
-            "profile v24",
-            "evaluator v24",
+            "autotechno-canonical-engine.v44",
+            "quality-contract schema 45",
+            "candidate-vector schema 39",
+            "candidate-transaction schema 10",
+            "professional evidence v25",
+            "profile v25",
+            "evaluator v25",
             "live feedback",
             "physical-output soak",
         ] {

@@ -461,6 +461,10 @@ private extension AutonomousTypedFingerprint {
             sink.field("semitone"); sink.int(voice.semitone)
             sink.field("frequencyRatio"); sink.double(voice.frequencyRatio)
         }
+        sink.field("incomingResampledMemory")
+        encode(value.incomingResampledMemory, into: &sink)
+        sink.field("endingResampledMemory")
+        encode(value.endingResampledMemory, into: &sink)
         sink.field("endingInterlockState"); encode(value.endingInterlockState, into: &sink)
         sink.field("endingSpatialContrastState")
         encode(value.endingSpatialContrastState, into: &sink)
@@ -569,6 +573,11 @@ private extension AutonomousTypedFingerprint {
             sink.field("sourceKind"); sink.raw(slice.sourceKind.rawValue)
             sink.field("texture"); sink.raw(slice.texture.rawValue)
             sink.field("textureSeed"); sink.uint64(slice.textureSeed)
+            sink.field("resampledMemorySource")
+            sink.presence(slice.resampledMemorySource != nil)
+            if let source = slice.resampledMemorySource {
+                encode(source, into: &sink)
+            }
             sink.field("triggers"); sink.collection(slice.triggers.count)
             for trigger in slice.triggers {
                 sink.aggregate("AudioSliceTrigger")
@@ -622,6 +631,29 @@ private extension AutonomousTypedFingerprint {
             sink.field("rhythmicModulationPhaseOffset")
             sink.int(pad.rhythmicModulation.phaseOffset)
         }
+    }
+
+    static func encode(
+        _ value: ResampledMemoryContinuationState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("ResampledMemoryContinuationState")
+        sink.collection(value.sources.count)
+        for source in value.sources { encode(source, into: &sink) }
+    }
+
+    static func encode(
+        _ value: ResampledMemorySource,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("ResampledMemorySource")
+        sink.field("absoluteBar"); sink.int(value.absoluteBar)
+        sink.field("sourceStep"); sink.int(value.sourceStep)
+        sink.field("synthesisSeed"); sink.uint64(value.synthesisSeed)
+        sink.field("bpm"); sink.double(value.bpm)
+        sink.field("section"); sink.raw(value.section.rawValue)
+        sink.field("combinedAccent"); sink.double(value.combinedAccent)
+        sink.field("kickMorphology"); encode(value.kickMorphology, into: &sink)
     }
 
     static func encode(_ value: ResolvedUpperNote, into sink: inout StreamingFNV1a) {
