@@ -615,13 +615,11 @@ struct SpatialProtectedRoutingRegressionTests {
                 $0.arrangementGesture != .minimalize &&
                 !$0.groovePulses.isEmpty
         })
-        let authoredIntensityByStep: [Int: Double] = [
-            1: 0.30, 3: 0.72, 5: 0.30, 7: 0.30,
-            9: 0.72, 11: 0.30, 13: 0.30, 15: 0.72,
-        ]
-        #expect(source.groovePulses.allSatisfy {
-            authoredIntensityByStep[$0.step] == $0.intensity
-        })
+        #expect(source.groovePulses.map(\.intensity).sorted() ==
+                [0.30, 0.72, 0.30, 0.30, 0.72, 0.30, 0.30, 0.72].sorted())
+        #expect((source.percussionPolymetricEvidence?.eventCount ?? -1) >=
+                source.groovePulses.count)
+        #expect(source.percussionPolymetricEvidence?.protectedEventsEqual == true)
         let pulseEvents = source.ensemble.events.filter { $0.voice == .groovePulse }
         let isolated = ResolvedPerformanceBar(
             performance: source.performance,
@@ -946,17 +944,27 @@ struct SpatialProtectedRoutingRegressionTests {
             graphState: &neutralGraphState
         )
 
-        let toneEvent = tone[barIndex].events.first {
-            $0.voice == .synth && $0.step == motif.step
+        let toneBlock = tone[barIndex]
+        let neutralBlock = neutral[barIndex]
+        let toneAppliedStep = toneBlock.synthPerformance.relocatedUpperStep(
+            for: motif.voice,
+            sourceStep: motif.step
+        )
+        let neutralAppliedStep = neutralBlock.synthPerformance.relocatedUpperStep(
+            for: motif.voice,
+            sourceStep: motif.step
+        )
+        let toneEvent = toneBlock.events.first {
+            $0.voice == .synth && $0.step == toneAppliedStep
         }
-        let neutralEvent = neutral[barIndex].events.first {
-            $0.voice == .synth && $0.step == motif.step
+        let neutralEvent = neutralBlock.events.first {
+            $0.voice == .synth && $0.step == neutralAppliedStep
         }
         #expect((toneEvent?.spectralAperture ?? 0) > 0)
         #expect((toneEvent?.bandPassBlend ?? 0) > 0)
         #expect(neutralEvent?.spectralAperture == 0)
         #expect(neutralEvent?.bandPassBlend == 0)
-        #expect(tone[barIndex].left != neutral[barIndex].left)
+        #expect(toneBlock.left != neutralBlock.left)
         #expect(tone.map(\.protectedFoundationSampleHash) ==
                 neutral.map(\.protectedFoundationSampleHash))
     }
@@ -1118,6 +1126,8 @@ struct SpatialProtectedRoutingRegressionTests {
             percussionGear: resolved.percussionGear,
             performanceCharacter: resolved.performanceCharacter,
             foundationBehavior: resolved.foundationBehavior,
+            foundationRhythmicRelation:
+                resolved.foundationRhythmicRelation,
             foundationCompanion: resolved.foundationCompanion,
             pulseEchoEnabled: resolved.pulseEchoEnabled,
             interlockChapter: interlockChapter ?? resolved.interlockChapter,
@@ -1131,7 +1141,11 @@ struct SpatialProtectedRoutingRegressionTests {
             spatialContrast: spatialContrast ?? resolved.spatialContrast,
             narrative: resolved.narrative,
             kickSyntaxRole: resolved.kickSyntaxRole,
+            climaxHang: resolved.climaxHang,
             percussionEchoTexture: resolved.percussionEchoTexture,
+            percussionPolymetricEvidence:
+                resolved.percussionPolymetricEvidence,
+            upperMusicalPump: resolved.upperMusicalPump,
             harmonicDisclosureRelationship:
                 resolved.harmonicDisclosureRelationship,
             kickMorphology: resolved.kickMorphology
@@ -1158,7 +1172,14 @@ struct SpatialProtectedRoutingRegressionTests {
             endingSpatialContrastState: plan.endingSpatialContrastState,
             endingNarrativeState: plan.endingNarrativeState,
             harmonicContinuation: plan.incomingHarmonicContinuation,
-            resampledMemory: plan.incomingResampledMemory
+            resampledMemory: plan.incomingResampledMemory,
+            longHorizonSelection: plan.longHorizonSelection,
+            longHorizonEnergyCoordination:
+                plan.longHorizonEnergyCoordination,
+            materialWorld: plan.materialWorld,
+            incomingEffectCarrierState: plan.effectCarrier.state,
+            qualityRecoveryContext: plan.qualityRecoveryContext,
+            presentationStartBar: plan.presentationStartBar
         )
     }
 }

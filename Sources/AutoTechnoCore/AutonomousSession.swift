@@ -398,27 +398,70 @@ package enum KickSyntaxRole: String, CaseIterable, Sendable {
 /// One bounded input-window -> delay -> output-window relationship on the
 /// existing percussion role. The score chooses only geometry; renderer-owned
 /// filter, feedback, gain, and boundary fades remain one canonical contract.
-package enum PercussionEchoTextureRelation: String, CaseIterable, Sendable {
+package enum PercussionEchoTextureRelation: String, CaseIterable, Codable, Sendable {
     case gatedEcho
     case anticipationSwell
+    case spatialDust
 }
 
-package struct PercussionEchoTextureArticulation: Equatable, Sendable {
+package enum SpatialDustDominantSide: String, CaseIterable, Codable, Sendable {
+    case left
+    case right
+}
+
+package struct SpatialDustCadence: Codable, Equatable, Sendable {
+    package let worldID: UInt64
+    package let absoluteBar: Int
+    package let cadencePhase: Int
+    package let gapPhase: Int
+    package let active: Bool
+    package let dominantSide: SpatialDustDominantSide?
+
+    package init(
+        worldID: UInt64,
+        absoluteBar: Int,
+        cadencePhase: Int,
+        gapPhase: Int,
+        active: Bool,
+        dominantSide: SpatialDustDominantSide?
+    ) {
+        self.worldID = worldID
+        self.absoluteBar = absoluteBar
+        self.cadencePhase = cadencePhase
+        self.gapPhase = gapPhase
+        self.active = active
+        self.dominantSide = dominantSide
+    }
+}
+
+package struct PercussionEchoTextureArticulation: Codable, Equatable, Sendable {
     package let relation: PercussionEchoTextureRelation
     package let inputStep: Int
     package let outputStartStep: Int
     package let outputEndStep: Int
+    package let worldID: UInt64
+    package let cadencePhase: Int
+    package let gapPhase: Int
+    package let dominantSide: SpatialDustDominantSide?
 
     package init(
         relation: PercussionEchoTextureRelation = .gatedEcho,
         inputStep: Int,
         outputStartStep: Int,
-        outputEndStep: Int
+        outputEndStep: Int,
+        worldID: UInt64 = 0,
+        cadencePhase: Int = -1,
+        gapPhase: Int = -1,
+        dominantSide: SpatialDustDominantSide? = nil
     ) {
         self.relation = relation
         self.inputStep = inputStep
         self.outputStartStep = outputStartStep
         self.outputEndStep = outputEndStep
+        self.worldID = worldID
+        self.cadencePhase = cadencePhase
+        self.gapPhase = gapPhase
+        self.dominantSide = dominantSide
     }
 }
 
@@ -436,13 +479,48 @@ package enum PercussionEchoTextureResolver {
         ClimaxHangContract.startStep
     package static let minimumAnticipationRiseDB = 3.0
 
+    package static func spatialDustCadence(
+        materialWorld: LongHorizonMaterialWorldPlan,
+        absoluteBar: Int
+    ) -> SpatialDustCadence? {
+        guard absoluteBar >= 0,
+              materialWorld.worldID != 0,
+              materialWorld.polymetricGrammar.isEnabled,
+              materialWorld.polymetricGrammar.isValid else {
+            return nil
+        }
+        let relativeBar = max(
+            0,
+            absoluteBar - materialWorld.polymetricGrammar.activationBar
+        )
+        let cadencePhase = positiveModulo(relativeBar, 4)
+        let gapPhase = Int(
+            (materialWorld.worldID ^ 0x5350_4154_4941_4C44) % 4
+        )
+        let active = cadencePhase != gapPhase
+        let completedCycles = relativeBar / 4
+        let activeBarsBefore = completedCycles * 3 +
+            (0..<cadencePhase).filter { $0 != gapPhase }.count
+        return SpatialDustCadence(
+            worldID: materialWorld.worldID,
+            absoluteBar: absoluteBar,
+            cadencePhase: cadencePhase,
+            gapPhase: gapPhase,
+            active: active,
+            dominantSide: active
+                ? (activeBarsBefore.isMultiple(of: 2) ? .left : .right)
+                : nil
+        )
+    }
+
     package static func articulation(
         ensemble: EnsembleContext,
         kind: AutonomousPhraseKind,
         character: PerformanceCharacter,
         gesture: ArrangementGesture,
         kickSyntaxRole: KickSyntaxRole = .grounded,
-        absoluteBar: Int? = nil
+        absoluteBar: Int? = nil,
+        materialWorld: LongHorizonMaterialWorldPlan = .neutral
     ) -> PercussionEchoTextureArticulation? {
         guard let source = eligibleSourceEvents(in: ensemble).first else {
             return nil
@@ -472,7 +550,24 @@ package enum PercussionEchoTextureResolver {
                 outputEndStep: anticipationSwellOutputEndStep
             )
         }
-        return nil
+        guard let absoluteBar,
+              let cadence = spatialDustCadence(
+                materialWorld: materialWorld,
+                absoluteBar: absoluteBar
+              ) else {
+            return nil
+        }
+        guard cadence.active else { return nil }
+        return PercussionEchoTextureArticulation(
+            relation: .spatialDust,
+            inputStep: source.step,
+            outputStartStep: 0,
+            outputEndStep: 16,
+            worldID: materialWorld.worldID,
+            cadencePhase: cadence.cadencePhase,
+            gapPhase: cadence.gapPhase,
+            dominantSide: cadence.dominantSide
+        )
     }
 
     package static func eligibleSourceEvents(
@@ -530,6 +625,8 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
     package let kickSyntaxRole: KickSyntaxRole
     package let climaxHang: ClimaxHangArticulation?
     package let percussionEchoTexture: PercussionEchoTextureArticulation?
+    package let percussionPolymetricEvidence: LongHorizonPolymetricBarEvidence?
+    package let upperMusicalPump: UpperMusicalPumpArticulation
     package let harmonicDisclosureRelationship: LongHorizonEnergyRelationship
     package let kickMorphology: KickMorphologyArticulation
 
@@ -550,6 +647,9 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
                  kickSyntaxRole: KickSyntaxRole = .grounded,
                  climaxHang: ClimaxHangArticulation? = nil,
                  percussionEchoTexture: PercussionEchoTextureArticulation? = nil,
+                 percussionPolymetricEvidence:
+                    LongHorizonPolymetricBarEvidence? = nil,
+                 upperMusicalPump: UpperMusicalPumpArticulation = .neutral,
                  harmonicDisclosureRelationship:
                     LongHorizonEnergyRelationship = .hold,
                  kickMorphology: KickMorphologyArticulation? = nil) {
@@ -590,12 +690,74 @@ package struct ResolvedPerformanceBar: Equatable, Sendable {
         self.kickSyntaxRole = kickSyntaxRole
         self.climaxHang = climaxHang
         self.percussionEchoTexture = percussionEchoTexture
+        self.percussionPolymetricEvidence = percussionPolymetricEvidence
+        self.upperMusicalPump = upperMusicalPump
         self.harmonicDisclosureRelationship = harmonicDisclosureRelationship
         self.kickMorphology = kickMorphology ??
             KickMorphologyResolver.balancedFallback(
                 sessionSeed: performance.eventSeed,
                 absoluteBar: performance.bar
             )
+    }
+
+    package func withUpperMusicalPump(
+        _ articulation: UpperMusicalPumpArticulation
+    ) -> ResolvedPerformanceBar {
+        ResolvedPerformanceBar(
+            performance: performance,
+            ensemble: ensemble,
+            arrangementGesture: arrangementGesture,
+            percussionGear: percussionGear,
+            performanceCharacter: performanceCharacter,
+            foundationBehavior: foundationBehavior,
+            foundationRhythmicRelation: foundationRhythmicRelation,
+            foundationCompanion: foundationCompanion,
+            pulseEchoEnabled: pulseEchoEnabled,
+            interlockChapter: interlockChapter,
+            groovePulses: groovePulses,
+            closedHatDecayArticulations: closedHatDecayArticulations,
+            upperPercussionTailArticulations: upperPercussionTailArticulations,
+            modalPercussionArticulations: modalPercussionArticulations,
+            spatialContrast: spatialContrast,
+            narrative: narrative,
+            kickSyntaxRole: kickSyntaxRole,
+            climaxHang: climaxHang,
+            percussionEchoTexture: percussionEchoTexture,
+            percussionPolymetricEvidence: percussionPolymetricEvidence,
+            upperMusicalPump: articulation,
+            harmonicDisclosureRelationship: harmonicDisclosureRelationship,
+            kickMorphology: kickMorphology
+        )
+    }
+
+    package func withSpatialContrast(
+        _ articulation: SpatialContrastArticulation
+    ) -> ResolvedPerformanceBar {
+        ResolvedPerformanceBar(
+            performance: performance,
+            ensemble: ensemble,
+            arrangementGesture: arrangementGesture,
+            percussionGear: percussionGear,
+            performanceCharacter: performanceCharacter,
+            foundationBehavior: foundationBehavior,
+            foundationRhythmicRelation: foundationRhythmicRelation,
+            foundationCompanion: foundationCompanion,
+            pulseEchoEnabled: pulseEchoEnabled,
+            interlockChapter: interlockChapter,
+            groovePulses: groovePulses,
+            closedHatDecayArticulations: closedHatDecayArticulations,
+            upperPercussionTailArticulations: upperPercussionTailArticulations,
+            modalPercussionArticulations: modalPercussionArticulations,
+            spatialContrast: articulation,
+            narrative: narrative,
+            kickSyntaxRole: kickSyntaxRole,
+            climaxHang: climaxHang,
+            percussionEchoTexture: percussionEchoTexture,
+            percussionPolymetricEvidence: percussionPolymetricEvidence,
+            upperMusicalPump: upperMusicalPump,
+            harmonicDisclosureRelationship: harmonicDisclosureRelationship,
+            kickMorphology: kickMorphology
+        )
     }
 
     package func groovePulse(at step: Int) -> GroovePulseArticulation? {
@@ -656,7 +818,8 @@ package enum KickSyntaxResolver {
     package static func resolve(
         resolvedBars: [ResolvedPerformanceBar],
         kind: AutonomousPhraseKind,
-        paidDebtIDs: [Int]
+        paidDebtIDs: [Int],
+        materialWorld: LongHorizonMaterialWorldPlan = .neutral
     ) -> [ResolvedPerformanceBar] {
         guard resolvedBars.count <= 16,
               kind == .energyRelease,
@@ -732,17 +895,20 @@ package enum KickSyntaxResolver {
         result[firstWithheldIndex] = replacingKickScore(
             in: firstWithheld,
             role: .withheld,
-            phraseKind: kind
+            phraseKind: kind,
+            materialWorld: materialWorld
         )
         result[secondWithheldIndex] = replacingKickScore(
             in: secondWithheld,
             role: .withheld,
-            phraseKind: kind
+            phraseKind: kind,
+            materialWorld: materialWorld
         )
         result[recoveryIndex] = replacingKickScore(
             in: recovery,
             role: .recovery,
-            phraseKind: kind
+            phraseKind: kind,
+            materialWorld: materialWorld
         )
         return result
     }
@@ -778,7 +944,8 @@ package enum KickSyntaxResolver {
     private static func replacingKickScore(
         in resolved: ResolvedPerformanceBar,
         role: KickSyntaxRole,
-        phraseKind: AutonomousPhraseKind
+        phraseKind: AutonomousPhraseKind,
+        materialWorld: LongHorizonMaterialWorldPlan
     ) -> ResolvedPerformanceBar {
         let hang = ClimaxHangResolver.articulation(
             kind: phraseKind,
@@ -835,8 +1002,10 @@ package enum KickSyntaxResolver {
                 character: resolved.performanceCharacter,
                 gesture: resolved.arrangementGesture,
                 kickSyntaxRole: role,
-                absoluteBar: resolved.performance.bar
+                absoluteBar: resolved.performance.bar,
+                materialWorld: materialWorld
             ),
+            percussionPolymetricEvidence: resolved.percussionPolymetricEvidence,
             harmonicDisclosureRelationship:
                 resolved.harmonicDisclosureRelationship,
             kickMorphology: resolved.kickMorphology
@@ -1469,6 +1638,7 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
     package let longHorizonSelection: LongHorizonPhraseSelection
     package let longHorizonEnergyCoordination: LongHorizonEnergyCoordination
     package let materialWorld: LongHorizonMaterialWorldPlan
+    package let effectCarrier: LongHorizonEffectCarrierArticulation
     package let longHorizonEffectSentence: LongHorizonEffectSentence?
     package let qualityRecoveryContext: AutonomousQualityRecoveryContext
 
@@ -1486,6 +1656,7 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
                  longHorizonSelection: LongHorizonPhraseSelection? = nil,
                  longHorizonEnergyCoordination: LongHorizonEnergyCoordination? = nil,
                  materialWorld: LongHorizonMaterialWorldPlan = .neutral,
+                 incomingEffectCarrierState: LongHorizonEffectCarrierState? = nil,
                  qualityRecoveryContext: AutonomousQualityRecoveryContext = .neutral,
                  presentationStartBar suppliedPresentationStartBar: Int? = nil) {
         self.phraseIndex = phraseIndex
@@ -1502,22 +1673,16 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
         self.kind = kind
         self.scene = scene
         self.dna = dna
-        self.resolvedBars = resolvedBars
         self.openedDebt = openedDebt
         self.paidDebtIDs = paidDebtIDs
         self.requestsTopologyMutation = requestsTopologyMutation
         self.interest = interest
-        performanceCharacterEvidence = PerformanceCharacterEvidence(
-            resolvedBars: resolvedBars,
-            kind: kind,
-            paidDebtIDs: paidDebtIDs
-        )
         self.endingInterlockState = endingInterlockState
         self.endingSpatialContrastState = endingSpatialContrastState
         self.endingNarrativeState = endingNarrativeState
         incomingHarmonicContinuation = harmonicContinuation
         incomingResampledMemory = resampledMemory
-        phraseComposition = PhraseCompositionResolver.resolve(
+        let resolvedComposition = PhraseCompositionResolver.resolve(
             scene: scene,
             dna: dna,
             kind: kind,
@@ -1525,8 +1690,9 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
             harmonicContinuation: harmonicContinuation,
             resampledMemory: resampledMemory
         )
+        phraseComposition = resolvedComposition
         endingHarmonicContinuation = HarmonicContinuationState(
-            voices: phraseComposition.compactMap(\.padVoicing).last?.voices ??
+            voices: resolvedComposition.compactMap(\.padVoicing).last?.voices ??
                 harmonicContinuation.voices
         )
         endingResampledMemory = resampledMemory.advancing(
@@ -1555,11 +1721,51 @@ package struct AutonomousPhrasePlan: Equatable, Sendable {
             selectionReason: resolvedSelection.reason
         )
         self.materialWorld = materialWorld
+        let synthPerformance = SynthPerformancePlan(
+            scene: scene,
+            dna: dna,
+            kind: kind,
+            resolvedBars: resolvedBars,
+            materialWorld: materialWorld,
+            compositionBars: resolvedComposition
+        )
+        let carrier = LongHorizonEffectCarrierResolver.resolve(
+            incoming: incomingEffectCarrierState ??
+                .unselected(worldID: materialWorld.worldID),
+            materialWorld: materialWorld,
+            phraseIndex: phraseIndex,
+            phraseKind: kind,
+            synthPerformance: synthPerformance
+        )
+        effectCarrier = carrier
+        let spatiallyAlignedBars = resolvedBars.enumerated().map { index, resolved in
+            resolved.withSpatialContrast(
+                synthPerformance.relocatedSpatialContrast(
+                    for: resolved,
+                    barIndex: index
+                )
+            )
+        }
+        let articulatedBars = spatiallyAlignedBars.map { resolved in
+            resolved.withUpperMusicalPump(
+                UpperMusicalPumpResolver.articulation(
+                    resolved: resolved,
+                    phraseKind: kind,
+                    carrier: carrier
+                )
+            )
+        }
+        self.resolvedBars = articulatedBars
+        performanceCharacterEvidence = PerformanceCharacterEvidence(
+            resolvedBars: articulatedBars,
+            kind: kind,
+            paidDebtIDs: paidDebtIDs
+        )
         self.qualityRecoveryContext = qualityRecoveryContext
         longHorizonEffectSentence = LongHorizonEffectSentence.resolving(
             phraseIndex: self.phraseIndex,
             phraseKind: kind,
-            resolvedBars: self.resolvedBars
+            resolvedBars: articulatedBars
         )
     }
 
@@ -1736,8 +1942,35 @@ package enum PhraseInterestEvaluator {
             let actual = resolved.groovePulses.map(\.step)
             let expectedSet = Set(expected)
             expectedWeakPositions += expectedSet.count
-            matchedWeakPositions += actual.filter(expectedSet.contains).count
-            unexpectedWeakPositions += actual.filter { !expectedSet.contains($0) }.count
+            let evaluatesAppliedPolymeter =
+                !actual.isEmpty &&
+                resolved.percussionPolymetricEvidence.map { evidence in
+                    evidence.lane == .nonFoundationPercussion &&
+                        evidence.protectedEventsEqual &&
+                        evidence.combinedPeriodInSteps >= Int(
+                            LongHorizonPolymetricGrammarSchema
+                                .minimumCombinedPeriodInBars *
+                                Double(LongHorizonPolymetricGrammarSchema.stepsPerBar)
+                        ) &&
+                        evidence.combinedPeriodInSteps <= Int(
+                            LongHorizonPolymetricGrammarSchema
+                                .maximumCombinedPeriodInBars *
+                                Double(LongHorizonPolymetricGrammarSchema.stepsPerBar)
+                        )
+                } == true
+            if evaluatesAppliedPolymeter {
+                // The grammar preserves the already-arbitrated pulse count but
+                // deliberately changes its onset geometry. Evaluate coverage
+                // against that final score-owned relation; the legacy weak-grid
+                // oracle remains exact whenever no valid grammar is attached.
+                matchedWeakPositions += min(actual.count, expectedSet.count)
+                unexpectedWeakPositions += max(0, actual.count - expectedSet.count)
+            } else {
+                matchedWeakPositions += actual.filter(expectedSet.contains).count
+                unexpectedWeakPositions += actual.filter {
+                    !expectedSet.contains($0)
+                }.count
+            }
             for articulation in resolved.groovePulses {
                 switch articulation.pulseClass {
                 case .leadingWeak:
@@ -2231,7 +2464,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 gesture: gesture,
                 relationship: energyTarget.foundationAuthority
             )
-            let ensemble = Self.ensemblePlan(
+            let baselineEnsemble = Self.ensemblePlan(
                 dna: dna, bar: bar, focus: focusRole,
                 release: kind == .energyRelease, kind: kind,
                 character: character,
@@ -2239,6 +2472,13 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 companion: foundation.companion,
                 gear: gear, gesture: gesture
             )
+            let percussionPolymetric =
+                LongHorizonPolymetricGrammarResolver.relocatePercussion(
+                    ensemble: baselineEnsemble,
+                    grammar: materialWorld.polymetricGrammar,
+                    absoluteBar: absoluteBar
+                )
+            let ensemble = percussionPolymetric.ensemble
             let modalPercussionArticulations = ModalPercussionResolver.foundationArticulations(
                 ensemble: ensemble,
                 dna: dna,
@@ -2268,7 +2508,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 kind: kind,
                 character: character,
                 gesture: gesture,
-                absoluteBar: absoluteBar
+                absoluteBar: absoluteBar,
+                materialWorld: materialWorld
             )
             let echoEnabled = pulseEchoEnabled(
                 scene: scene, bar: bar, kind: kind,
@@ -2302,6 +2543,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
                 spatialContrast: spatialContrast,
                 narrative: narrative,
                 percussionEchoTexture: percussionEchoTexture,
+                percussionPolymetricEvidence: percussionPolymetric.evidence,
                 harmonicDisclosureRelationship:
                     materialWorld.resolvedAxes.harmonicRelationship,
                 kickMorphology: KickMorphologyResolver.articulation(
@@ -2345,7 +2587,8 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
         resolvedBars = KickSyntaxResolver.resolve(
             resolvedBars: resolvedBars,
             kind: kind,
-            paidDebtIDs: paidDebtIDs
+            paidDebtIDs: paidDebtIDs,
+            materialWorld: materialWorld
         )
         let interest = PhraseInterestEvaluator.evaluate(
             resolvedBars: resolvedBars,
@@ -2380,6 +2623,7 @@ package struct AutonomousSessionDirector: Equatable, Sendable {
             longHorizonSelection: longHorizonSelection,
             longHorizonEnergyCoordination: energyCoordination,
             materialWorld: materialWorld,
+            incomingEffectCarrierState: continuation.effectCarrierState,
             qualityRecoveryContext: qualityRecoveryContext,
             presentationStartBar: presentationStart
         )

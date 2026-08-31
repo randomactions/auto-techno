@@ -10,7 +10,7 @@ package enum SynthGesture: String, CaseIterable, Sendable {
     case release
 }
 
-package enum SynthRole: String, CaseIterable, Sendable {
+package enum SynthRole: String, CaseIterable, Codable, Hashable, Sendable {
     case anchor
     case shadow
     case atmosphere
@@ -138,6 +138,23 @@ package struct ResolvedUpperNote: Equatable, Sendable {
             envelopeRelation: envelopeRelation,
             spectralReveal: spectralReveal,
             timingOffsetInSteps: value,
+            instrument: instrument
+        )
+    }
+
+    package func withOnsetStep(_ value: Int) -> ResolvedUpperNote {
+        ResolvedUpperNote(
+            role: role,
+            onsetStep: value,
+            durationInSteps: durationInSteps,
+            startFrequencyRatio: startFrequencyRatio,
+            endFrequencyRatio: endFrequencyRatio,
+            velocity: velocity,
+            gate: gate,
+            timbreIntent: timbreIntent,
+            envelopeRelation: envelopeRelation,
+            spectralReveal: spectralReveal,
+            timingOffsetInSteps: timingOffsetInSteps,
             instrument: instrument
         )
     }
@@ -418,7 +435,12 @@ package struct SynthPerformanceBar: Equatable, Sendable {
     package let mutationAmount: Double
     package let foundationInstrument: InstrumentAssignment
     package let relationalSteps: [RelationalArticulation]
+    /// Canonical upper notes before the held polymetric geometry relocates
+    /// their onsets. The parallel resolved list lets downstream score
+    /// relations follow the same event without re-running planning.
+    package let sourceUpperNotes: [ResolvedUpperNote]
     package let upperNotes: [ResolvedUpperNote]
+    package let polymetricEvidence: [LongHorizonPolymetricBarEvidence]
     package let composition: PhraseCompositionBar
     package let upperTimingRelation: UpperTimingRelation
     package let pulseEchoTextureArticulation: PulseEchoTextureArticulation
@@ -438,7 +460,9 @@ package struct SynthPerformanceBar: Equatable, Sendable {
     package init(bar: Int, gesture: SynthGesture, mutationAmount: Double,
                 foundationInstrument: InstrumentAssignment = InstrumentPalette.safeFoundation(),
                 relationalSteps: [RelationalArticulation],
+                sourceUpperNotes: [ResolvedUpperNote]? = nil,
                 upperNotes: [ResolvedUpperNote],
+                polymetricEvidence: [LongHorizonPolymetricBarEvidence] = [],
                 composition: PhraseCompositionBar? = nil,
                 upperTimingRelation: UpperTimingRelation = .aligned,
                 pulseEchoTextureArticulation: PulseEchoTextureArticulation = .neutral,
@@ -452,7 +476,9 @@ package struct SynthPerformanceBar: Equatable, Sendable {
             ? foundationInstrument : InstrumentPalette.safeFoundation()
         self.relationalSteps = relationalSteps.count == 16
             ? relationalSteps : Array(repeating: .neutral, count: 16)
+        self.sourceUpperNotes = sourceUpperNotes ?? upperNotes
         self.upperNotes = upperNotes
+        self.polymetricEvidence = polymetricEvidence
         self.composition = composition ?? .neutral(bar: bar)
         self.upperTimingRelation = upperTimingRelation
         self.pulseEchoTextureArticulation = pulseEchoTextureArticulation
@@ -468,6 +494,44 @@ package struct SynthPerformanceBar: Equatable, Sendable {
     package func upperNotes(for role: SynthRole) -> [ResolvedUpperNote] {
         upperNotes.filter { $0.role == role }
     }
+
+    /// Projects an ensemble event's source-grid onset onto the held upper
+    /// polymeter without re-running the resolver. Non-upper and unmatched
+    /// events retain their original onset.
+    package func relocatedUpperStep(
+        for voice: EnsembleVoice,
+        sourceStep: Int
+    ) -> Int {
+        let role: SynthRole? = switch voice {
+        case .motif: .anchor
+        case .response: .response
+        case .atmosphere: .atmosphere
+        case .transition: .transition
+        default: nil
+        }
+        guard let role,
+              sourceUpperNotes.count == upperNotes.count,
+              let noteIndex = sourceUpperNotes.indices.first(where: {
+                  sourceUpperNotes[$0].role == role &&
+                      sourceUpperNotes[$0].onsetStep == sourceStep
+              }) else { return sourceStep }
+        return upperNotes[noteIndex].onsetStep
+    }
+
+    /// Recovers the pre-relocation step for renderer relations whose values
+    /// are musical attributes of the moved note, rather than geometry at its
+    /// new onset.
+    package func sourceUpperStep(
+        for role: SynthRole,
+        appliedStep: Int
+    ) -> Int {
+        guard sourceUpperNotes.count == upperNotes.count,
+              let noteIndex = upperNotes.indices.first(where: {
+                  upperNotes[$0].role == role &&
+                      upperNotes[$0].onsetStep == appliedStep
+              }) else { return appliedStep }
+        return sourceUpperNotes[noteIndex].onsetStep
+    }
 }
 
 /// A deterministic upper-voice score. Its relational phase continues across
@@ -479,8 +543,34 @@ package struct SynthPerformancePlan: Equatable, Sendable {
     package let homeTimbreCorrection: Bool
     package let bars: [SynthPerformanceBar]
 
+    package func relocatedSpatialContrast(
+        for resolved: ResolvedPerformanceBar,
+        barIndex: Int
+    ) -> SpatialContrastArticulation {
+        let source = resolved.spatialContrast
+        guard source.depthPosition == .distant,
+              let voice = source.carrierVoice,
+              let sourceStep = source.carrierStep,
+              bars.indices.contains(barIndex) else { return source }
+        let bar = bars[barIndex]
+        let appliedStep = bar.relocatedUpperStep(
+            for: voice,
+            sourceStep: sourceStep
+        )
+        return SpatialContrastArticulation(
+            depthPosition: source.depthPosition,
+            carrierVoice: voice,
+            carrierStep: appliedStep,
+            dryScale: source.dryScale,
+            reverbSend: source.reverbSend,
+            highPassHz: source.highPassHz,
+            lowPassHz: source.lowPassHz
+        )
+    }
+
     package init(scene: TechnoScene, dna: SceneDNA, kind: AutonomousPhraseKind,
                  resolvedBars: [ResolvedPerformanceBar],
+                 materialWorld: LongHorizonMaterialWorldPlan = .neutral,
                  forceHomeUpperTimbre: Bool = false,
                  compositionBars suppliedComposition: [PhraseCompositionBar]? = nil) {
         let synthWorld = SynthWorldDNA(scene: scene, dna: dna)
@@ -526,7 +616,13 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 relationalSteps: relationalSteps,
                 composition: composition
             )
-            let upperNotes = upperResolution.notes
+            let polymetric =
+                LongHorizonPolymetricGrammarResolver.relocateUpperNotes(
+                    upperResolution.notes,
+                    grammar: materialWorld.polymetricGrammar,
+                    absoluteBar: performanceBar.bar
+                )
+            let upperNotes = polymetric.notes
             let eligibilityNotes: [ResolvedUpperNote]
             if forceHomeUpperTimbre {
                 let authoredComposition = authoredCompositionBars.indices.contains(index)
@@ -581,7 +677,9 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                         resolved.foundationRhythmicRelation
                 ),
                 relationalSteps: relationalSteps,
+                sourceUpperNotes: upperResolution.notes,
                 upperNotes: upperNotes,
+                polymetricEvidence: polymetric.evidence,
                 composition: composition,
                 upperTimingRelation: upperResolution.timingRelation,
                 pulseEchoTextureArticulation: PulseEchoTextureArticulation(

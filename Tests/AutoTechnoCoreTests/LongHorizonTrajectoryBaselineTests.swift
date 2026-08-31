@@ -51,7 +51,7 @@ struct LongHorizonTrajectoryBaselineTests {
 
     private static let expectedV3 = LongHorizonPlanningBaselineReport(
         schemaVersion: "long-horizon-planning-baseline.v3",
-        engineVersion: "autotechno-canonical-engine.v45",
+        engineVersion: "autotechno-canonical-engine.v48",
         evidenceClassification: "descriptive-structural-baseline",
         qualificationStatus: "unavailable",
         qualificationReason: "no-calibrated-long-horizon-policy",
@@ -80,7 +80,7 @@ struct LongHorizonTrajectoryBaselineTests {
         highTensionBarCount: 629,
         recoveryTensionObservationCeiling: 0.4,
         recoveryTensionBarCount: 388,
-        distinctEventSignatureCount: 1_040,
+        distinctEventSignatureCount: 2_388,
         maximumOpenDebtCount: 7,
         maximumMemoryCounts: .init(
             recentBars: 4,
@@ -97,6 +97,6 @@ struct LongHorizonTrajectoryBaselineTests {
             sessionBars: 256
         ),
         planSequenceFingerprint: "28d944266dfaa03e",
-        barEvidenceFingerprint: "d57d500f3aa67a0e"
+        barEvidenceFingerprint: "a7323dff6a221311"
     )
 }

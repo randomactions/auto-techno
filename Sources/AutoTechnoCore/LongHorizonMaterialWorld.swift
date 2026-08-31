@@ -195,11 +195,13 @@ package struct LongHorizonMaterialWorldIntent: Codable, Equatable, Sendable {
     package let retryOrdinal: Int
     package let handoff: LongHorizonMaterialHandoff
     package let axes: LongHorizonMaterialAxes
+    package let polymetricGrammar: LongHorizonPolymetricGrammar
     package let fingerprint: String
 
     package var isValid: Bool {
         generation >= 0 && (0...3).contains(retryOrdinal) &&
-            !fingerprint.isEmpty && (generation == 0) == (parentID == nil) &&
+            !fingerprint.isEmpty && polymetricGrammar.isValid &&
+            (generation == 0) == (parentID == nil) &&
             (parentID == nil) == (parentFingerprint == nil) &&
             (parentID == nil) == (parentAxes == nil)
     }
@@ -215,6 +217,7 @@ package struct LongHorizonMaterialWorldPlan: Codable, Equatable, Sendable {
     package let handoff: LongHorizonMaterialHandoff
     package let sourceAxes: LongHorizonMaterialAxes
     package let axes: LongHorizonMaterialAxes
+    package let polymetricGrammar: LongHorizonPolymetricGrammar
     package let progress: Double
 
     package static let neutral = LongHorizonMaterialWorldPlan(
@@ -239,6 +242,7 @@ package struct LongHorizonMaterialWorldPlan: Codable, Equatable, Sendable {
             architecture: .hybrid,
             effect: .neutral
         ),
+        polymetricGrammar: .neutral,
         progress: 0
     )
 
@@ -250,6 +254,7 @@ package struct LongHorizonMaterialWorldPlan: Codable, Equatable, Sendable {
         handoff: LongHorizonMaterialHandoff,
         sourceAxes: LongHorizonMaterialAxes,
         axes: LongHorizonMaterialAxes,
+        polymetricGrammar: LongHorizonPolymetricGrammar = .neutral,
         progress: Double
     ) {
         self.worldID = worldID
@@ -259,6 +264,8 @@ package struct LongHorizonMaterialWorldPlan: Codable, Equatable, Sendable {
         self.handoff = handoff
         self.sourceAxes = sourceAxes
         self.axes = axes
+        self.polymetricGrammar = polymetricGrammar.isValid
+            ? polymetricGrammar : .neutral
         self.progress = min(1, max(0, progress.isFinite ? progress : 0))
     }
 
@@ -276,6 +283,7 @@ package struct LongHorizonMaterialWorldPlan: Codable, Equatable, Sendable {
             sourceAxes: episode.materialWorld.parentAxes ??
                 episode.materialWorld.axes,
             axes: episode.materialWorld.axes,
+            polymetricGrammar: episode.materialWorld.polymetricGrammar,
             progress: Double(max(0, startBar - episode.startedAtBar)) / Double(duration)
         )
     }
@@ -288,7 +296,8 @@ package struct LongHorizonMaterialWorldPlan: Codable, Equatable, Sendable {
             handoff == episode.materialWorld.handoff &&
             sourceAxes == (episode.materialWorld.parentAxes ??
                 episode.materialWorld.axes) &&
-            axes == episode.materialWorld.axes
+            axes == episode.materialWorld.axes &&
+            polymetricGrammar == episode.materialWorld.polymetricGrammar
     }
 
     /// The target world is stable for the episode, while its score-facing
@@ -372,7 +381,8 @@ package enum LongHorizonMaterialWorldResolver {
         operatorKind: LongHorizonEpisodeOperator,
         parent: LongHorizonMaterialWorldIntent?,
         recallSource: LongHorizonMaterialWorldIntent?,
-        recentFingerprints: [String]
+        recentFingerprints: [String],
+        activationBar: Int = 0
     ) -> LongHorizonMaterialWorldIntent {
         let source = operatorKind == .recall ? (recallSource ?? parent) : parent
         let generation = (parent?.generation ?? -1) + 1
@@ -384,7 +394,12 @@ package enum LongHorizonMaterialWorldResolver {
             )
             let axes = source.map { transformedAxes(from: $0.axes, seed: seed) }
                 ?? initialAxes(seed: seed)
-            let fingerprint = fingerprint(axes: axes)
+            let worldID = episodeID ^ seed
+            let grammar = LongHorizonPolymetricGrammarResolver.make(
+                worldSeed: worldID,
+                activationBar: activationBar
+            )
+            let fingerprint = fingerprint(axes: axes, grammar: grammar)
             let changesImmediateParent = parent.map {
                 axes.changedAxisCount(from: $0.axes) >= 4 &&
                     axes.changedStructuralAxisCount(from: $0.axes) >= 2 &&
@@ -394,7 +409,7 @@ package enum LongHorizonMaterialWorldResolver {
                 !recentFingerprints.suffix(4).contains(fingerprint)
             {
                 return LongHorizonMaterialWorldIntent(
-                    id: episodeID ^ seed,
+                    id: worldID,
                     parentID: parent?.id,
                     parentFingerprint: parent?.fingerprint,
                     parentAxes: parent?.axes,
@@ -402,6 +417,7 @@ package enum LongHorizonMaterialWorldResolver {
                     retryOrdinal: retry,
                     handoff: LongHorizonMaterialHandoff(operatorKind: operatorKind),
                     axes: axes,
+                    polymetricGrammar: grammar,
                     fingerprint: fingerprint
                 )
             }
@@ -430,12 +446,17 @@ package enum LongHorizonMaterialWorldResolver {
                 seed: fallbackSeed,
                 effect: effect
             )
-            let fingerprint = fingerprint(axes: axes)
+            let worldID = episodeID ^ fallbackSeed
+            let grammar = LongHorizonPolymetricGrammarResolver.make(
+                worldSeed: worldID,
+                activationBar: activationBar
+            )
+            let fingerprint = fingerprint(axes: axes, grammar: grammar)
             guard !recentFingerprints.suffix(4).contains(fingerprint) else {
                 continue
             }
             return LongHorizonMaterialWorldIntent(
-                id: episodeID ^ fallbackSeed,
+                id: worldID,
                 parentID: parent?.id,
                 parentFingerprint: parent?.fingerprint,
                 parentAxes: parent?.axes,
@@ -443,6 +464,7 @@ package enum LongHorizonMaterialWorldResolver {
                 retryOrdinal: 3,
                 handoff: LongHorizonMaterialHandoff(operatorKind: operatorKind),
                 axes: axes,
+                polymetricGrammar: grammar,
                 fingerprint: fingerprint
             )
         }
@@ -524,7 +546,10 @@ package enum LongHorizonMaterialWorldResolver {
         return effectPresets[(nearest + delta) % effectPresets.count]
     }
 
-    private static func fingerprint(axes: LongHorizonMaterialAxes) -> String {
+    private static func fingerprint(
+        axes: LongHorizonMaterialAxes,
+        grammar: LongHorizonPolymetricGrammar
+    ) -> String {
         var value: UInt64 = 0xcbf2_9ce4_8422_2325
         let text = [
             axes.rhythm.rawValue, axes.motif.rawValue, axes.roles.rawValue,
@@ -533,7 +558,10 @@ package enum LongHorizonMaterialWorldResolver {
             String(format: "%.3f", axes.effect.nonlinearPressure),
             String(format: "%.3f", axes.effect.modulationMotion),
             String(format: "%.3f", axes.effect.echoMemory),
-            String(format: "%.3f", axes.effect.spatialDepth)
+            String(format: "%.3f", axes.effect.spatialDepth),
+            grammar.fingerprint,
+            String(grammar.activationBar),
+            String(grammar.combinedPeriodInSteps)
         ].joined(separator: "|")
         for byte in text.utf8 {
             value ^= UInt64(byte)

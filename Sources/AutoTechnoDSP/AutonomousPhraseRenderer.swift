@@ -950,6 +950,87 @@ package struct PercussionEchoTextureRenderEvidence: Equatable, Sendable {
     package let finite: Bool
 }
 
+package struct SpatialDustChannelRenderEvidence: Codable, Equatable, Sendable {
+    package let sourceSampleHash: String
+    package let returnSampleHash: String
+    package let delayFrameCount: Int
+    package let feedback: Double
+    package let gain: Double
+    package let pan: Double
+    package let highPassHz: Double
+    package let lowPassHz: Double
+    package let sourceRMS: Double
+    package let returnRMS: Double
+    package let lowBandRMS: Double
+    package let nonzeroSampleCount: Int
+}
+
+/// Reduced proof for the stereo extension of the existing percussion echo.
+/// Both delay lines are bar-local and therefore clear exactly at every bar and
+/// material-world handoff; only hashes and bounded signal facts survive.
+package struct SpatialDustRenderEvidence: Codable, Equatable, Sendable {
+    package let active: Bool
+    package let worldID: UInt64
+    package let cadencePhase: Int
+    package let gapPhase: Int
+    package let dominantSide: SpatialDustDominantSide?
+    package let sourceStep: Int
+    package let renderedFrameCount: Int
+    package let transitionFrameCount: Int
+    package let left: SpatialDustChannelRenderEvidence
+    package let right: SpatialDustChannelRenderEvidence
+    package let stereoCorrelation: Double
+    package let lowBandEnergyRatio: Double
+    package let outOfWindowNonzeroSampleCount: Int
+    package let firstLeftSampleBitPattern: UInt32
+    package let firstRightSampleBitPattern: UInt32
+    package let lastLeftSampleBitPattern: UInt32
+    package let lastRightSampleBitPattern: UInt32
+    package let terminalCleared: Bool
+    package let finite: Bool
+
+    package static func neutral(frameCount: Int = 0) -> Self {
+        let hash = ExactPCMFingerprint.mono(
+            [Float](repeating: 0, count: max(0, frameCount))
+        )
+        let channel = SpatialDustChannelRenderEvidence(
+            sourceSampleHash: ExactPCMFingerprint.mono([]),
+            returnSampleHash: hash,
+            delayFrameCount: 0,
+            feedback: 0,
+            gain: 0,
+            pan: 0,
+            highPassHz: 0,
+            lowPassHz: 0,
+            sourceRMS: 0,
+            returnRMS: 0,
+            lowBandRMS: 0,
+            nonzeroSampleCount: 0
+        )
+        return Self(
+            active: false,
+            worldID: 0,
+            cadencePhase: -1,
+            gapPhase: -1,
+            dominantSide: nil,
+            sourceStep: -1,
+            renderedFrameCount: max(0, frameCount),
+            transitionFrameCount: 0,
+            left: channel,
+            right: channel,
+            stereoCorrelation: 0,
+            lowBandEnergyRatio: 0,
+            outOfWindowNonzeroSampleCount: 0,
+            firstLeftSampleBitPattern: 0,
+            firstRightSampleBitPattern: 0,
+            lastLeftSampleBitPattern: 0,
+            lastRightSampleBitPattern: 0,
+            terminalCleared: true,
+            finite: true
+        )
+    }
+}
+
 /// Same-pass reduced evidence for the existing pulse-echo return before and
 /// after the bounded texture drive. The delay line and its feedback remain
 /// outside this processor. Its undriven tail remains canonical continuation;
@@ -1197,6 +1278,7 @@ package struct RenderedBar: Equatable, Sendable {
     package let instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence]
     package let percussionEchoTextureRenderEvidence:
         PercussionEchoTextureRenderEvidence
+    package let spatialDustRenderEvidence: SpatialDustRenderEvidence
     package let audioSliceRenderEvidence: AudioSliceRenderEvidence
     package let polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence
     package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
@@ -1209,6 +1291,7 @@ package struct RenderedBar: Equatable, Sendable {
     package let upperPercussionSamples: [Float]
     package let graphRemainderReferenceLeftSamples: [Float]
     package let graphRemainderReferenceRightSamples: [Float]
+    package let effectCarrierSamples: [Float]
     package let resonantAnchorSamples: [Float]
     package let detunedCompanionSamples: [Float]
 
@@ -1233,6 +1316,7 @@ package struct RenderedBar: Equatable, Sendable {
                 instrumentRenderEvidence: [InstrumentArchitectureRenderEvidence] = [],
                 percussionEchoTextureRenderEvidence:
                     PercussionEchoTextureRenderEvidence,
+                spatialDustRenderEvidence: SpatialDustRenderEvidence = .neutral(),
                 audioSliceRenderEvidence: AudioSliceRenderEvidence = .neutral,
                 polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence = .neutral,
                 pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
@@ -1243,6 +1327,7 @@ package struct RenderedBar: Equatable, Sendable {
                 upperPercussionSamples: [Float],
                 graphRemainderReferenceLeftSamples: [Float],
                 graphRemainderReferenceRightSamples: [Float],
+                effectCarrierSamples: [Float] = [],
                 resonantAnchorSamples: [Float],
                 detunedCompanionSamples: [Float]) {
         self.sampleRate = sampleRate
@@ -1291,6 +1376,7 @@ package struct RenderedBar: Equatable, Sendable {
         }
         self.percussionEchoTextureRenderEvidence =
             percussionEchoTextureRenderEvidence
+        self.spatialDustRenderEvidence = spatialDustRenderEvidence
         self.audioSliceRenderEvidence = audioSliceRenderEvidence
         self.polyphonicPadRenderEvidence = polyphonicPadRenderEvidence
         self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
@@ -1303,6 +1389,7 @@ package struct RenderedBar: Equatable, Sendable {
             graphRemainderReferenceLeftSamples
         self.graphRemainderReferenceRightSamples =
             graphRemainderReferenceRightSamples
+        self.effectCarrierSamples = effectCarrierSamples
         self.resonantAnchorSamples = resonantAnchorSamples
         self.detunedCompanionSamples = detunedCompanionSamples
     }
@@ -1372,11 +1459,15 @@ package struct RenderBlock: Equatable, Sendable {
     package let percussionEchoTextureRenderEvidence:
         PercussionEchoTextureRenderEvidence
     package let percussionEchoTextureRenderPassesMatch: Bool
+    package let spatialDustRenderEvidence: SpatialDustRenderEvidence
+    package let spatialDustRenderPassesMatch: Bool
     package let audioSliceRenderEvidence: AudioSliceRenderEvidence
     package let audioSliceRenderPassesMatch: Bool
     package let polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence
     package let pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence
     package let spatialFDNRenderEvidence: SpatialFDNRenderEvidence
+    package let effectCarrierRenderEvidence: EffectCarrierRenderEvidence?
+    package let upperMusicalPumpRenderEvidence: UpperMusicalPumpRenderEvidence
     /// Score-owned terminal absence applied after the canonical graph and
     /// before the existing live-master scalar.
     package let climaxHangRenderEvidence: ClimaxHangRenderEvidence
@@ -1432,11 +1523,15 @@ package struct RenderBlock: Equatable, Sendable {
                 percussionEchoTextureRenderEvidence:
                     PercussionEchoTextureRenderEvidence,
                 percussionEchoTextureRenderPassesMatch: Bool,
+                spatialDustRenderEvidence: SpatialDustRenderEvidence = .neutral(),
+                spatialDustRenderPassesMatch: Bool = true,
                 audioSliceRenderEvidence: AudioSliceRenderEvidence = .neutral,
                 audioSliceRenderPassesMatch: Bool = true,
                 polyphonicPadRenderEvidence: PolyphonicPadRenderEvidence = .neutral,
                 pulseEchoReturnDriveRenderEvidence: PulseEchoReturnDriveRenderEvidence,
                 spatialFDNRenderEvidence: SpatialFDNRenderEvidence = .neutral,
+                effectCarrierRenderEvidence: EffectCarrierRenderEvidence? = nil,
+                upperMusicalPumpRenderEvidence: UpperMusicalPumpRenderEvidence = .neutral,
                 climaxHangRenderEvidence: ClimaxHangRenderEvidence = .neutral,
                 liveMasterTrimRenderEvidence: LiveMasterTrimRenderEvidence,
                 upperNoteRenderEvidence: [UpperNoteRenderEvidence],
@@ -1495,11 +1590,15 @@ package struct RenderBlock: Equatable, Sendable {
             percussionEchoTextureRenderEvidence
         self.percussionEchoTextureRenderPassesMatch =
             percussionEchoTextureRenderPassesMatch
+        self.spatialDustRenderEvidence = spatialDustRenderEvidence
+        self.spatialDustRenderPassesMatch = spatialDustRenderPassesMatch
         self.audioSliceRenderEvidence = audioSliceRenderEvidence
         self.audioSliceRenderPassesMatch = audioSliceRenderPassesMatch
         self.polyphonicPadRenderEvidence = polyphonicPadRenderEvidence
         self.pulseEchoReturnDriveRenderEvidence = pulseEchoReturnDriveRenderEvidence
         self.spatialFDNRenderEvidence = spatialFDNRenderEvidence
+        self.effectCarrierRenderEvidence = effectCarrierRenderEvidence
+        self.upperMusicalPumpRenderEvidence = upperMusicalPumpRenderEvidence
         self.climaxHangRenderEvidence = climaxHangRenderEvidence
         self.liveMasterTrimRenderEvidence = liveMasterTrimRenderEvidence
         self.upperNoteRenderEvidence = upperNoteRenderEvidence
@@ -1576,6 +1675,8 @@ package struct RenderBlock: Equatable, Sendable {
             pulseEchoReturnDriveRenderEvidence:
                 pulseEchoReturnDriveRenderEvidence,
             spatialFDNRenderEvidence: spatialFDNRenderEvidence,
+            effectCarrierRenderEvidence: effectCarrierRenderEvidence,
+            upperMusicalPumpRenderEvidence: upperMusicalPumpRenderEvidence,
             climaxHangRenderEvidence: climaxHangRenderEvidence,
             liveMasterTrimRenderEvidence: liveMasterTrimRenderEvidence,
             upperNoteRenderEvidence: upperNoteRenderEvidence,
@@ -1695,6 +1796,7 @@ struct RenderBuffers {
     var percussionTextureStem: [Float] = []
     var upperTonalStem: [Float] = []
     var atmosphereStem: [Float] = []
+    var transitionStem: [Float] = []
     var resonantAnchorStem: [Float] = []
     var detunedCompanionStem: [Float] = []
     var shadowTimingStem: [Float] = []
@@ -1722,6 +1824,11 @@ struct RenderBuffers {
         reset(&percussionTextureStem, frameCount: frameCount)
         reset(&upperTonalStem, frameCount: frameCount)
         reset(&atmosphereStem, frameCount: frameCount)
+        if includeUpperRoleTaps {
+            reset(&transitionStem, frameCount: frameCount)
+        } else {
+            transitionStem.removeAll(keepingCapacity: false)
+        }
         if includeUpperRoleTaps {
             reset(&resonantAnchorStem, frameCount: frameCount)
             reset(&detunedCompanionStem, frameCount: frameCount)
@@ -1841,6 +1948,7 @@ package enum AutonomousPhraseRenderer {
         let synthPlan = SynthPerformancePlan(
             scene: plan.scene, dna: plan.dna, kind: plan.kind,
             resolvedBars: plan.resolvedBars,
+            materialWorld: plan.materialWorld,
             forceHomeUpperTimbre: forceHomeUpperTimbre,
             compositionBars: plan.phraseComposition
         )
@@ -1893,15 +2001,21 @@ package enum AutonomousPhraseRenderer {
                 synthPerformance: synthPerformance,
                 workspace: &workspace,
                 layer: .full,
+                effectCarrierRole: plan.effectCarrier.active
+                    ? plan.effectCarrier.state.role : nil,
                 phraseKind: plan.kind
             )
             guard !cancellationRequested() else { return nil }
             let events = resolved.ensemble.events.map { event in
                 let pulse = event.voice == .groovePulse
                     ? resolved.groovePulse(at: event.step) : nil
+                let appliedStep = synthPerformance.relocatedUpperStep(
+                    for: event.voice,
+                    sourceStep: event.step
+                )
                 let spatial = resolved.spatialContrast
                 let isSpatialCarrier = spatial.depthPosition == .distant &&
-                    spatial.carrierVoice == event.voice && spatial.carrierStep == event.step
+                    spatial.carrierVoice == event.voice && spatial.carrierStep == appliedStep
                 let isDominantMotif = event.voice == .motif
                 let isRelationalUpperVoice = isDominantMotif || event.voice == .response
                 let narrative = resolved.narrative
@@ -1909,7 +2023,7 @@ package enum AutonomousPhraseRenderer {
                 return VoiceEvent(
                     voice: voiceKind(event.voice),
                     bar: performance.bar,
-                    step: pulse?.step ?? event.step,
+                    step: pulse?.step ?? appliedStep,
                     intensity: pulse?.intensity ?? event.intensity,
                     pulseClass: pulse?.pulseClass,
                     timingOffsetInSteps: pulse?.timingOffsetInSteps ??
@@ -1953,9 +2067,103 @@ package enum AutonomousPhraseRenderer {
             ).map {
                 $0.0 - $0.1
             }
+            let graphFrameCount = min(graphInputLeft.count, graphInputRight.count)
+            let requestedCarrier = (0..<graphFrameCount).map { index in
+                rendered.effectCarrierSamples.indices.contains(index)
+                    ? rendered.effectCarrierSamples[index] : 0
+            }
+            var carrierLeft = [Float](repeating: 0, count: graphFrameCount)
+            var carrierRight = [Float](repeating: 0, count: graphFrameCount)
+            var residualLeft = [Float](repeating: 0, count: graphFrameCount)
+            var residualRight = [Float](repeating: 0, count: graphFrameCount)
+            var maximumCarrierReconstructionError = 0.0
+            for index in 0..<graphFrameCount {
+                let leftSplit = exactCarrierSplit(
+                    input: graphInputLeft[index],
+                    requestedCarrier: plan.effectCarrier.active
+                        ? requestedCarrier[index] : 0
+                )
+                let rightSplit = exactCarrierSplit(
+                    input: graphInputRight[index],
+                    requestedCarrier: plan.effectCarrier.active
+                        ? requestedCarrier[index] : 0
+                )
+                carrierLeft[index] = leftSplit.carrier
+                carrierRight[index] = rightSplit.carrier
+                residualLeft[index] = leftSplit.residual
+                residualRight[index] = rightSplit.residual
+                maximumCarrierReconstructionError = max(
+                    maximumCarrierReconstructionError,
+                    Double(abs(
+                        graphInputLeft[index] -
+                            (leftSplit.carrier + leftSplit.residual)
+                    )),
+                    Double(abs(
+                        graphInputRight[index] -
+                            (rightSplit.carrier + rightSplit.residual)
+                    ))
+                )
+            }
+            let graphDoseInputLeft: [Float]
+            let graphDoseInputRight: [Float]
+            if plan.effectCarrier.active {
+                graphDoseInputLeft = (0..<graphFrameCount).map {
+                    carrierLeft[$0] + residualLeft[$0] *
+                        Float(LongHorizonEffectCarrierSchema.nonCarrierDose)
+                }
+                graphDoseInputRight = (0..<graphFrameCount).map {
+                    carrierRight[$0] + residualRight[$0] *
+                        Float(LongHorizonEffectCarrierSchema.nonCarrierDose)
+                }
+            } else {
+                graphDoseInputLeft = graphInputLeft
+                graphDoseInputRight = graphInputRight
+            }
             let generated = GeneratedDSPGraphRenderer.process(
-                left: graphInputLeft, right: graphInputRight,
+                left: graphDoseInputLeft, right: graphDoseInputRight,
                 sampleRate: sampleRate, plan: graph, state: &graphState
+            )
+            let postCarrierLeft: [Float]
+            let postCarrierRight: [Float]
+            if plan.effectCarrier.active {
+                postCarrierLeft = (0..<graphFrameCount).map {
+                    generated.0[$0] + residualLeft[$0] * 0.65
+                }
+                postCarrierRight = (0..<graphFrameCount).map {
+                    generated.1[$0] + residualRight[$0] * 0.65
+                }
+            } else {
+                postCarrierLeft = generated.0
+                postCarrierRight = generated.1
+            }
+            let pumpedUpper = UpperMusicalPumpProcessor.apply(
+                left: postCarrierLeft,
+                right: postCarrierRight,
+                articulation: resolved.upperMusicalPump,
+                sampleRate: sampleRate,
+                bpm: plan.scene.bpm
+            )
+            let effectCarrierRenderEvidence = EffectCarrierRenderEvidence(
+                bar: performance.bar,
+                articulation: plan.effectCarrier,
+                synthPerformance: synthPerformance,
+                carrierLeft: carrierLeft,
+                carrierRight: carrierRight,
+                residualLeft: residualLeft,
+                residualRight: residualRight,
+                graphInputLeft: graphInputLeft,
+                graphInputRight: graphInputRight,
+                graphDoseInputLeft: graphDoseInputLeft,
+                graphDoseInputRight: graphDoseInputRight,
+                graphOutputLeft: generated.0,
+                graphOutputRight: generated.1,
+                finalUpperLeft: pumpedUpper.left,
+                finalUpperRight: pumpedUpper.right,
+                maximumReconstructionError: maximumCarrierReconstructionError,
+                bindingComplete: graphFrameCount > 0 &&
+                    graphInputLeft.count == graphInputRight.count &&
+                    generated.0.count == graphFrameCount &&
+                    generated.1.count == graphFrameCount
             )
             guard !cancellationRequested() else { return nil }
             let stepFrames = Double(
@@ -2053,8 +2261,8 @@ package enum AutonomousPhraseRenderer {
             guard !cancellationRequested() else { return nil }
             let postGraphMixEvidence = UpperTimbreEvidenceAnalyzer.analyze(
                 UpperTimbreAnalysisInput(
-                left: generated.0,
-                right: generated.1,
+                    left: pumpedUpper.left,
+                    right: pumpedUpper.right,
                 sampleRate: sampleRate,
                 protectedReferenceMono: protectedRhythm.samples,
                     precedingFrame: state.previousPostGraphRemainderEvidenceFrame
@@ -2085,18 +2293,19 @@ package enum AutonomousPhraseRenderer {
                     left: left, right: right
                 )
             }
-            if let left = generated.0.last, let right = generated.1.last {
+            if let left = pumpedUpper.left.last,
+               let right = pumpedUpper.right.last {
                 state.previousPostGraphRemainderEvidenceFrame = UpperTimbreStereoFrame(
                     left: left, right: right
                 )
             }
             let preLiveFeedbackLeft = zip(
                 protectedRhythm.leftSamples,
-                generated.0
+                pumpedUpper.left
             ).map { outputSafety($0 + $1) }
             let preLiveFeedbackRight = zip(
                 protectedRhythm.rightSamples,
-                generated.1
+                pumpedUpper.right
             ).map { outputSafety($0 + $1) }
             let climaxOutput = ClimaxHangRenderer.render(
                 left: preLiveFeedbackLeft,
@@ -2126,8 +2335,8 @@ package enum AutonomousPhraseRenderer {
                         wholeMixRight: preLiveFeedbackRight,
                         protectedRhythmLeft: protectedRhythm.leftSamples,
                         protectedRhythmRight: protectedRhythm.rightSamples,
-                        melodicRemainderLeft: generated.0,
-                        melodicRemainderRight: generated.1,
+                        melodicRemainderLeft: pumpedUpper.left,
+                        melodicRemainderRight: pumpedUpper.right,
                         kick: protectedRhythm.audibleKickSamples,
                         upperPercussion:
                             protectedRhythm.upperPercussionSamples
@@ -2207,7 +2416,8 @@ package enum AutonomousPhraseRenderer {
                     kind: .percussionEchoTexture,
                     amount: PercussionEchoTextureVoice.returnGain,
                     active: protectedRhythm
-                        .percussionEchoTextureRenderEvidence.active
+                        .percussionEchoTextureRenderEvidence.active ||
+                        protectedRhythm.spatialDustRenderEvidence.active
                 ),
                 EffectState(
                     kind: .pulseEcho,
@@ -2274,6 +2484,11 @@ package enum AutonomousPhraseRenderer {
                 percussionEchoTextureRenderPassesMatch:
                     protectedRhythm.percussionEchoTextureRenderEvidence ==
                         rendered.percussionEchoTextureRenderEvidence,
+                spatialDustRenderEvidence:
+                    protectedRhythm.spatialDustRenderEvidence,
+                spatialDustRenderPassesMatch:
+                    protectedRhythm.spatialDustRenderEvidence ==
+                        rendered.spatialDustRenderEvidence,
                 audioSliceRenderEvidence:
                     protectedRhythm.audioSliceRenderEvidence,
                 audioSliceRenderPassesMatch:
@@ -2285,6 +2500,8 @@ package enum AutonomousPhraseRenderer {
                     rendered.pulseEchoReturnDriveRenderEvidence,
                 spatialFDNRenderEvidence:
                     rendered.spatialFDNRenderEvidence,
+                effectCarrierRenderEvidence: effectCarrierRenderEvidence,
+                upperMusicalPumpRenderEvidence: pumpedUpper.evidence,
                 climaxHangRenderEvidence: climaxOutput.evidence,
                 liveMasterTrimRenderEvidence: terminalOutput.evidence,
                 upperNoteRenderEvidence: rendered.upperNoteRenderEvidence,
@@ -2327,6 +2544,28 @@ package enum AutonomousPhraseRenderer {
                 )
             }
         )
+    }
+
+    /// Produces an exact Float-domain partition. Extremely rare rounding
+    /// failures fall back to an all-residual split rather than admitting an
+    /// unreconstructable carrier tap.
+    private static func exactCarrierSplit(
+        input: Float,
+        requestedCarrier: Float
+    ) -> (carrier: Float, residual: Float) {
+        guard input.isFinite, requestedCarrier.isFinite else {
+            return (0, input.isFinite ? input : 0)
+        }
+        var carrier = requestedCarrier
+        var residual = input - carrier
+        if carrier + residual != input {
+            carrier = input - residual
+        }
+        if carrier + residual != input {
+            carrier = 0
+            residual = input
+        }
+        return (carrier, residual)
     }
 
     private static func outputSafety(_ input: Float) -> Float {

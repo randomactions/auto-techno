@@ -475,6 +475,24 @@ private extension AutonomousTypedFingerprint {
         encode(value.longHorizonEnergyCoordination, into: &sink)
         sink.field("materialWorld")
         encode(value.materialWorld, into: &sink)
+        sink.field("effectCarrier")
+        sink.aggregate("LongHorizonEffectCarrierArticulation")
+        sink.field("stateSchema")
+        sink.string(value.effectCarrier.state.schemaIdentifier)
+        sink.field("worldID"); sink.uint64(value.effectCarrier.state.worldID)
+        sink.field("status"); sink.raw(value.effectCarrier.state.status.rawValue)
+        sink.field("role")
+        sink.presence(value.effectCarrier.state.role != nil)
+        if let role = value.effectCarrier.state.role { sink.raw(role.rawValue) }
+        sink.field("selectedAtPhraseIndex")
+        sink.presence(value.effectCarrier.state.selectedAtPhraseIndex != nil)
+        if let index = value.effectCarrier.state.selectedAtPhraseIndex {
+            sink.int(index)
+        }
+        sink.field("active"); sink.bool(value.effectCarrier.active)
+        sink.field("carrierDose"); sink.double(value.effectCarrier.carrierDose)
+        sink.field("nonCarrierDose")
+        sink.double(value.effectCarrier.nonCarrierDose)
         sink.field("qualityRecoveryContext")
         sink.aggregate("AutonomousQualityRecoveryContext")
         sink.field("wave"); sink.uint64(value.qualityRecoveryContext.wave)
@@ -499,6 +517,7 @@ private extension AutonomousTypedFingerprint {
             dna: value.dna,
             kind: value.kind,
             resolvedBars: value.resolvedBars,
+            materialWorld: value.materialWorld,
             compositionBars: value.phraseComposition
         )
         sink.field("resolvedUpperNotes")
@@ -516,6 +535,11 @@ private extension AutonomousTypedFingerprint {
             encode(bar.composition, into: &sink)
             sink.field("notes"); sink.collection(bar.upperNotes.count)
             for note in bar.upperNotes { encode(note, into: &sink) }
+            sink.field("polymetricEvidence")
+            sink.collection(bar.polymetricEvidence.count)
+            for evidence in bar.polymetricEvidence {
+                encode(evidence, into: &sink)
+            }
         }
     }
 
@@ -559,6 +583,25 @@ private extension AutonomousTypedFingerprint {
         sink.double(value.axes.effect.modulationMotion)
         sink.field("effectEchoMemory"); sink.double(value.axes.effect.echoMemory)
         sink.field("effectSpatialDepth"); sink.double(value.axes.effect.spatialDepth)
+        sink.field("polymetricGrammar")
+        sink.aggregate("LongHorizonPolymetricGrammar")
+        sink.field("schemaVersion"); sink.int(value.polymetricGrammar.schemaVersion)
+        sink.field("schemaIdentifier")
+        sink.string(value.polymetricGrammar.schemaIdentifier)
+        sink.field("isEnabled"); sink.bool(value.polymetricGrammar.isEnabled)
+        sink.field("activationBar"); sink.int(value.polymetricGrammar.activationBar)
+        sink.field("combinedPeriodInSteps")
+        sink.int(value.polymetricGrammar.combinedPeriodInSteps)
+        sink.field("fingerprint"); sink.raw(value.polymetricGrammar.fingerprint)
+        sink.field("laneGeometries")
+        sink.collection(value.polymetricGrammar.laneGeometries.count)
+        for geometry in value.polymetricGrammar.laneGeometries {
+            sink.aggregate("LongHorizonPolymetricLaneGeometry")
+            sink.field("lane"); sink.raw(geometry.lane.rawValue)
+            sink.field("stepLength"); sink.int(geometry.stepLength)
+            sink.field("pulseCount"); sink.int(geometry.pulseCount)
+            sink.field("rotation"); sink.int(geometry.rotation)
+        }
         sink.field("progress"); sink.double(value.progress)
     }
 
@@ -865,13 +908,62 @@ private extension AutonomousTypedFingerprint {
             sink.field("inputStep"); sink.int(texture.inputStep)
             sink.field("outputStartStep"); sink.int(texture.outputStartStep)
             sink.field("outputEndStep"); sink.int(texture.outputEndStep)
+            sink.field("worldID"); sink.uint64(texture.worldID)
+            sink.field("cadencePhase"); sink.int(texture.cadencePhase)
+            sink.field("gapPhase"); sink.int(texture.gapPhase)
+            sink.field("dominantSide")
+            sink.presence(texture.dominantSide != nil)
+            if let side = texture.dominantSide {
+                sink.raw(side.rawValue)
+            }
         }
+        sink.field("percussionPolymetricEvidence")
+        sink.presence(value.percussionPolymetricEvidence != nil)
+        if let evidence = value.percussionPolymetricEvidence {
+            encode(evidence, into: &sink)
+        }
+        sink.field("upperMusicalPump")
+        sink.aggregate("UpperMusicalPumpArticulation")
+        sink.field("schemaIdentifier")
+        sink.string(value.upperMusicalPump.schemaIdentifier)
+        sink.field("active"); sink.bool(value.upperMusicalPump.active)
+        sink.field("kickAnchorSteps")
+        sink.collection(value.upperMusicalPump.kickAnchorSteps.count)
+        for step in value.upperMusicalPump.kickAnchorSteps { sink.int(step) }
+        sink.field("attenuation")
+        sink.double(value.upperMusicalPump.attenuation)
+        sink.field("attackInBeats")
+        sink.double(value.upperMusicalPump.attackInBeats)
+        sink.field("releaseInBeats")
+        sink.double(value.upperMusicalPump.releaseInBeats)
         sink.field("spatialContrast"); encode(value.spatialContrast, into: &sink)
         sink.field("narrative"); encode(value.narrative, into: &sink)
         sink.field("harmonicDisclosureRelationship")
         sink.raw(value.harmonicDisclosureRelationship.rawValue)
         sink.field("kickMorphology")
         encode(value.kickMorphology, into: &sink)
+    }
+
+    static func encode(
+        _ value: LongHorizonPolymetricBarEvidence,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonPolymetricBarEvidence")
+        sink.field("absoluteBar"); sink.int(value.absoluteBar)
+        sink.field("lane"); sink.raw(value.lane.rawValue)
+        sink.field("lanePhase"); sink.int(value.lanePhase)
+        sink.field("sourceMask"); sink.uint64(UInt64(value.sourceMask))
+        sink.field("appliedMask"); sink.uint64(UInt64(value.appliedMask))
+        sink.field("eventCount"); sink.int(value.eventCount)
+        sink.field("relocatedEventCount"); sink.int(value.relocatedEventCount)
+        sink.field("collisionFallbackCount")
+        sink.int(value.collisionFallbackCount)
+        sink.field("combinedPeriodInSteps")
+        sink.int(value.combinedPeriodInSteps)
+        sink.field("protectedEventFingerprintBefore")
+        sink.uint64(value.protectedEventFingerprintBefore)
+        sink.field("protectedEventFingerprintAfter")
+        sink.uint64(value.protectedEventFingerprintAfter)
     }
 
     static func encode(

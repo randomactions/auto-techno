@@ -27,15 +27,15 @@ score/graph snapshots without using loudness or density alone as proof.
 Graph evidence binds the world fingerprint, requested five-coordinate target,
 realized graph vector, distance, protected routing, and at most one changed node
 per phrase. Existing transition-tail and route-recovery contracts remain.
-The exact engine-v45 primary-v26 and long-horizon-v13 development, adversarial,
+The exact engine-v48 primary-v29 and long-horizon-v16 development, adversarial,
 and disjoint-holdout artifacts now pass and replace the ineligible v38 set.
 Listening, real app/route QA, latency observation, and physical-output soak
 remain separate unverified gates.
 
 The current qualified offline implementation is
-`autotechno-canonical-engine.v45` under quality-contract schema 46,
-candidate-vector schema 40, candidate-transaction schema 11, and Professional
-Evidence v26. Primary profile/evaluator v26 and long-horizon policy v13 are the
+`autotechno-canonical-engine.v48` under quality-contract schema 49,
+candidate-vector schema 43, candidate-transaction schema 14, and Professional
+Evidence v29. Primary profile/evaluator v29 and long-horizon policy v16 are the
 required exact identities; their artifact loaders fail closed on any mismatch.
 
 ## Status and purpose
@@ -54,9 +54,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 46, candidate-vector schema 40,
-candidate-transaction schema 11, and canonical engine identity
-`autotechno-canonical-engine.v45`. Its explicit modal, tuned-inharmonic,
+candidate uses quality-contract schema 49, candidate-vector schema 43,
+candidate-transaction schema 14, and canonical engine identity
+`autotechno-canonical-engine.v48`. Its explicit modal, tuned-inharmonic,
 deliberate-dissonance, and indefinite-pitch rules are defined in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md). It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
@@ -290,10 +290,10 @@ detached rendering reconstructs its canonical kick PCM at the current route
 rate before the existing cut or granular renderer runs. Candidate validation
 requires a complete prior-bar recipe, kick source kind, bounded age, and the
 ordinary regenerated source/output hashes. Missing or malformed memory falls
-back to the current bar source and cannot mutate continuation. The engine-v45
-primary-v26 calibration accepts all 36 development trajectories, its 34
+back to the current bar source and cannot mutate continuation. The engine-v48
+primary-v29 calibration accepts all 36 development trajectories, its 34
 adversarial attacks pass, and all 56 observations from four disjoint holdout
-trajectories pass at 44.1 and 48 kHz; the compatible long-horizon-v13 artifacts
+trajectories pass at 44.1 and 48 kHz; the compatible long-horizon-v16 artifacts
 are regenerated separately. These are automated offline qualifications, not
 listening, app playback, route-recovery, or physical-output proof.
 
@@ -309,12 +309,43 @@ modes, scored fundamental, attack/body/tail relationships, centroid, masking,
 route, and continuation. Focused tests prove distinct deterministic PCM for all
 four held worlds, coupling causality with unchanged excitation and fundamental,
 44.1/48 kHz decay stability, exact continuation, fixed capacity, and finite
-aggressive bounds. The engine-v45 primary-v26 calibration accepts all 504
+aggressive bounds. The engine-v48 primary-v29 calibration accepts all 504
 development observations and all 56 observations from four disjoint holdout
 journeys with zero relationship failures; every adversarial attack is rejected
-as expected. Compatible long-horizon-v13 artifacts pass separately. This is
+as expected. Compatible long-horizon-v16 artifacts pass separately. This is
 automated offline qualification, not listening, app playback, route-recovery,
 or physical-output proof.
+
+Long-cycle groove evidence retains, for every semantic lane, the source and
+applied masks, source and applied event counts, activation-relative phase,
+length, pulse count, rotation, combined period, collision fallbacks, and exact
+protected-event equality. Candidate completeness rejects added or lost events,
+short dominant recurrence, reset phase, split slide chains, or any mutation of
+kick and protected-foundation score/render evidence. The exact neutral grammar
+is accepted only as the canonical three-lane no-op record and remains bit-exact
+to the preceding engine.
+Symbolic groove coverage uses the final relocated pulse count only when the bar
+carries valid bounded-period evidence with exact protected-event equality. The
+legacy weak-position comparison remains unchanged for neutral and malformed
+evidence, so a Euclidean onset is neither mislabeled as an unexpected legacy
+hit nor allowed to conceal event loss.
+
+Focused-effect evidence binds the world-selected carrier and persistence state,
+eligible-role order, active/fallback reason, exact carrier-plus-residual
+reconstruction error, carrier and non-carrier doses, and pre/post hashes around
+the one existing generated graph. Upper-pump evidence binds actual post-syntax
+kick anchors, route-derived attack/release frames, deterministic modulation
+target, minimum gain, affected upper roles and returns, and pre/post hashes.
+Candidate validation independently requires the legacy detector-driven safety
+duck to retain its prior score, envelope, and protected-rhythm equality.
+
+Spatial-dust evidence is channel-specific. It retains internally generated
+source and return hashes, high/low band bounds, unequal delay geometry, gains,
+equal-power pan positions, cadence and gap phase, alternating dominant side,
+stereo correlation, protected-low-band ratio, out-of-window energy, and exact
+terminal clearing. Exactly three of four eligible bars must be active; the
+world-stable gap must be exact zero. A missing or ineligible source produces a
+literal neutral record and no return PCM.
 
 Pad rhythmic-modulation evidence extends the existing phrase-composition record;
 it does not create another synth, sequencer, or effect return. A naturally
@@ -397,7 +428,7 @@ their patch-owned coefficients crossfade for 500 ms.
 `ProfessionalEvidenceReportBank` v25 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v26 from the v25 profile, v19 adversarial suite,
+exact-engine primary evaluator v29 from the v29 profile, v22 adversarial suite,
 and v15 disjoint holdout only after all three exact artifacts replay. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 36 complete 44.1/48 kHz journeys; four replacement holdout journeys
@@ -423,7 +454,7 @@ trajectories plus malformed and adversarial synthetic journeys, but the report
 has no pass/reject field and always declares qualification unavailable with
 reason `no-calibrated-long-horizon-policy`.
 
-Phase 2 separately embeds current `autotechno-long-horizon-continuation.v4` in canonical
+Phase 2 separately embeds current `autotechno-long-horizon-continuation.v6` in canonical
 `TemporalMusicalMemory`. It records committed arc/episode context, fixed-domain
 capability recency, semantic energy start/target coordinates, identity
 landmarks, reserve, payoff/recovery/recall obligations, and bounded material-
@@ -470,13 +501,13 @@ without partially mutating accepted summaries.
 
 Phase 6B calibrates independent non-compensable semantic, per-operator signal,
 and effect-family dimensions across seven exact four-hour development journeys
-at 44.1/48 kHz. The immutable v13 artifact set rejects ten independent
+at 44.1/48 kHz. The immutable v16 artifact set rejects ten independent
 adversarial attacks and accepts two fresh disjoint holdout roots. Generated-
 graph evidence additionally bounds realized material-world count and requested-
 to-realized effect-world distance. It retains only reduced irreversible
-evidence and binds the exact engine-v45/primary-v26 identity. The pinned
+evidence and binds the exact engine-v48/primary-v29 identity. The pinned
 long-horizon profile, adversarial, and holdout fingerprints are
-`6139c62f14150a56`, `41f2f0052adc68b3`, and `9c73ae998d25f693`.
+`836ac66b68470cd4`, `5950762cf2dc2635`, and `0e00df369ce54e50`.
 
 Phase 7 consumes that policy only during detached preparation. A fixed-capacity
 active-rate observation requires at least 7,200 bars, twelve signal observations,
@@ -600,7 +631,7 @@ sample hashes; pre/post peak, RMS, and low-band RMS; difference RMS; and finite
 status. It also retains exact first/last sample bit patterns, the pre-drive peak
 frame, the exact input/amount witness at the post-drive peak, and a replayable
 changed-frame witness together with that frame's exact input bits.
-Candidate-vector schema 40 binds that record to the matching instrument effect
+Candidate-vector schema 43 binds that record to the matching instrument effect
 access, score bar, phrase kind, route rate, three-sixteenth delay geometry, and
 sample-rate-normalized boundary transition. Neutral drive requires the no-change
 sentinel, identical pre/post hashes and metrics, and zero difference RMS. Positive
@@ -629,7 +660,7 @@ uses half depth, response uses full depth, and the full displacement is capped
 at `0.12` of one sixteenth. Note count, base step, pitch, velocity, instrument,
 requested duration, gate, and every protected-rhythm event remain unchanged.
 
-Candidate-vector schema 40 retains one compact record per full rendered bar. It
+Candidate-vector schema 43 retains one compact record per full rendered bar. It
 binds route-derived frame geometry, score and actual renderer onset facts,
 requested gate end, bounded renderer-owned applied gate end, causal role counts,
 exact protected/role offset relationships, and separate shadow/response dry
@@ -794,7 +825,7 @@ accepted PCM when none remain. At most five sidecars are retained for the select
 initial sidecar is released before a corrective render, and the declared
 preparation memory budget includes both that storage and bounded looper capture
 memory. Primary-v24 artifacts and
-engine-v45 candidate fingerprints remain
+engine-v48 candidate fingerprints remain
 unchanged because the sidecar cannot affect the primary plan, scheduled default
 PCM, evidence transaction, render continuation, or commit decision.
 
@@ -802,8 +833,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 46, candidate-vector schema 40,
-candidate-transaction schema 11, and canonical engine v45, the versioned
+Under quality-contract schema 49, candidate-vector schema 43,
+candidate-transaction schema 14, and canonical engine v48, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.

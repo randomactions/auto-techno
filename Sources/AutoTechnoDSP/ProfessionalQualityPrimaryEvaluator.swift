@@ -101,11 +101,11 @@ package enum ProfessionalQualityRecoveryIntentReducer {
 package struct ProfessionalQualityPrimaryEvaluator:
         AutonomousCandidateEvaluating {
     package static let policyFamilyVersion =
-        "autotechno-quality.primary-calibrated.v26"
+        "autotechno-quality.primary-calibrated.v29"
     package static let evaluatorVersionIdentifier =
-        "autotechno-candidate-evaluator.primary-calibrated.v26"
+        "autotechno-candidate-evaluator.primary-calibrated.v29"
     package static let requiredProfileVersion =
-        "autotechno-professional-quality-profile.v26"
+        "autotechno-professional-quality-profile.v29"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport

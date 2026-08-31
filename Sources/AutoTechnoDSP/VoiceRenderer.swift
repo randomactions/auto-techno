@@ -201,7 +201,8 @@ package enum PercussionEchoTextureVoice {
     ) -> PercussionEchoTextureRenderEvidence {
         let frameCount = min(source.count, returnStem.count)
         let neutralInputHash = ExactPCMFingerprint.mono([])
-        guard let articulation else {
+        guard let articulation,
+              articulation.relation != .spatialDust else {
             var returnFingerprint = ExactPCMFingerprint.MonoAccumulator(
                 sampleCount: frameCount
             )
@@ -471,6 +472,221 @@ package enum PercussionEchoTextureVoice {
                 lateToEarlyDB.isFinite
         )
     }
+
+    package static func renderSpatialDust(
+        source: [Float],
+        leftReturn: inout [Float],
+        rightReturn: inout [Float],
+        articulation: PercussionEchoTextureArticulation?,
+        sampleRate: Double
+    ) -> SpatialDustRenderEvidence {
+        let frameCount = min(source.count, leftReturn.count, rightReturn.count)
+        guard let articulation,
+              articulation.relation == .spatialDust,
+              articulation.worldID != 0,
+              (0..<4).contains(articulation.cadencePhase),
+              (0..<4).contains(articulation.gapPhase),
+              articulation.cadencePhase != articulation.gapPhase,
+              let dominantSide = articulation.dominantSide,
+              frameCount > 1,
+              sampleRate.isFinite, sampleRate > 0 else {
+            return .neutral(frameCount: frameCount)
+        }
+
+        let stepFrames = Double(frameCount) / 16
+        let leftDelayCount = max(1, Int(stepFrames.rounded()))
+        let rightDelayCount = max(1, Int((stepFrames * 1.375).rounded()))
+        var leftDelay = [Float](repeating: 0, count: leftDelayCount)
+        var rightDelay = [Float](repeating: 0, count: rightDelayCount)
+        var leftIndex = 0
+        var rightIndex = 0
+        var leftHighPassState = 0.0
+        var rightHighPassState = 0.0
+        var leftLowPassState = 0.0
+        var rightLowPassState = 0.0
+        let rightFeedback = feedback * 0.90
+        let highPassCoefficient = min(
+            0.35,
+            1 - exp(-2 * .pi * highPassHz / sampleRate)
+        )
+        let lowPassCoefficient = min(
+            0.55,
+            1 - exp(-2 * .pi * lowPassHz / sampleRate)
+        )
+        let lowBandCoefficient = min(
+            0.25,
+            1 - exp(-2 * .pi * 180 / sampleRate)
+        )
+        let transitionFrames = transitionFrameCount(sampleRate: sampleRate)
+        let leftDrive = dominantSide == .left ? 1.0 : 0.68
+        let rightDrive = dominantSide == .right ? 1.0 : 0.68
+        let spatialGain = returnGain * 0.32
+        let leftPan = -0.75
+        let rightPan = 0.75
+        let leftAngle = (leftPan + 1) * .pi * 0.25
+        let rightAngle = (rightPan + 1) * .pi * 0.25
+        let leftToLeft = cos(leftAngle)
+        let leftToRight = sin(leftAngle)
+        let rightToLeft = cos(rightAngle)
+        let rightToRight = sin(rightAngle)
+
+        var leftSourceHash = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frameCount
+        )
+        var rightSourceHash = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frameCount
+        )
+        var leftReturnHash = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frameCount
+        )
+        var rightReturnHash = ExactPCMFingerprint.MonoAccumulator(
+            sampleCount: frameCount
+        )
+        var leftSourceEnergy = 0.0
+        var rightSourceEnergy = 0.0
+        var leftReturnEnergy = 0.0
+        var rightReturnEnergy = 0.0
+        var crossEnergy = 0.0
+        var leftLowBandEnergy = 0.0
+        var rightLowBandEnergy = 0.0
+        var leftLowBandState = 0.0
+        var rightLowBandState = 0.0
+        var leftNonzero = 0
+        var rightNonzero = 0
+        var finite = highPassCoefficient.isFinite &&
+            lowPassCoefficient.isFinite && lowBandCoefficient.isFinite
+
+        for frame in 0..<frameCount {
+            let sourceSample = source[frame]
+            let leftSource = sourceSample * Float(leftDrive)
+            let rightSource = sourceSample * Float(rightDrive)
+            let leftRead = leftDelay[leftIndex]
+            let rightRead = rightDelay[rightIndex]
+            leftDelay[leftIndex] = leftSource + leftRead * Float(feedback)
+            rightDelay[rightIndex] = rightSource +
+                rightRead * Float(rightFeedback)
+            leftIndex = (leftIndex + 1) % leftDelayCount
+            rightIndex = (rightIndex + 1) % rightDelayCount
+
+            let leftReadValue = Double(leftRead)
+            let rightReadValue = Double(rightRead)
+            leftHighPassState += (leftReadValue - leftHighPassState) *
+                highPassCoefficient
+            rightHighPassState += (rightReadValue - rightHighPassState) *
+                highPassCoefficient
+            let leftHighPassed = leftReadValue - leftHighPassState
+            let rightHighPassed = rightReadValue - rightHighPassState
+            leftLowPassState += (leftHighPassed - leftLowPassState) *
+                lowPassCoefficient
+            rightLowPassState += (rightHighPassed - rightLowPassState) *
+                lowPassCoefficient
+
+            let boundaryDistance = min(frame, frameCount - 1 - frame)
+            let gate = frame == 0 || frame == frameCount - 1
+                ? 0
+                : min(1, Double(boundaryDistance) / Double(transitionFrames))
+            let leftSample = Float((
+                leftLowPassState * spatialGain * leftToLeft +
+                rightLowPassState * spatialGain * rightToLeft
+            ) * gate)
+            let rightSample = Float((
+                leftLowPassState * spatialGain * leftToRight +
+                rightLowPassState * spatialGain * rightToRight
+            ) * gate)
+            leftReturn[frame] = leftSample
+            rightReturn[frame] = rightSample
+
+            leftSourceHash.append(leftSource)
+            rightSourceHash.append(rightSource)
+            leftReturnHash.append(leftSample)
+            rightReturnHash.append(rightSample)
+            let leftSourceValue = Double(leftSource)
+            let rightSourceValue = Double(rightSource)
+            let leftValue = Double(leftSample)
+            let rightValue = Double(rightSample)
+            leftSourceEnergy += leftSourceValue * leftSourceValue
+            rightSourceEnergy += rightSourceValue * rightSourceValue
+            leftReturnEnergy += leftValue * leftValue
+            rightReturnEnergy += rightValue * rightValue
+            crossEnergy += leftValue * rightValue
+            leftLowBandState += (leftValue - leftLowBandState) *
+                lowBandCoefficient
+            rightLowBandState += (rightValue - rightLowBandState) *
+                lowBandCoefficient
+            leftLowBandEnergy += leftLowBandState * leftLowBandState
+            rightLowBandEnergy += rightLowBandState * rightLowBandState
+            if leftSample.bitPattern & 0x7fff_ffff != 0 { leftNonzero += 1 }
+            if rightSample.bitPattern & 0x7fff_ffff != 0 { rightNonzero += 1 }
+            finite = finite && sourceSample.isFinite && leftRead.isFinite &&
+                rightRead.isFinite && leftSample.isFinite && rightSample.isFinite &&
+                leftHighPassState.isFinite && rightHighPassState.isFinite &&
+                leftLowPassState.isFinite && rightLowPassState.isFinite
+        }
+
+        let frameDenominator = Double(frameCount)
+        let leftRMS = sqrt(leftReturnEnergy / frameDenominator)
+        let rightRMS = sqrt(rightReturnEnergy / frameDenominator)
+        let correlation = crossEnergy / sqrt(max(
+            1e-18,
+            leftReturnEnergy * rightReturnEnergy
+        ))
+        let totalEnergy = leftReturnEnergy + rightReturnEnergy
+        let lowBandRatio = totalEnergy > 0
+            ? (leftLowBandEnergy + rightLowBandEnergy) / totalEnergy : 0
+        let terminalCleared =
+            leftReturn[0].bitPattern & 0x7fff_ffff == 0 &&
+            rightReturn[0].bitPattern & 0x7fff_ffff == 0 &&
+            leftReturn[frameCount - 1].bitPattern & 0x7fff_ffff == 0 &&
+            rightReturn[frameCount - 1].bitPattern & 0x7fff_ffff == 0
+        return SpatialDustRenderEvidence(
+            active: true,
+            worldID: articulation.worldID,
+            cadencePhase: articulation.cadencePhase,
+            gapPhase: articulation.gapPhase,
+            dominantSide: dominantSide,
+            sourceStep: articulation.inputStep,
+            renderedFrameCount: frameCount,
+            transitionFrameCount: transitionFrames,
+            left: SpatialDustChannelRenderEvidence(
+                sourceSampleHash: leftSourceHash.fingerprint,
+                returnSampleHash: leftReturnHash.fingerprint,
+                delayFrameCount: leftDelayCount,
+                feedback: feedback,
+                gain: spatialGain * leftDrive,
+                pan: leftPan,
+                highPassHz: highPassHz,
+                lowPassHz: lowPassHz,
+                sourceRMS: sqrt(leftSourceEnergy / frameDenominator),
+                returnRMS: leftRMS,
+                lowBandRMS: sqrt(leftLowBandEnergy / frameDenominator),
+                nonzeroSampleCount: leftNonzero
+            ),
+            right: SpatialDustChannelRenderEvidence(
+                sourceSampleHash: rightSourceHash.fingerprint,
+                returnSampleHash: rightReturnHash.fingerprint,
+                delayFrameCount: rightDelayCount,
+                feedback: rightFeedback,
+                gain: spatialGain * rightDrive,
+                pan: rightPan,
+                highPassHz: highPassHz,
+                lowPassHz: lowPassHz,
+                sourceRMS: sqrt(rightSourceEnergy / frameDenominator),
+                returnRMS: rightRMS,
+                lowBandRMS: sqrt(rightLowBandEnergy / frameDenominator),
+                nonzeroSampleCount: rightNonzero
+            ),
+            stereoCorrelation: correlation,
+            lowBandEnergyRatio: lowBandRatio,
+            outOfWindowNonzeroSampleCount: 0,
+            firstLeftSampleBitPattern: leftReturn[0].bitPattern,
+            firstRightSampleBitPattern: rightReturn[0].bitPattern,
+            lastLeftSampleBitPattern: leftReturn[frameCount - 1].bitPattern,
+            lastRightSampleBitPattern: rightReturn[frameCount - 1].bitPattern,
+            terminalCleared: terminalCleared,
+            finite: finite && leftRMS.isFinite && rightRMS.isFinite &&
+                correlation.isFinite && lowBandRatio.isFinite
+        )
+    }
 }
 
 /// Fixed DSP contract for the existing ordinary closed-hat voice. The score
@@ -609,6 +825,7 @@ package enum VoiceRenderer {
                           dna: SceneDNA, resolved: ResolvedPerformanceBar,
                           synthWorld: SynthWorldDNA, synthPerformance: SynthPerformanceBar,
                           workspace: inout RenderWorkspace, layer: RenderLayer,
+                          effectCarrierRole: SynthRole? = nil,
                           phraseKind: AutonomousPhraseKind = .lock) -> RenderedBar {
         let performance = resolved.performance
         let section = performance.section
@@ -657,10 +874,13 @@ package enum VoiceRenderer {
         var modalPercussionStem: [Float] = []
         var percussionStem: [Float] = []
         var percussionTextureStem: [Float] = []
+        var spatialDustLeftStem = [Float](repeating: 0, count: frames)
+        var spatialDustRightStem = [Float](repeating: 0, count: frames)
         var audioSliceStem = [Float](repeating: 0, count: frames)
         var polyphonicPadStem = [Float](repeating: 0, count: frames)
         var upperTonalStem: [Float] = []
         var atmosphereStem: [Float] = []
+        var transitionStem: [Float] = []
         var resonantAnchorStem: [Float] = []
         var detunedCompanionStem: [Float] = []
         var shadowTimingStem: [Float] = []
@@ -704,6 +924,7 @@ package enum VoiceRenderer {
         swap(&percussionTextureStem, &checkedOut.percussionTextureStem)
         swap(&upperTonalStem, &checkedOut.upperTonalStem)
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
+        swap(&transitionStem, &checkedOut.transitionStem)
         swap(&resonantAnchorStem, &checkedOut.resonantAnchorStem)
         swap(&detunedCompanionStem, &checkedOut.detunedCompanionStem)
         swap(&shadowTimingStem, &checkedOut.shadowTimingStem)
@@ -1034,6 +1255,14 @@ package enum VoiceRenderer {
                 bpm: scene.bpm,
                 sampleRate: sampleRate
             )
+        let spatialDustRenderEvidence =
+            PercussionEchoTextureVoice.renderSpatialDust(
+                source: percussionStem,
+                leftReturn: &spatialDustLeftStem,
+                rightReturn: &spatialDustRightStem,
+                articulation: resolved.percussionEchoTexture,
+                sampleRate: sampleRate
+            )
         let audioSlicePlan = synthPerformance.composition.audioSlice
         let audioSliceRenderEvidence: AudioSliceRenderEvidence
         if let memorySource = audioSlicePlan?.resampledMemorySource {
@@ -1104,6 +1333,7 @@ package enum VoiceRenderer {
                 spatialReverbSend: &spatialReverbSendBus,
                 upperTonalStem: &upperTonalStem,
                 atmosphereStem: &atmosphereStem,
+                transitionStem: &transitionStem,
                 resonantAnchorStem: &resonantAnchorStem,
                 detunedCompanionStem: &detunedCompanionStem,
                 shadowTimingStem: &shadowTimingStem,
@@ -1587,10 +1817,10 @@ package enum VoiceRenderer {
             }
             let leftPreMaster = center + synthLeftOut + reflectionLeft +
                 (spatial + pulseEcho) * (1.0 + delayPan * 0.18) * upperDuck +
-                spatialFDNLeft
+                spatialFDNLeft + spatialDustLeftStem[index]
             let rightPreMaster = center + synthRightOut + reflectionRight +
                 (spatial + pulseEcho) * (1.0 + (1.0 - delayPan) * 0.18) * upperDuck +
-                spatialFDNRight
+                spatialFDNRight + spatialDustRightStem[index]
             // Linked two-band glue: center and upper energy share detector
             // gains, so compression cannot pull the stereo image sideways.
             // This is deliberately before the master safety stage.
@@ -1871,6 +2101,7 @@ package enum VoiceRenderer {
                     note.endFrequencyRatio
                 let evidenceIndex = unmatchedNoteEvidence.firstIndex { evidence in
                     evidence.role == note.role &&
+                        evidence.onsetFrame == expectedStartFrame &&
                         evidence.requestedStartFrequency == requestedStartFrequency &&
                         evidence.requestedEndFrequency == targetEndFrequency &&
                         evidence.requestedGate == note.gate &&
@@ -1918,6 +2149,15 @@ package enum VoiceRenderer {
                 samples: responseTimingStem
             )
         )
+        let effectCarrierSamples: [Float] = switch effectCarrierRole {
+        case .anchor: resonantAnchorStem
+        case .shadow: shadowTimingStem
+        case .response: responseTimingStem
+        case .transition: transitionStem
+        case .atmosphere:
+            zip(atmosphereStem, transitionStem).map { $0 - $1 }
+        case nil: []
+        }
         let rendered = RenderedBar(sampleRate: sampleRate,
                                    samples: zip(left, right).map { ($0 + $1) * 0.5 },
                                    leftSamples: left, rightSamples: right,
@@ -1967,6 +2207,8 @@ package enum VoiceRenderer {
                                     ),
                                    percussionEchoTextureRenderEvidence:
                                     percussionEchoTextureRenderEvidence,
+                                   spatialDustRenderEvidence:
+                                    spatialDustRenderEvidence,
                                    audioSliceRenderEvidence:
                                     audioSliceRenderEvidence,
                                    polyphonicPadRenderEvidence:
@@ -1983,6 +2225,7 @@ package enum VoiceRenderer {
                                     graphRemainderReferenceLeftSamples,
                                    graphRemainderReferenceRightSamples:
                                     graphRemainderReferenceRightSamples,
+                                   effectCarrierSamples: effectCarrierSamples,
                                    resonantAnchorSamples: resonantAnchorStem,
                                    detunedCompanionSamples: detunedCompanionStem)
         swap(&output, &checkedOut.output)
@@ -1994,6 +2237,7 @@ package enum VoiceRenderer {
         swap(&percussionTextureStem, &checkedOut.percussionTextureStem)
         swap(&upperTonalStem, &checkedOut.upperTonalStem)
         swap(&atmosphereStem, &checkedOut.atmosphereStem)
+        swap(&transitionStem, &checkedOut.transitionStem)
         swap(&resonantAnchorStem, &checkedOut.resonantAnchorStem)
         swap(&detunedCompanionStem, &checkedOut.detunedCompanionStem)
         swap(&shadowTimingStem, &checkedOut.shadowTimingStem)
@@ -2026,6 +2270,7 @@ package enum VoiceRenderer {
         spatialReverbSend: inout [Float],
         upperTonalStem: inout [Float],
         atmosphereStem: inout [Float],
+        transitionStem: inout [Float],
         resonantAnchorStem: inout [Float],
         detunedCompanionStem: inout [Float],
         shadowTimingStem: inout [Float],
@@ -2081,9 +2326,13 @@ package enum VoiceRenderer {
                 } else {
                     spatial = (1, 0)
                 }
+                let sourceStep = synthBar.sourceUpperStep(
+                    for: role,
+                    appliedStep: note.onsetStep
+                )
                 let relational: RelationalArticulation = switch role {
                 case .anchor, .shadow, .response:
-                    synthBar.articulation(at: note.onsetStep)
+                    synthBar.articulation(at: sourceStep)
                 case .atmosphere, .transition:
                     .neutral
                 }
@@ -2201,7 +2450,7 @@ package enum VoiceRenderer {
         }
         AlienAnalogVoice.render(
             &output,
-            measurement: &atmosphereStem,
+            measurement: &transitionStem,
             architectureMeasurement: &tonalMotionInstrumentStem,
             envelopeExpansionMeasurement: &tonalEnvelopeExpansionStem,
             pulseEchoSend: &pulseEchoSend,
@@ -2214,7 +2463,7 @@ package enum VoiceRenderer {
         )
         SpectralTextureVoice.render(
             &output,
-            measurement: &atmosphereStem,
+            measurement: &transitionStem,
             architectureMeasurement: &spectralTextureInstrumentStem,
             indefinitePitchMeasurement: &spectralTextureIndefinitePitchStem,
             clusterMeasurement: &spectralTextureClusterStem,
@@ -2301,6 +2550,9 @@ package enum VoiceRenderer {
             level: 0.008 + scene.atmosphere * 0.012,
             state: &state.spectralTransitionState
         )
+        for frame in atmosphereStem.indices {
+            atmosphereStem[frame] += transitionStem[frame]
+        }
         for frame in upperTonalStem.indices {
             detunedCompanionStem[frame] =
                 shadowTimingStem[frame] + responseTimingStem[frame]

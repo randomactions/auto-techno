@@ -1,8 +1,8 @@
 # Single Primary Evaluator
 
-Current engine v45 binds material-world/effect-target lineage, pitch identity,
-and transition-tail continuity under quality schema 46, candidate-vector schema
-40, and transaction schema 11. Its primary-v26 artifacts are the single active
+Current engine v48 binds material-world/effect-target lineage, pitch identity,
+and transition-tail continuity under quality schema 49, candidate-vector schema
+43, and transaction schema 14. Its primary-v29 artifacts are the single active
 qualification set.
 
 ## Runtime contract
@@ -55,11 +55,11 @@ invalid.
 ## Qualification
 
 `ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v45 profile v26, adversarial suite v19, and disjoint holdout qualification
-v17. The profile derives from 36 complete 44.1/48 kHz journeys; four fresh,
+engine-v48 profile v29, adversarial suite v22, and disjoint holdout qualification
+v20. The profile derives from 36 complete 44.1/48 kHz journeys; four fresh,
 disjoint holdout journeys passed all 56 local verdicts and every relationship
 gate. The pinned profile, adversarial, and holdout fingerprints are
-`49533dcd68238f05`, `b0733d1aad0de785`, and `81f20d011441fa5f`.
+`06cb04bfbef71c28`, `16820b6274dd26d4`, and `2037dec24ac1e45c`.
 
 Offline calibration may retain several checkpoint observations from one
 candidate. Runtime terminal qualification selects one most-specific

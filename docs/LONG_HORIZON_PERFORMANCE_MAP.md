@@ -1,7 +1,7 @@
 # Long-Horizon Performance Map
 
-Current engine v45 binds material-world/effect-target lineage, pitch identity,
-and transition-tail continuity to the primary-v26 and long-horizon-v13
+Current engine v48 binds material-world/effect-target lineage, pitch identity,
+and transition-tail continuity to the primary-v29 and long-horizon-v16
 qualification sets.
 
 ## Status and verdict
@@ -22,7 +22,7 @@ resolved-score owners with bounded, versioned provenance. Phase 5 supplies the
 effect-dose/recovery and phrase-sentence foundation from the current palette
 without changing audio. Phase 6A supplies compatible realized signal
 trajectories while keeping semantic targets and physical consequences separate.
-Phase 6B now binds those dimensions to one exact engine-v45/primary-v26
+Phase 6B now binds those dimensions to one exact engine-v48/primary-v29
 development profile, passes ten independent adversarial attacks, and accepts two
 disjoint four-hour holdout journeys. Phase 7 now reduces each accepted prepared
 phrase into one bounded active-rate observation during detached preparation,
@@ -156,7 +156,7 @@ musical, quality, live-master, and long-horizon continuations together only when
 the accepted prepared successor is scheduled.
 
 Stage 6 offline long-horizon qualification and Stage 7 local runtime integration
-are now **passed** for the exact engine-v45/primary-v26/long-horizon-v13 artifact set. Real
+are now **passed** for the exact engine-v48/primary-v29/long-horizon-v16 artifact set. Real
 app/route QA, listening, and physical-output soak remain separate and
 unverified.
 
@@ -295,7 +295,7 @@ report still declares qualification unavailable with reason
 ### Implemented Phase 2 hierarchical continuation
 
 `TemporalMusicalMemory` now owns schema
-`autotechno-long-horizon-continuation.v4`. The state binds to the fresh
+`autotechno-long-horizon-continuation.v6`. The state binds to the fresh
 performance root and accepted phrase/bar boundary, then transactionally observes
 each committed canonical plan. It retains one renewable arc intention, one
 current episode, semantic energy start/target coordinates, named capability/
@@ -455,7 +455,7 @@ one planned sentence to exact source/return fingerprints, positive RMS,
 masking, and terminal tail clearance. Synthetic active-to-tail-to-clear evidence
 proves a tail is not counted as recovered one bar early. These are provenance
 and dose facts; the report remains an observation rather than a verdict. The
-exact long-horizon-v13 policy consumes its compatible reduced dimensions only
+exact long-horizon-v16 policy consumes its compatible reduced dimensions only
 after primary-qualified preparation.
 
 Phase 5 changes no resolved event, score permission, graph, synth, patch, DSP
@@ -511,12 +511,12 @@ remain named and non-compensable across nine semantic dimensions,
 every operator/signal-rate relationship, and every existing effect family; no
 aggregate engagement score can hide a hard failure.
 
-The current v11 development profile replaces the v9 artifact identity and rejects all ten required
-attacks through adversarial artifact `41f2f0052adc68b3`: permanent peak, fixed
+The current v16 development profile rejects all ten required
+attacks through adversarial artifact `5950762cf2dc2635`: permanent peak, fixed
 sawtooth, strict alternation, failed recall, periodic rare gesture, wetness
 ratchet, monotonic decline, instant debt payment, semantic/signal mismatch, and
 route identity reset. Fresh disjoint roots `271828` and `314159` are both
-accepted by holdout artifact `9c73ae998d25f693`. The bundled artifacts enforce canonical
+accepted by holdout artifact `0e00df369ce54e50`. The bundled artifacts enforce canonical
 JSON, exact engine/primary-policy identity, development/holdout disjointness,
 and fail-closed cross-artifact construction. They retain only irreversible
 summaries and fingerprints; PCM, samples, waveforms, and score events are absent.
@@ -524,7 +524,7 @@ summaries and fingerprints; PCM, samples, waveforms, and score events are absent
 Calibration adjusted only evidence uncertainty, not audio: one-sided semantic
 bounds distinguish absence of debt from excessive debt; sparse two-transition
 means receive explicit metric-unit floors while every contributing phrase still
-must pass the exact primary-v26 evaluator. Phase 6B changes no score, synth,
+must pass the exact primary-v29 evaluator. Phase 6B changes no score, synth,
 preset, patch home, DSP primitive, effect, graph, renderer, scheduler, route
 lifecycle, or realtime callback. The regenerated policy accepts both fresh
 holdouts after the two AudioReakt-derived and one Mordio-derived in-place
@@ -791,14 +791,14 @@ Each slice extends the one canonical owner and leaves a reusable capability.
 | --- | --- | --- | --- | --- | --- |
 | 0. Descriptive baseline — complete locally | Test-only `LongHorizonPlanningBaselineProbe` using `AutonomousSessionDirector` and real continuation | Frozen, versioned four-hour planning snapshot with canonical JSON and separate plan/bar fingerprints | Exact engine-v38 kind/character/tension/signature/debt/memory coverage; encoded qualification unavailability and no engagement verdict | Pure planning; fixture drift requires explicit review; no PCM, runtime selection, or production state change | No second planner, synthetic fixture engine, or unfrozen same-run-only comparison |
 | 1. Trajectory schema and offline harness — complete locally | `AutoTechnoCore` schema `autotechno-long-horizon-semantic.v1` plus existing canonical journey harness | Fixed-capacity semantic trajectory accumulator and machine-readable report | Real four/eight-hour evidence plus adversarial periodicity, peak dwell, capability fatigue, recall, and debt cases; qualification remains unavailable | Offline only; malformed input is unavailable without partial mutation; no runtime selection change | No opaque engagement score, handwritten pass, second planner, DSP type, or PCM retention |
-| 2. Hierarchical continuation — complete locally | `TemporalMusicalMemory` extended with current `autotechno-long-horizon-continuation.v4` | Renewable arc/episode intention, material-world lineage, fixed-domain recency, rare-operator reserve, identity landmarks, obligations, and exact last trajectory decision | Four/eight-hour state, episode/world sequence, exact replay, fresh-root variation, and bounded recent-world history | Observes only committed plans; bounded due/hold and retained collections; schema-safe decode; preserve current episode/world on failure | No second director, playlist, user mode, plan selection, score, PCM, or callback change |
+| 2. Hierarchical continuation — complete locally | `TemporalMusicalMemory` extended with current `autotechno-long-horizon-continuation.v6` | Renewable arc/episode intention, material-world lineage, held polymetric grammar and effect carrier, fixed-domain recency, rare-operator reserve, identity landmarks, obligations, and exact last trajectory decision | Four/eight-hour state, episode/world sequence, exact replay, fresh-root variation, and bounded recent-world history | Observes only committed plans; bounded due/hold and retained collections; schema-safe decode; preserve current episode/world on failure | No second director, playlist, user mode, plan selection, score, PCM, or callback change |
 | 3. Episode operator selection — complete locally | `AutonomousSessionDirector` selection and `makePlan` consume exact hierarchy context | Versioned maintain/rise/recover/reframe/payoff/recall provenance mapped to existing phrase kinds | All operators fulfill in the canonical journey; at most one payoff per arc, real debt payment, prompt bounded recovery, frozen planning/semantic/hierarchy drift | Candidate count remains one; minimum hold protects reserved rare events; invalid context uses the previous conservative policy | No alternative arrangement engine, phrase vocabulary, or random style switch |
 | 4. Score-owned energy coordination — complete locally | Existing resolved roles, character, narrative, foundation, disclosure, transformations, spatial carrier, and transition eligibility | Versioned eight-coordinate target projected through existing score owners | Every coordinate has directional semantic witnesses; exact all-hold fingerprint; four-hour six-operator coverage, bounded roles/slew/space, and protected rare-event reserve | One immutable phrase-boundary target; 0.16 protagonist slew; one percussion tier; one spatial carrier/macro; malformed provenance fails closed | No extra density track, disconnected scalar, synth, patch, DSP primitive, graph stage, or callback path |
 | 5. Effect/capability dose evidence — complete locally | Existing instrument effect access, graph, FDN, pulse echo, percussion returns, masking, and transition relations | Versioned phrase sentence plus fixed-capacity activation, occupancy, tail, recovery, gap, last-use, and level evidence | 63 existing four-hour sentences; exact detached source/return binding; adversarial false eligibility, disconnected claims, premature recovery, discontinuity, and replay checks | Annotation and detached reduction only; no PCM retained; invalid evidence is unavailable without partial mutation; current audio remains exact | No new bus, effect, orderable plug-in chain, FX sequencer, renderer, or callback path |
-| 6. Calibrated long-horizon policy — complete locally | Primary-v26 evaluator, DSP-owned `autotechno-long-horizon-signal-trajectory.v1`, and immutable Stage 6 artifact loader | Non-compensable cross-phrase/cross-episode semantic, phrase-kind-consistent operator/signal, and effect bounds over seven exact development journeys | Engine-v45 v13 profile, ten rejected attacks, and two fresh disjoint at-least-four-hour holdouts accepted at 44.1/48 kHz | Reduced detached evidence only; exact identities and canonical JSON fail closed; no PCM retained or scheduled audio rewritten | No parallel permissive evaluator, PCM ledger, aggregate engagement score, or semantic claim masquerading as signal consequence |
+| 6. Calibrated long-horizon policy — complete locally | Primary-v29 evaluator, DSP-owned `autotechno-long-horizon-signal-trajectory.v1`, and immutable Stage 6 artifact loader | Non-compensable cross-phrase/cross-episode semantic, phrase-kind-consistent operator/signal, and effect bounds over seven exact development journeys | Engine-v48 v16 profile, ten rejected attacks, and two fresh disjoint at-least-four-hour holdouts accepted at 44.1/48 kHz | Reduced detached evidence only; exact identities and canonical JSON fail closed; no PCM retained or scheduled audio rewritten | No parallel permissive evaluator, PCM ledger, aggregate engagement score, or semantic claim masquerading as signal consequence |
 | 7. Bounded future adaptation — complete locally | DSP-owned fixed-capacity runtime observation v2, Core continuation v4/decision v2, and App prepared-successor transaction | Exact active-rate Stage 6 evaluation and one reason-coded preserve/recover/reframe-material update for the next eligible phrase | Exact observation/decision/continuation replay; independent reason mappings; real prepared-phrase witness; stale/short/wrong-root/ineligible preservation; route rollback source contract | Fixed 7,200-bar/12-observation/two-transitions-per-operator minimum and 256-bar interval; immutable prepared state commits atomically; invalid evidence restarts; no callback work | No independent long-form controller, second plan, parallel policy, PCM history, renderer, graph, or callback path |
-| 8. Targeted sound maturation — complete locally with four bounded promotions | Existing Core kick, upper-percussion, phrase-composition, and modal-foundation score intent; primary-v26 phrase verdict; and affected DSP evidence owners | Bounded kick morphology, clap body, resampled memory, and four held coupled modal materials, all inside existing voices and renderers | Multi-rate kick, clap/snare/rim, cut/granular-memory, four-material PCM, coupling-causality, continuation, stability, primary-v26, and long-horizon-v13 evidence | Score-resolved state-free DSP only; a future promotion still requires repeated independent-root and two-rate causal failure and must replace provisional DSP in place | No preset pack, granular side engine, alternative renderer, speculative chain, genre selector, duplicate event lane, or sample library |
-| 9. Material-world lineage and effect morph — complete and offline-qualified | Core continuation v4 and `AutonomousPhrasePlan`; existing generated graph and evidence transaction | Causal four-to-eight-minute worlds changing rhythm, motif, roles, harmony, timbral architecture, and one five-coordinate effect target; one-node-per-phrase graph convergence | 512-root property sweep, different ten-/twenty-minute snapshots, exact replay and route recovery, primary-v26 qualification, and long-horizon-v13 development/adversarial/fresh-holdout pass | New worlds and reframe-material actions apply only at eligible future boundaries; malformed input preserves the accepted world; graph rejection freezes topology | No random graph-operation roulette, preset bank, selectable FX chain, alternative renderer, or second director |
+| 8. Targeted sound maturation — complete locally with four bounded promotions | Existing Core kick, upper-percussion, phrase-composition, and modal-foundation score intent; primary-v29 phrase verdict; and affected DSP evidence owners | Bounded kick morphology, clap body, resampled memory, and four held coupled modal materials, all inside existing voices and renderers | Multi-rate kick, clap/snare/rim, cut/granular-memory, four-material PCM, coupling-causality, continuation, stability, primary-v29, and long-horizon-v16 evidence | Score-resolved state-free DSP only; a future promotion still requires repeated independent-root and two-rate causal failure and must replace provisional DSP in place | No preset pack, granular side engine, alternative renderer, speculative chain, genre selector, duplicate event lane, or sample library |
+| 9. Material-world lineage and effect morph — complete and offline-qualified | Core continuation v6 and `AutonomousPhrasePlan`; existing generated graph and evidence transaction | Causal four-to-eight-minute worlds changing rhythm, motif, roles, harmony, timbral architecture, one five-coordinate effect target, long-cycle onset geometry, focused carrier, upper pump, and spatial dust; one-node-per-phrase graph convergence | 512-root property sweep, different ten-/twenty-minute snapshots, exact replay and route recovery, primary-v29 qualification, and long-horizon-v16 development/adversarial/fresh-holdout pass | New worlds and reframe-material actions apply only at eligible future boundaries; malformed input preserves the accepted world; graph rejection freezes topology | No random graph-operation roulette, preset bank, selectable FX chain, alternative renderer, or second director |
 
 ## Validation matrix
 

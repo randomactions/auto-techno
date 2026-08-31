@@ -4,8 +4,8 @@ import Foundation
 /// canonical session state. The geometry is planning context, not a calibrated
 /// entertainment threshold or a second arrangement engine.
 package enum LongHorizonContinuationSchema {
-    package static let schemaVersion = 4
-    package static let schemaIdentifier = "autotechno-long-horizon-continuation.v4"
+    package static let schemaVersion = 6
+    package static let schemaIdentifier = "autotechno-long-horizon-continuation.v6"
     package static let recentEpisodeCapacity = 8
     package static let recentOperatorCapacity = 6
     package static let identityLandmarkCapacity = 8
@@ -227,6 +227,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
     package let arcIndex: Int
     package let arcEpisodeCount: Int
     package let currentEpisode: LongHorizonEpisodeIntent
+    package let effectCarrierState: LongHorizonEffectCarrierState
     package let lastSemanticEnergy: LongHorizonSemanticEnergyVector
     package let recentEpisodes: [LongHorizonCompletedEpisode]
     package let recentOperators: [LongHorizonEpisodeOperator]
@@ -253,6 +254,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         case arcIndex
         case arcEpisodeCount
         case currentEpisode
+        case effectCarrierState
         case lastSemanticEnergy
         case recentEpisodes
         case recentOperators
@@ -282,6 +284,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             arcIndex: 0,
             arcEpisodeCount: LongHorizonContinuationSchema.minimumArcEpisodes,
             currentEpisode: placeholderEpisode(startingBar: startingBar),
+            effectCarrierState: .unselected(worldID: 0),
             lastSemanticEnergy: .neutral,
             recentEpisodes: [],
             recentOperators: [],
@@ -333,6 +336,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             arcIndex: 0,
             arcEpisodeCount: arcCount,
             currentEpisode: episode,
+            effectCarrierState: .unselected(worldID: episode.materialWorld.id),
             lastSemanticEnergy: .neutral,
             recentEpisodes: [],
             recentOperators: [.maintain],
@@ -367,6 +371,7 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         arcIndex: Int,
         arcEpisodeCount: Int,
         currentEpisode: LongHorizonEpisodeIntent,
+        effectCarrierState: LongHorizonEffectCarrierState,
         lastSemanticEnergy: LongHorizonSemanticEnergyVector,
         recentEpisodes: [LongHorizonCompletedEpisode],
         recentOperators: [LongHorizonEpisodeOperator],
@@ -398,6 +403,10 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             max(LongHorizonContinuationSchema.minimumArcEpisodes, arcEpisodeCount)
         )
         self.currentEpisode = currentEpisode
+        self.effectCarrierState = effectCarrierState.isValid &&
+            effectCarrierState.worldID == currentEpisode.materialWorld.id
+            ? effectCarrierState
+            : .unselected(worldID: currentEpisode.materialWorld.id)
         self.lastSemanticEnergy = lastSemanticEnergy
         self.recentEpisodes = Array(
             recentEpisodes.suffix(
@@ -489,6 +498,10 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             currentEpisode: try container.decode(
                 LongHorizonEpisodeIntent.self,
                 forKey: .currentEpisode
+            ),
+            effectCarrierState: try container.decode(
+                LongHorizonEffectCarrierState.self,
+                forKey: .effectCarrierState
             ),
             lastSemanticEnergy: try container.decode(
                 LongHorizonSemanticEnergyVector.self,
@@ -587,6 +600,8 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             plan.dna.sceneSeed == suppliedRootSeed &+ 17,
             plan.scene.bpm == AutonomousSessionDirector.bpm,
             plan.materialWorld.isConsistent(with: currentEpisode),
+            plan.effectCarrier.state.isValid,
+            plan.effectCarrier.state.worldID == currentEpisode.materialWorld.id,
             let character = plan.resolvedBars.first?.performanceCharacter,
             plan.resolvedBars.indices.allSatisfy({ index in
                 let resolved = plan.resolvedBars[index]
@@ -747,6 +762,9 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
                 arcIndex: nextArcIndex,
                 arcEpisodeCount: nextArcEpisodeCount,
                 currentEpisode: nextEpisode,
+                effectCarrierState: nextEpisode.id == currentEpisode.id
+                    ? plan.effectCarrier.state
+                    : .unselected(worldID: nextEpisode.materialWorld.id),
                 lastSemanticEnergy: energy,
                 recentEpisodes: nextRecentEpisodes,
                 recentOperators: nextRecentOperators,
@@ -907,6 +925,9 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             arcIndex: arcIndex,
             arcEpisodeCount: arcEpisodeCount,
             currentEpisode: currentEpisode,
+            effectCarrierState: currentEpisode.id == self.currentEpisode.id
+                ? effectCarrierState
+                : .unselected(worldID: currentEpisode.materialWorld.id),
             lastSemanticEnergy: lastSemanticEnergy,
             recentEpisodes: recentEpisodes,
             recentOperators: recentOperators,
@@ -939,6 +960,16 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
         hasher.combine(currentEpisode.minimumHoldUntilBar)
         hasher.combine(currentEpisode.dueByBar)
         hasher.combine(currentEpisode.materialWorld.fingerprint)
+        hasher.combine(currentEpisode.materialWorld.polymetricGrammar.fingerprint)
+        hasher.combine(currentEpisode.materialWorld.polymetricGrammar.activationBar)
+        hasher.combine(
+            currentEpisode.materialWorld.polymetricGrammar.combinedPeriodInSteps
+        )
+        hasher.combine(effectCarrierState.schemaIdentifier)
+        hasher.combine(effectCarrierState.worldID)
+        hasher.combine(effectCarrierState.status.rawValue)
+        hasher.combine(effectCarrierState.role?.rawValue ?? "none")
+        hasher.combine(effectCarrierState.selectedAtPhraseIndex ?? -1)
         for episode in recentEpisodes {
             hasher.combine(episode.id)
             hasher.combine(episode.completionReason.rawValue)
@@ -971,7 +1002,8 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             operatorKind: .maintain,
             parent: nil,
             recallSource: nil,
-            recentFingerprints: []
+            recentFingerprints: [],
+            activationBar: max(0, startingBar)
         )
         return LongHorizonEpisodeIntent(
             id: 0,
@@ -1170,7 +1202,8 @@ package struct LongHorizonContinuationState: Codable, Equatable, Sendable {
             operatorKind: operatorKind,
             parent: parentWorld,
             recallSource: recallSource,
-            recentFingerprints: recentWorlds.map(\.fingerprint)
+            recentFingerprints: recentWorlds.map(\.fingerprint),
+            activationBar: start
         )
         return LongHorizonEpisodeIntent(
             id: episodeID,

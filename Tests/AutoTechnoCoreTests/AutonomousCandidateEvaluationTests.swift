@@ -132,7 +132,7 @@ struct AutonomousCandidateEvaluationTests {
         let active = fixtureVector(modalPercussionBar: activeBar)
         let event = try #require(active.modalPercussion.first?.events.first)
 
-        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 40)
+        #expect(AutonomousCandidateEvaluationVector.schemaVersion == 43)
         #expect(neutral.isComplete)
         #expect(active.isComplete)
         #expect(active.isFinite)
@@ -304,7 +304,7 @@ struct AutonomousCandidateEvaluationTests {
             object["liveProposalFingerprint"] = "aaaaaaaaaaaaaaaa"
         }
         #expect(!transaction(correction: changedLiveProposal).isComplete)
-        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 11)
+        #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 14)
     }
 
     @Test("Candidate live policy rejects boost forged scaling stale revision and boundary")
@@ -798,6 +798,13 @@ struct AutonomousCandidateEvaluationTests {
 
     @Test("Upper timing evidence is compact, score-bound, and playback-gate-neutral")
     func upperTimingEvidenceContract() throws {
+        #expect(
+            AutonomousUpperTimingBarEvidence.offsetPatternFingerprint(
+                [0, 0.036, 0.018, 0.018]
+            ) == AutonomousUpperTimingBarEvidence.offsetPatternFingerprint(
+                [0.018, 0, 0.018, 0.036]
+            )
+        )
         let neutral = fixtureUpperTiming()
         let active = fixtureUpperTiming(
             bar: 7,
@@ -1304,10 +1311,10 @@ struct AutonomousCandidateEvaluationTests {
         #expect(event.isComplete(sampleRate: 8_000))
         #expect(event.isFinite)
         #expect(bar.isComplete(sampleRate: 8_000))
-        #expect(vector.schemaVersion == 40)
-        #expect(QualityQualificationContract.schemaVersion == 46)
+        #expect(vector.schemaVersion == 43)
+        #expect(QualityQualificationContract.schemaVersion == 49)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v45")
+                "autotechno-canonical-engine.v48")
         #expect(vector.isComplete)
         #expect(vector.isFinite)
         #expect(vector.fingerprint != fixtureVector().fingerprint)
@@ -3915,7 +3922,7 @@ struct AutonomousCandidateEvaluationTests {
         }
 
         #expect(AutonomousCandidateFingerprint.plan(plan) ==
-            "e024695dd198f0e9")
+            "e4e7937cef42580e")
         #expect(AutonomousCandidateFingerprint.graph(graph42) ==
                 "9191ba1b316d1c03")
         #expect(AutonomousCandidateFingerprint.renderState(emptyRenderState) ==
@@ -3923,7 +3930,7 @@ struct AutonomousCandidateEvaluationTests {
         #expect(AutonomousCandidateFingerprint.generatedDSPState(orderedGraphState) ==
                 "ab9b24221ea4baa5")
         #expect(AutonomousCandidateFingerprint.qualityState(initialQuality) ==
-            "99ff92a16aae19db")
+            "0cd0790eafeb6017")
         #expect(AutonomousCandidateFingerprint.route(
             sampleRate: 48_000,
             generation: 7
@@ -4380,6 +4387,9 @@ struct AutonomousCandidateEvaluationTests {
                 sampleRate: 8_000
             )],
             upperTiming: resolvedUpperTimingBars,
+            polymetric: [fixturePolymetric(bar: evidenceBar)],
+            focusedEffect: [fixtureFocusedEffect(bar: evidenceBar)],
+            spatialDust: [.neutral(bar: evidenceBar, sampleRate: 8_000)],
             graph: graph,
             routeContinuation: route,
             incomingLiveMasterRevision: 0,
@@ -4405,6 +4415,55 @@ struct AutonomousCandidateEvaluationTests {
             liveProposalBindingMatches: true,
             preGraphUpperTimbreEvidence: upper,
             postGraphUpperTimbreEvidence: upper
+        )
+    }
+
+    private func fixturePolymetric(
+        bar: Int
+    ) -> AutonomousPolymetricBarEvidence {
+        let grammar = LongHorizonPolymetricGrammarResolver.make(
+            worldSeed: 1,
+            activationBar: 0
+        )
+        let lanes = grammar.laneGeometries.map { geometry in
+            AutonomousPolymetricLaneEvidence(
+                geometry: geometry,
+                evidence: LongHorizonPolymetricBarEvidence(
+                    absoluteBar: bar,
+                    lane: geometry.lane,
+                    lanePhase: grammar.phase(
+                        for: geometry.lane,
+                        absoluteBar: bar
+                    ),
+                    sourceMask: 0,
+                    appliedMask: 0,
+                    eventCount: 0,
+                    relocatedEventCount: 0,
+                    collisionFallbackCount: 0,
+                    combinedPeriodInSteps: grammar.combinedPeriodInSteps,
+                    protectedEventFingerprintBefore: 0,
+                    protectedEventFingerprintAfter: 0
+                )
+            )
+        }
+        return AutonomousPolymetricBarEvidence(
+            bar: bar,
+            grammar: grammar,
+            lanes: lanes,
+            bindingValid: true
+        )
+    }
+
+    private func fixtureFocusedEffect(
+        bar: Int
+    ) -> AutonomousFocusedEffectBarEvidence {
+        AutonomousFocusedEffectBarEvidence(
+            bar: bar,
+            carrier: EffectCarrierRenderEvidence(neutralBar: bar),
+            pumpScore: .neutral,
+            pumpRender: .neutral,
+            kickSafetyDuckUnchanged: true,
+            protectedRhythmSampleHash: "0123456789abcdef"
         )
     }
 
@@ -4676,6 +4735,9 @@ struct AutonomousCandidateEvaluationTests {
                 PercussionEchoTextureResolver.inputWindowLengthInSteps
             outputEndStep = PercussionEchoTextureResolver
                 .anticipationSwellOutputEndStep
+        case .spatialDust:
+            outputStartStep = 0
+            outputEndStep = 16
         }
         func frame(_ step: Int) -> Int {
             Int((Double(step) * Double(renderedFrameCount) / 16.0).rounded())

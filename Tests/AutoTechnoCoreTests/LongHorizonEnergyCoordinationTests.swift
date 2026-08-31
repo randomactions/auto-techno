@@ -96,7 +96,7 @@ struct LongHorizonEnergyCoordinationTests {
     #expect(protected.longHorizonSelection.reason == .reservedPayoff)
     #expect(protected.longHorizonEnergyCoordination.reason == .protectedRareEvent)
     #expect(protected.longHorizonEnergyCoordination.target.isNeutral)
-    #expect(AutonomousTypedFingerprint.plan(fallback) == "8d42fd5d852b8f80")
+    #expect(AutonomousTypedFingerprint.plan(fallback) == "d65fb6874c05376d")
   }
 
   @Test("Coordination provenance round-trips and rejects unsupported schema")
@@ -201,7 +201,7 @@ struct LongHorizonEnergyCoordinationTests {
     #expect(activeOperators == Set(LongHorizonEpisodeOperator.allCases.map(\.rawValue)))
     #expect(protectedRareEventPhrases == 249)
     #expect(maximumPresenceSlew <= 0.160_001)
-    #expect(state.memory.longHorizon.fingerprint == "62801156352cdcc8")
+    #expect(state.memory.longHorizon.fingerprint == "311f55d31923c807")
     #expect(distantBarsPerMacro.values.allSatisfy { $0 <= 1 })
   }
 

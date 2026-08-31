@@ -243,7 +243,7 @@ struct FoundationRhythmicRelationTests {
         #expect(evidence.isComplete(sampleRate: 8_000))
     }
 
-    @Test("Director reaches bounded dotted pairs without changing non-bass score")
+    @Test("Director reaches bounded dotted pairs without changing post-polymetric non-bass score")
     func directorDottedPairs() throws {
         var activePairs = 0
         for rawSeed in 1...48 {
@@ -283,6 +283,12 @@ struct FoundationRhythmicRelationTests {
                         gear: resolved.percussionGear,
                         gesture: resolved.arrangementGesture
                     )
+                    let postPolymetricBaseline =
+                        LongHorizonPolymetricGrammarResolver.relocatePercussion(
+                            ensemble: baseline,
+                            grammar: plan.materialWorld.polymetricGrammar,
+                            absoluteBar: resolved.performance.bar
+                        ).ensemble
                     #expect(plan.kind == .lock)
                     #expect(resolved.performanceCharacter == .hypnoticLock)
                     #expect(resolved.foundationBehavior == .monotone)
@@ -291,7 +297,9 @@ struct FoundationRhythmicRelationTests {
                     #expect(resolved.ensemble.kickAnchors == [0, 4, 8, 12])
                     #expect(bassSteps == expectedSteps)
                     #expect(resolved.ensemble.events.filter { $0.voice != .bass } ==
-                            baseline.events.filter { $0.voice != .bass })
+                            postPolymetricBaseline.events.filter {
+                                $0.voice != .bass
+                            })
                     #expect(synth.bars[index].foundationInstrument.patch == .bassPluck)
                     #expect(synth.bars[index].foundationInstrument.automation.space == 0)
                     if phase == 0 {
@@ -711,7 +719,7 @@ struct FoundationRhythmicRelationTests {
         from active: ResolvedPerformanceBar,
         plan: AutonomousPhrasePlan
     ) -> ResolvedPerformanceBar {
-        let ensemble = AutonomousSessionDirector.ensemblePlan(
+        let established = AutonomousSessionDirector.ensemblePlan(
             dna: plan.dna,
             bar: active.performance,
             focus: active.ensemble.focusRole,
@@ -722,6 +730,20 @@ struct FoundationRhythmicRelationTests {
             companion: active.foundationCompanion,
             gear: active.percussionGear,
             gesture: active.arrangementGesture
+        )
+        let firstBassIndex = active.ensemble.events.firstIndex {
+            $0.voice == .bass
+        } ?? active.ensemble.events.count
+        var events = active.ensemble.events.filter { $0.voice != .bass }
+        events.insert(
+            contentsOf: established.events.filter { $0.voice == .bass },
+            at: min(firstBassIndex, events.count)
+        )
+        let ensemble = EnsembleContext(
+            focusRole: active.ensemble.focusRole,
+            events: events,
+            kickAnchors: active.ensemble.kickAnchors,
+            intentionalPileup: active.ensemble.intentionalPileup
         )
         return replacingRelation(
             in: active,
@@ -755,7 +777,11 @@ struct FoundationRhythmicRelationTests {
             spatialContrast: resolved.spatialContrast,
             narrative: resolved.narrative,
             kickSyntaxRole: resolved.kickSyntaxRole,
+            climaxHang: resolved.climaxHang,
             percussionEchoTexture: resolved.percussionEchoTexture,
+            percussionPolymetricEvidence:
+                resolved.percussionPolymetricEvidence,
+            upperMusicalPump: resolved.upperMusicalPump,
             harmonicDisclosureRelationship:
                 resolved.harmonicDisclosureRelationship,
             kickMorphology: resolved.kickMorphology

@@ -526,7 +526,7 @@ struct QualityQualificationFoundationTests {
         }
     }
 
-    @Test("Professional Evidence v26 bank requires every journey checkpoint and unavailable policy")
+    @Test("Professional Evidence v29 bank requires every journey checkpoint and unavailable policy")
     func professionalEvidenceReportBank() throws {
         let reports = try qualificationReports()
 
@@ -1157,6 +1157,34 @@ struct QualityQualificationFoundationTests {
             sessionSeed: 1,
             absoluteBar: 0
         )
+        let polymetricGrammar = LongHorizonPolymetricGrammarResolver.make(
+            worldSeed: 1,
+            activationBar: 0
+        )
+        let polymetric = AutonomousPolymetricBarEvidence(
+            bar: 0,
+            grammar: polymetricGrammar,
+            lanes: polymetricGrammar.laneGeometries.map { geometry in
+                AutonomousPolymetricLaneEvidence(
+                    geometry: geometry,
+                    evidence: LongHorizonPolymetricBarEvidence(
+                        absoluteBar: 0,
+                        lane: geometry.lane,
+                        lanePhase: 0,
+                        sourceMask: 0,
+                        appliedMask: 0,
+                        eventCount: 0,
+                        relocatedEventCount: 0,
+                        collisionFallbackCount: 0,
+                        combinedPeriodInSteps:
+                            polymetricGrammar.combinedPeriodInSteps,
+                        protectedEventFingerprintBefore: 0,
+                        protectedEventFingerprintAfter: 0
+                    )
+                )
+            },
+            bindingValid: true
+        )
         let vector = AutonomousCandidateEvaluationVector(
             planFingerprint: planFingerprint,
             graphFingerprint: graphFingerprint,
@@ -1423,6 +1451,16 @@ struct QualityQualificationFoundationTests {
                 bindingValid: true,
                 finite: true
             )],
+            polymetric: [polymetric],
+            focusedEffect: [AutonomousFocusedEffectBarEvidence(
+                bar: 0,
+                carrier: EffectCarrierRenderEvidence(neutralBar: 0),
+                pumpScore: .neutral,
+                pumpRender: .neutral,
+                kickSafetyDuckUnchanged: true,
+                protectedRhythmSampleHash: "0123456789abcdef"
+            )],
+            spatialDust: [.neutral(bar: 0, sampleRate: evidence.sampleRate)],
             graph: graph,
             routeContinuation: route,
             incomingLiveMasterRevision: 0,

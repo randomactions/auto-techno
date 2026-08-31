@@ -1949,7 +1949,8 @@ package enum AutonomousPhrasePreparer {
                 character: resolved.performanceCharacter,
                 gesture: resolved.arrangementGesture,
                 kickSyntaxRole: resolved.kickSyntaxRole,
-                absoluteBar: resolved.performance.bar
+                absoluteBar: resolved.performance.bar,
+                materialWorld: plan.materialWorld
             )
         let percussionEchoTextureIsCanonical =
             resolved.percussionEchoTexture == canonicalPercussionEchoTexture
@@ -1988,7 +1989,7 @@ package enum AutonomousPhrasePreparer {
         for plan: AutonomousPhrasePlan
     ) -> [ResolvedPerformanceBar] {
         let baseline = plan.resolvedBars.map { resolved in
-            let ensemble = AutonomousSessionDirector.ensemblePlan(
+            let baselineEnsemble = AutonomousSessionDirector.ensemblePlan(
                 dna: plan.dna,
                 bar: resolved.performance,
                 focus: resolved.ensemble.focusRole,
@@ -2000,6 +2001,13 @@ package enum AutonomousPhrasePreparer {
                 gear: resolved.percussionGear,
                 gesture: resolved.arrangementGesture
             )
+            let percussionPolymetric =
+                LongHorizonPolymetricGrammarResolver.relocatePercussion(
+                    ensemble: baselineEnsemble,
+                    grammar: plan.materialWorld.polymetricGrammar,
+                    absoluteBar: resolved.performance.bar
+                )
+            let ensemble = percussionPolymetric.ensemble
             return ResolvedPerformanceBar(
                 performance: resolved.performance,
                 ensemble: ensemble,
@@ -2048,8 +2056,10 @@ package enum AutonomousPhrasePreparer {
                         kind: plan.kind,
                         character: resolved.performanceCharacter,
                         gesture: resolved.arrangementGesture,
-                        absoluteBar: resolved.performance.bar
+                        absoluteBar: resolved.performance.bar,
+                        materialWorld: plan.materialWorld
                     ),
+                percussionPolymetricEvidence: percussionPolymetric.evidence,
                 harmonicDisclosureRelationship:
                     resolved.harmonicDisclosureRelationship,
                 kickMorphology: KickMorphologyResolver.articulation(
@@ -2067,7 +2077,8 @@ package enum AutonomousPhrasePreparer {
         return KickSyntaxResolver.resolve(
             resolvedBars: rhythmicFoundation,
             kind: plan.kind,
-            paidDebtIDs: plan.paidDebtIDs
+            paidDebtIDs: plan.paidDebtIDs,
+            materialWorld: plan.materialWorld
         )
     }
 

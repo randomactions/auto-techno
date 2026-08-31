@@ -22,7 +22,7 @@ struct PercussionEchoTextureTests {
         #expect(first.state == second.state)
 
         let activeBars = first.plan.resolvedBars.filter {
-            $0.percussionEchoTexture != nil
+            $0.percussionEchoTexture?.relation == .gatedEcho
         }
         #expect(!activeBars.isEmpty)
         for resolved in first.plan.resolvedBars {
@@ -30,10 +30,14 @@ struct PercussionEchoTextureTests {
                 ensemble: resolved.ensemble,
                 kind: first.plan.kind,
                 character: resolved.performanceCharacter,
-                gesture: resolved.arrangementGesture
+                gesture: resolved.arrangementGesture,
+                absoluteBar: resolved.performance.bar,
+                materialWorld: first.plan.materialWorld
             )
             #expect(resolved.percussionEchoTexture == expected)
-            if let articulation = resolved.percussionEchoTexture {
+            if let articulation = resolved.percussionEchoTexture,
+               articulation.relation == .gatedEcho
+            {
                 let source = try #require(
                     PercussionEchoTextureResolver.eligibleSourceEvents(
                         in: resolved.ensemble
@@ -49,7 +53,7 @@ struct PercussionEchoTextureTests {
         }
 
         let activeIndex = try #require(first.plan.resolvedBars.firstIndex {
-            $0.percussionEchoTexture != nil
+            $0.percussionEchoTexture?.relation == .gatedEcho
         })
         let activeBar = first.plan.resolvedBars[activeIndex]
         var neutralBars = first.plan.resolvedBars
@@ -67,7 +71,7 @@ struct PercussionEchoTextureTests {
         let fixture = try #require(activePlanFixture())
         let plan = fixture.plan
         let index = try #require(plan.resolvedBars.firstIndex {
-            $0.percussionEchoTexture != nil
+            $0.percussionEchoTexture?.relation == .gatedEcho
         })
         let activeResolved = plan.resolvedBars[index]
         let neutralResolved = replacingTexture(in: activeResolved, with: nil)
@@ -185,7 +189,7 @@ struct PercussionEchoTextureTests {
     func forgedScoreRejected() throws {
         let fixture = try #require(activePlanFixture())
         let activeIndex = try #require(fixture.plan.resolvedBars.firstIndex {
-            $0.percussionEchoTexture != nil
+            $0.percussionEchoTexture?.relation == .gatedEcho
         })
         let activeBar = fixture.plan.resolvedBars[activeIndex]
         let articulation = try #require(activeBar.percussionEchoTexture)
@@ -421,7 +425,7 @@ struct PercussionEchoTextureTests {
             for _ in 0..<80 {
                 let plan = director.plan(from: state)
                 if plan.resolvedBars.contains(where: {
-                    $0.percussionEchoTexture != nil
+                    $0.percussionEchoTexture?.relation == .gatedEcho
                 }) {
                     return (state, plan)
                 }

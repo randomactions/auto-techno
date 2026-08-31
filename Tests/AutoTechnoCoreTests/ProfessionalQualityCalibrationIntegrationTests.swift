@@ -11,9 +11,9 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         66_666, 70_707, 77_777, 80_808, 88_888, 90_909, 99_999,
         123_456, 135_791, 19, 44_444, 121_212, 246_810,
         112_358, 141_421, 173_205, 223_606,
-        161_803, 264_575, 271_828, 314_159,
+        161_803, 264_575, 271_828, 866_025,
     ]
-    private let holdoutSeeds: [UInt64] = [577_215, 618_034, 707_106, 866_025]
+    private let holdoutSeeds: [UInt64] = [577_215, 618_034, 707_106, 314_159]
 
     /// This deliberately expensive, explicit calibration harness renders the
     /// complete canonical journey at 44.1 and 48 kHz. Normal CI validates the
@@ -319,16 +319,16 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                     ProfessionalQualityCalibrationProfile.requiredSampleRates.count)
         #expect(profile.isComplete)
         #expect(profile.usesDiverseCalibration)
-        #expect(profile.schemaVersion == 18)
+        #expect(profile.schemaVersion == 21)
         #expect(profile.observationVersion ==
                 ProfessionalQualityObservation.observationVersion)
         #expect(profile.sourceTrajectoryCount == calibrationSeeds.count)
         #expect(adversarial.passed)
-        #expect(adversarial.schemaVersion == 19)
+        #expect(adversarial.schemaVersion == 22)
         #expect(adversarial.cases.count ==
                 ProfessionalQualityAdversarialScenario.allCases.count)
         #expect(holdout.qualified)
-        #expect(holdout.schemaVersion == 17)
+        #expect(holdout.schemaVersion == 20)
         #expect(holdout.holdoutTrajectoryCount == holdoutSeeds.count)
         #expect(holdout.overlappingSourceBankCount == 0)
         #expect(primaryEvaluator.policyVersion.contains(profile.fingerprint))

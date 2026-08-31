@@ -3750,6 +3750,8 @@ package struct AutonomousPercussionEchoTextureBarEvidence: Codable, Equatable,
                 PercussionEchoTextureResolver.inputWindowLengthInSteps
             expectedOutputEndStep = PercussionEchoTextureResolver
                 .anticipationSwellOutputEndStep
+        case .spatialDust:
+            return false
         }
         guard outputStartStep == expectedOutputStartStep,
               outputEndStep == expectedOutputEndStep,
@@ -3904,21 +3906,37 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
     package let bindingValid: Bool
     package let finite: Bool
 
-    package init(block: RenderBlock) {
+    package init(block: borrowing RenderBlock) {
         let composition = block.synthPerformance.composition
         let slice = block.audioSliceRenderEvidence
         let arpeggiator = composition.arpeggiator
         let pad = composition.padVoicing
         let padRender = block.polyphonicPadRenderEvidence
-        let scorePitches = arpeggiator?.steps.map { step in
-            (step: step.onsetStep,
-             frequency: block.synthWorld.rootFrequency * step.frequencyRatio)
-        } ?? []
+        // The composition owns pitch order, while the material-world grammar
+        // owns the final onset. Bind the renderer to the post-grammar score so
+        // a legal relocation cannot make otherwise truthful arpeggiator
+        // evidence look stale.
+        let resolvedArpeggiatorNotes = arpeggiator == nil ? [] :
+            block.synthPerformance.upperNotes.filter { $0.role == .anchor }
+                .sorted { lhs, rhs in
+                    lhs.onsetStep < rhs.onsetStep
+                }
+        let scorePitches = resolvedArpeggiatorNotes.map { note in
+            (step: note.onsetStep,
+             frequency: block.synthWorld.rootFrequency *
+                note.startFrequencyRatio)
+        }
         let renderedAnchors = block.upperNoteRenderEvidence
             .filter { $0.role == .anchor }
             .sorted { lhs, rhs in lhs.onsetFrame < rhs.onsetFrame }
-        let renderPitches = zip(scorePitches, renderedAnchors).map {
-            (step: $0.0.step, frequency: $0.1.requestedStartFrequency)
+        let pairedPitchCount = min(scorePitches.count, renderedAnchors.count)
+        var renderPitches: [(step: Int, frequency: Double)] = []
+        renderPitches.reserveCapacity(pairedPitchCount)
+        for index in 0..<pairedPitchCount {
+            renderPitches.append((
+                step: scorePitches[index].step,
+                frequency: renderedAnchors[index].requestedStartFrequency
+            ))
         }
         bar = block.bar
         localBar = block.resolvedPerformance.performance.localBar
@@ -4012,7 +4030,8 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
                     )) &&
             arpeggiatorStepCount == (arpeggiator?.steps.count ?? 0) &&
             (arpeggiator == nil ||
-                (renderedAnchors.count == scorePitches.count &&
+                (resolvedArpeggiatorNotes.count == arpeggiatorStepCount &&
+                    renderedAnchors.count == scorePitches.count &&
                     arpeggiatorScorePitchFingerprint ==
                         arpeggiatorRenderPitchFingerprint)) &&
             padRender.active == (pad != nil) &&
@@ -4884,7 +4903,11 @@ package struct AutonomousUpperTimingBarEvidence: Codable, Equatable, Sendable {
         var sink = StreamingFNV1a()
         sink.domain("upper-timing-anchor-offsets.typed.v1")
         sink.collection(offsets.count)
-        for offset in offsets {
+        // Long-horizon onset relocation preserves timing-offset attributes but
+        // may change their temporal order. Canonicalize this allocation proof
+        // as a multiset; scoreFingerprint/renderFingerprint independently bind
+        // every offset to its final onset and rendered frame.
+        for offset in offsets.sorted() {
             sink.double(offset)
         }
         return fixedWidthFingerprintHex(sink.value)
@@ -5837,7 +5860,307 @@ package enum AutonomousCandidateCompletenessFailure: String, Codable,
     case crossPhraseTransitionEvidence =
         "cross-phrase-transition-evidence"
     case upperTimingEvidence = "upper-timing-evidence"
+    case polymetricEvidence = "polymetric-evidence"
+    case focusedEffectEvidence = "focused-effect-evidence"
+    case spatialDustEvidence = "spatial-dust-evidence"
     case liveMasterEvidence = "live-master-evidence"
+}
+
+package struct AutonomousPolymetricLaneEvidence: Codable, Equatable, Sendable {
+    package let lane: String
+    package let stepLength: Int
+    package let pulseCount: Int
+    package let rotation: Int
+    package let lanePhase: Int
+    package let sourceMask: UInt16
+    package let appliedMask: UInt16
+    package let eventCount: Int
+    package let relocatedEventCount: Int
+    package let collisionFallbackCount: Int
+    package let protectedEventFingerprintBefore: UInt64
+    package let protectedEventFingerprintAfter: UInt64
+
+    package init(
+        geometry: LongHorizonPolymetricLaneGeometry,
+        evidence: LongHorizonPolymetricBarEvidence
+    ) {
+        lane = geometry.lane.rawValue
+        stepLength = geometry.stepLength
+        pulseCount = geometry.pulseCount
+        rotation = geometry.rotation
+        lanePhase = evidence.lanePhase
+        sourceMask = evidence.sourceMask
+        appliedMask = evidence.appliedMask
+        eventCount = evidence.eventCount
+        relocatedEventCount = evidence.relocatedEventCount
+        collisionFallbackCount = evidence.collisionFallbackCount
+        protectedEventFingerprintBefore =
+            evidence.protectedEventFingerprintBefore
+        protectedEventFingerprintAfter = evidence.protectedEventFingerprintAfter
+    }
+
+    package var isComplete: Bool {
+        LongHorizonPolymetricLane(rawValue: lane) != nil &&
+            stepLength >= 2 && pulseCount > 0 && pulseCount < stepLength &&
+            rotation >= 0 && rotation < stepLength &&
+            lanePhase >= 0 && lanePhase < stepLength &&
+            eventCount >= 0 && eventCount <= 64 &&
+            relocatedEventCount >= 0 && relocatedEventCount <= eventCount &&
+            collisionFallbackCount >= 0 && collisionFallbackCount <= eventCount &&
+            protectedEventFingerprintBefore == protectedEventFingerprintAfter
+    }
+}
+
+package struct AutonomousPolymetricBarEvidence: Codable, Equatable, Sendable {
+    package let bar: Int
+    package let grammarFingerprint: String
+    package let activationBar: Int
+    package let combinedPeriodInSteps: Int
+    package let sourceLaneCount: Int
+    package let lanes: [AutonomousPolymetricLaneEvidence]
+    package let bindingValid: Bool
+
+    package init(
+        bar: Int,
+        grammar: LongHorizonPolymetricGrammar,
+        lanes: [AutonomousPolymetricLaneEvidence],
+        bindingValid: Bool
+    ) {
+        self.bar = bar
+        grammarFingerprint = grammar.fingerprint
+        activationBar = grammar.activationBar
+        combinedPeriodInSteps = grammar.combinedPeriodInSteps
+        sourceLaneCount = lanes.count
+        self.lanes = Array(lanes.prefix(LongHorizonPolymetricLane.allCases.count))
+        self.bindingValid = bindingValid
+    }
+
+    package var isComplete: Bool {
+        guard bar >= 0 else { return false }
+        if grammarFingerprint == LongHorizonPolymetricGrammar.neutral.fingerprint {
+            return activationBar == 0 && combinedPeriodInSteps == 0 &&
+                sourceLaneCount == 0 && lanes.isEmpty && bindingValid
+        }
+        return activationBar >= 0 && !grammarFingerprint.isEmpty &&
+            (64 * LongHorizonPolymetricGrammarSchema.stepsPerBar ...
+                128 * LongHorizonPolymetricGrammarSchema.stepsPerBar)
+                .contains(combinedPeriodInSteps) &&
+            sourceLaneCount == LongHorizonPolymetricLane.allCases.count &&
+            lanes.count == sourceLaneCount && lanes.allSatisfy(\.isComplete) &&
+            Set(lanes.map(\.lane)) ==
+                Set(LongHorizonPolymetricLane.allCases.map(\.rawValue)) &&
+            bindingValid
+    }
+}
+
+package struct AutonomousFocusedEffectBarEvidence: Codable, Equatable,
+        Sendable {
+    package let bar: Int
+    package let carrier: EffectCarrierRenderEvidence
+    package let pumpScore: UpperMusicalPumpArticulation
+    package let pumpRender: UpperMusicalPumpRenderEvidence
+    package let kickSafetyDuckUnchanged: Bool
+    package let protectedRhythmSampleHash: String
+
+    package init(
+        bar: Int,
+        carrier: EffectCarrierRenderEvidence,
+        pumpScore: UpperMusicalPumpArticulation,
+        pumpRender: UpperMusicalPumpRenderEvidence,
+        kickSafetyDuckUnchanged: Bool,
+        protectedRhythmSampleHash: String
+    ) {
+        self.bar = bar
+        self.carrier = carrier
+        self.pumpScore = pumpScore
+        self.pumpRender = pumpRender
+        self.kickSafetyDuckUnchanged = kickSafetyDuckUnchanged
+        self.protectedRhythmSampleHash = protectedRhythmSampleHash
+    }
+
+    package var isComplete: Bool {
+        bar >= 0 && carrier.bar == bar && carrier.isComplete &&
+            pumpScore.isValid && pumpRender.isComplete &&
+            pumpRender.active == pumpScore.active &&
+            pumpRender.kickAnchorSteps == pumpScore.kickAnchorSteps &&
+            (!pumpScore.active ||
+                pumpRender.requestedMinimumGain == pumpScore.minimumGain) &&
+            kickSafetyDuckUnchanged &&
+            protectedRhythmSampleHash.count == 16
+    }
+}
+
+package struct AutonomousSpatialDustBarEvidence: Codable, Equatable, Sendable {
+    package let bar: Int
+    package let worldID: UInt64
+    package let cadencePhase: Int
+    package let gapPhase: Int
+    package let cadenceActive: Bool
+    package let eligibleSourceStepMask: UInt16
+    package let scoreRelation: String
+    package let render: SpatialDustRenderEvidence
+    package let renderPassesMatch: Bool
+    package let bindingValid: Bool
+
+    package init(
+        bar: Int,
+        cadence: SpatialDustCadence?,
+        eligibleSourceStepMask: UInt16,
+        scoreRelation: PercussionEchoTextureRelation?,
+        render: SpatialDustRenderEvidence,
+        renderPassesMatch: Bool,
+        bindingValid: Bool
+    ) {
+        self.bar = bar
+        worldID = cadence?.worldID ?? 0
+        cadencePhase = cadence?.cadencePhase ?? -1
+        gapPhase = cadence?.gapPhase ?? -1
+        cadenceActive = cadence?.active ?? false
+        self.eligibleSourceStepMask = eligibleSourceStepMask
+        self.scoreRelation = scoreRelation?.rawValue ?? ""
+        self.render = render
+        self.renderPassesMatch = renderPassesMatch
+        self.bindingValid = bindingValid
+    }
+
+    package static func neutral(bar: Int, sampleRate: Double) -> Self {
+        let frameCount = Int((
+            240 / AutonomousSessionDirector.bpm * sampleRate
+        ).rounded())
+        return Self(
+            bar: bar,
+            cadence: SpatialDustCadence(
+                worldID: 1,
+                absoluteBar: bar,
+                cadencePhase: 0,
+                gapPhase: 3,
+                active: true,
+                dominantSide: .left
+            ),
+            eligibleSourceStepMask: 0,
+            scoreRelation: nil,
+            render: .neutral(frameCount: frameCount),
+            renderPassesMatch: true,
+            bindingValid: true
+        )
+    }
+
+    package var isFinite: Bool {
+        render.finite && [
+            render.stereoCorrelation,
+            render.lowBandEnergyRatio,
+            render.left.feedback,
+            render.left.gain,
+            render.left.pan,
+            render.left.highPassHz,
+            render.left.lowPassHz,
+            render.left.sourceRMS,
+            render.left.returnRMS,
+            render.left.lowBandRMS,
+            render.right.feedback,
+            render.right.gain,
+            render.right.pan,
+            render.right.highPassHz,
+            render.right.lowPassHz,
+            render.right.sourceRMS,
+            render.right.returnRMS,
+            render.right.lowBandRMS,
+        ].allSatisfy(\.isFinite)
+    }
+
+    package func isComplete(sampleRate: Double) -> Bool {
+        let expectedFrames = Int((
+            240 / AutonomousSessionDirector.bpm * sampleRate
+        ).rounded())
+        let dustSelected = scoreRelation ==
+            PercussionEchoTextureRelation.spatialDust.rawValue
+        guard bar >= 0, sampleRate.isFinite, sampleRate > 0,
+              renderedHashIsValid(render.left.sourceSampleHash),
+              renderedHashIsValid(render.left.returnSampleHash),
+              renderedHashIsValid(render.right.sourceSampleHash),
+              renderedHashIsValid(render.right.returnSampleHash),
+              render.renderedFrameCount == expectedFrames,
+              renderPassesMatch, bindingValid, isFinite,
+              render.active == dustSelected else {
+            return false
+        }
+        if worldID == 0 {
+            return cadencePhase == -1 && gapPhase == -1 && !cadenceActive &&
+                !dustSelected && !render.active && render.worldID == 0 &&
+                render.dominantSide == nil && render.sourceStep == -1 &&
+                render.transitionFrameCount == 0 &&
+                render.left.delayFrameCount == 0 &&
+                render.right.delayFrameCount == 0 &&
+                render.left.nonzeroSampleCount == 0 &&
+                render.right.nonzeroSampleCount == 0 &&
+                render.outOfWindowNonzeroSampleCount == 0 &&
+                render.terminalCleared
+        }
+        guard worldID != 0,
+              (0..<4).contains(cadencePhase),
+              (0..<4).contains(gapPhase),
+              eligibleSourceStepMask & 0xff00 == 0 else {
+            return false
+        }
+        if !dustSelected {
+            return !render.active && render.worldID == 0 &&
+                render.dominantSide == nil && render.sourceStep == -1 &&
+                render.transitionFrameCount == 0 &&
+                render.left.delayFrameCount == 0 &&
+                render.right.delayFrameCount == 0 &&
+                render.left.nonzeroSampleCount == 0 &&
+                render.right.nonzeroSampleCount == 0 &&
+                render.outOfWindowNonzeroSampleCount == 0 &&
+                render.terminalCleared
+        }
+        let expectedSourceStep = eligibleSourceStepMask.trailingZeroBitCount
+        let expectedTransition = PercussionEchoTextureVoice
+            .transitionFrameCount(sampleRate: sampleRate)
+        let expectedLeftDelay = max(1, Int((
+            Double(expectedFrames) / 16
+        ).rounded()))
+        let expectedRightDelay = max(1, Int((
+            Double(expectedFrames) / 16 * 1.375
+        ).rounded()))
+        return cadenceActive && cadencePhase != gapPhase &&
+            eligibleSourceStepMask != 0 &&
+            render.worldID == worldID &&
+            render.cadencePhase == cadencePhase &&
+            render.gapPhase == gapPhase &&
+            render.dominantSide != nil &&
+            render.sourceStep == expectedSourceStep &&
+            render.transitionFrameCount == expectedTransition &&
+            render.left.delayFrameCount == expectedLeftDelay &&
+            render.right.delayFrameCount == expectedRightDelay &&
+            render.left.feedback == PercussionEchoTextureVoice.feedback &&
+            render.right.feedback == PercussionEchoTextureVoice.feedback * 0.90 &&
+            render.left.pan == -0.75 && render.right.pan == 0.75 &&
+            render.left.highPassHz == PercussionEchoTextureVoice.highPassHz &&
+            render.right.highPassHz == PercussionEchoTextureVoice.highPassHz &&
+            render.left.lowPassHz == PercussionEchoTextureVoice.lowPassHz &&
+            render.right.lowPassHz == PercussionEchoTextureVoice.lowPassHz &&
+            render.left.sourceRMS > 0 && render.right.sourceRMS > 0 &&
+            render.left.returnRMS > 0 && render.right.returnRMS > 0 &&
+            render.left.returnRMS != render.right.returnRMS &&
+            render.left.sourceSampleHash != render.right.sourceSampleHash &&
+            render.left.returnSampleHash != render.right.returnSampleHash &&
+            render.left.nonzeroSampleCount > 0 &&
+            render.right.nonzeroSampleCount > 0 &&
+            (-1...1).contains(render.stereoCorrelation) &&
+            (0...1).contains(render.lowBandEnergyRatio) &&
+            render.outOfWindowNonzeroSampleCount == 0 &&
+            render.firstLeftSampleBitPattern & 0x7fff_ffff == 0 &&
+            render.firstRightSampleBitPattern & 0x7fff_ffff == 0 &&
+            render.lastLeftSampleBitPattern & 0x7fff_ffff == 0 &&
+            render.lastRightSampleBitPattern & 0x7fff_ffff == 0 &&
+            render.terminalCleared
+    }
+
+    private func renderedHashIsValid(_ value: String) -> Bool {
+        value.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
 }
 
 package struct AutonomousLiveMasterRenderValidationInput: Sendable {
@@ -5868,7 +6191,7 @@ package struct AutonomousValidatedLiveMasterEvidence: Equatable, Sendable {
 /// The complete reduced evidence vector for one immutable candidate render.
 /// Raw PCM and renderer state never enter this value.
 package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable {
-    package static let schemaVersion = 40
+    package static let schemaVersion = 43
     package static let maximumBarCount = 16
     package static let maximumMaskingObservationsPerBar = 12
     package static let maximumStemRolesPerBar = 5
@@ -5921,6 +6244,12 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package let spatialFDN: [AutonomousSpatialFDNBarEvidence]
     package let sourceUpperTimingBarCount: Int
     package let upperTiming: [AutonomousUpperTimingBarEvidence]
+    package let sourcePolymetricBarCount: Int
+    package let polymetric: [AutonomousPolymetricBarEvidence]
+    package let sourceFocusedEffectBarCount: Int
+    package let focusedEffect: [AutonomousFocusedEffectBarEvidence]
+    package let sourceSpatialDustBarCount: Int
+    package let spatialDust: [AutonomousSpatialDustBarEvidence]
     package let graph: AutonomousGraphEvidence
     package let routeContinuation: AutonomousRouteContinuationEvidence
     package let incomingLiveMasterRevision: Int
@@ -5973,6 +6302,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         pulseEchoDrive: [AutonomousPulseEchoDriveBarEvidence],
         spatialFDN: [AutonomousSpatialFDNBarEvidence],
         upperTiming: [AutonomousUpperTimingBarEvidence],
+        polymetric: [AutonomousPolymetricBarEvidence],
+        focusedEffect: [AutonomousFocusedEffectBarEvidence],
+        spatialDust: [AutonomousSpatialDustBarEvidence],
         graph: AutonomousGraphEvidence,
         routeContinuation: AutonomousRouteContinuationEvidence,
         incomingLiveMasterRevision: Int,
@@ -6045,6 +6377,12 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.spatialFDN = Array(spatialFDN.prefix(Self.maximumBarCount))
         sourceUpperTimingBarCount = upperTiming.count
         self.upperTiming = Array(upperTiming.prefix(Self.maximumBarCount))
+        sourcePolymetricBarCount = polymetric.count
+        self.polymetric = Array(polymetric.prefix(Self.maximumBarCount))
+        sourceFocusedEffectBarCount = focusedEffect.count
+        self.focusedEffect = Array(focusedEffect.prefix(Self.maximumBarCount))
+        sourceSpatialDustBarCount = spatialDust.count
+        self.spatialDust = Array(spatialDust.prefix(Self.maximumBarCount))
         self.graph = graph
         self.routeContinuation = routeContinuation
         self.incomingLiveMasterRevision = incomingLiveMasterRevision
@@ -6106,12 +6444,25 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     ) -> AutonomousCandidateEvaluationVector? {
         guard !cancellationRequested() else { return nil }
         let boundedBlocks = Array(blocks.prefix(maximumBarCount))
+        // Keep the large phrase plan out of per-bar closure contexts. Capturing
+        // the whole value here makes Swift materialize a stack frame close to
+        // the worker thread's guard page as the canonical score grows. These
+        // immutable projections retain the same evidence contract while the
+        // arrays remain heap-backed.
+        let planBars = plan.resolvedBars
+        let planDNA = plan.dna
+        let planKind = plan.kind
+        let planScene = plan.scene
+        let planMaterialWorld = plan.materialWorld
+        let planPaidDebtIDs = plan.paidDebtIDs
+        let planStartBar = plan.startBar
+        let hasPaidDebt = !planPaidDebtIDs.isEmpty
         let preGraphUpperTimbreEvidence = UpperTimbreEvidence.aggregating(
             boundedBlocks.map { $0.graphInputRemainderTimbreEvidence }
         )
         let graphValidation = DSPGraphValidator.validate(graph)
         let completeInputs = !blocks.isEmpty && blocks.count <= maximumBarCount &&
-            plan.barCount == plan.resolvedBars.count && plan.barCount == blocks.count &&
+            plan.barCount == planBars.count && plan.barCount == blocks.count &&
             audioPreflight.bars.count == blocks.count
         let channelsAligned = boundedBlocks.allSatisfy {
             !$0.left.isEmpty && $0.left.count == $0.right.count
@@ -6139,7 +6490,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             }
         }
 
-        let chapters = plan.resolvedBars.map { $0.interlockChapter }
+        let chapters = planBars.map { $0.interlockChapter }
         let internalChapterChange = zip(chapters, chapters.dropFirst()).contains {
             $0 != $1
         }
@@ -6154,7 +6505,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             phraseIndex: plan.phraseIndex,
             startBar: plan.startBar,
             declaredBarCount: plan.barCount,
-            resolvedBarCount: plan.resolvedBars.count,
+            resolvedBarCount: planBars.count,
             phraseKind: plan.kind.rawValue,
             pulseClarity: plan.interest.pulseClarity,
             intentionalSpace: plan.interest.intentionalSpace,
@@ -6270,7 +6621,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             )
         }
         let automaticMix = boundedBlocks.map { block in
-            let companion = plan.resolvedBars.first {
+            let companion = planBars.first {
                 $0.performance.bar == block.bar
             }?.foundationCompanion.rawValue ?? ""
             return AutonomousAutomaticMixEvidence(
@@ -6298,8 +6649,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 .map(\.step)
                 .sorted()
             let scoreKickStepMask = kickStepMask(scoreKickSteps)
-            let resolvedPlanBar = plan.resolvedBars.indices.contains(index)
-                ? plan.resolvedBars[index] : nil
+            let resolvedPlanBar = planBars.indices.contains(index)
+                ? planBars[index] : nil
             let role = block.resolvedPerformance.kickSyntaxRole
             let mix = block.kickMix
             let expectedAudibleGain = KickMixBalance.audibleGain * Double(
@@ -6341,7 +6692,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                     }
             }
             let syntaxAuthorizationMatches = role == .grounded || (
-                plan.kind == .energyRelease && !plan.paidDebtIDs.isEmpty
+                planKind == .energyRelease && hasPaidDebt
             )
             let planBarMatches = resolvedPlanBar.map {
                 $0 == block.resolvedPerformance && $0.performance.bar == block.bar
@@ -6393,121 +6744,24 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 bindingValid: bindingValid
             ))
         }
-        let foundationRhythm = boundedBlocks.enumerated().map { index, block in
-            let resolved = block.resolvedPerformance
-            let render = block.foundationRhythmRenderEvidence
-            let scoreBassEvents = resolved.ensemble.events.filter {
-                $0.voice == .bass
-            }
-            let scoreBassSteps = scoreBassEvents.map(\.step)
-            let scoreMask = stepMaskAllowingDuplicates(scoreBassSteps)
-            let stepFrames = Double(block.left.count) / 16.0
-            let expectedStartFrames = scoreBassEvents.map { event in
-                let offset = VoiceRenderer.timingOffsetInSteps(
-                    for: .bass,
-                    step: event.step,
-                    dna: plan.dna
+        let foundationRhythm = boundedBlocks.indices.map { index in
+            let planBarMatches = planBars.indices.contains(index) &&
+                resolvedPerformanceMatches(
+                    block: boundedBlocks[index],
+                    planBar: planBars[index]
                 )
-                return Int(((Double(event.step) + offset) * stepFrames).rounded())
-            }
-            let planBarMatches = plan.resolvedBars.indices.contains(index) &&
-                plan.resolvedBars[index] == resolved &&
-                resolved.performance.bar == block.bar
-            let assignment = block.synthPerformance.foundationInstrument
-            let preKickPocketBindingValid: Bool = {
-                let score = FoundationPreKickPocketResolver.articulation(
-                    in: resolved
-                )
-                let pocket = render.preKickPocket
-                guard let score else { return pocket == .neutral }
-                guard resolved.ensemble.events.indices.contains(
-                        score.scoreEventIndex
-                      ) else { return false }
-                let event = resolved.ensemble.events[score.scoreEventIndex]
-                let offset = VoiceRenderer.timingOffsetInSteps(
-                    for: event.voice,
-                    step: event.step,
-                    dna: plan.dna
-                )
-                let eventStartFrame = Int((
-                    (Double(event.step) + offset) * stepFrames
-                ).rounded())
-                let naturalFrameCount = min(
-                    max(1, Int((sampleRate * (
-                        0.16 + assignment.automation.shape * 0.18
-                    )).rounded())),
-                    max(0, block.left.count - eventStartFrame)
-                )
-                let kickOffset = VoiceRenderer.timingOffsetInSteps(
-                    for: .kick,
-                    step: score.kickStep,
-                    dna: plan.dna
-                )
-                let kickFrame = Int(((
-                    Double(score.kickStep) + kickOffset
-                ) * stepFrames).rounded())
-                let releaseStartFrame = Int(((
-                    score.releaseStartStep + kickOffset
-                ) * stepFrames).rounded())
-                let releaseEndFrame = Int(((
-                    score.releaseEndStep + kickOffset
-                ) * stepFrames).rounded())
-                return event.voice == .bass &&
-                    event.step == score.bassStep &&
-                    pocket.relation == score.relation &&
-                    pocket.scoreEventIndex == score.scoreEventIndex &&
-                    pocket.bassStep == score.bassStep &&
-                    pocket.kickStep == score.kickStep &&
-                    pocket.eventStartFrame == eventStartFrame &&
-                    pocket.naturalEndFrame == eventStartFrame +
-                        naturalFrameCount &&
-                    pocket.releaseStartFrame == releaseStartFrame &&
-                    pocket.releaseEndFrame == releaseEndFrame &&
-                    pocket.kickFrame == kickFrame &&
-                    pocket.applied && pocket.finite
-            }()
-            let bindingValid = planBarMatches &&
-                block.section == resolved.performance.section &&
-                block.left.count == block.right.count &&
-                render.bar == block.bar &&
-                render.relation == resolved.foundationRhythmicRelation &&
-                render.sampleRate == sampleRate &&
-                render.renderedFrameCount == block.left.count &&
-                render.renderedBassEventCount == scoreBassEvents.count &&
-                (scoreMask.map { render.renderedBassStepMask == $0 } ?? false) &&
-                render.renderedStartFrames == expectedStartFrames &&
-                assignment.use == .foundationBass &&
-                assignment.isValid &&
-                preKickPocketBindingValid &&
-                block.foundationRhythmRenderPassesMatch
-            return AutonomousFoundationRhythmBarEvidence(
-                bar: block.bar,
-                relation: resolved.foundationRhythmicRelation,
-                pairPhase: FoundationRhythmicRelationContract.pairPhase(
-                    absoluteBar: block.bar
-                ),
-                scoreBassEventCount: scoreBassEvents.count,
-                scoreBassStepMask: scoreMask ?? 0,
-                renderedBassEventCount: render.renderedBassEventCount,
-                renderedBassStepMask: render.renderedBassStepMask,
-                renderedFrameCount: render.renderedFrameCount,
-                renderedStartFrameFingerprint:
-                    AutonomousFoundationRhythmBarEvidence
-                        .startFrameFingerprint(render.renderedStartFrames),
-                dryFoundationSampleHash: render.dryFoundationSampleHash,
-                peak: render.peak,
-                rms: render.rms,
-                bassPluckAssigned: assignment.patch == .bassPluck,
-                preKickPocket: AutonomousFoundationPreKickPocketEvidence(
-                    render: render.preKickPocket
-                ),
-                renderPassesMatch: block.foundationRhythmRenderPassesMatch,
-                bindingValid: bindingValid,
-                finite: render.finite
+            return makeFoundationRhythmEvidence(
+                block: boundedBlocks[index],
+                planBarMatches: planBarMatches,
+                dna: planDNA,
+                sampleRate: sampleRate
             )
         }
         let climaxArc = makeClimaxArcEvidence(
-            plan: plan,
+            phraseKind: planKind,
+            paidDebtIDs: planPaidDebtIDs,
+            startBar: planStartBar,
+            planBars: planBars,
             incomingDramaticDebts: incomingDramaticDebts,
             kickSyntax: kickSyntax,
             blocks: boundedBlocks,
@@ -6589,7 +6843,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                       ClosedHatVoiceContract.appliedParametersMatch(
                         level: evidence.appliedLevel,
                         decayRate: evidence.appliedDecayRate,
-                        brightness: plan.scene.character.percussionBrightness,
+                        brightness: planScene.character.percussionBrightness,
                         reportedSection: block.section,
                         scoreSection: scoreSection,
                         combinedAccent: combinedAccent,
@@ -6629,12 +6883,12 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             let resolved = block.resolvedPerformance
             let score = resolved.upperPercussionTailArticulations
             let rendered = block.upperPercussionTailRenderEvidence
-            let planBarMatches = plan.resolvedBars.first {
+            let planBarMatches = planBars.first {
                 $0.performance.bar == block.bar
             } == resolved
             let replayed = UpperPercussionTailResolver.articulations(
                 from: resolved.ensemble,
-                phraseKind: plan.kind,
+                phraseKind: planKind,
                 performanceCharacter: resolved.performanceCharacter
             )
             let matched = rendered.compactMap {
@@ -6683,7 +6937,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         }
         let modalPercussion = makeModalPercussionEvidence(
             blocks: boundedBlocks,
-            planBars: plan.resolvedBars,
+            planBars: planBars,
             sampleRate: sampleRate
         )
         let instruments = boundedBlocks.map { block in
@@ -6702,22 +6956,24 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 ).map(\.step)
             )).sorted()
             let eligibleMask = kickStepMask(eligibleSteps)
-            let planBarMatches = plan.resolvedBars.first {
+            let planBarMatches = planBars.first {
                 $0.performance.bar == block.bar
             } == resolved
+            let legacyArticulation = articulation?.relation == .spatialDust
+                ? nil : articulation
             let bindingValid = eligibleMask != nil && planBarMatches &&
                 block.section == resolved.performance.section &&
-                evidence.active == (articulation != nil) &&
-                evidence.relation == articulation?.relation &&
-                evidence.bpm == plan.scene.bpm &&
+                evidence.active == (legacyArticulation != nil) &&
+                evidence.relation == legacyArticulation?.relation &&
+                evidence.bpm == planScene.bpm &&
                 evidence.sampleRate == sampleRate &&
                 evidence.renderedFrameCount == block.left.count &&
                 evidence.renderedFrameCount == block.right.count &&
-                evidence.inputStep == (articulation?.inputStep ?? -1) &&
+                evidence.inputStep == (legacyArticulation?.inputStep ?? -1) &&
                 evidence.outputStartStep ==
-                    (articulation?.outputStartStep ?? -1) &&
+                    (legacyArticulation?.outputStartStep ?? -1) &&
                 evidence.outputEndStep ==
-                    (articulation?.outputEndStep ?? -1) &&
+                    (legacyArticulation?.outputEndStep ?? -1) &&
                 block.percussionEchoTextureRenderPassesMatch
             return AutonomousPercussionEchoTextureBarEvidence(
                 evidence,
@@ -6740,8 +6996,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 .map { $0.onsetStep }
                 .min()
             let bindingValid = evidence.bar == block.bar &&
-                evidence.bpm == plan.scene.bpm &&
-                evidence.machineTexture == plan.scene.machineTexture &&
+                evidence.bpm == planScene.bpm &&
+                evidence.machineTexture == planScene.machineTexture &&
                 evidence.scoreEnabled ==
                     block.resolvedPerformance.pulseEchoEnabled &&
                 evidence.earliestPulseEchoOnsetStep ==
@@ -6759,13 +7015,13 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             )
         }
         let expectedSpatialFDNConfiguration = FeedbackDelayNetworkConfiguration(
-            scene: plan.scene,
+            scene: planScene,
             sampleRate: sampleRate,
-            phraseKind: plan.kind
+            phraseKind: planKind
         )
         let spatialFDN = makeSpatialFDNEvidence(
             blocks: boundedBlocks,
-            planBars: plan.resolvedBars,
+            planBars: planBars,
             expectedConfiguration: expectedSpatialFDNConfiguration,
             sampleRate: sampleRate
         )
@@ -6774,9 +7030,122 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         }
         let upperTiming = makeUpperTimingEvidence(
             blocks: boundedBlocks,
-            planBPM: plan.scene.bpm,
+            planBPM: planScene.bpm,
             routeSampleRate: sampleRate
         )
+        let polymetricGrammar = planMaterialWorld.polymetricGrammar
+        let polymetric = boundedBlocks.map { block in
+            let scoreEvidence = block.synthPerformance.polymetricEvidence +
+                [block.resolvedPerformance.percussionPolymetricEvidence]
+                    .compactMap { $0 }
+            if !polymetricGrammar.isEnabled {
+                let expectedLanes = Set(LongHorizonPolymetricLane.allCases)
+                let neutralEvidenceValid = scoreEvidence.count ==
+                        LongHorizonPolymetricLane.allCases.count &&
+                    Set(scoreEvidence.map(\.lane)) == expectedLanes &&
+                    scoreEvidence.allSatisfy { evidence in
+                        evidence.absoluteBar == block.bar &&
+                            evidence.lanePhase == 0 &&
+                            evidence.sourceMask == evidence.appliedMask &&
+                            evidence.eventCount >= 0 &&
+                            evidence.relocatedEventCount == 0 &&
+                            evidence.collisionFallbackCount == 0 &&
+                            evidence.combinedPeriodInSteps == 0 &&
+                            evidence.protectedEventFingerprintBefore ==
+                                evidence.protectedEventFingerprintAfter
+                    }
+                return AutonomousPolymetricBarEvidence(
+                    bar: block.bar,
+                    grammar: polymetricGrammar,
+                    lanes: [],
+                    bindingValid: polymetricGrammar == .neutral &&
+                        neutralEvidenceValid
+                )
+            }
+            var bindingValid = polymetricGrammar.isEnabled &&
+                polymetricGrammar.isValid &&
+                scoreEvidence.count == LongHorizonPolymetricLane.allCases.count
+            let lanes = LongHorizonPolymetricLane.allCases.compactMap { lane ->
+                AutonomousPolymetricLaneEvidence? in
+                guard let geometry = polymetricGrammar.geometry(for: lane),
+                      let evidence = scoreEvidence.first(where: {
+                          $0.lane == lane
+                      }) else {
+                    bindingValid = false
+                    return nil
+                }
+                bindingValid = bindingValid && evidence.absoluteBar == block.bar &&
+                    evidence.combinedPeriodInSteps ==
+                        polymetricGrammar.combinedPeriodInSteps &&
+                    evidence.lanePhase == polymetricGrammar.phase(
+                        for: lane,
+                        absoluteBar: block.bar
+                    )
+                return AutonomousPolymetricLaneEvidence(
+                    geometry: geometry,
+                    evidence: evidence
+                )
+            }
+            return AutonomousPolymetricBarEvidence(
+                bar: block.bar,
+                grammar: polymetricGrammar,
+                lanes: lanes,
+                bindingValid: bindingValid
+            )
+        }
+        let focusedEffect = boundedBlocks.compactMap { block ->
+            AutonomousFocusedEffectBarEvidence? in
+            guard let carrier = block.effectCarrierRenderEvidence else {
+                return nil
+            }
+            return AutonomousFocusedEffectBarEvidence(
+                bar: block.bar,
+                carrier: carrier,
+                pumpScore: block.resolvedPerformance.upperMusicalPump,
+                pumpRender: block.upperMusicalPumpRenderEvidence,
+                kickSafetyDuckUnchanged: block.kickRenderPassesMatch,
+                protectedRhythmSampleHash: block.protectedRhythmSampleHash
+            )
+        }
+        let spatialDust = boundedBlocks.map { block in
+            let resolved = block.resolvedPerformance
+            let cadence = PercussionEchoTextureResolver.spatialDustCadence(
+                materialWorld: planMaterialWorld,
+                absoluteBar: block.bar
+            )
+            let eligibleSteps = Array(Set(
+                PercussionEchoTextureResolver.eligibleSourceEvents(
+                    in: resolved.ensemble
+                ).map(\.step)
+            )).sorted()
+            let eligibleMask = kickStepMask(eligibleSteps) ?? 0
+            let scoreRelation = resolved.percussionEchoTexture?.relation
+            let expectedActive = scoreRelation == .spatialDust
+            let render = block.spatialDustRenderEvidence
+            let bindingValid = planBars.first(where: {
+                $0.performance.bar == block.bar
+            }) == resolved &&
+                block.section == resolved.performance.section &&
+                render.active == expectedActive &&
+                (!expectedActive || (
+                    render.worldID == planMaterialWorld.worldID &&
+                    render.cadencePhase == cadence?.cadencePhase &&
+                    render.gapPhase == cadence?.gapPhase &&
+                    render.dominantSide ==
+                        resolved.percussionEchoTexture?.dominantSide &&
+                    render.sourceStep ==
+                        resolved.percussionEchoTexture?.inputStep
+                ))
+            return AutonomousSpatialDustBarEvidence(
+                bar: block.bar,
+                cadence: cadence,
+                eligibleSourceStepMask: eligibleMask,
+                scoreRelation: scoreRelation,
+                render: render,
+                renderPassesMatch: block.spatialDustRenderPassesMatch,
+                bindingValid: bindingValid
+            )
+        }
         let graphEvidence = AutonomousGraphEvidence(
             graphFingerprint: graphFingerprint,
             revision: graph.revision,
@@ -6868,6 +7237,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             pulseEchoDrive: pulseEchoDrive,
             spatialFDN: spatialFDN,
             upperTiming: upperTiming,
+            polymetric: polymetric,
+            focusedEffect: focusedEffect,
+            spatialDust: spatialDust,
             graph: graphEvidence,
             routeContinuation: route,
             incomingLiveMasterRevision: incomingLiveMasterState.revision,
@@ -6905,13 +7277,33 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
 
     @inline(never)
     private static func makeModalPercussionEvidence(
-        blocks: [RenderBlock],
-        planBars: [ResolvedPerformanceBar],
+        blocks: borrowing [RenderBlock],
+        planBars: borrowing [ResolvedPerformanceBar],
         sampleRate: Double
     ) -> [AutonomousModalPercussionBarEvidence] {
         var result: [AutonomousModalPercussionBarEvidence] = []
         result.reserveCapacity(blocks.count)
-        for (index, block) in blocks.enumerated() {
+        for index in blocks.indices {
+            let planBarMatches = planBars.indices.contains(index) &&
+                resolvedPerformanceMatches(
+                    block: blocks[index],
+                    planBar: planBars[index]
+                ) && planBars[index].performance.bar == blocks[index].bar
+            result.append(makeModalPercussionEvidence(
+                block: blocks[index],
+                planBarMatches: planBarMatches,
+                sampleRate: sampleRate
+            ))
+        }
+        return result
+    }
+
+    @inline(never)
+    private static func makeModalPercussionEvidence(
+        block: borrowing RenderBlock,
+        planBarMatches: Bool,
+        sampleRate: Double
+    ) -> AutonomousModalPercussionBarEvidence {
             let resolved = block.resolvedPerformance
             let score = resolved.modalPercussionArticulations
             let render = block.modalPercussionRenderEvidence
@@ -6923,9 +7315,6 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             let renderedIndices = renderedEvents.map {
                 $0.articulation.scoreEventIndex
             }
-            let planBarMatches = planBars.indices.contains(index) &&
-                planBars[index] == resolved &&
-                planBars[index].performance.bar == block.bar
             let barBindingValid = planBarMatches &&
                 block.section == resolved.performance.section &&
                 render.bar == block.bar && render.sampleRate == sampleRate &&
@@ -7009,7 +7398,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                         render.sampleRate == sampleRate
                 )
             }.sorted { $0.scoreEventIndex < $1.scoreEventIndex }
-            result.append(AutonomousModalPercussionBarEvidence(
+            return AutonomousModalPercussionBarEvidence(
                 bar: block.bar,
                 sourceScoreEventCount: score.count,
                 sourceRenderEventCount: renderedEvents.count,
@@ -7024,9 +7413,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                     block.modalPercussionRenderPassesMatch,
                 foundationRoutingValid: barBindingValid,
                 events: events
-            ))
-        }
-        return result
+            )
     }
 
     /// Keeps the spatial-FDN binding audit out of the already large candidate
@@ -7035,18 +7422,18 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     /// `contains(where:)` from exhausting the testing worker's bounded stack.
     @inline(never)
     private static func makeSpatialFDNEvidence(
-        blocks: [RenderBlock],
-        planBars: [ResolvedPerformanceBar],
+        blocks: borrowing [RenderBlock],
+        planBars: borrowing [ResolvedPerformanceBar],
         expectedConfiguration: FeedbackDelayNetworkConfiguration,
         sampleRate: Double
     ) -> [AutonomousSpatialFDNBarEvidence] {
         var result: [AutonomousSpatialFDNBarEvidence] = []
         result.reserveCapacity(blocks.count)
-        for block in blocks {
+        for index in blocks.indices {
             result.append(AutonomousSpatialFDNBarEvidence(
-                block.spatialFDNRenderEvidence,
+                blocks[index].spatialFDNRenderEvidence,
                 bindingValid: spatialFDNBindingIsValid(
-                    block: block,
+                    block: blocks[index],
                     planBars: planBars,
                     expectedConfiguration: expectedConfiguration,
                     sampleRate: sampleRate
@@ -7058,16 +7445,20 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
 
     @inline(never)
     private static func spatialFDNBindingIsValid(
-        block: RenderBlock,
-        planBars: [ResolvedPerformanceBar],
+        block: borrowing RenderBlock,
+        planBars: borrowing [ResolvedPerformanceBar],
         expectedConfiguration: FeedbackDelayNetworkConfiguration,
         sampleRate: Double
     ) -> Bool {
         let evidence = block.spatialFDNRenderEvidence
         let spatial = block.resolvedPerformance.spatialContrast
         var planBarMatches = false
-        for planBar in planBars where planBar.performance.bar == block.bar {
-            planBarMatches = planBar == block.resolvedPerformance
+        for index in planBars.indices where
+            planBars[index].performance.bar == block.bar {
+            planBarMatches = resolvedPerformanceMatches(
+                block: block,
+                planBar: planBars[index]
+            )
             break
         }
         var effectMatches = false
@@ -7114,15 +7505,15 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
 
     @inline(never)
     private static func makeUpperTimingEvidence(
-        blocks: [RenderBlock],
+        blocks: borrowing [RenderBlock],
         planBPM: Double,
         routeSampleRate: Double
     ) -> [AutonomousUpperTimingBarEvidence] {
         var result: [AutonomousUpperTimingBarEvidence] = []
         result.reserveCapacity(blocks.count)
-        for block in blocks {
+        for index in blocks.indices {
             result.append(makeUpperTimingEvidence(
-                block: block,
+                block: blocks[index],
                 planBPM: planBPM,
                 routeSampleRate: routeSampleRate
             ))
@@ -7132,89 +7523,98 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
 
     @inline(never)
     private static func makeClimaxArcEvidence(
-        plan: AutonomousPhrasePlan,
-        incomingDramaticDebts: [SessionDramaticDebt],
-        kickSyntax: [AutonomousKickSyntaxBarEvidence],
-        blocks: [RenderBlock],
+        phraseKind: AutonomousPhraseKind,
+        paidDebtIDs: borrowing [Int],
+        startBar: Int,
+        planBars: borrowing [ResolvedPerformanceBar],
+        incomingDramaticDebts: borrowing [SessionDramaticDebt],
+        kickSyntax: borrowing [AutonomousKickSyntaxBarEvidence],
+        blocks: borrowing [RenderBlock],
         sampleRate: Double
     ) -> AutonomousClimaxArcEvidence {
-        let activeHangBlocks = blocks.filter {
-            $0.climaxHangRenderEvidence.active
+        var activeHangIndices: [Int] = []
+        activeHangIndices.reserveCapacity(1)
+        for index in blocks.indices where
+            blocks[index].climaxHangRenderEvidence.active {
+            activeHangIndices.append(index)
         }
-        let active = plan.kind == .energyRelease && !plan.paidDebtIDs.isEmpty
+        let active = phraseKind == .energyRelease && !paidDebtIDs.isEmpty
         guard active else {
             return .inactive(
-                releaseStartBar: plan.startBar,
-                bindingValid: activeHangBlocks.isEmpty
+                releaseStartBar: startBar,
+                bindingValid: activeHangIndices.isEmpty
             )
         }
         let sourceDebtsAreBounded = incomingDramaticDebts.count <=
             AutonomousClimaxArcEvidence.maximumDebtCount
-        let boundedIncomingDebts = Array(incomingDramaticDebts.prefix(
+        var paidDebts: [SessionDramaticDebt] = []
+        let inspectedDebtCount = min(
+            incomingDramaticDebts.count,
             AutonomousClimaxArcEvidence.maximumDebtCount + 1
-        ))
-        let paidDebts = boundedIncomingDebts.filter {
-            plan.paidDebtIDs.contains($0.id)
+        )
+        paidDebts.reserveCapacity(inspectedDebtCount)
+        for index in 0..<inspectedDebtCount {
+            let debt = incomingDramaticDebts[index]
+            guard paidDebtIDs.contains(debt.id) else { continue }
+            paidDebts.append(debt)
         }
-        let setupIndex = kickSyntax.indices.first { index in
-            index <= kickSyntax.count - 4 &&
+        var setupIndex: Int?
+        if kickSyntax.count >= 4 {
+            for index in 0...(kickSyntax.count - 4) where
                 kickSyntax[index].role == KickSyntaxRole.grounded.rawValue &&
                 kickSyntax[index + 1].role == KickSyntaxRole.withheld.rawValue &&
                 kickSyntax[index + 2].role == KickSyntaxRole.withheld.rawValue &&
-                kickSyntax[index + 3].role == KickSyntaxRole.recovery.rawValue
+                kickSyntax[index + 3].role == KickSyntaxRole.recovery.rawValue {
+                setupIndex = index
+                break
+            }
         }
-        let sourcesAreSupported = paidDebts.allSatisfy {
-            $0.source == .contrast || $0.source == .majorBreak
-        }
-        let debtGeometryIsValid = paidDebts.allSatisfy {
-            $0.id >= 0 && $0.openedAtBar >= 0 &&
-                $0.openedAtBar < plan.startBar &&
-                $0.dueByBar >= $0.openedAtBar
+        var sourcesAreSupported = true
+        var debtGeometryIsValid = true
+        var contrastDebtCount = 0
+        var majorBreakDebtCount = 0
+        var earliestOpenedAtBar: Int?
+        var latestOpenedAtBar: Int?
+        var latestDueByBar: Int?
+        for debt in paidDebts {
+            sourcesAreSupported = sourcesAreSupported &&
+                (debt.source == .contrast || debt.source == .majorBreak)
+            debtGeometryIsValid = debtGeometryIsValid && debt.id >= 0 &&
+                debt.openedAtBar >= 0 && debt.openedAtBar < startBar &&
+                debt.dueByBar >= debt.openedAtBar
+            if debt.source == .contrast { contrastDebtCount += 1 }
+            if debt.source == .majorBreak { majorBreakDebtCount += 1 }
+            earliestOpenedAtBar = min(
+                earliestOpenedAtBar ?? debt.openedAtBar,
+                debt.openedAtBar
+            )
+            latestOpenedAtBar = max(
+                latestOpenedAtBar ?? debt.openedAtBar,
+                debt.openedAtBar
+            )
+            latestDueByBar = max(
+                latestDueByBar ?? debt.dueByBar,
+                debt.dueByBar
+            )
         }
         let exactDebtsMatch = sourceDebtsAreBounded &&
-            paidDebts.map(\.id) == plan.paidDebtIDs &&
+            paidDebts.map(\.id) == paidDebtIDs &&
             paidDebts.count == incomingDramaticDebts.count
         let setupBar = setupIndex.map { kickSyntax[$0].bar }
         let secondWithheldBar = setupIndex.map { kickSyntax[$0 + 2].bar }
-        let expectedHangBlock = activeHangBlocks.count == 1
-            ? activeHangBlocks.first : nil
+        let expectedHangIndex = activeHangIndices.count == 1
+            ? activeHangIndices.first : nil
         let hangScoreBindingValid: Bool
         let hangEvidence: AutonomousClimaxHangEvidence
-        if let expectedHangBlock {
-            let score = expectedHangBlock.resolvedPerformance.climaxHang
-            let texture = expectedHangBlock.resolvedPerformance
-                .percussionEchoTexture
-            let planBarMatches = plan.resolvedBars.contains {
-                $0 == expectedHangBlock.resolvedPerformance &&
-                    $0.performance.bar == expectedHangBlock.bar
-            }
-            hangScoreBindingValid =
-                expectedHangBlock.bar == secondWithheldBar &&
-                score == ClimaxHangArticulation() &&
-                expectedHangBlock.resolvedPerformance.kickSyntaxRole ==
-                    .withheld &&
-                expectedHangBlock.resolvedPerformance.groovePulses.map(\.step) ==
-                    ClimaxHangContract.preHangWeakPulseSteps &&
-                expectedHangBlock.resolvedPerformance.ensemble.events
-                    .allSatisfy { $0.step < ClimaxHangContract.startStep } &&
-                texture?.relation == .anticipationSwell &&
-                texture?.outputEndStep == ClimaxHangContract.startStep &&
-                planBarMatches &&
-                expectedHangBlock.climaxHangRenderEvidence.sampleRate ==
-                    sampleRate &&
-                expectedHangBlock.climaxHangRenderEvidence.renderedFrameCount ==
-                    expectedHangBlock.left.count &&
-                expectedHangBlock.left.count == expectedHangBlock.right.count
-            hangEvidence = AutonomousClimaxHangEvidence(
-                render: expectedHangBlock.climaxHangRenderEvidence,
-                bar: expectedHangBlock.bar,
-                postHangMatchesLiveMasterInput:
-                    expectedHangBlock.climaxHangRenderEvidence
-                        .postHangStereoSampleHash ==
-                    expectedHangBlock.liveMasterTrimRenderEvidence
-                        .preTrimStereoSampleHash,
-                bindingValid: hangScoreBindingValid
+        if let expectedHangIndex {
+            let result = makeClimaxHangEvidence(
+                block: blocks[expectedHangIndex],
+                planBars: planBars,
+                secondWithheldBar: secondWithheldBar,
+                sampleRate: sampleRate
             )
+            hangScoreBindingValid = result.bindingValid
+            hangEvidence = result.evidence
         } else {
             hangScoreBindingValid = false
             hangEvidence = .neutral
@@ -7223,14 +7623,14 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             relation: setupIndex == nil
                 ? .dramaticDebtRelease : .dramaticDebtRecovery,
             paidDebtCount: paidDebts.count,
-            contrastDebtCount: paidDebts.filter { $0.source == .contrast }.count,
-            majorBreakDebtCount: paidDebts.filter { $0.source == .majorBreak }.count,
+            contrastDebtCount: contrastDebtCount,
+            majorBreakDebtCount: majorBreakDebtCount,
             sourceDebtFingerprint:
                 AutonomousClimaxArcEvidence.debtFingerprint(paidDebts),
-            earliestOpenedAtBar: paidDebts.map(\.openedAtBar).min(),
-            latestOpenedAtBar: paidDebts.map(\.openedAtBar).max(),
-            latestDueByBar: paidDebts.map(\.dueByBar).max(),
-            releaseStartBar: plan.startBar,
+            earliestOpenedAtBar: earliestOpenedAtBar,
+            latestOpenedAtBar: latestOpenedAtBar,
+            latestDueByBar: latestDueByBar,
+            releaseStartBar: startBar,
             setupBar: setupBar,
             firstWithheldBar: setupIndex.map { kickSyntax[$0 + 1].bar },
             secondWithheldBar: secondWithheldBar,
@@ -7238,9 +7638,198 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             hang: setupIndex == nil ? .neutral : hangEvidence,
             bindingValid: sourcesAreSupported && debtGeometryIsValid &&
                 exactDebtsMatch && (setupIndex == nil
-                    ? activeHangBlocks.isEmpty
+                    ? activeHangIndices.isEmpty
                     : hangScoreBindingValid)
         )
+    }
+
+    @inline(never)
+    private static func makeClimaxHangEvidence(
+        block: borrowing RenderBlock,
+        planBars: borrowing [ResolvedPerformanceBar],
+        secondWithheldBar: Int?,
+        sampleRate: Double
+    ) -> (bindingValid: Bool, evidence: AutonomousClimaxHangEvidence) {
+        var planBarMatches = false
+        for index in planBars.indices where
+            resolvedPerformanceMatches(block: block, planBar: planBars[index]) {
+            planBarMatches = true
+            break
+        }
+        var eventsPrecedeHang = true
+        for event in block.resolvedPerformance.ensemble.events where
+            event.step >= ClimaxHangContract.startStep {
+            eventsPrecedeHang = false
+            break
+        }
+        let render = block.climaxHangRenderEvidence
+        let texture = block.resolvedPerformance.percussionEchoTexture
+        let bindingValid = block.bar == secondWithheldBar &&
+            block.resolvedPerformance.climaxHang == ClimaxHangArticulation() &&
+            block.resolvedPerformance.kickSyntaxRole == .withheld &&
+            block.resolvedPerformance.groovePulses.map(\.step) ==
+                ClimaxHangContract.preHangWeakPulseSteps &&
+            eventsPrecedeHang && texture?.relation == .anticipationSwell &&
+            texture?.outputEndStep == ClimaxHangContract.startStep &&
+            planBarMatches && render.sampleRate == sampleRate &&
+            render.renderedFrameCount == block.left.count &&
+            block.left.count == block.right.count
+        return (
+            bindingValid,
+            AutonomousClimaxHangEvidence(
+                render: render,
+                bar: block.bar,
+                postHangMatchesLiveMasterInput:
+                    render.postHangStereoSampleHash ==
+                        block.liveMasterTrimRenderEvidence.preTrimStereoSampleHash,
+                bindingValid: bindingValid
+            )
+        )
+    }
+
+    /// Keep the large resolved-score value borrowed from its heap-backed block.
+    /// Splitting this reduction into bounded helpers avoids debug-only stack
+    /// copies on Swift Testing's cooperative worker without changing evidence.
+    private static func makeFoundationRhythmEvidence(
+        block: borrowing RenderBlock,
+        planBarMatches: Bool,
+        dna: SceneDNA,
+        sampleRate: Double
+    ) -> AutonomousFoundationRhythmBarEvidence {
+        let render = block.foundationRhythmRenderEvidence
+        let scoreBassEvents = block.resolvedPerformance
+            .ensemble.events.filter { $0.voice == .bass }
+        let scoreBassSteps = scoreBassEvents.map(\.step)
+        let scoreMask = stepMaskAllowingDuplicates(scoreBassSteps)
+        let stepFrames = Double(block.left.count) / 16.0
+        let expectedStartFrames = scoreBassEvents.map { event in
+            let offset = VoiceRenderer.timingOffsetInSteps(
+                for: .bass,
+                step: event.step,
+                dna: dna
+            )
+            return Int(((Double(event.step) + offset) * stepFrames).rounded())
+        }
+        let assignment = block.synthPerformance.foundationInstrument
+        let preKickPocketBindingValid = foundationPreKickPocketBindingValid(
+            block: block,
+            dna: dna,
+            sampleRate: sampleRate,
+            stepFrames: stepFrames,
+            assignment: assignment,
+            render: render
+        )
+        let bindingValid = planBarMatches &&
+            block.section == block
+                .resolvedPerformance.performance.section &&
+            block.left.count == block.right.count &&
+            render.bar == block.bar &&
+            render.relation == block
+                .resolvedPerformance.foundationRhythmicRelation &&
+            render.sampleRate == sampleRate &&
+            render.renderedFrameCount == block.left.count &&
+            render.renderedBassEventCount == scoreBassEvents.count &&
+            (scoreMask.map { render.renderedBassStepMask == $0 } ?? false) &&
+            render.renderedStartFrames == expectedStartFrames &&
+            assignment.use == .foundationBass &&
+            assignment.isValid &&
+            preKickPocketBindingValid &&
+            block.foundationRhythmRenderPassesMatch
+        return AutonomousFoundationRhythmBarEvidence(
+            bar: block.bar,
+            relation: block.resolvedPerformance.foundationRhythmicRelation,
+            pairPhase: FoundationRhythmicRelationContract.pairPhase(
+                absoluteBar: block.bar
+            ),
+            scoreBassEventCount: scoreBassEvents.count,
+            scoreBassStepMask: scoreMask ?? 0,
+            renderedBassEventCount: render.renderedBassEventCount,
+            renderedBassStepMask: render.renderedBassStepMask,
+            renderedFrameCount: render.renderedFrameCount,
+            renderedStartFrameFingerprint:
+                AutonomousFoundationRhythmBarEvidence.startFrameFingerprint(
+                    render.renderedStartFrames
+                ),
+            dryFoundationSampleHash: render.dryFoundationSampleHash,
+            peak: render.peak,
+            rms: render.rms,
+            bassPluckAssigned: assignment.patch == .bassPluck,
+            preKickPocket: AutonomousFoundationPreKickPocketEvidence(
+                render: render.preKickPocket
+            ),
+            renderPassesMatch: block.foundationRhythmRenderPassesMatch,
+            bindingValid: bindingValid,
+            finite: render.finite
+        )
+    }
+
+    private static func resolvedPerformanceMatches(
+        block: borrowing RenderBlock,
+        planBar: borrowing ResolvedPerformanceBar
+    ) -> Bool {
+        planBar == block.resolvedPerformance &&
+            block.resolvedPerformance.performance.bar == block.bar
+    }
+
+    private static func foundationPreKickPocketBindingValid(
+        block: borrowing RenderBlock,
+        dna: SceneDNA,
+        sampleRate: Double,
+        stepFrames: Double,
+        assignment: InstrumentAssignment,
+        render: FoundationRhythmRenderEvidence
+    ) -> Bool {
+        let score = FoundationPreKickPocketResolver.articulation(
+            in: block.resolvedPerformance
+        )
+        let pocket = render.preKickPocket
+        guard let score else { return pocket == .neutral }
+        guard block.resolvedPerformance.ensemble.events.indices.contains(
+            score.scoreEventIndex
+        ) else { return false }
+        let event = block.resolvedPerformance.ensemble.events[
+            score.scoreEventIndex
+        ]
+        let offset = VoiceRenderer.timingOffsetInSteps(
+            for: event.voice,
+            step: event.step,
+            dna: dna
+        )
+        let eventStartFrame = Int((
+            (Double(event.step) + offset) * stepFrames
+        ).rounded())
+        let naturalFrameCount = min(
+            max(1, Int((sampleRate * (
+                0.16 + assignment.automation.shape * 0.18
+            )).rounded())),
+            max(0, block.left.count - eventStartFrame)
+        )
+        let kickOffset = VoiceRenderer.timingOffsetInSteps(
+            for: .kick,
+            step: score.kickStep,
+            dna: dna
+        )
+        let kickFrame = Int(((
+            Double(score.kickStep) + kickOffset
+        ) * stepFrames).rounded())
+        let releaseStartFrame = Int(((
+            score.releaseStartStep + kickOffset
+        ) * stepFrames).rounded())
+        let releaseEndFrame = Int(((
+            score.releaseEndStep + kickOffset
+        ) * stepFrames).rounded())
+        return event.voice == .bass &&
+            event.step == score.bassStep &&
+            pocket.relation == score.relation &&
+            pocket.scoreEventIndex == score.scoreEventIndex &&
+            pocket.bassStep == score.bassStep &&
+            pocket.kickStep == score.kickStep &&
+            pocket.eventStartFrame == eventStartFrame &&
+            pocket.naturalEndFrame == eventStartFrame + naturalFrameCount &&
+            pocket.releaseStartFrame == releaseStartFrame &&
+            pocket.releaseEndFrame == releaseEndFrame &&
+            pocket.kickFrame == kickFrame &&
+            pocket.applied && pocket.finite
     }
 
     private static func kickStepMask(_ steps: [Int]) -> UInt16? {
@@ -7300,7 +7889,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
 
     @inline(never)
     private static func makeUpperTimingEvidence(
-        block: RenderBlock,
+        block: borrowing RenderBlock,
         planBPM: Double,
         routeSampleRate: Double
     ) -> AutonomousUpperTimingBarEvidence {
@@ -7410,7 +7999,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     }
 
     @inline(never)
-    private static func upperTimingScheduleEnabled(_ block: RenderBlock) -> Bool {
+    private static func upperTimingScheduleEnabled(
+        _ block: borrowing RenderBlock
+    ) -> Bool {
         guard block.resolvedPerformance.performance.signatureEvent !=
                 .textureCollapse else {
             return false
@@ -7485,7 +8076,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
 
     @inline(never)
     private static func upperTimingBindingIsValid(
-        block: RenderBlock,
+        block: borrowing RenderBlock,
         renderEvidence: UpperTimingRenderEvidence,
         planBPM: Double,
         routeSampleRate: Double,
@@ -7842,6 +8433,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             pulseEchoDrive.allSatisfy { $0.isFinite } &&
             spatialFDN.allSatisfy { $0.isFinite } &&
             upperTiming.allSatisfy { $0.isFinite } &&
+            spatialDust.allSatisfy { $0.isFinite } &&
             incomingLiveMasterTrimDB.isFinite &&
             requestedLiveMasterTrimDB.isFinite &&
             appliedLiveMasterTrimDB.isFinite && liveMasterGain.isFinite &&
@@ -7924,6 +8516,15 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         if !upperTimingEvidenceIsComplete(expectedBars: expectedBars) {
             failures.append(.upperTimingEvidence)
         }
+        if !polymetricEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.polymetricEvidence)
+        }
+        if !focusedEffectEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.focusedEffectEvidence)
+        }
+        if !spatialDustEvidenceIsComplete(expectedBars: expectedBars) {
+            failures.append(.spatialDustEvidence)
+        }
         if !liveMasterEvidenceIsComplete() {
             failures.append(.liveMasterEvidence)
         }
@@ -7956,6 +8557,12 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
               spatialFDN.count == fullMix.sourceBarCount,
               sourceUpperTimingBarCount == upperTiming.count,
               upperTiming.count == fullMix.sourceBarCount,
+              sourcePolymetricBarCount == polymetric.count,
+              polymetric.count == fullMix.sourceBarCount,
+              sourceFocusedEffectBarCount == focusedEffect.count,
+              focusedEffect.count == fullMix.sourceBarCount,
+              sourceSpatialDustBarCount == spatialDust.count,
+              spatialDust.count == fullMix.sourceBarCount,
               preGraphUpperTimbreEvidence.candidateEvidenceIsComplete(
                 windowCount: fullMix.sourceBarCount
               ),
@@ -8205,6 +8812,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourcePulseEchoDriveBarCount == pulseEchoDrive.count &&
             sourceSpatialFDNBarCount == spatialFDN.count &&
             sourceUpperTimingBarCount == upperTiming.count &&
+            sourcePolymetricBarCount == polymetric.count &&
+            sourceFocusedEffectBarCount == focusedEffect.count &&
+            sourceSpatialDustBarCount == spatialDust.count &&
             masking.count == fullMix.sourceBarCount &&
             stems.count == fullMix.sourceBarCount &&
             automaticMix.count == fullMix.sourceBarCount &&
@@ -8219,7 +8829,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             phraseComposition.count == fullMix.sourceBarCount &&
             pulseEchoDrive.count == fullMix.sourceBarCount &&
             spatialFDN.count == fullMix.sourceBarCount &&
-            upperTiming.count == fullMix.sourceBarCount
+            upperTiming.count == fullMix.sourceBarCount &&
+            polymetric.count == fullMix.sourceBarCount &&
+            focusedEffect.count == fullMix.sourceBarCount &&
+            spatialDust.count == fullMix.sourceBarCount
     }
 
     @inline(never)
@@ -8624,6 +9237,36 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         return true
     }
 
+    @inline(never)
+    private func polymetricEvidenceIsComplete(expectedBars: Set<Int>) -> Bool {
+        Set(polymetric.map(\.bar)) == expectedBars &&
+            polymetric.map(\.bar) == fullMix.bars.map(\.bar) &&
+            polymetric.count == fullMix.sourceBarCount &&
+            polymetric.allSatisfy(\.isComplete)
+    }
+
+    @inline(never)
+    private func focusedEffectEvidenceIsComplete(
+        expectedBars: Set<Int>
+    ) -> Bool {
+        Set(focusedEffect.map(\.bar)) == expectedBars &&
+            focusedEffect.map(\.bar) == fullMix.bars.map(\.bar) &&
+            focusedEffect.count == fullMix.sourceBarCount &&
+            focusedEffect.allSatisfy(\.isComplete)
+    }
+
+    @inline(never)
+    private func spatialDustEvidenceIsComplete(
+        expectedBars: Set<Int>
+    ) -> Bool {
+        Set(spatialDust.map(\.bar)) == expectedBars &&
+            spatialDust.map(\.bar) == fullMix.bars.map(\.bar) &&
+            spatialDust.count == fullMix.sourceBarCount &&
+            spatialDust.allSatisfy {
+                $0.isComplete(sampleRate: routeContinuation.sampleRate)
+            }
+    }
+
     package var playbackGateEvidence: AutonomousPlaybackGateEvidence {
         AutonomousPlaybackGateEvidence(
             symbolicValid: symbolic.interestValid,
@@ -8751,7 +9394,13 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             sourcePulseEchoDriveBarCount >= pulseEchoDrive.count &&
             sourceSpatialFDNBarCount >= spatialFDN.count &&
             sourceSpatialFDNBarCount <= Self.maximumBarCount &&
-            sourceUpperTimingBarCount >= upperTiming.count
+            sourceUpperTimingBarCount >= upperTiming.count &&
+            sourcePolymetricBarCount >= polymetric.count &&
+            sourcePolymetricBarCount <= Self.maximumBarCount &&
+            sourceFocusedEffectBarCount >= focusedEffect.count &&
+            sourceFocusedEffectBarCount <= Self.maximumBarCount &&
+            sourceSpatialDustBarCount >= spatialDust.count &&
+            sourceSpatialDustBarCount <= Self.maximumBarCount
     }
 
     @inline(never)
@@ -8792,7 +9441,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             phraseComposition.count <= Self.maximumBarCount &&
             pulseEchoDrive.count <= Self.maximumBarCount &&
             spatialFDN.count <= Self.maximumBarCount &&
-            upperTiming.count <= Self.maximumBarCount
+            upperTiming.count <= Self.maximumBarCount &&
+            polymetric.count <= Self.maximumBarCount &&
+            focusedEffect.count <= Self.maximumBarCount &&
+            spatialDust.count <= Self.maximumBarCount
     }
 
     @inline(never)
@@ -8819,7 +9471,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             instrumentRecordsAreBounded() &&
             percussionEchoTextureRecordsAreBounded() &&
             pulseEchoDriveRecordsAreBounded() &&
-            spatialFDNRecordsAreBounded() && upperTimingRecordsAreBounded()
+            spatialFDNRecordsAreBounded() && upperTimingRecordsAreBounded() &&
+            polymetricRecordsAreBounded() && focusedEffectRecordsAreBounded() &&
+            spatialDustRecordsAreBounded()
     }
 
     @inline(never)
@@ -9038,6 +9692,33 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     }
 
     @inline(never)
+    private func polymetricRecordsAreBounded() -> Bool {
+        polymetric.map(\.bar) == fullMix.bars.map(\.bar) &&
+            polymetric.allSatisfy { evidence in
+                evidence.lanes.count <= LongHorizonPolymetricLane.allCases.count &&
+                    evidence.sourceLaneCount >= evidence.lanes.count &&
+                    evidence.sourceLaneCount <=
+                        LongHorizonPolymetricLane.allCases.count
+            }
+    }
+
+    @inline(never)
+    private func focusedEffectRecordsAreBounded() -> Bool {
+        focusedEffect.map(\.bar) == fullMix.bars.map(\.bar) &&
+            focusedEffect.allSatisfy { evidence in
+                evidence.carrier.roleDoses.count <= SynthRole.allCases.count
+            }
+    }
+
+    @inline(never)
+    private func spatialDustRecordsAreBounded() -> Bool {
+        spatialDust.map(\.bar) == fullMix.bars.map(\.bar) &&
+            spatialDust.allSatisfy {
+                $0.eligibleSourceStepMask.nonzeroBitCount <= 8
+            }
+    }
+
+    @inline(never)
     package func hardGateSummaryIsCanonicalForTransactionValidation(
         prevalidatedSignalSafetyValid: Bool
     ) -> Bool {
@@ -9221,7 +9902,7 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
 }
 
 package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sendable {
-    package static let schemaVersion = 11
+    package static let schemaVersion = 14
     package static let maximumCorrectionAttempts =
         QualityQualificationContract.maximumCorrectionRenders
     package static let maximumAttemptCount =

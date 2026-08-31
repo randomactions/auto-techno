@@ -280,6 +280,39 @@ eligibility. Invalid context and protected payoff/recall reserve use the exact
 all-hold path. This is internal autonomous behavior: it adds no duration,
 energy, style, synth, preset, or effect control to the transport-only UI.
 
+Every active material world also owns one deterministic long-cycle grammar.
+Its three semantic lanes relocate only existing upper-role and non-foundation
+percussion events onto sixteenth-note Euclidean masks whose combined recurrence
+is between 64 and 128 bars. The phase is derived from the world's absolute
+activation bar, so phrase boundaries, pause/resume, retries, cancellation, and
+route recovery cannot restart it. Slide chains move atomically; kick, bass,
+rumble, modal percussion, and every other protected-foundation event remain
+exact. If the bounded collision search cannot find a legal hit, the original
+onset is retained. No note, sequencer, lane, or event is added.
+The phrase-interest gate evaluates groove-pulse coverage against the final
+score-owned polymetric relation whenever valid long-cycle evidence is present;
+bars without that evidence retain the preceding weak-grid oracle exactly.
+
+The first committed eligible phrase in a material world also selects one
+persistent upper effect carrier. The score translates the existing five-axis
+effect target at full dose for that carrier and at 35% for other upper roles.
+At the existing graph-input boundary, the renderer reconstructs carrier plus
+residual exactly, sends `carrier + 0.35 * residual` through the one generated
+graph, and restores `0.65 * residual` dry. The resulting upper remainder then
+receives a separate score-owned kick pump: 22--32% additional attenuation with
+a 1/64-beat attack and a 3/8--1/2-beat release. The detector-driven safety duck
+remains unchanged and independently evidenced. Neutral, identity-return,
+malformed, and carrier-ineligible paths add neither carrier processing nor pump.
+
+The existing percussion-echo articulation now has one `spatialDust` relation.
+It reuses internally generated eligible percussion texture and the existing
+bounded echo kernel on exactly three of each four eligible bars. The world seed
+selects one stable exact-zero gap phase; unequal band-limited left/right paths
+sit near equal-power positions `-0.75` and `+0.75`, with the dominant side
+alternating across active bars. High-pass exclusion protects the low end, and
+both bar and world handoffs clear the tail exactly. This adds no sampler, track,
+return, delay network, generated-graph topology, or realtime state.
+
 ## Professional-sound objective
 
 The long-term goal is professional release-quality sound produced by engine-owned
@@ -339,7 +372,7 @@ Future sound maturation must still replace only a repeatedly failed provisional
 DSP in place after independent-root, two-rate causal evidence.
 
 Professional quality remains an unverified release goal until the shipping
-policy and its operational gates pass. Professional Evidence v26 supplies
+policy and its operational gates pass. Professional Evidence v29 supplies
 standards-based phrase loudness/true-peak evidence plus bounded physical-time spectral and trajectory
 evidence, modal-foundation, pre-kick foundation-pocket, terminal climax-hang,
 material-world/effect-target lineage, and live-controller consequence, explicit

@@ -209,8 +209,10 @@ package enum FoundationRhythmicRelationResolver {
                 character: resolved.performanceCharacter,
                 gesture: resolved.arrangementGesture,
                 kickSyntaxRole: resolved.kickSyntaxRole,
-                absoluteBar: resolved.performance.bar
+                absoluteBar: resolved.performance.bar,
+                materialWorld: materialWorld
             ),
+            percussionPolymetricEvidence: resolved.percussionPolymetricEvidence,
             harmonicDisclosureRelationship:
                 resolved.harmonicDisclosureRelationship,
             kickMorphology: resolved.kickMorphology

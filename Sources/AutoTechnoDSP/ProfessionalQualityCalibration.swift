@@ -611,9 +611,9 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 18
+    package static let schemaVersion = 21
     package static let observationVersion =
-        "autotechno-professional-quality-observation.v18"
+        "autotechno-professional-quality-observation.v21"
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -1424,9 +1424,9 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 18
+    package static let schemaVersion = 21
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v26"
+        "autotechno-professional-quality-profile.v29"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 

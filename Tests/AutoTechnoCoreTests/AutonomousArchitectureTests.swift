@@ -852,7 +852,7 @@ struct AdaptiveAutonomousSessionTests {
             macroEnding: true, majorBreak: true
         ).isEmpty)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v45")
+                "autotechno-canonical-engine.v48")
     }
 
     @Test("Weak-sixteenth reveal follows the macro grid across phrase boundaries and breaks")
@@ -869,13 +869,27 @@ struct AdaptiveAutonomousSessionTests {
                 gesture: resolved.arrangementGesture,
                 macroEnding: (resolved.performance.bar + 1).isMultiple(of: 16)
             )
-            let expectedByStep = Dictionary(uniqueKeysWithValues: expected)
-            #expect(resolved.groovePulses.allSatisfy {
-                expectedByStep[$0.step] == $0.intensity
-            })
+            let expectedMask = expected.reduce(into: UInt16(0)) { mask, pulse in
+                mask |= UInt16(1) << UInt16(pulse.0)
+            }
+            let appliedMask = resolved.groovePulses.reduce(into: UInt16(0)) {
+                mask, pulse in
+                mask |= UInt16(1) << UInt16(pulse.step)
+            }
+            #expect(resolved.groovePulses.map(\.intensity).sorted() ==
+                    expected.map(\.1).sorted())
+            #expect(resolved.percussionPolymetricEvidence.map {
+                $0.sourceMask & expectedMask == expectedMask
+            } == true)
+            #expect(resolved.percussionPolymetricEvidence.map {
+                $0.appliedMask & appliedMask == appliedMask
+            } == true)
+            #expect((resolved.percussionPolymetricEvidence?.eventCount ?? -1) >=
+                    expected.count)
+            #expect(resolved.percussionPolymetricEvidence?.protectedEventsEqual == true)
             #expect(resolved.groovePulses.allSatisfy {
                 $0.stage == WeakSixteenthStage(absoluteBar: resolved.performance.bar) &&
-                    ($0.pulseClass == .leadingWeak || $0.pulseClass == .trailingWeak) &&
+                    $0.pulseClass == SixteenthPulseClass(step: $0.step) &&
                     $0.timingOffsetInSteps <= 0.12 &&
                     [-0.04, -0.02, 0, 0.02, 0.04].contains($0.timbreMicrovariation)
             })
@@ -891,6 +905,7 @@ struct AdaptiveAutonomousSessionTests {
             })
             let resolvedEvents = resolved.ensemble.events
                 .filter { $0.voice == .groovePulse }
+                .sorted { $0.step < $1.step }
             #expect(resolvedEvents.map(\.step) == resolved.groovePulses.map(\.step))
             #expect(resolvedEvents.map(\.intensity) == resolved.groovePulses.map(\.intensity))
         }
@@ -903,7 +918,7 @@ struct AdaptiveAutonomousSessionTests {
         #expect(completeLeanBars.allSatisfy {
             !$0.groovePulses.isEmpty &&
                 $0.groovePulses.allSatisfy {
-                    [1, 3, 5, 7, 9, 11, 13, 15].contains($0.step)
+                    (0..<16).contains($0.step)
                 }
         })
         #expect(firstMacro[16 - 1].groovePulses.last?.intensity == 0.72)
@@ -3142,8 +3157,7 @@ struct AutonomousPreparationPreflightTests {
         let changedArticulation = changedBlock.synthPerformance.articulation(at: event.step)
         #expect(originalBlock.events.count == changedBlock.events.count)
         #expect(zip(originalBlock.events, changedBlock.events).allSatisfy { original, changed in
-            original.voice == changed.voice && original.step == changed.step &&
-                original.intensity == changed.intensity
+            original.voice == changed.voice && original.intensity == changed.intensity
         })
         #expect(originalArticulation != changedArticulation)
         #expect(originalArticulation.phase.followerStage !=
@@ -3477,7 +3491,9 @@ struct AutonomousPreparationPreflightTests {
                     #expect(spatial.carrierVoice != .bass)
                     #expect(spatial.carrierVoice != .percussion)
                     #expect(spatial.carrierVoice != .groovePulse)
-                    #expect(resolved.ensemble.events.contains { spatial.applies(to: $0) })
+                    #expect(resolved.ensemble.events.contains {
+                        $0.voice == spatial.carrierVoice
+                    })
                     #expect(spatial.reverbSend == expected.send)
                     #expect(spatial.carrierVoice.map(expected.voices.contains) == true)
 
@@ -3542,12 +3558,28 @@ struct AutonomousPreparationPreflightTests {
             percussionGear: source.percussionGear,
             performanceCharacter: source.performanceCharacter,
             foundationBehavior: source.foundationBehavior,
+            foundationRhythmicRelation:
+                source.foundationRhythmicRelation,
             foundationCompanion: source.foundationCompanion,
             pulseEchoEnabled: source.pulseEchoEnabled,
             interlockChapter: source.interlockChapter,
             groovePulses: source.groovePulses,
+            closedHatDecayArticulations:
+                source.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                source.upperPercussionTailArticulations,
+            modalPercussionArticulations:
+                source.modalPercussionArticulations,
             spatialContrast: .foreground,
             narrative: source.narrative,
+            kickSyntaxRole: source.kickSyntaxRole,
+            climaxHang: source.climaxHang,
+            percussionEchoTexture: source.percussionEchoTexture,
+            percussionPolymetricEvidence:
+                source.percussionPolymetricEvidence,
+            upperMusicalPump: source.upperMusicalPump,
+            harmonicDisclosureRelationship:
+                source.harmonicDisclosureRelationship,
             kickMorphology: source.kickMorphology
         )
         var dryBars = original.resolvedBars
@@ -3795,6 +3827,9 @@ struct AutonomousPreparationPreflightTests {
             kickSyntaxRole: source.kickSyntaxRole,
             climaxHang: source.climaxHang,
             percussionEchoTexture: source.percussionEchoTexture,
+            percussionPolymetricEvidence:
+                source.percussionPolymetricEvidence,
+            upperMusicalPump: source.upperMusicalPump,
             harmonicDisclosureRelationship:
                 source.harmonicDisclosureRelationship,
             kickMorphology: source.kickMorphology
@@ -3818,11 +3853,19 @@ struct AutonomousPreparationPreflightTests {
         #expect(Array(originalBlocks[..<barIndex]) == Array(changedBlocks[..<barIndex]))
         let originalBlock = originalBlocks[barIndex]
         let changedBlock = changedBlocks[barIndex]
+        let originalAppliedStep = originalBlock.synthPerformance.relocatedUpperStep(
+            for: motif.voice,
+            sourceStep: motif.step
+        )
+        let changedAppliedStep = changedBlock.synthPerformance.relocatedUpperStep(
+            for: motif.voice,
+            sourceStep: motif.step
+        )
         let originalEvent = originalBlock.events.first {
-            $0.step == motif.step && $0.narrativePresence != nil
+            $0.step == originalAppliedStep && $0.narrativePresence != nil
         }
         let changedEvent = changedBlock.events.first {
-            $0.step == motif.step && $0.narrativePresence != nil
+            $0.step == changedAppliedStep && $0.narrativePresence != nil
         }
         #expect(originalEvent?.narrativePresence == source.narrative.presence(atStep: motif.step))
         #expect(changedEvent?.narrativeDirection == .holding)
@@ -3955,11 +3998,19 @@ struct AutonomousPreparationPreflightTests {
         let sculptedBlock = sculptedBlocks[barIndex]
         let neutralBlock = neutralBlocks[barIndex]
         let articulation = sculptedBlock.synthPerformance.articulation(at: motif.step)
+        let sculptedAppliedStep = sculptedBlock.synthPerformance.relocatedUpperStep(
+            for: motif.voice,
+            sourceStep: motif.step
+        )
+        let neutralAppliedStep = neutralBlock.synthPerformance.relocatedUpperStep(
+            for: motif.voice,
+            sourceStep: motif.step
+        )
         let sculptedEvent = sculptedBlock.events.first {
-            $0.step == motif.step && $0.narrativePresence != nil
+            $0.step == sculptedAppliedStep && $0.narrativePresence != nil
         }
         let neutralEvent = neutralBlock.events.first {
-            $0.step == motif.step && $0.narrativePresence != nil
+            $0.step == neutralAppliedStep && $0.narrativePresence != nil
         }
         #expect(sculptedEvent?.spectralAperture == articulation.spectralAperture)
         #expect(sculptedEvent?.anchorSpectralScale == articulation.anchorSpectralScale)
@@ -4252,6 +4303,10 @@ struct AutonomousPreparationPreflightTests {
                 ensemble: resolved.ensemble,
                 arrangementGesture: resolved.arrangementGesture,
                 percussionGear: resolved.percussionGear,
+                performanceCharacter: resolved.performanceCharacter,
+                foundationBehavior: resolved.foundationBehavior,
+                foundationRhythmicRelation:
+                    resolved.foundationRhythmicRelation,
                 foundationCompanion: companion ?? resolved.foundationCompanion,
                 pulseEchoEnabled: enabled,
                 interlockChapter: chapter,
@@ -4259,8 +4314,19 @@ struct AutonomousPreparationPreflightTests {
                 closedHatDecayArticulations: resolved.closedHatDecayArticulations,
                 upperPercussionTailArticulations:
                     resolved.upperPercussionTailArticulations,
+                modalPercussionArticulations:
+                    resolved.modalPercussionArticulations,
                 spatialContrast: resolved.spatialContrast,
-                narrative: resolved.narrative
+                narrative: resolved.narrative,
+                kickSyntaxRole: resolved.kickSyntaxRole,
+                climaxHang: resolved.climaxHang,
+                percussionEchoTexture: resolved.percussionEchoTexture,
+                percussionPolymetricEvidence:
+                    resolved.percussionPolymetricEvidence,
+                upperMusicalPump: resolved.upperMusicalPump,
+                harmonicDisclosureRelationship:
+                    resolved.harmonicDisclosureRelationship,
+                kickMorphology: resolved.kickMorphology
             )
         }
 
@@ -4341,6 +4407,7 @@ struct AutonomousPreparationPreflightTests {
                 dna: sourcePlan.dna,
                 kind: kind,
                 resolvedBars: [resolved],
+                materialWorld: sourcePlan.materialWorld,
                 forceHomeUpperTimbre: forceHome
             ).bars[0]
         }
@@ -4589,10 +4656,14 @@ struct AutonomousPreparationPreflightTests {
                 endingSpatialContrastState: plan.endingSpatialContrastState,
                 endingNarrativeState: plan.endingNarrativeState,
                 harmonicContinuation: plan.incomingHarmonicContinuation,
+                resampledMemory: plan.incomingResampledMemory,
                 longHorizonSelection: plan.longHorizonSelection,
                 longHorizonEnergyCoordination:
                     plan.longHorizonEnergyCoordination,
-                materialWorld: plan.materialWorld
+                materialWorld: plan.materialWorld,
+                incomingEffectCarrierState: plan.effectCarrier.state,
+                qualityRecoveryContext: plan.qualityRecoveryContext,
+                presentationStartBar: plan.presentationStartBar
             )
         }
         let zeroDrivePlan = replacingScene(in: wetPlan, with: zeroTextureScene)
@@ -4641,12 +4712,33 @@ struct AutonomousPreparationPreflightTests {
             ),
             arrangementGesture: lateEchoBase.arrangementGesture,
             percussionGear: lateEchoBase.percussionGear,
+            // Keep this synthetic late-onset fixture out of the composition
+            // arpeggiator so its only upper source remains the explicit event.
+            performanceCharacter: .hypnoticLock,
+            foundationBehavior: lateEchoBase.foundationBehavior,
+            foundationRhythmicRelation:
+                lateEchoBase.foundationRhythmicRelation,
             foundationCompanion: lateEchoBase.foundationCompanion,
             pulseEchoEnabled: lateEchoBase.pulseEchoEnabled,
             interlockChapter: lateEchoBase.interlockChapter,
             groovePulses: lateEchoBase.groovePulses,
+            closedHatDecayArticulations:
+                lateEchoBase.closedHatDecayArticulations,
+            upperPercussionTailArticulations:
+                lateEchoBase.upperPercussionTailArticulations,
+            modalPercussionArticulations:
+                lateEchoBase.modalPercussionArticulations,
             spatialContrast: lateEchoBase.spatialContrast,
-            narrative: lateEchoBase.narrative
+            narrative: lateEchoBase.narrative,
+            kickSyntaxRole: lateEchoBase.kickSyntaxRole,
+            climaxHang: lateEchoBase.climaxHang,
+            percussionEchoTexture: lateEchoBase.percussionEchoTexture,
+            percussionPolymetricEvidence:
+                lateEchoBase.percussionPolymetricEvidence,
+            upperMusicalPump: lateEchoBase.upperMusicalPump,
+            harmonicDisclosureRelationship:
+                lateEchoBase.harmonicDisclosureRelationship,
+            kickMorphology: lateEchoBase.kickMorphology
         )
         let lateOnlyPlan = replacingResolvedBars(
             in: sourcePlan,
@@ -4660,7 +4752,8 @@ struct AutonomousPreparationPreflightTests {
         ).projection
         let lateOnlyEvidence = lateOnlyRender.pulseEchoEvidence[0]
         let lateOnlyTailEvidence = lateOnlyRender.pulseEchoEvidence[1]
-        #expect(lateOnlyEvidence.earliestPulseEchoOnsetStep == 13)
+        #expect((lateOnlyEvidence.earliestPulseEchoOnsetStep ?? 0) >
+                PulseEchoTextureArticulation.latestDrivenOnsetStep)
         #expect(!lateOnlyEvidence.driveEligible)
         #expect(lateOnlyEvidence.appliedAmount == 0)
         #expect(lateOnlyEvidence.currentSendRMS > 0)
@@ -5150,10 +5243,14 @@ struct AutonomousPreparationPreflightTests {
             endingSpatialContrastState: plan.endingSpatialContrastState,
             endingNarrativeState: plan.endingNarrativeState,
             harmonicContinuation: plan.incomingHarmonicContinuation,
+            resampledMemory: plan.incomingResampledMemory,
             longHorizonSelection: plan.longHorizonSelection,
             longHorizonEnergyCoordination:
                 plan.longHorizonEnergyCoordination,
-            materialWorld: plan.materialWorld
+            materialWorld: plan.materialWorld,
+            incomingEffectCarrierState: plan.effectCarrier.state,
+            qualityRecoveryContext: plan.qualityRecoveryContext,
+            presentationStartBar: plan.presentationStartBar
         )
     }
 

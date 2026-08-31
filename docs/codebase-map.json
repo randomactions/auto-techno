@@ -147,7 +147,7 @@
     {
       "id": "performance-grammar-and-composition",
       "name": "Performance grammar and phrase composition",
-      "responsibility": "Resolve performance character, rhythmic relations, phrase-local and bounded earlier-source slices, arpeggiation, pads, structural gestures, episode-bound kick materials, and score-owned feature articulations inside the canonical plan.",
+      "responsibility": "Resolve performance character, rhythmic relations including held long-cycle Euclidean relocation, phrase-local and bounded earlier-source slices, arpeggiation, pads, structural gestures, episode-bound kick materials, and score-owned feature articulations inside the canonical plan.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -197,6 +197,7 @@
         "Sources/AutoTechnoCore/KickMorphology.swift",
         "Sources/AutoTechnoCore/PerformanceCharacter.swift",
         "Sources/AutoTechnoCore/PhraseComposition.swift",
+        "Sources/AutoTechnoCore/UpperMusicalPump.swift",
         "Sources/AutoTechnoCore/UpperPercussionTail.swift",
         "Sources/AutoTechnoCore/UpperSpectralReveal.swift"
       ],
@@ -204,6 +205,7 @@
         "Tests/AutoTechnoCoreTests/ClimaxHangTests.swift",
         "Tests/AutoTechnoCoreTests/FoundationRhythmicRelationTests.swift",
         "Tests/AutoTechnoCoreTests/KickSyntaxTests.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonPolymetricGrammarTests.swift",
         "Tests/AutoTechnoCoreTests/PercussionEchoTextureTests.swift",
         "Tests/AutoTechnoCoreTests/PhraseCompositionTests.swift",
         "Tests/AutoTechnoCoreTests/UpperPercussionTailTests.swift",
@@ -222,7 +224,7 @@
     {
       "id": "instrument-pitch-and-role-policy",
       "name": "Instrument, pitch, and role policy",
-      "responsibility": "Assign internal architectures and patches, enforce tonal/atonal pitch identity, plan material-world-selected coupled modal percussion, and resolve upper synth performance without creating another engine.",
+      "responsibility": "Assign internal architectures and patches, enforce tonal/atonal pitch identity, plan material-world-selected coupled modal percussion, and resolve upper synth performance through the shared long-cycle grammar without creating another engine.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -280,7 +282,7 @@
     {
       "id": "long-horizon-semantic-control",
       "name": "Long-horizon semantic control",
-      "responsibility": "Maintain compact long-range musical continuation, causal four-to-eight-minute material-world lineage, semantic trajectory, episode selection, energy coordination, effect sentences, and bounded future decision eligibility.",
+      "responsibility": "Maintain compact long-range musical continuation, causal four-to-eight-minute material-world lineage, held long-cycle grammar and effect carrier, semantic trajectory, episode selection, energy coordination, effect sentences, and bounded future decision eligibility.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -288,11 +290,19 @@
         {
           "symbol": "LongHorizonContinuationState",
           "path": "Sources/AutoTechnoCore/LongHorizonContinuation.swift"
+        },
+        {
+          "symbol": "LongHorizonPolymetricGrammar",
+          "path": "Sources/AutoTechnoCore/LongHorizonPolymetricGrammar.swift"
+        },
+        {
+          "symbol": "LongHorizonEffectCarrierState",
+          "path": "Sources/AutoTechnoCore/LongHorizonEffectCarrier.swift"
         }
       ],
       "state": [
         "LongHorizonContinuationState",
-        "long-horizon episode, material-world, and energy state"
+        "long-horizon episode, material-world, energy, polymetric-grammar, and effect-carrier state"
       ],
       "inputs": [
         "committed phrase semantics",
@@ -301,18 +311,20 @@
       "outputs": [
         "semantic trajectory",
         "episode operator",
-        "material-world score plan",
+        "material-world score plan with activation-anchored lane geometry, held carrier, and upper pump",
         "future preserve, recover, or material-reframe intent"
       ],
       "evidence": [
         "long-horizon semantic report",
-        "material lineage, energy, and effect-sentence provenance"
+        "material lineage, lane geometry and phase, held carrier, upper-pump, energy, and effect-sentence provenance"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/LongHorizonContinuation.swift",
+        "Sources/AutoTechnoCore/LongHorizonEffectCarrier.swift",
         "Sources/AutoTechnoCore/LongHorizonEffectSentence.swift",
         "Sources/AutoTechnoCore/LongHorizonEnergyCoordination.swift",
         "Sources/AutoTechnoCore/LongHorizonMaterialWorld.swift",
+        "Sources/AutoTechnoCore/LongHorizonPolymetricGrammar.swift",
         "Sources/AutoTechnoCore/LongHorizonSemanticTrajectory.swift",
         "Sources/AutoTechnoCore/LongHorizonTrajectoryDecision.swift"
       ],
@@ -321,6 +333,7 @@
         "Tests/AutoTechnoCoreTests/LongHorizonEnergyCoordinationTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonEpisodeSelectionTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonMaterialWorldTests.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonPolymetricGrammarTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonPlanningBaselineProbe.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonSemanticTrajectoryTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonTrajectoryBaselineTests.swift"
@@ -398,7 +411,7 @@
     {
       "id": "voice-and-phrase-rendering",
       "name": "Voice and phrase rendering",
-      "responsibility": "Render the canonical resolved score through internal voices, phrase composition including reconstructed earlier kick recipes, coupled-material modal percussion, kick/upper articulations, source-local terminal de-clicking, and stable continuation into immutable stereo blocks and role taps.",
+      "responsibility": "Render the canonical resolved score through internal voices, phrase composition including reconstructed earlier kick recipes, coupled-material modal percussion, kick/upper articulations, near-continuous asymmetric spatial dust, source-local terminal de-clicking, and stable continuation into immutable stereo blocks and role taps.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -432,7 +445,8 @@
         "source-terminal attack and ending evidence",
         "exact PCM fingerprints",
         "score/render correspondence",
-        "modal material, coupling, stability, decay, and pitch evidence"
+        "modal material, coupling, stability, decay, and pitch evidence",
+        "spatial-dust channel, cadence, low-band exclusion, and clearing evidence"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AlienAnalogVoice.swift",
@@ -453,6 +467,7 @@
         "Tests/AutoTechnoCoreTests/KickSourceDynamicsTests.swift",
         "Tests/AutoTechnoCoreTests/ModalPercussionDSPTests.swift",
         "Tests/AutoTechnoCoreTests/SourceTerminalDeclickTests.swift",
+        "Tests/AutoTechnoCoreTests/SpatialDustTests.swift",
         "Tests/AutoTechnoCoreTests/UpperPercussionTailDSPTests.swift",
         "Tests/AutoTechnoCoreTests/UpperSpectralRevealDSPTests.swift",
         "Tests/AutoTechnoCoreTests/UpperTimbreDSPTests.swift"
@@ -474,7 +489,7 @@
     {
       "id": "graph-effects-routing-and-mix",
       "name": "Graph, effects, routing, and mix control",
-      "responsibility": "Plan and render the bounded target-directed effect-world graph morph, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, independently qualified repeat-hold DJ-deck chains with full-mix filtering and target-specific loop memories, and read-only waveform envelopes.",
+      "responsibility": "Plan and render the bounded target-directed effect-world graph morph with one held carrier and post-graph upper pump, protected routing, FDN spatial field, automatic kick/foundation balance, nonlinear core, independently qualified repeat-hold DJ-deck chains with full-mix filtering and target-specific loop memories, and read-only waveform envelopes.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -515,6 +530,7 @@
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift",
+        "Sources/AutoTechnoDSP/EffectCarrierAndUpperPumpDSP.swift",
         "Sources/AutoTechnoDSP/FeedbackDelayNetwork.swift",
         "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
         "Sources/AutoTechnoDSP/RepeatHoldEvolution.swift",
@@ -523,6 +539,7 @@
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/FeedbackDelayNetworkTests.swift",
+        "Tests/AutoTechnoCoreTests/EffectCarrierAndUpperPumpTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonMaterialWorldTests.swift",
         "Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift",
         "Tests/AutoTechnoCoreTests/SpatialProtectedRoutingRegressionTests.swift",
@@ -597,9 +614,9 @@
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityVerdict.swift",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v26.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v26.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v26.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v29.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v29.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v29.json",
         "Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift",
         "Sources/AutoTechnoDSP/StreamingPerceptualEvidence.swift",
         "Sources/AutoTechnoDSP/UpperTimbreEvidence.swift"
@@ -674,9 +691,9 @@
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicy.swift",
         "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift",
         "Sources/AutoTechnoDSP/LongHorizonSignalTrajectory.swift",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v13.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v13.json",
-        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v13.json"
+        "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v16.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v16.json",
+        "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v16.json"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/LongHorizonEffectDoseTests.swift",

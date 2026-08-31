@@ -18,8 +18,8 @@ struct LongHorizonContinuationTests {
 
         #expect(continuation.isBound)
         #expect(continuation.rootSeed == 48_291)
-        #expect(continuation.schemaVersion == 4)
-        #expect(continuation.schemaIdentifier == "autotechno-long-horizon-continuation.v4")
+        #expect(continuation.schemaVersion == 6)
+        #expect(continuation.schemaIdentifier == "autotechno-long-horizon-continuation.v6")
         #expect(continuation.nextExpectedPresentationBar == 0)
         #expect(continuation.currentEpisode.operatorKind == .maintain)
         #expect(continuation.currentEpisode.startedAtBar == 0)

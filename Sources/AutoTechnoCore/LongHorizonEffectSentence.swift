@@ -85,6 +85,11 @@ package struct LongHorizonEffectSentence: Codable, Equatable, Sendable {
         function = .turnaround
         attentionPriority = .foreground
         priority = 2
+      case .spatialDust:
+        // The held dust bed is world cadence, not a phrase-scale call/answer
+        // sentence. Existing foreground/supporting sentence ownership stays
+        // with the two bounded special relations above.
+        continue
       }
       let candidate = LongHorizonEffectSentence(
         phraseIndex: phraseIndex,

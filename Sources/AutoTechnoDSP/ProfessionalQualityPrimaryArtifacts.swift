@@ -5,16 +5,16 @@ import Foundation
 /// engine no longer matches `QualityQualificationContract.engineVersion`.
 package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     package static let profileResource =
-        "professional-quality-primary-profile-v26"
+        "professional-quality-primary-profile-v29"
     package static let adversarialResource =
-        "professional-quality-primary-adversarial-suite-v26"
+        "professional-quality-primary-adversarial-suite-v29"
     package static let holdoutResource =
-        "professional-quality-primary-holdout-v26"
-    package static let expectedProfileFingerprint = "49533dcd68238f05"
+        "professional-quality-primary-holdout-v29"
+    package static let expectedProfileFingerprint = "06cb04bfbef71c28"
     package static let expectedAdversarialSuiteFingerprint =
-        "b0733d1aad0de785"
+        "16820b6274dd26d4"
     package static let expectedHoldoutQualificationFingerprint =
-        "81f20d011441fa5f"
+        "2037dec24ac1e45c"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport

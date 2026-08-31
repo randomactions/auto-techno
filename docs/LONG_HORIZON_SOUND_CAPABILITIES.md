@@ -14,10 +14,31 @@ distance. This consolidates random graph-operation choice; it adds no processor
 family, alternate renderer, fixed chain, or selector. A future policy may issue
 one `reframe-material` action per world, only at an eligible future boundary.
 
-This PCM-changing engine-v45 slice is implemented and offline-qualified by the
-exact primary-v26 and long-horizon-v13 artifact sets. Listening, real app/route
+This PCM-changing engine-v48 slice is implemented and offline-qualified by the
+exact primary-v29 and long-horizon-v16 artifact sets. Listening, real app/route
 QA, latency observation, and physical-output soak remain separate unverified
 gates; historical engine-v38 artifacts cannot approve this slice.
+
+## Long-cycle groove and focused effect-world realization
+
+Engine v48 extends each material-world lineage with one Core-owned three-lane
+Euclidean/polymetric grammar. It repositions only existing eligible upper and
+non-foundation-percussion events; the world seed chooses prevalidated lane
+geometry whose combined period is 64--128 bars, while the absolute activation
+bar fixes phase across phrase, pause, retry, cancellation, and route boundaries.
+Slide chains remain atomic, collision exhaustion retains the original onset,
+and the full protected foundation remains exact.
+
+The same lineage holds one eligible upper effect carrier from its first
+committed selection until handoff. It focuses the existing five-coordinate
+effect target through existing instrument automation and the one generated
+graph, leaving 65% of non-carrier residual dry. A separate score-owned upper
+pump follows actual kick syntax after the graph; the legacy detector safety duck
+is unchanged. The existing percussion-echo relation supplies near-continuous
+asymmetric `spatialDust`: exactly three active bars and one stable silent bar per
+four, alternating dominant side, protected low band, and exact handoff clearing.
+No new user surface, engine, renderer, graph selector, topology, track, sampler,
+return, effect family, callback work, or external dependency was added.
 
 ## Purpose and current decision
 
@@ -99,7 +120,7 @@ Status meanings:
 ### LH-SND-01 — multi-rate semantic modulation
 
 **Status:** partially implemented; AudioReakt promoted the kick-source
-trajectory only; exact engine-v45 primary-v26 and long-horizon-v13 qualification
+trajectory only; exact engine-v48 primary-v29 and long-horizon-v16 qualification
 passed, while app/runtime verification remains separate.
 
 - **Canonical owner:** the existing score-owned `InstrumentAssignment` color,
@@ -170,8 +191,8 @@ automation maturation conditional.
 ### LH-SND-04 — transition and payoff maturation
 
 **Status:** partially implemented; AudioReakt promoted kick morphology and
-contextual clap/snare/rim articulation; exact engine-v45 primary-v26 and
-long-horizon-v13 qualification passed, while app/runtime verification remains
+contextual clap/snare/rim articulation; exact engine-v48 primary-v29 and
+long-horizon-v16 qualification passed, while app/runtime verification remains
 separate.
 
 - **Canonical owner:** dramatic debt, energy-release phrase, anticipation swell,
@@ -354,9 +375,9 @@ long-horizon policy does not prove that every provisional DSP is mature, but it
 does prove that this corpus supplies no repeatable failure that authorizes one
 of the replacements below.
 
-The current engine-v45/primary-v26 regeneration pins long-horizon v13 profile
-`6139c62f14150a56`, adversarial suite `41f2f0052adc68b3`, and disjoint holdout
-`9c73ae998d25f693`. Earlier policy fingerprints remain historical evidence
+The current engine-v48/primary-v29 regeneration pins long-horizon v16 profile
+`836ac66b68470cd4`, adversarial suite `5950762cf2dc2635`, and disjoint holdout
+`0e00df369ce54e50`. Earlier policy fingerprints remain historical evidence
 only. Seven development journeys, all ten adversarial attacks, and two fresh
 disjoint holdouts pass at both representative rates. The prior Hypnotic sweep
 promoted LH-SND-09's interpolation primitive from
@@ -372,7 +393,7 @@ chain.
 | LH-SND-05 percussion depth | repeated AudioReakt kick and snare/clap technical explanations, prior session-static source probe, distinct deterministic body PCM, and attack/body/tail evidence | Kick morphology plus clap/snare/rim articulation promoted in place; additional percussion lanes and sample dependencies rejected. |
 | LH-SND-06 harmonic/motif syntax | identity recall, periodicity, payoff semantics, and realized operator movement | Conditional; no predictable-cycle or failed-recall result survives with otherwise valid evidence. |
 | LH-SND-07 spatial scene | FDN/effect occupancy, tail recovery, stereo and rate-bound phrase qualification | Conditional; no ratchet, uncleared tail, mono/rate, or depth failure cluster. |
-| LH-SND-08 dynamics/effect body | primary-v26 phrase verdicts, crest/loudness/transient deltas, wet/dry bounds, transition-tail continuity, and live-controller provenance | Conditional; no repeated dynamics or effect-intelligibility failure after valid semantics. |
+| LH-SND-08 dynamics/effect body | primary-v29 phrase verdicts, crest/loudness/transient deltas, wet/dry bounds, transition-tail continuity, and live-controller provenance | Conditional; no repeated dynamics or effect-intelligibility failure after valid semantics. |
 | LH-SND-09 resampling | synthetic A/B alias and passband probes, all 276 Mordio source dispositions, exact cut-neutral PCM, deterministic grain geometry/source-position evidence, bounded accepted-only recipe memory, regenerated source/output hashes, and exact-engine phrase evidence at representative checkpoints and both rates | Band-limited interpolation, one bounded granular-memory texture, and four-recipe/256-bar phrase-spanning kick recall promoted in the canonical renderer; stereo-grain maturation remains conditional. |
 | LH-SND-10 additional patches | all existing role, register, character, and capability coverage | Not justified; no missing role/register/episode relationship. |
 | LH-SND-11 another architecture | current three architectures under exact profile and holdouts | Not justified; no surviving synthesis-class deficit. |
