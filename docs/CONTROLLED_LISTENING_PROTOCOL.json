@@ -1,0 +1,93 @@
+{
+  "schema": "autotechno-controlled-listening-protocol.v1",
+  "protocolVersion": 1,
+  "purpose": {
+    "id": "hypothesis-discovery-only",
+    "meaning": "A controlled observation may propose a later falsifiable deficit hypothesis; it never approves, qualifies, ranks, or promotes audio.",
+    "promotionAuthorized": false,
+    "runtimeInputAuthorized": false
+  },
+  "limits": {
+    "minimumTrials": 2,
+    "maximumTrials": 32,
+    "minimumRepetitions": 2,
+    "maximumRepetitions": 4,
+    "maximumOrderStreak": 2,
+    "maximumSessionMinutes": 45,
+    "maximumNoteCharacters": 2000,
+    "maximumHypotheses": 8,
+    "maximumInterruptions": 16,
+    "maximumBreaks": 8
+  },
+  "vocabularies": {
+    "attributes": [
+      "groove-coherence",
+      "kick-foundation-separation",
+      "transient-shape",
+      "spectral-balance",
+      "stereo-stability",
+      "motif-legibility",
+      "transition-clarity",
+      "tension-release",
+      "fatigue-cue",
+      "other-declared"
+    ],
+    "audibility": [
+      "not-audible",
+      "uncertain",
+      "audible"
+    ],
+    "confidence": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "fatigue": [
+      "none",
+      "mild",
+      "stop"
+    ],
+    "levelMethods": [
+      "calibrated-loudspeaker-spl",
+      "locked-device-setting",
+      "documented-relative-gain-match"
+    ],
+    "resultStatuses": [
+      "draft",
+      "observed",
+      "unavailable"
+    ],
+    "revealStatuses": [
+      "concealed",
+      "revealed"
+    ],
+    "transducerTypes": [
+      "loudspeakers",
+      "headphones"
+    ]
+  },
+  "schemas": {
+    "request": "autotechno-controlled-listening-request.v1",
+    "plan": "autotechno-controlled-listening-plan.v1",
+    "key": "autotechno-controlled-listening-key.v1",
+    "result": "autotechno-controlled-listening-result.v1"
+  },
+  "randomization": {
+    "algorithm": "splitmix64-balanced-pair-order.v1",
+    "seedScope": "one-local-session",
+    "tokenDerivation": "sha256-session-seed-condition.v1",
+    "requiresBalancedFirstPosition": true,
+    "identityLabelsForbiddenInPlan": true
+  },
+  "qualificationBoundary": {
+    "listeningGateState": "observed",
+    "allowedRoadmapDisposition": "proposed-not-authorized",
+    "forbiddenClaims": [
+      "approved for release",
+      "promotion gate passed",
+      "professional quality verified",
+      "qualified for release",
+      "release ready"
+    ]
+  }
+}

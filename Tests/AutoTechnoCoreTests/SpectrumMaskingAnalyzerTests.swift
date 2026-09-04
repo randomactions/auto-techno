@@ -4,6 +4,45 @@ import Testing
 
 @Suite("Spectrum masking analyzer")
 struct SpectrumMaskingAnalyzerTests {
+    @Test("Reusable sample filter preserves exact band-window evidence")
+    func reusableFilterParity() throws {
+        let sampleRate = 48_000.0
+        let samples: [Float] = (0..<4_099).map { frame in
+            Float(
+                sin(2 * Double.pi * 93 * Double(frame) / sampleRate) * 0.2 +
+                    sin(2 * Double.pi * 1_707 * Double(frame) / sampleRate) * 0.1
+            )
+        }
+        let windows = try #require(SpectrumMaskingAnalyzer.bandEnergyWindows(
+            samples,
+            sampleRate: sampleRate
+        ))
+        var filter = try #require(MaskingBandFilter(sampleRate: sampleRate))
+        var sums = Array(
+            repeating: [Double](repeating: 0, count: 4),
+            count: SpectrumMaskingAnalyzer.analyzedWindowCount
+        )
+        for (frame, sample) in samples.enumerated() {
+            let processed = filter.process(Double(sample))
+            let output = try #require(processed)
+            let window = min(
+                SpectrumMaskingAnalyzer.analyzedWindowCount - 1,
+                frame * SpectrumMaskingAnalyzer.analyzedWindowCount /
+                    samples.count
+            )
+            for band in output.values.indices {
+                sums[window][band] += output.values[band] * output.values[band]
+            }
+        }
+        for window in windows {
+            for band in sums[window.index].indices {
+                let expected = sums[window.index][band] /
+                    Double(window.frameCount)
+                #expect(window.bandMeanSquares[band] == expected)
+            }
+        }
+    }
+
     @Test("Valid silence has a fixed truthful vector while malformed input is unavailable")
     func fixedShapeAndInvalidInput() {
         let silence = [Float](repeating: 0, count: 160)

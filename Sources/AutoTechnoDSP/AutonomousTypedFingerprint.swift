@@ -21,6 +21,14 @@ func fixedWidthFingerprintHex(_ value: UInt64) -> String {
 /// no reflection, textual object descriptions, or whole-state byte buffers
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
+    package static func sessionState(
+        _ state: AutonomousSessionState
+    ) -> String {
+        digest(domain: "session-state.typed.v1") { sink in
+            encode(state, into: &sink)
+        }
+    }
+
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
         digest(domain: "candidate-plan.typed.v21") { sink in
             encode(plan, into: &sink)
@@ -1242,6 +1250,393 @@ private extension AutonomousTypedFingerprint {
         sink.collection(value.activeSupportingRoles.count)
         for role in value.activeSupportingRoles { sink.raw(role.rawValue) }
         sink.field("releaseSettlementPending"); sink.bool(value.releaseSettlementPending)
+    }
+
+    // MARK: Canonical session continuation
+
+    static func encode(
+        _ value: AutonomousSessionState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("AutonomousSessionState")
+        sink.field("rootSeed"); sink.uint64(value.rootSeed)
+        sink.field("identitySeed"); sink.uint64(value.identitySeed)
+        sink.field("identityDNA"); encode(value.identityDNA, into: &sink)
+        sink.field("phraseIndex"); sink.int(value.phraseIndex)
+        sink.field("intent"); encode(value.intent, into: &sink)
+        sink.field("memory")
+        encode(value.memory, into: &sink)
+        sink.field("quality"); encode(value.quality, into: &sink)
+        sink.field("liveMasterHeadroomFingerprint")
+        sink.string(value.liveMasterHeadroom.fingerprint)
+    }
+
+    static func encode(
+        _ value: TemporalMusicalMemory,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("TemporalMusicalMemory")
+        sink.field("recentBars"); encode(value.recentBars, into: &sink)
+        sink.field("currentPhrase"); encode(value.currentPhrase, into: &sink)
+        sink.field("previousPhrase"); encode(value.previousPhrase, into: &sink)
+        sink.field("dramaticArc"); encode(value.dramaticArc, into: &sink)
+        sink.field("sessionBars"); encode(value.sessionBars, into: &sink)
+        sink.field("totalBars"); sink.int(value.totalBars)
+        sink.field("lastContrastBar"); encode(value.lastContrastBar, into: &sink)
+        sink.field("lastBreakBar"); encode(value.lastBreakBar, into: &sink)
+        sink.field("lastReleaseBar"); encode(value.lastReleaseBar, into: &sink)
+        sink.field("lastIdentityReturnBar")
+        encode(value.lastIdentityReturnBar, into: &sink)
+        sink.field("topologyRevision"); sink.int(value.topologyRevision)
+        sink.field("openDebts"); sink.collection(value.openDebts.count)
+        for debt in value.openDebts { encode(debt, into: &sink) }
+        sink.field("interlockEvolution")
+        encode(value.interlockEvolution, into: &sink)
+        sink.field("spatialContrast"); encode(value.spatialContrast, into: &sink)
+        sink.field("narrativeEvolution")
+        encode(value.narrativeEvolution, into: &sink)
+        sink.field("recentPerformanceCharacters")
+        sink.collection(value.recentPerformanceCharacters.count)
+        for character in value.recentPerformanceCharacters {
+            sink.raw(character.rawValue)
+        }
+        sink.field("harmonicContinuation")
+        encode(value.harmonicContinuation, into: &sink)
+        sink.field("resampledMemory")
+        encode(value.resampledMemory, into: &sink)
+        sink.field("longHorizon")
+        encode(value.longHorizon, into: &sink)
+    }
+
+    static func encode(
+        _ value: LongHorizonContinuationState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonContinuationState")
+        sink.field("schemaVersion"); sink.int(value.schemaVersion)
+        sink.field("schemaIdentifier"); sink.string(value.schemaIdentifier)
+        sink.field("isBound"); sink.bool(value.isBound)
+        sink.field("rootSeed"); sink.uint64(value.rootSeed)
+        sink.field("nextExpectedPhraseIndex")
+        sink.int(value.nextExpectedPhraseIndex)
+        sink.field("nextExpectedBar"); sink.int(value.nextExpectedBar)
+        sink.field("nextExpectedPresentationBar")
+        sink.int(value.nextExpectedPresentationBar)
+        sink.field("arcIndex"); sink.int(value.arcIndex)
+        sink.field("arcEpisodeCount"); sink.int(value.arcEpisodeCount)
+        sink.field("currentEpisode"); encode(value.currentEpisode, into: &sink)
+        sink.field("effectCarrierState")
+        encode(value.effectCarrierState, into: &sink)
+        sink.field("lastSemanticEnergy")
+        encode(value.lastSemanticEnergy, into: &sink)
+        sink.field("recentEpisodes")
+        sink.collection(value.recentEpisodes.count)
+        for episode in value.recentEpisodes { encode(episode, into: &sink) }
+        sink.field("recentOperators")
+        sink.collection(value.recentOperators.count)
+        for operatorKind in value.recentOperators {
+            sink.raw(operatorKind.rawValue)
+        }
+        sink.field("capabilityRecency")
+        encodeLongHorizonRecency(value.capabilityRecency, into: &sink)
+        sink.field("characterRecency")
+        encodeLongHorizonRecency(value.characterRecency, into: &sink)
+        sink.field("harmonicRecency")
+        encodeLongHorizonRecency(value.harmonicRecency, into: &sink)
+        sink.field("transformationRecency")
+        encodeLongHorizonRecency(value.transformationRecency, into: &sink)
+        sink.field("identityLandmarks")
+        sink.collection(value.identityLandmarks.count)
+        for landmark in value.identityLandmarks { encode(landmark, into: &sink) }
+        sink.field("obligations")
+        sink.collection(value.obligations.count)
+        for obligation in value.obligations { encode(obligation, into: &sink) }
+        sink.field("reserve"); encode(value.reserve, into: &sink)
+        sink.field("lastTrajectoryEvidenceSchema")
+        encode(value.lastTrajectoryEvidenceSchema, into: &sink)
+        sink.field("lastTrajectoryDecisionReason")
+        sink.string(value.lastTrajectoryDecisionReason)
+        sink.field("lastTrajectoryDecision")
+        sink.presence(value.lastTrajectoryDecision != nil)
+        if let decision = value.lastTrajectoryDecision {
+            encode(decision, into: &sink)
+        }
+        sink.field("trajectoryCorrectionCount")
+        sink.int(value.trajectoryCorrectionCount)
+    }
+
+    static func encode(
+        _ value: LongHorizonEpisodeIntent,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonEpisodeIntent")
+        sink.field("id"); sink.uint64(value.id)
+        sink.field("arcIndex"); sink.int(value.arcIndex)
+        sink.field("episodeIndex"); sink.int(value.episodeIndex)
+        sink.field("operatorKind"); sink.raw(value.operatorKind.rawValue)
+        sink.field("startedAtBar"); sink.int(value.startedAtBar)
+        sink.field("minimumHoldUntilBar")
+        sink.int(value.minimumHoldUntilBar)
+        sink.field("dueByBar"); sink.int(value.dueByBar)
+        sink.field("startEnergy"); encode(value.startEnergy, into: &sink)
+        sink.field("target"); encode(value.target, into: &sink)
+        sink.field("materialWorld"); encode(value.materialWorld, into: &sink)
+    }
+
+    static func encode(
+        _ value: LongHorizonCompletedEpisode,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonCompletedEpisode")
+        sink.field("id"); sink.uint64(value.id)
+        sink.field("arcIndex"); sink.int(value.arcIndex)
+        sink.field("episodeIndex"); sink.int(value.episodeIndex)
+        sink.field("operatorKind"); sink.raw(value.operatorKind.rawValue)
+        sink.field("startedAtBar"); sink.int(value.startedAtBar)
+        sink.field("completedAtBar"); sink.int(value.completedAtBar)
+        sink.field("minimumHoldUntilBar")
+        sink.int(value.minimumHoldUntilBar)
+        sink.field("dueByBar"); sink.int(value.dueByBar)
+        sink.field("completionReason")
+        sink.raw(value.completionReason.rawValue)
+        sink.field("materialWorld"); encode(value.materialWorld, into: &sink)
+    }
+
+    static func encode(
+        _ value: LongHorizonSemanticEnergyVector,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonSemanticEnergyVector")
+        sink.field("foundationAuthority")
+        sink.double(value.foundationAuthority)
+        sink.field("roleDensity"); sink.double(value.roleDensity)
+        sink.field("percussionActivity")
+        sink.double(value.percussionActivity)
+        sink.field("protagonistPresence")
+        sink.double(value.protagonistPresence)
+        sink.field("harmonicDisclosure")
+        sink.double(value.harmonicDisclosure)
+        sink.field("timbralMotionIntent")
+        sink.double(value.timbralMotionIntent)
+        sink.field("spatialDistance"); sink.double(value.spatialDistance)
+        sink.field("transitionExpectation")
+        sink.double(value.transitionExpectation)
+    }
+
+    static func encode(
+        _ value: LongHorizonEnergyTarget,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonEnergyTarget")
+        sink.field("foundationAuthority")
+        sink.raw(value.foundationAuthority.rawValue)
+        sink.field("roleDensity"); sink.raw(value.roleDensity.rawValue)
+        sink.field("percussionActivity")
+        sink.raw(value.percussionActivity.rawValue)
+        sink.field("protagonistPresence")
+        sink.raw(value.protagonistPresence.rawValue)
+        sink.field("harmonicDisclosure")
+        sink.raw(value.harmonicDisclosure.rawValue)
+        sink.field("timbralMotionIntent")
+        sink.raw(value.timbralMotionIntent.rawValue)
+        sink.field("spatialDistance")
+        sink.raw(value.spatialDistance.rawValue)
+        sink.field("transitionExpectation")
+        sink.raw(value.transitionExpectation.rawValue)
+    }
+
+    static func encode(
+        _ value: LongHorizonMaterialWorldIntent,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonMaterialWorldIntent")
+        sink.field("id"); sink.uint64(value.id)
+        sink.field("parentID"); sink.presence(value.parentID != nil)
+        if let parentID = value.parentID { sink.uint64(parentID) }
+        sink.field("parentFingerprint")
+        encode(value.parentFingerprint, into: &sink)
+        sink.field("parentAxes"); sink.presence(value.parentAxes != nil)
+        if let parentAxes = value.parentAxes { encode(parentAxes, into: &sink) }
+        sink.field("generation"); sink.int(value.generation)
+        sink.field("retryOrdinal"); sink.int(value.retryOrdinal)
+        sink.field("handoff"); sink.raw(value.handoff.rawValue)
+        sink.field("axes"); encode(value.axes, into: &sink)
+        sink.field("polymetricGrammar")
+        encode(value.polymetricGrammar, into: &sink)
+        sink.field("fingerprint"); sink.string(value.fingerprint)
+    }
+
+    static func encode(
+        _ value: LongHorizonMaterialAxes,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonMaterialAxes")
+        sink.field("rhythm"); sink.raw(value.rhythm.rawValue)
+        sink.field("motif"); sink.raw(value.motif.rawValue)
+        sink.field("roles"); sink.raw(value.roles.rawValue)
+        sink.field("harmony"); sink.raw(value.harmony.rawValue)
+        sink.field("architecture"); sink.raw(value.architecture.rawValue)
+        sink.field("effect"); encode(value.effect, into: &sink)
+    }
+
+    static func encode(
+        _ value: LongHorizonPolymetricGrammar,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonPolymetricGrammar")
+        sink.field("schemaVersion"); sink.int(value.schemaVersion)
+        sink.field("schemaIdentifier"); sink.string(value.schemaIdentifier)
+        sink.field("isEnabled"); sink.bool(value.isEnabled)
+        sink.field("activationBar"); sink.int(value.activationBar)
+        sink.field("laneGeometries")
+        sink.collection(value.laneGeometries.count)
+        for geometry in value.laneGeometries {
+            sink.aggregate("LongHorizonPolymetricLaneGeometry")
+            sink.field("lane"); sink.raw(geometry.lane.rawValue)
+            sink.field("stepLength"); sink.int(geometry.stepLength)
+            sink.field("pulseCount"); sink.int(geometry.pulseCount)
+            sink.field("rotation"); sink.int(geometry.rotation)
+        }
+        sink.field("combinedPeriodInSteps")
+        sink.int(value.combinedPeriodInSteps)
+        sink.field("fingerprint"); sink.string(value.fingerprint)
+    }
+
+    static func encode(
+        _ value: LongHorizonEffectCarrierState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonEffectCarrierState")
+        sink.field("schemaVersion"); sink.int(value.schemaVersion)
+        sink.field("schemaIdentifier"); sink.string(value.schemaIdentifier)
+        sink.field("worldID"); sink.uint64(value.worldID)
+        sink.field("status"); sink.raw(value.status.rawValue)
+        sink.field("role"); sink.presence(value.role != nil)
+        if let role = value.role { sink.raw(role.rawValue) }
+        sink.field("selectedAtPhraseIndex")
+        encode(value.selectedAtPhraseIndex, into: &sink)
+    }
+
+    static func encodeLongHorizonRecency(
+        _ values: [LongHorizonNamedUseRecency],
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.collection(values.count)
+        for value in values {
+            sink.aggregate("LongHorizonNamedUseRecency")
+            sink.field("name"); sink.string(value.name)
+            sink.field("useCount"); sink.int(value.useCount)
+            sink.field("lastUsedBar"); encode(value.lastUsedBar, into: &sink)
+        }
+    }
+
+    static func encode(
+        _ value: LongHorizonIdentityLandmarkSummary,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonIdentityLandmarkSummary")
+        sink.field("scoreFingerprint")
+        sink.uint64(value.scoreFingerprint)
+        sink.field("establishedAtBar"); sink.int(value.establishedAtBar)
+        sink.field("lastRecalledAtBar")
+        encode(value.lastRecalledAtBar, into: &sink)
+    }
+
+    static func encode(
+        _ value: LongHorizonObligation,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonObligation")
+        sink.field("id"); sink.uint64(value.id)
+        sink.field("kind"); sink.raw(value.kind.rawValue)
+        sink.field("openedAtBar"); sink.int(value.openedAtBar)
+        sink.field("dueByBar"); sink.int(value.dueByBar)
+        sink.field("sourceEpisodeID"); sink.uint64(value.sourceEpisodeID)
+        sink.field("sourceScoreFingerprint")
+        sink.uint64(value.sourceScoreFingerprint)
+    }
+
+    static func encode(
+        _ value: LongHorizonReserveState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonReserveState")
+        sink.field("payoffAvailable"); sink.bool(value.payoffAvailable)
+        sink.field("reframeAvailable"); sink.bool(value.reframeAvailable)
+        sink.field("recallAvailable"); sink.bool(value.recallAvailable)
+    }
+
+    static func encode(
+        _ value: LongHorizonTrajectoryDecision,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("LongHorizonTrajectoryDecision")
+        sink.field("schemaVersion"); sink.int(value.schemaVersion)
+        sink.field("schemaIdentifier"); sink.string(value.schemaIdentifier)
+        sink.field("rootSeed"); sink.uint64(value.rootSeed)
+        sink.field("policyVersion"); sink.string(value.policyVersion)
+        sink.field("evidenceSchema"); sink.string(value.evidenceSchema)
+        sink.field("evidenceFingerprint")
+        sink.string(value.evidenceFingerprint)
+        sink.field("observedThroughPhraseIndex")
+        sink.int(value.observedThroughPhraseIndex)
+        sink.field("observedThroughBar")
+        sink.int(value.observedThroughBar)
+        sink.field("targetPhraseIndex"); sink.int(value.targetPhraseIndex)
+        sink.field("targetBar"); sink.int(value.targetBar)
+        sink.field("action"); sink.raw(value.action.rawValue)
+        sink.field("reasons"); sink.collection(value.reasons.count)
+        for reason in value.reasons { sink.raw(reason.rawValue) }
+        sink.field("fingerprint"); sink.string(value.fingerprint)
+    }
+
+    static func encode(
+        _ values: [MusicalMemoryBar],
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.collection(values.count)
+        for value in values { encode(value, into: &sink) }
+    }
+
+    static func encode(
+        _ value: MusicalMemoryBar,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("MusicalMemoryBar")
+        sink.field("absoluteBar"); sink.int(value.absoluteBar)
+        sink.field("phraseIndex"); sink.int(value.phraseIndex)
+        sink.field("section"); sink.raw(value.section.rawValue)
+        sink.field("tension"); sink.double(value.tension)
+        sink.field("roles"); sink.collection(value.roles.count)
+        for role in value.roles { sink.raw(role.rawValue) }
+        sink.field("transformations")
+        sink.collection(value.transformations.count)
+        for transformation in value.transformations {
+            sink.raw(transformation.rawValue)
+        }
+        sink.field("eventSignature"); sink.uint64(value.eventSignature)
+        sink.field("activity"); sink.double(value.activity)
+        sink.field("repetition"); sink.double(value.repetition)
+        sink.field("density"); sink.double(value.density)
+    }
+
+    static func encode(
+        _ value: HarmonicContinuationState,
+        into sink: inout StreamingFNV1a
+    ) {
+        sink.aggregate("HarmonicContinuationState")
+        sink.field("voices"); sink.collection(value.voices.count)
+        for voice in value.voices {
+            sink.aggregate("PadVoice")
+            sink.field("modalDegree"); sink.int(voice.modalDegree)
+            sink.field("semitone"); sink.int(voice.semitone)
+            sink.field("frequencyRatio"); sink.double(voice.frequencyRatio)
+        }
+    }
+
+    static func encode(_ value: Int?, into sink: inout StreamingFNV1a) {
+        sink.presence(value != nil)
+        if let value { sink.int(value) }
     }
 
     // MARK: Generated graph

@@ -168,22 +168,23 @@ quality is not established until every automated, app/runtime, and
 physical-output gate in the validation contract passes for the exact release
 revision.
 
-### One-click Windows distribution
+### One-click Windows source validation
 
 On a 64-bit Windows build machine, run the one-time prerequisite installer and
-then the distribution builder:
+then the source validator:
 
 ```text
 scripts\setup-windows-build.cmd
 scripts\build-windows.cmd
 ```
 
-The second command tests the canonical engine, builds the native Windows
-executable, bundles the required official Swift and app-local Microsoft C++
-runtime DLLs, writes build and SHA-256 manifests, creates a portable ZIP, and
-creates one installer executable.
-See [`docs/WINDOWS_DISTRIBUTION.md`](docs/WINDOWS_DISTRIBUTION.md) for the local
-and GitHub Actions workflows and the remaining Windows release gates.
+The second command tests the canonical engine and builds the native Windows
+executable under ignored local build storage. It deliberately creates no ZIP or
+installer: the previous directory-wide Swift/MSVC runtime copying path is
+isolated until every redistributed file has exact licence, notice, REDIST,
+version, and hash evidence. See
+[`docs/WINDOWS_DISTRIBUTION.md`](docs/WINDOWS_DISTRIBUTION.md) for local and
+GitHub source validation and the future distribution re-entry gate.
 
 ## Product documents
 
@@ -204,7 +205,13 @@ and GitHub Actions workflows and the remaining Windows release gates.
 - [`docs/ROADMAP.md`](docs/ROADMAP.md) — ordered engine-evolution outcomes
 - [`docs/AUTONOMOUS_RUNTIME_PROVENANCE.md`](docs/AUTONOMOUS_RUNTIME_PROVENANCE.md) — runtime ownership and feedback flow
 - [`docs/AUTONOMOUS_RUNTIME_VALIDATION.md`](docs/AUTONOMOUS_RUNTIME_VALIDATION.md) — current validation and release gates
-- [`docs/WINDOWS_DISTRIBUTION.md`](docs/WINDOWS_DISTRIBUTION.md) — native Windows build, packaging, and validation
+- [`docs/COMPONENT_LICENSE_ASSET_MANIFEST.md`](docs/COMPONENT_LICENSE_ASSET_MANIFEST.md) — checked dependency, licence, notice, governed-asset, and local-artifact inventory
+- [`docs/RESULT_STATUS_VOCABULARY.md`](docs/RESULT_STATUS_VOCABULARY.md) — checked implementation, verification, qualification, runtime, listening, and soak result states
+- [`docs/SOURCE_CITATION_SCHEMA.md`](docs/SOURCE_CITATION_SCHEMA.md) — checked source URL, revision, depth, licence, use, summary, and bounded-excerpt records
+- [`docs/NEGATIVE_RESULT_SCHEMA.md`](docs/NEGATIVE_RESULT_SCHEMA.md) — checked failed/inconclusive experiment evidence, learning, retirement, and follow-up records
+- [`docs/PHASE_ZERO_GATE.md`](docs/PHASE_ZERO_GATE.md) — aggregate Phase-0 structural coherence, authority, provenance, and roadmap preflight
+- [`docs/BASELINE_CORPUS.md`](docs/BASELINE_CORPUS.md) — deterministic pre-listening Phase-1 seeds, continuation checkpoints, routes, and coverage contract
+- [`docs/WINDOWS_DISTRIBUTION.md`](docs/WINDOWS_DISTRIBUTION.md) — native Windows source validation, distribution isolation, and re-entry gates
 - [`docs/VIDEO_ANALYSIS_PROTOCOL.md`](docs/VIDEO_ANALYSIS_PROTOCOL.md) — source-evidence protocol for video-derived hypotheses
 - [`docs/history/MORDIO_MUSIC_CHANNEL_AUDIT.md`](docs/history/MORDIO_MUSIC_CHANNEL_AUDIT.md) — complete 276-video device, effect, chain, automation, and disposition audit
 - [`docs/history/TASTE_EXPERIMENTS.md`](docs/history/TASTE_EXPERIMENTS.md) — non-normative historical experiments

@@ -46,7 +46,7 @@ class SemanticMapFixture:
             ],
         )
         self.manifest = {
-            "schemaVersion": 1,
+            "schemaVersion": 2,
             "modulePolicies": [
                 {
                     "target": "App",
@@ -85,6 +85,31 @@ class SemanticMapFixture:
                     depends_on=["director"],
                 ),
             ],
+            "continuationStates": [
+                {
+                    "id": "director-state",
+                    "name": "Director state",
+                    "ownerComponent": "director",
+                    "symbol": "Director",
+                    "path": "Sources/Core/Core.swift",
+                    "scope": "canonical-phrase",
+                    "pcmRelationship": "Selects the future plan; owns no PCM.",
+                }
+            ],
+            "transitions": [
+                {
+                    "id": "director-to-host",
+                    "name": "Commit prepared state",
+                    "fromComponent": "director",
+                    "toComponent": "host",
+                    "boundary": "future-commit",
+                    "consumesState": ["director-state"],
+                    "producesState": ["director-state"],
+                    "artifact": "prepared state",
+                    "pcmConsequence": "commits-immutable-pcm",
+                    "failureBehavior": "Retain the last accepted state.",
+                }
+            ],
             "flows": [
                 {
                     "id": "prepare-and-host",
@@ -94,6 +119,7 @@ class SemanticMapFixture:
                         {"component": "director", "artifact": "prepared state"},
                         {"component": "host", "artifact": "presented state"},
                     ],
+                    "transitions": ["director-to-host"],
                     "contracts": ["docs/CONTRACT.md"],
                 }
             ],
@@ -185,9 +211,9 @@ class CodebaseMapTests(unittest.TestCase):
     def test_unknown_field_and_unsupported_schema_fail(self) -> None:
         manifest = copy.deepcopy(self.fixture.manifest)
         manifest["unexpected"] = True
-        manifest["schemaVersion"] = 2
+        manifest["schemaVersion"] = 99
         self.assert_error_contains(manifest, "unknown fields: unexpected")
-        self.assert_error_contains(manifest, "schemaVersion must be 1")
+        self.assert_error_contains(manifest, "schemaVersion must be 2")
 
     def test_path_normalization_rejects_absolute_parent_and_build_paths(self) -> None:
         for path in ["/tmp/file.swift", "Sources/../file.swift", ".build/file.swift"]:
@@ -228,6 +254,37 @@ class CodebaseMapTests(unittest.TestCase):
         self.assert_error_contains(manifest, "references unknown boundary missing-boundary")
         self.assert_error_contains(manifest, "component references unknown component missing-component")
         self.assert_error_contains(manifest, "ownerComponent references unknown component")
+
+    def test_continuation_and_transition_references_fail_closed(self) -> None:
+        manifest = copy.deepcopy(self.fixture.manifest)
+        manifest["continuationStates"][0]["symbol"] = "MissingState"
+        manifest["transitions"][0]["consumesState"] = ["missing-state"]
+        manifest["transitions"][0]["boundary"] = "missing-boundary"
+        manifest["transitions"][0]["pcmConsequence"] = "sounds-better"
+        self.assert_error_contains(manifest, "does not resolve declaration MissingState")
+        self.assert_error_contains(manifest, "references unknown state missing-state")
+        self.assert_error_contains(manifest, "references unknown boundary missing-boundary")
+        self.assert_error_contains(manifest, "pcmConsequence must be one of")
+
+    def test_flow_must_use_typed_transition_matching_adjacent_components(self) -> None:
+        manifest = copy.deepcopy(self.fixture.manifest)
+        manifest["transitions"][0]["toComponent"] = "director"
+        self.assert_error_contains(manifest, "expected director -> host")
+
+        manifest = copy.deepcopy(self.fixture.manifest)
+        manifest["flows"][0]["transitions"] = []
+        self.assert_error_contains(
+            manifest, "must contain exactly one edge per adjacent step"
+        )
+
+    def test_unreferenced_continuation_is_rejected(self) -> None:
+        manifest = copy.deepcopy(self.fixture.manifest)
+        extra = copy.deepcopy(manifest["continuationStates"][0])
+        extra["id"] = "unreferenced-state"
+        manifest["continuationStates"].append(extra)
+        self.assert_error_contains(
+            manifest, "continuation state unreferenced-state is not referenced"
+        )
 
     def test_generate_and_check_are_idempotent_and_check_does_not_edit(self) -> None:
         docs = self.fixture.root / "docs"

@@ -1,0 +1,5 @@
+# Generated Markdown uses intentional two-space hard line breaks.
+docs/AUTHORITY_SURFACE_INVENTORY.md whitespace=-blank-at-eol
+docs/BASELINE_CORPUS.md whitespace=-blank-at-eol
+docs/COMPONENT_LICENSE_ASSET_MANIFEST.md whitespace=-blank-at-eol
+docs/PARAMETER_REACHABILITY_AUDIT.md whitespace=-blank-at-eol

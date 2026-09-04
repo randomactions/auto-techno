@@ -1,0 +1,88 @@
+{
+  "schema": "autotechno-source-citation-schema.v1",
+  "schemaVersion": 1,
+  "depthGrades": [
+    {
+      "id": "A",
+      "meaning": "Equations, pseudocode, public API contracts, schematics, or inspectable source.",
+      "permittedUse": "Hypothesis or original prototype only after the licence and component audit."
+    },
+    {
+      "id": "B",
+      "meaning": "Detailed signal flow, topology, parameter interaction, constraints, or engineering explanation.",
+      "permittedUse": "Falsifiable design hypothesis, not an exact implementation claim."
+    },
+    {
+      "id": "C",
+      "meaning": "Thorough user manual or module reference with behavioural detail.",
+      "permittedUse": "Capability and regression scenarios."
+    },
+    {
+      "id": "D",
+      "meaning": "Product description, marketing, tutorial, or preset-level explanation.",
+      "permittedUse": "Discovery only; corroboration required."
+    },
+    {
+      "id": "X",
+      "meaning": "Unverified, unavailable, gated, stale, or unclear provenance.",
+      "permittedUse": "Discovery only; do not use until reverified."
+    }
+  ],
+  "licenceClasses": [
+    {
+      "id": "GREEN-ORIGINAL",
+      "meaning": "Repository-owned work or independently documented public-domain mathematics."
+    },
+    {
+      "id": "GREEN-PERMISSIVE",
+      "meaning": "Exact MIT, BSD, ISC, zlib, or Apache component after dependency, asset, attribution, notice, and patent review."
+    },
+    {
+      "id": "YELLOW-REVIEW",
+      "meaning": "Custom, commercial, weak-copyleft, generated, or mixed source; study only pending explicit clearance."
+    },
+    {
+      "id": "RED-STUDY-ONLY",
+      "meaning": "Incompatible copyleft, proprietary, decompiled, leaked, uncertain, or otherwise non-incorporable source."
+    },
+    {
+      "id": "RED-ASSET",
+      "meaning": "Preset, sample, recording, impulse response, wavetable, firmware data, model weight, factory content, or transcript corpus."
+    }
+  ],
+  "sourceUses": [
+    "contract-authority",
+    "behavioural-hypothesis",
+    "implementation-reference",
+    "licence-evidence",
+    "discovery-only",
+    "negative-evidence"
+  ],
+  "recordSchema": {
+    "schema": "autotechno-source-citation-record.v1",
+    "requiredRootFields": [
+      "schema",
+      "itemId",
+      "planPath",
+      "sources"
+    ],
+    "requiredSourceFields": [
+      "id",
+      "url",
+      "title",
+      "publisher",
+      "revisionOrDate",
+      "accessDate",
+      "depth",
+      "licenceClass",
+      "use",
+      "summary",
+      "excerpt"
+    ],
+    "localRecordPattern": "docs/local/reports/source-citations/AT-xxxx.json"
+  },
+  "excerptPolicy": {
+    "maximumWords": 25,
+    "meaning": "Optional verbatim evidence only. Prefer original summaries; never store transcript corpora or source media in a citation record."
+  }
+}

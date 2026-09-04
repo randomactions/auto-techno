@@ -3916,19 +3916,60 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         // owns the final onset. Bind the renderer to the post-grammar score so
         // a legal relocation cannot make otherwise truthful arpeggiator
         // evidence look stale.
-        let resolvedArpeggiatorNotes = arpeggiator == nil ? [] :
-            block.synthPerformance.upperNotes.filter { $0.role == .anchor }
-                .sorted { lhs, rhs in
-                    lhs.onsetStep < rhs.onsetStep
+        var resolvedArpeggiatorNotes: [ResolvedUpperNote] = []
+        if arpeggiator != nil {
+            resolvedArpeggiatorNotes.reserveCapacity(
+                block.synthPerformance.upperNotes.count
+            )
+            for note in block.synthPerformance.upperNotes where
+                note.role == .anchor {
+                resolvedArpeggiatorNotes.append(note)
+            }
+            if resolvedArpeggiatorNotes.count > 1 {
+                for index in 1..<resolvedArpeggiatorNotes.count {
+                    var insertionIndex = index
+                    while insertionIndex > 0 &&
+                        resolvedArpeggiatorNotes[insertionIndex - 1]
+                            .onsetStep >
+                        resolvedArpeggiatorNotes[insertionIndex].onsetStep {
+                        resolvedArpeggiatorNotes.swapAt(
+                            insertionIndex - 1,
+                            insertionIndex
+                        )
+                        insertionIndex -= 1
+                    }
                 }
-        let scorePitches = resolvedArpeggiatorNotes.map { note in
-            (step: note.onsetStep,
-             frequency: block.synthWorld.rootFrequency *
-                note.startFrequencyRatio)
+            }
         }
-        let renderedAnchors = block.upperNoteRenderEvidence
-            .filter { $0.role == .anchor }
-            .sorted { lhs, rhs in lhs.onsetFrame < rhs.onsetFrame }
+        var scorePitches: [(step: Int, frequency: Double)] = []
+        scorePitches.reserveCapacity(resolvedArpeggiatorNotes.count)
+        for note in resolvedArpeggiatorNotes {
+            scorePitches.append((
+                step: note.onsetStep,
+                frequency: block.synthWorld.rootFrequency *
+                    note.startFrequencyRatio
+            ))
+        }
+        var renderedAnchors: [UpperNoteRenderEvidence] = []
+        renderedAnchors.reserveCapacity(block.upperNoteRenderEvidence.count)
+        for evidence in block.upperNoteRenderEvidence where
+            evidence.role == .anchor {
+            renderedAnchors.append(evidence)
+        }
+        if renderedAnchors.count > 1 {
+            for index in 1..<renderedAnchors.count {
+                var insertionIndex = index
+                while insertionIndex > 0 &&
+                    renderedAnchors[insertionIndex - 1].onsetFrame >
+                    renderedAnchors[insertionIndex].onsetFrame {
+                    renderedAnchors.swapAt(
+                        insertionIndex - 1,
+                        insertionIndex
+                    )
+                    insertionIndex -= 1
+                }
+            }
+        }
         let pairedPitchCount = min(scorePitches.count, renderedAnchors.count)
         var renderPitches: [(step: Int, frequency: Double)] = []
         renderPitches.reserveCapacity(pairedPitchCount)
@@ -4012,17 +4053,29 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
         padRMS = padRender.outputRMS
         padPeak = padRender.outputPeak
         renderPassesMatch = block.audioSliceRenderPassesMatch
+        let resampledMemorySourceValid: Bool
+        if let source = composition.audioSlice?.resampledMemorySource {
+            resampledMemorySourceValid = source.isComplete &&
+                source.absoluteBar < block.bar &&
+                block.bar - source.absoluteBar <=
+                    ResampledMemoryContinuationState.maximumRecallAgeBars &&
+                composition.audioSlice?.sourceKind == .kick
+        } else {
+            resampledMemorySourceValid = true
+        }
+        var requestedPadFrequencyRatios: [Double] = []
+        if let pad {
+            requestedPadFrequencyRatios.reserveCapacity(pad.voices.count)
+            for voice in pad.voices {
+                requestedPadFrequencyRatios.append(voice.frequencyRatio)
+            }
+        }
         bindingValid = composition.bar == block.bar &&
             slice.active == (composition.audioSlice != nil) &&
             slice.triggerCount == (composition.audioSlice?.triggers.count ?? 0) &&
             slice.sourceKind == composition.audioSlice?.sourceKind &&
             slice.texture == composition.audioSlice?.texture &&
-            (composition.audioSlice?.resampledMemorySource.map { source in
-                source.isComplete && source.absoluteBar < block.bar &&
-                    block.bar - source.absoluteBar <=
-                        ResampledMemoryContinuationState.maximumRecallAgeBars &&
-                    composition.audioSlice?.sourceKind == .kick
-            } ?? true) &&
+            resampledMemorySourceValid &&
             (composition.audioSlice?.texture != .granularMemory ||
                 slice.textureSeedFingerprint ==
                     AudioSliceRenderer.textureSeedFingerprint(
@@ -4037,7 +4090,7 @@ package struct AutonomousPhraseCompositionBarEvidence: Codable, Equatable,
             padRender.active == (pad != nil) &&
             padRender.voiceCount == (pad?.voices.count ?? 0) &&
             padRender.requestedFrequencyRatios ==
-                (pad?.voices.map(\.frequencyRatio) ?? []) &&
+                requestedPadFrequencyRatios &&
             padRender.rhythmicModulationRelation ==
                 (pad?.rhythmicModulation.relation ?? .neutral) &&
             padRender.rhythmicModulationPhaseOffset ==
@@ -6413,49 +6466,61 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         self.postGraphUpperTimbreEvidence = postGraphUpperTimbreEvidence
     }
 
-    package static func make(
+    private final class FoundationEvidenceStage {
+        let preGraphUpperTimbreEvidence: UpperTimbreEvidence
+        let graphValidation: DSPGraphValidation
+        let symbolic: AutonomousSymbolicEvidence
+        let hardGates: AutonomousHardGateEvidence
+        let fullMix: AutonomousFullMixEvidence
+        let masking: [AutonomousMaskingBarEvidence]
+        let stems: [AutonomousStemBarEvidence]
+        let automaticMix: [AutonomousAutomaticMixEvidence]
+        let kickSyntax: [AutonomousKickSyntaxBarEvidence]
+        let foundationRhythm: [AutonomousFoundationRhythmBarEvidence]
+
+        init(
+            preGraphUpperTimbreEvidence: UpperTimbreEvidence,
+            graphValidation: DSPGraphValidation,
+            symbolic: AutonomousSymbolicEvidence,
+            hardGates: AutonomousHardGateEvidence,
+            fullMix: AutonomousFullMixEvidence,
+            masking: [AutonomousMaskingBarEvidence],
+            stems: [AutonomousStemBarEvidence],
+            automaticMix: [AutonomousAutomaticMixEvidence],
+            kickSyntax: [AutonomousKickSyntaxBarEvidence],
+            foundationRhythm: [AutonomousFoundationRhythmBarEvidence]
+        ) {
+            self.preGraphUpperTimbreEvidence = preGraphUpperTimbreEvidence
+            self.graphValidation = graphValidation
+            self.symbolic = symbolic
+            self.hardGates = hardGates
+            self.fullMix = fullMix
+            self.masking = masking
+            self.stems = stems
+            self.automaticMix = automaticMix
+            self.kickSyntax = kickSyntax
+            self.foundationRhythm = foundationRhythm
+        }
+    }
+
+    @inline(never)
+    private static func makeFoundationEvidenceStage(
         plan: AutonomousPhrasePlan,
         graph: DSPGraphPlan,
         planFingerprint: String,
-        graphFingerprint: String,
         blocks: [RenderBlock],
         audioPreflight: PhraseAudioPreflight,
         crossPhraseTransition: CrossPhraseTransitionEvidence,
         upperTimbreEvidence: UpperTimbreEvidence,
         sampleRate: Double,
-        routeChannelCount: Int,
-        routeGeneration: Int,
-        routeFingerprint: String,
-        incomingContinuationFingerprint: String,
-        incomingQualityStateFingerprint: String,
-        incomingKickCorrectionDB: Double,
-        incomingTopologyRevision: Int,
-        previousGraphFingerprint: String,
-        routeRecovery: Bool,
-        outgoingRenderDSPFingerprint: String,
-        controllerStateFingerprint: String,
-        incomingLiveMasterState: LiveMasterHeadroomContinuationState,
-        outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
-        liveProposal: LiveMasterHeadroomProposal?,
-        liveProposalOutcome: LiveFeedbackProposalOutcome,
-        liveTargetStartSample: Int64?,
-        incomingDramaticDebts: [SessionDramaticDebt],
+        foundationRhythm: [AutonomousFoundationRhythmBarEvidence],
         cancellationRequested: @escaping @Sendable () -> Bool
-    ) -> AutonomousCandidateEvaluationVector? {
+    ) -> FoundationEvidenceStage? {
         guard !cancellationRequested() else { return nil }
         let boundedBlocks = Array(blocks.prefix(maximumBarCount))
-        // Keep the large phrase plan out of per-bar closure contexts. Capturing
-        // the whole value here makes Swift materialize a stack frame close to
-        // the worker thread's guard page as the canonical score grows. These
-        // immutable projections retain the same evidence contract while the
-        // arrays remain heap-backed.
         let planBars = plan.resolvedBars
-        let planDNA = plan.dna
         let planKind = plan.kind
-        let planScene = plan.scene
-        let planMaterialWorld = plan.materialWorld
         let planPaidDebtIDs = plan.paidDebtIDs
-        let planStartBar = plan.startBar
         let hasPaidDebt = !planPaidDebtIDs.isEmpty
         let preGraphUpperTimbreEvidence = UpperTimbreEvidence.aggregating(
             boundedBlocks.map { $0.graphInputRemainderTimbreEvidence }
@@ -6649,8 +6714,6 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 .map(\.step)
                 .sorted()
             let scoreKickStepMask = kickStepMask(scoreKickSteps)
-            let resolvedPlanBar = planBars.indices.contains(index)
-                ? planBars[index] : nil
             let role = block.resolvedPerformance.kickSyntaxRole
             let mix = block.kickMix
             let expectedAudibleGain = KickMixBalance.audibleGain * Double(
@@ -6694,9 +6757,11 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             let syntaxAuthorizationMatches = role == .grounded || (
                 planKind == .energyRelease && hasPaidDebt
             )
-            let planBarMatches = resolvedPlanBar.map {
-                $0 == block.resolvedPerformance && $0.performance.bar == block.bar
-            } ?? false
+            let planBarMatches = planBars.indices.contains(index) &&
+                resolvedPerformanceMatches(
+                    block: block,
+                    planBar: planBars[index]
+                )
             let kickMaskMatches = scoreKickStepMask.map {
                 $0 == mix.renderedKickStepMask
             } ?? false
@@ -6744,29 +6809,154 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 bindingValid: bindingValid
             ))
         }
-        let foundationRhythm = boundedBlocks.indices.map { index in
-            let planBarMatches = planBars.indices.contains(index) &&
-                resolvedPerformanceMatches(
-                    block: boundedBlocks[index],
-                    planBar: planBars[index]
-                )
-            return makeFoundationRhythmEvidence(
-                block: boundedBlocks[index],
-                planBarMatches: planBarMatches,
-                dna: planDNA,
-                sampleRate: sampleRate
-            )
-        }
+        return FoundationEvidenceStage(
+            preGraphUpperTimbreEvidence: preGraphUpperTimbreEvidence,
+            graphValidation: graphValidation,
+            symbolic: symbolic,
+            hardGates: hardGates,
+            fullMix: fullMix,
+            masking: masking,
+            stems: stems,
+            automaticMix: automaticMix,
+            kickSyntax: kickSyntax,
+            foundationRhythm: foundationRhythm
+        )
+    }
+
+    package static func make(
+        plan: AutonomousPhrasePlan,
+        graph: DSPGraphPlan,
+        planFingerprint: String,
+        graphFingerprint: String,
+        blocks: [RenderBlock],
+        audioPreflight: PhraseAudioPreflight,
+        crossPhraseTransition: CrossPhraseTransitionEvidence,
+        upperTimbreEvidence: UpperTimbreEvidence,
+        sampleRate: Double,
+        routeChannelCount: Int,
+        routeGeneration: Int,
+        routeFingerprint: String,
+        incomingContinuationFingerprint: String,
+        incomingQualityStateFingerprint: String,
+        incomingKickCorrectionDB: Double,
+        incomingTopologyRevision: Int,
+        previousGraphFingerprint: String,
+        routeRecovery: Bool,
+        outgoingRenderDSPFingerprint: String,
+        controllerStateFingerprint: String,
+        incomingLiveMasterState: LiveMasterHeadroomContinuationState,
+        outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
+        liveProposal: LiveMasterHeadroomProposal?,
+        liveProposalOutcome: LiveFeedbackProposalOutcome,
+        liveTargetStartSample: Int64?,
+        incomingDramaticDebts: [SessionDramaticDebt],
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> AutonomousCandidateEvaluationVector? {
+        guard !cancellationRequested() else { return nil }
+        let boundedBlocks = Array(blocks.prefix(maximumBarCount))
+        let planBars = plan.resolvedBars
+        let foundationRhythm = makeFoundationRhythmEvidence(
+            blocks: boundedBlocks,
+            planBars: planBars,
+            dna: plan.dna,
+            sampleRate: sampleRate
+        )
+        guard let foundationStage = makeFoundationEvidenceStage(
+            plan: plan,
+            graph: graph,
+            planFingerprint: planFingerprint,
+            blocks: blocks,
+            audioPreflight: audioPreflight,
+            crossPhraseTransition: crossPhraseTransition,
+            upperTimbreEvidence: upperTimbreEvidence,
+            sampleRate: sampleRate,
+            foundationRhythm: foundationRhythm,
+            cancellationRequested: cancellationRequested
+        ) else { return nil }
         let climaxArc = makeClimaxArcEvidence(
-            phraseKind: planKind,
-            paidDebtIDs: planPaidDebtIDs,
-            startBar: planStartBar,
+            phraseKind: plan.kind,
+            paidDebtIDs: plan.paidDebtIDs,
+            startBar: plan.startBar,
             planBars: planBars,
             incomingDramaticDebts: incomingDramaticDebts,
-            kickSyntax: kickSyntax,
+            kickSyntax: foundationStage.kickSyntax,
             blocks: boundedBlocks,
             sampleRate: sampleRate
         )
+        return makeFinalVector(
+            plan: plan,
+            graph: graph,
+            planFingerprint: planFingerprint,
+            graphFingerprint: graphFingerprint,
+            blocks: blocks,
+            audioPreflight: audioPreflight,
+            crossPhraseTransition: crossPhraseTransition,
+            upperTimbreEvidence: upperTimbreEvidence,
+            sampleRate: sampleRate,
+            routeChannelCount: routeChannelCount,
+            routeGeneration: routeGeneration,
+            routeFingerprint: routeFingerprint,
+            incomingContinuationFingerprint: incomingContinuationFingerprint,
+            incomingQualityStateFingerprint: incomingQualityStateFingerprint,
+            incomingKickCorrectionDB: incomingKickCorrectionDB,
+            incomingTopologyRevision: incomingTopologyRevision,
+            previousGraphFingerprint: previousGraphFingerprint,
+            routeRecovery: routeRecovery,
+            outgoingRenderDSPFingerprint: outgoingRenderDSPFingerprint,
+            controllerStateFingerprint: controllerStateFingerprint,
+            incomingLiveMasterState: incomingLiveMasterState,
+            outgoingLiveMasterState: outgoingLiveMasterState,
+            liveProposal: liveProposal,
+            liveProposalOutcome: liveProposalOutcome,
+            liveTargetStartSample: liveTargetStartSample,
+            foundationStage: foundationStage,
+            climaxArc: climaxArc,
+            cancellationRequested: cancellationRequested
+        )
+    }
+
+    @inline(never)
+    private static func makeFinalVector(
+        plan: AutonomousPhrasePlan,
+        graph: DSPGraphPlan,
+        planFingerprint: String,
+        graphFingerprint: String,
+        blocks: [RenderBlock],
+        audioPreflight: PhraseAudioPreflight,
+        crossPhraseTransition: CrossPhraseTransitionEvidence,
+        upperTimbreEvidence: UpperTimbreEvidence,
+        sampleRate: Double,
+        routeChannelCount: Int,
+        routeGeneration: Int,
+        routeFingerprint: String,
+        incomingContinuationFingerprint: String,
+        incomingQualityStateFingerprint: String,
+        incomingKickCorrectionDB: Double,
+        incomingTopologyRevision: Int,
+        previousGraphFingerprint: String,
+        routeRecovery: Bool,
+        outgoingRenderDSPFingerprint: String,
+        controllerStateFingerprint: String,
+        incomingLiveMasterState: LiveMasterHeadroomContinuationState,
+        outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
+        liveProposal: LiveMasterHeadroomProposal?,
+        liveProposalOutcome: LiveFeedbackProposalOutcome,
+        liveTargetStartSample: Int64?,
+        foundationStage: FoundationEvidenceStage,
+        climaxArc: AutonomousClimaxArcEvidence,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> AutonomousCandidateEvaluationVector? {
+        guard !cancellationRequested() else { return nil }
+        let boundedBlocks = Array(blocks.prefix(maximumBarCount))
+        // Keep the large phrase plan out of per-bar closure contexts. Capturing
+        // the whole value here makes Swift materialize a stack frame close to
+        // the worker thread's guard page as the canonical score grows. These
+        // immutable projections retain the same evidence contract while the
+        // arrays remain heap-backed.
+        let planBars = plan.resolvedBars
+        let planKind = plan.kind
+        let planScene = plan.scene
+        let planMaterialWorld = plan.materialWorld
         let groovePulse = boundedBlocks.map { block in
             let score = block.resolvedPerformance.groovePulses
             let rendered = block.groovePulseRenderEvidence
@@ -6883,9 +7073,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             let resolved = block.resolvedPerformance
             let score = resolved.upperPercussionTailArticulations
             let rendered = block.upperPercussionTailRenderEvidence
-            let planBarMatches = planBars.first {
-                $0.performance.bar == block.bar
-            } == resolved
+            let planBarMatches = planContainsResolvedPerformance(
+                block: block,
+                planBars: planBars
+            )
             let replayed = UpperPercussionTailResolver.articulations(
                 from: resolved.ensemble,
                 phraseKind: planKind,
@@ -6956,9 +7147,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 ).map(\.step)
             )).sorted()
             let eligibleMask = kickStepMask(eligibleSteps)
-            let planBarMatches = planBars.first {
-                $0.performance.bar == block.bar
-            } == resolved
+            let planBarMatches = planContainsResolvedPerformance(
+                block: block,
+                planBars: planBars
+            )
             let legacyArticulation = articulation?.relation == .spatialDust
                 ? nil : articulation
             let bindingValid = eligibleMask != nil && planBarMatches &&
@@ -7025,9 +7217,9 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             expectedConfiguration: expectedSpatialFDNConfiguration,
             sampleRate: sampleRate
         )
-        let phraseComposition = boundedBlocks.map {
-            AutonomousPhraseCompositionBarEvidence(block: $0)
-        }
+        let phraseComposition = makePhraseCompositionEvidence(
+            blocks: boundedBlocks
+        )
         let upperTiming = makeUpperTimingEvidence(
             blocks: boundedBlocks,
             planBPM: planScene.bpm,
@@ -7122,9 +7314,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             let scoreRelation = resolved.percussionEchoTexture?.relation
             let expectedActive = scoreRelation == .spatialDust
             let render = block.spatialDustRenderEvidence
-            let bindingValid = planBars.first(where: {
-                $0.performance.bar == block.bar
-            }) == resolved &&
+            let bindingValid = planContainsResolvedPerformance(
+                block: block,
+                planBars: planBars
+            ) &&
                 block.section == resolved.performance.section &&
                 render.active == expectedActive &&
                 (!expectedActive || (
@@ -7154,9 +7347,10 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             maximumDepth: graph.maximumDepth,
             lowEndProtected: graph.lowEndProtected,
             protectedRoutingValid: graph.protectedRouting.valid,
-            validationValid: graphValidation.valid,
-            sourceViolationCount: graphValidation.violations.count,
-            violations: graphValidation.violations,
+            validationValid: foundationStage.graphValidation.valid,
+            sourceViolationCount:
+                foundationStage.graphValidation.violations.count,
+            violations: foundationStage.graphValidation.violations,
             mutationKind: graph.mutation?.kind.rawValue,
             mutatedNodeCount: graph.mutation?.affectedNodeIDs.count ?? 0,
             materialWorldFingerprint: graph.materialWorldFingerprint,
@@ -7217,15 +7411,15 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         return AutonomousCandidateEvaluationVector(
             planFingerprint: planFingerprint,
             graphFingerprint: graphFingerprint,
-            symbolic: symbolic,
-            hardGates: hardGates,
-            fullMix: fullMix,
+            symbolic: foundationStage.symbolic,
+            hardGates: foundationStage.hardGates,
+            fullMix: foundationStage.fullMix,
             crossPhraseTransition: crossPhraseTransition,
-            masking: masking,
-            stems: stems,
-            automaticMix: automaticMix,
-            kickSyntax: kickSyntax,
-            foundationRhythm: foundationRhythm,
+            masking: foundationStage.masking,
+            stems: foundationStage.stems,
+            automaticMix: foundationStage.automaticMix,
+            kickSyntax: foundationStage.kickSyntax,
+            foundationRhythm: foundationStage.foundationRhythm,
             climaxArc: climaxArc,
             groovePulse: groovePulse,
             closedHat: closedHat,
@@ -7270,9 +7464,24 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                 liveProposal?.earliestEligibleFutureSample,
             liveAppliedFutureSample: liveTargetStartSample,
             liveProposalBindingMatches: liveProposalBindingMatches,
-            preGraphUpperTimbreEvidence: preGraphUpperTimbreEvidence,
+            preGraphUpperTimbreEvidence:
+                foundationStage.preGraphUpperTimbreEvidence,
             postGraphUpperTimbreEvidence: upperTimbreEvidence
         )
+    }
+
+    @inline(never)
+    private static func makePhraseCompositionEvidence(
+        blocks: borrowing [RenderBlock]
+    ) -> [AutonomousPhraseCompositionBarEvidence] {
+        var result: [AutonomousPhraseCompositionBarEvidence] = []
+        result.reserveCapacity(blocks.count)
+        for index in blocks.indices {
+            result.append(
+                AutonomousPhraseCompositionBarEvidence(block: blocks[index])
+            )
+        }
+        return result
     }
 
     @inline(never)
@@ -7304,53 +7513,68 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         planBarMatches: Bool,
         sampleRate: Double
     ) -> AutonomousModalPercussionBarEvidence {
-            let resolved = block.resolvedPerformance
-            let score = resolved.modalPercussionArticulations
-            let render = block.modalPercussionRenderEvidence
-            let renderedEvents = render.events
-            let tunedTomIndices = resolved.ensemble.events.enumerated()
-                .filter { $0.element.voice == .tunedTom }
-                .map(\.offset)
-            let scoreIndices = score.map(\.scoreEventIndex)
-            let renderedIndices = renderedEvents.map {
-                $0.articulation.scoreEventIndex
+        let resolved = block.resolvedPerformance
+        let score = resolved.modalPercussionArticulations
+        let render = block.modalPercussionRenderEvidence
+        let renderedEvents = render.events
+        var tunedTomIndices: [Int] = []
+        tunedTomIndices.reserveCapacity(resolved.ensemble.events.count)
+        for index in resolved.ensemble.events.indices where
+            resolved.ensemble.events[index].voice == .tunedTom {
+            tunedTomIndices.append(index)
+        }
+        var scoreIndices: [Int] = []
+        scoreIndices.reserveCapacity(score.count)
+        for articulation in score {
+            scoreIndices.append(articulation.scoreEventIndex)
+        }
+        var renderedIndices: [Int] = []
+        renderedIndices.reserveCapacity(renderedEvents.count)
+        for evidence in renderedEvents {
+            renderedIndices.append(evidence.articulation.scoreEventIndex)
+        }
+        let barBindingValid = planBarMatches &&
+            block.section == resolved.performance.section &&
+            render.bar == block.bar && render.sampleRate == sampleRate &&
+            render.renderedFrameCount == block.left.count &&
+            block.left.count == block.right.count &&
+            scoreIndices == tunedTomIndices &&
+            renderedIndices == scoreIndices &&
+            render.dryBarSampleHash == block.dryModalPercussionSampleHash &&
+            block.modalPercussionRenderPassesMatch &&
+            block.modalPercussionFoundationRoutingValid
+        var events: [AutonomousModalPercussionEventEvidence] = []
+        events.reserveCapacity(renderedEvents.count)
+        for evidence in renderedEvents {
+            let index = evidence.articulation.scoreEventIndex
+            var matchingScoreIndex: Int?
+            var matchingScoreCount = 0
+            for scoreIndex in score.indices where
+                score[scoreIndex].scoreEventIndex == index {
+                matchingScoreIndex = scoreIndex
+                matchingScoreCount += 1
             }
-            let barBindingValid = planBarMatches &&
-                block.section == resolved.performance.section &&
-                render.bar == block.bar && render.sampleRate == sampleRate &&
-                render.renderedFrameCount == block.left.count &&
-                block.left.count == block.right.count &&
-                scoreIndices == tunedTomIndices &&
-                renderedIndices == scoreIndices &&
-                render.dryBarSampleHash == block.dryModalPercussionSampleHash &&
-                block.modalPercussionRenderPassesMatch &&
-                block.modalPercussionFoundationRoutingValid
-            let events = renderedEvents.compactMap {
-                evidence -> AutonomousModalPercussionEventEvidence? in
-                let index = evidence.articulation.scoreEventIndex
-                guard score.filter({ $0.scoreEventIndex == index }).count == 1,
-                      let articulation = score.first(where: {
-                          $0.scoreEventIndex == index
-                      }),
-                      resolved.ensemble.events.indices.contains(index) else {
-                    return nil
-                }
-                let scoreEvent = resolved.ensemble.events[index]
-                let scoreBindingValid = barBindingValid &&
-                    scoreEvent.voice == .tunedTom &&
-                    scoreEvent.step == articulation.step &&
-                    scoreEvent.intensity == articulation.eventIntensity &&
-                    articulation.use == .foundationCompanion &&
-                    evidence.articulation == articulation &&
-                    evidence.requestedFundamentalHz ==
-                        articulation.fundamentalHz &&
-                    evidence.appliedFundamentalHz ==
-                        articulation.fundamentalHz &&
-                    evidence.material == articulation.material &&
-                    evidence.coupling == articulation.coupling &&
-                    evidence.modeCount == ModalPercussionVoice.modeCount &&
-                    evidence.stable && evidence.capacityValid
-                return AutonomousModalPercussionEventEvidence(
+            guard matchingScoreCount == 1,
+                  let matchingScoreIndex,
+                  index >= 0,
+                  index < resolved.ensemble.events.count else {
+                continue
+            }
+            let articulation = score[matchingScoreIndex]
+            let scoreEvent = resolved.ensemble.events[index]
+            let scoreBindingValid = barBindingValid &&
+                scoreEvent.voice == .tunedTom &&
+                scoreEvent.step == articulation.step &&
+                scoreEvent.intensity == articulation.eventIntensity &&
+                articulation.use == .foundationCompanion &&
+                evidence.articulation == articulation &&
+                evidence.requestedFundamentalHz == articulation.fundamentalHz &&
+                evidence.appliedFundamentalHz == articulation.fundamentalHz &&
+                evidence.material == articulation.material &&
+                evidence.coupling == articulation.coupling &&
+                evidence.modeCount == ModalPercussionVoice.modeCount &&
+                evidence.stable && evidence.capacityValid
+            events.append(AutonomousModalPercussionEventEvidence(
                     scoreEventIndex: articulation.scoreEventIndex,
                     step: articulation.step,
                     use: articulation.use.rawValue,
@@ -7396,24 +7620,24 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                     scoreBindingValid: scoreBindingValid,
                     routeBindingValid: evidence.routeBindingValid &&
                         render.sampleRate == sampleRate
-                )
-            }.sorted { $0.scoreEventIndex < $1.scoreEventIndex }
-            return AutonomousModalPercussionBarEvidence(
-                bar: block.bar,
-                sourceScoreEventCount: score.count,
-                sourceRenderEventCount: renderedEvents.count,
-                use: ModalPercussionUse.foundationCompanion.rawValue,
-                incomingStateFingerprint: render.incomingStateFingerprint,
-                outgoingStateFingerprint: render.outgoingStateFingerprint,
-                dryBarSampleHash: render.dryBarSampleHash,
-                activeIncomingVoiceCount: render.activeIncomingVoiceCount,
-                activeOutgoingVoiceCount: render.activeOutgoingVoiceCount,
-                continuationRendered: render.continuationRendered,
-                renderPassesMatch:
-                    block.modalPercussionRenderPassesMatch,
-                foundationRoutingValid: barBindingValid,
-                events: events
-            )
+                ))
+        }
+        events.sort { $0.scoreEventIndex < $1.scoreEventIndex }
+        return AutonomousModalPercussionBarEvidence(
+            bar: block.bar,
+            sourceScoreEventCount: score.count,
+            sourceRenderEventCount: renderedEvents.count,
+            use: ModalPercussionUse.foundationCompanion.rawValue,
+            incomingStateFingerprint: render.incomingStateFingerprint,
+            outgoingStateFingerprint: render.outgoingStateFingerprint,
+            dryBarSampleHash: render.dryBarSampleHash,
+            activeIncomingVoiceCount: render.activeIncomingVoiceCount,
+            activeOutgoingVoiceCount: render.activeOutgoingVoiceCount,
+            continuationRendered: render.continuationRendered,
+            renderPassesMatch: block.modalPercussionRenderPassesMatch,
+            foundationRoutingValid: barBindingValid,
+            events: events
+        )
     }
 
     /// Keeps the spatial-FDN binding audit out of the already large candidate
@@ -7687,9 +7911,36 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         )
     }
 
-    /// Keep the large resolved-score value borrowed from its heap-backed block.
-    /// Splitting this reduction into bounded helpers avoids debug-only stack
-    /// copies on Swift Testing's cooperative worker without changing evidence.
+    /// Keep the large resolved-score values borrowed from their heap-backed
+    /// arrays. Splitting this reduction into bounded, non-inlined helpers
+    /// avoids debug-only stack copies on Swift Testing's cooperative worker
+    /// without changing evidence.
+    @inline(never)
+    private static func makeFoundationRhythmEvidence(
+        blocks: borrowing [RenderBlock],
+        planBars: borrowing [ResolvedPerformanceBar],
+        dna: SceneDNA,
+        sampleRate: Double
+    ) -> [AutonomousFoundationRhythmBarEvidence] {
+        var result: [AutonomousFoundationRhythmBarEvidence] = []
+        result.reserveCapacity(blocks.count)
+        for index in blocks.indices {
+            let planBarMatches = planBars.indices.contains(index) &&
+                resolvedPerformanceMatches(
+                    block: blocks[index],
+                    planBar: planBars[index]
+                )
+            result.append(makeFoundationRhythmEvidence(
+                block: blocks[index],
+                planBarMatches: planBarMatches,
+                dna: dna,
+                sampleRate: sampleRate
+            ))
+        }
+        return result
+    }
+
+    @inline(never)
     private static func makeFoundationRhythmEvidence(
         block: borrowing RenderBlock,
         planBarMatches: Bool,
@@ -7697,18 +7948,32 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         sampleRate: Double
     ) -> AutonomousFoundationRhythmBarEvidence {
         let render = block.foundationRhythmRenderEvidence
-        let scoreBassEvents = block.resolvedPerformance
-            .ensemble.events.filter { $0.voice == .bass }
-        let scoreBassSteps = scoreBassEvents.map(\.step)
+        var scoreBassEvents: [EnsembleResolvedEvent] = []
+        scoreBassEvents.reserveCapacity(
+            block.resolvedPerformance.ensemble.events.count
+        )
+        for event in block.resolvedPerformance.ensemble.events where
+            event.voice == .bass {
+            scoreBassEvents.append(event)
+        }
+        var scoreBassSteps: [Int] = []
+        scoreBassSteps.reserveCapacity(scoreBassEvents.count)
+        for event in scoreBassEvents {
+            scoreBassSteps.append(event.step)
+        }
         let scoreMask = stepMaskAllowingDuplicates(scoreBassSteps)
         let stepFrames = Double(block.left.count) / 16.0
-        let expectedStartFrames = scoreBassEvents.map { event in
+        var expectedStartFrames: [Int] = []
+        expectedStartFrames.reserveCapacity(scoreBassEvents.count)
+        for event in scoreBassEvents {
             let offset = VoiceRenderer.timingOffsetInSteps(
                 for: .bass,
                 step: event.step,
                 dna: dna
             )
-            return Int(((Double(event.step) + offset) * stepFrames).rounded())
+            expectedStartFrames.append(
+                Int(((Double(event.step) + offset) * stepFrames).rounded())
+            )
         }
         let assignment = block.synthPerformance.foundationInstrument
         let preKickPocketBindingValid = foundationPreKickPocketBindingValid(
@@ -7729,7 +7994,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             render.sampleRate == sampleRate &&
             render.renderedFrameCount == block.left.count &&
             render.renderedBassEventCount == scoreBassEvents.count &&
-            (scoreMask.map { render.renderedBassStepMask == $0 } ?? false) &&
+            scoreMask == render.renderedBassStepMask &&
             render.renderedStartFrames == expectedStartFrames &&
             assignment.use == .foundationBass &&
             assignment.isValid &&
@@ -7763,12 +8028,65 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         )
     }
 
+    @inline(never)
+    private static func planContainsResolvedPerformance(
+        block: borrowing RenderBlock,
+        planBars: borrowing [ResolvedPerformanceBar]
+    ) -> Bool {
+        for index in planBars.indices where
+            planBars[index].performance.bar == block.bar {
+            return resolvedPerformanceMatches(
+                block: block,
+                planBar: planBars[index]
+            )
+        }
+        return false
+    }
+
+    /// Keep this exact comparison decomposed and out of line. Swift's
+    /// synthesized `ResolvedPerformanceBar.==` builds one frame for the full
+    /// score graph; on a correction attempt that frame can exhaust the bounded
+    /// cooperative-task stack before reaching the final morphology fields.
+    @inline(never)
     private static func resolvedPerformanceMatches(
         block: borrowing RenderBlock,
         planBar: borrowing ResolvedPerformanceBar
     ) -> Bool {
-        planBar == block.resolvedPerformance &&
-            block.resolvedPerformance.performance.bar == block.bar
+        let rendered = block.resolvedPerformance
+        guard planBar.performance.bar == block.bar,
+              rendered.performance.bar == block.bar,
+              planBar.performance == rendered.performance,
+              planBar.ensemble == rendered.ensemble,
+              planBar.arrangementGesture == rendered.arrangementGesture,
+              planBar.percussionGear == rendered.percussionGear,
+              planBar.performanceCharacter == rendered.performanceCharacter,
+              planBar.foundationBehavior == rendered.foundationBehavior,
+              planBar.foundationRhythmicRelation ==
+                rendered.foundationRhythmicRelation,
+              planBar.foundationCompanion == rendered.foundationCompanion,
+              planBar.pulseEchoEnabled == rendered.pulseEchoEnabled,
+              planBar.interlockChapter == rendered.interlockChapter,
+              planBar.groovePulses == rendered.groovePulses,
+              planBar.closedHatDecayArticulations ==
+                rendered.closedHatDecayArticulations,
+              planBar.upperPercussionTailArticulations ==
+                rendered.upperPercussionTailArticulations,
+              planBar.modalPercussionArticulations ==
+                rendered.modalPercussionArticulations,
+              planBar.spatialContrast == rendered.spatialContrast,
+              planBar.narrative == rendered.narrative,
+              planBar.kickSyntaxRole == rendered.kickSyntaxRole,
+              planBar.climaxHang == rendered.climaxHang,
+              planBar.percussionEchoTexture == rendered.percussionEchoTexture,
+              planBar.percussionPolymetricEvidence ==
+                rendered.percussionPolymetricEvidence,
+              planBar.upperMusicalPump == rendered.upperMusicalPump,
+              planBar.harmonicDisclosureRelationship ==
+                rendered.harmonicDisclosureRelationship,
+              planBar.kickMorphology == rendered.kickMorphology else {
+            return false
+        }
+        return true
     }
 
     private static func foundationPreKickPocketBindingValid(
@@ -9901,6 +10219,11 @@ package struct AutonomousCandidateAttempt: Codable, Equatable, Sendable {
     }
 }
 
+/// Stable engine/policy/score/evaluator provenance envelope for one bounded
+/// candidate-selection transaction. `planFingerprint` is the resolved score
+/// identity; the selected attempt binds the exact evidence that the primary
+/// evaluator judged. Outer prepared-commit provenance separately binds this
+/// envelope to accepted PCM and outgoing continuation state.
 package struct AutonomousCandidateEvaluationTransaction: Codable, Equatable, Sendable {
     package static let schemaVersion = 14
     package static let maximumCorrectionAttempts =
@@ -10542,6 +10865,12 @@ package struct AutonomousPreparedCommitProvenance: Codable, Equatable, Sendable 
 /// labels, enum cases, array shape, sorted dictionary/set keys, and exact
 /// IEEE-754 bit patterns all participate.
 package enum AutonomousCandidateFingerprint {
+    package static func sessionState(
+        _ state: AutonomousSessionState
+    ) -> String {
+        AutonomousTypedFingerprint.sessionState(state)
+    }
+
     package static func plan(_ plan: AutonomousPhrasePlan) -> String {
         AutonomousTypedFingerprint.plan(plan)
     }

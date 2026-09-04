@@ -1,5 +1,6 @@
 import AutoTechnoCore
 import AutoTechnoDSP
+import Foundation
 
 /// Immutable identity for one detached preparation transaction. Platform
 /// transports use the same key so stale work, route rebuilds, quality-state
@@ -66,6 +67,256 @@ package struct PhrasePreparationKey: Hashable, Sendable {
     }
 }
 
+/// Deterministic, non-PCM serialization of every identity required to replay
+/// one detached preparation boundary. Canonical state remains in its existing
+/// Core and DSP owners; this record proves that a restored request contains the
+/// exact same state, route, recovery context, and future sample coordinates.
+package struct PhrasePreparationReplayIdentity:
+        Codable, Equatable, Hashable, Sendable {
+    package static let schemaVersion = 1
+
+    private struct Payload: Codable, Equatable, Hashable, Sendable {
+        let schemaVersion: Int
+        let sessionSeed: UInt64
+        let phraseIndex: Int
+        let sourceStateFingerprint: String
+        let incomingLongHorizonStateFingerprint: String?
+        let incomingRenderStateFingerprint: String
+        let incomingGraphStateFingerprint: String
+        let previousGraphFingerprint: String?
+        let sampleRate: Double
+        let channelCount: Int
+        let routeRecovery: Bool
+        let routeGeneration: Int
+        let routeFingerprint: String
+        let qualityRetryWave: UInt64
+        let qualityRetryOrdinal: Int
+        let qualityPresentedRepeatBars: UInt64
+        let qualityRecoveryIntent: AutonomousQualityRecoveryIntent
+        let qualityRevision: Int
+        let qualityPolicyVersion: String
+        let qualityControllerFingerprint: String?
+        let incomingLiveMasterRevision: Int
+        let incomingLiveMasterStateFingerprint: String
+        let pendingLiveMasterProposalFingerprint: String?
+        let liveEarliestEligibleFutureSample: Int64?
+        let liveTargetStartSample: Int64?
+        let bindingsValid: Bool
+    }
+
+    private let payload: Payload
+    package let fingerprint: String
+
+    package var sessionSeed: UInt64 { payload.sessionSeed }
+    package var phraseIndex: Int { payload.phraseIndex }
+    package var sourceStateFingerprint: String {
+        payload.sourceStateFingerprint
+    }
+    package var incomingLongHorizonStateFingerprint: String? {
+        payload.incomingLongHorizonStateFingerprint
+    }
+    package var incomingRenderStateFingerprint: String {
+        payload.incomingRenderStateFingerprint
+    }
+    package var incomingGraphStateFingerprint: String {
+        payload.incomingGraphStateFingerprint
+    }
+    package var previousGraphFingerprint: String? {
+        payload.previousGraphFingerprint
+    }
+    package var routeGeneration: Int { payload.routeGeneration }
+    package var liveTargetStartSample: Int64? {
+        payload.liveTargetStartSample
+    }
+
+    package init(
+        key: PhrasePreparationKey,
+        sourceState: AutonomousSessionState,
+        incomingLongHorizonState: LongHorizonFutureAdaptationState?,
+        incomingRenderState: RenderState,
+        incomingGraphState: GeneratedDSPContinuationState,
+        previousGraph: DSPGraphPlan?,
+        pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding?
+    ) {
+        let expectedQualityControllerFingerprint =
+            sourceState.quality.observedControllerStateFingerprint ??
+            sourceState.quality.acceptedControllerStateFingerprint
+        let proposal = pendingLiveMasterBinding?.proposal
+        let bindingsValid = key.sessionSeed == sourceState.rootSeed &&
+            key.phraseIndex == sourceState.phraseIndex &&
+            key.qualityRetryOrdinal == key.qualityRecoveryContext.ordinal &&
+            key.qualityRevision == sourceState.quality.revision &&
+            key.qualityPolicyVersion == sourceState.quality.policyVersion &&
+            key.qualityControllerFingerprint ==
+                expectedQualityControllerFingerprint &&
+            key.incomingLiveMasterRevision ==
+                sourceState.liveMasterHeadroom.revision &&
+            key.incomingLiveMasterStateFingerprint ==
+                sourceState.liveMasterHeadroom.fingerprint &&
+            key.pendingLiveMasterProposalFingerprint == proposal?.fingerprint &&
+            key.liveEarliestEligibleFutureSample ==
+                proposal?.earliestEligibleFutureSample &&
+            (proposal == nil) == (key.liveTargetStartSample == nil) &&
+            (proposal.map {
+                $0.incomingRevision == key.incomingLiveMasterRevision &&
+                    $0.incomingStateFingerprint ==
+                        key.incomingLiveMasterStateFingerprint &&
+                    $0.routeGeneration == key.routeGeneration
+            } ?? true)
+        payload = Payload(
+            schemaVersion: Self.schemaVersion,
+            sessionSeed: key.sessionSeed,
+            phraseIndex: key.phraseIndex,
+            sourceStateFingerprint:
+                AutonomousCandidateFingerprint.sessionState(sourceState),
+            incomingLongHorizonStateFingerprint:
+                incomingLongHorizonState?.fingerprint,
+            incomingRenderStateFingerprint:
+                AutonomousCandidateFingerprint.renderState(
+                    incomingRenderState
+                ),
+            incomingGraphStateFingerprint:
+                AutonomousCandidateFingerprint.generatedDSPState(
+                    incomingGraphState
+                ),
+            previousGraphFingerprint: previousGraph.map {
+                AutonomousCandidateFingerprint.graph($0)
+            },
+            sampleRate: key.sampleRate,
+            channelCount: key.channelCount,
+            routeRecovery: key.routeRecovery,
+            routeGeneration: key.routeGeneration,
+            routeFingerprint: AutonomousCandidateFingerprint.route(
+                sampleRate: key.sampleRate,
+                channelCount: key.channelCount,
+                generation: key.routeGeneration
+            ),
+            qualityRetryWave: key.qualityRecoveryContext.wave,
+            qualityRetryOrdinal: key.qualityRecoveryContext.ordinal,
+            qualityPresentedRepeatBars:
+                key.qualityRecoveryContext.presentedRepeatBars,
+            qualityRecoveryIntent: key.qualityRecoveryContext.intent,
+            qualityRevision: key.qualityRevision,
+            qualityPolicyVersion: key.qualityPolicyVersion,
+            qualityControllerFingerprint:
+                key.qualityControllerFingerprint,
+            incomingLiveMasterRevision:
+                key.incomingLiveMasterRevision,
+            incomingLiveMasterStateFingerprint:
+                key.incomingLiveMasterStateFingerprint,
+            pendingLiveMasterProposalFingerprint:
+                key.pendingLiveMasterProposalFingerprint,
+            liveEarliestEligibleFutureSample:
+                key.liveEarliestEligibleFutureSample,
+            liveTargetStartSample: key.liveTargetStartSample,
+            bindingsValid: bindingsValid
+        )
+        fingerprint = Self.fingerprint(payload)
+    }
+
+    package var isComplete: Bool {
+        payload.schemaVersion == Self.schemaVersion &&
+            payload.phraseIndex >= 0 &&
+            payload.sampleRate.isFinite && payload.sampleRate > 0 &&
+            payload.channelCount ==
+                QualityQualificationContract.requiredRouteChannelCount &&
+            payload.routeGeneration >= 0 &&
+            payload.qualityRetryOrdinal >= 0 &&
+            payload.qualityRevision >= 0 &&
+            !payload.qualityPolicyVersion.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ).isEmpty &&
+            payload.incomingLiveMasterRevision >= 0 &&
+            (payload.liveEarliestEligibleFutureSample.map { $0 >= 0 } ?? true) &&
+            (payload.liveTargetStartSample.map { $0 > 0 } ?? true) &&
+            Self.isFingerprint(payload.sourceStateFingerprint) &&
+            Self.isOptionalFingerprint(
+                payload.incomingLongHorizonStateFingerprint
+            ) &&
+            Self.isFingerprint(payload.incomingRenderStateFingerprint) &&
+            Self.isFingerprint(payload.incomingGraphStateFingerprint) &&
+            Self.isOptionalFingerprint(payload.previousGraphFingerprint) &&
+            Self.isFingerprint(payload.routeFingerprint) &&
+            Self.isOptionalFingerprint(
+                payload.qualityControllerFingerprint
+            ) &&
+            Self.isFingerprint(
+                payload.incomingLiveMasterStateFingerprint
+            ) &&
+            Self.isOptionalFingerprint(
+                payload.pendingLiveMasterProposalFingerprint
+            ) &&
+            payload.bindingsValid &&
+            fingerprint == Self.fingerprint(payload)
+    }
+
+    package func matches(_ request: PhrasePreparationRequest) -> Bool {
+        self == Self(
+            key: request.key,
+            sourceState: request.sourceState,
+            incomingLongHorizonState: request.incomingLongHorizonState,
+            incomingRenderState: request.incomingRenderState,
+            incomingGraphState: request.incomingGraphState,
+            previousGraph: request.previousGraph,
+            pendingLiveMasterBinding: request.pendingLiveMasterBinding
+        )
+    }
+
+    package func deterministicJSON() throws -> Data {
+        try Self.canonicalData(self)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case payload
+        case fingerprint
+    }
+
+    package init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        payload = try container.decode(Payload.self, forKey: .payload)
+        fingerprint = try container.decode(String.self, forKey: .fingerprint)
+        guard isComplete else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .fingerprint,
+                in: container,
+                debugDescription: "Preparation replay identity mismatch"
+            )
+        }
+    }
+
+    package func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(payload, forKey: .payload)
+        try container.encode(fingerprint, forKey: .fingerprint)
+    }
+
+    private static func canonicalData<T: Encodable>(_ value: T) throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        return try encoder.encode(value)
+    }
+
+    private static func fingerprint(_ payload: Payload) -> String {
+        guard let data = try? canonicalData(payload) else { return "" }
+        var value: UInt64 = 0xcbf29ce484222325
+        for byte in data {
+            value ^= UInt64(byte)
+            value &*= 0x100000001b3
+        }
+        return String(format: "%016llx", value)
+    }
+
+    private static func isFingerprint(_ value: String) -> Bool {
+        value.utf8.count == 16 && value.utf8.allSatisfy { byte in
+            (48...57).contains(byte) || (97...102).contains(byte)
+        }
+    }
+
+    private static func isOptionalFingerprint(_ value: String?) -> Bool {
+        value.map(isFingerprint) ?? true
+    }
+}
+
 package struct PhrasePreparationRequest: Sendable {
     package let key: PhrasePreparationKey
     package let sourceState: AutonomousSessionState
@@ -74,6 +325,7 @@ package struct PhrasePreparationRequest: Sendable {
     package let incomingGraphState: GeneratedDSPContinuationState
     package let previousGraph: DSPGraphPlan?
     package let pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding?
+    package let replayIdentity: PhrasePreparationReplayIdentity
 
     package init(
         key: PhrasePreparationKey,
@@ -91,6 +343,15 @@ package struct PhrasePreparationRequest: Sendable {
         self.incomingGraphState = incomingGraphState
         self.previousGraph = previousGraph
         self.pendingLiveMasterBinding = pendingLiveMasterBinding
+        replayIdentity = PhrasePreparationReplayIdentity(
+            key: key,
+            sourceState: sourceState,
+            incomingLongHorizonState: incomingLongHorizonState,
+            incomingRenderState: incomingRenderState,
+            incomingGraphState: incomingGraphState,
+            previousGraph: previousGraph,
+            pendingLiveMasterBinding: pendingLiveMasterBinding
+        )
     }
 }
 
@@ -156,13 +417,15 @@ package enum AutonomousPerformancePreparer {
         request: PhrasePreparationRequest,
         director: AutonomousSessionDirector,
         artifacts: ProfessionalQualityPrimaryArtifacts?,
-        longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?
+        longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?,
+        diagnosticRoleStemCapture: Bool = false
     ) -> PreparedPerformancePhrase? {
         prepareDiagnosing(
             request: request,
             director: director,
             artifacts: artifacts,
-            longHorizonArtifacts: longHorizonArtifacts
+            longHorizonArtifacts: longHorizonArtifacts,
+            diagnosticRoleStemCapture: diagnosticRoleStemCapture
         ).preparedPhrase
     }
 
@@ -170,9 +433,14 @@ package enum AutonomousPerformancePreparer {
         request: PhrasePreparationRequest,
         director: AutonomousSessionDirector,
         artifacts: ProfessionalQualityPrimaryArtifacts?,
-        longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?
+        longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?,
+        diagnosticRoleStemCapture: Bool = false
     ) -> PerformancePreparationOutcome {
         let requestFailures = [
+            request.replayIdentity.isComplete
+                ? nil : "request-replay-identity",
+            request.replayIdentity.matches(request)
+                ? nil : "request-replay-mismatch",
             request.key.sessionSeed == request.sourceState.rootSeed
                 ? nil : "request-source-root",
             director.rootSeed == request.sourceState.rootSeed
@@ -208,6 +476,7 @@ package enum AutonomousPerformancePreparer {
             routeGeneration: request.key.routeGeneration,
             pendingLiveMasterBinding: request.pendingLiveMasterBinding,
             liveTargetStartSample: request.key.liveTargetStartSample,
+            diagnosticRoleStemCapture: diagnosticRoleStemCapture,
             evaluator: evaluator,
             cancellationRequested: { Task.isCancelled }
         )

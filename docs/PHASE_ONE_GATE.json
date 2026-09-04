@@ -1,0 +1,437 @@
+{
+  "artifacts": [
+    {
+      "artifactFingerprint": "01c96d87cb8ec375a86ddbf5c5f18b85b7efbc1b2bdc3f8cb8e8c657583b7b0f",
+      "configurationBinding": "native-artifact-field",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "5f7648161049c11a3cdf1b476176e3309eefb6d2b10918d68b114f517407c650",
+      "gateBuildConfiguration": "release",
+      "id": "long-horizon-session",
+      "nativeBuildConfiguration": "release",
+      "path": "docs/local/reports/long-horizon-session-baseline-v1/report.json",
+      "routeIdentity": "score-only-canonical-planning",
+      "schema": "autotechno-long-horizon-session-baseline-report.v1",
+      "sourceFingerprint": "0d676fe1b9dfaf962d4fb8cea3dfa832411683ed14651d1ba874ad08ba9f58c0",
+      "validator": "python3 scripts/session_trajectory_baseline_report.py --check",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "a07424e590ffafaaaa199c3280c5a26d6fd2845182df01e3c1f0cb6e7eaccf43",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "a07424e590ffafaaaa199c3280c5a26d6fd2845182df01e3c1f0cb6e7eaccf43",
+      "gateBuildConfiguration": "release",
+      "id": "whole-mix-render",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/local/reports/baseline-corpus-v1/manifest.json",
+      "routeIdentity": "not-applicable",
+      "schema": "autotechno-baseline-render-manifest.v1",
+      "sourceFingerprint": "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9",
+      "validator": "python3 scripts/baseline_render_manifest.py check",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "f4a5634aadaa6225c3ddc28cb34020499c59bf833c7661054734d644c6610099",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "not-applicable",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "45df5f4f881fecec481e6c71a9a584e006bccd3fc96480494c2adc26100ff4c1",
+      "gateBuildConfiguration": "release",
+      "id": "pcm-comparison-whole",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/local/reports/pcm-comparisons-v1/whole-mix-self.json",
+      "routeIdentity": "whole-mix",
+      "schema": "autotechno-pcm-comparison-report.v1",
+      "sourceFingerprint": "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9",
+      "validator": "python3 scripts/pcm_comparison_report.py check --report <report>",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "3fcd65e5045757d9b7f9f8866a645b0f15a1b62932068e82087682a33e138082",
+      "configurationBinding": "native-artifact-field",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "not-applicable",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "02ebd9b958562ce548182ac077f38369568213cb1756ed83b938343c44c45f5e",
+      "gateBuildConfiguration": "release",
+      "id": "performance-envelope",
+      "nativeBuildConfiguration": "release",
+      "path": "docs/local/reports/performance-envelope-v1/report.json",
+      "routeIdentity": "not-applicable",
+      "schema": "autotechno-performance-envelope-report.v1",
+      "sourceFingerprint": "0d676fe1b9dfaf962d4fb8cea3dfa832411683ed14651d1ba874ad08ba9f58c0",
+      "validator": "python3 scripts/performance_envelope_report.py check <trace-arguments>",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "c796594183e700bca28970dbef73326d80c1253e7a83b121418cba63796154eb",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "6011955b302a2534b2c1287c308d13223965a72079a66c2ee6dd185e34930e5d",
+      "gateBuildConfiguration": "release",
+      "id": "rhythmic-baseline",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/local/reports/rhythmic-baseline-v1/manifest.json",
+      "routeIdentity": "not-applicable",
+      "schema": "autotechno-rhythmic-baseline-report.v1",
+      "sourceFingerprint": "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9",
+      "validator": "python3 scripts/rhythmic_baseline_report.py check",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "dc11ddf2dd4af4ed8dfeb477373335f728e885645eb1453426f7a8c39423ec55",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "dc11ddf2dd4af4ed8dfeb477373335f728e885645eb1453426f7a8c39423ec55",
+      "gateBuildConfiguration": "release",
+      "id": "role-stem-capture",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/local/reports/baseline-stems-v1/manifest.json",
+      "routeIdentity": "not-applicable",
+      "schema": "autotechno-role-stem-manifest.v1",
+      "sourceFingerprint": "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9",
+      "validator": "python3 scripts/stem_capture_manifest.py check",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "b650c6ed998aeeef21eb068175aab930691852e4db1b9eff25b2c238bbfa6618",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "2a9f7016860b2a474531e5952cecaeaf142aa4f896785886494a8936e598208d",
+      "gateBuildConfiguration": "release",
+      "id": "score-motif",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/local/reports/score-motif-baseline-v1/manifest.json",
+      "routeIdentity": "not-applicable",
+      "schema": "autotechno-score-motif-baseline-report.v1",
+      "sourceFingerprint": "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9",
+      "validator": "python3 scripts/score_motif_baseline_report.py check",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "9b2a7ab70a391865184324a77951cc075bf119536fbc461e5f7326361b655f6f",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "c726879bbd604b7c6bc1fc0589368eb33644e710425859f09e4e87e3e6902381",
+      "gateBuildConfiguration": "release",
+      "id": "section-boundary",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/local/reports/section-boundary-baseline-v1/report.json",
+      "routeIdentity": "not-applicable",
+      "schema": "autotechno-section-boundary-baseline-report.v1",
+      "sourceFingerprint": "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9",
+      "validator": "python3 scripts/section_boundary_baseline_report.py check",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "056610f43a90cd62eacd21862d4e55829ee767c4513e4c99083e680ea21976e6",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "f778dad45ec1af5b8a4d2b5d300fffa5baf85533537dbd03149105da72349a02",
+      "gateBuildConfiguration": "release",
+      "id": "kick-foundation-collision",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/local/reports/kick-foundation-collision-v1/manifest.json",
+      "routeIdentity": "not-applicable",
+      "schema": "autotechno-kick-foundation-collision-report.v1",
+      "sourceFingerprint": "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9",
+      "validator": "python3 scripts/kick_foundation_collision_report.py check",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "b52259430dc2e97ab40a8da81598f30c45790d5e481a94981589506e0a3418f2",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "not-applicable",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "d40d332b71789f208f72aa6b27f8dbd3ea5f7ac2f7d4e6dc7b6b403475f3d0e6",
+      "gateBuildConfiguration": "release",
+      "id": "pcm-comparison-role",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/local/reports/pcm-comparisons-v1/role-stems-self.json",
+      "routeIdentity": "role-stems",
+      "schema": "autotechno-pcm-comparison-report.v1",
+      "sourceFingerprint": "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9",
+      "validator": "python3 scripts/pcm_comparison_report.py check --report <report>",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "d4233186be2c7660a774d14de3d7651b2cc41b7ea5c1ac8eea1a35b706b64afa",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "93442c42b22d9d8814954e69ef784f7ee96de193dfd0a844537b79a6e9359a1b",
+      "gateBuildConfiguration": "release",
+      "id": "signal-baseline",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/local/reports/signal-baseline-v1/manifest.json",
+      "routeIdentity": "not-applicable",
+      "schema": "autotechno-signal-baseline-report.v1",
+      "sourceFingerprint": "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9",
+      "validator": "python3 scripts/signal_baseline_report.py check",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "d53699e1c5d2353b5882119c577d66aa939b0923d8d13106b18b35c77fb73e33",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "6495281c02a2dc9b46b5ff3f30e1c1adf7a1451120c301c7e0e1efaa856418f2",
+      "gateBuildConfiguration": "release",
+      "id": "spectral-baseline",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/local/reports/spectral-baseline-v1/manifest.json",
+      "routeIdentity": "not-applicable",
+      "schema": "autotechno-spectral-baseline-report.v1",
+      "sourceFingerprint": "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9",
+      "validator": "python3 scripts/spectral_baseline_report.py check",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "7ae3f86e3017e055263960cec540bc8e1d86a2ac1a6934c311d90f7ae1bbe0bd",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "e575865bdd57b8d710ea47a875188fa48e05f26619e29366a2444a9d252d859a",
+      "gateBuildConfiguration": "release",
+      "id": "stereo-compatibility",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/local/reports/stereo-compatibility-baseline-v1/manifest.json",
+      "routeIdentity": "not-applicable",
+      "schema": "autotechno-stereo-compatibility-baseline-report.v1",
+      "sourceFingerprint": "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9",
+      "validator": "python3 scripts/stereo_compatibility_baseline_report.py check",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "3db150fb30b29eac2dab4a64b8ab9f9348d099890e204aeaf7d6853abbaa0dc2",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "3dff12da26f3e6eea54b155351cd1c31971428a802958b15c62f05db74c1909d",
+      "gateBuildConfiguration": "release",
+      "id": "transient-envelope",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/local/reports/transient-envelope-baseline-v1/manifest.json",
+      "routeIdentity": "not-applicable",
+      "schema": "autotechno-transient-envelope-baseline-report.v1",
+      "sourceFingerprint": "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9",
+      "validator": "python3 scripts/transient_envelope_baseline_report.py check",
+      "version": 1
+    },
+    {
+      "artifactFingerprint": "aed7a3244a85b10d20d7b4450b61141b63082c4f6f7b86a8797edfa46fe12810",
+      "configurationBinding": "aggregate-release-regeneration-wrapper",
+      "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+      "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+      "engineVersion": "autotechno-canonical-engine.v48",
+      "fileSha256": "6a71b77dec7c2ffcb37123c2c565728c3716bbdf1799ddc02e3b710a71247dcb",
+      "gateBuildConfiguration": "release",
+      "id": "deficit-register",
+      "nativeBuildConfiguration": "not-applicable",
+      "path": "docs/DEFICIT_REGISTER.json",
+      "routeIdentity": "not-applicable",
+      "schema": "autotechno-deficit-register.v1",
+      "sourceFingerprint": "not-applicable",
+      "validator": "python3 scripts/deficit_register.py check",
+      "version": 1
+    }
+  ],
+  "checks": [
+    {
+      "command": "python3 scripts/phase_zero_gate.py check",
+      "id": "phase-zero",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/baseline_corpus.py check",
+      "id": "baseline-corpus",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/baseline_lifecycle_policy.py validate",
+      "id": "lifecycle-policy",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/baseline_lifecycle_policy.py assess --require-current --output docs/local/reports/baseline-lifecycle-v1/assessment.json",
+      "id": "lifecycle-current",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/baseline_render_manifest.py check",
+      "id": "whole-mix-manifest",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/stem_capture_manifest.py check",
+      "id": "role-stem-manifest",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/pcm_comparison_report.py check --report docs/local/reports/pcm-comparisons-v1/whole-mix-self.json",
+      "id": "whole-pcm-comparison",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/pcm_comparison_report.py check --report docs/local/reports/pcm-comparisons-v1/role-stems-self.json",
+      "id": "role-pcm-comparison",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/signal_baseline_report.py check",
+      "id": "signal-baseline",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/spectral_baseline_report.py check",
+      "id": "spectral-baseline",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/kick_foundation_collision_report.py check",
+      "id": "kick-foundation-collision",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/transient_envelope_baseline_report.py check",
+      "id": "transient-envelope",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/stereo_compatibility_baseline_report.py check",
+      "id": "stereo-compatibility",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/rhythmic_baseline_report.py check",
+      "id": "rhythmic-baseline",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/score_motif_baseline_report.py check",
+      "id": "score-motif",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/section_boundary_baseline_report.py check",
+      "id": "section-boundary",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/session_trajectory_baseline_report.py --check",
+      "id": "long-horizon-session",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/performance_envelope_report.py check --trace-directory docs/local/reports/performance-envelope-v1/live-macos-20260904 --trace-process AutoTechno --trace-sample-rate 44100 --trace-channel-count 2",
+      "id": "performance-envelope",
+      "status": "passed"
+    },
+    {
+      "command": "python3 scripts/deficit_register.py check",
+      "id": "deficit-register",
+      "status": "passed"
+    }
+  ],
+  "context": {
+    "buildConfiguration": "release",
+    "contractBaselineFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+    "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
+    "engineVersions": [
+      "autotechno-canonical-engine.v48"
+    ],
+    "gitHeads": [
+      "c3bfeaf8b42029fb2ade0a4870210b6880e1bad5"
+    ],
+    "lifecyclePolicyFingerprint": "5adf87179c53df3bc1eb59bbec7a70e81a5dd01e65f81bbc55a0cc2c92d89606",
+    "routeIds": [
+      "native-stereo-44100",
+      "native-stereo-48000"
+    ],
+    "sourceFingerprints": [
+      "0d676fe1b9dfaf962d4fb8cea3dfa832411683ed14651d1ba874ad08ba9f58c0",
+      "b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9"
+    ]
+  },
+  "deficitTraceability": {
+    "calibratedAuditoryDefects": 0,
+    "entries": 9,
+    "quarantinedObservations": 6,
+    "registerFingerprint": "aed7a3244a85b10d20d7b4450b61141b63082c4f6f7b86a8797edfa46fe12810",
+    "sourceCount": 8,
+    "traceableSourceCount": 8
+  },
+  "exactPCM": {
+    "changedSamples": 0,
+    "classification": "exact",
+    "roleAssets": 210,
+    "roleReportFingerprint": "b52259430dc2e97ab40a8da81598f30c45790d5e481a94981589506e0a3418f2",
+    "roleSamples": 310644810,
+    "wholeAssets": 14,
+    "wholeReportFingerprint": "f4a5634aadaa6225c3ddc28cb34020499c59bf833c7661054734d644c6610099",
+    "wholeSamples": 29585220
+  },
+  "gateFingerprint": "2b6cf2f7d7d660bf9c831fde8eb79a085f39456868320f11f0861528d6148bbd",
+  "gateVersion": 1,
+  "limitations": [
+    "Current metadata does not replace any family-specific content validator.",
+    "Release configuration is natively recorded where supported and otherwise bound by this exact artifact-hash wrapper.",
+    "Cross-configuration and floating-point differences are incompatible until explicitly captured and compared; they never weaken exact PCM gates.",
+    "The live macOS trace is bounded and does not establish long physical soak or Windows performance.",
+    "No app/route audition or controlled listening was conducted for this gate.",
+    "Reproducible evidence is not a calibrated auditory-quality or release-readiness claim."
+  ],
+  "qualification": {
+    "appRouteAudition": "not-run",
+    "controlledListening": "not-conducted",
+    "deterministicValidation": "passed",
+    "exactPCM": "passed",
+    "implementation": "implemented",
+    "musicalQualityClaim": false,
+    "performance": "bounded-macos-observed",
+    "physicalSoak": "unavailable",
+    "promotionAuthorized": false,
+    "releaseReadinessClaim": false,
+    "runtimeInput": false,
+    "windowsPerformance": "unavailable"
+  },
+  "regenerationOrder": [
+    "long-horizon-session",
+    "whole-mix-render",
+    "pcm-comparison-whole",
+    "performance-envelope",
+    "rhythmic-baseline",
+    "role-stem-capture",
+    "score-motif",
+    "section-boundary",
+    "kick-foundation-collision",
+    "pcm-comparison-role",
+    "signal-baseline",
+    "spectral-baseline",
+    "stereo-compatibility",
+    "transient-envelope",
+    "deficit-register"
+  ],
+  "schema": "autotechno-phase-one-gate.v1",
+  "status": "passed"
+}

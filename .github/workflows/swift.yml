@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
 
@@ -47,6 +47,46 @@ jobs:
           python3 -m unittest scripts/test_codebase_map.py
           python3 scripts/codebase_map.py check \
             --build-path "$RUNNER_TEMP/auto-techno-tests"
+
+      - name: Verify component licences and governed assets
+        run: |
+          python3 -m unittest scripts/test_component_license_asset_manifest.py
+          python3 -m unittest scripts/test_local_artifact_doctor.py
+          python3 scripts/component_license_asset_manifest.py check
+
+      - name: Verify result status vocabulary
+        run: |
+          python3 -m unittest scripts/test_result_status_vocabulary.py
+          python3 -m unittest scripts/test_controlled_listening_protocol.py
+          python3 -m unittest scripts/test_baseline_lifecycle_policy.py
+          python3 -m unittest scripts/test_deficit_register.py
+          python3 -m unittest scripts/test_roadmap_integrity.py
+          python3 -m unittest scripts/test_source_citation_records.py
+          python3 -m unittest scripts/test_negative_result_records.py
+          python3 -m unittest scripts/test_phase_zero_gate.py
+          python3 -m unittest scripts/test_phase_one_gate.py
+          python3 -m unittest scripts/test_baseline_corpus.py
+          python3 -m unittest scripts/test_baseline_render_manifest.py
+          python3 -m unittest scripts/test_stem_capture_manifest.py
+          python3 -m unittest scripts/test_pcm_comparison_report.py
+          python3 -m unittest scripts/test_signal_baseline_report.py
+          python3 -m unittest scripts/test_spectral_baseline_report.py
+          python3 -m unittest scripts/test_kick_foundation_collision_report.py
+          python3 -m unittest scripts/test_transient_envelope_baseline_report.py
+          python3 scripts/result_status_vocabulary.py check
+          python3 scripts/controlled_listening_protocol.py check
+          python3 scripts/baseline_lifecycle_policy.py validate
+          python3 scripts/deficit_register.py validate
+          python3 scripts/source_citation_records.py check
+          python3 scripts/negative_result_records.py check
+          python3 scripts/baseline_corpus.py check
+          python3 scripts/phase_one_gate.py validate
+
+      - name: Run detached role-stem capture contracts
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(RoleStemCaptureTests|StemCaptureIntegrationTests|PCMSignalIntegrityAnalyzerTests|SignalBaselineIntegrationTests|PCMSpectralBaselineAnalyzerTests|SpectralBaselineIntegrationTests|PCMKickFoundationCollisionAnalyzerTests|KickFoundationCollisionIntegrationTests|PCMTransientEnvelopeAnalyzerTests|TransientEnvelopeBaselineIntegrationTests)'
 
       - name: Run realtime queue and callback safety
         run: |

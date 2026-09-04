@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "modulePolicies": [
     {
       "target": "CAutoTechnoRealtime",
@@ -93,6 +93,10 @@
         {
           "symbol": "ResampledMemoryContinuationState",
           "path": "Sources/AutoTechnoCore/ResampledMemory.swift"
+        },
+        {
+          "symbol": "ScoreMotifBaselineAnalyzer",
+          "path": "Sources/AutoTechnoCore/ScoreMotifBaselineAnalyzer.swift"
         }
       ],
       "state": [
@@ -112,11 +116,13 @@
         "AutonomousPhrasePlan",
         "ResolvedPerformanceBar",
         "advanced session state",
-        "RepeatHoldEvolutionPlaybackMode"
+        "RepeatHoldEvolutionPlaybackMode",
+        "detached ScoreMotifBaselineEvidence"
       ],
       "evidence": [
         "PhraseInterestReport",
-        "resolved event and pitch provenance"
+        "resolved event and pitch provenance",
+        "accepted-score motif recurrence, mutation, register, and density baseline"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/RepeatHoldEvolutionPolicy.swift",
@@ -126,22 +132,30 @@
         "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
         "Sources/AutoTechnoCore/MusicalPerformance.swift",
         "Sources/AutoTechnoCore/ResampledMemory.swift",
+        "Sources/AutoTechnoCore/ScoreMotifBaselineAnalyzer.swift",
         "Sources/AutoTechnoCore/SeededGenerator.swift",
         "Sources/AutoTechnoCore/TechnoScene.swift"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift",
+        "Tests/AutoTechnoCoreTests/BaselineCorpusTests.swift",
+        "Tests/AutoTechnoCoreTests/BaselineRenderIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/IdentityReturnContinuationTests.swift",
+        "Tests/AutoTechnoCoreTests/ScoreMotifBaselineAnalyzerTests.swift",
+        "Tests/AutoTechnoCoreTests/ScoreMotifBaselineIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/SymbolicInterestRetryTests.swift"
       ],
       "contracts": [
         "docs/PRODUCT.md",
         "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
-        "docs/PITCH_IDENTITY_CONTRACT.md"
+        "docs/BASELINE_CORPUS.md",
+        "docs/PITCH_IDENTITY_CONTRACT.md",
+        "docs/SCORE_MOTIF_BASELINE.md"
       ],
       "dependsOn": [],
       "boundaries": [
-        "future-phrase-commit"
+        "macos-future-phrase-commit",
+        "windows-future-phrase-commit"
       ]
     },
     {
@@ -282,7 +296,7 @@
     {
       "id": "long-horizon-semantic-control",
       "name": "Long-horizon semantic control",
-      "responsibility": "Maintain compact long-range musical continuation, causal four-to-eight-minute material-world lineage, held long-cycle grammar and effect carrier, semantic trajectory, episode selection, energy coordination, effect sentences, and bounded future decision eligibility.",
+      "responsibility": "Maintain compact long-range musical continuation, causal four-to-eight-minute material-world lineage, held long-cycle grammar and effect carrier, semantic trajectory, episode selection, energy coordination, effect sentences, bounded future decision eligibility, and detached neutral session-trajectory evidence.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -298,6 +312,10 @@
         {
           "symbol": "LongHorizonEffectCarrierState",
           "path": "Sources/AutoTechnoCore/LongHorizonEffectCarrier.swift"
+        },
+        {
+          "symbol": "LongHorizonSessionBaselineAnalyzer",
+          "path": "Sources/AutoTechnoCore/LongHorizonSessionBaseline.swift"
         }
       ],
       "state": [
@@ -306,16 +324,19 @@
       ],
       "inputs": [
         "committed phrase semantics",
-        "qualified long-horizon observation"
+        "qualified long-horizon observation",
+        "exact contiguous canonical planning phrases for detached baseline observation"
       ],
       "outputs": [
         "semantic trajectory",
+        "detached fixed-segment session baseline with explicit signal and qualification unavailability",
         "episode operator",
         "material-world score plan with activation-anchored lane geometry, held carrier, and upper pump",
         "future preserve, recover, or material-reframe intent"
       ],
       "evidence": [
         "long-horizon semantic report",
+        "bounded score-only session segments, payoff spacing, recovery latency, recurrence, and capability exposure",
         "material lineage, lane geometry and phase, held carrier, upper-pump, energy, and effect-sentence provenance"
       ],
       "sourcePaths": [
@@ -325,6 +346,7 @@
         "Sources/AutoTechnoCore/LongHorizonEnergyCoordination.swift",
         "Sources/AutoTechnoCore/LongHorizonMaterialWorld.swift",
         "Sources/AutoTechnoCore/LongHorizonPolymetricGrammar.swift",
+        "Sources/AutoTechnoCore/LongHorizonSessionBaseline.swift",
         "Sources/AutoTechnoCore/LongHorizonSemanticTrajectory.swift",
         "Sources/AutoTechnoCore/LongHorizonTrajectoryDecision.swift"
       ],
@@ -335,10 +357,13 @@
         "Tests/AutoTechnoCoreTests/LongHorizonMaterialWorldTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonPolymetricGrammarTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonPlanningBaselineProbe.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonSessionBaselineIntegrationTests.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonSessionBaselineTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonSemanticTrajectoryTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonTrajectoryBaselineTests.swift"
       ],
       "contracts": [
+        "docs/LONG_HORIZON_SESSION_BASELINE.md",
         "docs/LONG_HORIZON_PERFORMANCE_MAP.md",
         "docs/PERFORMANCE_GRAMMAR.md",
         "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md"
@@ -347,13 +372,14 @@
         "session-director-and-score"
       ],
       "boundaries": [
-        "future-phrase-commit"
+        "macos-future-phrase-commit",
+        "windows-future-phrase-commit"
       ]
     },
     {
       "id": "quality-and-feedback-contracts",
       "name": "Quality and feedback contracts",
-      "responsibility": "Define reason-coded quality decisions, accepted and observed provenance, live-feedback observations/proposals, revision rules, and fail-closed future-boundary state.",
+      "responsibility": "Define reason-coded quality decisions, accepted and observed provenance, live-feedback observations/proposals, revision rules, fail-closed future-boundary state, the non-promotional boundary for optional local listening hypotheses, the detached evidence-ranked deficit register, the offline baseline lifecycle and schema-migration policy, and the aggregate Phase-1 reproducible-evidence gate; none can independently authorize or enter runtime decisions.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -370,6 +396,7 @@
       "state": [
         "QualityContinuationState",
         "LiveMasterHeadroomContinuationState",
+        "AutonomousQualityRetryContinuation",
         "accepted PCM hold provenance"
       ],
       "inputs": [
@@ -379,11 +406,18 @@
       "outputs": [
         "quality continuation",
         "bounded live correction proposal",
-        "future eligibility boundary"
+        "future eligibility boundary",
+        "detached evidence-ranked non-authoritative deficit register",
+        "offline baseline regeneration order and explicit compatibility or invalidation state",
+        "aggregate Phase-1 evidence currency with exact PCM and bounded qualification states"
       ],
       "evidence": [
         "QualityDecision",
-        "accepted live-feedback observation fingerprint"
+        "accepted live-feedback observation fingerprint",
+        "identity-blind local listening record that may only propose a later falsifiable hypothesis",
+        "source-bound prevalence, severity, confidence, ownership, and roadmap-link facts with uncalibrated observations quarantined",
+        "schema-, contract-, corpus-, engine-, route-, build-, and dependency-bound evidence lifecycle metadata",
+        "fifteen current artifact bindings, subordinate validation, exact whole/role PCM, and deficit-source traceability without a musical-quality claim"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/LiveFeedback.swift",
@@ -396,6 +430,10 @@
       ],
       "contracts": [
         "docs/SOUND_QUALITY.md",
+        "docs/CONTROLLED_LISTENING_PROTOCOL.md",
+        "docs/BASELINE_LIFECYCLE_POLICY.md",
+        "docs/DEFICIT_REGISTER.md",
+        "docs/PHASE_ONE_GATE.md",
         "docs/LIVE_FEEDBACK.md",
         "docs/PRIMARY_EVALUATOR.md",
         "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md"
@@ -405,13 +443,14 @@
       ],
       "boundaries": [
         "background-live-analysis",
-        "future-phrase-commit"
+        "macos-future-phrase-commit",
+        "windows-future-phrase-commit"
       ]
     },
     {
       "id": "voice-and-phrase-rendering",
       "name": "Voice and phrase rendering",
-      "responsibility": "Render the canonical resolved score through internal voices, phrase composition including reconstructed earlier kick recipes, coupled-material modal percussion, kick/upper articulations, near-continuous asymmetric spatial dust, source-local terminal de-clicking, and stable continuation into immutable stereo blocks and role taps.",
+      "responsibility": "Render the canonical resolved score through internal voices, phrase composition including reconstructed earlier kick recipes, coupled-material modal percussion, kick/upper articulations, near-continuous asymmetric spatial dust, source-local terminal de-clicking, and stable continuation into immutable stereo blocks, transient role taps, and default-off detached diagnostic captures.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -437,13 +476,14 @@
       ],
       "outputs": [
         "RenderBlock",
-        "role stems",
+        "transient role taps and opt-in local diagnostic captures",
         "ending render state"
       ],
       "evidence": [
         "role-local render evidence",
         "source-terminal attack and ending evidence",
         "exact PCM fingerprints",
+        "aligned dry-role, protected-rhythm, processed-stage, and nonlinear-residual reconstruction evidence",
         "score/render correspondence",
         "modal material, coupling, stability, decay, and pitch evidence",
         "spatial-dust channel, cadence, low-band exclusion, and clearing evidence"
@@ -466,6 +506,7 @@
       "testPaths": [
         "Tests/AutoTechnoCoreTests/KickSourceDynamicsTests.swift",
         "Tests/AutoTechnoCoreTests/ModalPercussionDSPTests.swift",
+        "Tests/AutoTechnoCoreTests/RoleStemCaptureTests.swift",
         "Tests/AutoTechnoCoreTests/SourceTerminalDeclickTests.swift",
         "Tests/AutoTechnoCoreTests/SpatialDustTests.swift",
         "Tests/AutoTechnoCoreTests/UpperPercussionTailDSPTests.swift",
@@ -475,6 +516,7 @@
       "contracts": [
         "docs/SYNTH_TRACK_RENDERING_MATRIX.md",
         "docs/INSTRUMENT_PALETTE.md",
+        "docs/ROLE_STEM_CAPTURE.md",
         "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md"
       ],
       "dependsOn": [
@@ -561,7 +603,7 @@
     {
       "id": "evidence-calibration-and-primary-evaluation",
       "name": "Evidence, calibration, and primary evaluation",
-      "responsibility": "Construct complete candidate evidence, stream bounded perceptual analysis, validate exact artifacts, run the single calibrated primary evaluator, and bind atomic commit provenance.",
+      "responsibility": "Construct complete candidate evidence, stream bounded perceptual analysis, validate exact artifacts and offline tolerance-aware PCM, signal, spectral, stereo-compatibility, collision, transient/envelope, rhythmic, and score-declared section-boundary reports, run the single calibrated primary evaluator, and bind atomic commit provenance.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -573,6 +615,10 @@
         {
           "symbol": "ProfessionalQualityPrimaryEvaluator",
           "path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift"
+        },
+        {
+          "symbol": "PCMSectionBoundaryBaselineAnalyzer",
+          "path": "Sources/AutoTechnoDSP/PCMSectionBoundaryBaselineAnalyzer.swift"
         }
       ],
       "state": [
@@ -593,6 +639,14 @@
       "evidence": [
         "BS.1770 and true-peak evidence",
         "masking and role-stem evidence",
+        "exact and tolerance-aware local PCM comparison reports",
+        "bar-, channel-, and role-local signal integrity baselines",
+        "window-, segment-, and role-local spectral and causal-band baselines",
+        "full- and causal-band stereo correlation, mid/side, mono-retention, and structural compatibility baselines",
+        "score-bound event-local kick/foundation collision baselines",
+        "legacy-compatible transient density plus PCM-inferred role-local attack, decay, and crest baselines",
+        "whole-mix onset distribution, rest, silence, metrical, microtiming, and bounded repetition/mutation baselines",
+        "score-declared phrase/chapter boundary, fixed transition-cell, multidimensional contrast, and explicit recovery-state baselines",
         "professional calibration and holdout reports"
       ],
       "sourcePaths": [
@@ -604,6 +658,13 @@
         "Sources/AutoTechnoDSP/LiveMasterHeadroomController.swift",
         "Sources/AutoTechnoDSP/LiveOutputWindowEvidence.swift",
         "Sources/AutoTechnoDSP/MusicalQualityMetrics.swift",
+        "Sources/AutoTechnoDSP/PCMKickFoundationCollisionAnalyzer.swift",
+        "Sources/AutoTechnoDSP/PCMRhythmicBaselineAnalyzer.swift",
+        "Sources/AutoTechnoDSP/PCMSectionBoundaryBaselineAnalyzer.swift",
+        "Sources/AutoTechnoDSP/PCMSignalIntegrityAnalyzer.swift",
+        "Sources/AutoTechnoDSP/PCMSpectralBaselineAnalyzer.swift",
+        "Sources/AutoTechnoDSP/PCMStereoCompatibilityAnalyzer.swift",
+        "Sources/AutoTechnoDSP/PCMTransientEnvelopeAnalyzer.swift",
         "Sources/AutoTechnoDSP/PackagedResourceBundle.swift",
         "Sources/AutoTechnoDSP/ProfessionalEvidenceReportBank.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityAdversarialSuite.swift",
@@ -624,19 +685,42 @@
       "testPaths": [
         "Tests/AutoTechnoCoreTests/AutonomousCandidateEvaluationTests.swift",
         "Tests/AutoTechnoCoreTests/AutonomousPhrasePreparationDiagnosticsTests.swift",
+        "Tests/AutoTechnoCoreTests/BaselineArtifactReportSupport.swift",
         "Tests/AutoTechnoCoreTests/BS1770AudioEvidenceTests.swift",
         "Tests/AutoTechnoCoreTests/CanonicalJourneyQualificationHarness.swift",
+        "Tests/AutoTechnoCoreTests/KickFoundationCollisionIntegrationTests.swift",
+        "Tests/AutoTechnoCoreTests/PCMKickFoundationCollisionAnalyzerTests.swift",
+        "Tests/AutoTechnoCoreTests/PCMRhythmicBaselineAnalyzerTests.swift",
+        "Tests/AutoTechnoCoreTests/PCMSectionBoundaryBaselineAnalyzerTests.swift",
+        "Tests/AutoTechnoCoreTests/PCMSignalIntegrityAnalyzerTests.swift",
+        "Tests/AutoTechnoCoreTests/PCMSpectralBaselineAnalyzerTests.swift",
+        "Tests/AutoTechnoCoreTests/PCMStereoCompatibilityAnalyzerTests.swift",
+        "Tests/AutoTechnoCoreTests/PCMTransientEnvelopeAnalyzerTests.swift",
         "Tests/AutoTechnoCoreTests/PrimaryEvaluatorReadinessTests.swift",
         "Tests/AutoTechnoCoreTests/PrimaryEvaluatorTestSupport.swift",
         "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationTests.swift",
         "Tests/AutoTechnoCoreTests/QualityQualificationFoundationTests.swift",
+        "Tests/AutoTechnoCoreTests/RhythmicBaselineIntegrationTests.swift",
+        "Tests/AutoTechnoCoreTests/SectionBoundaryBaselineIntegrationTests.swift",
+        "Tests/AutoTechnoCoreTests/SignalBaselineIntegrationTests.swift",
+        "Tests/AutoTechnoCoreTests/SpectralBaselineIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/SpectrumMaskingAnalyzerTests.swift",
+        "Tests/AutoTechnoCoreTests/StereoCompatibilityBaselineIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/StreamingPerceptualEvidenceTests.swift",
+        "Tests/AutoTechnoCoreTests/TransientEnvelopeBaselineIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/UpperTimbreIntegrationTests.swift"
       ],
       "contracts": [
         "docs/SOUND_QUALITY.md",
+        "docs/PCM_COMPARISON_REPORT.md",
+        "docs/KICK_FOUNDATION_COLLISION_BASELINE.md",
+        "docs/PCM_RHYTHMIC_BASELINE.md",
+        "docs/PCM_SECTION_BOUNDARY_BASELINE.md",
+        "docs/PCM_SIGNAL_BASELINE.md",
+        "docs/PCM_SPECTRAL_BASELINE.md",
+        "docs/PCM_STEREO_COMPATIBILITY_BASELINE.md",
+        "docs/PCM_TRANSIENT_ENVELOPE_BASELINE.md",
         "docs/PRIMARY_EVALUATOR.md",
         "docs/AUTONOMOUS_RUNTIME_VALIDATION.md",
         "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md"
@@ -649,7 +733,8 @@
       "boundaries": [
         "background-live-analysis",
         "detached-preparation",
-        "future-phrase-commit"
+        "macos-future-phrase-commit",
+        "windows-future-phrase-commit"
       ]
     },
     {
@@ -712,13 +797,14 @@
       ],
       "boundaries": [
         "detached-preparation",
-        "future-phrase-commit"
+        "macos-future-phrase-commit",
+        "windows-future-phrase-commit"
       ]
     },
     {
       "id": "shared-detached-preparation",
       "name": "Shared detached preparation",
-      "responsibility": "Own the platform-neutral request, cancellation, candidate preparation, immutable waveform derivation, and success/failure envelope used by both hosts.",
+      "responsibility": "Own the platform-neutral request, cancellation, candidate preparation, immutable waveform derivation, success/failure envelope used by both hosts, and the default-off selected-candidate diagnostic capture requested only by local evidence exporters.",
       "targets": [
         "AutoTechnoTransport"
       ],
@@ -726,10 +812,15 @@
         {
           "symbol": "AutonomousPerformancePreparer",
           "path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift"
+        },
+        {
+          "symbol": "PhrasePreparationReplayIdentity",
+          "path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift"
         }
       ],
       "state": [
         "PhrasePreparationKey",
+        "PhrasePreparationReplayIdentity",
         "incoming render, graph, quality, live-master, and long-horizon state"
       ],
       "inputs": [
@@ -740,23 +831,32 @@
       "outputs": [
         "PerformancePreparationOutcome",
         "PreparedPerformancePhrase",
+        "opt-in selected-candidate role-stem capture for local evidence",
+        "deterministic preparation replay identity",
         "read-only waveform envelopes"
       ],
-      "evidence": [
-        "preparation diagnostics",
-        "commit-eligible prepared transaction"
+    "evidence": [
+      "preparation diagnostics",
+      "release-only detached planning, render/evaluate, presentation, complete-preparation, and process-high-water observations",
+      "exact seed, continuation, route, recovery, and sample-boundary fingerprints",
+      "commit-eligible prepared transaction"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift"
       ],
       "testPaths": [
-        "Tests/AutoTechnoCoreTests/AutonomousPhrasePreparationDiagnosticsTests.swift",
-        "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift"
+      "Tests/AutoTechnoCoreTests/AutonomousPhrasePreparationDiagnosticsTests.swift",
+      "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift",
+      "Tests/AutoTechnoCoreTests/PerformanceEnvelopeIntegrationTests.swift",
+      "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift",
+      "Tests/AutoTechnoCoreTests/StemCaptureIntegrationTests.swift"
       ],
       "contracts": [
-        "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
-        "docs/AUTONOMOUS_RUNTIME_VALIDATION.md",
-        "docs/PRIMARY_EVALUATOR.md"
+      "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
+      "docs/AUTONOMOUS_RUNTIME_VALIDATION.md",
+      "docs/PERFORMANCE_ENVELOPE.md",
+      "docs/PRIMARY_EVALUATOR.md",
+      "docs/ROLE_STEM_CAPTURE.md"
       ],
       "dependsOn": [
         "evidence-calibration-and-primary-evaluation",
@@ -766,7 +866,8 @@
       ],
       "boundaries": [
         "detached-preparation",
-        "future-phrase-commit"
+        "macos-future-phrase-commit",
+        "windows-future-phrase-commit"
       ]
     },
     {
@@ -794,9 +895,10 @@
         "bounded immutable PCM packets",
         "drop/reject counters"
       ],
-      "evidence": [
-        "packet sequence and generation metadata",
-        "object-level callback dependency audit"
+    "evidence": [
+      "off-callback exact-producer performance observations separated from live callback and underrun evidence",
+      "packet sequence and generation metadata",
+      "object-level callback dependency audit"
       ],
       "sourcePaths": [
         "Sources/CAutoTechnoRealtime/CAutoTechnoRealtimeConsumer.c",
@@ -805,12 +907,14 @@
         "Sources/CAutoTechnoRealtime/CAutoTechnoRealtimeProducer.c",
         "Sources/CAutoTechnoRealtime/include/CAutoTechnoRealtime.h"
       ],
-      "testPaths": [
-        "Tests/AutoTechnoCoreTests/LivePCMQueueTests.swift"
-      ],
-      "contracts": [
-        "docs/LIVE_FEEDBACK.md",
-        "docs/AUTONOMOUS_RUNTIME_VALIDATION.md"
+    "testPaths": [
+      "Tests/AutoTechnoCoreTests/LivePCMQueueTests.swift",
+      "Tests/AutoTechnoCoreTests/PerformanceEnvelopeIntegrationTests.swift"
+    ],
+    "contracts": [
+      "docs/LIVE_FEEDBACK.md",
+      "docs/AUTONOMOUS_RUNTIME_VALIDATION.md",
+      "docs/PERFORMANCE_ENVELOPE.md"
       ],
       "dependsOn": [],
       "boundaries": [
@@ -888,7 +992,9 @@
         "shared-detached-preparation"
       ],
       "boundaries": [
-        "future-phrase-commit",
+        "macos-future-phrase-commit",
+        "macos-sample-scheduling",
+        "macos-route-recovery",
         "main-actor-presentation",
         "macos-realtime-production"
       ]
@@ -1035,6 +1141,7 @@
       ],
       "state": [
         "WindowsAutoTechnoController transport state",
+        "WindowsRecoveryContext",
         "RepeatHoldEvolutionPlaybackMode",
         "waveOut queue and completion counters"
       ],
@@ -1071,15 +1178,484 @@
       ],
       "boundaries": [
         "detached-preparation",
+        "windows-future-phrase-commit",
+        "windows-control-scheduling",
+        "windows-route-recovery",
         "windows-completion-callback"
       ]
     }
   ],
+  "continuationStates": [
+    {
+      "id": "autonomous-session-state",
+      "name": "Canonical session and score continuation",
+      "ownerComponent": "session-director-and-score",
+      "symbol": "AutonomousSessionState",
+      "path": "Sources/AutoTechnoCore/AutonomousSession.swift",
+      "scope": "canonical-phrase",
+      "pcmRelationship": "Selects one future score and advances only with an accepted prepared phrase; owns no PCM."
+    },
+    {
+      "id": "render-state",
+      "name": "Voice and mix render continuation",
+      "ownerComponent": "voice-and-phrase-rendering",
+      "symbol": "RenderState",
+      "path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift",
+      "scope": "canonical-phrase",
+      "pcmRelationship": "Carries deterministic voice, mix, tail, and output-transition memory used to render future PCM."
+    },
+    {
+      "id": "graph-state",
+      "name": "Generated DSP graph continuation",
+      "ownerComponent": "graph-effects-routing-and-mix",
+      "symbol": "GeneratedDSPContinuationState",
+      "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
+      "scope": "canonical-phrase",
+      "pcmRelationship": "Carries the one effect graph and its node memory while processing future PCM."
+    },
+    {
+      "id": "quality-continuation",
+      "name": "Accepted quality-policy continuation",
+      "ownerComponent": "quality-and-feedback-contracts",
+      "symbol": "QualityContinuationState",
+      "path": "Sources/AutoTechnoCore/QualityQualification.swift",
+      "scope": "canonical-phrase",
+      "pcmRelationship": "Binds accepted evidence and policy provenance without retaining PCM."
+    },
+    {
+      "id": "live-master-continuation",
+      "name": "Accepted live master-headroom continuation",
+      "ownerComponent": "quality-and-feedback-contracts",
+      "symbol": "LiveMasterHeadroomContinuationState",
+      "path": "Sources/AutoTechnoCore/LiveFeedback.swift",
+      "scope": "canonical-phrase",
+      "pcmRelationship": "Controls only a qualified future render and advances atomically with that PCM."
+    },
+    {
+      "id": "quality-retry-continuation",
+      "name": "Rejected-candidate recovery continuation",
+      "ownerComponent": "quality-and-feedback-contracts",
+      "symbol": "AutonomousQualityRetryContinuation",
+      "path": "Sources/AutoTechnoCore/QualityQualification.swift",
+      "scope": "host-control",
+      "pcmRelationship": "Coordinates bounded detached retries while rejected PCM remains uncommitted."
+    },
+    {
+      "id": "long-horizon-adaptation-state",
+      "name": "Long-horizon realized-signal continuation",
+      "ownerComponent": "long-horizon-signal-and-future-adaptation",
+      "symbol": "LongHorizonFutureAdaptationState",
+      "path": "Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift",
+      "scope": "canonical-phrase",
+      "pcmRelationship": "Retains reduced accepted evidence and may change only an eligible future score/render."
+    },
+    {
+      "id": "repeat-hold-playback-state",
+      "name": "Qualified repeat-hold presentation state",
+      "ownerComponent": "session-director-and-score",
+      "symbol": "RepeatHoldEvolutionPlaybackMode",
+      "path": "Sources/AutoTechnoCore/RepeatHoldEvolutionPolicy.swift",
+      "scope": "host-control",
+      "pcmRelationship": "Selects exact accepted PCM or a prequalified pattern family without advancing canonical score state."
+    },
+    {
+      "id": "phrase-preparation-key",
+      "name": "Detached preparation identity",
+      "ownerComponent": "shared-detached-preparation",
+      "symbol": "PhrasePreparationKey",
+      "path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift",
+      "scope": "detached-preparation",
+      "pcmRelationship": "Binds route, policy, recovery, and proposal lookup identity before future PCM can enter a host queue."
+    },
+    {
+      "id": "phrase-preparation-replay-identity",
+      "name": "Exact detached preparation replay identity",
+      "ownerComponent": "shared-detached-preparation",
+      "symbol": "PhrasePreparationReplayIdentity",
+      "path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift",
+      "scope": "detached-preparation",
+      "pcmRelationship": "Serializes exact seed, canonical session, render, graph, long-horizon, route, recovery, proposal, and future-sample identities before preparation; it retains no PCM."
+    },
+    {
+      "id": "realtime-pcm-queue",
+      "name": "Preallocated macOS PCM packet handoff",
+      "ownerComponent": "realtime-pcm-handoff",
+      "symbol": "ATLivePCMQueue",
+      "path": "Sources/CAutoTechnoRealtime/CAutoTechnoRealtimePrivate.h",
+      "scope": "realtime-handoff",
+      "pcmRelationship": "Copies bounded app-owned scheduled-output PCM for one background consumer."
+    },
+    {
+      "id": "scheduled-phrase-ledger",
+      "name": "Scheduled occurrence ledger",
+      "ownerComponent": "live-feedback-coordination-and-inspection",
+      "symbol": "ScheduledPhraseLedger",
+      "path": "Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift",
+      "scope": "host-control",
+      "pcmRelationship": "Authenticates copied sample ranges against exact scheduled immutable PCM occurrences."
+    },
+    {
+      "id": "live-feedback-runtime-state",
+      "name": "Live-feedback lifecycle and correction state",
+      "ownerComponent": "live-feedback-coordination-and-inspection",
+      "symbol": "LiveFeedbackRuntimeCoordinator",
+      "path": "Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift",
+      "scope": "host-control",
+      "pcmRelationship": "Authorizes at most one future correction and never rewrites current PCM."
+    },
+    {
+      "id": "live-feedback-capture-state",
+      "name": "Live PCM capture lifecycle",
+      "ownerComponent": "live-feedback-coordination-and-inspection",
+      "symbol": "LiveFeedbackCaptureLifecycle",
+      "path": "Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift",
+      "scope": "realtime-handoff",
+      "pcmRelationship": "Owns bounded producer/consumer lifecycle identity around the PCM queue."
+    },
+    {
+      "id": "accepted-pcm-hold",
+      "name": "Accepted PCM hold provenance",
+      "ownerComponent": "live-feedback-coordination-and-inspection",
+      "symbol": "AcceptedPCMHold",
+      "path": "Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift",
+      "scope": "host-control",
+      "pcmRelationship": "Keeps already qualified PCM eligible when an authorized correction cannot commit."
+    },
+    {
+      "id": "next-phrase-progress",
+      "name": "macOS successor preparation progress",
+      "ownerComponent": "macos-transport-and-session-lifecycle",
+      "symbol": "NextPhraseProgress",
+      "path": "Sources/AutoTechnoApp/NextPhraseProgress.swift",
+      "scope": "host-control",
+      "pcmRelationship": "Records bounded successor failure/repeat progress without treating rejected PCM as accepted."
+    },
+    {
+      "id": "monitoring-output-state",
+      "name": "Downstream monitoring gain state",
+      "ownerComponent": "macos-transport-and-session-lifecycle",
+      "symbol": "MonitoringOutputState",
+      "path": "Sources/AutoTechnoApp/MonitoringOutputState.swift",
+      "scope": "monitoring-output",
+      "pcmRelationship": "Changes only downstream device-output gain after canonical capture and evidence."
+    },
+    {
+      "id": "windows-recovery-context",
+      "name": "Windows route-recovery input snapshot",
+      "ownerComponent": "windows-transport-and-waveout",
+      "symbol": "WindowsRecoveryContext",
+      "path": "Sources/AutoTechnoWindows/main.swift",
+      "scope": "host-control",
+      "pcmRelationship": "Preserves incoming canonical state so the interrupted phrase can be rerendered for the recovered route."
+    }
+  ],
+  "transitions": [
+    {
+      "id": "score-to-performance-grammar",
+      "name": "Resolve score-owned performance grammar",
+      "fromComponent": "session-director-and-score",
+      "toComponent": "performance-grammar-and-composition",
+      "boundary": "detached-preparation",
+      "consumesState": ["autonomous-session-state"],
+      "producesState": [],
+      "artifact": "resolved phrase context and bars",
+      "pcmConsequence": "none",
+      "failureBehavior": "Reject an inconsistent plan before rendering."
+    },
+    {
+      "id": "grammar-to-instrument-policy",
+      "name": "Resolve instrument, pitch, and role policy",
+      "fromComponent": "performance-grammar-and-composition",
+      "toComponent": "instrument-pitch-and-role-policy",
+      "boundary": "detached-preparation",
+      "consumesState": ["autonomous-session-state"],
+      "producesState": [],
+      "artifact": "score-owned composition and role relations",
+      "pcmConsequence": "none",
+      "failureBehavior": "Preserve the canonical plan or reject malformed score relations."
+    },
+    {
+      "id": "instrument-to-long-horizon-score",
+      "name": "Bind the current material world",
+      "fromComponent": "instrument-pitch-and-role-policy",
+      "toComponent": "long-horizon-semantic-control",
+      "boundary": "detached-preparation",
+      "consumesState": ["autonomous-session-state"],
+      "producesState": [],
+      "artifact": "instrument, pitch, articulation, and material-world intent",
+      "pcmConsequence": "none",
+      "failureBehavior": "Use the bounded score-owned fallback without adding another engine."
+    },
+    {
+      "id": "long-horizon-score-to-preparer",
+      "name": "Create one versioned preparation transaction",
+      "fromComponent": "long-horizon-semantic-control",
+      "toComponent": "shared-detached-preparation",
+      "boundary": "detached-preparation",
+      "consumesState": ["autonomous-session-state", "long-horizon-adaptation-state"],
+      "producesState": ["phrase-preparation-key", "phrase-preparation-replay-identity"],
+      "artifact": "AutonomousPhrasePlan and exact replay-bound PhrasePreparationRequest",
+      "pcmConsequence": "none",
+      "failureBehavior": "Fail closed on discontinuous root, phrase, bar, route, or policy identity."
+    },
+    {
+      "id": "preparer-to-voice-renderer",
+      "name": "Render score-owned voices and role taps",
+      "fromComponent": "shared-detached-preparation",
+      "toComponent": "voice-and-phrase-rendering",
+      "boundary": "detached-preparation",
+      "consumesState": ["phrase-preparation-key", "phrase-preparation-replay-identity", "autonomous-session-state", "render-state", "graph-state", "quality-continuation", "live-master-continuation", "long-horizon-adaptation-state"],
+      "producesState": ["render-state"],
+      "artifact": "RenderBlock voice PCM and role-local evidence",
+      "pcmConsequence": "creates-future-pcm",
+      "failureBehavior": "Return a reason-coded preparation failure; no PCM becomes schedulable."
+    },
+    {
+      "id": "voice-renderer-to-graph",
+      "name": "Process the canonical graph and mix",
+      "fromComponent": "voice-and-phrase-rendering",
+      "toComponent": "graph-effects-routing-and-mix",
+      "boundary": "detached-preparation",
+      "consumesState": ["render-state", "graph-state"],
+      "producesState": ["render-state", "graph-state"],
+      "artifact": "processed stereo blocks, role taps, and ending render/graph state",
+      "pcmConsequence": "processes-future-pcm",
+      "failureBehavior": "Reject invalid routing or use the declared protected neutral path."
+    },
+    {
+      "id": "graph-to-primary-evaluator",
+      "name": "Qualify the complete prepared candidate",
+      "fromComponent": "graph-effects-routing-and-mix",
+      "toComponent": "evidence-calibration-and-primary-evaluation",
+      "boundary": "detached-preparation",
+      "consumesState": ["quality-continuation", "live-master-continuation", "render-state", "graph-state"],
+      "producesState": ["quality-continuation", "live-master-continuation"],
+      "artifact": "candidate vector, verdict, and atomic commit provenance",
+      "pcmConsequence": "qualifies-without-changing-pcm",
+      "failureBehavior": "Reject or report qualification unavailable; never weaken a hard gate."
+    },
+    {
+      "id": "evaluator-to-prepared-product",
+      "name": "Package one immutable prepared performance phrase",
+      "fromComponent": "evidence-calibration-and-primary-evaluation",
+      "toComponent": "shared-detached-preparation",
+      "boundary": "detached-preparation",
+      "consumesState": ["phrase-preparation-key", "phrase-preparation-replay-identity", "render-state", "graph-state", "quality-continuation", "live-master-continuation", "long-horizon-adaptation-state"],
+      "producesState": ["render-state", "graph-state", "quality-continuation", "live-master-continuation", "long-horizon-adaptation-state"],
+      "artifact": "PreparedPerformancePhrase with immutable qualified PCM",
+      "pcmConsequence": "qualifies-without-changing-pcm",
+      "failureBehavior": "Return no commit-eligible product when any identity or evidence binding fails."
+    },
+    {
+      "id": "prepared-product-to-macos-commit",
+      "name": "Commit the prepared phrase on macOS",
+      "fromComponent": "shared-detached-preparation",
+      "toComponent": "macos-transport-and-session-lifecycle",
+      "boundary": "macos-future-phrase-commit",
+      "consumesState": ["phrase-preparation-key", "phrase-preparation-replay-identity", "autonomous-session-state", "render-state", "graph-state", "quality-continuation", "live-master-continuation", "long-horizon-adaptation-state"],
+      "producesState": ["autonomous-session-state", "render-state", "graph-state", "quality-continuation", "live-master-continuation", "long-horizon-adaptation-state", "repeat-hold-playback-state", "next-phrase-progress"],
+      "artifact": "accepted PreparedPerformancePhrase and advanced canonical state",
+      "pcmConsequence": "commits-immutable-pcm",
+      "failureBehavior": "Discard stale or unqualified work and preserve accepted PCM/fallback state."
+    },
+    {
+      "id": "prepared-product-to-windows-commit",
+      "name": "Commit the prepared phrase on Windows",
+      "fromComponent": "shared-detached-preparation",
+      "toComponent": "windows-transport-and-waveout",
+      "boundary": "windows-future-phrase-commit",
+      "consumesState": ["phrase-preparation-key", "phrase-preparation-replay-identity", "autonomous-session-state", "render-state", "graph-state", "quality-continuation", "live-master-continuation", "long-horizon-adaptation-state"],
+      "producesState": ["autonomous-session-state", "render-state", "graph-state", "quality-continuation", "live-master-continuation", "long-horizon-adaptation-state", "repeat-hold-playback-state"],
+      "artifact": "accepted PreparedPerformancePhrase and advanced canonical state",
+      "pcmConsequence": "commits-immutable-pcm",
+      "failureBehavior": "Discard stale or unqualified work and keep the last accepted host state."
+    },
+    {
+      "id": "macos-schedule-to-realtime-capture",
+      "name": "Schedule immutable PCM and publish bounded capture packets",
+      "fromComponent": "macos-transport-and-session-lifecycle",
+      "toComponent": "realtime-pcm-handoff",
+      "boundary": "macos-sample-scheduling",
+      "consumesState": ["repeat-hold-playback-state", "scheduled-phrase-ledger", "live-feedback-capture-state"],
+      "producesState": ["realtime-pcm-queue", "scheduled-phrase-ledger", "live-feedback-capture-state"],
+      "artifact": "sample-time scheduled buffer and authenticated capture range",
+      "pcmConsequence": "schedules-immutable-pcm",
+      "failureBehavior": "Do not schedule stale ranges; retain qualified fallback or report unavailable."
+    },
+    {
+      "id": "realtime-packets-to-live-feedback",
+      "name": "Consume app-owned scheduled-output PCM packets",
+      "fromComponent": "realtime-pcm-handoff",
+      "toComponent": "live-feedback-coordination-and-inspection",
+      "boundary": "macos-realtime-production",
+      "consumesState": ["realtime-pcm-queue", "scheduled-phrase-ledger", "live-feedback-capture-state"],
+      "producesState": ["live-feedback-runtime-state", "scheduled-phrase-ledger", "live-feedback-capture-state"],
+      "artifact": "sequence- and generation-bound native-stereo packets",
+      "pcmConsequence": "copies-app-owned-pcm",
+      "failureBehavior": "Drop invalid/full packets and continue output without blocking."
+    },
+    {
+      "id": "windows-queue-waveout-pcm",
+      "name": "Convert and queue immutable PCM for waveOut",
+      "fromComponent": "windows-transport-and-waveout",
+      "toComponent": "windows-transport-and-waveout",
+      "boundary": "windows-control-scheduling",
+      "consumesState": ["repeat-hold-playback-state"],
+      "producesState": ["repeat-hold-playback-state"],
+      "artifact": "bounded Int16 waveOut buffer and scheduled visual",
+      "pcmConsequence": "converts-and-queues-device-pcm",
+      "failureBehavior": "Stop queue advancement and request recovery without callback-side work."
+    },
+    {
+      "id": "live-feedback-to-evaluator",
+      "name": "Analyze one authenticated live PCM window",
+      "fromComponent": "live-feedback-coordination-and-inspection",
+      "toComponent": "evidence-calibration-and-primary-evaluation",
+      "boundary": "background-live-analysis",
+      "consumesState": ["live-feedback-runtime-state", "scheduled-phrase-ledger", "live-feedback-capture-state", "accepted-pcm-hold"],
+      "producesState": ["live-feedback-runtime-state"],
+      "artifact": "bounded live-output evidence",
+      "pcmConsequence": "observes-without-changing-pcm",
+      "failureBehavior": "Reject incomplete, stale, late, mismatched, or unavailable windows."
+    },
+    {
+      "id": "live-evaluator-to-quality-contract",
+      "name": "Reduce live evidence to one future proposal",
+      "fromComponent": "evidence-calibration-and-primary-evaluation",
+      "toComponent": "quality-and-feedback-contracts",
+      "boundary": "background-live-analysis",
+      "consumesState": ["quality-continuation", "live-master-continuation", "live-feedback-runtime-state"],
+      "producesState": ["live-feedback-runtime-state"],
+      "artifact": "reason-coded headroom proposal and target boundary",
+      "pcmConsequence": "observes-without-changing-pcm",
+      "failureBehavior": "Hold or reject the proposal; current and scheduled PCM remain immutable."
+    },
+    {
+      "id": "quality-proposal-to-preparer",
+      "name": "Bind an authorized proposal to one future candidate",
+      "fromComponent": "quality-and-feedback-contracts",
+      "toComponent": "shared-detached-preparation",
+      "boundary": "detached-preparation",
+      "consumesState": ["phrase-preparation-key", "quality-continuation", "live-master-continuation", "live-feedback-runtime-state"],
+      "producesState": ["phrase-preparation-key"],
+      "artifact": "pending live-master binding for an unscheduled phrase",
+      "pcmConsequence": "changes-future-pcm-only",
+      "failureBehavior": "Expire stale/late proposals and retain the previous committed controller state."
+    },
+    {
+      "id": "session-to-long-horizon-semantics",
+      "name": "Accumulate committed semantic history",
+      "fromComponent": "session-director-and-score",
+      "toComponent": "long-horizon-semantic-control",
+      "boundary": "detached-preparation",
+      "consumesState": ["autonomous-session-state", "long-horizon-adaptation-state"],
+      "producesState": ["long-horizon-adaptation-state"],
+      "artifact": "committed semantic trajectory and episode state",
+      "pcmConsequence": "none",
+      "failureBehavior": "Mark discontinuous evidence unavailable without partial advancement."
+    },
+    {
+      "id": "long-horizon-semantics-to-renderer",
+      "name": "Render the selected long-horizon consequence",
+      "fromComponent": "long-horizon-semantic-control",
+      "toComponent": "voice-and-phrase-rendering",
+      "boundary": "detached-preparation",
+      "consumesState": ["autonomous-session-state", "render-state", "long-horizon-adaptation-state"],
+      "producesState": ["render-state"],
+      "artifact": "score-owned material-world render intent",
+      "pcmConsequence": "creates-future-pcm",
+      "failureBehavior": "Use the bounded canonical score path."
+    },
+    {
+      "id": "renderer-to-long-horizon-signal",
+      "name": "Reduce accepted render evidence",
+      "fromComponent": "voice-and-phrase-rendering",
+      "toComponent": "long-horizon-signal-and-future-adaptation",
+      "boundary": "detached-preparation",
+      "consumesState": ["render-state", "long-horizon-adaptation-state"],
+      "producesState": ["long-horizon-adaptation-state"],
+      "artifact": "semantic, signal, and effect-dose trajectory observation",
+      "pcmConsequence": "observes-without-changing-pcm",
+      "failureBehavior": "Preserve prior adaptation state when evidence is incomplete or discontinuous."
+    },
+    {
+      "id": "long-horizon-decision-to-session",
+      "name": "Apply one eligible future trajectory decision",
+      "fromComponent": "long-horizon-signal-and-future-adaptation",
+      "toComponent": "session-director-and-score",
+      "boundary": "detached-preparation",
+      "consumesState": ["autonomous-session-state", "long-horizon-adaptation-state"],
+      "producesState": ["autonomous-session-state", "long-horizon-adaptation-state"],
+      "artifact": "preserve, recover, or material-reframe intent",
+      "pcmConsequence": "changes-future-pcm-only",
+      "failureBehavior": "Preserve course when the decision is invalid, stale, early, or ineligible."
+    },
+    {
+      "id": "macos-route-recovery-to-preparer",
+      "name": "Rebuild the interrupted macOS phrase for a recovered route",
+      "fromComponent": "macos-transport-and-session-lifecycle",
+      "toComponent": "shared-detached-preparation",
+      "boundary": "macos-route-recovery",
+      "consumesState": ["autonomous-session-state", "render-state", "graph-state", "quality-continuation", "live-master-continuation", "long-horizon-adaptation-state", "accepted-pcm-hold"],
+      "producesState": ["phrase-preparation-key", "phrase-preparation-replay-identity", "accepted-pcm-hold"],
+      "artifact": "route-recovery PhrasePreparationRequest",
+      "pcmConsequence": "rebuilds-unscheduled-pcm",
+      "failureBehavior": "Preserve the recovery request/hold and report unavailable for an unsupported route."
+    },
+    {
+      "id": "windows-route-recovery-to-preparer",
+      "name": "Rebuild the interrupted Windows phrase for a recovered device",
+      "fromComponent": "windows-transport-and-waveout",
+      "toComponent": "shared-detached-preparation",
+      "boundary": "windows-route-recovery",
+      "consumesState": ["windows-recovery-context", "autonomous-session-state", "render-state", "graph-state", "quality-continuation", "live-master-continuation", "long-horizon-adaptation-state"],
+      "producesState": ["windows-recovery-context", "phrase-preparation-key", "phrase-preparation-replay-identity"],
+      "artifact": "route-recovery PhrasePreparationRequest",
+      "pcmConsequence": "rebuilds-unscheduled-pcm",
+      "failureBehavior": "Retain the recovery snapshot and do not queue mismatched PCM."
+    },
+    {
+      "id": "macos-qualified-hold",
+      "name": "Present a bounded qualified macOS hold",
+      "fromComponent": "macos-transport-and-session-lifecycle",
+      "toComponent": "macos-transport-and-session-lifecycle",
+      "boundary": "macos-sample-scheduling",
+      "consumesState": ["repeat-hold-playback-state", "quality-retry-continuation", "next-phrase-progress", "accepted-pcm-hold"],
+      "producesState": ["repeat-hold-playback-state", "quality-retry-continuation", "next-phrase-progress", "accepted-pcm-hold"],
+      "artifact": "exact accepted PCM or prequalified repeat-hold pattern family",
+      "pcmConsequence": "replays-qualified-pcm-without-canonical-advance",
+      "failureBehavior": "Fall back to exact accepted PCM and keep retries bounded."
+    },
+    {
+      "id": "windows-qualified-hold",
+      "name": "Present a bounded qualified Windows hold",
+      "fromComponent": "windows-transport-and-waveout",
+      "toComponent": "windows-transport-and-waveout",
+      "boundary": "windows-control-scheduling",
+      "consumesState": ["repeat-hold-playback-state"],
+      "producesState": ["repeat-hold-playback-state"],
+      "artifact": "exact accepted PCM or prequalified repeat-hold pattern family",
+      "pcmConsequence": "replays-qualified-pcm-without-canonical-advance",
+      "failureBehavior": "Fall back to exact accepted PCM and request the successor serially."
+    },
+    {
+      "id": "macos-monitoring-output",
+      "name": "Apply downstream monitoring gain",
+      "fromComponent": "macos-transport-and-session-lifecycle",
+      "toComponent": "macos-transport-and-session-lifecycle",
+      "boundary": "main-actor-presentation",
+      "consumesState": ["monitoring-output-state"],
+      "producesState": ["monitoring-output-state"],
+      "artifact": "main-output-mixer gain intent",
+      "pcmConsequence": "changes-monitoring-output-only",
+      "failureBehavior": "Normalize invalid gain to the bounded monitoring state without changing evidence."
+    }
+  ],
   "flows": [
     {
-      "id": "phrase-preparation-and-atomic-commit",
-      "name": "Phrase preparation and atomic commit",
-      "summary": "One semantic intention is resolved, rendered, evaluated, and committed with every continuation state before it becomes eligible for scheduling.",
+      "id": "macos-phrase-preparation-and-atomic-commit",
+      "name": "macOS phrase preparation and atomic commit",
+      "summary": "One semantic intention is resolved, rendered, evaluated, packaged, and atomically committed with every continuation state before macOS may schedule it.",
       "steps": [
         {
           "component": "session-director-and-score",
@@ -1114,9 +1690,24 @@
           "artifact": "reason-coded verdict and commit provenance"
         },
         {
+          "component": "shared-detached-preparation",
+          "artifact": "PreparedPerformancePhrase with immutable qualified PCM"
+        },
+        {
           "component": "macos-transport-and-session-lifecycle",
           "artifact": "atomic future-state commit"
         }
+      ],
+      "transitions": [
+        "score-to-performance-grammar",
+        "grammar-to-instrument-policy",
+        "instrument-to-long-horizon-score",
+        "long-horizon-score-to-preparer",
+        "preparer-to-voice-renderer",
+        "voice-renderer-to-graph",
+        "graph-to-primary-evaluator",
+        "evaluator-to-prepared-product",
+        "prepared-product-to-macos-commit"
       ],
       "contracts": [
         "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
@@ -1124,9 +1715,72 @@
       ]
     },
     {
-      "id": "scheduled-playback",
-      "name": "Scheduled playback",
-      "summary": "Hosts consume the same prepared immutable PCM; macOS additionally publishes bounded app-owned samples for live evidence while presentation remains read-only.",
+      "id": "windows-phrase-preparation-and-atomic-commit",
+      "name": "Windows phrase preparation and atomic commit",
+      "summary": "The Windows host consumes the same semantic plan, detached renderer, evaluator, immutable PCM, and continuation bundle before its serial state queue may accept the phrase.",
+      "steps": [
+        {
+          "component": "session-director-and-score",
+          "artifact": "resolved phrase and bars"
+        },
+        {
+          "component": "performance-grammar-and-composition",
+          "artifact": "score-owned character and composition"
+        },
+        {
+          "component": "instrument-pitch-and-role-policy",
+          "artifact": "instrument, pitch, and articulation plan"
+        },
+        {
+          "component": "long-horizon-semantic-control",
+          "artifact": "bounded long-range obligations"
+        },
+        {
+          "component": "shared-detached-preparation",
+          "artifact": "versioned preparation transaction"
+        },
+        {
+          "component": "voice-and-phrase-rendering",
+          "artifact": "immutable PCM and role taps"
+        },
+        {
+          "component": "graph-effects-routing-and-mix",
+          "artifact": "processed mix and continuation"
+        },
+        {
+          "component": "evidence-calibration-and-primary-evaluation",
+          "artifact": "reason-coded verdict and commit provenance"
+        },
+        {
+          "component": "shared-detached-preparation",
+          "artifact": "PreparedPerformancePhrase with immutable qualified PCM"
+        },
+        {
+          "component": "windows-transport-and-waveout",
+          "artifact": "atomic future-state commit"
+        }
+      ],
+      "transitions": [
+        "score-to-performance-grammar",
+        "grammar-to-instrument-policy",
+        "instrument-to-long-horizon-score",
+        "long-horizon-score-to-preparer",
+        "preparer-to-voice-renderer",
+        "voice-renderer-to-graph",
+        "graph-to-primary-evaluator",
+        "evaluator-to-prepared-product",
+        "prepared-product-to-windows-commit"
+      ],
+      "contracts": [
+        "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
+        "docs/PRIMARY_EVALUATOR.md",
+        "docs/WINDOWS_DISTRIBUTION.md"
+      ]
+    },
+    {
+      "id": "macos-scheduled-playback-and-observation",
+      "name": "macOS scheduled playback and observation",
+      "summary": "macOS schedules accepted immutable PCM and the capture mixer copies only bounded app-owned samples into the authenticated background evidence path.",
       "steps": [
         {
           "component": "shared-detached-preparation",
@@ -1141,12 +1795,43 @@
           "artifact": "bounded app-owned PCM packets"
         },
         {
-          "component": "read-only-ui-and-presentation",
-          "artifact": "waveform, status, and playing time"
+          "component": "live-feedback-coordination-and-inspection",
+          "artifact": "authenticated scheduled occurrence"
         }
+      ],
+      "transitions": [
+        "prepared-product-to-macos-commit",
+        "macos-schedule-to-realtime-capture",
+        "realtime-packets-to-live-feedback"
       ],
       "contracts": [
         "docs/LIVE_FEEDBACK.md",
+        "docs/AUTONOMOUS_RUNTIME_VALIDATION.md"
+      ]
+    },
+    {
+      "id": "windows-scheduled-playback",
+      "name": "Windows scheduled playback",
+      "summary": "Windows accepts the same immutable prepared phrase, then converts and queues bounded device PCM off the fixed-work completion callback.",
+      "steps": [
+        {
+          "component": "shared-detached-preparation",
+          "artifact": "PreparedPerformancePhrase"
+        },
+        {
+          "component": "windows-transport-and-waveout",
+          "artifact": "accepted canonical phrase"
+        },
+        {
+          "component": "windows-transport-and-waveout",
+          "artifact": "queued waveOut PCM and scheduled visual"
+        }
+      ],
+      "transitions": [
+        "prepared-product-to-windows-commit",
+        "windows-queue-waveout-pcm"
+      ],
+      "contracts": [
         "docs/WINDOWS_DISTRIBUTION.md",
         "docs/AUTONOMOUS_RUNTIME_VALIDATION.md"
       ]
@@ -1181,6 +1866,13 @@
           "artifact": "committed corrected successor or accepted-PCM hold"
         }
       ],
+      "transitions": [
+        "realtime-packets-to-live-feedback",
+        "live-feedback-to-evaluator",
+        "live-evaluator-to-quality-contract",
+        "quality-proposal-to-preparer",
+        "prepared-product-to-macos-commit"
+      ],
       "contracts": [
         "docs/LIVE_FEEDBACK.md",
         "docs/SOUND_QUALITY.md"
@@ -1211,6 +1903,12 @@
           "component": "session-director-and-score",
           "artifact": "eligible future phrase decision"
         }
+      ],
+      "transitions": [
+        "session-to-long-horizon-semantics",
+        "long-horizon-semantics-to-renderer",
+        "renderer-to-long-horizon-signal",
+        "long-horizon-decision-to-session"
       ],
       "contracts": [
         "docs/LONG_HORIZON_PERFORMANCE_MAP.md",
@@ -1258,16 +1956,79 @@
       ]
     },
     {
-      "id": "future-phrase-commit",
-      "name": "Future phrase commit",
+      "id": "macos-future-phrase-commit",
+      "name": "macOS future phrase commit",
       "ownerComponent": "macos-transport-and-session-lifecycle",
-      "executionContext": "Host-owned control/MainActor boundary before unscheduled audio becomes current.",
-      "allowedWork": "Validate exact keys/generations and atomically commit plan, render, graph, quality, live-master, and long-horizon continuation.",
+      "executionContext": "MainActor boundary before an unscheduled prepared phrase becomes current on macOS.",
+      "allowedWork": "Validate exact keys/generations and atomically commit plan, render, graph, quality, live-master, long-horizon, and hold state.",
       "forbiddenWork": "Partial state commit, rejected-attempt leakage, scheduled-buffer rewrite, or stale route/session acceptance.",
       "failureBehavior": "Discard stale/unqualified work; preserve accepted PCM or follow the declared deterministic fallback.",
       "tests": [
         "Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift",
         "Tests/AutoTechnoCoreTests/AutonomousCandidateEvaluationTests.swift"
+      ]
+    },
+    {
+      "id": "windows-future-phrase-commit",
+      "name": "Windows future phrase commit",
+      "ownerComponent": "windows-transport-and-waveout",
+      "executionContext": "Serial Windows host-state boundary before an unscheduled prepared phrase becomes current.",
+      "allowedWork": "Validate exact key, route generation, prepared provenance, and atomically advance the shared canonical continuation bundle.",
+      "forbiddenWork": "Partial state commit, rejected-attempt leakage, callback-side commit, or stale device/session acceptance.",
+      "failureBehavior": "Discard stale/unqualified work and retain the last accepted host state or unavailable status.",
+      "tests": [
+        "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift",
+        "Tests/AutoTechnoCoreTests/AutonomousCandidateEvaluationTests.swift"
+      ]
+    },
+    {
+      "id": "macos-sample-scheduling",
+      "name": "macOS sample-time scheduling",
+      "ownerComponent": "macos-transport-and-session-lifecycle",
+      "executionContext": "MainActor transport control before immutable AVAudioPCMBuffer scheduling.",
+      "allowedWork": "Select an accepted block or qualified hold family, bind its scheduled sample range, and queue immutable PCM.",
+      "forbiddenWork": "Rendering, evaluation, scheduled-buffer mutation, unbounded retry, or audio-callback analysis.",
+      "failureBehavior": "Keep already accepted PCM eligible, open bounded successor recovery, or report unavailable.",
+      "tests": [
+        "Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift",
+        "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift"
+      ]
+    },
+    {
+      "id": "windows-control-scheduling",
+      "name": "Windows control-thread scheduling",
+      "ownerComponent": "windows-transport-and-waveout",
+      "executionContext": "Serial Windows host queue outside the waveOut completion callback.",
+      "allowedWork": "Select qualified immutable PCM, convert it to bounded Int16 buffers, queue waveOut, and update read-only visuals.",
+      "forbiddenWork": "Callback-side conversion/submission, unqualified PCM, partial canonical commit, or musical planning.",
+      "failureBehavior": "Stop queue advancement, retain accepted state, and request bounded device recovery.",
+      "tests": [
+        "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift"
+      ]
+    },
+    {
+      "id": "macos-route-recovery",
+      "name": "macOS route recovery",
+      "ownerComponent": "macos-transport-and-session-lifecycle",
+      "executionContext": "MainActor route-change lifecycle followed by detached rerendering for the active route.",
+      "allowedWork": "Invalidate stale work, preserve the interrupted phrase's incoming bundle/hold, and request one route-bound rerender.",
+      "forbiddenWork": "Reuse wrong-rate PCM, double-advance continuation, clear a latched hold, or perform planning in the callback.",
+      "failureBehavior": "Keep the recovery request and accepted hold provenance or report the route unavailable.",
+      "tests": [
+        "Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift",
+        "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift"
+      ]
+    },
+    {
+      "id": "windows-route-recovery",
+      "name": "Windows device recovery",
+      "ownerComponent": "windows-transport-and-waveout",
+      "executionContext": "Serial Windows host-state recovery after waveOut device restart.",
+      "allowedWork": "Preserve the interrupted incoming bundle and rerender one route-generation-bound phrase before queueing resumes.",
+      "forbiddenWork": "Queue stale-rate PCM, advance twice, mutate canonical state in the completion callback, or bypass primary qualification.",
+      "failureBehavior": "Retain the recovery snapshot and remain recovering/unavailable until a valid device-bound phrase is prepared.",
+      "tests": [
+        "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift"
       ]
     },
     {

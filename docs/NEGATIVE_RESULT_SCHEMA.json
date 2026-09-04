@@ -1,0 +1,85 @@
+{
+  "schema": "autotechno-negative-result-schema.v1",
+  "schemaVersion": 1,
+  "outcomeCodes": [
+    "falsified",
+    "inconclusive",
+    "invalid-experiment",
+    "regressed-protected-behaviour",
+    "no-measurable-benefit"
+  ],
+  "failureReasonCodes": [
+    "hypothesis-disconfirmed",
+    "insufficient-evidence",
+    "invalid-provenance",
+    "guardrail-regression",
+    "benefit-below-threshold",
+    "resource-bound-exceeded"
+  ],
+  "dispositions": [
+    "retired",
+    "superseded",
+    "follow-up-proposed"
+  ],
+  "evidenceKinds": [
+    "measurement",
+    "test",
+    "render-comparison",
+    "runtime-observation",
+    "listening-observation",
+    "source-analysis"
+  ],
+  "recordSchema": {
+    "schema": "autotechno-negative-result-record.v1",
+    "requiredRootFields": [
+      "schema",
+      "itemId",
+      "planPath",
+      "citationRecordPath",
+      "experimentId",
+      "title",
+      "createdDate",
+      "concludedDate",
+      "hypothesis",
+      "canonicalOwner",
+      "checkpoint",
+      "baseline",
+      "intervention",
+      "bounds",
+      "evidence",
+      "outcome",
+      "failureReason",
+      "learnedConstraints",
+      "reusableEvidence",
+      "disposition",
+      "replacementItem",
+      "followUp"
+    ],
+    "requiredBaselineFields": [
+      "description",
+      "identity",
+      "evidenceRefs"
+    ],
+    "requiredInterventionFields": [
+      "description",
+      "identity",
+      "changedVariables"
+    ],
+    "requiredEvidenceFields": [
+      "id",
+      "kind",
+      "reference",
+      "observation"
+    ],
+    "requiredOutcomeFields": [
+      "code",
+      "summary"
+    ],
+    "requiredFollowUpFields": [
+      "status",
+      "proposedOutcome",
+      "condition"
+    ],
+    "localRecordPattern": "docs/local/reports/negative-results/NEG-AT-xxxx-nnn.json"
+  }
+}

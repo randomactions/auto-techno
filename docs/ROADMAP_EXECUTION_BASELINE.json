@@ -1,0 +1,176 @@
+{
+  "schema": "autotechno-roadmap-contract-baseline.v1",
+  "snapshotVersion": 35,
+  "digestAlgorithm": "sha256",
+  "snapshotFingerprint": "f51706a512880be031b163b6729d91b50773f2e434317079569d99c9738b58ef",
+  "documents": [
+    {
+      "role": "repository-guidance",
+      "path": "AGENTS.md",
+      "byteCount": 4171,
+      "sha256": "9348d58359d8e14240dfb6d3068fde240edd05f445e4c79d0e19022257fb454e"
+    },
+    {
+      "role": "package-manifest",
+      "path": "Package.swift",
+      "byteCount": 2926,
+      "sha256": "2fcc1dd87b2da133d5b8d93f4fc3302395b9b6a4a55e5caa4e6dc4e29b900786"
+    },
+    {
+      "role": "product-contract",
+      "path": "docs/PRODUCT.md",
+      "byteCount": 30360,
+      "sha256": "b5eb3fd501ae39a9eb7afd838f2555302cba8a2b03782f2f9dc6804a38cff47d"
+    },
+    {
+      "role": "sound-quality-contract",
+      "path": "docs/SOUND_QUALITY.md",
+      "byteCount": 66180,
+      "sha256": "a7299cddd6ed72a16114a9b0f64fe0b5c3cf2ea2d402e0303a9e3b20d864961f"
+    },
+    {
+      "role": "runtime-provenance-contract",
+      "path": "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
+      "byteCount": 93502,
+      "sha256": "25dec65d35fa06f7e3f2584e82e64dadf9f30ea0f48884ca3a64f5abbc4c2d71"
+    },
+    {
+      "role": "component-license-asset-manifest-source",
+      "path": "docs/COMPONENT_LICENSE_ASSET_MANIFEST.json",
+      "byteCount": 20335,
+      "sha256": "3b654a59fe6076afc372263b8ba05fb55756eef11272e72b5b301bf5134c3618"
+    },
+    {
+      "role": "component-license-asset-manifest-rendering",
+      "path": "docs/COMPONENT_LICENSE_ASSET_MANIFEST.md",
+      "byteCount": 13722,
+      "sha256": "e223cfcbf13ce7a889371b2c5d68f4b76c3a60f457ca80ffcf8cb791c6576696"
+    },
+    {
+      "role": "result-status-vocabulary-source",
+      "path": "docs/RESULT_STATUS_VOCABULARY.json",
+      "byteCount": 6925,
+      "sha256": "f2f7557207809198b5c54a4543016a851f01727957a05cc462fcbe363441786c"
+    },
+    {
+      "role": "result-status-vocabulary-rendering",
+      "path": "docs/RESULT_STATUS_VOCABULARY.md",
+      "byteCount": 4554,
+      "sha256": "6e6b81e76aeec43f5751c538572d95df9a5a5509b090499e6dde5aaf453405b7"
+    },
+    {
+      "role": "controlled-listening-protocol-source",
+      "path": "docs/CONTROLLED_LISTENING_PROTOCOL.json",
+      "byteCount": 2386,
+      "sha256": "344cd41d5e7a68bddf44ad89d1d09eb81c6b5f2475f44b0bf1a196a57f361198"
+    },
+    {
+      "role": "controlled-listening-protocol-rendering",
+      "path": "docs/CONTROLLED_LISTENING_PROTOCOL.md",
+      "byteCount": 3552,
+      "sha256": "9ad3019ba71cc60e2398ab09f5837b5286f3b1fd9dd2939235caf3d2ccb2c0e0"
+    },
+    {
+      "role": "baseline-lifecycle-policy-source",
+      "path": "docs/BASELINE_LIFECYCLE_POLICY.json",
+      "byteCount": 21781,
+      "sha256": "af5dcaffae691d6cee52062ef57f38987e5ffa14c010d343b9e486dd19188e48"
+    },
+    {
+      "role": "baseline-lifecycle-policy-rendering",
+      "path": "docs/BASELINE_LIFECYCLE_POLICY.md",
+      "byteCount": 5247,
+      "sha256": "607c8051572c8527f0490f20a35e4bd5c01db7d8803b20fb2ad3b5770c68e89e"
+    },
+    {
+      "role": "source-citation-schema-source",
+      "path": "docs/SOURCE_CITATION_SCHEMA.json",
+      "byteCount": 2819,
+      "sha256": "62d55c8286634edc0153fca574326ed7a5c23f9649533595af19b59e15d1680a"
+    },
+    {
+      "role": "source-citation-schema-rendering",
+      "path": "docs/SOURCE_CITATION_SCHEMA.md",
+      "byteCount": 2468,
+      "sha256": "7fbe12585b500d921f1444761ac04279462dfadfc2f8b4eceaa61b2b71509c96"
+    },
+    {
+      "role": "negative-result-schema-source",
+      "path": "docs/NEGATIVE_RESULT_SCHEMA.json",
+      "byteCount": 1808,
+      "sha256": "3c723f750bd863a087e02513aea518b7e038c733bf77186028514e5b308c1ebc"
+    },
+    {
+      "role": "negative-result-schema-rendering",
+      "path": "docs/NEGATIVE_RESULT_SCHEMA.md",
+      "byteCount": 1284,
+      "sha256": "44ea0484eed7a538b7c2858ef85c1c55fbbc1f3def3b193b68ce85bf0326d625"
+    },
+    {
+      "role": "baseline-corpus-source",
+      "path": "docs/BASELINE_CORPUS.json",
+      "byteCount": 3310,
+      "sha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7"
+    },
+    {
+      "role": "baseline-corpus-rendering",
+      "path": "docs/BASELINE_CORPUS.md",
+      "byteCount": 2835,
+      "sha256": "e1d1cd877e272fb22e0d8ecbc451c7780220655eb900773ff2fbfbdd181035ee"
+    },
+    {
+      "role": "role-stem-capture-contract",
+      "path": "docs/ROLE_STEM_CAPTURE.md",
+      "byteCount": 7041,
+      "sha256": "ca2ccf4fc1345de2fbe0285c5166bba5ca35e44891a70d887e5410b746c70c22"
+    },
+    {
+      "role": "pcm-comparison-report-contract",
+      "path": "docs/PCM_COMPARISON_REPORT.md",
+      "byteCount": 5953,
+      "sha256": "e69a40be5005a8ae50916569e26e5a0b883dac9b2453245d92c514a3377edaea"
+    },
+    {
+      "role": "pcm-signal-baseline-contract",
+      "path": "docs/PCM_SIGNAL_BASELINE.md",
+      "byteCount": 5202,
+      "sha256": "bd4cd98c197a99100accbd1f5e8c50677ae72a1aded9bb3188b66f75eb7750c5"
+    },
+    {
+      "role": "pcm-spectral-baseline-contract",
+      "path": "docs/PCM_SPECTRAL_BASELINE.md",
+      "byteCount": 6823,
+      "sha256": "19b0f2b700ad23f3996ad9a80065a726d8bd3e2a445d007365bd733eb53eb572"
+    },
+    {
+      "role": "kick-foundation-collision-baseline-contract",
+      "path": "docs/KICK_FOUNDATION_COLLISION_BASELINE.md",
+      "byteCount": 10065,
+      "sha256": "3ebf6d7d02f79b1f0be2e46dc5c2b2a2f020359285a7ce1a6dc97505efd97cfd"
+    },
+    {
+      "role": "pcm-transient-envelope-baseline-contract",
+      "path": "docs/PCM_TRANSIENT_ENVELOPE_BASELINE.md",
+      "byteCount": 11356,
+      "sha256": "28840d813138cffe219932b0cd80054b03013a4c06677665a2c9b752bba82e58"
+    },
+    {
+      "role": "pcm-section-boundary-baseline-contract",
+      "path": "docs/PCM_SECTION_BOUNDARY_BASELINE.md",
+      "byteCount": 6011,
+      "sha256": "335dee4992a4fdb5a1e48aaa209ae5c669c9c848044fed7fda989509d0d842f6"
+    },
+    {
+      "role": "semantic-codebase-map-source",
+      "path": "docs/codebase-map.json",
+      "byteCount": 92670,
+      "sha256": "0fca2f6fc9384a7d75af602a299f07dc746a150eeeef501c56615178fb4a2a29"
+    },
+    {
+      "role": "semantic-codebase-map-rendering",
+      "path": "docs/CODEBASE_MAP.md",
+      "byteCount": 240671,
+      "sha256": "92184ee814220c7eba8f0c3178e2fb0b2724e5b3293a565bd119d09217e895bb"
+    }
+  ]
+}

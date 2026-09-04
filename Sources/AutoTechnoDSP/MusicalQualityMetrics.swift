@@ -123,15 +123,9 @@ package struct MusicalQualityMetrics: Equatable, Sendable {
         var highSum = 0.0
         let lowCoefficient = 1 - exp(-2 * Double.pi * 180 / sampleRate)
         let midCoefficient = 1 - exp(-2 * Double.pi * 2_500 / sampleRate)
-        var previousEnvelope = 0.0
-        var transients = 0
-        let refractory = max(1, Int(sampleRate * 0.035))
-        let referenceEnvelopeCoefficient = 0.08
-        let envelopeCoefficient = 1 - pow(
-            1 - referenceEnvelopeCoefficient,
-            48_000 / sampleRate
+        var transientTracker = PCMTransientDensityTracker(
+            sampleRate: sampleRate
         )
-        var lastTransient = -refractory
         var frame = 0
         for (left, right) in chunks {
             let chunkCount = min(left.count, right.count)
@@ -149,14 +143,7 @@ package struct MusicalQualityMetrics: Equatable, Sendable {
                 lowSum += lowPass * lowPass
                 midSum += mid * mid
                 highSum += high * high
-                let envelope = abs(sample)
-                if envelope - previousEnvelope > 0.055 &&
-                    frame - lastTransient >= refractory {
-                    transients += 1
-                    lastTransient = frame
-                }
-                previousEnvelope +=
-                    (envelope - previousEnvelope) * envelopeCoefficient
+                _ = transientTracker.process(sample)
                 frame += 1
             }
         }
@@ -167,7 +154,8 @@ package struct MusicalQualityMetrics: Equatable, Sendable {
         midEnergy = midSum / total
         highEnergy = highSum / total
         spectralCentroid = perceptual.spectralCentroidMeanHz
-        transientDensity = Double(transients) / (Double(count) / sampleRate)
+        transientDensity = Double(transientTracker.transientCount) /
+            (Double(count) / sampleRate)
         perceptualEvidence = perceptual
         loudnessPeakWorkingByteCount = loudness.peakWorkingByteCount
     }

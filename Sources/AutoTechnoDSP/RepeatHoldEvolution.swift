@@ -127,14 +127,19 @@ package struct AutonomousPhraseRenderProduct: Sendable {
     package let blocks: [RenderBlock]
     package let repeatHoldEvolutionCandidates:
         [RepeatHoldEvolutionRenderCandidate]
+    /// Exact role PCM exists only when detached diagnostic capture was
+    /// explicitly requested. Production rendering leaves this array empty.
+    package let diagnosticRoleStemCaptures: [AutonomousBarRoleStemCapture]
 
     package init(
         blocks: [RenderBlock],
         repeatHoldEvolutionCandidates:
-            [RepeatHoldEvolutionRenderCandidate]
+            [RepeatHoldEvolutionRenderCandidate],
+        diagnosticRoleStemCaptures: [AutonomousBarRoleStemCapture] = []
     ) {
         self.blocks = blocks
         self.repeatHoldEvolutionCandidates = repeatHoldEvolutionCandidates
+        self.diagnosticRoleStemCaptures = diagnosticRoleStemCaptures
     }
 }
 

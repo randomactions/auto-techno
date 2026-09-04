@@ -826,7 +826,8 @@ package enum VoiceRenderer {
                           synthWorld: SynthWorldDNA, synthPerformance: SynthPerformanceBar,
                           workspace: inout RenderWorkspace, layer: RenderLayer,
                           effectCarrierRole: SynthRole? = nil,
-                          phraseKind: AutonomousPhraseKind = .lock) -> RenderedBar {
+                          phraseKind: AutonomousPhraseKind = .lock,
+                          diagnosticRoleStemCapture: Bool = false) -> RenderedBar {
         let performance = resolved.performance
         let section = performance.section
         let frames = max(1, Int((240.0 / scene.bpm * sampleRate).rounded()))
@@ -2158,6 +2159,20 @@ package enum VoiceRenderer {
             zip(atmosphereStem, transitionStem).map { $0 - $1 }
         case nil: []
         }
+        let roleStemCapture = diagnosticRoleStemCapture
+            ? VoiceRoleStemCapture(
+                dryCenterReference: output,
+                dryUpperReference: synthBus,
+                kick: kickBus,
+                foundation: foundationStem,
+                modalFoundation: modalPercussionStem,
+                percussion: percussionTextureStem,
+                upperTonal: upperTonalStem,
+                atmosphere: atmosphereStem,
+                protectedFoundation: maskingFoundationBus,
+                sourceLeft: left,
+                sourceRight: right
+            ) : nil
         let rendered = RenderedBar(sampleRate: sampleRate,
                                    samples: zip(left, right).map { ($0 + $1) * 0.5 },
                                    leftSamples: left, rightSamples: right,
@@ -2227,7 +2242,8 @@ package enum VoiceRenderer {
                                     graphRemainderReferenceRightSamples,
                                    effectCarrierSamples: effectCarrierSamples,
                                    resonantAnchorSamples: resonantAnchorStem,
-                                   detunedCompanionSamples: detunedCompanionStem)
+                                   detunedCompanionSamples: detunedCompanionStem,
+                                   diagnosticRoleStemCapture: roleStemCapture)
         swap(&output, &checkedOut.output)
         swap(&kickBus, &checkedOut.kick)
         swap(&kickDetectorBus, &checkedOut.kickDetector)

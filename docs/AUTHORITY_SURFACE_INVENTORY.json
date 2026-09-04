@@ -1,0 +1,908 @@
+{
+  "schema": "autotechno-authority-surface-inventory.v1",
+  "inventoryVersion": 1,
+  "scopePolicy": "The collision boundary is every production Swift type whose name ends in an authority-shaped suffix (Renderer, Preparer, Evaluator, Director, Resolver, Policy, Reducer, Controller, Qualifier, Generator, Engine, Orchestrator, Coordinator, Balancer, Analyzer, Validator, Processor, Artifacts, or Preflight), every production Swift type ending in Profile, Preset, Mode, or Configuration, every static value whose identifier contains profile or preset, every bundled JSON resource under Sources, and every source path assigned to the semantic map's graph-effects-routing-and-mix component. The inventory classifies naming collisions and convergence; it does not infer authority from a suffix alone and does not replace executable data-flow tests.",
+  "authorityGroups": [
+    {
+      "id": "session-director-owner",
+      "title": "Canonical session director",
+      "category": "decision",
+      "classification": "canonical-owner",
+      "surfaceComponent": "session-director-and-score",
+      "canonicalComponent": "session-director-and-score",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/AutonomousSession.swift", "symbol": "AutonomousSessionDirector", "kind": "struct"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/AutonomousSession.swift", "fragment": "package func plan(from state: AutonomousSessionState)"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func fixedSessionIdentity()"}
+      ],
+      "pcmConsequence": "selects-score-only",
+      "limitations": "The director owns top-level score choice; delegated resolvers below remain bounded implementation stages under its immutable plan."
+    },
+    {
+      "id": "session-owned-decisions",
+      "title": "Session-owned score resolvers and interest evidence",
+      "category": "decision",
+      "classification": "owned-stage",
+      "surfaceComponent": "session-director-and-score",
+      "canonicalComponent": "session-director-and-score",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/AutonomousSession.swift", "symbol": "PercussionEchoTextureResolver", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/AutonomousSession.swift", "symbol": "ClosedHatDecayResolver", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/AutonomousSession.swift", "symbol": "KickSyntaxResolver", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/AutonomousSession.swift", "symbol": "GroovePulseResolver", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/AutonomousSession.swift", "symbol": "PhraseInterestEvaluator", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/AutonomousSession.swift", "fragment": "package struct AutonomousSessionDirector"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func currentPlanningIsDeterministic(seed: UInt64)"}
+      ],
+      "pcmConsequence": "selects-score-only",
+      "limitations": "These pure score helpers cannot dispatch a renderer or commit state independently of AutonomousSessionDirector."
+    },
+    {
+      "id": "session-boundary-policies",
+      "title": "Session boundary and qualified-repeat policies",
+      "category": "decision",
+      "classification": "owned-stage",
+      "surfaceComponent": "session-director-and-score",
+      "canonicalComponent": "session-director-and-score",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/AutonomousRuntimeSafety.swift", "symbol": "AutonomousPhraseBoundaryPolicy", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/RepeatHoldEvolutionPolicy.swift", "symbol": "RepeatHoldEvolutionBoundaryPolicy", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/RepeatHoldEvolutionPolicy.swift", "fragment": "package static func decide("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift", "fragment": "func boundaryPolicyIsBounded()"}
+      ],
+      "pcmConsequence": "replays-qualified-pcm-without-canonical-advance",
+      "limitations": "The repeat decision selects exact accepted PCM or an already qualified bounded branch; it cannot plan or render a second phrase."
+    },
+    {
+      "id": "score-motif-offline-evidence",
+      "title": "Detached resolved-score motif evidence",
+      "category": "evidence",
+      "classification": "offline-only",
+      "surfaceComponent": "session-director-and-score",
+      "canonicalComponent": "session-director-and-score",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/ScoreMotifBaselineAnalyzer.swift", "symbol": "ScoreMotifBaselineAnalyzer", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/ScoreMotifBaselineAnalyzer.swift", "fragment": "package static func analyze("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/ScoreMotifBaselineAnalyzerTests.swift", "fragment": "func emptyAndInactive()"}
+      ],
+      "pcmConsequence": "none",
+      "limitations": "This bounded analyzer describes accepted resolved upper-score notes only in opt-in offline evidence; it owns no score choice, evaluator input, continuation, renderer, or future decision."
+    },
+    {
+      "id": "seed-generator-utility",
+      "title": "Deterministic seed utility",
+      "category": "utility",
+      "classification": "deterministic-utility",
+      "surfaceComponent": "session-director-and-score",
+      "canonicalComponent": "session-director-and-score",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/SeededGenerator.swift", "symbol": "SeededGenerator", "kind": "struct"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/TechnoScene.swift", "fragment": "SeededGenerator(seed:"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func currentPlanningIsDeterministic(seed: UInt64)"}
+      ],
+      "pcmConsequence": "none",
+      "limitations": "The Generator suffix is a lexical collision only; this value supplies deterministic entropy and owns no musical policy."
+    },
+    {
+      "id": "session-trajectory-offline-evidence",
+      "title": "Detached long-horizon session-trajectory evidence",
+      "category": "evidence",
+      "classification": "offline-only",
+      "surfaceComponent": "long-horizon-semantic-control",
+      "canonicalComponent": "long-horizon-semantic-control",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/LongHorizonSessionBaseline.swift", "symbol": "LongHorizonSessionBaselineAnalyzer", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/LongHorizonSessionBaseline.swift", "fragment": "package static func analyze("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/LongHorizonSessionBaselineTests.swift", "fragment": "func scalarShapeAndSegmentation()"}
+      ],
+      "pcmConsequence": "none",
+      "limitations": "This bounded score-only observatory reports neutral segment, payoff, recovery, recurrence, and capability-exposure facts in opt-in offline evidence; it owns no score choice, PCM, evaluator input, continuation, renderer, or future decision."
+    },
+    {
+      "id": "performance-grammar-owners",
+      "title": "Canonical phrase-composition and kick-morphology owners",
+      "category": "decision",
+      "classification": "canonical-owner",
+      "surfaceComponent": "performance-grammar-and-composition",
+      "canonicalComponent": "performance-grammar-and-composition",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/KickMorphology.swift", "symbol": "KickMorphologyResolver", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/PhraseComposition.swift", "symbol": "PhraseCompositionResolver", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/AutonomousSession.swift", "fragment": "PhraseCompositionResolver.resolve("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift", "fragment": "func deterministicSession(seed: UInt64)"}
+      ],
+      "pcmConsequence": "selects-score-only",
+      "limitations": "Both are map-declared owners inside one grammar component and return score state to the same director; neither is a top-level planner."
+    },
+    {
+      "id": "performance-grammar-owned-resolvers",
+      "title": "Owned performance-articulation resolvers",
+      "category": "decision",
+      "classification": "owned-stage",
+      "surfaceComponent": "performance-grammar-and-composition",
+      "canonicalComponent": "performance-grammar-and-composition",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/ClimaxHang.swift", "symbol": "ClimaxHangResolver", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/FoundationPreKickPocket.swift", "symbol": "FoundationPreKickPocketResolver", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/FoundationRhythmicRelation.swift", "symbol": "FoundationRhythmicRelationResolver", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/UpperMusicalPump.swift", "symbol": "UpperMusicalPumpResolver", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/UpperPercussionTail.swift", "symbol": "UpperPercussionTailResolver", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/UpperSpectralReveal.swift", "symbol": "UpperSpectralRevealResolver", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/PhraseComposition.swift", "fragment": "package enum PhraseCompositionResolver"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift", "fragment": "func dramaticPromises(seed: UInt64)"}
+      ],
+      "pcmConsequence": "selects-score-only",
+      "limitations": "Each resolver creates one typed articulation consumed by the canonical composition and renderer path."
+    },
+    {
+      "id": "foundation-pitch-owner",
+      "title": "Canonical foundation-pitch owner",
+      "category": "decision",
+      "classification": "canonical-owner",
+      "surfaceComponent": "instrument-pitch-and-role-policy",
+      "canonicalComponent": "instrument-pitch-and-role-policy",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/FoundationPitchResolver.swift", "symbol": "FoundationPitchResolver", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/FoundationPitchResolver.swift", "fragment": "package enum FoundationPitchResolver"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift", "fragment": "func foundationCompanionContinuity()"}
+      ],
+      "pcmConsequence": "selects-score-only",
+      "limitations": "The foundation resolver is the map-declared pitch owner and emits no PCM itself."
+    },
+    {
+      "id": "modal-percussion-owned-resolver",
+      "title": "Owned modal-percussion resolver",
+      "category": "decision",
+      "classification": "owned-stage",
+      "surfaceComponent": "instrument-pitch-and-role-policy",
+      "canonicalComponent": "instrument-pitch-and-role-policy",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/ModalPercussion.swift", "symbol": "ModalPercussionResolver", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/ModalPercussion.swift", "fragment": "package enum ModalPercussionResolver"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift", "fragment": "func directorModalPercussionOwnsExistingFoundationEvents()"}
+      ],
+      "pcmConsequence": "selects-score-only",
+      "limitations": "It binds a physical-model intention inside the current instrument palette and cannot select another instrument engine."
+    },
+    {
+      "id": "long-horizon-owned-resolvers",
+      "title": "Owned long-horizon semantic resolvers",
+      "category": "decision",
+      "classification": "owned-stage",
+      "surfaceComponent": "long-horizon-semantic-control",
+      "canonicalComponent": "long-horizon-semantic-control",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/LongHorizonEffectCarrier.swift", "symbol": "LongHorizonEffectCarrierResolver", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/LongHorizonMaterialWorld.swift", "symbol": "LongHorizonMaterialWorldResolver", "kind": "enum"},
+        {"path": "Sources/AutoTechnoCore/LongHorizonPolymetricGrammar.swift", "symbol": "LongHorizonPolymetricGrammarResolver", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/LongHorizonContinuation.swift", "fragment": "LongHorizonMaterialWorldResolver.make("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func longCycleWorldPrimaryIdentityContract()"}
+      ],
+      "pcmConsequence": "selects-score-only",
+      "limitations": "These resolvers extend the one session plan and cannot commit a separate long-horizon runtime."
+    },
+    {
+      "id": "quality-recovery-scheduling-policy",
+      "title": "Quality-recovery scheduling policy",
+      "category": "decision",
+      "classification": "owned-stage",
+      "surfaceComponent": "quality-and-feedback-contracts",
+      "canonicalComponent": "evidence-calibration-and-primary-evaluation",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/QualityQualification.swift", "symbol": "AutonomousQualityRecoverySchedulingPolicy", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift", "fragment": "qualityRecoveryContext: request.key.routeRecovery"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift", "fragment": "func onePrimaryCorrectionCannotRewriteLiveProposal()"}
+      ],
+      "pcmConsequence": "changes-future-pcm-only",
+      "limitations": "This contract schedules bounded recovery context; the installed primary evaluator and canonical preparer retain decision and render authority."
+    },
+    {
+      "id": "canonical-phrase-render-owners",
+      "title": "Canonical phrase and voice render owners",
+      "category": "render",
+      "classification": "canonical-owner",
+      "surfaceComponent": "voice-and-phrase-rendering",
+      "canonicalComponent": "voice-and-phrase-rendering",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift", "symbol": "AutonomousPhraseRenderer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/VoiceRenderer.swift", "symbol": "VoiceRenderer", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift", "fragment": "let rendered = VoiceRenderer.renderBar("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func rendererContinuationReplay()"}
+      ],
+      "pcmConsequence": "creates-future-pcm",
+      "limitations": "VoiceRenderer is the mapped voice stage called by the sole phrase renderer, not a separately dispatchable top-level renderer."
+    },
+    {
+      "id": "owned-specialized-render-stages",
+      "title": "Owned specialized render stages",
+      "category": "render",
+      "classification": "owned-stage",
+      "surfaceComponent": "voice-and-phrase-rendering",
+      "canonicalComponent": "voice-and-phrase-rendering",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/ClimaxHangRenderer.swift", "symbol": "ClimaxHangRenderer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/PhraseCompositionRenderer.swift", "symbol": "AudioSliceRenderer", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift", "fragment": "let climaxOutput = ClimaxHangRenderer.render("},
+        {"path": "Sources/AutoTechnoDSP/VoiceRenderer.swift", "fragment": "audioSliceRenderEvidence = AudioSliceRenderer.render("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift", "fragment": "func fixedSeedAudio(seed: UInt64)"}
+      ],
+      "pcmConsequence": "processes-future-pcm",
+      "limitations": "Both stages are called inside the sole phrase/voice render transaction and expose no host entry point."
+    },
+    {
+      "id": "canonical-graph-decision-owners",
+      "title": "Canonical graph-plan and automatic-mix owners",
+      "category": "effect",
+      "classification": "canonical-owner",
+      "surfaceComponent": "graph-effects-routing-and-mix",
+      "canonicalComponent": "graph-effects-routing-and-mix",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift", "symbol": "AutomaticMixBalancer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift", "symbol": "DSPGraphGenerator", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/VoiceRenderer.swift", "fragment": "let automaticMix = AutomaticMixBalancer.resolve("},
+        {"path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift", "fragment": "let generated = GeneratedDSPGraphRenderer.process("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift", "fragment": "func graphProperties()"}
+      ],
+      "pcmConsequence": "processes-future-pcm",
+      "limitations": "The graph generator selects the one graph plan; the balancer resolves bounded gains consumed inside the same voice render."
+    },
+    {
+      "id": "graph-owned-processing-stages",
+      "title": "Owned graph, evidence, and qualified-repeat stages",
+      "category": "effect",
+      "classification": "owned-stage",
+      "surfaceComponent": "graph-effects-routing-and-mix",
+      "canonicalComponent": "graph-effects-routing-and-mix",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift", "symbol": "StemObservationAnalyzer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/EffectCarrierAndUpperPumpDSP.swift", "symbol": "UpperMusicalPumpProcessor", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift", "symbol": "DSPGraphValidator", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift", "symbol": "GeneratedDSPGraphRenderer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift", "symbol": "PhraseAudioPreflight", "kind": "struct"},
+        {"path": "Sources/AutoTechnoDSP/RepeatHoldEvolution.swift", "symbol": "RepeatHoldEvolutionQualifier", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift", "fragment": "GeneratedDSPGraphRenderer.process("},
+        {"path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift", "fragment": "RepeatHoldEvolutionQualifier.qualify("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift", "fragment": "func preparedVariantsAreQualified()"}
+      ],
+      "pcmConsequence": "processes-future-pcm",
+      "limitations": "These validators, analyzers, processors, and qualifiers are nested under one render/evaluation transaction and cannot schedule output."
+    },
+    {
+      "id": "owned-preparation-transaction",
+      "title": "Owned DSP preparation transaction and commit gate",
+      "category": "preparation",
+      "classification": "owned-stage",
+      "surfaceComponent": "graph-effects-routing-and-mix",
+      "canonicalComponent": "shared-detached-preparation",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift", "symbol": "AutonomousCommitPolicy", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift", "symbol": "AutonomousPhrasePreparer", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift", "fragment": "AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func platformTransportPreparation()"}
+      ],
+      "pcmConsequence": "qualifies-without-changing-pcm",
+      "limitations": "Despite the similar name, AutonomousPhrasePreparer is the DSP transaction nested behind the platform-neutral AutonomousPerformancePreparer."
+    },
+    {
+      "id": "offline-evidence-only-evaluator",
+      "title": "Offline evidence-only evaluator",
+      "category": "evidence",
+      "classification": "offline-only",
+      "surfaceComponent": "graph-effects-routing-and-mix",
+      "canonicalComponent": "evidence-calibration-and-primary-evaluation",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift", "symbol": "ProfessionalEvidenceOnlyEvaluator", "kind": "struct"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift", "fragment": "outcome: .qualificationUnavailable"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryEvaluatorAndLiveControllerAreCanonical()"}
+      ],
+      "pcmConsequence": "qualifies-without-changing-pcm",
+      "limitations": "This explicit offline collector always reports qualification unavailable and is never installed by either shipping host."
+    },
+    {
+      "id": "primary-quality-owner",
+      "title": "Canonical primary quality evaluator",
+      "category": "evidence",
+      "classification": "canonical-owner",
+      "surfaceComponent": "evidence-calibration-and-primary-evaluation",
+      "canonicalComponent": "evidence-calibration-and-primary-evaluation",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift", "symbol": "ProfessionalQualityPrimaryEvaluator", "kind": "struct"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPreparationEvaluator.swift", "fragment": "calibrated = artifacts.evaluator"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryEvaluatorAndLiveControllerAreCanonical()"}
+      ],
+      "pcmConsequence": "qualifies-without-changing-pcm",
+      "limitations": "Construction requires the exact installed profile, adversarial suite, holdout, engine, and evidence identities."
+    },
+    {
+      "id": "primary-evidence-owned-stages",
+      "title": "Owned primary evidence, installation, and correction stages",
+      "category": "evidence",
+      "classification": "owned-stage",
+      "surfaceComponent": "evidence-calibration-and-primary-evaluation",
+      "canonicalComponent": "evidence-calibration-and-primary-evaluation",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/AutonomousCandidateEvaluation.swift", "symbol": "AutonomousCandidateEvaluationTransactionValidator", "kind": "class"},
+        {"path": "Sources/AutoTechnoDSP/LiveMasterHeadroomController.swift", "symbol": "LiveMasterHeadroomController", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/LiveOutputWindowEvidence.swift", "symbol": "LiveOutputWindowAnalyzer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/PCMKickFoundationCollisionAnalyzer.swift", "symbol": "PCMKickFoundationCollisionAnalyzer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/PCMRhythmicBaselineAnalyzer.swift", "symbol": "PCMRhythmicBaselineAnalyzer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/PCMSectionBoundaryBaselineAnalyzer.swift", "symbol": "PCMSectionBoundaryBaselineAnalyzer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/PCMSignalIntegrityAnalyzer.swift", "symbol": "PCMSignalIntegrityAnalyzer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/PCMSpectralBaselineAnalyzer.swift", "symbol": "PCMSpectralBaselineAnalyzer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/PCMStereoCompatibilityAnalyzer.swift", "symbol": "PCMStereoCompatibilityAnalyzer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/PCMTransientEnvelopeAnalyzer.swift", "symbol": "PCMTransientEnvelopeAnalyzer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityCalibration.swift", "symbol": "ProfessionalQualityRelationshipEvaluator", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityCalibration.swift", "symbol": "ProfessionalQualityProfileEvaluator", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPreparationEvaluator.swift", "symbol": "ProfessionalQualityPreparationEvaluator", "kind": "struct"},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "symbol": "ProfessionalQualityPrimaryArtifacts", "kind": "struct"},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift", "symbol": "ProfessionalQualityRecoveryIntentReducer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift", "symbol": "SpectrumMaskingAnalyzer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/StreamingPerceptualEvidence.swift", "symbol": "StreamingPerceptualEvidenceAnalyzer", "kind": "enum"},
+        {"path": "Sources/AutoTechnoDSP/UpperTimbreEvidence.swift", "symbol": "UpperTimbreEvidenceAnalyzer", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPreparationEvaluator.swift", "fragment": "return calibrated.terminalVerdict("},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPreparationEvaluator.swift", "fragment": "outcome: .qualificationUnavailable"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func longCycleWorldPrimaryIdentityContract()"},
+        {"path": "Tests/AutoTechnoCoreTests/PCMKickFoundationCollisionAnalyzerTests.swift", "fragment": "func lowBandOverlap()"},
+        {"path": "Tests/AutoTechnoCoreTests/PCMRhythmicBaselineAnalyzerTests.swift", "fragment": "func boundedMutationAndChurn()"},
+        {"path": "Tests/AutoTechnoCoreTests/PCMSectionBoundaryBaselineAnalyzerTests.swift", "fragment": "func markersAndFocusBounds()"},
+        {"path": "Tests/AutoTechnoCoreTests/PCMStereoCompatibilityAnalyzerTests.swift", "fragment": "func exactCancellation()"},
+        {"path": "Tests/AutoTechnoCoreTests/PCMTransientEnvelopeAnalyzerTests.swift", "fragment": "func attackSensitivityAndSign()"}
+      ],
+      "pcmConsequence": "changes-future-pcm-only",
+      "limitations": "Analyzers create evidence, artifacts install one exact evaluator, and reducers propose bounded future corrections; none can accept or schedule PCM independently."
+    },
+    {
+      "id": "long-horizon-quality-owned-stages",
+      "title": "Owned long-horizon policy and artifact stages",
+      "category": "evidence",
+      "classification": "owned-stage",
+      "surfaceComponent": "long-horizon-signal-and-future-adaptation",
+      "canonicalComponent": "long-horizon-signal-and-future-adaptation",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicy.swift", "symbol": "LongHorizonProfessionalProfileEvaluator", "kind": "struct"},
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicy.swift", "symbol": "LongHorizonProfessionalPolicy", "kind": "struct"},
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "symbol": "LongHorizonProfessionalPolicyArtifacts", "kind": "struct"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift", "fragment": "extension LongHorizonProfessionalPolicy"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift", "fragment": "func completeQualificationChain()"}
+      ],
+      "pcmConsequence": "changes-future-pcm-only",
+      "limitations": "The policy consumes reduced accepted evidence and can influence only an eligible future score through the mapped adaptation state."
+    },
+    {
+      "id": "shared-preparation-owner",
+      "title": "Canonical platform-neutral preparation owner",
+      "category": "preparation",
+      "classification": "canonical-owner",
+      "surfaceComponent": "shared-detached-preparation",
+      "canonicalComponent": "shared-detached-preparation",
+      "members": [
+        {"path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift", "symbol": "AutonomousPerformancePreparer", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift", "fragment": "package static func prepareDiagnosing("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func desktopHostsUseSharedPreparation()"}
+      ],
+      "pcmConsequence": "creates-future-pcm",
+      "limitations": "Both hosts call this owner; it delegates one DSP transaction and returns one immutable PreparedPerformancePhrase."
+    },
+    {
+      "id": "macos-host-owner",
+      "title": "macOS transport owner",
+      "category": "host",
+      "classification": "canonical-owner",
+      "surfaceComponent": "macos-transport-and-session-lifecycle",
+      "canonicalComponent": "macos-transport-and-session-lifecycle",
+      "members": [
+        {"path": "Sources/AutoTechnoApp/TechnoEngine.swift", "symbol": "TechnoEngine", "kind": "class"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoApp/TechnoEngine.swift", "fragment": "AutonomousPerformancePreparer.prepareDiagnosing("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func desktopHostsUseSharedPreparation()"}
+      ],
+      "pcmConsequence": "schedules-immutable-pcm",
+      "limitations": "TechnoEngine owns macOS scheduling and route lifecycle but receives its score and PCM from the shared preparer."
+    },
+    {
+      "id": "macos-presentation-preparer-adapter",
+      "title": "macOS presentation-preparation adapter",
+      "category": "preparation",
+      "classification": "host-adapter",
+      "surfaceComponent": "macos-transport-and-session-lifecycle",
+      "canonicalComponent": "shared-detached-preparation",
+      "members": [
+        {"path": "Sources/AutoTechnoApp/TechnoEngine.swift", "symbol": "AppPerformancePreparer", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoApp/TechnoEngine.swift", "fragment": "let outcome = AutonomousPerformancePreparer.prepareDiagnosing("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func desktopHostsUseSharedPreparation()"}
+      ],
+      "pcmConsequence": "projects-without-changing-pcm",
+      "limitations": "This private adapter adds immutable inspector snapshots only and cannot plan, render, evaluate, or replace PCM."
+    },
+    {
+      "id": "live-feedback-owner",
+      "title": "Canonical live-feedback coordinator",
+      "category": "host",
+      "classification": "canonical-owner",
+      "surfaceComponent": "live-feedback-coordination-and-inspection",
+      "canonicalComponent": "live-feedback-coordination-and-inspection",
+      "members": [
+        {"path": "Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift", "symbol": "LiveFeedbackCoordinator", "kind": "class"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift", "fragment": "package final class LiveFeedbackCoordinator"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func canonicalLiveFeedbackDocumentationIsCurrent()"}
+      ],
+      "pcmConsequence": "changes-future-pcm-only",
+      "limitations": "The coordinator observes authenticated app-owned PCM and can authorize only bounded future work."
+    },
+    {
+      "id": "live-feedback-owned-stages",
+      "title": "Owned live-feedback lifecycle and boundary stages",
+      "category": "host",
+      "classification": "owned-stage",
+      "surfaceComponent": "live-feedback-coordination-and-inspection",
+      "canonicalComponent": "live-feedback-coordination-and-inspection",
+      "members": [
+        {"path": "Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift", "symbol": "LiveCorrectedSuccessorBoundaryPolicy", "kind": "enum"},
+        {"path": "Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift", "symbol": "LiveFeedbackRuntimeCoordinator", "kind": "class"},
+        {"path": "Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift", "symbol": "LiveFeedbackEngineOrchestrator", "kind": "class"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift", "fragment": "package final class LiveFeedbackCoordinator"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func canonicalLiveFeedbackDocumentationIsCurrent()"}
+      ],
+      "pcmConsequence": "changes-future-pcm-only",
+      "limitations": "These lifecycle objects authenticate, order, and expire work; they do not render PCM or choose musical content."
+    },
+    {
+      "id": "windows-host-owner",
+      "title": "Windows transport owner",
+      "category": "host",
+      "classification": "canonical-owner",
+      "surfaceComponent": "windows-transport-and-waveout",
+      "canonicalComponent": "windows-transport-and-waveout",
+      "members": [
+        {"path": "Sources/AutoTechnoWindows/main.swift", "symbol": "WindowsAutoTechnoController", "kind": "class"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoWindows/main.swift", "fragment": "AutonomousPerformancePreparer.prepare("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func desktopHostsUseSharedPreparation()"}
+      ],
+      "pcmConsequence": "schedules-immutable-pcm",
+      "limitations": "The Windows controller converts and queues the same prepared product; it is a host adapter rather than a second engine."
+    }
+  ],
+  "profileGroups": [
+    {
+      "id": "score-profile-state",
+      "title": "Score-owned groove profile",
+      "category": "profile",
+      "classification": "score-state",
+      "surfaceComponent": "session-director-and-score",
+      "canonicalComponent": "session-director-and-score",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/TechnoScene.swift", "symbol": "GrooveProfile", "kind": "struct"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/TechnoScene.swift", "fragment": "let grooveProfile = GrooveProfile("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift", "fragment": "func groovePulseResolvedRendering()"}
+      ],
+      "pcmConsequence": "selects-score-only",
+      "limitations": "Profile means immutable groove data here, not a user-selectable or alternate runtime profile."
+    },
+    {
+      "id": "qualified-repeat-playback-state",
+      "title": "Qualified repeat-hold playback state",
+      "category": "profile",
+      "classification": "bounded-playback-state",
+      "surfaceComponent": "session-director-and-score",
+      "canonicalComponent": "session-director-and-score",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/RepeatHoldEvolutionPolicy.swift", "symbol": "RepeatHoldEvolutionPlaybackMode", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/RepeatHoldEvolutionPolicy.swift", "fragment": "case qualifiedPattern(RepeatHoldEvolutionPatternFamily)"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift", "fragment": "func boundaryPolicyIsBounded()"}
+      ],
+      "pcmConsequence": "replays-qualified-pcm-without-canonical-advance",
+      "limitations": "Mode is internal bounded presentation state, not a user mode, engine selector, or live effect path."
+    },
+    {
+      "id": "live-feedback-quiescence-state",
+      "title": "Live-feedback quiescence lifecycle state",
+      "category": "profile",
+      "classification": "host-lifecycle",
+      "surfaceComponent": "live-feedback-coordination-and-inspection",
+      "canonicalComponent": "live-feedback-coordination-and-inspection",
+      "members": [
+        {"path": "Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift", "symbol": "LiveFeedbackEngineQuiescenceMode", "kind": "enum"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoApp/LiveFeedbackCoordinator.swift", "fragment": "package func quiesceAndTearDown"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func canonicalLiveFeedbackDocumentationIsCurrent()"}
+      ],
+      "pcmConsequence": "none",
+      "limitations": "Mode selects pause versus stop ordering during teardown and has no musical or renderer authority."
+    },
+    {
+      "id": "fdn-dsp-configuration",
+      "title": "Bounded FDN DSP configuration",
+      "category": "profile",
+      "classification": "dsp-configuration",
+      "surfaceComponent": "graph-effects-routing-and-mix",
+      "canonicalComponent": "graph-effects-routing-and-mix",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/FeedbackDelayNetwork.swift", "symbol": "FeedbackDelayNetworkConfiguration", "kind": "struct"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/VoiceRenderer.swift", "fragment": "let requestedSpatialFDNConfiguration = FeedbackDelayNetworkConfiguration("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/FeedbackDelayNetworkTests.swift", "fragment": "func configurationBounds()"}
+      ],
+      "pcmConsequence": "processes-future-pcm",
+      "limitations": "This is score-derived bounded DSP state inside the canonical voice renderer, not a preset or hidden graph."
+    },
+    {
+      "id": "modal-implementation-configuration",
+      "title": "Private modal-voice implementation configuration",
+      "category": "profile",
+      "classification": "implementation-detail",
+      "surfaceComponent": "voice-and-phrase-rendering",
+      "canonicalComponent": "voice-and-phrase-rendering",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/ModalPercussionVoice.swift", "symbol": "ModeConfiguration", "kind": "struct"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/ModalPercussionVoice.swift", "fragment": "private struct ModeConfiguration"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift", "fragment": "func directorModalPercussionOwnsExistingFoundationEvents()"}
+      ],
+      "pcmConsequence": "processes-future-pcm",
+      "limitations": "Mode denotes one resonator coefficient record and is private to the canonical modal voice."
+    },
+    {
+      "id": "material-world-effect-vocabulary",
+      "title": "Score-owned material-world effect vocabulary",
+      "category": "profile",
+      "classification": "score-state",
+      "surfaceComponent": "long-horizon-semantic-control",
+      "canonicalComponent": "long-horizon-semantic-control",
+      "members": [
+        {"path": "Sources/AutoTechnoCore/LongHorizonMaterialWorld.swift", "symbol": "effectPresets", "kind": "static-value"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoCore/LongHorizonMaterialWorld.swift", "fragment": "effect: effectPresets["}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func longCycleWorldPrimaryIdentityContract()"}
+      ],
+      "pcmConsequence": "selects-score-only",
+      "limitations": "The historical identifier names a private bounded axis vocabulary, not factory presets, a browser, a selectable profile, or an alternate graph."
+    },
+    {
+      "id": "long-horizon-installed-profile",
+      "title": "Installed long-horizon calibration profile",
+      "category": "profile",
+      "classification": "installed-calibration-artifact",
+      "surfaceComponent": "long-horizon-signal-and-future-adaptation",
+      "canonicalComponent": "long-horizon-signal-and-future-adaptation",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicy.swift", "symbol": "LongHorizonProfessionalProfile", "kind": "struct"},
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicy.swift", "symbol": "profileVersion", "kind": "static-value"},
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "symbol": "profileResource", "kind": "static-value"},
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "symbol": "expectedProfileFingerprint", "kind": "static-value"},
+        {"path": "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v16.json", "symbol": "long-horizon-professional-profile-v16", "kind": "json-resource"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "fragment": "\"long-horizon-professional-profile-v16\""}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift", "fragment": "func bundledArtifacts()"}
+      ],
+      "pcmConsequence": "changes-future-pcm-only",
+      "limitations": "One exact packaged profile is fingerprint-bound to the current engine and primary policy; no selector is exposed."
+    },
+    {
+      "id": "long-horizon-profile-support",
+      "title": "Long-horizon adversarial and holdout support",
+      "category": "profile",
+      "classification": "qualification-support-artifact",
+      "surfaceComponent": "long-horizon-signal-and-future-adaptation",
+      "canonicalComponent": "long-horizon-signal-and-future-adaptation",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v16.json", "symbol": "long-horizon-adversarial-suite-v16", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v16.json", "symbol": "long-horizon-holdout-v16", "kind": "json-resource"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "fragment": "\"long-horizon-adversarial-suite-v16\""},
+        {"path": "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift", "fragment": "\"long-horizon-holdout-v16\""}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift", "fragment": "func currentPolicyResourcesFailClosed()"}
+      ],
+      "pcmConsequence": "qualifies-without-changing-pcm",
+      "limitations": "These artifacts qualify the one installed profile and cannot be selected as runtime policies."
+    },
+    {
+      "id": "primary-installed-profile",
+      "title": "Installed primary calibration profile",
+      "category": "profile",
+      "classification": "installed-calibration-artifact",
+      "surfaceComponent": "evidence-calibration-and-primary-evaluation",
+      "canonicalComponent": "evidence-calibration-and-primary-evaluation",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityCalibration.swift", "symbol": "ProfessionalQualityCheckpointProfile", "kind": "struct"},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityCalibration.swift", "symbol": "ProfessionalQualityCalibrationProfile", "kind": "struct"},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityCalibration.swift", "symbol": "profileVersion", "kind": "static-value"},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "symbol": "profileResource", "kind": "static-value"},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "symbol": "expectedProfileFingerprint", "kind": "static-value"},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift", "symbol": "requiredProfileVersion", "kind": "static-value"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v29.json", "symbol": "professional-quality-primary-profile-v29", "kind": "json-resource"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-profile-v29\""}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV29Only()"}
+      ],
+      "pcmConsequence": "qualifies-without-changing-pcm",
+      "limitations": "Checkpoint profiles are parts of one exact installed calibration profile; neither is a runtime style or engine profile."
+    },
+    {
+      "id": "primary-profile-support",
+      "title": "Primary adversarial and holdout support",
+      "category": "profile",
+      "classification": "qualification-support-artifact",
+      "surfaceComponent": "evidence-calibration-and-primary-evaluation",
+      "canonicalComponent": "evidence-calibration-and-primary-evaluation",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v29.json", "symbol": "professional-quality-primary-adversarial-suite-v29", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v29.json", "symbol": "professional-quality-primary-holdout-v29", "kind": "json-resource"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-adversarial-suite-v29\""},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-holdout-v29\""}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV29Only()"}
+      ],
+      "pcmConsequence": "qualifies-without-changing-pcm",
+      "limitations": "These exact resources gate construction of the primary evaluator and expose no parallel runtime evaluator path."
+    }
+  ],
+  "effectPaths": [
+    {
+      "id": "automatic-mix-path",
+      "title": "Automatic mix planning inside voice rendering",
+      "classification": "owned-effect-stage",
+      "canonicalComponent": "graph-effects-routing-and-mix",
+      "sourcePath": "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift",
+      "entryAnchors": [
+        {"path": "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift", "fragment": "package static func resolve(observations:"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/VoiceRenderer.swift", "fragment": "let automaticMix = AutomaticMixBalancer.resolve("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift", "fragment": "func automaticMixBounds()"}
+      ],
+      "pcmConsequence": "processes-future-pcm",
+      "limitations": "The balancer emits bounded role gains consumed by VoiceRenderer; it has no output bus or host entry point."
+    },
+    {
+      "id": "effect-carrier-upper-pump-path",
+      "title": "Effect-carrier dose and upper-pump stage",
+      "classification": "owned-effect-stage",
+      "canonicalComponent": "graph-effects-routing-and-mix",
+      "sourcePath": "Sources/AutoTechnoDSP/EffectCarrierAndUpperPumpDSP.swift",
+      "entryAnchors": [
+        {"path": "Sources/AutoTechnoDSP/EffectCarrierAndUpperPumpDSP.swift", "fragment": "package enum UpperMusicalPumpProcessor"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift", "fragment": "let pumpedUpper = UpperMusicalPumpProcessor.apply("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/EffectCarrierAndUpperPumpTests.swift", "fragment": "func detachedDSP(seed: UInt64, sampleRate: Double)"}
+      ],
+      "pcmConsequence": "processes-future-pcm",
+      "limitations": "This stage is score-bound around the one generated graph and rejoins the canonical phrase mix before terminal processing."
+    },
+    {
+      "id": "feedback-delay-network-path",
+      "title": "Prepared spatial feedback-delay network",
+      "classification": "owned-effect-stage",
+      "canonicalComponent": "graph-effects-routing-and-mix",
+      "sourcePath": "Sources/AutoTechnoDSP/FeedbackDelayNetwork.swift",
+      "entryAnchors": [
+        {"path": "Sources/AutoTechnoDSP/FeedbackDelayNetwork.swift", "fragment": "package static func processPrepared("}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/VoiceRenderer.swift", "fragment": "FeedbackDelayNetwork.processPrepared("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/FeedbackDelayNetworkTests.swift", "fragment": "func continuationAndFallback()"}
+      ],
+      "pcmConsequence": "processes-future-pcm",
+      "limitations": "The FDN is a prepared voice-local spatial primitive whose state is carried by the canonical RenderState."
+    },
+    {
+      "id": "generated-dsp-graph-path",
+      "title": "Canonical generated DSP graph",
+      "classification": "canonical-effect-owner",
+      "canonicalComponent": "graph-effects-routing-and-mix",
+      "sourcePath": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
+      "entryAnchors": [
+        {"path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift", "fragment": "package enum DSPGraphGenerator"},
+        {"path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift", "fragment": "package enum GeneratedDSPGraphRenderer"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift", "fragment": "let generated = GeneratedDSPGraphRenderer.process("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift", "fragment": "func topologyDistinction()"}
+      ],
+      "pcmConsequence": "processes-future-pcm",
+      "limitations": "This is the only score-generated graph plan/renderer path; specialized primitives remain subordinate stages."
+    },
+    {
+      "id": "repeat-hold-qualified-branch",
+      "title": "Prequalified repeat-hold transformation branch",
+      "classification": "bounded-qualified-branch",
+      "canonicalComponent": "graph-effects-routing-and-mix",
+      "sourcePath": "Sources/AutoTechnoDSP/RepeatHoldEvolution.swift",
+      "entryAnchors": [
+        {"path": "Sources/AutoTechnoDSP/RepeatHoldEvolution.swift", "fragment": "package enum RepeatHoldEvolutionQualifier"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift", "fragment": "RepeatHoldEvolutionRenderAccumulator("},
+        {"path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift", "fragment": "RepeatHoldEvolutionQualifier.qualify("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift", "fragment": "func preparedVariantsAreQualified()"}
+      ],
+      "pcmConsequence": "replays-qualified-pcm-without-canonical-advance",
+      "limitations": "Branches are rendered and hard-gate-qualified during the same preparation transaction, remain bounded, and cannot advance canonical score state."
+    },
+    {
+      "id": "tpt-antialiased-core-path",
+      "title": "TPT antialiased nonlinear voice primitive",
+      "classification": "owned-effect-stage",
+      "canonicalComponent": "graph-effects-routing-and-mix",
+      "sourcePath": "Sources/AutoTechnoDSP/TPTAntialiasedNonlinearCore.swift",
+      "entryAnchors": [
+        {"path": "Sources/AutoTechnoDSP/TPTAntialiasedNonlinearCore.swift", "fragment": "enum TPTAntialiasedNonlinearCore"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/ResonantMonoVoice.swift", "fragment": "TPTAntialiasedNonlinearCore.process("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/TPTAntialiasedNonlinearCoreTests.swift", "fragment": "func antiderivativeAntialiasingSuppressesFoldedHarmonics()"}
+      ],
+      "pcmConsequence": "processes-future-pcm",
+      "limitations": "This voice-local filter/nonlinearity primitive is not a parallel graph or renderer and cannot dispatch itself."
+    },
+    {
+      "id": "waveform-envelope-projection",
+      "title": "Read-only waveform envelope projection",
+      "classification": "non-pcm-projection",
+      "canonicalComponent": "graph-effects-routing-and-mix",
+      "sourcePath": "Sources/AutoTechnoDSP/WaveformEnvelope.swift",
+      "entryAnchors": [
+        {"path": "Sources/AutoTechnoDSP/WaveformEnvelope.swift", "fragment": "package static func fixedDB("}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift", "fragment": "WaveformEnvelope.fixedDB("}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift", "fragment": "func waveformUsesFixedDecibelScale()"}
+      ],
+      "pcmConsequence": "projects-without-changing-pcm",
+      "limitations": "The envelope is derived after immutable PCM preparation for read-only presentation and cannot affect rendering or evidence."
+    }
+  ]
+}

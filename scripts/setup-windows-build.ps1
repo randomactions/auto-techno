@@ -22,9 +22,4 @@ winget install --id Swift.Toolchain --exact --version 6.3.3 --source winget `
     --accept-package-agreements --accept-source-agreements
 if ($LASTEXITCODE -ne 0) { throw "Swift toolchain installation failed." }
 
-Write-Host "Installing Inno Setup for the one-file installer..."
-winget install --id JRSoftware.InnoSetup --exact --source winget `
-    --accept-package-agreements --accept-source-agreements
-if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed." }
-
 Write-Host "Setup complete. Close this window, reopen PowerShell, then run scripts\build-windows.cmd."

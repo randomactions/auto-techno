@@ -854,6 +854,11 @@ package final class PreparedAutonomousPhrase: Sendable {
     package let plan: AutonomousPhrasePlan
     package let graph: DSPGraphPlan
     package let blocks: [RenderBlock]
+    /// Empty for every production call. Opt-in local evidence exporters may
+    /// retain same-pass diagnostic PCM after the selected candidate commits;
+    /// schedulers and continuation never consume this field.
+    package let diagnosticRoleStemCaptures:
+        [AutonomousBarRoleStemCapture]
     /// Independently hard-gate-qualified immutable fallback families for a
     /// prolonged coherent hold. They never change primary selection,
     /// continuation, or quality acceptance.
@@ -891,6 +896,7 @@ package final class PreparedAutonomousPhrase: Sendable {
         plan: AutonomousPhrasePlan,
         graph: DSPGraphPlan,
         blocks: [RenderBlock],
+        diagnosticRoleStemCaptures: [AutonomousBarRoleStemCapture],
         repeatHoldEvolutions: [PreparedRepeatHoldEvolutionPhrase],
         repeatHoldEvolutionEvidence: [RepeatHoldEvolutionEvidence],
         endingRenderState: RenderState,
@@ -915,6 +921,7 @@ package final class PreparedAutonomousPhrase: Sendable {
         self.plan = plan
         self.graph = graph
         self.blocks = blocks
+        self.diagnosticRoleStemCaptures = diagnosticRoleStemCaptures
         self.repeatHoldEvolutions = repeatHoldEvolutions
         self.repeatHoldEvolutionEvidence = repeatHoldEvolutionEvidence
         self.endingRenderState = endingRenderState
@@ -1304,6 +1311,7 @@ package enum AutonomousPhrasePreparer {
         let routeChannelCount: Int
         let routeGeneration: Int
         let liveTargetStartSample: Int64?
+        let diagnosticRoleStemCapture: Bool
         let cancellationRequested: @Sendable () -> Bool
 
         init(
@@ -1326,6 +1334,7 @@ package enum AutonomousPhrasePreparer {
             routeChannelCount: Int,
             routeGeneration: Int,
             liveTargetStartSample: Int64?,
+            diagnosticRoleStemCapture: Bool,
             cancellationRequested: @escaping @Sendable () -> Bool
         ) {
             self.sessionSeed = sessionSeed
@@ -1347,6 +1356,7 @@ package enum AutonomousPhrasePreparer {
             self.routeChannelCount = routeChannelCount
             self.routeGeneration = routeGeneration
             self.liveTargetStartSample = liveTargetStartSample
+            self.diagnosticRoleStemCapture = diagnosticRoleStemCapture
             self.cancellationRequested = cancellationRequested
         }
     }
@@ -1381,6 +1391,7 @@ package enum AutonomousPhrasePreparer {
             routeGeneration: routeGeneration,
             pendingLiveMasterBinding: pendingLiveMasterBinding,
             liveTargetStartSample: liveTargetStartSample,
+            diagnosticRoleStemCapture: false,
             evaluator: evaluator,
             cancellationRequested: { false }
         ).preparedPhrase else {
@@ -1403,6 +1414,7 @@ package enum AutonomousPhrasePreparer {
         routeGeneration: Int = 0,
         pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding? = nil,
         liveTargetStartSample: Int64? = nil,
+        diagnosticRoleStemCapture: Bool = false,
         evaluator: E,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> PreparedAutonomousPhrase? {
@@ -1420,6 +1432,7 @@ package enum AutonomousPhrasePreparer {
             routeGeneration: routeGeneration,
             pendingLiveMasterBinding: pendingLiveMasterBinding,
             liveTargetStartSample: liveTargetStartSample,
+            diagnosticRoleStemCapture: diagnosticRoleStemCapture,
             evaluator: evaluator,
             cancellationRequested: cancellationRequested
         ).preparedPhrase
@@ -1441,6 +1454,7 @@ package enum AutonomousPhrasePreparer {
         routeGeneration: Int = 0,
         pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding? = nil,
         liveTargetStartSample: Int64? = nil,
+        diagnosticRoleStemCapture: Bool = false,
         evaluator: E,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhrasePreparationOutcome {
@@ -1458,6 +1472,7 @@ package enum AutonomousPhrasePreparer {
             routeGeneration: routeGeneration,
             pendingLiveMasterBinding: pendingLiveMasterBinding,
             liveTargetStartSample: liveTargetStartSample,
+            diagnosticRoleStemCapture: diagnosticRoleStemCapture,
             evaluator: evaluator,
             cancellationRequested: cancellationRequested
         )
@@ -1477,6 +1492,7 @@ package enum AutonomousPhrasePreparer {
         routeGeneration: Int,
         pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding?,
         liveTargetStartSample: Int64?,
+        diagnosticRoleStemCapture: Bool,
         evaluator: E,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhrasePreparationOutcome {
@@ -1612,6 +1628,7 @@ package enum AutonomousPhrasePreparer {
             routeChannelCount: routeChannelCount,
             routeGeneration: routeGeneration,
             liveTargetStartSample: liveTargetStartSample,
+            diagnosticRoleStemCapture: diagnosticRoleStemCapture,
             cancellationRequested: cancellationRequested
         )
 
@@ -1663,6 +1680,8 @@ package enum AutonomousPhrasePreparer {
                 liveTargetStartSample:
                     renderContext.liveTargetStartSample,
                 forceHomeUpperTimbre: forceHomeUpperTimbre,
+                diagnosticRoleStemCapture:
+                    renderContext.diagnosticRoleStemCapture,
                 cancellationRequested: renderContext.cancellationRequested
             )
             guard !renderContext.cancellationRequested() else {
@@ -1690,6 +1709,7 @@ package enum AutonomousPhrasePreparer {
             // Release the superseded initial sidecar before the corrective
             // render claims its bounded PCM storage.
             initialPrimary.releaseRepeatHoldEvolution()
+            initialPrimary.releaseDiagnosticRoleStemCaptures()
             let correctedResult = product(
                 plan: plan,
                 kind: .correctionRender,
@@ -2419,6 +2439,8 @@ package enum AutonomousPhrasePreparer {
         let blocks: [RenderBlock]
         private(set) var repeatHoldEvolutionCandidates:
             [RepeatHoldEvolutionRenderCandidate]
+        private(set) var diagnosticRoleStemCaptures:
+            [AutonomousBarRoleStemCapture]
         let sampleRate: Double
         let endingRenderState: RenderState
         let endingGraphState: GeneratedDSPContinuationState
@@ -2432,6 +2454,7 @@ package enum AutonomousPhrasePreparer {
             blocks: [RenderBlock],
             repeatHoldEvolutionCandidates:
                 [RepeatHoldEvolutionRenderCandidate],
+            diagnosticRoleStemCaptures: [AutonomousBarRoleStemCapture],
             sampleRate: Double,
             endingRenderState: RenderState,
             endingGraphState: GeneratedDSPContinuationState,
@@ -2444,6 +2467,7 @@ package enum AutonomousPhrasePreparer {
             self.blocks = blocks
             self.repeatHoldEvolutionCandidates =
                 repeatHoldEvolutionCandidates
+            self.diagnosticRoleStemCaptures = diagnosticRoleStemCaptures
             self.sampleRate = sampleRate
             self.endingRenderState = endingRenderState
             self.endingGraphState = endingGraphState
@@ -2454,6 +2478,10 @@ package enum AutonomousPhrasePreparer {
 
         func releaseRepeatHoldEvolution() {
             repeatHoldEvolutionCandidates.removeAll(keepingCapacity: false)
+        }
+
+        func releaseDiagnosticRoleStemCaptures() {
+            diagnosticRoleStemCaptures.removeAll(keepingCapacity: false)
         }
     }
 
@@ -2482,6 +2510,7 @@ package enum AutonomousPhrasePreparer {
         routeGeneration: Int,
         liveTargetStartSample: Int64?,
         forceHomeUpperTimbre: Bool = false,
+        diagnosticRoleStemCapture: Bool = false,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> Result<CandidateRenderProduct, AutonomousPhrasePreparationFailure> {
         let stage: AutonomousPhrasePreparationFailure.Stage =
@@ -2512,6 +2541,7 @@ package enum AutonomousPhrasePreparer {
             plan: plan, graph: graph, sampleRate: sampleRate,
             state: &renderState, graphState: &graphState,
             forceHomeUpperTimbre: forceHomeUpperTimbre,
+            diagnosticRoleStemCapture: diagnosticRoleStemCapture,
             cancellationRequested: cancellationRequested
         ) else {
             return .failure(.init(
@@ -2632,6 +2662,8 @@ package enum AutonomousPhrasePreparer {
             blocks: blocks,
             repeatHoldEvolutionCandidates:
                 renderProduct.repeatHoldEvolutionCandidates,
+            diagnosticRoleStemCaptures:
+                renderProduct.diagnosticRoleStemCaptures,
             sampleRate: sampleRate,
             endingRenderState: renderState,
             endingGraphState: graphState,
@@ -2927,6 +2959,8 @@ package enum AutonomousPhrasePreparer {
             plan: selected.plan,
             graph: selected.graph,
             blocks: selected.blocks,
+            diagnosticRoleStemCaptures:
+                selected.diagnosticRoleStemCaptures,
             repeatHoldEvolutions: repeatHoldEvolutionOutcomes.compactMap {
                 $0.prepared
             },

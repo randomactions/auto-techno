@@ -32,7 +32,11 @@ package enum MusicalControl: String, CaseIterable, Codable, Sendable {
     case drumChaos
     case synthChaos
     case textureChaos
+    /// Quarantined legacy intent identity. It has no scene, PCM, evidence, or
+    /// future-decision consequence; see PARAMETER_REACHABILITY_AUDIT.md.
     case paceOfChange
+    /// Quarantined score-only surface. These values currently create typed
+    /// scene metadata but no canonical renderer consumes it.
     case sequencerPresence
     case sequencerStyle
     case sequencerDensity
@@ -111,7 +115,7 @@ package struct MusicalIntent: Equatable, Sendable {
 
     /// Creates a random semantic intent with correlation constraints.
     /// - Parameter seed: Deterministic seed for reproducibility.
-    /// - Returns: A `MusicalIntent` with all 17 controls sampled within
+    /// - Returns: A `MusicalIntent` with every stored control sampled within
     ///   musically valid ranges, respecting cross-control invariants.
     package static func random(seed: UInt64) -> MusicalIntent {
         var random = SeededGenerator(seed: seed ^ 0xC5012F7A3E9B648D)

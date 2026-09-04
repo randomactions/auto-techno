@@ -155,6 +155,14 @@ mistaken for a completed feedback system.
    outgoing render/DSP state, finalized quality continuation state, and the
    matching live-master continuation. A pending live proposal is applied to a
    copy of incoming render state and becomes durable only in this atomic commit.
+   Before either render begins, `PhrasePreparationReplayIdentity` schema 1
+   serializes the exact session seed, full canonical session fingerprint,
+   long-horizon adaptation fingerprint, incoming render and generated-DSP
+   fingerprints, prior graph fingerprint, route identity, recovery context,
+   live proposal identity, and relevant future sample coordinates. Decoding
+   validates its aggregate fingerprint, and preparation rejects a request whose
+   restored state does not reproduce that identity. The record contains no PCM
+   and does not replace any continuation owner.
    The candidate binds source observation/proposal identity, route and future
    boundary, incoming/outgoing revisions, requested/applied trim, and exact
    terminal pre/post PCM scaling. Rejected or unavailable work cannot mutate
@@ -719,6 +727,262 @@ the preceding engine's neutral path. Pause/resume, cancellation, retry, and
 route recovery re-enter from the accepted continuation boundary and therefore
 cannot spend, reset, or advance any of these world-owned decisions twice.
 
+## Implemented component licence and asset inventory
+
+`docs/COMPONENT_LICENSE_ASSET_MANIFEST.json` is the machine-readable compliance
+record for the resolved SwiftPM graph, platform imports and link libraries, CI
+actions, active Windows build toolchains, explicit distribution isolation, every
+tracked resource/licence/media/binary asset, and governed local-only research
+class. Its generated Markdown is descriptive; the JSON and repository/package
+surfaces are authoritative. The offline checker fails on an undeclared resolved
+package, source import, linked system library, CI action, governed asset, missing
+licence field, invalid disposition, changed asset hash, stale rendering, missing
+ignore rule, tracked private research artifact, or mutable GitHub Action selector.
+
+The current macOS executable has no third-party runtime package. Swift Testing
+and Swift Syntax are exact test-only pins. Apple and Windows system frameworks
+remain platform-provided. Every active GitHub Action is pinned to an exact
+reviewed revision. The Windows source-validation path builds and tests in place,
+but does not install Inno Setup, copy Swift/Foundation/Dispatch or MSVC runtime
+DLLs, create an installer or archive, or upload a distribution. The dormant
+project-owned installer template is isolated from every active script and
+workflow. Windows distribution may return only through the exact per-file
+licence, notice, version, hash, and REDIST re-entry gate in
+`docs/WINDOWS_DISTRIBUTION.md`. Research audio, video evidence, transcripts,
+renders, and the autonomous roadmap remain local and untracked.
+
+The local-only artifact doctor assigns new private evidence to five explicit
+classes under `docs/local/`: `roadmap-plans/`, `reports/`, `audio/`, `profiles/`,
+and `transcripts/`. The roadmap and local layout guide are the only permitted
+root files. `python3 scripts/local_artifact_doctor.py check` fails on a missing
+class directory or blanket ignore rule, an unexpected root entry, any symlink,
+or any Git-tracked local path. The doctor reads names and Git metadata only; it
+does not open, classify, transform, copy, publish, or infer permission from the
+contents of a private artifact.
+
+`docs/RESULT_STATUS_VOCABULARY.json` is the result-reporting authority for eight
+exact states across ten ordered gates: implementation, focused/full local
+verification, automated qualification, published SHA, exact-head CI, release
+launch, app/route QA, listening observation, and physical-output soak. Its
+generated Markdown is descriptive. The offline validator requires positive
+evidence, explicit non-positive limitations, every gate exactly once in order,
+and an exact list of missing release prerequisites. A professional-release claim
+cannot be verified without all nine objective gates passing for one 40-digit
+revision. Listening is the only `observed` gate and cannot be marked passed or
+used to override automated evidence.
+
+The private roadmap remains a single Markdown authority. Its offline integrity
+checker parses the exact Control C YAML subset, Control D states, and 390
+machine-searchable `AT-xxxx` rows without a Markdown/YAML dependency. It rejects
+duplicate or noncontiguous IDs, unknown or missing dependencies, self-edges and
+cycles, invalid states, more or less than one active item, controller/plan drift,
+an unsatisfied active dependency, or selection that skips a lower eligible
+queued item. It reports only and never edits, selects, completes, or renumbers a
+roadmap item.
+
+Source citations use one tracked schema and one ignored local record per active
+plan. Each source binds a stable sequential ID, HTTPS or repository locator,
+title, publisher, revision/date, access date, A–D/X depth, Control-H licence
+class, permitted use, original summary, and optional excerpt capped at 25 words.
+Repository sources are content-hash bound; the mutable local roadmap is bound to
+its explicit revision. The active preflight performs no network request and
+fails on record/plan mismatch, missing or duplicate source identity, source/hash
+drift, invalid depth/licence/use, unsafe depth-X or study-only use, or an
+overlong excerpt. A citation remains evidence, never permission to copy,
+incorporate, train on, ship, or bypass component-level review.
+
+Negative experiments use one checked local record rather than a terminal label
+alone. The record binds its item plan and citation record, stable experiment ID,
+falsifiable hypothesis, canonical owner/checkpoint, exact baseline and bounded
+intervention, safe local evidence references, outcome/failure reason,
+nonempty learned constraints, reusable evidence, and one retirement,
+supersession, or proposed-follow-up disposition. Contradictory dispositions,
+unsafe or absent paths, missing evidence/learning, and an inconclusive result
+that claims disconfirmation fail closed. A proposed follow-up remains advice
+until Control G separately admits it.
+
+`docs/PHASE_ZERO_GATE.json` and its generated Markdown combine the Phase-0
+authorities without becoming another runtime owner. The offline gate reruns the
+contract baseline, parameter reachability, authority convergence, component
+provenance, roadmap integrity, status vocabulary, source-citation, negative-
+result, and local-artifact checks, then requires zero unowned active parameter
+domains, unresolved authority paths, invalid roadmap invariants, or unresolved
+component findings. It records exact hashes for the three tracked inventory
+authorities and binds the ignored roadmap through its active citation revision.
+Passing means only that the structural governance and provenance records agree;
+it makes no app, route, listening, physical-output, or professional-release
+qualification claim.
+
+`docs/BASELINE_CORPUS.json` is the tracked Phase-1 input authority for repeated
+offline current-state measurement. Seven roots come from one fixed,
+domain-separated SplitMix64 ordinal sequence, then bind one case to the first
+canonical occurrence of each of the seven existing journey checkpoints. No PCM,
+metric, verdict, ranking, or listening result participates in selection. The
+cases expand over the existing 44.1 and 48 kHz native-stereo route classes for
+14 future render identities. Python checks the exact derivation, IDs, route and
+coverage schema; Swift tests advance the real director and require every phrase
+kind plus initial, advanced, and long continuation states. The corpus is an
+offline input set, never a runtime seed selector or alternate state owner.
+
+AT-0016's opt-in baseline exporter advances each corpus case through the same
+accepted `AutonomousPerformancePreparer` chain used by both hosts, retaining
+render, graph, quality, and long-horizon continuation rather than fabricating an
+advanced score state. It writes only ignored local stereo IEEE-float WAVs and a
+local manifest. The manifest binds corpus and contract fingerprints, exact
+source and Git identities, engine/policy, score and incoming-state fingerprints,
+preparation replay identity, route geometry, frame count, and separate PCM/file
+SHA-256 digests. The offline verifier rejects missing, duplicate, extra,
+non-finite, malformed, path-divergent, or hash-divergent evidence. These files
+are measurement inputs, not runtime assets, release artifacts, or listening and
+professional-quality claims.
+
+AT-0018 adds a read-only pairwise comparator over valid whole-mix or role-stem
+manifests. It streams canonical Float32 WAV evidence, rechecks geometry,
+finiteness, PCM/file hashes, emits a sorted PCM-set fingerprint for each side,
+and reports exact, bounded, material, or structurally incompatible results with
+sample-indexed error evidence. The report stores only root-relative paths and a
+canonical report fingerprint; verification reconstructs the complete report
+from current inputs. These offline tolerance classes never replace runtime
+typed identity, evaluator verdicts, or accepted preparation provenance. The
+contract is [`PCM_COMPARISON_REPORT.md`](PCM_COMPARISON_REPORT.md).
+
+AT-0019 adds one reusable detached `PCMSignalIntegrityAnalyzer` inside
+`AutoTechnoDSP`. It consumes only exact local whole/role PCM and reuses the
+existing Annex-2 true-peak implementation. Complete assets, channels, and
+route-derived one-bar segments retain sample peak, RMS, crest, DC, clipping,
+subnormal, non-finite, exact-zero, and near-silence counts plus longest silent
+runs. The ignored report binds corpus, contract, source, Git, engine, both
+manifests, every PCM-set identity, and a canonical report fingerprint. No report
+field is admitted to current preparation, quality policy, continuation,
+scheduler, route, presentation, handoff, or callback state. The complete
+contract is [`PCM_SIGNAL_BASELINE.md`](PCM_SIGNAL_BASELINE.md).
+
+AT-0020 composes two existing detached evidence owners without replacing either.
+`PCMSpectralBaselineAnalyzer` folds exact whole/role PCM by arithmetic channel
+mean, divides each fixed-130-BPM bar into the masking owner's sixteen causal
+cells, and exposes that owner's four band mean squares. One centered canonical
+`StreamingPerceptualEvidenceAnalyzer` window per cell retains centroid,
+bandwidth, flatness, and 85%-rolloff facts. A source-active cell is descriptively
+low-end occupied only when the existing 35--120 Hz band is positive and owns at
+least 10% of the four analyzed bands. The causal filters are explicitly not a
+power-complementary bank and sampled occupancy is not continuous coverage or a
+quality threshold. Exact windows, segment/role summaries, manifests, PCM sets,
+source/Git/engine/contract identities, and the report fingerprint remain local
+and ignored. No report field reaches preparation, evaluation, correction,
+continuation, scheduling, route state, presentation, handoff, or callback work.
+The complete contract is
+[`PCM_SPECTRAL_BASELINE.md`](PCM_SPECTRAL_BASELINE.md).
+
+AT-0021 reconciles the accepted resolved score, selected candidate kick syntax,
+canonical dotted-foundation pocket evidence, and the exact aligned post-fader
+kick/foundation role taps without changing any owner. Each score-bound kick
+receives a bar-bounded two-step window divided by the masking owner's sixteen
+causal cells. The local report retains one-sided activity, separation, temporal
+overlap, provisional 35--120 Hz similarity overlap, cell-quantized duration,
+responsible signal pair, descriptive relative energy, exact pocket silence, and
+explicit confidence inputs. It does not infer events from PCM or label overlap,
+relative level, or silence as a quality failure. A second implementation
+independently rereads both manifests and exact WAVs, reconstructs causal energy,
+timing, aggregation, pocket samples, and provenance, then binds the report with
+a canonical fingerprint. Report fields never enter preparation, evaluation,
+correction, continuation, scheduling, route state, presentation, handoff, or
+callback work. The complete contract is
+[`KICK_FOUNDATION_COLLISION_BASELINE.md`](KICK_FOUNDATION_COLLISION_BASELINE.md).
+
+AT-0022 extracts the current `MusicalQualityMetrics` transient detector into a
+reusable state machine whose constants, comparison order, envelope update,
+refractory geometry, and density denominator remain parity-tested. A separate
+detached `PCMTransientEnvelopeAnalyzer` folds each exact whole/role asset with
+the same arithmetic channel mean, then retains PCM-inferred activity or legacy-
+flux onsets, bounded 10%--90% attack rise and normalized shape, peak-through-
+boundary decay occupancy, optional 10% decay landmark, and event/segment/asset
+crest. Inferred onsets are explicitly not score-bound. Silence and roles with
+no inferred events use zero counts and null shape aggregates. The independent
+verifier rereads every manifest-bound Float32 WAV and recomputes every event,
+landmark, aggregate, and report fingerprint. No report field reaches
+preparation, evaluation, correction, continuation, scheduling, route state,
+presentation, handoff, or callback work. The complete contract is
+[`PCM_TRANSIENT_ENVELOPE_BASELINE.md`](PCM_TRANSIENT_ENVELOPE_BASELINE.md).
+
+AT-0024 composes that unchanged PCM-inferred onset authority with exact accepted
+whole-mix samples only. `PCMRhythmicBaselineAnalyzer` maps onsets onto one
+nearest cyclic sixteen-step grid while retaining signed physical microtiming,
+linear and complete-bar cyclic intervals, rhythmic-rest cells, and exact
+multichannel silence as distinct facts. Two named metrical proxies remain
+reconstructable rather than perceptual claims. Complete bars compare against at
+most four predecessors using exact PCM and onset identity, count-normalized
+grid mutation/similarity, all-sixteen rotation search, and matched-cell
+microtiming distance. Two no-onset bars make the rhythmic relation explicitly
+unavailable even when their PCM is identical. The whole manifest does not
+retain event-local score data, so score binding is truthfully unavailable and
+no inferred onset becomes score authority. The independent verifier rereads all
+fourteen WAVs and recomputes every bar, comparison, aggregate, and fingerprint.
+No report field reaches preparation, evaluation, correction, continuation,
+scheduling, route state, presentation, handoff, or callback work. The complete
+contract is [`PCM_RHYTHMIC_BASELINE.md`](PCM_RHYTHMIC_BASELINE.md).
+
+AT-0025 adds the complementary resolved-score motif view without changing that
+PCM authority. `ScoreMotifBaselineAnalyzer` receives the already accepted
+canonical phrase plan, reconstructs the renderer's existing
+`SynthPerformancePlan`, and analyzes only resolved upper-score notes. Anchor,
+shadow, and response notes form separately reported and combined motif scopes;
+atmosphere and transition notes remain retained as excluded provenance rather
+than silently disappearing. Millistep onset/duration tokens, MIDI-millinote
+pitch tokens, exact and normalized motif identities, interval contours,
+register and density deltas, and bounded lag/rotation mutation comparisons are
+all reconstructable from exported raw score input. Empty or inactive scopes
+are explicitly unavailable. The independent verifier rebuilds every token,
+bar, comparison, aggregate, and fingerprint, while route-paired cases must
+retain identical plan, input, and evidence. No report field reaches rendering,
+evaluation, correction, continuation, scheduling, route state, presentation,
+handoff, or callback work. The complete contract is
+[`SCORE_MOTIF_BASELINE.md`](SCORE_MOTIF_BASELINE.md).
+
+AT-0026 adds a detached composite boundary view while preserving every narrower
+owner. `PCMSectionBoundaryBaselineAnalyzer` accepts no more than three exact
+contiguous accepted phrases and forty-eight complete bars. Phrase kind/start and
+resolved interlock chapter declare boundaries; PCM never discovers or authors
+them. The analyzer composes the existing signal, spectral causal-band, stereo,
+and PCM-inferred rhythmic observations into a fixed two-bar reference, first
+post-boundary bar with sixteen exact cells, and eight-bar post horizon. Each of
+nine ordered dimensions retains native-unit transition deltas and independent
+movement, closed-reference-envelope entry, and two-consecutive-bar residence
+facts. Missing predecessor, successor, or spatial evidence fails closed through
+explicit unavailable states rather than changing the metric set.
+
+The default-off local exporter advances the same accepted state/render/graph/
+quality/long-horizon chain, retains only immediate predecessor/focus/successor,
+and requires the focus PCM to remain byte-identical to the existing whole-mix
+manifest. Its WAV, raw score/observation input, evidence, and manifest stay
+ignored. The independent verifier rereads exact context WAVs and reconstructs
+every observation, marker, window, recovery record, aggregate, hash, and source
+binding. None of this evidence reaches preparation, evaluation, correction,
+continuation, scheduling, route state, presentation, handoff, or callback work.
+The complete contract is
+[`PCM_SECTION_BOUNDARY_BASELINE.md`](PCM_SECTION_BOUNDARY_BASELINE.md).
+
+AT-0028 adds a release-only, default-off performance observatory around the
+same accepted preparation boundary. The local exporter reconstructs all seven
+Phase-1 corpus checkpoints on both 44.1 and 48 kHz native-stereo routes, excludes
+one warmup, and records three ordered trials for planning, the existing combined
+render/evaluate transaction, long-horizon observation, waveform presentation,
+and complete `AutonomousPerformancePreparer` replay. The direct and complete
+paths must retain exact plan, PCM, and evaluation identity. Calculated working
+storage remains separate from cumulative `getrusage` process high-water; neither
+is described as phase-exclusive allocation.
+
+The same exporter measures the unchanged fixed C queue producer outside the
+callback over 128, 256, 512, and 1,024 native-stereo frames. Every timed batch is
+drained and exactly compared after timing. Its drop/reject counters remain
+feedback-handoff facts and never become output-underrun evidence. Actual macOS
+callback durations, frame geometry, non-normal cycles, and glitch-relevant
+points of interest come only from an external Instruments Audio System Trace;
+no timer, signpost, counter, logging, allocation, lock, wait, or analysis was
+added to the callback. Missing live or native-Windows evidence stays explicitly
+unavailable. Timings never affect score, rendering, evaluation, correction,
+adaptation, scheduling, route state, presentation, or callback work. The
+complete contract is [`PERFORMANCE_ENVELOPE.md`](PERFORMANCE_ENVELOPE.md).
+
 ## Implemented pad rhythmic-modulation slice
 
 The canonical phrase-composition resolver now retains one bounded rhythmic
@@ -1111,6 +1375,20 @@ scheduled bar.
 The complete contract is [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md).
 
 ## Reproducibility and product boundary
+
+Phase-1 role-stem evidence uses the exact selected preparation transaction, not
+a second renderer or a set of solo re-renders. An explicit local-only request
+may retain the renderer's transient dry roles, protected-rhythm pass, graph
+input, processed upper stage, pre-climax mix, and named nonlinear residuals.
+Rejected candidate captures are released before correction; the selected
+capture remains detached diagnostic data and is written only after preparation
+returns. Normal preparation leaves the capture collection empty. `RenderBlock`,
+render/graph continuation, both desktop hosts, schedulers, route state, the C
+handoff, and callbacks neither request nor consume it. Capture-enabled and
+capture-disabled transactions must emit bit-identical scheduled PCM and
+outgoing DSP state. The exact signal taxonomy, reconstruction equations, local
+manifest, and fail-closed verifier are specified in
+[`ROLE_STEM_CAPTURE.md`](ROLE_STEM_CAPTURE.md).
 
 Fresh-session selection and deterministic replay are separate contracts. A
 complete performance boundary chooses a new opaque root seed; after selection,

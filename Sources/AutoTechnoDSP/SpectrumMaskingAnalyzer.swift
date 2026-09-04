@@ -6,7 +6,7 @@ package enum MaskingRole: String, CaseIterable, Hashable, Sendable {
     case upper
 }
 
-package struct MaskingBand: Equatable, Sendable {
+package struct MaskingBand: Codable, Equatable, Sendable {
     package let name: String
     package let lowerHz: Double
     package let upperHz: Double
@@ -15,6 +15,88 @@ package struct MaskingBand: Equatable, Sendable {
         self.name = name
         self.lowerHz = lowerHz
         self.upperHz = upperHz
+    }
+}
+
+/// Exact causal band-energy cells used by the masking analyzer. Exposing this
+/// reduced evidence lets detached baseline tooling reuse the established band
+/// filters without claiming that their overlapping one-pole differences are a
+/// power-complementary filter bank.
+package struct MaskingBandEnergyWindow: Codable, Equatable, Sendable {
+    package let index: Int
+    package let startFrame: Int
+    package let frameCount: Int
+    package let sourceMeanSquare: Double
+    package let bandMeanSquares: [Double]
+
+    package init(
+        index: Int,
+        startFrame: Int,
+        frameCount: Int,
+        sourceMeanSquare: Double,
+        bandMeanSquares: [Double]
+    ) {
+        self.index = index
+        self.startFrame = startFrame
+        self.frameCount = frameCount
+        self.sourceMeanSquare = sourceMeanSquare
+        self.bandMeanSquares = bandMeanSquares
+    }
+}
+
+/// One sample of the established causal masking filter bank. The bands are
+/// deliberately overlapping one-pole differences rather than a
+/// power-complementary crossover, so callers must preserve their names and
+/// must not infer that their energies sum to source energy.
+package struct MaskingBandFilterOutput: Equatable, Sendable {
+    package let sub: Double
+    package let lowMid: Double
+    package let mid: Double
+    package let high: Double
+
+    package var values: [Double] {
+        [sub, lowMid, mid, high]
+    }
+
+    package subscript(index: Int) -> Double {
+        switch index {
+        case 0: sub
+        case 1: lowMid
+        case 2: mid
+        case 3: high
+        default: preconditionFailure("masking band index out of range")
+        }
+    }
+}
+
+/// Reusable sample-by-sample owner of the masking analyzer's causal filter
+/// coefficients and state. It is intended for detached evidence analysis;
+/// production rendering does not use this filter bank.
+package struct MaskingBandFilter: Sendable {
+    private static let cutoffs = [35.0, 120.0, 420.0, 2_400.0, 10_000.0]
+
+    private let coefficients: [Double]
+    private var states = [Double](repeating: 0, count: cutoffs.count)
+
+    package init?(sampleRate: Double) {
+        guard sampleRate.isFinite, sampleRate > 0 else { return nil }
+        coefficients = Self.cutoffs.map { cutoff in
+            let boundedCutoff = min(cutoff, sampleRate * 0.45)
+            return 1 - exp(-2 * Double.pi * boundedCutoff / sampleRate)
+        }
+    }
+
+    package mutating func process(_ sample: Double) -> MaskingBandFilterOutput? {
+        guard sample.isFinite else { return nil }
+        for index in states.indices {
+            states[index] += (sample - states[index]) * coefficients[index]
+        }
+        return MaskingBandFilterOutput(
+            sub: states[1] - states[0],
+            lowMid: states[2] - states[1],
+            mid: states[3] - states[2],
+            high: states[4] - states[3]
+        )
     }
 }
 
@@ -72,8 +154,7 @@ package enum SpectrumMaskingAnalyzer {
     package static let minimumPersistentWindows = 2
     package static let overlapThreshold = 0.38
 
-    private static let activeMeanSquareThreshold = 0.000_000_000_1
-    private static let cutoffs = [35.0, 120.0, 420.0, 2_400.0, 10_000.0]
+    package static let activeMeanSquareThreshold = 0.000_000_000_1
     package static let rolePairs: [(MaskingRole, MaskingRole)] = [
         (.foundation, .percussion),
         (.foundation, .upper),
@@ -93,28 +174,23 @@ package enum SpectrumMaskingAnalyzer {
             return []
         }
 
-        var energies: [MaskingRole: [[Double]]] = [:]
-        var sourceEnergies: [MaskingRole: [Double]] = [:]
+        var energies: [MaskingRole: [MaskingBandEnergyWindow]] = [:]
         energies.reserveCapacity(MaskingRole.allCases.count)
-        sourceEnergies.reserveCapacity(MaskingRole.allCases.count)
         for role in MaskingRole.allCases {
             guard let signal = signals[role],
-                  let roleAnalysis = windowBandEnergies(
+                  let roleAnalysis = bandEnergyWindows(
                     signal,
                     sampleRate: sampleRate
                   ) else {
                 return []
             }
-            energies[role] = roleAnalysis.bandEnergies
-            sourceEnergies[role] = roleAnalysis.sourceEnergies
+            energies[role] = roleAnalysis
         }
 
         var observations: [RoleMaskingObservation] = []
         observations.reserveCapacity(rolePairs.count * bands.count)
         for (firstRole, secondRole) in rolePairs {
-            guard let first = energies[firstRole], let second = energies[secondRole],
-                  let firstSource = sourceEnergies[firstRole],
-                  let secondSource = sourceEnergies[secondRole] else {
+            guard let first = energies[firstRole], let second = energies[secondRole] else {
                 return []
             }
             for bandIndex in bands.indices {
@@ -124,13 +200,13 @@ package enum SpectrumMaskingAnalyzer {
                 var longestOverlapRun = 0
                 var maximumOverlap = 0.0
                 for window in 0..<analyzedWindowCount {
-                    let firstEnergy = first[window][bandIndex]
-                    let secondEnergy = second[window][bandIndex]
+                    let firstEnergy = first[window].bandMeanSquares[bandIndex]
+                    let secondEnergy = second[window].bandMeanSquares[bandIndex]
                     // The causal analysis filters intentionally retain state
                     // across windows, but their decay must not invent source
                     // activity after an exact tap has become silent.
-                    guard firstSource[window] > activeMeanSquareThreshold,
-                          secondSource[window] > activeMeanSquareThreshold,
+                    guard first[window].sourceMeanSquare > activeMeanSquareThreshold,
+                          second[window].sourceMeanSquare > activeMeanSquareThreshold,
                           firstEnergy > activeMeanSquareThreshold,
                           secondEnergy > activeMeanSquareThreshold else {
                         currentOverlapRun = 0
@@ -163,15 +239,18 @@ package enum SpectrumMaskingAnalyzer {
         return observations
     }
 
-    private static func windowBandEnergies(
+    package static func bandEnergyWindows(
         _ samples: [Float],
         sampleRate: Double
-    ) -> (bandEnergies: [[Double]], sourceEnergies: [Double])? {
-        let coefficients = cutoffs.map { cutoff in
-            let boundedCutoff = min(cutoff, sampleRate * 0.45)
-            return 1 - exp(-2 * Double.pi * boundedCutoff / sampleRate)
+    ) -> [MaskingBandEnergyWindow]? {
+        guard sampleRate.isFinite, sampleRate > 0,
+              samples.count >= analyzedWindowCount,
+              samples.count <= maximumFrames else {
+            return nil
         }
-        var filterStates = [Double](repeating: 0, count: cutoffs.count)
+        guard var filter = MaskingBandFilter(sampleRate: sampleRate) else {
+            return nil
+        }
         var energySums = Array(
             repeating: [Double](repeating: 0, count: bands.count),
             count: analyzedWindowCount
@@ -181,34 +260,36 @@ package enum SpectrumMaskingAnalyzer {
 
         for (frame, sample) in samples.enumerated() {
             let input = Double(sample)
-            guard input.isFinite else { return nil }
-            for cutoffIndex in cutoffs.indices {
-                filterStates[cutoffIndex] +=
-                    (input - filterStates[cutoffIndex]) * coefficients[cutoffIndex]
-            }
+            guard let output = filter.process(input) else { return nil }
             let window = min(
                 analyzedWindowCount - 1,
                 frame * analyzedWindowCount / samples.count
             )
             frameCounts[window] += 1
             sourceEnergySums[window] += input * input
-            let sub = filterStates[1] - filterStates[0]
-            let lowMid = filterStates[2] - filterStates[1]
-            let mid = filterStates[3] - filterStates[2]
-            let high = filterStates[4] - filterStates[3]
-            energySums[window][0] += sub * sub
-            energySums[window][1] += lowMid * lowMid
-            energySums[window][2] += mid * mid
-            energySums[window][3] += high * high
+            for band in bands.indices {
+                energySums[window][band] += output[band] * output[band]
+            }
         }
 
+        var windows: [MaskingBandEnergyWindow] = []
+        windows.reserveCapacity(analyzedWindowCount)
+        var startFrame = 0
         for window in 0..<analyzedWindowCount {
             let divisor = Double(max(1, frameCounts[window]))
             sourceEnergySums[window] /= divisor
             for band in bands.indices {
                 energySums[window][band] /= divisor
             }
+            windows.append(MaskingBandEnergyWindow(
+                index: window,
+                startFrame: startFrame,
+                frameCount: frameCounts[window],
+                sourceMeanSquare: sourceEnergySums[window],
+                bandMeanSquares: energySums[window]
+            ))
+            startFrame += frameCounts[window]
         }
-        return (energySums, sourceEnergySums)
+        return windows
     }
 }

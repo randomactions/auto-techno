@@ -1,0 +1,442 @@
+{
+  "schema": "autotechno-component-license-asset-manifest.v1",
+  "manifestVersion": 1,
+  "accessDate": "2026-08-31",
+  "scopePolicy": "Covers the repository licence, resolved SwiftPM graph, source-level platform imports and linked libraries, CI actions, active Windows build toolchains, explicit Windows distribution isolation, every tracked resource/licence/media/binary asset, and governed local-only research classes. The dormant project-owned Inno Setup template is not invoked by an active script or workflow and is not a build dependency. Ubiquitous host shell, Git, and operating-system utilities are out of scope unless the repository redistributes them or invokes a separately licensed package. Research citations are evidence, not dependencies or copied assets.",
+  "components": [
+    {
+      "id": "apple-platform-frameworks",
+      "name": "Apple macOS SDK and system frameworks",
+      "kind": "platform-sdk",
+      "version": "macOS 14 minimum; Xcode selected by build host",
+      "revision": "installation-specific",
+      "source": "https://developer.apple.com/xcode/",
+      "license": "Apple Xcode and SDK Agreement; system-framework use only",
+      "licenseSource": "Xcode installation Resources/en.lproj/License.pdf and https://www.apple.com/legal/sla/docs/xcode.pdf",
+      "notice": "No Apple framework is copied into the repository or app bundle by project scripts",
+      "noticeSource": "Package.swift and Sources/AutoTechnoApp imports",
+      "role": "macOS UI, audio transport, observation, and platform services",
+      "distribution": "platform-provided",
+      "provenanceClass": "GREEN-SYSTEM",
+      "disposition": "retain-platform-only",
+      "bindings": [
+        "swift-import:AVFoundation",
+        "swift-import:AppKit",
+        "swift-import:Combine",
+        "swift-import:OSLog",
+        "swift-import:SwiftUI"
+      ],
+      "sourceAnchors": [
+        "Package.swift",
+        "Sources/AutoTechnoApp/AutoTechnoApp.swift",
+        "Sources/AutoTechnoApp/LivePCMTransport.swift",
+        "Sources/AutoTechnoApp/TechnoEngine.swift"
+      ]
+    },
+    {
+      "id": "auto-techno-project",
+      "name": "Auto Techno source, documentation, and generated policy assets",
+      "kind": "project",
+      "version": "current checkout",
+      "revision": "Git revision recorded by each build artifact",
+      "source": "local repository",
+      "license": "Apache-2.0",
+      "licenseSource": "LICENSE",
+      "notice": "No project NOTICE file is currently present",
+      "noticeSource": "repository root licence/notice scan on 2026-08-31",
+      "role": "canonical application, tests, documentation, and project-generated qualification resources",
+      "distribution": "repository-source",
+      "provenanceClass": "GREEN-ORIGINAL",
+      "disposition": "retain",
+      "bindings": [],
+      "sourceAnchors": [
+        "LICENSE",
+        "README.md"
+      ]
+    },
+    {
+      "id": "github-actions-checkout",
+      "name": "GitHub Actions checkout",
+      "kind": "ci-action",
+      "version": "v4-compatible exact workflow revision",
+      "revision": "11d5960a326750d5838078e36cf38b85af677262",
+      "source": "https://github.com/actions/checkout",
+      "license": "MIT",
+      "licenseSource": "https://github.com/actions/checkout/blob/11d5960a326750d5838078e36cf38b85af677262/LICENSE",
+      "notice": "Build-only action; not shipped with Auto Techno",
+      "noticeSource": "https://github.com/actions/checkout/tree/11d5960a326750d5838078e36cf38b85af677262",
+      "role": "CI source checkout",
+      "distribution": "build-only",
+      "provenanceClass": "GREEN-OPEN-SOURCE",
+      "disposition": "retain",
+      "bindings": [
+        "ci-action:actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+      ],
+      "sourceAnchors": [
+        ".github/workflows/swift.yml",
+        ".github/workflows/windows-distribution.yml"
+      ]
+    },
+    {
+      "id": "microsoft-vc143-runtime",
+      "name": "Microsoft Visual C++ v14 build-host runtime",
+      "kind": "platform-sdk",
+      "version": "host-installed Windows build runtime",
+      "revision": "installation-specific; not redistributed",
+      "source": "Visual Studio installation VC/Redist/MSVC",
+      "license": "Microsoft Visual C++ v14 Redistributable and Runtime terms",
+      "licenseSource": "https://visualstudio.microsoft.com/license-terms/",
+      "notice": "The active source-validation path does not copy or redistribute Visual C++ runtime files",
+      "noticeSource": "https://learn.microsoft.com/en-us/cpp/windows/determining-which-dlls-to-redistribute",
+      "role": "Windows build, link, and validation-host runtime prerequisite",
+      "distribution": "platform-provided",
+      "provenanceClass": "GREEN-SYSTEM",
+      "disposition": "retain-platform-only",
+      "bindings": [
+        "build-host:msvc-runtime"
+      ],
+      "sourceAnchors": [
+        "docs/WINDOWS_DISTRIBUTION.md",
+        "scripts/build-windows.ps1"
+      ]
+    },
+    {
+      "id": "python-standard-library",
+      "name": "Python 3 standard library",
+      "kind": "build-tool",
+      "version": "Python 3 host interpreter",
+      "revision": "unconstrained; local audit observed 3.14.7",
+      "source": "https://www.python.org/",
+      "license": "PSF-2.0",
+      "licenseSource": "https://docs.python.org/3/license.html",
+      "notice": "Offline tooling only; interpreter is not shipped",
+      "noticeSource": "scripts/*.py shebang and imports",
+      "role": "Repository validation, inventory generation, and audit tests",
+      "distribution": "build-only",
+      "provenanceClass": "GREEN-OPEN-SOURCE",
+      "disposition": "retain-with-release-gate",
+      "bindings": [
+        "tooling:python3"
+      ],
+      "sourceAnchors": [
+        "scripts/codebase_map.py",
+        "scripts/roadmap_contract_baseline.py"
+      ]
+    },
+    {
+      "id": "swift-runtime-toolchain",
+      "name": "Swift toolchain, standard library, Foundation, and Dispatch",
+      "kind": "toolchain-runtime",
+      "version": "swift-tools 6.0; Windows CI 6.3.3; macOS runner selected",
+      "revision": "Windows 6.3.3 pinned; local audit observed swiftlang-6.3.3.1.3",
+      "source": "https://www.swift.org/install/",
+      "license": "Apache-2.0 with Swift Runtime Library Exception",
+      "licenseSource": "https://github.com/swiftlang/swift/blob/swift-6.3.3-RELEASE/LICENSE.txt",
+      "notice": "The active Windows scripts build and test only; no Swift, Foundation, or Dispatch DLL is copied or redistributed",
+      "noticeSource": "https://github.com/swiftlang/swift/tree/swift-6.3.3-RELEASE",
+      "role": "Compiler and cross-platform standard/runtime libraries on build and validation hosts",
+      "distribution": "build-only",
+      "provenanceClass": "GREEN-OPEN-SOURCE",
+      "disposition": "retain-with-release-gate",
+      "bindings": [
+        "build-host:swift-runtime",
+        "swift-import:Dispatch",
+        "swift-import:Foundation"
+      ],
+      "sourceAnchors": [
+        ".github/workflows/windows-distribution.yml",
+        "Package.swift",
+        "docs/WINDOWS_DISTRIBUTION.md",
+        "scripts/build-windows.ps1"
+      ]
+    },
+    {
+      "id": "swift-syntax",
+      "name": "Swift Syntax",
+      "kind": "package-transitive",
+      "version": "600.0.1",
+      "revision": "0687f71944021d616d34d922343dcef086855920",
+      "source": "https://github.com/swiftlang/swift-syntax.git",
+      "license": "Apache-2.0 with Swift Runtime Library Exception",
+      "licenseSource": "https://github.com/swiftlang/swift-syntax/blob/600.0.1/LICENSE.txt",
+      "notice": "No NOTICE.txt exists at tag 600.0.1; test-only package",
+      "noticeSource": "https://github.com/swiftlang/swift-syntax/tree/600.0.1",
+      "role": "Transitive macro/compiler support for Swift Testing",
+      "distribution": "test-only",
+      "provenanceClass": "GREEN-OPEN-SOURCE",
+      "disposition": "retain-test-only",
+      "bindings": [
+        "package:swift-syntax"
+      ],
+      "sourceAnchors": [
+        "Package.resolved"
+      ]
+    },
+    {
+      "id": "swift-testing",
+      "name": "Swift Testing",
+      "kind": "package-direct",
+      "version": "0.12.0",
+      "revision": "c55848b2aa4b29a4df542b235dfdd792a6fbe341",
+      "source": "https://github.com/swiftlang/swift-testing.git",
+      "license": "Apache-2.0 with Swift Runtime Library Exception",
+      "licenseSource": "https://github.com/swiftlang/swift-testing/blob/0.12.0/LICENSE.txt",
+      "notice": "NOTICE.txt exists at 0.12.0; package is test-only and is not in the executable product",
+      "noticeSource": "https://github.com/swiftlang/swift-testing/blob/0.12.0/NOTICE.txt",
+      "role": "Test declarations and runner support",
+      "distribution": "test-only",
+      "provenanceClass": "GREEN-OPEN-SOURCE",
+      "disposition": "retain-test-only",
+      "bindings": [
+        "package:swift-testing"
+      ],
+      "sourceAnchors": [
+        "Package.resolved",
+        "Package.swift"
+      ]
+    },
+    {
+      "id": "windows-system-sdk",
+      "name": "Windows SDK and system libraries",
+      "kind": "platform-sdk",
+      "version": "Windows 11 / host-selected Windows SDK",
+      "revision": "windows-2025 runner or local installed SDK",
+      "source": "https://learn.microsoft.com/en-us/windows/apps/windows-sdk/",
+      "license": "Microsoft Windows SDK and operating-system terms",
+      "licenseSource": "Installed Windows SDK licence terms and https://visualstudio.microsoft.com/license-terms/",
+      "notice": "gdi32, user32, and winmm are linked system components and are not copied by packaging",
+      "noticeSource": "Package.swift and Sources/AutoTechnoWindowsPlatform/AutoTechnoWindowsPlatform.c",
+      "role": "Windows windowing, waveOut audio, C runtime headers, and system linkage",
+      "distribution": "platform-provided",
+      "provenanceClass": "GREEN-SYSTEM",
+      "disposition": "retain-platform-only",
+      "bindings": [
+        "linked-library:gdi32",
+        "linked-library:user32",
+        "linked-library:winmm"
+      ],
+      "sourceAnchors": [
+        "Package.swift",
+        "Sources/AutoTechnoWindowsPlatform/AutoTechnoWindowsPlatform.c"
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "path": "LICENSE",
+      "kind": "project-licence",
+      "sha256": "5c9817c129b98e7bb966bca028c43c19107102ef8e03fe799bffb4354f4ef015",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Apache Software Foundation licence text selected for this project",
+      "role": "Repository and distribution licence",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "README.md",
+        "scripts/build-windows.ps1"
+      ]
+    },
+    {
+      "path": "Sources/AutoTechnoDSP/Resources/long-horizon-adversarial-suite-v16.json",
+      "kind": "project-generated-qualification-resource",
+      "sha256": "b2842647918232c09be3c637f410f8c15aa498a062503eb0d028a3e9d3ededdd",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Deterministically generated from repository-owned long-horizon corpus and policy code",
+      "role": "Bundled long-horizon adversarial qualification bank",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift"
+      ]
+    },
+    {
+      "path": "Sources/AutoTechnoDSP/Resources/long-horizon-holdout-v16.json",
+      "kind": "project-generated-qualification-resource",
+      "sha256": "e99d32c72ae5c750ecd3f7f86f5540e0963445b1f4e37db3189f18508a130f6e",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Deterministically generated from repository-owned long-horizon corpus and policy code",
+      "role": "Bundled disjoint long-horizon holdout bank",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift"
+      ]
+    },
+    {
+      "path": "Sources/AutoTechnoDSP/Resources/long-horizon-professional-profile-v16.json",
+      "kind": "project-generated-calibration-resource",
+      "sha256": "6d321f36e269ae667b0962a9a90639e69a3aaaf53dc6854b8c98e7be4cbfbd69",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Deterministically generated from repository-owned long-horizon corpus and policy code",
+      "role": "Bundled long-horizon policy profile",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift"
+      ]
+    },
+    {
+      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v29.json",
+      "kind": "project-generated-qualification-resource",
+      "sha256": "a8ba14971024e9d5e2d806920ba073bc1d7f0eec46bb9fbf30efde43a23d1329",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Deterministically generated from repository-owned primary corpus, renderer, and evaluator code",
+      "role": "Bundled primary adversarial qualification bank",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift"
+      ]
+    },
+    {
+      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v29.json",
+      "kind": "project-generated-qualification-resource",
+      "sha256": "c7fa7b1ef1363e588dfc5527a1b39acddde1989a9cb36c56a6bd3a2ba0c87c06",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Deterministically generated from repository-owned primary corpus, renderer, and evaluator code",
+      "role": "Bundled disjoint primary holdout bank",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift"
+      ]
+    },
+    {
+      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v29.json",
+      "kind": "project-generated-calibration-resource",
+      "sha256": "77e797d34d51d7a63f7e04097404d19d4248da98c9bfe6c3c6e44961caf39110",
+      "licenseComponent": "auto-techno-project",
+      "origin": "Deterministically generated from repository-owned primary corpus, renderer, and evaluator code",
+      "role": "Bundled primary evaluator profile",
+      "distribution": "shipped-runtime",
+      "disposition": "retain",
+      "sourceAnchors": [
+        "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
+        "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift"
+      ]
+    }
+  ],
+  "localArtifactClasses": [
+    {
+      "id": "build-output-macos",
+      "pathPattern": ".build/**",
+      "ignoreRule": ".build/",
+      "kinds": [
+        "compiled objects",
+        "dependency checkouts",
+        "test products"
+      ],
+      "role": "Local SwiftPM build and dependency cache",
+      "licensePolicy": "Never treat cached dependency content as project-owned or publish it from the repository",
+      "disposition": "local-only-untracked"
+    },
+    {
+      "id": "build-output-windows",
+      "pathPattern": ".build-windows/**",
+      "ignoreRule": ".build-windows/",
+      "kinds": [
+        "compiled objects",
+        "dependency checkouts",
+        "test products"
+      ],
+      "role": "Local Windows SwiftPM build and dependency cache",
+      "licensePolicy": "Never treat cached dependency content as project-owned or publish it from the repository",
+      "disposition": "local-only-untracked"
+    },
+    {
+      "id": "distribution-output",
+      "pathPattern": "dist/**",
+      "ignoreRule": "dist/",
+      "kinds": [
+        "installer",
+        "portable archive",
+        "redistributed runtime DLLs"
+      ],
+      "role": "Stale local distribution products or future products created only after the distribution re-entry gate",
+      "licensePolicy": "Active scripts do not create or upload distribution products. Any future distribution remains blocked until exact bundled component licences, notices, versions, and REDIST eligibility pass.",
+      "disposition": "local-only-untracked"
+    },
+    {
+      "id": "private-local-artifacts",
+      "pathPattern": "docs/local/**",
+      "ignoreRule": "docs/local/",
+      "kinds": [
+        "audio and listening evidence",
+        "implementation plans",
+        "local profiles",
+        "private research",
+        "reports",
+        "roadmap controller",
+        "transcripts and source-derived notes"
+      ],
+      "role": "Structured local-only planning, reports, audio, profiles, transcripts, and research evidence",
+      "licensePolicy": "Keep every class untracked and outside runtime dependencies; do not publish or infer reuse/redistribution permission from local placement",
+      "disposition": "local-only-untracked"
+    },
+    {
+      "id": "reference-audio",
+      "pathPattern": "docs/reference/*.wav",
+      "ignoreRule": "docs/reference/*.wav",
+      "kinds": [
+        "generated renders",
+        "licensed or private references",
+        "listening fixtures"
+      ],
+      "role": "Optional behavioural and listening evidence",
+      "licensePolicy": "Never copy, bundle, publish, or make runtime/release validation depend on reference audio",
+      "disposition": "local-only-untracked"
+    },
+    {
+      "id": "video-evidence",
+      "pathPattern": "docs/reference/video-evidence/**",
+      "ignoreRule": "docs/reference/video-evidence/",
+      "kinds": [
+        "sanitized excerpts",
+        "transcripts",
+        "video-derived notes"
+      ],
+      "role": "Optional source evidence and low-confidence research decisions",
+      "licensePolicy": "Retain only locally under the research-use protocol; do not redistribute source media or transcripts",
+      "disposition": "local-only-untracked"
+    }
+  ],
+  "reviewFindings": [
+    {
+      "id": "ci-action-revision-pinned",
+      "severity": "green",
+      "component": "github-actions-checkout",
+      "summary": "Every active GitHub Action binding uses an exact 40-digit revision recorded by this manifest",
+      "disposition": "Retain the exact pin and fail manifest validation if a mutable selector is introduced",
+      "followUp": "No AT-0008 follow-up; future action upgrades require an explicit reviewed revision change"
+    },
+    {
+      "id": "windows-installer-tool-isolated",
+      "severity": "green",
+      "component": "auto-techno-project",
+      "summary": "Active Windows scripts and workflows neither install nor invoke Inno Setup; the project-owned installer template is dormant",
+      "disposition": "Keep installer generation outside the executable build path until the documented distribution re-entry gate is satisfied",
+      "followUp": "Future distribution work must review and pin its installer tool before activating the dormant template"
+    },
+    {
+      "id": "windows-msvc-distribution-isolated",
+      "severity": "green",
+      "component": "microsoft-vc143-runtime",
+      "summary": "The active Windows path no longer copies a Visual C++ runtime directory or creates a distributable artifact",
+      "disposition": "Treat the runtime as validation-host infrastructure only",
+      "followUp": "Future distribution work must prove exact per-file REDIST eligibility, versions, licences, and notices"
+    },
+    {
+      "id": "windows-swift-distribution-isolated",
+      "severity": "green",
+      "component": "swift-runtime-toolchain",
+      "summary": "The active Windows path builds and tests in place without copying Swift, Foundation, or Dispatch DLLs into a distributable artifact",
+      "disposition": "Retain Swift as a pinned Windows build toolchain and keep runtime distribution isolated",
+      "followUp": "Future distribution work must enumerate every runtime file and stage exact version-matched licence and notice evidence"
+    }
+  ]
+}

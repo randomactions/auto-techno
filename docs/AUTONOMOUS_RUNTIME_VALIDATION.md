@@ -8,6 +8,12 @@ listening may propose a new measurable hypothesis or help diagnose a failure,
 but it is not a qualification step and cannot override a failed automated
 result.
 
+[`RESULT_STATUS_VOCABULARY.md`](RESULT_STATUS_VOCABULARY.md) is the generated
+machine-readable encoding of these boundaries. A durable result record must use
+all ten ordered gates and an exact claim state. `not-applicable` never satisfies
+a professional-release prerequisite, and listening may be `observed` but never
+`passed`.
+
 This file is the evergreen release contract. Dated measurements and superseded
 candidate records live in [`history/VALIDATION_SNAPSHOTS.md`](history/VALIDATION_SNAPSHOTS.md).
 
@@ -30,18 +36,21 @@ pitch-identity matrix in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md) and the transition-
 tail gates in [`SPATIAL_ENGINE.md`](SPATIAL_ENGINE.md).
 
-For a Windows distribution, run on 64-bit Windows with the official Swift and
-Windows SDK toolchains:
+For native Windows source validation, run on 64-bit Windows with the official
+Swift and Windows SDK toolchains:
 
 ```powershell
-.\scripts\build-windows.ps1 -Installer
+.\scripts\build-windows.ps1
 ```
 
 That command must pass `swift test`, build the host-selected `AutoTechno`
-release product, bundle the runtime reported by `swiftc -print-target-info`, and
-produce both the portable ZIP and installer with SHA-256 manifests. A macOS
-compile of the Windows Swift target exercises shared source and non-Windows C
-stubs only; it is not Windows compilation or runtime evidence.
+release product, and confirm the native executable exists. It deliberately does
+not copy runtime DLLs, create a portable ZIP/installer, or upload a distribution.
+Windows distribution is unavailable until the exact per-file licence, notice,
+version, hash, and REDIST re-entry gate in `docs/WINDOWS_DISTRIBUTION.md` passes.
+A macOS compile of the Windows Swift target exercises shared source and
+non-Windows C stubs only; it is not Windows compilation, distribution, or
+runtime evidence.
 
 ## Automated quality qualification
 

@@ -1,8 +1,9 @@
 import Foundation
 
-/// Translates a full `MusicalIntent` (17 semantic controls) into the concrete
-/// parameters needed to construct a `TechnoScene`. Every mapping is deterministic
-/// and runs off the audio callback.
+/// Translates the mapped `MusicalIntent` controls into the concrete parameters
+/// needed to construct a `TechnoScene`. The reachability audit explicitly
+/// quarantines the legacy intent-only and score-only members that do not reach
+/// PCM. Every mapping is deterministic and runs off the audio callback.
 package struct MusicalIntentMapper: Sendable {
 
     /// Produces the deterministic scene parameters derived from a musical

@@ -1247,6 +1247,118 @@ package struct FoundationRhythmRenderEvidence: Equatable, Sendable {
     )
 }
 
+/// Opt-in PCM retained only by detached diagnostic preparation. These arrays
+/// expose the exact same-pass role taps that already feed render evidence;
+/// normal preparation leaves this value absent and continues recycling the
+/// workspace into immutable scheduled blocks.
+package struct VoiceRoleStemCapture: Equatable, Sendable {
+    package let dryCenterReference: [Float]
+    package let dryUpperReference: [Float]
+    package let kick: [Float]
+    package let foundation: [Float]
+    package let modalFoundation: [Float]
+    package let percussion: [Float]
+    package let upperTonal: [Float]
+    package let atmosphere: [Float]
+    package let protectedFoundation: [Float]
+    package let sourceLeft: [Float]
+    package let sourceRight: [Float]
+
+    package var frameCount: Int {
+        dryCenterReference.count
+    }
+
+    package var frameCountsAreAligned: Bool {
+        [
+            dryUpperReference.count,
+            kick.count,
+            foundation.count,
+            modalFoundation.count,
+            percussion.count,
+            upperTonal.count,
+            atmosphere.count,
+            protectedFoundation.count,
+            sourceLeft.count,
+            sourceRight.count,
+        ].allSatisfy { $0 == frameCount }
+    }
+
+    package var samplesAreFinite: Bool {
+        [
+            dryCenterReference,
+            dryUpperReference,
+            kick,
+            foundation,
+            modalFoundation,
+            percussion,
+            upperTonal,
+            atmosphere,
+            protectedFoundation,
+            sourceLeft,
+            sourceRight,
+        ].allSatisfy { $0.allSatisfy(\.isFinite) }
+    }
+}
+
+/// One bar of exact, aligned, offline-only role evidence. Shared and nonlinear
+/// stages remain explicit instead of being mislabelled as additive stems:
+/// `outputSafetyResidual` captures the bounded outer safety curve and
+/// `terminalProcessingResidual` captures climax/live-master processing.
+package struct AutonomousBarRoleStemCapture: Equatable, Sendable {
+    package let bar: Int
+    package let sampleRate: Double
+    package let full: VoiceRoleStemCapture
+    package let protectedRhythm: VoiceRoleStemCapture
+    package let graphInputLeft: [Float]
+    package let graphInputRight: [Float]
+    package let processedUpperLeft: [Float]
+    package let processedUpperRight: [Float]
+    package let preClimaxMixLeft: [Float]
+    package let preClimaxMixRight: [Float]
+    package let outputSafetyResidualLeft: [Float]
+    package let outputSafetyResidualRight: [Float]
+    package let terminalProcessingResidualLeft: [Float]
+    package let terminalProcessingResidualRight: [Float]
+
+    package var frameCount: Int {
+        full.frameCount
+    }
+
+    package var frameCountsAreAligned: Bool {
+        full.frameCountsAreAligned &&
+            protectedRhythm.frameCountsAreAligned &&
+            protectedRhythm.frameCount == frameCount &&
+            [
+                graphInputLeft.count,
+                graphInputRight.count,
+                processedUpperLeft.count,
+                processedUpperRight.count,
+                preClimaxMixLeft.count,
+                preClimaxMixRight.count,
+                outputSafetyResidualLeft.count,
+                outputSafetyResidualRight.count,
+                terminalProcessingResidualLeft.count,
+                terminalProcessingResidualRight.count,
+            ].allSatisfy { $0 == frameCount }
+    }
+
+    package var samplesAreFinite: Bool {
+        full.samplesAreFinite && protectedRhythm.samplesAreFinite &&
+            [
+                graphInputLeft,
+                graphInputRight,
+                processedUpperLeft,
+                processedUpperRight,
+                preClimaxMixLeft,
+                preClimaxMixRight,
+                outputSafetyResidualLeft,
+                outputSafetyResidualRight,
+                terminalProcessingResidualLeft,
+                terminalProcessingResidualRight,
+            ].allSatisfy { $0.allSatisfy(\.isFinite) }
+    }
+}
+
 package struct RenderedBar: Equatable, Sendable {
     package let sampleRate: Double
     package let samples: [Float]
@@ -1294,6 +1406,9 @@ package struct RenderedBar: Equatable, Sendable {
     package let effectCarrierSamples: [Float]
     package let resonantAnchorSamples: [Float]
     package let detunedCompanionSamples: [Float]
+    /// Present only for an explicitly requested detached diagnostic render.
+    /// It is never copied into `RenderBlock` or any scheduler-facing state.
+    package let diagnosticRoleStemCapture: VoiceRoleStemCapture?
 
     package init(sampleRate: Double, samples: [Float], leftSamples: [Float],
                 rightSamples: [Float], masking: [RoleMaskingObservation] = [],
@@ -1329,7 +1444,8 @@ package struct RenderedBar: Equatable, Sendable {
                 graphRemainderReferenceRightSamples: [Float],
                 effectCarrierSamples: [Float] = [],
                 resonantAnchorSamples: [Float],
-                detunedCompanionSamples: [Float]) {
+                detunedCompanionSamples: [Float],
+                diagnosticRoleStemCapture: VoiceRoleStemCapture? = nil) {
         self.sampleRate = sampleRate
         self.samples = samples
         self.leftSamples = leftSamples
@@ -1392,6 +1508,7 @@ package struct RenderedBar: Equatable, Sendable {
         self.effectCarrierSamples = effectCarrierSamples
         self.resonantAnchorSamples = resonantAnchorSamples
         self.detunedCompanionSamples = detunedCompanionSamples
+        self.diagnosticRoleStemCapture = diagnosticRoleStemCapture
     }
 }
 
@@ -1942,6 +2059,7 @@ package enum AutonomousPhraseRenderer {
         state: inout RenderState,
         graphState: inout GeneratedDSPContinuationState,
         forceHomeUpperTimbre: Bool = false,
+        diagnosticRoleStemCapture: Bool = false,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhraseRenderProduct? {
         guard !cancellationRequested() else { return nil }
@@ -1955,6 +2073,10 @@ package enum AutonomousPhraseRenderer {
         var workspace = RenderWorkspace()
         var blocks: [RenderBlock] = []
         blocks.reserveCapacity(plan.barCount)
+        var diagnosticRoleStemCaptures: [AutonomousBarRoleStemCapture] = []
+        if diagnosticRoleStemCapture {
+            diagnosticRoleStemCaptures.reserveCapacity(plan.barCount)
+        }
         let framesPerBar = max(1, Int((
             240.0 / AutonomousSessionDirector.bpm * sampleRate
         ).rounded()))
@@ -1988,7 +2110,8 @@ package enum AutonomousPhraseRenderer {
                 synthPerformance: synthPerformance,
                 workspace: &workspace,
                 layer: .protectedRhythm,
-                phraseKind: plan.kind
+                phraseKind: plan.kind,
+                diagnosticRoleStemCapture: diagnosticRoleStemCapture
             )
             guard !cancellationRequested() else { return nil }
             let rendered = VoiceRenderer.renderBar(
@@ -2003,7 +2126,8 @@ package enum AutonomousPhraseRenderer {
                 layer: .full,
                 effectCarrierRole: plan.effectCarrier.active
                     ? plan.effectCarrier.state.role : nil,
-                phraseKind: plan.kind
+                phraseKind: plan.kind,
+                diagnosticRoleStemCapture: diagnosticRoleStemCapture
             )
             guard !cancellationRequested() else { return nil }
             let events = resolved.ensemble.events.map { event in
@@ -2320,6 +2444,69 @@ package enum AutonomousPhraseRenderer {
             )
             let outputLeft = terminalOutput.left
             let outputRight = terminalOutput.right
+            if diagnosticRoleStemCapture {
+                guard let fullCapture = rendered.diagnosticRoleStemCapture,
+                      let protectedCapture =
+                        protectedRhythm.diagnosticRoleStemCapture,
+                      fullCapture.frameCountsAreAligned,
+                      protectedCapture.frameCountsAreAligned,
+                      fullCapture.frameCount == protectedCapture.frameCount,
+                      fullCapture.frameCount == graphFrameCount,
+                      outputLeft.count == graphFrameCount,
+                      outputRight.count == graphFrameCount else {
+                    return nil
+                }
+                var outputSafetyResidualLeft = [Float](
+                    repeating: 0,
+                    count: graphFrameCount
+                )
+                var outputSafetyResidualRight = [Float](
+                    repeating: 0,
+                    count: graphFrameCount
+                )
+                var terminalProcessingResidualLeft = [Float](
+                    repeating: 0,
+                    count: graphFrameCount
+                )
+                var terminalProcessingResidualRight = [Float](
+                    repeating: 0,
+                    count: graphFrameCount
+                )
+                for frame in 0..<graphFrameCount {
+                    let leftLinear = protectedRhythm.leftSamples[frame] +
+                        pumpedUpper.left[frame]
+                    let rightLinear = protectedRhythm.rightSamples[frame] +
+                        pumpedUpper.right[frame]
+                    outputSafetyResidualLeft[frame] =
+                        preLiveFeedbackLeft[frame] - leftLinear
+                    outputSafetyResidualRight[frame] =
+                        preLiveFeedbackRight[frame] - rightLinear
+                    terminalProcessingResidualLeft[frame] =
+                        outputLeft[frame] - preLiveFeedbackLeft[frame]
+                    terminalProcessingResidualRight[frame] =
+                        outputRight[frame] - preLiveFeedbackRight[frame]
+                }
+                diagnosticRoleStemCaptures.append(
+                    AutonomousBarRoleStemCapture(
+                        bar: performance.bar,
+                        sampleRate: sampleRate,
+                        full: fullCapture,
+                        protectedRhythm: protectedCapture,
+                        graphInputLeft: graphInputLeft,
+                        graphInputRight: graphInputRight,
+                        processedUpperLeft: pumpedUpper.left,
+                        processedUpperRight: pumpedUpper.right,
+                        preClimaxMixLeft: preLiveFeedbackLeft,
+                        preClimaxMixRight: preLiveFeedbackRight,
+                        outputSafetyResidualLeft: outputSafetyResidualLeft,
+                        outputSafetyResidualRight: outputSafetyResidualRight,
+                        terminalProcessingResidualLeft:
+                            terminalProcessingResidualLeft,
+                        terminalProcessingResidualRight:
+                            terminalProcessingResidualRight
+                    )
+                )
+            }
             let protectedRhythmSampleHash = ExactPCMFingerprint.stereo(
                 left: protectedRhythm.leftSamples,
                 right: protectedRhythm.rightSamples
@@ -2542,7 +2729,8 @@ package enum AutonomousPhraseRenderer {
                     patternFamily: $0.patternFamily,
                     blocks: $0.blocks
                 )
-            }
+            },
+            diagnosticRoleStemCaptures: diagnosticRoleStemCaptures
         )
     }
 

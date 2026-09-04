@@ -1,0 +1,250 @@
+{
+  "schema": "autotechno-result-status-vocabulary.v1",
+  "vocabularyVersion": 1,
+  "states": [
+    {
+      "id": "not-applicable",
+      "meaning": "The gate is outside this item's scope; this never satisfies a release prerequisite.",
+      "requiresEvidence": false,
+      "requiresLimitation": true
+    },
+    {
+      "id": "unavailable",
+      "meaning": "A named prerequisite or evaluator does not exist or cannot currently run.",
+      "requiresEvidence": false,
+      "requiresLimitation": true
+    },
+    {
+      "id": "not-run",
+      "meaning": "The applicable gate was not performed for this exact revision.",
+      "requiresEvidence": false,
+      "requiresLimitation": true
+    },
+    {
+      "id": "in-progress",
+      "meaning": "The applicable gate started but has no terminal result.",
+      "requiresEvidence": false,
+      "requiresLimitation": true
+    },
+    {
+      "id": "passed",
+      "meaning": "The objective gate passed for the named exact revision and evidence.",
+      "requiresEvidence": true,
+      "requiresLimitation": false
+    },
+    {
+      "id": "failed",
+      "meaning": "The objective gate ran and failed for the named exact revision.",
+      "requiresEvidence": true,
+      "requiresLimitation": true
+    },
+    {
+      "id": "blocked",
+      "meaning": "The gate cannot proceed because a concrete dependency or authority is missing.",
+      "requiresEvidence": false,
+      "requiresLimitation": true
+    },
+    {
+      "id": "observed",
+      "meaning": "A listening observation was recorded as hypothesis evidence, never as approval.",
+      "requiresEvidence": true,
+      "requiresLimitation": false
+    }
+  ],
+  "gates": [
+    {
+      "id": "implementation",
+      "label": "Implementation",
+      "allowedStates": [
+        "not-applicable",
+        "in-progress",
+        "passed",
+        "failed",
+        "blocked"
+      ],
+      "releaseClaimRequiredState": "passed",
+      "meaning": "The bounded requested change exists in the intended canonical owner."
+    },
+    {
+      "id": "focused-local-verification",
+      "label": "Focused local verification",
+      "allowedStates": [
+        "not-applicable",
+        "unavailable",
+        "not-run",
+        "in-progress",
+        "passed",
+        "failed",
+        "blocked"
+      ],
+      "releaseClaimRequiredState": "passed",
+      "meaning": "Item-specific structural, signal, ownership, or tooling checks passed locally."
+    },
+    {
+      "id": "full-local-verification",
+      "label": "Full local verification",
+      "allowedStates": [
+        "not-applicable",
+        "unavailable",
+        "not-run",
+        "in-progress",
+        "passed",
+        "failed",
+        "blocked"
+      ],
+      "releaseClaimRequiredState": "passed",
+      "meaning": "The complete required local suite and release build passed for the exact revision."
+    },
+    {
+      "id": "automated-quality-qualification",
+      "label": "Automated quality qualification",
+      "allowedStates": [
+        "not-applicable",
+        "unavailable",
+        "not-run",
+        "in-progress",
+        "passed",
+        "failed",
+        "blocked"
+      ],
+      "releaseClaimRequiredState": "passed",
+      "meaning": "Exact engine/policy artifacts, hard gates, adversarial cases, and holdout qualification passed."
+    },
+    {
+      "id": "published-exact-sha",
+      "label": "Published exact SHA",
+      "allowedStates": [
+        "not-applicable",
+        "unavailable",
+        "not-run",
+        "in-progress",
+        "passed",
+        "failed",
+        "blocked"
+      ],
+      "releaseClaimRequiredState": "passed",
+      "meaning": "The reported exact commit is present on the intended remote branch."
+    },
+    {
+      "id": "exact-head-ci",
+      "label": "Exact-head CI",
+      "allowedStates": [
+        "not-applicable",
+        "unavailable",
+        "not-run",
+        "in-progress",
+        "passed",
+        "failed",
+        "blocked"
+      ],
+      "releaseClaimRequiredState": "passed",
+      "meaning": "Required remote CI passed against the same published exact commit."
+    },
+    {
+      "id": "release-app-launched",
+      "label": "Release app launched",
+      "allowedStates": [
+        "not-applicable",
+        "unavailable",
+        "not-run",
+        "in-progress",
+        "passed",
+        "failed",
+        "blocked"
+      ],
+      "releaseClaimRequiredState": "passed",
+      "meaning": "The exact release artifact launched with recorded binary identity and advancing playback state."
+    },
+    {
+      "id": "app-route-qa",
+      "label": "App and route QA",
+      "allowedStates": [
+        "not-applicable",
+        "unavailable",
+        "not-run",
+        "in-progress",
+        "passed",
+        "failed",
+        "blocked"
+      ],
+      "releaseClaimRequiredState": "passed",
+      "meaning": "Playback, transport, route, interruption, recovery, and applicable accessibility behavior passed on the exact release app."
+    },
+    {
+      "id": "listening-observation",
+      "label": "Listening observation",
+      "allowedStates": [
+        "not-applicable",
+        "unavailable",
+        "not-run",
+        "in-progress",
+        "blocked",
+        "observed"
+      ],
+      "releaseClaimRequiredState": "not-a-release-prerequisite",
+      "meaning": "Optional human observation may open a measurable hypothesis but cannot approve or override qualification."
+    },
+    {
+      "id": "physical-output-soak",
+      "label": "Physical-output soak",
+      "allowedStates": [
+        "not-applicable",
+        "unavailable",
+        "not-run",
+        "in-progress",
+        "passed",
+        "failed",
+        "blocked"
+      ],
+      "releaseClaimRequiredState": "passed",
+      "meaning": "The required duration, output hardware, recovery scenarios, and stability observations passed."
+    }
+  ],
+  "claim": {
+    "id": "professional-release-quality",
+    "allowedStates": [
+      "unverified",
+      "verified"
+    ],
+    "requiredGates": [
+      "implementation",
+      "focused-local-verification",
+      "full-local-verification",
+      "automated-quality-qualification",
+      "published-exact-sha",
+      "exact-head-ci",
+      "release-app-launched",
+      "app-route-qa",
+      "physical-output-soak"
+    ],
+    "ambiguousPhrases": [
+      "sounds professional",
+      "professional quality",
+      "production ready",
+      "release ready"
+    ],
+    "meaning": "Verified only when every objective prerequisite passes for one exact published revision; listening is never an approval gate."
+  },
+  "recordSchema": {
+    "schema": "autotechno-result-record.v1",
+    "requiredRootFields": [
+      "schema",
+      "subject",
+      "revision",
+      "summary",
+      "gates",
+      "claim"
+    ],
+    "requiredGateFields": [
+      "id",
+      "status",
+      "evidence",
+      "limitation"
+    ],
+    "requiredClaimFields": [
+      "id",
+      "status",
+      "missingGates"
+    ]
+  }
+}

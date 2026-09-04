@@ -1,0 +1,669 @@
+{
+  "comparisonRules": {
+    "exactPCMRule": "metadata-never-substitutes-for-streaming-sample-comparison",
+    "explicitDifferenceDimensions": [
+      "artifactFingerprint",
+      "contractBaselineFingerprint",
+      "sourceFingerprint"
+    ],
+    "identityEnvelopeSchema": "autotechno-baseline-identity-envelope.v1",
+    "immutableComparisonDimensions": [
+      "familyId",
+      "artifactSchema",
+      "artifactVersion",
+      "corpusSha256",
+      "engineVersion",
+      "buildConfiguration",
+      "routeIdentity"
+    ],
+    "schemaTransitionRule": "explicit-registered-migration-or-incompatible"
+  },
+  "limits": {
+    "maximumCommandCharacters": 1000,
+    "maximumDependenciesPerNode": 16,
+    "maximumFieldPathsPerNode": 8,
+    "maximumMigrations": 32,
+    "maximumNodes": 32,
+    "maximumTextCharacters": 500
+  },
+  "nodes": [
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": null,
+      "artifactPath": "docs/local/reports/baseline-corpus-v1/manifest.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "exact-pcm-owned-elsewhere",
+      "contractFingerprintFields": [
+        "contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [
+        "corpusSha256"
+      ],
+      "dependencies": [],
+      "engineVersionFields": [
+        "engineVersion"
+      ],
+      "id": "whole-mix-render",
+      "label": "Whole-mix render corpus",
+      "producerCommand": "AUTOTECHNO_RUN_BASELINE_RENDER=1 swift test -c release --filter BaselineRenderIntegrationTests",
+      "routeIdentityFields": [],
+      "schema": "autotechno-baseline-render-manifest.v1",
+      "sourceFingerprintFields": [
+        "sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/baseline_render_manifest.py check",
+      "version": 1,
+      "versionField": "manifestVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": "reportFingerprint",
+      "artifactPath": "docs/local/reports/long-horizon-session-baseline-v1/report.json",
+      "buildConfigurationFields": [
+        "buildConfiguration"
+      ],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "descriptive-same-schema",
+      "contractFingerprintFields": [
+        "contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [
+        "corpusSha256"
+      ],
+      "dependencies": [],
+      "engineVersionFields": [
+        "engineVersion"
+      ],
+      "id": "long-horizon-session",
+      "label": "Four-hour score-only session baseline",
+      "producerCommand": "AUTOTECHNO_RUN_SESSION_TRAJECTORY_BASELINE=1 swift test -c release --filter LongHorizonSessionBaselineIntegrationTests && python3 scripts/session_trajectory_baseline_report.py",
+      "routeIdentityFields": [
+        "observationRoute"
+      ],
+      "schema": "autotechno-long-horizon-session-baseline-report.v1",
+      "sourceFingerprintFields": [
+        "sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/session_trajectory_baseline_report.py --check",
+      "version": 1,
+      "versionField": "reportVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": null,
+      "artifactPath": "docs/local/reports/baseline-stems-v1/manifest.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "exact-pcm-owned-elsewhere",
+      "contractFingerprintFields": [
+        "contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [
+        "corpusSha256"
+      ],
+      "dependencies": [
+        "whole-mix-render"
+      ],
+      "engineVersionFields": [
+        "engineVersion"
+      ],
+      "id": "role-stem-capture",
+      "label": "Aligned role-stem capture",
+      "producerCommand": "AUTOTECHNO_RUN_STEM_CAPTURE=1 swift test -c release --filter StemCaptureIntegrationTests",
+      "routeIdentityFields": [],
+      "schema": "autotechno-role-stem-manifest.v1",
+      "sourceFingerprintFields": [
+        "sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/stem_capture_manifest.py check",
+      "version": 1,
+      "versionField": "manifestVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": "reportFingerprint",
+      "artifactPath": "docs/local/reports/performance-envelope-v1/report.json",
+      "buildConfigurationFields": [
+        "buildConfiguration"
+      ],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "descriptive-same-schema",
+      "contractFingerprintFields": [
+        "contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [],
+      "dependencies": [
+        "whole-mix-render"
+      ],
+      "engineVersionFields": [
+        "engineVersion"
+      ],
+      "id": "performance-envelope",
+      "label": "Release and bounded live performance envelope",
+      "producerCommand": "AUTOTECHNO_RUN_PERFORMANCE_ENVELOPE=1 AUTOTECHNO_PERFORMANCE_BUILD_CONFIGURATION=release swift test -c release --filter PerformanceEnvelopeIntegrationTests && python3 scripts/performance_envelope_report.py generate <trace-arguments>",
+      "routeIdentityFields": [],
+      "schema": "autotechno-performance-envelope-report.v1",
+      "sourceFingerprintFields": [
+        "sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/performance_envelope_report.py check <trace-arguments>",
+      "version": 1,
+      "versionField": "reportVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": "reportFingerprint",
+      "artifactPath": "docs/local/reports/pcm-comparisons-v1/whole-mix-self.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "exact-pcm-owned-elsewhere",
+      "contractFingerprintFields": [
+        "baseline.contractBaselineFingerprint",
+        "candidate.contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [],
+      "dependencies": [
+        "whole-mix-render"
+      ],
+      "engineVersionFields": [
+        "baseline.engineVersion",
+        "candidate.engineVersion"
+      ],
+      "id": "pcm-comparison-whole",
+      "label": "Whole-mix exact PCM comparison",
+      "producerCommand": "python3 scripts/pcm_comparison_report.py compare --baseline-manifest <whole-baseline> --candidate-manifest <whole-candidate> --output <report>",
+      "routeIdentityFields": [
+        "baseline.domain",
+        "candidate.domain"
+      ],
+      "schema": "autotechno-pcm-comparison-report.v1",
+      "sourceFingerprintFields": [
+        "baseline.sourceFingerprint",
+        "candidate.sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/pcm_comparison_report.py check --report <report>",
+      "version": 1,
+      "versionField": "reportVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": "reportFingerprint",
+      "artifactPath": "docs/local/reports/pcm-comparisons-v1/role-stems-self.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "exact-pcm-owned-elsewhere",
+      "contractFingerprintFields": [
+        "baseline.contractBaselineFingerprint",
+        "candidate.contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [],
+      "dependencies": [
+        "role-stem-capture"
+      ],
+      "engineVersionFields": [
+        "baseline.engineVersion",
+        "candidate.engineVersion"
+      ],
+      "id": "pcm-comparison-role",
+      "label": "Role-stem exact PCM comparison",
+      "producerCommand": "python3 scripts/pcm_comparison_report.py compare --baseline-manifest <role-baseline> --candidate-manifest <role-candidate> --output <report>",
+      "routeIdentityFields": [
+        "baseline.domain",
+        "candidate.domain"
+      ],
+      "schema": "autotechno-pcm-comparison-report.v1",
+      "sourceFingerprintFields": [
+        "baseline.sourceFingerprint",
+        "candidate.sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/pcm_comparison_report.py check --report <report>",
+      "version": 1,
+      "versionField": "reportVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": "reportFingerprint",
+      "artifactPath": "docs/local/reports/signal-baseline-v1/manifest.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "descriptive-same-schema",
+      "contractFingerprintFields": [
+        "contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [
+        "corpusSha256"
+      ],
+      "dependencies": [
+        "whole-mix-render",
+        "role-stem-capture"
+      ],
+      "engineVersionFields": [
+        "engineVersion"
+      ],
+      "id": "signal-baseline",
+      "label": "Signal-integrity baseline",
+      "producerCommand": "python3 scripts/signal_baseline_report.py generate",
+      "routeIdentityFields": [],
+      "schema": "autotechno-signal-baseline-report.v1",
+      "sourceFingerprintFields": [
+        "sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/signal_baseline_report.py check",
+      "version": 1,
+      "versionField": "reportVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": "reportFingerprint",
+      "artifactPath": "docs/local/reports/spectral-baseline-v1/manifest.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "descriptive-same-schema",
+      "contractFingerprintFields": [
+        "contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [
+        "corpusSha256"
+      ],
+      "dependencies": [
+        "whole-mix-render",
+        "role-stem-capture"
+      ],
+      "engineVersionFields": [
+        "engineVersion"
+      ],
+      "id": "spectral-baseline",
+      "label": "Spectral-shape baseline",
+      "producerCommand": "python3 scripts/spectral_baseline_report.py generate",
+      "routeIdentityFields": [],
+      "schema": "autotechno-spectral-baseline-report.v1",
+      "sourceFingerprintFields": [
+        "sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/spectral_baseline_report.py check",
+      "version": 1,
+      "versionField": "reportVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": "reportFingerprint",
+      "artifactPath": "docs/local/reports/kick-foundation-collision-v1/manifest.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "descriptive-same-schema",
+      "contractFingerprintFields": [
+        "contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [
+        "corpusSha256"
+      ],
+      "dependencies": [
+        "whole-mix-render",
+        "role-stem-capture"
+      ],
+      "engineVersionFields": [
+        "engineVersion"
+      ],
+      "id": "kick-foundation-collision",
+      "label": "Kick/foundation collision baseline",
+      "producerCommand": "python3 scripts/kick_foundation_collision_report.py generate",
+      "routeIdentityFields": [],
+      "schema": "autotechno-kick-foundation-collision-report.v1",
+      "sourceFingerprintFields": [
+        "sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/kick_foundation_collision_report.py check",
+      "version": 1,
+      "versionField": "reportVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": "reportFingerprint",
+      "artifactPath": "docs/local/reports/transient-envelope-baseline-v1/manifest.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "descriptive-same-schema",
+      "contractFingerprintFields": [
+        "contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [
+        "corpusSha256"
+      ],
+      "dependencies": [
+        "whole-mix-render",
+        "role-stem-capture"
+      ],
+      "engineVersionFields": [
+        "engineVersion"
+      ],
+      "id": "transient-envelope",
+      "label": "Transient and envelope baseline",
+      "producerCommand": "python3 scripts/transient_envelope_baseline_report.py generate",
+      "routeIdentityFields": [],
+      "schema": "autotechno-transient-envelope-baseline-report.v1",
+      "sourceFingerprintFields": [
+        "sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/transient_envelope_baseline_report.py check",
+      "version": 1,
+      "versionField": "reportVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": "reportFingerprint",
+      "artifactPath": "docs/local/reports/stereo-compatibility-baseline-v1/manifest.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "descriptive-same-schema",
+      "contractFingerprintFields": [
+        "contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [
+        "corpusSha256"
+      ],
+      "dependencies": [
+        "whole-mix-render",
+        "role-stem-capture"
+      ],
+      "engineVersionFields": [
+        "engineVersion"
+      ],
+      "id": "stereo-compatibility",
+      "label": "Stereo compatibility baseline",
+      "producerCommand": "python3 scripts/stereo_compatibility_baseline_report.py generate",
+      "routeIdentityFields": [],
+      "schema": "autotechno-stereo-compatibility-baseline-report.v1",
+      "sourceFingerprintFields": [
+        "sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/stereo_compatibility_baseline_report.py check",
+      "version": 1,
+      "versionField": "reportVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": "reportFingerprint",
+      "artifactPath": "docs/local/reports/rhythmic-baseline-v1/manifest.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "descriptive-same-schema",
+      "contractFingerprintFields": [
+        "contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [
+        "corpusSha256"
+      ],
+      "dependencies": [
+        "whole-mix-render"
+      ],
+      "engineVersionFields": [
+        "engineVersion"
+      ],
+      "id": "rhythmic-baseline",
+      "label": "Whole-mix rhythmic baseline",
+      "producerCommand": "python3 scripts/rhythmic_baseline_report.py generate",
+      "routeIdentityFields": [],
+      "schema": "autotechno-rhythmic-baseline-report.v1",
+      "sourceFingerprintFields": [
+        "sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/rhythmic_baseline_report.py check",
+      "version": 1,
+      "versionField": "reportVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": "reportFingerprint",
+      "artifactPath": "docs/local/reports/score-motif-baseline-v1/manifest.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "descriptive-same-schema",
+      "contractFingerprintFields": [
+        "contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [
+        "corpusSha256"
+      ],
+      "dependencies": [
+        "whole-mix-render"
+      ],
+      "engineVersionFields": [
+        "engineVersion"
+      ],
+      "id": "score-motif",
+      "label": "Accepted-score motif baseline",
+      "producerCommand": "python3 scripts/score_motif_baseline_report.py generate",
+      "routeIdentityFields": [],
+      "schema": "autotechno-score-motif-baseline-report.v1",
+      "sourceFingerprintFields": [
+        "sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/score_motif_baseline_report.py check",
+      "version": 1,
+      "versionField": "reportVersion"
+    },
+    {
+      "artifactClass": "local-ignored",
+      "artifactFingerprintField": "reportFingerprint",
+      "artifactPath": "docs/local/reports/section-boundary-baseline-v1/report.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "descriptive-same-schema",
+      "contractFingerprintFields": [
+        "contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [
+        "corpusSha256"
+      ],
+      "dependencies": [
+        "whole-mix-render"
+      ],
+      "engineVersionFields": [
+        "engineVersion"
+      ],
+      "id": "section-boundary",
+      "label": "Section-boundary baseline",
+      "producerCommand": "python3 scripts/section_boundary_baseline_report.py generate",
+      "routeIdentityFields": [],
+      "schema": "autotechno-section-boundary-baseline-report.v1",
+      "sourceFingerprintFields": [
+        "sourceFingerprint"
+      ],
+      "validatorCommand": "python3 scripts/section_boundary_baseline_report.py check",
+      "version": 1,
+      "versionField": "reportVersion"
+    },
+    {
+      "artifactClass": "tracked-derived",
+      "artifactFingerprintField": "registerFingerprint",
+      "artifactPath": "docs/DEFICIT_REGISTER.json",
+      "buildConfigurationFields": [],
+      "changeTriggers": [
+        "artifact-schema",
+        "build-configuration",
+        "contract-baseline",
+        "corpus",
+        "dependency",
+        "engine-version",
+        "route-identity",
+        "source-fingerprint"
+      ],
+      "comparisonMode": "metadata-only",
+      "contractFingerprintFields": [
+        "generatedFrom.contractBaselineFingerprint"
+      ],
+      "corpusFingerprintFields": [
+        "generatedFrom.corpusSha256"
+      ],
+      "dependencies": [
+        "kick-foundation-collision",
+        "long-horizon-session",
+        "performance-envelope",
+        "rhythmic-baseline",
+        "score-motif",
+        "section-boundary",
+        "signal-baseline",
+        "spectral-baseline"
+      ],
+      "engineVersionFields": [
+        "generatedFrom.engineVersion"
+      ],
+      "id": "deficit-register",
+      "label": "Evidence-ranked deficit register",
+      "producerCommand": "python3 scripts/deficit_register.py generate",
+      "routeIdentityFields": [],
+      "schema": "autotechno-deficit-register.v1",
+      "sourceFingerprintFields": [],
+      "validatorCommand": "python3 scripts/deficit_register.py check",
+      "version": 1,
+      "versionField": "registerVersion"
+    }
+  ],
+  "policyFingerprint": "5adf87179c53df3bc1eb59bbec7a70e81a5dd01e65f81bbc55a0cc2c92d89606",
+  "policyVersion": 1,
+  "qualification": {
+    "promotionAuthorized": false,
+    "purpose": "offline-regeneration-order-compatibility-and-invalidation-only",
+    "rawArtifactsTracked": false,
+    "runtimeInput": false,
+    "validatorRequiredForCurrentClaim": true
+  },
+  "registeredMigrations": [],
+  "schema": "autotechno-baseline-lifecycle-policy.v1",
+  "states": [
+    "current-metadata",
+    "comparable",
+    "migration-required",
+    "regeneration-required",
+    "incompatible",
+    "unavailable",
+    "blocked-by-dependency"
+  ]
+}

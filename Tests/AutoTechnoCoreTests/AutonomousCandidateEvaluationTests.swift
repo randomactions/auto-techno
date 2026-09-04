@@ -123,6 +123,104 @@ struct AutonomousCandidateEvaluationTests {
                 decoded.postGraphUpperTimbreEvidence)
     }
 
+    @Test("Transaction provenance reproduces and rejects identity mismatches visibly")
+    func deterministicTransactionProvenanceEnvelope() throws {
+        let evaluator = try ProfessionalQualityPrimaryArtifacts.load().evaluator
+        let vector = fixtureVector()
+        func transaction(
+            engineVersion: String,
+            policyVersion: String,
+            evaluatorVersion: String,
+            planFingerprint: String
+        ) -> AutonomousCandidateEvaluationTransaction {
+            AutonomousCandidateEvaluationTransaction(
+                engineVersion: engineVersion,
+                policyVersion: policyVersion,
+                evaluatorVersion: evaluatorVersion,
+                planFingerprint: planFingerprint,
+                attempts: [AutonomousCandidateAttempt(
+                    kind: .initialRender,
+                    vector: vector
+                )],
+                selectedAttemptIndex: 0,
+                correctionCount: 0
+            )
+        }
+        let first = transaction(
+            engineVersion: QualityQualificationContract.engineVersion,
+            policyVersion: evaluator.policyVersion,
+            evaluatorVersion: evaluator.evaluatorVersion,
+            planFingerprint: vector.planFingerprint
+        )
+        let second = transaction(
+            engineVersion: QualityQualificationContract.engineVersion,
+            policyVersion: evaluator.policyVersion,
+            evaluatorVersion: evaluator.evaluatorVersion,
+            planFingerprint: vector.planFingerprint
+        )
+
+        #expect(first.isComplete)
+        #expect(first == second)
+        #expect(try first.deterministicJSON() == second.deterministicJSON())
+        #expect(first.fingerprint == second.fingerprint)
+        #expect(!first.fingerprint.isEmpty)
+        #expect(try JSONDecoder().decode(
+            AutonomousCandidateEvaluationTransaction.self,
+            from: first.deterministicJSON()
+        ) == first)
+
+        let baselineVerdict = evaluator.terminalVerdict(
+            selected: vector,
+            transaction: first
+        )
+        for mismatch in [
+            "transaction-incomplete",
+            "engine-version",
+            "policy-version",
+            "evaluator-version",
+            "plan-fingerprint",
+        ] {
+            #expect(!baselineVerdict.diagnosticDetails.contains(mismatch))
+        }
+
+        let attacks: [(AutonomousCandidateEvaluationTransaction, [String])] = [
+            (transaction(
+                engineVersion: "wrong-engine",
+                policyVersion: evaluator.policyVersion,
+                evaluatorVersion: evaluator.evaluatorVersion,
+                planFingerprint: vector.planFingerprint
+            ), ["transaction-incomplete", "engine-version"]),
+            (transaction(
+                engineVersion: QualityQualificationContract.engineVersion,
+                policyVersion: "wrong-policy",
+                evaluatorVersion: evaluator.evaluatorVersion,
+                planFingerprint: vector.planFingerprint
+            ), ["policy-version"]),
+            (transaction(
+                engineVersion: QualityQualificationContract.engineVersion,
+                policyVersion: evaluator.policyVersion,
+                evaluatorVersion: "wrong-evaluator",
+                planFingerprint: vector.planFingerprint
+            ), ["evaluator-version"]),
+            (transaction(
+                engineVersion: QualityQualificationContract.engineVersion,
+                policyVersion: evaluator.policyVersion,
+                evaluatorVersion: evaluator.evaluatorVersion,
+                planFingerprint: "wrong-plan"
+            ), ["transaction-incomplete", "plan-fingerprint"]),
+        ]
+        for (attacked, expectedDiagnostics) in attacks {
+            let verdict = evaluator.terminalVerdict(
+                selected: vector,
+                transaction: attacked
+            )
+            #expect(verdict.outcome == .rejected)
+            #expect(verdict.reasonCodes == [.guardrailRegressionV1])
+            #expect(verdict.diagnosticDetails == expectedDiagnostics)
+            #expect(attacked.fingerprint != first.fingerprint)
+        }
+    }
+
     @Test("Modal percussion evidence binds score, signal, route, and stem facts")
     func modalPercussionEvidenceContract() throws {
         let neutral = fixtureVector()

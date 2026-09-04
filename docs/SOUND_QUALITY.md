@@ -38,6 +38,98 @@ candidate-vector schema 43, candidate-transaction schema 14, and Professional
 Evidence v29. Primary profile/evaluator v29 and long-horizon policy v16 are the
 required exact identities; their artifact loaders fail closed on any mismatch.
 
+The Phase-1 measurement corpus is separate from those calibration and holdout
+populations. Its seven roots are fixed by an outcome-blind integer derivation
+before rendering or listening, and its cases target the first canonical
+occurrence of every current journey checkpoint. Both representative native-
+stereo rates are measurement dimensions, not independent musical selections.
+Corpus membership cannot change because an output sounds better or scores
+higher; an incompatible engine evolution must version the corpus or explicitly
+migrate its evidence instead.
+
+The exact whole-mix corpus and its opt-in aligned role captures are governed by
+[`BASELINE_CORPUS.md`](BASELINE_CORPUS.md) and
+[`ROLE_STEM_CAPTURE.md`](ROLE_STEM_CAPTURE.md). Role capture is a detached,
+default-off measurement mode on the same selected preparation transaction.
+Tests require capture-on and capture-off scheduled PCM and outgoing DSP state to
+be identical. Additive dry roles, protected-foundation variants, processed
+stages, and the two intentional nonlinear residuals are named separately;
+neither shared dynamics/effects nor terminal processing may be misrepresented
+as independently summable stems. All generated WAVs and manifests remain local,
+ignored evidence and cannot enter calibration, runtime, or distribution by
+mere presence.
+
+[`PCM_COMPARISON_REPORT.md`](PCM_COMPARISON_REPORT.md) governs offline pairwise
+comparison of those manifests. It preserves exact PCM-set fingerprints and
+separately reports structural incompatibility, raw bit changes, maximum sample
+error, RMS error, and the first changed frame/channel. `exact`, `bounded`, and
+`material` are numeric evidence classes only: no tolerance result is an
+audibility, desirability, qualification, or professional-quality verdict.
+
+[`PCM_SIGNAL_BASELINE.md`](PCM_SIGNAL_BASELINE.md) governs the next descriptive
+layer. One detached `AutoTechnoDSP` analyzer reuses the canonical Annex-2 true-
+peak owner and reports sample peak, RMS, crest, DC, clipping, subnormal,
+non-finite, exact-zero, and near-silence evidence for every whole/role asset,
+channel, and non-overlapping fixed-130-BPM bar. These local reports locate a
+deficit; they do not add evaluator dimensions, thresholds, corrections, or a
+professional-quality claim.
+
+[`PCM_SPECTRAL_BASELINE.md`](PCM_SPECTRAL_BASELINE.md) governs the corresponding
+spectral layer. Sixteen deterministic causal cells per fixed-130-BPM bar reuse
+the existing masking filter-bank owner for four named mean-square bands; one
+canonical short-time Hann/FFT window centered in each cell reuses the existing
+centroid, bandwidth, flatness, and 85%-rolloff owner. The report retains every
+window plus segment/role aggregates and a source-active 35--120 Hz occupancy
+relation. The causal bands are explicitly non-power-complementary, the 16
+windows are samples rather than continuous coverage, and no descriptive value
+is admitted to policy or correction.
+
+[`PCM_TRANSIENT_ENVELOPE_BASELINE.md`](PCM_TRANSIENT_ENVELOPE_BASELINE.md)
+governs the time-domain shape layer. It extracts the existing whole-mix
+transient detector into a parity-tested reusable tracker, while retaining one
+separately named PCM-inferred activity/event family for uniform role-local
+attack landmarks, normalized attack shape, decay occupancy, and arithmetic-
+fold crest. The report explicitly distinguishes legacy detections from inferred
+events and never treats either as score authority or a quality rank.
+
+[`PCM_RHYTHMIC_BASELINE.md`](PCM_RHYTHMIC_BASELINE.md) governs the detached
+whole-mix rhythm layer. It reuses that explicitly PCM-inferred onset family,
+then retains sixteen-step distribution, linear/cyclic spacing, microtiming,
+rhythmic rest, exact multichannel silence, two named metrical proxies, and
+bounded lag/rotation comparisons. Exact PCM repetition, onset repetition,
+grid equivalence, mutation, and rotation remain separate facts. Two no-onset
+bars are unavailable as a rhythmic comparison rather than perfect repetition,
+and no descriptive value is admitted to policy or correction.
+
+[`SCORE_MOTIF_BASELINE.md`](SCORE_MOTIF_BASELINE.md) governs the complementary
+resolved-score motif layer. It analyzes the accepted canonical upper-score
+notes before rendering, retaining exact, interval-contour, and normalized
+transposition-invariant identities alongside bounded note, timing, duration,
+pitch, register, density, role, lag, and rotation comparisons. Anchor, shadow,
+and response notes are eligible; atmosphere and transition notes remain named
+and counted but are excluded from motif identity. This detached evidence does
+not reinterpret PCM-inferred rhythm as score truth and is not admitted to
+evaluation, correction, continuation, or future decisions.
+
+[`PCM_SECTION_BOUNDARY_BASELINE.md`](PCM_SECTION_BOUNDARY_BASELINE.md) governs
+the score-to-PCM boundary layer. It captures at most the exact accepted
+predecessor, focus phrase, and one successor, then composes existing signal,
+spectral, stereo, and rhythmic observations at score-declared phrase/chapter
+markers. Fixed two-bar reference, one-bar/sixteen-cell transition, and eight-bar
+post windows retain nine separate contrast trajectories plus explicit movement,
+reference-envelope entry, and two-bar sustained-residence facts. Missing
+context or dimensions remain unavailable; no recovery fact is a perceptual
+return, transition-quality rank, evaluator input, or runtime decision.
+
+[`PERFORMANCE_ENVELOPE.md`](PERFORMANCE_ENVELOPE.md) governs the orthogonal
+execution-cost baseline. Release-only detached trials keep planning,
+render/evaluate, complete preparation, modeled working storage, cumulative
+process high-water, off-callback fixed-producer cost, externally observed live
+callback timing, and glitch points of interest as separate facts. Performance
+measurements never rank musical quality or feed the generator, evaluator,
+controller, scheduler, or callback. A short clean trace is not a physical soak
+or general no-underrun claim, and missing native-host evidence remains explicit.
+
 ## Status and purpose
 
 Professional release-quality sound is Auto Techno's explicit iterative goal. It
@@ -936,3 +1028,10 @@ Report these five states separately:
 
 Passing one state never implies the next. Until all five pass, professional
 release quality remains unverified.
+
+The checked [`RESULT_STATUS_VOCABULARY.md`](RESULT_STATUS_VOCABULARY.md)
+expands these five quality states into the ten evergreen implementation,
+verification, publication/CI, runtime, listening-observation, and soak gates.
+Its professional-release claim remains `unverified` when any objective gate is
+not `passed`; a listening observation is optional hypothesis evidence and never
+an approval substitute.

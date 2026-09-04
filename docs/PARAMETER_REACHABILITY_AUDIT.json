@@ -1,0 +1,1698 @@
+{
+  "schema": "autotechno-parameter-reachability-audit.v1",
+  "auditVersion": 2,
+  "scopePolicy": "The audited boundary is every named semantic control plus every stored field of the immutable score, articulation, instrument, composition, material-world, DSP-graph, spatial, mix, live-master, repeat-hold, and future-adaptation types that currently carry musical or signal-processing intent across the canonical Core-to-DSP-to-evidence path. Local variables, derived evidence/report payloads, transport counters, caches, raw PCM containers, and implementation coefficients that never cross an owner boundary are not parameter state; their safety remains owned by their focused DSP and evaluator tests.",
+  "domains": [
+    {
+      "id": "active-semantic-intent",
+      "title": "Active semantic intent controls",
+      "classification": "active-rendered",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntent.swift",
+          "type": "MusicalControl",
+          "kind": "enum-cases",
+          "selection": "explicit",
+          "members": [
+            "groove",
+            "syncopation",
+            "beatShape",
+            "polyrhythm",
+            "darkness",
+            "atmosphere",
+            "atmosphericDarkness",
+            "hypnosis",
+            "aggression",
+            "machineTexture",
+            "drone",
+            "melodicity",
+            "synthPresence",
+            "noteActivity",
+            "overallChaos",
+            "drumChaos",
+            "synthChaos",
+            "textureChaos"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "package static func map(intent: MusicalIntent)"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.groove]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.syncopation]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.beatShape]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.polyrhythm]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.darkness]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.atmosphere]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.atmosphericDarkness]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.hypnosis]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.aggression]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.machineTexture]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.drone]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.melodicity]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.synthPresence]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.noteActivity]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.overallChaos]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.drumChaos]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.synthChaos]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.textureChaos]"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "composed-causal",
+        "path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift",
+        "fragment": "func fixedSeedAudio(seed: UInt64)"
+      },
+      "signalEvidence": {
+        "status": "aggregate-evidence",
+        "path": "Sources/AutoTechnoDSP/AutonomousCandidateEvaluation.swift",
+        "fragment": "package struct AutonomousCandidateEvaluationVector"
+      },
+      "futureDecision": {
+        "status": "available-to-bounded-evaluator",
+        "path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",
+        "fragment": "package enum ProfessionalQualityRecoveryIntentReducer"
+      },
+      "forbiddenAnchors": [],
+      "limitations": "The audit composes exact mapper consumption with downstream score/render tests; it does not claim an independent full-phrase scalar sweep for all eighteen correlated controls."
+    },
+    {
+      "id": "quarantined-intent-only-control",
+      "title": "Quarantined intent-only control",
+      "classification": "quarantined-no-pcm",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntent.swift",
+          "type": "MusicalControl",
+          "kind": "enum-cases",
+          "selection": "explicit",
+          "members": [
+            "paceOfChange"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntent.swift",
+          "fragment": "values[.paceOfChange]"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "quarantined-no-pcm",
+        "path": "Sources/AutoTechnoCore/MusicalIntent.swift",
+        "fragment": "case paceOfChange"
+      },
+      "signalEvidence": {
+        "status": "unavailable-quarantined",
+        "path": "Sources/AutoTechnoCore/MusicalIntent.swift",
+        "fragment": "case .paceOfChange: .evolution"
+      },
+      "futureDecision": {
+        "status": "quarantined",
+        "path": "Sources/AutoTechnoCore/MusicalIntent.swift",
+        "fragment": "case .paceOfChange: 0.25"
+      },
+      "forbiddenAnchors": [
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "intent[.paceOfChange]"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift",
+          "fragment": "paceOfChange"
+        }
+      ],
+      "limitations": "This historical value mutates typed plan identity but has no scene, PCM, signal-evidence, or controller consequence. It is retained only as an explicit quarantine until an engine/provenance migration can remove it without silently invalidating calibrated identities."
+    },
+    {
+      "id": "quarantined-score-only-sequencer",
+      "title": "Quarantined score-only sequencer surface",
+      "classification": "quarantined-no-pcm",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntent.swift",
+          "type": "MusicalControl",
+          "kind": "enum-cases",
+          "selection": "explicit",
+          "members": [
+            "sequencerPresence",
+            "sequencerStyle",
+            "sequencerDensity",
+            "sequencerRegister",
+            "sequencerRepetition",
+            "sequencerDrift",
+            "sequencerDepth"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntent.swift",
+          "type": "SequencerAmbientKind",
+          "kind": "enum-cases",
+          "selection": "all",
+          "members": [
+            "pulseNetwork",
+            "arpeggiatedMotif",
+            "texturalStepField"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/TechnoScene.swift",
+          "type": "SequencerEvent",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "stepIndex",
+            "scaleDegree",
+            "frequency",
+            "durationInSteps",
+            "bar",
+            "kind"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/TechnoScene.swift",
+          "type": "TechnoScene",
+          "kind": "stored-properties",
+          "selection": "explicit",
+          "members": [
+            "sequencer"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "sequencerPresence: intent[.sequencerPresence]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "sequencerStyle: intent[.sequencerStyle]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "sequencerDensity: intent[.sequencerDensity]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "sequencerRegister: intent[.sequencerRegister]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "sequencerRepetition: intent[.sequencerRepetition]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "sequencerDrift: intent[.sequencerDrift]"
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalIntentMapper.swift",
+          "fragment": "sequencerDepth: intent[.sequencerDepth]"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/AutonomousTypedFingerprint.swift",
+          "fragment": "sink.field(\"sequencer\")"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "quarantined-no-pcm",
+        "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
+        "fragment": "scene.sequencer.count <= 6"
+      },
+      "signalEvidence": {
+        "status": "unavailable-quarantined",
+        "path": "Sources/AutoTechnoDSP/AutonomousTypedFingerprint.swift",
+        "fragment": "static func encode(_ value: SequencerEvent"
+      },
+      "futureDecision": {
+        "status": "quarantined",
+        "path": "Sources/AutoTechnoCore/MusicalIntent.swift",
+        "fragment": "case sequencerPresence"
+      },
+      "forbiddenAnchors": [
+        {
+          "path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift",
+          "fragment": "SequencerEvent"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift",
+          "fragment": "scene.sequencer"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/VoiceRenderer.swift",
+          "fragment": "SequencerEvent"
+        }
+      ],
+      "limitations": "These controls produce bounded score metadata and typed fingerprints, but no canonical renderer consumes the events and no signal evidence or bounded future decision observes a consequence. The audit prevents that dormant surface from being mistaken for implemented synthesis."
+    },
+    {
+      "id": "scene-rhythm-and-motif",
+      "title": "Scene, rhythm, motif, and derived render character",
+      "classification": "active-rendered",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoCore/TechnoScene.swift",
+          "type": "TechnoScene",
+          "kind": "stored-properties",
+          "selection": "explicit",
+          "members": [
+            "seed",
+            "bpm",
+            "drive",
+            "darkness",
+            "hypnosis",
+            "beatShape",
+            "musicalIntent",
+            "aggression",
+            "machineTexture",
+            "drone",
+            "atmosphere",
+            "atmosphericDarkness",
+            "drumChaos",
+            "synthChaos",
+            "textureChaos",
+            "melodicity",
+            "synthPresence",
+            "noteActivity",
+            "syncopation",
+            "polyrhythm",
+            "steps",
+            "character",
+            "groove",
+            "motif"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/TechnoScene.swift",
+          "type": "Step",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "kick",
+            "hat",
+            "clap",
+            "bass"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/TechnoScene.swift",
+          "type": "RenderCharacter",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "kickWeight",
+            "percussionBrightness",
+            "bassDecay",
+            "bassLevel"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/TechnoScene.swift",
+          "type": "TimedEvent",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "stepIndex",
+            "kind",
+            "offsetInStep",
+            "bar"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/TechnoScene.swift",
+          "type": "GrooveProfile",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "swingPercent",
+            "events"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/TechnoScene.swift",
+          "type": "SynthEvent",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "stepIndex",
+            "offsetInStep",
+            "scaleDegree",
+            "frequency",
+            "durationInSteps",
+            "bar",
+            "sourceIntent"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoCore/AutonomousSession.swift",
+          "fragment": "let scene = TechnoScene(intent: intent"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift",
+          "fragment": "plan.resolvedBars"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "composed-causal",
+        "path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift",
+        "fragment": "func resolvedEventChangesPCMAndMetadata()"
+      },
+      "signalEvidence": {
+        "status": "aggregate-evidence",
+        "path": "Sources/AutoTechnoDSP/AutonomousCandidateEvaluation.swift",
+        "fragment": "package struct AutonomousSymbolicEvidence"
+      },
+      "futureDecision": {
+        "status": "available-to-bounded-evaluator",
+        "path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",
+        "fragment": "package struct ProfessionalQualityPrimaryEvaluator"
+      },
+      "forbiddenAnchors": [],
+      "limitations": "Seed and tempo are structural/provenance members within the same immutable scene root; their replay and fixed-tempo contracts are tested separately from musical scalar causality."
+    },
+    {
+      "id": "performance-identity-and-resolved-score",
+      "title": "Performance identity and resolved score",
+      "classification": "active-rendered",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoCore/MusicalPerformance.swift",
+          "type": "RhythmCell",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "kickSteps",
+            "bassSteps",
+            "hatSteps",
+            "accentSteps",
+            "swingPercent"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalPerformance.swift",
+          "type": "MotifCell",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "degrees",
+            "steps"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalPerformance.swift",
+          "type": "SceneDNA",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "sceneSeed",
+            "tonalCenter",
+            "modalIdentity",
+            "modalDegrees",
+            "rhythm",
+            "motif",
+            "characteristicSyncopations",
+            "foregroundPriority",
+            "timbralFamily",
+            "foundationCompanion"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/MusicalPerformance.swift",
+          "type": "PerformanceBar",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "bar",
+            "phrase",
+            "localBar",
+            "phraseLength",
+            "section",
+            "tension",
+            "roles",
+            "transformations",
+            "signatureEvent",
+            "eventSeed",
+            "accentContour"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/AutonomousSession.swift",
+          "type": "EnsembleResolvedEvent",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "voice",
+            "step",
+            "intensity",
+            "relocated"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/AutonomousSession.swift",
+          "type": "EnsembleContext",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "focusRole",
+            "events",
+            "kickAnchors",
+            "intentionalPileup"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/AutonomousSession.swift",
+          "type": "ResolvedPerformanceBar",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "performance",
+            "ensemble",
+            "arrangementGesture",
+            "percussionGear",
+            "performanceCharacter",
+            "foundationBehavior",
+            "foundationRhythmicRelation",
+            "foundationCompanion",
+            "pulseEchoEnabled",
+            "interlockChapter",
+            "groovePulses",
+            "closedHatDecayArticulations",
+            "upperPercussionTailArticulations",
+            "modalPercussionArticulations",
+            "spatialContrast",
+            "narrative",
+            "kickSyntaxRole",
+            "climaxHang",
+            "percussionEchoTexture",
+            "percussionPolymetricEvidence",
+            "upperMusicalPump",
+            "harmonicDisclosureRelationship",
+            "kickMorphology"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
+          "fragment": "for (index, resolved) in plan.resolvedBars.enumerated()"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "direct-causal",
+        "path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift",
+        "fragment": "func resolvedEventChangesPCMAndMetadata()"
+      },
+      "signalEvidence": {
+        "status": "direct-evidence",
+        "path": "Sources/AutoTechnoDSP/AutonomousCandidateEvaluation.swift",
+        "fragment": "package struct AutonomousBarFullMixEvidence"
+      },
+      "futureDecision": {
+        "status": "available-to-bounded-evaluator",
+        "path": "Sources/AutoTechnoCore/QualityQualification.swift",
+        "fragment": "package struct AutonomousQualityRecoveryIntent"
+      },
+      "forbiddenAnchors": [],
+      "limitations": "Collection and provenance members are covered through exact plan fingerprints and preflight completeness in addition to representative direct event PCM mutation."
+    },
+    {
+      "id": "physical-and-relational-articulations",
+      "title": "Physical and relational bar articulations",
+      "classification": "active-rendered",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoCore/AutonomousSession.swift",
+          "type": "GroovePulseArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "step",
+            "pulseClass",
+            "stage",
+            "intensity",
+            "timingOffsetInSteps",
+            "strikeZone",
+            "damping",
+            "timbreMicrovariation"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/AutonomousSession.swift",
+          "type": "ClosedHatDecayArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "scoreEventIndex",
+            "step",
+            "role"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/AutonomousSession.swift",
+          "type": "SpatialContrastArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "depthPosition",
+            "carrierVoice",
+            "carrierStep",
+            "dryScale",
+            "reverbSend",
+            "highPassHz",
+            "lowPassHz"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/AutonomousSession.swift",
+          "type": "NarrativeArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "direction",
+            "presenceStart",
+            "presenceEnd",
+            "activeSupportingRoles"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/AutonomousSession.swift",
+          "type": "PercussionEchoTextureArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "relation",
+            "inputStep",
+            "outputStartStep",
+            "outputEndStep",
+            "worldID",
+            "cadencePhase",
+            "gapPhase",
+            "dominantSide"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/ClimaxHang.swift",
+          "type": "ClimaxHangArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "relation",
+            "startStep",
+            "endStep"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/FoundationPreKickPocket.swift",
+          "type": "FoundationPreKickPocketArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "relation",
+            "scoreEventIndex",
+            "bassStep",
+            "kickStep",
+            "releaseStartStep",
+            "releaseEndStep"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
+          "fragment": "let grooveArticulations = resolved.groovePulses.sorted"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/ClimaxHangRenderer.swift",
+          "fragment": "ClimaxHangArticulation"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "direct-causal",
+        "path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift",
+        "fragment": "func groovePulseResolvedRendering()"
+      },
+      "signalEvidence": {
+        "status": "direct-evidence",
+        "path": "Sources/AutoTechnoDSP/AutonomousCandidateEvaluation.swift",
+        "fragment": "package struct AutonomousGroovePulseBarEvidence"
+      },
+      "futureDecision": {
+        "status": "available-to-bounded-evaluator",
+        "path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",
+        "fragment": "ProfessionalQualityRecoveryIntentReducer"
+      },
+      "forbiddenAnchors": [],
+      "limitations": "Each articulation family owns separate focused causal tests; this row uses groove pulse as the representative anchor while the generated member table prevents hidden fields."
+    },
+    {
+      "id": "instrument-and-upper-performance",
+      "title": "Instrument assignment and upper performance",
+      "classification": "active-rendered",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoCore/InstrumentPalette.swift",
+          "type": "InstrumentAutomation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "color",
+            "shape",
+            "motion",
+            "space"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/InstrumentPalette.swift",
+          "type": "InstrumentAssignment",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "use",
+            "architecture",
+            "patch",
+            "automation",
+            "effects",
+            "spectralTextureClusterRelation",
+            "spectralTextureHarmonicTailRelation"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/SynthPerformance.swift",
+          "type": "UpperTimbreIntent",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "kind",
+            "amount"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/SynthPerformance.swift",
+          "type": "ResolvedUpperNote",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "role",
+            "onsetStep",
+            "durationInSteps",
+            "startFrequencyRatio",
+            "endFrequencyRatio",
+            "velocity",
+            "gate",
+            "timbreIntent",
+            "envelopeRelation",
+            "spectralReveal",
+            "timingOffsetInSteps",
+            "instrument"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/SynthPerformance.swift",
+          "type": "RelationalArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "chapter",
+            "phase",
+            "velocityScale",
+            "attackScale",
+            "decayScale",
+            "spectralScale",
+            "spectralAperture",
+            "anchorSpectralScale",
+            "complementarySpectralScale",
+            "bandPassBlend",
+            "glideTimeScale",
+            "pulseEchoSend"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/SynthPerformance.swift",
+          "type": "PulseEchoTextureArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "machineTexture",
+            "earliestPulseEchoOnsetStep",
+            "driveEligible",
+            "appliedAmount"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/SynthPerformance.swift",
+          "type": "SynthWorldDNA",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "sceneSeed",
+            "variation",
+            "rootFrequency",
+            "shadowInterval",
+            "responseInterval",
+            "motifFingerprint"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/SynthPerformance.swift",
+          "type": "SynthPerformanceBar",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "bar",
+            "gesture",
+            "mutationAmount",
+            "foundationInstrument",
+            "relationalSteps",
+            "sourceUpperNotes",
+            "upperNotes",
+            "polymetricEvidence",
+            "composition",
+            "upperTimingRelation",
+            "pulseEchoTextureArticulation",
+            "tonalEnvelopeExpansionEligible",
+            "spectralRevealEligible",
+            "forceHomeUpperTimbre"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/SynthPerformance.swift",
+          "type": "SynthPerformancePlan",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "world",
+            "kind",
+            "homeTimbreCorrection",
+            "bars"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/UpperMusicalPump.swift",
+          "type": "UpperMusicalPumpArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "schemaVersion",
+            "schemaIdentifier",
+            "active",
+            "kickAnchorSteps",
+            "attenuation",
+            "attackInBeats",
+            "releaseInBeats"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/UpperPercussionTail.swift",
+          "type": "UpperPercussionTailArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "scoreEventIndex",
+            "voice",
+            "step",
+            "role",
+            "body"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/UpperSpectralReveal.swift",
+          "type": "UpperSpectralRevealArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "relation",
+            "aperture"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift",
+          "fragment": "package let instrument: InstrumentAssignment"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift",
+          "fragment": "synthPlan.bars"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "direct-causal",
+        "path": "Tests/AutoTechnoCoreTests/InstrumentPaletteTests.swift",
+        "fragment": "func architectureAutomationPCM()"
+      },
+      "signalEvidence": {
+        "status": "direct-evidence",
+        "path": "Sources/AutoTechnoDSP/AutonomousCandidateEvaluation.swift",
+        "fragment": "package struct AutonomousInstrumentAssignmentEvidence"
+      },
+      "futureDecision": {
+        "status": "available-to-bounded-evaluator",
+        "path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",
+        "fragment": "package enum ProfessionalQualityRecoveryIntentReducer"
+      },
+      "forbiddenAnchors": [],
+      "limitations": "Role-specific tests isolate timbre, timing, tail, pump, reveal, and echo consequences; the domain-level PCM anchor is not a replacement for those focused tests."
+    },
+    {
+      "id": "kick-and-modal-physical-models",
+      "title": "Kick and modal physical-model parameters",
+      "classification": "active-rendered",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoCore/KickMorphology.swift",
+          "type": "KickMorphologyParameters",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "fundamentalHz",
+            "pitchDepthHz",
+            "fastPitchDepthHz",
+            "pitchDecayPerSecond",
+            "fastPitchDecayPerSecond",
+            "bodyDecayPerSecond",
+            "subDecayPerSecond",
+            "secondHarmonicLevel",
+            "bodyDrive",
+            "subLevel",
+            "noiseClickLevel",
+            "tonalClickLevel",
+            "clickFrequencyHz",
+            "presenceScale"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/KickMorphology.swift",
+          "type": "KickMorphologyArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "version",
+            "absoluteBar",
+            "presentationBar",
+            "segmentIndex",
+            "episodeID",
+            "operatorKind",
+            "episodeRelativeBar",
+            "fromHome",
+            "toHome",
+            "startProgress",
+            "endProgress",
+            "start",
+            "end"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/ModalPercussion.swift",
+          "type": "ModalPercussionArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "scoreEventIndex",
+            "step",
+            "use",
+            "modalIdentity",
+            "modalDegree",
+            "octave",
+            "fundamentalHz",
+            "excitation",
+            "damping",
+            "brightness",
+            "inharmonicity",
+            "eventIntensity",
+            "seed",
+            "material",
+            "coupling"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoDSP/VoiceRenderer.swift",
+          "fragment": "kickSourceDynamics.bind(morphology: resolved.kickMorphology)"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/ModalPercussionVoice.swift",
+          "fragment": "ModalPercussionArticulation"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "direct-causal",
+        "path": "Tests/AutoTechnoCoreTests/KickSourceDynamicsTests.swift",
+        "fragment": "func episodeMaterialsChangePCM()"
+      },
+      "signalEvidence": {
+        "status": "direct-evidence",
+        "path": "Sources/AutoTechnoDSP/AutonomousCandidateEvaluation.swift",
+        "fragment": "package struct AutonomousKickSourceDynamicsEvidence"
+      },
+      "futureDecision": {
+        "status": "direct-adaptation",
+        "path": "Sources/AutoTechnoCore/KickMorphology.swift",
+        "fragment": "package func qualityRetryAdjusted("
+      },
+      "forbiddenAnchors": [],
+      "limitations": "Kick and modal members have separate causal suites; the row's representative kick test is supplemented by ModalPercussionDSPTests and candidate completeness checks."
+    },
+    {
+      "id": "phrase-composition",
+      "title": "Phrase composition and accepted-memory parameters",
+      "classification": "active-rendered",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoCore/PhraseComposition.swift",
+          "type": "AudioSliceTrigger",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "onsetStep",
+            "playbackRate",
+            "direction",
+            "gain"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/PhraseComposition.swift",
+          "type": "AudioSlicePlan",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "sourceStartStep",
+            "sourceLengthInSteps",
+            "sourceKind",
+            "texture",
+            "textureSeed",
+            "resampledMemorySource",
+            "triggers"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/PhraseComposition.swift",
+          "type": "ArpeggiatorStep",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "onsetStep",
+            "durationInSteps",
+            "frequencyRatio",
+            "velocity",
+            "octave"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/PhraseComposition.swift",
+          "type": "ArpeggiatorPlan",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "direction",
+            "rateInSteps",
+            "octaveSpan",
+            "rotation",
+            "steps"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/PhraseComposition.swift",
+          "type": "PadRhythmicModulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "relation",
+            "phaseOffset"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/PhraseComposition.swift",
+          "type": "PadVoice",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "modalDegree",
+            "semitone",
+            "frequencyRatio"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/PhraseComposition.swift",
+          "type": "PadVoicing",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "function",
+            "harmonicDisclosureStage",
+            "onsetStep",
+            "durationInSteps",
+            "voices",
+            "commonToneCount",
+            "totalMovementInSemitones",
+            "maximumLeapInSemitones",
+            "contraryOuterMotion",
+            "instrument",
+            "rhythmicModulation"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/PhraseComposition.swift",
+          "type": "PhraseCompositionBar",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "bar",
+            "audioSlice",
+            "arpeggiator",
+            "padVoicing"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoDSP/PhraseCompositionRenderer.swift",
+          "fragment": "package enum AudioSliceRenderer"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift",
+          "fragment": "compositionBars: plan.phraseComposition"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "direct-causal",
+        "path": "Tests/AutoTechnoCoreTests/PhraseCompositionTests.swift",
+        "fragment": "func harmonicDisclosurePCMIsolation()"
+      },
+      "signalEvidence": {
+        "status": "direct-evidence",
+        "path": "Sources/AutoTechnoDSP/AutonomousCandidateEvaluation.swift",
+        "fragment": "package struct AutonomousPhraseCompositionBarEvidence"
+      },
+      "futureDecision": {
+        "status": "structural-owner",
+        "path": "Sources/AutoTechnoCore/PhraseComposition.swift",
+        "fragment": "package enum PhraseCompositionResolver"
+      },
+      "forbiddenAnchors": [],
+      "limitations": "Slice, arpeggiator, pad-harmony, pad-rhythm, and memory paths have different focused PCM tests; the member inventory is complete while the displayed anchor is representative."
+    },
+    {
+      "id": "long-horizon-material-and-effects",
+      "title": "Long-horizon material, effect, energy, and polymetric parameters",
+      "classification": "active-rendered",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoCore/LongHorizonMaterialWorld.swift",
+          "type": "EffectWorldTarget",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "spectralFocus",
+            "nonlinearPressure",
+            "modulationMotion",
+            "echoMemory",
+            "spatialDepth"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/LongHorizonMaterialWorld.swift",
+          "type": "LongHorizonMaterialAxes",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "rhythm",
+            "motif",
+            "roles",
+            "harmony",
+            "architecture",
+            "effect"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/LongHorizonMaterialWorld.swift",
+          "type": "LongHorizonMaterialWorldIntent",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "id",
+            "parentID",
+            "parentFingerprint",
+            "parentAxes",
+            "generation",
+            "retryOrdinal",
+            "handoff",
+            "axes",
+            "polymetricGrammar",
+            "fingerprint"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/LongHorizonMaterialWorld.swift",
+          "type": "LongHorizonMaterialWorldPlan",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "worldID",
+            "worldFingerprint",
+            "parentFingerprint",
+            "generation",
+            "handoff",
+            "sourceAxes",
+            "axes",
+            "polymetricGrammar",
+            "progress",
+            "handoffThresholds"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/LongHorizonEffectCarrier.swift",
+          "type": "LongHorizonEffectCarrierArticulation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "state",
+            "active",
+            "carrierDose",
+            "nonCarrierDose",
+            "requestedTarget"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/LongHorizonEffectSentence.swift",
+          "type": "LongHorizonEffectSentence",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "schemaVersion",
+            "schemaIdentifier",
+            "phraseIndex",
+            "phraseKind",
+            "sourceBar",
+            "sourceVoice",
+            "sourceStep",
+            "answerStartStep",
+            "answerEndStep",
+            "arrangementGesture",
+            "capability",
+            "function",
+            "attentionPriority"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/LongHorizonEnergyCoordination.swift",
+          "type": "LongHorizonEnergyCoordination",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "schemaVersion",
+            "schemaIdentifier",
+            "phraseIndex",
+            "startBar",
+            "phraseKind",
+            "episodeID",
+            "operatorKind",
+            "selectionReason",
+            "reason",
+            "target"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/LongHorizonPolymetricGrammar.swift",
+          "type": "LongHorizonPolymetricLaneGeometry",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "lane",
+            "stepLength",
+            "pulseCount",
+            "rotation"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/LongHorizonPolymetricGrammar.swift",
+          "type": "LongHorizonPolymetricGrammar",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "schemaVersion",
+            "schemaIdentifier",
+            "isEnabled",
+            "activationBar",
+            "laneGeometries",
+            "combinedPeriodInSteps",
+            "fingerprint"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
+          "fragment": "let target = phrase.materialWorld.resolvedAxes.effect"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift",
+          "fragment": "articulation: plan.effectCarrier"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "direct-causal",
+        "path": "Tests/AutoTechnoCoreTests/LongHorizonMaterialWorldTests.swift",
+        "fragment": "func tenTwentyMinuteSeparation()"
+      },
+      "signalEvidence": {
+        "status": "direct-evidence",
+        "path": "Sources/AutoTechnoDSP/LongHorizonEffectDose.swift",
+        "fragment": "package struct LongHorizonEffectDosePhraseEvidence"
+      },
+      "futureDecision": {
+        "status": "direct-adaptation",
+        "path": "Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift",
+        "fragment": "package enum LongHorizonFutureDecisionFactory"
+      },
+      "forbiddenAnchors": [],
+      "limitations": "Long-horizon members include lineage and boundary provenance as well as PCM-bearing targets; exact typed fingerprints distinguish those roles."
+    },
+    {
+      "id": "dsp-graph-and-spatial-contracts",
+      "title": "DSP graph and spatial-network contracts",
+      "classification": "active-dsp-contract",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
+          "type": "DSPGraphNode",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "id",
+            "kind",
+            "branch",
+            "order",
+            "amount",
+            "mix",
+            "feedback",
+            "delaySeconds"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
+          "type": "DSPProtectedRouting",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "kick",
+            "subAndBass",
+            "maskingProtection",
+            "glue",
+            "limiter",
+            "output"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
+          "type": "DSPGraphPlan",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "sessionSeed",
+            "revision",
+            "nodes",
+            "mutation",
+            "lowEndProtected",
+            "protectedRouting",
+            "materialWorldFingerprint",
+            "effectWorldTarget"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/FeedbackDelayNetwork.swift",
+          "type": "FeedbackDelayNetworkConfiguration",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "sampleRate",
+            "roomScale",
+            "decayTimeSeconds",
+            "dampingHz",
+            "delayFrameCounts",
+            "feedbackGains",
+            "dampingCoefficient",
+            "synthSendGain",
+            "percussionSendGain",
+            "wetGain"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
+          "fragment": "package enum GeneratedDSPGraphRenderer"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/FeedbackDelayNetwork.swift",
+          "fragment": "package enum FeedbackDelayNetwork"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "direct-causal",
+        "path": "Tests/AutoTechnoCoreTests/AutonomousArchitectureTests.swift",
+        "fragment": "func topologyDistinction()"
+      },
+      "signalEvidence": {
+        "status": "direct-evidence",
+        "path": "Sources/AutoTechnoDSP/AutonomousCandidateEvaluation.swift",
+        "fragment": "package struct AutonomousGraphEvidence"
+      },
+      "futureDecision": {
+        "status": "fixed-contract-with-evidence",
+        "path": "Sources/AutoTechnoDSP/GeneratedDSPGraph.swift",
+        "fragment": "package enum DSPGraphGenerator"
+      },
+      "forbiddenAnchors": [],
+      "limitations": "Configuration includes derived frame counts and feedback gains; constructors and route-normalized stability tests are the authority for those derived members."
+    },
+    {
+      "id": "automatic-mix-and-live-master",
+      "title": "Automatic mix and live-master controller parameters",
+      "classification": "active-dsp-contract",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift",
+          "type": "AutomaticMixPlan",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "gainsDB",
+            "measuredKickOverFoundationDB",
+            "targetKickOverFoundationDB",
+            "sourceKickRMS",
+            "sourceKickActiveRMS"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift",
+          "type": "AutomaticMixState",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "kickCorrectionDB"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/LiveFeedback.swift",
+          "type": "LiveMasterHeadroomContinuationState",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "revision",
+            "committedTrimDB",
+            "consecutiveCleanWindows",
+            "lastProposalFingerprint",
+            "lastObservationFingerprint",
+            "lastAcceptedSourcePhraseIndex",
+            "earliestEligibleFutureSample"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/LiveFeedback.swift",
+          "type": "LiveMasterHeadroomProposal",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "controllerPolicyVersion",
+            "targetFingerprint",
+            "sourcePhraseIndex",
+            "sourcePlanFingerprint",
+            "routeGeneration",
+            "playerSampleRange",
+            "observationFingerprint",
+            "incomingRevision",
+            "incomingStateFingerprint",
+            "outcome",
+            "reasonCodes",
+            "proposedTrimDB",
+            "proposedCleanWindows",
+            "earliestEligibleFutureSample",
+            "fingerprint"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/LiveOutputWindowEvidence.swift",
+          "type": "LiveMasterHeadroomTarget",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "schemaVersion",
+            "sourceObservationFingerprint",
+            "phraseIndex",
+            "planFingerprint",
+            "routeGeneration",
+            "controllerRevision",
+            "playerSampleRange",
+            "sampleRate",
+            "applicableCheckpoints",
+            "selectedLoudnessCheckpoint",
+            "selectedTruePeakCheckpoint",
+            "analyzerVersion",
+            "engineVersion",
+            "evidenceVersion",
+            "qualityPolicyVersion",
+            "evaluatorVersion",
+            "controllerPolicyVersion",
+            "profileVersion",
+            "profileFingerprint",
+            "loudnessLowerLUFS",
+            "loudnessUpperLUFS",
+            "loudnessMidpointLUFS",
+            "truePeakLowerDBTP",
+            "truePeakUpperDBTP",
+            "truePeakMidpointDBTP"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift",
+          "fragment": "package enum AutomaticMixBalancer"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/LiveMasterHeadroomController.swift",
+          "fragment": "package enum LiveMasterHeadroomController"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "direct-causal",
+        "path": "Tests/AutoTechnoCoreTests/LiveMasterTrimRenderingTests.swift",
+        "fragment": "func minusTrimScalesTerminalStereoOnly()"
+      },
+      "signalEvidence": {
+        "status": "direct-evidence",
+        "path": "Sources/AutoTechnoDSP/LiveOutputWindowEvidence.swift",
+        "fragment": "package struct LiveOutputWindowEvidence"
+      },
+      "futureDecision": {
+        "status": "direct-adaptation",
+        "path": "Sources/AutoTechnoDSP/LiveMasterHeadroomController.swift",
+        "fragment": "package enum LiveMasterHeadroomController"
+      },
+      "forbiddenAnchors": [],
+      "limitations": "Automatic mix is detached render-state adaptation while live master crosses an App-authoritative future boundary; they share a domain only as attenuation-only controllers and retain separate tests."
+    },
+    {
+      "id": "repeat-hold-and-future-adaptation",
+      "title": "Repeat-hold transformation and future-adaptation parameters",
+      "classification": "active-structural",
+      "owners": [
+        {
+          "path": "Sources/AutoTechnoDSP/RepeatHoldEvolution.swift",
+          "type": "RepeatHoldEvolutionRenderCandidate",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "patternFamily",
+            "blocks"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/RepeatHoldEvolution.swift",
+          "type": "PreparedRepeatHoldEvolutionPhrase",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "patternFamily",
+            "blocks",
+            "evidence"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/LongHorizonTrajectoryDecision.swift",
+          "type": "LongHorizonTrajectoryDecision",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "schemaVersion",
+            "schemaIdentifier",
+            "rootSeed",
+            "policyVersion",
+            "evidenceSchema",
+            "evidenceFingerprint",
+            "observedThroughPhraseIndex",
+            "observedThroughBar",
+            "targetPhraseIndex",
+            "targetBar",
+            "action",
+            "reasons",
+            "fingerprint"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift",
+          "type": "LongHorizonFutureAdaptationUpdate",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "state",
+            "decision"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift",
+          "type": "LongHorizonFutureAdaptationState",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "schemaVersion",
+            "rootSeed",
+            "expectedPhraseIndex",
+            "expectedBar",
+            "nextEligibleDecisionBar",
+            "lastDecisionFingerprint",
+            "lastMaterialReframeGeneration",
+            "profileFingerprint",
+            "primaryPolicyVersion",
+            "semantic",
+            "effects",
+            "signals"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/QualityQualification.swift",
+          "type": "AutonomousQualityRecoveryIntent",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "schemaVersion",
+            "symbolicDensity",
+            "spectralMovement",
+            "kickCrestReduction"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/QualityQualification.swift",
+          "type": "AutonomousQualityRecoveryContext",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "wave",
+            "ordinal",
+            "presentedRepeatBars",
+            "intent"
+          ]
+        },
+        {
+          "path": "Sources/AutoTechnoCore/QualityQualification.swift",
+          "type": "AutonomousQualityRetryContinuation",
+          "kind": "stored-properties",
+          "selection": "all",
+          "members": [
+            "schemaVersion",
+            "targetPhraseIndex",
+            "ordinal",
+            "wave",
+            "presentedRepeatBars",
+            "recoveryIntent",
+            "exhausted"
+          ]
+        }
+      ],
+      "consumerAnchors": [
+        {
+          "path": "Sources/AutoTechnoDSP/RepeatHoldEvolution.swift",
+          "fragment": "struct RepeatHoldEvolutionDeckState"
+        },
+        {
+          "path": "Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift",
+          "fragment": "package struct LongHorizonFutureAdaptationState"
+        }
+      ],
+      "pcmEvidence": {
+        "status": "direct-causal",
+        "path": "Tests/AutoTechnoCoreTests/RepeatHoldEvolutionTests.swift",
+        "fragment": "func wholeMixFilterIncludesKick()"
+      },
+      "signalEvidence": {
+        "status": "direct-evidence",
+        "path": "Sources/AutoTechnoDSP/LongHorizonSignalTrajectory.swift",
+        "fragment": "package struct LongHorizonSignalTrajectoryReport"
+      },
+      "futureDecision": {
+        "status": "direct-adaptation",
+        "path": "Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift",
+        "fragment": "package enum LongHorizonFutureDecisionFactory"
+      },
+      "forbiddenAnchors": [],
+      "limitations": "Repeat-hold filters transform already-qualified PCM without canonical score advance; future-adaptation state changes only unstarted plans. The report keeps those consequences distinct despite their shared future-boundary role."
+    }
+  ]
+}

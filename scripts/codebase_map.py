@@ -22,8 +22,16 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, 
 from urllib.parse import unquote, urlparse
 
 
-SCHEMA_VERSION = 1
-ROOT_KEYS = {"schemaVersion", "modulePolicies", "components", "flows", "boundaries"}
+SCHEMA_VERSION = 2
+ROOT_KEYS = {
+    "schemaVersion",
+    "modulePolicies",
+    "components",
+    "continuationStates",
+    "transitions",
+    "flows",
+    "boundaries",
+}
 MODULE_KEYS = {"target", "responsibility", "allowedInternalDependencies"}
 COMPONENT_KEYS = {
     "id",
@@ -42,7 +50,50 @@ COMPONENT_KEYS = {
     "boundaries",
 }
 ANCHOR_KEYS = {"symbol", "path"}
-FLOW_KEYS = {"id", "name", "summary", "steps", "contracts"}
+CONTINUATION_KEYS = {
+    "id",
+    "name",
+    "ownerComponent",
+    "symbol",
+    "path",
+    "scope",
+    "pcmRelationship",
+}
+CONTINUATION_SCOPES = {
+    "canonical-phrase",
+    "detached-preparation",
+    "host-control",
+    "realtime-handoff",
+    "monitoring-output",
+}
+TRANSITION_KEYS = {
+    "id",
+    "name",
+    "fromComponent",
+    "toComponent",
+    "boundary",
+    "consumesState",
+    "producesState",
+    "artifact",
+    "pcmConsequence",
+    "failureBehavior",
+}
+PCM_CONSEQUENCES = {
+    "none",
+    "creates-future-pcm",
+    "processes-future-pcm",
+    "qualifies-without-changing-pcm",
+    "commits-immutable-pcm",
+    "schedules-immutable-pcm",
+    "converts-and-queues-device-pcm",
+    "copies-app-owned-pcm",
+    "changes-future-pcm-only",
+    "replays-qualified-pcm-without-canonical-advance",
+    "changes-monitoring-output-only",
+    "rebuilds-unscheduled-pcm",
+    "observes-without-changing-pcm",
+}
+FLOW_KEYS = {"id", "name", "summary", "steps", "transitions", "contracts"}
 FLOW_STEP_KEYS = {"component", "artifact"}
 BOUNDARY_KEYS = {
     "id",
@@ -638,6 +689,121 @@ def validate_manifest(
             if boundary not in boundaries:
                 errors.append(f"component {component_id} references unknown boundary {boundary}")
 
+    raw_continuations = manifest.get("continuationStates")
+    if not isinstance(raw_continuations, list):
+        errors.append("manifest.continuationStates must be an array")
+        raw_continuations = []
+    continuations: Dict[str, Mapping[str, Any]] = {}
+    for index, raw_continuation in enumerate(raw_continuations):
+        location = f"continuationStates[{index}]"
+        if not isinstance(raw_continuation, dict):
+            errors.append(f"{location} must be an object")
+            continue
+        validate_keys(raw_continuation, CONTINUATION_KEYS, location, errors)
+        continuation_id = validate_id(
+            raw_continuation.get("id"), f"{location}.id", errors
+        )
+        if continuation_id is None:
+            continue
+        if continuation_id in continuations:
+            errors.append(f"duplicate continuation state id {continuation_id}")
+        continuations[continuation_id] = raw_continuation
+        for field in ["name", "ownerComponent", "symbol", "path", "pcmRelationship"]:
+            if (
+                not isinstance(raw_continuation.get(field), str)
+                or not raw_continuation.get(field)
+            ):
+                errors.append(f"{location}.{field} must be a non-empty string")
+        scope = raw_continuation.get("scope")
+        if scope not in CONTINUATION_SCOPES:
+            errors.append(
+                f"{location}.scope must be one of {sorted(CONTINUATION_SCOPES)}"
+            )
+        owner_id = raw_continuation.get("ownerComponent")
+        owner = components.get(owner_id) if isinstance(owner_id, str) else None
+        if owner is None:
+            errors.append(
+                f"{location}.ownerComponent references unknown component {owner_id}"
+            )
+        raw_path = raw_continuation.get("path")
+        symbol = raw_continuation.get("symbol")
+        if isinstance(raw_path, str):
+            try:
+                path = normalize_repo_path(raw_path)
+            except ValueError as exc:
+                errors.append(f"{location}.path is invalid: {exc}")
+            else:
+                if owner is not None and path not in owner.get("sourcePaths", []):
+                    errors.append(
+                        f"{location}.path must be one of owner component {owner_id} sourcePaths"
+                    )
+                if isinstance(symbol, str) and not any(
+                    item.path == path and item.name == symbol for item in symbols
+                ):
+                    errors.append(
+                        f"{location} does not resolve declaration {symbol} in {path}"
+                    )
+
+    raw_transitions = manifest.get("transitions")
+    if not isinstance(raw_transitions, list):
+        errors.append("manifest.transitions must be an array")
+        raw_transitions = []
+    transitions: Dict[str, Mapping[str, Any]] = {}
+    referenced_continuations: Set[str] = set()
+    for index, raw_transition in enumerate(raw_transitions):
+        location = f"transitions[{index}]"
+        if not isinstance(raw_transition, dict):
+            errors.append(f"{location} must be an object")
+            continue
+        validate_keys(raw_transition, TRANSITION_KEYS, location, errors)
+        transition_id = validate_id(raw_transition.get("id"), f"{location}.id", errors)
+        if transition_id is None:
+            continue
+        if transition_id in transitions:
+            errors.append(f"duplicate transition id {transition_id}")
+        transitions[transition_id] = raw_transition
+        for field in [
+            "name",
+            "fromComponent",
+            "toComponent",
+            "boundary",
+            "artifact",
+            "failureBehavior",
+        ]:
+            if not isinstance(raw_transition.get(field), str) or not raw_transition.get(field):
+                errors.append(f"{location}.{field} must be a non-empty string")
+        for field in ["fromComponent", "toComponent"]:
+            component_id = raw_transition.get(field)
+            if isinstance(component_id, str) and component_id not in components:
+                errors.append(f"{location}.{field} references unknown component {component_id}")
+        boundary_id = raw_transition.get("boundary")
+        if isinstance(boundary_id, str) and boundary_id not in boundaries:
+            errors.append(f"{location}.boundary references unknown boundary {boundary_id}")
+        pcm_consequence = raw_transition.get("pcmConsequence")
+        if pcm_consequence not in PCM_CONSEQUENCES:
+            errors.append(
+                f"{location}.pcmConsequence must be one of {sorted(PCM_CONSEQUENCES)}"
+            )
+        transition_state_count = 0
+        for field in ["consumesState", "producesState"]:
+            state_ids = validate_string_list(
+                raw_transition.get(field), f"{location}.{field}", errors
+            )
+            transition_state_count += len(state_ids)
+            for state_id in state_ids:
+                referenced_continuations.add(state_id)
+                if state_id not in continuations:
+                    errors.append(f"{location}.{field} references unknown state {state_id}")
+        if transition_state_count == 0:
+            errors.append(
+                f"{location} must consume or produce at least one continuation state"
+            )
+
+    for continuation_id in sorted(set(continuations) - referenced_continuations):
+        errors.append(
+            f"continuation state {continuation_id} is not referenced by any transition"
+        )
+
     raw_flows = manifest.get("flows")
     if not isinstance(raw_flows, list):
         errors.append("manifest.flows must be an array")
@@ -686,6 +852,33 @@ def validate_manifest(
                 errors.append(f"{step_location}.component references unknown component {component}")
             if not isinstance(artifact, str) or not artifact:
                 errors.append(f"{step_location}.artifact must be a non-empty string")
+        flow_transitions = validate_string_list(
+            raw_flow.get("transitions"), f"{location}.transitions", errors
+        )
+        if len(flow_transitions) != len(steps) - 1:
+            errors.append(
+                f"{location}.transitions must contain exactly one edge per adjacent step"
+            )
+        for transition_index, transition_id in enumerate(flow_transitions):
+            transition = transitions.get(transition_id)
+            if transition is None:
+                errors.append(
+                    f"{location}.transitions references unknown transition {transition_id}"
+                )
+                continue
+            if transition_index >= len(steps) - 1:
+                continue
+            expected_from = steps[transition_index].get("component")
+            expected_to = steps[transition_index + 1].get("component")
+            if (
+                transition.get("fromComponent") != expected_from
+                or transition.get("toComponent") != expected_to
+            ):
+                errors.append(
+                    f"{location}.transitions[{transition_index}] {transition_id} links "
+                    f"{transition.get('fromComponent')} -> {transition.get('toComponent')}, "
+                    f"expected {expected_from} -> {expected_to}"
+                )
 
     if check_guardrail_documents:
         required_fragments = {
@@ -750,7 +943,7 @@ def render_markdown(
         "",
         "## Use and refresh",
         "",
-        "Start with the component or flow matching the change, then follow its owner anchors, source files, contracts, boundaries, and tests.",
+        "Start with the component, continuation, transition, or flow matching the change, then follow its owner anchors, source files, contracts, boundaries, and tests.",
         "",
         "```bash",
         "python3 scripts/codebase_map.py generate",
@@ -790,6 +983,9 @@ def render_markdown(
             + " |"
         )
 
+    transition_by_id = {
+        transition["id"]: transition for transition in manifest["transitions"]
+    }
     lines.extend(["", "## Canonical runtime flows", ""])
     for flow in manifest["flows"]:
         lines.extend([f"### {flow['name']}", "", flow["summary"], "", "```mermaid", "flowchart LR"])
@@ -798,13 +994,102 @@ def render_markdown(
             lines.append(
                 f'  {mermaid_id(flow["id"] + str(index))}["{component["name"]}"]'
             )
-        for index in range(len(flow["steps"]) - 1):
-            artifact = flow["steps"][index]["artifact"].replace('"', "'")
+        for index, transition_id in enumerate(flow["transitions"]):
+            transition = transition_by_id[transition_id]
+            artifact = transition["artifact"].replace('"', "'")
+            consequence = transition["pcmConsequence"].replace('"', "'")
             lines.append(
-                f"  {mermaid_id(flow['id'] + str(index))} -- \"{artifact}\" --> "
+                f"  {mermaid_id(flow['id'] + str(index))} -- \"{artifact}; {consequence}\" --> "
                 f"{mermaid_id(flow['id'] + str(index + 1))}"
             )
         lines.extend(["```", "", "Contracts: " + ", ".join(markdown_link(path) for path in flow["contracts"]), ""])
+
+    lines.extend(
+        [
+            "## Canonical cross-boundary continuation states",
+            "",
+            "These are the typed states that cross a canonical preparation, commit, scheduling, recovery, feedback, or monitoring boundary. Nested voice, effect, and evidence state remains owned by the named parent continuation.",
+            "",
+            "| State | Canonical owner | Declaration | Scope | PCM relationship |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
+    for continuation in manifest["continuationStates"]:
+        owner = component_by_id[continuation["ownerComponent"]]["name"]
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    f"`{continuation['id']}` — {escape_table(continuation['name'])}",
+                    escape_table(owner),
+                    f"`{continuation['symbol']}` in {markdown_link(continuation['path'])}",
+                    f"`{continuation['scope']}`",
+                    escape_table(continuation["pcmRelationship"]),
+                ]
+            )
+            + " |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Checked state and PCM transitions",
+            "",
+            "Every edge names its execution boundary, consumed and produced continuation, immutable artifact, PCM consequence, and fail-closed behavior.",
+            "",
+            "```mermaid",
+            "flowchart LR",
+        ]
+    )
+    transition_components = sorted(
+        {
+            transition[field]
+            for transition in manifest["transitions"]
+            for field in ["fromComponent", "toComponent"]
+        }
+    )
+    for component_id in transition_components:
+        component = component_by_id[component_id]
+        lines.append(
+            f'  {mermaid_id("transition_" + component_id)}["{component["name"]}"]'
+        )
+    for transition in manifest["transitions"]:
+        label = (
+            f"{transition['artifact']}; {transition['pcmConsequence']}"
+            .replace('"', "'")
+        )
+        lines.append(
+            f"  {mermaid_id('transition_' + transition['fromComponent'])} "
+            f"-- \"{label}\" --> "
+            f"{mermaid_id('transition_' + transition['toComponent'])}"
+        )
+    lines.extend(
+        [
+            "```",
+            "",
+            "| Transition | Boundary | Owner handoff | Consumes | Produces | Artifact | PCM consequence | Failure behavior |",
+            "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        ]
+    )
+    for transition in manifest["transitions"]:
+        from_name = component_by_id[transition["fromComponent"]]["name"]
+        to_name = component_by_id[transition["toComponent"]]["name"]
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    f"`{transition['id']}` — {escape_table(transition['name'])}",
+                    f"`{transition['boundary']}`",
+                    f"{escape_table(from_name)} → {escape_table(to_name)}",
+                    markdown_list(transition["consumesState"]),
+                    markdown_list(transition["producesState"]),
+                    escape_table(transition["artifact"]),
+                    f"`{transition['pcmConsequence']}`",
+                    escape_table(transition["failureBehavior"]),
+                ]
+            )
+            + " |"
+        )
 
     lines.extend(
         [
@@ -1020,7 +1305,7 @@ def render_markdown(
         [
             "## Update triggers",
             "",
-            "Update `docs/codebase-map.json` and regenerate this file when a change adds, removes, moves, or reassigns source/test/resource files, module dependencies, canonical owners or persistent state, runtime flows, evidence/evaluation/feedback/adaptation paths, realtime or future-boundary behavior, route recovery/fallback behavior, contracts, or test ownership.",
+            "Update `docs/codebase-map.json` and regenerate this file when a change adds, removes, moves, or reassigns source/test/resource files, module dependencies, canonical owners or persistent state, cross-boundary continuations or PCM consequences, runtime flows, evidence/evaluation/feedback/adaptation paths, realtime or future-boundary behavior, route recovery/fallback behavior, contracts, or test ownership.",
             "",
             "For an existing-symbol change that preserves all navigation semantics, leave the map unchanged and record the no-impact rationale in the pull request.",
             "",

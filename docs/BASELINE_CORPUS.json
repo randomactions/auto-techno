@@ -1,0 +1,117 @@
+{
+  "schema": "autotechno-baseline-corpus.v1",
+  "corpusVersion": 1,
+  "purpose": "Compact pre-listening inputs for reproducible Phase-1 whole-mix, stem, signal, score, performance, and controlled-listening evidence.",
+  "selectionPolicy": {
+    "algorithm": "splitmix64-domain-sequence.v1",
+    "domainKeyHex": "6175746f74656368",
+    "incrementHex": "9e3779b97f4a7c15",
+    "outputMapping": "rootSeed=mix(domainKey+(ordinal+1)*increment modulo 2^64)",
+    "selectionCount": 7,
+    "selectionOrder": "ordinal-ascending-before-any-render-or-listening",
+    "biasGuard": "Seeds and checkpoints are fixed by ordinal and checkpoint coverage before PCM rendering, quality scoring, or listening; no entry may be replaced because of its musical result."
+  },
+  "checkpointPolicy": {
+    "maximumPhrases": 128,
+    "selection": "first-canonical-occurrence",
+    "advancement": "AutonomousSessionDirector.plan then AutonomousSessionState.advancePlanning"
+  },
+  "routes": [
+    {
+      "id": "native-stereo-44100",
+      "sampleRate": 44100,
+      "channelCount": 2,
+      "routeGeneration": 0,
+      "routeRecovery": false
+    },
+    {
+      "id": "native-stereo-48000",
+      "sampleRate": 48000,
+      "channelCount": 2,
+      "routeGeneration": 0,
+      "routeRecovery": false
+    }
+  ],
+  "cases": [
+    {
+      "id": "ATBC-V1-000-ESTABLISHMENT",
+      "ordinal": 0,
+      "rootSeed": 14191091090230775643,
+      "checkpoint": "establishment",
+      "continuationClass": "initial"
+    },
+    {
+      "id": "ATBC-V1-001-CHAPTER-CHANGE",
+      "ordinal": 1,
+      "rootSeed": 16233903728507492277,
+      "checkpoint": "chapter-change",
+      "continuationClass": "advanced"
+    },
+    {
+      "id": "ATBC-V1-002-CONTRAST",
+      "ordinal": 2,
+      "rootSeed": 5264041106166723748,
+      "checkpoint": "contrast",
+      "continuationClass": "advanced"
+    },
+    {
+      "id": "ATBC-V1-003-MAJOR-BREAK",
+      "ordinal": 3,
+      "rootSeed": 16446217166147961487,
+      "checkpoint": "major-break",
+      "continuationClass": "advanced"
+    },
+    {
+      "id": "ATBC-V1-004-RELEASE",
+      "ordinal": 4,
+      "rootSeed": 14776902632212488312,
+      "checkpoint": "release",
+      "continuationClass": "advanced"
+    },
+    {
+      "id": "ATBC-V1-005-IDENTITY-RETURN",
+      "ordinal": 5,
+      "rootSeed": 5425050436083965530,
+      "checkpoint": "identity-return",
+      "continuationClass": "advanced"
+    },
+    {
+      "id": "ATBC-V1-006-LONG-CONTINUATION",
+      "ordinal": 6,
+      "rootSeed": 8323052619921110197,
+      "checkpoint": "long-continuation",
+      "continuationClass": "long"
+    }
+  ],
+  "requiredCoverage": {
+    "checkpoints": [
+      "establishment",
+      "chapter-change",
+      "contrast",
+      "major-break",
+      "release",
+      "identity-return",
+      "long-continuation"
+    ],
+    "phraseKinds": [
+      "lock",
+      "contrast",
+      "majorBreak",
+      "energyRelease",
+      "identityReturn"
+    ],
+    "continuationClasses": [
+      "initial",
+      "advanced",
+      "long"
+    ],
+    "sampleRates": [
+      44100,
+      48000
+    ],
+    "channelCounts": [
+      2
+    ]
+  },
+  "scope": "Offline corpus selection only. It adds no runtime selector, alternate engine, quality verdict, PCM claim, listening result, app/route qualification, or professional-release claim."
+}

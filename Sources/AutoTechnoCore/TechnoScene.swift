@@ -144,6 +144,8 @@ package struct TechnoScene: Equatable, Sendable {
     package let character: RenderCharacter
     package let groove: GrooveProfile
     package let motif: [SynthEvent]
+    /// Quarantined score-only metadata: fingerprinted and preflight-bounded,
+    /// but intentionally not represented as rendered PCM.
     package let sequencer: [SequencerEvent]
 
     // MARK: - Beat Shape Vocabulary

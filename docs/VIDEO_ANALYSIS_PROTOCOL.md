@@ -8,6 +8,9 @@ promotion verdict.
 ## Capture the source
 
 - Record the video URL, title, creator, access date, and any relevant timestamp.
+- For an active autonomous roadmap item, encode that provenance in its checked
+  `docs/local/reports/source-citations/AT-xxxx.json` record under the
+  [`SOURCE_CITATION_SCHEMA.md`](SOURCE_CITATION_SCHEMA.md) contract.
 - Inspect the linked moment and its surrounding chapter or context. Do not
   generalize from an isolated sentence when the nearby demonstration qualifies
   it.
