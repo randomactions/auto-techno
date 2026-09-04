@@ -1,15 +1,13 @@
 import AutoTechnoCore
 @testable import AutoTechnoDSP
-import Testing
+import XCTest
 
 /// Swift Testing retains render fixtures for the lifetime of its process on
-/// hosted Swift 6.1 arm64. Keep this large-value fingerprint assertion in its
-/// own file and suite so CI can execute it in a fresh process after rendering
-/// tests.
-@Suite("Live master trim fingerprint binding")
-struct LiveMasterTrimFingerprintTests {
-    @Test("Committed trim and revision are fingerprint-bound")
-    func trimIsFingerprintBound() {
+/// hosted Swift 6.1 arm64, and its cooperative-task stack faults while entering
+/// this large-value fingerprint assertion. Keep the exact assertion in a
+/// synchronous XCTest case and a fresh CI process after rendering tests.
+final class LiveMasterTrimFingerprintTests: XCTestCase {
+    func testTrimIsFingerprintBound() {
         let homeState = LiveMasterHeadroomContinuationState()
         let attenuatedState = liveState(trimDB: -0.5)
         let newerRevisionState = LiveMasterHeadroomContinuationState(
@@ -26,8 +24,8 @@ struct LiveMasterTrimFingerprintTests {
         let attenuated = normalFingerprint(liveState: attenuatedState)
         let newerRevision = normalFingerprint(liveState: newerRevisionState)
 
-        #expect(home != attenuated)
-        #expect(attenuated != newerRevision)
+        XCTAssertNotEqual(home, attenuated)
+        XCTAssertNotEqual(attenuated, newerRevision)
 
         let cancellableHome = cancellableFingerprint(liveState: homeState)
         let cancellableAttenuated = cancellableFingerprint(
@@ -36,20 +34,24 @@ struct LiveMasterTrimFingerprintTests {
         let cancellableNewerRevision = cancellableFingerprint(
             liveState: newerRevisionState
         )
-        #expect(cancellableHome != nil)
-        #expect(cancellableAttenuated != nil)
-        #expect(cancellableNewerRevision != nil)
-        #expect(cancellableHome != cancellableAttenuated)
-        #expect(cancellableAttenuated != cancellableNewerRevision)
+        XCTAssertNotNil(cancellableHome)
+        XCTAssertNotNil(cancellableAttenuated)
+        XCTAssertNotNil(cancellableNewerRevision)
+        XCTAssertNotEqual(cancellableHome, cancellableAttenuated)
+        XCTAssertNotEqual(cancellableAttenuated, cancellableNewerRevision)
 
         let negativeZeroState = LiveMasterHeadroomContinuationState(
             committedTrimDB: -0.0
         )
-        #expect(negativeZeroState.committedTrimDB.bitPattern ==
-                Double.zero.bitPattern)
-        #expect(normalFingerprint(liveState: negativeZeroState) == home)
-        #expect(cancellableFingerprint(liveState: negativeZeroState) ==
-                cancellableHome)
+        XCTAssertEqual(
+            negativeZeroState.committedTrimDB.bitPattern,
+            Double.zero.bitPattern
+        )
+        XCTAssertEqual(normalFingerprint(liveState: negativeZeroState), home)
+        XCTAssertEqual(
+            cancellableFingerprint(liveState: negativeZeroState),
+            cancellableHome
+        )
     }
 
     private func liveState(trimDB: Double) -> LiveMasterHeadroomContinuationState {
