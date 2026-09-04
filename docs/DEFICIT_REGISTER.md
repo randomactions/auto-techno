@@ -35,7 +35,7 @@ observed scoped fraction, never likelihood, importance, or severity.
 - **Canonical owner:** AutonomousPhrasePlan and the accepted resolved score (`AutoTechnoDSP detached evidence`).
 - **Evidence owner:** PCMRhythmicBaselineAnalyzer.
 - **Nearest roadmap work:** `AT-0038` Add segment-, role-, band-, and horizon-local feature aggregation; `AT-0040` Calibrate transient, density, and fatigue evidence.
-- **Source evidence:** `rhythmic` `c796594183e700bca28970dbef73326d80c1253e7a83b121418cba63796154eb` — 14/14 assets declare unavailable score binding.
+- **Source evidence:** `rhythmic` `85007d9f0603a51ad839c7e3f7aef280bd2b532f44a782a2060867e65f48097a` — 14/14 assets declare unavailable score binding.
 - **Limits:** PCM onset inference can fold stereo cancellation and cannot identify authored score events. No groove preference or defect threshold exists yet.
 
 ### DEF-0002 — Kick/foundation collision classes have no calibrated quality interpretation
@@ -46,7 +46,7 @@ observed scoped fraction, never likelihood, importance, or severity.
 - **Canonical owner:** Accepted score events, VoiceRenderer role taps, and SpectrumMaskingAnalyzer (`AutoTechnoDSP detached evidence`).
 - **Evidence owner:** PCMKickFoundationCollisionAnalyzer.
 - **Nearest roadmap work:** `AT-0039` Calibrate kick/bass masking and groove metrics against independent fixtures.
-- **Source evidence:** `kick-foundation-collision` `056610f43a90cd62eacd21862d4e55829ee767c4513e4c99083e680ea21976e6` — 288/652 events are descriptively low-band-overlap; all lack calibrated severity.
+- **Source evidence:** `kick-foundation-collision` `026aac5d9267190dcb3f53cc99ecc0ba22073ea465c9104f9b313d6b577dc850` — 288/652 events are descriptively low-band-overlap; all lack calibrated severity.
 - **Limits:** Overlap may be intentional, constructive, phase-dependent, or perceptually masked. Relative energy is explicitly descriptive and not an excessive-level verdict.
 
 ### DEF-0003 — Spectral shape and occupancy observations are uncalibrated
@@ -57,7 +57,7 @@ observed scoped fraction, never likelihood, importance, or severity.
 - **Canonical owner:** SpectrumMaskingAnalyzer causal bands and spectral-shape evidence (`AutoTechnoDSP detached evidence`).
 - **Evidence owner:** PCMSpectralBaselineAnalyzer.
 - **Nearest roadmap work:** `AT-0041` Calibrate timbral motion, harshness, dullness, and spectral-crowding evidence.
-- **Source evidence:** `spectral` `d53699e1c5d2353b5882119c577d66aa939b0923d8d13106b18b35c77fb73e33` — 44544 source-bound windows expose descriptive spectral features only.
+- **Source evidence:** `spectral` `568e525f884f4707245354e45fe52a1f1f6470b4705dcc81eb4942a25a655359` — 44544 source-bound windows expose descriptive spectral features only.
 - **Limits:** No reference-free spectral distribution is inherently good or bad for underground techno. Current role and whole-mix windows are correlated observations, not independent trials.
 
 ### DEF-0004 — Symbolic motif recurrence has no salience or coherent-variation calibration
@@ -68,7 +68,7 @@ observed scoped fraction, never likelihood, importance, or severity.
 - **Canonical owner:** AutonomousPhrasePlan and resolved upper-note score (`AutoTechnoCore score evidence`).
 - **Evidence owner:** ScoreMotifBaselineAnalyzer.
 - **Nearest roadmap work:** `AT-0044` Calibrate motif identity, variation, phrase grammar, and arrangement contrast evidence.
-- **Source evidence:** `score-motif` `b650c6ed998aeeef21eb068175aab930691852e4db1b9eff25b2c238bbfa6618` — 1392 available symbolic comparisons have no calibrated salience or preference interpretation.
+- **Source evidence:** `score-motif` `fd14bd5fab5175e132717896eb09b25ae2b39caa5dc0ea491584cf5bf088b71c` — 1392 available symbolic comparisons have no calibrated salience or preference interpretation.
 - **Limits:** The report does not infer whether a scored motif is audible after synthesis and mixing. Route duplicates share score evidence and are not independent musical cases.
 
 ### DEF-0005 — Section contrast and recovery states lack transition-quality calibration
@@ -79,7 +79,7 @@ observed scoped fraction, never likelihood, importance, or severity.
 - **Canonical owner:** AutonomousSessionDirector, accepted phrase boundaries, and exact context PCM (`AutoTechnoDSP detached evidence`).
 - **Evidence owner:** PCMSectionBoundaryBaselineAnalyzer.
 - **Nearest roadmap work:** `AT-0045` Calibrate transition preparation, consequence, and recovery evidence.
-- **Source evidence:** `section-boundary` `9b2a7ab70a391865184324a77951cc075bf119536fbc461e5f7326361b655f6f` — 34 boundaries include 26 joint recoveries not observed in horizon and 8 unavailable, all descriptively.
+- **Source evidence:** `section-boundary` `723cc41e0c6cfbe08d4497d1b7c19723d01949bd78281180599fed1bec4c3288` — 34 boundaries include 26 joint recoveries not observed in horizon and 8 unavailable, all descriptively.
 - **Limits:** Joint return across every metric may be neither necessary nor desirable. Missing pre/post context is evidence unavailability, not failed recovery.
 
 ### DEF-0006 — Four-hour trajectories lack continuous realized-PCM evidence
@@ -90,7 +90,7 @@ observed scoped fraction, never likelihood, importance, or severity.
 - **Canonical owner:** AutonomousSessionDirector and LongHorizonContinuationState (`AutoTechnoCore detached session evidence`).
 - **Evidence owner:** LongHorizonSessionBaselineAnalyzer.
 - **Nearest roadmap work:** `AT-0046` Calibrate long-horizon arc, peak scarcity, return, reset, and landing evidence; `AT-0067` Build deterministic long-run scheduling and resource-soak harnesses.
-- **Source evidence:** `long-horizon` `01c96d87cb8ec375a86ddbf5c5f18b85b7efbc1b2bdc3f8cb8e8c657583b7b0f` — 7/7 four-hour journeys have no continuous realized-PCM observation.
+- **Source evidence:** `long-horizon` `ea8eaf97afad724f4a7adc38755971efdfbdcc13be43546f72227c82ec4ffdc9` — 7/7 four-hour journeys have no continuous realized-PCM observation.
 - **Limits:** The existing score-only trajectory is not a continuous audio render. Listener fatigue and perceived peak authority remain unknown.
 
 ### DEF-0007 — Subnormal Float32 samples remain visible in role/reference evidence
@@ -101,7 +101,7 @@ observed scoped fraction, never likelihood, importance, or severity.
 - **Canonical owner:** VoiceRenderer role and processed-stage signal paths (`AutoTechnoDSP rendering and signal evidence`).
 - **Evidence owner:** PCMSignalIntegrityAnalyzer.
 - **Nearest roadmap work:** `AT-0036` Separate hard safety gates from descriptive features, musical heuristics, and calibrated quality vectors; `AT-0060` Preallocate and bound the canonical DSP graph and per-session resources.
-- **Source evidence:** `signal-integrity` `d4233186be2c7660a774d14de3d7651b2cc41b7ea5c1ac8eea1a35b706b64afa` — 22330/340230030 samples across 6/224 assets are subnormal.
+- **Source evidence:** `signal-integrity` `1c4666472e3417411dae6113736cddbd2c0d1de9b03730bbc2ba7da8243d0e92` — 22330/340230030 samples across 6/224 assets are subnormal.
 - **Limits:** The exact same signal may appear in a role and reconstruction reference, so counts are not independent events. No denormal-specific callback slowdown or audible defect has been measured.
 
 ### DEF-0008 — Native host and corpus performance coverage is incomplete
@@ -112,7 +112,7 @@ observed scoped fraction, never likelihood, importance, or severity.
 - **Canonical owner:** Supported host route lifecycle and AutonomousPerformancePreparer (`AutoTechnoApp host transport and detached evidence`).
 - **Evidence owner:** PerformanceEnvelopeIntegrationTests and performance_envelope_report.py.
 - **Nearest roadmap work:** `AT-0355` Qualify supported sample rates, buffer sizes, channel layouts, and route changes; `AT-0358` Bound CPU, memory, battery/thermal pressure, disk use, and preparation lead time.
-- **Source evidence:** `performance-envelope` `3fcd65e5045757d9b7f9f8866a645b0f15a1b62932068e82087682a33e138082` — 1/2 declared host classes are unavailable; one largest-frame corpus case is timed.
+- **Source evidence:** `performance-envelope` `a509bc440e2de855d9febf397ef7a323c9a6ca51b332f072c8639ab39e7618ec` — 1/2 declared host classes are unavailable; one largest-frame corpus case is timed.
 - **Limits:** The current macOS values are one-machine descriptive observations, not capacity thresholds. Windows remains a source-buildable candidate rather than a promoted binary.
 
 ### DEF-0009 — Long physical-output soak evidence is unavailable
@@ -123,7 +123,7 @@ observed scoped fraction, never likelihood, importance, or severity.
 - **Canonical owner:** TechnoEngine scheduling, interruption, and device-route state (`AutoTechnoApp route lifecycle`).
 - **Evidence owner:** Performance envelope external trace.
 - **Nearest roadmap work:** `AT-0361` Run multi-hour foreground/background, sleep/wake, interruption, and route-churn soak.
-- **Source evidence:** `performance-envelope` `3fcd65e5045757d9b7f9f8866a645b0f15a1b62932068e82087682a33e138082` — Physical soak is explicitly unclaimed despite a bounded trace with no relevant observed point of interest.
+- **Source evidence:** `performance-envelope` `a509bc440e2de855d9febf397ef7a323c9a6ca51b332f072c8639ab39e7618ec` — Physical soak is explicitly unclaimed despite a bounded trace with no relevant observed point of interest.
 - **Limits:** Missing soak evidence is not evidence that an underrun or route failure occurred. No background, sleep/wake, route-churn, or thermal-duration matrix was run.
 
 ## Quarantined observations
@@ -141,14 +141,14 @@ These facts remain visible but are not called sound defects.
 
 | Source | Local path | Report fingerprint | Source fingerprint |
 |---|---|---|---|
-| `signal-integrity` | `docs/local/reports/signal-baseline-v1/manifest.json` | `d4233186be2c7660a774d14de3d7651b2cc41b7ea5c1ac8eea1a35b706b64afa` | `b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9` |
-| `spectral` | `docs/local/reports/spectral-baseline-v1/manifest.json` | `d53699e1c5d2353b5882119c577d66aa939b0923d8d13106b18b35c77fb73e33` | `b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9` |
-| `kick-foundation-collision` | `docs/local/reports/kick-foundation-collision-v1/manifest.json` | `056610f43a90cd62eacd21862d4e55829ee767c4513e4c99083e680ea21976e6` | `b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9` |
-| `rhythmic` | `docs/local/reports/rhythmic-baseline-v1/manifest.json` | `c796594183e700bca28970dbef73326d80c1253e7a83b121418cba63796154eb` | `b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9` |
-| `score-motif` | `docs/local/reports/score-motif-baseline-v1/manifest.json` | `b650c6ed998aeeef21eb068175aab930691852e4db1b9eff25b2c238bbfa6618` | `b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9` |
-| `section-boundary` | `docs/local/reports/section-boundary-baseline-v1/report.json` | `9b2a7ab70a391865184324a77951cc075bf119536fbc461e5f7326361b655f6f` | `b844be529a93094dc7c9372375c79b47db6408e68ad5c5f92805feec034e03f9` |
-| `long-horizon` | `docs/local/reports/long-horizon-session-baseline-v1/report.json` | `01c96d87cb8ec375a86ddbf5c5f18b85b7efbc1b2bdc3f8cb8e8c657583b7b0f` | `0d676fe1b9dfaf962d4fb8cea3dfa832411683ed14651d1ba874ad08ba9f58c0` |
-| `performance-envelope` | `docs/local/reports/performance-envelope-v1/report.json` | `3fcd65e5045757d9b7f9f8866a645b0f15a1b62932068e82087682a33e138082` | `0d676fe1b9dfaf962d4fb8cea3dfa832411683ed14651d1ba874ad08ba9f58c0` |
+| `signal-integrity` | `docs/local/reports/signal-baseline-v1/manifest.json` | `1c4666472e3417411dae6113736cddbd2c0d1de9b03730bbc2ba7da8243d0e92` | `e45303fb780ec2eda35b0be1b5bae354de1343ce1dd146d03ae7fdeeece4a17f` |
+| `spectral` | `docs/local/reports/spectral-baseline-v1/manifest.json` | `568e525f884f4707245354e45fe52a1f1f6470b4705dcc81eb4942a25a655359` | `e45303fb780ec2eda35b0be1b5bae354de1343ce1dd146d03ae7fdeeece4a17f` |
+| `kick-foundation-collision` | `docs/local/reports/kick-foundation-collision-v1/manifest.json` | `026aac5d9267190dcb3f53cc99ecc0ba22073ea465c9104f9b313d6b577dc850` | `e45303fb780ec2eda35b0be1b5bae354de1343ce1dd146d03ae7fdeeece4a17f` |
+| `rhythmic` | `docs/local/reports/rhythmic-baseline-v1/manifest.json` | `85007d9f0603a51ad839c7e3f7aef280bd2b532f44a782a2060867e65f48097a` | `e45303fb780ec2eda35b0be1b5bae354de1343ce1dd146d03ae7fdeeece4a17f` |
+| `score-motif` | `docs/local/reports/score-motif-baseline-v1/manifest.json` | `fd14bd5fab5175e132717896eb09b25ae2b39caa5dc0ea491584cf5bf088b71c` | `e45303fb780ec2eda35b0be1b5bae354de1343ce1dd146d03ae7fdeeece4a17f` |
+| `section-boundary` | `docs/local/reports/section-boundary-baseline-v1/report.json` | `723cc41e0c6cfbe08d4497d1b7c19723d01949bd78281180599fed1bec4c3288` | `e45303fb780ec2eda35b0be1b5bae354de1343ce1dd146d03ae7fdeeece4a17f` |
+| `long-horizon` | `docs/local/reports/long-horizon-session-baseline-v1/report.json` | `ea8eaf97afad724f4a7adc38755971efdfbdcc13be43546f72227c82ec4ffdc9` | `254790c47dac48eff2899cf108b7d1727f4514db9d107250b4fe0b16f5ca28b0` |
+| `performance-envelope` | `docs/local/reports/performance-envelope-v1/report.json` | `a509bc440e2de855d9febf397ef7a323c9a6ca51b332f072c8639ab39e7618ec` | `254790c47dac48eff2899cf108b7d1727f4514db9d107250b4fe0b16f5ca28b0` |
 
 ## Qualification boundary
 

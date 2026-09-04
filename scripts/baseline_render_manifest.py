@@ -7,7 +7,9 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import struct
+import subprocess
 import sys
 from pathlib import Path, PurePosixPath
 from typing import Any, Mapping, Optional, Sequence, TextIO
@@ -61,10 +63,69 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def source_fingerprint(root: Path) -> str:
+    """Reconstruct the existing BaselineRenderIntegrationTests byte identity.
+
+    Git HEAD is capture provenance, not a substitute for source-byte identity:
+    committing derived reports must not require another audio regeneration.
+    """
+    source_root = root / "Sources"
+    if source_root.is_symlink() or not source_root.is_dir():
+        raise BaselineRenderManifestError("source identity requires a real Sources directory")
+    paths = [
+        root / "Package.swift",
+        root / "docs/BASELINE_CORPUS.json",
+        root / "docs/ROADMAP_EXECUTION_BASELINE.json",
+    ]
+
+    def reject_walk_error(error: OSError) -> None:
+        raise error
+
+    for directory, directories, files in os.walk(source_root, onerror=reject_walk_error):
+        for name in directories:
+            if (Path(directory) / name).is_symlink():
+                raise BaselineRenderManifestError("source identity cannot traverse a symlink")
+        paths.extend(Path(directory) / name for name in files)
+    digest = hashlib.sha256()
+    for path in sorted(paths, key=lambda item: item.relative_to(root).as_posix()):
+        if path.is_symlink() or not path.is_file():
+            raise BaselineRenderManifestError("source identity requires regular non-symlink files")
+        digest.update(path.relative_to(root).as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    return digest.hexdigest()
+
+
 def is_hex(value: object, length: int) -> bool:
     return isinstance(value, str) and len(value) == length and all(
         character in "0123456789abcdef" for character in value
     )
+
+
+def capture_revision_error(root: Path, revision: object) -> str | None:
+    """Validate historical capture lineage; callers separately bind current bytes."""
+    if not is_hex(revision, 40):
+        return "capture Git revision must be a full lowercase commit ID"
+    commands = (
+        (["cat-file", "-e", str(revision) + "^{commit}"],
+         "capture Git revision is not an available commit"),
+        (["merge-base", "--is-ancestor", str(revision), "HEAD"],
+         "capture Git revision is not an ancestor of current HEAD"),
+    )
+    for arguments, diagnostic in commands:
+        try:
+            result = subprocess.run(
+                ["git", "--no-replace-objects", "-C", str(root), *arguments],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                check=False, timeout=30,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return "cannot verify capture Git ancestry"
+        if result.returncode != 0:
+            return diagnostic
+    return None
 
 
 def exact_keys(value: Mapping[str, Any], expected: set[str], location: str) -> list[str]:
@@ -131,6 +192,11 @@ def validate(root: Path) -> list[str]:
     for field, length in (("sourceFingerprint", 64), ("gitHead", 40)):
         if not is_hex(manifest.get(field), length):
             errors.append(f"{field} must be {length} lowercase hexadecimal digits")
+    try:
+        if manifest.get("sourceFingerprint") != source_fingerprint(root):
+            errors.append("sourceFingerprint does not match the current source")
+    except (OSError, BaselineRenderManifestError) as exc:
+        errors.append(f"cannot verify current source identity: {exc}")
     if not isinstance(manifest.get("engineVersion"), str) or not manifest.get("engineVersion"):
         errors.append("engineVersion must be non-empty")
 

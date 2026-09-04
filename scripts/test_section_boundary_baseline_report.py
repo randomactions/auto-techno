@@ -21,6 +21,41 @@ import section_boundary_baseline_report as module  # noqa: E402
 
 
 class SectionBoundaryBaselineReportTests(unittest.TestCase):
+    def test_provenance_requires_current_source_and_shared_capture_ancestry(self) -> None:
+        # Empty corpus isolates provenance wiring; corpus coverage has its own gate.
+        root = Path("/fixture")
+        export = {
+            "schema": module.EXPORT_SCHEMA, "manifestVersion": 1,
+            "analyzerVersion": module.ANALYZER_VERSION,
+            "corpusSha256": "corpus", "contractBaselineFingerprint": "contract",
+            "wholeManifestSha256": "whole", "sourceFingerprint": "source",
+            "gitHead": "a" * 40, "engineVersion": "engine", "entries": [],
+        }
+        for source, revision_error, expected_error in (
+            ("source", None, None),
+            ("source", "capture Git revision is not an ancestor", "not an ancestor"),
+            ("changed", None, "source fingerprint is stale"),
+        ):
+            with self.subTest(source=source, revision_error=revision_error), \
+                    mock.patch.object(module, "load_json", side_effect=[
+                        {"cases": [], "routes": []}, {"snapshotFingerprint": "contract"},
+                        {"engineVersion": "engine", "entries": []},
+                    ]), mock.patch.object(module, "sha256_path", side_effect=["corpus", "whole"]), \
+                    mock.patch.object(module, "source_fingerprint", return_value=source), \
+                    mock.patch.object(module.baseline_identity, "capture_revision_error",
+                                      return_value=revision_error) as ancestry:
+                if expected_error:
+                    with self.assertRaisesRegex(module.SectionBoundaryBaselineReportError,
+                                                expected_error):
+                        module.validate_export(export, root)
+                else:
+                    entries, _ = module.validate_export(export, root)
+                    self.assertEqual(entries, [])
+                if source == "source":
+                    ancestry.assert_called_once_with(root, export["gitHead"])
+                else:
+                    ancestry.assert_not_called()
+
     def input(
         self,
         sample_rate: int = 48_000,

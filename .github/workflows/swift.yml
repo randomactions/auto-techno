@@ -73,6 +73,8 @@ jobs:
           python3 -m unittest scripts/test_spectral_baseline_report.py
           python3 -m unittest scripts/test_kick_foundation_collision_report.py
           python3 -m unittest scripts/test_transient_envelope_baseline_report.py
+          python3 -m unittest scripts/test_section_boundary_baseline_report.py
+          python3 -m unittest scripts/test_session_trajectory_baseline_report.py
           python3 scripts/result_status_vocabulary.py check
           python3 scripts/controlled_listening_protocol.py check
           python3 scripts/baseline_lifecycle_policy.py validate

@@ -9,7 +9,6 @@ import hashlib
 import json
 import math
 from pathlib import Path, PurePosixPath
-import subprocess
 import sys
 from typing import Any, Mapping, Optional, Sequence
 
@@ -19,6 +18,7 @@ if SCRIPT_DIRECTORY not in sys.path:
     sys.path.insert(0, SCRIPT_DIRECTORY)
 import pcm_comparison_report as pcm  # noqa: E402
 import rhythmic_baseline_report as rhythmic  # noqa: E402
+import baseline_render_manifest as baseline_identity  # noqa: E402
 
 
 EXPORT_SCHEMA = "autotechno-section-boundary-baseline-manifest.v1"
@@ -831,21 +831,6 @@ def source_fingerprint(root: Path) -> str:
     return digest.hexdigest()
 
 
-def git_head(root: Path) -> str:
-    result = subprocess.run(
-        ["git", "-C", str(root), "rev-parse", "HEAD"],
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
-    if result.returncode:
-        raise SectionBoundaryBaselineReportError(
-            "cannot resolve current Git HEAD: " + result.stderr.strip()
-        )
-    return result.stdout.strip()
-
-
 def validate_export(
     export: Mapping[str, Any], root: Path
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -868,8 +853,9 @@ def validate_export(
         raise SectionBoundaryBaselineReportError("export whole manifest hash is stale")
     if export.get("sourceFingerprint") != source_fingerprint(root):
         raise SectionBoundaryBaselineReportError("export source fingerprint is stale")
-    if export.get("gitHead") != git_head(root):
-        raise SectionBoundaryBaselineReportError("export Git HEAD is stale")
+    revision_error = baseline_identity.capture_revision_error(root, export.get("gitHead"))
+    if revision_error:
+        raise SectionBoundaryBaselineReportError(revision_error)
     if export.get("engineVersion") != whole_manifest.get("engineVersion"):
         raise SectionBoundaryBaselineReportError("export engine version is inconsistent")
     cases = corpus.get("cases")

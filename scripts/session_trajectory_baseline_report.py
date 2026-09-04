@@ -13,6 +13,11 @@ import subprocess
 import sys
 from typing import Any, Mapping, Sequence
 
+SCRIPT_DIRECTORY = str(Path(__file__).resolve().parent)
+if SCRIPT_DIRECTORY not in sys.path:
+    sys.path.insert(0, SCRIPT_DIRECTORY)
+import baseline_render_manifest as baseline_identity  # noqa: E402
+
 
 MANIFEST_SCHEMA = "autotechno-long-horizon-session-baseline-manifest.v1"
 ARTIFACT_SCHEMA = "autotechno-long-horizon-session-baseline-artifact.v1"
@@ -628,8 +633,9 @@ def validate_provenance(manifest: dict[str, Any], root: Path) -> dict[str, Any]:
         raise SessionTrajectoryBaselineError("manifest contract baseline is stale")
     if manifest["sourceFingerprint"] != source_fingerprint(root):
         raise SessionTrajectoryBaselineError("manifest source fingerprint is stale")
-    if manifest["gitHead"] != git_output(root, ["rev-parse", "HEAD"]).strip():
-        raise SessionTrajectoryBaselineError("manifest Git head is stale")
+    revision_error = baseline_identity.capture_revision_error(root, manifest["gitHead"])
+    if revision_error:
+        raise SessionTrajectoryBaselineError(revision_error)
     return corpus
 
 

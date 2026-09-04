@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 import sys
 import tempfile
@@ -197,6 +198,50 @@ class SessionTrajectoryBaselineReportTests(unittest.TestCase):
                 (root / "Tests/b.swift").write_text("changed\n", encoding="utf-8")
                 second = module.source_fingerprint(root)
         self.assertNotEqual(first, second)
+
+    def test_unchanged_capture_survives_report_only_commit_but_source_edit_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            def git(*arguments: str) -> str:
+                return subprocess.run(
+                    ["git", "-C", str(root), "-c", "user.name=Fixture",
+                     "-c", "user.email=fixture@example.invalid", "-c",
+                     "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null",
+                     *arguments], check=True, capture_output=True, text=True,
+                ).stdout.strip()
+            git("init", "-q", "--object-format=sha1")
+            git("commit", "--allow-empty", "-qm", "capture anchor")
+            (root / "docs").mkdir()
+            (root / "docs/BASELINE_CORPUS.json").write_text('{"cases": []}\n')
+            (root / "docs/ROADMAP_EXECUTION_BASELINE.json").write_text(
+                json.dumps({"snapshotFingerprint": "a" * 64})
+            )
+            manifest = self.manifest([])
+            manifest.update({
+                "gitHead": git("rev-parse", "HEAD"),
+                "sourceFingerprint": module.source_fingerprint(root),
+                "corpusSha256": module.sha256_path(root / "docs/BASELINE_CORPUS.json"),
+                "contractBaselineFingerprint": "a" * 64,
+            })
+            (root / "docs/result.md").write_text("derived report\n")
+            git("add", "docs/result.md")
+            git("commit", "-qm", "publish derived report")
+            self.assertEqual(module.validate_provenance(manifest, root), {"cases": []})
+            captured = manifest["gitHead"]
+            manifest["gitHead"] = "0" * 40
+            with self.assertRaisesRegex(module.SessionTrajectoryBaselineError,
+                                        "not an available commit"):
+                module.validate_provenance(manifest, root)
+            manifest["gitHead"] = git("commit-tree", git("rev-parse", "HEAD^{tree}"),
+                                      "-m", "unrelated history")
+            with self.assertRaisesRegex(module.SessionTrajectoryBaselineError,
+                                        "not an ancestor"):
+                module.validate_provenance(manifest, root)
+            manifest["gitHead"] = captured
+            (root / "Package.swift").write_text("changed source input\n")
+            with self.assertRaisesRegex(module.SessionTrajectoryBaselineError,
+                                        "source fingerprint is stale"):
+                module.validate_provenance(manifest, root)
 
     def test_manifest_artifact_and_swift_report_are_independently_bound(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
