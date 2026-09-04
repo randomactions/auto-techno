@@ -802,6 +802,7 @@ Tests:
 - [`Tests/AutoTechnoAppTests/LiveRenderInspectorTests.swift`](../Tests/AutoTechnoAppTests/LiveRenderInspectorTests.swift)
 - [`Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift`](../Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift)
 - [`Tests/AutoTechnoCoreTests/LiveMasterHeadroomControllerTests.swift`](../Tests/AutoTechnoCoreTests/LiveMasterHeadroomControllerTests.swift)
+- [`Tests/AutoTechnoCoreTests/LiveMasterTrimFingerprintTests.swift`](../Tests/AutoTechnoCoreTests/LiveMasterTrimFingerprintTests.swift)
 - [`Tests/AutoTechnoCoreTests/LiveMasterTrimRenderingTests.swift`](../Tests/AutoTechnoCoreTests/LiveMasterTrimRenderingTests.swift)
 - [`Tests/AutoTechnoCoreTests/LiveOutputWindowEvidenceTests.swift`](../Tests/AutoTechnoCoreTests/LiveOutputWindowEvidenceTests.swift)
 - [`Tests/AutoTechnoCoreTests/LivePCMQueueTests.swift`](../Tests/AutoTechnoCoreTests/LivePCMQueueTests.swift)
@@ -1045,6 +1046,7 @@ Tests:
 | [`Tests/AutoTechnoCoreTests/LiveFeedbackCoreTests.swift`](../Tests/AutoTechnoCoreTests/LiveFeedbackCoreTests.swift) | `quality-and-feedback-contracts` | — | `LiveFeedbackCoreTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/LiveFeedbackTestSupport.swift`](../Tests/AutoTechnoCoreTests/LiveFeedbackTestSupport.swift) | `quality-and-feedback-contracts` | — | `LiveFeedbackTestSupport` (Enumeration) |
 | [`Tests/AutoTechnoCoreTests/LiveMasterHeadroomControllerTests.swift`](../Tests/AutoTechnoCoreTests/LiveMasterHeadroomControllerTests.swift) | `live-feedback-coordination-and-inspection` | — | `LiveMasterHeadroomControllerTests` (Structure) |
+| [`Tests/AutoTechnoCoreTests/LiveMasterTrimFingerprintTests.swift`](../Tests/AutoTechnoCoreTests/LiveMasterTrimFingerprintTests.swift) | `live-feedback-coordination-and-inspection` | — | `LiveMasterTrimFingerprintTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/LiveMasterTrimRenderingTests.swift`](../Tests/AutoTechnoCoreTests/LiveMasterTrimRenderingTests.swift) | `live-feedback-coordination-and-inspection` | — | `LiveMasterTrimRenderingTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/LiveOutputWindowEvidenceTests.swift`](../Tests/AutoTechnoCoreTests/LiveOutputWindowEvidenceTests.swift) | `live-feedback-coordination-and-inspection` | `background-live-analysis` | `CancellationCounter` (Class)<br>`LiveOutputWindowEvidenceTests` (Structure) |
 | [`Tests/AutoTechnoCoreTests/LivePCMQueueTests.swift`](../Tests/AutoTechnoCoreTests/LivePCMQueueTests.swift) | `live-feedback-coordination-and-inspection`<br>`realtime-pcm-handoff` | `macos-realtime-production` | `LivePCMQueueTests` (Structure) |

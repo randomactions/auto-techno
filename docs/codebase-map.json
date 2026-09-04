@@ -1047,6 +1047,7 @@
         "Tests/AutoTechnoAppTests/LiveRenderInspectorTests.swift",
         "Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift",
         "Tests/AutoTechnoCoreTests/LiveMasterHeadroomControllerTests.swift",
+        "Tests/AutoTechnoCoreTests/LiveMasterTrimFingerprintTests.swift",
         "Tests/AutoTechnoCoreTests/LiveMasterTrimRenderingTests.swift",
         "Tests/AutoTechnoCoreTests/LiveOutputWindowEvidenceTests.swift",
         "Tests/AutoTechnoCoreTests/LivePCMQueueTests.swift"

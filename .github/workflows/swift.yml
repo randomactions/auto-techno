@@ -129,10 +129,13 @@ jobs:
           fi
 
       - name: Run live analyzer controller and terminal trim
-        run: >-
-          swift test --no-parallel --skip-build
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(LiveOutputWindowEvidenceTests|LiveMasterHeadroomControllerTests|LiveMasterTrimRenderingTests|BS1770AudioEvidenceTests)'
+        run: |
+          swift test --no-parallel --skip-build \
+            --build-path "$RUNNER_TEMP/auto-techno-tests" \
+            --filter '(LiveOutputWindowEvidenceTests|LiveMasterHeadroomControllerTests|LiveMasterTrimRenderingTests|BS1770AudioEvidenceTests)'
+          swift test --no-parallel --skip-build \
+            --build-path "$RUNNER_TEMP/auto-techno-tests" \
+            --filter LiveMasterTrimFingerprintTests
 
       - name: Run App live-feedback coordination
         run: >-

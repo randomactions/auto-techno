@@ -119,50 +119,6 @@ struct LiveMasterTrimRenderingTests {
         #expect(render.renderState.liveMasterHeadroomState.revision == 7)
     }
 
-    @Test("Committed trim and revision are fingerprint-bound")
-    func trimIsFingerprintBound() {
-        let homeState = LiveMasterHeadroomContinuationState()
-        let attenuatedState = liveState(trimDB: -0.5)
-        let newerRevisionState = LiveMasterHeadroomContinuationState(
-            revision: 8,
-            committedTrimDB: -0.5,
-            consecutiveCleanWindows: 1,
-            lastProposalFingerprint: "proposal-8",
-            lastObservationFingerprint: "observation-8",
-            lastAcceptedSourcePhraseIndex: 5,
-            earliestEligibleFutureSample: 96_000
-        )
-
-        let home = normalFingerprint(liveState: homeState)
-        let attenuated = normalFingerprint(liveState: attenuatedState)
-        let newerRevision = normalFingerprint(liveState: newerRevisionState)
-
-        #expect(home != attenuated)
-        #expect(attenuated != newerRevision)
-
-        let cancellableHome = cancellableFingerprint(liveState: homeState)
-        let cancellableAttenuated = cancellableFingerprint(
-            liveState: attenuatedState
-        )
-        let cancellableNewerRevision = cancellableFingerprint(
-            liveState: newerRevisionState
-        )
-        #expect(cancellableHome != nil)
-        #expect(cancellableAttenuated != nil)
-        #expect(cancellableNewerRevision != nil)
-        #expect(cancellableHome != cancellableAttenuated)
-        #expect(cancellableAttenuated != cancellableNewerRevision)
-
-        let negativeZeroState = LiveMasterHeadroomContinuationState(
-            committedTrimDB: -0.0
-        )
-        #expect(negativeZeroState.committedTrimDB.bitPattern ==
-                Double.zero.bitPattern)
-        #expect(normalFingerprint(liveState: negativeZeroState) == home)
-        #expect(cancellableFingerprint(liveState: negativeZeroState) ==
-                cancellableHome)
-    }
-
     @Test("A RenderBlock copy preserves required terminal trim evidence")
     func trimmedRenderBlockCopyPreservesRequiredEvidence() throws {
         let source = try #require(render(trimDB: -1.5).blocks.first)
@@ -225,31 +181,6 @@ struct LiveMasterTrimRenderingTests {
             lastObservationFingerprint: "observation-7",
             lastAcceptedSourcePhraseIndex: 4,
             earliestEligibleFutureSample: 64_000
-        )
-    }
-
-    /// Swift 6.1's arm64 debug code generation can place every large
-    /// `RenderState` value captured by one `#expect` function on the same
-    /// cooperative-task stack frame. Keep one state and one fingerprint path
-    /// in each non-inlined helper so nested frames remain below that guard.
-    @inline(never)
-    private func normalFingerprint(
-        liveState: LiveMasterHeadroomContinuationState
-    ) -> String {
-        var renderState = RenderState()
-        renderState.liveMasterHeadroomState = liveState
-        return AutonomousCandidateFingerprint.renderState(renderState)
-    }
-
-    @inline(never)
-    private func cancellableFingerprint(
-        liveState: LiveMasterHeadroomContinuationState
-    ) -> String? {
-        var renderState = RenderState()
-        renderState.liveMasterHeadroomState = liveState
-        return AutonomousCandidateFingerprint.renderState(
-            renderState,
-            cancellationRequested: { false }
         )
     }
 
