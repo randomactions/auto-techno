@@ -424,7 +424,7 @@ package enum PCMKickFoundationCollisionAnalyzer {
         }
         let relativeDB = kickPairEnergy > 0 && foundationPairEnergy > 0
             ? 10 * log10(kickPairEnergy / foundationPairEnergy) : nil
-        let values = [
+        let values: [Double] = [
             Double(temporalFrames) / sampleRate,
             Double(lowFrames) / sampleRate,
             windows.map(\.subBandSimilarity).max() ?? 0,

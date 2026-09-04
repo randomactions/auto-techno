@@ -252,7 +252,7 @@ package enum PCMSpectralBaselineAnalyzer {
         let spectralDivisor = Double(max(1, activeSpectrum.count))
         let sourceDivisor = Double(max(1, activeSource.count))
         let centroids = activeSpectrum.map(\.spectralCentroidHz)
-        let values = [
+        let values: [Double] = [
             sourceMeanSquare,
             activeSpectrum.reduce(0) { $0 + $1.spectralCentroidHz } /
                 spectralDivisor,
