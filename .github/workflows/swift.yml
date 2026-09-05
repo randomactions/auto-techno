@@ -63,9 +63,10 @@ jobs:
             diagnostic_library_path="${DYLD_LIBRARY_PATH:+$DYLD_LIBRARY_PATH:}$sdk_platform/Developer/usr/lib"
             # One replay for crash evidence only; retain the normal gate's
             # failure and never load debugger initialization or dump variables.
+            # Pass the literal filter directly; shell expansion invokes argdumper.
             xcrun lldb --batch --no-lldbinit \
               -o "settings set target.env-vars 'DYLD_FRAMEWORK_PATH=$diagnostic_framework_path' 'DYLD_LIBRARY_PATH=$diagnostic_library_path'" \
-              -o run \
+              -o 'process launch --shell-expand-args false' \
               -k 'thread backtrace --count 40 all' \
               -k 'register read sp fp pc x9' \
               -k 'memory region $sp' \
