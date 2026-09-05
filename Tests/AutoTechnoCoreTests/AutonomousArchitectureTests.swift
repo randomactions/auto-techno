@@ -33,15 +33,25 @@ struct LiveFeedbackPrimaryCommitTests {
         let liveTargetStartSample: Int64
         let binding: PendingLiveMasterHeadroomBinding
 
-        // A stored RenderState makes every fixture copy carry the large DSP
-        // value. Hosted Swift 6.1.2 exhausted the cooperative worker stack in
-        // makeFixture before reaching a test assertion. Construct the same
-        // neutral incoming state only at its use site, in a separate frame.
+        // Keep aggregate projection separate from mutable RenderState work.
+        // Hosted Swift 6.1.2 requested a 640,320-byte frame when this method
+        // combined both operations, before reaching a test assertion.
         @inline(never)
         func makeIncomingRenderState() -> RenderState {
+            Self.makeIncomingRenderState(
+                startBar: targetPlan.startBar,
+                liveMasterHeadroom: targetState.liveMasterHeadroom
+            )
+        }
+
+        @inline(never)
+        private static func makeIncomingRenderState(
+            startBar: Int,
+            liveMasterHeadroom: LiveMasterHeadroomContinuationState
+        ) -> RenderState {
             var state = RenderState()
-            state.barIndex = targetPlan.startBar
-            state.liveMasterHeadroomState = targetState.liveMasterHeadroom
+            state.barIndex = startBar
+            state.liveMasterHeadroomState = liveMasterHeadroom
             return state
         }
     }
