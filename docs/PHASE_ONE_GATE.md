@@ -4,7 +4,7 @@
 
 Status: **passed**
 
-- Gate fingerprint: `c986184de34d9e13c788479e7571afd035955c96ce816dc403b9465948d158ac`
+- Gate fingerprint: `b35860598fea8ad23e1f1635a7dc6f28ef5e0b050c8ceb573be167b1ab80f516`
 - Contract baseline: `e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05`
 - Lifecycle policy: `5adf87179c53df3bc1eb59bbec7a70e81a5dd01e65f81bbc55a0cc2c92d89606`
 - Build configuration: `release`

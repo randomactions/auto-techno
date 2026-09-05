@@ -1,29 +1,29 @@
 {
   "artifacts": [
     {
-      "artifactFingerprint": "c63bdaace99f012d20241be093f15344e01ccb55d5bb7c0b509fffeae84213a2",
+      "artifactFingerprint": "f80ca7d977b375b2f67ee0a3012a564923ee37e9098d0f2744c812415a15984c",
       "configurationBinding": "native-artifact-field",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "3654942ded1244512778769c3436080251447e172e32e5581ac3071363b57943",
+      "fileSha256": "770ba763ae18bdc6f6f51cbff16cc3addc1494a37bce3503b1b3bc5abd576c21",
       "gateBuildConfiguration": "release",
       "id": "long-horizon-session",
       "nativeBuildConfiguration": "release",
       "path": "docs/local/reports/long-horizon-session-baseline-v1/report.json",
       "routeIdentity": "score-only-canonical-planning",
       "schema": "autotechno-long-horizon-session-baseline-report.v1",
-      "sourceFingerprint": "bdfea0e3a4f5ec905ec7137fa4df6e53ad901e7fddf79c616d1b3055f5cd15c8",
+      "sourceFingerprint": "b1bf19dbf877b737cc6b0baae9524440297667eeb4226c900ded0cd727f1c8d6",
       "validator": "python3 scripts/session_trajectory_baseline_report.py --check",
       "version": 1
     },
     {
-      "artifactFingerprint": "5733822bb60105c08238e68cbf5de3f562f41cc8ef742791e3de250834e223df",
+      "artifactFingerprint": "f166fc4e1af5bb32df2230504dfde6099dbd0d8eb9f5834f46c6fbbedf7358c9",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "5733822bb60105c08238e68cbf5de3f562f41cc8ef742791e3de250834e223df",
+      "fileSha256": "f166fc4e1af5bb32df2230504dfde6099dbd0d8eb9f5834f46c6fbbedf7358c9",
       "gateBuildConfiguration": "release",
       "id": "whole-mix-render",
       "nativeBuildConfiguration": "not-applicable",
@@ -35,12 +35,12 @@
       "version": 1
     },
     {
-      "artifactFingerprint": "7890f5e4c4cb8bea6d5eba8b5683c976dff0868990452a0c971445b7039f826e",
+      "artifactFingerprint": "833ef80f5c5ba4af4201f19a52a8c784a1c63afe06ac65e6e7f397a0a054602f",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "not-applicable",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "2128a8e699c35baa708568b2a09af6ef4fbaba670a35433bde8ab35d15a200f7",
+      "fileSha256": "fcd7fbad69f7a98efb63af0cc17896b08c4d663ad1a5b453f2f0b14d5fd43ef6",
       "gateBuildConfiguration": "release",
       "id": "pcm-comparison-whole",
       "nativeBuildConfiguration": "not-applicable",
@@ -52,29 +52,29 @@
       "version": 1
     },
     {
-      "artifactFingerprint": "966d6898f565f2f69f0392012f6a37c4b745b1d86adfb150be9a30cd436a68fc",
+      "artifactFingerprint": "34d8b67346ab7b27c3e777fcf1a39948c824121ec0a8043d09306659e493647c",
       "configurationBinding": "native-artifact-field",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "not-applicable",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "8ba148868fafa2685de6f7cc4c7705dc412747a08664d473cd5bc8ca19fae6af",
+      "fileSha256": "86e636ea2f090f0911ee9754afdf8e15af30ad239f0f9f9bf6f4dd8f0797f3aa",
       "gateBuildConfiguration": "release",
       "id": "performance-envelope",
       "nativeBuildConfiguration": "release",
       "path": "docs/local/reports/performance-envelope-v1/report.json",
       "routeIdentity": "not-applicable",
       "schema": "autotechno-performance-envelope-report.v1",
-      "sourceFingerprint": "bdfea0e3a4f5ec905ec7137fa4df6e53ad901e7fddf79c616d1b3055f5cd15c8",
+      "sourceFingerprint": "b1bf19dbf877b737cc6b0baae9524440297667eeb4226c900ded0cd727f1c8d6",
       "validator": "python3 scripts/performance_envelope_report.py check <trace-arguments>",
       "version": 1
     },
     {
-      "artifactFingerprint": "4937bd0c3697a793077e5199676d0a6549a69e3f1125f75484ce3fd239ed1ac4",
+      "artifactFingerprint": "dcb16f1b1af08a991afa75f3956780754846afa9ff54fb14fc0b76bc61356ac6",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "a2f30e968c4f4a3bfddc5fb4f8ec44cf3b0485f79a2229a5044dbfa06665cabd",
+      "fileSha256": "42d07e115a0190f4a2dbb0a5fa317c4d66c8daf0d0553c4adc5d6b1b654c379e",
       "gateBuildConfiguration": "release",
       "id": "rhythmic-baseline",
       "nativeBuildConfiguration": "not-applicable",
@@ -86,12 +86,12 @@
       "version": 1
     },
     {
-      "artifactFingerprint": "bf30bc2f55f3a7b84bdf0504c0ad8a7608bea42879171826e18d76c384bf379d",
+      "artifactFingerprint": "23eff4c72b9fd3e69dac8d67bf8e5c0976e73f059cb8442e21e6ff351fa9de67",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "bf30bc2f55f3a7b84bdf0504c0ad8a7608bea42879171826e18d76c384bf379d",
+      "fileSha256": "23eff4c72b9fd3e69dac8d67bf8e5c0976e73f059cb8442e21e6ff351fa9de67",
       "gateBuildConfiguration": "release",
       "id": "role-stem-capture",
       "nativeBuildConfiguration": "not-applicable",
@@ -103,12 +103,12 @@
       "version": 1
     },
     {
-      "artifactFingerprint": "fb6bccb6f314113d390e2f46cb725ae8b40613fdc9112a0b3cb56c8167e221e0",
+      "artifactFingerprint": "ecd70d76d3a6639a54d57d7740ea4aef2393ee2f500f70c0fd6f56a81eb46145",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "8c16073799261113cc1dc9ea9fbe91ba78a15720bc4baeed05cd71def1c896d0",
+      "fileSha256": "1fc566cde8bfeb50e6025240445c0be98e77e891263470220dbedcda95c19817",
       "gateBuildConfiguration": "release",
       "id": "score-motif",
       "nativeBuildConfiguration": "not-applicable",
@@ -120,12 +120,12 @@
       "version": 1
     },
     {
-      "artifactFingerprint": "b359b83dcc8759080cac95f182a47c673c2595255cdf59e6bb08b23e0725fbd7",
+      "artifactFingerprint": "84990b5f911040d1264c569e27f4bbd4e19fe18dfc3d957cea63f1a929d80c27",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "4a67f1ff26b0c14fdf5b81206aa0943e5a32fdc51062af2eb6c159b62040dc4c",
+      "fileSha256": "98cb9fa95b03907de7e8d62094e6282f6f4ff22ed533e0525d2bb22ca942101d",
       "gateBuildConfiguration": "release",
       "id": "section-boundary",
       "nativeBuildConfiguration": "not-applicable",
@@ -137,12 +137,12 @@
       "version": 1
     },
     {
-      "artifactFingerprint": "9333d5a0e7e8bd907fd0cf9cfa6d80fc510ad223e69898d3e27ad575d71ae528",
+      "artifactFingerprint": "68120648bbb0de1cf62a8b3933a5e02dd2788de885ba7a1b9a7863c7f488f436",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "8572c0eeb62739ca9cb848ab8083d02437e6d33c6c8aa7be1c35656df1bc5063",
+      "fileSha256": "9aae2bd30ca61d84f7ded40abb6a0b48671433edc41f95a3f150140a9b4babd6",
       "gateBuildConfiguration": "release",
       "id": "kick-foundation-collision",
       "nativeBuildConfiguration": "not-applicable",
@@ -154,12 +154,12 @@
       "version": 1
     },
     {
-      "artifactFingerprint": "1489ae154091b05299170ab8c66767462d1ee8fe7104f4bc8ef0959614041a94",
+      "artifactFingerprint": "d58e34d9039dac48d0a46f83eacaec88f421c982f09762b7f7183ae05b868f76",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "not-applicable",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "37fe9f41bbe63538d35899c62b1de19f3214983ced6bc0de7523a973e77c4889",
+      "fileSha256": "3678f0c1a685916202d068df78c6ce8fb2d55cb5ee74a9e4a7371c52370cadde",
       "gateBuildConfiguration": "release",
       "id": "pcm-comparison-role",
       "nativeBuildConfiguration": "not-applicable",
@@ -171,12 +171,12 @@
       "version": 1
     },
     {
-      "artifactFingerprint": "0fcbabde95ba07c2cb6fffdd6190d1a294018af32c3caf79482d21c9006f7f9d",
+      "artifactFingerprint": "d9bdbd157791e7ce73f95682501b350e286821a655ae9682509120516762158d",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "5ff91c2fdd57b8889a4d1bb6465353f9ee181cd8a839984c4f5592413f8f0308",
+      "fileSha256": "228041550bf7d19a24fdf46c8713f6c53f50c75f5ff52844d0759a6b676d4c98",
       "gateBuildConfiguration": "release",
       "id": "signal-baseline",
       "nativeBuildConfiguration": "not-applicable",
@@ -188,12 +188,12 @@
       "version": 1
     },
     {
-      "artifactFingerprint": "6c6328b2dd11ecbb745b46ff38a581691e059f1650210e06978520ff313316c2",
+      "artifactFingerprint": "863002d5dd5c1b7f1c04fa4a03016bd13c3bb7a422ab25a51f3e42372048c1ed",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "dedfd9b4d256a48aa7a938c00dcc72a9cf9f63a00aa12df8585212587a28adfa",
+      "fileSha256": "6bf5f427347e1bd95da4f2e2b895cee103d912dca4486dcdbc2c0bba47910649",
       "gateBuildConfiguration": "release",
       "id": "spectral-baseline",
       "nativeBuildConfiguration": "not-applicable",
@@ -205,12 +205,12 @@
       "version": 1
     },
     {
-      "artifactFingerprint": "3d27d3869e2ddac5fe4412cdfb213cbaeda438e8b2aeb9dba08bd524f894b807",
+      "artifactFingerprint": "c122a464edb60f4c852d1880781f9758b96147f25b141d62dc88d169e8d8964a",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "2e5988e863f90ba3e50c4d9bb44fb41d390931bdd0bfc8b4e29c1fc02ef6d769",
+      "fileSha256": "1ed3280ccb3fecbbb63f3678f4549f1f5f1143d353352c900cbb1cf3896c81cd",
       "gateBuildConfiguration": "release",
       "id": "stereo-compatibility",
       "nativeBuildConfiguration": "not-applicable",
@@ -222,12 +222,12 @@
       "version": 1
     },
     {
-      "artifactFingerprint": "120de1d44ff4998edf83c98272889ae7adb1ca5cec9a9543c4286413fe72c81a",
+      "artifactFingerprint": "1875dc6fa7fa4b68b250cad19e7da43dc5e5f4bb19de6fce6183c6fadca979c4",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "4f9bd1d4beda50518256c80ebb7041ab0bd0205cb29e791b0310b134e6790ca9",
+      "fileSha256": "588eb787e675e2a976a9888abfcb27a51874a9bcf385b4632e8f2317426f046f",
       "gateBuildConfiguration": "release",
       "id": "transient-envelope",
       "nativeBuildConfiguration": "not-applicable",
@@ -239,12 +239,12 @@
       "version": 1
     },
     {
-      "artifactFingerprint": "8a72dd6a1e89dbc0211acb52363f81622bee20787d802e2124aa69a1063c1c5b",
+      "artifactFingerprint": "2b860879ffa18b68e47a99e294117a57b46286ebd0323e4e5571066fe86d3bfe",
       "configurationBinding": "aggregate-release-regeneration-wrapper",
       "contractBaselineFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
       "corpusSha256": "fb1839e7e92889e7253cbef80c2bd031b311d39a0d033161790b650b72cc8ba7",
       "engineVersion": "autotechno-canonical-engine.v48",
-      "fileSha256": "f3632b754e37865d0455c85e505e33c8fd23de00f7f357104b47ca22141decea",
+      "fileSha256": "7bf171a1c73fbd9e3b36ad81656712caed7c869dc8d0f2f7e9b30d565fa769e1",
       "gateBuildConfiguration": "release",
       "id": "deficit-register",
       "nativeBuildConfiguration": "not-applicable",
@@ -361,7 +361,7 @@
       "autotechno-canonical-engine.v48"
     ],
     "gitHeads": [
-      "3a5818ce42853abe77041add6ae3bb6650ec04af"
+      "c57e5120b59cc93c576fd0e98e4b24869ef0505b"
     ],
     "lifecyclePolicyFingerprint": "5adf87179c53df3bc1eb59bbec7a70e81a5dd01e65f81bbc55a0cc2c92d89606",
     "routeIds": [
@@ -369,7 +369,7 @@
       "native-stereo-48000"
     ],
     "sourceFingerprints": [
-      "bdfea0e3a4f5ec905ec7137fa4df6e53ad901e7fddf79c616d1b3055f5cd15c8",
+      "b1bf19dbf877b737cc6b0baae9524440297667eeb4226c900ded0cd727f1c8d6",
       "e45303fb780ec2eda35b0be1b5bae354de1343ce1dd146d03ae7fdeeece4a17f"
     ]
   },
@@ -377,7 +377,7 @@
     "calibratedAuditoryDefects": 0,
     "entries": 9,
     "quarantinedObservations": 6,
-    "registerFingerprint": "8a72dd6a1e89dbc0211acb52363f81622bee20787d802e2124aa69a1063c1c5b",
+    "registerFingerprint": "2b860879ffa18b68e47a99e294117a57b46286ebd0323e4e5571066fe86d3bfe",
     "sourceCount": 8,
     "traceableSourceCount": 8
   },
@@ -385,13 +385,13 @@
     "changedSamples": 0,
     "classification": "exact",
     "roleAssets": 210,
-    "roleReportFingerprint": "1489ae154091b05299170ab8c66767462d1ee8fe7104f4bc8ef0959614041a94",
+    "roleReportFingerprint": "d58e34d9039dac48d0a46f83eacaec88f421c982f09762b7f7183ae05b868f76",
     "roleSamples": 310644810,
     "wholeAssets": 14,
-    "wholeReportFingerprint": "7890f5e4c4cb8bea6d5eba8b5683c976dff0868990452a0c971445b7039f826e",
+    "wholeReportFingerprint": "833ef80f5c5ba4af4201f19a52a8c784a1c63afe06ac65e6e7f397a0a054602f",
     "wholeSamples": 29585220
   },
-  "gateFingerprint": "c986184de34d9e13c788479e7571afd035955c96ce816dc403b9465948d158ac",
+  "gateFingerprint": "b35860598fea8ad23e1f1635a7dc6f28ef5e0b050c8ceb573be167b1ab80f516",
   "gateVersion": 1,
   "limitations": [
     "Current metadata does not replace any family-specific content validator.",
