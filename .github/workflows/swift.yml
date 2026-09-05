@@ -42,16 +42,16 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
 
-      # Capture the hosted-only percussion crashes before the long
-      # bank. The original core group below still runs unchanged, including
-      # both tests, so this checkpoint does not replace grouped coverage.
+      # Capture every percussion-echo test before the long qualification bank.
+      # A later anticipation test also crashed after the first two repairs.
+      # The original core group remains unchanged for grouped coverage.
       - name: Run percussion echo diagnostic checkpoints
         timeout-minutes: 10
         run: |
           test_status=0
           swift test --no-parallel --skip-build \
             --build-path "$RUNNER_TEMP/auto-techno-tests" \
-            --filter 'PercussionEchoTextureTests/(protectedRendererDifferential|forgedScoreRejected)' || test_status=$?
+            --filter 'PercussionEchoTextureTests' || test_status=$?
           if [ "$test_status" -ne 0 ]; then
             test_binary_directory="$(swift build \
               --build-path "$RUNNER_TEMP/auto-techno-tests" --show-bin-path)"
@@ -74,7 +74,7 @@ jobs:
               -k 'frame select 1' \
               -k 'disassemble --frame --count 24' \
               -- "$test_helper" --test-bundle-path "$test_binary" \
-              --no-parallel --filter 'PercussionEchoTextureTests/(protectedRendererDifferential|forgedScoreRejected)' \
+              --no-parallel --filter 'PercussionEchoTextureTests' \
               "$test_binary" --testing-library swift-testing || true
           fi
           exit "$test_status"
