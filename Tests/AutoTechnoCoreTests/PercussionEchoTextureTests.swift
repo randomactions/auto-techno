@@ -410,8 +410,8 @@ struct PercussionEchoTextureTests {
         )
         #expect(activeSynth.bars == neutralSynth.bars)
 
-        var activeState = RenderState()
-        activeState.barIndex = activeResolved.performance.bar
+        var activeState = Self.makeNeutralRenderState()
+        Self.bindRenderStartBar(&activeState, startBar: activeResolved.performance.bar)
         var neutralState = activeState
         var activeWorkspace = RenderWorkspace()
         var neutralWorkspace = RenderWorkspace()
