@@ -42,6 +42,14 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
 
+      # Keep the previously crashing, unchanged test near the build so a
+      # recurrence yields diagnostics before the long evidence bank runs.
+      - name: Run single correction order
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter onePrimaryCorrection
+
       - name: Verify semantic codebase map
         run: |
           python3 -m unittest scripts/test_codebase_map.py
@@ -229,12 +237,6 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter primaryBoundaryCancellation
 
-      - name: Run single correction order
-        run: >-
-          swift test --no-parallel --skip-build
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter onePrimaryCorrection
-
       - name: Run rejected-attempt isolation
         run: >-
           swift test --no-parallel --skip-build
@@ -393,3 +395,48 @@ jobs:
 
       - name: Build release app
         run: swift build -c release --product AutoTechno --build-path "$RUNNER_TEMP/auto-techno-release"
+
+      - name: Summarize test crash diagnostics on failure
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          directory = Path.home() / "Library/Logs/DiagnosticReports"
+          reports = sorted(directory.glob("*.ips"), key=lambda p: p.stat().st_mtime)
+          emitted = 0
+          for path in reversed(reports):
+              if emitted >= 3:
+                  break
+              try:
+                  text = path.read_text()
+                  # Apple IPS uses one metadata object followed by the report.
+                  decoder = json.JSONDecoder()
+                  first, end = decoder.raw_decode(text.lstrip())
+                  remainder = text.lstrip()[end:].strip()
+                  report = decoder.raw_decode(remainder)[0] if remainder else first
+                  if report.get("procName") not in (
+                      "AutoTechnoPackageTests", "swiftpm-testing-helper", "xctest"
+                  ):
+                      continue
+                  summary = {
+                      "process": report.get("procName"),
+                      "cpuType": report.get("cpuType"),
+                      "osVersion": report.get("osVersion"),
+                      "exception": report.get("exception"),
+                      "termination": report.get("termination"),
+                      "vmRegionInfo": report.get("vmRegionInfo"),
+                      "faultingThread": report.get("faultingThread"),
+                      "triggeredThreads": [
+                          {"name": thread.get("name"), "frames": thread.get("frames", [])[:40]}
+                          for thread in report.get("threads", []) if thread.get("triggered")
+                      ],
+                  }
+                  print(json.dumps(summary, indent=2))
+                  emitted += 1
+              except (OSError, ValueError, TypeError, AttributeError) as error:
+                  print("Crash report could not be summarized:", type(error).__name__)
+          if not emitted:
+              print("No matching test crash report available; absence does not establish a cause.")
+          PY
