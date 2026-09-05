@@ -146,8 +146,8 @@ struct PercussionEchoTextureTests {
     private static func renderProtectedRendererOutputs(
         _ inputs: ProtectedRendererInputs
     ) -> ProtectedRendererOutputs {
-        var activeState = RenderState()
-        activeState.barIndex = inputs.activeResolved.performance.bar
+        var activeState = makeNeutralRenderState()
+        bindRenderStartBar(&activeState, startBar: inputs.activeResolved.performance.bar)
         var neutralState = activeState
         var activeWorkspace = RenderWorkspace()
         var neutralWorkspace = RenderWorkspace()
@@ -175,6 +175,19 @@ struct PercussionEchoTextureTests {
         )
 
         return ProtectedRendererOutputs(active: active, neutral: neutral)
+    }
+
+    // The hosted render-stage prologue still requested 654,512 bytes after
+    // partitioning. Keep neutral construction and in-place binding separate;
+    // the neutral comparison state is copied only after both have completed.
+    @inline(never)
+    private static func makeNeutralRenderState() -> RenderState {
+        RenderState()
+    }
+
+    @inline(never)
+    private static func bindRenderStartBar(_ state: inout RenderState, startBar: Int) {
+        state.barIndex = startBar
     }
 
     @inline(never)
