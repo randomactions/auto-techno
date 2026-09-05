@@ -89,7 +89,7 @@ struct PercussionEchoTextureTests {
         )
         #expect(activeSynth.bars == neutralSynth.bars)
 
-        var activeState = RenderState()
+        var activeState = Self.makeNeutralRenderState()
         activeState.barIndex = activeResolved.performance.bar
         var neutralState = activeState
         var activeWorkspace = RenderWorkspace()
@@ -144,6 +144,14 @@ struct PercussionEchoTextureTests {
                 Array(neutral.leftSamples.prefix(outputStartFrame)))
         #expect(Array(active.rightSamples.prefix(outputStartFrame)) ==
                 Array(neutral.rightSamples.prefix(outputStartFrame)))
+    }
+
+    // Keep default construction outside the differential's aggregate frame.
+    // Hosted Swift 6.1.2 requests 692,400 bytes before entering that test body.
+    // Neutral copying, bar binding, renderer calls, and assertions stay there.
+    @inline(never)
+    private static func makeNeutralRenderState() -> RenderState {
+        RenderState()
     }
 
     @Test("The established gated echo remains bit exact")
