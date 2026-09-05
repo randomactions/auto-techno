@@ -14,6 +14,41 @@ struct PercussionEchoTextureTests {
         let recovery: Int
     }
 
+    // Test-local holders keep large value results out of the @Test entry frame.
+    // Hosted Swift 6.1.2 requested 692,400 bytes for the combined differential;
+    // constructor-only extraction did not reduce that request.
+    private final class ProtectedRendererInputs {
+        let plan: AutonomousPhrasePlan
+        let activeResolved: ResolvedPerformanceBar
+        let neutralResolved: ResolvedPerformanceBar
+        let activeSynth: SynthPerformancePlan
+        let neutralSynth: SynthPerformancePlan
+
+        init(
+            plan: AutonomousPhrasePlan,
+            activeResolved: ResolvedPerformanceBar,
+            neutralResolved: ResolvedPerformanceBar,
+            activeSynth: SynthPerformancePlan,
+            neutralSynth: SynthPerformancePlan
+        ) {
+            self.plan = plan
+            self.activeResolved = activeResolved
+            self.neutralResolved = neutralResolved
+            self.activeSynth = activeSynth
+            self.neutralSynth = neutralSynth
+        }
+    }
+
+    private final class ProtectedRendererOutputs {
+        let active: RenderedBar
+        let neutral: RenderedBar
+
+        init(active: RenderedBar, neutral: RenderedBar) {
+            self.active = active
+            self.neutral = neutral
+        }
+    }
+
     @Test("The director resolves one bounded primary contrast gesture")
     func scoreOwnershipAndReachability() throws {
         let first = try #require(activePlanFixture())
@@ -68,6 +103,15 @@ struct PercussionEchoTextureTests {
 
     @Test("The later output gate changes only the protected percussion consequence")
     func protectedRendererDifferential() throws {
+        let inputs = try makeProtectedRendererInputs()
+        let outputs = Self.renderProtectedRendererOutputs(inputs)
+        Self.expectPercussionReturnEvidence(outputs)
+        Self.expectProtectedRendererEquality(outputs)
+        try Self.expectOutputWindowIsolation(inputs, outputs)
+    }
+
+    @inline(never)
+    private func makeProtectedRendererInputs() throws -> ProtectedRendererInputs {
         let fixture = try #require(activePlanFixture())
         let plan = fixture.plan
         let index = try #require(plan.resolvedBars.firstIndex {
@@ -89,34 +133,56 @@ struct PercussionEchoTextureTests {
         )
         #expect(activeSynth.bars == neutralSynth.bars)
 
-        var activeState = Self.makeNeutralRenderState()
-        activeState.barIndex = activeResolved.performance.bar
+        return ProtectedRendererInputs(
+            plan: plan,
+            activeResolved: activeResolved,
+            neutralResolved: neutralResolved,
+            activeSynth: activeSynth,
+            neutralSynth: neutralSynth
+        )
+    }
+
+    @inline(never)
+    private static func renderProtectedRendererOutputs(
+        _ inputs: ProtectedRendererInputs
+    ) -> ProtectedRendererOutputs {
+        var activeState = RenderState()
+        activeState.barIndex = inputs.activeResolved.performance.bar
         var neutralState = activeState
         var activeWorkspace = RenderWorkspace()
         var neutralWorkspace = RenderWorkspace()
         let active = VoiceRenderer.renderBar(
-            scene: plan.scene,
+            scene: inputs.plan.scene,
             sampleRate: 8_000,
             state: &activeState,
-            dna: plan.dna,
-            resolved: activeResolved,
-            synthWorld: activeSynth.world,
-            synthPerformance: activeSynth.bars[0],
+            dna: inputs.plan.dna,
+            resolved: inputs.activeResolved,
+            synthWorld: inputs.activeSynth.world,
+            synthPerformance: inputs.activeSynth.bars[0],
             workspace: &activeWorkspace,
             layer: .protectedRhythm
         )
         let neutral = VoiceRenderer.renderBar(
-            scene: plan.scene,
+            scene: inputs.plan.scene,
             sampleRate: 8_000,
             state: &neutralState,
-            dna: plan.dna,
-            resolved: neutralResolved,
-            synthWorld: neutralSynth.world,
-            synthPerformance: neutralSynth.bars[0],
+            dna: inputs.plan.dna,
+            resolved: inputs.neutralResolved,
+            synthWorld: inputs.neutralSynth.world,
+            synthPerformance: inputs.neutralSynth.bars[0],
             workspace: &neutralWorkspace,
             layer: .protectedRhythm
         )
 
+        return ProtectedRendererOutputs(active: active, neutral: neutral)
+    }
+
+    @inline(never)
+    private static func expectPercussionReturnEvidence(
+        _ outputs: ProtectedRendererOutputs
+    ) {
+        let active = outputs.active
+        let neutral = outputs.neutral
         let evidence = active.percussionEchoTextureRenderEvidence
         #expect(evidence.active)
         #expect(evidence.inputPeak > 0)
@@ -128,11 +194,29 @@ struct PercussionEchoTextureTests {
         #expect(evidence.firstOutputSampleBitPattern & 0x7fff_ffff == 0)
         #expect(evidence.lastOutputSampleBitPattern & 0x7fff_ffff == 0)
         #expect(!neutral.percussionEchoTextureRenderEvidence.active)
+    }
+
+    @inline(never)
+    private static func expectProtectedRendererEquality(
+        _ outputs: ProtectedRendererOutputs
+    ) {
+        let active = outputs.active
+        let neutral = outputs.neutral
         #expect(active.dryPercussionSampleHash == neutral.dryPercussionSampleHash)
         #expect(active.dryFoundationSampleHash == neutral.dryFoundationSampleHash)
         #expect(active.kickMix == neutral.kickMix)
         #expect(active.groovePulseRenderEvidence == neutral.groovePulseRenderEvidence)
         #expect(active.closedHatRenderEvidence == neutral.closedHatRenderEvidence)
+    }
+
+    @inline(never)
+    private static func expectOutputWindowIsolation(
+        _ inputs: ProtectedRendererInputs,
+        _ outputs: ProtectedRendererOutputs
+    ) throws {
+        let active = outputs.active
+        let neutral = outputs.neutral
+        let activeResolved = inputs.activeResolved
         #expect(active.leftSamples != neutral.leftSamples)
         #expect(active.rightSamples != neutral.rightSamples)
 
@@ -144,14 +228,6 @@ struct PercussionEchoTextureTests {
                 Array(neutral.leftSamples.prefix(outputStartFrame)))
         #expect(Array(active.rightSamples.prefix(outputStartFrame)) ==
                 Array(neutral.rightSamples.prefix(outputStartFrame)))
-    }
-
-    // Keep default construction outside the differential's aggregate frame.
-    // Hosted Swift 6.1.2 requests 692,400 bytes before entering that test body.
-    // Neutral copying, bar binding, renderer calls, and assertions stay there.
-    @inline(never)
-    private static func makeNeutralRenderState() -> RenderState {
-        RenderState()
     }
 
     @Test("The established gated echo remains bit exact")
