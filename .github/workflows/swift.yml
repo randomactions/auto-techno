@@ -42,16 +42,16 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
 
-      # Capture every percussion-echo test before the long qualification bank.
-      # A later anticipation test also crashed after the first two repairs.
-      # The original core group remains unchanged for grouped coverage.
-      - name: Run percussion echo diagnostic checkpoints
+      # Capture the known crashing fixtures before the long qualification bank.
+      # Preflight also exited signal 10 after the percussion repairs passed.
+      # The original core and preflight groups retain their full coverage.
+      - name: Run percussion and preflight diagnostic checkpoints
         timeout-minutes: 10
         run: |
           test_status=0
           swift test --no-parallel --skip-build \
             --build-path "$RUNNER_TEMP/auto-techno-tests" \
-            --filter 'PercussionEchoTextureTests' || test_status=$?
+            --filter '(PercussionEchoTextureTests|AutonomousPreparationPreflightTests/preflightRejectsMissingDuplicateReorderedAndForgedModalArticulations)' || test_status=$?
           if [ "$test_status" -ne 0 ]; then
             test_binary_directory="$(swift build \
               --build-path "$RUNNER_TEMP/auto-techno-tests" --show-bin-path)"
@@ -74,7 +74,7 @@ jobs:
               -k 'frame select 1' \
               -k 'disassemble --frame --count 24' \
               -- "$test_helper" --test-bundle-path "$test_binary" \
-              --no-parallel --filter 'PercussionEchoTextureTests' \
+              --no-parallel --filter '(PercussionEchoTextureTests|AutonomousPreparationPreflightTests/preflightRejectsMissingDuplicateReorderedAndForgedModalArticulations)' \
               "$test_binary" --testing-library swift-testing || true
           fi
           exit "$test_status"
