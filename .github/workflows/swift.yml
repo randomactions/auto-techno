@@ -42,7 +42,7 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(localizedVerticalSlicePCM|upperTimingCascadeVerticalSlice|scoreVelocityVerticalSlice)'
 
-      # Keep the previously crashing, unchanged test near the build so a
+      # Keep the previously crashing correction gate near the build so a
       # recurrence yields diagnostics before the long evidence bank runs.
       - name: Run single correction order
         run: |
@@ -65,9 +65,11 @@ jobs:
               -o "settings set target.env-vars 'DYLD_FRAMEWORK_PATH=$diagnostic_framework_path' 'DYLD_LIBRARY_PATH=$diagnostic_library_path'" \
               -o run \
               -k 'thread backtrace --count 40 all' \
-              -k 'register read sp fp pc' \
+              -k 'register read sp fp pc x9' \
               -k 'memory region $sp' \
               -k 'disassemble --frame --count 12' \
+              -k 'frame select 1' \
+              -k 'disassemble --frame --count 24' \
               -- "$test_helper" --test-bundle-path "$test_binary" \
               --no-parallel --filter onePrimaryCorrection \
               "$test_binary" --testing-library swift-testing || true
