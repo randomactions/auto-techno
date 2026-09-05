@@ -49,10 +49,28 @@ struct LiveFeedbackPrimaryCommitTests {
             startBar: Int,
             liveMasterHeadroom: LiveMasterHeadroomContinuationState
         ) -> RenderState {
-            var state = RenderState()
+            var state = makeNeutralRenderState()
+            bindIncomingRenderState(
+                &state,
+                startBar: startBar,
+                liveMasterHeadroom: liveMasterHeadroom
+            )
+            return state
+        }
+
+        @inline(never)
+        private static func makeNeutralRenderState() -> RenderState {
+            RenderState()
+        }
+
+        @inline(never)
+        private static func bindIncomingRenderState(
+            _ state: inout RenderState,
+            startBar: Int,
+            liveMasterHeadroom: LiveMasterHeadroomContinuationState
+        ) {
             state.barIndex = startBar
             state.liveMasterHeadroomState = liveMasterHeadroom
-            return state
         }
     }
 
