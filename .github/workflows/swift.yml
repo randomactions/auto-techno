@@ -45,10 +45,34 @@ jobs:
       # Keep the previously crashing, unchanged test near the build so a
       # recurrence yields diagnostics before the long evidence bank runs.
       - name: Run single correction order
-        run: >-
-          swift test --no-parallel --skip-build
-          --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter onePrimaryCorrection
+        run: |
+          test_status=0
+          swift test --no-parallel --skip-build \
+            --build-path "$RUNNER_TEMP/auto-techno-tests" \
+            --filter onePrimaryCorrection || test_status=$?
+          if [ "$test_status" -ne 0 ]; then
+            test_binary_directory="$(swift build \
+              --build-path "$RUNNER_TEMP/auto-techno-tests" --show-bin-path)"
+            test_binary="$test_binary_directory/AutoTechnoPackageTests.xctest/Contents/MacOS/AutoTechnoPackageTests"
+            swift_compiler="$(xcrun --find swift)"
+            test_helper="$(dirname "$swift_compiler")/../libexec/swift/pm/swiftpm-testing-helper"
+            sdk_platform="$(xcrun --sdk macosx --show-sdk-platform-path)"
+            diagnostic_framework_path="${DYLD_FRAMEWORK_PATH:+$DYLD_FRAMEWORK_PATH:}$sdk_platform/Developer/Library/Frameworks:$sdk_platform/Developer/Library/PrivateFrameworks"
+            diagnostic_library_path="${DYLD_LIBRARY_PATH:+$DYLD_LIBRARY_PATH:}$sdk_platform/Developer/usr/lib"
+            # One diagnostic replay only. Its result never replaces the failed
+            # gate above; no initialization files or variable dumps are loaded.
+            xcrun lldb --batch --no-lldbinit \
+              -o "settings set target.env-vars 'DYLD_FRAMEWORK_PATH=$diagnostic_framework_path' 'DYLD_LIBRARY_PATH=$diagnostic_library_path'" \
+              -o run \
+              -k 'thread backtrace --count 40 all' \
+              -k 'register read sp fp pc' \
+              -k 'memory region $sp' \
+              -k 'disassemble --frame --count 12' \
+              -- "$test_helper" --test-bundle-path "$test_binary" \
+              --no-parallel --filter onePrimaryCorrection \
+              "$test_binary" --testing-library swift-testing || true
+          fi
+          exit "$test_status"
 
       - name: Verify semantic codebase map
         run: |
