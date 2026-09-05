@@ -5232,12 +5232,24 @@ struct AutonomousPreparationPreflightTests {
         )
     }
 
+    // Keep neutral construction and in-place binding out of the preparation
+    // frame: hosted Swift 6.1.2 requested 647,552 bytes at this probe entry.
+    @inline(never)
+    private func makeNeutralProbeRenderState() -> RenderState {
+        RenderState()
+    }
+
+    @inline(never)
+    private func bindProbeRenderStartBar(_ state: inout RenderState, startBar: Int) {
+        state.barIndex = startBar
+    }
+
     private func probePreparation(
         plan: AutonomousPhrasePlan,
         state: AutonomousSessionState
     ) -> (prepared: PreparedAutonomousPhrase?, cancellationCallCount: Int) {
-        var renderState = RenderState()
-        renderState.barIndex = plan.startBar
+        var renderState = makeNeutralProbeRenderState()
+        bindProbeRenderStartBar(&renderState, startBar: plan.startBar)
         let probe = InputGateCancellationProbe()
         let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
             plan: plan,
