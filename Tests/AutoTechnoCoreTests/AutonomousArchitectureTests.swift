@@ -29,17 +29,28 @@ struct LiveFeedbackPrimaryCommitTests {
         let sourcePlan: AutonomousPhrasePlan
         let targetState: AutonomousSessionState
         let targetPlan: AutonomousPhrasePlan
-        let incomingRenderState: RenderState
         let sampleRate: Double
         let liveTargetStartSample: Int64
         let binding: PendingLiveMasterHeadroomBinding
+
+        // A stored RenderState makes every fixture copy carry the large DSP
+        // value. Hosted Swift 6.1.2 exhausted the cooperative worker stack in
+        // makeFixture before reaching a test assertion. Construct the same
+        // neutral incoming state only at its use site, in a separate frame.
+        @inline(never)
+        func makeIncomingRenderState() -> RenderState {
+            var state = RenderState()
+            state.barIndex = targetPlan.startBar
+            state.liveMasterHeadroomState = targetState.liveMasterHeadroom
+            return state
+        }
     }
 
     @Test("Pending proposal remains detached from incoming committed state")
     func pendingProposalDoesNotMutateIncomingState() {
         let fixture = makeFixture()
         let before = fixture.targetState
-        let incomingRenderState = fixture.incomingRenderState
+        let incomingRenderState = fixture.makeIncomingRenderState()
 
         let prepared = prepare(
             fixture,
@@ -49,6 +60,7 @@ struct LiveFeedbackPrimaryCommitTests {
 
         #expect(prepared != nil)
         #expect(fixture.targetState == before)
+        #expect(incomingRenderState.barIndex == fixture.targetPlan.startBar)
         #expect(incomingRenderState.liveMasterHeadroomState ==
                 before.liveMasterHeadroom)
         #expect(before.liveMasterHeadroom.revision == 0)
@@ -262,10 +274,6 @@ struct LiveFeedbackPrimaryCommitTests {
             liveMasterHeadroom: sourceState.liveMasterHeadroom
         )
         let targetPlan = director.plan(from: targetState)
-        var incomingRenderState = RenderState()
-        incomingRenderState.barIndex = targetPlan.startBar
-        incomingRenderState.liveMasterHeadroomState =
-            targetState.liveMasterHeadroom
         let frameCount = try! #require(LiveOutputWindowAnalyzer.frameCount(
             sampleRate: sampleRate
         ))
@@ -346,7 +354,6 @@ struct LiveFeedbackPrimaryCommitTests {
             sourcePlan: sourcePlan,
             targetState: targetState,
             targetPlan: targetPlan,
-            incomingRenderState: incomingRenderState,
             sampleRate: sampleRate,
             liveTargetStartSample: futureBoundary,
             binding: binding
@@ -446,7 +453,7 @@ struct LiveFeedbackPrimaryCommitTests {
             sessionSeed: fixture.targetState.rootSeed,
             memory: fixture.targetState.memory,
             sampleRate: fixture.sampleRate,
-            incomingRenderState: fixture.incomingRenderState,
+            incomingRenderState: fixture.makeIncomingRenderState(),
             incomingGraphState: GeneratedDSPContinuationState(),
             previousGraph: nil,
             incomingQualityState: fixture.targetState.quality,
