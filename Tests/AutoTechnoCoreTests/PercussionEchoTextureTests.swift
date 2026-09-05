@@ -303,8 +303,8 @@ struct PercussionEchoTextureTests {
             in: fixture.plan,
             with: forgedBars
         )
-        var renderState = RenderState()
-        renderState.barIndex = fixture.state.memory.totalBars
+        var renderState = Self.makeNeutralRenderState()
+        Self.bindRenderStartBar(&renderState, startBar: fixture.state.memory.totalBars)
         let prepared = AutonomousPhrasePreparer.prepareIfNotCancelled(
             plan: forged,
             sessionSeed: fixture.state.rootSeed,
