@@ -159,6 +159,20 @@ class DeficitRegisterTests(unittest.TestCase):
             for error in register_module.validate_register(self.register, changed_outcome)
         ))
 
+    def test_generated_register_links_only_to_open_roadmap_work(self) -> None:
+        roadmap = register_module.parse_roadmap_items(
+            REPOSITORY_ROOT / register_module.ROADMAP_PATH
+        )
+        generated = register_module.current_register(REPOSITORY_ROOT)
+        self.assertEqual(register_module.validate_register(generated, roadmap), [])
+        linked_ids = {
+            link["id"]
+            for entry in generated["entries"]
+            for link in entry["nearestRoadmapItems"]
+        }
+        self.assertNotIn("AT-0038", linked_ids)
+        self.assertNotIn("AT-0036", linked_ids)
+
     def test_unknown_quarantined_source_is_rejected(self) -> None:
         changed = copy.deepcopy(self.register)
         changed["quarantinedObservations"][0]["sourceId"] = "unknown"
