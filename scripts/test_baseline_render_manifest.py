@@ -130,6 +130,74 @@ class BaselineRenderManifestTests(unittest.TestCase):
         self.assertEqual(result, 0, diagnostic)
         self.assertIn("14 exact", diagnostic)
 
+    def test_capture_namespace_isolated_and_path_safe(self) -> None:
+        self.assertEqual(
+            renders.manifest_path(self.root, "at0039-v1"),
+            self.root / "docs/local/reports/baseline-corpus-at0039-v1/manifest.json",
+        )
+        self.assertEqual(
+            renders.audio_directory(self.root, "at0039-v1"),
+            self.root / "docs/local/audio/baseline-corpus-at0039-v1",
+        )
+        with self.assertRaises(renders.BaselineRenderManifestError):
+            renders.manifest_path(self.root, "../baseline-corpus-v1")
+        local_corpus = self.root / "docs/local/cohort.json"
+        local_corpus.parent.mkdir(parents=True, exist_ok=True)
+        local_corpus.write_text("{}\n")
+        self.assertEqual(
+            renders.resolve_corpus_path(self.root, "docs/local/cohort.json"),
+            local_corpus.resolve(),
+        )
+        with self.assertRaises(renders.BaselineRenderManifestError):
+            renders.resolve_corpus_path(
+                self.root, "docs/local/../../outside.json"
+            )
+
+    def test_namespaced_manifest_and_wavs_validate_without_touching_v1(self) -> None:
+        namespace = "at0039-v1"
+        manifest = copy.deepcopy(self.manifest)
+        for entry in manifest["entries"]:
+            source = self.root / entry["wavPath"]
+            destination = (
+                f"docs/local/audio/baseline-corpus-{namespace}/"
+                f"{entry['id']}.wav"
+            )
+            self.write_bytes(destination, source.read_bytes())
+            entry["wavPath"] = destination
+        self.write_json(
+            f"docs/local/reports/baseline-corpus-{namespace}/manifest.json",
+            manifest,
+        )
+        self.assertEqual(renders.validate(self.root, namespace), [])
+
+    def test_local_at0039_corpus_requires_current_source_and_baseline(self) -> None:
+        corpus = json.loads(
+            (self.root / "docs/BASELINE_CORPUS.json").read_text()
+        )
+        corpus.update({
+            "schema": "autotechno-at0039-foundation-cohort.v1",
+            "sourceFingerprint": self.manifest["sourceFingerprint"],
+            "contractBaselineFingerprint": "a" * 64,
+        })
+        corpus_path = "docs/local/AT-0039/corpus.json"
+        self.write_json(corpus_path, corpus)
+        encoded = (self.root / corpus_path).read_bytes()
+        manifest = copy.deepcopy(self.manifest)
+        manifest["corpusSha256"] = hashlib.sha256(encoded).hexdigest()
+        self.write_manifest(manifest)
+        self.assertEqual(
+            renders.validate(self.root, "v1", corpus_path), []
+        )
+
+        corpus["sourceFingerprint"] = "0" * 64
+        self.write_json(corpus_path, corpus)
+        manifest["corpusSha256"] = hashlib.sha256(
+            (self.root / corpus_path).read_bytes()
+        ).hexdigest()
+        self.write_manifest(manifest)
+        errors = renders.validate(self.root, "v1", corpus_path)
+        self.assertTrue(any("AT-0039 cohort sourceFingerprint" in item for item in errors))
+
     def test_missing_and_duplicate_identities_fail(self) -> None:
         manifest = copy.deepcopy(self.manifest)
         manifest["entries"][-1] = copy.deepcopy(manifest["entries"][0])

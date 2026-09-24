@@ -108,6 +108,70 @@ struct BS1770AudioEvidenceTests {
         #expect(abs(measurement.integratedLoudness - -23.01) < 0.5)
     }
 
+    @Test("Momentary maximum exposes burst-window alignment and duration opportunity")
+    func momentaryMaximumBurstAlignment() {
+        let sampleRate = 48_000.0
+        func burst(duration: Double, offset: Double) -> [Float] {
+            let frameCount = Int((sampleRate * duration).rounded())
+            let start = Int((sampleRate * offset).rounded())
+            let burstFrames = Int((sampleRate * 0.4).rounded())
+            return (0..<frameCount).map { frame in
+                guard (start..<(start + burstFrames)).contains(frame) else {
+                    return 0
+                }
+                let localFrame = frame - start
+                return Float(0.2 * sin(
+                    2 * Double.pi * 997 * Double(localFrame) / sampleRate
+                ))
+            }
+        }
+        func measurement(_ samples: [Float]) -> BS1770LoudnessMeasurement {
+            BS1770LoudnessMeasurement(
+                left: samples,
+                right: [Float](repeating: 0, count: samples.count),
+                sampleRate: sampleRate
+            )
+        }
+
+        let shortOpportunity = measurement(burst(duration: 1.2, offset: 0.6))
+        let longOpportunity = measurement(burst(duration: 2.0, offset: 0.6))
+        let offGrid = measurement(burst(duration: 2.0, offset: 0.65))
+
+        #expect(shortOpportunity.momentaryBlockCount <
+                longOpportunity.momentaryBlockCount)
+        #expect(shortOpportunity.maximumMomentaryLoudness ==
+                longOpportunity.maximumMomentaryLoudness)
+        #expect(longOpportunity.maximumMomentaryLoudness >
+                offGrid.maximumMomentaryLoudness + 0.1)
+    }
+
+    @Test("Short-term maximum switches at the first complete three-second window")
+    func shortTermWindowBoundaryAndFallback() {
+        let sampleRate = 48_000.0
+        func measurement(duration: Double) -> BS1770LoudnessMeasurement {
+            let signal = sine(
+                frequency: 997,
+                amplitude: 0.1,
+                duration: duration,
+                sampleRate: sampleRate
+            )
+            return BS1770LoudnessMeasurement(
+                left: signal,
+                right: [Float](repeating: 0, count: signal.count),
+                sampleRate: sampleRate
+            )
+        }
+
+        let belowBoundary = measurement(duration: 2.999)
+        let atBoundary = measurement(duration: 3.0)
+
+        #expect(belowBoundary.shortTermBlockCount == 0)
+        #expect(belowBoundary.maximumShortTermLoudness ==
+                belowBoundary.integratedLoudness)
+        #expect(atBoundary.shortTermBlockCount == 1)
+        #expect(atBoundary.maximumShortTermLoudness.isFinite)
+    }
+
     @Test("Annex 2 FIR exposes an inter-sample peak missed by sample peak")
     func annex2TruePeak() throws {
         let samples = (0..<4_096).map { frame in

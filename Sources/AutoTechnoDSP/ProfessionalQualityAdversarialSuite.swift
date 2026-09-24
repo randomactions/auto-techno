@@ -434,7 +434,8 @@ package struct ProfessionalQualityLiveCandidateChain: Equatable, Sendable {
 /// only reason-coded outcomes, not the source observations or reconstructable
 /// evidence. Every scenario must be rejected independently.
 package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
-        Sendable {
+        Sendable, AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory = .provenance
     package static let schemaVersion = 22
     package static let suiteVersion =
         "autotechno-professional-quality-adversarial.v22"
@@ -470,6 +471,10 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         }) else {
             throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
         }
+        let relationshipBaseline = try Self.relationshipBaseline(
+            profile: profile,
+            observations: sourceObservations
+        )
 
         var generated: [ProfessionalQualityAdversarialCaseResult] = []
         func append(
@@ -947,10 +952,11 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         )
         let trajectoryAttack = try Self.trajectoryAttack(
             profile: profile,
-            observations: sourceObservations
+            observations: relationshipBaseline
         )
         let trajectoryFailures = ProfessionalQualityRelationshipEvaluator
             .evaluate(observations: trajectoryAttack, against: profile)
+            .failures
             .filter { $0.kind == .trajectory }
         generated.append(ProfessionalQualityAdversarialCaseResult(
             scenario: .trajectoryFlattening,
@@ -964,10 +970,11 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
 
         let rateAttack = try Self.rateAttack(
             profile: profile,
-            observations: sourceObservations
+            observations: relationshipBaseline
         )
         let rateFailures = ProfessionalQualityRelationshipEvaluator
             .evaluate(observations: rateAttack, against: profile)
+            .failures
             .filter { $0.kind == .rateConsistency }
         generated.append(ProfessionalQualityAdversarialCaseResult(
             scenario: .rateDrift,
@@ -981,10 +988,11 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         let modalRateAttack = try Self.rateAttack(
             metric: .modalPercussionSpectralCentroidMeanHz,
             profile: profile,
-            observations: sourceObservations
+            observations: relationshipBaseline
         )
         let modalRateFailures = ProfessionalQualityRelationshipEvaluator
             .evaluate(observations: modalRateAttack, against: profile)
+            .failures
             .filter {
                 $0.kind == .rateConsistency &&
                     $0.metric == .modalPercussionSpectralCentroidMeanHz
@@ -1033,7 +1041,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                   ProfessionalQualityRelationshipEvaluator.evaluate(
                       observations: trajectory.observations,
                       against: profile
-                  ).isEmpty
+                  ).accepted
               }) else {
             throw ProfessionalQualityCalibrationError.profileMismatch
         }
@@ -1112,6 +1120,26 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         return observation
     }
 
+    private static func relationshipBaseline(
+        profile: ProfessionalQualityCalibrationProfile,
+        observations: [ProfessionalQualityObservation]
+    ) throws -> [ProfessionalQualityObservation] {
+        let baseline = CanonicalJourneyCheckpoint.allCases.flatMap { checkpoint in
+            profile.sampleRates.compactMap { sampleRate in
+                observations.first {
+                    $0.checkpoint == checkpoint &&
+                        $0.sampleRate == sampleRate
+                }
+            }
+        }
+        guard baseline.count == profile.sampleRates.count *
+                CanonicalJourneyCheckpoint.allCases.count else {
+            throw ProfessionalQualityCalibrationError
+                .incompleteCheckpointCoverage
+        }
+        return baseline
+    }
+
     private static func trajectoryAttack(
         profile: ProfessionalQualityCalibrationProfile,
         observations: [ProfessionalQualityObservation]
@@ -1145,6 +1173,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
                 }
                 let relationshipFailed = ProfessionalQualityRelationshipEvaluator
                     .evaluate(observations: mutated, against: profile)
+                    .failures
                     .contains {
                         $0.kind == .trajectory &&
                             $0.trajectory == relation.trajectory &&
@@ -1183,6 +1212,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             }
             let relationshipFailed = ProfessionalQualityRelationshipEvaluator
                 .evaluate(observations: mutated, against: profile)
+                .failures
                 .contains {
                     $0.kind == .rateConsistency &&
                         $0.checkpoint == rateBound.checkpoint &&
@@ -1222,6 +1252,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             }
             let relationshipFailed = ProfessionalQualityRelationshipEvaluator
                 .evaluate(observations: mutated, against: profile)
+                .failures
                 .contains {
                     $0.kind == .rateConsistency &&
                         $0.checkpoint == rateBound.checkpoint &&

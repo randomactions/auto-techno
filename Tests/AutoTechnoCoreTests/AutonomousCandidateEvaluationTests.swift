@@ -5,6 +5,159 @@ import Testing
 
 @Suite("Autonomous candidate evaluation provenance")
 struct AutonomousCandidateEvaluationTests {
+    @Test("Candidate fields and calibrated dimensions have exhaustive categories")
+    func evidenceCategoryInventoryIsExhaustive() {
+        let vector = fixtureVector()
+        let storedFields = Mirror(reflecting: vector).children.compactMap(\.label)
+        #expect(
+            AutonomousCandidateEvaluationVector.evidenceCategoriesCoverStoredFields(
+                storedFields
+            )
+        )
+
+        let categories = Dictionary(uniqueKeysWithValues:
+            AutonomousCandidateEvaluationVector.evidenceFieldClassifications.map {
+                ($0.path, $0.category)
+            }
+        )
+        #expect(categories["hardGates"] == .hardGate)
+        #expect(categories["symbolic"] == .musicalHeuristic)
+        #expect(categories["fullMix"] == .descriptive)
+        #expect(categories["planFingerprint"] == .provenance)
+        #expect(ProfessionalQualityMetric.allCases.count == 68)
+        #expect(ProfessionalQualityMetric.allCases.allSatisfy {
+            $0.evidenceCategory == .calibratedQuality
+        })
+
+        let reportTypes: [(any AutonomousEvidenceCategorizedReport.Type,
+                           AutonomousEvidenceCategory)] = [
+            (AutonomousHardGateEvidence.self, .hardGate),
+            (AutonomousPlaybackGateEvidence.self, .descriptive),
+            (AutonomousSymbolicEvidence.self, .musicalHeuristic),
+            (ProfessionalQualityCandidateAssessment.self, .calibratedQuality),
+            (ProfessionalQualityRecoveryFailure.self, .calibratedQuality),
+            (ProfessionalQualityReportVerdict.self, .calibratedQuality),
+            (ProfessionalQualityVerdict.self, .calibratedQuality),
+            (ProfessionalQualityHoldoutQualification.self, .provenance),
+            (AudioQualityReport.self, .descriptive),
+            (CanonicalJourneyQualificationReport.self, .calibratedQuality),
+            (LongHorizonEffectFamilyReport.self, .descriptive),
+            (LongHorizonEffectDoseReport.self, .descriptive),
+            (LongHorizonSignalTrajectoryReport.self, .descriptive),
+            (LongHorizonPolicyVerdict.self, .calibratedQuality),
+            (LongHorizonAdversarialCaseVerdict.self, .provenance),
+            (LongHorizonAdversarialSuiteReport.self, .provenance),
+            (LongHorizonHoldoutJourneyVerdict.self, .provenance),
+            (LongHorizonHoldoutQualification.self, .provenance),
+            (ProfessionalEvidenceReportBank.self, .descriptive),
+            (ProfessionalQualityAdversarialSuiteReport.self, .provenance),
+        ]
+        let reportNames = reportTypes.map { String(reflecting: $0.0) }
+        #expect(Set(reportNames).count == reportNames.count)
+        #expect(reportTypes.allSatisfy { $0.0.evidenceCategory == $0.1 })
+    }
+
+    @Test("Each hard-gate input rejects and suppresses unrelated recovery")
+    func everyHardGateInputIsNonCompensable() throws {
+        let source = fixtureVector()
+        let evaluator = try ProfessionalQualityPrimaryArtifacts.load().evaluator
+        let hardGateFields = [
+            "symbolicValid",
+            "graphValid",
+            "audioSafetyValid",
+            "fullMixFinite",
+            "upperTimbreFinite",
+            "blocksPresent",
+            "blockChannelsAligned",
+            "allSamplesFinite",
+            "completeInputs",
+        ]
+        let decoder = JSONDecoder()
+        let encodedSource = try source.deterministicJSON()
+
+        for field in hardGateFields {
+            var candidateObject = try #require(
+                JSONSerialization.jsonObject(with: encodedSource) as? [String: Any]
+            )
+            var gates = try #require(
+                candidateObject["hardGates"] as? [String: Any]
+            )
+            gates[field] = false
+            candidateObject["hardGates"] = gates
+            let data = try JSONSerialization.data(
+                withJSONObject: candidateObject,
+                options: [.sortedKeys]
+            )
+            let failedCandidate = try decoder.decode(
+                AutonomousCandidateEvaluationVector.self,
+                from: data
+            )
+            let verdict = ProfessionalQualityPrimaryEvaluator
+                .hardGateRejectionVerdict(for: failedCandidate)
+
+            #expect(!failedCandidate.hardGatesPassed, "field=\(field)")
+            #expect(verdict.outcome == .rejected, "field=\(field)")
+            #expect(verdict.decisionBasis == .hardGate, "field=\(field)")
+            #expect(verdict.reasonCodes.contains(.hardGateFailedV1),
+                    "field=\(field)")
+            #expect(verdict.recoveryIntent.isNeutral, "field=\(field)")
+
+            let transaction = AutonomousCandidateEvaluationTransaction(
+                engineVersion: QualityQualificationContract.engineVersion,
+                policyVersion: evaluator.policyVersion,
+                evaluatorVersion: evaluator.evaluatorVersion,
+                planFingerprint: failedCandidate.planFingerprint,
+                attempts: [AutonomousCandidateAttempt(
+                    kind: .initialRender,
+                    reasonCodes: [.hardGateFailedV1],
+                    vector: failedCandidate
+                )],
+                selectedAttemptIndex: 0,
+                correctionCount: 0
+            )
+            let terminal = evaluator.terminalVerdict(
+                selected: failedCandidate,
+                transaction: transaction
+            )
+            #expect(terminal.outcome == .rejected, "field=\(field)")
+            #expect(terminal.decisionBasis == .hardGate, "field=\(field)")
+            #expect(terminal.reasonCodes == [.hardGateFailedV1],
+                    "field=\(field)")
+            #expect(terminal.recoveryIntent.isNeutral, "field=\(field)")
+        }
+    }
+
+    @Test("Hard-gate authority is not changed by rich heuristic evidence")
+    func richHeuristicFieldsCannotCompensateForHardGateFailure() throws {
+        let source = fixtureVector()
+        var candidateObject = try #require(
+            JSONSerialization.jsonObject(with: source.deterministicJSON())
+                as? [String: Any]
+        )
+        var gates = try #require(candidateObject["hardGates"] as? [String: Any])
+        gates["audioSafetyValid"] = false
+        candidateObject["hardGates"] = gates
+
+        // Keep the strong symbolic-interest values and all measured candidate
+        // fields byte-identical while falsifying the audio-safety gate.
+        let altered = try JSONDecoder().decode(
+            AutonomousCandidateEvaluationVector.self,
+            from: JSONSerialization.data(
+                withJSONObject: candidateObject,
+                options: [.sortedKeys]
+            )
+        )
+        let verdict = ProfessionalQualityPrimaryEvaluator
+            .hardGateRejectionVerdict(for: altered)
+
+        #expect(altered.symbolic.interestScore == source.symbolic.interestScore)
+        #expect(altered.hardGatesPassed == false)
+        #expect(verdict.outcome == .rejected)
+        #expect(verdict.decisionBasis == .hardGate)
+        #expect(verdict.reasonCodes.contains(.hardGateFailedV1))
+        #expect(verdict.recoveryIntent.isNeutral)
+    }
+
     @Test("Candidate binds exact pre/post terminal trim PCM evidence")
     func candidateBindsPreAndPostTrimPCM() throws {
         let prepared = try #require(realPreparedCandidate())
@@ -215,7 +368,7 @@ struct AutonomousCandidateEvaluationTests {
                 transaction: attacked
             )
             #expect(verdict.outcome == .rejected)
-            #expect(verdict.reasonCodes == [.guardrailRegressionV1])
+            #expect(verdict.reasonCodes == [.hardGateFailedV1])
             #expect(verdict.diagnosticDetails == expectedDiagnostics)
             #expect(attacked.fingerprint != first.fingerprint)
         }

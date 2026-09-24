@@ -145,6 +145,7 @@ enum LiveFeedbackTestSupport {
         ) -> AutonomousCandidatePolicyVerdict {
             AutonomousCandidatePolicyVerdict(
                 outcome: .qualified,
+                decisionBasis: .calibratedQuality,
                 reasonCodes: [.candidateQualifiedV1]
             )
         }

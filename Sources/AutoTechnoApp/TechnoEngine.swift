@@ -38,6 +38,22 @@ private struct ScheduledVisual {
     let inspectorSnapshot: LiveRenderSnapshot
 }
 
+/// Final admission boundary for app-owned PCM scheduling. The queueing closure
+/// is invoked only for a candidate whose detached preparation passed commit
+/// qualification; transport cannot enqueue rejected candidate audio.
+package enum AppOwnedPCMBufferScheduleAdmission {
+    @discardableResult
+    package static func enqueue<Buffer>(
+        _ buffer: Buffer,
+        commitEligible: Bool,
+        schedule: (Buffer) -> Void
+    ) -> Bool {
+        guard commitEligible else { return false }
+        schedule(buffer)
+        return true
+    }
+}
+
 /// Preparation remains entirely outside the audio callback. It produces the
 /// immutable inspector projection consumed by the macOS presentation layer;
 /// planning, rendering, quality evaluation, and waveform preparation remain in
@@ -1896,11 +1912,23 @@ package final class TechnoEngine: ObservableObject {
             )
         }
         if first {
-            player.scheduleBuffer(buffer)
+            guard AppOwnedPCMBufferScheduleAdmission.enqueue(
+                buffer,
+                commitEligible: phrase.prepared.commitEligible,
+                schedule: { self.player.scheduleBuffer($0) }
+            ) else { return false }
             nextScheduleSample = frameLength
             currentBarFrames = frameLength
         } else {
-            player.scheduleBuffer(buffer, at: AVAudioTime(sampleTime: startSample, atRate: format.sampleRate))
+            let audioTime = AVAudioTime(
+                sampleTime: startSample,
+                atRate: format.sampleRate
+            )
+            guard AppOwnedPCMBufferScheduleAdmission.enqueue(
+                buffer,
+                commitEligible: phrase.prepared.commitEligible,
+                schedule: { self.player.scheduleBuffer($0, at: audioTime) }
+            ) else { return false }
             nextScheduleSample += frameLength
         }
         scheduledVisuals.append(ScheduledVisual(

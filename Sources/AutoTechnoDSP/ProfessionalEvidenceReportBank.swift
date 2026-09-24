@@ -20,7 +20,9 @@ package enum ProfessionalQualityPolicyAvailability: String, Codable, Sendable {
 /// for each route rate represented by the bank. Professional Evidence v29 is an
 /// observation contract only: it has no constructor for a calibrated profile
 /// or adversarial-suite identity, so it cannot claim policy availability.
-package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable {
+package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable,
+        AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory = .descriptive
     package static let schemaVersion = 29
     package static let evidenceVersion = "autotechno-professional-evidence.v29"
     package static let maximumReports = 64
@@ -37,6 +39,25 @@ package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable {
     package let sourceReportCount: Int
     package let sampleRates: [Double]
     package let reports: [CanonicalJourneyQualificationReport]
+
+    /// Projects a report-only bar-level view from the exact role evidence
+    /// already retained in each candidate. This is descriptive analysis and
+    /// does not alter the bundled calibrated profile or policy availability.
+    package func kickFoundationLocalFeatureReports() throws ->
+        [ProfessionalQualityKickFoundationLocalEvidence] {
+        try reports.map { report in
+            try ProfessionalQualityKickFoundationLocalEvidence(report: report)
+        }
+    }
+
+    /// Projects the existing per-bar, role-pair, and band masking observations
+    /// without adding a metric to the calibrated primary policy.
+    package func maskingLocalFeatureReports() throws ->
+        [ProfessionalQualityMaskingLocalEvidence] {
+        try reports.map { report in
+            try ProfessionalQualityMaskingLocalEvidence(report: report)
+        }
+    }
 
     package init(reports sourceReports: [CanonicalJourneyQualificationReport]) throws {
         guard !sourceReports.isEmpty else {

@@ -112,13 +112,54 @@ current source fingerprint, Git head, engine identity, exact whole-mix
 manifest, accepted plan/state/replay identities, every stem file and PCM hash,
 reconstruction maxima, and the named nonlinear exception taxonomy.
 
+The same opt-in capture writes
+`docs/local/reports/baseline-stems-v1/foundation-behavior-coverage.json` as a
+separate score-provenance sidecar. It counts all seven resolved
+`FoundationBehavior` cases across the exact captured phrase, including zero
+counts, and binds each row to the whole-mix PCM hash, accepted plan/replay
+fingerprints, whole-mix manifest hash, role-stem manifest hash, contract
+baseline, source fingerprint, engine, and capture revision. The independent
+verifier checks the behavior counts cover exactly the resolved-bar count and
+that the sidecar identities match the paired manifests. This adds descriptive
+score coverage only: it does not change PCM, analyzer inputs, quality verdicts,
+or capture-on/capture-off equivalence. The fourteen Phase-1 checkpoint samples
+may still omit one or more foundation behaviors; this sidecar exposes that gap
+and is not, by itself, the AT-0039 calibration corpus.
+
 Generate only from an isolated local build:
 
 ```sh
 AUTOTECHNO_RUN_STEM_CAPTURE=1 swift test --no-parallel \
   --filter StemCaptureIntegrationTests
 python3 scripts/stem_capture_manifest.py check
+python3 scripts/foundation_behavior_coverage.py check
 ```
+
+The default capture namespace remains `v1`. To preserve those historical WAVs
+and manifests during an intentional refresh, set a separate namespace on both
+render and stem-capture runs. For example, `at0039-v1` writes to
+`baseline-corpus-at0039-v1` and `baseline-stems-at0039-v1`; namespace values are
+restricted to lowercase letters, digits, and hyphens.
+
+```sh
+AUTOTECHNO_CAPTURE_NAMESPACE=at0039-v1 \
+  AUTOTECHNO_RUN_BASELINE_RENDER=1 swift test --no-parallel \
+  --filter BaselineRenderIntegrationTests
+python3 scripts/baseline_render_manifest.py check --namespace at0039-v1
+AUTOTECHNO_CAPTURE_NAMESPACE=at0039-v1 \
+  AUTOTECHNO_RUN_STEM_CAPTURE=1 swift test --no-parallel \
+  --filter StemCaptureIntegrationTests
+python3 scripts/stem_capture_manifest.py check --namespace at0039-v1
+python3 scripts/foundation_behavior_coverage.py check --namespace at0039-v1
+```
+
+The namespace changes artifact paths and provenance-manifest hashes only; it
+does not change the tracked Phase-1 corpus, route inputs, selected plan, or PCM.
+Use it only after confirming the source and contract baseline that the capture
+will bind. A non-`v1` namespace is one-shot: if either destination already
+exists, the capture fails before writing. Use a new namespace for a retry or a
+later baseline revision. Never point a refresh at `v1` when the historical
+artifacts need to remain available for comparison.
 
 `scripts/stem_capture_manifest.py` independently parses every WAV, rejects
 unknown, missing, duplicate, escaped, non-finite, misaligned, stale, or corrupt

@@ -637,7 +637,10 @@ extension LongHorizonEffectDoseBarEvidence {
   }
 }
 
-package struct LongHorizonEffectFamilyReport: Codable, Equatable, Sendable {
+package struct LongHorizonEffectFamilyReport: Codable, Equatable, Sendable,
+  AutonomousEvidenceCategorizedReport
+{
+  package static let evidenceCategory: AutonomousEvidenceCategory = .descriptive
   package let family: LongHorizonEffectFamily
   package let eligibleBarCount: Int
   package let activeBarCount: Int
@@ -654,7 +657,10 @@ package struct LongHorizonEffectFamilyReport: Codable, Equatable, Sendable {
   package let maximumReturnToSourceDB: Double?
 }
 
-package struct LongHorizonEffectDoseReport: Codable, Equatable, Sendable {
+package struct LongHorizonEffectDoseReport: Codable, Equatable, Sendable,
+  AutonomousEvidenceCategorizedReport
+{
+  package static let evidenceCategory: AutonomousEvidenceCategory = .descriptive
   package let schemaVersion: Int
   package let schemaIdentifier: String
   package let availability: LongHorizonEffectDoseAvailability

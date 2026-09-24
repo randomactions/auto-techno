@@ -22,7 +22,8 @@ package struct ProfessionalQualityHoldoutTrajectoryResult: Codable, Equatable,
 /// deterministic canonical journeys that were not used to derive it. This is
 /// still offline evidence: it makes no listening, hardware, or shipping claim.
 package struct ProfessionalQualityHoldoutQualification: Codable, Equatable,
-        Sendable {
+        Sendable, AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory = .provenance
     package static let schemaVersion = 20
     package static let qualificationVersion =
         "autotechno-professional-quality-holdout.v20"
@@ -80,7 +81,7 @@ package struct ProfessionalQualityHoldoutQualification: Codable, Equatable,
         let checkpointOrder = Dictionary(uniqueKeysWithValues:
             CanonicalJourneyCheckpoint.allCases.enumerated().map { ($1, $0) }
         )
-        let results = holdoutCorpus.trajectories.map { trajectory in
+        let results = try holdoutCorpus.trajectories.map { trajectory in
             let verdicts = trajectory.observations.map { observation in
                 let verdict = ProfessionalQualityProfileEvaluator.evaluate(
                     observation,
@@ -100,16 +101,21 @@ package struct ProfessionalQualityHoldoutQualification: Codable, Equatable,
                 return (checkpointOrder[left.checkpoint] ?? Int.max) <
                     (checkpointOrder[right.checkpoint] ?? Int.max)
             }
+            let relationships = ProfessionalQualityRelationshipEvaluator
+                .evaluate(
+                    observations: trajectory.observations,
+                    against: profile
+                )
+            guard relationships.availability == .available,
+                  relationships.support == .sufficient else {
+                throw ProfessionalQualityCalibrationError.profileMismatch
+            }
             return ProfessionalQualityHoldoutTrajectoryResult(
                 sourceBankFingerprint: trajectory.sourceBankFingerprint,
                 sourceObservationCount: trajectory.observations.count,
                 acceptedObservationCount: verdicts.filter(\.accepted).count,
                 verdicts: verdicts,
-                relationshipFailures: ProfessionalQualityRelationshipEvaluator
-                    .evaluate(
-                        observations: trajectory.observations,
-                        against: profile
-                    )
+                relationshipFailures: relationships.failures
             )
         }.sorted { $0.sourceBankFingerprint < $1.sourceBankFingerprint }
 

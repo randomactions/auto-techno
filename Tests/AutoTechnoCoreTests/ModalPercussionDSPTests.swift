@@ -15,6 +15,8 @@ struct ModalPercussionDSPTests {
         #expect(event.finite)
         #expect(event.minimumModeFrequencyHz >= event.appliedFundamentalHz)
         #expect(event.maximumModeFrequencyHz < 0.9 * 44_100 * 0.5)
+        #expect((event.minimumModeFrequencyHz...event.maximumModeFrequencyHz)
+            .contains(event.spectralCentroidHz))
         #expect(event.maximumPoleRadius > 0 && event.maximumPoleRadius < 1)
         #expect(event.modeRatioFingerprint.count == 16)
     }
@@ -164,10 +166,26 @@ struct ModalPercussionDSPTests {
         )
         let evidence441 = try #require(at441.evidence.events.first)
         let evidence480 = try #require(at480.evidence.events.first)
+        func attackToBodyDB(_ attackRMS: Double, _ bodyRMS: Double) -> Double {
+            min(120, max(-120,
+                20 * (log10(max(attackRMS, 1e-12)) -
+                      log10(max(bodyRMS, 1e-12)))
+            ))
+        }
+        let attackToBody441 = attackToBodyDB(
+            evidence441.attackRMS,
+            evidence441.bodyRMS
+        )
+        let attackToBody480 = attackToBodyDB(
+            evidence480.attackRMS,
+            evidence480.bodyRMS
+        )
 
         #expect(abs(decay441 - decay480) < 0.025)
         #expect(abs(evidence441.tailToBodyDB - evidence480.tailToBodyDB) < 1.5)
         #expect(abs(evidence441.attackRMS - evidence480.attackRMS) < 0.02)
+        #expect(evidence441.bodyRMS > 0 && evidence480.bodyRMS > 0)
+        #expect(abs(attackToBody441 - attackToBody480) < 1.5)
     }
 
     @Test("Bar continuation equals one continuous render")
@@ -189,14 +207,14 @@ struct ModalPercussionDSPTests {
         var splitState = ModalPercussionVoiceState()
         var first = [Float](repeating: 0, count: barFrames)
         var second = [Float](repeating: 0, count: barFrames)
-        _ = ModalPercussionVoice.renderBar(
+        let firstEvidence = ModalPercussionVoice.renderBar(
             into: &first,
             bar: 0,
             sampleRate: sampleRate,
             events: [event],
             state: &splitState
         )
-        _ = ModalPercussionVoice.renderBar(
+        let secondEvidence = ModalPercussionVoice.renderBar(
             into: &second,
             bar: 1,
             sampleRate: sampleRate,
@@ -204,6 +222,10 @@ struct ModalPercussionDSPTests {
             state: &splitState
         )
 
+        #expect(firstEvidence.activeOutgoingVoiceCount > 0)
+        #expect(secondEvidence.events.isEmpty)
+        #expect(secondEvidence.activeIncomingVoiceCount > 0)
+        #expect(secondEvidence.continuationRendered)
         #expect(first + second == continuous)
         #expect(splitState == continuousState)
     }

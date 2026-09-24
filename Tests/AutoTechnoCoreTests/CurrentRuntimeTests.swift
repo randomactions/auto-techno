@@ -232,57 +232,161 @@ struct CurrentRuntimeTests {
         )
         let report = AudioQualityReport(blocks: first, sampleRate: 8_000)
 
+        func correlations(left: [Float], right: [Float]) -> (Double, Double) {
+            let leftSamples = left.map(Double.init)
+            let rightSamples = right.map(Double.init)
+            let crossEnergy = zip(leftSamples, rightSamples)
+                .reduce(0.0) { $0 + $1.0 * $1.1 }
+            let leftEnergy = leftSamples.reduce(0.0) { $0 + $1 * $1 }
+            let rightEnergy = rightSamples.reduce(0.0) { $0 + $1 * $1 }
+            let uncentered = crossEnergy /
+                sqrt(max(0.0000001, leftEnergy * rightEnergy))
+            let leftMean = leftSamples.reduce(0, +) / Double(leftSamples.count)
+            let rightMean = rightSamples.reduce(0, +) / Double(rightSamples.count)
+            let centeredCross = zip(leftSamples, rightSamples).reduce(0.0) {
+                $0 + ($1.0 - leftMean) * ($1.1 - rightMean)
+            }
+            let centeredLeft = leftSamples.reduce(0.0) {
+                $0 + ($1 - leftMean) * ($1 - leftMean)
+            }
+            let centeredRight = rightSamples.reduce(0.0) {
+                $0 + ($1 - rightMean) * ($1 - rightMean)
+            }
+            let pearson = centeredCross /
+                sqrt(max(0.0000001, centeredLeft * centeredRight))
+            return (uncentered, pearson)
+        }
+
         #expect(first == second)
         #expect(renderA == renderB)
         #expect(graphA == graphB)
         #expect(report.finite)
         #expect(report.truePeakEstimate <= 0.95)
         #expect(abs(report.dcOffset) < 0.05)
+        let source = first[0]
+        func copyingSourceBlock(
+            left: [Float],
+            right: [Float],
+            liveMasterTrimEvidence: LiveMasterTrimRenderEvidence? = nil
+        ) -> RenderBlock {
+            RenderBlock(
+                bar: source.bar,
+                section: source.section,
+                left: left,
+                right: right,
+                events: source.events,
+                modulation: source.modulation,
+                busStates: source.busStates,
+                masking: source.masking,
+                effects: source.effects,
+                kickMix: source.kickMix,
+                kickRenderPassesMatch: source.kickRenderPassesMatch,
+                stemObservations: source.stemObservations,
+                automaticMix: source.automaticMix,
+                stemReconstruction: source.stemReconstruction,
+                protectedFoundationSampleHash: source.protectedFoundationSampleHash,
+                percussionSampleHash: source.percussionSampleHash,
+                protectedRhythmSampleHash: source.protectedRhythmSampleHash,
+                dryModalPercussionSampleHash:
+                    source.dryModalPercussionSampleHash,
+                modalPercussionRenderEvidence:
+                    source.modalPercussionRenderEvidence,
+                modalPercussionRenderPassesMatch:
+                    source.modalPercussionRenderPassesMatch,
+                modalPercussionFoundationRoutingValid:
+                    source.modalPercussionFoundationRoutingValid,
+                groovePulseRenderEvidence: source.groovePulseRenderEvidence,
+                instrumentRenderEvidence: source.instrumentRenderEvidence,
+                percussionEchoTextureRenderEvidence:
+                    source.percussionEchoTextureRenderEvidence,
+                percussionEchoTextureRenderPassesMatch:
+                    source.percussionEchoTextureRenderPassesMatch,
+                pulseEchoReturnDriveRenderEvidence:
+                    source.pulseEchoReturnDriveRenderEvidence,
+                liveMasterTrimRenderEvidence:
+                    liveMasterTrimEvidence ?? source.liveMasterTrimRenderEvidence,
+                upperNoteRenderEvidence: source.upperNoteRenderEvidence,
+                upperTimingRenderEvidence: source.upperTimingRenderEvidence,
+                graphInputRemainderTimbreEvidence:
+                    source.graphInputRemainderTimbreEvidence,
+                postGraphRemainderTimbreEvidence:
+                    source.postGraphRemainderTimbreEvidence,
+                resolvedPerformance: source.resolvedPerformance,
+                sceneDNA: source.sceneDNA,
+                synthWorld: source.synthWorld,
+                synthPerformance: source.synthPerformance
+            )
+        }
+        let biasedLeft = source.left.map { $0 + 0.08 }
+        let biasedRight = source.right.map { $0 - 0.04 }
+        let biasedReport = AudioQualityReport(
+            blocks: [copyingSourceBlock(left: biasedLeft, right: biasedRight)],
+            sampleRate: 8_000
+        )
+        let biasedCorrelations = correlations(left: biasedLeft, right: biasedRight)
+        #expect(abs(
+            Double(biasedReport.stereoCorrelation) - biasedCorrelations.0
+        ) < 0.000_001)
+        #expect(abs(biasedCorrelations.0 - biasedCorrelations.1) > 0.000_1)
+
+        let expectedBiasedDC = zip(biasedLeft, biasedRight).reduce(0.0) {
+            $0 + Double($1.0 + $1.1)
+        } / Double(biasedLeft.count * 2)
+        #expect(abs(Double(biasedReport.dcOffset) - expectedBiasedDC) < 0.000_001)
+        let opposedDCReport = AudioQualityReport(
+            blocks: [copyingSourceBlock(
+                left: source.left,
+                right: source.left.map { -$0 }
+            )],
+            sampleRate: 8_000
+        )
+        #expect(opposedDCReport.dcOffset == 0)
+
+        func crestFactorDB(_ report: AudioQualityReport) -> Double {
+            guard report.peak > 0, report.rms > 0 else { return -120 }
+            return 20 * log10(Double(report.peak) / Double(report.rms))
+        }
+        let sourceReport = AudioQualityReport(blocks: [source], sampleRate: 8_000)
+        var isolatedPeakLeft = source.left
+        isolatedPeakLeft[0] = 1
+        let isolatedPeakReport = AudioQualityReport(
+            blocks: [copyingSourceBlock(
+                left: isolatedPeakLeft,
+                right: source.right
+            )],
+            sampleRate: 8_000
+        )
+        let paddedSilenceReport = AudioQualityReport(
+            blocks: [copyingSourceBlock(
+                left: source.left + [Float](repeating: 0, count: source.left.count),
+                right: source.right + [Float](repeating: 0, count: source.right.count)
+            )],
+            sampleRate: 8_000
+        )
+        #expect(isolatedPeakReport.peak > sourceReport.peak)
+        #expect(crestFactorDB(isolatedPeakReport) > crestFactorDB(sourceReport))
+        #expect(paddedSilenceReport.peak == sourceReport.peak)
+        #expect(abs(
+            Double(paddedSilenceReport.rms) -
+                Double(sourceReport.rms) / sqrt(2)
+        ) < 0.000_001)
+        #expect(abs(
+            crestFactorDB(paddedSilenceReport) -
+                crestFactorDB(sourceReport) - 20 * log10(sqrt(2))
+        ) < 0.001)
         #expect(report.lowStereoCorrelation > 0.94)
         #expect(report.maxBoundaryDelta < 0.65)
 
-        let source = first[0]
         let nonFiniteLeft: [Float] = [0]
         let nonFiniteRight: [Float] = [0, .nan]
         let nonFiniteFingerprint = ExactPCMFingerprint.stereo(
             left: nonFiniteLeft,
             right: nonFiniteRight
         )
-        let asymmetricNonFinite = RenderBlock(
-            bar: source.bar,
-            section: source.section,
+        let asymmetricNonFinite = copyingSourceBlock(
             left: nonFiniteLeft,
             right: nonFiniteRight,
-            events: source.events,
-            modulation: source.modulation,
-            busStates: source.busStates,
-            masking: source.masking,
-            effects: source.effects,
-            kickMix: source.kickMix,
-            kickRenderPassesMatch: source.kickRenderPassesMatch,
-            stemObservations: source.stemObservations,
-            automaticMix: source.automaticMix,
-            stemReconstruction: source.stemReconstruction,
-            protectedFoundationSampleHash: source.protectedFoundationSampleHash,
-            percussionSampleHash: source.percussionSampleHash,
-            protectedRhythmSampleHash: source.protectedRhythmSampleHash,
-            dryModalPercussionSampleHash:
-                source.dryModalPercussionSampleHash,
-            modalPercussionRenderEvidence:
-                source.modalPercussionRenderEvidence,
-            modalPercussionRenderPassesMatch:
-                source.modalPercussionRenderPassesMatch,
-            modalPercussionFoundationRoutingValid:
-                source.modalPercussionFoundationRoutingValid,
-            groovePulseRenderEvidence: source.groovePulseRenderEvidence,
-            instrumentRenderEvidence: source.instrumentRenderEvidence,
-            percussionEchoTextureRenderEvidence:
-                source.percussionEchoTextureRenderEvidence,
-            percussionEchoTextureRenderPassesMatch:
-                source.percussionEchoTextureRenderPassesMatch,
-            pulseEchoReturnDriveRenderEvidence:
-                source.pulseEchoReturnDriveRenderEvidence,
-            liveMasterTrimRenderEvidence: LiveMasterTrimRenderEvidence(
+            liveMasterTrimEvidence: LiveMasterTrimRenderEvidence(
                 requestedTrimDB: 0,
                 appliedTrimDB: 0,
                 appliedGain: 1,
@@ -291,17 +395,7 @@ struct CurrentRuntimeTests {
                 preTrimNonzeroSampleCount: 1,
                 postTrimNonzeroSampleCount: 1,
                 exactScaleMatches: false
-            ),
-            upperNoteRenderEvidence: source.upperNoteRenderEvidence,
-            upperTimingRenderEvidence: source.upperTimingRenderEvidence,
-            graphInputRemainderTimbreEvidence:
-                source.graphInputRemainderTimbreEvidence,
-            postGraphRemainderTimbreEvidence:
-                source.postGraphRemainderTimbreEvidence,
-            resolvedPerformance: source.resolvedPerformance,
-            sceneDNA: source.sceneDNA,
-            synthWorld: source.synthWorld,
-            synthPerformance: source.synthPerformance
+            )
         )
         #expect(!AudioQualityReport(
             blocks: [asymmetricNonFinite],
@@ -325,6 +419,21 @@ struct CurrentRuntimeTests {
 
         #expect(abs(internalOnly - 0.05) < 0.000_001)
         #expect(abs(includingPredecessor - 1.20) < 0.000_001)
+
+        let continuousLeft: [Float] = [0.10, 0.20, 0.90, 0.91]
+        let continuousRight: [Float] = [0.10, 0.20, 0.80, 0.81]
+        let oneBlock = AudioQualityReport.maximumBoundaryDelta(
+            leftBlocks: [continuousLeft],
+            rightBlocks: [continuousRight]
+        )
+        let twoBlocks = AudioQualityReport.maximumBoundaryDelta(
+            leftBlocks: [[0.10, 0.20], [0.90, 0.91]],
+            rightBlocks: [[0.10, 0.20], [0.80, 0.81]]
+        )
+
+        #expect(oneBlock == 0)
+        #expect(abs(twoBlocks - 0.70) < 0.000_001,
+                "The statistic observes render-block seams, not every adjacent PCM sample")
     }
 
     private var repositoryRoot: URL {

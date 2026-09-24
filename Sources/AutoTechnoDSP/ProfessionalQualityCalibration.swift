@@ -24,6 +24,7 @@ package enum ProfessionalQualityCalibrationError: Error, Equatable, Sendable {
     )
     case invalidBounds
     case profileMismatch
+    case invalidLocalFeatureEvidence
 }
 
 package struct AutonomousStemRoleFailure: Equatable, Sendable {
@@ -133,6 +134,11 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         "pad-harmonic-disclosure-revealed-bar-ratio"
     case padHarmonicDisclosureDistinctFunctionCount =
         "pad-harmonic-disclosure-distinct-function-count"
+
+    package var evidenceCategory:
+        AutonomousCandidateEvaluationVector.EvidenceCategory {
+        .calibratedQuality
+    }
 
     package var acceptsSaferValuesBelowCalibration: Bool {
         switch self {
@@ -2205,7 +2211,10 @@ package enum ProfessionalQualityRejection: String, Codable, Hashable, Sendable {
     case liveRouteBoundaryFailure = "live-route-boundary-failure"
 }
 
-package struct ProfessionalQualityVerdict: Codable, Equatable, Sendable {
+package struct ProfessionalQualityVerdict: Codable, Equatable, Sendable,
+        AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory =
+        .calibratedQuality
     package let accepted: Bool
     package let reasons: [ProfessionalQualityRejection]
     package let failedMetrics: [ProfessionalQualityMetric]
@@ -2228,12 +2237,145 @@ package struct ProfessionalQualityRelationshipFailure: Codable, Equatable,
     package let upperBound: Double
 }
 
+package enum ProfessionalQualityCalibrationSupport: String, Codable, Sendable {
+    case sufficient
+    case insufficient
+}
+
+package enum ProfessionalQualityConfidenceStatus: String, Codable, Sendable {
+    /// Complete, qualified evidence exists, but no statistical confidence
+    /// interval has been calibrated for these deterministic profile bounds.
+    case notEstimated = "not-estimated"
+    case unavailable
+}
+
+package enum ProfessionalQualityRelationshipAvailability: String, Codable,
+        Sendable {
+    case available
+    case unavailableProfile = "unavailable-profile"
+    case unsupportedSampleRate = "unsupported-sample-rate"
+    case incompleteObservations = "incomplete-observations"
+    case invalidObservations = "invalid-observations"
+}
+
+package enum ProfessionalQualityRelationshipCoverage: String, Codable, Sendable {
+    case complete
+    case trajectoryOnly = "trajectory-only"
+}
+
+/// Relationship findings are meaningful only when the expected checkpoint
+/// and route population is complete. Support sufficiency is distinct from
+/// statistical confidence: the current policy has no calibrated confidence
+/// interval, so it reports that estimate as unavailable.
+package struct ProfessionalQualityRelationshipAssessment: Equatable, Sendable {
+    package let availability: ProfessionalQualityRelationshipAvailability
+    package let coverage: ProfessionalQualityRelationshipCoverage
+    package let support: ProfessionalQualityCalibrationSupport
+    package let confidence: ProfessionalQualityConfidenceStatus
+    package let observationCount: Int
+    package let requiredObservationCount: Int
+    package let failures: [ProfessionalQualityRelationshipFailure]
+
+    package var accepted: Bool {
+        availability == .available && coverage == .complete &&
+            support == .sufficient &&
+            failures.isEmpty
+    }
+}
+
 package enum ProfessionalQualityRelationshipEvaluator {
     package static func evaluate(
         observations: [ProfessionalQualityObservation],
         against profile: ProfessionalQualityCalibrationProfile
-    ) -> [ProfessionalQualityRelationshipFailure] {
-        guard profile.isComplete else { return [] }
+    ) -> ProfessionalQualityRelationshipAssessment {
+        let fullRequiredObservationCount = profile.sampleRates.count *
+            CanonicalJourneyCheckpoint.allCases.count
+        let support: ProfessionalQualityCalibrationSupport =
+            profile.usesDiverseCalibration ? .sufficient : .insufficient
+        guard profile.isComplete else {
+            return ProfessionalQualityRelationshipAssessment(
+                availability: .unavailableProfile,
+                coverage: .complete,
+                support: .insufficient,
+                confidence: .unavailable,
+                observationCount: observations.count,
+                requiredObservationCount: fullRequiredObservationCount,
+                failures: []
+            )
+        }
+        let representedSampleRates = Set(observations.map(\.sampleRate))
+        let coverage: ProfessionalQualityRelationshipCoverage =
+            representedSampleRates.count == 1 && profile.sampleRates.count > 1
+                ? .trajectoryOnly : .complete
+        let requiredObservationCount = representedSampleRates.count *
+            CanonicalJourneyCheckpoint.allCases.count
+        guard !representedSampleRates.isEmpty else {
+            return ProfessionalQualityRelationshipAssessment(
+                availability: .incompleteObservations,
+                coverage: coverage,
+                support: support,
+                confidence: .unavailable,
+                observationCount: observations.count,
+                requiredObservationCount: max(
+                    requiredObservationCount,
+                    fullRequiredObservationCount
+                ),
+                failures: []
+            )
+        }
+        guard representedSampleRates.isSubset(of: Set(profile.sampleRates)) else {
+            return ProfessionalQualityRelationshipAssessment(
+                availability: .unsupportedSampleRate,
+                coverage: coverage,
+                support: support,
+                confidence: .unavailable,
+                observationCount: observations.count,
+                requiredObservationCount: fullRequiredObservationCount,
+                failures: []
+            )
+        }
+        guard observations.count == requiredObservationCount else {
+            return ProfessionalQualityRelationshipAssessment(
+                availability: .incompleteObservations,
+                coverage: coverage,
+                support: support,
+                confidence: .unavailable,
+                observationCount: observations.count,
+                requiredObservationCount: max(
+                    requiredObservationCount,
+                    fullRequiredObservationCount
+                ),
+                failures: []
+            )
+        }
+        let observedIdentities = Set(observations.map {
+            "\($0.checkpoint.rawValue):\($0.sampleRate.bitPattern)"
+        })
+        let expectedIdentities = Set(
+            CanonicalJourneyCheckpoint.allCases.flatMap { checkpoint in
+                representedSampleRates.map { sampleRate in
+                    "\(checkpoint.rawValue):\(sampleRate.bitPattern)"
+                }
+            }
+        )
+        guard observedIdentities.count == observations.count,
+              observedIdentities == expectedIdentities,
+              observations.allSatisfy({
+                  $0.isComplete && $0.engineVersion == profile.engineVersion &&
+                      $0.evidenceVersion == profile.evidenceVersion
+              }) else {
+            return ProfessionalQualityRelationshipAssessment(
+                availability: .invalidObservations,
+                coverage: coverage,
+                support: support,
+                confidence: .unavailable,
+                observationCount: observations.count,
+                requiredObservationCount: coverage == .complete
+                    ? fullRequiredObservationCount
+                    : CanonicalJourneyCheckpoint.allCases.count,
+                failures: []
+            )
+        }
         var failures: [ProfessionalQualityRelationshipFailure] = []
         for bounds in profile.trajectories
             where bounds.metric.participatesInQualification {
@@ -2303,7 +2445,7 @@ package enum ProfessionalQualityRelationshipEvaluator {
                 ))
             }
         }
-        return failures.sorted { left, right in
+        let orderedFailures = failures.sorted { left, right in
             let leftKey = [
                 left.kind.rawValue,
                 left.trajectory?.rawValue ?? "",
@@ -2320,6 +2462,18 @@ package enum ProfessionalQualityRelationshipEvaluator {
             ].joined(separator: ":")
             return leftKey < rightKey
         }
+        return ProfessionalQualityRelationshipAssessment(
+            availability: .available,
+            coverage: coverage,
+            support: support,
+            confidence: support == .sufficient && coverage == .complete
+                ? .notEstimated : .unavailable,
+            observationCount: observations.count,
+            requiredObservationCount: coverage == .complete
+                ? fullRequiredObservationCount
+                : CanonicalJourneyCheckpoint.allCases.count,
+            failures: orderedFailures
+        )
     }
 }
 

@@ -80,7 +80,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 .evaluate(
                     observations: trajectory.observations,
                     against: profile
-                )
+                ).failures
             progress(
                 "calibration-source=\(trajectory.sourceBankFingerprint) " +
                 "local=\(localFailures.joined(separator: ";")) " +
@@ -168,7 +168,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 .evaluate(
                     observations: trajectory.observations,
                     against: profile
-                )
+                ).failures
             for observation in trajectory.observations {
                 let verdict = ProfessionalQualityProfileEvaluator.evaluate(
                     observation,
@@ -364,37 +364,135 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         print("AUTOTECHNO_HOLDOUT_QUALIFICATION_FINGERPRINT=\(holdout.fingerprint)")
     }
 
-    @Test("Render one explicitly selected calibration diagnostic journey")
+    @Test("Render selected calibration diagnostic journeys")
     func renderSelectedDiagnosticJourney() throws {
-        guard let rawSeed = ProcessInfo.processInfo.environment[
+        let environment = ProcessInfo.processInfo.environment
+        let selectedSeeds: [UInt64]
+        if let raw = environment["AUTOTECHNO_CALIBRATION_DIAGNOSTIC_SEEDS"] {
+            if raw == "all-calibration" {
+                selectedSeeds = calibrationSeeds
+            } else {
+                selectedSeeds = try raw.split(separator: ",").map { value in
+                    guard let seed = UInt64(value.trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )) else {
+                        throw ProfessionalQualityCalibrationError
+                            .invalidLocalFeatureEvidence
+                    }
+                    return seed
+                }
+            }
+        } else if let raw = environment[
             "AUTOTECHNO_CALIBRATION_DIAGNOSTIC_SEED"
-        ], let seed = UInt64(rawSeed) else { return }
+        ], let seed = UInt64(raw) {
+            selectedSeeds = [seed]
+        } else {
+            return
+        }
+        guard !selectedSeeds.isEmpty,
+              Set(selectedSeeds).count == selectedSeeds.count else {
+            throw ProfessionalQualityCalibrationError.invalidLocalFeatureEvidence
+        }
 
-        let trajectory = try renderTrajectory(seed: seed)
-        progress(
-            "diagnostic-seed=\(seed) source=" +
-            trajectory.sourceBankFingerprint
-        )
-        for observation in trajectory.observations {
-            guard let peak = observation[.rmsTrajectoryDeltaPeakDB],
-                  let mean = observation[.rmsTrajectoryDeltaMeanDB],
-                  let activeKickFoundationBarRatio = observation[
-                    .activeKickFoundationBarRatio
-                  ],
-                  let kickOverFoundationActiveDBMean = observation[
-                    .kickOverFoundationActiveDBMean
-                  ] else {
-                continue
+        var reports: [(seed: UInt64,
+                       report: ProfessionalQualityKickFoundationLocalEvidence)] = []
+        for seed in selectedSeeds {
+            var sourceReports: [CanonicalJourneyQualificationReport] = []
+            for sampleRate in ProfessionalQualityCalibrationProfile
+                .requiredSampleRates {
+                sourceReports.append(contentsOf: try renderJourney(
+                    seed: seed,
+                    sampleRate: sampleRate
+                ))
+            }
+            let bank = try ProfessionalEvidenceReportBank(reports: sourceReports)
+            let trajectory = try ProfessionalQualityCalibrationTrajectory(
+                bank: bank
+            )
+            let localReports = try bank.kickFoundationLocalFeatureReports()
+            let maskingReports = try bank.maskingLocalFeatureReports()
+            guard localReports.count ==
+                    CanonicalJourneyCheckpoint.allCases.count *
+                    ProfessionalQualityCalibrationProfile.requiredSampleRates.count,
+                  maskingReports.count == localReports.count,
+                  maskingReports.allSatisfy({ report in
+                      report.observationCount == report.sourceBarCount *
+                          AutonomousCandidateEvaluationVector
+                              .maximumMaskingObservationsPerBar
+                  })
+            else {
+                throw ProfessionalQualityCalibrationError
+                    .invalidLocalFeatureEvidence
             }
             progress(
-                "diagnostic-seed=\(seed) checkpoint=" +
-                "\(observation.checkpoint.rawValue) rate=" +
-                "\(Int(observation.sampleRate)) rms-trajectory-mean-db=" +
-                "\(mean) rms-trajectory-peak-db=\(peak) " +
-                "active-kick-foundation-bar-ratio=" +
-                "\(activeKickFoundationBarRatio) " +
-                "kick-over-foundation-active-db-mean=" +
-                "\(kickOverFoundationActiveDBMean)"
+                "diagnostic-seed=\(seed) source=" +
+                trajectory.sourceBankFingerprint +
+                " local-reports=\(localReports.count)"
+            )
+            reports.append(contentsOf: localReports.map { (seed, $0) })
+            for local in localReports {
+                let mean = local.meanDB.map { String($0) } ?? "unavailable"
+                let spread = local.spreadDB.map { String($0) } ?? "unavailable"
+                let minimum = local.barMeasurements.min {
+                    $0.kickOverFoundationDB < $1.kickOverFoundationDB
+                }
+                let maximum = local.barMeasurements.max {
+                    $0.kickOverFoundationDB < $1.kickOverFoundationDB
+                }
+                let extrema: String
+                if let minimum, let maximum {
+                    extrema = "min-bar=\(minimum.bar):" +
+                        "\(minimum.kickOverFoundationDB) " +
+                        "max-bar=\(maximum.bar):" +
+                        "\(maximum.kickOverFoundationDB)"
+                } else {
+                    extrema = "extrema=unavailable"
+                }
+                progress(
+                    "diagnostic-seed=\(seed) checkpoint=" +
+                    "\(local.checkpoint.rawValue) rate=\(Int(local.sampleRate)) " +
+                    "source-bars=\(local.sourceBarCount) " +
+                    "paired-bars=\(local.pairedBarCount) " +
+                    "availability=\(local.availability.rawValue) " +
+                    "mean-db=\(mean) spread-db=\(spread) \(extrema)"
+                )
+            }
+        }
+
+        for key in Set(reports.map {
+            "\($0.report.checkpoint.rawValue)|\(Int($0.report.sampleRate))"
+        }).sorted() {
+            let values = reports.filter {
+                "\($0.report.checkpoint.rawValue)|" +
+                    "\(Int($0.report.sampleRate))" == key
+            }
+            func summary(_ samples: [Double]) -> String {
+                let sorted = samples.sorted()
+                guard let first = sorted.first, let last = sorted.last else {
+                    return "unavailable"
+                }
+                let median = sorted[sorted.count / 2]
+                return "min=\(first),median=\(median),max=\(last)"
+            }
+            let means = values.compactMap { $0.report.meanDB }
+            let estimableSpreads = values.compactMap { value in
+                value.report.pairedBarCount >= 2 ? value.report.spreadDB : nil
+            }
+            let pairedCounts = Dictionary(grouping: values) {
+                $0.report.pairedBarCount
+            }.keys.sorted().map { count in
+                let journeys = values.filter {
+                    $0.report.pairedBarCount == count
+                }.count
+                return "\(count):\(journeys)"
+            }.joined(separator: ",")
+            progress(
+                "diagnostic-distribution group=\(key) " +
+                "journeys=\(values.count) " +
+                "paired-bar-counts=\(pairedCounts) " +
+                "spread-estimable-journeys=\(estimableSpreads.count) " +
+                "mean-db.{\(summary(means))} " +
+                "spread-db-paired-bars-ge-2.{\(summary(estimableSpreads))}"
             )
         }
     }
@@ -573,7 +671,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                     result + ProfessionalQualityRelationshipEvaluator.evaluate(
                         observations: trajectory.observations,
                         against: profile
-                    ).count
+                    ).failures.count
                 }
                 progress(
                     "leave-two-out=\(seeds[firstHoldout])," +
@@ -606,7 +704,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             }.count
             let relationships = ProfessionalQualityRelationshipEvaluator
                 .evaluate(observations: holdout.observations, against: profile)
-                .count
+                .failures.count
             progress(
                 "leave-one-out=\(seeds[holdoutIndex]) " +
                 "accepted=\(accepted)/14 relationships=\(relationships)"

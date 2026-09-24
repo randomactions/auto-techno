@@ -21,8 +21,18 @@ struct StemCaptureIntegrationTests {
             let id: String
             let rootSeed: UInt64
             let checkpoint: CanonicalJourneyCheckpoint
+            let targetPhraseIndex: Int?
             let continuationClass: String
+            let expectedPlanFingerprint: String?
+            let ordinal: Int?
+            let cohort: String?
+            let resolvedBarCount: Int?
+            let foundationBehaviorBarCounts: [String: Int]?
         }
+        let schema: String?
+        let sourceFingerprint: String?
+        let contractBaselineFingerprint: String?
+        let gitHead: String?
         let checkpointPolicy: Policy
         let routes: [Route]
         let cases: [Case]
@@ -48,6 +58,45 @@ struct StemCaptureIntegrationTests {
         let engineVersion: String
         let nonlinearExceptions: [NonlinearException]
         let entries: [Entry]
+    }
+
+    private struct FoundationBehaviorCoverageManifest: Encodable {
+        let schema = "autotechno-foundation-behavior-coverage.v1"
+        let manifestVersion = 1
+        let corpusSha256: String
+        let wholeMixManifestSha256: String
+        let roleStemManifestSha256: String
+        let contractBaselineFingerprint: String
+        let sourceFingerprint: String
+        let gitHead: String
+        let engineVersion: String
+        let entries: [FoundationBehaviorCoverageEntry]
+    }
+
+    private struct FoundationBehaviorCoverageEntry: Encodable {
+        let id: String
+        let caseId: String
+        let routeId: String
+        let rootSeed: UInt64
+        let checkpoint: String
+        let continuationClass: String
+        let phraseIndex: Int
+        let startBar: Int
+        let phraseKind: String
+        let stateFingerprint: String
+        let planFingerprint: String
+        let replayFingerprint: String
+        let policyVersion: String
+        let qualityOutcome: String
+        let sampleRate: Int
+        let wholeMixPcmSha256: String
+        let resolvedBarCount: Int
+        let foundationBehaviorBarCounts: [String: Int]
+    }
+
+    private struct CapturedEntry {
+        let stems: Entry
+        let foundationBehaviorCoverage: FoundationBehaviorCoverageEntry
     }
 
     private struct NonlinearException: Encodable {
@@ -116,7 +165,8 @@ struct StemCaptureIntegrationTests {
             "AUTOTECHNO_RUN_STEM_CAPTURE"
         ] == "1" else { return }
         let root = repositoryRoot
-        let corpusURL = root.appendingPathComponent("docs/BASELINE_CORPUS.json")
+        let namespace = try captureNamespace()
+        let corpusURL = try captureCorpusURL(root)
         let corpusData = try Data(contentsOf: corpusURL)
         let corpus = try JSONDecoder().decode(Corpus.self, from: corpusData)
         let baseline = try JSONSerialization.jsonObject(
@@ -124,8 +174,9 @@ struct StemCaptureIntegrationTests {
                 "docs/ROADMAP_EXECUTION_BASELINE.json"
             ))
         ) as? [String: Any]
+        try validateFrozenCohort(corpus, baseline: baseline, root: root)
         let wholeMixURL = root.appendingPathComponent(
-            "docs/local/reports/baseline-corpus-v1/manifest.json"
+            "docs/local/reports/baseline-corpus-\(namespace)/manifest.json"
         )
         let wholeMixData = try Data(contentsOf: wholeMixURL)
         let wholeMix = try JSONDecoder().decode(
@@ -136,13 +187,18 @@ struct StemCaptureIntegrationTests {
             uniqueKeysWithValues: wholeMix.entries.map { ($0.id, $0) }
         )
         let output = root.appendingPathComponent(
-            "docs/local/audio/baseline-stems-v1",
+            "docs/local/audio/baseline-stems-\(namespace)",
             isDirectory: true
         )
         let report = root.appendingPathComponent(
-            "docs/local/reports/baseline-stems-v1",
+            "docs/local/reports/baseline-stems-\(namespace)",
             isDirectory: true
         )
+        if namespace != "v1",
+           (FileManager.default.fileExists(atPath: output.path) ||
+            FileManager.default.fileExists(atPath: report.path)) {
+            throw CaptureError.namespaceAlreadyExists
+        }
         try FileManager.default.createDirectory(
             at: output,
             withIntermediateDirectories: true
@@ -154,11 +210,13 @@ struct StemCaptureIntegrationTests {
         let primary = try ProfessionalQualityPrimaryArtifacts.load()
         let longHorizon = try LongHorizonProfessionalPolicyArtifacts.load()
         var entries: [Entry] = []
+        var foundationBehaviorCoverage: [FoundationBehaviorCoverageEntry] = []
         for fixture in corpus.cases {
             for route in corpus.routes {
-                entries.append(try capture(
+                let captured = try capture(
                     fixture,
                     route: route,
+                    namespace: namespace,
                     limit: corpus.checkpointPolicy.maximumPhrases,
                     primary: primary,
                     longHorizon: longHorizon,
@@ -166,7 +224,11 @@ struct StemCaptureIntegrationTests {
                         wholeEntries[fixture.id + "--" + route.id]
                     ),
                     output: output
-                ))
+                )
+                entries.append(captured.stems)
+                foundationBehaviorCoverage.append(
+                    captured.foundationBehaviorCoverage
+                )
             }
         }
         let manifest = Manifest(
@@ -212,8 +274,27 @@ struct StemCaptureIntegrationTests {
             .sortedKeys,
             .withoutEscapingSlashes,
         ]
-        try encoder.encode(manifest).write(
+        let manifestData = try encoder.encode(manifest)
+        try manifestData.write(
             to: report.appendingPathComponent("manifest.json"),
+            options: .atomic
+        )
+        let coverageManifest = FoundationBehaviorCoverageManifest(
+            corpusSha256: digest(corpusData),
+            wholeMixManifestSha256: digest(wholeMixData),
+            roleStemManifestSha256: digest(manifestData),
+            contractBaselineFingerprint: try #require(
+                baseline?["snapshotFingerprint"] as? String
+            ),
+            sourceFingerprint: try sourceFingerprint(root),
+            gitHead: try gitHead(root),
+            engineVersion: QualityQualificationContract.engineVersion,
+            entries: foundationBehaviorCoverage.sorted { $0.id < $1.id }
+        )
+        try encoder.encode(coverageManifest).write(
+            to: report.appendingPathComponent(
+                "foundation-behavior-coverage.json"
+            ),
             options: .atomic
         )
         #expect(entries.count == corpus.cases.count * corpus.routes.count)
@@ -222,12 +303,13 @@ struct StemCaptureIntegrationTests {
     private func capture(
         _ fixture: Corpus.Case,
         route: Corpus.Route,
+        namespace: String,
         limit: Int,
         primary: ProfessionalQualityPrimaryArtifacts,
         longHorizon: LongHorizonProfessionalPolicyArtifacts,
         wholeMix: WholeMixManifest.Entry,
         output: URL
-    ) throws -> Entry {
+    ) throws -> CapturedEntry {
         let director = AutonomousSessionDirector(rootSeed: fixture.rootSeed)
         var state = director.initialState()
         var renderState = RenderState()
@@ -274,13 +356,35 @@ struct StemCaptureIntegrationTests {
                 )
             )
             let plan = prepared.prepared.plan
+            let targetPhraseMatches = fixture.targetPhraseIndex == nil ||
+                fixture.targetPhraseIndex == plan.phraseIndex
+            if targetPhraseMatches, let expected = fixture.expectedPlanFingerprint,
+               AutonomousCandidateFingerprint.plan(plan) != expected {
+                throw CaptureError.planMismatch
+            }
+            if targetPhraseMatches, fixture.expectedPlanFingerprint != nil {
+                let behaviorCounts = Dictionary(uniqueKeysWithValues:
+                    FoundationBehavior.allCases.map { behavior in
+                        (behavior.rawValue, plan.resolvedBars.filter {
+                            $0.foundationBehavior == behavior
+                        }.count)
+                    }
+                )
+                guard AT0039FrozenCohortValidator.scoreMetadataMatches(
+                    expectedBarCount: fixture.resolvedBarCount,
+                    expectedBehaviorCounts: fixture.foundationBehaviorBarCounts,
+                    actualBarCount: plan.resolvedBars.count,
+                    actualBehaviorCounts: behaviorCounts
+                ) else { throw CaptureError.frozenScoreMismatch }
+            }
             let chapters = plan.resolvedBars.map(\.interlockChapter)
             let changed = zip(chapters, chapters.dropFirst()).contains {
                 $0.0 != $0.1
             } || (previousChapter.flatMap { previous in
                 chapters.first.map { $0 != previous }
             } ?? false)
-            if CanonicalJourneyCheckpoint.applicable(
+            if targetPhraseMatches,
+               CanonicalJourneyCheckpoint.applicable(
                 phraseIndex: plan.phraseIndex,
                 phraseKind: plan.kind,
                 chapterChanged: changed
@@ -289,6 +393,7 @@ struct StemCaptureIntegrationTests {
                     prepared,
                     fixture: fixture,
                     route: route,
+                    namespace: namespace,
                     wholeMix: wholeMix,
                     output: output
                 )
@@ -313,9 +418,10 @@ struct StemCaptureIntegrationTests {
         _ product: PreparedPerformancePhrase,
         fixture: Corpus.Case,
         route: Corpus.Route,
+        namespace: String,
         wholeMix: WholeMixManifest.Entry,
         output: URL
-    ) throws -> Entry {
+    ) throws -> CapturedEntry {
         let blocks = product.prepared.blocks
         let captures = product.prepared.diagnosticRoleStemCaptures
         guard blocks.count == captures.count, !blocks.isEmpty else {
@@ -359,7 +465,7 @@ struct StemCaptureIntegrationTests {
                 sampleRate: route.sampleRate,
                 frameCount: signal.left.count,
                 pcmSha256: digest(pcm),
-                wavPath: "docs/local/audio/baseline-stems-v1/" + filename,
+                wavPath: "docs/local/audio/baseline-stems-\(namespace)/" + filename,
                 wavSha256: digest(wav)
             ))
         }
@@ -384,7 +490,7 @@ struct StemCaptureIntegrationTests {
             Issue.record("stem reconstruction maxima: \(maxima)")
             throw CaptureError.reconstruction
         }
-        return Entry(
+        let stems = Entry(
             id: id,
             caseId: fixture.id,
             routeId: route.id,
@@ -409,6 +515,42 @@ struct StemCaptureIntegrationTests {
             wholeMixPcmSha256: wholeMix.pcmSha256,
             reconstruction: reconstruction,
             files: files.sorted { $0.signal < $1.signal }
+        )
+        let resolvedBars = product.prepared.plan.resolvedBars
+        let behaviorCounts = Dictionary(uniqueKeysWithValues:
+            FoundationBehavior.allCases.map { behavior in
+                (behavior.rawValue, resolvedBars.filter {
+                    $0.foundationBehavior == behavior
+                }.count)
+            }
+        )
+        let coverage = FoundationBehaviorCoverageEntry(
+            id: id,
+            caseId: fixture.id,
+            routeId: route.id,
+            rootSeed: fixture.rootSeed,
+            checkpoint: fixture.checkpoint.rawValue,
+            continuationClass: fixture.continuationClass,
+            phraseIndex: product.prepared.plan.phraseIndex,
+            startBar: product.prepared.plan.startBar,
+            phraseKind: product.prepared.plan.kind.rawValue,
+            stateFingerprint: AutonomousCandidateFingerprint.sessionState(
+                product.request.sourceState
+            ),
+            planFingerprint: AutonomousCandidateFingerprint.plan(
+                product.prepared.plan
+            ),
+            replayFingerprint: product.request.replayIdentity.fingerprint,
+            policyVersion: product.prepared.qualityDecision.policyVersion,
+            qualityOutcome: product.prepared.qualityDecision.outcome.rawValue,
+            sampleRate: route.sampleRate,
+            wholeMixPcmSha256: wholeMix.pcmSha256,
+            resolvedBarCount: resolvedBars.count,
+            foundationBehaviorBarCounts: behaviorCounts
+        )
+        return CapturedEntry(
+            stems: stems,
+            foundationBehaviorCoverage: coverage
         )
     }
 
@@ -640,6 +782,87 @@ struct StemCaptureIntegrationTests {
             .deletingLastPathComponent()
     }
 
+    private func captureNamespace() throws -> String {
+        let namespace = ProcessInfo.processInfo.environment[
+            "AUTOTECHNO_CAPTURE_NAMESPACE"
+        ] ?? "v1"
+        guard namespace.range(
+            of: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            options: .regularExpression
+        ) != nil else { throw CaptureError.invalidNamespace }
+        return namespace
+    }
+
+    private func captureCorpusURL(_ root: URL) throws -> URL {
+        let relativePath = ProcessInfo.processInfo.environment[
+            "AUTOTECHNO_CAPTURE_CORPUS"
+        ] ?? "docs/BASELINE_CORPUS.json"
+        let components = relativePath.split(separator: "/")
+        guard !relativePath.hasPrefix("/"),
+              !components.contains(".."),
+              (relativePath == "docs/BASELINE_CORPUS.json" ||
+               relativePath.hasPrefix("docs/local/")) else {
+            throw CaptureError.invalidCorpusPath
+        }
+        let candidate = root.appendingPathComponent(relativePath)
+            .standardizedFileURL.resolvingSymlinksInPath()
+        let resolvedRoot = root.standardizedFileURL.resolvingSymlinksInPath()
+        guard candidate.path.hasPrefix(resolvedRoot.path + "/"),
+              (try? candidate.resourceValues(forKeys: [.isSymbolicLinkKey])
+                .isSymbolicLink) != true else {
+            throw CaptureError.invalidCorpusPath
+        }
+        return candidate
+    }
+
+    private func validateFrozenCohort(
+        _ corpus: Corpus,
+        baseline: [String: Any]?,
+        root: URL
+    ) throws {
+        guard corpus.schema == "autotechno-at0039-foundation-cohort.v1" else {
+            return
+        }
+        guard try acceptedInputsAreClean(root),
+              corpus.sourceFingerprint == (try sourceFingerprint(root)),
+              corpus.contractBaselineFingerprint ==
+                (baseline?["snapshotFingerprint"] as? String),
+              corpus.gitHead == (try gitHead(root)) else {
+            throw CaptureError.unacceptedCohortInputs
+        }
+        let errors = AT0039FrozenCohortValidator.errors(for: corpus.cases.map {
+            AT0039FrozenCohortCaseIdentity(
+                id: $0.id,
+                ordinal: $0.ordinal,
+                cohort: $0.cohort,
+                rootSeed: $0.rootSeed,
+                checkpoint: $0.checkpoint,
+                targetPhraseIndex: $0.targetPhraseIndex,
+                continuationClass: $0.continuationClass,
+                expectedPlanFingerprint: $0.expectedPlanFingerprint,
+                resolvedBarCount: $0.resolvedBarCount,
+                behaviorCounts: $0.foundationBehaviorBarCounts
+            )
+        })
+        guard errors.isEmpty else { throw CaptureError.invalidFrozenCohort }
+    }
+
+    private func acceptedInputsAreClean(_ root: URL) throws -> Bool {
+        let process = Process()
+        let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.arguments = [
+            "-C", root.path, "status", "--porcelain", "--untracked-files=all", "--",
+            "Package.swift", "Sources", "docs/BASELINE_CORPUS.json",
+            "docs/ROADMAP_EXECUTION_BASELINE.json",
+        ]
+        process.standardOutput = pipe
+        try process.run()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { throw CaptureError.git }
+        return pipe.fileHandleForReading.readDataToEndOfFile().isEmpty
+    }
+
     private func gitHead(_ root: URL) throws -> String {
         let process = Process()
         let pipe = Pipe()
@@ -699,6 +922,13 @@ struct StemCaptureIntegrationTests {
         case invalidCapture
         case wholeMixMismatch
         case reconstruction
+        case invalidNamespace
+        case namespaceAlreadyExists
+        case invalidCorpusPath
+        case planMismatch
+        case frozenScoreMismatch
+        case unacceptedCohortInputs
+        case invalidFrozenCohort
         case git
     }
 }

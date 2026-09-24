@@ -1,4 +1,5 @@
 import AutoTechnoCore
+import Foundation
 
 package enum ProfessionalQualityCandidateAssessmentAvailability: String,
         Codable, Equatable, Sendable {
@@ -14,32 +15,475 @@ package enum ProfessionalQualityCandidateAssessmentAvailability: String,
 /// population. There is deliberately no aggregate score or distance-to-center
 /// optimization.
 package struct ProfessionalQualityCandidateAssessment: Codable, Equatable,
-        Sendable {
+        Sendable, AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory =
+        .calibratedQuality
     package let availability: ProfessionalQualityCandidateAssessmentAvailability
     package let sampleRate: Double?
     package let checkpoints: [CanonicalJourneyCheckpoint]
     package let verdicts: [ProfessionalQualityReportVerdict]
+    package let calibrationTrajectoryCount: Int?
+    package let support: ProfessionalQualityCalibrationSupport
+    package let confidence: ProfessionalQualityConfidenceStatus
 
     package var accepted: Bool {
-        availability == .available && !verdicts.isEmpty &&
+        availability == .available && support == .sufficient &&
+            confidence == .notEstimated && !verdicts.isEmpty &&
             verdicts.allSatisfy(\.accepted)
     }
 
     fileprivate static func unavailable(
         _ availability: ProfessionalQualityCandidateAssessmentAvailability,
         sampleRate: Double? = nil,
-        checkpoints: [CanonicalJourneyCheckpoint] = []
+        checkpoints: [CanonicalJourneyCheckpoint] = [],
+        calibrationTrajectoryCount: Int?
     ) -> Self {
         Self(
             availability: availability,
             sampleRate: sampleRate,
             checkpoints: checkpoints,
-            verdicts: []
+            verdicts: [],
+            calibrationTrajectoryCount: calibrationTrajectoryCount,
+            support: (calibrationTrajectoryCount ?? 0) >=
+                    ProfessionalQualityCalibrationProfile
+                        .minimumCalibrationTrajectoryCount
+                ? .sufficient : .insufficient,
+            confidence: .unavailable
         )
     }
 }
 
-package struct ProfessionalQualityRecoveryFailure: Equatable, Sendable {
+/// Descriptive per-bar kick/foundation measurements retained alongside the
+/// existing calibrated mean. This report is diagnostic only: it does not
+/// change the primary profile verdict or claim that a spread is undesirable.
+package struct ProfessionalQualityKickFoundationLocalEvidence: Codable,
+        Equatable, Sendable, AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory =
+        .descriptive
+    package static let schemaVersion = 1
+    package static let evidenceVersion =
+        "autotechno-kick-foundation-local-evidence.v1"
+
+    package enum Availability: String, Codable, Sendable {
+        case available
+        case noActivePairedBars = "no-active-paired-bars"
+    }
+
+    package struct BarMeasurement: Codable, Equatable, Sendable {
+        package let bar: Int
+        package let kickOverFoundationDB: Double
+    }
+
+    package struct SourceBar: Equatable, Sendable {
+        package let bar: Int
+        package let kickActiveRMS: Double
+        package let foundationActiveRMS: Double
+
+        package init(
+            bar: Int,
+            kickActiveRMS: Double,
+            foundationActiveRMS: Double
+        ) {
+            self.bar = bar
+            self.kickActiveRMS = kickActiveRMS
+            self.foundationActiveRMS = foundationActiveRMS
+        }
+    }
+
+    package let schemaVersion: Int
+    package let evidenceVersion: String
+    package let engineVersion: String
+    package let policyVersion: String
+    package let sourceReportFingerprint: String
+    package let planFingerprint: String
+    package let checkpoint: CanonicalJourneyCheckpoint
+    package let sampleRate: Double
+    package let sourceBarCount: Int
+    package let pairedBarCount: Int
+    package let availability: Availability
+    package let barMeasurements: [BarMeasurement]
+    package let meanDB: Double?
+    package let minimumDB: Double?
+    package let maximumDB: Double?
+    package let spreadDB: Double?
+
+    package init(
+        engineVersion: String,
+        policyVersion: String,
+        sourceReportFingerprint: String,
+        planFingerprint: String,
+        checkpoint: CanonicalJourneyCheckpoint,
+        sampleRate: Double,
+        sourceBarCount: Int,
+        sourceBars: [SourceBar]
+    ) throws {
+        let barOrderIsContiguous = zip(sourceBars, sourceBars.dropFirst())
+            .allSatisfy { previous, next in
+                previous.bar < Int.max && next.bar == previous.bar + 1
+            }
+        guard !engineVersion.isEmpty,
+              !policyVersion.isEmpty,
+              !sourceReportFingerprint.isEmpty,
+              !planFingerprint.isEmpty,
+              sampleRate.isFinite,
+              sampleRate >= QualityQualificationContract
+                .minimumSupportedSampleRate,
+              sampleRate <= QualityQualificationContract
+                .maximumSupportedSampleRate,
+              sourceBarCount > 0,
+              sourceBarCount <= AutonomousCandidateEvaluationVector
+                .maximumBarCount,
+              sourceBars.count == sourceBarCount,
+              sourceBars == sourceBars.sorted(by: { $0.bar < $1.bar }),
+              Set(sourceBars.map(\.bar)).count == sourceBars.count,
+              barOrderIsContiguous,
+              sourceBars.allSatisfy({
+                  $0.bar >= 0 && $0.bar < Int.max &&
+                      $0.kickActiveRMS.isFinite &&
+                      $0.kickActiveRMS >= 0 &&
+                      $0.foundationActiveRMS.isFinite &&
+                      $0.foundationActiveRMS >= 0
+              }) else {
+            throw ProfessionalQualityCalibrationError
+                .invalidLocalFeatureEvidence
+        }
+
+        let paired = sourceBars.compactMap { source -> BarMeasurement? in
+            guard source.kickActiveRMS > 0,
+                  source.foundationActiveRMS > 0 else { return nil }
+            let value = Self.decibels(
+                source.kickActiveRMS,
+                source.foundationActiveRMS
+            )
+            return BarMeasurement(bar: source.bar,
+                                  kickOverFoundationDB: value)
+        }
+        guard paired.allSatisfy({ $0.kickOverFoundationDB.isFinite }) else {
+            throw ProfessionalQualityCalibrationError
+                .invalidLocalFeatureEvidence
+        }
+
+        schemaVersion = Self.schemaVersion
+        evidenceVersion = Self.evidenceVersion
+        self.engineVersion = engineVersion
+        self.policyVersion = policyVersion
+        self.sourceReportFingerprint = sourceReportFingerprint
+        self.planFingerprint = planFingerprint
+        self.checkpoint = checkpoint
+        self.sampleRate = sampleRate
+        self.sourceBarCount = sourceBarCount
+        pairedBarCount = paired.count
+        availability = paired.isEmpty ? .noActivePairedBars : .available
+        barMeasurements = paired
+        if let minimum = paired.map(\.kickOverFoundationDB).min(),
+           let maximum = paired.map(\.kickOverFoundationDB).max() {
+            meanDB = paired.map(\.kickOverFoundationDB).reduce(0, +) /
+                Double(paired.count)
+            minimumDB = minimum
+            maximumDB = maximum
+            spreadDB = maximum - minimum
+        } else {
+            meanDB = nil
+            minimumDB = nil
+            maximumDB = nil
+            spreadDB = nil
+        }
+    }
+
+    package init(
+        report: CanonicalJourneyQualificationReport
+    ) throws {
+        guard report.evidenceScope ==
+                CanonicalJourneyQualificationReport.currentEvidenceScope else {
+            throw ProfessionalQualityCalibrationError
+                .invalidLocalFeatureEvidence
+        }
+        try self.init(
+            candidate: report.selectedCandidateEvidence,
+            engineVersion: report.engineVersion,
+            policyVersion: report.policyVersion,
+            sourceReportFingerprint: report.evidenceFingerprint,
+            checkpoint: report.checkpoint
+        )
+    }
+
+    package init(
+        candidate: AutonomousCandidateEvaluationVector,
+        engineVersion: String,
+        policyVersion: String,
+        sourceReportFingerprint: String,
+        checkpoint: CanonicalJourneyCheckpoint
+    ) throws {
+        guard candidate.isComplete,
+              candidate.isFinite,
+              candidate.stems.count == candidate.sourceStemBarCount,
+              candidate.stems.count == candidate.fullMix.bars.count,
+              candidate.stems.map(\.bar) ==
+                candidate.fullMix.bars.map(\.bar) else {
+            throw ProfessionalQualityCalibrationError
+                .invalidLocalFeatureEvidence
+        }
+        guard let phraseKind = AutonomousPhraseKind(
+            rawValue: candidate.symbolic.phraseKind
+        ) else {
+            throw ProfessionalQualityCalibrationError
+                .invalidLocalFeatureEvidence
+        }
+        let primaryCheckpoint = CanonicalJourneyCheckpoint
+            .primaryQualification(
+                phraseIndex: candidate.symbolic.phraseIndex,
+                phraseKind: phraseKind,
+                chapterChanged: candidate.symbolic.chapterChanged
+            ) ?? .longContinuation
+        guard CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: candidate.symbolic.phraseIndex,
+            phraseKind: phraseKind,
+            chapterChanged: candidate.symbolic.chapterChanged
+        ).contains(checkpoint) || checkpoint == primaryCheckpoint else {
+            throw ProfessionalQualityCalibrationError
+                .invalidLocalFeatureEvidence
+        }
+        let sourceBars = try candidate.stems.map { stem -> SourceBar in
+            guard stem.isComplete,
+                  let kick = stem.roles.first(where: {
+                      $0.role == MixRole.kick.rawValue
+                  }),
+                  let foundation = stem.roles.first(where: {
+                      $0.role == MixRole.foundation.rawValue
+                  }) else {
+                throw ProfessionalQualityCalibrationError
+                    .invalidLocalFeatureEvidence
+            }
+            return SourceBar(
+                bar: stem.bar,
+                kickActiveRMS: kick.activeRMS,
+                foundationActiveRMS: foundation.activeRMS
+            )
+        }
+        try self.init(
+            engineVersion: engineVersion,
+            policyVersion: policyVersion,
+            sourceReportFingerprint: sourceReportFingerprint,
+            planFingerprint: candidate.planFingerprint,
+            checkpoint: checkpoint,
+            sampleRate: candidate.routeContinuation.sampleRate,
+            sourceBarCount: candidate.sourceStemBarCount,
+            sourceBars: sourceBars
+        )
+    }
+
+    private static func decibels(
+        _ numerator: Double,
+        _ denominator: Double
+    ) -> Double {
+        min(120, max(-120,
+            20 * (log10(numerator) - log10(denominator))
+        ))
+    }
+}
+
+/// Descriptive localization of the existing masking observations by rendered
+/// bar, role pair, and canonical frequency band. It preserves the analyzer's
+/// fixed-window evidence without changing calibrated candidate-wide metrics.
+package struct ProfessionalQualityMaskingLocalEvidence: Codable,
+        Equatable, Sendable, AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory =
+        .descriptive
+    package static let schemaVersion = 1
+    package static let evidenceVersion =
+        "autotechno-masking-local-evidence.v1"
+
+    package struct Observation: Codable, Equatable, Sendable {
+        package let bar: Int
+        package let bandName: String
+        package let lowerHz: Double
+        package let upperHz: Double
+        package let firstRole: String
+        package let secondRole: String
+        package let analyzedWindowCount: Int
+        package let activePairWindowCount: Int
+        package let overlapWindowCount: Int
+        package let longestOverlapRun: Int
+        package let maximumOverlap: Double
+
+        package init(bar: Int,
+                     bandName: String,
+                     lowerHz: Double,
+                     upperHz: Double,
+                     firstRole: String,
+                     secondRole: String,
+                     analyzedWindowCount: Int,
+                     activePairWindowCount: Int,
+                     overlapWindowCount: Int,
+                     longestOverlapRun: Int,
+                     maximumOverlap: Double) {
+            self.bar = bar
+            self.bandName = bandName
+            self.lowerHz = lowerHz
+            self.upperHz = upperHz
+            self.firstRole = firstRole
+            self.secondRole = secondRole
+            self.analyzedWindowCount = analyzedWindowCount
+            self.activePairWindowCount = activePairWindowCount
+            self.overlapWindowCount = overlapWindowCount
+            self.longestOverlapRun = longestOverlapRun
+            self.maximumOverlap = maximumOverlap
+        }
+
+        fileprivate init(bar: Int,
+                         source: AutonomousMaskingObservationEvidence) {
+            self.init(
+                bar: bar,
+                bandName: source.bandName,
+                lowerHz: source.lowerHz,
+                upperHz: source.upperHz,
+                firstRole: source.firstRole,
+                secondRole: source.secondRole,
+                analyzedWindowCount: source.analyzedWindowCount,
+                activePairWindowCount: source.activePairWindowCount,
+                overlapWindowCount: source.overlapWindowCount,
+                longestOverlapRun: source.longestOverlapRun,
+                maximumOverlap: source.maximumOverlap
+            )
+        }
+    }
+
+    package let schemaVersion: Int
+    package let evidenceVersion: String
+    package let engineVersion: String
+    package let policyVersion: String
+    package let sourceReportFingerprint: String
+    package let planFingerprint: String
+    package let checkpoint: CanonicalJourneyCheckpoint
+    package let sampleRate: Double
+    package let sourceBarCount: Int
+    package let observationCount: Int
+    package let observations: [Observation]
+
+    package init(engineVersion: String,
+                 policyVersion: String,
+                 sourceReportFingerprint: String,
+                 planFingerprint: String,
+                 checkpoint: CanonicalJourneyCheckpoint,
+                 sampleRate: Double,
+                 sourceBars: [AutonomousMaskingBarEvidence]) throws {
+        let canonicalObservationKeys = SpectrumMaskingAnalyzer.rolePairs
+            .flatMap { pair in
+                SpectrumMaskingAnalyzer.bands.map { band in
+                    "\(pair.0.rawValue)|\(pair.1.rawValue)|\(band.name)"
+                }
+            }
+        let barsAreOrderedAndContiguous = zip(sourceBars, sourceBars.dropFirst())
+            .allSatisfy { previous, next in
+                previous.bar < Int.max && next.bar == previous.bar + 1
+            }
+        guard !engineVersion.isEmpty,
+              !policyVersion.isEmpty,
+              !sourceReportFingerprint.isEmpty,
+              !planFingerprint.isEmpty,
+              sampleRate.isFinite,
+              sampleRate >= QualityQualificationContract.minimumSupportedSampleRate,
+              sampleRate <= QualityQualificationContract.maximumSupportedSampleRate,
+              !sourceBars.isEmpty,
+              sourceBars.count <= AutonomousCandidateEvaluationVector.maximumBarCount,
+              sourceBars == sourceBars.sorted(by: { $0.bar < $1.bar }),
+              Set(sourceBars.map(\.bar)).count == sourceBars.count,
+              barsAreOrderedAndContiguous,
+              sourceBars.allSatisfy({
+                  $0.bar >= 0 && $0.bar < Int.max && $0.isComplete && $0.isFinite &&
+                      $0.observations.map({
+                          "\($0.firstRole)|\($0.secondRole)|\($0.bandName)"
+                      }) == canonicalObservationKeys
+              }) else {
+            throw ProfessionalQualityCalibrationError.invalidLocalFeatureEvidence
+        }
+
+        let observations = sourceBars.flatMap { bar in
+            bar.observations.map {
+                Observation(bar: bar.bar, source: $0)
+            }
+        }
+        guard observations.count == sourceBars.count *
+                AutonomousCandidateEvaluationVector.maximumMaskingObservationsPerBar,
+              observations.allSatisfy({
+                  $0.lowerHz.isFinite && $0.upperHz.isFinite &&
+                      $0.maximumOverlap.isFinite
+              }) else {
+            throw ProfessionalQualityCalibrationError.invalidLocalFeatureEvidence
+        }
+
+        schemaVersion = Self.schemaVersion
+        evidenceVersion = Self.evidenceVersion
+        self.engineVersion = engineVersion
+        self.policyVersion = policyVersion
+        self.sourceReportFingerprint = sourceReportFingerprint
+        self.planFingerprint = planFingerprint
+        self.checkpoint = checkpoint
+        self.sampleRate = sampleRate
+        sourceBarCount = sourceBars.count
+        observationCount = observations.count
+        self.observations = observations
+    }
+
+    package init(report: CanonicalJourneyQualificationReport) throws {
+        guard report.evidenceScope ==
+                CanonicalJourneyQualificationReport.currentEvidenceScope else {
+            throw ProfessionalQualityCalibrationError.invalidLocalFeatureEvidence
+        }
+        try self.init(
+            candidate: report.selectedCandidateEvidence,
+            engineVersion: report.engineVersion,
+            policyVersion: report.policyVersion,
+            sourceReportFingerprint: report.evidenceFingerprint,
+            checkpoint: report.checkpoint
+        )
+    }
+
+    package init(candidate: AutonomousCandidateEvaluationVector,
+                 engineVersion: String,
+                 policyVersion: String,
+                 sourceReportFingerprint: String,
+                 checkpoint: CanonicalJourneyCheckpoint) throws {
+        guard candidate.isComplete,
+              candidate.isFinite,
+              candidate.masking.count == candidate.sourceMaskingBarCount,
+              candidate.masking.count == candidate.fullMix.bars.count,
+              candidate.masking.map(\.bar) == candidate.fullMix.bars.map(\.bar) else {
+            throw ProfessionalQualityCalibrationError.invalidLocalFeatureEvidence
+        }
+        guard let phraseKind = AutonomousPhraseKind(
+            rawValue: candidate.symbolic.phraseKind
+        ) else {
+            throw ProfessionalQualityCalibrationError.invalidLocalFeatureEvidence
+        }
+        let primaryCheckpoint = CanonicalJourneyCheckpoint.primaryQualification(
+            phraseIndex: candidate.symbolic.phraseIndex,
+            phraseKind: phraseKind,
+            chapterChanged: candidate.symbolic.chapterChanged
+        ) ?? .longContinuation
+        guard CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: candidate.symbolic.phraseIndex,
+            phraseKind: phraseKind,
+            chapterChanged: candidate.symbolic.chapterChanged
+        ).contains(checkpoint) || checkpoint == primaryCheckpoint else {
+            throw ProfessionalQualityCalibrationError.invalidLocalFeatureEvidence
+        }
+        try self.init(
+            engineVersion: engineVersion,
+            policyVersion: policyVersion,
+            sourceReportFingerprint: sourceReportFingerprint,
+            planFingerprint: candidate.planFingerprint,
+            checkpoint: checkpoint,
+            sampleRate: candidate.routeContinuation.sampleRate,
+            sourceBars: candidate.masking
+        )
+    }
+}
+
+package struct ProfessionalQualityRecoveryFailure: Equatable, Sendable,
+        AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory =
+        .calibratedQuality
     package let metric: ProfessionalQualityMetric
     package let value: Double
     package let lowerBound: Double
@@ -156,7 +600,10 @@ package struct ProfessionalQualityPrimaryEvaluator:
         guard let phraseKind = AutonomousPhraseKind(
             rawValue: candidate.symbolic.phraseKind
         ) else {
-            return .unavailable(.invalidEvidence)
+            return .unavailable(
+                .invalidEvidence,
+                calibrationTrajectoryCount: profile.sourceTrajectoryCount
+            )
         }
         let primaryCheckpoint = CanonicalJourneyCheckpoint.primaryQualification(
             phraseIndex: candidate.symbolic.phraseIndex,
@@ -171,14 +618,16 @@ package struct ProfessionalQualityPrimaryEvaluator:
         guard !checkpoints.isEmpty else {
             return .unavailable(
                 .noApplicableCheckpoint,
-                sampleRate: sampleRate
+                sampleRate: sampleRate,
+                calibrationTrajectoryCount: profile.sourceTrajectoryCount
             )
         }
         guard profile.sampleRates.contains(sampleRate) else {
             return .unavailable(
                 .unsupportedSampleRate,
                 sampleRate: sampleRate,
-                checkpoints: checkpoints
+                checkpoints: checkpoints,
+                calibrationTrajectoryCount: profile.sourceTrajectoryCount
             )
         }
         do {
@@ -194,7 +643,8 @@ package struct ProfessionalQualityPrimaryEvaluator:
             return .unavailable(
                 .invalidEvidence,
                 sampleRate: sampleRate,
-                checkpoints: checkpoints
+                checkpoints: checkpoints,
+                calibrationTrajectoryCount: profile.sourceTrajectoryCount
             )
         }
     }
@@ -208,13 +658,17 @@ package struct ProfessionalQualityPrimaryEvaluator:
             checkpoint in observations.contains { $0.checkpoint == checkpoint }
         }
         guard let sampleRate = observations.first?.sampleRate else {
-            return .unavailable(.noApplicableCheckpoint)
+            return .unavailable(
+                .noApplicableCheckpoint,
+                calibrationTrajectoryCount: profile.sourceTrajectoryCount
+            )
         }
         guard profile.sampleRates.contains(sampleRate) else {
             return .unavailable(
                 .unsupportedSampleRate,
                 sampleRate: sampleRate,
-                checkpoints: checkpoints
+                checkpoints: checkpoints,
+                calibrationTrajectoryCount: profile.sourceTrajectoryCount
             )
         }
         let identities = Set(observations.map(\.checkpoint))
@@ -231,7 +685,8 @@ package struct ProfessionalQualityPrimaryEvaluator:
             return .unavailable(
                 .invalidEvidence,
                 sampleRate: sampleRate,
-                checkpoints: checkpoints
+                checkpoints: checkpoints,
+                calibrationTrajectoryCount: profile.sourceTrajectoryCount
             )
         }
         let verdicts = checkpoints.compactMap { checkpoint in
@@ -254,14 +709,20 @@ package struct ProfessionalQualityPrimaryEvaluator:
             return .unavailable(
                 .invalidEvidence,
                 sampleRate: sampleRate,
-                checkpoints: checkpoints
+                checkpoints: checkpoints,
+                calibrationTrajectoryCount: profile.sourceTrajectoryCount
             )
         }
         return ProfessionalQualityCandidateAssessment(
             availability: .available,
             sampleRate: sampleRate,
             checkpoints: checkpoints,
-            verdicts: verdicts
+            verdicts: verdicts,
+            calibrationTrajectoryCount: profile.sourceTrajectoryCount,
+            support: profile.usesDiverseCalibration
+                ? .sufficient : .insufficient,
+            confidence: profile.usesDiverseCalibration
+                ? .notEstimated : .unavailable
         )
     }
 
@@ -305,7 +766,8 @@ package struct ProfessionalQualityPrimaryEvaluator:
         guard transactionFailures.isEmpty else {
             return AutonomousCandidatePolicyVerdict(
                 outcome: .rejected,
-                reasonCodes: [.guardrailRegressionV1],
+                decisionBasis: .hardGate,
+                reasonCodes: [.hardGateFailedV1],
                 diagnosticDetails: transactionFailures
             )
         }
@@ -331,6 +793,7 @@ package struct ProfessionalQualityPrimaryEvaluator:
             }
             return AutonomousCandidatePolicyVerdict(
                 outcome: .qualificationUnavailable,
+                decisionBasis: .unavailable,
                 reasonCodes: [.evaluatorUnavailableV1],
                 diagnosticDetails: diagnosticDetails
             )
@@ -338,6 +801,7 @@ package struct ProfessionalQualityPrimaryEvaluator:
         guard result.accepted else {
             return AutonomousCandidatePolicyVerdict(
                 outcome: .rejected,
+                decisionBasis: .calibratedQuality,
                 reasonCodes: [.guardrailRegressionV1],
                 diagnosticDetails: rejectionDiagnostics(
                     candidate: selected,
@@ -351,6 +815,7 @@ package struct ProfessionalQualityPrimaryEvaluator:
         }
         return AutonomousCandidatePolicyVerdict(
             outcome: transaction.correctionCount == 0 ? .qualified : .adjusted,
+            decisionBasis: .calibratedQuality,
             reasonCodes: transaction.correctionCount == 0
                 ? [.candidateQualifiedV1] : [.candidateAdjustedV1]
         )
@@ -382,6 +847,7 @@ package struct ProfessionalQualityPrimaryEvaluator:
         }
         return AutonomousCandidatePolicyVerdict(
             outcome: .rejected,
+            decisionBasis: .hardGate,
             reasonCodes: reasonCodes,
             diagnosticDetails: hardGateFailures,
             recoveryIntent: selected.symbolicInterestIsOnlyHardGateFailure
@@ -537,6 +1003,8 @@ package struct ProfessionalQualityPrimaryEvaluator:
             return [prefix + "observation=bounds"]
         case .profileMismatch:
             return [prefix + "observation=profile"]
+        case .invalidLocalFeatureEvidence:
+            return [prefix + "observation=local-feature"]
         }
     }
 }

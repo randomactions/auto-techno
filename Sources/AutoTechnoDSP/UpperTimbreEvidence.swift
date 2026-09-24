@@ -917,7 +917,10 @@ package enum CanonicalJourneyQualificationReportError: Error, Equatable, Sendabl
     case liveMasterMismatch
 }
 
-package struct CanonicalJourneyQualificationReport: Encodable, Equatable, Sendable {
+package struct CanonicalJourneyQualificationReport: Encodable, Equatable,
+        Sendable, AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory =
+        .calibratedQuality
     package static let currentEvidenceScope =
         "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-granular-memory-pitch-identity-transition-tail-material-world-polymetric-effect-carrier-upper-pump-spatial-dust-source-terminal-declick-live-commit-recovery.v27"
     package static let maximumEncodedBytes = 4 * 1_024 * 1_024

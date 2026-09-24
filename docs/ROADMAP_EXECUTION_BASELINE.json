@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 36,
+  "snapshotVersion": 49,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
+  "snapshotFingerprint": "ef1497d27f0170e2ea13270405f62541577003ae528fab7daa0800bdccce426b",
   "documents": [
     {
       "role": "repository-guidance",
@@ -121,8 +121,8 @@
     {
       "role": "role-stem-capture-contract",
       "path": "docs/ROLE_STEM_CAPTURE.md",
-      "byteCount": 7041,
-      "sha256": "ca2ccf4fc1345de2fbe0285c5166bba5ca35e44891a70d887e5410b746c70c22"
+      "byteCount": 9404,
+      "sha256": "044abdcd7a8e984125ca2e444495cb196151fadda108bf1ec4d177835ac8f5f9"
     },
     {
       "role": "pcm-comparison-report-contract",
@@ -163,14 +163,14 @@
     {
       "role": "semantic-codebase-map-source",
       "path": "docs/codebase-map.json",
-      "byteCount": 92744,
-      "sha256": "50dfa3bfaa8177e6489e2ad5dba0eeb0a525a3303e72946e736acc404ef3e286"
+      "byteCount": 96930,
+      "sha256": "19c1a76ba5c7bfac888b9b208078f030a98213bd9a768b8786aa026fac84f385"
     },
     {
       "role": "semantic-codebase-map-rendering",
       "path": "docs/CODEBASE_MAP.md",
-      "byteCount": 241040,
-      "sha256": "a4016331d3cf0da20b20877bbe40f70e46e237e61e644a86b13b147239eaa24b"
+      "byteCount": 247879,
+      "sha256": "517ee0de5213c8a280b87d13a6f1442981c1e40f8bc6323b46ca3d6dc7196c72"
     }
   ]
 }

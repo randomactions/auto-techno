@@ -18,6 +18,7 @@ struct AcceptingPrimaryTestEvaluator: AutonomousCandidateEvaluating {
     ) -> AutonomousCandidatePolicyVerdict {
         AutonomousCandidatePolicyVerdict(
             outcome: .qualified,
+            decisionBasis: .calibratedQuality,
             reasonCodes: [.candidateQualifiedV1]
         )
     }
@@ -39,6 +40,7 @@ struct CorrectingPrimaryTestEvaluator: AutonomousCandidateEvaluating {
     ) -> AutonomousCandidatePolicyVerdict {
         AutonomousCandidatePolicyVerdict(
             outcome: transaction.correctionCount == 1 ? .adjusted : .rejected,
+            decisionBasis: .calibratedQuality,
             reasonCodes: transaction.correctionCount == 1
                 ? [.candidateAdjustedV1] : [.guardrailRegressionV1]
         )

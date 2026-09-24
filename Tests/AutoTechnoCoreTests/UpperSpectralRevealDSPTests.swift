@@ -119,6 +119,23 @@ struct UpperSpectralRevealDSPTests {
         #expect(prepared.candidateEvaluation.isComplete)
         #expect(prepared.commitEligible)
 
+        let phraseKind = try #require(AutonomousPhraseKind(
+            rawValue: correctionAttempt.vector.symbolic.phraseKind
+        ))
+        let checkpoint = try #require(CanonicalJourneyCheckpoint.applicable(
+            phraseIndex: correctionAttempt.vector.symbolic.phraseIndex,
+            phraseKind: phraseKind,
+            chapterChanged: correctionAttempt.vector.symbolic.chapterChanged
+        ).first)
+        let correctedObservation = try ProfessionalQualityObservation(
+            candidate: correctionAttempt.vector,
+            engineVersion: QualityQualificationContract.engineVersion,
+            checkpoint: checkpoint
+        )
+        #expect(correctedObservation[
+            .upperSpectralRevealAppliedCutoffRatioMean
+        ] == 0)
+
         let data = try JSONEncoder().encode(prepared.candidateEvaluation)
         var object = try #require(
             JSONSerialization.jsonObject(with: data) as? [String: Any]

@@ -66,6 +66,71 @@ struct UpperPercussionTailDSPTests {
         })
     }
 
+    @Test("Clearance ratio follows varied complete event populations")
+    func clearanceRatioPopulationAcrossCandidates() throws {
+        var candidates: [AutonomousCandidateEvaluationVector] = []
+        var populations = Set<String>()
+
+        search: for seed in UInt64(1)...128 {
+            let director = AutonomousSessionDirector(rootSeed: seed)
+            let state = director.initialState()
+            let plan = director.plan(from: state)
+            guard plan.resolvedBars.contains(where: {
+                !$0.upperPercussionTailArticulations.isEmpty
+            }) else { continue }
+            let prepared = AutonomousPhrasePreparer.prepare(
+                plan: plan,
+                sessionSeed: state.rootSeed,
+                memory: state.memory,
+                sampleRate: 8_000,
+                incomingRenderState: RenderState(),
+                incomingGraphState: GeneratedDSPContinuationState(),
+                previousGraph: nil,
+                incomingQualityState: state.quality,
+                evaluator: AcceptingPrimaryTestEvaluator()
+            )
+            let candidate = prepared.selectedCandidateEvidence
+            guard candidate.isComplete else { continue }
+            let events = candidate.upperPercussionTail.flatMap(\.events)
+            guard !events.isEmpty else { continue }
+            let clearanceCount = events.filter {
+                $0.role == UpperPercussionTailRole.foregroundClearance.rawValue
+            }.count
+            let signature = "\(events.count):\(clearanceCount)"
+            if populations.insert(signature).inserted {
+                candidates.append(candidate)
+            }
+            if candidates.count >= 2 { break search }
+        }
+
+        #expect(candidates.count >= 2,
+                "Complete candidates must expose distinct upper-tail event populations")
+        #expect(populations.count >= 2)
+        for candidate in candidates {
+            let phraseKind = try #require(AutonomousPhraseKind(
+                rawValue: candidate.symbolic.phraseKind
+            ))
+            let checkpoint = try #require(CanonicalJourneyCheckpoint.applicable(
+                phraseIndex: candidate.symbolic.phraseIndex,
+                phraseKind: phraseKind,
+                chapterChanged: candidate.symbolic.chapterChanged
+            ).first)
+            let observation = try ProfessionalQualityObservation(
+                candidate: candidate,
+                engineVersion: QualityQualificationContract.engineVersion,
+                checkpoint: checkpoint
+            )
+            let events = candidate.upperPercussionTail.flatMap(\.events)
+            let clearanceCount = events.filter {
+                $0.role == UpperPercussionTailRole.foregroundClearance.rawValue
+            }.count
+            #expect(candidate.upperPercussionTail.count ==
+                    candidate.sourceUpperPercussionTailBarCount)
+            #expect(observation[.upperPercussionTailClearanceEventRatio] ==
+                    Double(clearanceCount) / Double(max(1, events.count)))
+        }
+    }
+
     @Test("Same-bar clearance changes only the intended post-attack event body")
     func rendererCausality() throws {
         let fixture = try #require(activeResolvedBar())

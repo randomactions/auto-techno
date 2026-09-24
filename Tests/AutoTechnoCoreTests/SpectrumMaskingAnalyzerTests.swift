@@ -183,6 +183,51 @@ struct SpectrumMaskingAnalyzerTests {
         #expect(!disjoint.isPersistent)
     }
 
+    @Test("Overlap ratios preserve the strict threshold on every window")
+    func strictOverlapThreshold() throws {
+        let sampleRate = 48_000.0
+        let framesPerWindow = 512
+        let allWindows = Set(0..<SpectrumMaskingAnalyzer.analyzedWindowCount)
+        let foundation = tone(
+            sampleRate: sampleRate,
+            framesPerWindow: framesPerWindow,
+            activeWindows: allWindows
+        )
+        let silence = [Float](repeating: 0, count: foundation.count)
+
+        func midBandObservation(targetOverlap: Double) throws
+            -> RoleMaskingObservation {
+            let upper = foundation.map {
+                Float(Double($0) / sqrt(targetOverlap))
+            }
+            return try #require(observation(
+                in: SpectrumMaskingAnalyzer.analyze(
+                    signals: [
+                        .foundation: foundation,
+                        .percussion: silence,
+                        .upper: upper,
+                    ],
+                    sampleRate: sampleRate
+                ),
+                first: .foundation,
+                second: .upper,
+                band: "mid"
+            ))
+        }
+
+        let below = try midBandObservation(targetOverlap: 0.37)
+        let above = try midBandObservation(targetOverlap: 0.39)
+
+        #expect(below.activePairWindowCount == 16)
+        #expect(above.activePairWindowCount == 16)
+        #expect(abs(below.maximumOverlap - 0.37) < 0.000_01)
+        #expect(abs(above.maximumOverlap - 0.39) < 0.000_01)
+        #expect(below.overlapWindowCount == 0)
+        #expect(below.longestOverlapRun == 0)
+        #expect(above.overlapWindowCount == 16)
+        #expect(above.longestOverlapRun == 16)
+    }
+
     @Test("Equivalent physical-time fixtures retain masking classification across rates")
     func rateNormalizedClassification() {
         func observations(sampleRate: Double) -> [RoleMaskingObservation] {
@@ -215,6 +260,138 @@ struct SpectrumMaskingAnalyzerTests {
         #expect(persistentKeys(at48) == persistentKeys(at96))
         #expect(persistentKeys(at48).contains("foundation/upper/mid"))
         #expect(at48 == observations(sampleRate: 48_000))
+    }
+
+    @Test("AT-0039 mechanistic masking controls separate on held-out tone frequencies")
+    func mechanisticCalibrationControls() throws {
+        struct Row: Codable {
+            let split: String
+            let label: String
+            let sampleRate: Int
+            let frequencyHz: Double
+            let activePairWindows: Int
+            let overlapWindows: Int
+            let maximumOverlap: Double
+            let longestOverlapRun: Int
+            let predictedConflict: Bool
+        }
+
+        // Frequencies and labels are fixed before calling the analyzer. The
+        // holdout frequencies are never used to define the classifier.
+        let splits: [(String, [Double])] = [
+            ("development", [48, 87]),
+            ("held-out-frequency", [61, 105]),
+        ]
+        var rows: [Row] = []
+
+        func tone(
+            frequencyHz: Double,
+            sampleRate: Double,
+            frameCount: Int,
+            framesPerWindow: Int,
+            activeWindows: Set<Int>
+        ) throws -> [Float] {
+            var samples = try DeterministicSignalFixtures.sine(
+                frameCount: frameCount,
+                sampleRate: sampleRate,
+                frequencyHz: frequencyHz,
+                amplitude: 0.2,
+                phaseRadians: .pi / 2
+            )
+            for frame in samples.indices
+            where !activeWindows.contains(frame / framesPerWindow) {
+                samples[frame] = 0
+            }
+            return samples
+        }
+
+        for sampleRate in [44_100.0, 48_000.0] {
+            let framesPerWindow = Int((sampleRate * 0.04).rounded())
+            let frameCount = framesPerWindow * SpectrumMaskingAnalyzer.analyzedWindowCount
+            let silence = try DeterministicSignalFixtures.silence(frameCount: frameCount)
+
+            for (split, frequencies) in splits {
+                for frequency in frequencies {
+                    let shared = try DeterministicSignalFixtures.sine(
+                        frameCount: frameCount,
+                        sampleRate: sampleRate,
+                        frequencyHz: frequency,
+                        amplitude: 0.2,
+                        phaseRadians: .pi / 2
+                    )
+                    let disjointFirst = try tone(
+                        frequencyHz: frequency,
+                        sampleRate: sampleRate,
+                        frameCount: frameCount,
+                        framesPerWindow: framesPerWindow,
+                        activeWindows: Set(0..<8)
+                    )
+                    let disjointSecond = try tone(
+                        frequencyHz: frequency,
+                        sampleRate: sampleRate,
+                        frameCount: frameCount,
+                        framesPerWindow: framesPerWindow,
+                        activeWindows: Set(8..<16)
+                    )
+
+                    for (label, foundation, percussion, expectedConflict) in [
+                        ("shared-sub-band-time", shared, shared, true),
+                        ("time-disjoint-same-tone", disjointFirst, disjointSecond, false),
+                    ] {
+                        let observations = SpectrumMaskingAnalyzer.analyze(
+                            signals: [
+                                .foundation: foundation,
+                                .percussion: percussion,
+                                .upper: silence,
+                            ],
+                            sampleRate: sampleRate
+                        )
+                        let sub = try #require(observation(
+                            in: observations,
+                            first: .foundation,
+                            second: .percussion,
+                            band: "sub"
+                        ))
+                        let predictedConflict = sub.overlapWindowCount >= 2 &&
+                            sub.maximumOverlap > SpectrumMaskingAnalyzer.overlapThreshold
+                        rows.append(Row(
+                            split: split,
+                            label: label,
+                            sampleRate: Int(sampleRate),
+                            frequencyHz: frequency,
+                            activePairWindows: sub.activePairWindowCount,
+                            overlapWindows: sub.overlapWindowCount,
+                            maximumOverlap: sub.maximumOverlap,
+                            longestOverlapRun: sub.longestOverlapRun,
+                            predictedConflict: predictedConflict
+                        ))
+                        #expect(predictedConflict == expectedConflict)
+                        #expect(observations == SpectrumMaskingAnalyzer.analyze(
+                            signals: [
+                                .foundation: foundation,
+                                .percussion: percussion,
+                                .upper: silence,
+                            ],
+                            sampleRate: sampleRate
+                        ))
+                    }
+                }
+            }
+
+        }
+
+        let development = rows.filter { $0.split == "development" }
+        let holdout = rows.filter { $0.split == "held-out-frequency" }
+        #expect(development.count == 8)
+        #expect(holdout.count == 8)
+        #expect(development.filter(\.predictedConflict).count == 4)
+        #expect(holdout.filter(\.predictedConflict).count == 4)
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let report = try encoder.encode(rows)
+        FileHandle.standardOutput.write(report)
+        FileHandle.standardOutput.write(Data([0x0A]))
     }
 
     private func tone(

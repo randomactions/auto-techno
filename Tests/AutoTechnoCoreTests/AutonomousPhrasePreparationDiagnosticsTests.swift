@@ -61,7 +61,8 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
     func evaluatorDiagnosticsAreBounded() {
         let verdict = AutonomousCandidatePolicyVerdict(
             outcome: .rejected,
-            reasonCodes: [.guardrailRegressionV1],
+            decisionBasis: .hardGate,
+            reasonCodes: [.hardGateFailedV1],
             diagnosticDetails: (0..<32).map { "detail-\($0)" }
         )
 

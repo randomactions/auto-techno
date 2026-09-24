@@ -1212,28 +1212,102 @@ package struct AutonomousRenderPassBudget: Equatable, Sendable {
     }
 }
 
-package struct AutonomousCandidatePolicyVerdict: Equatable, Sendable {
+package enum AutonomousCandidateDecisionBasis: String, Codable, Equatable,
+        Sendable {
+    case hardGate
+    case descriptive
+    case musicalHeuristic = "musical-heuristic"
+    case calibratedQuality = "calibrated-quality"
+    case unavailable
+}
+
+package struct AutonomousCandidatePolicyVerdict: Equatable, Sendable,
+        AutonomousEvidenceCategorizedDecision {
     package let outcome: QualityDecisionOutcome
+    package let decisionBasis: AutonomousCandidateDecisionBasis
     package let reasonCodes: [QualityReasonCode]
     package let diagnosticDetails: [String]
     package let recoveryIntent: AutonomousQualityRecoveryIntent
 
+    package var evidenceCategory: AutonomousEvidenceCategory {
+        switch decisionBasis {
+        case .hardGate: .hardGate
+        case .descriptive: .descriptive
+        case .musicalHeuristic: .musicalHeuristic
+        case .calibratedQuality: .calibratedQuality
+        case .unavailable: .unavailable
+        }
+    }
+
     package init(
         outcome: QualityDecisionOutcome,
+        decisionBasis: AutonomousCandidateDecisionBasis,
         reasonCodes: [QualityReasonCode],
         diagnosticDetails: [String] = [],
         recoveryIntent: AutonomousQualityRecoveryIntent = .neutral
     ) {
-        self.outcome = outcome
-        self.reasonCodes = Array(Set(reasonCodes)).sorted {
+        let suppliedReasons = Set(reasonCodes)
+        let basisAllowsOutcome: Bool
+        switch decisionBasis {
+        case .hardGate:
+            basisAllowsOutcome = outcome == .rejected &&
+                suppliedReasons.contains(.hardGateFailedV1)
+        case .descriptive:
+            basisAllowsOutcome = outcome == .qualificationUnavailable
+        case .musicalHeuristic:
+            basisAllowsOutcome = outcome == .qualificationUnavailable ||
+                (outcome == .rejected &&
+                 suppliedReasons.contains(.symbolicInterestFailedV1))
+        case .calibratedQuality:
+            switch outcome {
+            case .qualified:
+                basisAllowsOutcome =
+                    suppliedReasons.contains(.candidateQualifiedV1)
+            case .adjusted:
+                basisAllowsOutcome =
+                    suppliedReasons.contains(.candidateAdjustedV1)
+            case .rejected:
+                basisAllowsOutcome =
+                    suppliedReasons.contains(.guardrailRegressionV1) &&
+                    !suppliedReasons.contains(.hardGateFailedV1) &&
+                    !suppliedReasons.contains(.symbolicInterestFailedV1)
+            case .qualificationUnavailable:
+                basisAllowsOutcome = false
+            }
+        case .unavailable:
+            basisAllowsOutcome = outcome == .qualificationUnavailable
+        }
+        let resolvedOutcome = basisAllowsOutcome
+            ? outcome : .qualificationUnavailable
+        self.outcome = resolvedOutcome
+        self.decisionBasis = basisAllowsOutcome ? decisionBasis : .unavailable
+        let resolvedReasons = basisAllowsOutcome
+            ? reasonCodes : [.policyUncalibratedV1]
+        self.reasonCodes = Array(Set(resolvedReasons)).sorted {
             $0.rawValue < $1.rawValue
         }
         var seen: Set<String> = []
-        self.diagnosticDetails = diagnosticDetails
+        let resolvedDetails = basisAllowsOutcome ? diagnosticDetails :
+            ["decision-basis=\(decisionBasis.rawValue)-cannot-\(outcome.rawValue)"] + diagnosticDetails
+        self.diagnosticDetails = resolvedDetails
             .filter { seen.insert($0).inserted }
             .prefix(24)
             .map { $0 }
-        self.recoveryIntent = outcome == .rejected
+        let calibratedRetry = basisAllowsOutcome &&
+            decisionBasis == .calibratedQuality &&
+            resolvedOutcome == .rejected &&
+            suppliedReasons.contains(.guardrailRegressionV1)
+        let symbolicOnlyRetry = basisAllowsOutcome &&
+            decisionBasis == .hardGate &&
+            suppliedReasons == Set([
+                .hardGateFailedV1,
+                .symbolicInterestFailedV1,
+            ]) &&
+            diagnosticDetails == ["symbolic-interest"] &&
+            recoveryIntent == AutonomousQualityRecoveryIntent(
+                symbolicDensity: .decrease
+            )
+        self.recoveryIntent = calibratedRetry || symbolicOnlyRetry
             ? recoveryIntent : .neutral
     }
 }
@@ -1278,6 +1352,7 @@ package struct ProfessionalEvidenceOnlyEvaluator:
     ) -> AutonomousCandidatePolicyVerdict {
         AutonomousCandidatePolicyVerdict(
             outcome: .qualificationUnavailable,
+            decisionBasis: .unavailable,
             reasonCodes: [.policyUncalibratedV1]
         )
     }
