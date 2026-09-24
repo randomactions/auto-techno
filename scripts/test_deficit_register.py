@@ -146,14 +146,15 @@ class DeficitRegisterTests(unittest.TestCase):
     def test_roadmap_links_bind_open_exact_outcomes(self) -> None:
         roadmap = self.roadmap_items()
         self.assertEqual(register_module.validate_register(self.register, roadmap), [])
+        target_id = self.register["entries"][0]["nearestRoadmapItems"][0]["id"]
         changed_status = copy.deepcopy(roadmap)
-        changed_status["AT-0038"]["status"] = "completed"
+        changed_status[target_id]["status"] = "completed"
         self.assertTrue(any(
             "is not open roadmap work" in error
             for error in register_module.validate_register(self.register, changed_status)
         ))
         changed_outcome = copy.deepcopy(roadmap)
-        changed_outcome["AT-0038"]["outcome"] = "stale"
+        changed_outcome[target_id]["outcome"] = "stale"
         self.assertTrue(any(
             "outcome is stale" in error
             for error in register_module.validate_register(self.register, changed_outcome)
