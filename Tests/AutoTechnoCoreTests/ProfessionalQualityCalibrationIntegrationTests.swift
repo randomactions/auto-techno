@@ -20,7 +20,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
     /// current primary artifacts; regeneration is opt-in so every source-bank
     /// change is intentional and reviewable.
     @Test("Generate complete representative-rate profile and adversarial identity")
-    func generateRepresentativeProfile() throws {
+    func generateRepresentativeProfile() async throws {
         guard ProcessInfo.processInfo.environment[
             "AUTOTECHNO_RUN_PROFILE_CALIBRATION"
         ] == "1" else { return }
@@ -33,11 +33,11 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             return
         }
 
-        let calibrationTrajectories = try calibrationSeeds.map(
-            renderTrajectory(seed:)
+        let calibrationTrajectories = try await renderTrajectories(
+            seeds: calibrationSeeds
         )
-        let holdoutTrajectories = try holdoutSeeds.map(
-            renderTrajectory(seed:)
+        let holdoutTrajectories = try await renderTrajectories(
+            seeds: holdoutSeeds
         )
         let calibrationCorpus = try ProfessionalQualityCalibrationCorpus(
             trajectories: calibrationTrajectories
@@ -613,6 +613,99 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         }
     }
 
+    /// Bounded parallelism reduces wall time for this opt-in multi-hour
+    /// harness. Indexed collection preserves the canonical seed order, so
+    /// corpus fingerprints and artifact bytes remain deterministic.
+    private func renderTrajectories(seeds: [UInt64]) async throws
+        -> [ProfessionalQualityCalibrationTrajectory] {
+        let maximumConcurrentTrajectories = 4
+        return try await withThrowingTaskGroup(
+            of: (Int, ProfessionalQualityCalibrationTrajectory).self
+        ) { group in
+            var next = seeds.enumerated().makeIterator()
+            for _ in 0..<min(maximumConcurrentTrajectories, seeds.count) {
+                guard let (index, seed) = next.next() else { break }
+                group.addTask {
+                    (index, try self.renderTrajectory(seed: seed))
+                }
+            }
+
+            var ordered = Array<ProfessionalQualityCalibrationTrajectory?>(
+                repeating: nil,
+                count: seeds.count
+            )
+            while let (index, trajectory) = try await group.next() {
+                ordered[index] = trajectory
+                if let (nextIndex, nextSeed) = next.next() {
+                    group.addTask {
+                        (nextIndex, try self.renderTrajectory(seed: nextSeed))
+                    }
+                }
+            }
+            return try ordered.map { trajectory in
+                guard let trajectory else {
+                    throw ProfessionalQualityCalibrationError
+                        .incompleteCheckpointCoverage
+                }
+                return trajectory
+            }
+        }
+    }
+
+    @Test("Journey cache identity separates rendered inputs from artifact versions")
+    func cachedJourneyIdentityTracksRenderedInputs() throws {
+        let current = CachedJourneyIdentity.current(rootSeed: 42)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        var legacyObject = try #require(
+            JSONSerialization.jsonObject(with: encoder.encode(current))
+                as? [String: Any]
+        )
+        legacyObject["profileVersion"] =
+            "autotechno-professional-quality-profile.v29"
+        legacyObject["adversarialSuiteVersion"] =
+            "autotechno-professional-quality-adversarial.v22"
+        let legacy = try JSONDecoder().decode(
+            CachedJourneyIdentity.self,
+            from: canonicalCacheJSON(legacyObject)
+        )
+        #expect(legacy.matchesRenderedJourneyContract(current))
+
+        legacyObject["engineVersion"] = "autotechno-canonical-engine.v47"
+        let staleRender = try JSONDecoder().decode(
+            CachedJourneyIdentity.self,
+            from: canonicalCacheJSON(legacyObject)
+        )
+        #expect(!staleRender.matchesRenderedJourneyContract(current))
+    }
+
+    @Test("Completed report cache survives calibration artifact version changes")
+    func completedJourneyCacheSurvivesArtifactVersionChanges() throws {
+        guard let directoryPath = ProcessInfo.processInfo.environment[
+            "AUTOTECHNO_CALIBRATION_CACHE_DIRECTORY"
+        ], !directoryPath.isEmpty else { return }
+        let directory = URL(fileURLWithPath: directoryPath, isDirectory: true)
+        let seeds = [UInt64(7), 60_606, 66_666].filter {
+            FileManager.default.fileExists(
+                atPath: directory.appendingPathComponent("journey-\($0).json").path
+            )
+        }
+        guard seeds.contains(7) else {
+            Issue.record("Opt-in cache directory is missing the completed seed-7 report")
+            return
+        }
+        for seed in seeds {
+            var attemptedRendering = false
+            let trajectory = try resolvedTrajectory(seed: seed,
+                                                    cacheDirectory: directory) {
+                attemptedRendering = true
+                throw ProfessionalQualityCalibrationError.profileMismatch
+            }
+            #expect(!attemptedRendering)
+            #expect(trajectory.isComplete)
+        }
+    }
+
     func resolvedTrajectory(
         seed: UInt64,
         cacheDirectory: URL?,
@@ -737,8 +830,8 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                   from: data
               ),
               decoded.schemaVersion == CachedJourneyReportBank.schemaVersion,
-              decoded.identity == CachedJourneyIdentity.current(
-                  rootSeed: requestedSeed
+              decoded.identity.matchesRenderedJourneyContract(
+                  CachedJourneyIdentity.current(rootSeed: requestedSeed)
               ),
               decoded.reportJSON.count ==
                 CachedJourneyReportBank.expectedReportCount,
@@ -858,6 +951,32 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         let holdoutQualificationVersion: String
         let sampleRates: [Double]
         let checkpoints: [String]
+
+        /// The cached rows are rendered with `ProfessionalEvidenceOnlyEvaluator`.
+        /// Profile, primary-evaluator, adversarial, and holdout identities are
+        /// recorded for provenance but do not affect those report rows. Keep
+        /// every render and report contract exact while allowing cached PCM
+        /// evidence to feed a newly versioned calibration artifact set.
+        func matchesRenderedJourneyContract(
+            _ current: CachedJourneyIdentity
+        ) -> Bool {
+            rootSeed == current.rootSeed &&
+                maximumPhrases == current.maximumPhrases &&
+                qualitySchemaVersion == current.qualitySchemaVersion &&
+                engineVersion == current.engineVersion &&
+                policyVersion == current.policyVersion &&
+                evaluatorVersion == current.evaluatorVersion &&
+                candidateSchemaVersion == current.candidateSchemaVersion &&
+                transactionSchemaVersion == current.transactionSchemaVersion &&
+                commitSchemaVersion == current.commitSchemaVersion &&
+                reportBankSchemaVersion == current.reportBankSchemaVersion &&
+                evidenceVersion == current.evidenceVersion &&
+                evidenceScope == current.evidenceScope &&
+                observationSchemaVersion == current.observationSchemaVersion &&
+                observationVersion == current.observationVersion &&
+                sampleRates == current.sampleRates &&
+                checkpoints == current.checkpoints
+        }
 
         static func current(rootSeed: UInt64) -> CachedJourneyIdentity {
             CachedJourneyIdentity(

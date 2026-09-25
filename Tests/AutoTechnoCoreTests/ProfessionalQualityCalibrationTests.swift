@@ -1289,6 +1289,15 @@ struct ProfessionalQualityCalibrationTests {
                              $0.padSpatialSendRMS)
                 }.reduce(0, +) / Double(active.count)
             #expect(observation[.padRhythmicSpatialDifferenceToSendDBMean] == spatialMean)
+            let relationIsActive = !active.isEmpty
+            for metric in [
+                ProfessionalQualityMetric.padRhythmicFilterDifferenceToPadDBMean,
+                .padRhythmicAmplitudeGateDifferenceToPadDBMean,
+                .padRhythmicSpatialDifferenceToSendDBMean,
+            ] {
+                #expect(observation.measurementIsApplicable(metric) ==
+                        relationIsActive)
+            }
         }
     }
 
@@ -1520,17 +1529,17 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v29")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v29")
+                "autotechno-quality.primary-calibrated.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v29")
+                "autotechno-candidate-evaluator.primary-calibrated.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
-                "autotechno-professional-quality-profile.v29")
+                "autotechno-professional-quality-profile.v30")
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 21)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v29")
+                "autotechno-professional-quality-profile.v30")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 22)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
-                "autotechno-professional-quality-adversarial.v22")
+                "autotechno-professional-quality-adversarial.v23")
         #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 20)
         #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
                 "autotechno-professional-quality-holdout.v20")
@@ -2226,7 +2235,26 @@ struct ProfessionalQualityCalibrationTests {
                 let harmonicTail = observation.checkpoint == .contrast
                     ? (observation.sampleRate == 48_000 ? 0.62 : 0.60)
                     : 1
-                return try observation
+                // v30 pad means require score-owned active-bar evidence;
+                // keep this synthetic corpus representative for every metric.
+                let padSupported = try observation
+                    .replacing(
+                        .padRhythmicModulationActiveBarRatio,
+                        with: 0.5
+                    )
+                    .replacing(
+                        .padRhythmicFilterDifferenceToPadDBMean,
+                        with: -24 + Double(index) * 0.01
+                    )
+                    .replacing(
+                        .padRhythmicAmplitudeGateDifferenceToPadDBMean,
+                        with: -18 + Double(index) * 0.01
+                    )
+                    .replacing(
+                        .padRhythmicSpatialDifferenceToSendDBMean,
+                        with: -12 + Double(index) * 0.01
+                    )
+                return try padSupported
                     .replacing(
                         .modalPercussionMaskingMaximumOverlap,
                         with: modalMasking
@@ -2262,7 +2290,24 @@ struct ProfessionalQualityCalibrationTests {
             let harmonicTail = observation.checkpoint == .longContinuation
                 ? (observation.sampleRate == 48_000 ? 0.62 : 0.60)
                 : 1
-            return try observation
+            let padSupported = try observation
+                .replacing(
+                    .padRhythmicModulationActiveBarRatio,
+                    with: 0.5
+                )
+                .replacing(
+                    .padRhythmicFilterDifferenceToPadDBMean,
+                    with: -24
+                )
+                .replacing(
+                    .padRhythmicAmplitudeGateDifferenceToPadDBMean,
+                    with: -18
+                )
+                .replacing(
+                    .padRhythmicSpatialDifferenceToSendDBMean,
+                    with: -12
+                )
+            return try padSupported
                 .replacing(
                     .modalPercussionMaskingMaximumOverlap,
                     with: modalMasking
@@ -2710,7 +2755,7 @@ struct ProfessionalQualityCalibrationTests {
             artifacts.profile.deterministicJSON(),
             replacements: [
                 "\"schemaVersion\":18": "\"schemaVersion\":17",
-                "autotechno-professional-quality-profile.v29":
+                ProfessionalQualityCalibrationProfile.profileVersion:
                     "autotechno-professional-quality-profile.v25",
             ]
         )
@@ -2724,7 +2769,7 @@ struct ProfessionalQualityCalibrationTests {
             artifacts.adversarial.deterministicJSON(),
             replacements: [
                 "\"schemaVersion\":22": "\"schemaVersion\":21",
-                "autotechno-professional-quality-adversarial.v22":
+                ProfessionalQualityAdversarialSuiteReport.suiteVersion:
                     "autotechno-professional-quality-adversarial.v21",
             ]
         )
@@ -2780,15 +2825,11 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Bundled v29 primary artifacts activate the exact v29 evaluator")
-    func primaryArtifacts() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(artifacts.profile.fingerprint ==
-                ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
-        #expect(artifacts.adversarialSuite.fingerprint ==
-                ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint)
-        #expect(artifacts.holdoutQualification.fingerprint ==
-                ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint)
+    @Test("Missing v30 artifacts cannot activate the v30 evaluator")
+    func legacyPrimaryArtifactsAreIneligible() {
+        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
+            try ProfessionalQualityPrimaryArtifacts.load()
+        }
     }
 
     @Test("Diverse corpus identity is ordered and bounded")
@@ -2818,6 +2859,75 @@ struct ProfessionalQualityCalibrationTests {
                     trajectories: Array(trajectories.dropLast())
                 )
             )
+        }
+    }
+
+    @Test("Score-inapplicable pad values do not train calibration bounds")
+    func scoreInapplicablePadValuesDoNotTrainBounds() throws {
+        let padMetrics: [ProfessionalQualityMetric] = [
+            .padRhythmicFilterDifferenceToPadDBMean,
+            .padRhythmicAmplitudeGateDifferenceToPadDBMean,
+            .padRhythmicSpatialDifferenceToSendDBMean,
+        ]
+        let trajectories = try (0..<24).map { index in
+            let observations = try representativeObservations(
+                trajectoryOffset: Double(index) * 0.001
+            ).map { observation in
+                let inapplicable = index == 0 &&
+                    observation.checkpoint == .chapterChange
+                let checkpointIndex = try #require(
+                    CanonicalJourneyCheckpoint.allCases.firstIndex(
+                        of: observation.checkpoint
+                    )
+                )
+                let activeValue = -24 + Double(checkpointIndex) * 0.25 +
+                    Double(index) * 0.01 +
+                    (observation.sampleRate == 48_000 ? 0.2 : 0)
+                let inapplicableValue = observation.sampleRate == 48_000
+                    ? 20.0
+                    : 0.0
+                var projected = try observation.replacing(
+                    .padRhythmicModulationActiveBarRatio,
+                    with: inapplicable ? 0 : 0.5
+                )
+                for (metricIndex, metric) in padMetrics.enumerated() {
+                    projected = try projected.replacing(
+                        metric,
+                        with: inapplicable
+                            ? inapplicableValue
+                            : activeValue + Double(metricIndex) * 0.1
+                    )
+                }
+                return projected
+            }
+            return try ProfessionalQualityCalibrationTrajectory(
+                sourceBankFingerprint: "pad-applicability-\(index)",
+                observations: observations
+            )
+        }
+        let profile = try ProfessionalQualityCalibrationProfile(
+            corpus: ProfessionalQualityCalibrationCorpus(
+                trajectories: trajectories
+            )
+        )
+
+        for metric in padMetrics {
+            let checkpointBounds = try #require(
+                profile[.chapterChange]?[metric]
+            )
+            #expect(checkpointBounds.upper < 0)
+            let trajectoryBounds = try #require(
+                profile.trajectories.first {
+                    $0.trajectory == .establishmentToChapterChange &&
+                        $0.metric == metric
+                }
+            )
+            #expect(trajectoryBounds.lowerDelta > -3)
+            #expect(trajectoryBounds.upperDelta < 3)
+            let rateBounds = try #require(profile.rateConsistency.first {
+                $0.checkpoint == .chapterChange && $0.metric == metric
+            })
+            #expect(rateBounds.maximumAbsoluteDelta < 2)
         }
     }
 

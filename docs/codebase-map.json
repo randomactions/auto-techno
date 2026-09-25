@@ -604,7 +604,7 @@
     {
       "id": "evidence-calibration-and-primary-evaluation",
       "name": "Evidence, calibration, and primary evaluation",
-      "responsibility": "Construct complete candidate evidence, stream bounded perceptual analysis, validate exact artifacts and offline tolerance-aware PCM, signal, spectral, stereo-compatibility, collision, transient/envelope, rhythmic, and score-declared section-boundary reports, run the single calibrated primary evaluator with explicit relationship coverage and candidate-level calibration support/confidence-estimate status, and bind atomic commit provenance; deterministic synthetic signal fixtures used by analyzer evidence tests. Derive versioned descriptive per-bar kick/foundation and bar/role-pair/band masking feature reports from complete source reports without changing calibrated verdicts.",
+      "responsibility": "Construct complete candidate evidence, stream bounded perceptual analysis, validate exact artifacts and offline tolerance-aware PCM, signal, spectral, stereo-compatibility, collision, transient/envelope, rhythmic, and score-declared section-boundary reports, run the single calibrated primary evaluator with explicit relationship coverage and candidate-level calibration support/confidence-estimate status, and bind atomic commit provenance; deterministic synthetic signal fixtures used by analyzer evidence tests. Apply pad-rhythmic filter, amplitude-gate, and spatial-consequence means only when validated score evidence shows the three-step-pulse relation active, treating an absent relation as unavailable rather than a zero consequence; require that relation in the corresponding major-break adversarial baseline. Derive versioned descriptive per-bar kick/foundation and bar/role-pair/band masking feature reports from complete source reports without changing calibrated verdicts.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -647,6 +647,7 @@
         "calibrated primary artifacts",
         "streaming evidence accumulators",
         "relationship support/coverage/confidence availability",
+        "score-declared pad-rhythm relation activity and consequence-metric applicability",
         "candidate calibration support and confidence-estimate status",
         "descriptive per-bar kick/foundation evidence",
         "descriptive bar-, role-pair-, and frequency-band-local masking evidence"
@@ -672,6 +673,7 @@
         "window-, segment-, and role-local spectral and causal-band baselines",
         "full- and causal-band stereo correlation, mid/side, mono-retention, and structural compatibility baselines",
         "score-bound event-local kick/foundation collision baselines",
+        "score-tagged three-step-pulse active-bar ratio and relation-scoped pad filter, amplitude-gate, and spatial-consequence means",
         "legacy-compatible transient density plus PCM-inferred role-local attack, decay, and crest baselines",
         "whole-mix onset distribution, rest, silence, metrical, microtiming, and bounded repetition/mutation baselines",
         "score-declared phrase/chapter boundary, fixed transition-cell, multidimensional contrast, and explicit recovery-state baselines",

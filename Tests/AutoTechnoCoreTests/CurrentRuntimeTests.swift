@@ -15,14 +15,14 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 21)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v29")
+                "autotechno-professional-quality-profile.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v29")
+                "autotechno-candidate-evaluator.primary-calibrated.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v29")
+                "autotechno-quality.primary-calibrated.v30")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 22)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
-                "autotechno-professional-quality-adversarial.v22")
+                "autotechno-professional-quality-adversarial.v23")
         #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 20)
         #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
                 "autotechno-professional-quality-holdout.v20")
@@ -33,14 +33,14 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalEvidenceReportBank.schemaVersion == 29)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v29")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v29"))
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v30"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v29"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v29"))
+            .hasSuffix("-v30"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v30"))
     }
 
-    @Test("Only bundled v29 primary resources remain")
-    func primaryResourcesAreV29Only() {
+    @Test("Legacy v29 primary resources cannot satisfy the v30 artifact loader")
+    func primaryResourcesAreV30FailClosed() {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
         for stem in ["profile", "adversarial-suite", "holdout"] {
@@ -161,18 +161,20 @@ struct CurrentRuntimeTests {
                 .containsBundledResource(named: "\(prefix)-v28"))
             #expect(ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v29"))
+            #expect(!FileManager.default.fileExists(atPath:
+                resourceDirectory.appendingPathComponent("\(prefix)-v30.json").path))
+            #expect(!ProfessionalQualityPrimaryArtifacts
+                .containsBundledResource(named: "\(prefix)-v30"))
         }
-        #expect(throws: Never.self) {
+        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
             _ = try ProfessionalQualityPrimaryArtifacts.load()
         }
     }
 
-    @Test("The shipped evaluator and live controller form one exact path")
-    func primaryEvaluatorAndLiveControllerAreCanonical() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-
-        #expect(artifacts.evaluator.evaluatorVersion ==
-                ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier)
+    @Test("The v30 candidate identity and live controller remain canonical")
+    func primaryEvaluatorAndLiveControllerAreCanonical() {
+        #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
+                "autotechno-candidate-evaluator.primary-calibrated.v30")
         #expect(LiveMasterHeadroomController.version ==
                 "autotechno-live-master-headroom-controller.v2")
         #expect(LiveMasterHeadroomController.minimumTrimDB == -3)

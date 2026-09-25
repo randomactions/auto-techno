@@ -2,8 +2,12 @@
 
 Current engine v48 binds material-world/effect-target lineage, pitch identity,
 and transition-tail continuity under quality schema 49, candidate-vector schema
-43, and transaction schema 14. Its primary-v29 artifacts are the single active
-qualification set.
+43, and transaction schema 14. This checkout's option-A candidate uses primary
+evaluator and profile v30 with adversarial suite v23. The bundled profile,
+adversarial, and holdout resources still belong to the previous v29 set; the
+runtime rejects them, leaving the candidate without an active qualified primary
+evaluator until matching v30 artifacts are generated and pass. Do not use this
+candidate for promoted runtime qualification or AT-0039 capture.
 
 ## Runtime contract
 
@@ -54,12 +58,13 @@ invalid.
 
 ## Qualification
 
-`ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
+`ProfessionalQualityPrimaryArtifacts` currently contains the previous
 engine-v48 profile v29, adversarial suite v22, and disjoint holdout qualification
-v20. The profile derives from 36 complete 44.1/48 kHz journeys; four fresh,
-disjoint holdout journeys passed all 56 local verdicts and every relationship
-gate. The pinned profile, adversarial, and holdout fingerprints are
-`06cb04bfbef71c28`, `16820b6274dd26d4`, and `2037dec24ac1e45c`.
+v20. Their fingerprints are `06cb04bfbef71c28`, `16820b6274dd26d4`, and
+`2037dec24ac1e45c`; they are intentionally ineligible for the v30 candidate.
+The candidate requires a regenerated profile v30, adversarial suite v23, and
+disjoint holdout qualification v20 from 36 complete 44.1/48 kHz calibration
+journeys and four fresh holdout journeys, with every relationship gate passing.
 
 Offline calibration may retain several checkpoint observations from one
 candidate. Runtime terminal qualification selects one most-specific
@@ -108,6 +113,13 @@ Four kick-source dimensions retain conditioned crest, attack-to-body balance,
 upper-mid energy, and measured crest reduction. A dedicated transient-spike
 attack proves a disconnected or regressed kick conditioner cannot hide behind
 unrelated strengths.
+
+The three pad-rhythmic consequence means (filter, amplitude/gate, and spatial
+send) are applicable only when the score-projected active-bar ratio is positive.
+Their source aggregation includes only bars whose resolved score declares the
+three-step-pulse relation; an empty population is therefore inapplicable rather
+than a zero-valued consequence. The active-relation adversarial cases remain
+required and must reject disconnected consequences.
 
 The app preloads artifacts away from the audio callback and creates a route-local
 evaluator for detached preparation. Missing artifacts and rates outside 44.1 or

@@ -195,13 +195,16 @@ mistaken for a completed feedback system.
    A deterministic Professional Evidence v29
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
-   observation-only. `ProfessionalQualityPrimaryArtifacts` validates the exact
-   engine-v48 profile v29, adversarial suite v22, and disjoint holdout
-   qualification v20.
-   The profile derives from 36 complete canonical journeys; four untouched
-   replacement journeys passed 56/56 local observations and all trajectory/rate
-   relationships. Its evaluator maps the Core-owned plan checkpoint into the
-   same 68-metric observation and rejects dimensions independently. The eight
+   observation-only. The last accepted `ProfessionalQualityPrimaryArtifacts`
+   set used engine-v48 profile v29, adversarial suite v22, and disjoint holdout
+   qualification v20; its profile derived from 36 complete canonical journeys,
+   and four untouched replacement journeys passed 56/56 local observations
+   and all trajectory/rate relationships. The current Option A worktree
+   candidate requires profile v30 and adversarial suite v23. Its bundled v29
+   artifacts are ineligible, and the candidate remains unqualified until a
+   matching profile, adversarial suite, and holdout are generated and pass. The
+   evaluator maps the Core-owned plan checkpoint into the same 68-metric
+   observation and rejects dimensions independently. The eight
    modal dimensions cover active-bar ratio, event density, pitch error,
    attack/body and tail/body relationships, spectral centroid, masking, and
    maximum pole radius.

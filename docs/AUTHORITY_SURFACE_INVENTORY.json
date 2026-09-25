@@ -745,10 +745,10 @@
         {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v29.json", "symbol": "professional-quality-primary-profile-v29", "kind": "json-resource"}
       ],
       "convergenceAnchors": [
-        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-profile-v29\""}
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-profile-v30\""}
       ],
       "evidenceAnchors": [
-        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV29Only()"}
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV30FailClosed()"}
       ],
       "pcmConsequence": "qualifies-without-changing-pcm",
       "limitations": "Checkpoint profiles are parts of one exact installed calibration profile; neither is a runtime style or engine profile."
@@ -765,11 +765,11 @@
         {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v29.json", "symbol": "professional-quality-primary-holdout-v29", "kind": "json-resource"}
       ],
       "convergenceAnchors": [
-        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-adversarial-suite-v29\""},
-        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-holdout-v29\""}
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-adversarial-suite-v30\""},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-holdout-v30\""}
       ],
       "evidenceAnchors": [
-        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV29Only()"}
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV30FailClosed()"}
       ],
       "pcmConsequence": "qualifies-without-changing-pcm",
       "limitations": "These exact resources gate construction of the primary evaluator and expose no parallel runtime evaluator path."

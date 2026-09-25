@@ -27,16 +27,20 @@ score/graph snapshots without using loudness or density alone as proof.
 Graph evidence binds the world fingerprint, requested five-coordinate target,
 realized graph vector, distance, protected routing, and at most one changed node
 per phrase. Existing transition-tail and route-recovery contracts remain.
-The exact engine-v48 primary-v29 and long-horizon-v16 development, adversarial,
-and disjoint-holdout artifacts now pass and replace the ineligible v38 set.
-Listening, real app/route QA, latency observation, and physical-output soak
-remain separate unverified gates.
+The last accepted engine-v48 primary-v29 and long-horizon-v16 development,
+adversarial, and disjoint-holdout artifacts passed and replaced the ineligible
+v38 set. This checkout also contains an unqualified Option A candidate: primary
+evaluator/profile v30 and adversarial suite v23. Its bundled v29 primary
+artifacts are rejected; do not treat the candidate as qualified until matching
+artifacts pass the automated gates. Listening, real app/route QA, latency
+observation, and physical-output soak remain separate unverified gates.
 
-The current qualified offline implementation is
+The last fully qualified offline implementation is
 `autotechno-canonical-engine.v48` under quality-contract schema 49,
 candidate-vector schema 43, candidate-transaction schema 14, and Professional
 Evidence v29. Primary profile/evaluator v29 and long-horizon policy v16 are the
-required exact identities; their artifact loaders fail closed on any mismatch.
+identities of that accepted artifact set; its loaders fail closed on any
+mismatch. Those results do not qualify the current v30 candidate.
 
 The Phase-1 measurement corpus is separate from those calibration and holdout
 populations. Its seven roots are fixed by an outcome-blind integer derivation

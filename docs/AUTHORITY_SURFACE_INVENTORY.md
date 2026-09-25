@@ -881,11 +881,11 @@ Members:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-profile-v29"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-profile-v30"`
 
 Evidence anchors:
 
-- [`Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift`](../Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift): `func primaryResourcesAreV29Only()`
+- [`Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift`](../Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift): `func primaryResourcesAreV30FailClosed()`
 
 Limitation: Checkpoint profiles are parts of one exact installed calibration profile; neither is a runtime style or engine profile.
 
@@ -903,12 +903,12 @@ Members:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-adversarial-suite-v29"`
-- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-holdout-v29"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-adversarial-suite-v30"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-holdout-v30"`
 
 Evidence anchors:
 
-- [`Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift`](../Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift): `func primaryResourcesAreV29Only()`
+- [`Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift`](../Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift): `func primaryResourcesAreV30FailClosed()`
 
 Limitation: These exact resources gate construction of the primary evaluator and expose no parallel runtime evaluator path.
 

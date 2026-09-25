@@ -1256,6 +1256,13 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         switch metric {
         case .kickOverFoundationActiveDBMean:
             return (self[.activeKickFoundationBarRatio] ?? 0) > 1e-12
+        case .padRhythmicFilterDifferenceToPadDBMean,
+                .padRhythmicAmplitudeGateDifferenceToPadDBMean,
+                .padRhythmicSpatialDifferenceToSendDBMean:
+            // These are means over score-tagged three-step-pulse bars. An
+            // empty tagged population is absence of the musical relation,
+            // not a measured zero consequence.
+            return (self[.padRhythmicModulationActiveBarRatio] ?? 0) > 1e-12
         default:
             return true
         }
@@ -1432,7 +1439,7 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
     package static let schemaVersion = 21
     package static let profileVersion =
-        "autotechno-professional-quality-profile.v29"
+        "autotechno-professional-quality-profile.v30"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1480,6 +1487,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         }
 
         var profiles: [ProfessionalQualityCheckpointProfile] = []
+        let allObservations = corpus.trajectories.flatMap(\.observations)
         for checkpoint in CanonicalJourneyCheckpoint.allCases {
             let sources = corpus.trajectories.flatMap { trajectory in
                 trajectory.observations.filter { $0.checkpoint == checkpoint }
@@ -1491,29 +1499,41 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             }
             var metricBounds: [ProfessionalQualityMetricBounds] = []
             for metric in ProfessionalQualityMetric.allCases {
-                var values = sources.compactMap { $0[metric] }
-                guard values.count == sources.count,
-                      !values.isEmpty else {
+                var values = Self.applicableValues(
+                    in: sources,
+                    for: metric
+                )
+                if values.isEmpty {
+                    // This checkpoint had no score-supported examples for
+                    // this optional measurement. Reuse its active population
+                    // from the same corpus instead of training on absence as
+                    // a numeric zero.
+                    values = Self.applicableValues(
+                        in: allObservations,
+                        for: metric
+                    )
+                }
+                guard !values.isEmpty else {
                     throw ProfessionalQualityCalibrationError.invalidMetricSet
                 }
-                var crossRateDrifts = try corpus.trajectories.map {
-                    trajectory -> Double in
-                    let values = trajectory.observations
-                        .filter { $0.checkpoint == checkpoint }
-                        .compactMap { $0[metric] }
-                    guard values.count == Self.requiredSampleRates.count,
-                          let minimum = values.min(),
-                          let maximum = values.max() else {
-                        throw ProfessionalQualityCalibrationError
-                            .incompleteCheckpointCoverage
-                    }
-                    return maximum - minimum
+                var crossRateDrifts = try Self.applicableRateDrifts(
+                    in: corpus,
+                    for: metric,
+                    checkpoints: [checkpoint]
+                )
+                if crossRateDrifts.isEmpty {
+                    crossRateDrifts = try Self.applicableRateDrifts(
+                        in: corpus,
+                        for: metric,
+                        checkpoints: CanonicalJourneyCheckpoint.allCases
+                    )
                 }
                 if metric.conditionalNeutralSentinel != nil,
                    values.allSatisfy({ metric.isConditionalNeutral($0) }) {
-                    let activeValues = corpus.trajectories.flatMap {
-                        $0.observations
-                    }.compactMap { $0[metric] }.filter {
+                    let activeValues = Self.applicableValues(
+                        in: allObservations,
+                        for: metric
+                    ).filter {
                         !metric.isConditionalNeutral($0)
                     }
                     let activeRateDrifts = try Self
@@ -1562,13 +1582,12 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                         to: pair.to,
                         metric: metric
                     )
+                    guard !trajectoryDeltas.isEmpty else { continue }
                     deltas.append(contentsOf: trajectoryDeltas)
-                    guard let minimum = trajectoryDeltas.min(),
-                          let maximum = trajectoryDeltas.max() else {
-                        throw ProfessionalQualityCalibrationError
-                            .invalidMetricSet
+                    if let minimum = trajectoryDeltas.min(),
+                       let maximum = trajectoryDeltas.max() {
+                        crossRateDrifts.append(maximum - minimum)
                     }
-                    crossRateDrifts.append(maximum - minimum)
                 }
                 guard let minimum = deltas.min(),
                       let maximum = deltas.max() else {
@@ -1591,18 +1610,20 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         var rateBounds: [ProfessionalQualityRateConsistencyBounds] = []
         for checkpoint in CanonicalJourneyCheckpoint.allCases {
             for metric in ProfessionalQualityMetric.allCases {
-                var absoluteDeltas = try corpus.trajectories.map {
-                    trajectory -> Double in
-                    let values = trajectory.observations
-                        .filter { $0.checkpoint == checkpoint }
-                        .compactMap { $0[metric] }
-                    guard values.count == Self.requiredSampleRates.count,
-                          let minimum = values.min(),
-                          let maximum = values.max() else {
-                        throw ProfessionalQualityCalibrationError
-                            .incompleteCheckpointCoverage
-                    }
-                    return maximum - minimum
+                var absoluteDeltas = try Self.applicableRateDrifts(
+                    in: corpus,
+                    for: metric,
+                    checkpoints: [checkpoint]
+                )
+                if absoluteDeltas.isEmpty {
+                    absoluteDeltas = try Self.applicableRateDrifts(
+                        in: corpus,
+                        for: metric,
+                        checkpoints: CanonicalJourneyCheckpoint.allCases
+                    )
+                }
+                guard !absoluteDeltas.isEmpty else {
+                    throw ProfessionalQualityCalibrationError.invalidMetricSet
                 }
                 if metric.conditionalNeutralSentinel != nil {
                     let checkpointValues = corpus.trajectories.flatMap {
@@ -2016,6 +2037,48 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         return drifts
     }
 
+    private static func applicableValues(
+        in observations: [ProfessionalQualityObservation],
+        for metric: ProfessionalQualityMetric
+    ) -> [Double] {
+        observations.compactMap { observation in
+            guard observation.measurementIsApplicable(metric) else {
+                return nil
+            }
+            return observation[metric]
+        }
+    }
+
+    private static func applicableRateDrifts(
+        in corpus: ProfessionalQualityCalibrationCorpus,
+        for metric: ProfessionalQualityMetric,
+        checkpoints: [CanonicalJourneyCheckpoint]
+    ) throws -> [Double] {
+        var drifts: [Double] = []
+        for trajectory in corpus.trajectories {
+            for checkpoint in checkpoints {
+                let observations = trajectory.observations
+                    .filter { $0.checkpoint == checkpoint }
+                    .sorted { $0.sampleRate < $1.sampleRate }
+                guard observations.count == Self.requiredSampleRates.count else {
+                    throw ProfessionalQualityCalibrationError
+                        .incompleteCheckpointCoverage
+                }
+                guard observations.allSatisfy({
+                    $0.measurementIsApplicable(metric)
+                }) else { continue }
+                let values = observations.compactMap { $0[metric] }
+                guard values.count == Self.requiredSampleRates.count,
+                      let minimum = values.min(),
+                      let maximum = values.max() else {
+                    throw ProfessionalQualityCalibrationError.invalidMetricSet
+                }
+                drifts.append(maximum - minimum)
+            }
+        }
+        return drifts
+    }
+
     /// Transient density counts discrete events per second. At fixed 130 BPM,
     /// one changed event in one four-beat bar is the smallest physically
     /// meaningful difference; representative-rate frame rounding makes the
@@ -2096,18 +2159,23 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
         to: CanonicalJourneyCheckpoint,
         metric: ProfessionalQualityMetric
     ) throws -> [Double] {
-        try requiredSampleRates.map { sampleRate in
-            guard let fromValue = trajectory.observations.first(where: {
+        var deltas: [Double] = []
+        for sampleRate in requiredSampleRates {
+            guard let fromObservation = trajectory.observations.first(where: {
                 $0.sampleRate == sampleRate && $0.checkpoint == from
-            })?[metric],
-                  let toValue = trajectory.observations.first(where: {
+            }), let toObservation = trajectory.observations.first(where: {
                       $0.sampleRate == sampleRate && $0.checkpoint == to
-                  })?[metric] else {
+                  }) else {
                 throw ProfessionalQualityCalibrationError
                     .incompleteCheckpointCoverage
             }
-            return toValue - fromValue
+            guard fromObservation.measurementIsApplicable(metric),
+                  toObservation.measurementIsApplicable(metric),
+                  let fromValue = fromObservation[metric],
+                  let toValue = toObservation[metric] else { continue }
+            deltas.append(toValue - fromValue)
         }
+        return deltas
     }
 
     private static func domain(

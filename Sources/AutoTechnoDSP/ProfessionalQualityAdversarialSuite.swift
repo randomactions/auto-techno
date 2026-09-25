@@ -438,7 +438,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
     package static let evidenceCategory: AutonomousEvidenceCategory = .provenance
     package static let schemaVersion = 22
     package static let suiteVersion =
-        "autotechno-professional-quality-adversarial.v22"
+        "autotechno-professional-quality-adversarial.v23"
 
     package let schemaVersion: Int
     package let suiteVersion: String
@@ -1113,7 +1113,9 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         observations: [ProfessionalQualityObservation]
     ) throws -> ProfessionalQualityObservation {
         guard let observation = observations.first(where: {
-            $0.checkpoint == checkpoint && $0.sampleRate == 48_000
+            $0.checkpoint == checkpoint && $0.sampleRate == 48_000 &&
+                (checkpoint != .majorBreak ||
+                    ($0[.padRhythmicModulationActiveBarRatio] ?? 0) > 0)
         }) else {
             throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
         }
