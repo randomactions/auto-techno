@@ -11,7 +11,7 @@ struct PrimaryEvaluatorReadinessTests {
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 3)
         #expect(ProfessionalEvidenceReportBank.schemaVersion == 29)
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
-        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 21)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 22)
         #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 20)
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
@@ -46,7 +46,7 @@ struct PrimaryEvaluatorReadinessTests {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(artifacts.profile.engineVersion ==
                 QualityQualificationContract.engineVersion)
-        #expect(artifacts.profile.schemaVersion == 21)
+        #expect(artifacts.profile.schemaVersion == 22)
         #expect(artifacts.adversarialSuite.schemaVersion == 22)
         #expect(artifacts.holdoutQualification.schemaVersion == 20)
         for sampleRate in [44_100.0, 48_000.0] {

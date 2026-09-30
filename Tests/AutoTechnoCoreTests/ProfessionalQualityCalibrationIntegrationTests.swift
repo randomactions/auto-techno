@@ -319,7 +319,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                     ProfessionalQualityCalibrationProfile.requiredSampleRates.count)
         #expect(profile.isComplete)
         #expect(profile.usesDiverseCalibration)
-        #expect(profile.schemaVersion == 21)
+        #expect(profile.schemaVersion == 22)
         #expect(profile.observationVersion ==
                 ProfessionalQualityObservation.observationVersion)
         #expect(profile.sourceTrajectoryCount == calibrationSeeds.count)
@@ -663,6 +663,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         )
         legacyObject["profileVersion"] =
             "autotechno-professional-quality-profile.v29"
+        legacyObject["profileSchemaVersion"] = 21
         legacyObject["adversarialSuiteVersion"] =
             "autotechno-professional-quality-adversarial.v22"
         let legacy = try JSONDecoder().decode(

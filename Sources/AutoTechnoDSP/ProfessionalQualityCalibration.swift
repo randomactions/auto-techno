@@ -161,6 +161,22 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
             self == .upperSpectralRevealActiveEventRatio
     }
 
+    /// These means exist only when score-owned paired activity is present.
+    /// Calibration and relationship evaluation use the same applicability
+    /// owner as individual observation assessment.
+    package var measurementActivityMetric: ProfessionalQualityMetric? {
+        switch self {
+        case .kickOverFoundationActiveDBMean:
+            return .activeKickFoundationBarRatio
+        case .padRhythmicFilterDifferenceToPadDBMean,
+                .padRhythmicAmplitudeGateDifferenceToPadDBMean,
+                .padRhythmicSpatialDifferenceToSendDBMean:
+            return .padRhythmicModulationActiveBarRatio
+        default:
+            return nil
+        }
+    }
+
     /// Capability-local one-sided metrics use an exact safe value when the
     /// owning sound is absent. That sentinel is not an active measurement and
     /// must not make a checkpoint with no development examples reject a valid
@@ -1253,19 +1269,10 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
     package func measurementIsApplicable(
         _ metric: ProfessionalQualityMetric
     ) -> Bool {
-        switch metric {
-        case .kickOverFoundationActiveDBMean:
-            return (self[.activeKickFoundationBarRatio] ?? 0) > 1e-12
-        case .padRhythmicFilterDifferenceToPadDBMean,
-                .padRhythmicAmplitudeGateDifferenceToPadDBMean,
-                .padRhythmicSpatialDifferenceToSendDBMean:
-            // These are means over score-tagged three-step-pulse bars. An
-            // empty tagged population is absence of the musical relation,
-            // not a measured zero consequence.
-            return (self[.padRhythmicModulationActiveBarRatio] ?? 0) > 1e-12
-        default:
+        guard let activityMetric = metric.measurementActivityMetric else {
             return true
         }
+        return (self[activityMetric] ?? 0) > 1e-12
     }
 
     package func deterministicJSON() throws -> Data {
@@ -1362,21 +1369,30 @@ package struct ProfessionalQualityTrajectoryBounds: Codable, Equatable,
     package let metric: ProfessionalQualityMetric
     package let lowerDelta: Double
     package let upperDelta: Double
+    /// Zero explicitly records an unobserved conditional comparison. Its
+    /// canonical zero bounds are storage sentinels, never measured deltas.
+    package let sourceComparisonCount: Int
 
     package init(
         trajectory: ProfessionalQualityTrajectory,
         metric: ProfessionalQualityMetric,
         lowerDelta: Double,
-        upperDelta: Double
+        upperDelta: Double,
+        sourceComparisonCount: Int
     ) throws {
         guard lowerDelta.isFinite, upperDelta.isFinite,
-              lowerDelta <= upperDelta else {
+              lowerDelta <= upperDelta,
+              sourceComparisonCount >= 0,
+              sourceComparisonCount > 0 ||
+                (metric.measurementActivityMetric != nil &&
+                    lowerDelta == 0 && upperDelta == 0) else {
             throw ProfessionalQualityCalibrationError.invalidBounds
         }
         self.trajectory = trajectory
         self.metric = metric
         self.lowerDelta = lowerDelta
         self.upperDelta = upperDelta
+        self.sourceComparisonCount = sourceComparisonCount
     }
 }
 
@@ -1437,7 +1453,7 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 21
+    package static let schemaVersion = 22
     package static let profileVersion =
         "autotechno-professional-quality-profile.v30"
     package static let requiredSampleRates = [44_100.0, 48_000.0]
@@ -1589,6 +1605,16 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                         crossRateDrifts.append(maximum - minimum)
                     }
                 }
+                if deltas.isEmpty, metric.measurementActivityMetric != nil {
+                    trajectoryBounds.append(try ProfessionalQualityTrajectoryBounds(
+                        trajectory: trajectoryKind,
+                        metric: metric,
+                        lowerDelta: 0,
+                        upperDelta: 0,
+                        sourceComparisonCount: 0
+                    ))
+                    continue
+                }
                 guard let minimum = deltas.min(),
                       let maximum = deltas.max() else {
                     throw ProfessionalQualityCalibrationError.invalidMetricSet
@@ -1602,7 +1628,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                     trajectory: trajectoryKind,
                     metric: metric,
                     lowerDelta: minimum - guardBand,
-                    upperDelta: maximum + guardBand
+                    upperDelta: maximum + guardBand,
+                    sourceComparisonCount: deltas.count
                 ))
             }
         }
@@ -1764,7 +1791,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                     trajectory: trajectory,
                     metric: metric,
                     lowerDelta: minimum - guardBand,
-                    upperDelta: maximum + guardBand
+                    upperDelta: maximum + guardBand,
+                    sourceComparisonCount: deltas.count
                 ))
             }
         }
@@ -1839,7 +1867,11 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             }).count == trajectories.count &&
             trajectories.allSatisfy {
                 $0.lowerDelta.isFinite && $0.upperDelta.isFinite &&
-                    $0.lowerDelta <= $0.upperDelta
+                    $0.lowerDelta <= $0.upperDelta &&
+                    (0...expectedObservationCount).contains($0.sourceComparisonCount) &&
+                    ($0.sourceComparisonCount > 0 ||
+                        ($0.metric.measurementActivityMetric != nil &&
+                            $0.lowerDelta == 0 && $0.upperDelta == 0))
             } &&
             rateConsistency.count == CanonicalJourneyCheckpoint.allCases.count *
                 ProfessionalQualityMetric.allCases.count &&
@@ -2324,6 +2356,7 @@ package enum ProfessionalQualityRelationshipAvailability: String, Codable,
     case unsupportedSampleRate = "unsupported-sample-rate"
     case incompleteObservations = "incomplete-observations"
     case invalidObservations = "invalid-observations"
+    case unavailableCalibrationSupport = "unavailable-calibration-support"
 }
 
 package enum ProfessionalQualityRelationshipCoverage: String, Codable, Sendable {
@@ -2445,6 +2478,7 @@ package enum ProfessionalQualityRelationshipEvaluator {
             )
         }
         var failures: [ProfessionalQualityRelationshipFailure] = []
+        var unavailableCalibrationSupport = false
         for bounds in profile.trajectories
             where bounds.metric.participatesInQualification {
             let pair = bounds.trajectory.checkpoints
@@ -2461,6 +2495,10 @@ package enum ProfessionalQualityRelationshipEvaluator {
                 if bounds.metric.conditionalNeutralSentinel != nil,
                    bounds.metric.isConditionalNeutral(from) !=
                    bounds.metric.isConditionalNeutral(to) {
+                    continue
+                }
+                guard bounds.sourceComparisonCount > 0 else {
+                    unavailableCalibrationSupport = true
                     continue
                 }
                 let delta = to - from
@@ -2531,10 +2569,12 @@ package enum ProfessionalQualityRelationshipEvaluator {
             return leftKey < rightKey
         }
         return ProfessionalQualityRelationshipAssessment(
-            availability: .available,
+            availability: unavailableCalibrationSupport
+                ? .unavailableCalibrationSupport : .available,
             coverage: coverage,
-            support: support,
-            confidence: support == .sufficient && coverage == .complete
+            support: unavailableCalibrationSupport ? .insufficient : support,
+            confidence: !unavailableCalibrationSupport &&
+                support == .sufficient && coverage == .complete
                 ? .notEstimated : .unavailable,
             observationCount: observations.count,
             requiredObservationCount: coverage == .complete

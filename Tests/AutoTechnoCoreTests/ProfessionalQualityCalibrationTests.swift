@@ -1534,7 +1534,7 @@ struct ProfessionalQualityCalibrationTests {
                 "autotechno-candidate-evaluator.primary-calibrated.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
                 "autotechno-professional-quality-profile.v30")
-        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 21)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
                 "autotechno-professional-quality-profile.v30")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 22)
@@ -2929,6 +2929,116 @@ struct ProfessionalQualityCalibrationTests {
             })
             #expect(rateBounds.maximumAbsoluteDelta < 2)
         }
+    }
+
+    @Test("Unsupported conditional trajectories stay explicit and fail closed")
+    func unsupportedConditionalTrajectorySupport() throws {
+        let padMetrics: [ProfessionalQualityMetric] = [
+            .padRhythmicFilterDifferenceToPadDBMean,
+            .padRhythmicAmplitudeGateDifferenceToPadDBMean,
+            .padRhythmicSpatialDifferenceToSendDBMean,
+        ]
+        let trajectories = try (0..<24).map { index in
+            let observations = try representativeObservations().map { observation in
+                let active = observation.checkpoint == .majorBreak
+                var projected = try observation.replacing(
+                    .padRhythmicModulationActiveBarRatio,
+                    with: active ? 0.5 : 0
+                )
+                for metric in padMetrics {
+                    projected = try projected.replacing(
+                        metric,
+                        with: active ? -12 + Double(index) * 0.01 : 20
+                    )
+                }
+                return projected
+            }
+            return try ProfessionalQualityCalibrationTrajectory(
+                sourceBankFingerprint: "unsupported-pad-trajectory-\(index)",
+                observations: observations
+            )
+        }
+        let profile = try ProfessionalQualityCalibrationProfile(
+            corpus: ProfessionalQualityCalibrationCorpus(trajectories: trajectories)
+        )
+        #expect(profile.isComplete)
+        let unsupported = profile.trajectories.filter {
+            padMetrics.contains($0.metric)
+        }
+        #expect(unsupported.count == padMetrics.count *
+            ProfessionalQualityTrajectory.allCases.count)
+        #expect(unsupported.allSatisfy {
+            $0.sourceComparisonCount == 0 &&
+                $0.lowerDelta == 0 && $0.upperDelta == 0
+        })
+        #expect(throws: ProfessionalQualityCalibrationError.invalidBounds) {
+            try ProfessionalQualityTrajectoryBounds(
+                trajectory: .establishmentToMajorBreak,
+                metric: .integratedLoudnessLUFS,
+                lowerDelta: 0,
+                upperDelta: 0,
+                sourceComparisonCount: 0
+            )
+        }
+        #expect(throws: ProfessionalQualityCalibrationError.invalidBounds) {
+            try ProfessionalQualityTrajectoryBounds(
+                trajectory: .establishmentToMajorBreak,
+                metric: .padRhythmicAmplitudeGateDifferenceToPadDBMean,
+                lowerDelta: -1,
+                upperDelta: 1,
+                sourceComparisonCount: 0
+            )
+        }
+        #expect(profile.trajectories.filter {
+            !padMetrics.contains($0.metric)
+        }.allSatisfy { $0.sourceComparisonCount > 0 })
+        for checkpoint in CanonicalJourneyCheckpoint.allCases {
+            for metric in padMetrics {
+                #expect(try #require(profile[checkpoint]?[metric]).upper < 0)
+            }
+        }
+        let encoded = try profile.deterministicJSON()
+        #expect(try ProfessionalQualityCalibrationProfile
+            .decodeDeterministicJSON(encoded) == profile)
+        let stale = try replacingJSONIdentity(encoded, replacements: [
+            "\"schemaVersion\":22": "\"schemaVersion\":21",
+        ])
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityCalibrationProfile.decodeDeterministicJSON(stale)
+        }
+        let observations = trajectories[0].observations
+        #expect(ProfessionalQualityRelationshipEvaluator.evaluate(
+            observations: observations, against: profile
+        ).accepted)
+        let newlyApplicable = try observations.map { observation in
+            if observation.checkpoint == .establishment {
+                return try observation.replacing(
+                    .padRhythmicModulationActiveBarRatio, with: 0.5
+                )
+            }
+            if observation.checkpoint == .release {
+                return try observation.replacing(.maskingMaximumOverlap, with: 1)
+            }
+            return observation
+        }
+        let unavailable = ProfessionalQualityRelationshipEvaluator.evaluate(
+            observations: newlyApplicable, against: profile
+        )
+        #expect(unavailable.availability == .unavailableCalibrationSupport)
+        #expect(unavailable.support == .insufficient)
+        #expect(!unavailable.accepted)
+        #expect(unavailable.failures.contains {
+            $0.metric == .maskingMaximumOverlap
+        })
+        let active = try #require(observations.first {
+            $0.checkpoint == .majorBreak
+        })
+        let disconnected = try active.replacing(
+            .padRhythmicAmplitudeGateDifferenceToPadDBMean, with: 0
+        )
+        #expect(ProfessionalQualityProfileEvaluator.evaluate(
+            disconnected, against: profile
+        ).failedMetrics.contains(.padRhythmicAmplitudeGateDifferenceToPadDBMean))
     }
 
     @Test("Holdout qualification requires disjoint accepted journeys")

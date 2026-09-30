@@ -121,6 +121,16 @@ three-step-pulse relation; an empty population is therefore inapplicable rather
 than a zero-valued consequence. The active-relation adversarial cases remain
 required and must reject disconnected consequences.
 
+Calibration profile schema 22 records the source comparison count for every
+trajectory bound. A conditional metric with no applicable paired development
+observations has zero support and canonical zero storage sentinels; those
+sentinels are not measured deltas. Inapplicable comparisons remain skipped.
+An applicable comparison with zero recorded support makes relationship
+qualification unavailable and cannot pass, while independent failures remain
+visible. Individual checkpoint and paired-rate bounds still derive only from
+applicable measurements, with the existing same-corpus active fallback.
+This adds no renderer parameter, score choice, or callback operation.
+
 The app preloads artifacts away from the audio callback and creates a route-local
 evaluator for detached preparation. Missing artifacts and rates outside 44.1 or
 48 kHz are truthfully `qualificationUnavailable`; they cannot commit audio.

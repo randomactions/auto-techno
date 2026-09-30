@@ -13,7 +13,7 @@ struct CurrentRuntimeTests {
                 "autotechno-canonical-engine.v48")
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 43)
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
-        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 21)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
                 "autotechno-professional-quality-profile.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
