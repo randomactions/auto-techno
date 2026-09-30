@@ -174,6 +174,18 @@ figures reuse the bounded 2026-09-04 host trace; they do not establish live app
 behavior at the newly recorded exporter head. The exact trace inputs and hashes
 remain in the local performance report.
 
+The frozen four-bar calibration coverage harness extends the offline corpus
+with disjoint score-selected development and holdout break/release windows.
+The expanded 40-development/6-holdout candidate passed development and
+adversarial checks but failed independent holdout qualification. The installed
+primary v30 and matching long-horizon v16 policies remain unchanged.
+
+The current Phase-1 evidence refresh records all 15 lifecycle families and
+19 subordinate checks for that retained runtime at exporter head `e97496b`.
+Its 14 whole mixes and 210 role/residual signals match the preserved captures
+sample for sample. This evidence does not qualify the failed expanded policy
+or establish independently labelled masking and groove quality.
+
 ### One-click Windows source validation
 
 On a 64-bit Windows build machine, run the one-time prerequisite installer and
