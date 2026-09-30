@@ -742,7 +742,7 @@
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "symbol": "profileResource", "kind": "static-value"},
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "symbol": "expectedProfileFingerprint", "kind": "static-value"},
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift", "symbol": "requiredProfileVersion", "kind": "static-value"},
-        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v29.json", "symbol": "professional-quality-primary-profile-v29", "kind": "json-resource"}
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json", "symbol": "professional-quality-primary-profile-v30", "kind": "json-resource"}
       ],
       "convergenceAnchors": [
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-profile-v30\""}
@@ -761,8 +761,8 @@
       "surfaceComponent": "evidence-calibration-and-primary-evaluation",
       "canonicalComponent": "evidence-calibration-and-primary-evaluation",
       "members": [
-        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v29.json", "symbol": "professional-quality-primary-adversarial-suite-v29", "kind": "json-resource"},
-        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v29.json", "symbol": "professional-quality-primary-holdout-v29", "kind": "json-resource"}
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json", "symbol": "professional-quality-primary-adversarial-suite-v30", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json", "symbol": "professional-quality-primary-holdout-v30", "kind": "json-resource"}
       ],
       "convergenceAnchors": [
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-adversarial-suite-v30\""},

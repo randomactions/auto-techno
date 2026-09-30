@@ -39,136 +39,29 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v30"))
     }
 
-    @Test("Legacy v29 primary resources cannot satisfy the v30 artifact loader")
-    func primaryResourcesAreV30FailClosed() {
+    @Test("Only the exact qualified v30 primary resources are installed")
+    func primaryResourcesAreV30FailClosed() throws {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
         for stem in ["profile", "adversarial-suite", "holdout"] {
             let prefix = "professional-quality-primary-\(stem)"
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v1.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v2.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v3.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v4.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v5.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v6.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v7.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v8.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v9.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v10.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v11.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v12.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v13.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v14.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v15.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v16.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v17.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v18.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v19.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v20.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v21.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v22.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v23.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v24.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v25.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v26.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v27.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v28.json").path))
+            for version in 1..<30 {
+                #expect(!FileManager.default.fileExists(atPath:
+                    resourceDirectory.appendingPathComponent(
+                        "\(prefix)-v\(version).json").path))
+                #expect(!ProfessionalQualityPrimaryArtifacts
+                    .containsBundledResource(named: "\(prefix)-v\(version)"))
+            }
             #expect(FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v29.json").path))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v1"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v2"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v3"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v4"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v5"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v6"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v7"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v8"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v9"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v10"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v11"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v12"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v13"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v14"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v15"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v16"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v17"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v18"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v19"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v20"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v21"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v22"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v23"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v24"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v25"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v26"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v27"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v28"))
-            #expect(ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v29"))
-            #expect(!FileManager.default.fileExists(atPath:
                 resourceDirectory.appendingPathComponent("\(prefix)-v30.json").path))
-            #expect(!ProfessionalQualityPrimaryArtifacts
+            #expect(ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v30"))
         }
-        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
-            _ = try ProfessionalQualityPrimaryArtifacts.load()
-        }
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        #expect(artifacts.profile.fingerprint ==
+                ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
+        #expect(artifacts.adversarialSuite.passed)
+        #expect(artifacts.holdoutQualification.qualified)
     }
 
     @Test("The v30 candidate identity and live controller remain canonical")

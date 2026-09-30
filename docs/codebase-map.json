@@ -706,9 +706,9 @@
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityVerdict.swift",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v29.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v29.json",
-        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v29.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json",
+        "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json",
         "Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift",
         "Sources/AutoTechnoDSP/StreamingPerceptualEvidence.swift",
         "Sources/AutoTechnoDSP/UpperTimbreEvidence.swift"

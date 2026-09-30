@@ -2,12 +2,13 @@
 
 Current engine v48 binds material-world/effect-target lineage, pitch identity,
 and transition-tail continuity under quality schema 49, candidate-vector schema
-43, and transaction schema 14. This checkout's option-A candidate uses primary
-evaluator and profile v30 with adversarial suite v23. The bundled profile,
-adversarial, and holdout resources still belong to the previous v29 set; the
-runtime rejects them, leaving the candidate without an active qualified primary
-evaluator until matching v30 artifacts are generated and pass. Do not use this
-candidate for promoted runtime qualification or AT-0039 capture.
+43, and transaction schema 14. The qualified primary evaluator and profile v30
+use adversarial suite v23 and disjoint holdout v20. The three bundled resources
+are fingerprint-bound and load only as that exact set. Profile schema 22 retains
+explicit source comparison support for conditional trajectory measurements.
+The matching long-horizon artifact refresh, Phase-1 lifecycle regeneration,
+AT-0039 frozen-cohort calibration, app/route QA, and physical-output soak remain
+separate pending gates.
 
 ## Runtime contract
 
@@ -58,13 +59,16 @@ invalid.
 
 ## Qualification
 
-`ProfessionalQualityPrimaryArtifacts` currently contains the previous
-engine-v48 profile v29, adversarial suite v22, and disjoint holdout qualification
-v20. Their fingerprints are `06cb04bfbef71c28`, `16820b6274dd26d4`, and
-`2037dec24ac1e45c`; they are intentionally ineligible for the v30 candidate.
-The candidate requires a regenerated profile v30, adversarial suite v23, and
-disjoint holdout qualification v20 from 36 complete 44.1/48 kHz calibration
-journeys and four fresh holdout journeys, with every relationship gate passing.
+`ProfessionalQualityPrimaryArtifacts` contains engine-v48 profile v30,
+adversarial suite v23, and disjoint holdout qualification v20. Their fingerprints
+are `45d94400c298892e`, `a5070b55dd992655`, and `7169407cd746c0b6`.
+The Release qualifier uses 36 complete 44.1/48 kHz development journeys (504
+observations) and four disjoint holdout journeys. All 34 adversarial cases,
+56/56 holdout observations, and every applicable trajectory/rate relationship
+passed. Eighteen conditional pad trajectory bounds explicitly have zero source
+comparisons; these remain unavailable for any future applicable comparison.
+This exact qualification does not establish coverage of four-bar major-break
+modal windows or the independent AT-0039 fixture labels.
 
 Offline calibration may retain several checkpoint observations from one
 candidate. Runtime terminal qualification selects one most-specific

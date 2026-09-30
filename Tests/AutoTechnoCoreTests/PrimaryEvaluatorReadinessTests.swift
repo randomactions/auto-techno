@@ -41,8 +41,8 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("Bundled v29 artifacts activate only the exact schema-49 engine")
-    func bundledV29ArtifactsAreReady() throws {
+    @Test("Bundled v30 artifacts activate only the exact schema-49 engine")
+    func bundledV30ArtifactsAreReady() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(artifacts.profile.engineVersion ==
                 QualityQualificationContract.engineVersion)
@@ -57,7 +57,7 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("An 8 kHz route with exact v29 artifacts is unsupported")
+    @Test("An 8 kHz route with exact v30 artifacts is unsupported")
     func unsupported8KRouteStaysUnavailable() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(
@@ -66,7 +66,7 @@ struct PrimaryEvaluatorReadinessTests {
         ).availability == .unsupportedSampleRate)
     }
 
-    @Test("A 12 kHz route with exact v29 artifacts is unsupported")
+    @Test("A 12 kHz route with exact v30 artifacts is unsupported")
     func unsupported12KRouteStaysUnavailable() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(

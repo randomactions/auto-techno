@@ -27,20 +27,22 @@ score/graph snapshots without using loudness or density alone as proof.
 Graph evidence binds the world fingerprint, requested five-coordinate target,
 realized graph vector, distance, protected routing, and at most one changed node
 per phrase. Existing transition-tail and route-recovery contracts remain.
-The last accepted engine-v48 primary-v29 and long-horizon-v16 development,
-adversarial, and disjoint-holdout artifacts passed and replaced the ineligible
-v38 set. This checkout also contains an unqualified Option A candidate: primary
-evaluator/profile v30 and adversarial suite v23. Its bundled v29 primary
-artifacts are rejected; do not treat the candidate as qualified until matching
-artifacts pass the automated gates. Listening, real app/route QA, latency
-observation, and physical-output soak remain separate unverified gates.
+The engine-v48 primary-v30 development, adversarial, and disjoint-holdout
+artifacts now pass: 504 development observations, 34 adversarial cases, and
+56/56 holdout observations with no relationship failures. Profile schema 22
+records unsupported conditional trajectory comparisons explicitly rather than
+fitting absent measurements. The installed primary set fails closed on any
+identity mismatch. The existing long-horizon-v16 artifacts still bind the prior
+primary-v29 identity and require regeneration before long-horizon qualification.
+Listening, real app/route QA, latency observation, and physical-output soak remain
+separate unverified gates.
 
-The last fully qualified offline implementation is
+The current primary-qualified offline implementation is
 `autotechno-canonical-engine.v48` under quality-contract schema 49,
 candidate-vector schema 43, candidate-transaction schema 14, and Professional
-Evidence v29. Primary profile/evaluator v29 and long-horizon policy v16 are the
-identities of that accepted artifact set; its loaders fail closed on any
-mismatch. Those results do not qualify the current v30 candidate.
+Evidence v29. Primary profile/evaluator v30, adversarial v23, and holdout v20
+are the current primary artifact identities. The previous fully qualified
+primary-v29/long-horizon-v16 result does not qualify the current combined policy.
 
 The Phase-1 measurement corpus is separate from those calibration and holdout
 populations. Its seven roots are fixed by an outcome-blind integer derivation
@@ -521,11 +523,11 @@ remain explicit rather than being hidden behind a blanket master crossfade.
 Tonal Motion patch boundaries separately retain comb/all-pass/echo memory while
 their patch-owned coefficients crossfade for 500 ms.
 
-`ProfessionalEvidenceReportBank` v25 accepts a bank only when every canonical
+`ProfessionalEvidenceReportBank` v29 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v29 from the v29 profile, v22 adversarial suite,
-and v15 disjoint holdout only after all three exact artifacts replay. It judges every
+exact-engine primary evaluator v30 from the v30 profile, v23 adversarial suite,
+and v20 disjoint holdout only after all three exact artifacts replay. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 36 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.

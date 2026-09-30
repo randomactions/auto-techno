@@ -2825,10 +2825,25 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Missing v30 artifacts cannot activate the v30 evaluator")
-    func legacyPrimaryArtifactsAreIneligible() {
-        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
-            try ProfessionalQualityPrimaryArtifacts.load()
+    @Test("Legacy profile identity cannot activate the qualified v30 evaluator")
+    func legacyPrimaryArtifactsAreIneligible() throws {
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        var object = try #require(JSONSerialization.jsonObject(
+            with: artifacts.profile.deterministicJSON()
+        ) as? [String: Any])
+        object["profileVersion"] = "autotechno-professional-quality-profile.v29"
+        object["schemaVersion"] = 21
+        let legacy = try JSONSerialization.data(
+            withJSONObject: object,
+            options: [.sortedKeys, .withoutEscapingSlashes]
+        )
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts(
+                profileData: legacy,
+                adversarialSuiteData: artifacts.adversarialSuite.deterministicJSON(),
+                holdoutQualificationData: artifacts.holdoutQualification
+                    .deterministicJSON()
+            )
         }
     }
 

@@ -279,9 +279,9 @@
       ]
     },
     {
-      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v29.json",
+      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json",
       "kind": "project-generated-qualification-resource",
-      "sha256": "a8ba14971024e9d5e2d806920ba073bc1d7f0eec46bb9fbf30efde43a23d1329",
+      "sha256": "247078c111ca043d24f28697c444a996005ed9fc40985a3bd7ed39dce0146417",
       "licenseComponent": "auto-techno-project",
       "origin": "Deterministically generated from repository-owned primary corpus, renderer, and evaluator code",
       "role": "Bundled primary adversarial qualification bank",
@@ -293,9 +293,9 @@
       ]
     },
     {
-      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v29.json",
+      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json",
       "kind": "project-generated-qualification-resource",
-      "sha256": "c7fa7b1ef1363e588dfc5527a1b39acddde1989a9cb36c56a6bd3a2ba0c87c06",
+      "sha256": "2a2429b80f8a656b15b97c43b82f56d3b8c597e526f7ac965fdcf9f670ca8bc3",
       "licenseComponent": "auto-techno-project",
       "origin": "Deterministically generated from repository-owned primary corpus, renderer, and evaluator code",
       "role": "Bundled disjoint primary holdout bank",
@@ -307,9 +307,9 @@
       ]
     },
     {
-      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v29.json",
+      "path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json",
       "kind": "project-generated-calibration-resource",
-      "sha256": "77e797d34d51d7a63f7e04097404d19d4248da98c9bfe6c3c6e44961caf39110",
+      "sha256": "e0fc12e521f456d93ba1f6299cea4c0c2d39613b9b24c739c363178208fca677",
       "licenseComponent": "auto-techno-project",
       "origin": "Deterministically generated from repository-owned primary corpus, renderer, and evaluator code",
       "role": "Bundled primary evaluator profile",

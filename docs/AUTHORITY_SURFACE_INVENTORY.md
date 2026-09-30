@@ -877,7 +877,7 @@ Members:
 - `static-value profileResource` in [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift)
 - `static-value expectedProfileFingerprint` in [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift)
 - `static-value requiredProfileVersion` in [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift)
-- `json-resource professional-quality-primary-profile-v29` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v29.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v29.json)
+- `json-resource professional-quality-primary-profile-v30` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json)
 
 Convergence anchors:
 
@@ -898,8 +898,8 @@ PCM consequence: `qualifies-without-changing-pcm`
 
 Members:
 
-- `json-resource professional-quality-primary-adversarial-suite-v29` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v29.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v29.json)
-- `json-resource professional-quality-primary-holdout-v29` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v29.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v29.json)
+- `json-resource professional-quality-primary-adversarial-suite-v30` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json)
+- `json-resource professional-quality-primary-holdout-v30` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json)
 
 Convergence anchors:
 

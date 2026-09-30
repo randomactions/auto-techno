@@ -195,14 +195,15 @@ mistaken for a completed feedback system.
    A deterministic Professional Evidence v29
    bank requires every named journey checkpoint for every included sample rate,
    plus complete exact-role masking and stem evidence. The bank remains
-   observation-only. The last accepted `ProfessionalQualityPrimaryArtifacts`
-   set used engine-v48 profile v29, adversarial suite v22, and disjoint holdout
-   qualification v20; its profile derived from 36 complete canonical journeys,
-   and four untouched replacement journeys passed 56/56 local observations
-   and all trajectory/rate relationships. The current Option A worktree
-   candidate requires profile v30 and adversarial suite v23. Its bundled v29
-   artifacts are ineligible, and the candidate remains unqualified until a
-   matching profile, adversarial suite, and holdout are generated and pass. The
+   observation-only. The installed `ProfessionalQualityPrimaryArtifacts` set
+   uses engine-v48 profile v30, adversarial suite v23, and disjoint holdout
+   qualification v20. The profile derives from 36 complete canonical journeys,
+   all 34 adversarial cases pass, and four disjoint journeys pass 56/56 local
+   observations and all applicable trajectory/rate relationships. Profile
+   schema 22 records comparison support; an applicable conditional comparison
+   with no development support is unavailable rather than a passing zero delta.
+   Existing long-horizon artifacts bind the prior primary-v29 set and remain
+   ineligible until regenerated under the exact installed primary policy. The
    evaluator maps the Core-owned plan checkpoint into the same 68-metric
    observation and rejects dimensions independently. The eight
    modal dimensions cover active-bar ratio, event density, pitch error,
@@ -1285,14 +1286,15 @@ detached preparation. No render callback, C handoff, audio buffer, graph,
 renderer, or sample scheduler was changed. The main actor only installs the
 already-immutable accepted result at the existing scheduled phrase boundary.
 
-## Completed evidence-gated sound maturation assessment
+## Previous completed evidence-gated sound maturation assessment
 
 Phase 8 reconciles the exact engine-v48/primary-v29 sound capabilities with the
 long-horizon-v16 profile, adversarial suite, and disjoint holdout. Their
 fingerprints are `836ac66b68470cd4`, `5950762cf2dc2635`, and
 `0e00df369ce54e50`. The primary profile, adversarial suite, and holdout are
 independently pinned as `06cb04bfbef71c28`, `16820b6274dd26d4`, and
-`2037dec24ac1e45c`. All six current artifacts replay byte for byte. The physical
+`2037dec24ac1e45c`. All six artifacts in that prior assessment replayed byte for byte.
+The current v30 primary set requires matching long-horizon requalification. The physical
 percussion promotion stays inside the existing score/voice/evidence owners;
 other capability families remain unchanged.
 
