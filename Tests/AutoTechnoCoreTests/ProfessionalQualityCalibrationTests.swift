@@ -2877,6 +2877,31 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
+    @Test("Expanded calibration corpus retains a finite capacity and rejects duplicate sources")
+    func windowCoverageCorpusCapacity() throws {
+        let observations = try representativeObservations(trajectoryOffset: 0)
+        let trajectories = try (0...48).map { index in
+            try ProfessionalQualityCalibrationTrajectory(
+                sourceBankFingerprint: "window-capacity-\(index)", observations: observations
+            )
+        }
+        let complete = try ProfessionalQualityCalibrationCorpus(
+            trajectories: Array(trajectories.prefix(48))
+        )
+        #expect(complete.isComplete)
+        #expect(complete.sourceTrajectoryCount == 48)
+        #expect(complete.sourceObservationCount == 672)
+        #expect(complete.schemaVersion == 3)
+        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
+            try ProfessionalQualityCalibrationCorpus(trajectories: trajectories)
+        }
+        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
+            try ProfessionalQualityCalibrationCorpus(
+                trajectories: [trajectories[0], trajectories[0]]
+            )
+        }
+    }
+
     @Test("Score-inapplicable pad values do not train calibration bounds")
     func scoreInapplicablePadValuesDoNotTrainBounds() throws {
         let padMetrics: [ProfessionalQualityMetric] = [

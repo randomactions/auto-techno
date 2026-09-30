@@ -111,10 +111,10 @@ package struct ProfessionalQualityCalibrationTrajectory: Codable, Equatable,
 /// fingerprints and source-bank identities must remain disjoint.
 package struct ProfessionalQualityCalibrationCorpus: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 2
+    package static let schemaVersion = 3
     package static let corpusVersion =
-        "autotechno-professional-quality-corpus.v2"
-    package static let maximumTrajectoryCount = 36
+        "autotechno-professional-quality-corpus.v3"
+    package static let maximumTrajectoryCount = 48
 
     package let schemaVersion: Int
     package let corpusVersion: String

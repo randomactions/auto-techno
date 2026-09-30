@@ -91,12 +91,7 @@ enum AT0039FrozenCohortValidator {
     }
 
     static func seed(_ ordinal: Int) -> UInt64 {
-        precondition(ordinal >= 0)
-        var value = UInt64(0x6175746f74656368)
-            &+ (UInt64(ordinal) &+ 1) &* 0x9e3779b97f4a7c15
-        value = (value ^ (value >> 30)) &* 0xbf58476d1ce4e5b9
-        value = (value ^ (value >> 27)) &* 0x94d049bb133111eb
-        return value ^ (value >> 31)
+        CanonicalJourneyQualificationHarness.windowRootSeed(ordinal)
     }
 
     static func scoreMetadataMatches(

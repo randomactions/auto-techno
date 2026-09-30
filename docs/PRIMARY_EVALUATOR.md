@@ -71,6 +71,20 @@ comparisons; these remain unavailable for any future applicable comparison.
 This exact qualification does not establish coverage of four-bar major-break
 modal windows or the independent AT-0039 fixture labels.
 
+The offline calibration corpus v3 has a finite capacity of 48 complete
+trajectories. Its opt-in four-bar coverage expansion retains the existing
+36 development and four holdout roots, adding four development and two disjoint
+holdout roots. Before rendering, the existing canonical journey harness freezes
+the first four-bar major break within 128 phrases from each selected root,
+and its first following release, using ascending disjoint ordinal domains (263..<519 and 519..<775). The local
+manifest binds clean accepted source, exact score identity and the unchanged
+original AT-0039 cohort. Both fresh and cached reports must match the frozen
+break/release phrases and resolved lengths at both native rates. Cache schema 3 records the
+window identity; complete legacy schema-2 banks remain reusable only for the
+unchanged default checkpoint schedule. This offline capability does not promote
+new policy artifacts: automatic fitting, all adversarial cases and every
+holdout verdict/relationship must pass before installation.
+
 Offline calibration may retain several checkpoint observations from one
 candidate. Runtime terminal qualification selects one most-specific
 whole-phrase population: establishment first, then long continuation from

@@ -533,6 +533,11 @@ and v20 disjoint holdout only after all three exact artifacts replay. It judges 
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 36 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.
+The offline corpus v3 bounds support to 48 complete trajectories. Four-bar
+major-break coverage uses separately frozen score-only development and holdout
+windows, exact candidate identity checks on fresh/cache replay, and the same
+automatic fitter and promotion gates; the installed 36-root profile remains
+current until a replacement passes those gates.
 EBU-style short-program loudness range stays descriptive because its gated
 percentile can change discontinuously when one short-term block crosses the
 gate. Integrated, momentary, short-term, and true-peak evidence remain policy
