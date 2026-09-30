@@ -168,6 +168,12 @@ quality is not established until every automated, app/runtime, and
 physical-output gate in the validation contract passes for the exact release
 revision.
 
+The 2026-09-30 [performance envelope](docs/PERFORMANCE_ENVELOPE.md) records
+fresh Release detached-preparation and producer measurements. Its live callback
+figures reuse the bounded 2026-09-04 host trace; they do not establish live app
+behavior at the newly recorded exporter head. The exact trace inputs and hashes
+remain in the local performance report.
+
 ### One-click Windows source validation
 
 On a 64-bit Windows build machine, run the one-time prerequisite installer and

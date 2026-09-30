@@ -4,9 +4,9 @@
 
 Status: **passed**
 
-- Gate fingerprint: `0a5e8e17cae2983ed25e336b94882387c5bdde0d5a5a2a3826f3cd570f80ef66`
-- Contract baseline: `ef1497d27f0170e2ea13270405f62541577003ae528fab7daa0800bdccce426b`
-- Lifecycle policy: `5adf87179c53df3bc1eb59bbec7a70e81a5dd01e65f81bbc55a0cc2c92d89606`
+- Gate fingerprint: `eb7931d45235b929e15938bb041b59ac017c447a908e520c146eae82ac3f3d30`
+- Contract baseline: `606b1345b050a9247df36d308694a409b7c0acaf023058206dd3714a27a512c7`
+- Lifecycle policy: `239dae27a2121db9426f3fe14989913341c53b1a7e1133c51af93f0b6d0abe2b`
 - Build configuration: `release`
 - Routes: `native-stereo-44100`, `native-stereo-48000`
 - Artifact families: 15
@@ -28,12 +28,12 @@ Fourteen whole mixes and 210 role signals are `exact` with 0 changed samples acr
 | 2 | `whole-mix-render` | `autotechno-baseline-render-manifest.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/baseline_render_manifest.py check` |
 | 3 | `pcm-comparison-whole` | `autotechno-pcm-comparison-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/pcm_comparison_report.py check --report <report>` |
 | 4 | `performance-envelope` | `autotechno-performance-envelope-report.v1` | `native-artifact-field` | `python3 scripts/performance_envelope_report.py check <trace-arguments>` |
-| 5 | `rhythmic-baseline` | `autotechno-rhythmic-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/rhythmic_baseline_report.py check` |
-| 6 | `role-stem-capture` | `autotechno-role-stem-manifest.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/stem_capture_manifest.py check` |
-| 7 | `score-motif` | `autotechno-score-motif-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/score_motif_baseline_report.py check` |
-| 8 | `section-boundary` | `autotechno-section-boundary-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/section_boundary_baseline_report.py check` |
-| 9 | `kick-foundation-collision` | `autotechno-kick-foundation-collision-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/kick_foundation_collision_report.py check` |
-| 10 | `pcm-comparison-role` | `autotechno-pcm-comparison-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/pcm_comparison_report.py check --report <report>` |
+| 5 | `role-stem-capture` | `autotechno-role-stem-manifest.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/stem_capture_manifest.py check` |
+| 6 | `score-motif` | `autotechno-score-motif-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/score_motif_baseline_report.py check` |
+| 7 | `section-boundary` | `autotechno-section-boundary-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/section_boundary_baseline_report.py check` |
+| 8 | `kick-foundation-collision` | `autotechno-kick-foundation-collision-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/kick_foundation_collision_report.py check` |
+| 9 | `pcm-comparison-role` | `autotechno-pcm-comparison-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/pcm_comparison_report.py check --report <report>` |
+| 10 | `rhythmic-baseline` | `autotechno-rhythmic-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/rhythmic_baseline_report.py check` |
 | 11 | `signal-baseline` | `autotechno-signal-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/signal_baseline_report.py check` |
 | 12 | `spectral-baseline` | `autotechno-spectral-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/spectral_baseline_report.py check` |
 | 13 | `stereo-compatibility` | `autotechno-stereo-compatibility-baseline-report.v1` | `aggregate-release-regeneration-wrapper` | `python3 scripts/stereo_compatibility_baseline_report.py check` |
