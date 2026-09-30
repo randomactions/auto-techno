@@ -6,7 +6,8 @@ and transition-tail continuity under quality schema 49, candidate-vector schema
 use adversarial suite v23 and disjoint holdout v20. The three bundled resources
 are fingerprint-bound and load only as that exact set. Profile schema 22 retains
 explicit source comparison support for conditional trajectory measurements.
-The matching long-horizon artifact refresh, Phase-1 lifecycle regeneration,
+Matching long-horizon-v16 development, adversarial, and disjoint-holdout
+artifacts now qualify under the same exact primary policy. Phase-1 lifecycle regeneration,
 AT-0039 frozen-cohort calibration, app/route QA, and physical-output soak remain
 separate pending gates.
 

@@ -3535,6 +3535,12 @@ struct ProfessionalQualityCalibrationTests {
             .modalPercussionMaximumPoleRadius: 0.998,
             .upperSpectralRevealActiveEventRatio: 1,
             .spectralHarmonicTailUpperBandEnergyRatioMean: 0.42,
+            // A calibration fixture must contain paired applicable pad
+            // evidence, rather than a zero default activated by rateOffset.
+            .padRhythmicModulationActiveBarRatio: 0.5,
+            .padRhythmicFilterDifferenceToPadDBMean: -24,
+            .padRhythmicAmplitudeGateDifferenceToPadDBMean: -18,
+            .padRhythmicSpatialDifferenceToSendDBMean: -12,
         ]
         return ProfessionalQualityMetric.allCases.map { metric in
             let metricRateOffset: Double = switch metric {

@@ -202,8 +202,10 @@ mistaken for a completed feedback system.
    observations and all applicable trajectory/rate relationships. Profile
    schema 22 records comparison support; an applicable conditional comparison
    with no development support is unavailable rather than a passing zero delta.
-   Existing long-horizon artifacts bind the prior primary-v29 set and remain
-   ineligible until regenerated under the exact installed primary policy. The
+   Matching long-horizon-v16 artifacts bind this exact primary policy and pass
+   all seven development journeys, ten adversarial cases, and two disjoint
+   holdouts. Those are sparse native-rate checkpoints in four-hour symbolic
+   journeys, not continuous playback or physical-output soak. The
    evaluator maps the Core-owned plan checkpoint into the same 68-metric
    observation and rejects dimensions independently. The eight
    modal dimensions cover active-bar ratio, event density, pitch error,
@@ -1249,7 +1251,7 @@ succeeded.
 This reduction runs only after detached preparation. It changes no score,
 renderer, graph, scheduler, route lifecycle, live controller, commit decision,
 or realtime callback. Phase 6B binds compatible complete reports to the exact
-immutable engine-v48/primary-v29 development, adversarial, and disjoint-holdout
+immutable engine-v48/primary-v30 development, adversarial, and disjoint-holdout
 artifacts. Raw PCM remains outside the artifacts and runtime observation.
 
 ## Implemented bounded long-horizon future adaptation
@@ -1294,7 +1296,9 @@ fingerprints are `836ac66b68470cd4`, `5950762cf2dc2635`, and
 `0e00df369ce54e50`. The primary profile, adversarial suite, and holdout are
 independently pinned as `06cb04bfbef71c28`, `16820b6274dd26d4`, and
 `2037dec24ac1e45c`. All six artifacts in that prior assessment replayed byte for byte.
-The current v30 primary set requires matching long-horizon requalification. The physical
+The current v30 primary set has separately qualified matching long-horizon-v16
+artifacts, pinned as `5110688cc8620d7a`, `fded455207d0919c`, and
+`768388d21859dfdc`. The physical
 percussion promotion stays inside the existing score/voice/evidence owners;
 other capability families remain unchanged.
 

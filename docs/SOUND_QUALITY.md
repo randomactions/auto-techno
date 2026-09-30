@@ -32,8 +32,10 @@ artifacts now pass: 504 development observations, 34 adversarial cases, and
 56/56 holdout observations with no relationship failures. Profile schema 22
 records unsupported conditional trajectory comparisons explicitly rather than
 fitting absent measurements. The installed primary set fails closed on any
-identity mismatch. The existing long-horizon-v16 artifacts still bind the prior
-primary-v29 identity and require regeneration before long-horizon qualification.
+identity mismatch. The matching long-horizon-v16 artifacts now bind this exact primary policy;
+all seven development journeys, ten adversarial cases, and two disjoint holdouts
+pass. Their bounded sparse-checkpoint evidence is separate from continuous
+playback and physical-output soak.
 Listening, real app/route QA, latency observation, and physical-output soak remain
 separate unverified gates.
 
@@ -41,8 +43,8 @@ The current primary-qualified offline implementation is
 `autotechno-canonical-engine.v48` under quality-contract schema 49,
 candidate-vector schema 43, candidate-transaction schema 14, and Professional
 Evidence v29. Primary profile/evaluator v30, adversarial v23, and holdout v20
-are the current primary artifact identities. The previous fully qualified
-primary-v29/long-horizon-v16 result does not qualify the current combined policy.
+are the current primary artifact identities. The current combined primary-v30/long-horizon-v16 artifact set is qualified
+within those exact offline evidence domains.
 
 The Phase-1 measurement corpus is separate from those calibration and holdout
 populations. Its seven roots are fixed by an outcome-blind integer derivation
@@ -603,9 +605,9 @@ at 44.1/48 kHz. The immutable v16 artifact set rejects ten independent
 adversarial attacks and accepts two fresh disjoint holdout roots. Generated-
 graph evidence additionally bounds realized material-world count and requested-
 to-realized effect-world distance. It retains only reduced irreversible
-evidence and binds the exact engine-v48/primary-v29 identity. The pinned
+evidence and binds the exact engine-v48/primary-v30 identity. The pinned
 long-horizon profile, adversarial, and holdout fingerprints are
-`836ac66b68470cd4`, `5950762cf2dc2635`, and `0e00df369ce54e50`.
+`5110688cc8620d7a`, `fded455207d0919c`, and `768388d21859dfdc`.
 
 Phase 7 consumes that policy only during detached preparation. A fixed-capacity
 active-rate observation requires at least 7,200 bars, twelve signal observations,

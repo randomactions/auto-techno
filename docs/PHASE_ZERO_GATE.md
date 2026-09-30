@@ -12,7 +12,7 @@ Phase 0 structural governance and provenance only; no app, route, listening, or 
 |---|---|---:|---:|---|
 | `parameter-reachability` | `autotechno-parameter-reachability-audit.v1` v2 | 543 | 0 | `838fd0736e83579a43473dcaf63ff5c94d47785cc509ba95fcf79dbdcdaac238` |
 | `authority-convergence` | `autotechno-authority-surface-inventory.v1` v1 | 44 | 0 | `7a4be307fe204395f9c693a57e9c3f95bf8c5e17522edd54e2d206fd5d73756b` |
-| `component-provenance` | `autotechno-component-license-asset-manifest.v1` v1 | 9 | 0 | `30b2ff92b9c8bbb41371f8199a4a65dc3241a014bb6696b60f81b457c07f9f14` |
+| `component-provenance` | `autotechno-component-license-asset-manifest.v1` v1 | 9 | 0 | `25a3497c5dae2b8e2950c41dea19f8890713217fc86fc229c2db9fb181858f2b` |
 | `roadmap-integrity` | `autotechno-evolution.v1` v1 | 390 | 0 | `local-revision-bound-by-active-citation` |
 
 ## Subordinate checks
