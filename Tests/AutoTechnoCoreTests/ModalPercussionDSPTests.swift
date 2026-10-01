@@ -5,6 +5,87 @@ import Testing
 
 @Suite("Modal percussion DSP", .serialized)
 struct ModalPercussionDSPTests {
+    @Test("AT-0039 frozen material/morphology/bar-phase matrix preserves truthful window support")
+    func modalMorphologyTimingCoverage() throws {
+        let controls = [("low", 48.0, 0.2, 0.0, 0.0, 0.0, 0.0),
+                        ("middle", 110.0, 0.6, 0.5, 0.5, 0.06, 0.18),
+                        ("high", 196.0, 1.0, 1.0, 1.0, 0.12, 0.6)]
+        let seeds: [UInt64] = [12_648_430, 219_540_062]
+        var rows: [[String: Any]] = []
+        var maximumRMSError = 0.0
+        for rate in [44_100.0, 48_000.0] {
+            let frames = Int((240 / AutonomousSessionDirector.bpm * rate).rounded())
+            let full = [Float](repeating: 0, count: Int(rate * 0.3) + 2)
+            for material in ModalPercussionMaterial.allCases {
+                for control in controls {
+                    for step in 0..<16 {
+                        let onset = Int((Double(step) * Double(frames) / 16).rounded())
+                        for (seedIndex, seed) in seeds.enumerated() {
+                            var state = ModalPercussionVoiceState()
+                            var pcm = [Float](repeating: 0, count: frames)
+                            let rendered = ModalPercussionVoice.renderBar(
+                                into: &pcm, bar: 0, sampleRate: rate,
+                                events: [.init(articulation: articulation(
+                                    fundamentalHz: control.1, excitation: control.2,
+                                    damping: control.3, brightness: control.4,
+                                    inharmonicity: control.5, seed: seed,
+                                    material: material, coupling: control.6, step: step),
+                                    startFrame: onset, level: 0.2)], state: &state)
+                            let event = try #require(rendered.events.first)
+                            #expect(event.finite && event.stable && event.capacityValid)
+                            #expect(event.windowSupport.isValid(sampleRate: rate, frameCount: frames))
+                            let ranges = [(0.0, 0.010), (0.020, 0.080), (0.120, 0.240)]
+                            let counts = [event.windowSupport.attackSampleCount,
+                                event.windowSupport.bodySampleCount, event.windowSupport.tailSampleCount]
+                            let rms = [event.attackRMS, event.bodyRMS, event.tailRMS]
+                            let statuses = [event.windowSupport.attack(sampleRate: rate),
+                                event.windowSupport.body(sampleRate: rate), event.windowSupport.tail(sampleRate: rate)]
+                            var windows: [[String: Any]] = []
+                            for index in ranges.indices {
+                                let (start, end) = ranges[index]
+                                let oracle = DeterministicSignalFixtures.timestampWindow(
+                                    samples: pcm, onsetFrame: onset, sampleRate: rate,
+                                    startSeconds: start, endSeconds: end)
+                                let complete = DeterministicSignalFixtures.timestampWindow(
+                                    samples: full, onsetFrame: 0, sampleRate: rate,
+                                    startSeconds: start, endSeconds: end).count
+                                let expected: ModalPercussionWindowSupport.Availability =
+                                    oracle.count == 0 ? .missing :
+                                    (oracle.count == complete ? .complete : .partial)
+                                let error = abs(rms[index] - oracle.rms)
+                                let bound = 2 * Double(Float.ulpOfOne) * event.peak
+                                maximumRMSError = max(maximumRMSError, error)
+                                #expect(counts[index] == oracle.count)
+                                #expect(statuses[index] == expected)
+                                #expect(error <= bound)
+                                windows.append(["window": index, "expectedCount": oracle.count,
+                                    "observedCount": counts[index], "fullCount": complete,
+                                    "availability": expected.rawValue, "pcmRMS": oracle.rms,
+                                    "eventRMS": rms[index], "roundingError": error, "roundingBound": bound])
+                            }
+                            if step == 14 { #expect(statuses[2] == .partial) }
+                            if step == 15 {
+                                #expect(statuses[2] == .missing)
+                                #expect(event.windowSupport.tailToBodyDB(tailRMS: event.tailRMS,
+                                    bodyRMS: event.bodyRMS, sampleRate: rate) == nil)
+                            }
+                            rows.append(["sampleRate": rate, "material": material.rawValue,
+                                "morphology": control.0, "step": step, "onsetFrame": onset,
+                                "seed": seed, "split": seedIndex == 0 ? "development-construction" : "held-out-excitation-construction",
+                                "windows": windows])
+                        }
+                    }
+                }
+            }
+        }
+        #expect(rows.count == 768)
+        let report: [String: Any] = ["fixture": "modal-morphology-timing.v1",
+            "caseCount": rows.count, "maximumRMSError": maximumRMSError,
+            "qualityQualification": "unavailable", "rows": rows]
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     @Test("AT-0039 timestamp oracles independently bound modal counts and PCM RMS")
     func independentModalWindowOracles() throws {
         // Frozen before measurement in independent-measurement-fixtures-v1.
@@ -546,11 +627,12 @@ struct ModalPercussionDSPTests {
         intensity: Double = 0.58,
         seed: UInt64 = 0xA11CE,
         material: ModalPercussionMaterial = .stretchedMembrane,
-        coupling: Double = 0.18
+        coupling: Double = 0.18,
+        step: Int = 10
     ) -> ModalPercussionArticulation {
         ModalPercussionArticulation(
             scoreEventIndex: 0,
-            step: 10,
+            step: step,
             use: .foundationCompanion,
             modalIdentity: .dorian,
             modalDegree: modalDegree,

@@ -15,6 +15,182 @@ struct ProfessionalQualityCalibrationIntegrationTests {
     ]
     private let holdoutSeeds: [UInt64] = [577_215, 618_034, 707_106, 314_159]
 
+    func freshCoverageFixtures() throws -> (
+        development: [CanonicalCalibrationCoverageFixture],
+        holdout: [CanonicalCalibrationCoverageFixture]
+    ) {
+        let harness = CanonicalJourneyQualificationHarness(
+            engineVersion: QualityQualificationContract.engineVersion,
+            routeFingerprint: "score-only-coverage-selection", routeGeneration: 0)
+        let oldRoots = Set((0..<775).map(CanonicalJourneyQualificationHarness.windowRootSeed))
+            .union(calibrationSeeds + holdoutSeeds)
+        let development = harness.coverageFixtures(ordinals: 775..<1031,
+            generalCount: 36, fourBarCount: 4, excludedRoots: oldRoots)
+        let holdout = harness.coverageFixtures(ordinals: 1031..<1287,
+            generalCount: 4, fourBarCount: 2,
+            excludedRoots: oldRoots.union(development.map(\.rootSeed)))
+        guard development.count == 40, holdout.count == 6 else {
+            throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
+        }
+        return (development, holdout)
+    }
+
+    @Test("Fresh score-only coverage retains every checkpoint, quotas and disjoint ordinal domains")
+    func freshCoverageSelectionIsOutcomeBlind() throws {
+        let fixtures = try freshCoverageFixtures()
+        let replay = try freshCoverageFixtures()
+        #expect(fixtures.development == replay.development)
+        #expect(fixtures.holdout == replay.holdout)
+        let all = fixtures.development + fixtures.holdout
+        #expect(Set(all.map(\.rootSeed)).count == 46)
+        #expect(fixtures.development.filter { $0.requiredMajorBreakBarCount == 4 }.count == 4)
+        #expect(fixtures.holdout.filter { $0.requiredMajorBreakBarCount == 4 }.count == 2)
+        #expect(fixtures.development.allSatisfy { (775..<1031).contains($0.ordinal) })
+        #expect(fixtures.holdout.allSatisfy { (1031..<1287).contains($0.ordinal) })
+        #expect(Set(calibrationSeeds + holdoutSeeds).isDisjoint(with: all.map(\.rootSeed)))
+        for fixture in all {
+            #expect(fixture.rootSeed == CanonicalJourneyQualificationHarness.windowRootSeed(fixture.ordinal))
+            #expect(Set(fixture.checkpoints.map(\.checkpoint)) == Set(CanonicalJourneyCheckpoint.allCases))
+            #expect(fixture.checkpoints.allSatisfy { $0.phraseIndex < 128 && $0.planFingerprint.count == 16 })
+            if fixture.requiredMajorBreakBarCount == 4 {
+                let major = try #require(fixture.checkpoints.first { $0.checkpoint == .majorBreak })
+                let release = try #require(fixture.checkpoints.first { $0.checkpoint == .release })
+                #expect(major.resolvedBarCount == 4)
+                #expect(release.phraseIndex > major.phraseIndex)
+            }
+        }
+        let harness = CanonicalJourneyQualificationHarness(
+            engineVersion: QualityQualificationContract.engineVersion,
+            routeFingerprint: "score-only-coverage-selection", routeGeneration: 0)
+        let first = try #require(fixtures.development.first)
+        #expect(harness.coverageFixtures(ordinals: 775..<(first.ordinal + 1),
+            generalCount: 1, fourBarCount: 0, excludedRoots: [first.rootSeed]).isEmpty)
+        #expect(harness.coverageFixtures(ordinals: 775..<776,
+            generalCount: 36, fourBarCount: 4, excludedRoots: []).isEmpty)
+        #expect(harness.coverageFixtures(ordinals: 775..<1032,
+            generalCount: 36, fourBarCount: 4, excludedRoots: []).isEmpty)
+    }
+
+    /// Freeze score recipes and predicted sample geometry, not measured body
+    /// energy or quality. Keep late events in the cohort, even when their
+    /// required windows cannot be measured by the current bar-local owner.
+    private func modalScoreGeometry(
+        fixture: CanonicalCalibrationCoverageFixture,
+        timingCache: inout [String: [[String: Any]]]
+    ) throws -> [[String: Any]] {
+        let director = AutonomousSessionDirector(rootSeed: fixture.rootSeed)
+        var state = director.initialState()
+        var result: [[String: Any]] = []
+        let last = fixture.checkpoints.map(\.phraseIndex).max() ?? -1
+        guard (0..<128).contains(last) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        for _ in 0...last {
+            let plan = director.plan(from: state)
+            for checkpoint in fixture.checkpoints where checkpoint.phraseIndex == plan.phraseIndex {
+                guard checkpoint.planFingerprint == AutonomousCandidateFingerprint.plan(plan),
+                      checkpoint.resolvedBarCount == plan.resolvedBars.count,
+                      checkpoint.startBar == plan.startBar, checkpoint.phraseKind == plan.kind
+                else { throw ProfessionalQualityCalibrationError.profileMismatch }
+                var events: [[String: Any]] = []
+                for bar in plan.resolvedBars {
+                    for event in bar.modalPercussionArticulations {
+                        for rate in ProfessionalQualityCalibrationProfile.requiredSampleRates {
+                            let frames = max(1, Int((240 / plan.scene.bpm * rate).rounded()))
+                            let offset = VoiceRenderer.timingOffsetInSteps(
+                                for: .tunedTom, step: event.step, dna: plan.dna)
+                            let onset = Int(((Double(event.step) + offset) * Double(frames) / 16).rounded())
+                            let key = "\(rate):\(frames):\(onset)"
+                            if timingCache[key] == nil {
+                                let pcm = [Float](repeating: 0, count: frames)
+                                let full = [Float](repeating: 0, count: Int(rate * 0.3) + 2)
+                                timingCache[key] = [(0.0, 0.010), (0.020, 0.080), (0.120, 0.240)]
+                                    .enumerated().map { index, range in
+                                        let actual = DeterministicSignalFixtures.timestampWindow(
+                                            samples: pcm, onsetFrame: onset, sampleRate: rate,
+                                            startSeconds: range.0, endSeconds: range.1).count
+                                        let complete = DeterministicSignalFixtures.timestampWindow(
+                                            samples: full, onsetFrame: 0, sampleRate: rate,
+                                            startSeconds: range.0, endSeconds: range.1).count
+                                        return ["window": index, "predictedSampleCount": actual,
+                                            "fullSampleCount": complete,
+                                            "predictedAvailability": actual == 0 ? "missing" :
+                                                (actual == complete ? "complete" : "partial")]
+                                    }
+                            }
+                            events.append(["bar": bar.performance.bar,
+                                "scoreEventIndex": event.scoreEventIndex, "step": event.step,
+                                "sampleRate": rate, "frameCount": frames, "startFrame": onset,
+                                "timingOffsetInSteps": offset, "material": event.material.rawValue,
+                                "fundamentalHz": event.fundamentalHz, "excitation": event.excitation,
+                                "damping": event.damping, "brightness": event.brightness,
+                                "inharmonicity": event.inharmonicity, "coupling": event.coupling,
+                                "seed": event.seed, "predictedWindows": timingCache[key] ?? []])
+                        }
+                    }
+                }
+                result.append(["checkpoint": checkpoint.checkpoint.rawValue,
+                    "phraseIndex": plan.phraseIndex, "planFingerprint": checkpoint.planFingerprint,
+                    "noScoreModalEvents": events.isEmpty, "geometryOnly": true,
+                    "positiveBodyQualification": "unavailable-before-PCM", "events": events])
+            }
+            state.advancePlanning(using: plan)
+        }
+        guard result.count == CanonicalJourneyCheckpoint.allCases.count else {
+            throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
+        }
+        return result
+    }
+
+    @Test("Freeze fresh complete score coverage on accepted clean source before any new-root PCM")
+    func freezeFreshCoverageCohort() throws {
+        guard ProcessInfo.processInfo.environment["AUTOTECHNO_FREEZE_CALIBRATION_COVERAGE"] == "1"
+        else { return }
+        guard try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty,
+              let path = ProcessInfo.processInfo.environment["AUTOTECHNO_CALIBRATION_COVERAGE_COHORT"]
+        else { throw ProfessionalQualityCalibrationError.invalidIdentity }
+        let destination = URL(fileURLWithPath: path).standardizedFileURL
+        guard destination.path.hasPrefix(repositoryRoot.appendingPathComponent(
+            "docs/local/reports/", isDirectory: true).path + "/"),
+              !FileManager.default.fileExists(atPath: destination.path)
+        else { throw ProfessionalQualityCalibrationError.invalidIdentity }
+        let head = try git(["rev-parse", "HEAD"])
+        let objects = try git(["rev-parse"] + ["Package.swift", "Sources", "Tests", "scripts",
+            "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"].map { "HEAD:\($0)" })
+            .split(separator: "\n").map(String.init)
+        let fixtures = try freshCoverageFixtures()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        var cache: [String: [[String: Any]]] = [:]
+        func entries(_ fixtures: [CanonicalCalibrationCoverageFixture]) throws -> [[String: Any]] {
+            try fixtures.map { fixture in
+                var object = try #require(JSONSerialization.jsonObject(with:
+                    encoder.encode(fixture)) as? [String: Any])
+                object["modalScoreGeometry"] = try modalScoreGeometry(fixture: fixture, timingCache: &cache)
+                return object
+            }
+        }
+        let object: [String: Any] = ["schema": "autotechno-frozen-calibration-coverage-cohort.v1",
+            "engineVersion": QualityQualificationContract.engineVersion,
+            "gitHead": head, "acceptedInputObjects": objects, "maximumPhrases": 128,
+            "protocolSha256": "1b10f7880d27d044a41d00b2d2f23af9d1e71226534ace0fd018645a38090877",
+            "originalCohortBlob": try git(["hash-object", "docs/local/reports/AT-0039-foundation-cohort-v1/corpus.json"]),
+            "failedFourBarCohortBlob": try git(["hash-object", "docs/local/reports/AT-0039-four-bar-calibration-cohort-v1/cohort.json"]),
+            "selectionRule": "ascending-ordinal-complete-score-then-remaining-four-bar.v1",
+            "sampleRates": ProfessionalQualityCalibrationProfile.requiredSampleRates,
+            "replacementQualification": "unavailable-not-activated",
+            "development": try entries(fixtures.development), "holdout": try entries(fixtures.holdout)]
+        let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes])
+        guard data.count <= 8 * 1024 * 1024,
+              try git(["rev-parse", "HEAD"]) == head,
+              try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty
+        else { throw ProfessionalQualityCalibrationError.invalidIdentity }
+        try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(),
+            withIntermediateDirectories: true)
+        try data.write(to: destination, options: .withoutOverwriting)
+        progress("fresh-coverage-frozen head=\(head) development=40 holdout=6 bytes=\(data.count)")
+    }
+
     func fourBarWindowFixtures() throws -> (
         development: [CanonicalCalibrationWindowFixture],
         holdout: [CanonicalCalibrationWindowFixture]

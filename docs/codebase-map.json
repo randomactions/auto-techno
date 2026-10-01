@@ -657,7 +657,8 @@
         "descriptive per-bar kick/foundation evidence",
         "descriptive bar-, role-pair-, and frequency-band-local masking evidence",
         "local frozen calibration-window root, score, accepted-input, and original-cohort provenance",
-        "version-bound modal window coverage counts and required measurement availability"
+        "version-bound modal window coverage counts and required measurement availability",
+        "fresh outcome-blind 40/6 score coverage cohort with complete checkpoint identities and inherited four-bar quotas"
       ],
       "inputs": [
         "planned structure",
@@ -687,7 +688,8 @@
         "professional calibration and holdout reports",
         "complete checkpoint/rate coverage and explicit unestimated confidence status",
         "report-only modal window eligibility, excluded-event counts, and nullable measured ratios; installed calibration unchanged",
-        "schema2 modal ratio support: missing, partial, undefined body and measured event counts; omitted unavailable values, shared fit refusal and relationship availability"
+        "schema2 modal ratio support: missing, partial, undefined body and measured event counts; omitted unavailable values, shared fit refusal and relationship availability",
+        "preregistered modal material/morphology/bar-phase fixture matrix and score-only predicted window geometry; incomplete events retained, no positive-body or quality qualification"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AudioQualityReport.swift",
@@ -777,7 +779,8 @@
         "background-live-analysis",
         "detached-preparation",
         "macos-future-phrase-commit",
-        "windows-future-phrase-commit"
+        "windows-future-phrase-commit",
+        "offline-calibration-coverage-freeze"
       ]
     },
     {
@@ -2295,6 +2298,19 @@
       "failureBehavior": "Record fixed completion state; non-callback control work performs cleanup or recovery.",
       "tests": [
         "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift"
+      ]
+    },
+    {
+      "id": "offline-calibration-coverage-freeze",
+      "name": "Offline calibration coverage freeze",
+      "ownerComponent": "evidence-calibration-and-primary-evaluation",
+      "executionContext": "Opt-in test-owned bounded canonical score planning on accepted clean source before new-root PCM.",
+      "allowedWork": "Select disjoint ordinal partitions with fixed counts and inherited score quotas; freeze complete checkpoint identities and predicted modal window geometry.",
+      "forbiddenWork": "Outcome-based root selection, dropping incomplete events, interpreting predicted support as measured energy or quality, overwriting frozen cohorts, runtime mutation or callback work.",
+      "failureBehavior": "Fail closed on insufficient score coverage, changed accepted inputs, invalid output location or an existing destination; preserve earlier cohorts and installed policies.",
+      "tests": [
+        "Tests/AutoTechnoCoreTests/CanonicalJourneyQualificationHarness.swift",
+        "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationIntegrationTests.swift"
       ]
     }
   ]
