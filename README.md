@@ -190,9 +190,14 @@ still requires independent quality targets, broader morphology/timing coverage,
 fresh holdouts and full qualification. The [independent measurement fixtures](docs/reports/AT_0039_INDEPENDENT_MEASUREMENT_FIXTURES.md)
 pass 344 fixed mechanistic cases with bounded timestamp, Float and frame-grid
 uncertainty; these labels do not establish musical or perceptual quality.
+A [broader modal morphology and timing study](docs/reports/AT_0039_MODAL_MORPHOLOGY_SCORE_COVERAGE.md)
+passes 768 construction controls and freezes a fresh outcome-blind 40/6 score
+cohort. Eight roots retain incomplete predicted tail windows; they remain in
+the cohort, and replacement qualification awaits bounded measurement continuity
+and measured positive-body support before fresh PCM fitting.
 
 The current Phase-1 evidence refresh records all 15 lifecycle families and
-19 subordinate checks for that retained runtime at exporter head `34b8fa7`.
+19 subordinate checks for that retained runtime at exporter head `6042898`.
 Its 14 whole mixes and 210 role/residual signals match the preserved captures
 sample for sample across 340,230,030 samples. This evidence does not qualify
 the failed expanded policy or establish independently labelled masking and
