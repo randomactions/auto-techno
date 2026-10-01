@@ -168,7 +168,7 @@ quality is not established until every automated, app/runtime, and
 physical-output gate in the validation contract passes for the exact release
 revision.
 
-The 2026-09-30 [performance envelope](docs/PERFORMANCE_ENVELOPE.md) records
+The 2026-10-01 [performance envelope](docs/PERFORMANCE_ENVELOPE.md) records
 fresh Release detached-preparation and producer measurements. Its live callback
 figures reuse the bounded 2026-09-04 host trace; they do not establish live app
 behavior at the newly recorded exporter head. The exact trace inputs and hashes
@@ -180,11 +180,17 @@ The expanded 40-development/6-holdout candidate passed development and
 adversarial checks but failed independent holdout qualification. The installed
 primary v30 and matching long-horizon v16 policies remain unchanged.
 
+Explicit modal measurement-window support now records actual attack, body,
+and tail coverage. Descriptive diagnostics distinguish missing or partial
+windows from measured silence. Existing calibrated metrics and policy bounds
+remain unchanged; replacement applicability still requires full qualification.
+
 The current Phase-1 evidence refresh records all 15 lifecycle families and
-19 subordinate checks for that retained runtime at exporter head `e97496b`.
+19 subordinate checks for that retained runtime at exporter head `c4f2076`.
 Its 14 whole mixes and 210 role/residual signals match the preserved captures
-sample for sample. This evidence does not qualify the failed expanded policy
-or establish independently labelled masking and groove quality.
+sample for sample across 340,230,030 samples. This evidence does not qualify
+the failed expanded policy or establish independently labelled masking and
+groove quality.
 
 ### One-click Windows source validation
 
