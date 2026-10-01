@@ -87,3 +87,27 @@ package enum ProfessionalQualityMeasurementContract {
         }
     }
 }
+
+/// Shared count/mean owner for bar-local and continuous descriptive projections.
+/// Complete geometry and positive body remain distinct requirements.
+struct ProfessionalQualityModalRatioAccumulator {
+    var values: [Double] = []
+    var sourceCount = 0
+    var missingCount = 0, partialCount = 0, undefinedCount = 0
+
+    mutating func append(value: Double?, numerator: ModalPercussionWindowSupport.Availability,
+                         body: ModalPercussionWindowSupport.Availability) {
+        sourceCount += 1
+        if let value { values.append(value) }
+        else if numerator == .missing || body == .missing { missingCount += 1 }
+        else if numerator == .partial || body == .partial { partialCount += 1 }
+        else { undefinedCount += 1 }
+    }
+
+    var support: ProfessionalQualityModalRatioSupport {
+        .init(sourceEventCount: sourceCount, measuredEventCount: values.count,
+              missingWindowEventCount: missingCount, partialWindowEventCount: partialCount,
+              undefinedBodyEventCount: undefinedCount)
+    }
+    var mean: Double? { values.isEmpty ? nil : values.reduce(0, +) / Double(values.count) }
+}

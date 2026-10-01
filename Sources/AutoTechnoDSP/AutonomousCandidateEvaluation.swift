@@ -3242,6 +3242,7 @@ package struct AutonomousModalPercussionEventEvidence:
     /// Absent only in evidence predating the additive window-support contract.
     /// Old policy metrics retain their identity; support diagnostics fail closed.
     package let windowSupport: ModalPercussionWindowSupport?
+    package let articulationFingerprint: String?
     package let spectralCentroidHz: Double
     package let incomingVoiceStateFingerprint: String
     package let outgoingVoiceStateFingerprint: String
@@ -3284,6 +3285,7 @@ package struct AutonomousModalPercussionEventEvidence:
         tailRMS: Double,
         tailToBodyDB: Double,
         windowSupport: ModalPercussionWindowSupport? = nil,
+        articulationFingerprint: String? = nil,
         spectralCentroidHz: Double,
         incomingVoiceStateFingerprint: String,
         outgoingVoiceStateFingerprint: String,
@@ -3325,6 +3327,7 @@ package struct AutonomousModalPercussionEventEvidence:
         self.tailRMS = tailRMS
         self.tailToBodyDB = tailToBodyDB
         self.windowSupport = windowSupport
+        self.articulationFingerprint = articulationFingerprint
         self.spectralCentroidHz = spectralCentroidHz
         self.incomingVoiceStateFingerprint = incomingVoiceStateFingerprint
         self.outgoingVoiceStateFingerprint = outgoingVoiceStateFingerprint
@@ -3415,6 +3418,8 @@ package struct AutonomousModalPercussionBarEvidence:
     package let renderPassesMatch: Bool
     package let foundationRoutingValid: Bool
     package let events: [AutonomousModalPercussionEventEvidence]
+    /// Additive descriptive observation; installed legacy metrics stay bar-local.
+    package let continuousWindows: ModalPercussionContinuousBarEvidence?
 
     package init(
         bar: Int,
@@ -3429,7 +3434,8 @@ package struct AutonomousModalPercussionBarEvidence:
         continuationRendered: Bool,
         renderPassesMatch: Bool,
         foundationRoutingValid: Bool,
-        events: [AutonomousModalPercussionEventEvidence]
+        events: [AutonomousModalPercussionEventEvidence],
+        continuousWindows: ModalPercussionContinuousBarEvidence? = nil
     ) {
         self.bar = bar
         self.sourceScoreEventCount = sourceScoreEventCount
@@ -3446,6 +3452,7 @@ package struct AutonomousModalPercussionBarEvidence:
         self.events = Array(events.prefix(
             AutonomousCandidateEvaluationVector.maximumModalPercussionEventsPerBar
         ))
+        self.continuousWindows = continuousWindows
     }
 
     package var isFinite: Bool { events.allSatisfy { $0.isFinite } }
@@ -7747,6 +7754,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                     tailRMS: evidence.tailRMS,
                     tailToBodyDB: evidence.tailToBodyDB,
                     windowSupport: evidence.windowSupport,
+                    articulationFingerprint: AutonomousTypedFingerprint.modalArticulation(articulation),
                     spectralCentroidHz: evidence.spectralCentroidHz,
                     incomingVoiceStateFingerprint:
                         evidence.incomingVoiceStateFingerprint,
@@ -7774,7 +7782,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             continuationRendered: render.continuationRendered,
             renderPassesMatch: block.modalPercussionRenderPassesMatch,
             foundationRoutingValid: barBindingValid,
-            events: events
+            events: events,
+            continuousWindows: render.continuousWindows
         )
     }
 

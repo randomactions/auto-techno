@@ -463,12 +463,17 @@
         {
           "symbol": "VoiceRenderer",
           "path": "Sources/AutoTechnoDSP/VoiceRenderer.swift"
+        },
+        {
+          "symbol": "ModalPercussionMeasurementState",
+          "path": "Sources/AutoTechnoDSP/ModalPercussionMeasurementContinuity.swift"
         }
       ],
       "state": [
         "RenderState",
         "voice and phrase-composition continuation",
-        "four-slot modal material, coupling, and eight-mode continuation"
+        "four-slot modal material, coupling, and eight-mode continuation",
+        "eight bounded event-observation records; origin identity, actual samples, retired-slot zero contribution, and expected successor bar"
       ],
       "inputs": [
         "AutonomousPhrasePlan",
@@ -488,7 +493,8 @@
         "score/render correspondence",
         "modal material, coupling, stability, decay, and pitch evidence",
         "spatial-dust channel, cadence, low-band exclusion, and clearing evidence",
-        "actual modal attack/body/tail sample support, with missing/partial/complete window geometry"
+        "actual modal attack/body/tail sample support, with missing/partial/complete window geometry",
+        "same-pass continuous modal windows with explicit pending, interruption and overflow; legacy bar-local metrics and PCM preserved"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AlienAnalogVoice.swift",
@@ -503,7 +509,8 @@
         "Sources/AutoTechnoDSP/SpectralTextureVoice.swift",
         "Sources/AutoTechnoDSP/UpperPercussionTailDSP.swift",
         "Sources/AutoTechnoDSP/UpperSpectralRevealDSP.swift",
-        "Sources/AutoTechnoDSP/VoiceRenderer.swift"
+        "Sources/AutoTechnoDSP/VoiceRenderer.swift",
+        "Sources/AutoTechnoDSP/ModalPercussionMeasurementContinuity.swift"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/KickSourceDynamicsTests.swift",
@@ -645,6 +652,10 @@
         {
           "symbol": "ProfessionalQualityMeasurementContract",
           "path": "Sources/AutoTechnoDSP/ProfessionalQualityMeasurementApplicability.swift"
+        },
+        {
+          "symbol": "ProfessionalQualityContinuousModalWindowEvidence",
+          "path": "Sources/AutoTechnoDSP/ProfessionalQualityContinuousModalWindowEvidence.swift"
         }
       ],
       "state": [
@@ -689,7 +700,8 @@
         "complete checkpoint/rate coverage and explicit unestimated confidence status",
         "report-only modal window eligibility, excluded-event counts, and nullable measured ratios; installed calibration unchanged",
         "schema2 modal ratio support: missing, partial, undefined body and measured event counts; omitted unavailable values, shared fit refusal and relationship availability",
-        "preregistered modal material/morphology/bar-phase fixture matrix and score-only predicted window geometry; incomplete events retained, no positive-body or quality qualification"
+        "preregistered modal material/morphology/bar-phase fixture matrix and score-only predicted window geometry; incomplete events retained, no positive-body or quality qualification",
+        "additive descriptive continuous modal window projection binds original score/route and successor measurement chain; shared ratio support owner, no replacement policy activation"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AudioQualityReport.swift",
@@ -723,7 +735,8 @@
         "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json",
         "Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift",
         "Sources/AutoTechnoDSP/StreamingPerceptualEvidence.swift",
-        "Sources/AutoTechnoDSP/UpperTimbreEvidence.swift"
+        "Sources/AutoTechnoDSP/UpperTimbreEvidence.swift",
+        "Sources/AutoTechnoDSP/ProfessionalQualityContinuousModalWindowEvidence.swift"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/AutonomousCandidateEvaluationTests.swift",
@@ -1401,6 +1414,15 @@
       "path": "Sources/AutoTechnoWindows/main.swift",
       "scope": "host-control",
       "pcmRelationship": "Preserves incoming canonical state so the interrupted phrase can be rerendered for the recovered route."
+    },
+    {
+      "id": "modal-measurement-continuation",
+      "name": "Bounded modal event observation continuation",
+      "ownerComponent": "voice-and-phrase-rendering",
+      "symbol": "ModalPercussionMeasurementState",
+      "path": "Sources/AutoTechnoDSP/ModalPercussionMeasurementContinuity.swift",
+      "scope": "canonical-phrase",
+      "pcmRelationship": "Carries at most eight actual source-separated observation accumulators under RenderState; no retained PCM or changed synthesis. Missing successor, gap, reset or overflow remains unavailable; only accepted prepared state advances."
     }
   ],
   "transitions": [
@@ -1478,12 +1500,14 @@
         "graph-state",
         "quality-continuation",
         "live-master-continuation",
-        "long-horizon-adaptation-state"
+        "long-horizon-adaptation-state",
+        "modal-measurement-continuation"
       ],
       "producesState": [
-        "render-state"
+        "render-state",
+        "modal-measurement-continuation"
       ],
-      "artifact": "RenderBlock voice PCM and role-local evidence",
+      "artifact": "RenderBlock voice PCM and role-local evidence; bounded same-pass modal observation continuation and source-bound descriptive windows",
       "pcmConsequence": "creates-future-pcm",
       "failureBehavior": "Return a reason-coded preparation failure; no PCM becomes schedulable."
     },
@@ -1495,13 +1519,15 @@
       "boundary": "detached-preparation",
       "consumesState": [
         "render-state",
-        "graph-state"
+        "graph-state",
+        "modal-measurement-continuation"
       ],
       "producesState": [
         "render-state",
-        "graph-state"
+        "graph-state",
+        "modal-measurement-continuation"
       ],
-      "artifact": "processed stereo blocks, role taps, and ending render/graph state",
+      "artifact": "processed stereo blocks, role taps, and ending render/graph state; bounded same-pass modal observation continuation and source-bound descriptive windows",
       "pcmConsequence": "processes-future-pcm",
       "failureBehavior": "Reject invalid routing or use the declared protected neutral path."
     },
@@ -1515,13 +1541,14 @@
         "quality-continuation",
         "live-master-continuation",
         "render-state",
-        "graph-state"
+        "graph-state",
+        "modal-measurement-continuation"
       ],
       "producesState": [
         "quality-continuation",
         "live-master-continuation"
       ],
-      "artifact": "candidate vector, verdict, and atomic commit provenance",
+      "artifact": "candidate vector, verdict, and atomic commit provenance; bounded same-pass modal observation continuation and source-bound descriptive windows",
       "pcmConsequence": "qualifies-without-changing-pcm",
       "failureBehavior": "Reject or report qualification unavailable; never weaken a hard gate."
     },

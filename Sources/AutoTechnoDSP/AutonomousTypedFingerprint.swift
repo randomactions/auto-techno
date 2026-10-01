@@ -21,6 +21,11 @@ func fixedWidthFingerprintHex(_ value: UInt64) -> String {
 /// no reflection, textual object descriptions, or whole-state byte buffers
 /// participate in the digest.
 package enum AutonomousTypedFingerprint {
+    package static func modalArticulation(_ value: ModalPercussionArticulation) -> String {
+        digest(domain: "modal-articulation.typed.v1") { sink in
+            encode(value, into: &sink)
+        }
+    }
     package static func sessionState(
         _ state: AutonomousSessionState
     ) -> String {
@@ -2044,6 +2049,11 @@ private extension AutonomousTypedFingerprint {
         sink.field("slot1"); encode(value.slot1, into: &sink)
         sink.field("slot2"); encode(value.slot2, into: &sink)
         sink.field("slot3"); encode(value.slot3, into: &sink)
+        // Additive observation continuation. Idle state preserves the legacy
+        // synthesis identity; pending actual observations bind replay exactly.
+        if !value.measurement.pending.isEmpty || value.measurement.expectedBar != nil {
+            sink.field("modalMeasurement.v1"); sink.string(value.measurement.fingerprint)
+        }
     }
 
     static func encode(

@@ -53,56 +53,34 @@ package struct ProfessionalQualityModalWindowEvidence: Codable, Equatable, Senda
         }
         let sampleRate = candidate.routeContinuation.sampleRate
         let events = candidate.modalPercussion.flatMap(\.events)
-        var attacks: [Double] = []
-        var tails: [Double] = []
-        var attackMissing = 0, attackPartial = 0, attackUndefined = 0
-        var tailMissing = 0, tailPartial = 0, tailUndefined = 0
+        var attacks = ProfessionalQualityModalRatioAccumulator()
+        var tails = ProfessionalQualityModalRatioAccumulator()
         for event in events {
             guard let support = event.windowSupport,
                   support.isValid(sampleRate: sampleRate,
                                   frameCount: event.renderedFrameCount) else {
                 throw ProfessionalEvidenceReportBankError.incompleteEvidence
             }
-            if let value = support.attackToBodyDB(
-                attackRMS: event.attackRMS, bodyRMS: event.bodyRMS,
-                sampleRate: sampleRate
-            ) { attacks.append(value) }
-            else if support.attack(sampleRate: sampleRate) == .missing ||
-                        support.body(sampleRate: sampleRate) == .missing {
-                attackMissing += 1
-            } else if support.attack(sampleRate: sampleRate) == .partial ||
-                        support.body(sampleRate: sampleRate) == .partial {
-                attackPartial += 1
-            } else { attackUndefined += 1 }
-            if let value = support.tailToBodyDB(
-                tailRMS: event.tailRMS, bodyRMS: event.bodyRMS,
-                sampleRate: sampleRate
-            ) { tails.append(value) }
-            else if support.tail(sampleRate: sampleRate) == .missing ||
-                        support.body(sampleRate: sampleRate) == .missing {
-                tailMissing += 1
-            } else if support.tail(sampleRate: sampleRate) == .partial ||
-                        support.body(sampleRate: sampleRate) == .partial {
-                tailPartial += 1
-            } else { tailUndefined += 1 }
+            attacks.append(value: support.attackToBodyDB(attackRMS: event.attackRMS,
+                bodyRMS: event.bodyRMS, sampleRate: sampleRate),
+                numerator: support.attack(sampleRate: sampleRate), body: support.body(sampleRate: sampleRate))
+            tails.append(value: support.tailToBodyDB(tailRMS: event.tailRMS,
+                bodyRMS: event.bodyRMS, sampleRate: sampleRate),
+                numerator: support.tail(sampleRate: sampleRate), body: support.body(sampleRate: sampleRate))
         }
         schemaVersion = 2
         self.checkpoint = checkpoint
         self.sampleRate = sampleRate
         self.sourceReportFingerprint = sourceReportFingerprint
         sourceEventCount = events.count
-        attackBodyMeasuredEventCount = attacks.count
-        tailBodyMeasuredEventCount = tails.count
-        attackBodyExcludedEventCount = events.count - attacks.count
-        tailBodyExcludedEventCount = events.count - tails.count
-        attackToBodyDBMean = attacks.isEmpty ? nil : attacks.reduce(0, +) / Double(attacks.count)
-        tailToBodyDBMean = tails.isEmpty ? nil : tails.reduce(0, +) / Double(tails.count)
-        attackBodySupport = .init(sourceEventCount: events.count,
-            measuredEventCount: attacks.count, missingWindowEventCount: attackMissing,
-            partialWindowEventCount: attackPartial, undefinedBodyEventCount: attackUndefined)
-        tailBodySupport = .init(sourceEventCount: events.count,
-            measuredEventCount: tails.count, missingWindowEventCount: tailMissing,
-            partialWindowEventCount: tailPartial, undefinedBodyEventCount: tailUndefined)
+        attackBodyMeasuredEventCount = attacks.values.count
+        tailBodyMeasuredEventCount = tails.values.count
+        attackBodyExcludedEventCount = events.count - attacks.values.count
+        tailBodyExcludedEventCount = events.count - tails.values.count
+        attackToBodyDBMean = attacks.mean
+        tailToBodyDBMean = tails.mean
+        attackBodySupport = attacks.support
+        tailBodySupport = tails.support
     }
 
     package var isComplete: Bool {
@@ -153,6 +131,15 @@ package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable,
     package func modalWindowFeatureReports() throws ->
         [ProfessionalQualityModalWindowEvidence] {
         try reports.map { try ProfessionalQualityModalWindowEvidence(report: $0) }
+    }
+
+    /// Same-pass event observations continue under the sole renderer owner.
+    /// This descriptive geometry/body audit does not replace v21/v22 metrics,
+    /// fit a profile or activate a policy.
+    package func continuousModalWindowFeatureReports() throws ->
+        [ProfessionalQualityContinuousModalWindowEvidence] {
+        try reports.map { try .init(candidate: $0.selectedCandidateEvidence,
+            checkpoint: $0.checkpoint, sourceReportFingerprint: $0.evidenceFingerprint) }
     }
 
     package func windowSupportedObservations() throws -> [ProfessionalQualityObservation] {

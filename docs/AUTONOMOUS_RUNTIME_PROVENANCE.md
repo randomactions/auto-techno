@@ -219,6 +219,20 @@ mistaken for a completed feedback system.
    bind material, coupling, and every mode; malformed state fails closed to the
    prior stable body realization. This adds no independent percussion lane,
    graph, renderer, persistent controller, or callback operation.
+   Additive modal-measurement continuation v1 remains under that same detached
+   four-slot renderer. Eight source-bound observation records cover its 240 ms
+   physical windows, including actually observed zero contribution after a
+   resonator retires. Original bar/score articulation, route, sample counts,
+   accumulator state and expected successor bind deterministic replay. Bar
+   gaps, route resets, unfinished windows and overflow remain explicit;
+   unobserved time is never filled with measured silence. Accepted render state
+   alone advances this observation continuation. Candidate modal bars carry
+   bounded descriptive records, and the report bank validates their origin and
+   successor chain through the shared ratio-support owner. Legacy bar-local
+   metrics and installed v30/v16 artifacts retain their policy identity. This
+   observation foundation changes neither PCM nor a future musical decision,
+   adds no callback operation, and does not qualify or activate replacement
+   calibration. Missing additive records make its diagnostic unavailable.
    Short-program EBU-style loudness range is retained descriptively rather than
    treated as a gate-discontinuous policy dimension; integrated, momentary,
    short-term, true-peak, and the other stable metrics remain evaluative.

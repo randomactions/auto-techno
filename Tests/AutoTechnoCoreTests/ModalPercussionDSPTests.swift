@@ -5,6 +5,158 @@ import Testing
 
 @Suite("Modal percussion DSP", .serialized)
 struct ModalPercussionDSPTests {
+    @Test("AT-0039 actual successor samples complete all fixed late modal windows")
+    func continuousModalWindowMatrix() throws {
+        var rows: [[String: Any]] = []
+        var maximumRMSError = 0.0
+        for rate in [44_100.0, 48_000.0] {
+            let frames = Int((240 / AutonomousSessionDirector.bpm * rate).rounded())
+            for material in ModalPercussionMaterial.allCases {
+                for damping in [0.0, 0.5, 1.0] {
+                    for step in [14, 15] {
+                        for level in [0.0, 0.2] {
+                            let onset = Int((Double(step) * Double(frames) / 16).rounded())
+                            let event = ScheduledModalPercussionEvent(articulation: articulation(
+                                damping: damping, seed: 12_648_430, material: material, step: step),
+                                startFrame: onset, level: level)
+                            var state = ModalPercussionVoiceState()
+                            var first = [Float](repeating: 0, count: frames)
+                            let opening = ModalPercussionVoice.renderBar(into: &first, bar: 0,
+                                sampleRate: rate, events: [event], state: &state)
+                            #expect(opening.continuousWindows.pending.count == 1)
+                            #expect(opening.events[0].windowSupport.tail(sampleRate: rate) != .complete)
+                            let frozen = state
+                            var second = [Float](repeating: 0, count: Int(ceil(rate * 0.3)))
+                            let closing = ModalPercussionVoice.renderBar(into: &second, bar: 1,
+                                sampleRate: rate, events: [], state: &state)
+                            let measured = try #require(closing.continuousWindows.completed.first)
+                            #expect(measured.isValid && measured.status == .complete)
+                            #expect(closing.continuousWindows.pending.isEmpty)
+                            #expect(opening.continuousWindows.outgoingStateFingerprint ==
+                                closing.continuousWindows.incomingStateFingerprint)
+                            var replayState = frozen
+                            var replay = [Float](repeating: 0, count: second.count)
+                            let replayEvidence = ModalPercussionVoice.renderBar(into: &replay, bar: 1,
+                                sampleRate: rate, events: [], state: &replayState)
+                            #expect(replay == second && replayEvidence == closing && replayState == state)
+                            var oneState = ModalPercussionVoiceState()
+                            var one = [Float](repeating: 0, count: first.count + second.count)
+                            _ = ModalPercussionVoice.renderBar(into: &one, bar: 0,
+                                sampleRate: rate, events: [event], state: &oneState)
+                            #expect(first + second == one)
+                            let support = measured.windowSupport
+                            let counts = [support.attackSampleCount, support.bodySampleCount, support.tailSampleCount]
+                            let rms = [measured.attackRMS, measured.bodyRMS, measured.tailRMS]
+                            for (index, interval) in [(0.0, 0.010), (0.020, 0.080), (0.120, 0.240)].enumerated() {
+                                let oracle = DeterministicSignalFixtures.timestampWindow(samples: one,
+                                    onsetFrame: onset, sampleRate: rate,
+                                    startSeconds: interval.0, endSeconds: interval.1)
+                                #expect(counts[index] == oracle.count)
+                                let error = abs(rms[index] - oracle.rms)
+                                maximumRMSError = max(maximumRMSError, error)
+                                #expect(error <= 2 * Double(Float.ulpOfOne) * measured.peak)
+                            }
+                            #expect((support.tailToBodyDB(tailRMS: measured.tailRMS,
+                                bodyRMS: measured.bodyRMS, sampleRate: rate) != nil) == (level > 0))
+                            if level == 0 { #expect(measured.bodyRMS == 0) }
+                            else { #expect(measured.bodyRMS > 0) }
+                            rows.append(["rate": rate, "material": material.rawValue,
+                                "damping": damping, "step": step, "level": level,
+                                "observedFrames": measured.observedFrameCount,
+                                "tailSamples": support.tailSampleCount, "bodyRMS": measured.bodyRMS,
+                                "tailRMS": measured.tailRMS, "status": measured.status.rawValue])
+                        }
+                    }
+                }
+            }
+        }
+        #expect(rows.count == 96)
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject:
+            ["fixture": "modal-measurement-continuity.v1", "caseCount": rows.count,
+             "maximumRMSError": maximumRMSError, "qualification": "unavailable", "rows": rows],
+            options: [.sortedKeys]))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
+    @Test("Continuous observation preserves retired-slot identity and overlap source separation")
+    func continuousModalRetirementAndOverlap() throws {
+        for rate in [44_101.0, 96_000.0] {
+            let cut = Int(ceil(rate * 0.190))
+            let event = scheduled(articulation: articulation(damping: 0, seed: 1), startFrame: 0)
+            var state = ModalPercussionVoiceState()
+            var first = [Float](repeating: 0, count: cut)
+            _ = ModalPercussionVoice.renderBar(into: &first, bar: 0, sampleRate: rate,
+                events: [event], state: &state)
+            #expect(!state.slot0.active && state.measurement.pending.count == 1)
+            #expect(state.measurement.pending[0].slotIndex == nil)
+            var second = [Float](repeating: 0, count: Int(ceil(rate * 0.3)))
+            let other = scheduled(articulation: articulation(seed: 2), startFrame: 0)
+            let closing = ModalPercussionVoice.renderBar(into: &second, bar: 1, sampleRate: rate,
+                events: [other], state: &state)
+            let original = try #require(closing.continuousWindows.completed.first { $0.originBar == 0 })
+            var isolatedState = ModalPercussionVoiceState()
+            var isolated = [Float](repeating: 0, count: first.count + second.count)
+            _ = ModalPercussionVoice.renderBar(into: &isolated, bar: 0, sampleRate: rate,
+                events: [event], state: &isolatedState)
+            let oracle = DeterministicSignalFixtures.timestampWindow(samples: isolated,
+                onsetFrame: 0, sampleRate: rate, startSeconds: 0.120, endSeconds: 0.240)
+            #expect(original.isValid && original.tailRMS == oracle.rms)
+            #expect(second.contains { $0 != 0 })
+            // Two simultaneous overlapping sources retain their own RMS,
+            // rather than measuring the summed modal stem twice.
+            var overlapState = ModalPercussionVoiceState()
+            var overlap = [Float](repeating: 0, count: second.count)
+            let pair = ModalPercussionVoice.renderBar(into: &overlap, bar: 0, sampleRate: rate,
+                events: [event, other], state: &overlapState)
+            let own = try #require(pair.continuousWindows.completed.first {
+                $0.articulationFingerprint == AutonomousTypedFingerprint.modalArticulation(event.articulation)
+            })
+            #expect(own.tailRMS == original.tailRMS)
+        }
+    }
+
+    @Test("Pending modal windows reject gaps and route resets without invented successor silence")
+    func continuousModalInterruptionAndBounds() throws {
+        let rate = 44_100.0
+        var state = ModalPercussionVoiceState()
+        var first = [Float](repeating: 0, count: Int(rate * 0.05))
+        _ = ModalPercussionVoice.renderBar(into: &first, bar: 0, sampleRate: rate,
+            events: [scheduled(articulation: articulation(), startFrame: 0)], state: &state)
+        let frozen = state
+        let pending = try #require(state.measurement.pending.first?.evidence(status: .pending))
+        #expect(pending.windowSupport.body(sampleRate: rate) == .partial)
+        #expect(pending.windowSupport.tail(sampleRate: rate) == .missing)
+        for (bar, nextRate, reason) in [(2, rate, ModalPercussionMeasurementStatus.barGap),
+                                     (1, 48_000.0, .routeChange)] {
+            var copy = frozen
+            var next = [Float](repeating: 0, count: Int(nextRate * 0.3))
+            let ended = ModalPercussionVoice.renderBar(into: &next, bar: bar,
+                sampleRate: nextRate, events: [], state: &copy)
+            let interrupted = try #require(ended.continuousWindows.completed.first)
+            #expect(interrupted.status == reason && interrupted.observedFrameCount == first.count)
+            #expect(interrupted.tailRMS == 0)
+            #expect(interrupted.windowSupport.tail(sampleRate: rate) == .missing)
+        }
+        var poisoned = frozen
+        poisoned.measurement.pending[0].bodyEnergy += 0.01
+        var left = RenderState(), right = RenderState()
+        left.modalPercussionState = frozen; right.modalPercussionState = poisoned
+        #expect(AutonomousTypedFingerprint.renderState(left) != AutonomousTypedFingerprint.renderState(right))
+        #expect(frozen == state)
+        // Four retired voices plus four newly occupied voices exercise the
+        // full eight-record bound; a ninth onset cannot steal a voice.
+        var bounded = ModalPercussionVoiceState()
+        var opening = [Float](repeating: 0, count: Int(ceil(rate * 0.190)))
+        let events = (1...4).map { scheduled(articulation: articulation(damping: 0, seed: UInt64($0)), startFrame: 0) }
+        _ = ModalPercussionVoice.renderBar(into: &opening, bar: 0, sampleRate: rate,
+            events: events, state: &bounded)
+        var ending = [Float](repeating: 0, count: 1)
+        let result = ModalPercussionVoice.renderBar(into: &ending, bar: 1, sampleRate: rate,
+            events: events + [scheduled(articulation: articulation(seed: 5), startFrame: 0)], state: &bounded)
+        #expect(bounded.measurement.pending.count == ModalPercussionMeasurementState.pendingCapacity)
+        #expect(result.continuousWindows.completed.contains { $0.status == .voiceCapacity })
+        #expect(result.events.last?.capacityValid == false)
+    }
     @Test("AT-0039 frozen material/morphology/bar-phase matrix preserves truthful window support")
     func modalMorphologyTimingCoverage() throws {
         let controls = [("low", 48.0, 0.2, 0.0, 0.0, 0.0, 0.0),
@@ -578,7 +730,22 @@ struct ModalPercussionDSPTests {
 
         #expect(rebuilt == fresh)
         #expect(rebuiltState == freshState)
-        #expect(rebuiltEvidence == freshEvidence)
+        let legacyRebuilt = ModalPercussionBarRenderEvidence(
+            bar: rebuiltEvidence.bar, sampleRate: rebuiltEvidence.sampleRate,
+            renderedFrameCount: rebuiltEvidence.renderedFrameCount,
+            incomingStateFingerprint: rebuiltEvidence.incomingStateFingerprint,
+            outgoingStateFingerprint: rebuiltEvidence.outgoingStateFingerprint,
+            dryBarSampleHash: rebuiltEvidence.dryBarSampleHash,
+            dryBarPeak: rebuiltEvidence.dryBarPeak, dryBarRMS: rebuiltEvidence.dryBarRMS,
+            activeIncomingVoiceCount: rebuiltEvidence.activeIncomingVoiceCount,
+            activeOutgoingVoiceCount: rebuiltEvidence.activeOutgoingVoiceCount,
+            continuationRendered: rebuiltEvidence.continuationRendered,
+            events: rebuiltEvidence.events, continuousWindows: freshEvidence.continuousWindows,
+            finite: rebuiltEvidence.finite)
+        #expect(legacyRebuilt == freshEvidence)
+        #expect(rebuiltEvidence.continuousWindows.completed.first?.status == .routeChange)
+        #expect(rebuiltEvidence.continuousWindows.completed.first?.observedFrameCount == oldRoute.count)
+        #expect(rebuiltEvidence.continuousWindows.pending == freshEvidence.continuousWindows.pending)
     }
 
     private func render(

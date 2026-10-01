@@ -5,6 +5,67 @@ import Testing
 
 @Suite("Autonomous candidate evaluation provenance")
 struct AutonomousCandidateEvaluationTests {
+    @Test("Continuous modal windows reach the canonical candidate and reject retargeted evidence")
+    func continuousModalCandidateBinding() throws {
+        // Reuse the public preparer-test seed; study root recipes stay local.
+        let director = AutonomousSessionDirector(rootSeed: 48_291)
+        var state = director.initialState()
+        var selected: AutonomousPhrasePlan?
+        for _ in 0..<128 {
+            let plan = director.plan(from: state)
+            if plan.resolvedBars.contains(where: { !$0.modalPercussionArticulations.isEmpty }) {
+                selected = plan; break
+            }
+            state.advancePlanning(using: plan)
+        }
+        let plan = try #require(selected)
+        var incoming = RenderState()
+        incoming.barIndex = plan.startBar
+        let result = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            plan: plan, sessionSeed: state.rootSeed, memory: state.memory, sampleRate: 8_000,
+            incomingRenderState: incoming, incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil, incomingQualityState: state.quality,
+            pendingLiveMasterBinding: nil, evaluator: AcceptingPrimaryTestEvaluator(),
+            cancellationRequested: { false })
+        let prepared = try #require(result)
+        let vector = prepared.selectedCandidateEvidence
+        let report = try ProfessionalQualityContinuousModalWindowEvidence(candidate: vector,
+            checkpoint: .majorBreak, sourceReportFingerprint: vector.fingerprint)
+        #expect(vector.isComplete && report.isComplete && report.sourceEventCount > 0)
+        #expect(report.attackBodySupport.measuredEventCount == report.sourceEventCount)
+        for (block, projected) in zip(prepared.blocks, vector.modalPercussion) {
+            #expect(block.modalPercussionRenderEvidence.continuousWindows == projected.continuousWindows)
+        }
+        let decoded = try JSONDecoder().decode(AutonomousCandidateEvaluationVector.self,
+            from: vector.deterministicJSON())
+        #expect(decoded == vector)
+        #expect(try ProfessionalQualityContinuousModalWindowEvidence(candidate: decoded,
+            checkpoint: .majorBreak, sourceReportFingerprint: vector.fingerprint) == report)
+        for field in ["scoreEventIndex", "observedFrameCount"] {
+            var wire = try #require(JSONSerialization.jsonObject(with: vector.deterministicJSON()) as? [String: Any])
+            var bars = try #require(wire["modalPercussion"] as? [[String: Any]])
+            let index = try #require(bars.firstIndex { bar in
+                ((bar["continuousWindows"] as? [String: Any])?["completed"] as? [[String: Any]])?.isEmpty == false
+            })
+            var continuity = try #require(bars[index]["continuousWindows"] as? [String: Any])
+            var records = try #require(continuity["completed"] as? [[String: Any]])
+            records[0][field] = try #require(records[0][field] as? Int) + 1
+            continuity["completed"] = records; bars[index]["continuousWindows"] = continuity
+            wire["modalPercussion"] = bars
+            let forged = try JSONDecoder().decode(AutonomousCandidateEvaluationVector.self,
+                from: JSONSerialization.data(withJSONObject: wire, options: [.sortedKeys]))
+            #expect(forged.fingerprint != vector.fingerprint)
+            #expect(throws: ProfessionalEvidenceReportBankError.incompleteEvidence) {
+                try ProfessionalQualityContinuousModalWindowEvidence(candidate: forged,
+                    checkpoint: .majorBreak, sourceReportFingerprint: forged.fingerprint)
+            }
+        }
+        // Historical records without this additive contract remain unavailable.
+        #expect(throws: ProfessionalEvidenceReportBankError.incompleteEvidence) {
+            try ProfessionalQualityContinuousModalWindowEvidence(candidate: fixtureVector(),
+                checkpoint: .establishment, sourceReportFingerprint: "legacy")
+        }
+    }
     @Test("Candidate fields and calibrated dimensions have exhaustive categories")
     func evidenceCategoryInventoryIsExhaustive() {
         let vector = fixtureVector()
