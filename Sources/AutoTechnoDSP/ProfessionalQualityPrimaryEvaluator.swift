@@ -1005,6 +1005,9 @@ package struct ProfessionalQualityPrimaryEvaluator:
             return [prefix + "observation=profile"]
         case .invalidLocalFeatureEvidence:
             return [prefix + "observation=local-feature"]
+        case let .unavailableMeasurement(measurement):
+            return [prefix + "metric=\(measurement.metric.rawValue)-unavailable",
+                    prefix + "support=\(measurement.reason.rawValue)"]
         }
     }
 }

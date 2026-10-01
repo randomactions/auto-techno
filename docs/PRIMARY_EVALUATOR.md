@@ -196,3 +196,33 @@ foundation does not qualify new applicability, replace profiles, waive failed
 holdouts, alter PCM/continuation, or add callback work. Replacement promotion
 still requires a unified versioned extraction/fitting/relationship contract,
 qualified support coverage, fresh independent holdouts and all existing gates.
+
+
+## Shared modal measurement applicability foundation
+
+The explicit offline `windowSupportedObservations` and `windowSupportedBanks`
+projections use observation v22 and profile v31 identities in the existing
+observation, corpus, fitter and evaluators. Schema2 modal evidence retains
+per-ratio measured, missing-window, partial-window and undefined-body event
+counts. No score-owned events means the ratio is not required. If events exist,
+every event must have complete paired windows and a finite positive body before
+the ratio is a qualification measurement. A measured zero numerator remains
+-120dB; unsupported values are omitted, never replaced with zero or a floor.
+
+One shared status owner controls extraction, fitting, local and relationship
+assessment. Fitting refuses any unsupported required dimension or asymmetric
+native-rate applicability. Local verdicts reason-code unavailable dimensions.
+Relationship assessment keeps required coverage unavailable and retains other
+numeric failures. Score absence may omit a conditional comparison, but a later
+active comparison with no trained support remains unavailable. Mixed observation
+contracts are rejected. Diagnostic subset means remain descriptive and cannot
+waive an excluded event.
+
+This is a qualification foundation, not activation of replacement applicability.
+The current v21/v30 extraction and installed v30/v16 resources remain unchanged;
+the production primary evaluator still requires v30 and rejects v31. No score,
+PCM, callback, continuation or future musical decision changes. Independent
+fixture labels, uncertainty, preregistered coverage and fresh disjoint holdouts,
+plus complete matching primary and long-horizon qualification, remain required
+before any replacement. This extends the existing canonical evidence owner and
+avoids separate extraction/fitting/evaluation eligibility rules.

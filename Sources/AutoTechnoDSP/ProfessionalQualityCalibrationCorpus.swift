@@ -24,9 +24,17 @@ package struct ProfessionalQualityCalibrationTrajectory: Codable, Equatable,
     }
 
     package init(bank: ProfessionalEvidenceReportBank) throws {
+        try self.init(bank: bank, requiringModalWindowSupport: false)
+    }
+
+    package init(bank: ProfessionalEvidenceReportBank,
+                 requiringModalWindowSupport: Bool) throws {
         try self.init(
             sourceBankFingerprint: Self.fingerprint(of: bank),
-            observations: bank.reports.map(ProfessionalQualityObservation.init)
+            observations: bank.reports.map {
+                try ProfessionalQualityObservation(report: $0,
+                    requiringModalWindowSupport: requiringModalWindowSupport)
+            }
         )
     }
 
@@ -53,7 +61,8 @@ package struct ProfessionalQualityCalibrationTrajectory: Codable, Equatable,
               observations.allSatisfy({
                   $0.isComplete &&
                       $0.engineVersion == first.engineVersion &&
-                      $0.evidenceVersion == first.evidenceVersion
+                      $0.evidenceVersion == first.evidenceVersion &&
+                      $0.observationVersion == first.observationVersion
               }) else {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
@@ -131,6 +140,13 @@ package struct ProfessionalQualityCalibrationCorpus: Codable, Equatable,
         ))
     }
 
+    package init(windowSupportedBanks banks: [ProfessionalEvidenceReportBank]) throws {
+        try self.init(trajectories: banks.map {
+            try ProfessionalQualityCalibrationTrajectory(bank: $0,
+                requiringModalWindowSupport: true)
+        })
+    }
+
     package init(
         trajectories sourceTrajectories: [
             ProfessionalQualityCalibrationTrajectory
@@ -148,7 +164,8 @@ package struct ProfessionalQualityCalibrationCorpus: Codable, Equatable,
                   $0.isComplete &&
                       $0.engineVersion == first.engineVersion &&
                       $0.evidenceVersion == first.evidenceVersion &&
-                      $0.sampleRates == first.sampleRates
+                      $0.sampleRates == first.sampleRates &&
+                      $0.observations.first?.observationVersion == first.observations.first?.observationVersion
               }) else {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
@@ -191,7 +208,8 @@ package struct ProfessionalQualityCalibrationCorpus: Codable, Equatable,
             trajectories.allSatisfy {
                 $0.isComplete && $0.engineVersion == engineVersion &&
                     $0.evidenceVersion == evidenceVersion &&
-                    $0.sampleRates == sampleRates
+                    $0.sampleRates == sampleRates &&
+                    $0.observations.first?.observationVersion == trajectories.first?.observations.first?.observationVersion
             }
     }
 

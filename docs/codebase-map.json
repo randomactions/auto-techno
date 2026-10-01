@@ -605,7 +605,7 @@
     {
       "id": "evidence-calibration-and-primary-evaluation",
       "name": "Evidence, calibration, and primary evaluation",
-      "responsibility": "Construct complete candidate evidence, stream bounded perceptual analysis, validate exact artifacts and offline tolerance-aware PCM, signal, spectral, stereo-compatibility, collision, transient/envelope, rhythmic, and score-declared section-boundary reports, run the single calibrated primary evaluator with explicit relationship coverage and candidate-level calibration support/confidence-estimate status, and bind atomic commit provenance; deterministic synthetic signal fixtures used by analyzer evidence tests. Apply pad-rhythmic filter, amplitude-gate, and spatial-consequence means only when validated score evidence shows the three-step-pulse relation active, treating an absent relation as unavailable rather than a zero consequence; require that relation in the corresponding major-break adversarial baseline. Record per-trajectory conditional comparison support in the calibration profile; preserve absent measurements without fitting numeric zeros, and report applicable unsupported relationships as unavailable while retaining independent failures. Derive versioned descriptive per-bar kick/foundation and bar/role-pair/band masking feature reports from complete source reports without changing calibrated verdicts. Bound complete calibration corpora to 48 trajectories; select and freeze separate score-only four-bar major-break development and holdout windows in the existing test harness, and require exact frozen candidate geometry for fresh and cached report banks before any refit or promotion.",
+      "responsibility": "Construct complete candidate evidence, stream bounded perceptual analysis, validate exact artifacts and offline tolerance-aware PCM, signal, spectral, stereo-compatibility, collision, transient/envelope, rhythmic, and score-declared section-boundary reports, run the single calibrated primary evaluator with explicit relationship coverage and candidate-level calibration support/confidence-estimate status, and bind atomic commit provenance; deterministic synthetic signal fixtures used by analyzer evidence tests. Apply pad-rhythmic filter, amplitude-gate, and spatial-consequence means only when validated score evidence shows the three-step-pulse relation active, treating an absent relation as unavailable rather than a zero consequence; require that relation in the corresponding major-break adversarial baseline. Record per-trajectory conditional comparison support in the calibration profile; preserve absent measurements without fitting numeric zeros, and report applicable unsupported relationships as unavailable while retaining independent failures. Derive versioned descriptive per-bar kick/foundation and bar/role-pair/band masking feature reports from complete source reports without changing calibrated verdicts. Bound complete calibration corpora to 48 trajectories; select and freeze separate score-only four-bar major-break development and holdout windows in the existing test harness, and require exact frozen candidate geometry for fresh and cached report banks before any refit or promotion. Share versioned modal window applicability across extraction, calibration fitting, local verdicts and trajectory/rate assessment; preserve required unavailable dimensions and independent numeric failures. Keep the v22 observation/v31 profile foundation unavailable for production activation while the installed v21/v30 path remains unchanged.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -641,6 +641,10 @@
         {
           "symbol": "ProfessionalQualityMaskingLocalEvidence",
           "path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift"
+        },
+        {
+          "symbol": "ProfessionalQualityMeasurementContract",
+          "path": "Sources/AutoTechnoDSP/ProfessionalQualityMeasurementApplicability.swift"
         }
       ],
       "state": [
@@ -652,7 +656,8 @@
         "candidate calibration support and confidence-estimate status",
         "descriptive per-bar kick/foundation evidence",
         "descriptive bar-, role-pair-, and frequency-band-local masking evidence",
-        "local frozen calibration-window root, score, accepted-input, and original-cohort provenance"
+        "local frozen calibration-window root, score, accepted-input, and original-cohort provenance",
+        "version-bound modal window coverage counts and required measurement availability"
       ],
       "inputs": [
         "planned structure",
@@ -681,7 +686,8 @@
         "score-declared phrase/chapter boundary, fixed transition-cell, multidimensional contrast, and explicit recovery-state baselines",
         "professional calibration and holdout reports",
         "complete checkpoint/rate coverage and explicit unestimated confidence status",
-        "report-only modal window eligibility, excluded-event counts, and nullable measured ratios; installed calibration unchanged"
+        "report-only modal window eligibility, excluded-event counts, and nullable measured ratios; installed calibration unchanged",
+        "schema2 modal ratio support: missing, partial, undefined body and measured event counts; omitted unavailable values, shared fit refusal and relationship availability"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AudioQualityReport.swift",
@@ -705,6 +711,7 @@
         "Sources/AutoTechnoDSP/ProfessionalQualityCalibration.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityCalibrationCorpus.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityHoldoutQualification.swift",
+        "Sources/AutoTechnoDSP/ProfessionalQualityMeasurementApplicability.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityPreparationEvaluator.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift",
         "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift",

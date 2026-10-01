@@ -418,6 +418,19 @@ struct AutonomousCandidateEvaluationTests {
             checkpoint: .establishment, sourceReportFingerprint: supported.fingerprint)
         #expect(diagnostic.sourceEventCount == 1)
         #expect(diagnostic.tailBodyMeasuredEventCount == 1)
+        #expect(diagnostic.isComplete)
+        let measured = try ProfessionalQualityObservation(candidate: supported,
+            engineVersion: QualityQualificationContract.engineVersion,
+            checkpoint: .establishment, requiringModalWindowSupport: true)
+        #expect(measured.observationVersion == ProfessionalQualityMeasurementContract.modalWindowObservationVersion)
+        #expect(measured.isComplete)
+        #expect(measured[.modalPercussionTailToBodyDBMean] == diagnostic.tailToBodyDBMean)
+        #expect(measured.modalWindowSupport == diagnostic)
+        #expect(throws: ProfessionalEvidenceReportBankError.incompleteEvidence) {
+            try ProfessionalQualityObservation(candidate: decoded,
+                engineVersion: QualityQualificationContract.engineVersion,
+                checkpoint: .establishment, requiringModalWindowSupport: true)
+        }
         #expect(diagnostic.tailBodyExcludedEventCount == 0)
         #expect(abs(try #require(diagnostic.tailToBodyDBMean) - event.tailToBodyDB) < 1e-12)
         #expect(try ProfessionalQualityObservation(candidate: active,

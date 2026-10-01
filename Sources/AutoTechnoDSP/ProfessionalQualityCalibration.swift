@@ -25,6 +25,7 @@ package enum ProfessionalQualityCalibrationError: Error, Equatable, Sendable {
     case invalidBounds
     case profileMismatch
     case invalidLocalFeatureEvidence
+    case unavailableMeasurement(ProfessionalQualityUnavailableMeasurement)
 }
 
 package struct AutonomousStemRoleFailure: Equatable, Sendable {
@@ -647,6 +648,7 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
     package let liveMaster: ProfessionalQualityLiveMasterProvenance
     package let sourceMetricCount: Int
     package let metrics: [ProfessionalQualityMetricValue]
+    package let modalWindowSupport: ProfessionalQualityModalWindowEvidence?
 
     package init(
         engineVersion: String,
@@ -655,7 +657,8 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         sampleRate: Double,
         hardGatesPassed: Bool,
         liveMaster: ProfessionalQualityLiveMasterProvenance,
-        metrics sourceMetrics: [ProfessionalQualityMetricValue]
+        metrics sourceMetrics: [ProfessionalQualityMetricValue],
+        modalWindowSupport: ProfessionalQualityModalWindowEvidence? = nil
     ) throws {
         guard !engineVersion.trimmingCharacters(
             in: .whitespacesAndNewlines
@@ -667,8 +670,12 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
         let sorted = sourceMetrics.sorted { $0.metric.rawValue < $1.metric.rawValue }
-        guard sorted.count == ProfessionalQualityMetric.allCases.count,
-              Set(sorted.map(\.metric)).count == sorted.count else {
+        let expected = Self.expectedMetrics(support: modalWindowSupport)
+        guard sorted.count == expected.count,
+              Set(sorted.map(\.metric)) == expected,
+              modalWindowSupport.map({
+                  $0.isComplete && $0.checkpoint == checkpoint && $0.sampleRate == sampleRate
+              }) ?? true else {
             throw ProfessionalQualityCalibrationError.invalidMetricSet
         }
         if let invalid = sorted.first(where: { !$0.value.isFinite }) {
@@ -676,8 +683,10 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 invalid.metric
             )
         }
-        schemaVersion = Self.schemaVersion
-        observationVersion = Self.observationVersion
+        schemaVersion = modalWindowSupport == nil ? Self.schemaVersion : 22
+        observationVersion = modalWindowSupport == nil ? Self.observationVersion :
+            ProfessionalQualityMeasurementContract.modalWindowObservationVersion
+        self.modalWindowSupport = modalWindowSupport
         self.engineVersion = engineVersion
         self.evidenceVersion = evidenceVersion
         self.checkpoint = checkpoint
@@ -695,7 +704,8 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
     package init(
         candidate vector: AutonomousCandidateEvaluationVector,
         engineVersion: String,
-        checkpoint: CanonicalJourneyCheckpoint
+        checkpoint: CanonicalJourneyCheckpoint,
+        requiringModalWindowSupport: Bool = false
     ) throws {
         guard let phraseKind = AutonomousPhraseKind(
             rawValue: vector.symbolic.phraseKind
@@ -897,7 +907,7 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 Double(perceptual.analyzedWindowCount)
         let crestDB = fullMix.peak > 0 && fullMix.rms > 0
             ? decibels(fullMix.peak, fullMix.rms) : 0
-        let metrics = [
+        var metrics = [
             ProfessionalQualityMetricValue(metric: .integratedLoudnessLUFS,
                 value: fullMix.integratedLoudness),
             ProfessionalQualityMetricValue(metric: .maximumMomentaryLoudnessLUFS,
@@ -1167,6 +1177,22 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 value: Double(distinctPadFunctionCount)
             ),
         ]
+        let windowSupport = requiringModalWindowSupport
+            ? try ProfessionalQualityModalWindowEvidence(
+                candidate: vector, checkpoint: checkpoint,
+                sourceReportFingerprint: vector.fingerprint
+            ) : nil
+        if let support = windowSupport {
+            metrics.removeAll { ProfessionalQualityMeasurementContract.modalMetrics.contains($0.metric) }
+            if support.attackBodySupport.applicability == .measured,
+               let value = support.attackToBodyDBMean {
+                metrics.append(.init(metric: .modalPercussionAttackToBodyDBMean, value: value))
+            }
+            if support.tailBodySupport.applicability == .measured,
+               let value = support.tailToBodyDBMean {
+                metrics.append(.init(metric: .modalPercussionTailToBodyDBMean, value: value))
+            }
+        }
         try self.init(
             engineVersion: engineVersion,
             checkpoint: checkpoint,
@@ -1174,7 +1200,8 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             hardGatesPassed: vector.hardGatesPassed,
             liveMaster: try ProfessionalQualityLiveMasterProvenance
                 .candidateDerived(vector),
-            metrics: metrics
+            metrics: metrics,
+            modalWindowSupport: windowSupport
         )
     }
 
@@ -1194,6 +1221,11 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
     }
 
     package init(report: CanonicalJourneyQualificationReport) throws {
+        try self.init(report: report, requiringModalWindowSupport: false)
+    }
+
+    package init(report: CanonicalJourneyQualificationReport,
+                 requiringModalWindowSupport: Bool) throws {
         guard report.evidenceScope ==
                 CanonicalJourneyQualificationReport.currentEvidenceScope else {
             throw ProfessionalQualityCalibrationError
@@ -1205,7 +1237,8 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         try self.init(
             candidate: report.selectedCandidateEvidence,
             engineVersion: report.engineVersion,
-            checkpoint: report.checkpoint
+            checkpoint: report.checkpoint,
+            requiringModalWindowSupport: requiringModalWindowSupport
         )
     }
 
@@ -1214,8 +1247,12 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
     }
 
     package var isComplete: Bool {
-        schemaVersion == Self.schemaVersion &&
-            observationVersion == Self.observationVersion &&
+        schemaVersion == (modalWindowSupport == nil ? Self.schemaVersion : 22) &&
+            observationVersion == (modalWindowSupport == nil ? Self.observationVersion :
+                ProfessionalQualityMeasurementContract.modalWindowObservationVersion) &&
+            (modalWindowSupport.map {
+                $0.isComplete && $0.checkpoint == checkpoint && $0.sampleRate == sampleRate
+            } ?? true) &&
             !engineVersion.trimmingCharacters(
                 in: .whitespacesAndNewlines
             ).isEmpty &&
@@ -1224,7 +1261,7 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             sampleRate >= QualityQualificationContract.minimumSupportedSampleRate &&
             sampleRate <= QualityQualificationContract.maximumSupportedSampleRate &&
             sourceMetricCount == metrics.count &&
-            metrics.count == ProfessionalQualityMetric.allCases.count &&
+            Set(metrics.map(\.metric)) == Self.expectedMetrics(support: modalWindowSupport) &&
             Set(metrics.map(\.metric)).count == metrics.count &&
             metrics == metrics.sorted { $0.metric.rawValue < $1.metric.rawValue } &&
             metrics.allSatisfy { $0.value.isFinite } && liveMaster.isComplete
@@ -1246,7 +1283,8 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 $0.metric == metric
                     ? ProfessionalQualityMetricValue(metric: metric, value: value)
                     : $0
-            }
+            },
+            modalWindowSupport: modalWindowSupport
         )
     }
 
@@ -1260,7 +1298,8 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             sampleRate: sampleRate,
             hardGatesPassed: hardGatesPassed,
             liveMaster: provenance,
-            metrics: metrics
+            metrics: metrics,
+            modalWindowSupport: modalWindowSupport
         )
     }
 
@@ -1269,10 +1308,37 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
     package func measurementIsApplicable(
         _ metric: ProfessionalQualityMetric
     ) -> Bool {
-        guard let activityMetric = metric.measurementActivityMetric else {
-            return true
+        measurementApplicability(metric) == .measured
+    }
+
+    package func measurementApplicability(
+        _ metric: ProfessionalQualityMetric
+    ) -> ProfessionalQualityMeasurementApplicability {
+        if let support = modalWindowSupport {
+            if metric == .modalPercussionAttackToBodyDBMean {
+                return support.attackBodySupport.applicability
+            }
+            if metric == .modalPercussionTailToBodyDBMean {
+                return support.tailBodySupport.applicability
+            }
         }
-        return (self[activityMetric] ?? 0) > 1e-12
+        guard let activityMetric = metric.measurementActivityMetric else { return .measured }
+        return (self[activityMetric] ?? 0) > 1e-12 ? .measured : .notRequired
+    }
+
+    private static func expectedMetrics(
+        support: ProfessionalQualityModalWindowEvidence?
+    ) -> Set<ProfessionalQualityMetric> {
+        var metrics = Set(ProfessionalQualityMetric.allCases)
+        if let support {
+            if support.attackBodySupport.applicability != .measured {
+                metrics.remove(.modalPercussionAttackToBodyDBMean)
+            }
+            if support.tailBodySupport.applicability != .measured {
+                metrics.remove(.modalPercussionTailToBodyDBMean)
+            }
+        }
+        return metrics
     }
 
     package func deterministicJSON() throws -> Data {
@@ -1384,7 +1450,8 @@ package struct ProfessionalQualityTrajectoryBounds: Codable, Equatable,
               lowerDelta <= upperDelta,
               sourceComparisonCount >= 0,
               sourceComparisonCount > 0 ||
-                (metric.measurementActivityMetric != nil &&
+                ((metric.measurementActivityMetric != nil ||
+                    ProfessionalQualityMeasurementContract.modalMetrics.contains(metric)) &&
                     lowerDelta == 0 && upperDelta == 0) else {
             throw ProfessionalQualityCalibrationError.invalidBounds
         }
@@ -1502,6 +1569,9 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
 
+        for trajectory in corpus.trajectories {
+            try ProfessionalQualityMeasurementContract.requireSupported(trajectory.observations)
+        }
         var profiles: [ProfessionalQualityCheckpointProfile] = []
         let allObservations = corpus.trajectories.flatMap(\.observations)
         for checkpoint in CanonicalJourneyCheckpoint.allCases {
@@ -1605,7 +1675,10 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                         crossRateDrifts.append(maximum - minimum)
                     }
                 }
-                if deltas.isEmpty, metric.measurementActivityMetric != nil {
+                if deltas.isEmpty,
+                   metric.measurementActivityMetric != nil ||
+                    (allObservations.first?.modalWindowSupport != nil &&
+                        ProfessionalQualityMeasurementContract.modalMetrics.contains(metric)) {
                     trajectoryBounds.append(try ProfessionalQualityTrajectoryBounds(
                         trajectory: trajectoryKind,
                         metric: metric,
@@ -1686,9 +1759,10 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             }
         }
 
-        schemaVersion = Self.schemaVersion
-        profileVersion = Self.profileVersion
-        observationVersion = ProfessionalQualityObservation.observationVersion
+        let usesWindowSupport = corpus.observations.first?.modalWindowSupport != nil
+        schemaVersion = usesWindowSupport ? 23 : Self.schemaVersion
+        profileVersion = usesWindowSupport ? ProfessionalQualityMeasurementContract.modalWindowProfileVersion : Self.profileVersion
+        observationVersion = corpus.observations.first!.observationVersion
         evidenceVersion = corpus.evidenceVersion
         engineVersion = corpus.engineVersion
         sourceBankFingerprint = corpus.fingerprint
@@ -1718,7 +1792,8 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
               ).isEmpty,
               observations.allSatisfy({
                   $0.isComplete && $0.engineVersion == engineVersion &&
-                      $0.evidenceVersion == evidenceVersion
+                      $0.evidenceVersion == evidenceVersion &&
+                      $0.observationVersion == observations.first?.observationVersion
               }) else {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
@@ -1727,6 +1802,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 CanonicalJourneyCheckpoint.allCases.count else {
             throw ProfessionalQualityCalibrationError.incompleteRepresentativeRates
         }
+        try ProfessionalQualityMeasurementContract.requireSupported(observations)
         var profiles: [ProfessionalQualityCheckpointProfile] = []
         for checkpoint in CanonicalJourneyCheckpoint.allCases {
             let sources = observations.filter { $0.checkpoint == checkpoint }
@@ -1818,9 +1894,10 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 ))
             }
         }
-        schemaVersion = Self.schemaVersion
-        profileVersion = Self.profileVersion
-        observationVersion = ProfessionalQualityObservation.observationVersion
+        let usesWindowSupport = observations.first?.modalWindowSupport != nil
+        schemaVersion = usesWindowSupport ? 23 : Self.schemaVersion
+        profileVersion = usesWindowSupport ? ProfessionalQualityMeasurementContract.modalWindowProfileVersion : Self.profileVersion
+        observationVersion = observations.first!.observationVersion
         self.evidenceVersion = evidenceVersion
         self.engineVersion = engineVersion
         self.sourceBankFingerprint = sourceBankFingerprint
@@ -1833,9 +1910,11 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
     package var isComplete: Bool {
         let expectedObservationCount = sourceTrajectoryCount *
             Self.requiredSampleRates.count
-        return schemaVersion == Self.schemaVersion &&
-            profileVersion == Self.profileVersion &&
-            observationVersion == ProfessionalQualityObservation.observationVersion &&
+        return ((schemaVersion == Self.schemaVersion && profileVersion == Self.profileVersion &&
+                    observationVersion == ProfessionalQualityObservation.observationVersion) ||
+                (schemaVersion == 23 &&
+                    profileVersion == ProfessionalQualityMeasurementContract.modalWindowProfileVersion &&
+                    observationVersion == ProfessionalQualityMeasurementContract.modalWindowObservationVersion)) &&
             evidenceVersion == ProfessionalEvidenceReportBank.evidenceVersion &&
             !engineVersion.trimmingCharacters(
                 in: .whitespacesAndNewlines
@@ -1870,7 +1949,9 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                     $0.lowerDelta <= $0.upperDelta &&
                     (0...expectedObservationCount).contains($0.sourceComparisonCount) &&
                     ($0.sourceComparisonCount > 0 ||
-                        ($0.metric.measurementActivityMetric != nil &&
+                        (($0.metric.measurementActivityMetric != nil ||
+                            (observationVersion == ProfessionalQualityMeasurementContract.modalWindowObservationVersion &&
+                                ProfessionalQualityMeasurementContract.modalMetrics.contains($0.metric))) &&
                             $0.lowerDelta == 0 && $0.upperDelta == 0))
             } &&
             rateConsistency.count == CanonicalJourneyCheckpoint.allCases.count *
@@ -1901,8 +1982,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
     }
 
     package var usesDiverseCalibration: Bool {
-        schemaVersion == Self.schemaVersion &&
-            profileVersion == Self.profileVersion &&
+        isComplete &&
             sourceTrajectoryCount >= Self.minimumCalibrationTrajectoryCount
     }
 
@@ -2299,6 +2379,7 @@ package enum ProfessionalQualityRejection: String, Codable, Hashable, Sendable {
     case profileMismatch = "profile-mismatch"
     case hardGateFailure = "hard-gate-failure"
     case incompleteObservation = "incomplete-observation"
+    case unavailableMeasurement = "unavailable-measurement"
     case metricOutOfRange = "metric-out-of-range"
     case trajectoryRelationshipFailed = "trajectory-relationship-failed"
     case rateConsistencyFailed = "rate-consistency-failed"
@@ -2357,6 +2438,7 @@ package enum ProfessionalQualityRelationshipAvailability: String, Codable,
     case incompleteObservations = "incomplete-observations"
     case invalidObservations = "invalid-observations"
     case unavailableCalibrationSupport = "unavailable-calibration-support"
+    case unavailableMeasurementSupport = "unavailable-measurement-support"
 }
 
 package enum ProfessionalQualityRelationshipCoverage: String, Codable, Sendable {
@@ -2376,11 +2458,29 @@ package struct ProfessionalQualityRelationshipAssessment: Equatable, Sendable {
     package let observationCount: Int
     package let requiredObservationCount: Int
     package let failures: [ProfessionalQualityRelationshipFailure]
+    package let unavailableMeasurements: [ProfessionalQualityUnavailableMeasurement]
+
+    package init(availability: ProfessionalQualityRelationshipAvailability,
+                 coverage: ProfessionalQualityRelationshipCoverage,
+                 support: ProfessionalQualityCalibrationSupport,
+                 confidence: ProfessionalQualityConfidenceStatus,
+                 observationCount: Int, requiredObservationCount: Int,
+                 failures: [ProfessionalQualityRelationshipFailure],
+                 unavailableMeasurements: [ProfessionalQualityUnavailableMeasurement] = []) {
+        self.availability = availability
+        self.coverage = coverage
+        self.support = support
+        self.confidence = confidence
+        self.observationCount = observationCount
+        self.requiredObservationCount = requiredObservationCount
+        self.failures = failures
+        self.unavailableMeasurements = unavailableMeasurements
+    }
 
     package var accepted: Bool {
         availability == .available && coverage == .complete &&
             support == .sufficient &&
-            failures.isEmpty
+            failures.isEmpty && unavailableMeasurements.isEmpty
     }
 }
 
@@ -2463,7 +2563,8 @@ package enum ProfessionalQualityRelationshipEvaluator {
               observedIdentities == expectedIdentities,
               observations.allSatisfy({
                   $0.isComplete && $0.engineVersion == profile.engineVersion &&
-                      $0.evidenceVersion == profile.evidenceVersion
+                      $0.evidenceVersion == profile.evidenceVersion &&
+                      $0.observationVersion == profile.observationVersion
               }) else {
             return ProfessionalQualityRelationshipAssessment(
                 availability: .invalidObservations,
@@ -2477,6 +2578,8 @@ package enum ProfessionalQualityRelationshipEvaluator {
                 failures: []
             )
         }
+        let unavailableMeasurements = ProfessionalQualityMeasurementContract
+            .unavailableMeasurements(in: observations)
         var failures: [ProfessionalQualityRelationshipFailure] = []
         var unavailableCalibrationSupport = false
         for bounds in profile.trajectories
@@ -2569,18 +2672,19 @@ package enum ProfessionalQualityRelationshipEvaluator {
             return leftKey < rightKey
         }
         return ProfessionalQualityRelationshipAssessment(
-            availability: unavailableCalibrationSupport
-                ? .unavailableCalibrationSupport : .available,
+            availability: !unavailableMeasurements.isEmpty ? .unavailableMeasurementSupport :
+                (unavailableCalibrationSupport ? .unavailableCalibrationSupport : .available),
             coverage: coverage,
-            support: unavailableCalibrationSupport ? .insufficient : support,
-            confidence: !unavailableCalibrationSupport &&
+            support: unavailableCalibrationSupport || !unavailableMeasurements.isEmpty ? .insufficient : support,
+            confidence: !unavailableCalibrationSupport && unavailableMeasurements.isEmpty &&
                 support == .sufficient && coverage == .complete
                 ? .notEstimated : .unavailable,
             observationCount: observations.count,
             requiredObservationCount: coverage == .complete
                 ? fullRequiredObservationCount
                 : CanonicalJourneyCheckpoint.allCases.count,
-            failures: orderedFailures
+            failures: orderedFailures,
+            unavailableMeasurements: unavailableMeasurements
         )
     }
 }
@@ -2594,6 +2698,7 @@ package enum ProfessionalQualityProfileEvaluator {
         var failed = Set<ProfessionalQualityMetric>()
         guard profile.isComplete,
               observation.evidenceVersion == profile.evidenceVersion,
+              observation.observationVersion == profile.observationVersion,
               profile.sampleRates.contains(observation.sampleRate),
               profile[observation.checkpoint] != nil else {
             return ProfessionalQualityVerdict(
@@ -2636,6 +2741,11 @@ package enum ProfessionalQualityProfileEvaluator {
         }
         for metric in ProfessionalQualityMetric.allCases
             where metric.participatesInQualification {
+            if observation.measurementApplicability(metric) == .unavailable {
+                reasons.insert(.unavailableMeasurement)
+                failed.insert(metric)
+                continue
+            }
             if !observation.measurementIsApplicable(metric) { continue }
             guard let value = observation[metric],
                   let bounds = profile.effectiveBounds(

@@ -32,6 +32,8 @@ package struct ProfessionalQualityModalWindowEvidence: Codable, Equatable, Senda
     package let tailBodyExcludedEventCount: Int
     package let attackToBodyDBMean: Double?
     package let tailToBodyDBMean: Double?
+    package let attackBodySupport: ProfessionalQualityModalRatioSupport
+    package let tailBodySupport: ProfessionalQualityModalRatioSupport
 
     package init(report: CanonicalJourneyQualificationReport) throws {
         guard report.evidenceScope == CanonicalJourneyQualificationReport.currentEvidenceScope else {
@@ -53,6 +55,8 @@ package struct ProfessionalQualityModalWindowEvidence: Codable, Equatable, Senda
         let events = candidate.modalPercussion.flatMap(\.events)
         var attacks: [Double] = []
         var tails: [Double] = []
+        var attackMissing = 0, attackPartial = 0, attackUndefined = 0
+        var tailMissing = 0, tailPartial = 0, tailUndefined = 0
         for event in events {
             guard let support = event.windowSupport,
                   support.isValid(sampleRate: sampleRate,
@@ -63,12 +67,26 @@ package struct ProfessionalQualityModalWindowEvidence: Codable, Equatable, Senda
                 attackRMS: event.attackRMS, bodyRMS: event.bodyRMS,
                 sampleRate: sampleRate
             ) { attacks.append(value) }
+            else if support.attack(sampleRate: sampleRate) == .missing ||
+                        support.body(sampleRate: sampleRate) == .missing {
+                attackMissing += 1
+            } else if support.attack(sampleRate: sampleRate) == .partial ||
+                        support.body(sampleRate: sampleRate) == .partial {
+                attackPartial += 1
+            } else { attackUndefined += 1 }
             if let value = support.tailToBodyDB(
                 tailRMS: event.tailRMS, bodyRMS: event.bodyRMS,
                 sampleRate: sampleRate
             ) { tails.append(value) }
+            else if support.tail(sampleRate: sampleRate) == .missing ||
+                        support.body(sampleRate: sampleRate) == .missing {
+                tailMissing += 1
+            } else if support.tail(sampleRate: sampleRate) == .partial ||
+                        support.body(sampleRate: sampleRate) == .partial {
+                tailPartial += 1
+            } else { tailUndefined += 1 }
         }
-        schemaVersion = 1
+        schemaVersion = 2
         self.checkpoint = checkpoint
         self.sampleRate = sampleRate
         self.sourceReportFingerprint = sourceReportFingerprint
@@ -79,6 +97,32 @@ package struct ProfessionalQualityModalWindowEvidence: Codable, Equatable, Senda
         tailBodyExcludedEventCount = events.count - tails.count
         attackToBodyDBMean = attacks.isEmpty ? nil : attacks.reduce(0, +) / Double(attacks.count)
         tailToBodyDBMean = tails.isEmpty ? nil : tails.reduce(0, +) / Double(tails.count)
+        attackBodySupport = .init(sourceEventCount: events.count,
+            measuredEventCount: attacks.count, missingWindowEventCount: attackMissing,
+            partialWindowEventCount: attackPartial, undefinedBodyEventCount: attackUndefined)
+        tailBodySupport = .init(sourceEventCount: events.count,
+            measuredEventCount: tails.count, missingWindowEventCount: tailMissing,
+            partialWindowEventCount: tailPartial, undefinedBodyEventCount: tailUndefined)
+    }
+
+    package var isComplete: Bool {
+        schemaVersion == 2 && sampleRate.isFinite &&
+            sampleRate >= QualityQualificationContract.minimumSupportedSampleRate &&
+            sampleRate <= QualityQualificationContract.maximumSupportedSampleRate &&
+            !sourceReportFingerprint.isEmpty &&
+            attackBodySupport.isComplete && tailBodySupport.isComplete &&
+            sourceEventCount == attackBodySupport.sourceEventCount &&
+            sourceEventCount == tailBodySupport.sourceEventCount &&
+            attackBodyMeasuredEventCount == attackBodySupport.measuredEventCount &&
+            tailBodyMeasuredEventCount == tailBodySupport.measuredEventCount &&
+            attackBodyExcludedEventCount == sourceEventCount - attackBodyMeasuredEventCount &&
+            tailBodyExcludedEventCount == sourceEventCount - tailBodyMeasuredEventCount &&
+            Self.meanIsValid(attackToBodyDBMean, count: attackBodyMeasuredEventCount) &&
+            Self.meanIsValid(tailToBodyDBMean, count: tailBodyMeasuredEventCount)
+    }
+
+    private static func meanIsValid(_ mean: Double?, count: Int) -> Bool {
+        count == 0 ? mean == nil : mean.map { $0.isFinite && (-120...120).contains($0) } == true
     }
 }
 
@@ -109,6 +153,14 @@ package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable,
     package func modalWindowFeatureReports() throws ->
         [ProfessionalQualityModalWindowEvidence] {
         try reports.map { try ProfessionalQualityModalWindowEvidence(report: $0) }
+    }
+
+    package func windowSupportedObservations() throws -> [ProfessionalQualityObservation] {
+        try reports.map { report in
+            try ProfessionalQualityObservation(
+                report: report, requiringModalWindowSupport: true
+            )
+        }
     }
 
     /// Projects a report-only bar-level view from the exact role evidence

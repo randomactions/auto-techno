@@ -14,6 +14,210 @@ import Testing
  */
 @Suite("Professional quality calibration")
 struct ProfessionalQualityCalibrationTests {
+    @Test("Window-supported profiles bind the new observation contract without activating v30")
+    func windowSupportedContractIdentity() throws {
+        let observations = try representativeObservations().map { try windowObservation($0) }
+        let corpus = try windowCorpus(observations)
+        let profile = try ProfessionalQualityCalibrationProfile(corpus: corpus)
+        #expect(profile.isComplete)
+        #expect(profile.profileVersion == ProfessionalQualityMeasurementContract.modalWindowProfileVersion)
+        #expect(profile.profileVersion != ProfessionalQualityPrimaryEvaluator.requiredProfileVersion)
+        #expect(profile.observationVersion == ProfessionalQualityMeasurementContract.modalWindowObservationVersion)
+        #expect(try ProfessionalQualityCalibrationProfile.decodeDeterministicJSON(
+            profile.deterministicJSON()) == profile)
+        for observation in observations {
+            #expect(observation.isComplete)
+            #expect(ProfessionalQualityProfileEvaluator.evaluate(observation, against: profile).accepted)
+        }
+        #expect(ProfessionalQualityRelationshipEvaluator.evaluate(
+            observations: observations, against: profile).accepted)
+        let legacy = try representativeObservations()
+        #expect(ProfessionalQualityProfileEvaluator.evaluate(legacy[0], against: profile)
+            .reasons == [.profileMismatch])
+        #expect(ProfessionalQualityRelationshipEvaluator.evaluate(
+            observations: legacy, against: profile).availability == .invalidObservations)
+        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
+            try ProfessionalQualityCalibrationTrajectory(sourceBankFingerprint: "mixed-contract",
+                observations: [legacy[0]] + Array(observations.dropFirst()))
+        }
+    }
+
+    @Test("Required missing, partial, undefined and mixed modal windows fail every quality path")
+    func unavailableWindowSupportIsNeverWaived() throws {
+        let legacy = try representativeObservations()
+        let observations = try legacy.map { try windowObservation($0) }
+        let profile = try ProfessionalQualityCalibrationProfile(corpus: windowCorpus(observations))
+        let index = try #require(observations.firstIndex {
+            $0.checkpoint == .majorBreak && $0.sampleRate == 44_100
+        })
+        for kind in ["missing", "partial", "undefined", "mixed"] {
+            let unsupported = try windowObservation(legacy[index], kind: kind)
+            #expect(unsupported.isComplete)
+            #expect(unsupported[.modalPercussionTailToBodyDBMean] == nil)
+            #expect(unsupported.measurementApplicability(.modalPercussionTailToBodyDBMean) == .unavailable)
+            let local = ProfessionalQualityProfileEvaluator.evaluate(unsupported, against: profile)
+            #expect(!local.accepted)
+            #expect(local.reasons.contains(.unavailableMeasurement))
+            #expect(local.failedMetrics.contains(.modalPercussionTailToBodyDBMean))
+            var attacked = observations
+            attacked[index] = unsupported
+            let numericalIndex = try #require(attacked.firstIndex {
+                $0.checkpoint == .chapterChange && $0.sampleRate == 48_000
+            })
+            attacked[numericalIndex] = try attacked[numericalIndex]
+                .replacing(.maximumBoundaryDelta, with: 100)
+            let assessment = ProfessionalQualityRelationshipEvaluator.evaluate(
+                observations: attacked, against: profile)
+            #expect(assessment.availability == .unavailableMeasurementSupport)
+            #expect(assessment.support == .insufficient)
+            #expect(assessment.confidence == .unavailable)
+            #expect(assessment.unavailableMeasurements.contains {
+                $0.metric == .modalPercussionTailToBodyDBMean && $0.reason == .requiredWindowSupport
+            })
+            #expect(assessment.failures.contains { $0.metric == .maximumBoundaryDelta })
+            let unavailable = try #require(ProfessionalQualityMeasurementContract
+                .unavailableMeasurements(in: attacked).first)
+            #expect(throws: ProfessionalQualityCalibrationError.unavailableMeasurement(unavailable)) {
+                try ProfessionalQualityCalibrationProfile(corpus: windowCorpus(attacked))
+            }
+            let data = try unsupported.deterministicJSON()
+            let wire = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            let values = try #require(wire["metrics"] as? [[String: Any]])
+            #expect(!values.contains { $0["metric"] as? String == ProfessionalQualityMetric.modalPercussionTailToBodyDBMean.rawValue })
+            #expect(wire["modalWindowSupport"] != nil)
+            if kind == "mixed" {
+                #expect(unsupported.modalWindowSupport?.tailToBodyDBMean != nil)
+                #expect(unsupported.modalWindowSupport?.tailBodyMeasuredEventCount == 1)
+                #expect(unsupported.modalWindowSupport?.tailBodyExcludedEventCount == 1)
+            }
+        }
+    }
+
+    @Test("Score absence is not trained as zero and cannot qualify an unseen active relation")
+    func absentWindowMeasurementsKeepCoverage() throws {
+        let legacy = try representativeObservations()
+        let observations = try legacy.map {
+            try windowObservation($0, kind: $0.checkpoint == .majorBreak ? "absent" : "measured")
+        }
+        let profile = try ProfessionalQualityCalibrationProfile(corpus: windowCorpus(observations))
+        #expect(profile.isComplete)
+        for observation in observations where observation.checkpoint == .majorBreak {
+            #expect(observation[.modalPercussionTailToBodyDBMean] == nil)
+            #expect(observation.measurementApplicability(.modalPercussionTailToBodyDBMean) == .notRequired)
+            #expect(ProfessionalQualityProfileEvaluator.evaluate(observation, against: profile).accepted)
+        }
+        #expect(ProfessionalQualityRelationshipEvaluator.evaluate(
+            observations: observations, against: profile).accepted)
+        let conditional = try #require(profile.trajectories.first {
+            $0.trajectory == .establishmentToMajorBreak &&
+                $0.metric == .modalPercussionTailToBodyDBMean
+        })
+        #expect(conditional.sourceComparisonCount == 0)
+        let nowActive = try legacy.map { try windowObservation($0) }
+        let assessment = ProfessionalQualityRelationshipEvaluator.evaluate(
+            observations: nowActive, against: profile)
+        #expect(!assessment.accepted)
+        #expect(assessment.availability == .unavailableCalibrationSupport)
+
+        var asymmetric = nowActive
+        let index = try #require(asymmetric.firstIndex {
+            $0.checkpoint == .majorBreak && $0.sampleRate == 44_100
+        })
+        asymmetric[index] = observations[index]
+        let mismatch = ProfessionalQualityRelationshipEvaluator.evaluate(
+            observations: asymmetric, against: profile)
+        #expect(mismatch.availability == .unavailableMeasurementSupport)
+        #expect(mismatch.unavailableMeasurements.contains { $0.reason == .rateApplicabilityMismatch })
+        #expect(throws: ProfessionalQualityCalibrationError.unavailableMeasurement(
+            mismatch.unavailableMeasurements[0])) {
+            try ProfessionalQualityCalibrationProfile(corpus: windowCorpus(asymmetric))
+        }
+    }
+
+    @Test("Measured zero remains numeric while malformed support and fabricated absence fail closed")
+    func windowSupportSerializationAndSilence() throws {
+        let legacy = try representativeObservations()[0]
+        let silent = try windowObservation(legacy, kind: "silent")
+        #expect(silent[.modalPercussionTailToBodyDBMean] == -120)
+        #expect(silent.measurementApplicability(.modalPercussionTailToBodyDBMean) == .measured)
+        #expect(silent.modalWindowSupport?.tailBodySupport.measuredEventCount == 1)
+        let absent = try windowObservation(legacy, kind: "absent")
+        #expect(absent.metrics.count == legacy.metrics.count - 2)
+        #expect(throws: ProfessionalQualityCalibrationError.invalidMetricSet) {
+            try ProfessionalQualityObservation(engineVersion: absent.engineVersion,
+                checkpoint: absent.checkpoint, sampleRate: absent.sampleRate,
+                hardGatesPassed: true, liveMaster: absent.liveMaster,
+                metrics: legacy.metrics, modalWindowSupport: absent.modalWindowSupport)
+        }
+        let support = try #require(silent.modalWindowSupport)
+        var wire = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(support)) as? [String: Any])
+        wire["tailBodyMeasuredEventCount"] = 0
+        let forged = try JSONDecoder().decode(ProfessionalQualityModalWindowEvidence.self,
+            from: JSONSerialization.data(withJSONObject: wire))
+        #expect(!forged.isComplete)
+        #expect(throws: ProfessionalQualityCalibrationError.invalidMetricSet) {
+            try ProfessionalQualityObservation(engineVersion: silent.engineVersion,
+                checkpoint: silent.checkpoint, sampleRate: silent.sampleRate,
+                hardGatesPassed: true, liveMaster: silent.liveMaster,
+                metrics: silent.metrics, modalWindowSupport: forged)
+        }
+        #expect(try JSONDecoder().decode(ProfessionalQualityModalWindowEvidence.self,
+            from: JSONEncoder().encode(support)) == support)
+    }
+
+    private func windowCorpus(_ observations: [ProfessionalQualityObservation]) throws
+        -> ProfessionalQualityCalibrationCorpus {
+        try ProfessionalQualityCalibrationCorpus(trajectories: (0..<24).map {
+            try ProfessionalQualityCalibrationTrajectory(
+                sourceBankFingerprint: "window-contract-unit-fixture-\($0)", observations: observations)
+        })
+    }
+
+    /// Reduced support fixtures test the algebra and failure contract, never
+    /// shipping qualification. Candidate/DSP fixtures independently test geometry.
+    private func windowObservation(_ legacy: ProfessionalQualityObservation,
+                                   kind: String = "measured") throws -> ProfessionalQualityObservation {
+        let count = kind == "absent" ? 0 : (kind == "mixed" ? 2 : 1)
+        func counts(measured: Int, missing: Int = 0, partial: Int = 0, undefined: Int = 0)
+            -> [String: Int] {
+            ["sourceEventCount": count, "measuredEventCount": measured,
+             "missingWindowEventCount": missing, "partialWindowEventCount": partial,
+             "undefinedBodyEventCount": undefined]
+        }
+        let attackCount = kind == "undefined" ? 0 : count
+        let tailCount = ["measured", "silent", "mixed"].contains(kind) ? 1 : 0
+        let attackSupport = counts(measured: attackCount, undefined: kind == "undefined" ? 1 : 0)
+        let tailSupport = counts(measured: tailCount,
+            missing: ["missing", "mixed"].contains(kind) ? 1 : 0,
+            partial: kind == "partial" ? 1 : 0, undefined: kind == "undefined" ? 1 : 0)
+        var wire: [String: Any] = [
+            "schemaVersion": 2, "checkpoint": legacy.checkpoint.rawValue,
+            "sampleRate": legacy.sampleRate, "sourceReportFingerprint": "reduced-support-unit-fixture",
+            "sourceEventCount": count, "attackBodyMeasuredEventCount": attackCount,
+            "tailBodyMeasuredEventCount": tailCount,
+            "attackBodyExcludedEventCount": count - attackCount,
+            "tailBodyExcludedEventCount": count - tailCount,
+            "attackBodySupport": attackSupport, "tailBodySupport": tailSupport,
+        ]
+        if attackCount > 0, let value = legacy[.modalPercussionAttackToBodyDBMean] { wire["attackToBodyDBMean"] = value }
+        if tailCount > 0, let value = legacy[.modalPercussionTailToBodyDBMean] { wire["tailToBodyDBMean"] = kind == "silent" ? -120 : value }
+        let support = try JSONDecoder().decode(ProfessionalQualityModalWindowEvidence.self,
+            from: JSONSerialization.data(withJSONObject: wire))
+        var metrics = legacy.metrics.filter {
+            !ProfessionalQualityMeasurementContract.modalMetrics.contains($0.metric)
+        }
+        if support.attackBodySupport.applicability == .measured, let value = support.attackToBodyDBMean {
+            metrics.append(.init(metric: .modalPercussionAttackToBodyDBMean, value: value))
+        }
+        if support.tailBodySupport.applicability == .measured, let value = support.tailToBodyDBMean {
+            metrics.append(.init(metric: .modalPercussionTailToBodyDBMean, value: value))
+        }
+        return try ProfessionalQualityObservation(engineVersion: legacy.engineVersion,
+            checkpoint: legacy.checkpoint, sampleRate: legacy.sampleRate,
+            hardGatesPassed: legacy.hardGatesPassed, liveMaster: legacy.liveMaster,
+            metrics: metrics, modalWindowSupport: support)
+    }
+
     @Test("Failed metric direction reduces to bounded Core recovery intent")
     func recoveryIntentReductionIsDirectional() {
         let low = ProfessionalQualityRecoveryIntentReducer.reduce([

@@ -564,6 +564,15 @@ struct QualityQualificationFoundationTests {
 
         let modalWindows = try bank.modalWindowFeatureReports()
         #expect(modalWindows.count == bank.sourceReportCount)
+        let windowObservations = try bank.windowSupportedObservations()
+        #expect(windowObservations.count == bank.sourceReportCount)
+        #expect(windowObservations.allSatisfy { $0.isComplete })
+        #expect(windowObservations.allSatisfy {
+            $0.observationVersion == ProfessionalQualityMeasurementContract.modalWindowObservationVersion
+        })
+        let windowCorpus = try ProfessionalQualityCalibrationCorpus(windowSupportedBanks: [bank])
+        #expect(windowCorpus.isComplete)
+        #expect(windowCorpus.observations == windowObservations)
         for (source, diagnostic) in zip(bank.reports, modalWindows) {
             let events = source.selectedCandidateEvidence.modalPercussion.flatMap(\.events)
             #expect(diagnostic.sourceReportFingerprint == source.evidenceFingerprint)
