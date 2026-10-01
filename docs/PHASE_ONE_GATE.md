@@ -4,8 +4,8 @@
 
 Status: **passed**
 
-- Gate fingerprint: `4369365717e74003cd202c256e16429d69d9b5285e620b6df31e0bfa5261c2ff`
-- Contract baseline: `ea75baa6522552cd2b20391bd1013d7d046e084d34850daa37247f15d7f58d1f`
+- Gate fingerprint: `92c60af860c862e361117ec145284042a8b9d051fee9f718803b82c52bb1eb6d`
+- Contract baseline: `0d2c7995d9c02d81832ee4c5a25b1d69408088856b51f685a49f2b4eea894689`
 - Lifecycle policy: `239dae27a2121db9426f3fe14989913341c53b1a7e1133c51af93f0b6d0abe2b`
 - Build configuration: `release`
 - Routes: `native-stereo-44100`, `native-stereo-48000`

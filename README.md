@@ -182,11 +182,14 @@ primary v30 and matching long-horizon v16 policies remain unchanged.
 
 Explicit modal measurement-window support now records actual attack, body,
 and tail coverage. Descriptive diagnostics distinguish missing or partial
-windows from measured silence. Existing calibrated metrics and policy bounds
-remain unchanged; replacement applicability still requires full qualification.
+windows from measured silence. The shared offline observation v22/profile v31
+foundation carries required unavailable measurements through extraction, fitting,
+local verdicts and relationship assessment. Existing installed v21/v30 metrics,
+policy bounds and v30/v16 resources remain unchanged; replacement applicability
+still requires independent fixtures, fresh holdouts and full qualification.
 
 The current Phase-1 evidence refresh records all 15 lifecycle families and
-19 subordinate checks for that retained runtime at exporter head `c4f2076`.
+19 subordinate checks for that retained runtime at exporter head `3fd005c`.
 Its 14 whole mixes and 210 role/residual signals match the preserved captures
 sample for sample across 340,230,030 samples. This evidence does not qualify
 the failed expanded policy or establish independently labelled masking and
