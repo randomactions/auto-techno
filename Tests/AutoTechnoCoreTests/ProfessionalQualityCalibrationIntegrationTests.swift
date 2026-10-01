@@ -614,10 +614,12 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             )
             let localReports = try bank.kickFoundationLocalFeatureReports()
             let maskingReports = try bank.maskingLocalFeatureReports()
+            let modalWindows = try bank.modalWindowFeatureReports()
             guard localReports.count ==
                     CanonicalJourneyCheckpoint.allCases.count *
                     ProfessionalQualityCalibrationProfile.requiredSampleRates.count,
                   maskingReports.count == localReports.count,
+                  modalWindows.count == localReports.count,
                   maskingReports.allSatisfy({ report in
                       report.observationCount == report.sourceBarCount *
                           AutonomousCandidateEvaluationVector
@@ -632,6 +634,12 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 trajectory.sourceBankFingerprint +
                 " local-reports=\(localReports.count)"
             )
+            let modalEncoder = JSONEncoder()
+            modalEncoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+            for modal in modalWindows {
+                progress("modal-window-evidence seed=\(seed) json=" +
+                    String(decoding: try modalEncoder.encode(modal), as: UTF8.self))
+            }
             reports.append(contentsOf: localReports.map { (seed, $0) })
             for local in localReports {
                 let mean = local.meanDB.map { String($0) } ?? "unavailable"

@@ -317,6 +317,58 @@ struct ModalPercussionDSPTests {
         #expect(event.tailToBodyDB == -120)
         #expect(event.tailToBodyDB >= -120)
         #expect(event.finite)
+        #expect(event.windowSupport.tail(sampleRate: sampleRate) == .missing)
+        #expect(event.windowSupport.tailSampleCount == 0)
+        #expect(event.windowSupport.tailToBodyDB(
+            tailRMS: event.tailRMS, bodyRMS: event.bodyRMS,
+            sampleRate: sampleRate
+        ) == nil)
+    }
+
+    @Test("Window support separates absent, partial, complete, and measured silence",
+          arguments: [44_100.0, 48_000.0])
+    func windowSupportUsesMeasuredSampleGeometry(sampleRate: Double) throws {
+        // End immediately before the first tail sample, just after it, and at
+        // the exclusive end. Nonzero onset catches absolute/relative mistakes.
+        let onset = 37
+        let tailStart = Int(sampleRate * 0.120)
+        let tailEnd = Int(sampleRate * 0.240)
+        for (available, expected) in [
+            (tailStart, ModalPercussionWindowSupport.Availability.missing),
+            (tailStart + 1, .partial), (tailEnd - 1, .partial),
+            (tailEnd, .complete), (tailEnd + 1, .complete),
+        ] {
+            var state = ModalPercussionVoiceState()
+            var output = [Float](repeating: 0, count: onset + available)
+            let rendered = ModalPercussionVoice.renderBar(
+                into: &output, bar: 0, sampleRate: sampleRate,
+                events: [ScheduledModalPercussionEvent(
+                    articulation: articulation(), startFrame: onset, level: 0
+                )], state: &state
+            )
+            let event = try #require(rendered.events.first)
+            let support = event.windowSupport
+            #expect(support.isValid(sampleRate: sampleRate, frameCount: output.count))
+            #expect(support.attack(sampleRate: sampleRate) == .complete)
+            #expect(support.body(sampleRate: sampleRate) == .complete)
+            #expect(support.tail(sampleRate: sampleRate) == expected)
+            #expect(event.tailRMS == 0)
+            #expect(output.allSatisfy { $0 == 0 })
+            let ratio = support.tailToBodyDB(tailRMS: 0, bodyRMS: 0.05,
+                                             sampleRate: sampleRate)
+            #expect(ratio == (expected == .complete ? -120 : nil))
+            #expect(support.tailToBodyDB(tailRMS: 0, bodyRMS: 0,
+                                        sampleRate: sampleRate) == nil)
+            let json = try JSONEncoder().encode(support)
+            #expect(try JSONDecoder().decode(ModalPercussionWindowSupport.self,
+                                             from: json) == support)
+            let forged = ModalPercussionWindowSupport(
+                startFrame: onset, attackSampleCount: support.attackSampleCount,
+                bodySampleCount: support.bodySampleCount,
+                tailSampleCount: support.tailSampleCount + 1
+            )
+            #expect(!forged.isValid(sampleRate: sampleRate, frameCount: output.count))
+        }
     }
 
     @Test("Route rebuild is deterministic")

@@ -181,3 +181,18 @@ claims.
 The scheduled-output controller cannot commit independently of this evaluator.
 See [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md) for its capture, proposal, lifecycle,
 accepted-PCM hold, and physical-QA boundaries.
+
+Modal-window support is an additive detached evidence foundation. The existing
+modal event accumulator now persists onset and actual attack/body/tail sample
+counts in nested support schema1. Complete support covers 0...10ms,
+20...80ms and 120...240ms respectively, with exclusive upper endpoints.
+The complete bank exposes a descriptive projection with explicit measured and
+excluded-event counts and nullable attack/body and tail/body means. Missing
+and partial windows cannot become measured silence; a completely measured zero
+tail with a nonzero body remains a measured -120dB ratio. Legacy banks lacking
+support cannot produce this diagnostic. Installed v29 observation extraction
+and v30/v23/v20 policy identities retain their original semantics. This
+foundation does not qualify new applicability, replace profiles, waive failed
+holdouts, alter PCM/continuation, or add callback work. Replacement promotion
+still requires a unified versioned extraction/fitting/relationship contract,
+qualified support coverage, fresh independent holdouts and all existing gates.

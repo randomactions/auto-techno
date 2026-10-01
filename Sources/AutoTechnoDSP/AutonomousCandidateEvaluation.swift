@@ -3239,6 +3239,9 @@ package struct AutonomousModalPercussionEventEvidence:
     package let bodyRMS: Double
     package let tailRMS: Double
     package let tailToBodyDB: Double
+    /// Absent only in evidence predating the additive window-support contract.
+    /// Old policy metrics retain their identity; support diagnostics fail closed.
+    package let windowSupport: ModalPercussionWindowSupport?
     package let spectralCentroidHz: Double
     package let incomingVoiceStateFingerprint: String
     package let outgoingVoiceStateFingerprint: String
@@ -3280,6 +3283,7 @@ package struct AutonomousModalPercussionEventEvidence:
         bodyRMS: Double,
         tailRMS: Double,
         tailToBodyDB: Double,
+        windowSupport: ModalPercussionWindowSupport? = nil,
         spectralCentroidHz: Double,
         incomingVoiceStateFingerprint: String,
         outgoingVoiceStateFingerprint: String,
@@ -3320,6 +3324,7 @@ package struct AutonomousModalPercussionEventEvidence:
         self.bodyRMS = bodyRMS
         self.tailRMS = tailRMS
         self.tailToBodyDB = tailToBodyDB
+        self.windowSupport = windowSupport
         self.spectralCentroidHz = spectralCentroidHz
         self.incomingVoiceStateFingerprint = incomingVoiceStateFingerprint
         self.outgoingVoiceStateFingerprint = outgoingVoiceStateFingerprint
@@ -3375,6 +3380,11 @@ package struct AutonomousModalPercussionEventEvidence:
             crestFactor >= 1 && attackRMS >= 0 && attackRMS <= 1 &&
             bodyRMS >= 0 && bodyRMS <= 1 && tailRMS >= 0 && tailRMS <= 1 &&
             (-120...120).contains(tailToBodyDB) &&
+            (windowSupport.map {
+                $0.isValid(sampleRate: sampleRate, frameCount: renderedFrameCount) &&
+                $0.startFrame == Int((Double(step) *
+                    Double(renderedFrameCount) / 16).rounded())
+            } ?? true) &&
             (0...(sampleRate / 2)).contains(spectralCentroidHz) &&
             Self.isFingerprint(incomingVoiceStateFingerprint) &&
             Self.isFingerprint(outgoingVoiceStateFingerprint) &&
@@ -7736,6 +7746,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                     bodyRMS: evidence.bodyRMS,
                     tailRMS: evidence.tailRMS,
                     tailToBodyDB: evidence.tailToBodyDB,
+                    windowSupport: evidence.windowSupport,
                     spectralCentroidHz: evidence.spectralCentroidHz,
                     incomingVoiceStateFingerprint:
                         evidence.incomingVoiceStateFingerprint,

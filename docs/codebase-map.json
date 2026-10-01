@@ -487,7 +487,8 @@
         "aligned dry-role, protected-rhythm, processed-stage, and nonlinear-residual reconstruction evidence",
         "score/render correspondence",
         "modal material, coupling, stability, decay, and pitch evidence",
-        "spatial-dust channel, cadence, low-band exclusion, and clearing evidence"
+        "spatial-dust channel, cadence, low-band exclusion, and clearing evidence",
+        "actual modal attack/body/tail sample support, with missing/partial/complete window geometry"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AlienAnalogVoice.swift",
@@ -679,7 +680,8 @@
         "whole-mix onset distribution, rest, silence, metrical, microtiming, and bounded repetition/mutation baselines",
         "score-declared phrase/chapter boundary, fixed transition-cell, multidimensional contrast, and explicit recovery-state baselines",
         "professional calibration and holdout reports",
-        "complete checkpoint/rate coverage and explicit unestimated confidence status"
+        "complete checkpoint/rate coverage and explicit unestimated confidence status",
+        "report-only modal window eligibility, excluded-event counts, and nullable measured ratios; installed calibration unchanged"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AudioQualityReport.swift",

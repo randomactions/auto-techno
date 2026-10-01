@@ -398,6 +398,44 @@ struct AutonomousCandidateEvaluationTests {
             from: active.deterministicJSON()
         )
         #expect(decoded == active)
+        #expect(decoded.modalPercussion[0].events[0].windowSupport == nil)
+        #expect(throws: ProfessionalEvidenceReportBankError.incompleteEvidence) {
+            try ProfessionalQualityModalWindowEvidence(candidate: decoded,
+                checkpoint: .establishment, sourceReportFingerprint: active.fingerprint)
+        }
+        let sampleRate = active.routeContinuation.sampleRate
+        let startFrame = Int((Double(event.step) * Double(event.renderedFrameCount) / 16).rounded())
+        let support = ModalPercussionWindowSupport(startFrame: startFrame,
+            attackSampleCount: Int(ceil(sampleRate * 0.010)),
+            bodySampleCount: Int(ceil(sampleRate * 0.080) - ceil(sampleRate * 0.020)),
+            tailSampleCount: Int(ceil(sampleRate * 0.240) - ceil(sampleRate * 0.120)))
+        let supported = try tamperedModalEvent(active) { wire in
+            wire["windowSupport"] = try JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(support))
+        }
+        #expect(supported.isComplete)
+        let diagnostic = try ProfessionalQualityModalWindowEvidence(candidate: supported,
+            checkpoint: .establishment, sourceReportFingerprint: supported.fingerprint)
+        #expect(diagnostic.sourceEventCount == 1)
+        #expect(diagnostic.tailBodyMeasuredEventCount == 1)
+        #expect(diagnostic.tailBodyExcludedEventCount == 0)
+        #expect(abs(try #require(diagnostic.tailToBodyDBMean) - event.tailToBodyDB) < 1e-12)
+        #expect(try ProfessionalQualityObservation(candidate: active,
+            engineVersion: QualityQualificationContract.engineVersion, checkpoint: .establishment) ==
+                ProfessionalQualityObservation(candidate: supported,
+                    engineVersion: QualityQualificationContract.engineVersion, checkpoint: .establishment))
+        for key in ["schemaVersion", "startFrame", "tailSampleCount"] {
+            let malformed = try tamperedModalEvent(supported) { wire in
+                var counts = try #require(wire["windowSupport"] as? [String: Any])
+                counts[key] = try #require(counts[key] as? Int) + 1
+                wire["windowSupport"] = counts
+            }
+            #expect(!malformed.isComplete)
+            #expect(throws: ProfessionalEvidenceReportBankError.incompleteEvidence) {
+                try ProfessionalQualityModalWindowEvidence(candidate: malformed,
+                    checkpoint: .establishment, sourceReportFingerprint: malformed.fingerprint)
+            }
+        }
     }
 
     @Test("Modal percussion covers every empty and active bar exactly once")

@@ -16,6 +16,72 @@ package enum ProfessionalQualityPolicyAvailability: String, Codable, Sendable {
         "unavailable-pending-calibrated-profile-and-adversarial-suite"
 }
 
+/// Descriptive eligibility audit for the existing modal measurements. This
+/// cannot fit a profile or turn unavailable support into a passing verdict.
+/// A future calibrated contract must retain the excluded-event counts and
+/// qualify its coverage before these means can replace the installed metrics.
+package struct ProfessionalQualityModalWindowEvidence: Codable, Equatable, Sendable {
+    package let schemaVersion: Int
+    package let checkpoint: CanonicalJourneyCheckpoint
+    package let sampleRate: Double
+    package let sourceReportFingerprint: String
+    package let sourceEventCount: Int
+    package let attackBodyMeasuredEventCount: Int
+    package let tailBodyMeasuredEventCount: Int
+    package let attackBodyExcludedEventCount: Int
+    package let tailBodyExcludedEventCount: Int
+    package let attackToBodyDBMean: Double?
+    package let tailToBodyDBMean: Double?
+
+    package init(report: CanonicalJourneyQualificationReport) throws {
+        guard report.evidenceScope == CanonicalJourneyQualificationReport.currentEvidenceScope else {
+            throw ProfessionalEvidenceReportBankError.incompleteEvidence
+        }
+        try self.init(candidate: report.selectedCandidateEvidence,
+                      checkpoint: report.checkpoint,
+                      sourceReportFingerprint: report.evidenceFingerprint)
+    }
+
+    package init(candidate: AutonomousCandidateEvaluationVector,
+                 checkpoint: CanonicalJourneyCheckpoint,
+                 sourceReportFingerprint: String) throws {
+        guard candidate.isComplete, candidate.isFinite,
+              !sourceReportFingerprint.isEmpty else {
+            throw ProfessionalEvidenceReportBankError.incompleteEvidence
+        }
+        let sampleRate = candidate.routeContinuation.sampleRate
+        let events = candidate.modalPercussion.flatMap(\.events)
+        var attacks: [Double] = []
+        var tails: [Double] = []
+        for event in events {
+            guard let support = event.windowSupport,
+                  support.isValid(sampleRate: sampleRate,
+                                  frameCount: event.renderedFrameCount) else {
+                throw ProfessionalEvidenceReportBankError.incompleteEvidence
+            }
+            if let value = support.attackToBodyDB(
+                attackRMS: event.attackRMS, bodyRMS: event.bodyRMS,
+                sampleRate: sampleRate
+            ) { attacks.append(value) }
+            if let value = support.tailToBodyDB(
+                tailRMS: event.tailRMS, bodyRMS: event.bodyRMS,
+                sampleRate: sampleRate
+            ) { tails.append(value) }
+        }
+        schemaVersion = 1
+        self.checkpoint = checkpoint
+        self.sampleRate = sampleRate
+        self.sourceReportFingerprint = sourceReportFingerprint
+        sourceEventCount = events.count
+        attackBodyMeasuredEventCount = attacks.count
+        tailBodyMeasuredEventCount = tails.count
+        attackBodyExcludedEventCount = events.count - attacks.count
+        tailBodyExcludedEventCount = events.count - tails.count
+        attackToBodyDBMean = attacks.isEmpty ? nil : attacks.reduce(0, +) / Double(attacks.count)
+        tailToBodyDBMean = tails.isEmpty ? nil : tails.reduce(0, +) / Double(tails.count)
+    }
+}
+
 /// A deterministic, bounded bank containing every canonical journey checkpoint
 /// for each route rate represented by the bank. Professional Evidence v29 is an
 /// observation contract only: it has no constructor for a calibrated profile
@@ -39,6 +105,11 @@ package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable,
     package let sourceReportCount: Int
     package let sampleRates: [Double]
     package let reports: [CanonicalJourneyQualificationReport]
+
+    package func modalWindowFeatureReports() throws ->
+        [ProfessionalQualityModalWindowEvidence] {
+        try reports.map { try ProfessionalQualityModalWindowEvidence(report: $0) }
+    }
 
     /// Projects a report-only bar-level view from the exact role evidence
     /// already retained in each candidate. This is descriptive analysis and

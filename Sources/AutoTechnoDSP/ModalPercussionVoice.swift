@@ -57,6 +57,89 @@ package struct ScheduledModalPercussionEvent: Equatable, Sendable {
     }
 }
 
+/// Geometry, not signal energy, determines whether a window was measured.
+/// Counts come from the same accumulator as the RMS values. Complete support
+/// is required for the diagnostic ratios; partial and missing are explicit.
+package struct ModalPercussionWindowSupport: Codable, Equatable, Sendable {
+    package enum Availability: String, Codable, Sendable {
+        case missing, partial, complete
+    }
+
+    package let schemaVersion: Int
+    package let startFrame: Int
+    package let attackSampleCount: Int
+    package let bodySampleCount: Int
+    package let tailSampleCount: Int
+
+    package init(startFrame: Int, attackSampleCount: Int,
+                 bodySampleCount: Int, tailSampleCount: Int) {
+        schemaVersion = 1
+        self.startFrame = startFrame
+        self.attackSampleCount = attackSampleCount
+        self.bodySampleCount = bodySampleCount
+        self.tailSampleCount = tailSampleCount
+    }
+
+    package func availability(_ count: Int, from start: Double,
+                              to end: Double, sampleRate: Double) -> Availability {
+        guard count > 0, sampleRate.isFinite,
+              sampleRate >= QualityQualificationContract.minimumSupportedSampleRate,
+              sampleRate <= QualityQualificationContract.maximumSupportedSampleRate else {
+            return .missing
+        }
+        return count == Int(ceil(end * sampleRate) - ceil(start * sampleRate))
+            ? .complete : .partial
+    }
+
+    package func attack(sampleRate: Double) -> Availability {
+        availability(attackSampleCount, from: 0, to: 0.010, sampleRate: sampleRate)
+    }
+    package func body(sampleRate: Double) -> Availability {
+        availability(bodySampleCount, from: 0.020, to: 0.080, sampleRate: sampleRate)
+    }
+    package func tail(sampleRate: Double) -> Availability {
+        availability(tailSampleCount, from: 0.120, to: 0.240, sampleRate: sampleRate)
+    }
+
+    package func attackToBodyDB(attackRMS: Double, bodyRMS: Double,
+                                sampleRate: Double) -> Double? {
+        guard attack(sampleRate: sampleRate) == .complete,
+              body(sampleRate: sampleRate) == .complete else { return nil }
+        return Self.ratioDB(attackRMS, bodyRMS)
+    }
+
+    package func tailToBodyDB(tailRMS: Double, bodyRMS: Double,
+                              sampleRate: Double) -> Double? {
+        guard tail(sampleRate: sampleRate) == .complete,
+              body(sampleRate: sampleRate) == .complete else { return nil }
+        return Self.ratioDB(tailRMS, bodyRMS)
+    }
+
+    private static func ratioDB(_ numerator: Double, _ denominator: Double) -> Double? {
+        guard numerator.isFinite, numerator >= 0,
+              denominator.isFinite, denominator > 0 else { return nil }
+        return min(120, max(-120, 20 *
+            (log10(max(numerator, 1e-12)) - log10(denominator))))
+    }
+
+    package func isValid(sampleRate: Double, frameCount: Int) -> Bool {
+        guard schemaVersion == 1, sampleRate.isFinite,
+              sampleRate >= QualityQualificationContract.minimumSupportedSampleRate,
+              sampleRate <= QualityQualificationContract.maximumSupportedSampleRate,
+              frameCount > 0, startFrame >= 0, startFrame < frameCount else {
+            return false
+        }
+        func measured(_ start: Double, _ end: Double) -> Int {
+            let remaining = frameCount - startFrame
+            return max(0, min(remaining, Int(ceil(end * sampleRate))) -
+                min(remaining, Int(ceil(start * sampleRate))))
+        }
+        return attackSampleCount == measured(0, 0.010) &&
+            bodySampleCount == measured(0.020, 0.080) &&
+            tailSampleCount == measured(0.120, 0.240)
+    }
+}
+
 package struct ModalPercussionRenderEventEvidence: Equatable, Sendable {
     package let articulation: ModalPercussionArticulation
     package let requestedFundamentalHz: Double
@@ -79,6 +162,7 @@ package struct ModalPercussionRenderEventEvidence: Equatable, Sendable {
     package let bodyRMS: Double
     package let tailRMS: Double
     package let tailToBodyDB: Double
+    package let windowSupport: ModalPercussionWindowSupport
     package let spectralCentroidHz: Double
     package let incomingVoiceStateFingerprint: String
     package let outgoingVoiceStateFingerprint: String
@@ -571,6 +655,12 @@ package enum ModalPercussionVoice {
                 bodyRMS: metrics.bodyRMS,
                 tailRMS: metrics.tailRMS,
                 tailToBodyDB: metrics.tailToBodyDB,
+                windowSupport: ModalPercussionWindowSupport(
+                    startFrame: event.startFrame,
+                    attackSampleCount: accumulator.attackCount,
+                    bodySampleCount: accumulator.bodyCount,
+                    tailSampleCount: accumulator.tailCount
+                ),
                 spectralCentroidHz: configuration.centroidHz,
                 incomingVoiceStateFingerprint: incomingStateFingerprint,
                 outgoingVoiceStateFingerprint: outgoingStateFingerprint,
