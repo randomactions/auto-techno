@@ -118,8 +118,9 @@ package struct ModalPercussionWindowSupport: Codable, Equatable, Sendable {
     private static func ratioDB(_ numerator: Double, _ denominator: Double) -> Double? {
         guard numerator.isFinite, numerator >= 0,
               denominator.isFinite, denominator > 0 else { return nil }
+        guard numerator > 0 else { return -120 }
         return min(120, max(-120, 20 *
-            (log10(max(numerator, 1e-12)) - log10(denominator))))
+            (log10(numerator) - log10(denominator))))
     }
 
     package func isValid(sampleRate: Double, frameCount: Int) -> Bool {

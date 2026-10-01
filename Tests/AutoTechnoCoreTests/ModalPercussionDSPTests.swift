@@ -357,6 +357,13 @@ struct ModalPercussionDSPTests {
             let ratio = support.tailToBodyDB(tailRMS: 0, bodyRMS: 0.05,
                                              sampleRate: sampleRate)
             #expect(ratio == (expected == .complete ? -120 : nil))
+            #expect(support.tailToBodyDB(tailRMS: 0, bodyRMS: 1e-20,
+                                        sampleRate: sampleRate) ==
+                    (expected == .complete ? -120 : nil))
+            #expect(support.tailToBodyDB(tailRMS: Double.leastNonzeroMagnitude,
+                                        bodyRMS: Double.leastNonzeroMagnitude,
+                                        sampleRate: sampleRate) ==
+                    (expected == .complete ? 0 : nil))
             #expect(support.tailToBodyDB(tailRMS: 0, bodyRMS: 0,
                                         sampleRate: sampleRate) == nil)
             let json = try JSONEncoder().encode(support)
