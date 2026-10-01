@@ -186,10 +186,13 @@ windows from measured silence. The shared offline observation v22/profile v31
 foundation carries required unavailable measurements through extraction, fitting,
 local verdicts and relationship assessment. Existing installed v21/v30 metrics,
 policy bounds and v30/v16 resources remain unchanged; replacement applicability
-still requires independent fixtures, fresh holdouts and full qualification.
+still requires independent quality targets, broader morphology/timing coverage,
+fresh holdouts and full qualification. The [independent measurement fixtures](docs/reports/AT_0039_INDEPENDENT_MEASUREMENT_FIXTURES.md)
+pass 344 fixed mechanistic cases with bounded timestamp, Float and frame-grid
+uncertainty; these labels do not establish musical or perceptual quality.
 
 The current Phase-1 evidence refresh records all 15 lifecycle families and
-19 subordinate checks for that retained runtime at exporter head `3fd005c`.
+19 subordinate checks for that retained runtime at exporter head `34b8fa7`.
 Its 14 whole mixes and 210 role/residual signals match the preserved captures
 sample for sample across 340,230,030 samples. This evidence does not qualify
 the failed expanded policy or establish independently labelled masking and

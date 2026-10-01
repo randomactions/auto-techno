@@ -1,0 +1,67 @@
+{
+  "fixtureSummaries": {
+    "independent-modal-window-oracle.v1": {
+      "caseCount": 256,
+      "fixture": "independent-modal-window-oracle.v1",
+      "maximumRMSError": 2.5794488767161283e-08,
+      "qualityQualification": "unavailable",
+      "uncertainty": "bounded-float-rounding-not-statistical-confidence"
+    },
+    "independent-physical-time-seam-oracle.v1": {
+      "caseCount": 56,
+      "fixture": "independent-physical-time-seam-oracle.v1",
+      "maximumContinuousDelta": 0.028363941237330437,
+      "minimumConstructedJumpDelta": 0.09663605690002441,
+      "productionMetricChanged": false,
+      "qualityQualification": "unavailable",
+      "uncertainty": "analytic-derivative-and-float-bounds"
+    },
+    "independent-rhythmic-displacement-oracle.v1": {
+      "caseCount": 32,
+      "fixture": "independent-rhythmic-displacement-oracle.v1",
+      "maximumDetectorFrameError": 0,
+      "qualityQualification": "unavailable",
+      "scoreBinding": "fixture-oracle-only-production-inferred",
+      "uncertainty": "one-frame-paired-rounding-bound"
+    }
+  },
+  "installedLongHorizonVersion": "v16",
+  "installedPrimaryVersion": "v30",
+  "limitations": [
+    "These are fixed mechanistic construction labels, not perceptual or musical-quality labels.",
+    "Repeated rates/windows and event bodies are not independent random samples.",
+    "Extra modal rates test the primitive; they do not qualify unsupported playback routes.",
+    "The seam statistic remains an adjacent amplitude difference at supplied block joins, not a physical-time derivative or audibility classifier.",
+    "Rhythmic production evidence remains inferred and is not score-bound by these fixture oracles.",
+    "Independent quality targets, preregistered morphology/timing coverage and fresh disjoint holdouts remain outstanding."
+  ],
+  "maskingDisposition": "existing pilots and counterexamples preserved; no new masking threshold or labels",
+  "measurementBounds": "timestamp enumeration, analytic derivative, Float rounding, one-frame paired timing quantization",
+  "productionChanges": false,
+  "protocolSha256": "43868e4a61dffdb0a1daf01e871d6b1d77a86259d1c565e660e889e95289eae6",
+  "replacementQualification": "unavailable-not-activated",
+  "retainedRuntimeEvidence": {
+    "aggregateCheckCount": 19,
+    "changedSampleCount": 0,
+    "comparedSampleCount": 340230030,
+    "contractSnapshot": 58,
+    "exporterHead": "34b8fa78bd1b5334fa8d7213df7dfb4edcfa8c8f",
+    "gateFingerprint": "11040db997fec4e91b4ed12884d229b9ceb80e9eadb3ecabd8f3c9944376cf0c",
+    "lifecycleFamilyCount": 15,
+    "liveCallbackTrace": "retained bounded 2026-09-04 macOS trace",
+    "preservedAssetCount": 224,
+    "refreshStageCount": 42,
+    "replacementQualification": "unavailable-not-activated"
+  },
+  "schema": "autotechno-independent-measurement-fixture-evidence.v1",
+  "sourceHead": "34b8fa78bd1b5334fa8d7213df7dfb4edcfa8c8f",
+  "statisticalConfidence": "not-estimated-fixed-construction-matrix",
+  "status": "mechanical-fixture-validation-passed",
+  "testSourcesSha256": {
+    "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift": "46ecbb2bee852a4c943d53adf81d41a4f7e2b9a031636b5a41a92dcce3f88bbf",
+    "Tests/AutoTechnoCoreTests/DeterministicSignalFixtures.swift": "fb613041be0f07d50364c52c10a900b07296dc566696ca97a293df16a8c75095",
+    "Tests/AutoTechnoCoreTests/ModalPercussionDSPTests.swift": "4c4434a73b429d5d04a2d0f8fb36bd97917d98bd7e1300a2cec9b271369fc70f",
+    "Tests/AutoTechnoCoreTests/PCMRhythmicBaselineAnalyzerTests.swift": "7f70c3a2256a74a86b4584be14446e05efe985d2257053e8c5d6a7b218fede5f"
+  },
+  "totalCaseCount": 344
+}
