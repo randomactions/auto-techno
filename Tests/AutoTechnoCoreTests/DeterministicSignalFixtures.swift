@@ -55,6 +55,56 @@ enum DeterministicSignalFixtures {
     static let minimumSampleRate = 8_000.0
     static let maximumSampleRate = 192_000.0
 
+    /// Independent timestamp oracle: enumerate the captured samples rather than
+    /// reproducing the renderer's endpoint/count arithmetic. It is not a quality
+    /// judge and does not call any production measurement helper.
+    static func timestampWindow(
+        samples: [Float], onsetFrame: Int, sampleRate: Double,
+        startSeconds: Double, endSeconds: Double
+    ) -> (count: Int, rms: Double) {
+        precondition(onsetFrame >= 0 && onsetFrame <= samples.count)
+        precondition(sampleRate.isFinite && sampleRate > 0)
+        precondition(startSeconds >= 0 && endSeconds > startSeconds)
+        var count = 0
+        var energy = 0.0
+        for frame in onsetFrame..<samples.count {
+            let time = Double(frame - onsetFrame) / sampleRate
+            if time >= startSeconds && time < endSeconds {
+                let value = Double(samples[frame])
+                energy += value * value
+                count += 1
+            }
+        }
+        return (count, count == 0 ? 0 : sqrt(energy / Double(count)))
+    }
+
+    /// Two event bodies with identical energy and a declared first sample.
+    /// The packet family challenges the onset detector without changing event
+    /// count, grid identity, or energy. Labels come from these indices alone.
+    static func displacedImpulseBar(
+        sampleRate: Int, steps: [Int], displacementSteps: Double,
+        amplitude: Float, packet: Bool
+    ) -> (samples: [Float], onsets: [Int]) {
+        precondition([44_100, 48_000].contains(sampleRate))
+        precondition(steps.count <= 16 && Set(steps).count == steps.count)
+        precondition(displacementSteps.isFinite && abs(displacementSteps) <= 0.25)
+        precondition(amplitude > 0 && amplitude <= 1)
+        let frames = Int((Double(sampleRate) * 240 / 130).rounded())
+        var samples = [Float](repeating: 0, count: frames)
+        var onsets: [Int] = []
+        let weights: [Float] = packet ? [1 / sqrt(1.3125), 0.5 / sqrt(1.3125),
+                                        0.25 / sqrt(1.3125)] : [1]
+        for step in steps {
+            let onset = Int(((Double(step) + displacementSteps) * Double(frames) / 16).rounded())
+            precondition(onset >= 0 && onset + weights.count <= frames)
+            onsets.append(onset)
+            for (offset, weight) in weights.enumerated() {
+                samples[onset + offset] = amplitude * weight
+            }
+        }
+        return (samples, onsets)
+    }
+
     /// One deterministic pitched kick body. The event begins at `onsetFrame`,
     /// sweeps down over `decayFrames`, and terminates at exact zero.
     static func kickHit(

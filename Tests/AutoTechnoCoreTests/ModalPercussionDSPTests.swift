@@ -5,6 +5,91 @@ import Testing
 
 @Suite("Modal percussion DSP", .serialized)
 struct ModalPercussionDSPTests {
+    @Test("AT-0039 timestamp oracles independently bound modal counts and PCM RMS")
+    func independentModalWindowOracles() throws {
+        // Frozen before measurement in independent-measurement-fixtures-v1.
+        // Extra rates are primitive holdouts, not qualified playback routes.
+        var cases = 0
+        var maximumRMSError = 0.0
+        var rows: [[String: Any]] = []
+        for rate in [44_100.0, 48_000.0, 44_101.0, 96_000.0] {
+            var lengths = [Int((rate * 0.3).rounded())]
+            for endpoint in [0.010, 0.020, 0.080, 0.120, 0.240] {
+                for offset in [-1, 0, 1] {
+                    lengths.append(Int((rate * endpoint).rounded()) + offset)
+                }
+            }
+            let full = [Float](repeating: 0, count: Int(rate * 0.3) + 2)
+            for onset in [37, 101] {
+                for level in [0.0, 0.2] {
+                    for length in lengths {
+                        var state = ModalPercussionVoiceState()
+                        var pcm = [Float](repeating: 0, count: onset + length)
+                        let rendered = ModalPercussionVoice.renderBar(
+                            into: &pcm, bar: 0, sampleRate: rate,
+                            events: [.init(articulation: articulation(),
+                                           startFrame: onset, level: level)], state: &state)
+                        let event = try #require(rendered.events.first)
+                        let support = event.windowSupport
+                        #expect(support.isValid(sampleRate: rate, frameCount: pcm.count))
+                        let ranges = [(0.0, 0.010), (0.020, 0.080), (0.120, 0.240)]
+                        let counts = [support.attackSampleCount, support.bodySampleCount,
+                                      support.tailSampleCount]
+                        let rms = [event.attackRMS, event.bodyRMS, event.tailRMS]
+                        let statuses = [support.attack(sampleRate: rate),
+                                        support.body(sampleRate: rate), support.tail(sampleRate: rate)]
+                        var windowRows: [[String: Any]] = []
+                        for index in ranges.indices {
+                            let (start, end) = ranges[index]
+                            let oracle = DeterministicSignalFixtures.timestampWindow(
+                                samples: pcm, onsetFrame: onset, sampleRate: rate,
+                                startSeconds: start, endSeconds: end)
+                            let complete = DeterministicSignalFixtures.timestampWindow(
+                                samples: full, onsetFrame: 0, sampleRate: rate,
+                                startSeconds: start, endSeconds: end).count
+                            let expected: ModalPercussionWindowSupport.Availability =
+                                oracle.count == 0 ? .missing :
+                                (oracle.count == complete ? .complete : .partial)
+                            #expect(counts[index] == oracle.count)
+                            #expect(statuses[index] == expected)
+                            let error = abs(rms[index] - oracle.rms)
+                            maximumRMSError = max(maximumRMSError, error)
+                            // RMS is Lipschitz under bounded per-sample Float
+                            // rounding; this bound is not fitted from errors.
+                            #expect(error <= 2 * Double(Float.ulpOfOne) * event.peak)
+                            windowRows.append(["window": index, "expectedCount": oracle.count,
+                                "observedCount": counts[index], "fullCount": complete,
+                                "expectedAvailability": expected.rawValue,
+                                "observedAvailability": statuses[index].rawValue,
+                                "pcmRMS": oracle.rms, "eventRMS": rms[index],
+                                "roundingError": error,
+                                "roundingBound": 2 * Double(Float.ulpOfOne) * event.peak])
+                        }
+                        if level == 0 {
+                            #expect(event.bodyRMS == 0)
+                            #expect(support.attackToBodyDB(attackRMS: event.attackRMS,
+                                bodyRMS: event.bodyRMS, sampleRate: rate) == nil)
+                            #expect(support.tailToBodyDB(tailRMS: event.tailRMS,
+                                bodyRMS: event.bodyRMS, sampleRate: rate) == nil)
+                        }
+                        cases += 1
+                        rows.append(["sampleRate": rate, "onsetFrame": onset,
+                            "availableFrames": length, "level": level,
+                            "split": [44_100.0, 48_000.0].contains(rate) ? "development-rate" : "held-out-primitive-rate",
+                            "windows": windowRows])
+                    }
+                }
+            }
+        }
+        #expect(cases == 256)
+        let report: [String: Any] = ["fixture": "independent-modal-window-oracle.v1",
+            "caseCount": cases, "maximumRMSError": maximumRMSError,
+            "uncertainty": "bounded-float-rounding-not-statistical-confidence",
+            "qualityQualification": "unavailable", "rows": rows]
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     @Test("Eight coupled modal modes are stable and stay below the route ceiling")
     func eightModesAreStableAndBelowTheRouteCeiling() throws {
         let result = render(sampleRate: 44_100)

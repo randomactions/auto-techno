@@ -6,6 +6,79 @@ import Testing
 
 @Suite("Current autonomous runtime")
 struct CurrentRuntimeTests {
+    @Test("AT-0039 analytic seam labels bound physical-time and Float uncertainty")
+    func independentPhysicalTimeSeamOracles() throws {
+        var cases = 0
+        var maximumContinuousDelta = 0.0
+        var minimumJumpDelta = Double.infinity
+        var rows: [[String: Any]] = []
+        let roundingBound = 2 * Double(Float.ulpOfOne)
+        for rate in [44_100.0, 48_000.0] {
+            for boundarySeconds in [0.0637, 0.1003] {
+                let boundary = Int((boundarySeconds * rate).rounded())
+                for frequency in [55.0, 997.0] {
+                    for phase in [0.0, Double.pi / 3, Double.pi / 2] {
+                        for jump in [0.0, 0.125] {
+                            let before = Float(0.2 * sin(2 * .pi * frequency * Double(boundary - 1) / rate + phase))
+                            let after = Float(0.2 * sin(2 * .pi * frequency * Double(boundary) / rate + phase) + jump)
+                            let measured = Double(AudioQualityReport.maximumBoundaryDelta(
+                                leftBlocks: [[before], [after]], rightBlocks: [[-before], [-after]]))
+                            let variation = 2 * .pi * 0.2 * frequency / rate + roundingBound
+                            #expect(measured <= jump + variation)
+                            #expect(measured >= max(0, jump - variation))
+                            let predecessor = AudioQualityReport.maximumBoundaryDelta(
+                                leftBlocks: [[after]], rightBlocks: [[-after]],
+                                precedingFrame: .init(left: before, right: -before))
+                            #expect(Double(predecessor) == measured)
+                            // One block hides the seam from this statistic even
+                            // though its source equation and PCM are unchanged.
+                            #expect(AudioQualityReport.maximumBoundaryDelta(
+                                leftBlocks: [[before, after]], rightBlocks: [[-before, -after]]) == 0)
+                            if jump == 0 { maximumContinuousDelta = max(maximumContinuousDelta, measured) }
+                            else { minimumJumpDelta = min(minimumJumpDelta, measured) }
+                            rows.append(["family": "sine", "split": "development-family",
+                                "sampleRate": rate, "boundarySeconds": boundarySeconds,
+                                "boundaryFrame": boundary, "frequencyHz": frequency,
+                                "phaseRadians": phase, "authoredJump": jump,
+                                "constructionLabel": jump == 0 ? "continuous" : "discontinuous",
+                                "measuredAdjacentDelta": measured,
+                                "lowerBound": max(0, jump - variation), "upperBound": jump + variation,
+                                "floatRoundingBound": roundingBound])
+                            cases += 1
+                        }
+                    }
+                }
+                // Distinct held-out affine family: derivative exactly 3/s.
+                for jump in [0.0, 0.125] {
+                    let before = Float(3 * Double(boundary - 1) / rate)
+                    let after = Float(3 * Double(boundary) / rate + jump)
+                    let measured = Double(AudioQualityReport.maximumBoundaryDelta(
+                        leftBlocks: [[before], [after]], rightBlocks: [[before], [after]]))
+                    #expect(abs(measured - (3 / rate + jump)) <= roundingBound)
+                    rows.append(["family": "affine", "split": "held-out-family",
+                        "sampleRate": rate, "boundarySeconds": boundarySeconds,
+                        "boundaryFrame": boundary, "slopePerSecond": 3,
+                        "authoredJump": jump,
+                        "constructionLabel": jump == 0 ? "continuous" : "discontinuous",
+                        "measuredAdjacentDelta": measured,
+                        "expectedAdjacentDelta": 3 / rate + jump,
+                        "floatRoundingBound": roundingBound])
+                    cases += 1
+                }
+            }
+        }
+        #expect(cases == 56)
+        #expect(maximumContinuousDelta < minimumJumpDelta)
+        let report: [String: Any] = ["fixture": "independent-physical-time-seam-oracle.v1",
+            "caseCount": cases, "maximumContinuousDelta": maximumContinuousDelta,
+            "minimumConstructedJumpDelta": minimumJumpDelta,
+            "uncertainty": "analytic-derivative-and-float-bounds",
+            "qualityQualification": "unavailable", "productionMetricChanged": false,
+            "rows": rows]
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     @Test("Long-cycle groove and effect-world identities advance as one exact contract")
     func longCycleWorldPrimaryIdentityContract() {
         #expect(QualityQualificationContract.schemaVersion == 49)
