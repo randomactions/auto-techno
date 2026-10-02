@@ -17,10 +17,10 @@ jobs:
   swift-test:
     name: swift-test
     runs-on: macos-15
-    # The serial, process-isolated qualification bank now reaches preparation
-    # preflight after about 105 minutes on hosted arm64. Keep a bounded
-    # three-hour ceiling without weakening or overlapping any gate.
-    timeout-minutes: 180
+    # The serial qualification bank hit the three-hour job limit during the
+    # modal core suite. Use the hosted runner's six-hour ceiling so every gate
+    # can run with its existing test selection and failure result.
+    timeout-minutes: 360
 
     steps:
       - name: Check out source
