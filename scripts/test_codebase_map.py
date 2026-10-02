@@ -208,6 +208,48 @@ class CodebaseMapTests(unittest.TestCase):
         self.assertNotIn(str(self.fixture.root), first)
         self.assertNotRegex(first, r"\b[0-9a-f]{40}\b")
 
+    def test_source_extension_index_retains_access_and_qualified_owners(self) -> None:
+        path = "Sources/App/App.swift"
+        self.fixture._write(path, """final class Host {}
+extension Color {}
+private extension View {}
+package extension Module.`Outer`.Inner {}
+struct Container {
+    struct Nested {}
+}
+""")
+        symbols = codebase_map.lexical_symbols(self.fixture.root, [path])
+        extensions = {item.name for item in symbols if item.kind == "Extension"}
+        self.assertEqual(extensions, {"Color", "View", "Module.Outer.Inner"})
+        self.assertNotIn("Nested", {item.name for item in symbols})
+
+    def test_compiler_extension_emission_does_not_change_generated_map(self) -> None:
+        path = "Sources/App/App.swift"
+        self.fixture._write(path, "final class Host {}\nextension Color {}\n")
+        graph_dir = self.fixture.root / "symbolgraph"
+        graph_dir.mkdir()
+        graph_path = graph_dir / "App.symbols.json"
+        extension = {
+            "pathComponents": ["Imported.Color"],
+            "location": {"uri": (self.fixture.root / path).as_uri()},
+            "names": {"title": "Imported.Color"},
+            "kind": {"identifier": "swift.extension", "displayName": "Extension"},
+        }
+        results = []
+        paths = ["Sources/Core/Core.swift", path, "Tests/CoreTests/CoreTests.swift"]
+        for compiler_symbols in [[], [extension]]:
+            graph_path.write_text(json.dumps({"module": {"name": "App"},
+                                              "symbols": compiler_symbols}))
+            with mock.patch.object(codebase_map, "ensure_test_modules_are_built"), \
+                    mock.patch.object(codebase_map, "run_swift_command",
+                                      return_value=f"Files written to {graph_dir}"):
+                symbols = codebase_map.inspect_symbols(
+                    self.fixture.root, None, self.fixture.targets, paths)
+            self.assertIn(codebase_map.StableSymbol(path, "Color", "Extension"), symbols)
+            results.append(codebase_map.render_markdown(
+                self.fixture.manifest, self.fixture.targets, symbols))
+        self.assertEqual(results[0], results[1])
+
     def test_unknown_field_and_unsupported_schema_fail(self) -> None:
         manifest = copy.deepcopy(self.fixture.manifest)
         manifest["unexpected"] = True

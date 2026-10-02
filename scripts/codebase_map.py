@@ -110,8 +110,8 @@ SWIFT_DECLARATION = re.compile(
     r"^(?:(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^\n]*\))?)\s+)*"
     r"(?:(?:package|public|internal|private|fileprivate|open|final|indirect|"
     r"nonisolated|distributed)\s+)*"
-    r"(actor|class|struct|enum|protocol|typealias|func)\s+"
-    r"(`?[A-Za-z_][A-Za-z0-9_]*`?)",
+    r"(actor|class|struct|enum|protocol|typealias|func|extension)\s+"
+    r"(`?[A-Za-z_][A-Za-z0-9_]*`?(?:\.`?[A-Za-z_][A-Za-z0-9_]*`?)*)",
     re.MULTILINE,
 )
 C_TYPE_DECLARATION = re.compile(
@@ -132,6 +132,7 @@ SWIFT_KIND_NAMES = {
     "protocol": "Protocol",
     "typealias": "Type Alias",
     "func": "Function",
+    "extension": "Extension",
 }
 
 
@@ -322,7 +323,7 @@ def lexical_symbols(root: Path, paths: Iterable[str]) -> Set[StableSymbol]:
         if file_path.suffix.lower() == ".swift":
             for match in SWIFT_DECLARATION.finditer(contents):
                 kind, name = match.groups()
-                symbols.add(StableSymbol(path, name.strip("`"), SWIFT_KIND_NAMES[kind]))
+                symbols.add(StableSymbol(path, name.replace("`", ""), SWIFT_KIND_NAMES[kind]))
         else:
             for match in C_TYPE_DECLARATION.finditer(contents):
                 kind, name = match.groups()
@@ -380,6 +381,15 @@ def inspect_symbols(
             continue
         for raw_symbol in graph.get("symbols", []):
             if not isinstance(raw_symbol, dict):
+                continue
+            # Swift toolchains differ in whether extensions of imported types
+            # are emitted. Index extension declarations from source consistently;
+            # compiler graphs still validate/index the other stable declarations.
+            kind_info = raw_symbol.get("kind", {})
+            if isinstance(kind_info, dict) and (
+                kind_info.get("identifier") == "swift.extension"
+                or kind_info.get("displayName") == "Extension"
+            ):
                 continue
             components = raw_symbol.get("pathComponents")
             if not isinstance(components, list) or len(components) != 1:
