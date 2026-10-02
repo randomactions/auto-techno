@@ -19,8 +19,7 @@ struct AutonomousCandidateEvaluationTests {
             state.advancePlanning(using: plan)
         }
         let plan = try #require(selected)
-        var incoming = RenderState()
-        incoming.barIndex = plan.startBar
+        let incoming = Self.continuousModalIncomingState(startBar: plan.startBar)
         let result = AutonomousPhrasePreparer.prepareIfNotCancelled(
             plan: plan, sessionSeed: state.rootSeed, memory: state.memory, sampleRate: 8_000,
             incomingRenderState: incoming, incomingGraphState: GeneratedDSPContinuationState(),
@@ -66,6 +65,24 @@ struct AutonomousCandidateEvaluationTests {
                 checkpoint: .establishment, sourceReportFingerprint: "legacy")
         }
     }
+    // Separate large aggregate construction from in-place binding, following
+    // the existing hosted-debug fixture contract. Values and assertions match
+    // the original control; production preparation remains unchanged.
+    @inline(never)
+    private static func continuousModalNeutralState() -> RenderState { RenderState() }
+
+    @inline(never)
+    private static func bindContinuousModalState(_ state: inout RenderState, startBar: Int) {
+        state.barIndex = startBar
+    }
+
+    @inline(never)
+    private static func continuousModalIncomingState(startBar: Int) -> RenderState {
+        var state = continuousModalNeutralState()
+        bindContinuousModalState(&state, startBar: startBar)
+        return state
+    }
+
     @Test("Candidate fields and calibrated dimensions have exhaustive categories")
     func evidenceCategoryInventoryIsExhaustive() {
         let vector = fixtureVector()
