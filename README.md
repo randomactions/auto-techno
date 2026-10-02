@@ -195,9 +195,14 @@ passes 768 construction controls and freezes a fresh outcome-blind 40/6 score
 cohort. Eight roots retain incomplete predicted tail windows; they remain in
 the cohort, and replacement qualification awaits bounded measurement continuity
 and measured positive-body support before fresh PCM fitting.
+[Canonical modal measurement continuity](docs/reports/AT_0039_MODAL_MEASUREMENT_CONTINUITY.md)
+now carries bounded same-pass event observations across actual successor bars.
+All 96 fixed late-onset controls complete their physical windows; deliberately
+silent bodies remain undefined. The fresh frozen cohort still awaits measurement
+and replacement qualification.
 
 The current Phase-1 evidence refresh records all 15 lifecycle families and
-19 subordinate checks for that retained runtime at exporter head `6042898`.
+19 subordinate checks for that retained runtime at exporter head `ef19f6b`.
 Its 14 whole mixes and 210 role/residual signals match the preserved captures
 sample for sample across 340,230,030 samples. This evidence does not qualify
 the failed expanded policy or establish independently labelled masking and
