@@ -192,14 +192,12 @@ pass 344 fixed mechanistic cases with bounded timestamp, Float and frame-grid
 uncertainty; these labels do not establish musical or perceptual quality.
 A [broader modal morphology and timing study](docs/reports/AT_0039_MODAL_MORPHOLOGY_SCORE_COVERAGE.md)
 passes 768 construction controls and freezes a fresh outcome-blind 40/6 score
-cohort. Eight roots retain incomplete predicted tail windows; they remain in
-the cohort, and replacement qualification awaits bounded measurement continuity
-and measured positive-body support before fresh PCM fitting.
+cohort. Score-only geometry predicted incomplete tail windows in eight frozen roots.
+The continuity and fresh studies below retain every root and measure their support.
 [Canonical modal measurement continuity](docs/reports/AT_0039_MODAL_MEASUREMENT_CONTINUITY.md)
 now carries bounded same-pass event observations across actual successor bars.
 All 96 fixed late-onset controls complete their physical windows; deliberately
-silent bodies remain undefined. The fresh frozen cohort still awaits measurement
-and replacement qualification.
+silent bodies remain undefined. The fresh native study below supplies measurement; replacement qualification remains pending.
 The [actual prepared-successor join](docs/reports/AT_0039_MODAL_SUCCESSOR_REPORT_JOIN.md)
 now binds original report ownership to immediate successor state and completes
 fixed-rate pending tails without changing PCM. The
@@ -211,9 +209,12 @@ planning identities. The [fresh native continuous study](docs/reports/AT_0039_CO
 completed all 40 development/six holdout journeys at both native rates, with 644
 original reports and 644 actual successor receipts. Offline v23/v32 fitting succeeds;
 replacement qualification remains unavailable and the profile is unactivated.
+The [continuous live source fixture](docs/reports/AT_0039_CONTINUOUS_LIVE_SOURCE_PRODUCTS_FOUNDATION.md)
+retains actual attenuation/recovery products and immediate successors for future
+adversarial qualification; the fixed fixture is not yet qualified under the new profile.
 
 The current Phase-1 evidence refresh records all 15 lifecycle families and
-19 subordinate checks for that retained runtime at exporter head `a2804ca`.
+19 subordinate checks for that retained runtime at exporter head `5fe0c50`.
 Its 14 whole mixes and 210 role/residual signals match the preserved captures
 sample for sample across 340,230,030 samples. This evidence does not qualify
 the failed expanded policy or establish independently labelled masking and
