@@ -295,8 +295,14 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         let (frozen, _) = try validatedFreshCoverageCohort()
         #expect(frozen.development.count == 40)
         #expect(frozen.holdout.count == 6)
-        #expect(frozen.development.reduce(0) { $0 + $1.checkpoints.count } +
-                frozen.holdout.reduce(0) { $0 + $1.checkpoints.count } == 322)
+        let developmentCheckpointCount: Int = frozen.development.reduce(0) {
+            $0 + $1.checkpoints.count
+        }
+        let holdoutCheckpointCount: Int = frozen.holdout.reduce(0) {
+            $0 + $1.checkpoints.count
+        }
+        let totalCheckpointCount: Int = developmentCheckpointCount + holdoutCheckpointCount
+        #expect(totalCheckpointCount == 322)
     }
 
     @Test("Execute the unchanged fresh native cohort through actual persistent successor preparation")
