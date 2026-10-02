@@ -204,11 +204,14 @@ The [actual prepared-successor join](docs/reports/AT_0039_MODAL_SUCCESSOR_REPORT
 now binds original report ownership to immediate successor state and completes
 fixed-rate pending tails without changing PCM. The
 [continuous observation/fitting foundation](docs/reports/AT_0039_CONTINUOUS_MODAL_OBSERVATION_FOUNDATION.md)
-binds v23/v32 to original reports and actual successors. The fresh cohort remains
-unrendered and replacement qualification is unavailable.
+binds v23/v32 to original reports and actual successors. The
+[continuous journey execution foundation](docs/reports/AT_0039_CONTINUOUS_MODAL_EXECUTION_FOUNDATION.md)
+shares one persistent producer with the legacy wrapper and validates all frozen
+planning identities. The fresh cohort remains unrendered and replacement
+qualification is unavailable.
 
 The current Phase-1 evidence refresh records all 15 lifecycle families and
-19 subordinate checks for that retained runtime at exporter head `53f0f3d`.
+19 subordinate checks for that retained runtime at exporter head `a2804ca`.
 Its 14 whole mixes and 210 role/residual signals match the preserved captures
 sample for sample across 340,230,030 samples. This evidence does not qualify
 the failed expanded policy or establish independently labelled masking and
