@@ -1,0 +1,87 @@
+{
+  "bounds": {
+    "bankReceipts": 64,
+    "emittedRecordsPerBar": 32,
+    "encodedReceiptBytes": 65536,
+    "pendingRecords": 8,
+    "successorBars": 1
+  },
+  "canonicalPipelineControls": {
+    "fixture": "modal-successor-report-join.v1",
+    "phraseIndex": 21,
+    "publicSeed": 48300,
+    "rows": [
+      {
+        "afterTailMissing": 0,
+        "afterTailPartial": 0,
+        "beforeTailPartial": 1,
+        "pendingOriginalEvents": 1,
+        "qualification": "unavailable-not-activated",
+        "receiptFingerprint": "12f8aeb1ca9a2617",
+        "sampleRate": 8000,
+        "sourceEventCount": 2,
+        "undefinedBodyEvents": 0
+      },
+      {
+        "afterTailMissing": 0,
+        "afterTailPartial": 0,
+        "beforeTailPartial": 1,
+        "pendingOriginalEvents": 1,
+        "qualification": "unavailable-not-activated",
+        "receiptFingerprint": "3f72c1545b1930f0",
+        "sampleRate": 44100,
+        "sourceEventCount": 2,
+        "undefinedBodyEvents": 0
+      },
+      {
+        "afterTailMissing": 0,
+        "afterTailPartial": 0,
+        "beforeTailPartial": 1,
+        "pendingOriginalEvents": 1,
+        "qualification": "unavailable-not-activated",
+        "receiptFingerprint": "9d472797f565d46a",
+        "sampleRate": 48000,
+        "sourceEventCount": 2,
+        "undefinedBodyEvents": 0
+      }
+    ],
+    "startBar": 225
+  },
+  "completeNativePhysicalWindows": 96,
+  "continuousFittingBoundary": "explicit-observation-contract-required-before-fresh-fitting",
+  "fixedConstructionEvidenceOnly": true,
+  "freshCohortRendered": false,
+  "freshCohortSha256": "bb5b9f5eb1ac332aa20acaa05ead459ad9a4f7372c408ae3de33fa2c9980044c",
+  "legacyMetricsChanged": false,
+  "maximumRMSError": 0,
+  "nativeLedgerCaseCount": 96,
+  "protocolSha256": "e0429c18f0d4fa65ea95ad12a3da12148d0268ab892962c4d799737cb61b858c",
+  "releaseEvidence": {
+    "appTests": 59,
+    "coreTests": 675,
+    "xctestChecks": 6
+  },
+  "replacementQualification": "unavailable-not-activated",
+  "retainedNegativeResult": "NEG-AT-0039-007",
+  "runtimeEvidence": {
+    "aggregateCheckCount": 19,
+    "changedSamples": 0,
+    "contractBaselineFingerprint": "0c8c1eca95df78ff33e8379683a0626d763a07f95ec1fc6cdb68369ff2fb3564",
+    "contractSnapshot": 61,
+    "exactComparedSamples": 340230030,
+    "existingRetiredSkips": 2,
+    "exporterHead": "430a22d8e4a69fbdc65901622b858a5d263a3a30",
+    "gateFingerprint": "4c59f193ec795f30c58b35cf32f815b1b96a817f2d694a1cc5752fccfd217e85",
+    "lifecycleFamilyCount": 15,
+    "liveTraceScope": "retained bounded 2026-09-04 macOS trace; no new app/route or physical soak",
+    "preservedAssets": 224,
+    "refreshStageCount": 42,
+    "releaseAppTests": 59,
+    "releaseCoreTests": 675,
+    "toolingTests": 272,
+    "xctestChecks": 6
+  },
+  "schema": "autotechno-modal-successor-report-join-summary.v1",
+  "sourceHead": "430a22d8e4a69fbdc65901622b858a5d263a3a30",
+  "undefinedNativeSilentBodies": 48
+}
