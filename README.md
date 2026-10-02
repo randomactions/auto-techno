@@ -207,8 +207,10 @@ fixed-rate pending tails without changing PCM. The
 binds v23/v32 to original reports and actual successors. The
 [continuous journey execution foundation](docs/reports/AT_0039_CONTINUOUS_MODAL_EXECUTION_FOUNDATION.md)
 shares one persistent producer with the legacy wrapper and validates all frozen
-planning identities. The fresh cohort remains unrendered and replacement
-qualification is unavailable.
+planning identities. The [fresh native continuous study](docs/reports/AT_0039_CONTINUOUS_MODAL_FRESH_NATIVE_STUDY.md)
+completed all 40 development/six holdout journeys at both native rates, with 644
+original reports and 644 actual successor receipts. Offline v23/v32 fitting succeeds;
+replacement qualification remains unavailable and the profile is unactivated.
 
 The current Phase-1 evidence refresh records all 15 lifecycle families and
 19 subordinate checks for that retained runtime at exporter head `a2804ca`.

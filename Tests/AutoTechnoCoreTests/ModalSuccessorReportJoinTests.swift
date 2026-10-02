@@ -5,6 +5,43 @@ import Testing
 
 @Suite("Modal successor report join", .serialized)
 struct ModalSuccessorReportJoinTests {
+    @Test("Continuous live challenge sources bind actual attenuation/recovery products and immediate successors")
+    func continuousLiveAdversarialSourceBinding() throws {
+        let products = try LiveFeedbackTestSupport.renderContinuousLiveSourceProducts()
+        #expect(products.chain.isCausal)
+        for (reports, successor, candidate) in [
+            (products.attenuationReports, products.attenuationSuccessor, products.chain.attenuation),
+            (products.recoveryReports, products.recoverySuccessor, products.chain.recovery),
+        ] {
+            let applicable = CanonicalJourneyCheckpoint.applicable(
+                phraseIndex: candidate.symbolic.phraseIndex,
+                phraseKind: try #require(AutonomousPhraseKind(rawValue: candidate.symbolic.phraseKind)),
+                chapterChanged: candidate.symbolic.chapterChanged
+            )
+            #expect(reports.map(\.checkpoint) == applicable)
+            for source in reports {
+                #expect(source.selectedCandidateEvidence == candidate)
+                #expect(source.policyVersion == LiveFeedbackTestSupport.fingerprintQualifiedPolicyVersion)
+                let receipt = try ProfessionalQualityModalSuccessorEvidence(source: source, successor: successor)
+                let observation = try ProfessionalQualityObservation(continuousReport: source, successor: receipt)
+                #expect(observation.isComplete)
+                #expect(observation.measurementScope == .continuousModalWindow)
+                #expect(observation.liveMaster == source.liveMaster)
+                #expect(observation.continuousModalSource?.sourceIdentityFingerprint ==
+                    ProfessionalQualityModalSuccessorEvidence.identity(source))
+                #expect(receipt.successorIncomingRenderDSPFingerprint ==
+                    source.commitProvenance.outgoingRenderDSPFingerprint)
+                #expect(successor.plan.phraseIndex == candidate.symbolic.phraseIndex + 1)
+                #expect(successor.incomingQualityState == source.outgoingState)
+            }
+        }
+        let source = try #require(products.attenuationReports.first)
+        #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+            try ProfessionalQualityModalSuccessorEvidence(source: source,
+                successor: products.recoverySuccessor)
+        }
+    }
+
     @Test("Frozen public score selection joins only the actual successor at all fixed rates")
     func actualSuccessorReportJoin() throws {
         var director = AutonomousSessionDirector(rootSeed: 48_291)
