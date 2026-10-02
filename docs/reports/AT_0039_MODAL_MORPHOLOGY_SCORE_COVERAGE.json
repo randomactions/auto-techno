@@ -1,0 +1,131 @@
+{
+  "contractSnapshot": 59,
+  "freshScoreCoverage": {
+    "checkpointCount": 322,
+    "cohortBytes": 280297,
+    "cohortSha256": "bb5b9f5eb1ac332aa20acaa05ead459ad9a4f7372c408ae3de33fa2c9980044c",
+    "legacyCalibrationRootCountChecked": 40,
+    "legacyCalibrationRootsDisjoint": true,
+    "limitations": [
+      "Score geometry only, not measured energy or quality.",
+      "Rates and correlated events are repeated dimensions, not random population samples.",
+      "No event or root was excluded because of these coverage outcomes."
+    ],
+    "materialEventCountsAcrossNativeRates": {
+      "bronze-plate": 68,
+      "ceramic-shell": 28,
+      "hollow-wood": 36,
+      "stretched-membrane": 36
+    },
+    "measuredBodyEvidence": "unavailable-before-PCM",
+    "predictedTailWindowCountsAcrossNativeRates": {
+      "complete": 146,
+      "missing": 12,
+      "partial": 10
+    },
+    "priorRootsChecked": 17,
+    "priorRootsDisjoint": true,
+    "protocolSha256": "1b10f7880d27d044a41d00b2d2f23af9d1e71226534ace0fd018645a38090877",
+    "replacementQualification": "unavailable-not-activated",
+    "rootCount": 46,
+    "rootsWithIncompletePredictedTail": 8,
+    "schema": "autotechno-fresh-modal-score-coverage-summary.v1",
+    "sourceHead": "6042898a7d8ab3b633580786e5653b6fa8e62b08",
+    "splitSummaries": {
+      "development": {
+        "tailByCheckpointAcrossNativeRates": {
+          "long-continuation": {
+            "complete": 22,
+            "partial": 2
+          },
+          "major-break": {
+            "complete": 100,
+            "missing": 6,
+            "partial": 6
+          }
+        },
+        "tailWindowCountsAcrossNativeRates": {
+          "complete": 122,
+          "missing": 6,
+          "no-score-modal-checkpoints": 246,
+          "partial": 8
+        },
+        "trajectoryCount": 40
+      },
+      "holdout": {
+        "tailByCheckpointAcrossNativeRates": {
+          "long-continuation": {
+            "complete": 10,
+            "missing": 2
+          },
+          "major-break": {
+            "complete": 14,
+            "missing": 4,
+            "partial": 2
+          }
+        },
+        "tailWindowCountsAcrossNativeRates": {
+          "complete": 24,
+          "missing": 6,
+          "no-score-modal-checkpoints": 34,
+          "partial": 2
+        },
+        "trajectoryCount": 6
+      }
+    },
+    "stepEventCountsAcrossNativeRates": {
+      "1": 8,
+      "10": 8,
+      "11": 24,
+      "14": 10,
+      "15": 12,
+      "2": 18,
+      "3": 26,
+      "5": 12,
+      "6": 14,
+      "7": 28,
+      "9": 8
+    }
+  },
+  "installedPolicies": [
+    "primary-v30",
+    "long-horizon-v16"
+  ],
+  "matrix": {
+    "caseCount": 768,
+    "contractSnapshot": 59,
+    "limits": "Fixed linked morphology controls and deterministic phase cells, not a random population or perceptual quality labels",
+    "maximumRMSError": 1.167061502993505e-09,
+    "protocolSha256": "1b10f7880d27d044a41d00b2d2f23af9d1e71226534ace0fd018645a38090877",
+    "qualification": "unavailable-not-activated",
+    "schema": "autotechno-modal-morphology-timing-summary.v1",
+    "status": "mechanistic-matrix-passed",
+    "tailWindowGeometry": {
+      "complete": 672,
+      "missing": 48,
+      "partial": 48
+    }
+  },
+  "negativeResult": "NEG-AT-0039-006",
+  "qualityClaim": false,
+  "replacementQualification": "unavailable-not-activated",
+  "retainedRuntimeEvidence": {
+    "aggregateCheckCount": 19,
+    "changedSampleCount": 0,
+    "comparedSampleCount": 340230030,
+    "contractBaselineFingerprint": "17a77f0e7e07cddaf1f38cf4145597db1ac709d6c8b2f118b93281226573b07f",
+    "contractSnapshot": 59,
+    "exporterHead": "6042898a7d8ab3b633580786e5653b6fa8e62b08",
+    "gateFingerprint": "0b59094881fd4236833277abd3e65eb4a383188d1ff04cecca4512f39e4a1351",
+    "lifecycleFamilyCount": 15,
+    "liveCallbackTrace": "retained bounded 2026-09-04 macOS trace",
+    "preservedAssetCount": 224,
+    "refreshStageCount": 42,
+    "replacementQualification": "unavailable-not-activated",
+    "toolingTestCount": 272
+  },
+  "runtimeChanges": false,
+  "schema": "autotechno-modal-morphology-and-score-coverage-evidence.v1",
+  "sourceHead": "6042898a7d8ab3b633580786e5653b6fa8e62b08",
+  "statisticalConfidence": "not-estimated-fixed-construction-and-deterministic-score-cohort"
+}

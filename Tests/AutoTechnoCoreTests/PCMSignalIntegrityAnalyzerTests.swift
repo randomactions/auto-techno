@@ -6,8 +6,18 @@ import Testing
 struct PCMSignalIntegrityAnalyzerTests {
     @Test("Impulse, RMS, crest, DC, clipping, and bar segments retain units")
     func levelAndSegmentMetrics() throws {
+        let silence = try DeterministicSignalFixtures.silence(frameCount: 4)
+        let negativeImpulse = try DeterministicSignalFixtures.impulse(
+            frameCount: 4, index: 0, amplitude: -1
+        )
+        let positiveImpulse = try DeterministicSignalFixtures.impulse(
+            frameCount: 4, index: 2, amplitude: 1
+        )
+        let samples = zip(zip(silence, negativeImpulse), positiveImpulse).map {
+            $0.0.0 + $0.0.1 + $0.1
+        }
         let evidence = try #require(PCMSignalIntegrityAnalyzer.analyze(
-            channels: [[-1, 0, 1, 0]],
+            channels: [samples],
             sampleRate: 44_100,
             segmentFrameCount: 2
         ))
@@ -31,6 +41,26 @@ struct PCMSignalIntegrityAnalyzerTests {
         #expect(try #require(evidence.combined.truePeak) >= 1)
     }
 
+    @Test("Hard-clipped sine rail count agrees with the analyzer")
+    func clippedSineRailCount() throws {
+        let samples = try DeterministicSignalFixtures.hardClippedSine(
+            frameCount: 80,
+            sampleRate: 8_000,
+            frequencyHz: 1_000,
+            inputAmplitude: 2,
+            clipLevel: 1
+        )
+        let expectedRailCount = samples.filter { abs($0) == 1 }.count
+        let evidence = try #require(PCMSignalIntegrityAnalyzer.analyze(
+            channels: [samples],
+            sampleRate: 8_000,
+            segmentFrameCount: samples.count
+        ))
+
+        #expect(expectedRailCount > 0)
+        #expect(evidence.combined.clippedSampleCount == expectedRailCount)
+    }
+
     @Test("Stereo silence requires every channel and preserves the longest run")
     func stereoSilenceRuns() throws {
         let threshold = Float(PCMSignalIntegrityAnalyzer.nearSilenceAmplitude)
@@ -52,8 +82,11 @@ struct PCMSignalIntegrityAnalyzerTests {
 
     @Test("DC and complete silence retain interpretable finite sentinels")
     func dcAndSilence() throws {
+        let dcSamples = try DeterministicSignalFixtures.dc(
+            frameCount: 8, value: 0.25
+        )
         let dc = try #require(PCMSignalIntegrityAnalyzer.analyze(
-            channels: [[Float](repeating: 0.25, count: 8)],
+            channels: [dcSamples],
             sampleRate: 48_000,
             segmentFrameCount: 4
         ))
@@ -63,8 +96,11 @@ struct PCMSignalIntegrityAnalyzerTests {
         #expect(dc.combined.dcOffset == 0.25)
         #expect(dc.nearSilentFrameCount == 0)
 
+        let silenceSamples = try DeterministicSignalFixtures.silence(
+            frameCount: 8
+        )
         let silence = try #require(PCMSignalIntegrityAnalyzer.analyze(
-            channels: [[Float](repeating: 0, count: 8)],
+            channels: [silenceSamples],
             sampleRate: 48_000,
             segmentFrameCount: 4
         ))

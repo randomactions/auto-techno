@@ -8,7 +8,7 @@ Inventory version: 1
 
 The collision boundary is every production Swift type whose name ends in an authority-shaped suffix (Renderer, Preparer, Evaluator, Director, Resolver, Policy, Reducer, Controller, Qualifier, Generator, Engine, Orchestrator, Coordinator, Balancer, Analyzer, Validator, Processor, Artifacts, or Preflight), every production Swift type ending in Profile, Preset, Mode, or Configuration, every static value whose identifier contains profile or preset, every bundled JSON resource under Sources, and every source path assigned to the semantic map's graph-effects-routing-and-mix component. The inventory classifies naming collisions and convergence; it does not infer authority from a suffix alone and does not replace executable data-flow tests.
 
-The checked inventory currently classifies 70 authority-shaped Swift types, 22 profile/mode/configuration/resource surfaces, and 7 graph-component paths. Similar names are candidates for collision analysis, not proof of duplicate runtime authority.
+The checked inventory currently classifies 70 authority-shaped Swift types, 23 profile/mode/configuration/resource surfaces, and 7 graph-component paths. Similar names are candidates for collision analysis, not proof of duplicate runtime authority.
 
 ## Authority summary
 
@@ -54,6 +54,7 @@ The checked inventory currently classifies 70 authority-shaped Swift types, 22 p
 | [`material-world-effect-vocabulary`](#material-world-effect-vocabulary) | `profile` | `score-state` | `long-horizon-semantic-control` → `long-horizon-semantic-control` | 1 | `selects-score-only` |
 | [`long-horizon-installed-profile`](#long-horizon-installed-profile) | `profile` | `installed-calibration-artifact` | `long-horizon-signal-and-future-adaptation` → `long-horizon-signal-and-future-adaptation` | 5 | `changes-future-pcm-only` |
 | [`long-horizon-profile-support`](#long-horizon-profile-support) | `profile` | `qualification-support-artifact` | `long-horizon-signal-and-future-adaptation` → `long-horizon-signal-and-future-adaptation` | 2 | `qualifies-without-changing-pcm` |
+| [`modal-window-profile-contract`](#modal-window-profile-contract) | `profile` | `qualification-support-artifact` | `evidence-calibration-and-primary-evaluation` → `evidence-calibration-and-primary-evaluation` | 1 | `qualifies-without-changing-pcm` |
 | [`primary-installed-profile`](#primary-installed-profile) | `profile` | `installed-calibration-artifact` | `evidence-calibration-and-primary-evaluation` → `evidence-calibration-and-primary-evaluation` | 7 | `qualifies-without-changing-pcm` |
 | [`primary-profile-support`](#primary-profile-support) | `profile` | `qualification-support-artifact` | `evidence-calibration-and-primary-evaluation` → `evidence-calibration-and-primary-evaluation` | 2 | `qualifies-without-changing-pcm` |
 
@@ -862,6 +863,27 @@ Evidence anchors:
 
 Limitation: These artifacts qualify the one installed profile and cannot be selected as runtime policies.
 
+## Offline modal-window profile contract identity
+<a id="modal-window-profile-contract"></a>
+
+Classification: `qualification-support-artifact`  
+Owner convergence: `evidence-calibration-and-primary-evaluation` → `evidence-calibration-and-primary-evaluation`  
+PCM consequence: `qualifies-without-changing-pcm`
+
+Members:
+
+- `static-value modalWindowProfileVersion` in [`Sources/AutoTechnoDSP/ProfessionalQualityMeasurementApplicability.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityMeasurementApplicability.swift)
+
+Convergence anchors:
+
+- [`Sources/AutoTechnoDSP/ProfessionalQualityCalibration.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityCalibration.swift): `ProfessionalQualityMeasurementContract.modalWindowProfileVersion`
+
+Evidence anchors:
+
+- [`Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationTests.swift`](../Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationTests.swift): `func windowSupportedContractIdentity()`
+
+Limitation: This unqualified offline identity extends the existing profile type and fitter. No v31 artifact is installed; production activation still requires v30.
+
 ## Installed primary calibration profile
 <a id="primary-installed-profile"></a>
 
@@ -877,15 +899,15 @@ Members:
 - `static-value profileResource` in [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift)
 - `static-value expectedProfileFingerprint` in [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift)
 - `static-value requiredProfileVersion` in [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift)
-- `json-resource professional-quality-primary-profile-v29` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v29.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v29.json)
+- `json-resource professional-quality-primary-profile-v30` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json)
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-profile-v29"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-profile-v30"`
 
 Evidence anchors:
 
-- [`Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift`](../Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift): `func primaryResourcesAreV29Only()`
+- [`Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift`](../Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift): `func primaryResourcesAreV30FailClosed()`
 
 Limitation: Checkpoint profiles are parts of one exact installed calibration profile; neither is a runtime style or engine profile.
 
@@ -898,17 +920,17 @@ PCM consequence: `qualifies-without-changing-pcm`
 
 Members:
 
-- `json-resource professional-quality-primary-adversarial-suite-v29` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v29.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v29.json)
-- `json-resource professional-quality-primary-holdout-v29` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v29.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v29.json)
+- `json-resource professional-quality-primary-adversarial-suite-v30` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json)
+- `json-resource professional-quality-primary-holdout-v30` in [`Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json`](../Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json)
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-adversarial-suite-v29"`
-- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-holdout-v29"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-adversarial-suite-v30"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-holdout-v30"`
 
 Evidence anchors:
 
-- [`Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift`](../Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift): `func primaryResourcesAreV29Only()`
+- [`Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift`](../Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift): `func primaryResourcesAreV30FailClosed()`
 
 Limitation: These exact resources gate construction of the primary evaluator and expose no parallel runtime evaluator path.
 

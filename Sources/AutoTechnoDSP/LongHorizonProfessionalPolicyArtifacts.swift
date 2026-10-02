@@ -10,9 +10,9 @@ package struct LongHorizonProfessionalPolicyArtifacts: Sendable {
     "long-horizon-adversarial-suite-v16"
   package static let holdoutResource =
     "long-horizon-holdout-v16"
-  package static let expectedProfileFingerprint = "836ac66b68470cd4"
-  package static let expectedAdversarialFingerprint = "5950762cf2dc2635"
-  package static let expectedHoldoutFingerprint = "0e00df369ce54e50"
+  package static let expectedProfileFingerprint = "5110688cc8620d7a"
+  package static let expectedAdversarialFingerprint = "fded455207d0919c"
+  package static let expectedHoldoutFingerprint = "768388d21859dfdc"
 
   package let profile: LongHorizonProfessionalProfile
   package let adversarial: LongHorizonAdversarialSuiteReport

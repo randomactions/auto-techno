@@ -235,6 +235,52 @@ class StemCaptureManifestTests(unittest.TestCase):
         self.assertEqual(result, 0, diagnostic)
         self.assertIn("14 identities x 15", diagnostic)
 
+    def test_capture_namespace_isolated_and_path_safe(self) -> None:
+        self.assertEqual(
+            stems.manifest_path(self.root, "at0039-v1"),
+            self.root / "docs/local/reports/baseline-stems-at0039-v1/manifest.json",
+        )
+        self.assertEqual(
+            stems.whole_mix_manifest_path(self.root, "at0039-v1"),
+            self.root / "docs/local/reports/baseline-corpus-at0039-v1/manifest.json",
+        )
+        with self.assertRaises(stems.StemCaptureManifestError):
+            stems.manifest_path(self.root, "../baseline-stems-v1")
+
+    def test_namespaced_whole_mix_and_stem_files_validate(self) -> None:
+        namespace = "at0039-v1"
+        whole = copy.deepcopy(self.whole)
+        for entry in whole["entries"]:
+            source = self.root / entry["wavPath"]
+            destination = (
+                f"docs/local/audio/baseline-corpus-{namespace}/"
+                f"{entry['id']}.wav"
+            )
+            self.write_bytes(destination, source.read_bytes())
+            entry["wavPath"] = destination
+        whole_data = json.dumps(whole, indent=2) + "\n"
+        whole_path = f"docs/local/reports/baseline-corpus-{namespace}/manifest.json"
+        self.write_json(whole_path, whole)
+
+        manifest = copy.deepcopy(self.manifest)
+        manifest["wholeMixManifestSha256"] = hashlib.sha256(
+            whole_data.encode()
+        ).hexdigest()
+        for entry in manifest["entries"]:
+            for stem in entry["files"]:
+                source = self.root / stem["wavPath"]
+                destination = (
+                    f"docs/local/audio/baseline-stems-{namespace}/"
+                    f"{entry['id']}--{stem['signal']}.wav"
+                )
+                self.write_bytes(destination, source.read_bytes())
+                stem["wavPath"] = destination
+        self.write_json(
+            f"docs/local/reports/baseline-stems-{namespace}/manifest.json",
+            manifest,
+        )
+        self.assertEqual(stems.validate(self.root, namespace), [])
+
     def test_missing_signal_and_extra_wav_fail(self) -> None:
         manifest = copy.deepcopy(self.manifest)
         manifest["entries"][0]["files"].pop()

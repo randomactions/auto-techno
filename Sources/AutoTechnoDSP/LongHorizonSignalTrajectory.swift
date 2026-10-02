@@ -509,8 +509,9 @@ package struct LongHorizonSignalOperatorTransitionSummary: Codable, Equatable,
 }
 
 package struct LongHorizonSignalTrajectoryReport: Codable, Equatable,
-  Sendable
+  Sendable, AutonomousEvidenceCategorizedReport
 {
+  package static let evidenceCategory: AutonomousEvidenceCategory = .descriptive
   package let schemaVersion: Int
   package let schemaIdentifier: String
   package let availability: LongHorizonSignalTrajectoryAvailability

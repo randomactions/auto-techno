@@ -2,8 +2,14 @@
 
 Current engine v48 binds material-world/effect-target lineage, pitch identity,
 and transition-tail continuity under quality schema 49, candidate-vector schema
-43, and transaction schema 14. Its primary-v29 artifacts are the single active
-qualification set.
+43, and transaction schema 14. The qualified primary evaluator and profile v30
+use adversarial suite v23 and disjoint holdout v20. The three bundled resources
+are fingerprint-bound and load only as that exact set. Profile schema 22 retains
+explicit source comparison support for conditional trajectory measurements.
+Matching long-horizon-v16 development, adversarial, and disjoint-holdout
+artifacts now qualify under the same exact primary policy. Phase-1 lifecycle regeneration,
+AT-0039 frozen-cohort calibration, app/route QA, and physical-output soak remain
+separate pending gates.
 
 ## Runtime contract
 
@@ -54,12 +60,30 @@ invalid.
 
 ## Qualification
 
-`ProfessionalQualityPrimaryArtifacts` loads only the non-reconstructable
-engine-v48 profile v29, adversarial suite v22, and disjoint holdout qualification
-v20. The profile derives from 36 complete 44.1/48 kHz journeys; four fresh,
-disjoint holdout journeys passed all 56 local verdicts and every relationship
-gate. The pinned profile, adversarial, and holdout fingerprints are
-`06cb04bfbef71c28`, `16820b6274dd26d4`, and `2037dec24ac1e45c`.
+`ProfessionalQualityPrimaryArtifacts` contains engine-v48 profile v30,
+adversarial suite v23, and disjoint holdout qualification v20. Their fingerprints
+are `45d94400c298892e`, `a5070b55dd992655`, and `7169407cd746c0b6`.
+The Release qualifier uses 36 complete 44.1/48 kHz development journeys (504
+observations) and four disjoint holdout journeys. All 34 adversarial cases,
+56/56 holdout observations, and every applicable trajectory/rate relationship
+passed. Eighteen conditional pad trajectory bounds explicitly have zero source
+comparisons; these remain unavailable for any future applicable comparison.
+This exact qualification does not establish coverage of four-bar major-break
+modal windows or the independent AT-0039 fixture labels.
+
+The offline calibration corpus v3 has a finite capacity of 48 complete
+trajectories. Its opt-in four-bar coverage expansion retains the existing
+36 development and four holdout roots, adding four development and two disjoint
+holdout roots. Before rendering, the existing canonical journey harness freezes
+the first four-bar major break within 128 phrases from each selected root,
+and its first following release, using ascending disjoint ordinal domains (263..<519 and 519..<775). The local
+manifest binds clean accepted source, exact score identity and the unchanged
+original AT-0039 cohort. Both fresh and cached reports must match the frozen
+break/release phrases and resolved lengths at both native rates. Cache schema 3 records the
+window identity; complete legacy schema-2 banks remain reusable only for the
+unchanged default checkpoint schedule. This offline capability does not promote
+new policy artifacts: automatic fitting, all adversarial cases and every
+holdout verdict/relationship must pass before installation.
 
 Offline calibration may retain several checkpoint observations from one
 candidate. Runtime terminal qualification selects one most-specific
@@ -109,6 +133,23 @@ upper-mid energy, and measured crest reduction. A dedicated transient-spike
 attack proves a disconnected or regressed kick conditioner cannot hide behind
 unrelated strengths.
 
+The three pad-rhythmic consequence means (filter, amplitude/gate, and spatial
+send) are applicable only when the score-projected active-bar ratio is positive.
+Their source aggregation includes only bars whose resolved score declares the
+three-step-pulse relation; an empty population is therefore inapplicable rather
+than a zero-valued consequence. The active-relation adversarial cases remain
+required and must reject disconnected consequences.
+
+Calibration profile schema 22 records the source comparison count for every
+trajectory bound. A conditional metric with no applicable paired development
+observations has zero support and canonical zero storage sentinels; those
+sentinels are not measured deltas. Inapplicable comparisons remain skipped.
+An applicable comparison with zero recorded support makes relationship
+qualification unavailable and cannot pass, while independent failures remain
+visible. Individual checkpoint and paired-rate bounds still derive only from
+applicable measurements, with the existing same-corpus active fallback.
+This adds no renderer parameter, score choice, or callback operation.
+
 The app preloads artifacts away from the audio callback and creates a route-local
 evaluator for detached preparation. Missing artifacts and rates outside 44.1 or
 48 kHz are truthfully `qualificationUnavailable`; they cannot commit audio.
@@ -140,3 +181,48 @@ claims.
 The scheduled-output controller cannot commit independently of this evaluator.
 See [`LIVE_FEEDBACK.md`](LIVE_FEEDBACK.md) for its capture, proposal, lifecycle,
 accepted-PCM hold, and physical-QA boundaries.
+
+Modal-window support is an additive detached evidence foundation. The existing
+modal event accumulator now persists onset and actual attack/body/tail sample
+counts in nested support schema1. Complete support covers 0...10ms,
+20...80ms and 120...240ms respectively, with exclusive upper endpoints.
+The complete bank exposes a descriptive projection with explicit measured and
+excluded-event counts and nullable attack/body and tail/body means. Missing
+and partial windows cannot become measured silence; a completely measured zero
+tail with a nonzero body remains a measured -120dB ratio. Legacy banks lacking
+support cannot produce this diagnostic. Installed v29 observation extraction
+and v30/v23/v20 policy identities retain their original semantics. This
+foundation does not qualify new applicability, replace profiles, waive failed
+holdouts, alter PCM/continuation, or add callback work. Replacement promotion
+still requires a unified versioned extraction/fitting/relationship contract,
+qualified support coverage, fresh independent holdouts and all existing gates.
+
+
+## Shared modal measurement applicability foundation
+
+The explicit offline `windowSupportedObservations` and `windowSupportedBanks`
+projections use observation v22 and profile v31 identities in the existing
+observation, corpus, fitter and evaluators. Schema2 modal evidence retains
+per-ratio measured, missing-window, partial-window and undefined-body event
+counts. No score-owned events means the ratio is not required. If events exist,
+every event must have complete paired windows and a finite positive body before
+the ratio is a qualification measurement. A measured zero numerator remains
+-120dB; unsupported values are omitted, never replaced with zero or a floor.
+
+One shared status owner controls extraction, fitting, local and relationship
+assessment. Fitting refuses any unsupported required dimension or asymmetric
+native-rate applicability. Local verdicts reason-code unavailable dimensions.
+Relationship assessment keeps required coverage unavailable and retains other
+numeric failures. Score absence may omit a conditional comparison, but a later
+active comparison with no trained support remains unavailable. Mixed observation
+contracts are rejected. Diagnostic subset means remain descriptive and cannot
+waive an excluded event.
+
+This is a qualification foundation, not activation of replacement applicability.
+The current v21/v30 extraction and installed v30/v16 resources remain unchanged;
+the production primary evaluator still requires v30 and rejects v31. No score,
+PCM, callback, continuation or future musical decision changes. Independent
+fixture labels, uncertainty, preregistered coverage and fresh disjoint holdouts,
+plus complete matching primary and long-horizon qualification, remain required
+before any replacement. This extends the existing canonical evidence owner and
+avoids separate extraction/fitting/evaluation eligibility rules.

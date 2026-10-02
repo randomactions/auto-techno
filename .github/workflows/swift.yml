@@ -346,7 +346,13 @@ jobs:
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
-          --filter '(ModalPercussionDSPTests|ModalPercussionPlanningTests)'
+          --filter '(ModalPercussionDSPTests|ModalPercussionPlanningTests|ModalSuccessorReportJoinTests)'
+
+      - name: Run measurement fixture and provenance controls
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter '(DeterministicSignalFixturesTests|AT0039FoundationCohortSelectionTests|AutonomousEvidenceAuthorityTests)'
 
       - name: Run adaptive autonomous-session suite
         run: >-

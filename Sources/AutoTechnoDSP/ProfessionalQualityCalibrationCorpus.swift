@@ -24,9 +24,17 @@ package struct ProfessionalQualityCalibrationTrajectory: Codable, Equatable,
     }
 
     package init(bank: ProfessionalEvidenceReportBank) throws {
+        try self.init(bank: bank, requiringModalWindowSupport: false)
+    }
+
+    package init(bank: ProfessionalEvidenceReportBank,
+                 requiringModalWindowSupport: Bool) throws {
         try self.init(
             sourceBankFingerprint: Self.fingerprint(of: bank),
-            observations: bank.reports.map(ProfessionalQualityObservation.init)
+            observations: bank.reports.map {
+                try ProfessionalQualityObservation(report: $0,
+                    requiringModalWindowSupport: requiringModalWindowSupport)
+            }
         )
     }
 
@@ -53,7 +61,8 @@ package struct ProfessionalQualityCalibrationTrajectory: Codable, Equatable,
               observations.allSatisfy({
                   $0.isComplete &&
                       $0.engineVersion == first.engineVersion &&
-                      $0.evidenceVersion == first.evidenceVersion
+                      $0.evidenceVersion == first.evidenceVersion &&
+                      $0.observationVersion == first.observationVersion
               }) else {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
@@ -111,10 +120,10 @@ package struct ProfessionalQualityCalibrationTrajectory: Codable, Equatable,
 /// fingerprints and source-bank identities must remain disjoint.
 package struct ProfessionalQualityCalibrationCorpus: Codable, Equatable,
         Sendable {
-    package static let schemaVersion = 2
+    package static let schemaVersion = 3
     package static let corpusVersion =
-        "autotechno-professional-quality-corpus.v2"
-    package static let maximumTrajectoryCount = 36
+        "autotechno-professional-quality-corpus.v3"
+    package static let maximumTrajectoryCount = 48
 
     package let schemaVersion: Int
     package let corpusVersion: String
@@ -129,6 +138,13 @@ package struct ProfessionalQualityCalibrationCorpus: Codable, Equatable,
         try self.init(trajectories: banks.map(
             ProfessionalQualityCalibrationTrajectory.init
         ))
+    }
+
+    package init(windowSupportedBanks banks: [ProfessionalEvidenceReportBank]) throws {
+        try self.init(trajectories: banks.map {
+            try ProfessionalQualityCalibrationTrajectory(bank: $0,
+                requiringModalWindowSupport: true)
+        })
     }
 
     package init(
@@ -148,7 +164,8 @@ package struct ProfessionalQualityCalibrationCorpus: Codable, Equatable,
                   $0.isComplete &&
                       $0.engineVersion == first.engineVersion &&
                       $0.evidenceVersion == first.evidenceVersion &&
-                      $0.sampleRates == first.sampleRates
+                      $0.sampleRates == first.sampleRates &&
+                      $0.observations.first?.observationVersion == first.observations.first?.observationVersion
               }) else {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
@@ -191,7 +208,8 @@ package struct ProfessionalQualityCalibrationCorpus: Codable, Equatable,
             trajectories.allSatisfy {
                 $0.isComplete && $0.engineVersion == engineVersion &&
                     $0.evidenceVersion == evidenceVersion &&
-                    $0.sampleRates == sampleRates
+                    $0.sampleRates == sampleRates &&
+                    $0.observations.first?.observationVersion == trajectories.first?.observations.first?.observationVersion
             }
     }
 

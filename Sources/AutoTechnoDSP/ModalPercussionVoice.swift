@@ -33,6 +33,7 @@ package struct ModalPercussionVoiceSlotState: Equatable, Sendable {
 
 package struct ModalPercussionVoiceState: Equatable, Sendable {
     package var sampleRate = 0.0
+    package var measurement = ModalPercussionMeasurementState()
     package var slot0 = ModalPercussionVoiceSlotState()
     package var slot1 = ModalPercussionVoiceSlotState()
     package var slot2 = ModalPercussionVoiceSlotState()
@@ -54,6 +55,90 @@ package struct ScheduledModalPercussionEvent: Equatable, Sendable {
         self.articulation = articulation
         self.startFrame = max(0, startFrame)
         self.level = min(1, max(0, level.isFinite ? level : 0))
+    }
+}
+
+/// Geometry, not signal energy, determines whether a window was measured.
+/// Counts come from the same accumulator as the RMS values. Complete support
+/// is required for the diagnostic ratios; partial and missing are explicit.
+package struct ModalPercussionWindowSupport: Codable, Equatable, Sendable {
+    package enum Availability: String, Codable, Sendable {
+        case missing, partial, complete
+    }
+
+    package let schemaVersion: Int
+    package let startFrame: Int
+    package let attackSampleCount: Int
+    package let bodySampleCount: Int
+    package let tailSampleCount: Int
+
+    package init(startFrame: Int, attackSampleCount: Int,
+                 bodySampleCount: Int, tailSampleCount: Int) {
+        schemaVersion = 1
+        self.startFrame = startFrame
+        self.attackSampleCount = attackSampleCount
+        self.bodySampleCount = bodySampleCount
+        self.tailSampleCount = tailSampleCount
+    }
+
+    package func availability(_ count: Int, from start: Double,
+                              to end: Double, sampleRate: Double) -> Availability {
+        guard count > 0, sampleRate.isFinite,
+              sampleRate >= QualityQualificationContract.minimumSupportedSampleRate,
+              sampleRate <= QualityQualificationContract.maximumSupportedSampleRate else {
+            return .missing
+        }
+        return count == Int(ceil(end * sampleRate) - ceil(start * sampleRate))
+            ? .complete : .partial
+    }
+
+    package func attack(sampleRate: Double) -> Availability {
+        availability(attackSampleCount, from: 0, to: 0.010, sampleRate: sampleRate)
+    }
+    package func body(sampleRate: Double) -> Availability {
+        availability(bodySampleCount, from: 0.020, to: 0.080, sampleRate: sampleRate)
+    }
+    package func tail(sampleRate: Double) -> Availability {
+        availability(tailSampleCount, from: 0.120, to: 0.240, sampleRate: sampleRate)
+    }
+
+    package func attackToBodyDB(attackRMS: Double, bodyRMS: Double,
+                                sampleRate: Double) -> Double? {
+        guard attack(sampleRate: sampleRate) == .complete,
+              body(sampleRate: sampleRate) == .complete else { return nil }
+        return Self.ratioDB(attackRMS, bodyRMS)
+    }
+
+    package func tailToBodyDB(tailRMS: Double, bodyRMS: Double,
+                              sampleRate: Double) -> Double? {
+        guard tail(sampleRate: sampleRate) == .complete,
+              body(sampleRate: sampleRate) == .complete else { return nil }
+        return Self.ratioDB(tailRMS, bodyRMS)
+    }
+
+    private static func ratioDB(_ numerator: Double, _ denominator: Double) -> Double? {
+        guard numerator.isFinite, numerator >= 0,
+              denominator.isFinite, denominator > 0 else { return nil }
+        guard numerator > 0 else { return -120 }
+        return min(120, max(-120, 20 *
+            (log10(numerator) - log10(denominator))))
+    }
+
+    package func isValid(sampleRate: Double, frameCount: Int) -> Bool {
+        guard schemaVersion == 1, sampleRate.isFinite,
+              sampleRate >= QualityQualificationContract.minimumSupportedSampleRate,
+              sampleRate <= QualityQualificationContract.maximumSupportedSampleRate,
+              frameCount > 0, startFrame >= 0, startFrame < frameCount else {
+            return false
+        }
+        func measured(_ start: Double, _ end: Double) -> Int {
+            let remaining = frameCount - startFrame
+            return max(0, min(remaining, Int(ceil(end * sampleRate))) -
+                min(remaining, Int(ceil(start * sampleRate))))
+        }
+        return attackSampleCount == measured(0, 0.010) &&
+            bodySampleCount == measured(0.020, 0.080) &&
+            tailSampleCount == measured(0.120, 0.240)
     }
 }
 
@@ -79,6 +164,7 @@ package struct ModalPercussionRenderEventEvidence: Equatable, Sendable {
     package let bodyRMS: Double
     package let tailRMS: Double
     package let tailToBodyDB: Double
+    package let windowSupport: ModalPercussionWindowSupport
     package let spectralCentroidHz: Double
     package let incomingVoiceStateFingerprint: String
     package let outgoingVoiceStateFingerprint: String
@@ -101,6 +187,7 @@ package struct ModalPercussionBarRenderEvidence: Equatable, Sendable {
     package let activeOutgoingVoiceCount: Int
     package let continuationRendered: Bool
     package let events: [ModalPercussionRenderEventEvidence]
+    package let continuousWindows: ModalPercussionContinuousBarEvidence
     package let finite: Bool
 }
 
@@ -120,6 +207,12 @@ package enum ModalPercussionVoice {
         state: inout ModalPercussionVoiceState
     ) -> ModalPercussionBarRenderEvidence {
         let routeIsValid = sampleRate.isFinite && sampleRate > 0
+        var measurement = state.measurement
+        let incomingMeasurementFingerprint = measurement.fingerprint
+        var completedWindows: [ModalPercussionContinuousEventEvidence] = []
+        var droppedWindowCount = 0
+        measurement.begin(bar: bar, sampleRate: sampleRate, frameCount: dryOutput.count,
+                          completed: &completedWindows, dropped: &droppedWindowCount)
         if !routeIsValid || state.sampleRate != sampleRate {
             state = ModalPercussionVoiceState()
             state.sampleRate = routeIsValid ? sampleRate : 0
@@ -155,6 +248,8 @@ package enum ModalPercussionVoice {
         var slotOwners = [Int?](repeating: nil, count: voiceCapacity)
         var slotExcitations = [[Double]?](repeating: nil, count: voiceCapacity)
         var eventSamples = [Double](repeating: 0, count: runtimes.count)
+        var slotSamples = [Double](repeating: 0, count: voiceCapacity)
+        var retiredSlots = [Bool](repeating: false, count: voiceCapacity)
         if routeIsValid {
             for slotIndex in 0..<voiceCapacity {
                 let slot = state.slot(at: slotIndex)
@@ -168,6 +263,10 @@ package enum ModalPercussionVoice {
         }
 
         for frame in 0..<frameCount {
+            for slot in 0..<voiceCapacity {
+                slotSamples[slot] = 0
+                retiredSlots[slot] = false
+            }
             for index in eventSamples.indices {
                 eventSamples[index] = 0
             }
@@ -175,6 +274,7 @@ package enum ModalPercussionVoice {
                   runtimes[eventCursor].event.startFrame == frame {
                 let incoming = stateFingerprint(state)
                 runtimes[eventCursor].incomingStateFingerprint = incoming
+                var observedSlot: Int?
                 if routeIsValid, let slotIndex = firstInactiveSlot(state) {
                     let slot = configuredSlot(
                         for: runtimes[eventCursor].event,
@@ -188,7 +288,11 @@ package enum ModalPercussionVoice {
                         sampleRate: sampleRate
                     )
                     runtimes[eventCursor].capacityValid = true
+                    observedSlot = slotIndex
                 }
+                measurement.start(event: runtimes[eventCursor].event, bar: bar,
+                    sampleRate: sampleRate, frameCount: frameCount, slotIndex: observedSlot,
+                    completed: &completedWindows, dropped: &droppedWindowCount)
                 eventCursor += 1
             }
 
@@ -208,6 +312,7 @@ package enum ModalPercussionVoice {
                         excitation: excitation,
                         slot: &slot
                     )
+                    slotSamples[slotIndex] = sample
                     modalSample += sample
                     if let owner = slotOwners[slotIndex] {
                         eventSamples[owner] += sample
@@ -215,6 +320,7 @@ package enum ModalPercussionVoice {
                     slot.ageFrames += 1
                     slot.remainingFrames -= 1
                     if slot.remainingFrames <= 0 {
+                        retiredSlots[slotIndex] = true
                         slot.active = false
                         slotOwners[slotIndex] = nil
                         slotExcitations[slotIndex] = nil
@@ -222,6 +328,9 @@ package enum ModalPercussionVoice {
                     state.setSlot(slot, at: slotIndex)
                 }
             }
+
+            measurement.observe(slotSamples: slotSamples, retired: retiredSlots, bar: bar,
+                completed: &completedWindows, dropped: &droppedWindowCount)
 
             if !modalSample.isFinite {
                 modalSample = 0
@@ -247,9 +356,14 @@ package enum ModalPercussionVoice {
 
         while eventCursor < runtimes.count {
             runtimes[eventCursor].incomingStateFingerprint = stateFingerprint(state)
+            measurement.start(event: runtimes[eventCursor].event, bar: bar,
+                sampleRate: sampleRate, frameCount: frameCount, slotIndex: nil,
+                completed: &completedWindows, dropped: &droppedWindowCount)
             eventCursor += 1
         }
         let outgoingStateFingerprint = stateFingerprint(state)
+        measurement.finish(bar: bar)
+        state.measurement = measurement
         let eventEvidence = runtimes.map {
             $0.evidence(
                 sampleRate: sampleRate,
@@ -274,6 +388,12 @@ package enum ModalPercussionVoice {
             activeOutgoingVoiceCount: activeVoiceCount(state),
             continuationRendered: activeIncomingVoiceCount > 0,
             events: eventEvidence,
+            continuousWindows: .init(schemaVersion: 1, bar: bar, sampleRate: sampleRate,
+                incomingStateFingerprint: incomingMeasurementFingerprint,
+                outgoingStateFingerprint: measurement.fingerprint,
+                completed: completedWindows,
+                pending: measurement.pending.map { $0.evidence(status: .pending) },
+                droppedRecordCount: droppedWindowCount),
             finite: finite && dryOutput.allSatisfy { $0.isFinite }
         )
     }
@@ -571,6 +691,12 @@ package enum ModalPercussionVoice {
                 bodyRMS: metrics.bodyRMS,
                 tailRMS: metrics.tailRMS,
                 tailToBodyDB: metrics.tailToBodyDB,
+                windowSupport: ModalPercussionWindowSupport(
+                    startFrame: event.startFrame,
+                    attackSampleCount: accumulator.attackCount,
+                    bodySampleCount: accumulator.bodyCount,
+                    tailSampleCount: accumulator.tailCount
+                ),
                 spectralCentroidHz: configuration.centroidHz,
                 incomingVoiceStateFingerprint: incomingStateFingerprint,
                 outgoingVoiceStateFingerprint: outgoingStateFingerprint,

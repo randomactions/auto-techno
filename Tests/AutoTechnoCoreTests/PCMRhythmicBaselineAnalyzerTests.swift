@@ -4,6 +4,63 @@ import Testing
 
 @Suite("PCM rhythmic baseline analyzer")
 struct PCMRhythmicBaselineAnalyzerTests {
+    @Test("AT-0039 paired displacement labels survive energy and event-body confounders")
+    func independentRhythmicDisplacementOracles() throws {
+        var cases = 0
+        var maximumFrameError = 0
+        var rows: [[String: Any]] = []
+        for rate in [44_100, 48_000] {
+            let frames = barFrames(rate)
+            for amplitude in [Float(0.3), Float(0.8)] {
+                for packet in [false, true] {
+                    let reference = DeterministicSignalFixtures.displacedImpulseBar(
+                        sampleRate: rate, steps: [2, 6, 10, 14], displacementSteps: 0,
+                        amplitude: amplitude, packet: packet)
+                    for displacement in [0.0, 0.0625, -0.1875, 0.1875] {
+                        let current = DeterministicSignalFixtures.displacedImpulseBar(
+                            sampleRate: rate, steps: [2, 6, 10, 14], displacementSteps: displacement,
+                            amplitude: amplitude, packet: packet)
+                        let evidence = try available(reference.samples + current.samples, sampleRate: rate)
+                        #expect(evidence.bars.count == 2)
+                        let detected = evidence.bars[1].onsets.map(\.frameInBar)
+                        #expect(detected.count == current.onsets.count)
+                        for (actual, authored) in zip(detected, current.onsets) {
+                            maximumFrameError = max(maximumFrameError, abs(actual - authored))
+                            #expect(actual == authored)
+                        }
+                        let relation = try #require(evidence.comparisons.first)
+                        #expect(relation.gridMutationDistance == 0)
+                        let timing = try #require(relation.matchedMicrotimingDistanceSteps)
+                        // Two rounded onset coordinates: total error <=1 frame.
+                        #expect(abs(timing - abs(displacement)) <= 16 / Double(frames))
+                        let referenceEnergy = reference.samples.reduce(0.0) { $0 + Double($1) * Double($1) }
+                        let currentEnergy = current.samples.reduce(0.0) { $0 + Double($1) * Double($1) }
+                        #expect(referenceEnergy == currentEnergy)
+                        #expect(abs(currentEnergy - 4 * Double(amplitude) * Double(amplitude)) <=
+                            8 * Double(Float.ulpOfOne))
+                        rows.append(["sampleRate": rate, "amplitude": amplitude,
+                            "family": packet ? "energy-matched-packet" : "impulse",
+                            "split": packet ? "held-out-event-body" : "development-event-body",
+                            "authoredDisplacementSteps": displacement,
+                            "referenceOnsets": reference.onsets, "authoredOnsets": current.onsets,
+                            "detectedOnsets": detected, "measuredDistanceSteps": timing,
+                            "pairedRoundingBoundSteps": 16 / Double(frames),
+                            "referenceEnergy": referenceEnergy, "currentEnergy": currentEnergy])
+                        cases += 1
+                    }
+                }
+            }
+        }
+        #expect(cases == 32)
+        let report: [String: Any] = ["fixture": "independent-rhythmic-displacement-oracle.v1",
+            "caseCount": cases, "maximumDetectorFrameError": maximumFrameError,
+            "uncertainty": "one-frame-paired-rounding-bound",
+            "scoreBinding": "fixture-oracle-only-production-inferred",
+            "qualityQualification": "unavailable", "rows": rows]
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     @Test("Identical active bars are exact PCM and rhythmic repeats")
     func identicalLoop() throws {
         let rate = 48_000

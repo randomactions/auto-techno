@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -37,12 +38,48 @@ def repository_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def manifest_path(root: Path) -> Path:
-    return root / "docs/local/reports/baseline-corpus-v1/manifest.json"
+def capture_namespace(namespace: Optional[str] = None) -> str:
+    value = (
+        namespace
+        if namespace is not None
+        else os.environ.get("AUTOTECHNO_CAPTURE_NAMESPACE", "v1")
+    )
+    if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", value):
+        raise BaselineRenderManifestError("capture namespace must be lowercase letters, digits, and hyphens")
+    return value
 
 
-def audio_directory(root: Path) -> Path:
-    return root / "docs/local/audio/baseline-corpus-v1"
+def manifest_path(root: Path, namespace: Optional[str] = None) -> Path:
+    selected = capture_namespace(namespace)
+    return root / f"docs/local/reports/baseline-corpus-{selected}/manifest.json"
+
+
+def resolve_corpus_path(root: Path, corpus: Optional[str] = None) -> Path:
+    relative = corpus or os.environ.get(
+        "AUTOTECHNO_CAPTURE_CORPUS", "docs/BASELINE_CORPUS.json"
+    )
+    if relative != "docs/BASELINE_CORPUS.json" and not relative.startswith("docs/local/"):
+        raise BaselineRenderManifestError(
+            "capture corpus must be docs/BASELINE_CORPUS.json or a docs/local file"
+        )
+    if ".." in Path(relative).parts or Path(relative).is_absolute():
+        raise BaselineRenderManifestError("capture corpus path cannot traverse directories")
+    candidate = root / relative
+    if candidate.is_symlink():
+        raise BaselineRenderManifestError("capture corpus cannot be a symlink")
+    try:
+        resolved = candidate.resolve(strict=True)
+        resolved.relative_to(root.resolve(strict=True))
+    except (OSError, ValueError) as exc:
+        raise BaselineRenderManifestError("capture corpus must resolve inside this repository") from exc
+    if not resolved.is_file():
+        raise BaselineRenderManifestError("capture corpus must be a regular file")
+    return resolved
+
+
+def audio_directory(root: Path, namespace: Optional[str] = None) -> Path:
+    selected = capture_namespace(namespace)
+    return root / f"docs/local/audio/baseline-corpus-{selected}"
 
 
 def load_json(path: Path, label: str) -> Mapping[str, Any]:
@@ -172,12 +209,18 @@ def parse_wav(path: Path) -> tuple[int, int, int, bytes]:
     return sample_rate, channels, len(pcm) // block_align, pcm
 
 
-def validate(root: Path) -> list[str]:
+def validate(
+    root: Path,
+    namespace: Optional[str] = None,
+    corpus_relative_path: Optional[str] = None,
+) -> list[str]:
     errors: list[str] = []
     try:
-        corpus = load_json(root / "docs/BASELINE_CORPUS.json", "corpus")
+        namespace = capture_namespace(namespace)
+        corpus_path = resolve_corpus_path(root, corpus_relative_path)
+        corpus = load_json(corpus_path, "corpus")
         baseline = load_json(root / "docs/ROADMAP_EXECUTION_BASELINE.json", "contract baseline")
-        manifest = load_json(manifest_path(root), "local render manifest")
+        manifest = load_json(manifest_path(root, namespace), "local render manifest")
     except BaselineRenderManifestError as exc:
         return [str(exc)]
     errors += exact_keys(manifest, ROOT_KEYS, "manifest")
@@ -185,18 +228,25 @@ def validate(root: Path) -> list[str]:
         errors.append(f"schema must be {SCHEMA}")
     if manifest.get("manifestVersion") != 1:
         errors.append("manifestVersion must be 1")
-    if manifest.get("corpusSha256") != sha256(root / "docs/BASELINE_CORPUS.json"):
-        errors.append("corpusSha256 does not match the tracked corpus")
+    if manifest.get("corpusSha256") != sha256(corpus_path):
+        errors.append("corpusSha256 does not match the tracked corpus or selected local corpus")
     if manifest.get("contractBaselineFingerprint") != baseline.get("snapshotFingerprint"):
         errors.append("contractBaselineFingerprint does not match the current baseline")
     for field, length in (("sourceFingerprint", 64), ("gitHead", 40)):
         if not is_hex(manifest.get(field), length):
             errors.append(f"{field} must be {length} lowercase hexadecimal digits")
     try:
-        if manifest.get("sourceFingerprint") != source_fingerprint(root):
+        current_source_fingerprint = source_fingerprint(root)
+        if manifest.get("sourceFingerprint") != current_source_fingerprint:
             errors.append("sourceFingerprint does not match the current source")
     except (OSError, BaselineRenderManifestError) as exc:
         errors.append(f"cannot verify current source identity: {exc}")
+        current_source_fingerprint = None
+    if corpus.get("schema") == "autotechno-at0039-foundation-cohort.v1":
+        if corpus.get("sourceFingerprint") != current_source_fingerprint:
+            errors.append("AT-0039 cohort sourceFingerprint does not match current source")
+        if corpus.get("contractBaselineFingerprint") != baseline.get("snapshotFingerprint"):
+            errors.append("AT-0039 cohort contract baseline does not match current baseline")
     if not isinstance(manifest.get("engineVersion"), str) or not manifest.get("engineVersion"):
         errors.append("engineVersion must be non-empty")
 
@@ -244,7 +294,7 @@ def validate(root: Path) -> list[str]:
             errors.append(f"{location}.qualityOutcome must be qualified or adjusted")
         if not isinstance(entry.get("policyVersion"), str) or not entry.get("policyVersion"):
             errors.append(f"{location}.policyVersion must be non-empty")
-        expected_path = f"docs/local/audio/baseline-corpus-v1/{identifier}.wav"
+        expected_path = f"docs/local/audio/baseline-corpus-{namespace}/{identifier}.wav"
         if entry.get("wavPath") != expected_path:
             errors.append(f"{location}.wavPath must be {expected_path}")
             continue
@@ -271,16 +321,21 @@ def validate(root: Path) -> list[str]:
         errors.append(f"entries must contain exactly {len(expected)} identities")
     actual_wavs = {
         path.relative_to(root).as_posix()
-        for path in audio_directory(root).glob("*.wav")
-    } if audio_directory(root).is_dir() else set()
+        for path in audio_directory(root, namespace).glob("*.wav")
+    } if audio_directory(root, namespace).is_dir() else set()
     extras = sorted(actual_wavs - referenced_wavs)
     if extras:
         errors.append("audio directory has unreferenced WAVs: " + ", ".join(extras))
     return errors
 
 
-def run_check(root: Path, output: TextIO = sys.stdout) -> int:
-    errors = validate(root)
+def run_check(
+    root: Path,
+    output: TextIO = sys.stdout,
+    namespace: Optional[str] = None,
+    corpus_relative_path: Optional[str] = None,
+) -> int:
+    errors = validate(root, namespace, corpus_relative_path)
     if errors:
         print(f"baseline renders rejected with {len(errors)} issue(s):", file=output)
         for index, error in enumerate(errors, 1):
@@ -293,9 +348,15 @@ def run_check(root: Path, output: TextIO = sys.stdout) -> int:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("check",))
+    parser.add_argument("--namespace", help="select an isolated capture namespace (default: v1)")
+    parser.add_argument("--corpus", help="relative canonical or docs/local corpus path")
     arguments = parser.parse_args(argv)
     if arguments.command == "check":
-        return run_check(repository_root())
+        return run_check(
+            repository_root(),
+            namespace=arguments.namespace,
+            corpus_relative_path=arguments.corpus,
+        )
     return 1
 
 

@@ -34,7 +34,7 @@ struct PCMStereoCompatibilityAnalyzerTests {
 
     @Test("Exact dual mono is structurally safe in every active domain")
     func exactMono() throws {
-        let signal = tone(frequency: 1_000, sampleRate: 48_000, frames: 4_800)
+        let signal = try tone(frequency: 1_000, sampleRate: 48_000, frames: 4_800)
         let evidence = try #require(PCMStereoCompatibilityAnalyzer.analyze(
             channels: [signal, signal],
             sampleRate: 48_000,
@@ -53,7 +53,7 @@ struct PCMStereoCompatibilityAnalyzerTests {
 
     @Test("Native mono is repeated for compatibility math without hiding provenance")
     func nativeMono() throws {
-        let signal = tone(frequency: 1_000, sampleRate: 48_000, frames: 4_800)
+        let signal = try tone(frequency: 1_000, sampleRate: 48_000, frames: 4_800)
         let native = try #require(PCMStereoCompatibilityAnalyzer.analyze(
             channels: [signal],
             sampleRate: 48_000,
@@ -74,7 +74,7 @@ struct PCMStereoCompatibilityAnalyzerTests {
 
     @Test("Exact polarity inversion is structurally unsafe in every active domain")
     func exactCancellation() throws {
-        let left = tone(frequency: 733, sampleRate: 48_000, frames: 4_800)
+        let left = try tone(frequency: 733, sampleRate: 48_000, frames: 4_800)
         let right = left.map { -$0 }
         let evidence = try #require(PCMStereoCompatibilityAnalyzer.analyze(
             channels: [left, right],
@@ -94,7 +94,7 @@ struct PCMStereoCompatibilityAnalyzerTests {
 
     @Test("One-sided audio is neither silence nor cancellation")
     func oneSided() throws {
-        let left = tone(frequency: 330, sampleRate: 48_000, frames: 2_400)
+        let left = try tone(frequency: 330, sampleRate: 48_000, frames: 2_400)
         let silence = [Float](repeating: 0, count: left.count)
         for channels in [[left, silence], [silence, left]] {
             let evidence = try #require(PCMStereoCompatibilityAnalyzer.analyze(
@@ -114,7 +114,7 @@ struct PCMStereoCompatibilityAnalyzerTests {
 
     @Test("Unequal aligned gain and sample delay remain descriptive mixed states")
     func mixedStates() throws {
-        let left = tone(frequency: 440, sampleRate: 48_000, frames: 4_800)
+        let left = try tone(frequency: 440, sampleRate: 48_000, frames: 4_800)
         let reduced = left.map { $0 * 0.5 }
         let delayed = [Float](repeating: 0, count: 17) + left.dropLast(17)
         for right in [reduced, Array(delayed)] {
@@ -166,7 +166,7 @@ struct PCMStereoCompatibilityAnalyzerTests {
     @Test("Declared causal bands separate low and high fixtures")
     func bandSeparation() throws {
         func summary(frequency: Double) throws -> [PCMStereoDomainEvidence] {
-            let signal = tone(
+            let signal = try tone(
                 frequency: frequency,
                 sampleRate: 48_000,
                 frames: 48_000
@@ -187,7 +187,7 @@ struct PCMStereoCompatibilityAnalyzerTests {
     func rateNormalized() throws {
         for rate in [44_100.0, 48_000.0] {
             let frames = Int(rate * 0.2)
-            let mono = tone(frequency: 211, sampleRate: rate, frames: frames)
+            let mono = try tone(frequency: 211, sampleRate: rate, frames: frames)
             let anti = mono.map { -$0 }
             let monoEvidence = try #require(PCMStereoCompatibilityAnalyzer.analyze(
                 channels: [mono, mono],
@@ -264,10 +264,13 @@ struct PCMStereoCompatibilityAnalyzerTests {
         frequency: Double,
         sampleRate: Double,
         frames: Int
-    ) -> [Float] {
-        (0..<frames).map { frame in
-            Float(sin(2 * Double.pi * frequency * Double(frame) / sampleRate) * 0.25)
-        }
+    ) throws -> [Float] {
+        try DeterministicSignalFixtures.sine(
+            frameCount: frames,
+            sampleRate: sampleRate,
+            frequencyHz: frequency,
+            amplitude: 0.25
+        )
     }
 
     private func close(

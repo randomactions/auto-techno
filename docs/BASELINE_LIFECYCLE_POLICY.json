@@ -503,7 +503,8 @@
         "corpusSha256"
       ],
       "dependencies": [
-        "whole-mix-render"
+        "whole-mix-render",
+        "role-stem-capture"
       ],
       "engineVersionFields": [
         "engineVersion"
@@ -646,7 +647,7 @@
       "versionField": "registerVersion"
     }
   ],
-  "policyFingerprint": "5adf87179c53df3bc1eb59bbec7a70e81a5dd01e65f81bbc55a0cc2c92d89606",
+  "policyFingerprint": "239dae27a2121db9426f3fe14989913341c53b1a7e1133c51af93f0b6d0abe2b",
   "policyVersion": 1,
   "qualification": {
     "promotionAuthorized": false,

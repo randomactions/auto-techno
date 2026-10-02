@@ -729,6 +729,25 @@
       "limitations": "These artifacts qualify the one installed profile and cannot be selected as runtime policies."
     },
     {
+      "id": "modal-window-profile-contract",
+      "title": "Offline modal-window profile contract identity",
+      "category": "profile",
+      "classification": "qualification-support-artifact",
+      "surfaceComponent": "evidence-calibration-and-primary-evaluation",
+      "canonicalComponent": "evidence-calibration-and-primary-evaluation",
+      "members": [
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityMeasurementApplicability.swift", "symbol": "modalWindowProfileVersion", "kind": "static-value"}
+      ],
+      "convergenceAnchors": [
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityCalibration.swift", "fragment": "ProfessionalQualityMeasurementContract.modalWindowProfileVersion"}
+      ],
+      "evidenceAnchors": [
+        {"path": "Tests/AutoTechnoCoreTests/ProfessionalQualityCalibrationTests.swift", "fragment": "func windowSupportedContractIdentity()"}
+      ],
+      "pcmConsequence": "qualifies-without-changing-pcm",
+      "limitations": "This unqualified offline identity extends the existing profile type and fitter. No v31 artifact is installed; production activation still requires v30."
+    },
+    {
       "id": "primary-installed-profile",
       "title": "Installed primary calibration profile",
       "category": "profile",
@@ -742,13 +761,13 @@
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "symbol": "profileResource", "kind": "static-value"},
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "symbol": "expectedProfileFingerprint", "kind": "static-value"},
         {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryEvaluator.swift", "symbol": "requiredProfileVersion", "kind": "static-value"},
-        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v29.json", "symbol": "professional-quality-primary-profile-v29", "kind": "json-resource"}
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json", "symbol": "professional-quality-primary-profile-v30", "kind": "json-resource"}
       ],
       "convergenceAnchors": [
-        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-profile-v29\""}
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-profile-v30\""}
       ],
       "evidenceAnchors": [
-        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV29Only()"}
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV30FailClosed()"}
       ],
       "pcmConsequence": "qualifies-without-changing-pcm",
       "limitations": "Checkpoint profiles are parts of one exact installed calibration profile; neither is a runtime style or engine profile."
@@ -761,15 +780,15 @@
       "surfaceComponent": "evidence-calibration-and-primary-evaluation",
       "canonicalComponent": "evidence-calibration-and-primary-evaluation",
       "members": [
-        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v29.json", "symbol": "professional-quality-primary-adversarial-suite-v29", "kind": "json-resource"},
-        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v29.json", "symbol": "professional-quality-primary-holdout-v29", "kind": "json-resource"}
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-adversarial-suite-v30.json", "symbol": "professional-quality-primary-adversarial-suite-v30", "kind": "json-resource"},
+        {"path": "Sources/AutoTechnoDSP/Resources/professional-quality-primary-holdout-v30.json", "symbol": "professional-quality-primary-holdout-v30", "kind": "json-resource"}
       ],
       "convergenceAnchors": [
-        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-adversarial-suite-v29\""},
-        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-holdout-v29\""}
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-adversarial-suite-v30\""},
+        {"path": "Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift", "fragment": "\"professional-quality-primary-holdout-v30\""}
       ],
       "evidenceAnchors": [
-        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV29Only()"}
+        {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func primaryResourcesAreV30FailClosed()"}
       ],
       "pcmConsequence": "qualifies-without-changing-pcm",
       "limitations": "These exact resources gate construction of the primary evaluator and expose no parallel runtime evaluator path."

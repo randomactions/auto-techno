@@ -11,7 +11,22 @@ struct BaselineRenderIntegrationTests {
     private struct Corpus: Decodable {
         struct Policy: Decodable { let maximumPhrases: Int }
         struct Route: Decodable { let id: String; let sampleRate: Int; let channelCount: Int; let routeGeneration: Int; let routeRecovery: Bool }
-        struct Case: Decodable { let id: String; let rootSeed: UInt64; let checkpoint: CanonicalJourneyCheckpoint; let continuationClass: String }
+        struct Case: Decodable {
+            let id: String
+            let rootSeed: UInt64
+            let checkpoint: CanonicalJourneyCheckpoint
+            let targetPhraseIndex: Int?
+            let continuationClass: String
+            let expectedPlanFingerprint: String?
+            let ordinal: Int?
+            let cohort: String?
+            let resolvedBarCount: Int?
+            let foundationBehaviorBarCounts: [String: Int]?
+        }
+        let schema: String?
+        let sourceFingerprint: String?
+        let contractBaselineFingerprint: String?
+        let gitHead: String?
         let corpusVersion: Int
         let checkpointPolicy: Policy
         let routes: [Route]
@@ -43,12 +58,19 @@ struct BaselineRenderIntegrationTests {
     func renderAll() throws {
         guard ProcessInfo.processInfo.environment["AUTOTECHNO_RUN_BASELINE_RENDER"] == "1" else { return }
         let root = repositoryRoot
-        let corpusURL = root.appendingPathComponent("docs/BASELINE_CORPUS.json")
+        let namespace = try captureNamespace()
+        let corpusURL = try captureCorpusURL(root)
         let corpusData = try Data(contentsOf: corpusURL)
         let corpus = try JSONDecoder().decode(Corpus.self, from: corpusData)
         let baseline = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("docs/ROADMAP_EXECUTION_BASELINE.json"))) as? [String: Any]
-        let output = root.appendingPathComponent("docs/local/audio/baseline-corpus-v1", isDirectory: true)
-        let report = root.appendingPathComponent("docs/local/reports/baseline-corpus-v1", isDirectory: true)
+        try validateFrozenCohort(corpus, baseline: baseline, root: root)
+        let output = root.appendingPathComponent("docs/local/audio/baseline-corpus-\(namespace)", isDirectory: true)
+        let report = root.appendingPathComponent("docs/local/reports/baseline-corpus-\(namespace)", isDirectory: true)
+        if namespace != "v1",
+           (FileManager.default.fileExists(atPath: output.path) ||
+            FileManager.default.fileExists(atPath: report.path)) {
+            throw RenderError.namespaceAlreadyExists
+        }
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: report, withIntermediateDirectories: true)
         let primary = try ProfessionalQualityPrimaryArtifacts.load()
@@ -56,7 +78,7 @@ struct BaselineRenderIntegrationTests {
         var entries: [Entry] = []
         for fixture in corpus.cases {
             for route in corpus.routes {
-                entries.append(try render(fixture, route: route, limit: corpus.checkpointPolicy.maximumPhrases, primary: primary, longHorizon: longHorizon, output: output))
+                entries.append(try render(fixture, route: route, namespace: namespace, limit: corpus.checkpointPolicy.maximumPhrases, primary: primary, longHorizon: longHorizon, output: output))
             }
         }
         let manifest = Manifest(
@@ -73,7 +95,7 @@ struct BaselineRenderIntegrationTests {
         #expect(entries.count == corpus.cases.count * corpus.routes.count)
     }
 
-    private func render(_ fixture: Corpus.Case, route: Corpus.Route, limit: Int, primary: ProfessionalQualityPrimaryArtifacts, longHorizon: LongHorizonProfessionalPolicyArtifacts, output: URL) throws -> Entry {
+    private func render(_ fixture: Corpus.Case, route: Corpus.Route, namespace: String, limit: Int, primary: ProfessionalQualityPrimaryArtifacts, longHorizon: LongHorizonProfessionalPolicyArtifacts, output: URL) throws -> Entry {
         let director = AutonomousSessionDirector(rootSeed: fixture.rootSeed)
         var state = director.initialState()
         var renderState = RenderState(), graphState = GeneratedDSPContinuationState()
@@ -85,10 +107,32 @@ struct BaselineRenderIntegrationTests {
                 sourceState: state, incomingLongHorizonState: horizon, incomingRenderState: renderState, incomingGraphState: graphState, previousGraph: previousGraph, pendingLiveMasterBinding: nil)
             let prepared = try #require(AutonomousPerformancePreparer.prepare(request: request, director: director, artifacts: primary, longHorizonArtifacts: longHorizon))
             let plan = prepared.prepared.plan
+            let targetPhraseMatches = fixture.targetPhraseIndex == nil ||
+                fixture.targetPhraseIndex == plan.phraseIndex
+            if targetPhraseMatches, let expected = fixture.expectedPlanFingerprint,
+               AutonomousCandidateFingerprint.plan(plan) != expected {
+                throw RenderError.planMismatch
+            }
+            if targetPhraseMatches, fixture.expectedPlanFingerprint != nil {
+                let behaviorCounts = Dictionary(uniqueKeysWithValues:
+                    FoundationBehavior.allCases.map { behavior in
+                        (behavior.rawValue, plan.resolvedBars.filter {
+                            $0.foundationBehavior == behavior
+                        }.count)
+                    }
+                )
+                guard AT0039FrozenCohortValidator.scoreMetadataMatches(
+                    expectedBarCount: fixture.resolvedBarCount,
+                    expectedBehaviorCounts: fixture.foundationBehaviorBarCounts,
+                    actualBarCount: plan.resolvedBars.count,
+                    actualBehaviorCounts: behaviorCounts
+                ) else { throw RenderError.frozenScoreMismatch }
+            }
             let chapters = plan.resolvedBars.map(\.interlockChapter)
             let changed = zip(chapters, chapters.dropFirst()).contains { $0.0 != $0.1 } || (previousChapter.flatMap { p in chapters.first.map { $0 != p } } ?? false)
-            if CanonicalJourneyCheckpoint.applicable(phraseIndex: plan.phraseIndex, phraseKind: plan.kind, chapterChanged: changed).contains(fixture.checkpoint) {
-                return try write(prepared, fixture: fixture, route: route, output: output)
+            if targetPhraseMatches,
+               CanonicalJourneyCheckpoint.applicable(phraseIndex: plan.phraseIndex, phraseKind: plan.kind, chapterChanged: changed).contains(fixture.checkpoint) {
+                return try write(prepared, fixture: fixture, route: route, namespace: namespace, output: output)
             }
             previousChapter = chapters.last ?? previousChapter
             state = state.advance(using: plan, quality: prepared.prepared.qualityContinuationState, liveMasterHeadroom: prepared.prepared.liveMasterHeadroomContinuationState, longHorizonDecision: prepared.longHorizonDecision)
@@ -100,7 +144,7 @@ struct BaselineRenderIntegrationTests {
         throw RenderError.missingCheckpoint
     }
 
-    private func write(_ product: PreparedPerformancePhrase, fixture: Corpus.Case, route: Corpus.Route, output: URL) throws -> Entry {
+    private func write(_ product: PreparedPerformancePhrase, fixture: Corpus.Case, route: Corpus.Route, namespace: String, output: URL) throws -> Entry {
         var pcm = Data()
         for block in product.prepared.blocks {
             guard block.left.count == block.right.count else { throw RenderError.invalidPCM }
@@ -114,7 +158,7 @@ struct BaselineRenderIntegrationTests {
         let wav = wave(pcm: pcm, rate: route.sampleRate)
         let filename = id + ".wav"
         try wav.write(to: output.appendingPathComponent(filename), options: .atomic)
-        return Entry(id: id, caseId: fixture.id, routeId: route.id, rootSeed: fixture.rootSeed, checkpoint: fixture.checkpoint.rawValue, continuationClass: fixture.continuationClass, phraseIndex: product.prepared.plan.phraseIndex, startBar: product.prepared.plan.startBar, phraseKind: product.prepared.plan.kind.rawValue, stateFingerprint: AutonomousCandidateFingerprint.sessionState(product.request.sourceState), planFingerprint: AutonomousCandidateFingerprint.plan(product.prepared.plan), replayFingerprint: product.request.replayIdentity.fingerprint, policyVersion: product.prepared.qualityDecision.policyVersion, qualityOutcome: product.prepared.qualityDecision.outcome.rawValue, sampleRate: route.sampleRate, channelCount: route.channelCount, frameCount: pcm.count / 8, pcmSha256: digest(pcm), wavPath: "docs/local/audio/baseline-corpus-v1/" + filename, wavSha256: digest(wav))
+        return Entry(id: id, caseId: fixture.id, routeId: route.id, rootSeed: fixture.rootSeed, checkpoint: fixture.checkpoint.rawValue, continuationClass: fixture.continuationClass, phraseIndex: product.prepared.plan.phraseIndex, startBar: product.prepared.plan.startBar, phraseKind: product.prepared.plan.kind.rawValue, stateFingerprint: AutonomousCandidateFingerprint.sessionState(product.request.sourceState), planFingerprint: AutonomousCandidateFingerprint.plan(product.prepared.plan), replayFingerprint: product.request.replayIdentity.fingerprint, policyVersion: product.prepared.qualityDecision.policyVersion, qualityOutcome: product.prepared.qualityDecision.outcome.rawValue, sampleRate: route.sampleRate, channelCount: route.channelCount, frameCount: pcm.count / 8, pcmSha256: digest(pcm), wavPath: "docs/local/audio/baseline-corpus-\(namespace)/" + filename, wavSha256: digest(wav))
     }
 
     private func wave(pcm: Data, rate: Int) -> Data {
@@ -122,9 +166,75 @@ struct BaselineRenderIntegrationTests {
         text("RIFF"); u32(UInt32(36 + pcm.count)); text("WAVEfmt "); u32(16); u16(3); u16(2); u32(UInt32(rate)); u32(UInt32(rate * 8)); u16(8); u16(32); text("data"); u32(UInt32(pcm.count)); data.append(pcm); return data
     }
     private func digest(_ data: Data) -> String { SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() }
+    private func captureNamespace() throws -> String {
+        let namespace = ProcessInfo.processInfo.environment[
+            "AUTOTECHNO_CAPTURE_NAMESPACE"
+        ] ?? "v1"
+        guard namespace.range(
+            of: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            options: .regularExpression
+        ) != nil else { throw RenderError.invalidNamespace }
+        return namespace
+    }
+    private func captureCorpusURL(_ root: URL) throws -> URL {
+        let relativePath = ProcessInfo.processInfo.environment[
+            "AUTOTECHNO_CAPTURE_CORPUS"
+        ] ?? "docs/BASELINE_CORPUS.json"
+        let components = relativePath.split(separator: "/")
+        guard !relativePath.hasPrefix("/"),
+              !components.contains(".."),
+              (relativePath == "docs/BASELINE_CORPUS.json" ||
+               relativePath.hasPrefix("docs/local/")) else {
+            throw RenderError.invalidCorpusPath
+        }
+        let candidate = root.appendingPathComponent(relativePath)
+            .standardizedFileURL.resolvingSymlinksInPath()
+        let resolvedRoot = root.standardizedFileURL.resolvingSymlinksInPath()
+        guard candidate.path.hasPrefix(resolvedRoot.path + "/"),
+              (try? candidate.resourceValues(forKeys: [.isSymbolicLinkKey])
+                .isSymbolicLink) != true else {
+            throw RenderError.invalidCorpusPath
+        }
+        return candidate
+    }
+    private func validateFrozenCohort(_ corpus: Corpus, baseline: [String: Any]?, root: URL) throws {
+        guard corpus.schema == "autotechno-at0039-foundation-cohort.v1" else { return }
+        guard try acceptedInputsAreClean(root),
+              corpus.sourceFingerprint == (try sourceFingerprint(root)),
+              corpus.contractBaselineFingerprint == baseline?["snapshotFingerprint"] as? String,
+              corpus.gitHead == (try gitHead(root)) else {
+            throw RenderError.unacceptedCohortInputs
+        }
+        let errors = AT0039FrozenCohortValidator.errors(for: corpus.cases.map {
+            AT0039FrozenCohortCaseIdentity(
+                id: $0.id,
+                ordinal: $0.ordinal,
+                cohort: $0.cohort,
+                rootSeed: $0.rootSeed,
+                checkpoint: $0.checkpoint,
+                targetPhraseIndex: $0.targetPhraseIndex,
+                continuationClass: $0.continuationClass,
+                expectedPlanFingerprint: $0.expectedPlanFingerprint,
+                resolvedBarCount: $0.resolvedBarCount,
+                behaviorCounts: $0.foundationBehaviorBarCounts
+            )
+        })
+        guard errors.isEmpty else { throw RenderError.invalidFrozenCohort }
+    }
+    private func acceptedInputsAreClean(_ root: URL) throws -> Bool {
+        let process = Process()
+        let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.arguments = ["-C", root.path, "status", "--porcelain", "--untracked-files=all", "--", "Package.swift", "Sources", "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"]
+        process.standardOutput = pipe
+        try process.run()
+        process.waitUntilExit()
+        guard process.terminationStatus == 0 else { throw RenderError.git }
+        return pipe.fileHandleForReading.readDataToEndOfFile().isEmpty
+    }
     private var repositoryRoot: URL { URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent() }
     private func gitHead(_ root: URL) throws -> String { let p = Process(); let pipe = Pipe(); p.executableURL = URL(fileURLWithPath: "/usr/bin/git"); p.arguments = ["-C", root.path, "rev-parse", "HEAD"]; p.standardOutput = pipe; try p.run(); p.waitUntilExit(); guard p.terminationStatus == 0 else { throw RenderError.git }; return String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines) }
     private func sourceFingerprint(_ root: URL) throws -> String { let fm = FileManager.default; let roots = ["Package.swift", "Sources", "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"]; var paths: [String] = []; for item in roots { let url = root.appendingPathComponent(item); var directory: ObjCBool = false; if fm.fileExists(atPath: url.path, isDirectory: &directory), directory.boolValue { paths += (fm.enumerator(at: url, includingPropertiesForKeys: [.isRegularFileKey])?.allObjects as? [URL] ?? []).filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }.map { $0.path.replacingOccurrences(of: root.path + "/", with: "") } } else { paths.append(item) } }; var data = Data(); for path in paths.sorted() { data.append(Data(path.utf8)); data.append(0); data.append(try Data(contentsOf: root.appendingPathComponent(path))) }; return digest(data) }
-    private enum RenderError: Error { case missingCheckpoint, invalidPCM, git }
+    private enum RenderError: Error { case missingCheckpoint, invalidPCM, invalidNamespace, namespaceAlreadyExists, invalidCorpusPath, planMismatch, frozenScoreMismatch, unacceptedCohortInputs, invalidFrozenCohort, git }
 }
 #endif

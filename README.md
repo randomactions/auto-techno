@@ -168,6 +168,50 @@ quality is not established until every automated, app/runtime, and
 physical-output gate in the validation contract passes for the exact release
 revision.
 
+The 2026-10-01 [performance envelope](docs/PERFORMANCE_ENVELOPE.md) records
+fresh Release detached-preparation and producer measurements. Its live callback
+figures reuse the bounded 2026-09-04 host trace; they do not establish live app
+behavior at the newly recorded exporter head. The exact trace inputs and hashes
+remain in the local performance report.
+
+The frozen four-bar calibration coverage harness extends the offline corpus
+with disjoint score-selected development and holdout break/release windows.
+The expanded 40-development/6-holdout candidate passed development and
+adversarial checks but failed independent holdout qualification. The installed
+primary v30 and matching long-horizon v16 policies remain unchanged.
+
+Explicit modal measurement-window support now records actual attack, body,
+and tail coverage. Descriptive diagnostics distinguish missing or partial
+windows from measured silence. The shared offline observation v22/profile v31
+foundation carries required unavailable measurements through extraction, fitting,
+local verdicts and relationship assessment. Existing installed v21/v30 metrics,
+policy bounds and v30/v16 resources remain unchanged; replacement applicability
+still requires independent quality targets, broader morphology/timing coverage,
+fresh holdouts and full qualification. The [independent measurement fixtures](docs/reports/AT_0039_INDEPENDENT_MEASUREMENT_FIXTURES.md)
+pass 344 fixed mechanistic cases with bounded timestamp, Float and frame-grid
+uncertainty; these labels do not establish musical or perceptual quality.
+A [broader modal morphology and timing study](docs/reports/AT_0039_MODAL_MORPHOLOGY_SCORE_COVERAGE.md)
+passes 768 construction controls and freezes a fresh outcome-blind 40/6 score
+cohort. Eight roots retain incomplete predicted tail windows; they remain in
+the cohort, and replacement qualification awaits bounded measurement continuity
+and measured positive-body support before fresh PCM fitting.
+[Canonical modal measurement continuity](docs/reports/AT_0039_MODAL_MEASUREMENT_CONTINUITY.md)
+now carries bounded same-pass event observations across actual successor bars.
+All 96 fixed late-onset controls complete their physical windows; deliberately
+silent bodies remain undefined. The fresh frozen cohort still awaits measurement
+and replacement qualification.
+The [actual prepared-successor join](docs/reports/AT_0039_MODAL_SUCCESSOR_REPORT_JOIN.md)
+now binds original report ownership to immediate successor state and completes
+fixed-rate pending tails without changing PCM. Continuous fitting still requires
+an explicit observation contract; the fresh cohort remains unrendered.
+
+The current Phase-1 evidence refresh records all 15 lifecycle families and
+19 subordinate checks for that retained runtime at exporter head `430a22d`.
+Its 14 whole mixes and 210 role/residual signals match the preserved captures
+sample for sample across 340,230,030 samples. This evidence does not qualify
+the failed expanded policy or establish independently labelled masking and
+groove quality.
+
 ### One-click Windows source validation
 
 On a 64-bit Windows build machine, run the one-time prerequisite installer and

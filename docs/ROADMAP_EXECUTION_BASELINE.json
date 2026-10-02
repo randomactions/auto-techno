@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 36,
+  "snapshotVersion": 61,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "e24b7fc24b5e24fdfb61b38c642b02529db41944bf7e91611733fe3542525e05",
+  "snapshotFingerprint": "0c8c1eca95df78ff33e8379683a0626d763a07f95ec1fc6cdb68369ff2fb3564",
   "documents": [
     {
       "role": "repository-guidance",
@@ -25,26 +25,26 @@
     {
       "role": "sound-quality-contract",
       "path": "docs/SOUND_QUALITY.md",
-      "byteCount": 66180,
-      "sha256": "a7299cddd6ed72a16114a9b0f64fe0b5c3cf2ea2d402e0303a9e3b20d864961f"
+      "byteCount": 70077,
+      "sha256": "0a9b3adf0f69b22013c55760f41d15fe86582623fe330630b1fc79aa374579ab"
     },
     {
       "role": "runtime-provenance-contract",
       "path": "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
-      "byteCount": 93502,
-      "sha256": "25dec65d35fa06f7e3f2584e82e64dadf9f30ea0f48884ca3a64f5abbc4c2d71"
+      "byteCount": 96264,
+      "sha256": "640af12748a65f95e4429e8efd849ea80bd4dddf0141360efedb63d816997261"
     },
     {
       "role": "component-license-asset-manifest-source",
       "path": "docs/COMPONENT_LICENSE_ASSET_MANIFEST.json",
       "byteCount": 20335,
-      "sha256": "3b654a59fe6076afc372263b8ba05fb55756eef11272e72b5b301bf5134c3618"
+      "sha256": "25a3497c5dae2b8e2950c41dea19f8890713217fc86fc229c2db9fb181858f2b"
     },
     {
       "role": "component-license-asset-manifest-rendering",
       "path": "docs/COMPONENT_LICENSE_ASSET_MANIFEST.md",
       "byteCount": 13722,
-      "sha256": "e223cfcbf13ce7a889371b2c5d68f4b76c3a60f457ca80ffcf8cb791c6576696"
+      "sha256": "2cf3d20cc59e83719ace714a44bf389207b56cee0b52b002581ac46f61d06a5a"
     },
     {
       "role": "result-status-vocabulary-source",
@@ -73,14 +73,14 @@
     {
       "role": "baseline-lifecycle-policy-source",
       "path": "docs/BASELINE_LIFECYCLE_POLICY.json",
-      "byteCount": 21781,
-      "sha256": "af5dcaffae691d6cee52062ef57f38987e5ffa14c010d343b9e486dd19188e48"
+      "byteCount": 21810,
+      "sha256": "603d323325c02b4f36b10935802e3203d119e04575b1ac147395d0f41e2e91ae"
     },
     {
       "role": "baseline-lifecycle-policy-rendering",
       "path": "docs/BASELINE_LIFECYCLE_POLICY.md",
-      "byteCount": 5247,
-      "sha256": "607c8051572c8527f0490f20a35e4bd5c01db7d8803b20fb2ad3b5770c68e89e"
+      "byteCount": 5268,
+      "sha256": "69c62427fafaecf358e1da84e35b97b0d4084d084094192527a328a9e997054b"
     },
     {
       "role": "source-citation-schema-source",
@@ -121,8 +121,8 @@
     {
       "role": "role-stem-capture-contract",
       "path": "docs/ROLE_STEM_CAPTURE.md",
-      "byteCount": 7041,
-      "sha256": "ca2ccf4fc1345de2fbe0285c5166bba5ca35e44891a70d887e5410b746c70c22"
+      "byteCount": 9404,
+      "sha256": "044abdcd7a8e984125ca2e444495cb196151fadda108bf1ec4d177835ac8f5f9"
     },
     {
       "role": "pcm-comparison-report-contract",
@@ -163,14 +163,14 @@
     {
       "role": "semantic-codebase-map-source",
       "path": "docs/codebase-map.json",
-      "byteCount": 92744,
-      "sha256": "50dfa3bfaa8177e6489e2ad5dba0eeb0a525a3303e72946e736acc404ef3e286"
+      "byteCount": 104171,
+      "sha256": "80ec66c551205454235abc30fc64563aae707e55fb91603e999c1d74fc890992"
     },
     {
       "role": "semantic-codebase-map-rendering",
       "path": "docs/CODEBASE_MAP.md",
-      "byteCount": 241040,
-      "sha256": "a4016331d3cf0da20b20877bbe40f70e46e237e61e644a86b13b147239eaa24b"
+      "byteCount": 261698,
+      "sha256": "4d4a9409ffdec6380d2f9036ec413926e2c21194f8467c961fc5f7a2ee1fda83"
     }
   ]
 }

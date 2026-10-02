@@ -5,12 +5,12 @@ This checked report is a bounded performance observation, not a musical-quality,
 ## Provenance
 
 - Engine: `autotechno-canonical-engine.v48`
-- Git head recorded by exporter: `ac768b64fe1807d58ab794ea416d47396ab64844`
-- Source fingerprint: `5be218a1dc64ef1645ef20f5a1f0d09af9349ca2ef3f4742fc95affc687cdfb1`
+- Git head recorded by exporter: `430a22d8e4a69fbdc65901622b858a5d263a3a30`
+- Source fingerprint: `96d3e7610b5c8c2298b2d8903c40914b8afdc6cd383dec06782a2ca8d2f02f00`
 - Build configuration: `release`
 - Hardware: `MacBookPro18,3` / `Apple M1 Pro`
 - OS: `Version 26.6.2 (Build 25G83)`
-- Report fingerprint: `6f8ccfab04cf5b0906a7374a330ff800e3f08c5e319e2ef8a0e0826fcf3b5872`
+- Report fingerprint: `c32cf8e426b8d3b62e57cf22e31dd9fd1b1473550185531b30b63f4f4fa2756c`
 
 ## Detached preparation
 
@@ -18,8 +18,8 @@ All values are nanoseconds. Render/evaluate is measured by the existing phrase p
 
 | Route | Cases | Trials | Horizon updates | Plan p95 | Render/evaluate p95 | Complete p95 | Worst prep/audio ratio | Minimum lookahead margin | Process high-water |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `native-stereo-44100` | 1 | 3 | 3 | 777166 | 5450638583 | 5514457125 | 0.199134115 | 22177719746 | 215564288 |
-| `native-stereo-48000` | 1 | 3 | 3 | 777542 | 5911637792 | 6062063500 | 0.218908799 | 21630124000 | 229588992 |
+| `native-stereo-44100` | 1 | 3 | 3 | 784833 | 5430890250 | 5447936625 | 0.196731974 | 22244240246 | 263585792 |
+| `native-stereo-48000` | 1 | 3 | 3 | 800333 | 6007769375 | 5980446875 | 0.215961519 | 21711740625 | 274235392 |
 
 ## Callback-shaped producer
 
@@ -27,10 +27,10 @@ This is an off-callback microbenchmark of the exact bounded C producer only. Que
 
 | Frames | Trials | Operations/trial | Producer p50 ns | p95 ns | max ns | Drops | Rejections |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| 128 | 9 | 128 | 62 | 186 | 186 | 0 | 0 |
-| 256 | 9 | 128 | 51 | 71 | 71 | 0 | 0 |
-| 512 | 9 | 128 | 90 | 95 | 95 | 0 | 0 |
-| 1024 | 9 | 128 | 180 | 182 | 182 | 0 | 0 |
+| 128 | 9 | 128 | 68 | 79 | 79 | 0 | 0 |
+| 256 | 9 | 128 | 51 | 73 | 73 | 0 | 0 |
+| 512 | 9 | 128 | 99 | 192 | 192 | 0 | 0 |
+| 1024 | 9 | 128 | 196 | 226 | 226 | 0 | 0 |
 
 ## Live macOS host evidence
 

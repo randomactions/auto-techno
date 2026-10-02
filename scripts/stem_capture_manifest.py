@@ -8,6 +8,8 @@ from array import array
 import hashlib
 import json
 import math
+import os
+import re
 import struct
 import sys
 from pathlib import Path, PurePosixPath
@@ -66,16 +68,53 @@ def repository_root() -> Path:
     return Path(__file__).resolve().parents[1]
 
 
-def manifest_path(root: Path) -> Path:
-    return root / "docs/local/reports/baseline-stems-v1/manifest.json"
+def capture_namespace(namespace: Optional[str] = None) -> str:
+    value = (
+        namespace
+        if namespace is not None
+        else os.environ.get("AUTOTECHNO_CAPTURE_NAMESPACE", "v1")
+    )
+    if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", value):
+        raise StemCaptureManifestError("capture namespace must be lowercase letters, digits, and hyphens")
+    return value
 
 
-def whole_mix_manifest_path(root: Path) -> Path:
-    return root / "docs/local/reports/baseline-corpus-v1/manifest.json"
+def manifest_path(root: Path, namespace: Optional[str] = None) -> Path:
+    selected = capture_namespace(namespace)
+    return root / f"docs/local/reports/baseline-stems-{selected}/manifest.json"
 
 
-def audio_directory(root: Path) -> Path:
-    return root / "docs/local/audio/baseline-stems-v1"
+def whole_mix_manifest_path(root: Path, namespace: Optional[str] = None) -> Path:
+    selected = capture_namespace(namespace)
+    return root / f"docs/local/reports/baseline-corpus-{selected}/manifest.json"
+
+
+def audio_directory(root: Path, namespace: Optional[str] = None) -> Path:
+    selected = capture_namespace(namespace)
+    return root / f"docs/local/audio/baseline-stems-{selected}"
+
+
+def resolve_corpus_path(root: Path, corpus: Optional[str] = None) -> Path:
+    relative = corpus or os.environ.get(
+        "AUTOTECHNO_CAPTURE_CORPUS", "docs/BASELINE_CORPUS.json"
+    )
+    if relative != "docs/BASELINE_CORPUS.json" and not relative.startswith("docs/local/"):
+        raise StemCaptureManifestError(
+            "capture corpus must be docs/BASELINE_CORPUS.json or a docs/local file"
+        )
+    if ".." in Path(relative).parts or Path(relative).is_absolute():
+        raise StemCaptureManifestError("capture corpus path cannot traverse directories")
+    candidate = root / relative
+    if candidate.is_symlink():
+        raise StemCaptureManifestError("capture corpus cannot be a symlink")
+    try:
+        resolved = candidate.resolve(strict=True)
+        resolved.relative_to(root.resolve(strict=True))
+    except (OSError, ValueError) as exc:
+        raise StemCaptureManifestError("capture corpus must resolve inside this repository") from exc
+    if not resolved.is_file():
+        raise StemCaptureManifestError("capture corpus must be a regular file")
+    return resolved
 
 
 def load_json(path: Path, label: str) -> Mapping[str, Any]:
@@ -272,15 +311,21 @@ def validate_reconstruction(
     return errors
 
 
-def validate(root: Path) -> list[str]:
+def validate(
+    root: Path,
+    namespace: Optional[str] = None,
+    corpus_relative_path: Optional[str] = None,
+) -> list[str]:
     errors: list[str] = []
     try:
-        corpus = load_json(root / "docs/BASELINE_CORPUS.json", "corpus")
+        namespace = capture_namespace(namespace)
+        corpus_path = resolve_corpus_path(root, corpus_relative_path)
+        corpus = load_json(corpus_path, "corpus")
         baseline = load_json(
             root / "docs/ROADMAP_EXECUTION_BASELINE.json", "contract baseline"
         )
-        whole = load_json(whole_mix_manifest_path(root), "whole-mix manifest")
-        manifest = load_json(manifest_path(root), "stem manifest")
+        whole = load_json(whole_mix_manifest_path(root, namespace), "whole-mix manifest")
+        manifest = load_json(manifest_path(root, namespace), "stem manifest")
     except StemCaptureManifestError as exc:
         return [str(exc)]
     errors += exact_keys(manifest, ROOT_KEYS, "manifest")
@@ -288,10 +333,10 @@ def validate(root: Path) -> list[str]:
         errors.append(f"schema must be {SCHEMA}")
     if manifest.get("manifestVersion") != 1:
         errors.append("manifestVersion must be 1")
-    if manifest.get("corpusSha256") != sha256(root / "docs/BASELINE_CORPUS.json"):
+    if manifest.get("corpusSha256") != sha256(corpus_path):
         errors.append("corpusSha256 does not match the tracked corpus")
     if manifest.get("wholeMixManifestSha256") != sha256(
-        whole_mix_manifest_path(root)
+        whole_mix_manifest_path(root, namespace)
     ):
         errors.append("wholeMixManifestSha256 does not match the local manifest")
     if manifest.get("contractBaselineFingerprint") != baseline.get(
@@ -307,6 +352,13 @@ def validate(root: Path) -> list[str]:
         errors.append("gitHead must match the whole-mix render manifest")
     if manifest.get("engineVersion") != whole.get("engineVersion"):
         errors.append("engineVersion must match the whole-mix render manifest")
+    if corpus.get("schema") == "autotechno-at0039-foundation-cohort.v1":
+        if corpus.get("sourceFingerprint") != whole.get("sourceFingerprint"):
+            errors.append("AT-0039 cohort sourceFingerprint differs from whole-mix provenance")
+        if corpus.get("contractBaselineFingerprint") != baseline.get(
+            "snapshotFingerprint"
+        ):
+            errors.append("AT-0039 cohort contract baseline does not match current baseline")
 
     exceptions = manifest.get("nonlinearExceptions")
     if not isinstance(exceptions, list):
@@ -430,7 +482,7 @@ def validate(root: Path) -> list[str]:
                 if stem.get(field) != wanted:
                     errors.append(f"{file_location}.{field} must be {wanted!r}")
             expected_path = (
-                f"docs/local/audio/baseline-stems-v1/{identifier}--{signal}.wav"
+                f"docs/local/audio/baseline-stems-{namespace}/{identifier}--{signal}.wav"
             )
             if stem.get("wavPath") != expected_path:
                 errors.append(f"{file_location}.wavPath must be {expected_path}")
@@ -480,16 +532,21 @@ def validate(root: Path) -> list[str]:
         errors.append(f"entries must contain exactly {len(expected)} identities")
     actual_wavs = {
         path.relative_to(root).as_posix()
-        for path in audio_directory(root).glob("*.wav")
-    } if audio_directory(root).is_dir() else set()
+        for path in audio_directory(root, namespace).glob("*.wav")
+    } if audio_directory(root, namespace).is_dir() else set()
     extras = sorted(actual_wavs - referenced_wavs)
     if extras:
         errors.append("audio directory has unreferenced WAVs: " + ", ".join(extras))
     return errors
 
 
-def run_check(root: Path, output: TextIO = sys.stdout) -> int:
-    errors = validate(root)
+def run_check(
+    root: Path,
+    output: TextIO = sys.stdout,
+    namespace: Optional[str] = None,
+    corpus_relative_path: Optional[str] = None,
+) -> int:
+    errors = validate(root, namespace, corpus_relative_path)
     if errors:
         print(f"role stems rejected with {len(errors)} issue(s):", file=output)
         for index, error in enumerate(errors, 1):
@@ -505,9 +562,15 @@ def run_check(root: Path, output: TextIO = sys.stdout) -> int:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("check",))
+    parser.add_argument("--namespace", help="select an isolated capture namespace (default: v1)")
+    parser.add_argument("--corpus", help="relative canonical or docs/local corpus path")
     arguments = parser.parse_args(argv)
     if arguments.command == "check":
-        return run_check(repository_root())
+        return run_check(
+            repository_root(),
+            namespace=arguments.namespace,
+            corpus_relative_path=arguments.corpus,
+        )
     return 1
 
 

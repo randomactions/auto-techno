@@ -6,6 +6,79 @@ import Testing
 
 @Suite("Current autonomous runtime")
 struct CurrentRuntimeTests {
+    @Test("AT-0039 analytic seam labels bound physical-time and Float uncertainty")
+    func independentPhysicalTimeSeamOracles() throws {
+        var cases = 0
+        var maximumContinuousDelta = 0.0
+        var minimumJumpDelta = Double.infinity
+        var rows: [[String: Any]] = []
+        let roundingBound = 2 * Double(Float.ulpOfOne)
+        for rate in [44_100.0, 48_000.0] {
+            for boundarySeconds in [0.0637, 0.1003] {
+                let boundary = Int((boundarySeconds * rate).rounded())
+                for frequency in [55.0, 997.0] {
+                    for phase in [0.0, Double.pi / 3, Double.pi / 2] {
+                        for jump in [0.0, 0.125] {
+                            let before = Float(0.2 * sin(2 * .pi * frequency * Double(boundary - 1) / rate + phase))
+                            let after = Float(0.2 * sin(2 * .pi * frequency * Double(boundary) / rate + phase) + jump)
+                            let measured = Double(AudioQualityReport.maximumBoundaryDelta(
+                                leftBlocks: [[before], [after]], rightBlocks: [[-before], [-after]]))
+                            let variation = 2 * .pi * 0.2 * frequency / rate + roundingBound
+                            #expect(measured <= jump + variation)
+                            #expect(measured >= max(0, jump - variation))
+                            let predecessor = AudioQualityReport.maximumBoundaryDelta(
+                                leftBlocks: [[after]], rightBlocks: [[-after]],
+                                precedingFrame: .init(left: before, right: -before))
+                            #expect(Double(predecessor) == measured)
+                            // One block hides the seam from this statistic even
+                            // though its source equation and PCM are unchanged.
+                            #expect(AudioQualityReport.maximumBoundaryDelta(
+                                leftBlocks: [[before, after]], rightBlocks: [[-before, -after]]) == 0)
+                            if jump == 0 { maximumContinuousDelta = max(maximumContinuousDelta, measured) }
+                            else { minimumJumpDelta = min(minimumJumpDelta, measured) }
+                            rows.append(["family": "sine", "split": "development-family",
+                                "sampleRate": rate, "boundarySeconds": boundarySeconds,
+                                "boundaryFrame": boundary, "frequencyHz": frequency,
+                                "phaseRadians": phase, "authoredJump": jump,
+                                "constructionLabel": jump == 0 ? "continuous" : "discontinuous",
+                                "measuredAdjacentDelta": measured,
+                                "lowerBound": max(0, jump - variation), "upperBound": jump + variation,
+                                "floatRoundingBound": roundingBound])
+                            cases += 1
+                        }
+                    }
+                }
+                // Distinct held-out affine family: derivative exactly 3/s.
+                for jump in [0.0, 0.125] {
+                    let before = Float(3 * Double(boundary - 1) / rate)
+                    let after = Float(3 * Double(boundary) / rate + jump)
+                    let measured = Double(AudioQualityReport.maximumBoundaryDelta(
+                        leftBlocks: [[before], [after]], rightBlocks: [[before], [after]]))
+                    #expect(abs(measured - (3 / rate + jump)) <= roundingBound)
+                    rows.append(["family": "affine", "split": "held-out-family",
+                        "sampleRate": rate, "boundarySeconds": boundarySeconds,
+                        "boundaryFrame": boundary, "slopePerSecond": 3,
+                        "authoredJump": jump,
+                        "constructionLabel": jump == 0 ? "continuous" : "discontinuous",
+                        "measuredAdjacentDelta": measured,
+                        "expectedAdjacentDelta": 3 / rate + jump,
+                        "floatRoundingBound": roundingBound])
+                    cases += 1
+                }
+            }
+        }
+        #expect(cases == 56)
+        #expect(maximumContinuousDelta < minimumJumpDelta)
+        let report: [String: Any] = ["fixture": "independent-physical-time-seam-oracle.v1",
+            "caseCount": cases, "maximumContinuousDelta": maximumContinuousDelta,
+            "minimumConstructedJumpDelta": minimumJumpDelta,
+            "uncertainty": "analytic-derivative-and-float-bounds",
+            "qualityQualification": "unavailable", "productionMetricChanged": false,
+            "rows": rows]
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]))
+        FileHandle.standardOutput.write(Data([0x0A]))
+    }
+
     @Test("Long-cycle groove and effect-world identities advance as one exact contract")
     func longCycleWorldPrimaryIdentityContract() {
         #expect(QualityQualificationContract.schemaVersion == 49)
@@ -13,16 +86,16 @@ struct CurrentRuntimeTests {
                 "autotechno-canonical-engine.v48")
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 43)
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
-        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 21)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
-                "autotechno-professional-quality-profile.v29")
+                "autotechno-professional-quality-profile.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v29")
+                "autotechno-candidate-evaluator.primary-calibrated.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v29")
+                "autotechno-quality.primary-calibrated.v30")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 22)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
-                "autotechno-professional-quality-adversarial.v22")
+                "autotechno-professional-quality-adversarial.v23")
         #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 20)
         #expect(ProfessionalQualityHoldoutQualification.qualificationVersion ==
                 "autotechno-professional-quality-holdout.v20")
@@ -33,146 +106,41 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalEvidenceReportBank.schemaVersion == 29)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v29")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v29"))
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v30"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v29"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v29"))
+            .hasSuffix("-v30"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v30"))
     }
 
-    @Test("Only bundled v29 primary resources remain")
-    func primaryResourcesAreV29Only() {
+    @Test("Only the exact qualified v30 primary resources are installed")
+    func primaryResourcesAreV30FailClosed() throws {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
         for stem in ["profile", "adversarial-suite", "holdout"] {
             let prefix = "professional-quality-primary-\(stem)"
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v1.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v2.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v3.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v4.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v5.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v6.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v7.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v8.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v9.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v10.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v11.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v12.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v13.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v14.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v15.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v16.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v17.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v18.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v19.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v20.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v21.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v22.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v23.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v24.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v25.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v26.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v27.json").path))
-            #expect(!FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v28.json").path))
+            for version in 1..<30 {
+                #expect(!FileManager.default.fileExists(atPath:
+                    resourceDirectory.appendingPathComponent(
+                        "\(prefix)-v\(version).json").path))
+                #expect(!ProfessionalQualityPrimaryArtifacts
+                    .containsBundledResource(named: "\(prefix)-v\(version)"))
+            }
             #expect(FileManager.default.fileExists(atPath:
-                resourceDirectory.appendingPathComponent("\(prefix)-v29.json").path))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v1"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v2"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v3"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v4"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v5"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v6"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v7"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v8"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v9"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v10"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v11"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v12"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v13"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v14"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v15"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v16"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v17"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v18"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v19"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v20"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v21"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v22"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v23"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v24"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v25"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v26"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v27"))
-            #expect(!ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v28"))
+                resourceDirectory.appendingPathComponent("\(prefix)-v30.json").path))
             #expect(ProfessionalQualityPrimaryArtifacts
-                .containsBundledResource(named: "\(prefix)-v29"))
+                .containsBundledResource(named: "\(prefix)-v30"))
         }
-        #expect(throws: Never.self) {
-            _ = try ProfessionalQualityPrimaryArtifacts.load()
-        }
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        #expect(artifacts.profile.fingerprint ==
+                ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
+        #expect(artifacts.adversarialSuite.passed)
+        #expect(artifacts.holdoutQualification.qualified)
     }
 
-    @Test("The shipped evaluator and live controller form one exact path")
-    func primaryEvaluatorAndLiveControllerAreCanonical() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-
-        #expect(artifacts.evaluator.evaluatorVersion ==
-                ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier)
+    @Test("The v30 candidate identity and live controller remain canonical")
+    func primaryEvaluatorAndLiveControllerAreCanonical() {
+        #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
+                "autotechno-candidate-evaluator.primary-calibrated.v30")
         #expect(LiveMasterHeadroomController.version ==
                 "autotechno-live-master-headroom-controller.v2")
         #expect(LiveMasterHeadroomController.minimumTrimDB == -3)
@@ -232,57 +200,161 @@ struct CurrentRuntimeTests {
         )
         let report = AudioQualityReport(blocks: first, sampleRate: 8_000)
 
+        func correlations(left: [Float], right: [Float]) -> (Double, Double) {
+            let leftSamples = left.map(Double.init)
+            let rightSamples = right.map(Double.init)
+            let crossEnergy = zip(leftSamples, rightSamples)
+                .reduce(0.0) { $0 + $1.0 * $1.1 }
+            let leftEnergy = leftSamples.reduce(0.0) { $0 + $1 * $1 }
+            let rightEnergy = rightSamples.reduce(0.0) { $0 + $1 * $1 }
+            let uncentered = crossEnergy /
+                sqrt(max(0.0000001, leftEnergy * rightEnergy))
+            let leftMean = leftSamples.reduce(0, +) / Double(leftSamples.count)
+            let rightMean = rightSamples.reduce(0, +) / Double(rightSamples.count)
+            let centeredCross = zip(leftSamples, rightSamples).reduce(0.0) {
+                $0 + ($1.0 - leftMean) * ($1.1 - rightMean)
+            }
+            let centeredLeft = leftSamples.reduce(0.0) {
+                $0 + ($1 - leftMean) * ($1 - leftMean)
+            }
+            let centeredRight = rightSamples.reduce(0.0) {
+                $0 + ($1 - rightMean) * ($1 - rightMean)
+            }
+            let pearson = centeredCross /
+                sqrt(max(0.0000001, centeredLeft * centeredRight))
+            return (uncentered, pearson)
+        }
+
         #expect(first == second)
         #expect(renderA == renderB)
         #expect(graphA == graphB)
         #expect(report.finite)
         #expect(report.truePeakEstimate <= 0.95)
         #expect(abs(report.dcOffset) < 0.05)
+        let source = first[0]
+        func copyingSourceBlock(
+            left: [Float],
+            right: [Float],
+            liveMasterTrimEvidence: LiveMasterTrimRenderEvidence? = nil
+        ) -> RenderBlock {
+            RenderBlock(
+                bar: source.bar,
+                section: source.section,
+                left: left,
+                right: right,
+                events: source.events,
+                modulation: source.modulation,
+                busStates: source.busStates,
+                masking: source.masking,
+                effects: source.effects,
+                kickMix: source.kickMix,
+                kickRenderPassesMatch: source.kickRenderPassesMatch,
+                stemObservations: source.stemObservations,
+                automaticMix: source.automaticMix,
+                stemReconstruction: source.stemReconstruction,
+                protectedFoundationSampleHash: source.protectedFoundationSampleHash,
+                percussionSampleHash: source.percussionSampleHash,
+                protectedRhythmSampleHash: source.protectedRhythmSampleHash,
+                dryModalPercussionSampleHash:
+                    source.dryModalPercussionSampleHash,
+                modalPercussionRenderEvidence:
+                    source.modalPercussionRenderEvidence,
+                modalPercussionRenderPassesMatch:
+                    source.modalPercussionRenderPassesMatch,
+                modalPercussionFoundationRoutingValid:
+                    source.modalPercussionFoundationRoutingValid,
+                groovePulseRenderEvidence: source.groovePulseRenderEvidence,
+                instrumentRenderEvidence: source.instrumentRenderEvidence,
+                percussionEchoTextureRenderEvidence:
+                    source.percussionEchoTextureRenderEvidence,
+                percussionEchoTextureRenderPassesMatch:
+                    source.percussionEchoTextureRenderPassesMatch,
+                pulseEchoReturnDriveRenderEvidence:
+                    source.pulseEchoReturnDriveRenderEvidence,
+                liveMasterTrimRenderEvidence:
+                    liveMasterTrimEvidence ?? source.liveMasterTrimRenderEvidence,
+                upperNoteRenderEvidence: source.upperNoteRenderEvidence,
+                upperTimingRenderEvidence: source.upperTimingRenderEvidence,
+                graphInputRemainderTimbreEvidence:
+                    source.graphInputRemainderTimbreEvidence,
+                postGraphRemainderTimbreEvidence:
+                    source.postGraphRemainderTimbreEvidence,
+                resolvedPerformance: source.resolvedPerformance,
+                sceneDNA: source.sceneDNA,
+                synthWorld: source.synthWorld,
+                synthPerformance: source.synthPerformance
+            )
+        }
+        let biasedLeft = source.left.map { $0 + 0.08 }
+        let biasedRight = source.right.map { $0 - 0.04 }
+        let biasedReport = AudioQualityReport(
+            blocks: [copyingSourceBlock(left: biasedLeft, right: biasedRight)],
+            sampleRate: 8_000
+        )
+        let biasedCorrelations = correlations(left: biasedLeft, right: biasedRight)
+        #expect(abs(
+            Double(biasedReport.stereoCorrelation) - biasedCorrelations.0
+        ) < 0.000_001)
+        #expect(abs(biasedCorrelations.0 - biasedCorrelations.1) > 0.000_1)
+
+        let expectedBiasedDC = zip(biasedLeft, biasedRight).reduce(0.0) {
+            $0 + Double($1.0 + $1.1)
+        } / Double(biasedLeft.count * 2)
+        #expect(abs(Double(biasedReport.dcOffset) - expectedBiasedDC) < 0.000_001)
+        let opposedDCReport = AudioQualityReport(
+            blocks: [copyingSourceBlock(
+                left: source.left,
+                right: source.left.map { -$0 }
+            )],
+            sampleRate: 8_000
+        )
+        #expect(opposedDCReport.dcOffset == 0)
+
+        func crestFactorDB(_ report: AudioQualityReport) -> Double {
+            guard report.peak > 0, report.rms > 0 else { return -120 }
+            return 20 * log10(Double(report.peak) / Double(report.rms))
+        }
+        let sourceReport = AudioQualityReport(blocks: [source], sampleRate: 8_000)
+        var isolatedPeakLeft = source.left
+        isolatedPeakLeft[0] = 1
+        let isolatedPeakReport = AudioQualityReport(
+            blocks: [copyingSourceBlock(
+                left: isolatedPeakLeft,
+                right: source.right
+            )],
+            sampleRate: 8_000
+        )
+        let paddedSilenceReport = AudioQualityReport(
+            blocks: [copyingSourceBlock(
+                left: source.left + [Float](repeating: 0, count: source.left.count),
+                right: source.right + [Float](repeating: 0, count: source.right.count)
+            )],
+            sampleRate: 8_000
+        )
+        #expect(isolatedPeakReport.peak > sourceReport.peak)
+        #expect(crestFactorDB(isolatedPeakReport) > crestFactorDB(sourceReport))
+        #expect(paddedSilenceReport.peak == sourceReport.peak)
+        #expect(abs(
+            Double(paddedSilenceReport.rms) -
+                Double(sourceReport.rms) / sqrt(2)
+        ) < 0.000_001)
+        #expect(abs(
+            crestFactorDB(paddedSilenceReport) -
+                crestFactorDB(sourceReport) - 20 * log10(sqrt(2))
+        ) < 0.001)
         #expect(report.lowStereoCorrelation > 0.94)
         #expect(report.maxBoundaryDelta < 0.65)
 
-        let source = first[0]
         let nonFiniteLeft: [Float] = [0]
         let nonFiniteRight: [Float] = [0, .nan]
         let nonFiniteFingerprint = ExactPCMFingerprint.stereo(
             left: nonFiniteLeft,
             right: nonFiniteRight
         )
-        let asymmetricNonFinite = RenderBlock(
-            bar: source.bar,
-            section: source.section,
+        let asymmetricNonFinite = copyingSourceBlock(
             left: nonFiniteLeft,
             right: nonFiniteRight,
-            events: source.events,
-            modulation: source.modulation,
-            busStates: source.busStates,
-            masking: source.masking,
-            effects: source.effects,
-            kickMix: source.kickMix,
-            kickRenderPassesMatch: source.kickRenderPassesMatch,
-            stemObservations: source.stemObservations,
-            automaticMix: source.automaticMix,
-            stemReconstruction: source.stemReconstruction,
-            protectedFoundationSampleHash: source.protectedFoundationSampleHash,
-            percussionSampleHash: source.percussionSampleHash,
-            protectedRhythmSampleHash: source.protectedRhythmSampleHash,
-            dryModalPercussionSampleHash:
-                source.dryModalPercussionSampleHash,
-            modalPercussionRenderEvidence:
-                source.modalPercussionRenderEvidence,
-            modalPercussionRenderPassesMatch:
-                source.modalPercussionRenderPassesMatch,
-            modalPercussionFoundationRoutingValid:
-                source.modalPercussionFoundationRoutingValid,
-            groovePulseRenderEvidence: source.groovePulseRenderEvidence,
-            instrumentRenderEvidence: source.instrumentRenderEvidence,
-            percussionEchoTextureRenderEvidence:
-                source.percussionEchoTextureRenderEvidence,
-            percussionEchoTextureRenderPassesMatch:
-                source.percussionEchoTextureRenderPassesMatch,
-            pulseEchoReturnDriveRenderEvidence:
-                source.pulseEchoReturnDriveRenderEvidence,
-            liveMasterTrimRenderEvidence: LiveMasterTrimRenderEvidence(
+            liveMasterTrimEvidence: LiveMasterTrimRenderEvidence(
                 requestedTrimDB: 0,
                 appliedTrimDB: 0,
                 appliedGain: 1,
@@ -291,17 +363,7 @@ struct CurrentRuntimeTests {
                 preTrimNonzeroSampleCount: 1,
                 postTrimNonzeroSampleCount: 1,
                 exactScaleMatches: false
-            ),
-            upperNoteRenderEvidence: source.upperNoteRenderEvidence,
-            upperTimingRenderEvidence: source.upperTimingRenderEvidence,
-            graphInputRemainderTimbreEvidence:
-                source.graphInputRemainderTimbreEvidence,
-            postGraphRemainderTimbreEvidence:
-                source.postGraphRemainderTimbreEvidence,
-            resolvedPerformance: source.resolvedPerformance,
-            sceneDNA: source.sceneDNA,
-            synthWorld: source.synthWorld,
-            synthPerformance: source.synthPerformance
+            )
         )
         #expect(!AudioQualityReport(
             blocks: [asymmetricNonFinite],
@@ -325,6 +387,21 @@ struct CurrentRuntimeTests {
 
         #expect(abs(internalOnly - 0.05) < 0.000_001)
         #expect(abs(includingPredecessor - 1.20) < 0.000_001)
+
+        let continuousLeft: [Float] = [0.10, 0.20, 0.90, 0.91]
+        let continuousRight: [Float] = [0.10, 0.20, 0.80, 0.81]
+        let oneBlock = AudioQualityReport.maximumBoundaryDelta(
+            leftBlocks: [continuousLeft],
+            rightBlocks: [continuousRight]
+        )
+        let twoBlocks = AudioQualityReport.maximumBoundaryDelta(
+            leftBlocks: [[0.10, 0.20], [0.90, 0.91]],
+            rightBlocks: [[0.10, 0.20], [0.80, 0.81]]
+        )
+
+        #expect(oneBlock == 0)
+        #expect(abs(twoBlocks - 0.70) < 0.000_001,
+                "The statistic observes render-block seams, not every adjacent PCM sample")
     }
 
     private var repositoryRoot: URL {

@@ -11,13 +11,13 @@ struct PrimaryEvaluatorReadinessTests {
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 3)
         #expect(ProfessionalEvidenceReportBank.schemaVersion == 29)
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
-        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 21)
+        #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 22)
         #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 20)
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v29")
+                "autotechno-quality.primary-calibrated.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v29")
+                "autotechno-candidate-evaluator.primary-calibrated.v30")
         #expect(AutonomousCandidateCompletenessFailure.upperPercussionTailEvidence
             .rawValue == "upper-percussion-tail-evidence")
         #expect(AutonomousCandidateCompletenessFailure.modalPercussionEvidence
@@ -41,12 +41,12 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("Bundled v29 artifacts activate only the exact schema-49 engine")
-    func bundledV29ArtifactsAreReady() throws {
+    @Test("Bundled v30 artifacts activate only the exact schema-49 engine")
+    func bundledV30ArtifactsAreReady() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(artifacts.profile.engineVersion ==
                 QualityQualificationContract.engineVersion)
-        #expect(artifacts.profile.schemaVersion == 21)
+        #expect(artifacts.profile.schemaVersion == 22)
         #expect(artifacts.adversarialSuite.schemaVersion == 22)
         #expect(artifacts.holdoutQualification.schemaVersion == 20)
         for sampleRate in [44_100.0, 48_000.0] {
@@ -57,7 +57,7 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("An 8 kHz route with exact v29 artifacts is unsupported")
+    @Test("An 8 kHz route with exact v30 artifacts is unsupported")
     func unsupported8KRouteStaysUnavailable() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(
@@ -66,7 +66,7 @@ struct PrimaryEvaluatorReadinessTests {
         ).availability == .unsupportedSampleRate)
     }
 
-    @Test("A 12 kHz route with exact v29 artifacts is unsupported")
+    @Test("A 12 kHz route with exact v30 artifacts is unsupported")
     func unsupported12KRouteStaysUnavailable() throws {
         let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
         #expect(ProfessionalQualityPreparationEvaluator(
