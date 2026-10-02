@@ -111,3 +111,22 @@ package struct ProfessionalQualityContinuousModalWindowEvidence: Codable, Equata
         count == 0 ? value == nil : value.map { $0.isFinite && (-120...120).contains($0) } == true
     }
 }
+
+/// Construction provenance for the continuous observation scope. The original
+/// report and typed validated successor are required at construction/rebinding;
+/// decoded descriptive means alone cannot confer fitting authority.
+package struct ProfessionalQualityContinuousModalObservationSource: Encodable,
+        Equatable, Sendable {
+    package let sourceIdentityFingerprint: String
+    package let projection: ProfessionalQualityContinuousModalWindowEvidence
+
+    package init(report: CanonicalJourneyQualificationReport,
+                 successor: ProfessionalQualityModalSuccessorEvidence? = nil) throws {
+        sourceIdentityFingerprint = ProfessionalQualityModalSuccessorEvidence.identity(report)
+        projection = try .init(report: report, successor: successor)
+    }
+
+    package var isComplete: Bool {
+        !sourceIdentityFingerprint.isEmpty && projection.isComplete
+    }
+}

@@ -1451,3 +1451,25 @@ There are no runtime profiles, selectable seeds, reference generators, optional
 scene/synth inputs, microphone inputs, or alternate executable entry points.
 Historical measurements and retired experiments are evidence only; they do not
 re-enter the product architecture.
+
+## Explicit continuous modal observation provenance
+
+Detached continuous observation v23/profile v32 extends the existing report,
+observation, trajectory/corpus and fitting owners. Construction derives the two
+modal ratios from the canonical original report and its optional validated
+actual prepared-successor receipt through the existing ledger/support owner.
+The non-reconstructable observation binds full original-report identity even
+without a successor, plus the actual receipt fingerprint when supplied. Numeric
+or diagnostic decoding cannot establish that construction authority; canonical
+reconstruction requires the expected typed source inputs. Existing ordinary
+observation decoding remains rejected.
+
+Metric/live-master challenge replacement retains the original construction
+binding. Actual original-bank identity owns continuous trajectory membership;
+receipt coverage cannot manufacture another independent source. Corpus and
+relationship validation retain complete native-rate/checkpoint coverage,
+version consistency, duplicate rejection and required-unavailable measurements.
+A reduced one-bank analysis uses the same corpus fitter and remains below the
+minimum diverse source count. The existing evaluator and activation authority are retained. Installed v21/v30/v16 remains the runtime contract; bar-local
+v22/v31 and continuous v23/v32 remain unqualified and unactivated. No renderer,
+Core continuation, callback operation, future decision or PCM algorithm changes.

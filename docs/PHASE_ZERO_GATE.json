@@ -17,7 +17,7 @@
       "artifact": "docs/AUTHORITY_SURFACE_INVENTORY.json",
       "schema": "autotechno-authority-surface-inventory.v1",
       "version": 1,
-      "sha256": "15fdbfc447cb2fe061f2155c32386533699505bd537515772274cb9d92dadb50",
+      "sha256": "9968d9a87abcadeb188c3d6531be6037c4b123eaa69635d9dd66976cfc3aa0f3",
       "surfaceCount": 45,
       "unresolvedCount": 0
     },

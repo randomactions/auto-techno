@@ -44,14 +44,76 @@ package struct ProfessionalQualityUnavailableMeasurement: Codable, Equatable, Se
     package let reason: ProfessionalQualityMeasurementUnavailableReason
 }
 
+/// One version decision for the retained runtime and both explicit offline
+/// measurement scopes. Scope selection never grants activation authority.
+package enum ProfessionalQualityMeasurementScope: String, Sendable {
+    case legacy
+    case barLocalModalWindow = "bar-local-modal-window"
+    case continuousModalWindow = "continuous-modal-window"
+
+    package var observationSchema: Int {
+        switch self {
+        case .legacy: 21
+        case .barLocalModalWindow: 22
+        case .continuousModalWindow: 23
+        }
+    }
+
+    package var observationVersion: String {
+        switch self {
+        case .legacy: "autotechno-professional-quality-observation.v21"
+        case .barLocalModalWindow: "autotechno-professional-quality-observation.v22"
+        case .continuousModalWindow: "autotechno-professional-quality-observation.v23"
+        }
+    }
+
+    package var profileSchema: Int {
+        switch self {
+        case .legacy: 22
+        case .barLocalModalWindow: 23
+        case .continuousModalWindow: 24
+        }
+    }
+    package var profileVersion: String {
+        switch self {
+        case .legacy: "autotechno-professional-quality-profile.v30"
+        case .barLocalModalWindow: "autotechno-professional-quality-profile.v31"
+        case .continuousModalWindow: "autotechno-professional-quality-profile.v32"
+        }
+    }
+
+    package var requiresModalWindowSupport: Bool { self != .legacy }
+
+    package static func observation(
+        schema: Int, version: String
+    ) -> Self? {
+        [Self.legacy, .barLocalModalWindow, .continuousModalWindow].first {
+            $0.observationSchema == schema && $0.observationVersion == version
+        }
+    }
+
+    package static func profile(
+        schema: Int, version: String, observationVersion: String
+    ) -> Self? {
+        [Self.legacy, .barLocalModalWindow, .continuousModalWindow].first {
+            $0.profileSchema == schema && $0.profileVersion == version &&
+                $0.observationVersion == observationVersion
+        }
+    }
+}
+
 /// One owner shared by extraction, fitting, local and relationship assessment.
 /// v21 remains the installed legacy contract. v22 is unavailable for production
 /// activation until its own independent fixtures and qualification pass.
 package enum ProfessionalQualityMeasurementContract {
     package static let modalWindowObservationVersion =
-        "autotechno-professional-quality-observation.v22"
+        ProfessionalQualityMeasurementScope.barLocalModalWindow.observationVersion
     package static let modalWindowProfileVersion =
-        "autotechno-professional-quality-profile.v31"
+        ProfessionalQualityMeasurementScope.barLocalModalWindow.profileVersion
+    package static let continuousModalObservationVersion =
+        ProfessionalQualityMeasurementScope.continuousModalWindow.observationVersion
+    package static let continuousModalProfileVersion =
+        ProfessionalQualityMeasurementScope.continuousModalWindow.profileVersion
     package static let modalMetrics: [ProfessionalQualityMetric] = [
         .modalPercussionAttackToBodyDBMean, .modalPercussionTailToBodyDBMean,
     ]
@@ -68,7 +130,7 @@ package enum ProfessionalQualityMeasurementContract {
                 }) {
                     result.append(.init(checkpoint: checkpoint, metric: metric,
                                         reason: .requiredWindowSupport))
-                } else if sources.contains(where: { $0.modalWindowSupport != nil }),
+                } else if sources.contains(where: { $0.measurementScope?.requiresModalWindowSupport == true }),
                           Set(sources.map { $0.measurementApplicability(metric) })
                             .count > 1 {
                     result.append(.init(checkpoint: checkpoint, metric: metric,

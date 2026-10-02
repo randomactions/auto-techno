@@ -1093,3 +1093,39 @@ fixture labels, uncertainty, preregistered coverage and fresh disjoint holdouts,
 plus complete matching primary and long-horizon qualification, remain required
 before any replacement. This extends the existing canonical evidence owner and
 avoids separate extraction/fitting/evaluation eligibility rules.
+
+## Continuous modal observation and fitting scope
+
+The explicit offline continuous projection uses observation v23 and profile v32
+under the existing observation, trajectory, corpus, fitter and evaluators. Its
+construction requires the full canonical original report and an optional
+validated actual-successor receipt. A source-only unfinished suffix remains
+required-unavailable. Diagnostic subset means, decoded numeric observations and
+invented successor/checkpoint labels cannot supply construction provenance.
+Canonical-byte reconstruction requires the same typed source inputs; ordinary
+observation decoding continues to reject every scope.
+
+Only the two existing modal ratios change measurement scope. All other candidate
+metrics, original event counts, hard gates and live-master provenance remain
+under their existing owners. Shared applicability preserves measured zero,
+not-required score absence, undefined body and missing/partial physical windows.
+Fitting refuses required unavailable support and native-rate applicability
+mismatch, while local and relationship assessment retain independent failures.
+Metric/live-master challenge replacement retains source provenance and cannot
+create independent journey membership.
+
+Trajectory membership remains the original report-bank fingerprint. Successor
+receipt coverage changes measurement/corpus identity but cannot disguise a
+repeated original bank as another source. Continuous trajectories require that
+actual bank; arbitrary numeric source labels are insufficient. Seven checkpoint
+identities at both native rates, the 48-source bound and disjoint development/
+holdout membership remain required. The reduced one-bank fitting seam delegates
+to the existing corpus fitter and remains insufficient for diverse calibration.
+
+A single scope owner binds observation/profile schema and versions, expected
+metrics, applicability and conditional comparison coverage. Installed v21/v30
+and bar-local v22/v31 identities retain their semantics. Continuous v23/v32 is an
+unqualified, unactivated foundation: fixed mechanical construction controls do
+not provide independent musical labels, confidence, fresh-cohort evidence or
+replacement qualification. Installed primary v30/long-horizon v16 resources,
+score, PCM, callback and future musical decisions remain unchanged.

@@ -634,9 +634,8 @@ package enum ProfessionalQualityLiveMasterAttack: Sendable {
 /// A bounded, non-reconstructable projection of one selected phrase. It carries
 /// no PCM, stems, event lists, or sample hashes.
 package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
-    package static let schemaVersion = 21
-    package static let observationVersion =
-        "autotechno-professional-quality-observation.v21"
+    package static let schemaVersion = ProfessionalQualityMeasurementScope.legacy.observationSchema
+    package static let observationVersion = ProfessionalQualityMeasurementScope.legacy.observationVersion
 
     package let schemaVersion: Int
     package let observationVersion: String
@@ -649,6 +648,32 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
     package let sourceMetricCount: Int
     package let metrics: [ProfessionalQualityMetricValue]
     package let modalWindowSupport: ProfessionalQualityModalWindowEvidence?
+    package let continuousModalSource: ProfessionalQualityContinuousModalObservationSource?
+
+    package var measurementScope: ProfessionalQualityMeasurementScope? {
+        guard !(modalWindowSupport != nil && continuousModalSource != nil),
+              let scope = ProfessionalQualityMeasurementScope.observation(
+                schema: schemaVersion, version: observationVersion) else { return nil }
+        switch scope {
+        case .legacy:
+            return modalWindowSupport == nil && continuousModalSource == nil ? scope : nil
+        case .barLocalModalWindow:
+            return modalWindowSupport != nil && continuousModalSource == nil ? scope : nil
+        case .continuousModalWindow:
+            return modalWindowSupport == nil && continuousModalSource != nil ? scope : nil
+        }
+    }
+
+    private var modalSupports: (attack: ProfessionalQualityModalRatioSupport,
+                               tail: ProfessionalQualityModalRatioSupport)? {
+        if let source = continuousModalSource {
+            return (source.projection.attackBodySupport, source.projection.tailBodySupport)
+        }
+        if let support = modalWindowSupport {
+            return (support.attackBodySupport, support.tailBodySupport)
+        }
+        return nil
+    }
 
     package init(
         engineVersion: String,
@@ -660,6 +685,23 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         metrics sourceMetrics: [ProfessionalQualityMetricValue],
         modalWindowSupport: ProfessionalQualityModalWindowEvidence? = nil
     ) throws {
+        try self.init(engineVersion: engineVersion, evidenceVersion: evidenceVersion,
+            checkpoint: checkpoint, sampleRate: sampleRate, hardGatesPassed: hardGatesPassed,
+            liveMaster: liveMaster, metrics: sourceMetrics, modalWindowSupport: modalWindowSupport,
+            continuousModalSource: nil)
+    }
+
+    private init(
+        engineVersion: String, evidenceVersion: String,
+        checkpoint: CanonicalJourneyCheckpoint, sampleRate: Double,
+        hardGatesPassed: Bool, liveMaster: ProfessionalQualityLiveMasterProvenance,
+        metrics sourceMetrics: [ProfessionalQualityMetricValue],
+        modalWindowSupport: ProfessionalQualityModalWindowEvidence?,
+        continuousModalSource: ProfessionalQualityContinuousModalObservationSource?
+    ) throws {
+        guard !(modalWindowSupport != nil && continuousModalSource != nil) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
         guard !engineVersion.trimmingCharacters(
             in: .whitespacesAndNewlines
         ).isEmpty,
@@ -670,11 +712,16 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
         let sorted = sourceMetrics.sorted { $0.metric.rawValue < $1.metric.rawValue }
-        let expected = Self.expectedMetrics(support: modalWindowSupport)
+        let expected = Self.expectedMetrics(support: modalWindowSupport,
+            continuousSource: continuousModalSource)
         guard sorted.count == expected.count,
               Set(sorted.map(\.metric)) == expected,
               modalWindowSupport.map({
                   $0.isComplete && $0.checkpoint == checkpoint && $0.sampleRate == sampleRate
+              }) ?? true,
+              continuousModalSource.map({
+                  $0.isComplete && $0.projection.checkpoint == checkpoint &&
+                      $0.projection.sampleRate == sampleRate
               }) ?? true else {
             throw ProfessionalQualityCalibrationError.invalidMetricSet
         }
@@ -683,10 +730,12 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                 invalid.metric
             )
         }
-        schemaVersion = modalWindowSupport == nil ? Self.schemaVersion : 22
-        observationVersion = modalWindowSupport == nil ? Self.observationVersion :
-            ProfessionalQualityMeasurementContract.modalWindowObservationVersion
+        let scope: ProfessionalQualityMeasurementScope = continuousModalSource != nil
+            ? .continuousModalWindow : (modalWindowSupport != nil ? .barLocalModalWindow : .legacy)
+        schemaVersion = scope.observationSchema
+        observationVersion = scope.observationVersion
         self.modalWindowSupport = modalWindowSupport
+        self.continuousModalSource = continuousModalSource
         self.engineVersion = engineVersion
         self.evidenceVersion = evidenceVersion
         self.checkpoint = checkpoint
@@ -1242,14 +1291,56 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         )
     }
 
+    /// Continuous measurements are derived from the canonical original report,
+    /// never imported from decoded numeric summaries or another checkpoint.
+    package init(continuousReport report: CanonicalJourneyQualificationReport,
+                 successor: ProfessionalQualityModalSuccessorEvidence? = nil) throws {
+        let original = try Self(report: report)
+        let source = try ProfessionalQualityContinuousModalObservationSource(
+            report: report, successor: successor)
+        let projection = source.projection
+        var values = original.metrics.filter {
+            !ProfessionalQualityMeasurementContract.modalMetrics.contains($0.metric)
+        }
+        if projection.attackBodySupport.applicability == .measured,
+           let value = projection.attackToBodyDBMean {
+            values.append(.init(metric: .modalPercussionAttackToBodyDBMean, value: value))
+        }
+        if projection.tailBodySupport.applicability == .measured,
+           let value = projection.tailToBodyDBMean {
+            values.append(.init(metric: .modalPercussionTailToBodyDBMean, value: value))
+        }
+        try self.init(engineVersion: original.engineVersion, evidenceVersion: original.evidenceVersion,
+            checkpoint: original.checkpoint, sampleRate: original.sampleRate,
+            hardGatesPassed: original.hardGatesPassed, liveMaster: original.liveMaster,
+            metrics: values, modalWindowSupport: nil, continuousModalSource: source)
+    }
+
+    /// Stored continuous observations require the same typed source bindings.
+    /// Ordinary observation decoding remains rejected for every scope.
+    package static func decodeValidated(_ data: Data,
+        report: CanonicalJourneyQualificationReport,
+        successor: ProfessionalQualityModalSuccessorEvidence? = nil) throws -> Self {
+        guard data.count <= ProfessionalEvidenceReportBank.maximumEncodedBytes else {
+            throw ProfessionalEvidenceReportBankError.invalidBounds
+        }
+        let expected = try Self(continuousReport: report, successor: successor)
+        guard try expected.deterministicJSON() == data else {
+            throw ProfessionalEvidenceReportBankError.inconsistentIdentity
+        }
+        return expected
+    }
+
     package subscript(metric: ProfessionalQualityMetric) -> Double? {
         metrics.first { $0.metric == metric }?.value
     }
 
     package var isComplete: Bool {
-        schemaVersion == (modalWindowSupport == nil ? Self.schemaVersion : 22) &&
-            observationVersion == (modalWindowSupport == nil ? Self.observationVersion :
-                ProfessionalQualityMeasurementContract.modalWindowObservationVersion) &&
+        measurementScope != nil &&
+            (continuousModalSource.map {
+                $0.isComplete && $0.projection.checkpoint == checkpoint &&
+                    $0.projection.sampleRate == sampleRate
+            } ?? true) &&
             (modalWindowSupport.map {
                 $0.isComplete && $0.checkpoint == checkpoint && $0.sampleRate == sampleRate
             } ?? true) &&
@@ -1261,7 +1352,7 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             sampleRate >= QualityQualificationContract.minimumSupportedSampleRate &&
             sampleRate <= QualityQualificationContract.maximumSupportedSampleRate &&
             sourceMetricCount == metrics.count &&
-            Set(metrics.map(\.metric)) == Self.expectedMetrics(support: modalWindowSupport) &&
+            Set(metrics.map(\.metric)) == Self.expectedMetrics(support: modalWindowSupport, continuousSource: continuousModalSource) &&
             Set(metrics.map(\.metric)).count == metrics.count &&
             metrics == metrics.sorted { $0.metric.rawValue < $1.metric.rawValue } &&
             metrics.allSatisfy { $0.value.isFinite } && liveMaster.isComplete
@@ -1284,7 +1375,8 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
                     ? ProfessionalQualityMetricValue(metric: metric, value: value)
                     : $0
             },
-            modalWindowSupport: modalWindowSupport
+            modalWindowSupport: modalWindowSupport,
+            continuousModalSource: continuousModalSource
         )
     }
 
@@ -1299,7 +1391,8 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
             hardGatesPassed: hardGatesPassed,
             liveMaster: provenance,
             metrics: metrics,
-            modalWindowSupport: modalWindowSupport
+            modalWindowSupport: modalWindowSupport,
+            continuousModalSource: continuousModalSource
         )
     }
 
@@ -1314,12 +1407,12 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
     package func measurementApplicability(
         _ metric: ProfessionalQualityMetric
     ) -> ProfessionalQualityMeasurementApplicability {
-        if let support = modalWindowSupport {
+        if let support = modalSupports {
             if metric == .modalPercussionAttackToBodyDBMean {
-                return support.attackBodySupport.applicability
+                return support.attack.applicability
             }
             if metric == .modalPercussionTailToBodyDBMean {
-                return support.tailBodySupport.applicability
+                return support.tail.applicability
             }
         }
         guard let activityMetric = metric.measurementActivityMetric else { return .measured }
@@ -1327,14 +1420,17 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
     }
 
     private static func expectedMetrics(
-        support: ProfessionalQualityModalWindowEvidence?
+        support: ProfessionalQualityModalWindowEvidence?,
+        continuousSource: ProfessionalQualityContinuousModalObservationSource?
     ) -> Set<ProfessionalQualityMetric> {
         var metrics = Set(ProfessionalQualityMetric.allCases)
-        if let support {
-            if support.attackBodySupport.applicability != .measured {
+        let attack = continuousSource?.projection.attackBodySupport ?? support?.attackBodySupport
+        let tail = continuousSource?.projection.tailBodySupport ?? support?.tailBodySupport
+        if let attack, let tail {
+            if attack.applicability != .measured {
                 metrics.remove(.modalPercussionAttackToBodyDBMean)
             }
-            if support.tailBodySupport.applicability != .measured {
+            if tail.applicability != .measured {
                 metrics.remove(.modalPercussionTailToBodyDBMean)
             }
         }
@@ -1520,9 +1616,8 @@ package struct ProfessionalQualityCheckpointProfile: Codable, Equatable, Sendabl
 }
 
 package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendable {
-    package static let schemaVersion = 22
-    package static let profileVersion =
-        "autotechno-professional-quality-profile.v30"
+    package static let schemaVersion = ProfessionalQualityMeasurementScope.legacy.profileSchema
+    package static let profileVersion = ProfessionalQualityMeasurementScope.legacy.profileVersion
     package static let requiredSampleRates = [44_100.0, 48_000.0]
     package static let minimumCalibrationTrajectoryCount = 24
 
@@ -1536,6 +1631,11 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
     package let checkpoints: [ProfessionalQualityCheckpointProfile]
     package let trajectories: [ProfessionalQualityTrajectoryBounds]
     package let rateConsistency: [ProfessionalQualityRateConsistencyBounds]
+
+    package var measurementScope: ProfessionalQualityMeasurementScope? {
+        ProfessionalQualityMeasurementScope.profile(schema: schemaVersion,
+            version: profileVersion, observationVersion: observationVersion)
+    }
 
     package init(bank: ProfessionalEvidenceReportBank) throws {
         guard bank.evidenceVersion == ProfessionalEvidenceReportBank.evidenceVersion,
@@ -1561,9 +1661,24 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
     /// several complete canonical journeys while preserving journey identity
     /// for phrase-wide and rate-consistency relationships.
     package init(corpus: ProfessionalQualityCalibrationCorpus) throws {
+        try self.init(corpus: corpus, minimumTrajectoryCount: Self.minimumCalibrationTrajectoryCount)
+    }
+
+    /// Same reduced single-journey evidence seam as the legacy bank constructor,
+    /// using the existing corpus fitter for conditional continuous measurements.
+    /// One source can never satisfy diverse calibration or primary activation.
+    package init(continuousBank bank: ProfessionalEvidenceReportBank,
+                 successors: [ProfessionalQualityModalSuccessorEvidence] = []) throws {
+        let trajectory = try ProfessionalQualityCalibrationTrajectory(
+            continuousBank: bank, successors: successors)
+        let corpus = try ProfessionalQualityCalibrationCorpus(trajectories: [trajectory])
+        try self.init(corpus: corpus, minimumTrajectoryCount: 1)
+    }
+
+    private init(corpus: ProfessionalQualityCalibrationCorpus,
+                 minimumTrajectoryCount: Int) throws {
         guard corpus.isComplete,
-              corpus.sourceTrajectoryCount >=
-                Self.minimumCalibrationTrajectoryCount,
+              corpus.sourceTrajectoryCount >= minimumTrajectoryCount,
               corpus.sampleRates == Self.requiredSampleRates,
               !corpus.fingerprint.isEmpty else {
             throw ProfessionalQualityCalibrationError.invalidIdentity
@@ -1677,7 +1792,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 }
                 if deltas.isEmpty,
                    metric.measurementActivityMetric != nil ||
-                    (allObservations.first?.modalWindowSupport != nil &&
+                    (allObservations.first?.measurementScope?.requiresModalWindowSupport == true &&
                         ProfessionalQualityMeasurementContract.modalMetrics.contains(metric)) {
                     trajectoryBounds.append(try ProfessionalQualityTrajectoryBounds(
                         trajectory: trajectoryKind,
@@ -1759,9 +1874,11 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
             }
         }
 
-        let usesWindowSupport = corpus.observations.first?.modalWindowSupport != nil
-        schemaVersion = usesWindowSupport ? 23 : Self.schemaVersion
-        profileVersion = usesWindowSupport ? ProfessionalQualityMeasurementContract.modalWindowProfileVersion : Self.profileVersion
+        guard let scope = corpus.observations.first?.measurementScope else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        schemaVersion = scope.profileSchema
+        profileVersion = scope.profileVersion
         observationVersion = corpus.observations.first!.observationVersion
         evidenceVersion = corpus.evidenceVersion
         engineVersion = corpus.engineVersion
@@ -1894,9 +2011,11 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                 ))
             }
         }
-        let usesWindowSupport = observations.first?.modalWindowSupport != nil
-        schemaVersion = usesWindowSupport ? 23 : Self.schemaVersion
-        profileVersion = usesWindowSupport ? ProfessionalQualityMeasurementContract.modalWindowProfileVersion : Self.profileVersion
+        guard let scope = observations.first?.measurementScope else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        schemaVersion = scope.profileSchema
+        profileVersion = scope.profileVersion
         observationVersion = observations.first!.observationVersion
         self.evidenceVersion = evidenceVersion
         self.engineVersion = engineVersion
@@ -1910,11 +2029,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
     package var isComplete: Bool {
         let expectedObservationCount = sourceTrajectoryCount *
             Self.requiredSampleRates.count
-        return ((schemaVersion == Self.schemaVersion && profileVersion == Self.profileVersion &&
-                    observationVersion == ProfessionalQualityObservation.observationVersion) ||
-                (schemaVersion == 23 &&
-                    profileVersion == ProfessionalQualityMeasurementContract.modalWindowProfileVersion &&
-                    observationVersion == ProfessionalQualityMeasurementContract.modalWindowObservationVersion)) &&
+        return measurementScope != nil &&
             evidenceVersion == ProfessionalEvidenceReportBank.evidenceVersion &&
             !engineVersion.trimmingCharacters(
                 in: .whitespacesAndNewlines
@@ -1950,7 +2065,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
                     (0...expectedObservationCount).contains($0.sourceComparisonCount) &&
                     ($0.sourceComparisonCount > 0 ||
                         (($0.metric.measurementActivityMetric != nil ||
-                            (observationVersion == ProfessionalQualityMeasurementContract.modalWindowObservationVersion &&
+                            (measurementScope?.requiresModalWindowSupport == true &&
                                 ProfessionalQualityMeasurementContract.modalMetrics.contains($0.metric))) &&
                             $0.lowerDelta == 0 && $0.upperDelta == 0))
             } &&

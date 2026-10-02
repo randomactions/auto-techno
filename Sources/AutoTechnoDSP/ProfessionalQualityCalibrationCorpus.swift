@@ -13,6 +13,17 @@ package struct ProfessionalQualityCalibrationTrajectory: Codable, Equatable,
         sourceBankFingerprint: String,
         observations sourceObservations: [ProfessionalQualityObservation]
     ) throws {
+        // Reduced numeric/algebra construction cannot manufacture membership
+        // for observations that require an actual canonical source bank.
+        guard sourceObservations.allSatisfy({ $0.continuousModalSource == nil }) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        try self.init(validatedSourceBankFingerprint: sourceBankFingerprint,
+            observations: sourceObservations)
+    }
+
+    private init(validatedSourceBankFingerprint sourceBankFingerprint: String,
+                 observations sourceObservations: [ProfessionalQualityObservation]) throws {
         guard !sourceBankFingerprint.trimmingCharacters(
             in: .whitespacesAndNewlines
         ).isEmpty else {
@@ -36,6 +47,25 @@ package struct ProfessionalQualityCalibrationTrajectory: Codable, Equatable,
                     requiringModalWindowSupport: requiringModalWindowSupport)
             }
         )
+    }
+
+    package init(continuousBank bank: ProfessionalEvidenceReportBank,
+                 successors: [ProfessionalQualityModalSuccessorEvidence] = []) throws {
+        try self.init(validatedSourceBankFingerprint: Self.fingerprint(of: bank),
+            observations: bank.continuousModalObservations(successors: successors))
+    }
+
+    package static func decodeValidated(_ data: Data,
+        bank: ProfessionalEvidenceReportBank,
+        successors: [ProfessionalQualityModalSuccessorEvidence] = []) throws -> Self {
+        guard data.count <= ProfessionalEvidenceReportBank.maximumEncodedBytes else {
+            throw ProfessionalEvidenceReportBankError.invalidBounds
+        }
+        let expected = try Self(continuousBank: bank, successors: successors)
+        guard try AutonomousCandidateCanonicalJSON.data(expected) == data else {
+            throw ProfessionalEvidenceReportBankError.inconsistentIdentity
+        }
+        return expected
     }
 
     package var engineVersion: String {
@@ -145,6 +175,30 @@ package struct ProfessionalQualityCalibrationCorpus: Codable, Equatable,
             try ProfessionalQualityCalibrationTrajectory(bank: $0,
                 requiringModalWindowSupport: true)
         })
+    }
+
+    package init(continuousBanks banks: [ProfessionalEvidenceReportBank],
+                 successorsByBank: [[ProfessionalQualityModalSuccessorEvidence]]) throws {
+        guard !banks.isEmpty, banks.count <= Self.maximumTrajectoryCount,
+              banks.count == successorsByBank.count else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        try self.init(trajectories: zip(banks, successorsByBank).map { bank, successors in
+            try ProfessionalQualityCalibrationTrajectory(continuousBank: bank, successors: successors)
+        })
+    }
+
+    package static func decodeValidated(_ data: Data,
+        banks: [ProfessionalEvidenceReportBank],
+        successorsByBank: [[ProfessionalQualityModalSuccessorEvidence]]) throws -> Self {
+        guard data.count <= ProfessionalEvidenceReportBank.maximumEncodedBytes else {
+            throw ProfessionalEvidenceReportBankError.invalidBounds
+        }
+        let expected = try Self(continuousBanks: banks, successorsByBank: successorsByBank)
+        guard try expected.deterministicJSON() == data else {
+            throw ProfessionalEvidenceReportBankError.inconsistentIdentity
+        }
+        return expected
     }
 
     package init(

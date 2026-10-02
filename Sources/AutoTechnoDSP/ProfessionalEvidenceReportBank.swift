@@ -139,6 +139,28 @@ package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable,
     package func continuousModalWindowFeatureReports(
         successors: [ProfessionalQualityModalSuccessorEvidence] = []
     ) throws -> [ProfessionalQualityContinuousModalWindowEvidence] {
+        let receipts = try modalSuccessorBindings(successors)
+        return try reports.map { report in
+            try .init(report: report,
+                successor: receipts[ProfessionalQualityModalSuccessorEvidence.identity(report)])
+        }
+    }
+
+    /// Explicit continuous observations share the same receipt ownership and
+    /// bounds as the descriptive projection; neither grants policy authority.
+    package func continuousModalObservations(
+        successors: [ProfessionalQualityModalSuccessorEvidence] = []
+    ) throws -> [ProfessionalQualityObservation] {
+        let receipts = try modalSuccessorBindings(successors)
+        return try reports.map { report in
+            try .init(continuousReport: report,
+                successor: receipts[ProfessionalQualityModalSuccessorEvidence.identity(report)])
+        }
+    }
+
+    private func modalSuccessorBindings(
+        _ successors: [ProfessionalQualityModalSuccessorEvidence]
+    ) throws -> [String: ProfessionalQualityModalSuccessorEvidence] {
         guard successors.count <= Self.maximumReports else {
             throw ProfessionalEvidenceReportBankError.invalidBounds
         }
@@ -153,10 +175,7 @@ package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable,
         let receipts = Dictionary(uniqueKeysWithValues: successors.map {
             ($0.sourceIdentityFingerprint, $0)
         })
-        return try reports.map { report in
-            try .init(report: report,
-                successor: receipts[ProfessionalQualityModalSuccessorEvidence.identity(report)])
-        }
+        return receipts
     }
 
     package func windowSupportedObservations() throws -> [ProfessionalQualityObservation] {
