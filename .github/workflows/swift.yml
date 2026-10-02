@@ -131,6 +131,7 @@ jobs:
           python3 -m unittest scripts/test_controlled_listening_protocol.py
           python3 -m unittest scripts/test_baseline_lifecycle_policy.py
           python3 -m unittest scripts/test_deficit_register.py
+          python3 -m unittest scripts/test_performance_envelope_report.py
           python3 -m unittest scripts/test_roadmap_integrity.py
           python3 -m unittest scripts/test_source_citation_records.py
           python3 -m unittest scripts/test_negative_result_records.py
