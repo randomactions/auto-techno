@@ -1304,11 +1304,13 @@ struct ProfessionalQualityCalibrationTests {
         #expect(activeEventCount > 0)
         #expect(observation[.upperSpectralRevealActiveEventRatio] ==
                 Double(activeEventCount) / Double(eligibleEventCount))
+        let cutoffRatios: [Double] = activeReveal.map {
+            $0.maximumAppliedCutoffHz / candidate.routeContinuation.sampleRate
+        }
+        let expectedCutoffRatioMean: Double =
+            cutoffRatios.reduce(0, +) / Double(activeReveal.count)
         #expect(observation[.upperSpectralRevealAppliedCutoffRatioMean] ==
-                activeReveal.map {
-                    $0.maximumAppliedCutoffHz /
-                        candidate.routeContinuation.sampleRate
-                }.reduce(0, +) / Double(activeReveal.count))
+                expectedCutoffRatioMean)
     }
 
     @Test("Spectral reveal ratio follows varied eligible event populations")
