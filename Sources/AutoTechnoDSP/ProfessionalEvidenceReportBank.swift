@@ -136,10 +136,27 @@ package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable,
     /// Same-pass event observations continue under the sole renderer owner.
     /// This descriptive geometry/body audit does not replace v21/v22 metrics,
     /// fit a profile or activate a policy.
-    package func continuousModalWindowFeatureReports() throws ->
-        [ProfessionalQualityContinuousModalWindowEvidence] {
-        try reports.map { try .init(candidate: $0.selectedCandidateEvidence,
-            checkpoint: $0.checkpoint, sourceReportFingerprint: $0.evidenceFingerprint) }
+    package func continuousModalWindowFeatureReports(
+        successors: [ProfessionalQualityModalSuccessorEvidence] = []
+    ) throws -> [ProfessionalQualityContinuousModalWindowEvidence] {
+        guard successors.count <= Self.maximumReports else {
+            throw ProfessionalEvidenceReportBankError.invalidBounds
+        }
+        let identities = Set(successors.map(\.sourceIdentityFingerprint))
+        guard identities.count == successors.count else {
+            throw ProfessionalEvidenceReportBankError.duplicateReport
+        }
+        let sourceIdentities = Set(reports.map(ProfessionalQualityModalSuccessorEvidence.identity))
+        guard identities.isSubset(of: sourceIdentities) else {
+            throw ProfessionalEvidenceReportBankError.inconsistentIdentity
+        }
+        let receipts = Dictionary(uniqueKeysWithValues: successors.map {
+            ($0.sourceIdentityFingerprint, $0)
+        })
+        return try reports.map { report in
+            try .init(report: report,
+                successor: receipts[ProfessionalQualityModalSuccessorEvidence.identity(report)])
+        }
     }
 
     package func windowSupportedObservations() throws -> [ProfessionalQualityObservation] {

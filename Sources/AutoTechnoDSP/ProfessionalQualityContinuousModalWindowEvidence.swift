@@ -9,42 +9,49 @@ package struct ProfessionalQualityContinuousModalWindowEvidence: Codable, Equata
     package let sampleRate: Double
     package let sourceReportFingerprint: String
     package let sourceEventCount: Int
+    package let successorEvidenceFingerprint: String?
     package let attackBodySupport: ProfessionalQualityModalRatioSupport
     package let tailBodySupport: ProfessionalQualityModalRatioSupport
     package let attackToBodyDBMean: Double?
     package let tailToBodyDBMean: Double?
 
+    package init(report: CanonicalJourneyQualificationReport,
+                 successor: ProfessionalQualityModalSuccessorEvidence? = nil) throws {
+        guard report.evidenceScope == CanonicalJourneyQualificationReport.currentEvidenceScope,
+              successor.map({ $0.matches(report) }) ?? true else {
+            throw ProfessionalEvidenceReportBankError.inconsistentIdentity
+        }
+        try self.init(candidate: report.selectedCandidateEvidence, checkpoint: report.checkpoint,
+            sourceReportFingerprint: report.evidenceFingerprint,
+            successorBar: successor?.firstBar, successorFingerprint: successor?.fingerprint)
+    }
+
     package init(candidate: AutonomousCandidateEvaluationVector,
                  checkpoint: CanonicalJourneyCheckpoint,
                  sourceReportFingerprint: String) throws {
+        try self.init(candidate: candidate, checkpoint: checkpoint,
+            sourceReportFingerprint: sourceReportFingerprint, successorBar: nil, successorFingerprint: nil)
+    }
+
+    private init(candidate: AutonomousCandidateEvaluationVector,
+                 checkpoint: CanonicalJourneyCheckpoint,
+                 sourceReportFingerprint: String,
+                 successorBar: ModalPercussionContinuousBarEvidence?,
+                 successorFingerprint: String?) throws {
         guard candidate.isComplete, candidate.isFinite, !sourceReportFingerprint.isEmpty else {
             throw ProfessionalEvidenceReportBankError.incompleteEvidence
         }
         let rate = candidate.routeContinuation.sampleRate
-        var latest: [String: ModalPercussionContinuousEventEvidence] = [:]
-        var previous: ModalPercussionContinuousBarEvidence?
-        for bar in candidate.modalPercussion {
+        let bars = try candidate.modalPercussion.map { bar in
             guard let continuity = bar.continuousWindows,
-                  continuity.isValid, continuity.bar == bar.bar,
-                  continuity.sampleRate == rate, continuity.droppedRecordCount == 0,
-                  previous.map({ $0.outgoingStateFingerprint == continuity.incomingStateFingerprint }) ?? true else {
+                  continuity.bar == bar.bar, continuity.sampleRate == rate else {
                 throw ProfessionalEvidenceReportBankError.incompleteEvidence
             }
-            for record in continuity.completed + continuity.pending {
-                if let old = latest[record.identity] {
-                    guard old.status == .pending,
-                          record.observedFrameCount >= old.observedFrameCount,
-                          record.lastObservedBar >= old.lastObservedBar,
-                          record.startFrame == old.startFrame,
-                          record.originFrameCount == old.originFrameCount,
-                          record.sampleRate == old.sampleRate else {
-                        throw ProfessionalEvidenceReportBankError.incompleteEvidence
-                    }
-                }
-                latest[record.identity] = record
-            }
-            previous = continuity
+            return continuity
         }
+        var ledger = try ModalPercussionObservationLedger(bars: bars)
+        if let successorBar { try ledger.append(successorBar) }
+        let latest = ledger.records
         var attacks = ProfessionalQualityModalRatioAccumulator()
         var tails = ProfessionalQualityModalRatioAccumulator()
         var count = 0
@@ -77,9 +84,10 @@ package struct ProfessionalQualityContinuousModalWindowEvidence: Codable, Equata
         guard Set(latest.values.filter { currentBars.contains($0.originBar) }.map(\.identity)) == expected else {
             throw ProfessionalEvidenceReportBankError.incompleteEvidence
         }
-        schemaVersion = 1
+        schemaVersion = successorFingerprint == nil ? 1 : 2
         self.checkpoint = checkpoint; sampleRate = rate
         self.sourceReportFingerprint = sourceReportFingerprint; sourceEventCount = count
+        successorEvidenceFingerprint = successorFingerprint
         attackBodySupport = attacks.support
         tailBodySupport = tails.support
         attackToBodyDBMean = attacks.mean
@@ -87,7 +95,9 @@ package struct ProfessionalQualityContinuousModalWindowEvidence: Codable, Equata
     }
 
     package var isComplete: Bool {
-        schemaVersion == 1 && !sourceReportFingerprint.isEmpty &&
+        ((schemaVersion == 1 && successorEvidenceFingerprint == nil) ||
+         (schemaVersion == 2 && successorEvidenceFingerprint?.isEmpty == false)) &&
+            !sourceReportFingerprint.isEmpty &&
             sampleRate.isFinite &&
             (QualityQualificationContract.minimumSupportedSampleRate...QualityQualificationContract.maximumSupportedSampleRate).contains(sampleRate) &&
             sourceEventCount == attackBodySupport.sourceEventCount &&

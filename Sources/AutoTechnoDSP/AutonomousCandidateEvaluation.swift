@@ -5872,6 +5872,8 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
     package let routeGeneration: Int
     package let routeFingerprint: String
     package let incomingContinuationFingerprint: String
+    /// Exact caller-owned render/DSP input before any candidate correction.
+    package let incomingRenderDSPFingerprint: String?
     package let incomingQualityStateFingerprint: String
     package let incomingKickCorrectionDB: Double
     package let incomingTopologyRevision: Int
@@ -5889,6 +5891,7 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
         routeGeneration: Int,
         routeFingerprint: String,
         incomingContinuationFingerprint: String,
+        incomingRenderDSPFingerprint: String? = nil,
         incomingQualityStateFingerprint: String,
         incomingKickCorrectionDB: Double,
         incomingTopologyRevision: Int,
@@ -5902,6 +5905,7 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
         self.routeGeneration = routeGeneration
         self.routeFingerprint = routeFingerprint
         self.incomingContinuationFingerprint = incomingContinuationFingerprint
+        self.incomingRenderDSPFingerprint = incomingRenderDSPFingerprint
         self.incomingQualityStateFingerprint = incomingQualityStateFingerprint
         self.incomingKickCorrectionDB = incomingKickCorrectionDB
         self.incomingTopologyRevision = incomingTopologyRevision
@@ -5922,6 +5926,11 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
             routeGeneration >= 0 &&
             !routeFingerprint.isEmpty &&
             !incomingContinuationFingerprint.isEmpty &&
+            (incomingRenderDSPFingerprint.map { fingerprint in
+                fingerprint.count == 16 && fingerprint.utf8.allSatisfy { byte in
+                    (48...57).contains(byte) || (97...102).contains(byte)
+                }
+            } ?? true) &&
             !incomingQualityStateFingerprint.isEmpty &&
             (AutomaticMixBalancer.minimumKickCorrectionDB...0).contains(
                 incomingKickCorrectionDB
@@ -6981,6 +6990,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         routeGeneration: Int,
         routeFingerprint: String,
         incomingContinuationFingerprint: String,
+        incomingRenderDSPFingerprint: String? = nil,
         incomingQualityStateFingerprint: String,
         incomingKickCorrectionDB: Double,
         incomingTopologyRevision: Int,
@@ -7041,6 +7051,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             routeGeneration: routeGeneration,
             routeFingerprint: routeFingerprint,
             incomingContinuationFingerprint: incomingContinuationFingerprint,
+            incomingRenderDSPFingerprint: incomingRenderDSPFingerprint,
             incomingQualityStateFingerprint: incomingQualityStateFingerprint,
             incomingKickCorrectionDB: incomingKickCorrectionDB,
             incomingTopologyRevision: incomingTopologyRevision,
@@ -7074,6 +7085,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         routeGeneration: Int,
         routeFingerprint: String,
         incomingContinuationFingerprint: String,
+        incomingRenderDSPFingerprint: String? = nil,
         incomingQualityStateFingerprint: String,
         incomingKickCorrectionDB: Double,
         incomingTopologyRevision: Int,
@@ -7507,6 +7519,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             routeGeneration: routeGeneration,
             routeFingerprint: routeFingerprint,
             incomingContinuationFingerprint: incomingContinuationFingerprint,
+            incomingRenderDSPFingerprint: incomingRenderDSPFingerprint,
             incomingQualityStateFingerprint: incomingQualityStateFingerprint,
             incomingKickCorrectionDB: incomingKickCorrectionDB,
             incomingTopologyRevision: incomingTopologyRevision,
@@ -10601,6 +10614,7 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
             left.routeFingerprint == right.routeFingerprint &&
             left.incomingContinuationFingerprint ==
                 right.incomingContinuationFingerprint &&
+            left.incomingRenderDSPFingerprint == right.incomingRenderDSPFingerprint &&
             left.incomingQualityStateFingerprint ==
                 right.incomingQualityStateFingerprint &&
             left.incomingKickCorrectionDB == right.incomingKickCorrectionDB &&
@@ -11117,7 +11131,8 @@ package enum AutonomousCandidateFingerprint {
     }
 }
 
-private enum AutonomousCandidateCanonicalJSON {
+/// Shared canonical evidence encoding and identity; no PCM or policy work.
+enum AutonomousCandidateCanonicalJSON {
     static func data<T: Encodable>(_ value: T) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]

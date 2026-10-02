@@ -233,6 +233,19 @@ mistaken for a completed feedback system.
    observation foundation changes neither PCM nor a future musical decision,
    adds no callback operation, and does not qualify or activate replacement
    calibration. Missing additive records make its diagnostic unavailable.
+   A bounded descriptive successor receipt now binds the original report to the
+   first actually rendered bar of its immutable immediate prepared successor,
+   including ordinary phrases without a calibration checkpoint. Preparation
+   records the exact incoming render/DSP fingerprint before any correction;
+   receipt validation requires matching outgoing/incoming render, quality,
+   previous graph, live-master, route and modal measurement state. The shared
+   observation ledger rejects dropped, retargeted, regressing or interrupted
+   records. Report-bank projection retains original score-event order and at
+   most one successor bar per report; duplicate or unowned receipts fail closed.
+   Full canonical original-report identity also binds checkpoint and fixture
+   labels; successor identity binds its selected transaction and atomic commit.
+   Missing historical incoming identity keeps this join unavailable. Neither
+   the receipt nor its projection changes PCM, policy, or callback work.
    Short-program EBU-style loudness range is retained descriptively rather than
    treated as a gate-discontinuous policy dimension; integrated, momentary,
    short-term, true-peak, and the other stable metrics remain evaluative.

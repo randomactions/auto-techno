@@ -30,6 +30,10 @@ struct ModalPercussionDSPTests {
                             let closing = ModalPercussionVoice.renderBar(into: &second, bar: 1,
                                 sampleRate: rate, events: [], state: &state)
                             let measured = try #require(closing.continuousWindows.completed.first)
+                            var ledger = try ModalPercussionObservationLedger(bars: [opening.continuousWindows])
+                            try ledger.append(closing.continuousWindows)
+                            #expect(ledger.records[measured.identity] == measured)
+                            #expect(ledger.records.count == 1)
                             #expect(measured.isValid && measured.status == .complete)
                             #expect(closing.continuousWindows.pending.isEmpty)
                             #expect(opening.continuousWindows.outgoingStateFingerprint ==

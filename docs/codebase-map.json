@@ -612,7 +612,7 @@
     {
       "id": "evidence-calibration-and-primary-evaluation",
       "name": "Evidence, calibration, and primary evaluation",
-      "responsibility": "Construct complete candidate evidence, stream bounded perceptual analysis, validate exact artifacts and offline tolerance-aware PCM, signal, spectral, stereo-compatibility, collision, transient/envelope, rhythmic, and score-declared section-boundary reports, run the single calibrated primary evaluator with explicit relationship coverage and candidate-level calibration support/confidence-estimate status, and bind atomic commit provenance; deterministic synthetic signal fixtures used by analyzer evidence tests. Apply pad-rhythmic filter, amplitude-gate, and spatial-consequence means only when validated score evidence shows the three-step-pulse relation active, treating an absent relation as unavailable rather than a zero consequence; require that relation in the corresponding major-break adversarial baseline. Record per-trajectory conditional comparison support in the calibration profile; preserve absent measurements without fitting numeric zeros, and report applicable unsupported relationships as unavailable while retaining independent failures. Derive versioned descriptive per-bar kick/foundation and bar/role-pair/band masking feature reports from complete source reports without changing calibrated verdicts. Bound complete calibration corpora to 48 trajectories; select and freeze separate score-only four-bar major-break development and holdout windows in the existing test harness, and require exact frozen candidate geometry for fresh and cached report banks before any refit or promotion. Share versioned modal window applicability across extraction, calibration fitting, local verdicts and trajectory/rate assessment; preserve required unavailable dimensions and independent numeric failures. Keep the v22 observation/v31 profile foundation unavailable for production activation while the installed v21/v30 path remains unchanged.",
+      "responsibility": "Construct complete candidate evidence, stream bounded perceptual analysis, validate exact artifacts and offline tolerance-aware PCM, signal, spectral, stereo-compatibility, collision, transient/envelope, rhythmic, and score-declared section-boundary reports, run the single calibrated primary evaluator with explicit relationship coverage and candidate-level calibration support/confidence-estimate status, and bind atomic commit provenance; deterministic synthetic signal fixtures used by analyzer evidence tests. Apply pad-rhythmic filter, amplitude-gate, and spatial-consequence means only when validated score evidence shows the three-step-pulse relation active, treating an absent relation as unavailable rather than a zero consequence; require that relation in the corresponding major-break adversarial baseline. Record per-trajectory conditional comparison support in the calibration profile; preserve absent measurements without fitting numeric zeros, and report applicable unsupported relationships as unavailable while retaining independent failures. Derive versioned descriptive per-bar kick/foundation and bar/role-pair/band masking feature reports from complete source reports without changing calibrated verdicts. Bound complete calibration corpora to 48 trajectories; select and freeze separate score-only four-bar major-break development and holdout windows in the existing test harness, and require exact frozen candidate geometry for fresh and cached report banks before any refit or promotion. Share versioned modal window applicability across extraction, calibration fitting, local verdicts and trajectory/rate assessment; preserve required unavailable dimensions and independent numeric failures. Keep the v22 observation/v31 profile foundation unavailable for production activation while the installed v21/v30 path remains unchanged. Join descriptive original modal windows only to the actual immediate successor through bounded report-bound receipts, exact incoming render/DSP, quality, graph, live-master, route and measurement continuation; do not transfer successor score ownership or activate policy.",
       "targets": [
         "AutoTechnoDSP"
       ],
@@ -656,6 +656,14 @@
         {
           "symbol": "ProfessionalQualityContinuousModalWindowEvidence",
           "path": "Sources/AutoTechnoDSP/ProfessionalQualityContinuousModalWindowEvidence.swift"
+        },
+        {
+          "symbol": "ModalPercussionObservationLedger",
+          "path": "Sources/AutoTechnoDSP/ModalPercussionObservationLedger.swift"
+        },
+        {
+          "symbol": "ProfessionalQualityModalSuccessorEvidence",
+          "path": "Sources/AutoTechnoDSP/ProfessionalQualityModalSuccessorEvidence.swift"
         }
       ],
       "state": [
@@ -669,12 +677,14 @@
         "descriptive bar-, role-pair-, and frequency-band-local masking evidence",
         "local frozen calibration-window root, score, accepted-input, and original-cohort provenance",
         "version-bound modal window coverage counts and required measurement availability",
-        "fresh outcome-blind 40/6 score coverage cohort with complete checkpoint identities and inherited four-bar quotas"
+        "fresh outcome-blind 40/6 score coverage cohort with complete checkpoint identities and inherited four-bar quotas",
+        "ephemeral bounded original-event ledger and validated immediate-successor receipts; no persistent policy state"
       ],
       "inputs": [
         "planned structure",
         "rendered blocks and stems",
-        "route-local evaluator artifacts"
+        "route-local evaluator artifacts",
+        "canonical original report and immutable actual prepared successor with incoming render/DSP continuation identity"
       ],
       "outputs": [
         "candidate vector",
@@ -682,7 +692,8 @@
         "prepared commit provenance",
         "relationship availability, scope, support, and reason-coded failures",
         "candidate assessment with availability, support, and confidence-estimate status",
-        "local descriptive feature reports"
+        "local descriptive feature reports",
+        "report-bound descriptive cross-phrase modal ratios without retargeted score ownership"
       ],
       "evidence": [
         "BS.1770 and true-peak evidence",
@@ -701,7 +712,8 @@
         "report-only modal window eligibility, excluded-event counts, and nullable measured ratios; installed calibration unchanged",
         "schema2 modal ratio support: missing, partial, undefined body and measured event counts; omitted unavailable values, shared fit refusal and relationship availability",
         "preregistered modal material/morphology/bar-phase fixture matrix and score-only predicted window geometry; incomplete events retained, no positive-body or quality qualification",
-        "additive descriptive continuous modal window projection binds original score/route and successor measurement chain; shared ratio support owner, no replacement policy activation"
+        "additive descriptive continuous modal window projection binds original score/route and successor measurement chain; shared ratio support owner, no replacement policy activation",
+        "fixed-rate actual-successor joins, report-retarget and canonical-byte rejection, missing/extra/frame/route/state integrity controls, and duplicate/unowned receipt rejection"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AudioQualityReport.swift",
@@ -736,7 +748,9 @@
         "Sources/AutoTechnoDSP/SpectrumMaskingAnalyzer.swift",
         "Sources/AutoTechnoDSP/StreamingPerceptualEvidence.swift",
         "Sources/AutoTechnoDSP/UpperTimbreEvidence.swift",
-        "Sources/AutoTechnoDSP/ProfessionalQualityContinuousModalWindowEvidence.swift"
+        "Sources/AutoTechnoDSP/ProfessionalQualityContinuousModalWindowEvidence.swift",
+        "Sources/AutoTechnoDSP/ModalPercussionObservationLedger.swift",
+        "Sources/AutoTechnoDSP/ProfessionalQualityModalSuccessorEvidence.swift"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/AutonomousCandidateEvaluationTests.swift",
@@ -767,7 +781,8 @@
         "Tests/AutoTechnoCoreTests/StereoCompatibilityBaselineIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/StreamingPerceptualEvidenceTests.swift",
         "Tests/AutoTechnoCoreTests/TransientEnvelopeBaselineIntegrationTests.swift",
-        "Tests/AutoTechnoCoreTests/UpperTimbreIntegrationTests.swift"
+        "Tests/AutoTechnoCoreTests/UpperTimbreIntegrationTests.swift",
+        "Tests/AutoTechnoCoreTests/ModalSuccessorReportJoinTests.swift"
       ],
       "contracts": [
         "docs/SOUND_QUALITY.md",

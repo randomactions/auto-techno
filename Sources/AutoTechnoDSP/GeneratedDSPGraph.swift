@@ -1376,6 +1376,7 @@ package enum AutonomousPhrasePreparer {
         let planFingerprint: String
         let routeFingerprint: String
         let incomingContinuationFingerprint: String
+        let incomingRenderDSPFingerprint: String
         let incomingQualityStateFingerprint: String
         let incomingLiveMasterState: LiveMasterHeadroomContinuationState
         let outgoingLiveMasterState: LiveMasterHeadroomContinuationState
@@ -1399,6 +1400,7 @@ package enum AutonomousPhrasePreparer {
             planFingerprint: String,
             routeFingerprint: String,
             incomingContinuationFingerprint: String,
+            incomingRenderDSPFingerprint: String,
             incomingQualityStateFingerprint: String,
             incomingLiveMasterState: LiveMasterHeadroomContinuationState,
             outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
@@ -1421,6 +1423,7 @@ package enum AutonomousPhrasePreparer {
             self.planFingerprint = planFingerprint
             self.routeFingerprint = routeFingerprint
             self.incomingContinuationFingerprint = incomingContinuationFingerprint
+            self.incomingRenderDSPFingerprint = incomingRenderDSPFingerprint
             self.incomingQualityStateFingerprint = incomingQualityStateFingerprint
             self.incomingLiveMasterState = incomingLiveMasterState
             self.outgoingLiveMasterState = outgoingLiveMasterState
@@ -1665,7 +1668,10 @@ package enum AutonomousPhrasePreparer {
                 previousGraphFingerprint: previousGraphFingerprint,
                 routeRecovery: routeRecovery,
                 cancellationRequested: cancellationRequested
-            )?.combined else {
+            )?.combined,
+            let incomingRenderDSPFingerprint = AutonomousCandidateFingerprint.renderDSPContinuation(
+                renderState: incomingRenderState, generatedDSPState: incomingGraphState,
+                cancellationRequested: cancellationRequested) else {
             return .failed(.init(
                 stage: .continuation,
                 code: cancellationRequested()
@@ -1693,6 +1699,7 @@ package enum AutonomousPhrasePreparer {
             planFingerprint: planFingerprint,
             routeFingerprint: routeFingerprint,
             incomingContinuationFingerprint: incomingContinuationFingerprint,
+            incomingRenderDSPFingerprint: incomingRenderDSPFingerprint,
             incomingQualityStateFingerprint: incomingQualityStateFingerprint,
             incomingLiveMasterState: liveBinding.incoming,
             outgoingLiveMasterState: liveBinding.outgoing,
@@ -1736,6 +1743,7 @@ package enum AutonomousPhrasePreparer {
                 routeFingerprint: renderContext.routeFingerprint,
                 incomingContinuationFingerprint:
                     renderContext.incomingContinuationFingerprint,
+                incomingRenderDSPFingerprint: renderContext.incomingRenderDSPFingerprint,
                 incomingQualityStateFingerprint:
                     renderContext.incomingQualityStateFingerprint,
                 incomingLiveMasterState:
@@ -2572,6 +2580,7 @@ package enum AutonomousPhrasePreparer {
         planFingerprint: String,
         routeFingerprint: String,
         incomingContinuationFingerprint: String,
+        incomingRenderDSPFingerprint: String,
         incomingQualityStateFingerprint: String,
         incomingLiveMasterState: LiveMasterHeadroomContinuationState,
         outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
@@ -2695,6 +2704,7 @@ package enum AutonomousPhrasePreparer {
             routeGeneration: routeGeneration,
             routeFingerprint: routeFingerprint,
             incomingContinuationFingerprint: incomingContinuationFingerprint,
+            incomingRenderDSPFingerprint: incomingRenderDSPFingerprint,
             incomingQualityStateFingerprint: incomingQualityStateFingerprint,
             incomingKickCorrectionDB: incomingKickCorrectionDB,
             incomingTopologyRevision: incomingTopologyRevision,
