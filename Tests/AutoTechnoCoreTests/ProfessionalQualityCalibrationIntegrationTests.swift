@@ -142,6 +142,307 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         return result
     }
 
+    @Test("Continuous execution closes the actual final successor and separates frozen planning continuation")
+    func continuousJourneyExecutionControl() throws {
+        let seed: UInt64 = 48_300
+        let harness = CanonicalJourneyQualificationHarness(
+            engineVersion: QualityQualificationContract.engineVersion,
+            routeFingerprint: "score-only-coverage-selection", routeGeneration: 0)
+        let planned = try #require(harness.planCheckpoints(
+            director: AutonomousSessionDirector(rootSeed: seed)).first)
+        let execution = try executeJourney(seed: seed, sampleRate: 8_000,
+            maximumPhrases: planned.phraseIndex + 2, frozenCheckpoints: [planned],
+            requiresActualSuccessors: true)
+        let report = try #require(execution.reports.first)
+        let receipt = try #require(execution.successors.first)
+        #expect(execution.reports.count == 1)
+        #expect(execution.successors.count == 1)
+        #expect(execution.renderedPhraseCount == planned.phraseIndex + 2)
+        #expect(report.selectedCandidateEvidence.planFingerprint == planned.planFingerprint)
+        #expect(report.fixtureFingerprint == planned.fixtureFingerprint)
+        #expect(report.incomingState.revision == planned.phraseIndex)
+        #expect(report.outgoingState.revision == report.incomingState.revision + 1)
+        #expect(planned.qualityRevision == 0)
+        #expect(planned.continuationFingerprint.hasSuffix("quality-r0"))
+        #expect(receipt.sourceOutgoingRenderDSPFingerprint == report.commitProvenance.outgoingRenderDSPFingerprint)
+        #expect(receipt.successorIncomingQualityFingerprint == report.commitProvenance.outgoingQualityStateFingerprint)
+        let observation = try ProfessionalQualityObservation(continuousReport: report, successor: receipt)
+        #expect(observation.measurementScope == .continuousModalWindow)
+        #expect(observation.continuousModalSource != nil)
+        // A reduced one-checkpoint control cannot manufacture a native-rate
+        // complete calibration trajectory or independent population evidence.
+        #expect(throws: ProfessionalEvidenceReportBankError.incompleteJourneyCoverage) {
+            try ProfessionalEvidenceReportBank(reports: execution.reports)
+        }
+    }
+
+    @Test("Continuous execution retains intervening acceptance and exact legacy original-report evidence")
+    func continuousJourneyExecutionLegacyPrefixEquality() throws {
+        let seed: UInt64 = 48_300
+        let harness = CanonicalJourneyQualificationHarness(
+            engineVersion: QualityQualificationContract.engineVersion,
+            routeFingerprint: "score-only-coverage-selection", routeGeneration: 0)
+        let planned = try #require(harness.planCheckpoints(
+            director: AutonomousSessionDirector(rootSeed: seed)).first { $0.phraseIndex > 0 })
+        let continuous = try executeJourney(seed: seed, sampleRate: 8_000,
+            maximumPhrases: planned.phraseIndex + 2, frozenCheckpoints: [planned],
+            requiresActualSuccessors: true)
+        let legacy = try executeJourney(seed: seed, sampleRate: 8_000,
+            maximumPhrases: planned.phraseIndex + 1, frozenCheckpoints: [planned])
+        let report = try #require(continuous.reports.first)
+        #expect(continuous.reports == legacy.reports)
+        #expect(continuous.renderedPhraseCount == legacy.renderedPhraseCount + 1)
+        #expect(legacy.successors.isEmpty)
+        #expect(continuous.successors.count == 1)
+        #expect(report.incomingState.revision == planned.phraseIndex)
+        #expect(report.incomingState.revision > planned.qualityRevision)
+        #expect(report.continuationFingerprint != planned.continuationFingerprint)
+        #expect(report.fixtureFingerprint == planned.fixtureFingerprint)
+        #expect(report.selectedCandidateEvidence.planFingerprint == planned.planFingerprint)
+        #expect(planned.qualityRevision == 0)
+    }
+
+    @Test("Continuous execution rejects changed frozen planning identity and insufficient successor bounds before rendering")
+    func continuousJourneyExecutionRejectsPlanningMutation() throws {
+        let seed: UInt64 = 48_300
+        let harness = CanonicalJourneyQualificationHarness(
+            engineVersion: QualityQualificationContract.engineVersion,
+            routeFingerprint: "score-only-coverage-selection", routeGeneration: 0)
+        let planned = try #require(harness.planCheckpoints(
+            director: AutonomousSessionDirector(rootSeed: seed)).first)
+        let changed = CanonicalJourneyPlanCheckpoint(checkpoint: planned.checkpoint,
+            phraseIndex: planned.phraseIndex, startBar: planned.startBar,
+            phraseKind: planned.phraseKind, qualityRevision: 1,
+            resolvedBarCount: planned.resolvedBarCount, planFingerprint: planned.planFingerprint,
+            fixtureFingerprint: planned.fixtureFingerprint,
+            continuationFingerprint: planned.continuationFingerprint)
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try executeJourney(seed: seed, sampleRate: 8_000,
+                maximumPhrases: planned.phraseIndex + 2, frozenCheckpoints: [changed],
+                requiresActualSuccessors: true)
+        }
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try executeJourney(seed: seed, sampleRate: 8_000,
+                maximumPhrases: planned.phraseIndex + 1, frozenCheckpoints: [planned],
+                requiresActualSuccessors: true)
+        }
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try executeJourney(seed: seed, sampleRate: 8_000,
+                frozenCheckpoints: [planned, planned], requiresActualSuccessors: true)
+        }
+    }
+
+    private struct FrozenCoverageCohort: Decodable {
+        let schema: String
+        let engineVersion: String
+        let gitHead: String
+        let acceptedInputObjects: [String]
+        let maximumPhrases: Int
+        let sampleRates: [Double]
+        let development: [CanonicalCalibrationCoverageFixture]
+        let holdout: [CanonicalCalibrationCoverageFixture]
+    }
+
+    /// Authenticate the unchanged score-only cohort before the first new-root
+    /// preparation. Its historical input objects and quality-r0 identities
+    /// remain untouched; current execution gets a separate accepted binding.
+    private func validatedFreshCoverageCohort() throws -> (FrozenCoverageCohort, [String: Any]) {
+        let relative = "docs/local/reports/AT-0039-fresh-modal-coverage-cohort-v1/cohort.json"
+        guard try git(["hash-object", relative]) == "da849a3ae636316afbbea231570d7c809de35d95"
+        else { throw ProfessionalQualityCalibrationError.invalidIdentity }
+        let data = try Data(contentsOf: repositoryRoot.appendingPathComponent(relative))
+        guard data.count <= 8 * 1_024 * 1_024 else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let frozen = try JSONDecoder().decode(FrozenCoverageCohort.self, from: data)
+        let original = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let expected = try freshCoverageFixtures()
+        guard frozen.schema == "autotechno-frozen-calibration-coverage-cohort.v1",
+              frozen.engineVersion == QualityQualificationContract.engineVersion,
+              frozen.maximumPhrases == 128,
+              frozen.sampleRates == ProfessionalQualityCalibrationProfile.requiredSampleRates,
+              frozen.development == expected.development, frozen.holdout == expected.holdout,
+              frozen.acceptedInputObjects.count == 6 else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        // Replay all original checkpoint recipes and complete modal geometry,
+        // without rendering musical PCM or relabelling historical context.
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        var timingCache: [String: [[String: Any]]] = [:]
+        for (name, fixtures) in [("development", frozen.development), ("holdout", frozen.holdout)] {
+            let originalEntries = try #require(original[name] as? [[String: Any]])
+            guard originalEntries.count == fixtures.count else {
+                throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
+            }
+            for (fixture, originalEntry) in zip(fixtures, originalEntries) {
+                var replay = try #require(JSONSerialization.jsonObject(with: encoder.encode(fixture)) as? [String: Any])
+                replay["modalScoreGeometry"] = try modalScoreGeometry(fixture: fixture, timingCache: &timingCache)
+                guard try canonicalCacheJSON(replay) == canonicalCacheJSON(originalEntry),
+                      fixture.checkpoints.count == CanonicalJourneyCheckpoint.allCases.count,
+                      fixture.checkpoints.allSatisfy({ $0.phraseIndex < frozen.maximumPhrases - 1 }) else {
+                    throw ProfessionalQualityCalibrationError.profileMismatch
+                }
+            }
+        }
+        return (frozen, original)
+    }
+
+    @Test("Replay every immutable fresh planning entry and modal geometry before continuous execution")
+    func validateFrozenContinuousCoverageExecutionInputs() throws {
+        guard ProcessInfo.processInfo.environment["AUTOTECHNO_VALIDATE_CONTINUOUS_FROZEN_COHORT"] == "1"
+        else { return }
+        let (frozen, _) = try validatedFreshCoverageCohort()
+        #expect(frozen.development.count == 40)
+        #expect(frozen.holdout.count == 6)
+        #expect(frozen.development.reduce(0) { $0 + $1.checkpoints.count } +
+                frozen.holdout.reduce(0) { $0 + $1.checkpoints.count } == 322)
+    }
+
+    @Test("Execute the unchanged fresh native cohort through actual persistent successor preparation")
+    func executeFreshContinuousCoverageCohort() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["AUTOTECHNO_RUN_CONTINUOUS_CALIBRATION_COVERAGE"] == "1" else { return }
+        guard let acceptedHead = environment["AUTOTECHNO_CONTINUOUS_EXECUTION_ACCEPTED_HEAD"],
+              let contractFingerprint = environment["AUTOTECHNO_CONTINUOUS_EXECUTION_CONTRACT_FINGERPRINT"],
+              let outputPath = environment["AUTOTECHNO_CONTINUOUS_EXECUTION_OUTPUT_DIRECTORY"],
+              try git(["rev-parse", "HEAD"]) == acceptedHead,
+              try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let output = URL(fileURLWithPath: outputPath, isDirectory: true).standardizedFileURL
+        guard output.path.hasPrefix(repositoryRoot.appendingPathComponent("docs/local/reports/").path + "/"),
+              !FileManager.default.fileExists(atPath: output.path) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        // Remote publication must already contain the qualified foundation's
+        // derived evidence. The external execution launcher fresh-fetches this
+        // ref before freezing the accepted source; this test performs no network I/O.
+        _ = try git(["merge-base", "--is-ancestor",
+            "53f0f3d47b0c0b4169168ea52b41b7ab2a87bdff", "origin/codex/phase1-candidate"])
+        let publishedData = Data(try git(["show", "origin/codex/phase1-candidate:docs/reports/AT_0039_CONTINUOUS_MODAL_OBSERVATION_FOUNDATION.json"]).utf8)
+        let published = try #require(JSONSerialization.jsonObject(with: publishedData) as? [String: Any])
+        let publishedRuntime = try #require(published["runtimeEvidence"] as? [String: Any])
+        guard published["sourceHead"] as? String == "53f0f3d47b0c0b4169168ea52b41b7ab2a87bdff",
+              publishedRuntime["refreshStages"] as? Int == 42,
+              publishedRuntime["preservedAssets"] as? Int == 224,
+              publishedRuntime["exactComparedSamples"] as? Int == 340_230_030,
+              publishedRuntime["changedSamples"] as? Int == 0 else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let baseline = try #require(JSONSerialization.jsonObject(with: Data(contentsOf:
+            repositoryRoot.appendingPathComponent("docs/ROADMAP_EXECUTION_BASELINE.json"))) as? [String: Any])
+        guard baseline["snapshotFingerprint"] as? String == contractFingerprint else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        let objects = try git(["rev-parse"] + ["Package.swift", "Sources", "Tests", "scripts",
+            "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"].map { "HEAD:\($0)" })
+            .split(separator: "\n").map(String.init)
+        let protocolBlob = try git(["hash-object", "docs/local/reports/AT-0039-continuous-execution-v1/protocol.json"])
+        guard protocolBlob == "9b9e979f02c311ac4b6f92aeee1de5b5a5a73af0" else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let (frozen, original) = try validatedFreshCoverageCohort()
+        func guardAcceptedInputs() throws {
+            guard try git(["rev-parse", "HEAD"]) == acceptedHead,
+                  try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty,
+                  try git(["hash-object", "docs/local/reports/AT-0039-fresh-modal-coverage-cohort-v1/cohort.json"]) == "da849a3ae636316afbbea231570d7c809de35d95",
+                  try git(["hash-object", "docs/local/reports/AT-0039-continuous-execution-v1/protocol.json"]) == protocolBlob else {
+                throw ProfessionalQualityCalibrationError.invalidIdentity
+            }
+        }
+        try guardAcceptedInputs()
+        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        var manifest: [String: Any] = ["schema": "autotechno-fresh-continuous-calibration-execution.v1",
+            "status": "running", "acceptedExecutionHead": acceptedHead,
+            "acceptedExecutionInputObjects": objects, "contractBaselineFingerprint": contractFingerprint,
+            "protocolBlob": protocolBlob, "frozenCohortBlob": "da849a3ae636316afbbea231570d7c809de35d95",
+            "historicalCohortHead": frozen.gitHead, "historicalAcceptedInputObjects": frozen.acceptedInputObjects,
+            "historicalContextRetagged": false, "planningCheckpointCount": 322,
+            "maximumPhrases": frozen.maximumPhrases, "sampleRates": frozen.sampleRates,
+            "observationVersion": ProfessionalQualityMeasurementContract.continuousModalObservationVersion,
+            "replacementQualification": "unavailable-not-activated", "completedTrajectories": []]
+        func saveManifest() throws {
+            try canonicalCacheJSON(manifest).write(to: output.appendingPathComponent("execution.json"), options: .atomic)
+        }
+        try saveManifest()
+        var development: [ProfessionalQualityCalibrationTrajectory] = []
+        var holdout: [ProfessionalQualityCalibrationTrajectory] = []
+        var completed: [[String: Any]] = []
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        for (partition, fixtures) in [("development", frozen.development), ("holdout", frozen.holdout)] {
+            let originalEntries = try #require(original[partition] as? [[String: Any]])
+            for (fixture, originalEntry) in zip(fixtures, originalEntries) {
+                try guardAcceptedInputs()
+                var reports: [CanonicalJourneyQualificationReport] = []
+                var receipts: [ProfessionalQualityModalSuccessorEvidence] = []
+                var phraseCounts: [String: Int] = [:]
+                for rate in frozen.sampleRates {
+                    let execution = try executeJourney(seed: fixture.rootSeed, sampleRate: rate,
+                        maximumPhrases: frozen.maximumPhrases, frozenCheckpoints: fixture.checkpoints,
+                        requiredMajorBreakBarCount: fixture.requiredMajorBreakBarCount,
+                        requiresActualSuccessors: true)
+                    reports.append(contentsOf: execution.reports)
+                    receipts.append(contentsOf: execution.successors)
+                    phraseCounts[String(Int(rate))] = execution.renderedPhraseCount
+                    try guardAcceptedInputs()
+                }
+                let bank = try ProfessionalEvidenceReportBank(reports: reports)
+                let trajectory = try ProfessionalQualityCalibrationTrajectory(continuousBank: bank, successors: receipts)
+                guard trajectory.isComplete, reports.count == 14, receipts.count == reports.count else {
+                    throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
+                }
+                let unavailable = trajectory.observations.filter { observation in
+                    ProfessionalQualityMeasurementContract.modalMetrics.contains {
+                        observation.measurementApplicability($0) == .unavailable
+                    }
+                }.count
+                let filename = "\(partition)-ordinal-\(fixture.ordinal).json"
+                let artifact: [String: Any] = ["frozenPlanningEntry": originalEntry,
+                    "actualReportBank": try JSONSerialization.jsonObject(with: bank.deterministicJSON()),
+                    "actualSuccessorReceipts": try JSONSerialization.jsonObject(with: encoder.encode(receipts)),
+                    "continuousTrajectory": try JSONSerialization.jsonObject(with: encoder.encode(trajectory)),
+                    "renderedPhraseCounts": phraseCounts,
+                    "requiredUnavailableObservationCount": unavailable,
+                    "constructionAuthority": "actual typed products; diagnostic serialization cannot replace source reconstruction"]
+                try canonicalCacheJSON(artifact).write(to: output.appendingPathComponent(filename), options: .withoutOverwriting)
+                if partition == "development" { development.append(trajectory) } else { holdout.append(trajectory) }
+                completed.append(["partition": partition, "ordinal": fixture.ordinal, "artifact": filename,
+                    "originalBankFingerprint": trajectory.sourceBankFingerprint,
+                    "originalReportCount": reports.count, "actualSuccessorCount": receipts.count,
+                    "requiredUnavailableObservationCount": unavailable])
+                manifest["completedTrajectories"] = completed
+                try saveManifest()
+            }
+        }
+        let developmentCorpus = try ProfessionalQualityCalibrationCorpus(trajectories: development)
+        let holdoutCorpus = try ProfessionalQualityCalibrationCorpus(trajectories: holdout)
+        guard development.count == 40, holdout.count == 6,
+              developmentCorpus.sourceBankFingerprints.isDisjoint(with: holdoutCorpus.sourceBankFingerprints) else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        try developmentCorpus.deterministicJSON().write(to: output.appendingPathComponent("development-corpus.json"), options: .withoutOverwriting)
+        try holdoutCorpus.deterministicJSON().write(to: output.appendingPathComponent("holdout-corpus.json"), options: .withoutOverwriting)
+        do {
+            let profile = try ProfessionalQualityCalibrationProfile(corpus: developmentCorpus)
+            try profile.deterministicJSON().write(to: output.appendingPathComponent("offline-profile.json"), options: .withoutOverwriting)
+            manifest["fitStatus"] = "complete-offline-unqualified"
+            manifest["profileFingerprint"] = profile.fingerprint
+        } catch let error as ProfessionalQualityCalibrationError {
+            // A coverage/fit failure is preserved, not a license to replace a
+            // root, drop an event, broaden a bound or hide independent failures.
+            manifest["fitStatus"] = "refused"
+            manifest["fitRefusal"] = String(describing: error)
+        }
+        try guardAcceptedInputs()
+        manifest["status"] = "captured-not-activated"
+        manifest["originalNativeReportCount"] = 644
+        manifest["actualSuccessorReceiptCount"] = 644
+        manifest["freshCohortRendered"] = true
+        try saveManifest()
+    }
+
     @Test("Freeze fresh complete score coverage on accepted clean source before any new-root PCM")
     func freezeFreshCoverageCohort() throws {
         guard ProcessInfo.processInfo.environment["AUTOTECHNO_FREEZE_CALIBRATION_COVERAGE"] == "1"
@@ -1540,13 +1841,57 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             .appendingPathComponent("journey-\(seed).json")
     }
 
+    private struct JourneyExecution {
+        let reports: [CanonicalJourneyQualificationReport]
+        let successors: [ProfessionalQualityModalSuccessorEvidence]
+        let renderedPhraseCount: Int
+    }
+
     private func renderJourney(
         seed: UInt64,
         sampleRate: Double,
         maximumPhrases: Int = 128,
         windowFixture: CanonicalCalibrationWindowFixture? = nil
     ) throws -> [CanonicalJourneyQualificationReport] {
+        try executeJourney(seed: seed, sampleRate: sampleRate,
+            maximumPhrases: maximumPhrases, windowFixture: windowFixture).reports
+    }
+
+    /// One persistent producer for legacy captures and explicit continuous
+    /// execution. Original checkpoint membership never includes successors.
+    /// Frozen planning quality labels remain separate from actual accepted
+    /// quality/live/render/DSP/graph continuation, which advances every phrase.
+    private func executeJourney(
+        seed: UInt64,
+        sampleRate: Double,
+        maximumPhrases: Int = 128,
+        windowFixture: CanonicalCalibrationWindowFixture? = nil,
+        frozenCheckpoints: [CanonicalJourneyPlanCheckpoint]? = nil,
+        requiredMajorBreakBarCount: Int? = nil,
+        requiresActualSuccessors: Bool = false
+    ) throws -> JourneyExecution {
+        guard (1...128).contains(maximumPhrases),
+              requiredMajorBreakBarCount == nil || requiredMajorBreakBarCount == 4,
+              !(windowFixture != nil && frozenCheckpoints != nil) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
         let director = AutonomousSessionDirector(rootSeed: seed)
+        let requiredCheckpoints = frozenCheckpoints.map {
+            Set($0.map(\.checkpoint))
+        } ?? Set(CanonicalJourneyCheckpoint.allCases)
+        if let frozen = frozenCheckpoints {
+            let planning = CanonicalJourneyQualificationHarness(
+                engineVersion: QualityQualificationContract.engineVersion,
+                routeFingerprint: "score-only-coverage-selection", routeGeneration: 0)
+                .planCheckpoints(director: director, maximumPhrases: maximumPhrases,
+                    requiredBarCounts: requiredMajorBreakBarCount.map { [.majorBreak: $0] } ?? [:])
+                .filter { requiredCheckpoints.contains($0.checkpoint) }
+            guard !frozen.isEmpty, frozen.count <= CanonicalJourneyCheckpoint.allCases.count,
+                  requiredCheckpoints.count == frozen.count,
+                  frozen == planning,
+                  !requiresActualSuccessors || frozen.allSatisfy({ $0.phraseIndex < maximumPhrases - 1 })
+            else { throw ProfessionalQualityCalibrationError.profileMismatch }
+        }
         var state = director.initialState()
         var renderState = RenderState()
         var graphState = GeneratedDSPContinuationState()
@@ -1554,9 +1899,25 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         var previousChapter: InterlockChapter?
         var reports: [CanonicalJourneyQualificationReport] = []
         var seen = Set<CanonicalJourneyCheckpoint>()
+        var pending: [CanonicalJourneyQualificationReport] = []
+        var successors: [ProfessionalQualityModalSuccessorEvidence] = []
+        var renderedPhraseCount = 0
+
+        func matchesFrozenScore(_ plan: AutonomousPhrasePlan,
+                                expected: CanonicalJourneyPlanCheckpoint) -> Bool {
+            plan.phraseIndex == expected.phraseIndex && plan.kind == expected.phraseKind &&
+                plan.startBar == expected.startBar &&
+                plan.resolvedBars.count == expected.resolvedBarCount &&
+                AutonomousCandidateFingerprint.plan(plan) == expected.planFingerprint
+        }
 
         for _ in 0..<maximumPhrases {
             let plan = director.plan(from: state)
+            for expected in frozenCheckpoints ?? [] where expected.phraseIndex == plan.phraseIndex {
+                guard matchesFrozenScore(plan, expected: expected) else {
+                    throw ProfessionalQualityCalibrationError.profileMismatch
+                }
+            }
             if let fixture = windowFixture,
                let expected = [fixture.planned, fixture.followingRelease].first(where: {
                    $0.phraseIndex == plan.phraseIndex
@@ -1601,11 +1962,35 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 )
             }
             let prepared = try #require(outcome.preparedPhrase)
+            renderedPhraseCount += 1
+            for expected in frozenCheckpoints ?? [] where expected.phraseIndex == plan.phraseIndex {
+                guard matchesFrozenScore(prepared.plan, expected: expected),
+                      prepared.selectedCandidateEvidence.planFingerprint == expected.planFingerprint
+                else { throw ProfessionalQualityCalibrationError.profileMismatch }
+            }
+            // Construct and reconstruct each receipt while the real immutable
+            // successor is present. No source-free cache or diagnostic mean
+            // can stand in for this accepted preparation transaction.
+            for original in pending {
+                let receipt = try ProfessionalQualityModalSuccessorEvidence(
+                    source: original, successor: prepared)
+                let reconstructed = try ProfessionalQualityModalSuccessorEvidence.decodeValidated(
+                    receipt.deterministicJSON(), source: original, successor: prepared)
+                guard reconstructed == receipt else {
+                    throw ProfessionalQualityCalibrationError.profileMismatch
+                }
+                _ = try ProfessionalQualityObservation(continuousReport: original, successor: receipt)
+                successors.append(receipt)
+            }
+            pending.removeAll(keepingCapacity: true)
             let checkpoints = checkpoints(
                 plan: plan,
                 previousChapter: previousChapter
             ).filter { checkpoint in
-                guard !seen.contains(checkpoint) else { return false }
+                guard requiredCheckpoints.contains(checkpoint), !seen.contains(checkpoint) else { return false }
+                if let frozen = frozenCheckpoints {
+                    return frozen.contains { $0.checkpoint == checkpoint && $0.phraseIndex == plan.phraseIndex }
+                }
                 guard let fixture = windowFixture,
                       let expected = [fixture.planned, fixture.followingRelease].first(where: {
                           $0.checkpoint == checkpoint
@@ -1642,6 +2027,10 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 )
                 _ = try ProfessionalQualityObservation(report: report)
                 reports.append(report)
+                if requiresActualSuccessors { pending.append(report) }
+                guard pending.count <= CanonicalJourneyCheckpoint.allCases.count else {
+                    throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
+                }
                 seen.insert(checkpoint)
                 progress(
                     "seed=\(seed) rate=\(Int(sampleRate)) " +
@@ -1661,10 +2050,14 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             renderState = prepared.endingRenderState
             graphState = prepared.endingGraphState
             previousGraph = prepared.graph
-            if seen.count == CanonicalJourneyCheckpoint.allCases.count { break }
+            if seen == requiredCheckpoints && pending.isEmpty { break }
         }
-        #expect(seen == Set(CanonicalJourneyCheckpoint.allCases))
-        return reports
+        guard seen == requiredCheckpoints, pending.isEmpty,
+              !requiresActualSuccessors || successors.count == reports.count else {
+            throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
+        }
+        return JourneyExecution(reports: reports, successors: successors,
+            renderedPhraseCount: renderedPhraseCount)
     }
 
     private func progress(_ message: String) {
