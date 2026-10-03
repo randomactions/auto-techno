@@ -577,6 +577,17 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             let distance = max(1e-9, abs(bounds.upper - bounds.lower) * 0.1)
             return preferLower ? bounds.lower - distance : bounds.upper + distance
         }
+        func rangeChallenge(
+            _ metric: ProfessionalQualityMetric,
+            preferLower: Bool
+        ) throws -> ProfessionalQualityObservation {
+            if continuousLiveSources != nil {
+                return try Self.measuredRangeChallenge(metric, preferLower: preferLower,
+                    profile: profile, observations: sourceObservations)
+            }
+            // Retain the installed legacy challenge inputs and exact artifact.
+            return try baseline.replacing(metric, with: outside(metric, preferLower: preferLower))
+        }
         func identityCopy(
             sampleRate: Double = baseline.sampleRate,
             hardGatesPassed: Bool = true,
@@ -601,10 +612,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         )
         append(
             .truePeakCompensation,
-            observation: try baseline.replacing(
-                .truePeakDBTP,
-                with: outside(.truePeakDBTP, preferLower: false)
-            ),
+            observation: try rangeChallenge(.truePeakDBTP, preferLower: false),
             expected: [.metricOutOfRange]
         )
         func acceptedObservation(
@@ -777,81 +785,42 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
 
         append(
             .spectralCollapse,
-            observation: try baseline.replacing(
-                .spectralCentroidMeanHz,
-                with: outside(.spectralCentroidMeanHz, preferLower: true)
-            ),
+            observation: try rangeChallenge(.spectralCentroidMeanHz, preferLower: true),
             expected: [.metricOutOfRange]
         )
         append(
             .maskingFlood,
-            observation: try baseline.replacing(
-                .maskingMaximumOverlap,
-                with: outside(.maskingMaximumOverlap, preferLower: false)
-            ),
+            observation: try rangeChallenge(.maskingMaximumOverlap, preferLower: false),
             expected: [.metricOutOfRange]
         )
         append(
             .lowEndPhaseFailure,
-            observation: try baseline.replacing(
-                .lowStereoCorrelation,
-                with: outside(.lowStereoCorrelation, preferLower: true)
-            ),
+            observation: try rangeChallenge(.lowStereoCorrelation, preferLower: true),
             expected: [.metricOutOfRange]
         )
         append(
             .modalDetuning,
-            observation: try baseline.replacing(
-                .modalPercussionPitchErrorCentsMaximum,
-                with: outside(
-                    .modalPercussionPitchErrorCentsMaximum,
-                    preferLower: false
-                )
-            ),
+            observation: try rangeChallenge(.modalPercussionPitchErrorCentsMaximum, preferLower: false),
             expected: [.metricOutOfRange]
         )
         append(
             .modalRunawayTail,
-            observation: try baseline.replacing(
-                .modalPercussionTailToBodyDBMean,
-                with: outside(
-                    .modalPercussionTailToBodyDBMean,
-                    preferLower: false
-                )
-            ),
+            observation: try rangeChallenge(.modalPercussionTailToBodyDBMean, preferLower: false),
             expected: [.metricOutOfRange]
         )
         append(
             .modalMaskingFlood,
-            observation: try baseline.replacing(
-                .modalPercussionMaskingMaximumOverlap,
-                with: outside(
-                    .modalPercussionMaskingMaximumOverlap,
-                    preferLower: false
-                )
-            ),
+            observation: try rangeChallenge(.modalPercussionMaskingMaximumOverlap, preferLower: false),
             expected: [.metricOutOfRange]
         )
         append(
             .upperPercussionTailRegression,
-            observation: try baseline.replacing(
-                .upperPercussionTailRenderedTailToAttackDBMean,
-                with: outside(
-                    .upperPercussionTailRenderedTailToAttackDBMean,
-                    preferLower: false
-                )
-            ),
+            observation: try rangeChallenge(.upperPercussionTailRenderedTailToAttackDBMean, preferLower: false),
             expected: [.metricOutOfRange]
         )
         append(
             .upperSpectralRevealRunaway,
-            observation: try baseline.replacing(
-                .upperSpectralRevealAppliedCutoffRatioMean,
-                with: outside(
-                    .upperSpectralRevealAppliedCutoffRatioMean,
-                    preferLower: false
-                )
-            ),
+            observation: try rangeChallenge(.upperSpectralRevealAppliedCutoffRatioMean, preferLower: false),
             expected: [.metricOutOfRange]
         )
         let harmonicTailCheckpoint = try Self.checkpointWithLargestLowerBound(
@@ -962,35 +931,17 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         )
         append(
             .foundationDottedRhythmOverpopulation,
-            observation: try baseline.replacing(
-                .foundationDottedRhythmActiveBarRatio,
-                with: outside(
-                    .foundationDottedRhythmActiveBarRatio,
-                    preferLower: false
-                )
-            ),
+            observation: try rangeChallenge(.foundationDottedRhythmActiveBarRatio, preferLower: false),
             expected: [.metricOutOfRange]
         )
         append(
             .foundationPreKickPocketContamination,
-            observation: try baseline.replacing(
-                .foundationPreKickPocketSilenceRMSMaximum,
-                with: outside(
-                    .foundationPreKickPocketSilenceRMSMaximum,
-                    preferLower: false
-                )
-            ),
+            observation: try rangeChallenge(.foundationPreKickPocketSilenceRMSMaximum, preferLower: false),
             expected: [.metricOutOfRange]
         )
         append(
             .kickSourceTransientSpike,
-            observation: try baseline.replacing(
-                .kickSourceOutputCrestFactorDBMean,
-                with: outside(
-                    .kickSourceOutputCrestFactorDBMean,
-                    preferLower: false
-                )
-            ),
+            observation: try rangeChallenge(.kickSourceOutputCrestFactorDBMean, preferLower: false),
             expected: [.metricOutOfRange]
         )
 
@@ -1082,9 +1033,9 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         ))
 
         let continuous = continuousLiveSources != nil
-        schemaVersion = continuous ? 23 : Self.schemaVersion
+        schemaVersion = continuous ? 24 : Self.schemaVersion
         suiteVersion = continuous
-            ? "autotechno-professional-quality-adversarial.v24" : Self.suiteVersion
+            ? "autotechno-professional-quality-adversarial.v25" : Self.suiteVersion
         sourceObservationVersion = continuous ? profile.observationVersion : nil
         profileFingerprint = profile.fingerprint
         sourceObservationCount = sourceObservations.count
@@ -1168,7 +1119,7 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             return .legacy
         }
         if sourceObservationVersion == ProfessionalQualityMeasurementScope.continuousModalWindow.observationVersion,
-           schemaVersion == 23, suiteVersion == "autotechno-professional-quality-adversarial.v24" {
+           schemaVersion == 24, suiteVersion == "autotechno-professional-quality-adversarial.v25" {
             return .continuousModalWindow
         }
         return nil
@@ -1221,6 +1172,57 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         sink.domain("professional-quality-adversarial-suite-json.v4")
         sink.string(string)
         return fixedWidthFingerprintHex(sink.value)
+    }
+
+    /// Range challenges must change a measured dimension of an actual source.
+    /// Corpus order, original/successor identity and calibrated bounds stay fixed.
+    /// Missing measurements cannot be invented or treated as numeric zero.
+    package static func measuredRangeChallenge(
+        _ metric: ProfessionalQualityMetric,
+        preferLower: Bool,
+        profile: ProfessionalQualityCalibrationProfile,
+        observations: [ProfessionalQualityObservation]
+    ) throws -> ProfessionalQualityObservation {
+        func measured(_ observation: ProfessionalQualityObservation) -> Bool {
+            observation.sampleRate == 48_000 &&
+                observation.measurementApplicability(metric) == .measured &&
+                observation[metric]?.isFinite == true
+        }
+        guard let source = observations.first(where: {
+            $0.checkpoint == .establishment && measured($0)
+        }) ?? observations.first(where: measured),
+              let original = source[metric],
+              let local = profile[source.checkpoint]?[metric] else {
+            throw ProfessionalQualityCalibrationError.invalidMetricSet
+        }
+        guard ProfessionalQualityProfileEvaluator.evaluate(source, against: profile).accepted else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        let localDistance = max(1e-9, abs(local.upper - local.lower) * 0.1)
+        let localOutside = preferLower ? local.lower - localDistance : local.upper + localDistance
+        guard let bounds = profile.effectiveBounds(for: metric, at: source.checkpoint,
+            observedValue: localOutside) else {
+            throw ProfessionalQualityCalibrationError.invalidMetricSet
+        }
+        let distance = max(1e-9, abs(bounds.upper - bounds.lower) * 0.1)
+        let value = preferLower ? bounds.lower - distance : bounds.upper + distance
+        guard value.isFinite, value != original,
+              let effective = profile.effectiveBounds(for: metric, at: source.checkpoint,
+                observedValue: value), !effective.contains(value) else {
+            throw ProfessionalQualityCalibrationError.invalidBounds
+        }
+        let challenged = try source.replacing(metric, with: value)
+        guard challenged[metric] == value,
+              challenged.measurementApplicability(metric) == .measured,
+              challenged.continuousModalSource == source.continuousModalSource,
+              challenged.modalWindowSupport == source.modalWindowSupport,
+              challenged.liveMaster == source.liveMaster,
+              challenged.hardGatesPassed == source.hardGatesPassed,
+              challenged.metrics.filter({ $0.metric != metric }) ==
+                source.metrics.filter({ $0.metric != metric }) else {
+            throw ProfessionalQualityCalibrationError.invalidMetricSet
+        }
+        return challenged
     }
 
     private static func checkpointWithLargestLowerBound(

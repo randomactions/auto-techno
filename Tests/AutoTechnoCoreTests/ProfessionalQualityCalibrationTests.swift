@@ -218,6 +218,71 @@ struct ProfessionalQualityCalibrationTests {
             metrics: metrics, modalWindowSupport: support)
     }
 
+    @Test("Range challenges skip absent tails, use source checkpoint bounds and retain every identity")
+    func measuredRangeChallengeSourceSelection() throws {
+        let observations = try representativeObservations().map { try windowObservation($0) }
+        let profile = try ProfessionalQualityCalibrationProfile(corpus: windowCorpus(observations))
+        let legacy = try representativeObservations()
+        let absent = try windowObservation(try #require(legacy.first {
+            $0.checkpoint == .establishment && $0.sampleRate == 48_000
+        }), kind: "absent")
+        let measured = try #require(observations.first {
+            $0.checkpoint == .majorBreak && $0.sampleRate == 48_000
+        })
+        let metric = ProfessionalQualityMetric.modalPercussionTailToBodyDBMean
+        #expect(absent[metric] == nil && absent.measurementApplicability(metric) == .notRequired)
+        let originalJSON = try measured.deterministicJSON()
+        for preferLower in [true, false] {
+            let challenged = try ProfessionalQualityAdversarialSuiteReport.measuredRangeChallenge(
+                metric, preferLower: preferLower, profile: profile, observations: [absent, measured])
+            #expect(challenged.checkpoint == measured.checkpoint)
+            #expect(challenged.sampleRate == measured.sampleRate)
+            #expect(challenged.modalWindowSupport == measured.modalWindowSupport)
+            #expect(challenged.continuousModalSource == measured.continuousModalSource)
+            #expect(challenged.liveMaster == measured.liveMaster)
+            #expect(challenged.hardGatesPassed == measured.hardGatesPassed)
+            #expect(challenged[metric] != measured[metric])
+            #expect(challenged.metrics.filter { $0.metric != metric } ==
+                measured.metrics.filter { $0.metric != metric })
+            let verdict = ProfessionalQualityProfileEvaluator.evaluate(challenged, against: profile)
+            #expect(verdict.reasons == [.metricOutOfRange] && verdict.failedMetrics == [metric])
+            #expect(try measured.deterministicJSON() == originalJSON)
+            #expect(try ProfessionalQualityAdversarialSuiteReport.measuredRangeChallenge(
+                metric, preferLower: preferLower, profile: profile, observations: [absent, measured]) == challenged)
+        }
+    }
+
+    @Test("Absent and unavailable challenge dimensions refuse; measured zero remains a numeric source")
+    func measuredRangeChallengeSupportRefusal() throws {
+        let legacy = try representativeObservations()
+        let metric = ProfessionalQualityMetric.modalPercussionTailToBodyDBMean
+        let observations = try legacy.map { observation in
+            let supported = try windowObservation(observation)
+            return observation.checkpoint == .majorBreak
+                ? try supported.replacing(metric, with: 0) : supported
+        }
+        let profile = try ProfessionalQualityCalibrationProfile(corpus: windowCorpus(observations))
+        let origin = try #require(legacy.first {
+            $0.checkpoint == .majorBreak && $0.sampleRate == 48_000
+        })
+        for kind in ["absent", "missing", "partial", "undefined", "mixed"] {
+            let unsupported = try windowObservation(origin, kind: kind)
+            #expect(throws: ProfessionalQualityCalibrationError.invalidMetricSet) {
+                try ProfessionalQualityAdversarialSuiteReport.measuredRangeChallenge(metric,
+                    preferLower: false, profile: profile, observations: [unsupported])
+            }
+        }
+        let zero = try #require(observations.first {
+            $0.checkpoint == .majorBreak && $0.sampleRate == 48_000
+        })
+        #expect(zero[metric] == 0 && zero.measurementApplicability(metric) == .measured)
+        let challenged = try ProfessionalQualityAdversarialSuiteReport.measuredRangeChallenge(
+            metric, preferLower: false, profile: profile, observations: [zero])
+        #expect(challenged[metric] != 0)
+        #expect(ProfessionalQualityProfileEvaluator.evaluate(challenged, against: profile)
+            .failedMetrics == [metric])
+    }
+
     @Test("Failed metric direction reduces to bounded Core recovery intent")
     func recoveryIntentReductionIsDirectional() {
         let low = ProfessionalQualityRecoveryIntentReducer.reduce([
