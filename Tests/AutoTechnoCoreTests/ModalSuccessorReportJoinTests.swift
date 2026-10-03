@@ -187,6 +187,8 @@ struct ModalSuccessorReportJoinTests {
     }
 
     @Test("Frozen public score selection joins only the actual successor at all fixed rates")
+    // This large detached fixture needs the main thread stack, matching existing calibration tests.
+    @MainActor
     func actualSuccessorReportJoin() throws {
         var director = AutonomousSessionDirector(rootSeed: 48_291)
         let rates = [8_000.0, 44_100.0, 48_000.0]
