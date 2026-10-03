@@ -349,15 +349,27 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
         let qualificationRequested = environment["AUTOTECHNO_RUN_CONTINUOUS_ADVERSARIAL_QUALIFICATION"] == "1"
-        let qualificationProtocolPath = "docs/local/reports/AT-0039-measured-challenge-v1/qualification-protocol.json"
+        let correctedQualification = qualificationRequested &&
+            ProfessionalEvidenceReportBank.evidenceVersion == "autotechno-professional-evidence.v30"
+        let qualificationProtocolPath = correctedQualification
+            ? "docs/local/reports/AT-0039-corrected-measurements-v1/qualification-protocol.json"
+            : "docs/local/reports/AT-0039-measured-challenge-v1/qualification-protocol.json"
+        let expectedQualificationProtocolBlob = correctedQualification
+            ? "b866703efaec06c7cedd11c63d5b8bee683c9774"
+            : "151f8453481bdc454284279f5df4517e89bf44b0"
         let qualificationProtocolBlob = qualificationRequested
             ? try git(["hash-object", qualificationProtocolPath]) : nil
         if qualificationRequested {
-            guard qualificationProtocolBlob == "151f8453481bdc454284279f5df4517e89bf44b0" else {
+            guard qualificationProtocolBlob == expectedQualificationProtocolBlob else {
                 throw ProfessionalQualityCalibrationError.invalidIdentity
             }
-            _ = try git(["merge-base", "--is-ancestor", acceptedHead,
-                "origin/codex/measured-adversarial-challenges"])
+            if correctedQualification {
+                _ = try git(["merge-base", "--is-ancestor",
+                    "5f1f55441c6cbbaabb3a33c20aeba68e2cea5d5a", acceptedHead])
+            } else {
+                _ = try git(["merge-base", "--is-ancestor", acceptedHead,
+                    "origin/codex/measured-adversarial-challenges"])
+            }
         }
         let (frozen, original) = try validatedFreshCoverageCohort()
         func guardAcceptedInputs() throws {
@@ -458,7 +470,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             if qualificationRequested {
                 manifest["offlineContinuousQualification"] = try qualifyFreshContinuousCorpora(
                     profile: profile, development: developmentCorpus,
-                    holdout: holdoutCorpus, output: output)
+                    holdout: holdoutCorpus, correctedMeasurements: correctedQualification, output: output)
             }
         } catch let error as ProfessionalQualityCalibrationError {
             // A coverage/fit failure is preserved, not a license to replace a
@@ -484,6 +496,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         profile: ProfessionalQualityCalibrationProfile,
         development: ProfessionalQualityCalibrationCorpus,
         holdout: ProfessionalQualityCalibrationCorpus,
+        correctedMeasurements: Bool,
         output: URL
     ) throws -> [String: Any] {
         var result: [String: Any] = ["schema": "autotechno-offline-continuous-qualification.v1",
@@ -497,8 +510,8 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 "offline-continuous-qualification.json"), options: .atomic)
         }
         guard profile.measurementScope == .continuousModalWindow,
-              profile.fingerprint == "5fedcae807b0ce09",
-              development.fingerprint == "39f157e5cbf2ba2a",
+              profile.fingerprint == (correctedMeasurements ? "4fb209bfb248d46b" : "5fedcae807b0ce09"),
+              development.fingerprint == (correctedMeasurements ? "5e3b02a21cace240" : "39f157e5cbf2ba2a"),
               development.sourceTrajectoryCount == 40, holdout.sourceTrajectoryCount == 6,
               development.isComplete, holdout.isComplete,
               development.sourceBankFingerprints.isDisjoint(with: holdout.sourceBankFingerprints) else {
