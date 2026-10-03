@@ -1379,6 +1379,22 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         return expected
     }
 
+    /// Reconstruct saved runtime observations from their immutable preparation
+    /// products. Numeric summaries and journey-report identities cannot replace
+    /// the actual source/successor chain, including unavailable suffix support.
+    package static func decodeValidated(_ data: Data,
+        prepared: PreparedAutonomousPhrase,
+        successor: PreparedAutonomousPhrase? = nil) throws -> Self {
+        guard data.count <= ProfessionalEvidenceReportBank.maximumEncodedBytes else {
+            throw ProfessionalEvidenceReportBankError.invalidBounds
+        }
+        let expected = try Self(continuousPrepared: prepared, successor: successor)
+        guard try expected.deterministicJSON() == data else {
+            throw ProfessionalEvidenceReportBankError.inconsistentIdentity
+        }
+        return expected
+    }
+
     package subscript(metric: ProfessionalQualityMetric) -> Double? {
         metrics.first { $0.metric == metric }?.value
     }

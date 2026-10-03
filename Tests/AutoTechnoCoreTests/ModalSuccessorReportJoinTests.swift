@@ -289,6 +289,56 @@ struct ModalSuccessorReportJoinTests {
             #expect(preparedReceipt.matches(origin) && !preparedReceipt.matches(source))
             #expect(receipt.matches(source) && !receipt.matches(origin))
             #expect(try ProfessionalQualityObservation(continuousPrepared: origin, successor: next) == preparedObservation)
+            let preparedData = try preparedObservation.deterministicJSON()
+            let preparedReceiptData = try preparedReceipt.deterministicJSON()
+            #expect(try ProfessionalQualityObservation.decodeValidated(preparedData,
+                prepared: origin, successor: next) == preparedObservation)
+            #expect(try ProfessionalQualityModalSuccessorEvidence.decodeValidated(preparedReceiptData,
+                sourcePrepared: origin, successor: next) == preparedReceipt)
+            #expect(try ProfessionalQualityObservation.decodeValidated(preparedBefore.deterministicJSON(),
+                prepared: origin) == preparedBefore)
+            #expect(throws: (any Error).self) {
+                try JSONDecoder().decode(ProfessionalQualityObservation.self, from: preparedData)
+            }
+            // Missing suffix coverage, substituted products, scope swaps,
+            // noncanonical bytes, and changed metrics never reconstruct.
+            for data in [preparedData, try continuousObservation.deterministicJSON(),
+                         try preparedObservation.replacing(.maximumBoundaryDelta, with: 100).deterministicJSON(),
+                         preparedData + Data([0x0a])] {
+                #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                    try ProfessionalQualityObservation.decodeValidated(data, prepared: origin)
+                }
+            }
+            for data in [try continuousObservation.deterministicJSON(),
+                         try preparedObservation.replacing(.maximumBoundaryDelta, with: 100).deterministicJSON(),
+                         preparedData + Data([0x0a])] {
+                #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                    try ProfessionalQualityObservation.decodeValidated(data, prepared: origin, successor: next)
+                }
+            }
+            for data in [try receipt.deterministicJSON(), preparedReceiptData + Data([0x0a])] {
+                #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                    try ProfessionalQualityModalSuccessorEvidence.decodeValidated(data,
+                        sourcePrepared: origin, successor: next)
+                }
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                try ProfessionalQualityObservation.decodeValidated(preparedData, prepared: next, successor: next)
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                try ProfessionalQualityModalSuccessorEvidence.decodeValidated(preparedReceiptData,
+                    sourcePrepared: next, successor: next)
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.invalidBounds) {
+                try ProfessionalQualityObservation.decodeValidated(
+                    Data(repeating: 0, count: ProfessionalEvidenceReportBank.maximumEncodedBytes + 1),
+                    prepared: origin, successor: next)
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.invalidBounds) {
+                try ProfessionalQualityModalSuccessorEvidence.decodeValidated(
+                    Data(repeating: 0, count: ProfessionalQualityModalSuccessorEvidence.maximumEncodedBytes + 1),
+                    sourcePrepared: origin, successor: next)
+            }
             #expect(preparedObservation.liveMaster == continuousObservation.liveMaster)
             #expect(preparedObservation.upperPercussionTailSupport == continuousObservation.upperPercussionTailSupport)
             for metric in ProfessionalQualityMetric.allCases {
@@ -472,6 +522,7 @@ struct ModalSuccessorReportJoinTests {
                 "preparedReceiptFingerprint": preparedReceipt.fingerprint,
                 "preparedSourceIdentityFingerprint": ProfessionalQualityModalSuccessorEvidence.identity(origin),
                 "preparedMeasurementsEqualReportMeasurements": preparedObservation.metrics == continuousObservation.metrics,
+                "preparedCanonicalReconstructionPassed": true,
                 "preparedTailMeasuredEventCount": preparedObservation.continuousModalSource!.projection.tailBodySupport.measuredEventCount,
                 "qualification": "unavailable-not-activated"])
         }

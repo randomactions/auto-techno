@@ -243,6 +243,20 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
         return data
     }
 
+    /// Runtime receipts require both actual products, just as construction does.
+    package static func decodeValidated(_ data: Data,
+        sourcePrepared: PreparedAutonomousPhrase,
+        successor: PreparedAutonomousPhrase) throws -> Self {
+        guard data.count <= maximumEncodedBytes else {
+            throw ProfessionalEvidenceReportBankError.invalidBounds
+        }
+        let expected = try Self(sourcePrepared: sourcePrepared, successor: successor)
+        guard try expected.deterministicJSON() == data else {
+            throw ProfessionalEvidenceReportBankError.inconsistentIdentity
+        }
+        return expected
+    }
+
     package static func decodeValidated(_ data: Data,
         source: CanonicalJourneyQualificationReport,
         successor: PreparedAutonomousPhrase) throws -> Self {

@@ -1497,18 +1497,37 @@ qualification is separate from runtime eligibility; delayed future-boundary
 integration and matching installed primary/long-horizon qualification remain
 required before promotion.
 
-+The reduced one-bank construction test preserves its original bank identity
-+`11743474e0cedea5` as a negative control: it has no foreground-clearance
-+population for the upper-percussion tail-to-attack metric and must refuse
-+fitting with `invalidMetricSet`. A positive construction counterpart selects
-+the first eligible score-declared foreground-clearance phrase before any PCM,
-+using the same public seed and a 128-phrase bound. It replaces only that actual
-+checkpoint's native-rate source pair in the counterpart bank; the original
-+bank, phrase-21 modal suffix and frozen 40/6 qualification study are preserved.
-+Both banks retain typed original and actual successor provenance. The positive
-+bank has one trajectory, so it cannot provide diverse calibration or activate
-+the installed primary evaluator. Foreign-rate wire controls preserve the actual
-+score-support metadata rather than reconstructing it as absent. Installed
-+evidence-v29 artifacts remain ineligible under corrected evidence-v30 source;
-+this observation seam does not waive that boundary.
-+
+The reduced one-bank construction test preserves its original bank identity
+`11743474e0cedea5` as a negative control: it has no foreground-clearance
+population for the upper-percussion tail-to-attack metric and must refuse
+fitting with `invalidMetricSet`. A positive construction counterpart selects
+the first eligible score-declared foreground-clearance phrase before any PCM,
+using the same public seed and a 128-phrase bound. It replaces only that actual
+checkpoint's native-rate source pair in the counterpart bank; the original
+bank, phrase-21 modal suffix and frozen 40/6 qualification study are preserved.
+Both banks retain typed original and actual successor provenance. The positive
+bank has one trajectory, so it cannot provide diverse calibration or activate
+the installed primary evaluator. Foreign-rate wire controls preserve the actual
+score-support metadata rather than reconstructing it as absent. Installed
+evidence-v29 artifacts remain ineligible under corrected evidence-v30 source;
+this observation seam does not waive that boundary.
+
+
+### Actual-prepared continuous reconstruction
+
+The existing `ProfessionalQualityObservation.decodeValidated` and
+`ProfessionalQualityModalSuccessorEvidence.decodeValidated` now also reconstruct
+saved evidence against actual immutable `PreparedAutonomousPhrase` products.
+They rerun the same source/successor construction and require exact canonical
+bytes within their existing encoded-size bounds. Journey-report identities,
+changed measurements, substituted products, omitted required successor coverage,
+and noncanonical encodings cannot reconstruct an actual-prepared observation.
+A source-only observation may reconstruct only with its original unavailable
+suffix support; reconstruction never supplies missing physical frames.
+
+This stateless detached evidence seam preserves the original canonical owner,
+ledger, observation versions, quality state and fallback. It avoids unchecked
+numeric decoding or an independent runtime evidence extractor. It adds no Core
+parameter, PCM change, callback work, transport admission, installed policy,
+persistent state or future-decision authority. Causal runtime integration and
+matching qualified primary/long-horizon artifacts remain required separately.
