@@ -31,7 +31,7 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
     /// score, transaction, PCM and every continuation atomically.
     package init(source: CanonicalJourneyQualificationReport,
                  successor: PreparedAutonomousPhrase) throws {
-        try self.init(source: source, next: successor.selectedCandidateEvidence,
+        try self.init(source: SourceBinding(source), next: successor.selectedCandidateEvidence,
             engineVersion: successor.candidateEvaluation.engineVersion,
             policyVersion: successor.candidateEvaluation.policyVersion,
             evaluatorVersion: successor.candidateEvaluation.evaluatorVersion,
@@ -39,6 +39,62 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
             sampleHash: successor.audioPreflight.quality.sampleHash,
             identity: AutonomousCandidateCanonicalJSON.fingerprint(PreparedIdentity(successor)),
             transactionFingerprint: successor.candidateEvaluationFingerprint)
+    }
+
+    /// Runtime construction uses actual immutable preparation products, with
+    /// no fixture label or invented canonical journey report.
+    package init(sourcePrepared: PreparedAutonomousPhrase,
+                 successor: PreparedAutonomousPhrase) throws {
+        try self.init(source: SourceBinding(sourcePrepared), next: successor.selectedCandidateEvidence,
+            engineVersion: successor.candidateEvaluation.engineVersion,
+            policyVersion: successor.candidateEvaluation.policyVersion,
+            evaluatorVersion: successor.candidateEvaluation.evaluatorVersion,
+            commit: successor.commitProvenance, incomingQuality: successor.incomingQualityState,
+            sampleHash: successor.audioPreflight.quality.sampleHash,
+            identity: Self.identity(successor),
+            transactionFingerprint: successor.candidateEvaluationFingerprint)
+    }
+
+    private struct SourceBinding {
+        let selectedCandidateEvidence: AutonomousCandidateEvaluationVector
+        let engineVersion: String
+        let policyVersion: String
+        let evaluatorVersion: String
+        let commitProvenance: AutonomousPreparedCommitProvenance
+        let sampleHash: String
+        let outgoingState: QualityContinuationState
+        let outgoingLiveMasterFingerprint: String
+        let identityFingerprint: String
+        let evidenceFingerprint: String
+        let evidenceScopeIsCurrent: Bool
+        var routeFingerprint: String { selectedCandidateEvidence.routeContinuation.routeFingerprint }
+        var routeGeneration: Int { selectedCandidateEvidence.routeContinuation.routeGeneration }
+
+        init(_ report: CanonicalJourneyQualificationReport) {
+            selectedCandidateEvidence = report.selectedCandidateEvidence
+            engineVersion = report.engineVersion; policyVersion = report.policyVersion
+            evaluatorVersion = report.candidateEvaluation.evaluatorVersion
+            commitProvenance = report.commitProvenance; sampleHash = report.sampleHash
+            outgoingState = report.outgoingState
+            outgoingLiveMasterFingerprint = report.liveMaster.outgoingStateFingerprint
+            identityFingerprint = ProfessionalQualityModalSuccessorEvidence.identity(report)
+            evidenceFingerprint = report.evidenceFingerprint
+            evidenceScopeIsCurrent = report.evidenceScope == CanonicalJourneyQualificationReport.currentEvidenceScope
+        }
+
+        init(_ prepared: PreparedAutonomousPhrase) {
+            selectedCandidateEvidence = prepared.selectedCandidateEvidence
+            engineVersion = prepared.candidateEvaluation.engineVersion
+            policyVersion = prepared.candidateEvaluation.policyVersion
+            evaluatorVersion = prepared.candidateEvaluation.evaluatorVersion
+            commitProvenance = prepared.commitProvenance
+            sampleHash = prepared.audioPreflight.quality.sampleHash
+            outgoingState = prepared.qualityContinuationState
+            outgoingLiveMasterFingerprint = prepared.liveMasterHeadroomContinuationState.fingerprint
+            identityFingerprint = ProfessionalQualityModalSuccessorEvidence.identity(prepared)
+            evidenceFingerprint = prepared.candidateEvaluationFingerprint
+            evidenceScopeIsCurrent = prepared.candidateEvaluation.isComplete
+        }
     }
 
     private struct PreparedIdentity: Encodable {
@@ -57,7 +113,7 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
         }
     }
 
-    private init(source: CanonicalJourneyQualificationReport,
+    private init(source: SourceBinding,
                  next: AutonomousCandidateEvaluationVector,
                  engineVersion: String, policyVersion: String, evaluatorVersion: String,
                  commit: AutonomousPreparedCommitProvenance,
@@ -70,8 +126,8 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
               next.isComplete, next.isFinite, next.hardGatesPassed,
               source.engineVersion == engineVersion,
               source.policyVersion == policyVersion,
-              source.candidateEvaluation.evaluatorVersion == evaluatorVersion,
-              source.evidenceScope == CanonicalJourneyQualificationReport.currentEvidenceScope,
+              source.evaluatorVersion == evaluatorVersion,
+              source.evidenceScopeIsCurrent,
               source.commitProvenance.isInternallyConsistent,
               commit.isInternallyConsistent,
               source.sampleHash == origin.fullMix.sampleHash,
@@ -90,7 +146,7 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
               nextRoute.incomingQualityStateFingerprint == source.commitProvenance.outgoingQualityStateFingerprint,
               source.outgoingState == incomingQuality,
               nextRoute.previousGraphFingerprint == origin.graphFingerprint,
-              source.liveMaster.outgoingStateFingerprint == next.incomingLiveMasterStateFingerprint,
+              source.outgoingLiveMasterFingerprint == next.incomingLiveMasterStateFingerprint,
               let last = origin.modalPercussion.last?.continuousWindows,
               let first = next.modalPercussion.first?.continuousWindows,
               last.bar < Int.max, first.bar == last.bar + 1,
@@ -119,7 +175,7 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
         })
         try ledger.append(first)
         schemaVersion = 1
-        sourceIdentityFingerprint = Self.identity(source)
+        sourceIdentityFingerprint = source.identityFingerprint
         sourceReportFingerprint = source.evidenceFingerprint
         sourceCandidateFingerprint = origin.fingerprint
         sourceOutgoingRenderDSPFingerprint = source.commitProvenance.outgoingRenderDSPFingerprint
@@ -142,6 +198,25 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
     /// transaction fingerprint alone does not distinguish those labels.
     package static func identity(_ report: CanonicalJourneyQualificationReport) -> String {
         AutonomousCandidateCanonicalJSON.fingerprint(report)
+    }
+
+    package static func identity(_ prepared: PreparedAutonomousPhrase) -> String {
+        AutonomousCandidateCanonicalJSON.fingerprint(PreparedIdentity(prepared))
+    }
+
+    package func matches(_ source: PreparedAutonomousPhrase) -> Bool {
+        let binding = SourceBinding(source)
+        let vector = binding.selectedCandidateEvidence
+        return schemaVersion == 1 && sourceIdentityFingerprint == binding.identityFingerprint &&
+            sourceReportFingerprint == binding.evidenceFingerprint &&
+            sourceCandidateFingerprint == vector.fingerprint &&
+            sourceOutgoingRenderDSPFingerprint == binding.commitProvenance.outgoingRenderDSPFingerprint &&
+            sampleRate == vector.routeContinuation.sampleRate &&
+            routeFingerprint == binding.routeFingerprint && routeGeneration == binding.routeGeneration &&
+            successorIncomingRenderDSPFingerprint == sourceOutgoingRenderDSPFingerprint &&
+            successorIncomingQualityFingerprint == binding.commitProvenance.outgoingQualityStateFingerprint &&
+            successorPreviousGraphFingerprint == vector.graphFingerprint &&
+            firstBar.isValid && firstBar.droppedRecordCount == 0
     }
 
     package var fingerprint: String { AutonomousCandidateCanonicalJSON.fingerprint(self) }

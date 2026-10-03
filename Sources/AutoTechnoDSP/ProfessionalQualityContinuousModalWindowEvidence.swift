@@ -33,6 +33,18 @@ package struct ProfessionalQualityContinuousModalWindowEvidence: Codable, Equata
             sourceReportFingerprint: sourceReportFingerprint, successorBar: nil, successorFingerprint: nil)
     }
 
+    package init(prepared: PreparedAutonomousPhrase,
+                 successor: ProfessionalQualityModalSuccessorEvidence? = nil) throws {
+        guard successor.map({ $0.matches(prepared) }) ?? true,
+              let checkpoint = ProfessionalQualityObservation.primaryCheckpoint(
+                for: prepared.selectedCandidateEvidence) else {
+            throw ProfessionalEvidenceReportBankError.inconsistentIdentity
+        }
+        try self.init(candidate: prepared.selectedCandidateEvidence, checkpoint: checkpoint,
+            sourceReportFingerprint: prepared.candidateEvaluationFingerprint,
+            successorBar: successor?.firstBar, successorFingerprint: successor?.fingerprint)
+    }
+
     private init(candidate: AutonomousCandidateEvaluationVector,
                  checkpoint: CanonicalJourneyCheckpoint,
                  sourceReportFingerprint: String,
@@ -124,6 +136,12 @@ package struct ProfessionalQualityContinuousModalObservationSource: Encodable,
                  successor: ProfessionalQualityModalSuccessorEvidence? = nil) throws {
         sourceIdentityFingerprint = ProfessionalQualityModalSuccessorEvidence.identity(report)
         projection = try .init(report: report, successor: successor)
+    }
+
+    package init(prepared: PreparedAutonomousPhrase,
+                 successor: ProfessionalQualityModalSuccessorEvidence? = nil) throws {
+        sourceIdentityFingerprint = ProfessionalQualityModalSuccessorEvidence.identity(prepared)
+        projection = try .init(prepared: prepared, successor: successor)
     }
 
     package var isComplete: Bool {

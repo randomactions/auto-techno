@@ -1310,6 +1310,41 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         let original = try Self(report: report)
         let source = try ProfessionalQualityContinuousModalObservationSource(
             report: report, successor: successor)
+        try self.init(continuousOriginal: original, source: source)
+    }
+
+    /// The same runtime population mapping as primary preparation, including
+    /// its broad continuation population for ordinary lock phrases.
+    package static func primaryCheckpoint(
+        for candidate: AutonomousCandidateEvaluationVector
+    ) -> CanonicalJourneyCheckpoint? {
+        guard candidate.symbolic.phraseIndex >= 0,
+              let kind = AutonomousPhraseKind(rawValue: candidate.symbolic.phraseKind) else { return nil }
+        return CanonicalJourneyCheckpoint.primaryQualification(
+            phraseIndex: candidate.symbolic.phraseIndex, phraseKind: kind,
+            chapterChanged: candidate.symbolic.chapterChanged) ?? .longContinuation
+    }
+
+    /// Detached, source-bound observation of one actual prepared phrase. A
+    /// missing successor preserves required-unavailable suffix measurements.
+    /// This adds no playback or policy activation authority.
+    package init(continuousPrepared prepared: PreparedAutonomousPhrase,
+                 successor: PreparedAutonomousPhrase? = nil) throws {
+        guard let checkpoint = Self.primaryCheckpoint(for: prepared.selectedCandidateEvidence) else {
+            throw ProfessionalEvidenceReportBankError.inconsistentIdentity
+        }
+        let receipt = try successor.map {
+            try ProfessionalQualityModalSuccessorEvidence(sourcePrepared: prepared, successor: $0)
+        }
+        let original = try Self(candidate: prepared.selectedCandidateEvidence,
+            engineVersion: prepared.candidateEvaluation.engineVersion, checkpoint: checkpoint)
+        let source = try ProfessionalQualityContinuousModalObservationSource(
+            prepared: prepared, successor: receipt)
+        try self.init(continuousOriginal: original, source: source)
+    }
+
+    private init(continuousOriginal original: Self,
+                 source: ProfessionalQualityContinuousModalObservationSource) throws {
         let projection = source.projection
         var values = original.metrics.filter {
             !ProfessionalQualityMeasurementContract.modalMetrics.contains($0.metric)

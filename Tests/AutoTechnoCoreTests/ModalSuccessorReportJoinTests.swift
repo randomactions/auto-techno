@@ -268,6 +268,48 @@ struct ModalSuccessorReportJoinTests {
             #expect(continuousObservation.continuousModalSource?.sourceIdentityFingerprint ==
                 ProfessionalQualityModalSuccessorEvidence.identity(source))
             #expect(continuousObservation.modalWindowSupport == nil)
+            // Runtime products share the original ledger and extraction path,
+            // but retain their own identity instead of manufacturing fixtures.
+            let preparedBefore = try ProfessionalQualityObservation(continuousPrepared: origin)
+            let preparedObservation = try ProfessionalQualityObservation(
+                continuousPrepared: origin, successor: next)
+            let preparedReceipt = try ProfessionalQualityModalSuccessorEvidence(
+                sourcePrepared: origin, successor: next)
+            #expect(preparedObservation.isComplete)
+            #expect(preparedObservation.measurementScope == .continuousModalWindow)
+            #expect(preparedObservation.checkpoint == ProfessionalQualityObservation.primaryCheckpoint(
+                for: origin.selectedCandidateEvidence))
+            #expect(preparedBefore.measurementApplicability(.modalPercussionTailToBodyDBMean) == .unavailable)
+            #expect(preparedObservation.continuousModalSource?.projection.tailBodySupport == joined.tailBodySupport)
+            #expect(preparedObservation.continuousModalSource?.projection.attackBodySupport == joined.attackBodySupport)
+            #expect(preparedObservation.continuousModalSource?.sourceIdentityFingerprint ==
+                ProfessionalQualityModalSuccessorEvidence.identity(origin))
+            #expect(preparedObservation.continuousModalSource?.sourceIdentityFingerprint !=
+                continuousObservation.continuousModalSource?.sourceIdentityFingerprint)
+            #expect(preparedReceipt.matches(origin) && !preparedReceipt.matches(source))
+            #expect(receipt.matches(source) && !receipt.matches(origin))
+            #expect(try ProfessionalQualityObservation(continuousPrepared: origin, successor: next) == preparedObservation)
+            #expect(preparedObservation.liveMaster == continuousObservation.liveMaster)
+            #expect(preparedObservation.upperPercussionTailSupport == continuousObservation.upperPercussionTailSupport)
+            for metric in ProfessionalQualityMetric.allCases {
+                #expect(preparedObservation[metric] == continuousObservation[metric])
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                try ProfessionalQualityObservation(continuousPrepared: origin, successor: origin)
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                try ProfessionalQualityContinuousModalWindowEvidence(prepared: origin, successor: receipt)
+            }
+            #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                try ProfessionalQualityContinuousModalWindowEvidence(report: source, successor: preparedReceipt)
+            }
+            if let otherRate = lowRateSuccessor, otherRate !== next {
+                #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                    try ProfessionalQualityObservation(continuousPrepared: origin, successor: otherRate)
+                }
+            }
+            #expect(!origin.commitEligible && !next.commitEligible)
+
             #expect(incompleteObservation.measurementApplicability(.modalPercussionTailToBodyDBMean) == .unavailable)
             #expect(incompleteObservation[.modalPercussionTailToBodyDBMean] == nil)
             for metric in ProfessionalQualityMetric.allCases where
@@ -402,6 +444,9 @@ struct ModalSuccessorReportJoinTests {
                         #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
                             try ProfessionalQualityModalSuccessorEvidence(source: source, successor: wrong)
                         }
+                        #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                            try ProfessionalQualityObservation(continuousPrepared: origin, successor: wrong)
+                        }
                     } else { #expect(outcome.failure != nil) }
                 }
                 // Real score checkpoints at one low-cost supported rate test bank
@@ -423,7 +468,12 @@ struct ModalSuccessorReportJoinTests {
                 "afterTailPartial": joined.tailBodySupport.partialWindowEventCount,
                 "afterTailMissing": joined.tailBodySupport.missingWindowEventCount,
                 "undefinedBodyEvents": joined.tailBodySupport.undefinedBodyEventCount,
-                "receiptFingerprint": receipt.fingerprint, "qualification": "unavailable-not-activated"])
+                "receiptFingerprint": receipt.fingerprint,
+                "preparedReceiptFingerprint": preparedReceipt.fingerprint,
+                "preparedSourceIdentityFingerprint": ProfessionalQualityModalSuccessorEvidence.identity(origin),
+                "preparedMeasurementsEqualReportMeasurements": preparedObservation.metrics == continuousObservation.metrics,
+                "preparedTailMeasuredEventCount": preparedObservation.continuousModalSource!.projection.tailBodySupport.measuredEventCount,
+                "qualification": "unavailable-not-activated"])
         }
         FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject:
             ["fixture": "modal-successor-report-join.v1", "publicSeed": initial.rootSeed,
@@ -490,7 +540,29 @@ struct ModalSuccessorReportJoinTests {
         #expect(throws: ProfessionalQualityCalibrationError.unavailableMeasurement(unavailable[0])) {
             try ProfessionalQualityCalibrationProfile(continuousBank: bank)
         }
-        let profile = try ProfessionalQualityCalibrationProfile(continuousBank: bank, successors: receipts)
+        let unsupportedTrainingMetrics = ProfessionalQualityMetric.allCases.filter { metric in
+            !complete.observations.contains { $0.measurementIsApplicable(metric) }
+        }
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: [
+            "fixture": "continuous-reduced-corpus-training-support.v1",
+            "sourceBankFingerprint": complete.sourceBankFingerprint,
+            "unsupportedTrainingMetrics": unsupportedTrainingMetrics.map(\.rawValue),
+            "qualification": "diagnostic-not-activated"
+        ], options: [.sortedKeys]))
+        FileHandle.standardOutput.write(Data([0x0A]))
+        #expect(complete.sourceBankFingerprint == "11743474e0cedea5")
+        #expect(unsupportedTrainingMetrics == [.upperPercussionTailRenderedTailToAttackDBMean])
+        #expect(throws: ProfessionalQualityCalibrationError.invalidMetricSet) {
+            try ProfessionalQualityCalibrationProfile(continuousBank: bank, successors: receipts)
+        }
+        let supported = try ProfessionalQualityCalibrationTrajectory(
+            continuousBank: fixture.supportedBank, successors: fixture.supportedReceipts)
+        #expect(supported.sourceBankFingerprint != complete.sourceBankFingerprint)
+        #expect(supported.observations.contains {
+            $0.measurementIsApplicable(.upperPercussionTailRenderedTailToAttackDBMean)
+        })
+        let profile = try ProfessionalQualityCalibrationProfile(
+            continuousBank: fixture.supportedBank, successors: fixture.supportedReceipts)
         #expect(profile.isComplete && !profile.usesDiverseCalibration)
         #expect(profile.measurementScope == .continuousModalWindow)
         #expect(profile.schemaVersion == 24 && profile.profileVersion ==
@@ -566,7 +638,8 @@ struct ModalSuccessorReportJoinTests {
                 evidenceVersion: legacyObservation.evidenceVersion,
                 checkpoint: legacyObservation.checkpoint, sampleRate: 96_000,
                 hardGatesPassed: legacyObservation.hardGatesPassed,
-                liveMaster: legacyObservation.liveMaster, metrics: legacyObservation.metrics)
+                liveMaster: legacyObservation.liveMaster, metrics: legacyObservation.metrics,
+                upperPercussionTailSupport: legacyObservation.upperPercussionTailSupport)
             #expect(try legacyChallenge.deterministicJSON() == historicalChallenge.deterministicJSON())
         }
         let invalidSources = complete.observations.map { $0.foreignRateChallenge() }
@@ -584,10 +657,14 @@ struct ModalSuccessorReportJoinTests {
             #expect(verdict.failedMetrics.contains(.modalPercussionTailToBodyDBMean))
             #expect(verdict.failedMetrics.contains(.maximumBoundaryDelta))
         }
-        let installed = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(installed.profile.profileVersion == ProfessionalQualityCalibrationProfile.profileVersion)
+        // Activation belongs to the existing readiness/artifact controls. A
+        // complete one-bank construction profile remains insufficient and is
+        // outside the installed primary evaluator's required scope.
+        #expect(profile.profileVersion != ProfessionalQualityPrimaryEvaluator.requiredProfileVersion)
         FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: [
-            "fixture": "continuous-modal-observation-foundation.v1",
+            "fixture": "continuous-modal-observation-foundation.v2",
+            "unsupportedOriginalTrainingMetrics": unsupportedTrainingMetrics.map(\.rawValue),
+            "supportedSourceBankFingerprint": supported.sourceBankFingerprint,
             "sourceBankFingerprint": complete.sourceBankFingerprint,
             "observationVersion": profile.observationVersion, "profileVersion": profile.profileVersion,
             "observationCount": complete.observations.count, "sourceTrajectoryCount": profile.sourceTrajectoryCount,
@@ -613,10 +690,34 @@ struct ModalSuccessorReportJoinTests {
     }
 
     private func continuousBankControl() throws ->
-        (bank: ProfessionalEvidenceReportBank, receipts: [ProfessionalQualityModalSuccessorEvidence]) {
+        (bank: ProfessionalEvidenceReportBank, receipts: [ProfessionalQualityModalSuccessorEvidence],
+         supportedBank: ProfessionalEvidenceReportBank,
+         supportedReceipts: [ProfessionalQualityModalSuccessorEvidence]) {
         let director = AutonomousSessionDirector(rootSeed: 48_300)
         var reports: [CanonicalJourneyQualificationReport] = []
         var receipts: [ProfessionalQualityModalSuccessorEvidence] = []
+        var supportReports: [CanonicalJourneyQualificationReport] = []
+        var supportReceipts: [ProfessionalQualityModalSuccessorEvidence] = []
+        // Declare one positive score population before any PCM. Preserve the
+        // original bank as the missing-population negative control. This is a
+        // mechanical construction fixture, separate from the frozen 40/6 study.
+        var planningState = director.initialState()
+        var supportSelection: (checkpoint: CanonicalJourneyCheckpoint, phraseIndex: Int)?
+        for _ in 0..<128 {
+            let plan = director.plan(from: planningState)
+            let labels = CanonicalJourneyCheckpoint.applicable(
+                phraseIndex: plan.phraseIndex, phraseKind: plan.kind,
+                chapterChanged: false)
+            if let checkpoint = labels.first,
+               plan.resolvedBars.contains(where: { bar in
+                   bar.upperPercussionTailArticulations.contains { $0.role == .foregroundClearance }
+               }) {
+                supportSelection = (checkpoint, plan.phraseIndex)
+                break
+            }
+            planningState.advancePlanning(using: plan)
+        }
+        let supportedSelection = try #require(supportSelection)
         let checkpoints = CanonicalJourneyQualificationHarness(engineVersion: QualityQualificationContract.engineVersion,
             routeFingerprint: "continuous-modal-mechanical-control", routeGeneration: 0)
             .planCheckpoints(director: director)
@@ -628,7 +729,8 @@ struct ModalSuccessorReportJoinTests {
                     checkpoint.checkpoint == .longContinuation
                         ? plan.phraseIndex == 21 : checkpoint.phraseIndex == plan.phraseIndex
                 }.map(\.checkpoint)
-                if !selected.isEmpty {
+                let isSupportSource = plan.phraseIndex == supportedSelection.phraseIndex
+                if !selected.isEmpty || isSupportSource {
                     let input = Self.incomingControlState(startBar: plan.startBar)
                     let originResult = AutonomousPhrasePreparer.prepareIfNotCancelled(
                         plan: plan, sessionSeed: state.rootSeed, memory: state.memory, sampleRate: rate,
@@ -650,12 +752,23 @@ struct ModalSuccessorReportJoinTests {
                         reports.append(source)
                         receipts.append(try .init(source: source, successor: next))
                     }
+                    if isSupportSource {
+                        let source = try report(origin, label: "continuous-modal-construction-control",
+                            checkpoint: supportedSelection.checkpoint)
+                        supportReports.append(source)
+                        supportReceipts.append(try .init(source: source, successor: next))
+                    }
                 }
-                if reports.filter({ $0.sampleRate == rate }).count == CanonicalJourneyCheckpoint.allCases.count { break }
+                if reports.filter({ $0.sampleRate == rate }).count == CanonicalJourneyCheckpoint.allCases.count &&
+                    supportReports.contains(where: { $0.sampleRate == rate }) { break }
                 state.advancePlanning(using: plan)
             }
         }
-        return (try ProfessionalEvidenceReportBank(reports: reports), receipts)
+        let retained = reports.filter { $0.checkpoint != supportedSelection.checkpoint }
+        let retainedIdentities = Set(retained.map(ProfessionalQualityModalSuccessorEvidence.identity))
+        let retainedReceipts = receipts.filter { retainedIdentities.contains($0.sourceIdentityFingerprint) }
+        return (try ProfessionalEvidenceReportBank(reports: reports), receipts,
+            try ProfessionalEvidenceReportBank(reports: retained + supportReports), retainedReceipts + supportReceipts)
     }
 
     private func report(_ prepared: PreparedAutonomousPhrase, label: String,

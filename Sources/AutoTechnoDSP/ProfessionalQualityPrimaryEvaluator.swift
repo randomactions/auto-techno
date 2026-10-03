@@ -599,23 +599,13 @@ package struct ProfessionalQualityPrimaryEvaluator:
     package func assessment(
         of candidate: AutonomousCandidateEvaluationVector
     ) -> ProfessionalQualityCandidateAssessment {
-        guard let phraseKind = AutonomousPhraseKind(
-            rawValue: candidate.symbolic.phraseKind
-        ) else {
+        guard let checkpoint = ProfessionalQualityObservation.primaryCheckpoint(for: candidate) else {
             return .unavailable(
                 .invalidEvidence,
                 calibrationTrajectoryCount: profile.sourceTrajectoryCount
             )
         }
-        let primaryCheckpoint = CanonicalJourneyCheckpoint.primaryQualification(
-            phraseIndex: candidate.symbolic.phraseIndex,
-            phraseKind: phraseKind,
-            chapterChanged: candidate.symbolic.chapterChanged
-        )
-        // Ordinary lock phrases use the continuation envelope. It is derived
-        // from the same engine's later steady-state journey observations and
-        // gives every primary phrase a calibrated, non-aggregate judgment.
-        let checkpoints = [primaryCheckpoint ?? .longContinuation]
+        let checkpoints = [checkpoint]
         let sampleRate = candidate.routeContinuation.sampleRate
         guard !checkpoints.isEmpty else {
             return .unavailable(

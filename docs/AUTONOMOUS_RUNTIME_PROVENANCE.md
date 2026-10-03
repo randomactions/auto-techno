@@ -1473,3 +1473,42 @@ A reduced one-bank analysis uses the same corpus fitter and remains below the
 minimum diverse source count. The existing evaluator and activation authority are retained. Installed v21/v30/v16 remains the runtime contract; bar-local
 v22/v31 and continuous v23/v32 remain unqualified and unactivated. No renderer,
 Core continuation, callback operation, future decision or PCM algorithm changes.
+
+## Prepared-product continuous observation seam
+
+The detached continuous observation owner can also bind one immutable prepared
+phrase and its actual immediate prepared successor, without creating fixture
+reports. The shared successor validator checks the same render/DSP, quality,
+graph, live-master, route and physical-window continuation as the report path.
+Prepared identity includes the selected plan, transaction, commit and incoming/
+outgoing quality states; report identity retains its separate checkpoint/fixture
+binding. Receipts cannot cross these source identities. The existing Core
+primary checkpoint mapping chooses the runtime population, including the broad
+continuation population for an ordinary lock phrase.
+
+Both paths use the same modal ledger, applicability and observation extraction.
+Absent successors leave unfinished source windows required-unavailable; new
+successor score events never contribute to the source phrase's means. The
+three-rate actual-product regression covers equality of measurements, distinct
+source identity, exact replay, self/wrong-rate successor rejection and rejection
+of cross-bound receipts. No persistent state, PCM, renderer, callback, schedule,
+commit outcome or policy activation changes. Continuous native offline
+qualification is separate from runtime eligibility; delayed future-boundary
+integration and matching installed primary/long-horizon qualification remain
+required before promotion.
+
++The reduced one-bank construction test preserves its original bank identity
++`11743474e0cedea5` as a negative control: it has no foreground-clearance
++population for the upper-percussion tail-to-attack metric and must refuse
++fitting with `invalidMetricSet`. A positive construction counterpart selects
++the first eligible score-declared foreground-clearance phrase before any PCM,
++using the same public seed and a 128-phrase bound. It replaces only that actual
++checkpoint's native-rate source pair in the counterpart bank; the original
++bank, phrase-21 modal suffix and frozen 40/6 qualification study are preserved.
++Both banks retain typed original and actual successor provenance. The positive
++bank has one trajectory, so it cannot provide diverse calibration or activate
++the installed primary evaluator. Foreign-rate wire controls preserve the actual
++score-support metadata rather than reconstructing it as absent. Installed
++evidence-v29 artifacts remain ineligible under corrected evidence-v30 source;
++this observation seam does not waive that boundary.
++
