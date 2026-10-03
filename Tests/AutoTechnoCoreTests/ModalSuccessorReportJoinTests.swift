@@ -532,6 +532,193 @@ struct ModalSuccessorReportJoinTests {
         FileHandle.standardOutput.write(Data([0x0A]))
     }
 
+    @Test("Private prospective source admission requires actual complete and identity-bound successor evidence")
+    @MainActor
+    func preparedValidationAdmission() throws {
+        let director = AutonomousSessionDirector(rootSeed: 48_300)
+        var state = director.initialState()
+        for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
+        let plan = director.plan(from: state)
+        #expect(plan.phraseIndex == 21 && plan.startBar == 225)
+        let originalState = state
+        var rows: [[String: Any]] = []
+        var cachedProof: AutonomousCandidatePreparedValidation?
+        for rate in [8_000.0, 44_100.0, 48_000.0] {
+            let control = PreparedValidationControl()
+            let evaluator = PreparedValidationTestEvaluator(
+                startingState: state, control: control, mode: .actualSuccessor)
+            let first = try #require(prepareValidationSource(
+                state: state, plan: plan, rate: rate, evaluator: evaluator).preparedPhrase)
+            #expect(first.preparedValidationRequired && first.commitEligible)
+            let proof = try #require(first.preparedValidation)
+            #expect(proof.hasRequiredMeasurements)
+            #expect(proof.sourceIdentityFingerprint == ProfessionalQualityModalSuccessorEvidence.identity(first))
+            #expect(proof.observation.continuousModalSource?.projection.tailBodySupport.partialWindowEventCount == 0)
+            #expect(first.qualityContinuationState.acceptanceProvenanceComplete)
+            #expect(first.qualityContinuationState.revision == state.quality.revision + 1)
+            #expect(first.candidateEvaluation.attempts.count == 1 && first.correctionRenderCount == 0)
+            #expect(control.snapshot.calls == 1 && control.snapshot.probes == 1)
+            #expect(control.snapshot.probeWasCommitEligible == false)
+            #expect(control.snapshot.assessments == 1)
+            let repeatControl = PreparedValidationControl()
+            let repeated = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
+                evaluator: PreparedValidationTestEvaluator(startingState: state,
+                    control: repeatControl, mode: .actualSuccessor)).preparedPhrase)
+            #expect(repeated.commitEligible)
+            #expect(repeated.audioPreflight.quality.sampleHash == first.audioPreflight.quality.sampleHash)
+            #expect(repeated.qualityContinuationState == first.qualityContinuationState)
+            #expect(repeated.commitProvenance == first.commitProvenance)
+            #expect(repeated.preparedValidation?.observation == proof.observation)
+            #expect(repeated.preparedValidation?.sourceIdentityFingerprint == proof.sourceIdentityFingerprint)
+            let advanced = state.advance(using: first.plan, quality: first.qualityContinuationState,
+                liveMasterHeadroom: first.liveMasterHeadroomContinuationState)
+            #expect(advanced.phraseIndex == state.phraseIndex + 1)
+            #expect(advanced.quality == first.qualityContinuationState)
+            #expect(state == originalState)
+            if rate == 8_000 { cachedProof = proof }
+            rows.append(["sampleRate": rate, "sourceIdentity": proof.sourceIdentityFingerprint,
+                "sampleHash": first.audioPreflight.quality.sampleHash,
+                "validationCalls": control.snapshot.calls, "probeRenders": control.snapshot.probes,
+                "probeCommitEligible": control.snapshot.probeWasCommitEligible,
+                "sourceCommitEligible": first.commitEligible, "qualification": "mechanical-only-not-installed"])
+        }
+        for mode in [PreparedValidationTestEvaluator.Mode.missingProof, .missingSuccessor, .reject] {
+            let control = PreparedValidationControl()
+            let source = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+                evaluator: PreparedValidationTestEvaluator(startingState: state,
+                    control: control, mode: mode)).preparedPhrase)
+            #expect(!source.commitEligible)
+            #expect(source.qualityContinuationState.acceptedEvidenceFingerprint == state.quality.acceptedEvidenceFingerprint)
+            #expect(!source.qualityDecision.isAcceptanceOutcome)
+            #expect(control.snapshot.calls == 1)
+            if mode == .missingSuccessor {
+                #expect(control.snapshot.assessments == 0 && control.snapshot.probes == 0)
+                #expect(source.preparedValidation?.hasRequiredMeasurements == false)
+            }
+        }
+        let changed = prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: PreparedValidationControl(), mode: .changedAcceptedReason))
+        #expect(changed.preparedPhrase == nil)
+        #expect(changed.failure?.code == .preparedValidationMismatch)
+        #expect(changed.failure?.details.contains("prepared-validation-source") == true)
+        let foreign = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: PreparedValidationControl(cached: cachedProof), mode: .foreignProof),
+            routeGeneration: 1).preparedPhrase)
+        #expect(!foreign.commitEligible && foreign.preparedValidation == nil)
+        #expect(foreign.qualityDiagnosticDetails == ["prepared-validation=source-mismatch"])
+        let cancelledControl = PreparedValidationControl()
+        let cancelled = prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: cancelledControl, mode: .cancel))
+        #expect(cancelled.preparedPhrase == nil && cancelled.failure?.code == .cancelled)
+        #expect(cancelledControl.snapshot.calls == 1)
+        let correctedControl = PreparedValidationControl()
+        let corrected = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: correctedControl, mode: .actualSuccessor, correct: true)).preparedPhrase)
+        #expect(corrected.commitEligible && corrected.qualityDecision.outcome == .adjusted)
+        #expect(corrected.candidateEvaluation.attempts.count == 2 && corrected.correctionRenderCount == 1)
+        #expect(correctedControl.snapshot.calls == 1 && correctedControl.snapshot.probes == 1)
+        let wire: [String: Any] = ["fixture": "private-prepared-validation-admission.v1",
+            "rows": rows, "requiredProofMissingRefused": true, "sourceOnlySuffixRefused": true,
+            "foreignProofRefused": true, "acceptedQualityRebindingRefused": true,
+            "cancelledBeforeAdmission": true, "adjustedTransactionBound": true,
+            "qualification": "mechanical-only-not-installed"]
+        print(String(decoding: try JSONSerialization.data(withJSONObject: wire, options: [.sortedKeys]), as: UTF8.self))
+    }
+
+    private func prepareValidationSource(state: AutonomousSessionState,
+        plan: AutonomousPhrasePlan, rate: Double,
+        evaluator: PreparedValidationTestEvaluator,
+        routeGeneration: Int = 0) -> AutonomousPhrasePreparationOutcome {
+        AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
+            plan: plan, sessionSeed: state.rootSeed, memory: state.memory, sampleRate: rate,
+            incomingRenderState: Self.incomingControlState(startBar: plan.startBar),
+            incomingGraphState: GeneratedDSPContinuationState(), previousGraph: nil,
+            incomingQualityState: state.quality, routeGeneration: routeGeneration,
+            evaluator: evaluator, cancellationRequested: { evaluator.control.snapshot.cancelled })
+    }
+
+    private final class PreparedValidationControl: @unchecked Sendable {
+        struct Snapshot {
+            var calls = 0; var probes = 0; var assessments = 0
+            var probeWasCommitEligible = false; var cancelled = false
+        }
+        private let lock = NSLock()
+        private var state = Snapshot()
+        let cached: AutonomousCandidatePreparedValidation?
+        init(cached: AutonomousCandidatePreparedValidation? = nil) { self.cached = cached }
+        var snapshot: Snapshot { lock.lock(); defer { lock.unlock() }; return state }
+        func update(_ change: (inout Snapshot) -> Void) {
+            lock.lock(); defer { lock.unlock() }; change(&state)
+        }
+    }
+
+    private struct PreparedValidationTestEvaluator: AutonomousCandidateEvaluating {
+        enum Mode: Equatable { case actualSuccessor, missingProof, missingSuccessor, reject,
+            changedAcceptedReason, foreignProof, cancel }
+        let startingState: AutonomousSessionState
+        let control: PreparedValidationControl
+        let mode: Mode
+        var correct = false
+        let policyVersion = "test-primary-calibrated.v1"
+        let evaluatorVersion = "test-prepared-validation.v1"
+        var requiresPreparedValidation: Bool { true }
+        func requestsHomeUpperTimbreCorrection(for candidate: AutonomousCandidateEvaluationVector) -> Bool { correct }
+        func terminalVerdict(selected: AutonomousCandidateEvaluationVector,
+            transaction: AutonomousCandidateEvaluationTransaction) -> AutonomousCandidatePolicyVerdict {
+            Self.accepted(transaction)
+        }
+        static func accepted(_ transaction: AutonomousCandidateEvaluationTransaction,
+            extraReason: Bool = false) -> AutonomousCandidatePolicyVerdict {
+            AutonomousCandidatePolicyVerdict(outcome: transaction.correctionCount == 0 ? .qualified : .adjusted,
+                decisionBasis: .calibratedQuality,
+                reasonCodes: [transaction.correctionCount == 0 ? .candidateQualifiedV1 : .candidateAdjustedV1] +
+                    (extraReason ? [.routeRecoveryV1] : []))
+        }
+        func preparedValidation(for preview: AutonomousCandidatePreparedPreview) -> AutonomousCandidatePreparedValidation? {
+            control.update { $0.calls += 1 }
+            if mode == .missingProof { return nil }
+            if mode == .foreignProof { return control.cached }
+            if mode == .cancel { control.update { $0.cancelled = true }; return nil }
+            var successor: PreparedAutonomousPhrase?
+            if mode != .missingSuccessor {
+                let next = startingState.advance(using: preview.plan, quality: preview.prospectiveQualityState,
+                    liveMasterHeadroom: preview.prospectiveLiveMasterState)
+                let director = AutonomousSessionDirector(rootSeed: next.rootSeed)
+                control.update { $0.probes += 1 }
+                successor = AutonomousPhrasePreparer.prepareIfNotCancelled(
+                    plan: director.plan(from: next), sessionSeed: next.rootSeed, memory: next.memory,
+                    sampleRate: preview.selectedCandidateEvidence.routeContinuation.sampleRate,
+                    incomingRenderState: preview.endingRenderState, incomingGraphState: preview.endingGraphState,
+                    previousGraph: preview.graph, incomingQualityState: next.quality,
+                    routeGeneration: preview.selectedCandidateEvidence.routeContinuation.routeGeneration,
+                    evaluator: ValidationProbeTestEvaluator(policyVersion: policyVersion, evaluatorVersion: evaluatorVersion),
+                    cancellationRequested: { false })
+                control.update { $0.probeWasCommitEligible = successor?.commitEligible ?? false }
+                if successor == nil { return nil }
+            }
+            return try? preview.assessingContinuous(successor: successor) { _ in
+                control.update { $0.assessments += 1 }
+                return mode == .reject ? AutonomousCandidatePolicyVerdict(outcome: .rejected,
+                    decisionBasis: .calibratedQuality, reasonCodes: [.guardrailRegressionV1]) :
+                    Self.accepted(preview.transaction, extraReason: mode == .changedAcceptedReason)
+            }
+        }
+    }
+
+    private struct ValidationProbeTestEvaluator: AutonomousCandidateEvaluating {
+        let policyVersion: String; let evaluatorVersion: String
+        func requestsHomeUpperTimbreCorrection(for candidate: AutonomousCandidateEvaluationVector) -> Bool { false }
+        func terminalVerdict(selected: AutonomousCandidateEvaluationVector,
+            transaction: AutonomousCandidateEvaluationTransaction) -> AutonomousCandidatePolicyVerdict {
+            AutonomousCandidatePolicyVerdict(outcome: .qualificationUnavailable, decisionBasis: .unavailable,
+                reasonCodes: [.evaluatorUnavailableV1])
+        }
+    }
+
     @Test("Continuous calibration keeps real bank membership and refuses unsupported fitting")
     func continuousCalibrationMembershipAndFitting() throws {
         // Public mechanical construction control, not a fresh calibration

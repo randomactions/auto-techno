@@ -879,6 +879,14 @@ package final class PreparedAutonomousPhrase: Sendable {
     /// Bounded, non-PCM evaluator context retained only for read-only runtime
     /// diagnostics. It never participates in candidate selection or commit.
     package let qualityDiagnosticDetails: [String]
+    /// Detached validation is mandatory only for evaluators that request it.
+    /// A prospective product with no proof cannot enter transport.
+    package let preparedValidationRequired: Bool
+    package let preparedValidation: AutonomousCandidatePreparedValidation?
+    /// Cached once by the private initializer. The legacy path incurs no new
+    /// full-product hash; required-validation admission compares bounded IDs.
+    package let preparedValidationSourceIdentityFingerprint: String?
+
     package let incomingQualityState: QualityContinuationState
     package let qualityContinuationState: QualityContinuationState
     package let incomingLiveMasterHeadroomState:
@@ -916,7 +924,9 @@ package final class PreparedAutonomousPhrase: Sendable {
             LiveMasterHeadroomContinuationState,
         liveTargetStartSample: Int64?,
         correctionRenderCount: Int,
-        usedHomeTimbreCorrection: Bool
+        usedHomeTimbreCorrection: Bool,
+        preparedValidationRequired: Bool = false,
+        preparedValidation: AutonomousCandidatePreparedValidation? = nil
     ) {
         self.plan = plan
         self.graph = graph
@@ -945,6 +955,14 @@ package final class PreparedAutonomousPhrase: Sendable {
         self.liveTargetStartSample = liveTargetStartSample
         self.correctionRenderCount = correctionRenderCount
         self.usedHomeTimbreCorrection = usedHomeTimbreCorrection
+        self.preparedValidationRequired = preparedValidationRequired
+        self.preparedValidation = preparedValidation
+        preparedValidationSourceIdentityFingerprint = preparedValidationRequired
+            ? ProfessionalQualityModalSuccessorEvidence.preparedValidationIdentity(
+                planFingerprint: selectedCandidateEvidence.planFingerprint,
+                transaction: boundCandidateEvaluation.transaction, commit: commitProvenance,
+                incomingQuality: incomingQualityState, outgoingQuality: qualityContinuationState)
+            : nil
     }
 
     package var qualifiedRepeatHoldPatternFamilies:
@@ -1016,6 +1034,25 @@ package final class PreparedAutonomousPhrase: Sendable {
             qualityDecision.evidenceFingerprint == candidateEvaluationFingerprint
                 ? nil : "quality-evidence-fingerprint",
         ].compactMap { $0 }
+        if preparedValidationRequired {
+            if let preparedValidation {
+                if preparedValidation.sourceIdentityFingerprint !=
+                    preparedValidationSourceIdentityFingerprint {
+                    failures.append("prepared-validation-source")
+                }
+                if !preparedValidation.hasRequiredMeasurements {
+                    failures.append("prepared-validation-measurements")
+                }
+                if preparedValidation.verdict.outcome != qualityDecision.outcome ||
+                    !qualityDecision.isAcceptanceOutcome {
+                    failures.append("prepared-validation-outcome")
+                }
+            } else {
+                failures.append("prepared-validation-missing")
+            }
+        } else if preparedValidation != nil {
+            failures.append("prepared-validation-unrequested")
+        }
         if let liveTargetStart,
            !commitProvenance.matches(
                 candidateEvaluationFingerprint: candidateEvaluationFingerprint,
@@ -1062,6 +1099,7 @@ package struct AutonomousPhrasePreparationFailure: Error, Equatable, Sendable {
     }
 
     package enum Code: String, Equatable, Sendable {
+        case preparedValidationMismatch = "prepared-validation-mismatch"
         case cancelled
         case invalidInput = "invalid-input"
         case continuationUnavailable = "continuation-unavailable"
@@ -1317,15 +1355,101 @@ package struct AutonomousCandidatePolicyVerdict: Equatable, Sendable,
 package protocol AutonomousCandidateEvaluating: Sendable {
     var policyVersion: String { get }
     var evaluatorVersion: String { get }
+    var requiresPreparedValidation: Bool { get }
+
+    /// Invoked once off the callback, before a required-validation source can
+    /// escape preparation. Nil preserves unavailable qualification.
+    func preparedValidation(
+        for preview: AutonomousCandidatePreparedPreview
+    ) -> AutonomousCandidatePreparedValidation?
 
     func requestsHomeUpperTimbreCorrection(
         for candidate: AutonomousCandidateEvaluationVector
     ) -> Bool
 
+    /// Accepting results remain prospective when prepared validation is
+    /// required. Only the canonical finalizer may admit the bound final product.
     func terminalVerdict(
         selected: AutonomousCandidateEvaluationVector,
         transaction: AutonomousCandidateEvaluationTransaction
     ) -> AutonomousCandidatePolicyVerdict
+}
+
+package extension AutonomousCandidateEvaluating {
+    var requiresPreparedValidation: Bool { false }
+
+    func preparedValidation(
+        for preview: AutonomousCandidatePreparedPreview
+    ) -> AutonomousCandidatePreparedValidation? { nil }
+}
+
+/// Immutable detached view of the sole source render. Its underlying prepared
+/// product remains private and commit-ineligible until actual validation. This
+/// is prospective continuation for an evidence probe, not accepted session state.
+package final class AutonomousCandidatePreparedPreview: Sendable {
+    fileprivate let source: PreparedAutonomousPhrase
+    fileprivate init(_ source: PreparedAutonomousPhrase) { self.source = source }
+
+    package var plan: AutonomousPhrasePlan { source.plan }
+    package var graph: DSPGraphPlan { source.graph }
+    package var endingRenderState: RenderState { source.endingRenderState }
+    package var endingGraphState: GeneratedDSPContinuationState { source.endingGraphState }
+    package var prospectiveQualityState: QualityContinuationState { source.qualityContinuationState }
+    package var prospectiveLiveMasterState: LiveMasterHeadroomContinuationState {
+        source.liveMasterHeadroomContinuationState
+    }
+    package var selectedCandidateEvidence: AutonomousCandidateEvaluationVector {
+        source.selectedCandidateEvidence
+    }
+    package var transaction: AutonomousCandidateEvaluationTransaction { source.candidateEvaluation }
+    package var sourceIdentityFingerprint: String {
+        ProfessionalQualityModalSuccessorEvidence.identity(source)
+    }
+
+    /// Only actual products can construct this proof. Missing physical support
+    /// remains unavailable even if an assessor attempts to accept it. No probe
+    /// PCM or successor acceptance is retained by the returned proof.
+    package func assessingContinuous(
+        successor: PreparedAutonomousPhrase? = nil,
+        using assess: (ProfessionalQualityObservation) -> AutonomousCandidatePolicyVerdict
+    ) throws -> AutonomousCandidatePreparedValidation {
+        let observation = try ProfessionalQualityObservation(
+            continuousPrepared: source, successor: successor)
+        let measured = observation.isComplete &&
+            ProfessionalQualityMeasurementContract.modalMetrics.allSatisfy {
+                observation.measurementApplicability($0) != .unavailable
+            }
+        let verdict = measured ? assess(observation) : AutonomousCandidatePolicyVerdict(
+            outcome: .qualificationUnavailable, decisionBasis: .unavailable,
+            reasonCodes: [.evaluatorUnavailableV1],
+            diagnosticDetails: ["prepared-validation=required-windows-unavailable"])
+        return AutonomousCandidatePreparedValidation(
+            sourceIdentityFingerprint: sourceIdentityFingerprint,
+            observation: observation, verdict: verdict)
+    }
+}
+
+/// Source-bound typed evidence attached only by the canonical finalizer. There
+/// is no decoded, memberwise, or arbitrary-fingerprint construction path.
+package final class AutonomousCandidatePreparedValidation: Sendable {
+    package let sourceIdentityFingerprint: String
+    package let observation: ProfessionalQualityObservation
+    package let verdict: AutonomousCandidatePolicyVerdict
+    package let hasRequiredMeasurements: Bool
+
+    fileprivate init(sourceIdentityFingerprint: String,
+        observation: ProfessionalQualityObservation,
+        verdict: AutonomousCandidatePolicyVerdict) {
+        self.sourceIdentityFingerprint = sourceIdentityFingerprint
+        self.observation = observation
+        self.verdict = verdict
+        hasRequiredMeasurements = observation.isComplete && observation.hardGatesPassed &&
+            observation.measurementScope == .continuousModalWindow &&
+            observation.continuousModalSource?.sourceIdentityFingerprint == sourceIdentityFingerprint &&
+            ProfessionalQualityMeasurementContract.modalMetrics.allSatisfy {
+                observation.measurementApplicability($0) != .unavailable
+            }
+    }
 }
 
 /// Explicit offline evidence collector used to build a profile. The shipping
@@ -1837,7 +1961,8 @@ package enum AutonomousPhrasePreparer {
             incomingQualityState: incomingQualityState,
             incomingLiveMasterState: liveBinding.incoming,
             outgoingLiveMasterState: liveBinding.outgoing,
-            evaluator: evaluator
+            evaluator: evaluator,
+            cancellationRequested: cancellationRequested
         )
     }
 
@@ -2974,12 +3099,72 @@ package enum AutonomousPhrasePreparer {
         incomingQualityState: QualityContinuationState,
         incomingLiveMasterState: LiveMasterHeadroomContinuationState,
         outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
-        evaluator: E
+        evaluator: E,
+        cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhrasePreparationOutcome {
-        let verdict = evaluator.terminalVerdict(
-            selected: selected.vector,
-            transaction: transaction
-        )
+        let prospectiveVerdict = evaluator.terminalVerdict(
+            selected: selected.vector, transaction: transaction)
+        let required = evaluator.requiresPreparedValidation
+        let prospective = assemblePrepared(
+            selected: selected, transaction: transaction,
+            incomingQualityState: incomingQualityState,
+            incomingLiveMasterState: incomingLiveMasterState,
+            outgoingLiveMasterState: outgoingLiveMasterState,
+            policyVersion: evaluator.policyVersion, verdict: prospectiveVerdict,
+            preparedValidationRequired: required)
+        guard required, let source = prospective.preparedPhrase,
+              source.qualityDecision.isAcceptanceOutcome,
+              source.hardGatesPassed, transaction.isComplete else { return prospective }
+        guard !cancellationRequested() else {
+            return .failed(.init(stage: .finalization, code: .cancelled))
+        }
+        let preview = AutonomousCandidatePreparedPreview(source)
+        let proof = evaluator.preparedValidation(for: preview)
+        guard !cancellationRequested() else {
+            return .failed(.init(stage: .finalization, code: .cancelled))
+        }
+        let boundProof = proof.flatMap {
+            $0.sourceIdentityFingerprint == preview.sourceIdentityFingerprint ? $0 : nil
+        }
+        let verdict: AutonomousCandidatePolicyVerdict
+        if let boundProof {
+            verdict = boundProof.verdict
+        } else {
+            verdict = AutonomousCandidatePolicyVerdict(
+                outcome: .qualificationUnavailable, decisionBasis: .unavailable,
+                reasonCodes: [.evaluatorUnavailableV1],
+                diagnosticDetails: [proof == nil
+                    ? "prepared-validation=missing" : "prepared-validation=source-mismatch"])
+        }
+        let final = assemblePrepared(
+            selected: selected, transaction: transaction,
+            incomingQualityState: incomingQualityState,
+            incomingLiveMasterState: incomingLiveMasterState,
+            outgoingLiveMasterState: outgoingLiveMasterState,
+            policyVersion: evaluator.policyVersion, verdict: verdict,
+            preparedValidationRequired: true, preparedValidation: boundProof,
+            presentation: source)
+        if let prepared = final.preparedPhrase,
+           prepared.qualityDecision.isAcceptanceOutcome,
+           !prepared.commitEligible {
+            return .failed(.init(stage: .finalization, code: .preparedValidationMismatch,
+                details: prepared.commitFailureDiagnostics))
+        }
+        return final
+    }
+
+    private static func assemblePrepared(
+        selected: CandidateRenderProduct,
+        transaction: AutonomousCandidateEvaluationTransaction,
+        incomingQualityState: QualityContinuationState,
+        incomingLiveMasterState: LiveMasterHeadroomContinuationState,
+        outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
+        policyVersion: String,
+        verdict: AutonomousCandidatePolicyVerdict,
+        preparedValidationRequired: Bool,
+        preparedValidation: AutonomousCandidatePreparedValidation? = nil,
+        presentation: PreparedAutonomousPhrase? = nil
+    ) -> AutonomousPhrasePreparationOutcome {
         var reasonCodes = verdict.reasonCodes + selected.attempt.reasonCodes
         if selected.vector.routeContinuation.routeRecovery {
             // Fresh evidence from the replacement route is not stale. This
@@ -2996,7 +3181,7 @@ package enum AutonomousPhrasePreparer {
         let boundCandidateEvaluation = BoundCandidateEvaluation(transaction)
         let transactionFingerprint = boundCandidateEvaluation.fingerprint
         let proposedDecision = QualityDecision(
-            policyVersion: evaluator.policyVersion,
+            policyVersion: policyVersion,
             outcome: verdict.outcome,
             reasonCodes: reasonCodes,
             candidateFingerprint: selected.vector.fullMix.sampleHash,
@@ -3031,27 +3216,25 @@ package enum AutonomousPhrasePreparer {
                     selected.vector.incomingLiveMasterRevision,
             liveTargetStart: liveTargetStart
         )
-        let repeatHoldEvolutionOutcomes =
-            selected.repeatHoldEvolutionCandidates.map { candidate in
+        let repeatHoldEvolutionOutcomes = presentation == nil
+            ? selected.repeatHoldEvolutionCandidates.map { candidate in
                 RepeatHoldEvolutionQualifier.qualify(
                     patternFamily: candidate.patternFamily,
                     primaryBlocks: selected.blocks,
                     candidateBlocks: candidate.blocks,
                     sampleRate: selected.sampleRate
                 )
-            }
+            } : []
         return .prepared(PreparedAutonomousPhrase(
             plan: selected.plan,
             graph: selected.graph,
             blocks: selected.blocks,
             diagnosticRoleStemCaptures:
                 selected.diagnosticRoleStemCaptures,
-            repeatHoldEvolutions: repeatHoldEvolutionOutcomes.compactMap {
-                $0.prepared
-            },
-            repeatHoldEvolutionEvidence: repeatHoldEvolutionOutcomes.map {
-                $0.evidence
-            },
+            repeatHoldEvolutions: presentation?.repeatHoldEvolutions ??
+                repeatHoldEvolutionOutcomes.compactMap { $0.prepared },
+            repeatHoldEvolutionEvidence: presentation?.repeatHoldEvolutionEvidence ??
+                repeatHoldEvolutionOutcomes.map { $0.evidence },
             endingRenderState: selected.endingRenderState,
             endingGraphState: selected.endingGraphState,
             audioPreflight: selected.audioPreflight,
@@ -3067,7 +3250,9 @@ package enum AutonomousPhrasePreparer {
             liveMasterHeadroomContinuationState: outgoingLiveMasterState,
             liveTargetStartSample: selected.vector.liveAppliedFutureSample,
             correctionRenderCount: transaction.correctionCount,
-            usedHomeTimbreCorrection: selected.attempt.forceHomeUpperTimbre
+            usedHomeTimbreCorrection: selected.attempt.forceHomeUpperTimbre,
+            preparedValidationRequired: preparedValidationRequired,
+            preparedValidation: preparedValidation
         ))
     }
 }

@@ -104,12 +104,22 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
         let commit: AutonomousPreparedCommitProvenance
         let incomingQuality: QualityContinuationState
         let outgoingQuality: QualityContinuationState
+        // Omitted for the existing path: historical prepared identities retain
+        // exact bytes. The proof itself is excluded to avoid a source-identity
+        // cycle; its typed source binding is rechecked by commit admission.
+        let preparedValidationRequired: Bool?
         init(_ prepared: PreparedAutonomousPhrase) {
-            planFingerprint = prepared.selectedCandidateEvidence.planFingerprint
-            transaction = prepared.candidateEvaluation
-            commit = prepared.commitProvenance
-            incomingQuality = prepared.incomingQualityState
-            outgoingQuality = prepared.qualityContinuationState
+            self.init(planFingerprint: prepared.selectedCandidateEvidence.planFingerprint,
+                transaction: prepared.candidateEvaluation, commit: prepared.commitProvenance,
+                incomingQuality: prepared.incomingQualityState, outgoingQuality: prepared.qualityContinuationState,
+                preparedValidationRequired: prepared.preparedValidationRequired)
+        }
+        init(planFingerprint: String, transaction: AutonomousCandidateEvaluationTransaction,
+            commit: AutonomousPreparedCommitProvenance, incomingQuality: QualityContinuationState,
+            outgoingQuality: QualityContinuationState, preparedValidationRequired: Bool) {
+            self.planFingerprint = planFingerprint; self.transaction = transaction; self.commit = commit
+            self.incomingQuality = incomingQuality; self.outgoingQuality = outgoingQuality
+            self.preparedValidationRequired = preparedValidationRequired ? true : nil
         }
     }
 
@@ -201,7 +211,20 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
     }
 
     package static func identity(_ prepared: PreparedAutonomousPhrase) -> String {
-        AutonomousCandidateCanonicalJSON.fingerprint(PreparedIdentity(prepared))
+        prepared.preparedValidationSourceIdentityFingerprint ??
+            AutonomousCandidateCanonicalJSON.fingerprint(PreparedIdentity(prepared))
+    }
+
+    /// Used only by private prepared-product construction, before commit
+    /// admission. Hashing stays in detached preparation rather than scheduling.
+    package static func preparedValidationIdentity(planFingerprint: String,
+        transaction: AutonomousCandidateEvaluationTransaction,
+        commit: AutonomousPreparedCommitProvenance, incomingQuality: QualityContinuationState,
+        outgoingQuality: QualityContinuationState) -> String {
+        AutonomousCandidateCanonicalJSON.fingerprint(PreparedIdentity(
+            planFingerprint: planFingerprint, transaction: transaction, commit: commit,
+            incomingQuality: incomingQuality, outgoingQuality: outgoingQuality,
+            preparedValidationRequired: true))
     }
 
     package func matches(_ source: PreparedAutonomousPhrase) -> Bool {

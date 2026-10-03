@@ -47,6 +47,16 @@ package struct ProfessionalQualityPreparationEvaluator:
         }
     }
 
+    package var requiresPreparedValidation: Bool {
+        calibrated?.requiresPreparedValidation ?? false
+    }
+
+    package func preparedValidation(
+        for preview: AutonomousCandidatePreparedPreview
+    ) -> AutonomousCandidatePreparedValidation? {
+        calibrated?.preparedValidation(for: preview)
+    }
+
     package func requestsHomeUpperTimbreCorrection(
         for candidate: AutonomousCandidateEvaluationVector
     ) -> Bool {

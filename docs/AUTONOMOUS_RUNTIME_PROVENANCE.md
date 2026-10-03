@@ -1531,3 +1531,54 @@ numeric decoding or an independent runtime evidence extractor. It adds no Core
 parameter, PCM change, callback work, transport admission, installed policy,
 persistent state or future-decision authority. Causal runtime integration and
 matching qualified primary/long-horizon artifacts remain required separately.
+
+
+## Private detached prepared-validation foundation
+
+`AutonomousPhrasePreparer` remains the only immutable prepared-product
+constructor. The sole `AutonomousCandidateEvaluating` seam may now require a
+prepared validation phase. Its initial accepting verdict is prospective in that
+case: the private source product carries `preparedValidationRequired` and has
+no validation proof, so it is commit-ineligible. Only a read-only
+`AutonomousCandidatePreparedPreview` escapes to the detached evaluator; it
+exposes the existing score and prospective quality/render/graph/live continuation
+needed to render evidence, but cannot return or schedule its private source PCM.
+The finalizer calls that evaluator once and checks cancellation before and after.
+
+The preview constructs one typed `AutonomousCandidatePreparedValidation` from
+actual continuous prepared-product observation. There is no arbitrary-fingerprint
+or decoded proof constructor. Missing physical windows preserve unavailable
+support and prevent assessor invocation. Actual successor receipt validation,
+source-event ownership and applicability reuse the existing ledger and extractor.
+The proof retains bounded observations and a verdict, not probe PCM or a successor
+acceptance. A missing or foreign proof yields unavailable qualification; a foreign
+proof is not attached to the source. Rejection never advances accepted state.
+
+The final source reuses its selected render, transaction and qualified hold
+sidecars. A successful final admission must have the exact prospective source
+identity used by the physical evidence, including final quality and live state.
+Changing acceptance metadata after measuring cannot rebind that proof. The
+required-validation marker is part of prepared identity; it is omitted from
+legacy prepared identities, preserving their exact bytes. The proof itself is
+excluded from its source identity to avoid recursion, and the private constructor
+caches the identity and support checks before bounded commit admission. The
+existing transaction fingerprint still precedes outgoing quality; no successor
+receipt is placed inside that transaction. Existing source correction/render
+budgets and the callback remain unchanged.
+
+This implements an unactivated admission foundation, not a production successor
+probe or calibrated policy. Current shipping evaluators request no prepared
+validation; the route-local wrapper delegates the same seam. Test-only controls
+use the canonical Core director and renderer to prepare one actual unaccepted
+successor under the exact prospective continuation, and exercise accepted and
+adjusted source admission, repeatability, unavailable windows, missing/foreign
+proof, acceptance rebinding and cancellation at the fixed rates. These are
+mechanical controls, not quality labels or artifact qualification.
+
+Production activation still requires one bounded successor producer under the
+existing detached transport owner, matching long-horizon and future live/route
+context, proof that measured source windows retain their consequence when that
+successor is committed or replaced, a qualified lookahead memory/time envelope,
+matching primary and long-horizon artifacts, and full source/PCM/lifecycle gates.
+No alternative evaluator, renderer, Core parameter, UI control or persistent
+adaptation state is installed by this foundation.
