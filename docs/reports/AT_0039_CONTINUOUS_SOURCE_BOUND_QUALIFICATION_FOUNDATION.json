@@ -1,0 +1,46 @@
+{
+  "bounds": "All existing adversarial cases and relationships; every applicable fixed seed42/44100 live label; frozen40/6 native cohort and322 planning checkpoints; no label/root replacement, archive import or threshold tuning",
+  "canonicalOwners": [
+    "ProfessionalQualityObservation",
+    "ProfessionalQualityLiveCandidateChain",
+    "ProfessionalQualityAdversarialSuiteReport",
+    "ProfessionalQualityHoldoutQualification",
+    "ProfessionalQualityCalibrationIntegrationTests.executeFreshContinuousCoverageCohort"
+  ],
+  "capability": "Preserve exact continuous source/support identity through adversarial attacks and consume typed development/holdout corpora with actual fixed live source products",
+  "consolidation": "Existing observation, challenge, live chain and holdout owners, with one existing persistent native executor",
+  "continuousAdversarialQualification": "pending-fresh-typed-source-execution",
+  "continuousHoldoutQualification": "pending-fresh-typed-source-execution",
+  "fallback": "Refusal or required unavailability retained; installed legacy primary authority unchanged; offline continuous reports cannot activate runtime",
+  "fullNativeQualificationLaunched": false,
+  "inputObjects": {
+    "Package.swift": "3d4f31c9330905091558753927d85135eb96a81a",
+    "Sources": "c75db934b5ff67360d1aa89c4d4eb71c3cf8daab",
+    "Tests": "71eb8ebae9fba435af8c15dba1e1ae8357b67a33",
+    "docs/BASELINE_CORPUS.json": "f55f54a1e9f92c7ff8150cccbb36bb5828148c99",
+    "docs/ROADMAP_EXECUTION_BASELINE.json": "273aa704fe1aff1ed60e38b046629e3f7189826a",
+    "scripts": "292a8f6c61771ec26facc9a11907464b51ad266c"
+  },
+  "mapRepair": "C/header source owns typedefs and value macros; optional or stale compiler C indexes cannot change semantic map output",
+  "qualityDeficit": "Legacy identity copies and numeric-only live fixture seams cannot qualify continuous original/successor report evidence",
+  "runtimeActivation": false,
+  "schema": "autotechno-continuous-source-bound-qualification-foundation.v1",
+  "sourceHead": "ba1e14e56537ebaf9ac82d28bcd703d6e4dd9f9e",
+  "validation": {
+    "aggregateChecks": 19,
+    "appReleaseTests": 59,
+    "changedSamples": 0,
+    "combinedToolingTests": 292,
+    "coreReleaseTests": 685,
+    "exactComparedSamples": 340230030,
+    "existingRetiredSkips": 2,
+    "gateFingerprint": "681f3fdb38154e126bd17718eea62fca106386bfdf242d897a6548edee9355bd",
+    "lifecycleFamilies": 15,
+    "liveTraceScope": "Retained bounded2026-09-04 trace; no new physical, route or listening qualification",
+    "preservedAssets": 224,
+    "refreshStages": 42,
+    "snapshotFingerprint": "6753d45110cda2e3411c739508e3ec5fb5432a04409f5b9bedb308f7e9ccd8c7",
+    "snapshotVersion": 72,
+    "xctestChecks": 6
+  }
+}
