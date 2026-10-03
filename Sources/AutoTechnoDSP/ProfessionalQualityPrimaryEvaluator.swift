@@ -571,7 +571,9 @@ package struct ProfessionalQualityPrimaryEvaluator:
               !adversarialSuite.fingerprint.isEmpty,
               adversarialSuite.schemaVersion ==
                 ProfessionalQualityAdversarialSuiteReport.schemaVersion,
+              adversarialSuite.measurementScope == .legacy,
               holdoutQualification.qualified,
+              holdoutQualification.measurementScope == .legacy,
               holdoutQualification.engineVersion == profile.engineVersion,
               holdoutQualification.profileFingerprint == profile.fingerprint,
               holdoutQualification.adversarialSuiteFingerprint ==

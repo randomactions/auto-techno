@@ -9,6 +9,36 @@ struct ModalSuccessorReportJoinTests {
     func continuousLiveAdversarialSourceBinding() throws {
         let products = try LiveFeedbackTestSupport.renderContinuousLiveSourceProducts()
         #expect(products.chain.isCausal)
+        let bound = try products.chain.continuousSourceObservations(
+            attenuationReports: products.attenuationReports,
+            attenuationSuccessor: products.attenuationSuccessor,
+            recoveryReports: products.recoveryReports,
+            recoverySuccessor: products.recoverySuccessor)
+        #expect(bound.attenuation.count == products.attenuationReports.count)
+        #expect(bound.recovery.count == products.recoveryReports.count)
+        #expect((bound.attenuation + bound.recovery).allSatisfy {
+            $0.isComplete && $0.measurementScope == .continuousModalWindow
+        })
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try products.chain.continuousSourceObservations(
+                attenuationReports: [], attenuationSuccessor: products.attenuationSuccessor,
+                recoveryReports: products.recoveryReports,
+                recoverySuccessor: products.recoverySuccessor)
+        }
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try products.chain.continuousSourceObservations(
+                attenuationReports: products.recoveryReports,
+                attenuationSuccessor: products.attenuationSuccessor,
+                recoveryReports: products.recoveryReports,
+                recoverySuccessor: products.recoverySuccessor)
+        }
+        #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+            try products.chain.continuousSourceObservations(
+                attenuationReports: products.attenuationReports,
+                attenuationSuccessor: products.recoverySuccessor,
+                recoveryReports: products.recoveryReports,
+                recoverySuccessor: products.recoverySuccessor)
+        }
         for (reports, successor, candidate) in [
             (products.attenuationReports, products.attenuationSuccessor, products.chain.attenuation),
             (products.recoveryReports, products.recoverySuccessor, products.chain.recovery),
@@ -40,6 +70,120 @@ struct ModalSuccessorReportJoinTests {
             try ProfessionalQualityModalSuccessorEvidence(source: source,
                 successor: products.recoverySuccessor)
         }
+    }
+
+    @Test("Continuous qualification metadata cannot change installed legacy authority")
+    func continuousQualificationScopeControls() throws {
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        let suite = artifacts.adversarialSuite
+        let holdout = artifacts.holdoutQualification
+        #expect(suite.measurementScope == .legacy && suite.sourceObservationVersion == nil)
+        #expect(holdout.measurementScope == .legacy && holdout.sourceObservationVersion == nil)
+        #expect(suite.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint)
+        #expect(holdout.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint)
+        #expect(suite.isBound(to: artifacts.profile))
+
+        func changed(_ data: Data, values: [String: Any]) throws -> Data {
+            var object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            for (key, value) in values { object[key] = value }
+            return try JSONSerialization.data(withJSONObject: object,
+                options: [.sortedKeys, .withoutEscapingSlashes])
+        }
+        let continuousVersion = ProfessionalQualityMeasurementScope.continuousModalWindow.observationVersion
+        let mixedSuiteData = try changed(suite.deterministicJSON(),
+            values: ["sourceObservationVersion": continuousVersion])
+        let mixedSuite = try JSONDecoder().decode(ProfessionalQualityAdversarialSuiteReport.self,
+            from: mixedSuiteData)
+        #expect(mixedSuite.measurementScope == nil && !mixedSuite.passed)
+        #expect(!mixedSuite.isBound(to: artifacts.profile))
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityAdversarialSuiteReport.decodeDeterministicJSON(mixedSuiteData)
+        }
+        let mixedHoldoutData = try changed(holdout.deterministicJSON(),
+            values: ["sourceObservationVersion": continuousVersion])
+        let mixedHoldout = try JSONDecoder().decode(ProfessionalQualityHoldoutQualification.self,
+            from: mixedHoldoutData)
+        #expect(mixedHoldout.measurementScope == nil && !mixedHoldout.qualified)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityHoldoutQualification.decodeDeterministicJSON(mixedHoldoutData)
+        }
+
+        // A coherent diagnostic envelope still cannot bind to the installed
+        // legacy profile or authorize the primary runtime evaluator.
+        let continuousSuiteData = try changed(suite.deterministicJSON(), values: [
+            "sourceObservationVersion": continuousVersion, "schemaVersion": 23,
+            "suiteVersion": "autotechno-professional-quality-adversarial.v24"])
+        let continuousSuite = try ProfessionalQualityAdversarialSuiteReport.decodeDeterministicJSON(
+            continuousSuiteData)
+        #expect(continuousSuite.measurementScope == .continuousModalWindow)
+        #expect(!continuousSuite.isBound(to: artifacts.profile))
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts(profileData: artifacts.profile.deterministicJSON(),
+                adversarialSuiteData: continuousSuiteData,
+                holdoutQualificationData: holdout.deterministicJSON())
+        }
+    }
+
+    @Test("Continuous holdout diagnostics cannot enter the installed primary evaluator")
+    func continuousHoldoutPrimaryScopeRejection() throws {
+        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        var object = try #require(JSONSerialization.jsonObject(
+            with: artifacts.holdoutQualification.deterministicJSON()) as? [String: Any])
+        object["schemaVersion"] = 21
+        object["qualificationVersion"] = "autotechno-professional-quality-holdout.v21"
+        object["evaluatorVersion"] = "autotechno-professional-quality-holdout-evaluator.v21"
+        object["sourceObservationVersion"] = ProfessionalQualityMeasurementScope.continuousModalWindow.observationVersion
+        let data = try JSONSerialization.data(withJSONObject: object,
+            options: [.sortedKeys, .withoutEscapingSlashes])
+        let diagnostic = try ProfessionalQualityHoldoutQualification.decodeDeterministicJSON(data)
+        #expect(diagnostic.measurementScope == .continuousModalWindow && diagnostic.qualified)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryEvaluator(profile: artifacts.profile,
+                adversarialSuite: artifacts.adversarialSuite, holdoutQualification: diagnostic)
+        }
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts(profileData: artifacts.profile.deterministicJSON(),
+                adversarialSuiteData: artifacts.adversarialSuite.deterministicJSON(),
+                holdoutQualificationData: data)
+        }
+    }
+
+    @Test("Fixed actual live sources must be accepted by the preserved offline continuous fit")
+    func continuousFixedLiveProfileAcceptance() throws {
+        guard let path = ProcessInfo.processInfo.environment[
+            "AUTOTECHNO_CONTINUOUS_LIVE_PROFILE_DIAGNOSTIC"] else { return }
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        let profile = try ProfessionalQualityCalibrationProfile.decodeDeterministicJSON(data)
+        #expect(profile.measurementScope == .continuousModalWindow)
+        #expect(profile.fingerprint == "5fedcae807b0ce09")
+        #expect(profile.sourceBankFingerprint == "39f157e5cbf2ba2a")
+        let products = try LiveFeedbackTestSupport.renderContinuousLiveSourceProducts()
+        let sources = try products.chain.continuousSourceObservations(
+            attenuationReports: products.attenuationReports,
+            attenuationSuccessor: products.attenuationSuccessor,
+            recoveryReports: products.recoveryReports,
+            recoverySuccessor: products.recoverySuccessor)
+        var outcomes: [[String: Any]] = []
+        var allAccepted = true
+        for (role, observations) in [("attenuation", sources.attenuation),
+                                     ("recovery", sources.recovery)] {
+            for observation in observations {
+                let verdict = ProfessionalQualityProfileEvaluator.evaluate(observation, against: profile)
+                allAccepted = allAccepted && verdict.accepted
+                outcomes.append(["role": role, "checkpoint": observation.checkpoint.rawValue,
+                    "sampleRate": observation.sampleRate, "accepted": verdict.accepted,
+                    "reasons": verdict.reasons.map(\.rawValue),
+                    "failedMetrics": verdict.failedMetrics.map(\.rawValue)])
+            }
+        }
+        let result: [String: Any] = ["fixture": "fixed-continuous-live-profile-acceptance.v1",
+            "profileFingerprint": profile.fingerprint, "profileSource": "preserved9fd02fc-offline-fit",
+            "allApplicableBaselinesAccepted": allAccepted, "outcomes": outcomes,
+            "qualification": "unqualified-not-activated", "newFitClaimed": false]
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: result,
+            options: [.sortedKeys]))
+        FileHandle.standardOutput.write(Data([0x0A]))
+        #expect(allAccepted)
     }
 
     @Test("Frozen public score selection joins only the actual successor at all fixed rates")
@@ -343,6 +487,84 @@ struct ModalSuccessorReportJoinTests {
         #expect(profile.sourceTrajectoryCount == 1)
         let profileRebuilt = try ProfessionalQualityCalibrationProfile.decodeDeterministicJSON(profile.deterministicJSON())
         #expect(profileRebuilt == profile)
+
+        // The fixed foreign-rate challenge must corrupt only the outer rate,
+        // never erase actual source/support ownership or change scope to legacy.
+        func rateOnlyChanged(_ original: ProfessionalQualityObservation,
+                             _ challenged: ProfessionalQualityObservation) throws {
+            var originalFields = try #require(JSONSerialization.jsonObject(
+                with: original.deterministicJSON()) as? [String: Any])
+            var challengedFields = try #require(JSONSerialization.jsonObject(
+                with: challenged.deterministicJSON()) as? [String: Any])
+            let claimedRate = try #require(challengedFields.removeValue(
+                forKey: "sampleRate") as? NSNumber)
+            originalFields.removeValue(forKey: "sampleRate")
+            let retainedFields = NSDictionary(dictionary: originalFields)
+                .isEqual(to: challengedFields)
+            #expect(claimedRate.doubleValue == 96_000)
+            #expect(retainedFields)
+        }
+        for source in bank.reports {
+            let sourceIdentity = ProfessionalQualityModalSuccessorEvidence.identity(source)
+            let receipt = try #require(receipts.first {
+                $0.sourceIdentityFingerprint == sourceIdentity
+            })
+            let original = try ProfessionalQualityObservation(continuousReport: source,
+                successor: receipt)
+            let challenged = original.foreignRateChallenge()
+            try rateOnlyChanged(original, challenged)
+            #expect(original.isComplete && !challenged.isComplete)
+            #expect(challenged.measurementScope == .continuousModalWindow)
+            #expect(challenged.continuousModalSource == original.continuousModalSource)
+            #expect(challenged.continuousModalSource?.projection.sampleRate == source.sampleRate)
+            // Match every identity prerequisite before the existing rate guard.
+            #expect(profile.isComplete)
+            #expect(challenged.evidenceVersion == profile.evidenceVersion)
+            #expect(challenged.observationVersion == profile.observationVersion)
+            #expect(profile[challenged.checkpoint] != nil)
+            #expect(!profile.sampleRates.contains(challenged.sampleRate))
+            let verdict = ProfessionalQualityProfileEvaluator.evaluate(challenged, against: profile)
+            #expect(!verdict.accepted && verdict.reasons == [.profileMismatch])
+            #expect(verdict.failedMetrics.isEmpty)
+            #expect(throws: ProfessionalEvidenceReportBankError.inconsistentIdentity) {
+                try ProfessionalQualityObservation.decodeValidated(challenged.deterministicJSON(),
+                    report: source, successor: receipt)
+            }
+            #expect(throws: (any Error).self) {
+                try JSONDecoder().decode(ProfessionalQualityObservation.self,
+                    from: challenged.deterministicJSON())
+            }
+            let barLocal = try ProfessionalQualityObservation(report: source,
+                requiringModalWindowSupport: true)
+            let barLocalChallenge = barLocal.foreignRateChallenge()
+            try rateOnlyChanged(barLocal, barLocalChallenge)
+            #expect(!barLocalChallenge.isComplete)
+            #expect(barLocalChallenge.measurementScope == .barLocalModalWindow)
+            #expect(throws: ProfessionalQualityCalibrationError.invalidMetricSet) {
+                try ProfessionalQualityObservation(engineVersion: barLocal.engineVersion,
+                    evidenceVersion: barLocal.evidenceVersion, checkpoint: barLocal.checkpoint,
+                    sampleRate: 96_000, hardGatesPassed: barLocal.hardGatesPassed,
+                    liveMaster: barLocal.liveMaster, metrics: barLocal.metrics,
+                    modalWindowSupport: barLocal.modalWindowSupport)
+            }
+            let legacyObservation = try ProfessionalQualityObservation(report: source)
+            let legacyChallenge = legacyObservation.foreignRateChallenge()
+            try rateOnlyChanged(legacyObservation, legacyChallenge)
+            let historicalChallenge = try ProfessionalQualityObservation(
+                engineVersion: legacyObservation.engineVersion,
+                evidenceVersion: legacyObservation.evidenceVersion,
+                checkpoint: legacyObservation.checkpoint, sampleRate: 96_000,
+                hardGatesPassed: legacyObservation.hardGatesPassed,
+                liveMaster: legacyObservation.liveMaster, metrics: legacyObservation.metrics)
+            #expect(try legacyChallenge.deterministicJSON() == historicalChallenge.deterministicJSON())
+        }
+        let invalidSources = complete.observations.map { $0.foreignRateChallenge() }
+        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
+            try ProfessionalQualityCalibrationProfile(engineVersion: profile.engineVersion,
+                evidenceVersion: profile.evidenceVersion,
+                sourceBankFingerprint: complete.sourceBankFingerprint,
+                sampleRates: profile.sampleRates, observations: invalidSources)
+        }
         for observation in incomplete.observations where
             observation.measurementApplicability(.modalPercussionTailToBodyDBMean) == .unavailable {
             let challenged = try observation.replacing(.maximumBoundaryDelta, with: 100)

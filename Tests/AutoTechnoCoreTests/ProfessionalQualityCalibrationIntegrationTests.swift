@@ -348,6 +348,17 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         guard protocolBlob == "9b9e979f02c311ac4b6f92aeee1de5b5a5a73af0" else {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
+        let qualificationRequested = environment["AUTOTECHNO_RUN_CONTINUOUS_ADVERSARIAL_QUALIFICATION"] == "1"
+        let qualificationProtocolPath = "docs/local/reports/AT-0039-continuous-adversarial-v1/protocol.json"
+        let qualificationProtocolBlob = qualificationRequested
+            ? try git(["hash-object", qualificationProtocolPath]) : nil
+        if qualificationRequested {
+            guard qualificationProtocolBlob == "5a1bebc0f22b9abbcf7c271125c37c1309c465b9" else {
+                throw ProfessionalQualityCalibrationError.invalidIdentity
+            }
+            _ = try git(["merge-base", "--is-ancestor", acceptedHead,
+                "origin/codex/continuous-adversarial-qualification"])
+        }
         let (frozen, original) = try validatedFreshCoverageCohort()
         func guardAcceptedInputs() throws {
             guard try git(["rev-parse", "HEAD"]) == acceptedHead,
@@ -355,6 +366,11 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                   try git(["hash-object", "docs/local/reports/AT-0039-fresh-modal-coverage-cohort-v1/cohort.json"]) == "da849a3ae636316afbbea231570d7c809de35d95",
                   try git(["hash-object", "docs/local/reports/AT-0039-continuous-execution-v1/protocol.json"]) == protocolBlob else {
                 throw ProfessionalQualityCalibrationError.invalidIdentity
+            }
+            if qualificationRequested {
+                guard try git(["hash-object", qualificationProtocolPath]) == qualificationProtocolBlob else {
+                    throw ProfessionalQualityCalibrationError.invalidIdentity
+                }
             }
         }
         try guardAcceptedInputs()
@@ -368,6 +384,10 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             "maximumPhrases": frozen.maximumPhrases, "sampleRates": frozen.sampleRates,
             "observationVersion": ProfessionalQualityMeasurementContract.continuousModalObservationVersion,
             "replacementQualification": "unavailable-not-activated", "completedTrajectories": []]
+        if let qualificationProtocolBlob {
+            manifest["continuousQualificationProtocolBlob"] = qualificationProtocolBlob
+            manifest["offlineContinuousQualification"] = ["status": "pending", "runtimeActivation": false]
+        }
         func saveManifest() throws {
             try canonicalCacheJSON(manifest).write(to: output.appendingPathComponent("execution.json"), options: .atomic)
         }
@@ -435,11 +455,20 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             try profile.deterministicJSON().write(to: output.appendingPathComponent("offline-profile.json"), options: .withoutOverwriting)
             manifest["fitStatus"] = "complete-offline-unqualified"
             manifest["profileFingerprint"] = profile.fingerprint
+            if qualificationRequested {
+                manifest["offlineContinuousQualification"] = try qualifyFreshContinuousCorpora(
+                    profile: profile, development: developmentCorpus,
+                    holdout: holdoutCorpus, output: output)
+            }
         } catch let error as ProfessionalQualityCalibrationError {
             // A coverage/fit failure is preserved, not a license to replace a
             // root, drop an event, broaden a bound or hide independent failures.
             manifest["fitStatus"] = "refused"
             manifest["fitRefusal"] = String(describing: error)
+            if qualificationRequested {
+                manifest["offlineContinuousQualification"] = ["status": "fit-refused",
+                    "reason": String(describing: error), "runtimeActivation": false]
+            }
         }
         try guardAcceptedInputs()
         manifest["status"] = "captured-not-activated"
@@ -447,6 +476,74 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         manifest["actualSuccessorReceiptCount"] = 644
         manifest["freshCohortRendered"] = true
         try saveManifest()
+    }
+
+    /// Qualification consumes only the fresh in-memory typed corpora from the
+    /// existing persistent journey executor. Saved diagnostics cannot enter.
+    private func qualifyFreshContinuousCorpora(
+        profile: ProfessionalQualityCalibrationProfile,
+        development: ProfessionalQualityCalibrationCorpus,
+        holdout: ProfessionalQualityCalibrationCorpus,
+        output: URL
+    ) throws -> [String: Any] {
+        var result: [String: Any] = ["schema": "autotechno-offline-continuous-qualification.v1",
+            "status": "running", "runtimeActivation": false, "archiveImport": false,
+            "fixedLiveSeed": 42, "fixedLiveRate": 44_100,
+            "profileFingerprint": profile.fingerprint,
+            "developmentCorpusFingerprint": development.fingerprint,
+            "holdoutCorpusFingerprint": holdout.fingerprint]
+        func save() throws {
+            try canonicalCacheJSON(result).write(to: output.appendingPathComponent(
+                "offline-continuous-qualification.json"), options: .atomic)
+        }
+        guard profile.measurementScope == .continuousModalWindow,
+              profile.fingerprint == "5fedcae807b0ce09",
+              development.fingerprint == "39f157e5cbf2ba2a",
+              development.sourceTrajectoryCount == 40, holdout.sourceTrajectoryCount == 6,
+              development.isComplete, holdout.isComplete,
+              development.sourceBankFingerprints.isDisjoint(with: holdout.sourceBankFingerprints) else {
+            result["status"] = "source-binding-refused"
+            try save()
+            return result
+        }
+        try save()
+        do {
+            let live = try LiveFeedbackTestSupport.renderContinuousLiveSourceProducts()
+            let suite = try ProfessionalQualityAdversarialSuiteReport(
+                continuousProfile: profile, sourceCorpus: development,
+                liveCandidateChain: live.chain,
+                attenuationReports: live.attenuationReports,
+                attenuationSuccessor: live.attenuationSuccessor,
+                recoveryReports: live.recoveryReports,
+                recoverySuccessor: live.recoverySuccessor)
+            try suite.deterministicJSON().write(to: output.appendingPathComponent(
+                "continuous-adversarial-suite.json"), options: .withoutOverwriting)
+            result["adversarialFingerprint"] = suite.fingerprint
+            result["adversarialPassed"] = suite.passed
+            result["adversarialCaseCount"] = suite.cases.count
+            result["distinctLiveBaselineCount"] = Set(suite.liveBaselineObservationFingerprints).count
+            guard suite.passed else {
+                result["status"] = "adversarial-failed"
+                result["holdoutStatus"] = "not-run-adversarial-prerequisite"
+                try save()
+                return result
+            }
+            let qualification = try ProfessionalQualityHoldoutQualification(profile: profile,
+                adversarialSuite: suite, calibrationCorpus: development, holdoutCorpus: holdout)
+            try qualification.deterministicJSON().write(to: output.appendingPathComponent(
+                "continuous-holdout-qualification.json"), options: .withoutOverwriting)
+            result["holdoutFingerprint"] = qualification.fingerprint
+            result["holdoutQualified"] = qualification.qualified
+            result["holdoutAcceptedObservationCount"] = qualification.acceptedObservationCount
+            result["holdoutSourceObservationCount"] = qualification.sourceObservationCount
+            result["status"] = qualification.qualified
+                ? "offline-adversarial-and-holdout-passed-not-activated" : "holdout-rejected"
+        } catch let error as ProfessionalQualityCalibrationError {
+            result["status"] = "construction-refused"
+            result["reason"] = String(describing: error)
+        }
+        try save()
+        return result
     }
 
     @Test("Freeze fresh complete score coverage on accepted clean source before any new-root PCM")

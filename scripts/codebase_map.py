@@ -119,9 +119,21 @@ C_TYPE_DECLARATION = re.compile(
     re.MULTILINE,
 )
 C_FUNCTION_DECLARATION = re.compile(
-    r"^(?:(?:static|inline|extern)\s+)*"
+    r"^(?!typedef\b)(?:(?:static|inline|extern)\s+)*"
     r"(?:[A-Za-z_][A-Za-z0-9_]*[\s\*]+)+"
     r"(?:CALLBACK\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*\(",
+    re.MULTILINE,
+)
+C_CALLBACK_TYPEDEF = re.compile(
+    r"^typedef\s+[^;{}]+?\(\s*\*\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)",
+    re.MULTILINE,
+)
+C_COMPOSITE_TYPEDEF = re.compile(
+    r"^typedef\s+(struct|enum|union)(?:\s+[A-Za-z_][A-Za-z0-9_]*)?\s*\{",
+    re.MULTILINE,
+)
+C_VALUE_MACRO = re.compile(
+    r"^[ \t]*#[ \t]*define[ \t]+([A-Za-z_][A-Za-z0-9_]*)(?:\([^\n]*?\))?[ \t]+[^\n]+",
     re.MULTILINE,
 )
 SWIFT_KIND_NAMES = {
@@ -325,6 +337,9 @@ def lexical_symbols(root: Path, paths: Iterable[str]) -> Set[StableSymbol]:
                 kind, name = match.groups()
                 symbols.add(StableSymbol(path, name.replace("`", ""), SWIFT_KIND_NAMES[kind]))
         else:
+            # Imported Clang graphs depend on module-cache locations. Index
+            # current C declarations directly, including anonymous typedefs.
+            contents = re.sub(r"/\*.*?\*/|//[^\n]*", " ", contents, flags=re.DOTALL)
             for match in C_TYPE_DECLARATION.finditer(contents):
                 kind, name = match.groups()
                 symbols.add(
@@ -332,6 +347,20 @@ def lexical_symbols(root: Path, paths: Iterable[str]) -> Set[StableSymbol]:
                 )
             for match in C_FUNCTION_DECLARATION.finditer(contents):
                 symbols.add(StableSymbol(path, match.group(1), "Function"))
+            for match in C_CALLBACK_TYPEDEF.finditer(contents):
+                symbols.add(StableSymbol(path, match.group(1), "Type Alias"))
+            for match in C_VALUE_MACRO.finditer(contents):
+                symbols.add(StableSymbol(path, match.group(1), "Macro"))
+            for match in C_COMPOSITE_TYPEDEF.finditer(contents):
+                depth = 1
+                position = match.end()
+                while position < len(contents) and depth:
+                    depth += (contents[position] == "{") - (contents[position] == "}")
+                    position += 1
+                alias = re.match(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*;", contents[position:])
+                if depth == 0 and alias:
+                    kind = "Enumeration" if match.group(1) == "enum" else "Structure"
+                    symbols.add(StableSymbol(path, alias.group(1), kind))
     return symbols
 
 
@@ -403,6 +432,8 @@ def inspect_symbols(
                 continue
             relative_path = relative_to_root(Path(unquote(parsed.path)), root)
             if relative_path is None:
+                continue
+            if Path(relative_path).suffix.lower() in {".c", ".h"}:
                 continue
             title = raw_symbol.get("names", {}).get("title")
             kind = raw_symbol.get("kind", {}).get("displayName")

@@ -1396,6 +1396,30 @@ package struct ProfessionalQualityObservation: Codable, Equatable, Sendable {
         )
     }
 
+    /// Detached identity corruption for the fixed unsupported-rate attack.
+    /// This preserves source/support provenance and changes only the claimed
+    /// observation rate. It cannot reconstruct measurement authority: bound
+    /// scopes become incomplete, validated decoding rejects it, and fitting
+    /// retains its normal completeness checks. No 96 kHz PCM is implied.
+    package func foreignRateChallenge() -> ProfessionalQualityObservation {
+        ProfessionalQualityObservation(foreignRateChallenge: self)
+    }
+
+    private init(foreignRateChallenge source: ProfessionalQualityObservation) {
+        schemaVersion = source.schemaVersion
+        observationVersion = source.observationVersion
+        engineVersion = source.engineVersion
+        evidenceVersion = source.evidenceVersion
+        checkpoint = source.checkpoint
+        sampleRate = 96_000
+        hardGatesPassed = source.hardGatesPassed
+        liveMaster = source.liveMaster
+        sourceMetricCount = source.sourceMetricCount
+        metrics = source.metrics
+        modalWindowSupport = source.modalWindowSupport
+        continuousModalSource = source.continuousModalSource
+    }
+
     /// A conditional detail is judged only when its paired activity metric
     /// proves that the underlying comparison exists in this phrase.
     package func measurementIsApplicable(

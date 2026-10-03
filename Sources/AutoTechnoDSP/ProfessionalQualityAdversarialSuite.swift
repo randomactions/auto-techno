@@ -428,6 +428,49 @@ package struct ProfessionalQualityLiveCandidateChain: Equatable, Sendable {
                 1 == recoveryTransition.candidateStorage.value.symbolic
                     .phraseIndex
     }
+    /// Construct every applicable continuous live label from actual products.
+    /// The fixed chain retains ownership; no numeric or decoded observation can
+    /// replace the original reports and their immediate prepared successors.
+    package func continuousSourceObservations(
+        attenuationReports: [CanonicalJourneyQualificationReport],
+        attenuationSuccessor: PreparedAutonomousPhrase,
+        recoveryReports: [CanonicalJourneyQualificationReport],
+        recoverySuccessor: PreparedAutonomousPhrase
+    ) throws -> (attenuation: [ProfessionalQualityObservation],
+                 recovery: [ProfessionalQualityObservation]) {
+        guard isCausal else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        func observations(_ reports: [CanonicalJourneyQualificationReport],
+                          successor: PreparedAutonomousPhrase,
+                          candidate: AutonomousCandidateEvaluationVector) throws
+            -> [ProfessionalQualityObservation] {
+            guard let kind = AutonomousPhraseKind(rawValue: candidate.symbolic.phraseKind) else {
+                throw ProfessionalQualityCalibrationError.profileMismatch
+            }
+            let applicable = CanonicalJourneyCheckpoint.applicable(
+                phraseIndex: candidate.symbolic.phraseIndex, phraseKind: kind,
+                chapterChanged: candidate.symbolic.chapterChanged)
+            guard !applicable.isEmpty, reports.map(\.checkpoint) == applicable,
+                  reports.allSatisfy({
+                      $0.engineVersion == QualityQualificationContract.engineVersion &&
+                          $0.selectedCandidateEvidence == candidate
+                  }) else {
+                throw ProfessionalQualityCalibrationError.profileMismatch
+            }
+            return try reports.map { report in
+                let receipt = try ProfessionalQualityModalSuccessorEvidence(
+                    source: report, successor: successor)
+                return try ProfessionalQualityObservation(continuousReport: report,
+                    successor: receipt)
+            }
+        }
+        return (try observations(attenuationReports, successor: attenuationSuccessor,
+                    candidate: attenuation),
+                try observations(recoveryReports, successor: recoverySuccessor,
+                    candidate: recovery))
+    }
+
 }
 
 /// A deterministic attack on the calibrated policy surface. The suite stores
@@ -442,6 +485,8 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
 
     package let schemaVersion: Int
     package let suiteVersion: String
+    /// Absent for the byte-compatible installed legacy artifact.
+    package let sourceObservationVersion: String?
     package let profileFingerprint: String
     package let sourceObservationCount: Int
     package let baselineAcceptanceCount: Int
@@ -454,6 +499,21 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         sourceObservations: [ProfessionalQualityObservation],
         liveCandidateChain: ProfessionalQualityLiveCandidateChain
     ) throws {
+        try self.init(profile: profile, sourceObservations: sourceObservations,
+            liveCandidateChain: liveCandidateChain, continuousLiveSources: nil)
+    }
+
+    private init(
+        profile: ProfessionalQualityCalibrationProfile,
+        sourceObservations: [ProfessionalQualityObservation],
+        liveCandidateChain: ProfessionalQualityLiveCandidateChain,
+        continuousLiveSources: (attenuation: [ProfessionalQualityObservation],
+                                recovery: [ProfessionalQualityObservation])?
+    ) throws {
+        switch (profile.measurementScope, continuousLiveSources) {
+        case (.legacy?, nil), (.continuousModalWindow?, .some): break
+        default: throw ProfessionalQualityCalibrationError.profileMismatch
+        }
         let expectedSourceObservationCount = profile.checkpoints.first
             .map { $0.sourceObservationCount *
                 CanonicalJourneyCheckpoint.allCases.count } ?? 0
@@ -522,15 +582,16 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             hardGatesPassed: Bool = true,
             metrics: [ProfessionalQualityMetricValue]? = nil
         ) throws -> ProfessionalQualityObservation {
-            try ProfessionalQualityObservation(
-                engineVersion: baseline.engineVersion,
-                evidenceVersion: baseline.evidenceVersion,
-                checkpoint: baseline.checkpoint,
-                sampleRate: sampleRate,
-                hardGatesPassed: hardGatesPassed,
-                liveMaster: baseline.liveMaster,
-                metrics: metrics ?? baseline.metrics
-            )
+            guard sampleRate == baseline.sampleRate || sampleRate == 96_000 else {
+                throw ProfessionalQualityCalibrationError.invalidIdentity
+            }
+            var challenged = baseline
+            for value in metrics ?? baseline.metrics {
+                challenged = try challenged.replacing(value.metric, with: value.value,
+                    hardGatesPassed: hardGatesPassed)
+            }
+            return sampleRate == baseline.sampleRate
+                ? challenged : challenged.foreignRateChallenge()
         }
 
         append(
@@ -574,12 +635,26 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             }
             throw ProfessionalQualityCalibrationError.profileMismatch
         }
-        let attenuationObservation = try acceptedObservation(
-            candidate: liveCandidateChain.attenuation
-        )
-        let recoveryObservation = try acceptedObservation(
-            candidate: liveCandidateChain.recovery
-        )
+        let attenuationObservation: ProfessionalQualityObservation
+        let recoveryObservation: ProfessionalQualityObservation
+        if let sources = continuousLiveSources {
+            // Admit every fixed applicable label before choosing its first
+            // deterministic representative. Never select a surviving label.
+            let all = sources.attenuation + sources.recovery
+            guard !sources.attenuation.isEmpty, !sources.recovery.isEmpty,
+                  all.allSatisfy({
+                      $0.measurementScope == .continuousModalWindow && $0.isComplete &&
+                          $0.engineVersion == profile.engineVersion &&
+                          ProfessionalQualityProfileEvaluator.evaluate($0, against: profile).accepted
+                  }) else {
+                throw ProfessionalQualityCalibrationError.profileMismatch
+            }
+            attenuationObservation = sources.attenuation[0]
+            recoveryObservation = sources.recovery[0]
+        } else {
+            attenuationObservation = try acceptedObservation(candidate: liveCandidateChain.attenuation)
+            recoveryObservation = try acceptedObservation(candidate: liveCandidateChain.recovery)
+        }
         let validLiveAttack = attenuationObservation.liveMaster
         let validLiveRecovery = recoveryObservation.liveMaster
         guard validLiveAttack.proposalOutcome == .attenuate,
@@ -1006,8 +1081,11 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
             failedMetrics: [.modalPercussionSpectralCentroidMeanHz]
         ))
 
-        schemaVersion = Self.schemaVersion
-        suiteVersion = Self.suiteVersion
+        let continuous = continuousLiveSources != nil
+        schemaVersion = continuous ? 23 : Self.schemaVersion
+        suiteVersion = continuous
+            ? "autotechno-professional-quality-adversarial.v24" : Self.suiteVersion
+        sourceObservationVersion = continuous ? profile.observationVersion : nil
         profileFingerprint = profile.fingerprint
         sourceObservationCount = sourceObservations.count
         baselineAcceptanceCount = sourceObservations.count
@@ -1052,9 +1130,58 @@ package struct ProfessionalQualityAdversarialSuiteReport: Codable, Equatable,
         )
     }
 
+    /// Continuous qualification reconstructs live sources from immutable
+    /// actual products. The complete diverse corpus and all relationship gates
+    /// remain mandatory; the legacy numeric/vector seam cannot authorize it.
+    package init(
+        continuousProfile profile: ProfessionalQualityCalibrationProfile,
+        sourceCorpus: ProfessionalQualityCalibrationCorpus,
+        liveCandidateChain: ProfessionalQualityLiveCandidateChain,
+        attenuationReports: [CanonicalJourneyQualificationReport],
+        attenuationSuccessor: PreparedAutonomousPhrase,
+        recoveryReports: [CanonicalJourneyQualificationReport],
+        recoverySuccessor: PreparedAutonomousPhrase
+    ) throws {
+        guard profile.measurementScope == .continuousModalWindow,
+              profile.usesDiverseCalibration, sourceCorpus.isComplete,
+              sourceCorpus.engineVersion == profile.engineVersion,
+              sourceCorpus.evidenceVersion == profile.evidenceVersion,
+              sourceCorpus.sourceTrajectoryCount == profile.sourceTrajectoryCount,
+              sourceCorpus.fingerprint == profile.sourceBankFingerprint,
+              sourceCorpus.trajectories.allSatisfy({
+                  ProfessionalQualityRelationshipEvaluator.evaluate(
+                      observations: $0.observations, against: profile).accepted
+              }) else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        let sources = try liveCandidateChain.continuousSourceObservations(
+            attenuationReports: attenuationReports,
+            attenuationSuccessor: attenuationSuccessor,
+            recoveryReports: recoveryReports, recoverySuccessor: recoverySuccessor)
+        try self.init(profile: profile, sourceObservations: sourceCorpus.observations,
+            liveCandidateChain: liveCandidateChain, continuousLiveSources: sources)
+    }
+
+    package var measurementScope: ProfessionalQualityMeasurementScope? {
+        if sourceObservationVersion == nil,
+           schemaVersion == Self.schemaVersion, suiteVersion == Self.suiteVersion {
+            return .legacy
+        }
+        if sourceObservationVersion == ProfessionalQualityMeasurementScope.continuousModalWindow.observationVersion,
+           schemaVersion == 23, suiteVersion == "autotechno-professional-quality-adversarial.v24" {
+            return .continuousModalWindow
+        }
+        return nil
+    }
+
+    package func isBound(to profile: ProfessionalQualityCalibrationProfile) -> Bool {
+        passed && measurementScope == profile.measurementScope &&
+            (sourceObservationVersion ?? ProfessionalQualityObservation.observationVersion) ==
+                profile.observationVersion && profileFingerprint == profile.fingerprint
+    }
+
     package var passed: Bool {
-        return schemaVersion == Self.schemaVersion &&
-            suiteVersion == Self.suiteVersion &&
+        return measurementScope != nil &&
             !profileFingerprint.isEmpty && sourceObservationCount > 0 &&
             baselineAcceptanceCount == sourceObservationCount &&
             liveBaselineAcceptanceCount == 2 &&

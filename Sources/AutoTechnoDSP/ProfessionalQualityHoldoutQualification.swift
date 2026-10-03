@@ -34,6 +34,8 @@ package struct ProfessionalQualityHoldoutQualification: Codable, Equatable,
     package let schemaVersion: Int
     package let qualificationVersion: String
     package let evaluatorVersion: String
+    /// Absent for the byte-compatible installed legacy artifact.
+    package let sourceObservationVersion: String?
     package let engineVersion: String
     package let evidenceVersion: String
     package let profileFingerprint: String
@@ -57,12 +59,7 @@ package struct ProfessionalQualityHoldoutQualification: Codable, Equatable,
             holdoutCorpus.sourceBankFingerprints
         )
         guard profile.usesDiverseCalibration,
-              adversarialSuite.schemaVersion ==
-                ProfessionalQualityAdversarialSuiteReport.schemaVersion,
-              adversarialSuite.suiteVersion ==
-                ProfessionalQualityAdversarialSuiteReport.suiteVersion,
-              adversarialSuite.passed,
-              adversarialSuite.profileFingerprint == profile.fingerprint,
+              adversarialSuite.isBound(to: profile),
               calibrationCorpus.isComplete,
               holdoutCorpus.isComplete,
               calibrationCorpus.fingerprint == profile.sourceBankFingerprint,
@@ -74,6 +71,12 @@ package struct ProfessionalQualityHoldoutQualification: Codable, Equatable,
               holdoutCorpus.engineVersion == profile.engineVersion,
               calibrationCorpus.evidenceVersion == profile.evidenceVersion,
               holdoutCorpus.evidenceVersion == profile.evidenceVersion,
+              calibrationCorpus.observations.allSatisfy({
+                  $0.observationVersion == profile.observationVersion
+              }),
+              holdoutCorpus.observations.allSatisfy({
+                  $0.observationVersion == profile.observationVersion
+              }),
               overlap.isEmpty else {
             throw ProfessionalQualityCalibrationError.profileMismatch
         }
@@ -119,9 +122,13 @@ package struct ProfessionalQualityHoldoutQualification: Codable, Equatable,
             )
         }.sorted { $0.sourceBankFingerprint < $1.sourceBankFingerprint }
 
-        schemaVersion = Self.schemaVersion
-        qualificationVersion = Self.qualificationVersion
-        evaluatorVersion = Self.evaluatorVersion
+        let continuous = profile.measurementScope == .continuousModalWindow
+        schemaVersion = continuous ? 21 : Self.schemaVersion
+        qualificationVersion = continuous
+            ? "autotechno-professional-quality-holdout.v21" : Self.qualificationVersion
+        evaluatorVersion = continuous
+            ? "autotechno-professional-quality-holdout-evaluator.v21" : Self.evaluatorVersion
+        sourceObservationVersion = continuous ? profile.observationVersion : nil
         engineVersion = profile.engineVersion
         evidenceVersion = profile.evidenceVersion
         profileFingerprint = profile.fingerprint
@@ -140,10 +147,21 @@ package struct ProfessionalQualityHoldoutQualification: Codable, Equatable,
         trajectories = results
     }
 
+    package var measurementScope: ProfessionalQualityMeasurementScope? {
+        if sourceObservationVersion == nil, schemaVersion == Self.schemaVersion,
+           qualificationVersion == Self.qualificationVersion,
+           evaluatorVersion == Self.evaluatorVersion { return .legacy }
+        if sourceObservationVersion == ProfessionalQualityMeasurementScope.continuousModalWindow.observationVersion,
+           schemaVersion == 21,
+           qualificationVersion == "autotechno-professional-quality-holdout.v21",
+           evaluatorVersion == "autotechno-professional-quality-holdout-evaluator.v21" {
+            return .continuousModalWindow
+        }
+        return nil
+    }
+
     package var qualified: Bool {
-        schemaVersion == Self.schemaVersion &&
-            qualificationVersion == Self.qualificationVersion &&
-            evaluatorVersion == Self.evaluatorVersion &&
+        measurementScope != nil &&
             !engineVersion.isEmpty &&
             evidenceVersion == ProfessionalEvidenceReportBank.evidenceVersion &&
             !profileFingerprint.isEmpty &&
