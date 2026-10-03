@@ -110,9 +110,18 @@ struct ModalSuccessorReportJoinTests {
 
         // A coherent diagnostic envelope still cannot bind to the installed
         // legacy profile or authorize the primary runtime evaluator.
-        let continuousSuiteData = try changed(suite.deterministicJSON(), values: [
+        let retiredSuiteData = try changed(suite.deterministicJSON(), values: [
             "sourceObservationVersion": continuousVersion, "schemaVersion": 23,
             "suiteVersion": "autotechno-professional-quality-adversarial.v24"])
+        let retiredSuite = try JSONDecoder().decode(ProfessionalQualityAdversarialSuiteReport.self,
+            from: retiredSuiteData)
+        #expect(retiredSuite.measurementScope == nil && !retiredSuite.passed)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityAdversarialSuiteReport.decodeDeterministicJSON(retiredSuiteData)
+        }
+        let continuousSuiteData = try changed(suite.deterministicJSON(), values: [
+            "sourceObservationVersion": continuousVersion, "schemaVersion": 24,
+            "suiteVersion": "autotechno-professional-quality-adversarial.v25"])
         let continuousSuite = try ProfessionalQualityAdversarialSuiteReport.decodeDeterministicJSON(
             continuousSuiteData)
         #expect(continuousSuite.measurementScope == .continuousModalWindow)
