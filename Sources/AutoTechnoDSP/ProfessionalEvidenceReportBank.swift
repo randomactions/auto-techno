@@ -111,8 +111,8 @@ package struct ProfessionalQualityModalWindowEvidence: Codable, Equatable, Senda
 package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable,
         AutonomousEvidenceCategorizedReport {
     package static let evidenceCategory: AutonomousEvidenceCategory = .descriptive
-    package static let schemaVersion = 29
-    package static let evidenceVersion = "autotechno-professional-evidence.v29"
+    package static let schemaVersion = 30
+    package static let evidenceVersion = "autotechno-professional-evidence.v30"
     package static let maximumReports = 64
     package static let maximumEncodedBytes = 64 * 1_024 * 1_024
 

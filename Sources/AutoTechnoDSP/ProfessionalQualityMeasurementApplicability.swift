@@ -9,6 +9,25 @@ package enum ProfessionalQualityMeasurementApplicability: String, Codable, Hasha
     case unavailable
 }
 
+/// Bounded score/render event population for the existing upper-tail projection.
+/// A natural-body zero remains a measured clearance ratio; an empty score does not.
+package struct ProfessionalQualityUpperPercussionTailSupport: Codable, Equatable, Sendable {
+    package let sourceEventCount: Int
+    package let foregroundClearanceEventCount: Int
+
+    package init(sourceEventCount: Int, foregroundClearanceEventCount: Int) {
+        self.sourceEventCount = sourceEventCount
+        self.foregroundClearanceEventCount = foregroundClearanceEventCount
+    }
+
+    package var isComplete: Bool {
+        let maximum = AutonomousCandidateEvaluationVector.maximumBarCount *
+            AutonomousCandidateEvaluationVector.maximumUpperPercussionTailEventsPerBar
+        return (0...maximum).contains(sourceEventCount) &&
+            (0...sourceEventCount).contains(foregroundClearanceEventCount)
+    }
+}
+
 package struct ProfessionalQualityModalRatioSupport: Codable, Equatable, Sendable {
     package let sourceEventCount: Int
     package let measuredEventCount: Int

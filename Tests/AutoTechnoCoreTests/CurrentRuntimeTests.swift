@@ -103,9 +103,9 @@ struct CurrentRuntimeTests {
                 "primary-structural-bs1770-signal-role-upper-modal-tail-reveal-harmonic-tail-swell-pad-rhythm-amplitude-gate-foundation-rhythm-foundation-pocket-climax-hang-harmonic-disclosure-kick-source-dynamics-granular-memory-pitch-identity-transition-tail-material-world-polymetric-effect-carrier-upper-pump-spatial-dust-source-terminal-declick-live-commit-recovery.v27")
         #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 14)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 3)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 29)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 30)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v29")
+                "autotechno-professional-evidence.v30")
         #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v30"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
             .hasSuffix("-v30"))

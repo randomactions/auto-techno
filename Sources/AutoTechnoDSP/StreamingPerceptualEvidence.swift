@@ -5,9 +5,9 @@ import Foundation
 /// scratch buffers; it never constructs a phrase-sized mono or spectrogram
 /// array.
 package final class StreamingPerceptualEvidence: Codable, Equatable, Sendable {
-    package static let schemaVersion = 3
+    package static let schemaVersion = 4
     package static let analyzerVersion =
-        "autotechno-streaming-perceptual-evidence.v3"
+        "autotechno-streaming-perceptual-evidence.v4"
 
     package let schemaVersion: Int
     package let analyzerVersion: String
@@ -302,7 +302,11 @@ package enum StreamingPerceptualEvidenceAnalyzer {
 
             analyzedWindowCount += 1
             let rms = sqrt(squareSum / Double(analysisSize))
-            let rmsDB = rms > 0 ? 20 * log10(rms) : -120
+            // Exact silence and sub-floor energy share the existing -120 dB
+            // numerical floor. A tiny positive sample must not manufacture a
+            // hundreds-of-dB trajectory jump at an ordinary audible onset.
+            // This changes only detached evidence; immutable PCM is untouched.
+            let rmsDB = rms > 0 ? max(-120, 20 * log10(rms)) : -120
             if let previousRMSDB {
                 let delta = abs(rmsDB - previousRMSDB)
                 trajectoryDeltaSum += delta

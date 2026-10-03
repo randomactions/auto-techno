@@ -14,6 +14,24 @@ import Testing
  */
 @Suite("Professional quality calibration")
 struct ProfessionalQualityCalibrationTests {
+    @Test("Pre-floor calibration evidence cannot activate the corrected analyzer")
+    func preFloorEvidenceArtifactsAreIneligible() throws {
+        let repository = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let profileURL = repository.appendingPathComponent(
+            "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json")
+        let object = try #require(JSONSerialization.jsonObject(
+            with: Data(contentsOf: profileURL)) as? [String: Any])
+        #expect(object["evidenceVersion"] as? String ==
+                "autotechno-professional-evidence.v29")
+        #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
+                "autotechno-professional-evidence.v30")
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            _ = try ProfessionalQualityPrimaryArtifacts.load()
+        }
+    }
+
     @Test("Window-supported profiles bind the new observation contract without activating v30")
     func windowSupportedContractIdentity() throws {
         let observations = try representativeObservations().map { try windowObservation($0) }
@@ -1796,9 +1814,9 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
         #expect(ProfessionalQualityObservation.observationVersion ==
                 "autotechno-professional-quality-observation.v21")
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 29)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 30)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
-                "autotechno-professional-evidence.v29")
+                "autotechno-professional-evidence.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
                 "autotechno-quality.primary-calibrated.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
@@ -2337,6 +2355,66 @@ struct ProfessionalQualityCalibrationTests {
         )
         #expect(activeBounds.contains(1))
         #expect(!activeBounds.contains(0))
+    }
+
+    @Test("Tail applicability distinguishes absent score events from measured natural-body zero")
+    func upperPercussionTailScoreApplicability() throws {
+        let director = AutonomousSessionDirector(rootSeed: 91_773)
+        var state = director.initialState()
+        var seen = Set<String>()
+        for _ in 0..<128 {
+            let plan = director.plan(from: state)
+            let scoreEvents = plan.resolvedBars.flatMap(\.upperPercussionTailArticulations)
+            let clearanceCount = scoreEvents.filter { $0.role == .foregroundClearance }.count
+            let kind = scoreEvents.isEmpty ? "absent" :
+                (clearanceCount == 0 ? "natural" : "clearance")
+            if seen.insert(kind).inserted {
+                var renderState = RenderState()
+                renderState.barIndex = plan.startBar
+                let preparation = AutonomousPhrasePreparer.prepareIfNotCancelled(
+                    plan: plan, sessionSeed: state.rootSeed, memory: state.memory,
+                    sampleRate: 8_000, incomingRenderState: renderState,
+                    incomingGraphState: GeneratedDSPContinuationState(), previousGraph: nil,
+                    incomingQualityState: state.quality,
+                    evaluator: AcceptingPrimaryTestEvaluator(), cancellationRequested: { false })
+                let prepared = try #require(preparation)
+                let vector = prepared.selectedCandidateEvidence
+                #expect(vector.isComplete)
+                let checkpoint = CanonicalJourneyCheckpoint.primaryQualification(
+                    phraseIndex: plan.phraseIndex, phraseKind: plan.kind,
+                    chapterChanged: vector.symbolic.chapterChanged) ?? .longContinuation
+                let observation = try ProfessionalQualityObservation(candidate: vector,
+                    engineVersion: QualityQualificationContract.engineVersion,
+                    checkpoint: checkpoint)
+                let eventCount = vector.upperPercussionTail.flatMap(\.events).count
+                let support = try #require(observation.upperPercussionTailSupport)
+                #expect(support.isComplete && support.sourceEventCount == eventCount)
+                #expect(support.foregroundClearanceEventCount == clearanceCount)
+                let changed = try observation.replacing(.maximumBoundaryDelta, with: 100)
+                #expect(changed.upperPercussionTailSupport == support)
+                #expect(observation.foreignRateChallenge().upperPercussionTailSupport == support)
+                #expect(eventCount == scoreEvents.count)
+                #expect(observation[.upperPercussionTailClearanceEventRatio] ==
+                    Double(clearanceCount) / Double(max(1, eventCount)))
+                #expect(observation.measurementApplicability(
+                    .upperPercussionTailClearanceEventRatio) ==
+                    (eventCount == 0 ? .notRequired : .measured))
+                #expect(observation.measurementApplicability(
+                    .upperPercussionTailRenderedTailToAttackDBMean) ==
+                    (clearanceCount == 0 ? .notRequired : .measured))
+            }
+            if seen.count == 3 { break }
+            state.advancePlanning(using: plan)
+        }
+        #expect(seen == Set(["absent", "natural", "clearance"]))
+        #expect(!ProfessionalQualityUpperPercussionTailSupport(
+            sourceEventCount: -1, foregroundClearanceEventCount: 0).isComplete)
+        #expect(!ProfessionalQualityUpperPercussionTailSupport(
+            sourceEventCount: 0, foregroundClearanceEventCount: 1).isComplete)
+        #expect(!ProfessionalQualityUpperPercussionTailSupport(
+            sourceEventCount: AutonomousCandidateEvaluationVector.maximumBarCount *
+                AutonomousCandidateEvaluationVector.maximumUpperPercussionTailEventsPerBar + 1,
+            foregroundClearanceEventCount: 0).isComplete)
     }
 
     @Test("Kick-foundation balance requires an active comparison")
