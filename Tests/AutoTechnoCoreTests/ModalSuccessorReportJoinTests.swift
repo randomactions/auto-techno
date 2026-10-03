@@ -669,6 +669,90 @@ struct ModalSuccessorReportJoinTests {
         print(String(decoding: try JSONSerialization.data(withJSONObject: wire, options: [.sortedKeys]), as: UTF8.self))
     }
 
+    @Test("Private long-horizon projection uses the accepted reducer and seals exact source admission")
+    @MainActor
+    func preparedValidationLongHorizonProjection() throws {
+        let rates = [8_000.0, 44_100.0, 48_000.0]
+        let artifacts = try qualifiedArtifacts(sampleRates: rates)
+        let policy = try LongHorizonProfessionalPolicy(profile: artifacts.profile,
+            adversarial: artifacts.adversarial, holdout: artifacts.holdout)
+        let director = AutonomousSessionDirector(rootSeed: 48_300)
+        var state = director.initialState()
+        for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
+        let plan = director.plan(from: state)
+        let incoming = try #require(LongHorizonFutureAdaptationState(startingState: state, policy: policy))
+        let incomingFingerprint = incoming.fingerprint
+        var rows: [[String: Any]] = []
+        var captured: LongHorizonProspectiveAdaptation?
+        for rate in rates {
+            let control = PreparedValidationControl()
+            let source = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
+                evaluator: PreparedValidationTestEvaluator(startingState: state, control: control,
+                    mode: .actualSuccessor, longHorizonState: incoming, longHorizonPolicy: policy)).preparedPhrase)
+            #expect(source.commitEligible)
+            let projection = try #require(control.snapshot.projection)
+            let admitted = try #require(projection.admittedUpdate(for: source,
+                incomingState: state, incomingAdaptation: incoming, policy: policy))
+            let observed = try #require(incoming.observing(prepared: source, incomingState: state, policy: policy))
+            #expect(admitted.state.fingerprint == observed.state.fingerprint)
+            #expect(admitted.decision == observed.decision)
+            #expect(projection.sourceIdentityFingerprint == ProfessionalQualityModalSuccessorEvidence.identity(source))
+            #expect(control.snapshot.signal == LongHorizonSignalPhraseEvidence.make(prepared: source))
+            #expect(projection.projectedState.expectedPhraseIndex == state.phraseIndex + 1)
+            #expect(projection.projectedState.expectedBar == plan.startBar + plan.barCount)
+            #expect(incoming.fingerprint == incomingFingerprint)
+            let successor = try #require(source.preparedValidation?.qualifiedSuccessor)
+            let acceptedFuture = state.advance(using: source.plan, quality: source.qualityContinuationState,
+                liveMasterHeadroom: source.liveMasterHeadroomContinuationState,
+                longHorizonDecision: observed.decision)
+            #expect(successor.plan == director.plan(from: acceptedFuture))
+            if rate == 8_000 { captured = projection }
+            rows.append(["sampleRate": rate, "sourceIdentity": projection.sourceIdentityFingerprint,
+                "projectedStateFingerprint": projection.projectedState.fingerprint,
+                "admittedMatchesObserved": true, "canonicalSuccessorPlanMatches": true])
+        }
+        let seal = try #require(captured)
+        for mode in [PreparedValidationTestEvaluator.Mode.missingProof, .unacceptedSuccessor, .reject] {
+            let source = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+                evaluator: PreparedValidationTestEvaluator(startingState: state,
+                    control: PreparedValidationControl(), mode: mode)).preparedPhrase)
+            #expect(!source.commitEligible && seal.admittedUpdate(for: source,
+                incomingState: state, incomingAdaptation: incoming, policy: policy) == nil)
+        }
+        let otherRoute = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: PreparedValidationControl(), mode: .actualSuccessor), routeGeneration: 1).preparedPhrase)
+        #expect(otherRoute.commitEligible && seal.admittedUpdate(for: otherRoute,
+            incomingState: state, incomingAdaptation: incoming, policy: policy) == nil)
+        let wrongState = try #require(LongHorizonFutureAdaptationState(
+            startingState: AutonomousSessionDirector(rootSeed: 90_909).initialState(), policy: policy))
+        let sameSource = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state,
+                control: PreparedValidationControl(), mode: .actualSuccessor)).preparedPhrase)
+        #expect(sameSource.commitEligible)
+        #expect(seal.admittedUpdate(for: sameSource, incomingState: state,
+            incomingAdaptation: wrongState, policy: policy) == nil)
+        #expect(seal.admittedUpdate(for: sameSource, incomingState: director.initialState(),
+            incomingAdaptation: incoming, policy: policy) == nil)
+        let otherArtifacts = try qualifiedArtifacts()
+        let otherPolicy = try LongHorizonProfessionalPolicy(profile: otherArtifacts.profile,
+            adversarial: otherArtifacts.adversarial, holdout: otherArtifacts.holdout)
+        #expect(seal.admittedUpdate(for: sameSource, incomingState: state,
+            incomingAdaptation: incoming, policy: otherPolicy) == nil)
+        let wrongControl = PreparedValidationControl()
+        let wrong = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
+            evaluator: PreparedValidationTestEvaluator(startingState: state, control: wrongControl,
+                mode: .actualSuccessor, longHorizonState: wrongState, longHorizonPolicy: policy)).preparedPhrase)
+        #expect(!wrong.commitEligible && wrongControl.snapshot.projection == nil)
+        #expect(wrongControl.snapshot.probes == 0)
+        print(String(decoding: try JSONSerialization.data(withJSONObject:
+            ["fixture": "private-long-horizon-projection.v1", "rows": rows,
+             "unadmittedAndForeignSourcesRefused": true, "wrongIncomingStateRefused": true,
+             "incomingStateUnchanged": true, "foreignSessionAdaptationAndPolicyRefused": true,
+             "qualification": "mechanical-only-not-installed"],
+            options: [.sortedKeys]), as: UTF8.self))
+    }
+
     private func prepareValidationSource(state: AutonomousSessionState,
         plan: AutonomousPhrasePlan, rate: Double,
         evaluator: PreparedValidationTestEvaluator,
@@ -685,6 +769,8 @@ struct ModalSuccessorReportJoinTests {
         struct Snapshot {
             var calls = 0; var probes = 0; var assessments = 0
             var probeWasCommitEligible = false; var cancelled = false
+            var projection: LongHorizonProspectiveAdaptation?
+            var signal: LongHorizonSignalPhraseEvidence?
         }
         private let lock = NSLock()
         private var state = Snapshot()
@@ -703,6 +789,8 @@ struct ModalSuccessorReportJoinTests {
         let control: PreparedValidationControl
         let mode: Mode
         var correct = false
+        var longHorizonState: LongHorizonFutureAdaptationState? = nil
+        var longHorizonPolicy: LongHorizonProfessionalPolicy? = nil
         let policyVersion = "test-primary-calibrated.v1"
         let evaluatorVersion = "test-prepared-validation.v1"
         var requiresPreparedValidation: Bool { true }
@@ -723,10 +811,21 @@ struct ModalSuccessorReportJoinTests {
             if mode == .missingProof { return nil }
             if mode == .foreignProof { return control.cached }
             if mode == .cancel { control.update { $0.cancelled = true }; return nil }
+            var projection: LongHorizonProspectiveAdaptation?
+            if let longHorizonState, let longHorizonPolicy {
+                projection = longHorizonState.projecting(preview: preview,
+                    incomingState: startingState, policy: longHorizonPolicy)
+                control.update {
+                    $0.projection = projection
+                    $0.signal = LongHorizonSignalPhraseEvidence.make(preview: preview)
+                }
+                guard projection != nil else { return nil }
+            }
             var successor: PreparedAutonomousPhrase?
             if mode != .missingSuccessor {
                 let next = startingState.advance(using: preview.plan, quality: preview.prospectiveQualityState,
-                    liveMasterHeadroom: preview.prospectiveLiveMasterState)
+                    liveMasterHeadroom: preview.prospectiveLiveMasterState,
+                    longHorizonDecision: projection?.decision)
                 let director = AutonomousSessionDirector(rootSeed: next.rootSeed)
                 control.update { $0.probes += 1 }
                 successor = AutonomousPhrasePreparer.prepareIfNotCancelled(

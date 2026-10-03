@@ -1595,3 +1595,40 @@ the retained continuation before choosing repeat fallback, a qualified bounded
 lookahead memory/time envelope, matching primary and long-horizon artifacts, and full source/PCM/lifecycle gates.
 No alternative evaluator, renderer, Core parameter, UI control or persistent
 adaptation state is installed by this foundation.
+
+
+## Source-bound prospective long-horizon projection
+
+The private prepared-validation preview can now project the source's existing
+signal and effect-dose evidence through `LongHorizonFutureAdaptationState` before
+planning a qualified successor. This uses the same private signal extractor and
+semantic/effect/signal reducer as accepted observation. No second adaptation loop,
+new musical parameter, renderer, PCM pass or persistent accumulator is added.
+The preview must be an otherwise fully bound prospective acceptance missing only
+its required prepared-validation proof. It exposes immutable signal facts without
+exposing its source PCM. Missing evidence, wrong source position/root, unsupported
+rate and mismatched profile retain the prior adaptation state.
+
+`LongHorizonProspectiveAdaptation` is a transient seal, constructed only by that
+reducer. It binds the exact prospective prepared-source identity, canonical incoming
+session fingerprint, incoming adaptation fingerprint and full long-horizon policy
+identity. Its projected state and bounded decision are available for private future
+planning. `admittedUpdate` releases an update only when the final source is
+commit-eligible and all four bindings match; rejection, unavailable qualification,
+source rebinding, a foreign route, foreign session/adaptation or policy cannot
+promote tentative state. Neither the seal nor the projection is a primary quality
+verdict or a reason to advance the actual session early.
+
+Mechanical controls at 8k, 44.1k and 48k compare projected and accepted signal
+facts, adaptation fingerprints and decisions, and verify the successor plan against
+the canonical accepted-state advance including that decision. They use synthetic
+long-horizon policy fixtures solely to exercise reducer mechanics, not a new
+calibration population. Incoming state remains unchanged and unsuccessful sources
+cannot admit their projections. The existing minimum evidence, future-boundary,
+recovery/reframe eligibility, decision interval and conservative fallback remain.
+
+The production detached successor producer and protected transport consumption
+remain unactivated. They must retain this exact incoming context, match the admitted
+projection against ordinary accepted reduction, carry future live/route boundaries,
+and qualify a bounded lookahead resource envelope before matching primary and
+long-horizon artifact qualification and full source/PCM/lifecycle publication gates.

@@ -503,10 +503,10 @@ private let longHorizonDevelopmentSeeds: [UInt64] = [
   7, 13, 17, 42, 73, 101, 131,
 ]
 
-func qualifiedArtifacts() throws -> QualifiedLongHorizonArtifacts {
+func qualifiedArtifacts(sampleRates: [Double] = [8_000, 12_000]) throws -> QualifiedLongHorizonArtifacts {
   let development = try LongHorizonPolicyCalibrationCorpus(
     observations: longHorizonDevelopmentSeeds.map {
-      makeObservation(rootSeed: $0)
+      makeObservation(rootSeed: $0, sampleRates: sampleRates)
     })
   let profile = try LongHorizonProfessionalProfile(corpus: development)
   let adversarial = try LongHorizonAdversarialSuiteReport(
@@ -514,7 +514,7 @@ func qualifiedArtifacts() throws -> QualifiedLongHorizonArtifacts {
     sourceObservation: development.observations[0])
   let holdoutCorpus = try LongHorizonPolicyCalibrationCorpus(
     observations: [112_358, 141_421].map { seed in
-      makeObservation(rootSeed: seed, variation: 0.5)
+      makeObservation(rootSeed: seed, sampleRates: sampleRates, variation: 0.5)
     })
   let holdout = try LongHorizonHoldoutQualification(
     profile: profile,

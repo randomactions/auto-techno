@@ -478,6 +478,47 @@ package struct LongHorizonFutureAdaptationUpdate: Sendable {
   package let decision: LongHorizonTrajectoryDecision?
 }
 
+/// Sealed projection of the canonical reducer for private successor planning.
+/// No source PCM or persistent accepted-state authority escapes this value.
+package struct LongHorizonProspectiveAdaptation: Sendable {
+  package let sourceIdentityFingerprint: String
+  package let incomingSessionStateFingerprint: String
+  package let incomingAdaptationStateFingerprint: String
+  package let policyVersion: String
+  package let projectedState: LongHorizonFutureAdaptationState
+  package let decision: LongHorizonTrajectoryDecision?
+
+  fileprivate init(sourceIdentityFingerprint: String,
+    incomingState: AutonomousSessionState,
+    incomingAdaptation: LongHorizonFutureAdaptationState,
+    policy: LongHorizonProfessionalPolicy,
+    update: LongHorizonFutureAdaptationUpdate) {
+    self.sourceIdentityFingerprint = sourceIdentityFingerprint
+    incomingSessionStateFingerprint = AutonomousCandidateFingerprint.sessionState(incomingState)
+    incomingAdaptationStateFingerprint = incomingAdaptation.fingerprint
+    policyVersion = policy.policyVersion
+    projectedState = update.state
+    decision = update.decision
+  }
+
+  /// A rejected, replaced, route-changed or otherwise rebound source cannot
+  /// promote a prospective update into the accepted continuation.
+  package func admittedUpdate(
+    for prepared: PreparedAutonomousPhrase,
+    incomingState: AutonomousSessionState,
+    incomingAdaptation: LongHorizonFutureAdaptationState,
+    policy: LongHorizonProfessionalPolicy
+  ) -> LongHorizonFutureAdaptationUpdate? {
+    guard prepared.commitEligible,
+      ProfessionalQualityModalSuccessorEvidence.identity(prepared) == sourceIdentityFingerprint,
+      AutonomousCandidateFingerprint.sessionState(incomingState) == incomingSessionStateFingerprint,
+      incomingAdaptation.fingerprint == incomingAdaptationStateFingerprint,
+      policy.policyVersion == policyVersion
+    else { return nil }
+    return LongHorizonFutureAdaptationUpdate(state: projectedState, decision: decision)
+  }
+}
+
 /// Bounded streaming state copied into detached phrase preparation. It owns no
 /// PCM, AVAudioEngine object, callback state, renderer, or mutable plan.
 package struct LongHorizonFutureAdaptationState: Sendable {
@@ -556,33 +597,71 @@ package struct LongHorizonFutureAdaptationState: Sendable {
     incomingState: AutonomousSessionState,
     policy: LongHorizonProfessionalPolicy
   ) -> LongHorizonFutureAdaptationUpdate? {
+    guard prepared.commitEligible,
+      let signalEvidence = LongHorizonSignalPhraseEvidence.make(prepared: prepared),
+      let effectEvidence = prepared.longHorizonEffectDoseEvidence
+    else { return nil }
+    return reducing(
+      plan: prepared.plan, quality: prepared.qualityContinuationState,
+      liveMasterHeadroom: prepared.liveMasterHeadroomContinuationState,
+      signalEvidence: signalEvidence, effectEvidence: effectEvidence,
+      incomingState: incomingState, policy: policy)
+  }
+
+  /// Detached, tentative evidence under the same reducer and policy. The
+  /// returned seal binds the exact prospective source before any future plan.
+  package func projecting(
+    preview: AutonomousCandidatePreparedPreview,
+    incomingState: AutonomousSessionState,
+    policy: LongHorizonProfessionalPolicy
+  ) -> LongHorizonProspectiveAdaptation? {
+    guard preview.hasProspectiveAcceptanceBinding,
+      let signalEvidence = LongHorizonSignalPhraseEvidence.make(preview: preview),
+      let effectEvidence = preview.longHorizonEffectDoseEvidence,
+      let update = reducing(
+        plan: preview.plan, quality: preview.prospectiveQualityState,
+        liveMasterHeadroom: preview.prospectiveLiveMasterState,
+        signalEvidence: signalEvidence, effectEvidence: effectEvidence,
+        incomingState: incomingState, policy: policy)
+    else { return nil }
+    return LongHorizonProspectiveAdaptation(
+      sourceIdentityFingerprint: preview.sourceIdentityFingerprint,
+      incomingState: incomingState, incomingAdaptation: self, policy: policy, update: update)
+  }
+
+  private func reducing(
+    plan: AutonomousPhrasePlan,
+    quality: QualityContinuationState,
+    liveMasterHeadroom: LiveMasterHeadroomContinuationState,
+    signalEvidence: LongHorizonSignalPhraseEvidence,
+    effectEvidence: LongHorizonEffectDosePhraseEvidence,
+    incomingState: AutonomousSessionState,
+    policy: LongHorizonProfessionalPolicy
+  ) -> LongHorizonFutureAdaptationUpdate? {
     guard schemaVersion == LongHorizonRuntimePolicySchema.adaptationVersion,
       rootSeed == incomingState.rootSeed,
       expectedPhraseIndex == incomingState.phraseIndex,
       expectedBar == incomingState.memory.totalBars,
-      prepared.plan.phraseIndex == expectedPhraseIndex,
-      prepared.plan.startBar == expectedBar,
-      prepared.commitEligible,
+      plan.phraseIndex == expectedPhraseIndex,
+      plan.startBar == expectedBar,
       profileFingerprint == policy.profile.fingerprint,
       primaryPolicyVersion == policy.profile.primaryPolicyVersion,
-      let signalEvidence = LongHorizonSignalPhraseEvidence.make(
-        prepared: prepared),
       let signalIndex = policy.profile.sampleRates.firstIndex(
         of: signalEvidence.sampleRate),
-      let effectEvidence = prepared.longHorizonEffectDoseEvidence
+      effectEvidence.isComplete
     else { return nil }
 
     var candidate = self
     guard
       candidate.semantic.observe(
-        plan: prepared.plan,
+        plan: plan,
         incomingState: incomingState) == .accepted,
       candidate.effects.observe(effectEvidence) == .accepted,
       candidate.signals[signalIndex].observe(signalEvidence) == .accepted
     else { return nil }
-    let end = prepared.plan.startBar.addingReportingOverflow(
-      prepared.plan.barCount)
-    let nextPhrase = prepared.plan.phraseIndex.addingReportingOverflow(1)
+    let end = plan.startBar.addingReportingOverflow(
+      plan.barCount)
+    let nextPhrase = plan.phraseIndex.addingReportingOverflow(1)
     guard !end.overflow, !nextPhrase.overflow else { return nil }
     candidate.expectedPhraseIndex = nextPhrase.partialValue
     candidate.expectedBar = end.partialValue
@@ -610,9 +689,9 @@ package struct LongHorizonFutureAdaptationState: Sendable {
     }
 
     let projected = incomingState.advance(
-      using: prepared.plan,
-      quality: prepared.qualityContinuationState,
-      liveMasterHeadroom: prepared.liveMasterHeadroomContinuationState)
+      using: plan,
+      quality: quality,
+      liveMasterHeadroom: liveMasterHeadroom)
     let continuation = projected.memory.longHorizon
     let recoveryEligible =
       continuation.currentEpisode.operatorKind != .recover
@@ -630,7 +709,7 @@ package struct LongHorizonFutureAdaptationState: Sendable {
       observation: observation,
       verdict: verdict,
       policyVersion: policy.policyVersion,
-      observedThroughPhraseIndex: prepared.plan.phraseIndex,
+      observedThroughPhraseIndex: plan.phraseIndex,
       observedThroughBar: end.partialValue,
       recoveryEligible: recoveryEligible,
       materialReframeEligible: materialReframeEligible)

@@ -880,22 +880,29 @@
         {
           "symbol": "LongHorizonFutureAdaptationState",
           "path": "Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift"
+        },
+        {
+          "symbol": "LongHorizonProspectiveAdaptation",
+          "path": "Sources/AutoTechnoDSP/LongHorizonFutureAdaptation.swift"
         }
       ],
       "state": [
         "LongHorizonFutureAdaptationState",
         "last material-reframe generation",
         "signal trajectory accumulator",
-        "effect-dose accumulator"
+        "effect-dose accumulator",
+        "sealed transient prospective adaptation; source, incoming session/adaptation and policy binding; never accepted before exact source admission"
       ],
       "inputs": [
         "committed semantic trajectory",
         "realized render evidence",
-        "versioned long-horizon artifacts"
+        "versioned long-horizon artifacts",
+        "private prepared source preview for detached prospective reduction"
       ],
       "outputs": [
         "LongHorizonFutureAdaptationUpdate",
-        "qualified preserve, recover, or material-reframe observation"
+        "qualified preserve, recover, or material-reframe observation",
+        "LongHorizonProspectiveAdaptation (tentative)"
       ],
       "evidence": [
         "LongHorizonSignalTrajectory",
@@ -916,7 +923,8 @@
         "Tests/AutoTechnoCoreTests/LongHorizonEffectDoseTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonPolicyCalibrationIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift",
-        "Tests/AutoTechnoCoreTests/LongHorizonSignalTrajectoryTests.swift"
+        "Tests/AutoTechnoCoreTests/LongHorizonSignalTrajectoryTests.swift",
+        "Tests/AutoTechnoCoreTests/ModalSuccessorReportJoinTests.swift"
       ],
       "contracts": [
         "docs/LONG_HORIZON_PERFORMANCE_MAP.md",
@@ -1870,9 +1878,9 @@
       "producesState": [
         "long-horizon-adaptation-state"
       ],
-      "artifact": "semantic, signal, and effect-dose trajectory observation",
+      "artifact": "semantic, signal, and effect-dose trajectory observation; same canonical reduction for a sealed private prospective source projection",
       "pcmConsequence": "observes-without-changing-pcm",
-      "failureBehavior": "Preserve prior adaptation state when evidence is incomplete or discontinuous."
+      "failureBehavior": "Preserve prior adaptation state when evidence is incomplete or discontinuous. A tentative projection can become an admitted update only for the exact accepted source, incoming session/adaptation fingerprints and complete policy identity."
     },
     {
       "id": "long-horizon-decision-to-session",

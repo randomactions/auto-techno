@@ -1405,6 +1405,16 @@ package final class AutonomousCandidatePreparedPreview: Sendable {
         source.selectedCandidateEvidence
     }
     package var transaction: AutonomousCandidateEvaluationTransaction { source.candidateEvaluation }
+    package var candidateEvaluationFingerprint: String { source.candidateEvaluationFingerprint }
+    package var audioPreflight: PhraseAudioPreflight { source.audioPreflight }
+    package var longHorizonEffectDoseEvidence: LongHorizonEffectDosePhraseEvidence? {
+        source.longHorizonEffectDoseEvidence
+    }
+    /// Only the private accepting product missing this one validation phase can
+    /// project future evidence. Other missing admission requirements fail closed.
+    package var hasProspectiveAcceptanceBinding: Bool {
+        source.commitFailureDiagnostics == ["prepared-validation-missing"]
+    }
     package var sourceIdentityFingerprint: String {
         ProfessionalQualityModalSuccessorEvidence.identity(source)
     }
