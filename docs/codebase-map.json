@@ -418,7 +418,8 @@
         "identity-blind local listening record that may only propose a later falsifiable hypothesis",
         "source-bound prevalence, severity, confidence, ownership, and roadmap-link facts with uncalibrated observations quarantined",
         "schema-, contract-, corpus-, engine-, route-, build-, and dependency-bound evidence lifecycle metadata",
-        "fifteen current artifact bindings, subordinate validation, exact whole/role PCM, and deficit-source traceability without a musical-quality claim"
+        "fifteen current artifact bindings, subordinate validation, exact whole/role PCM, and deficit-source traceability without a musical-quality claim",
+        "offline process-local independent stereo analysis reuse with live input hashes, unchanged per-asset comparisons, bounded memory, cold fallback and all nineteen aggregate subordinate validators"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/LiveFeedback.swift",
@@ -437,7 +438,8 @@
         "docs/PHASE_ONE_GATE.md",
         "docs/LIVE_FEEDBACK.md",
         "docs/PRIMARY_EVALUATOR.md",
-        "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md"
+        "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
+        "docs/BASELINE_VALIDATION_THROUGHPUT.md"
       ],
       "dependsOn": [
         "session-director-and-score"
