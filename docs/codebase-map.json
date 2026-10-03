@@ -576,7 +576,7 @@
         "GeneratedDSPContinuationState",
         "AutomaticMixState",
         "FeedbackDelayNetworkState",
-        "private prospective prepared candidate, typed continuous validation proof and cached admission binding; no persistent policy state"
+        "private prospective prepared candidate, typed continuous validation proof with retained qualified successor for unfinished source windows and cached admission binding; no persistent policy state"
       ],
       "inputs": [
         "resolved phrase",
@@ -1621,7 +1621,7 @@
         "quality-continuation",
         "live-master-continuation"
       ],
-      "artifact": "candidate vector, verdict, and atomic commit provenance; bounded same-pass modal observation continuation and source-bound descriptive windows; optional required detached validation of a private prospective source, actual continuous observation proof and cached final source identity",
+      "artifact": "candidate vector, verdict, and atomic commit provenance; bounded same-pass modal observation continuation and source-bound descriptive windows; optional required detached validation of a private prospective source, actual continuous observation proof, retained qualified successor for unfinished source windows and cached final source identity",
       "pcmConsequence": "qualifies-without-changing-pcm",
       "failureBehavior": "Reject or report qualification unavailable; never weaken a hard gate. Required validation missing or unsupported stays unavailable; mismatched accepted source identity or cancellation cannot produce an admitted product. Installed policy remains unchanged."
     },

@@ -1550,9 +1550,16 @@ actual continuous prepared-product observation. There is no arbitrary-fingerprin
 or decoded proof constructor. Missing physical windows preserve unavailable
 support and prevent assessor invocation. Actual successor receipt validation,
 source-event ownership and applicability reuse the existing ledger and extractor.
-The proof retains bounded observations and a verdict, not probe PCM or a successor
-acceptance. A missing or foreign proof yields unavailable qualification; a foreign
-proof is not attached to the source. Rejection never advances accepted state.
+When the source-only projection has physically missing or partial attack/body or
+tail/body support, admission additionally requires the actual successor to be
+commit-eligible. The proof retains that exact immutable qualified successor and
+caches its admission result off the callback. Complete measurements from an
+unaccepted successor preserve unavailable qualification and never invoke the
+assessor. A source with complete local windows requires no retained successor;
+undefined body energy remains unavailable rather than creating a suffix need.
+The final source rechecks both cached measurement and continuation admission.
+A missing or foreign proof yields unavailable qualification; a foreign proof is
+not attached to the source. Rejection never advances accepted state.
 
 The final source reuses its selected render, transaction and qualified hold
 sidecars. A successful final admission must have the exact prospective source
@@ -1569,16 +1576,22 @@ budgets and the callback remain unchanged.
 This implements an unactivated admission foundation, not a production successor
 probe or calibrated policy. Current shipping evaluators request no prepared
 validation; the route-local wrapper delegates the same seam. Test-only controls
-use the canonical Core director and renderer to prepare one actual unaccepted
-successor under the exact prospective continuation, and exercise accepted and
-adjusted source admission, repeatability, unavailable windows, missing/foreign
-proof, acceptance rebinding and cancellation at the fixed rates. These are
+use the canonical Core director and renderer to prepare one qualified successor
+under the exact prospective continuation. That successor uses the same sealed
+validation seam and must complete its own windows locally; it cannot recursively
+manufacture a suffix. Controls exercise accepted and adjusted source admission,
+retained-successor reconstruction and repeatability, unaccepted-successor refusal,
+unavailable windows, missing/foreign proof, acceptance rebinding and cancellation
+at the fixed rates. Replaying the accepted source's first bar cannot complete its
+last-bar observation ledger: it carries a different incoming state and lacks the
+original pending event identities. No historical record is relabeled. These are
 mechanical controls, not quality labels or artifact qualification.
 
 Production activation still requires one bounded successor producer under the
 existing detached transport owner, matching long-horizon and future live/route
 context, proof that measured source windows retain their consequence when that
-successor is committed or replaced, a qualified lookahead memory/time envelope,
-matching primary and long-horizon artifacts, and full source/PCM/lifecycle gates.
+successor is committed or replaced, a protected transport handoff that consumes
+the retained continuation before choosing repeat fallback, a qualified bounded
+lookahead memory/time envelope, matching primary and long-horizon artifacts, and full source/PCM/lifecycle gates.
 No alternative evaluator, renderer, Core parameter, UI control or persistent
 adaptation state is installed by this foundation.

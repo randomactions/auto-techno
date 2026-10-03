@@ -551,14 +551,40 @@ struct ModalSuccessorReportJoinTests {
                 state: state, plan: plan, rate: rate, evaluator: evaluator).preparedPhrase)
             #expect(first.preparedValidationRequired && first.commitEligible)
             let proof = try #require(first.preparedValidation)
-            #expect(proof.hasRequiredMeasurements)
+            #expect(proof.hasRequiredMeasurements && proof.hasQualifiedContinuation)
+            #expect(proof.requiresQualifiedSuccessor)
+            let successor = try #require(proof.qualifiedSuccessor)
+            #expect(successor.commitEligible && successor.preparedValidationRequired)
+            #expect(successor.preparedValidation?.requiresQualifiedSuccessor == false)
+            #expect(successor.preparedValidation?.qualifiedSuccessor == nil)
+            #expect(successor.plan.phraseIndex == first.plan.phraseIndex + 1)
+            #expect(successor.incomingQualityState == first.qualityContinuationState)
+            #expect(successor.selectedCandidateEvidence.routeContinuation.incomingRenderDSPFingerprint ==
+                first.commitProvenance.outgoingRenderDSPFingerprint)
+            #expect(try ProfessionalQualityObservation(continuousPrepared: first,
+                successor: successor) == proof.observation)
+            // Replaying accepted first-bar PCM does not continue the last bar's
+            // unfinished source records. Never relabel that historical evidence.
+            let sourceBars = try first.selectedCandidateEvidence.modalPercussion.map {
+                try #require($0.continuousWindows)
+            }
+            let sourceLastBar = try #require(sourceBars.last)
+            let repeatedFirstBar = try #require(sourceBars.first)
+            #expect(!sourceLastBar.pending.isEmpty)
+            #expect(repeatedFirstBar.incomingStateFingerprint != sourceLastBar.outgoingStateFingerprint)
+            let repeatedIdentities = Set((repeatedFirstBar.completed + repeatedFirstBar.pending).map(\.identity))
+            #expect(sourceLastBar.pending.allSatisfy { !repeatedIdentities.contains($0.identity) })
+            #expect(throws: ProfessionalEvidenceReportBankError.incompleteEvidence) {
+                var ledger = try ModalPercussionObservationLedger(bars: sourceBars)
+                try ledger.append(repeatedFirstBar)
+            }
             #expect(proof.sourceIdentityFingerprint == ProfessionalQualityModalSuccessorEvidence.identity(first))
             #expect(proof.observation.continuousModalSource?.projection.tailBodySupport.partialWindowEventCount == 0)
             #expect(first.qualityContinuationState.acceptanceProvenanceComplete)
             #expect(first.qualityContinuationState.revision == state.quality.revision + 1)
             #expect(first.candidateEvaluation.attempts.count == 1 && first.correctionRenderCount == 0)
             #expect(control.snapshot.calls == 1 && control.snapshot.probes == 1)
-            #expect(control.snapshot.probeWasCommitEligible == false)
+            #expect(control.snapshot.probeWasCommitEligible == true)
             #expect(control.snapshot.assessments == 1)
             let repeatControl = PreparedValidationControl()
             let repeated = try #require(prepareValidationSource(state: state, plan: plan, rate: rate,
@@ -570,6 +596,10 @@ struct ModalSuccessorReportJoinTests {
             #expect(repeated.commitProvenance == first.commitProvenance)
             #expect(repeated.preparedValidation?.observation == proof.observation)
             #expect(repeated.preparedValidation?.sourceIdentityFingerprint == proof.sourceIdentityFingerprint)
+            #expect(repeated.preparedValidation?.qualifiedSuccessor?.audioPreflight.quality.sampleHash ==
+                successor.audioPreflight.quality.sampleHash)
+            #expect(repeated.preparedValidation?.qualifiedSuccessor?.qualityContinuationState ==
+                successor.qualityContinuationState)
             let advanced = state.advance(using: first.plan, quality: first.qualityContinuationState,
                 liveMasterHeadroom: first.liveMasterHeadroomContinuationState)
             #expect(advanced.phraseIndex == state.phraseIndex + 1)
@@ -582,7 +612,7 @@ struct ModalSuccessorReportJoinTests {
                 "probeCommitEligible": control.snapshot.probeWasCommitEligible,
                 "sourceCommitEligible": first.commitEligible, "qualification": "mechanical-only-not-installed"])
         }
-        for mode in [PreparedValidationTestEvaluator.Mode.missingProof, .missingSuccessor, .reject] {
+        for mode in [PreparedValidationTestEvaluator.Mode.missingProof, .missingSuccessor, .unacceptedSuccessor, .reject] {
             let control = PreparedValidationControl()
             let source = try #require(prepareValidationSource(state: state, plan: plan, rate: 8_000,
                 evaluator: PreparedValidationTestEvaluator(startingState: state,
@@ -591,6 +621,14 @@ struct ModalSuccessorReportJoinTests {
             #expect(source.qualityContinuationState.acceptedEvidenceFingerprint == state.quality.acceptedEvidenceFingerprint)
             #expect(!source.qualityDecision.isAcceptanceOutcome)
             #expect(control.snapshot.calls == 1)
+            if mode == .unacceptedSuccessor {
+                let proof = try #require(source.preparedValidation)
+                #expect(proof.hasRequiredMeasurements && proof.requiresQualifiedSuccessor)
+                #expect(!proof.hasQualifiedContinuation && proof.qualifiedSuccessor == nil)
+                #expect(source.qualityDiagnosticDetails == ["prepared-validation=qualified-continuation-unavailable"])
+                #expect(control.snapshot.assessments == 0 && control.snapshot.probes == 1)
+                #expect(!control.snapshot.probeWasCommitEligible)
+            }
             if mode == .missingSuccessor {
                 #expect(control.snapshot.assessments == 0 && control.snapshot.probes == 0)
                 #expect(source.preparedValidation?.hasRequiredMeasurements == false)
@@ -623,7 +661,9 @@ struct ModalSuccessorReportJoinTests {
         #expect(correctedControl.snapshot.calls == 1 && correctedControl.snapshot.probes == 1)
         let wire: [String: Any] = ["fixture": "private-prepared-validation-admission.v1",
             "rows": rows, "requiredProofMissingRefused": true, "sourceOnlySuffixRefused": true,
-            "foreignProofRefused": true, "acceptedQualityRebindingRefused": true,
+            "foreignProofRefused": true, "unacceptedSuccessorRefused": true,
+            "qualifiedSuccessorRetained": true, "repeatCannotCompleteOriginalLedger": true,
+            "acceptedQualityRebindingRefused": true,
             "cancelledBeforeAdmission": true, "adjustedTransactionBound": true,
             "qualification": "mechanical-only-not-installed"]
         print(String(decoding: try JSONSerialization.data(withJSONObject: wire, options: [.sortedKeys]), as: UTF8.self))
@@ -657,7 +697,7 @@ struct ModalSuccessorReportJoinTests {
     }
 
     private struct PreparedValidationTestEvaluator: AutonomousCandidateEvaluating {
-        enum Mode: Equatable { case actualSuccessor, missingProof, missingSuccessor, reject,
+        enum Mode: Equatable { case actualSuccessor, missingProof, missingSuccessor, unacceptedSuccessor, reject,
             changedAcceptedReason, foreignProof, cancel }
         let startingState: AutonomousSessionState
         let control: PreparedValidationControl
@@ -695,7 +735,8 @@ struct ModalSuccessorReportJoinTests {
                     incomingRenderState: preview.endingRenderState, incomingGraphState: preview.endingGraphState,
                     previousGraph: preview.graph, incomingQualityState: next.quality,
                     routeGeneration: preview.selectedCandidateEvidence.routeContinuation.routeGeneration,
-                    evaluator: ValidationProbeTestEvaluator(policyVersion: policyVersion, evaluatorVersion: evaluatorVersion),
+                    evaluator: ValidationProbeTestEvaluator(policyVersion: policyVersion, evaluatorVersion: evaluatorVersion,
+                        allowAcceptance: mode != .unacceptedSuccessor),
                     cancellationRequested: { false })
                 control.update { $0.probeWasCommitEligible = successor?.commitEligible ?? false }
                 if successor == nil { return nil }
@@ -711,11 +752,21 @@ struct ModalSuccessorReportJoinTests {
 
     private struct ValidationProbeTestEvaluator: AutonomousCandidateEvaluating {
         let policyVersion: String; let evaluatorVersion: String
+        let allowAcceptance: Bool
+        var requiresPreparedValidation: Bool { true }
         func requestsHomeUpperTimbreCorrection(for candidate: AutonomousCandidateEvaluationVector) -> Bool { false }
         func terminalVerdict(selected: AutonomousCandidateEvaluationVector,
             transaction: AutonomousCandidateEvaluationTransaction) -> AutonomousCandidatePolicyVerdict {
-            AutonomousCandidatePolicyVerdict(outcome: .qualificationUnavailable, decisionBasis: .unavailable,
-                reasonCodes: [.evaluatorUnavailableV1])
+            allowAcceptance ? PreparedValidationTestEvaluator.accepted(transaction) :
+                AutonomousCandidatePolicyVerdict(outcome: .qualificationUnavailable, decisionBasis: .unavailable,
+                    reasonCodes: [.evaluatorUnavailableV1])
+        }
+        func preparedValidation(for preview: AutonomousCandidatePreparedPreview) -> AutonomousCandidatePreparedValidation? {
+            // The bounded mechanical successor can accept only its own complete
+            // source-local windows. It never recursively manufactures a suffix.
+            try? preview.assessingContinuous { _ in
+                PreparedValidationTestEvaluator.accepted(preview.transaction)
+            }
         }
     }
 

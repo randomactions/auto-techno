@@ -1043,6 +1043,9 @@ package final class PreparedAutonomousPhrase: Sendable {
                 if !preparedValidation.hasRequiredMeasurements {
                     failures.append("prepared-validation-measurements")
                 }
+                if !preparedValidation.hasQualifiedContinuation {
+                    failures.append("prepared-validation-continuation")
+                }
                 if preparedValidation.verdict.outcome != qualityDecision.outcome ||
                     !qualityDecision.isAcceptanceOutcome {
                     failures.append("prepared-validation-outcome")
@@ -1406,26 +1409,51 @@ package final class AutonomousCandidatePreparedPreview: Sendable {
         ProfessionalQualityModalSuccessorEvidence.identity(source)
     }
 
-    /// Only actual products can construct this proof. Missing physical support
-    /// remains unavailable even if an assessor attempts to accept it. No probe
-    /// PCM or successor acceptance is retained by the returned proof.
+    /// Only actual products can construct this proof. An unfinished source
+    /// window requires an accepted successor retained by the proof; discarded
+    /// or unaccepted probe PCM cannot support source admission.
     package func assessingContinuous(
         successor: PreparedAutonomousPhrase? = nil,
         using assess: (ProfessionalQualityObservation) -> AutonomousCandidatePolicyVerdict
     ) throws -> AutonomousCandidatePreparedValidation {
-        let observation = try ProfessionalQualityObservation(
-            continuousPrepared: source, successor: successor)
+        let sourceObservation = try ProfessionalQualityObservation(continuousPrepared: source)
+        guard let sourceWindows = sourceObservation.continuousModalSource?.projection else {
+            throw ProfessionalEvidenceReportBankError.incompleteEvidence
+        }
+        let requiresQualifiedSuccessor =
+            sourceWindows.attackBodySupport.partialWindowEventCount > 0 ||
+            sourceWindows.attackBodySupport.missingWindowEventCount > 0 ||
+            sourceWindows.tailBodySupport.partialWindowEventCount > 0 ||
+            sourceWindows.tailBodySupport.missingWindowEventCount > 0
+        let observation = try successor.map {
+            try ProfessionalQualityObservation(continuousPrepared: source, successor: $0)
+        } ?? sourceObservation
         let measured = observation.isComplete &&
             ProfessionalQualityMeasurementContract.modalMetrics.allSatisfy {
                 observation.measurementApplicability($0) != .unavailable
             }
-        let verdict = measured ? assess(observation) : AutonomousCandidatePolicyVerdict(
-            outcome: .qualificationUnavailable, decisionBasis: .unavailable,
-            reasonCodes: [.evaluatorUnavailableV1],
-            diagnosticDetails: ["prepared-validation=required-windows-unavailable"])
+        let qualifiedSuccessor = requiresQualifiedSuccessor && successor?.commitEligible == true
+            ? successor : nil
+        let hasQualifiedContinuation = !requiresQualifiedSuccessor || qualifiedSuccessor != nil
+        let verdict: AutonomousCandidatePolicyVerdict
+        if !measured {
+            verdict = AutonomousCandidatePolicyVerdict(
+                outcome: .qualificationUnavailable, decisionBasis: .unavailable,
+                reasonCodes: [.evaluatorUnavailableV1],
+                diagnosticDetails: ["prepared-validation=required-windows-unavailable"])
+        } else if !hasQualifiedContinuation {
+            verdict = AutonomousCandidatePolicyVerdict(
+                outcome: .qualificationUnavailable, decisionBasis: .unavailable,
+                reasonCodes: [.evaluatorUnavailableV1],
+                diagnosticDetails: ["prepared-validation=qualified-continuation-unavailable"])
+        } else {
+            verdict = assess(observation)
+        }
         return AutonomousCandidatePreparedValidation(
             sourceIdentityFingerprint: sourceIdentityFingerprint,
-            observation: observation, verdict: verdict)
+            observation: observation, verdict: verdict,
+            requiresQualifiedSuccessor: requiresQualifiedSuccessor,
+            qualifiedSuccessor: qualifiedSuccessor)
     }
 }
 
@@ -1436,13 +1464,23 @@ package final class AutonomousCandidatePreparedValidation: Sendable {
     package let observation: ProfessionalQualityObservation
     package let verdict: AutonomousCandidatePolicyVerdict
     package let hasRequiredMeasurements: Bool
+    package let requiresQualifiedSuccessor: Bool
+    /// The exact accepted continuation that completed the source windows.
+    /// Retention is detached; transport consumption still requires activation.
+    package let qualifiedSuccessor: PreparedAutonomousPhrase?
+    package let hasQualifiedContinuation: Bool
 
     fileprivate init(sourceIdentityFingerprint: String,
         observation: ProfessionalQualityObservation,
-        verdict: AutonomousCandidatePolicyVerdict) {
+        verdict: AutonomousCandidatePolicyVerdict,
+        requiresQualifiedSuccessor: Bool,
+        qualifiedSuccessor: PreparedAutonomousPhrase?) {
         self.sourceIdentityFingerprint = sourceIdentityFingerprint
         self.observation = observation
         self.verdict = verdict
+        self.requiresQualifiedSuccessor = requiresQualifiedSuccessor
+        self.qualifiedSuccessor = qualifiedSuccessor
+        hasQualifiedContinuation = !requiresQualifiedSuccessor || qualifiedSuccessor != nil
         hasRequiredMeasurements = observation.isComplete && observation.hardGatesPassed &&
             observation.measurementScope == .continuousModalWindow &&
             observation.continuousModalSource?.sourceIdentityFingerprint == sourceIdentityFingerprint &&
