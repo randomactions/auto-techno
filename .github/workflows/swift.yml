@@ -137,6 +137,7 @@ jobs:
           python3 -m unittest scripts/test_negative_result_records.py
           python3 -m unittest scripts/test_phase_zero_gate.py
           python3 -m unittest scripts/test_phase_one_gate.py
+          python3 -m unittest scripts/test_baseline_validation_session.py
           python3 -m unittest scripts/test_baseline_corpus.py
           python3 -m unittest scripts/test_baseline_render_manifest.py
           python3 -m unittest scripts/test_stem_capture_manifest.py

@@ -1,0 +1,59 @@
+{
+  "acceptedPCMSource": "5fe0c50db3c906b9132a07797febf19f843ec451",
+  "assets": 224,
+  "base": "9ce0422",
+  "coldAndSessionReportBytesExact": true,
+  "coldReferenceScope": "First isolated standalone cold pass, before adapter-only environment and loaded-source guard refinements; all thirteen cold validation functions are AST-exact to final implementation.",
+  "coldReferenceStage": {
+    "returncode": 0,
+    "seconds": 618.1989303330192,
+    "stage": "cold-generate"
+  },
+  "contractSnapshotFingerprint": "10e3a47511428bd7492ea572556adfb5af23380aac5764d08d8ee5e02edb2208",
+  "independentComputations": 188,
+  "maximumRetainedBytes": 134217728,
+  "reportSha256": "b05fc92378bc0b345d6e20171970ebc57fb6987d63a59c6f8bddac4dacbd76fc",
+  "retainedBytes": 10428192,
+  "reuses": 708,
+  "schema": "autotechno-validation-throughput-benchmark.v1",
+  "scope": "Accepted frozen bank and validator throughput only; no new rendering, sound qualification, listening, app/route, soak or activation.",
+  "stages": [
+    {
+      "returncode": 0,
+      "seconds": 461.23675725000794,
+      "stage": "session-generate"
+    },
+    {
+      "returncode": 0,
+      "seconds": 15.104230041994015,
+      "stage": "session-check-1"
+    },
+    {
+      "returncode": 0,
+      "seconds": 18.870802750025177,
+      "stage": "session-check-2"
+    },
+    {
+      "returncode": 0,
+      "seconds": 19.523618333012564,
+      "stage": "session-check-3"
+    }
+  ],
+  "toolingSources": {
+    "baseline_validation_session.py": "6e0510b1192c35a876835e4531f1d73d8b5f755bc8e21b2bbe627206515b7d69",
+    "stereo_compatibility_baseline_report.py": "61d043350b59c2ef99d6aba58350b30cb6fe8f980ea6ea122f2dea2689db85bd"
+  },
+  "unchangedColdValidationKernelFingerprint": "78910b4d23f1aa61e2f82ef73e7d9fbf8fe35b84fac5b79e0b32f18d429789c2",
+  "validation": {
+    "activeCitations": 67,
+    "contractFingerprint": "620203fd28584e59f1c43509311ffb61b0b10993af67a64b1755cd6fe69e3f94",
+    "contractSnapshot": 68,
+    "hostedCI": "not-run-on-this-branch",
+    "phaseZero": "passed-zero-findings",
+    "reuseIntegrityControls": 16,
+    "roadmap": "390-items-active-AT-0039",
+    "runtimeSourceChange": false,
+    "semanticMap": "passed",
+    "toolingTests": 290
+  }
+}
