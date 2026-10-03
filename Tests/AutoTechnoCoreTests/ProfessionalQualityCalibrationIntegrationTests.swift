@@ -349,15 +349,15 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             throw ProfessionalQualityCalibrationError.invalidIdentity
         }
         let qualificationRequested = environment["AUTOTECHNO_RUN_CONTINUOUS_ADVERSARIAL_QUALIFICATION"] == "1"
-        let qualificationProtocolPath = "docs/local/reports/AT-0039-continuous-adversarial-v1/protocol.json"
+        let qualificationProtocolPath = "docs/local/reports/AT-0039-measured-challenge-v1/qualification-protocol.json"
         let qualificationProtocolBlob = qualificationRequested
             ? try git(["hash-object", qualificationProtocolPath]) : nil
         if qualificationRequested {
-            guard qualificationProtocolBlob == "5a1bebc0f22b9abbcf7c271125c37c1309c465b9" else {
+            guard qualificationProtocolBlob == "151f8453481bdc454284279f5df4517e89bf44b0" else {
                 throw ProfessionalQualityCalibrationError.invalidIdentity
             }
             _ = try git(["merge-base", "--is-ancestor", acceptedHead,
-                "origin/codex/continuous-adversarial-qualification"])
+                "origin/codex/measured-adversarial-challenges"])
         }
         let (frozen, original) = try validatedFreshCoverageCohort()
         func guardAcceptedInputs() throws {
