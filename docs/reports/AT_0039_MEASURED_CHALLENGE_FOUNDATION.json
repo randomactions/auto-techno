@@ -1,0 +1,80 @@
+{
+  "schema": "autotechno-measured-challenge-foundation.v1",
+  "sourceHead": "1a88c9935eaeee70f8dcf6dada1723949f9ac562",
+  "inputObjects": {
+    "Package.swift": "3d4f31c9330905091558753927d85135eb96a81a",
+    "Sources": "678c37385c4b5a4b7cbb1cb446fb3f822d0abc3a",
+    "Tests": "49e455f9400f21f819c4b7d5f01dd6cdd1a06345",
+    "scripts": "292a8f6c61771ec26facc9a11907464b51ad266c",
+    "docs/BASELINE_CORPUS.json": "f55f54a1e9f92c7ff8150cccbb36bb5828148c99",
+    "docs/ROADMAP_EXECUTION_BASELINE.json": "57620ec02068fd42e801697751ace8c79d62a0fd"
+  },
+  "runtimeActivation": false,
+  "fullNativeQualificationLaunched": false,
+  "continuousAdversarialVersion": "autotechno-professional-quality-adversarial.v25",
+  "continuousAdversarialSchema": 24,
+  "retainedFailedSuiteFingerprint": "6ec6ef1e9cf550ed",
+  "retainedFailure": {
+    "acceptedHead": "78f7a09369e78a4e89f19ae6cc99637d1a519ea5",
+    "status": "adversarial-failed",
+    "rejectedCases": 33,
+    "totalCases": 34,
+    "failedScenario": "modal-runaway-tail",
+    "actualReasons": [],
+    "expectedReasons": [
+      "metric-out-of-range"
+    ],
+    "holdoutStatus": "not-run-adversarial-prerequisite",
+    "archiveImportedForQualification": false
+  },
+  "capability": {
+    "owner": "ProfessionalQualityAdversarialSuiteReport",
+    "sharedFactory": "measuredRangeChallenge",
+    "continuousRangeAttacks": 12,
+    "selection": "existing applicable measured48kHz establishment source, otherwise first measured48kHz source in unchanged canonical corpus order",
+    "boundSource": "selected source checkpoint effective calibrated bounds; original distance rule unchanged",
+    "preserved": [
+      "all cohort roots and observations",
+      "all34 adversarial scenarios",
+      "profile bounds",
+      "original/successor identity",
+      "modal support",
+      "live provenance",
+      "hard gates",
+      "other metrics",
+      "installed legacy resource bytes"
+    ],
+    "fallback": "refuse absent/unavailable source measurements or invalid/outside-mutation construction; installed legacy policy retains authority",
+    "runtimeAndPCM": "no renderer, callback, musical parameter or continuation change; offline qualification cannot activate runtime"
+  },
+  "protocolBlobs": {
+    "execution": "9b9e979f02c311ac4b6f92aeee1de5b5a5a73af0",
+    "qualification": "151f8453481bdc454284279f5df4517e89bf44b0",
+    "cohort": "da849a3ae636316afbbea231570d7c809de35d95"
+  },
+  "qualification": {
+    "freshTypedAdversarial": "pending",
+    "freshTypedHoldout": "pending",
+    "causalRuntimeHandoff": "pending",
+    "primaryAndLongHorizonReplacement": "pending",
+    "AT0039": "researching"
+  },
+  "validation": {
+    "coreReleaseTests": 687,
+    "appReleaseTests": 59,
+    "xctestChecks": 6,
+    "combinedToolingTests": 292,
+    "focusedTests": 5,
+    "existingRetiredSkips": 2,
+    "snapshotVersion": 74,
+    "snapshotFingerprint": "cf348ffd7625a0e2ed8fb92cb2b2133b1031a588e4b88b58b18f2a6c13b24c22",
+    "refreshStages": 42,
+    "lifecycleFamilies": 15,
+    "aggregateChecks": 19,
+    "gateFingerprint": "34aa861a4ed1fd2e58cfbb5202d0f26bb8e43b46add418b137e6db167427d77f",
+    "preservedAssets": 224,
+    "exactComparedSamples": 340230030,
+    "changedSamples": 0,
+    "liveTraceScope": "retained bounded2026-09-04 XML exports; no new app/route, listening or physical soak evidence"
+  }
+}
