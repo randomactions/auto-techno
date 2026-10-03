@@ -14,14 +14,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  swift-test:
-    name: swift-test
+  swift-gates:
+    name: swift-gates (${{ matrix.bank }})
     runs-on: macos-15
-    # The serial qualification bank hit the three-hour job limit during the
-    # modal core suite. Use the hosted runner's six-hour ceiling so every gate
-    # can run with its existing test selection and failure result.
+    # The unchanged serial bank exceeded the hosted six-hour job ceiling.
+    # Each bank retains serial test execution and builds its own exact source.
     timeout-minutes: 360
-
+    strategy:
+      fail-fast: false
+      matrix:
+        bank: [foundation, primary, modal, remaining]
     steps:
       - name: Check out source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -46,6 +48,7 @@ jobs:
       # Preflight also exited signal 10 after the percussion repairs passed.
       # The original core and preflight groups retain their full coverage.
       - name: Run percussion and preflight diagnostic checkpoints
+        if: matrix.bank == 'foundation'
         timeout-minutes: 10
         run: |
           test_status=0
@@ -82,6 +85,7 @@ jobs:
       # Keep the previously crashing correction gate near the build so a
       # recurrence yields diagnostics before the long evidence bank runs.
       - name: Run single correction order
+        if: matrix.bank == 'foundation'
         run: |
           test_status=0
           swift test --no-parallel --skip-build \
@@ -114,18 +118,21 @@ jobs:
           exit "$test_status"
 
       - name: Verify semantic codebase map
+        if: matrix.bank == 'foundation'
         run: |
           python3 -m unittest scripts/test_codebase_map.py
           python3 scripts/codebase_map.py check \
             --build-path "$RUNNER_TEMP/auto-techno-tests"
 
       - name: Verify component licences and governed assets
+        if: matrix.bank == 'foundation'
         run: |
           python3 -m unittest scripts/test_component_license_asset_manifest.py
           python3 -m unittest scripts/test_local_artifact_doctor.py
           python3 scripts/component_license_asset_manifest.py check
 
       - name: Verify result status vocabulary
+        if: matrix.bank == 'foundation'
         run: |
           python3 -m unittest scripts/test_result_status_vocabulary.py
           python3 -m unittest scripts/test_controlled_listening_protocol.py
@@ -158,12 +165,14 @@ jobs:
           python3 scripts/phase_one_gate.py validate
 
       - name: Run detached role-stem capture contracts
+        if: matrix.bank == 'foundation'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(RoleStemCaptureTests|StemCaptureIntegrationTests|PCMSignalIntegrityAnalyzerTests|SignalBaselineIntegrationTests|PCMSpectralBaselineAnalyzerTests|SpectralBaselineIntegrationTests|PCMKickFoundationCollisionAnalyzerTests|KickFoundationCollisionIntegrationTests|PCMTransientEnvelopeAnalyzerTests|TransientEnvelopeBaselineIntegrationTests)'
 
       - name: Run realtime queue and callback safety
+        if: matrix.bank == 'foundation'
         run: |
           swift test --no-parallel --skip-build \
             --build-path "$RUNNER_TEMP/auto-techno-tests" \
@@ -204,6 +213,7 @@ jobs:
           fi
 
       - name: Run live analyzer controller and terminal trim
+        if: matrix.bank == 'foundation'
         run: |
           swift test --no-parallel --skip-build \
             --build-path "$RUNNER_TEMP/auto-techno-tests" \
@@ -213,18 +223,21 @@ jobs:
             --filter LiveMasterTrimFingerprintTests
 
       - name: Run App live-feedback coordination
+        if: matrix.bank == 'foundation'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(LiveFeedbackCoordinatorTests|TechnoEngineLiveFeedbackTests|AutonomousSessionIdentityTests|LiveRenderInspectorTests)'
 
       - name: Run persistent continuous journey controls
+        if: matrix.bank == 'foundation'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter continuousJourneyExecution
 
       - name: Run candidate evidence and live tampering
+        if: matrix.bank == 'foundation'
         run: |
           test_status=0
           swift test --no-parallel --skip-build \
@@ -258,126 +271,147 @@ jobs:
           exit "$test_status"
 
       - name: Run exact primary artifacts and legacy rejection
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(harmonicTailPrimaryIdentityContract|primaryResourcesAreV14Only|bundledV14ArtifactsAreReady|primaryArtifacts|legacyPolicyJSONIsRejected|serializedLiveObservationProvenanceIsRejected|generateRepresentativeProfile|calibrationCacheRejectsSwappedOrUnboundedBanks|RepositorySurfaceTests)'
 
       - name: Run primary calibration adversarial challenge
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(deterministicProfile|adversarialSuite)'
 
       - name: Run primary calibrated-policy contracts
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(modalMetricContract|noAggregateCompensation|directionalSafetyBounds|descriptiveLoudnessRange|rmsTrajectoryRateConsistency|primaryCandidatePolicy|liveMasterProvenanceHardGates|diverseCorpusIdentity|preparationEvaluatorAvailability|invalidCalibrationInputs|modalEvidencePrecedesPrimaryPolicy)'
 
       - name: Run disjoint primary holdout qualification
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter holdoutDisjointnessAndAcceptance
 
       - name: Run atomic primary commit
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter calibratedPrimaryCommit
 
       - name: Run lightweight primary and evidence contracts
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(primaryCandidatePolicy|preparationEvaluatorAvailability|closedHatEvidenceContract|failedAttemptIsRetainable)'
 
       - name: Run 8 kHz primary unavailability gate
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter unsupported8KRouteStaysUnavailable
 
       - name: Run 12 kHz primary unavailability gate
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter unsupported12KRouteStaysUnavailable
 
       - name: Run closed-hat evidence tampering
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter closedHatEvidenceContract
 
       - name: Run pulse-echo evidence tampering
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter pulseEchoDriveEvidenceContract
 
       - name: Run modal-percussion evidence tampering
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter 'modalPercussionRejects'
 
       - name: Run unavailable-route commit gate
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter unavailableRouteDoesNotCommit
 
       - name: Run primary-boundary cancellation
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter primaryBoundaryCancellation
 
       - name: Run rejected-attempt isolation
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter failedAttemptIsRetainable
 
       - name: Run representative-rate intent
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter representativeRateEquivalence
 
       - name: Run modal-percussion representative-rate decay
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter physicalDecayMatchesAt44100And48000
 
       - name: Run modal-percussion correction equality
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter modalPercussionCorrectionMustMatchInitial
 
       - name: Run equivalent prepared transactions across rates
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter deviceSampleRates
 
       - name: Run primary-preparation resource envelope
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(representativeRateWorkingSetEnvelope|missingArtifactsStayUnavailable)'
 
       - name: Run phrase-boundary evidence
+        if: matrix.bank == 'primary'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter rendererContinuationReplay
 
       - name: Run modal-percussion core suites
+        if: matrix.bank == 'modal'
         run: |
           test_status=0
           swift test --no-parallel --skip-build \
@@ -411,120 +445,140 @@ jobs:
           exit "$test_status"
 
       - name: Run measurement fixture and provenance controls
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(DeterministicSignalFixturesTests|AT0039FoundationCohortSelectionTests|AutonomousEvidenceAuthorityTests)'
 
       - name: Run adaptive autonomous-session suite
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter AdaptiveAutonomousSessionTests
 
       - name: Run lightweight instrument palette tests
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter 'InstrumentPaletteTests.(catalogContract|correctionHomeContract|foundationBehaviorPCM|architectureAutomationPCM|resonantMonoAcidRelations|spectralTextureRisingCluster|spectralTextureUpperHarmonicTailAssignment|spectralTextureUpperHarmonicTailDSP|tonalTailContinuation|tonalPatchBoundary)'
 
       - name: Run instrument renderer evidence
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter InstrumentPaletteTests.canonicalRendererEvidence
 
       - name: Run canonical acid relation evidence
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter InstrumentPaletteTests.canonicalAcidRelationEvidence
 
       - name: Run prepared spectral-cluster evidence
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter InstrumentPalettePreparedEvidenceTests.testPreparedSpectralClusterEvidence
 
       - name: Run prepared upper harmonic-tail evidence
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter InstrumentPalettePreparedEvidenceTests.testPreparedHarmonicTailEvidence
 
       - name: Run prepared acid-relation evidence
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter InstrumentPalettePreparedEvidenceTests.testPreparedAcidRelationEvidence
 
       - name: Run kick source dynamics tests
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter KickSourceDynamicsTests
 
       - name: Run prepared percussion-echo evidence
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter PercussionEchoTexturePreparedEvidenceTests.testPreparedProductEvidence
 
       - name: Run core and evidence tests
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(ClimaxHangTests|FoundationRhythmicRelationTests|GeneratedDSPTopologyTests|FeedbackDelayNetworkTests|IdentityReturnContinuationTests|KickSyntaxTests|PercussionEchoTextureTests|PhraseCompositionTests|QualityQualificationFoundationTests|SpectrumMaskingAnalyzerTests|StreamingPerceptualEvidenceTests|TPTAntialiasedNonlinearCoreTests|fixedSessionIdentity|currentPlanningIsDeterministic)'
 
       - name: Run upper-percussion tail DSP tests
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter UpperPercussionTailDSPTests
 
       - name: Run upper-percussion tail score tests
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter UpperPercussionTailTests
 
       - name: Run upper spectral-reveal DSP tests
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter UpperSpectralRevealDSPTests
 
       - name: Run upper spectral-reveal score tests
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter UpperSpectralRevealTests
 
       - name: Run upper-timbre DSP tests
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter UpperTimbreDSPTests
 
       - name: Run upper-timbre planning tests
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel --skip-build
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter UpperTimbrePlanningTests
 
       - name: Run preparation preflight tests
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter AutonomousPreparationPreflightTests
 
       - name: Run protected-routing regression tests
+        if: matrix.bank == 'remaining'
         run: >-
           swift test --no-parallel
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter SpatialProtectedRoutingRegressionTests
 
       - name: Build release app
+        if: matrix.bank == 'remaining'
         run: swift build -c release --product AutoTechno --build-path "$RUNNER_TEMP/auto-techno-release"
 
       - name: Summarize test crash diagnostics on failure
@@ -571,3 +625,15 @@ jobs:
           if not emitted:
               print("No matching test crash report available; absence does not establish a cause.")
           PY
+
+  swift-test:
+    name: swift-test
+    runs-on: ubuntu-latest
+    needs: swift-gates
+    if: always()
+    timeout-minutes: 5
+    steps:
+      - name: Require every Swift bank to succeed
+        env:
+          SWIFT_GATES_RESULT: ${{ needs.swift-gates.result }}
+        run: test "$SWIFT_GATES_RESULT" = success
