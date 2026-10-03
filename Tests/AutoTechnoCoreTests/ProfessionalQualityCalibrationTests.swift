@@ -1818,11 +1818,11 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v30")
+                "autotechno-quality.primary-calibrated.v31")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v30")
+                "autotechno-candidate-evaluator.primary-calibrated.v31")
         #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
-                "autotechno-professional-quality-profile.v30")
+                "autotechno-professional-quality-profile.v32")
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
                 "autotechno-professional-quality-profile.v30")
@@ -2740,19 +2740,12 @@ struct ProfessionalQualityCalibrationTests {
         #expect(qualified.confidence == .notEstimated)
         #expect(qualified.accepted)
         #expect(qualified.observationCount == qualified.requiredObservationCount)
-        let primaryEvaluator = try ProfessionalQualityPrimaryEvaluator(
-            profile: artifacts.profile,
-            adversarialSuite: artifacts.adversarial,
-            holdoutQualification: artifacts.holdout
-        )
-        let candidateAssessment = primaryEvaluator.assessment(
-            of: [observations[0]]
-        )
-        #expect(candidateAssessment.availability == .available)
-        #expect(candidateAssessment.calibrationTrajectoryCount == 24)
-        #expect(candidateAssessment.support == .sufficient)
-        #expect(candidateAssessment.confidence == .notEstimated)
-        #expect(candidateAssessment.accepted)
+        // The shared legacy relationship reducer retains support semantics,
+        // but cannot authorize the sole continuous prepared policy.
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryEvaluator(profile: artifacts.profile,
+                adversarialSuite: artifacts.adversarial, holdoutQualification: artifacts.holdout)
+        }
 
         let trajectoryOnly = ProfessionalQualityRelationshipEvaluator.evaluate(
             observations: observations.filter { $0.sampleRate == 48_000 },
@@ -2816,14 +2809,6 @@ struct ProfessionalQualityCalibrationTests {
         #expect(unsupported.availability == .unsupportedSampleRate)
         #expect(unsupported.confidence == .unavailable)
         #expect(!unsupported.accepted)
-        let unsupportedCandidate = primaryEvaluator.assessment(
-            of: [unsupportedRate[0]]
-        )
-        #expect(unsupportedCandidate.availability == .unsupportedSampleRate)
-        #expect(unsupportedCandidate.support == .sufficient)
-        #expect(unsupportedCandidate.confidence == .unavailable)
-        #expect(!unsupportedCandidate.accepted)
-
         let lowSupportProfile = try ProfessionalQualityCalibrationProfile(
             engineVersion: QualityQualificationContract.engineVersion,
             sourceBankFingerprint: "low-support-relationship-test",
@@ -2996,22 +2981,15 @@ struct ProfessionalQualityCalibrationTests {
                 0.000_000_001)
     }
 
-    @Test("Constructed current artifacts activate only the single primary policy")
+    @Test("Constructed legacy artifacts cannot activate the sole continuous prepared policy")
     @MainActor
-    func primaryCandidatePolicy() throws {
+    func legacyConstructedPrimaryPolicyIsIneligible() throws {
         let artifacts = try diverseArtifacts()
-        #expect(artifacts.profile.profileVersion ==
-                ProfessionalQualityCalibrationProfile.profileVersion)
-        #expect(artifacts.profile.profileVersion ==
-                ProfessionalQualityPrimaryEvaluator.requiredProfileVersion)
-        let evaluator = try ProfessionalQualityPrimaryEvaluator(
-            profile: artifacts.profile,
-            adversarialSuite: artifacts.adversarial,
-            holdoutQualification: artifacts.holdout
-        )
-        #expect(evaluator.policyVersion.hasPrefix(
-            ProfessionalQualityPrimaryEvaluator.policyFamilyVersion
-        ))
+        #expect(artifacts.profile.isComplete && artifacts.adversarial.passed && artifacts.holdout.qualified)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryEvaluator(profile: artifacts.profile,
+                adversarialSuite: artifacts.adversarial, holdoutQualification: artifacts.holdout)
+        }
     }
 
     @Test("Live master provenance is non-compensable and missing evidence is a hold")
@@ -3174,25 +3152,10 @@ struct ProfessionalQualityCalibrationTests {
         }
     }
 
-    @Test("Legacy profile identity cannot activate the qualified v30 evaluator")
-    func legacyPrimaryArtifactsAreIneligible() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        var object = try #require(JSONSerialization.jsonObject(
-            with: artifacts.profile.deterministicJSON()
-        ) as? [String: Any])
-        object["profileVersion"] = "autotechno-professional-quality-profile.v29"
-        object["schemaVersion"] = 21
-        let legacy = try JSONSerialization.data(
-            withJSONObject: object,
-            options: [.sortedKeys, .withoutEscapingSlashes]
-        )
+    @Test("Historical bundled primary artifacts are ineligible under the continuous policy")
+    func legacyPrimaryArtifactsAreIneligible() {
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            try ProfessionalQualityPrimaryArtifacts(
-                profileData: legacy,
-                adversarialSuiteData: artifacts.adversarialSuite.deterministicJSON(),
-                holdoutQualificationData: artifacts.holdoutQualification
-                    .deterministicJSON()
-            )
+            try ProfessionalQualityPrimaryArtifacts.load()
         }
     }
 

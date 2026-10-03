@@ -1047,8 +1047,9 @@ struct ModalSuccessorReportJoinTests {
         }
         // Activation belongs to the existing readiness/artifact controls. A
         // complete one-bank construction profile remains insufficient and is
-        // outside the installed primary evaluator's required scope.
-        #expect(profile.profileVersion != ProfessionalQualityPrimaryEvaluator.requiredProfileVersion)
+        // within the primary scope but below its required diverse support.
+        #expect(profile.profileVersion == ProfessionalQualityPrimaryEvaluator.requiredProfileVersion)
+        #expect(!profile.usesDiverseCalibration)
         FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: [
             "fixture": "continuous-modal-observation-foundation.v2",
             "unsupportedOriginalTrainingMetrics": unsupportedTrainingMetrics.map(\.rawValue),

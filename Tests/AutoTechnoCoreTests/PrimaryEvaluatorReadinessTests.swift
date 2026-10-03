@@ -9,15 +9,15 @@ struct PrimaryEvaluatorReadinessTests {
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 43)
         #expect(AutonomousCandidateEvaluationTransaction.schemaVersion == 14)
         #expect(AutonomousPreparedCommitProvenance.schemaVersion == 3)
-        #expect(ProfessionalEvidenceReportBank.schemaVersion == 29)
+        #expect(ProfessionalEvidenceReportBank.schemaVersion == 30)
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 22)
         #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 20)
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v30")
+                "autotechno-quality.primary-calibrated.v31")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v30")
+                "autotechno-candidate-evaluator.primary-calibrated.v31")
         #expect(AutonomousCandidateCompletenessFailure.upperPercussionTailEvidence
             .rawValue == "upper-percussion-tail-evidence")
         #expect(AutonomousCandidateCompletenessFailure.modalPercussionEvidence
@@ -41,38 +41,15 @@ struct PrimaryEvaluatorReadinessTests {
         }
     }
 
-    @Test("Bundled v30 artifacts activate only the exact schema-49 engine")
-    func bundledV30ArtifactsAreReady() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(artifacts.profile.engineVersion ==
-                QualityQualificationContract.engineVersion)
-        #expect(artifacts.profile.schemaVersion == 22)
-        #expect(artifacts.adversarialSuite.schemaVersion == 22)
-        #expect(artifacts.holdoutQualification.schemaVersion == 20)
-        for sampleRate in [44_100.0, 48_000.0] {
-            #expect(ProfessionalQualityPreparationEvaluator(
-                sampleRate: sampleRate,
-                artifacts: artifacts
-            ).availability == .available)
+    @Test("Historical bundled artifacts cannot activate any route under the current continuous policy")
+    func bundledV30ArtifactsAreIneligible() {
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts.load()
         }
-    }
-
-    @Test("An 8 kHz route with exact v30 artifacts is unsupported")
-    func unsupported8KRouteStaysUnavailable() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(ProfessionalQualityPreparationEvaluator(
-            sampleRate: 8_000,
-            artifacts: artifacts
-        ).availability == .unsupportedSampleRate)
-    }
-
-    @Test("A 12 kHz route with exact v30 artifacts is unsupported")
-    func unsupported12KRouteStaysUnavailable() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(ProfessionalQualityPreparationEvaluator(
-            sampleRate: 12_000,
-            artifacts: artifacts
-        ).availability == .unsupportedSampleRate)
+        for sampleRate in [8_000.0, 12_000.0, 44_100.0, 48_000.0] {
+            #expect(ProfessionalQualityPreparationEvaluator(
+                sampleRate: sampleRate, artifacts: nil).availability == .artifactsUnavailable)
+        }
     }
 
     @Test("Missing artifacts cannot activate the calibrated primary evaluator")

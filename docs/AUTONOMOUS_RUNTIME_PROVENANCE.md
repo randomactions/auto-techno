@@ -1323,7 +1323,7 @@ fingerprints are `836ac66b68470cd4`, `5950762cf2dc2635`, and
 `0e00df369ce54e50`. The primary profile, adversarial suite, and holdout are
 independently pinned as `06cb04bfbef71c28`, `16820b6274dd26d4`, and
 `2037dec24ac1e45c`. All six artifacts in that prior assessment replayed byte for byte.
-The current v30 primary set has separately qualified matching long-horizon-v16
+The historical v30 primary set had separately qualified matching long-horizon-v16
 artifacts, pinned as `5110688cc8620d7a`, `fded455207d0919c`, and
 `768388d21859dfdc`. The physical
 percussion promotion stays inside the existing score/voice/evidence owners;
@@ -1470,8 +1470,9 @@ receipt coverage cannot manufacture another independent source. Corpus and
 relationship validation retain complete native-rate/checkpoint coverage,
 version consistency, duplicate rejection and required-unavailable measurements.
 A reduced one-bank analysis uses the same corpus fitter and remains below the
-minimum diverse source count. The existing evaluator and activation authority are retained. Installed v21/v30/v16 remains the runtime contract; bar-local
-v22/v31 and continuous v23/v32 remain unqualified and unactivated. No renderer,
+minimum diverse source count. The existing evaluator and activation authority are retained. Historical v21/v30/v16 artifacts retain their original contract and are ineligible
+under current evidence. The sole primary v31 requires continuous v23/v32 prepared
+validation; current artifact qualification and activation remain pending. No renderer,
 Core continuation, callback operation, future decision or PCM algorithm changes.
 
 ## Prepared-product continuous observation seam
@@ -1574,8 +1575,8 @@ receipt is placed inside that transaction. Existing source correction/render
 budgets and the callback remain unchanged.
 
 This implements an unactivated admission foundation, not a production successor
-probe or calibrated policy. Current shipping evaluators request no prepared
-validation; the route-local wrapper delegates the same seam. Test-only controls
+probe or calibrated policy. The historical primary v30 requested no prepared validation; the current sole
+primary v31 requires it and the route-local wrapper delegates the same seam. Test-only controls
 use the canonical Core director and renderer to prepare one qualified successor
 under the exact prospective continuation. That successor uses the same sealed
 validation seam and must complete its own windows locally; it cannot recursively
@@ -1632,3 +1633,35 @@ remain unactivated. They must retain this exact incoming context, match the admi
 projection against ordinary accepted reduction, carry future live/route boundaries,
 and qualify a bounded lookahead resource envelope before matching primary and
 long-horizon artifact qualification and full source/PCM/lifecycle publication gates.
+
+
+## Sole primary continuous prepared admission
+
+The existing ProfessionalQualityPrimaryEvaluator owns the v31 policy/evaluator
+contract. Its required profile is continuous v32 with observation v23; adversarial
+and disjoint holdout artifacts must have the same scope, observation identity,
+profile, corpus and engine/evidence binding. A vector alone or a legacy observation
+cannot supply actual prepared-source ownership and is refused. There is no
+alternative legacy evaluator or runtime selector. Historical bundled v30 primary
+and v16 long-horizon artifacts remain ineligible under the corrected evidence and
+current policy; they are not retagged or replaced by retained test artifacts.
+
+The terminal verdict supplies prospective acceptance only after transaction,
+hard-gate and rate checks. Required sealed prepared validation judges the actual
+continuous source observation and any physically necessary qualified successor.
+Only that calibrated verdict can admit the source; missing physical support
+preserves unavailable qualification and rejected evidence leaves accepted state
+unchanged. Diagnostics and bounded recovery intentions use that same observation,
+rather than reconstructing legacy metrics. The preview shares one physical suffix
+demand classifier with its proof constructor. Undefined body energy cannot be
+turned into a fabricated successor request. All work stays detached; source
+correction budgets, callback behavior and musical state ownership remain stable.
+
+Explicit opt-in controls use the retained 7ef30ff native model only to test
+admission mechanics at 44.1k and 48k. They also refuse mixed-scope artifact
+envelopes, vector-only and legacy assessment, altered metrics, missing proofs,
+unsupported rates and unfinished physical windows. They do not recertify that
+historical model, install resources, qualify the current source or activate
+playback. Production bounded successor preparation, protected retained-continuation
+consumption, future live/route context, resource qualification, matching current
+primary/long-horizon artifacts and full source/PCM/lifecycle gates remain pending.

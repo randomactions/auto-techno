@@ -90,9 +90,9 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
                 "autotechno-professional-quality-profile.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v30")
+                "autotechno-candidate-evaluator.primary-calibrated.v31")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v30")
+                "autotechno-quality.primary-calibrated.v31")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 22)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
                 "autotechno-professional-quality-adversarial.v23")
@@ -112,7 +112,7 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v30"))
     }
 
-    @Test("Only the exact qualified v30 primary resources are installed")
+    @Test("Historical v30 resources remain present but cannot activate the current policy")
     func primaryResourcesAreV30FailClosed() throws {
         let resourceDirectory = repositoryRoot
             .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
@@ -130,17 +130,15 @@ struct CurrentRuntimeTests {
             #expect(ProfessionalQualityPrimaryArtifacts
                 .containsBundledResource(named: "\(prefix)-v30"))
         }
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
-        #expect(artifacts.profile.fingerprint ==
-                ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
-        #expect(artifacts.adversarialSuite.passed)
-        #expect(artifacts.holdoutQualification.qualified)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts.load()
+        }
     }
 
-    @Test("The v30 candidate identity and live controller remain canonical")
+    @Test("The continuous candidate identity and live controller remain canonical")
     func primaryEvaluatorAndLiveControllerAreCanonical() {
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v30")
+                "autotechno-candidate-evaluator.primary-calibrated.v31")
         #expect(LiveMasterHeadroomController.version ==
                 "autotechno-live-master-headroom-controller.v2")
         #expect(LiveMasterHeadroomController.minimumTrimDB == -3)

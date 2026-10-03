@@ -545,11 +545,11 @@ package enum ProfessionalQualityRecoveryIntentReducer {
 package struct ProfessionalQualityPrimaryEvaluator:
         AutonomousCandidateEvaluating {
     package static let policyFamilyVersion =
-        "autotechno-quality.primary-calibrated.v30"
+        "autotechno-quality.primary-calibrated.v31"
     package static let evaluatorVersionIdentifier =
-        "autotechno-candidate-evaluator.primary-calibrated.v30"
+        "autotechno-candidate-evaluator.primary-calibrated.v31"
     package static let requiredProfileVersion =
-        "autotechno-professional-quality-profile.v30"
+        "autotechno-professional-quality-profile.v32"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport
@@ -569,11 +569,13 @@ package struct ProfessionalQualityPrimaryEvaluator:
               !profile.fingerprint.isEmpty,
               adversarialSuite.profileFingerprint == profile.fingerprint,
               !adversarialSuite.fingerprint.isEmpty,
-              adversarialSuite.schemaVersion ==
-                ProfessionalQualityAdversarialSuiteReport.schemaVersion,
-              adversarialSuite.measurementScope == .legacy,
+              profile.measurementScope == .continuousModalWindow,
+              adversarialSuite.measurementScope == .continuousModalWindow,
+              adversarialSuite.sourceObservationVersion == profile.observationVersion,
+              adversarialSuite.isBound(to: profile),
               holdoutQualification.qualified,
-              holdoutQualification.measurementScope == .legacy,
+              holdoutQualification.measurementScope == .continuousModalWindow,
+              holdoutQualification.sourceObservationVersion == profile.observationVersion,
               holdoutQualification.engineVersion == profile.engineVersion,
               holdoutQualification.profileFingerprint == profile.fingerprint,
               holdoutQualification.adversarialSuiteFingerprint ==
@@ -596,48 +598,34 @@ package struct ProfessionalQualityPrimaryEvaluator:
         ].joined(separator: ".")
     }
 
+    /// A vector alone cannot establish actual prepared-source ownership or
+    /// successor support. Continuous primary assessment requires that context.
     package func assessment(
         of candidate: AutonomousCandidateEvaluationVector
     ) -> ProfessionalQualityCandidateAssessment {
-        guard let checkpoint = ProfessionalQualityObservation.primaryCheckpoint(for: candidate) else {
-            return .unavailable(
-                .invalidEvidence,
-                calibrationTrajectoryCount: profile.sourceTrajectoryCount
-            )
-        }
-        let checkpoints = [checkpoint]
-        let sampleRate = candidate.routeContinuation.sampleRate
-        guard !checkpoints.isEmpty else {
-            return .unavailable(
-                .noApplicableCheckpoint,
-                sampleRate: sampleRate,
-                calibrationTrajectoryCount: profile.sourceTrajectoryCount
-            )
-        }
-        guard profile.sampleRates.contains(sampleRate) else {
-            return .unavailable(
-                .unsupportedSampleRate,
-                sampleRate: sampleRate,
-                checkpoints: checkpoints,
-                calibrationTrajectoryCount: profile.sourceTrajectoryCount
-            )
-        }
-        do {
-            let observations = try checkpoints.map {
-                try ProfessionalQualityObservation(
-                    candidate: candidate,
-                    engineVersion: QualityQualificationContract.engineVersion,
-                    checkpoint: $0
-                )
-            }
-            return assessment(of: observations)
-        } catch {
-            return .unavailable(
-                .invalidEvidence,
-                sampleRate: sampleRate,
-                checkpoints: checkpoints,
-                calibrationTrajectoryCount: profile.sourceTrajectoryCount
-            )
+        .unavailable(.invalidEvidence,
+            sampleRate: candidate.routeContinuation.sampleRate,
+            calibrationTrajectoryCount: profile.sourceTrajectoryCount)
+    }
+
+    package var requiresPreparedValidation: Bool { true }
+
+    package func preparedValidation(
+        for preview: AutonomousCandidatePreparedPreview
+    ) -> AutonomousCandidatePreparedValidation? {
+        preparedValidation(for: preview, successor: nil)
+    }
+
+    /// The route-local detached owner may supply only an actual qualified
+    /// continuation. The sealed preview remains the source/provenance owner.
+    package func preparedValidation(
+        for preview: AutonomousCandidatePreparedPreview,
+        successor: PreparedAutonomousPhrase?
+    ) -> AutonomousCandidatePreparedValidation? {
+        guard preview.transaction.policyVersion == policyVersion,
+              preview.transaction.evaluatorVersion == evaluatorVersion else { return nil }
+        return try? preview.assessingContinuous(successor: successor) { observation in
+            calibratedVerdict(observation: observation, transaction: preview.transaction)
         }
     }
 
@@ -672,6 +660,8 @@ package struct ProfessionalQualityPrimaryEvaluator:
                       $0.engineVersion ==
                         QualityQualificationContract.engineVersion &&
                       $0.evidenceVersion == profile.evidenceVersion &&
+                      $0.measurementScope == .continuousModalWindow &&
+                      $0.observationVersion == profile.observationVersion &&
                       $0.sampleRate == sampleRate
               }) else {
             return .unavailable(
@@ -766,51 +756,47 @@ package struct ProfessionalQualityPrimaryEvaluator:
         guard selected.hardGatesPassed else {
             return Self.hardGateRejectionVerdict(for: selected)
         }
-        let result = assessment(of: selected)
-        guard result.availability == .available else {
-            var diagnosticDetails = [
-                "assessment=\(result.availability.rawValue)",
-                "checkpoints=\(result.checkpoints.map(\.rawValue).joined(separator: ","))",
-            ]
-            if let sampleRate = result.sampleRate {
-                diagnosticDetails.append("sample-rate=\(sampleRate)")
-            }
-            if result.availability == .invalidEvidence {
-                diagnosticDetails.append(contentsOf:
-                    invalidEvidenceDiagnostics(
-                        candidate: selected,
-                        checkpoints: result.checkpoints
-                    )
-                )
-            }
+        guard profile.sampleRates.contains(selected.routeContinuation.sampleRate) else {
             return AutonomousCandidatePolicyVerdict(
-                outcome: .qualificationUnavailable,
-                decisionBasis: .unavailable,
+                outcome: .qualificationUnavailable, decisionBasis: .unavailable,
                 reasonCodes: [.evaluatorUnavailableV1],
-                diagnosticDetails: diagnosticDetails
-            )
+                diagnosticDetails: ["assessment=unsupported-sample-rate"])
         }
-        guard result.accepted else {
-            return AutonomousCandidatePolicyVerdict(
-                outcome: .rejected,
-                decisionBasis: .calibratedQuality,
-                reasonCodes: [.guardrailRegressionV1],
-                diagnosticDetails: rejectionDiagnostics(
-                    candidate: selected,
-                    assessment: result
-                ),
-                recoveryIntent: recoveryIntent(
-                    candidate: selected,
-                    assessment: result
-                )
-            )
-        }
-        return AutonomousCandidatePolicyVerdict(
+        // This verdict creates the private prospective continuation only.
+        // Required prepared validation prevents it from admitting source PCM.
+        return prospectiveAcceptance(transaction)
+    }
+
+    private func prospectiveAcceptance(
+        _ transaction: AutonomousCandidateEvaluationTransaction
+    ) -> AutonomousCandidatePolicyVerdict {
+        AutonomousCandidatePolicyVerdict(
             outcome: transaction.correctionCount == 0 ? .qualified : .adjusted,
             decisionBasis: .calibratedQuality,
             reasonCodes: transaction.correctionCount == 0
-                ? [.candidateQualifiedV1] : [.candidateAdjustedV1]
-        )
+                ? [.candidateQualifiedV1] : [.candidateAdjustedV1])
+    }
+
+    private func calibratedVerdict(
+        observation: ProfessionalQualityObservation,
+        transaction: AutonomousCandidateEvaluationTransaction
+    ) -> AutonomousCandidatePolicyVerdict {
+        let observations = [observation]
+        let result = assessment(of: observations)
+        guard result.availability == .available else {
+            return AutonomousCandidatePolicyVerdict(
+                outcome: .qualificationUnavailable, decisionBasis: .unavailable,
+                reasonCodes: [.evaluatorUnavailableV1],
+                diagnosticDetails: ["assessment=\(result.availability.rawValue)"])
+        }
+        guard result.accepted else {
+            return AutonomousCandidatePolicyVerdict(
+                outcome: .rejected, decisionBasis: .calibratedQuality,
+                reasonCodes: [.guardrailRegressionV1],
+                diagnosticDetails: rejectionDiagnostics(observations: observations, assessment: result),
+                recoveryIntent: recoveryIntent(observations: observations, assessment: result))
+        }
+        return prospectiveAcceptance(transaction)
     }
 
     /// Deterministic reason reduction for a candidate that already failed the
@@ -852,16 +838,14 @@ package struct ProfessionalQualityPrimaryEvaluator:
     /// recovery coordinates. Thresholds and metric identities remain DSP
     /// implementation details and never cross the module boundary.
     private func recoveryIntent(
-        candidate: AutonomousCandidateEvaluationVector,
+        observations: [ProfessionalQualityObservation],
         assessment: ProfessionalQualityCandidateAssessment
     ) -> AutonomousQualityRecoveryIntent {
         var failures: [ProfessionalQualityRecoveryFailure] = []
         for verdict in assessment.verdicts {
-            guard let observation = try? ProfessionalQualityObservation(
-                candidate: candidate,
-                engineVersion: QualityQualificationContract.engineVersion,
-                checkpoint: verdict.checkpoint
-            ) else { continue }
+            guard let observation = observations.first(where: {
+                $0.checkpoint == verdict.checkpoint
+            }) else { continue }
             for metric in verdict.failedMetrics {
                 guard let value = observation[metric],
                       let bounds = profile.effectiveBounds(
@@ -884,39 +868,8 @@ package struct ProfessionalQualityPrimaryEvaluator:
         return ProfessionalQualityRecoveryIntentReducer.reduce(failures)
     }
 
-    private func invalidEvidenceDiagnostics(
-        candidate: AutonomousCandidateEvaluationVector,
-        checkpoints: [CanonicalJourneyCheckpoint]
-    ) -> [String] {
-        guard AutonomousPhraseKind(
-            rawValue: candidate.symbolic.phraseKind
-        ) != nil else {
-            return ["observation=phrase-kind"]
-        }
-        var details: [String] = []
-        for checkpoint in checkpoints {
-            do {
-                _ = try ProfessionalQualityObservation(
-                    candidate: candidate,
-                    engineVersion: QualityQualificationContract.engineVersion,
-                    checkpoint: checkpoint
-                )
-            } catch let error as ProfessionalQualityCalibrationError {
-                details.append(contentsOf: Self.diagnosticDetails(
-                    for: error,
-                    checkpoint: checkpoint
-                ))
-            } catch {
-                details.append(
-                    "\(checkpoint.rawValue):observation=unknown-error"
-                )
-            }
-        }
-        return Array(details.prefix(20))
-    }
-
     private func rejectionDiagnostics(
-        candidate: AutonomousCandidateEvaluationVector,
+        observations: [ProfessionalQualityObservation],
         assessment: ProfessionalQualityCandidateAssessment
     ) -> [String] {
         var details: [String] = []
@@ -925,11 +878,7 @@ package struct ProfessionalQualityPrimaryEvaluator:
             details.append(contentsOf: verdict.reasons.map {
                 "\(checkpointName):reason=\($0.rawValue)"
             })
-            let observation = try? ProfessionalQualityObservation(
-                candidate: candidate,
-                engineVersion: QualityQualificationContract.engineVersion,
-                checkpoint: verdict.checkpoint
-            )
+            let observation = observations.first { $0.checkpoint == verdict.checkpoint }
             for metric in verdict.failedMetrics {
                 guard let value = observation?[metric],
                       let bounds = profile.effectiveBounds(
@@ -955,51 +904,4 @@ package struct ProfessionalQualityPrimaryEvaluator:
         return Array(details.prefix(24))
     }
 
-    private static func diagnosticDetails(
-        for error: ProfessionalQualityCalibrationError,
-        checkpoint: CanonicalJourneyCheckpoint
-    ) -> [String] {
-        let prefix = "\(checkpoint.rawValue):"
-        switch error {
-        case .invalidIdentity:
-            return [prefix + "observation=invalid-identity"]
-        case .incompleteRepresentativeRates:
-            return [prefix + "observation=representative-rates"]
-        case .incompleteCheckpointCoverage:
-            return [prefix + "observation=checkpoint-coverage"]
-        case .duplicateMetric:
-            return [prefix + "observation=duplicate-metric"]
-        case .invalidMetricSet:
-            return [prefix + "observation=metric-set"]
-        case let .nonFiniteMetric(metric):
-            return [prefix + "metric=\(metric.rawValue)-nonfinite"]
-        case .incompleteKickSyntaxEvidence:
-            return [prefix + "observation=kick-syntax"]
-        case let .incompleteStemBarCoverage(_, expected, actual):
-            return [
-                prefix + "observation=stem-bar-coverage",
-                prefix + "expected-stem-bars=\(expected.count)",
-                prefix + "actual-stem-bars=\(actual.count)",
-            ]
-        case let .incompleteStemRoleEvidence(_, failures):
-            return [prefix + "observation=stem-role"] + failures.flatMap {
-                failure in failure.failures.map {
-                    prefix + "stem-role=\(failure.role):\($0.rawValue)"
-                }
-            }
-        case let .incompleteCandidateEvidence(_, failures):
-            return [prefix + "observation=candidate"] + failures.map {
-                prefix + "candidate=\($0.rawValue)"
-            }
-        case .invalidBounds:
-            return [prefix + "observation=bounds"]
-        case .profileMismatch:
-            return [prefix + "observation=profile"]
-        case .invalidLocalFeatureEvidence:
-            return [prefix + "observation=local-feature"]
-        case let .unavailableMeasurement(measurement):
-            return [prefix + "metric=\(measurement.metric.rawValue)-unavailable",
-                    prefix + "support=\(measurement.reason.rawValue)"]
-        }
-    }
 }

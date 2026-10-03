@@ -1,5 +1,11 @@
 # Sound Quality Contract
 
+The current corrected-source primary contract is v31 and requires actual prepared
+continuous observation v23/profile v32 validation. Historical engine-v48 primary
+v30/Evidence-v29 and long-horizon-v16 results below retain their original scope;
+they cannot qualify current Evidence-v30 source or activate the new policy.
+Current-source artifact regeneration and full qualification remain pending.
+
 ## Engine-v43 episode-bound kick checkpoint
 
 Engine v43 retains the source-terminal repair and adds episode-bound kick
@@ -28,7 +34,7 @@ Graph evidence binds the world fingerprint, requested five-coordinate target,
 realized graph vector, distance, protected routing, and at most one changed node
 per phrase. Existing transition-tail and route-recovery contracts remain.
 The engine-v48 primary-v30 development, adversarial, and disjoint-holdout
-artifacts now pass: 504 development observations, 34 adversarial cases, and
+artifacts passed in their historical scope: 504 development observations, 34 adversarial cases, and
 56/56 holdout observations with no relationship failures. Profile schema 22
 records unsupported conditional trajectory comparisons explicitly rather than
 fitting absent measurements. The installed primary set fails closed on any
@@ -39,11 +45,11 @@ playback and physical-output soak.
 Listening, real app/route QA, latency observation, and physical-output soak remain
 separate unverified gates.
 
-The current primary-qualified offline implementation is
+The historical primary-qualified offline implementation was
 `autotechno-canonical-engine.v48` under quality-contract schema 49,
 candidate-vector schema 43, candidate-transaction schema 14, and Professional
 Evidence v29. Primary profile/evaluator v30, adversarial v23, and holdout v20
-are the current primary artifact identities. The current combined primary-v30/long-horizon-v16 artifact set is qualified
+are the historical primary artifact identities. The combined primary-v30/long-horizon-v16 artifact set was qualified
 within those exact offline evidence domains.
 
 The Phase-1 measurement corpus is separate from those calibration and holdout

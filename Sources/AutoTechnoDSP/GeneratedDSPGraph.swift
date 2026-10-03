@@ -1419,6 +1419,22 @@ package final class AutonomousCandidatePreparedPreview: Sendable {
         ProfessionalQualityModalSuccessorEvidence.identity(source)
     }
 
+    /// Detached physical demand, before the owner spends a successor render.
+    /// Undefined body energy does not request a fabricated continuation.
+    package func requiresQualifiedSuccessorSupport() throws -> Bool {
+        let windows = try ProfessionalQualityContinuousModalWindowEvidence(prepared: source)
+        return Self.requiresSuccessor(windows)
+    }
+
+    private static func requiresSuccessor(
+        _ windows: ProfessionalQualityContinuousModalWindowEvidence
+    ) -> Bool {
+        windows.attackBodySupport.partialWindowEventCount > 0 ||
+        windows.attackBodySupport.missingWindowEventCount > 0 ||
+        windows.tailBodySupport.partialWindowEventCount > 0 ||
+        windows.tailBodySupport.missingWindowEventCount > 0
+    }
+
     /// Only actual products can construct this proof. An unfinished source
     /// window requires an accepted successor retained by the proof; discarded
     /// or unaccepted probe PCM cannot support source admission.
@@ -1430,11 +1446,7 @@ package final class AutonomousCandidatePreparedPreview: Sendable {
         guard let sourceWindows = sourceObservation.continuousModalSource?.projection else {
             throw ProfessionalEvidenceReportBankError.incompleteEvidence
         }
-        let requiresQualifiedSuccessor =
-            sourceWindows.attackBodySupport.partialWindowEventCount > 0 ||
-            sourceWindows.attackBodySupport.missingWindowEventCount > 0 ||
-            sourceWindows.tailBodySupport.partialWindowEventCount > 0 ||
-            sourceWindows.tailBodySupport.missingWindowEventCount > 0
+        let requiresQualifiedSuccessor = Self.requiresSuccessor(sourceWindows)
         let observation = try successor.map {
             try ProfessionalQualityObservation(continuousPrepared: source, successor: $0)
         } ?? sourceObservation
