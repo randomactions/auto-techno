@@ -7,8 +7,8 @@ struct PCMSpectralBaselineAnalyzerTests {
     @Test("Low and high tones retain causal band and occupancy sign")
     func lowAndHighBandSign() throws {
         let sampleRate = 48_000.0
-        let low = sine(frequency: 60, sampleRate: sampleRate)
-        let high = sine(frequency: 4_000, sampleRate: sampleRate)
+        let low = try sine(frequency: 60, sampleRate: sampleRate)
+        let high = try sine(frequency: 4_000, sampleRate: sampleRate)
         let lowEvidence = try #require(analyze(low, sampleRate: sampleRate))
         let highEvidence = try #require(analyze(high, sampleRate: sampleRate))
 
@@ -25,12 +25,14 @@ struct PCMSpectralBaselineAnalyzerTests {
     @Test("Canonical spectral shape distinguishes tone, mixture, and noise")
     func shapeFixtures() throws {
         let sampleRate = 48_000.0
-        let tone = sine(frequency: 500, sampleRate: sampleRate)
+        let tone = try sine(frequency: 500, sampleRate: sampleRate)
         let mixture = zip(
             tone,
-            sine(frequency: 4_000, amplitude: 0.12, sampleRate: sampleRate)
+            try sine(frequency: 4_000, amplitude: 0.12, sampleRate: sampleRate)
         ).map { $0.0 + $0.1 }
-        let noise = deterministicNoise(frameCount: tone.count, amplitude: 0.2)
+        let noise = try DeterministicSignalFixtures.uniformNoise(
+            frameCount: tone.count, amplitude: 0.2, seed: 0x9E3779B97F4A7C15
+        )
         let toneEvidence = try #require(analyze(tone, sampleRate: sampleRate))
         let mixtureEvidence = try #require(analyze(mixture, sampleRate: sampleRate))
         let noiseEvidence = try #require(analyze(noise, sampleRate: sampleRate))
@@ -47,8 +49,12 @@ struct PCMSpectralBaselineAnalyzerTests {
     func silenceAndDC() throws {
         let sampleRate = 48_000.0
         let frameCount = Int(sampleRate)
-        let silence = [Float](repeating: 0, count: frameCount)
-        let dc = [Float](repeating: 0.2, count: frameCount)
+        let silence = try DeterministicSignalFixtures.silence(
+            frameCount: frameCount
+        )
+        let dc = try DeterministicSignalFixtures.dc(
+            frameCount: frameCount, value: 0.2
+        )
         let silenceEvidence = try #require(analyze(silence, sampleRate: sampleRate))
         let dcEvidence = try #require(analyze(dc, sampleRate: sampleRate))
 
@@ -68,7 +74,7 @@ struct PCMSpectralBaselineAnalyzerTests {
     func routeGeometry() throws {
         for sampleRate in [44_100.0, 48_000.0] {
             let segmentFrames = Int((sampleRate * 240 / 130).rounded())
-            let signal = sine(
+            let signal = try sine(
                 frequency: 997,
                 frameCount: segmentFrames,
                 sampleRate: sampleRate
@@ -103,7 +109,7 @@ struct PCMSpectralBaselineAnalyzerTests {
     @Test("Window facts exactly reuse both canonical analyzers")
     func canonicalOwnerParity() throws {
         let sampleRate = 48_000.0
-        let signal = sine(frequency: 731, sampleRate: sampleRate)
+        let signal = try sine(frequency: 731, sampleRate: sampleRate)
         let evidence = try #require(analyze(signal, sampleRate: sampleRate))
         let window = evidence.segments[0].windows[7]
         let spectrumEnd = window.spectrumStartFrame + window.spectrumFrameCount
@@ -179,24 +185,13 @@ struct PCMSpectralBaselineAnalyzerTests {
         amplitude: Double = 0.2,
         frameCount: Int? = nil,
         sampleRate: Double
-    ) -> [Float] {
+    ) throws -> [Float] {
         let count = frameCount ?? Int(sampleRate)
-        return (0..<count).map { frame in
-            Float(amplitude * sin(
-                2 * Double.pi * frequency * Double(frame) / sampleRate
-            ))
-        }
-    }
-
-    private func deterministicNoise(
-        frameCount: Int,
-        amplitude: Double
-    ) -> [Float] {
-        var state: UInt64 = 0x9e3779b97f4a7c15
-        return (0..<frameCount).map { _ in
-            state = state &* 6_364_136_223_846_793_005 &+ 1
-            let unit = Double(state >> 11) / Double(UInt64.max >> 11)
-            return Float((unit * 2 - 1) * amplitude)
-        }
+        return try DeterministicSignalFixtures.sine(
+            frameCount: count,
+            sampleRate: sampleRate,
+            frequencyHz: frequency,
+            amplitude: amplitude
+        )
     }
 }

@@ -171,10 +171,21 @@ struct PCMTransientEnvelopeAnalyzerTests {
     @Test("Impulses separate after refractory and close the prior event")
     func impulseSeparation() throws {
         let sampleRate = 48_000
-        var samples = [Float](repeating: 0, count: sampleRate / 2)
-        samples[1_000] = 1
-        samples[4_000] = 0.7
-        samples[20_000] = 0.8
+        let frameCount = sampleRate / 2
+        let impulses = try [
+            DeterministicSignalFixtures.impulse(
+                frameCount: frameCount, index: 1_000, amplitude: 1
+            ),
+            DeterministicSignalFixtures.impulse(
+                frameCount: frameCount, index: 4_000, amplitude: 0.7
+            ),
+            DeterministicSignalFixtures.impulse(
+                frameCount: frameCount, index: 20_000, amplitude: 0.8
+            ),
+        ]
+        let samples = (0..<frameCount).map { frame in
+            impulses.reduce(Float.zero) { $0 + $1[frame] }
+        }
         let evidence = try available(samples, sampleRate: sampleRate)
 
         #expect(evidence.summary.legacyTransientCount == 3)
@@ -255,11 +266,11 @@ struct PCMTransientEnvelopeAnalyzerTests {
     @Test("Silence and steady signal use explicit non-quality states")
     func silenceAndSteadySignal() throws {
         let silence = try available(
-            [Float](repeating: 0, count: 8_000),
+            DeterministicSignalFixtures.silence(frameCount: 8_000),
             sampleRate: 48_000
         )
         let steady = try available(
-            [Float](repeating: 0.2, count: 8_000),
+            DeterministicSignalFixtures.dc(frameCount: 8_000, value: 0.2),
             sampleRate: 48_000
         )
 

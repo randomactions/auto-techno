@@ -7,6 +7,7 @@ import copy
 import importlib.util
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -146,18 +147,82 @@ class DeficitRegisterTests(unittest.TestCase):
     def test_roadmap_links_bind_open_exact_outcomes(self) -> None:
         roadmap = self.roadmap_items()
         self.assertEqual(register_module.validate_register(self.register, roadmap), [])
+        target_id = self.register["entries"][0]["nearestRoadmapItems"][0]["id"]
         changed_status = copy.deepcopy(roadmap)
-        changed_status["AT-0038"]["status"] = "completed"
+        changed_status[target_id]["status"] = "completed"
         self.assertTrue(any(
             "is not open roadmap work" in error
             for error in register_module.validate_register(self.register, changed_status)
         ))
         changed_outcome = copy.deepcopy(roadmap)
-        changed_outcome["AT-0038"]["outcome"] = "stale"
+        changed_outcome[target_id]["outcome"] = "stale"
         self.assertTrue(any(
             "outcome is stale" in error
             for error in register_module.validate_register(self.register, changed_outcome)
         ))
+
+    def test_generated_register_links_only_to_open_roadmap_work(self) -> None:
+        # Exercise real entry generation with synthetic, non-audio source facts.
+        # Clean hosted checkouts have neither private exports nor the local roadmap.
+        reports = {
+            source["id"]: {"reportFingerprint": source["reportFingerprint"]}
+            for source in self.register["generatedFrom"]["sources"]
+        }
+        asset_id = "ATBC-V1-001-INITIAL--native-stereo-44100::whole"
+        reports["rhythmic"]["assets"] = [{"assetId": asset_id,
+            "evidence": {"scoreBindingStatus": "unavailable-fixture"}}]
+        reports["kick-foundation-collision"]["entries"] = [{
+            "caseId": "fixture", "routeId": "native-stereo-44100",
+            "evidence": {"events": [{"collisionClass": "low-band-overlap"}]}}]
+        reports["spectral"]["assets"] = [{"assetId": asset_id,
+            "evidence": {"summary": {"windowCount": 1}}}]
+        reports["score-motif"]["assets"] = [{"caseId": "fixture",
+            "routeId": "native-stereo-44100",
+            "evidence": {"summary": {"availableComparisonCount": 1}}}]
+        reports["section-boundary"]["summary"] = {"boundaryCount": 1}
+        reports["long-horizon"].update(summary={
+            "realizedSignalAvailability": "unavailable",
+            "payoffMarkerCount": 1, "unresolvedPayoffCount": 1},
+            entries=[{"caseId": "fixture"}])
+        reports["signal-integrity"]["assets"] = [{"assetId": asset_id,
+            "evidence": {"combined": {"sampleCount": 100,
+                "subnormalSampleCount": 1}}}]
+        reports["performance-envelope"].update(
+            coverage={"hostClasses": [{"status": "observed"},
+                {"status": "unavailable"}]},
+            qualification={"physicalSoakClaim": False})
+        outcomes = {
+            39: "Calibrate kick/bass masking and groove metrics against independent fixtures",
+            40: "Calibrate transient, density, and fatigue evidence",
+            41: "Calibrate timbral motion, harshness, dullness, and spectral-crowding evidence",
+            44: "Calibrate motif identity, variation, phrase grammar, and arrangement contrast evidence",
+            45: "Calibrate transition preparation, consequence, and recovery evidence",
+            46: "Calibrate long-horizon arc, peak scarcity, return, reset, and landing evidence",
+            60: "Preallocate and bound the canonical DSP graph and per-session resources",
+            67: "Build deterministic long-run scheduling and resource-soak harnesses",
+            355: "Qualify supported sample rates, buffer sizes, channel layouts, and route changes",
+            358: "Bound CPU, memory, battery/thermal pressure, disk use, and preparation lead time",
+            361: "Run multi-hour foreground/background, sleep/wake, interruption, and route-churn soak",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "roadmap.md"
+            path.write_text("".join(
+                f"| AT-{number:04d} | `{status}` | fixture | {outcomes.get(number, 'Unused fixture item')} |\n"
+                for number in range(1, 391)
+                for status in ["completed" if number in (36, 38) else "queued"]
+            ), encoding="utf-8")
+            roadmap = register_module.parse_roadmap_items(path)
+        generated = register_module.build_register(
+            reports, self.register["generatedFrom"])
+        self.assertEqual(len(generated["entries"]), 9)
+        self.assertEqual(register_module.validate_register(generated, roadmap), [])
+        linked_ids = {
+            link["id"] for entry in generated["entries"]
+            for link in entry["nearestRoadmapItems"]
+        }
+        self.assertEqual(linked_ids, {f"AT-{number:04d}" for number in outcomes})
+        self.assertNotIn("AT-0038", linked_ids)
+        self.assertNotIn("AT-0036", linked_ids)
 
     def test_unknown_quarantined_source_is_rejected(self) -> None:
         changed = copy.deepcopy(self.register)

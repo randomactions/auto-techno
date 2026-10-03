@@ -16,11 +16,101 @@ package enum ProfessionalQualityPolicyAvailability: String, Codable, Sendable {
         "unavailable-pending-calibrated-profile-and-adversarial-suite"
 }
 
+/// Descriptive eligibility audit for the existing modal measurements. This
+/// cannot fit a profile or turn unavailable support into a passing verdict.
+/// A future calibrated contract must retain the excluded-event counts and
+/// qualify its coverage before these means can replace the installed metrics.
+package struct ProfessionalQualityModalWindowEvidence: Codable, Equatable, Sendable {
+    package let schemaVersion: Int
+    package let checkpoint: CanonicalJourneyCheckpoint
+    package let sampleRate: Double
+    package let sourceReportFingerprint: String
+    package let sourceEventCount: Int
+    package let attackBodyMeasuredEventCount: Int
+    package let tailBodyMeasuredEventCount: Int
+    package let attackBodyExcludedEventCount: Int
+    package let tailBodyExcludedEventCount: Int
+    package let attackToBodyDBMean: Double?
+    package let tailToBodyDBMean: Double?
+    package let attackBodySupport: ProfessionalQualityModalRatioSupport
+    package let tailBodySupport: ProfessionalQualityModalRatioSupport
+
+    package init(report: CanonicalJourneyQualificationReport) throws {
+        guard report.evidenceScope == CanonicalJourneyQualificationReport.currentEvidenceScope else {
+            throw ProfessionalEvidenceReportBankError.incompleteEvidence
+        }
+        try self.init(candidate: report.selectedCandidateEvidence,
+                      checkpoint: report.checkpoint,
+                      sourceReportFingerprint: report.evidenceFingerprint)
+    }
+
+    package init(candidate: AutonomousCandidateEvaluationVector,
+                 checkpoint: CanonicalJourneyCheckpoint,
+                 sourceReportFingerprint: String) throws {
+        guard candidate.isComplete, candidate.isFinite,
+              !sourceReportFingerprint.isEmpty else {
+            throw ProfessionalEvidenceReportBankError.incompleteEvidence
+        }
+        let sampleRate = candidate.routeContinuation.sampleRate
+        let events = candidate.modalPercussion.flatMap(\.events)
+        var attacks = ProfessionalQualityModalRatioAccumulator()
+        var tails = ProfessionalQualityModalRatioAccumulator()
+        for event in events {
+            guard let support = event.windowSupport,
+                  support.isValid(sampleRate: sampleRate,
+                                  frameCount: event.renderedFrameCount) else {
+                throw ProfessionalEvidenceReportBankError.incompleteEvidence
+            }
+            attacks.append(value: support.attackToBodyDB(attackRMS: event.attackRMS,
+                bodyRMS: event.bodyRMS, sampleRate: sampleRate),
+                numerator: support.attack(sampleRate: sampleRate), body: support.body(sampleRate: sampleRate))
+            tails.append(value: support.tailToBodyDB(tailRMS: event.tailRMS,
+                bodyRMS: event.bodyRMS, sampleRate: sampleRate),
+                numerator: support.tail(sampleRate: sampleRate), body: support.body(sampleRate: sampleRate))
+        }
+        schemaVersion = 2
+        self.checkpoint = checkpoint
+        self.sampleRate = sampleRate
+        self.sourceReportFingerprint = sourceReportFingerprint
+        sourceEventCount = events.count
+        attackBodyMeasuredEventCount = attacks.values.count
+        tailBodyMeasuredEventCount = tails.values.count
+        attackBodyExcludedEventCount = events.count - attacks.values.count
+        tailBodyExcludedEventCount = events.count - tails.values.count
+        attackToBodyDBMean = attacks.mean
+        tailToBodyDBMean = tails.mean
+        attackBodySupport = attacks.support
+        tailBodySupport = tails.support
+    }
+
+    package var isComplete: Bool {
+        schemaVersion == 2 && sampleRate.isFinite &&
+            sampleRate >= QualityQualificationContract.minimumSupportedSampleRate &&
+            sampleRate <= QualityQualificationContract.maximumSupportedSampleRate &&
+            !sourceReportFingerprint.isEmpty &&
+            attackBodySupport.isComplete && tailBodySupport.isComplete &&
+            sourceEventCount == attackBodySupport.sourceEventCount &&
+            sourceEventCount == tailBodySupport.sourceEventCount &&
+            attackBodyMeasuredEventCount == attackBodySupport.measuredEventCount &&
+            tailBodyMeasuredEventCount == tailBodySupport.measuredEventCount &&
+            attackBodyExcludedEventCount == sourceEventCount - attackBodyMeasuredEventCount &&
+            tailBodyExcludedEventCount == sourceEventCount - tailBodyMeasuredEventCount &&
+            Self.meanIsValid(attackToBodyDBMean, count: attackBodyMeasuredEventCount) &&
+            Self.meanIsValid(tailToBodyDBMean, count: tailBodyMeasuredEventCount)
+    }
+
+    private static func meanIsValid(_ mean: Double?, count: Int) -> Bool {
+        count == 0 ? mean == nil : mean.map { $0.isFinite && (-120...120).contains($0) } == true
+    }
+}
+
 /// A deterministic, bounded bank containing every canonical journey checkpoint
 /// for each route rate represented by the bank. Professional Evidence v29 is an
 /// observation contract only: it has no constructor for a calibrated profile
 /// or adversarial-suite identity, so it cannot claim policy availability.
-package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable {
+package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable,
+        AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory = .descriptive
     package static let schemaVersion = 29
     package static let evidenceVersion = "autotechno-professional-evidence.v29"
     package static let maximumReports = 64
@@ -37,6 +127,83 @@ package struct ProfessionalEvidenceReportBank: Encodable, Equatable, Sendable {
     package let sourceReportCount: Int
     package let sampleRates: [Double]
     package let reports: [CanonicalJourneyQualificationReport]
+
+    package func modalWindowFeatureReports() throws ->
+        [ProfessionalQualityModalWindowEvidence] {
+        try reports.map { try ProfessionalQualityModalWindowEvidence(report: $0) }
+    }
+
+    /// Same-pass event observations continue under the sole renderer owner.
+    /// This descriptive geometry/body audit does not replace v21/v22 metrics,
+    /// fit a profile or activate a policy.
+    package func continuousModalWindowFeatureReports(
+        successors: [ProfessionalQualityModalSuccessorEvidence] = []
+    ) throws -> [ProfessionalQualityContinuousModalWindowEvidence] {
+        let receipts = try modalSuccessorBindings(successors)
+        return try reports.map { report in
+            try .init(report: report,
+                successor: receipts[ProfessionalQualityModalSuccessorEvidence.identity(report)])
+        }
+    }
+
+    /// Explicit continuous observations share the same receipt ownership and
+    /// bounds as the descriptive projection; neither grants policy authority.
+    package func continuousModalObservations(
+        successors: [ProfessionalQualityModalSuccessorEvidence] = []
+    ) throws -> [ProfessionalQualityObservation] {
+        let receipts = try modalSuccessorBindings(successors)
+        return try reports.map { report in
+            try .init(continuousReport: report,
+                successor: receipts[ProfessionalQualityModalSuccessorEvidence.identity(report)])
+        }
+    }
+
+    private func modalSuccessorBindings(
+        _ successors: [ProfessionalQualityModalSuccessorEvidence]
+    ) throws -> [String: ProfessionalQualityModalSuccessorEvidence] {
+        guard successors.count <= Self.maximumReports else {
+            throw ProfessionalEvidenceReportBankError.invalidBounds
+        }
+        let identities = Set(successors.map(\.sourceIdentityFingerprint))
+        guard identities.count == successors.count else {
+            throw ProfessionalEvidenceReportBankError.duplicateReport
+        }
+        let sourceIdentities = Set(reports.map(ProfessionalQualityModalSuccessorEvidence.identity))
+        guard identities.isSubset(of: sourceIdentities) else {
+            throw ProfessionalEvidenceReportBankError.inconsistentIdentity
+        }
+        let receipts = Dictionary(uniqueKeysWithValues: successors.map {
+            ($0.sourceIdentityFingerprint, $0)
+        })
+        return receipts
+    }
+
+    package func windowSupportedObservations() throws -> [ProfessionalQualityObservation] {
+        try reports.map { report in
+            try ProfessionalQualityObservation(
+                report: report, requiringModalWindowSupport: true
+            )
+        }
+    }
+
+    /// Projects a report-only bar-level view from the exact role evidence
+    /// already retained in each candidate. This is descriptive analysis and
+    /// does not alter the bundled calibrated profile or policy availability.
+    package func kickFoundationLocalFeatureReports() throws ->
+        [ProfessionalQualityKickFoundationLocalEvidence] {
+        try reports.map { report in
+            try ProfessionalQualityKickFoundationLocalEvidence(report: report)
+        }
+    }
+
+    /// Projects the existing per-bar, role-pair, and band masking observations
+    /// without adding a metric to the calibrated primary policy.
+    package func maskingLocalFeatureReports() throws ->
+        [ProfessionalQualityMaskingLocalEvidence] {
+        try reports.map { report in
+            try ProfessionalQualityMaskingLocalEvidence(report: report)
+        }
+    }
 
     package init(reports sourceReports: [CanonicalJourneyQualificationReport]) throws {
         guard !sourceReports.isEmpty else {

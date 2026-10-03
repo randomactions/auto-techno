@@ -562,6 +562,33 @@ struct QualityQualificationFoundationTests {
         #expect(try bank.deterministicJSON() == bank.deterministicJSON())
         #expect(try ProfessionalEvidenceReportBank(reports: reports) == bank)
 
+        let modalWindows = try bank.modalWindowFeatureReports()
+        #expect(modalWindows.count == bank.sourceReportCount)
+        let windowObservations = try bank.windowSupportedObservations()
+        #expect(windowObservations.count == bank.sourceReportCount)
+        #expect(windowObservations.allSatisfy { $0.isComplete })
+        #expect(windowObservations.allSatisfy {
+            $0.observationVersion == ProfessionalQualityMeasurementContract.modalWindowObservationVersion
+        })
+        let windowCorpus = try ProfessionalQualityCalibrationCorpus(windowSupportedBanks: [bank])
+        #expect(windowCorpus.isComplete)
+        #expect(windowCorpus.observations == windowObservations)
+        for (source, diagnostic) in zip(bank.reports, modalWindows) {
+            let events = source.selectedCandidateEvidence.modalPercussion.flatMap(\.events)
+            #expect(diagnostic.sourceReportFingerprint == source.evidenceFingerprint)
+            #expect(diagnostic.sourceEventCount == events.count)
+            #expect(diagnostic.attackBodyMeasuredEventCount +
+                    diagnostic.attackBodyExcludedEventCount == events.count)
+            #expect(diagnostic.tailBodyMeasuredEventCount +
+                    diagnostic.tailBodyExcludedEventCount == events.count)
+            #expect((diagnostic.tailToBodyDBMean == nil) ==
+                    (diagnostic.tailBodyMeasuredEventCount == 0))
+            #expect(events.allSatisfy { $0.windowSupport != nil })
+            let encoded = try JSONEncoder().encode(diagnostic)
+            #expect(try JSONDecoder().decode(ProfessionalQualityModalWindowEvidence.self,
+                                             from: encoded) == diagnostic)
+        }
+
         #expect(throws: ProfessionalEvidenceReportBankError
             .incompleteJourneyCoverage) {
             try ProfessionalEvidenceReportBank(reports: Array(reports.dropLast()))

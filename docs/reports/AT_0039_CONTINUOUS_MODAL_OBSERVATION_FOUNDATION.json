@@ -1,0 +1,45 @@
+{
+  "constructionControls": {
+    "fixture": "continuous-modal-observation-foundation.v1",
+    "observationCount": 14,
+    "observationVersion": "autotechno-professional-quality-observation.v23",
+    "profileVersion": "autotechno-professional-quality-profile.v32",
+    "qualification": "unavailable-not-activated",
+    "requiredUnavailableWithoutSuccessor": 1,
+    "sourceBankFingerprint": "bb280ae2276a666b",
+    "sourceTrajectoryCount": 1
+  },
+  "engineVersion": "autotechno-canonical-engine.v48",
+  "freshCohortRendered": false,
+  "installedVersions": [
+    "observation.v21",
+    "primary.v30",
+    "long-horizon.v16"
+  ],
+  "membership": "original report-bank fingerprint independent of receipt coverage",
+  "observationVersion": "autotechno-professional-quality-observation.v23",
+  "profileVersion": "autotechno-professional-quality-profile.v32",
+  "replacementQualification": "unavailable-not-activated",
+  "runtimeEvidence": {
+    "aggregateChecks": 19,
+    "changedSamples": 0,
+    "contractBaselineFingerprint": "288e34927e973580e1425e8a257922475a36dbad553479a9a8902b80ff609b0b",
+    "contractSnapshot": 64,
+    "exactComparedSamples": 340230030,
+    "existingRetiredSkips": 2,
+    "focusedReleaseTests": 56,
+    "fullCoreDocumentationFailure": "one local audit phrase; fixed and verified by all 16 repository-surface tests",
+    "fullCoreTestsExecuted": 676,
+    "gateFingerprint": "c03c62a1e4044b73c6f39338a0b57f1ad8dfd49c580dcfa04eaa9fe636be926d",
+    "lifecycleFamilies": 15,
+    "liveTraceScope": "retained bounded 2026-09-04 macOS trace; no new app/route, listening or physical soak",
+    "preservedAssets": 224,
+    "refreshStages": 42,
+    "releaseAppTestsPassed": 59,
+    "toolingTests": 274,
+    "xctestChecksPassed": 6
+  },
+  "schema": "autotechno-continuous-modal-observation-foundation.v1",
+  "sourceBinding": "canonical original report plus typed validated actual prepared-successor receipt; canonical-byte reconstruction",
+  "sourceHead": "53f0f3d47b0c0b4169168ea52b41b7ab2a87bdff"
+}

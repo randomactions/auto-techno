@@ -1,0 +1,93 @@
+{
+  "schema": "autotechno-at0039-kick-rate-diagnostic-summary.v1",
+  "evidenceCategory": "descriptive",
+  "result": "investigated-no-validated-audio-repair",
+  "failedQualificationPreserved": true,
+  "expandedPolicyPromotion": "unavailable",
+  "failedCaptureSourceHead": "e97496b7047833ec91e458909a5162b3cd6574ba",
+  "diagnosticReplaySourceHead": "c4f207674363f63500bc34ce4ea58085047bbd3c",
+  "rootSeedsAndCompleteBanksRetainedLocal": true,
+  "installedPolicyChanged": false,
+  "numericBoundsChanged": false,
+  "findings": [
+    {
+      "reasonCode": "kick-reframe-phase-coverage-limit",
+      "developmentTrajectoryRange": [
+        0.25914148432319095,
+        0.6573849642280205
+      ],
+      "existingTrajectoryBounds": [
+        -0.13910199558163328,
+        1.0556284441328474
+      ],
+      "failedTrajectoryDeltasByRate": {
+        "44100": -0.26915737948615526,
+        "48000": -0.2684356574836091
+      },
+      "developmentMorphologyDirectionRootCount": 1,
+      "developmentMorphologyProgressRange": [
+        0,
+        0.03806023374435663
+      ],
+      "failedMorphologyProgressRange": [
+        0.9619397662556434,
+        1
+      ],
+      "developmentBreaksWithPartialKickBody": 21,
+      "diagnosticDeltasWithoutThePartialBodyBarByRate": {
+        "44100": -0.2619119173633315,
+        "48000": -0.26114069235490867
+      },
+      "interpretation": "Score-bound late balanced-to-relaxed morphology differs from the sole early-phase development example. A partial body window is present but omitting its entire bar for diagnosis leaves the trajectory outside the existing bound. This is not a qualification exclusion rule or proof of perceptual acceptability.",
+      "metricUnit": "dB difference of checkpoint-mean raw kick attack/body ratios",
+      "developmentRootCount": 40,
+      "developmentTrajectoryComparisonCount": 80,
+      "processingGeometryBankCount": 46,
+      "processingGeometryMismatchCount": 0
+    },
+    {
+      "reasonCode": "internal-bar-boundary-rate-coverage-limit",
+      "metricUnit": "absolute Float sample amplitude difference across adjacent frames",
+      "existingRateUpperBound": 0.004895851016044617,
+      "failedRateDrift": 0.005434459075331688,
+      "developmentMaximumRateDrift": 0.002453526481986046,
+      "winningJoin": "same internal bar join and right channel at both native rates",
+      "fixedReplayPlanAndPCMHashMatch": true,
+      "passiveRoleCapturePreservesPCMHash": true,
+      "maximumNeighborFramesPerSide": 32,
+      "boundaryToNeighborMaximumRatioByRate": {
+        "44100": 0.7632329294208102,
+        "48000": 0.5464438133666284
+      },
+      "rateDriftStageContributions": {
+        "protected-rhythm": {
+          "amplitudeDifference": 3.1150721270023496e-05,
+          "fractionOfTotal": 0.005732073944842843
+        },
+        "processed-upper": {
+          "amplitudeDifference": 0.004486538469791412,
+          "fractionOfTotal": 0.8255722248708958
+        },
+        "output-safety-residual": {
+          "amplitudeDifference": 0.0009167692624032497,
+          "fractionOfTotal": 0.16869558675392093
+        },
+        "terminal-processing-residual": {
+          "amplitudeDifference": 0,
+          "fractionOfTotal": 0.0
+        }
+      },
+      "maximumReconstructionError": 4.256435204297304e-10,
+      "interpretation": "Most drift is in the processed-upper branch, with a smaller output-safety residual contribution. Phrase-entry and terminal processing do not explain the winning internal join. Adjacent-sample amplitude is not a rate-normalized continuity residual; nearby larger sample steps do not prove audibility or absence of artifacts."
+    }
+  ],
+  "requiredBeforeAnyReplacement": [
+    "One shared versioned support/applicability contract across extraction, fitting, local and relationship evaluation; qualification must retain unsupported coverage.",
+    "Independent continuous/discontinuous seam fixtures with explicit physical-time units and uncertainty.",
+    "Preregister outcome-blind development coverage over morphology phase and timing support, plus fresh independent holdouts; preserve existing failures.",
+    "Pass every existing hard gate, adversarial, held-out and matching long-horizon qualification before replacing installed artifacts."
+  ],
+  "mapImpact": "none: derived diagnostic reports; no source/resource/module/contract/test ownership, persistent state or runtime flow changes",
+  "scope": "Fixed-root investigation with matched PCM fingerprints, bounded role diagnostics and independent arithmetic; no physical-output, listening, app/route or soak claim.",
+  "developmentBoundReconstructionAbsoluteTolerance": 1e-12
+}

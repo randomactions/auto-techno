@@ -1,6 +1,8 @@
 import Foundation
 
-package struct AudioQualityReport: Equatable, Sendable {
+package struct AudioQualityReport: Equatable, Sendable,
+        AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory = .descriptive
     package static let lowStereoCorrelationCutoffHz = 140.0
     package static let loudnessStandard = BS1770LoudnessMeasurement.standard
     package static let truePeakStandard = BS1770AudioEvidence.truePeakStandard

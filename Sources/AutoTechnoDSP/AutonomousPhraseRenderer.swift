@@ -1836,7 +1836,7 @@ enum ExactPCMFingerprint {
     /// Streaming form for bounded event-local evidence. The caller supplies
     /// the known sample count, so this produces the same mono digest as
     /// `mono(_:)` without retaining a second PCM array.
-    struct MonoAccumulator {
+    struct MonoAccumulator: Equatable, Sendable {
         private var value: UInt64 = 0xcbf29ce484222325
 
         init(sampleCount: Int) {

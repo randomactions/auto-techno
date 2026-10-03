@@ -1,0 +1,38 @@
+{
+  "actualSuccessorReceipts": 644,
+  "compiledSourceHead": "a2804ca071f69606ebab1bf9928c70d14fe06a52",
+  "constructionAuthority": "Typed original canonical reports and actual immediate prepared successors; serialized diagnostic archives cannot replace reconstruction, fitting or activation authority",
+  "contractBaselineFingerprint": "e28802cff820bf5aab0ebdb0c6dbb16e5de81ad20ff6392e7a2cfeef3e0c2470",
+  "contractSnapshot": 66,
+  "developmentTrajectories": 40,
+  "diagnosticAudit": "original frozen entries, selected-score identities, report/receipt/rate joins, corpus partitions and version scope consistent",
+  "engineVersion": "autotechno-canonical-engine.v48",
+  "evidenceVersion": "autotechno-professional-evidence.v29",
+  "fitStatus": "complete-offline-unqualified",
+  "frozenPartitions": "unchanged and disjoint original report banks",
+  "holdoutTrajectories": 6,
+  "maximumPhrasesPerJourneyAndRate": 128,
+  "nativeOriginalReports": 644,
+  "nativeSampleRates": [
+    44100,
+    48000
+  ],
+  "observationVersion": "autotechno-professional-quality-observation.v23",
+  "offlineProfileSHA256": "0fe535abd9bd543b8c9614ee9b72775497f869773931f0c5049bd32192835bc7",
+  "planningCheckpoints": 322,
+  "profileFingerprint": "5fedcae807b0ce09",
+  "profileVersion": "autotechno-professional-quality-profile.v32",
+  "qualificationLimits": "Offline fitting and provenance/support mechanics only; no independent perceptual labels, population confidence, listening, app/route or physical soak claim",
+  "remainingGates": [
+    "continuous source-bound adversarial qualification",
+    "disjoint holdout qualification and uncertainty",
+    "causal runtime handoff",
+    "exact primary and long-horizon replacement qualification"
+  ],
+  "renderedPhrasesAcrossBothRates": 2664,
+  "replacementQualification": "unavailable-not-activated",
+  "requiredUnavailableModalWindowObservations": 0,
+  "retainedRuntime": "installed observation v21 / primary v30 / long-horizon v16",
+  "schema": "autotechno-continuous-modal-fresh-native-study.v1",
+  "sourceHead": "9fd02fcd8a135c561d3f2095375a219f57fb36f6"
+}

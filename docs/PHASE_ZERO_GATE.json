@@ -17,8 +17,8 @@
       "artifact": "docs/AUTHORITY_SURFACE_INVENTORY.json",
       "schema": "autotechno-authority-surface-inventory.v1",
       "version": 1,
-      "sha256": "53a4a70fc6737d19c8c19d2c1564e2e8274a5fb2883416fd22a00edd22d494d1",
-      "surfaceCount": 44,
+      "sha256": "9968d9a87abcadeb188c3d6531be6037c4b123eaa69635d9dd66976cfc3aa0f3",
+      "surfaceCount": 45,
       "unresolvedCount": 0
     },
     {
@@ -26,7 +26,7 @@
       "artifact": "docs/COMPONENT_LICENSE_ASSET_MANIFEST.json",
       "schema": "autotechno-component-license-asset-manifest.v1",
       "version": 1,
-      "sha256": "3b654a59fe6076afc372263b8ba05fb55756eef11272e72b5b301bf5134c3618",
+      "sha256": "25a3497c5dae2b8e2950c41dea19f8890713217fc86fc229c2db9fb181858f2b",
       "surfaceCount": 9,
       "unresolvedCount": 0
     },

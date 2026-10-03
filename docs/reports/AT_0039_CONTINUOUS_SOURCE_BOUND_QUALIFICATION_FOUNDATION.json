@@ -1,0 +1,56 @@
+{
+  "bounds": "All existing adversarial cases and relationships; every applicable fixed seed42/44100 live label; frozen40/6 native cohort and322 planning checkpoints; no label/root replacement, archive import or threshold tuning",
+  "canonicalOwners": [
+    "ProfessionalQualityObservation",
+    "ProfessionalQualityLiveCandidateChain",
+    "ProfessionalQualityAdversarialSuiteReport",
+    "ProfessionalQualityHoldoutQualification",
+    "ProfessionalQualityCalibrationIntegrationTests.executeFreshContinuousCoverageCohort"
+  ],
+  "capability": "Preserve exact continuous source/support identity through adversarial attacks and consume typed development/holdout corpora with actual fixed live source products",
+  "consolidation": "Existing observation, challenge, live chain and holdout owners, with one existing persistent native executor",
+  "continuousAdversarialQualification": "pending-fresh-typed-source-execution",
+  "continuousHoldoutQualification": "pending-fresh-typed-source-execution",
+  "fallback": "Refusal or required unavailability retained; installed legacy primary authority unchanged; offline continuous reports cannot activate runtime",
+  "fullNativeQualificationLaunched": false,
+  "historicalFoundationPublication": "7cbb34f320ff3fcff96db0035d103ddb7197bbd2",
+  "historicalFoundationSourceHead": "ba1e14e56537ebaf9ac82d28bcd703d6e4dd9f9e",
+  "hostedCIRepair": {
+    "assertionsAndFixedRatesUnchanged": true,
+    "cause": "actualSuccessorReportJoin test fixture exhausts hosted worker stack",
+    "change": "Run existing large detached test fixture on main actor",
+    "failureRun": 37078046409,
+    "focusedDebugAndReleasePassed": true,
+    "productionSourcesChanged": false
+  },
+  "inputObjects": {
+    "Package.swift": "3d4f31c9330905091558753927d85135eb96a81a",
+    "Sources": "c75db934b5ff67360d1aa89c4d4eb71c3cf8daab",
+    "Tests": "3290a282494de6f0fe6186c43451679e70835f95",
+    "docs/BASELINE_CORPUS.json": "f55f54a1e9f92c7ff8150cccbb36bb5828148c99",
+    "docs/ROADMAP_EXECUTION_BASELINE.json": "0e0a62a36ecad2d40ffcf9709157f2dc552f41f6",
+    "scripts": "292a8f6c61771ec26facc9a11907464b51ad266c"
+  },
+  "mapRepair": "C/header source owns typedefs and value macros; optional or stale compiler C indexes cannot change semantic map output",
+  "qualityDeficit": "Legacy identity copies and numeric-only live fixture seams cannot qualify continuous original/successor report evidence",
+  "runtimeActivation": false,
+  "schema": "autotechno-continuous-source-bound-qualification-foundation.v1",
+  "sourceHead": "4a433253af75b8bab39ffa60c739597b6f7a6666",
+  "validation": {
+    "aggregateChecks": 19,
+    "appReleaseTests": 59,
+    "changedSamples": 0,
+    "combinedToolingTests": 292,
+    "coreReleaseTests": 685,
+    "exactComparedSamples": 340230030,
+    "existingRetiredSkips": 2,
+    "gateFingerprint": "e5a6af3c01ce34a5688b8c2d0d4745d7e93f93dfdb27a7780b4ca28542f87e58",
+    "lifecycleFamilies": 15,
+    "liveTraceScope": "Retained bounded2026-09-04 trace; no new physical, route or listening qualification",
+    "preservedAssets": 224,
+    "refreshStages": 42,
+    "snapshotFingerprint": "e8565a8feeca63effde9e4978ade33d1ddf4efb0ff0ce8f24e3181e745bc4eb4",
+    "snapshotVersion": 73,
+    "xctestChecks": 6
+  }
+}

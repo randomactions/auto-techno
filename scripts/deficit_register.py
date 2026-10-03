@@ -481,7 +481,6 @@ def build_entries(
                 f"{len(missing_score_binding)}/{len(rhythmic_assets)} assets declare unavailable score binding.",
             )],
             [
-                roadmap_link("AT-0038", "Add segment-, role-, band-, and horizon-local feature aggregation"),
                 roadmap_link("AT-0040", "Calibrate transient, density, and fatigue evidence"),
             ],
             [
@@ -808,7 +807,6 @@ def build_entries(
                 f"{subnormal_samples}/{total_samples} samples across {len(affected_signal_assets)}/{len(signal_assets)} assets are subnormal.",
             )],
             [
-                roadmap_link("AT-0036", "Separate hard safety gates from descriptive features, musical heuristics, and calibrated quality vectors"),
                 roadmap_link("AT-0060", "Preallocate and bound the canonical DSP graph and per-session resources"),
             ],
             [

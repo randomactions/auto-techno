@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from array import array
+import copy
 import argparse
 import hashlib
 import json
@@ -64,6 +65,13 @@ DEFAULT_REPORT = Path(
 )
 
 
+# Bind the implementation actually loaded by this interpreter, including a
+# session constructed after another part of a driver imported this module.
+_IMPLEMENTATION_PATHS = (Path(__file__).resolve(), Path(pcm.__file__).resolve(),
+                         Path(signal.__file__).resolve())
+_IMPLEMENTATION_BYTES_AT_IMPORT = tuple(path.read_bytes() for path in _IMPLEMENTATION_PATHS)
+
+
 class StereoCompatibilityBaselineReportError(RuntimeError):
     """An actionable schema, provenance, or independent-analysis failure."""
 
@@ -87,13 +95,21 @@ def close(actual: float, expected: float, tolerance: float = 2e-8) -> bool:
     return abs(actual - expected) <= tolerance * max(1.0, abs(expected))
 
 
-def read_channels(path: Path) -> tuple[int, list[array[float]]]:
+def read_channels(
+    path: Path, expected_pcm_sha256: Optional[str] = None,
+) -> tuple[int, list[array[float]]]:
     try:
         with path.open("rb") as handle:
             sample_rate, channel_count, frame_count, data_size, _ = (
                 pcm.read_wav_header(handle, path)
             )
-            values = pcm.float_array(handle.read(data_size))
+            raw_pcm = handle.read(data_size)
+            if (expected_pcm_sha256 is not None
+                    and hashlib.sha256(raw_pcm).hexdigest() != expected_pcm_sha256):
+                raise StereoCompatibilityBaselineReportError(
+                    f"{path} PCM changed between manifest scan and analysis"
+                )
+            values = pcm.float_array(raw_pcm)
     except (OSError, pcm.PCMComparisonError) as exc:
         raise StereoCompatibilityBaselineReportError(
             f"cannot read exact PCM from {path}: {exc}"
@@ -276,6 +292,94 @@ def analyze_pcm(
     }
 
 
+class StereoAnalysisSession:
+    """Process-local independent results; no serialized cache is trusted.
+
+    Every validation still reads/scans its live manifests and WAVs and compares
+    every evidence field. Only the expensive independent arithmetic is reused.
+    A changed context or implementation refuses reuse; a fresh instance is cold.
+    Storage is capped at 128 MiB of recursively measured Python objects.
+    """
+
+    MAXIMUM_BYTES = 128 * 1024 * 1024
+    MAXIMUM_ENTRIES = 256
+
+    def __init__(self) -> None:
+        if tuple(path.read_bytes() for path in _IMPLEMENTATION_PATHS) != _IMPLEMENTATION_BYTES_AT_IMPORT:
+            raise StereoCompatibilityBaselineReportError(
+                "analysis implementation differs from loaded source"
+            )
+        self._context: Optional[str] = None
+        self._implementation = self._implementation_fingerprint()
+        self._results: dict[str, dict[str, Any]] = {}
+        self.retained_bytes = 0
+        self.computations = 0
+        self.reuses = 0
+
+    @staticmethod
+    def _implementation_fingerprint() -> str:
+        digest = hashlib.sha256(sys.version.encode("utf-8"))
+        for module in (sys.modules[__name__], pcm, signal):
+            path = Path(module.__file__).resolve()
+            digest.update(path.name.encode("utf-8"))
+            digest.update(path.read_bytes())
+        return digest.hexdigest()
+
+    def bind(self, report: Mapping[str, Any], root: Path) -> None:
+        if self._implementation_fingerprint() != self._implementation:
+            raise StereoCompatibilityBaselineReportError(
+                "analysis implementation changed during validation session"
+            )
+        context = {key: report.get(key) for key in PAYLOAD_KEYS - {"assets"}}
+        context["repositoryRoot"] = str(root.resolve())
+        context["corpusBytes"] = pcm.sha256(root / "docs/BASELINE_CORPUS.json")
+        context["contractBytes"] = pcm.sha256(root / "docs/ROADMAP_EXECUTION_BASELINE.json")
+        fingerprint = hashlib.sha256(pcm.canonical_bytes(context)).hexdigest()
+        if self._context is not None and self._context != fingerprint:
+            raise StereoCompatibilityBaselineReportError(
+                "frozen stereo validation context changed; start a new session"
+            )
+        self._context = fingerprint
+
+    @staticmethod
+    def _size(value: object, seen: Optional[set[int]] = None) -> int:
+        seen = set() if seen is None else seen
+        if id(value) in seen:
+            return 0
+        seen.add(id(value))
+        size = sys.getsizeof(value)
+        if isinstance(value, dict):
+            size += sum(StereoAnalysisSession._size(item, seen)
+                        for pair in value.items() for item in pair)
+        elif isinstance(value, (list, tuple)):
+            size += sum(StereoAnalysisSession._size(item, seen) for item in value)
+        return size
+
+    def expected(self, channels: Sequence[array[float]], sample_rate: int,
+                 segment_frames: int) -> dict[str, Any]:
+        if self._context is None:
+            raise StereoCompatibilityBaselineReportError("analysis session is not bound")
+        identity = hashlib.sha256(pcm.canonical_bytes({
+            "context": self._context, "implementation": self._implementation,
+            "sampleRate": sample_rate, "segmentFrames": segment_frames,
+            "channelFrames": [len(channel) for channel in channels],
+        }))
+        for channel in channels:
+            identity.update(channel.tobytes())
+        key = identity.hexdigest()
+        if key in self._results:
+            self.reuses += 1
+            return copy.deepcopy(self._results[key])
+        expected = analyze_pcm(channels, sample_rate, segment_frames)
+        self.computations += 1
+        size = self._size(expected) + sys.getsizeof(key)
+        if (len(self._results) < self.MAXIMUM_ENTRIES
+                and self.retained_bytes + size <= self.MAXIMUM_BYTES):
+            self._results[key] = copy.deepcopy(expected)
+            self.retained_bytes += size
+        return expected
+
+
 def compare_recomputed(actual: object, expected: object, location: str) -> None:
     if isinstance(expected, dict):
         if not isinstance(actual, dict):
@@ -344,6 +448,7 @@ def validate_evidence(
     sample_rate: int,
     segment_frames: int,
     location: str,
+    analysis_session: Optional[StereoAnalysisSession] = None,
 ) -> None:
     if not isinstance(value, dict):
         raise StereoCompatibilityBaselineReportError(f"{location} must be an object")
@@ -366,7 +471,9 @@ def validate_evidence(
                                 domain, DOMAIN_KEYS,
                                 f"{location}.segments[{index}].domains[{domain_index}]",
                             )
-    expected = analyze_pcm(channels, sample_rate, segment_frames)
+    expected = (analyze_pcm(channels, sample_rate, segment_frames)
+                if analysis_session is None else
+                analysis_session.expected(channels, sample_rate, segment_frames))
     compare_recomputed(value, expected, location)
 
 
@@ -375,6 +482,7 @@ def validate_asset(
     expected: Mapping[str, Any],
     root: Path,
     location: str,
+    analysis_session: Optional[StereoAnalysisSession] = None,
 ) -> None:
     if not isinstance(value, dict):
         raise StereoCompatibilityBaselineReportError(f"{location} must be an object")
@@ -388,7 +496,7 @@ def validate_asset(
                 f"{location}.{key} does not match its manifest"
             )
     path = pcm.resolve_local_path(root, value.get("wavPath"), f"{location}.wavPath")
-    sample_rate, channels = read_channels(path)
+    sample_rate, channels = read_channels(path, str(expected.get("pcmSha256")))
     if sample_rate != expected.get("sampleRate") or len(channels) not in (1, 2):
         raise StereoCompatibilityBaselineReportError(
             f"{location} must remain exact manifest-bound mono or stereo PCM"
@@ -396,11 +504,14 @@ def validate_asset(
     segment_frames = rounded_frames(sample_rate * 240.0 / 130.0)
     validate_evidence(
         value.get("evidence"), channels, sample_rate, segment_frames,
-        f"{location}.evidence",
+        f"{location}.evidence", analysis_session,
     )
 
 
-def validate(report: Mapping[str, Any], root: Path, require_fingerprint: bool) -> None:
+def validate(
+    report: Mapping[str, Any], root: Path, require_fingerprint: bool,
+    analysis_session: Optional[StereoAnalysisSession] = None,
+) -> None:
     exact_keys(report, REPORT_KEYS if require_fingerprint else PAYLOAD_KEYS, "report")
     if report.get("schema") != REPORT_SCHEMA or report.get("reportVersion") != 1:
         raise StereoCompatibilityBaselineReportError("report schema/version is invalid")
@@ -493,11 +604,13 @@ def validate(report: Mapping[str, Any], root: Path, require_fingerprint: bool) -
         raise StereoCompatibilityBaselineReportError(
             "assets must exactly cover both manifests in sorted identity order"
         )
+    if analysis_session is not None:
+        analysis_session.bind(report, root)
     for index, asset in enumerate(assets):
         identifier = str(asset["assetId"])
         expected_asset = dict(expected_assets[identifier])
         expected_asset["assetId"] = identifier
-        validate_asset(asset, expected_asset, root, f"assets[{index}]")
+        validate_asset(asset, expected_asset, root, f"assets[{index}]", analysis_session)
     if require_fingerprint:
         fingerprint = report.get("reportFingerprint")
         if not pcm.is_sha256(fingerprint):
@@ -520,10 +633,11 @@ def generate(
     output_path: Path,
     root: Path,
     output: TextIO = sys.stdout,
+    analysis_session: Optional[StereoAnalysisSession] = None,
 ) -> int:
     try:
         payload = dict(pcm.load_json(payload_path, "stereo compatibility payload"))
-        validate(payload, root, require_fingerprint=False)
+        validate(payload, root, require_fingerprint=False, analysis_session=analysis_session)
         payload["reportFingerprint"] = hashlib.sha256(
             pcm.canonical_bytes(payload)
         ).hexdigest()
@@ -556,10 +670,11 @@ def check(
     report_path: Path,
     root: Path,
     output: TextIO = sys.stdout,
+    analysis_session: Optional[StereoAnalysisSession] = None,
 ) -> int:
     try:
         report = pcm.load_json(report_path, "stereo compatibility baseline")
-        validate(report, root, require_fingerprint=True)
+        validate(report, root, require_fingerprint=True, analysis_session=analysis_session)
     except (
         OSError, ValueError, pcm.PCMComparisonError,
         signal.SignalBaselineReportError,
@@ -567,9 +682,11 @@ def check(
     ) as exc:
         print(f"stereo compatibility baseline rejected: {exc}", file=output)
         return 1
+    method = ("independently recomputed" if analysis_session is None else
+              "independently verified with process-local analysis reuse")
     print(
         f"stereo compatibility baseline is current: {len(report['assets'])} "
-        "whole/role assets independently recomputed",
+        f"whole/role assets {method}",
         file=output,
     )
     return 0

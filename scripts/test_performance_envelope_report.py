@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 import shutil
 import sys
+import subprocess
+import tempfile
 import unittest
 import uuid
 
@@ -191,24 +193,40 @@ class PerformanceEnvelopeReportTests(unittest.TestCase):
         self.assertEqual(evidence["nonNormalCallbackCycleCount"], 0)
 
     def test_report_without_trace_keeps_live_facts_unavailable(self) -> None:
-        directory = self.root / "docs/local/reports/performance-envelope-v1" / (
-            "test-" + uuid.uuid4().hex
-        )
-        directory.mkdir(parents=True)
-        raw_path = directory / "raw.json"
-        raw_path.write_text(json.dumps(self.valid_raw()), encoding="utf-8")
-        try:
+        # Selection authority is an owned synthetic manifest, never a private capture.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "docs").mkdir()
+            corpus_path = root / "docs/BASELINE_CORPUS.json"
+            shutil.copyfile(self.corpus_path, corpus_path)
+            shutil.copyfile(self.root / "docs/ROADMAP_EXECUTION_BASELINE.json",
+                root / "docs/ROADMAP_EXECUTION_BASELINE.json")
+            for relative in (
+                "Sources/CAutoTechnoRealtime/CAutoTechnoRealtimeProducer.c",
+                "Sources/AutoTechnoApp/LivePCMTransport.swift",
+            ):
+                source_path = root / relative
+                source_path.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(self.root / relative, source_path)
+            subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+            manifest_path = root / "docs/local/reports/baseline-corpus-v1/manifest.json"
+            manifest_path.parent.mkdir(parents=True)
+            manifest_path.write_text(json.dumps({"entries": [
+                {"routeId": route["id"], "caseId": case["id"],
+                 "frameCount": round(240 / 130 * route["sampleRate"]) *
+                     (4 if case["id"] == report.MEASUREMENT_CASE_ID else 2)}
+                for route in self.corpus["routes"] for case in self.corpus["cases"]
+            ]}), encoding="utf-8")
+            raw_path = root / "raw.json"
+            raw = self.valid_raw()
+            raw["sourceFingerprint"] = report.source_fingerprint(root)
+            raw_path.write_text(json.dumps(raw), encoding="utf-8")
             generated = report.build_report(
-                self.root, raw_path, None, "AutoTechno", None, None
-            )
-        finally:
-            shutil.rmtree(directory)
-        self.assertEqual(
-            generated["qualification"]["status"],
-            "partial-live-evidence-unavailable",
-        )
-        self.assertEqual(generated["liveMacOS"]["availability"], "unavailable")
-        self.assertFalse(generated["qualification"]["releaseReadinessClaim"])
+                root, raw_path, None, "AutoTechno", None, None)
+            self.assertEqual(generated["qualification"]["status"],
+                "partial-live-evidence-unavailable")
+            self.assertEqual(generated["liveMacOS"]["availability"], "unavailable")
+            self.assertFalse(generated["qualification"]["releaseReadinessClaim"])
 
     def make_trace_directory(self, with_overload: bool) -> Path:
         directory = self.root / "docs/local/reports/performance-envelope-v1" / (

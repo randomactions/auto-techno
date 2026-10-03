@@ -3,6 +3,121 @@ import AutoTechnoCore
 import Foundation
 import Testing
 
+@Suite("Evidence decision-basis authority")
+struct AutonomousEvidenceAuthorityTests {
+    @Test("Heuristics and descriptions cannot authorize acceptance or rejection")
+    func nonCalibratedEvidenceCannotApprove() {
+        let heuristicAcceptance = AutonomousCandidatePolicyVerdict(
+            outcome: .qualified,
+            decisionBasis: .musicalHeuristic,
+            reasonCodes: [.candidateQualifiedV1],
+            recoveryIntent: AutonomousQualityRecoveryIntent(
+                symbolicDensity: .decrease
+            )
+        )
+        #expect(heuristicAcceptance.outcome == .qualificationUnavailable)
+        #expect(heuristicAcceptance.decisionBasis == .unavailable)
+        #expect(heuristicAcceptance.reasonCodes == [.policyUncalibratedV1])
+        #expect(heuristicAcceptance.recoveryIntent.isNeutral)
+        #expect(heuristicAcceptance.evidenceCategory == .unavailable)
+
+        let descriptiveRejection = AutonomousCandidatePolicyVerdict(
+            outcome: .rejected,
+            decisionBasis: .descriptive,
+            reasonCodes: [.guardrailRegressionV1],
+            diagnosticDetails: ["movement-score=high"]
+        )
+        #expect(descriptiveRejection.outcome == .qualificationUnavailable)
+        #expect(descriptiveRejection.decisionBasis == .unavailable)
+        #expect(descriptiveRejection.diagnosticDetails.first ==
+                "decision-basis=descriptive-cannot-rejected")
+        #expect(descriptiveRejection.evidenceCategory == .unavailable)
+
+        let gateAcceptance = AutonomousCandidatePolicyVerdict(
+            outcome: .adjusted,
+            decisionBasis: .hardGate,
+            reasonCodes: [.candidateAdjustedV1]
+        )
+        #expect(gateAcceptance.outcome == .qualificationUnavailable)
+        #expect(gateAcceptance.decisionBasis == .unavailable)
+        #expect(gateAcceptance.evidenceCategory == .unavailable)
+
+        let forgedGateRetry = AutonomousCandidatePolicyVerdict(
+            outcome: .rejected,
+            decisionBasis: .hardGate,
+            reasonCodes: [.guardrailRegressionV1],
+            recoveryIntent: AutonomousQualityRecoveryIntent(
+                symbolicDensity: .decrease
+            )
+        )
+        #expect(forgedGateRetry.outcome == .qualificationUnavailable)
+        #expect(forgedGateRetry.decisionBasis == .unavailable)
+        #expect(forgedGateRetry.recoveryIntent.isNeutral)
+
+        let hardGateRejection = AutonomousCandidatePolicyVerdict(
+            outcome: .rejected,
+            decisionBasis: .hardGate,
+            reasonCodes: [.hardGateFailedV1]
+        )
+        let heuristicRejection = AutonomousCandidatePolicyVerdict(
+            outcome: .rejected,
+            decisionBasis: .musicalHeuristic,
+            reasonCodes: [.symbolicInterestFailedV1]
+        )
+        let descriptiveUnavailable = AutonomousCandidatePolicyVerdict(
+            outcome: .qualificationUnavailable,
+            decisionBasis: .descriptive,
+            reasonCodes: [.policyUncalibratedV1]
+        )
+        #expect(hardGateRejection.evidenceCategory == .hardGate)
+        #expect(heuristicRejection.evidenceCategory == .musicalHeuristic)
+        #expect(descriptiveUnavailable.evidenceCategory == .descriptive)
+
+        let forgedGateRecovery = AutonomousCandidatePolicyVerdict(
+            outcome: .rejected,
+            decisionBasis: .hardGate,
+            reasonCodes: [.hardGateFailedV1],
+            recoveryIntent: AutonomousQualityRecoveryIntent(
+                spectralMovement: .increase,
+                kickCrestReduction: .decrease
+            )
+        )
+        #expect(forgedGateRecovery.recoveryIntent.isNeutral)
+
+        let symbolicOnlyRecovery = AutonomousCandidatePolicyVerdict(
+            outcome: .rejected,
+            decisionBasis: .hardGate,
+            reasonCodes: [.hardGateFailedV1, .symbolicInterestFailedV1],
+            diagnosticDetails: ["symbolic-interest"],
+            recoveryIntent: AutonomousQualityRecoveryIntent(
+                symbolicDensity: .decrease
+            )
+        )
+        #expect(symbolicOnlyRecovery.recoveryIntent ==
+                AutonomousQualityRecoveryIntent(symbolicDensity: .decrease))
+    }
+
+    @Test("Only the calibrated basis can report qualified or adjusted")
+    func calibratedBasisCanAuthorizeAcceptance() {
+        let qualified = AutonomousCandidatePolicyVerdict(
+            outcome: .qualified,
+            decisionBasis: .calibratedQuality,
+            reasonCodes: [.candidateQualifiedV1]
+        )
+        let adjusted = AutonomousCandidatePolicyVerdict(
+            outcome: .adjusted,
+            decisionBasis: .calibratedQuality,
+            reasonCodes: [.candidateAdjustedV1]
+        )
+        #expect(qualified.outcome == .qualified)
+        #expect(qualified.decisionBasis == .calibratedQuality)
+        #expect(qualified.evidenceCategory == .calibratedQuality)
+        #expect(adjusted.outcome == .adjusted)
+        #expect(adjusted.decisionBasis == .calibratedQuality)
+        #expect(adjusted.evidenceCategory == .calibratedQuality)
+    }
+}
+
 @Suite("Live feedback primary commit", .serialized)
 struct LiveFeedbackPrimaryCommitTests {
     private struct RejectingPrimaryEvaluator: AutonomousCandidateEvaluating {
@@ -19,7 +134,12 @@ struct LiveFeedbackPrimaryCommitTests {
         ) -> AutonomousCandidatePolicyVerdict {
             AutonomousCandidatePolicyVerdict(
                 outcome: .rejected,
-                reasonCodes: [.guardrailRegressionV1]
+                decisionBasis: .hardGate,
+                reasonCodes: [.hardGateFailedV1],
+                recoveryIntent: AutonomousQualityRecoveryIntent(
+                    spectralMovement: .increase,
+                    kickCrestReduction: .increase
+                )
             )
         }
     }
@@ -123,6 +243,11 @@ struct LiveFeedbackPrimaryCommitTests {
     @Test("Rejected primary candidate leaves live continuation unchanged")
     func rejectedCandidateLeavesLiveContinuationUnchanged() throws {
         let fixture = makeFixture()
+        let qualified = try #require(prepare(
+            fixture,
+            binding: fixture.binding,
+            evaluator: AcceptingPrimaryTestEvaluator()
+        ))
         let prepared = try #require(prepare(
             fixture,
             binding: fixture.binding,
@@ -139,7 +264,11 @@ struct LiveFeedbackPrimaryCommitTests {
         }
 
         #expect(prepared.qualityDecision.outcome == .rejected)
+        #expect(prepared.qualityDecision.recoveryIntent.isNeutral)
         #expect(!prepared.commitEligible)
+        #expect(prepared.blocks == qualified.blocks)
+        #expect(prepared.plan == qualified.plan)
+        #expect(prepared.graph == qualified.graph)
         #expect(committed == fixture.targetState)
         #expect(committed.liveMasterHeadroom ==
                 fixture.targetState.liveMasterHeadroom)

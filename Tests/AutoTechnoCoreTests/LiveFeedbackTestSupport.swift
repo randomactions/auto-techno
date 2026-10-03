@@ -145,6 +145,7 @@ enum LiveFeedbackTestSupport {
         ) -> AutonomousCandidatePolicyVerdict {
             AutonomousCandidatePolicyVerdict(
                 outcome: .qualified,
+                decisionBasis: .calibratedQuality,
                 reasonCodes: [.candidateQualifiedV1]
             )
         }
@@ -157,13 +158,95 @@ enum LiveFeedbackTestSupport {
             ProfessionalQualityLiveScheduledOccurrenceEvidence
     }
 
+    private struct PreparedLiveChain {
+        let chain: ProfessionalQualityLiveCandidateChain
+        let attenuation: PreparedLiveStep
+        let cleanHold: PreparedLiveStep
+        let recovery: PreparedLiveStep
+        let director: AutonomousSessionDirector
+        let routeGeneration: Int
+        let sampleRate: Double
+    }
+
+    struct ContinuousLiveSourceProducts {
+        let chain: ProfessionalQualityLiveCandidateChain
+        let attenuationReports: [CanonicalJourneyQualificationReport]
+        let attenuationSuccessor: PreparedAutonomousPhrase
+        let recoveryReports: [CanonicalJourneyQualificationReport]
+        let recoverySuccessor: PreparedAutonomousPhrase
+    }
+
     static func renderLiveTransitionCandidates() throws ->
         ProfessionalQualityLiveCandidateChain {
+        try renderPreparedLiveTransitionChain().chain
+    }
+
+    /// Retain the actual products behind the fixed live fixture. Every source
+    /// report uses its own applicable checkpoint and immutable prepared commit.
+    /// Recovery gets a real immediate successor under the same continuation.
+    static func renderContinuousLiveSourceProducts() throws -> ContinuousLiveSourceProducts {
+        let products = try renderPreparedLiveTransitionChain()
+        let source = products.recovery
+        let nextState = source.sourceState.advance(
+            using: source.prepared.plan,
+            quality: source.prepared.qualityContinuationState,
+            liveMasterHeadroom: source.prepared.liveMasterHeadroomContinuationState
+        )
+        let nextPlan = products.director.plan(from: nextState)
+        guard let successor = AutonomousPhrasePreparer.prepareIfNotCancelled(
+            plan: nextPlan,
+            sessionSeed: nextState.rootSeed,
+            memory: nextState.memory,
+            sampleRate: products.sampleRate,
+            incomingRenderState: source.prepared.endingRenderState,
+            incomingGraphState: source.prepared.endingGraphState,
+            previousGraph: source.prepared.graph,
+            incomingQualityState: nextState.quality,
+            routeGeneration: products.routeGeneration,
+            evaluator: CalibratedFixtureEvaluator(),
+            cancellationRequested: { false }
+        ) else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        func reports(_ prepared: PreparedAutonomousPhrase, fixture: String) throws
+            -> [CanonicalJourneyQualificationReport] {
+            let candidate = prepared.selectedCandidateEvidence
+            let checkpoints = CanonicalJourneyCheckpoint.applicable(
+                phraseIndex: candidate.symbolic.phraseIndex,
+                phraseKind: prepared.plan.kind,
+                chapterChanged: candidate.symbolic.chapterChanged
+            )
+            guard !checkpoints.isEmpty else {
+                throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
+            }
+            let harness = CanonicalJourneyQualificationHarness(
+                engineVersion: QualityQualificationContract.engineVersion,
+                routeFingerprint: candidate.routeContinuation.routeFingerprint,
+                routeGeneration: candidate.routeContinuation.routeGeneration
+            )
+            return try checkpoints.map { checkpoint in
+                try harness.report(checkpoint: checkpoint, prepared: prepared,
+                    fixtureFingerprint: fixture,
+                    continuationFingerprint: candidate.routeContinuation.incomingContinuationFingerprint)
+            }
+        }
+        return ContinuousLiveSourceProducts(
+            chain: products.chain,
+            attenuationReports: try reports(products.attenuation.prepared,
+                fixture: "fixed-live-attenuation-continuous.v1"),
+            attenuationSuccessor: products.cleanHold.prepared,
+            recoveryReports: try reports(products.recovery.prepared,
+                fixture: "fixed-live-recovery-continuous.v1"),
+            recoverySuccessor: successor
+        )
+    }
+
+    private static func renderPreparedLiveTransitionChain() throws -> PreparedLiveChain {
         let sampleRate = 44_100.0
         let routeGeneration = 11
-        // Development-corpus seed 42 yields a real renderer/controller chain
-        // with a chapter change at attenuation and contrast at recovery. Both
-        // attacked baselines are therefore covered by calibrated source PCM.
+        // Historical development-corpus seed 42 yields the fixed live chain
+        // with chapter change at attenuation and contrast at recovery. Its
+        // acceptance under a newly fitted profile must be checked separately.
         let director = AutonomousSessionDirector(rootSeed: 42)
         let initial = director.initialState()
         let neverCancelled: @Sendable () -> Bool = { false }
@@ -215,11 +298,14 @@ enum LiveFeedbackTestSupport {
             routeGeneration: routeGeneration,
             sampleRate: sampleRate
         )
-        return try ProfessionalQualityLiveCandidateChain(
+        let chain = try ProfessionalQualityLiveCandidateChain(
             attenuationTransition: attenuation.transition,
             cleanHoldTransition: cleanHold.transition,
             recoveryTransition: recovery.transition
         )
+        return PreparedLiveChain(chain: chain, attenuation: attenuation.step,
+            cleanHold: cleanHold.step, recovery: recovery.step, director: director,
+            routeGeneration: routeGeneration, sampleRate: sampleRate)
     }
 
     private static func renderLiveTransitionCandidate(

@@ -900,7 +900,10 @@ package enum LongHorizonPolicyFailureDimension: String, CaseIterable,
   case effectFatigue = "effect-fatigue"
 }
 
-package struct LongHorizonPolicyVerdict: Codable, Equatable, Sendable {
+package struct LongHorizonPolicyVerdict: Codable, Equatable, Sendable,
+  AutonomousEvidenceCategorizedReport
+{
+  package static let evidenceCategory: AutonomousEvidenceCategory = .calibratedQuality
   package let accepted: Bool
   package let failedDimensions: [LongHorizonPolicyFailureDimension]
   package let failedSemanticMetrics: [LongHorizonPolicySemanticMetric]
@@ -1056,16 +1059,18 @@ package enum LongHorizonAdversarialAttack: String, CaseIterable, Codable,
 }
 
 package struct LongHorizonAdversarialCaseVerdict: Codable, Equatable,
-  Sendable
+  Sendable, AutonomousEvidenceCategorizedReport
 {
+  package static let evidenceCategory: AutonomousEvidenceCategory = .provenance
   package let attack: LongHorizonAdversarialAttack
   package let rejected: Bool
   package let failedDimensions: [LongHorizonPolicyFailureDimension]
 }
 
 package struct LongHorizonAdversarialSuiteReport: Codable, Equatable,
-  Sendable
+  Sendable, AutonomousEvidenceCategorizedReport
 {
+  package static let evidenceCategory: AutonomousEvidenceCategory = .provenance
   package let schemaVersion: String
   package let engineVersion: String
   package let profileFingerprint: String
@@ -1158,14 +1163,18 @@ package struct LongHorizonAdversarialSuiteReport: Codable, Equatable,
 }
 
 package struct LongHorizonHoldoutJourneyVerdict: Codable, Equatable,
-  Sendable
+  Sendable, AutonomousEvidenceCategorizedReport
 {
+  package static let evidenceCategory: AutonomousEvidenceCategory = .provenance
   package let rootSeed: UInt64
   package let sourceFingerprint: String
   package let verdict: LongHorizonPolicyVerdict
 }
 
-package struct LongHorizonHoldoutQualification: Codable, Equatable, Sendable {
+package struct LongHorizonHoldoutQualification: Codable, Equatable, Sendable,
+  AutonomousEvidenceCategorizedReport
+{
+  package static let evidenceCategory: AutonomousEvidenceCategory = .provenance
   package let schemaVersion: String
   package let engineVersion: String
   package let profileFingerprint: String

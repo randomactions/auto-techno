@@ -6,6 +6,31 @@ import Testing
 
 @Suite("TechnoEngine live feedback scheduling")
 struct TechnoEngineLiveFeedbackTests {
+    @Test("Rejected candidate cannot change the app-owned scheduled PCM queue")
+    func rejectedCandidateLeavesScheduledPCMQueueUnchanged() {
+        var scheduledPCM: [[Int16]] = []
+        let acceptedPCM: [Int16] = [0, 1_024, -1_024, 0]
+        let rejectedPCM: [Int16] = [0, 2_048, -2_048, 0]
+
+        let accepted = AppOwnedPCMBufferScheduleAdmission.enqueue(
+            acceptedPCM,
+            commitEligible: true,
+            schedule: { scheduledPCM.append($0) }
+        )
+        let queueBeforeRejection = scheduledPCM
+        let rejected = AppOwnedPCMBufferScheduleAdmission.enqueue(
+            rejectedPCM,
+            commitEligible: false,
+            schedule: { scheduledPCM.append($0) }
+        )
+
+        #expect(accepted)
+        #expect(!rejected)
+        #expect(queueBeforeRejection == [acceptedPCM])
+        #expect(scheduledPCM == queueBeforeRejection)
+        #expect(!scheduledPCM.contains(rejectedPCM))
+    }
+
     @MainActor
     @Test("Production orchestration maps before capture and designates the first future occurrence")
     func startupAndResumeDesignateFreshOccurrence() {
@@ -229,6 +254,35 @@ struct TechnoEngineLiveFeedbackTests {
         #expect(!feedbackHandlerBody.contains(
             "preparationTask?.cancel()"
         ))
+        let preparedPhraseAdmission = try #require(source.range(
+            of: "private func acceptPreparedPhrase("
+        ))
+        let barScheduling = try #require(source.range(
+            of: "private func scheduleNextBar(first: Bool)"
+        ))
+        let admissionBody = source[
+            preparedPhraseAdmission.lowerBound..<barScheduling.lowerBound
+        ]
+        let commitEligibilityGuard = try #require(admissionBody.range(
+            of: "guard phrase.prepared.commitEligible, liveMasterMatches else {"
+        ))
+        let committedPhraseAssignment = try #require(admissionBody.range(
+            of: "currentPhrase = phrase"
+        ))
+        #expect(commitEligibilityGuard.lowerBound <
+                committedPhraseAssignment.lowerBound)
+
+        let scheduleEnd = try #require(source.range(
+            of: "private func scheduleNextBar(first: Bool)"
+        ))
+        let scheduleBody = source[scheduleEnd.lowerBound...]
+        let committedPhraseRead = try #require(scheduleBody.range(
+            of: "guard var phrase = currentPhrase else { return false }"
+        ))
+        let appOwnedBufferSchedule = try #require(scheduleBody.range(
+            of: "self.player.scheduleBuffer($0)"
+        ))
+        #expect(committedPhraseRead.lowerBound < appOwnedBufferSchedule.lowerBound)
         let admission = try #require(source.range(of:
             "let correctedBoundaryDecision = LiveCorrectedSuccessorBoundaryPolicy.decide("
         ))

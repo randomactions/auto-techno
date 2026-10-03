@@ -1,6 +1,27 @@
 import AutoTechnoCore
 import Foundation
 
+package enum AutonomousEvidenceCategory: String, CaseIterable, Codable,
+        Sendable {
+    case hardGate = "hard-gate"
+    case descriptive
+    case musicalHeuristic = "musical-heuristic"
+    case calibratedQuality = "calibrated-quality"
+    case provenance
+    case unavailable
+}
+
+/// Policy-facing reports declare the one authority class they can represent.
+/// Mixed candidate bundles intentionally do not conform; their fields are
+/// classified individually by `AutonomousCandidateEvaluationVector`.
+package protocol AutonomousEvidenceCategorizedReport: Sendable {
+    static var evidenceCategory: AutonomousEvidenceCategory { get }
+}
+
+package protocol AutonomousEvidenceCategorizedDecision: Sendable {
+    var evidenceCategory: AutonomousEvidenceCategory { get }
+}
+
 /// One initial primary render and at most one correction render may be retained
 /// by an evaluation transaction.
 package enum AutonomousCandidateAttemptKind: String, Codable, CaseIterable, Sendable {
@@ -23,6 +44,10 @@ package struct AutonomousPlaybackGateEvidence: Equatable, Sendable {
         self.interesting = interesting
         self.combinedScore = min(1, max(0, combinedScore))
     }
+}
+
+extension AutonomousPlaybackGateEvidence: AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory = .descriptive
 }
 
 package struct AutonomousSymbolicEvidence: Codable, Equatable, Sendable {
@@ -128,6 +153,10 @@ package struct AutonomousSymbolicEvidence: Codable, Equatable, Sendable {
     }
 }
 
+extension AutonomousSymbolicEvidence: AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory = .musicalHeuristic
+}
+
 package struct AutonomousHardGateEvidence: Codable, Equatable, Sendable {
     package let symbolicValid: Bool
     package let graphValid: Bool
@@ -168,6 +197,10 @@ package struct AutonomousHardGateEvidence: Codable, Equatable, Sendable {
     }
 
     package var isComplete: Bool { completeInputs }
+}
+
+extension AutonomousHardGateEvidence: AutonomousEvidenceCategorizedReport {
+    package static let evidenceCategory: AutonomousEvidenceCategory = .hardGate
 }
 
 package struct AutonomousBarFullMixEvidence: Codable, Equatable, Sendable {
@@ -3206,6 +3239,10 @@ package struct AutonomousModalPercussionEventEvidence:
     package let bodyRMS: Double
     package let tailRMS: Double
     package let tailToBodyDB: Double
+    /// Absent only in evidence predating the additive window-support contract.
+    /// Old policy metrics retain their identity; support diagnostics fail closed.
+    package let windowSupport: ModalPercussionWindowSupport?
+    package let articulationFingerprint: String?
     package let spectralCentroidHz: Double
     package let incomingVoiceStateFingerprint: String
     package let outgoingVoiceStateFingerprint: String
@@ -3247,6 +3284,8 @@ package struct AutonomousModalPercussionEventEvidence:
         bodyRMS: Double,
         tailRMS: Double,
         tailToBodyDB: Double,
+        windowSupport: ModalPercussionWindowSupport? = nil,
+        articulationFingerprint: String? = nil,
         spectralCentroidHz: Double,
         incomingVoiceStateFingerprint: String,
         outgoingVoiceStateFingerprint: String,
@@ -3287,6 +3326,8 @@ package struct AutonomousModalPercussionEventEvidence:
         self.bodyRMS = bodyRMS
         self.tailRMS = tailRMS
         self.tailToBodyDB = tailToBodyDB
+        self.windowSupport = windowSupport
+        self.articulationFingerprint = articulationFingerprint
         self.spectralCentroidHz = spectralCentroidHz
         self.incomingVoiceStateFingerprint = incomingVoiceStateFingerprint
         self.outgoingVoiceStateFingerprint = outgoingVoiceStateFingerprint
@@ -3342,6 +3383,11 @@ package struct AutonomousModalPercussionEventEvidence:
             crestFactor >= 1 && attackRMS >= 0 && attackRMS <= 1 &&
             bodyRMS >= 0 && bodyRMS <= 1 && tailRMS >= 0 && tailRMS <= 1 &&
             (-120...120).contains(tailToBodyDB) &&
+            (windowSupport.map {
+                $0.isValid(sampleRate: sampleRate, frameCount: renderedFrameCount) &&
+                $0.startFrame == Int((Double(step) *
+                    Double(renderedFrameCount) / 16).rounded())
+            } ?? true) &&
             (0...(sampleRate / 2)).contains(spectralCentroidHz) &&
             Self.isFingerprint(incomingVoiceStateFingerprint) &&
             Self.isFingerprint(outgoingVoiceStateFingerprint) &&
@@ -3372,6 +3418,8 @@ package struct AutonomousModalPercussionBarEvidence:
     package let renderPassesMatch: Bool
     package let foundationRoutingValid: Bool
     package let events: [AutonomousModalPercussionEventEvidence]
+    /// Additive descriptive observation; installed legacy metrics stay bar-local.
+    package let continuousWindows: ModalPercussionContinuousBarEvidence?
 
     package init(
         bar: Int,
@@ -3386,7 +3434,8 @@ package struct AutonomousModalPercussionBarEvidence:
         continuationRendered: Bool,
         renderPassesMatch: Bool,
         foundationRoutingValid: Bool,
-        events: [AutonomousModalPercussionEventEvidence]
+        events: [AutonomousModalPercussionEventEvidence],
+        continuousWindows: ModalPercussionContinuousBarEvidence? = nil
     ) {
         self.bar = bar
         self.sourceScoreEventCount = sourceScoreEventCount
@@ -3403,6 +3452,7 @@ package struct AutonomousModalPercussionBarEvidence:
         self.events = Array(events.prefix(
             AutonomousCandidateEvaluationVector.maximumModalPercussionEventsPerBar
         ))
+        self.continuousWindows = continuousWindows
     }
 
     package var isFinite: Bool { events.allSatisfy { $0.isFinite } }
@@ -5822,6 +5872,8 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
     package let routeGeneration: Int
     package let routeFingerprint: String
     package let incomingContinuationFingerprint: String
+    /// Exact caller-owned render/DSP input before any candidate correction.
+    package let incomingRenderDSPFingerprint: String?
     package let incomingQualityStateFingerprint: String
     package let incomingKickCorrectionDB: Double
     package let incomingTopologyRevision: Int
@@ -5839,6 +5891,7 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
         routeGeneration: Int,
         routeFingerprint: String,
         incomingContinuationFingerprint: String,
+        incomingRenderDSPFingerprint: String? = nil,
         incomingQualityStateFingerprint: String,
         incomingKickCorrectionDB: Double,
         incomingTopologyRevision: Int,
@@ -5852,6 +5905,7 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
         self.routeGeneration = routeGeneration
         self.routeFingerprint = routeFingerprint
         self.incomingContinuationFingerprint = incomingContinuationFingerprint
+        self.incomingRenderDSPFingerprint = incomingRenderDSPFingerprint
         self.incomingQualityStateFingerprint = incomingQualityStateFingerprint
         self.incomingKickCorrectionDB = incomingKickCorrectionDB
         self.incomingTopologyRevision = incomingTopologyRevision
@@ -5872,6 +5926,11 @@ package struct AutonomousRouteContinuationEvidence: Codable, Equatable, Sendable
             routeGeneration >= 0 &&
             !routeFingerprint.isEmpty &&
             !incomingContinuationFingerprint.isEmpty &&
+            (incomingRenderDSPFingerprint.map { fingerprint in
+                fingerprint.count == 16 && fingerprint.utf8.allSatisfy { byte in
+                    (48...57).contains(byte) || (97...102).contains(byte)
+                }
+            } ?? true) &&
             !incomingQualityStateFingerprint.isEmpty &&
             (AutomaticMixBalancer.minimumKickCorrectionDB...0).contains(
                 incomingKickCorrectionDB
@@ -6256,6 +6315,100 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
     package static let maximumInstrumentAssignmentsPerArchitecture = 6
     package static let maximumInstrumentEventsPerBar = 64
     package static let maximumUpperTimingEventsPerBar = 64
+
+    package typealias EvidenceCategory = AutonomousEvidenceCategory
+
+    package struct EvidenceFieldClassification: Equatable, Sendable {
+        package let path: String
+        package let category: EvidenceCategory
+
+        package init(path: String, category: EvidenceCategory) {
+            self.path = path
+            self.category = category
+        }
+    }
+
+    /// Exhaustive classification of stored candidate-vector fields. The
+    /// vector contains gate inputs and descriptive/heuristic source evidence;
+    /// exact calibrated dimensions are projected later by the primary policy.
+    package static let evidenceFieldClassifications: [EvidenceFieldClassification] = [
+        .init(path: "schemaVersion", category: .provenance),
+        .init(path: "planFingerprint", category: .provenance),
+        .init(path: "graphFingerprint", category: .provenance),
+        .init(path: "symbolic", category: .musicalHeuristic),
+        .init(path: "hardGates", category: .hardGate),
+        .init(path: "fullMix", category: .descriptive),
+        .init(path: "crossPhraseTransition", category: .descriptive),
+        .init(path: "sourceMaskingBarCount", category: .provenance),
+        .init(path: "masking", category: .descriptive),
+        .init(path: "sourceStemBarCount", category: .provenance),
+        .init(path: "stems", category: .descriptive),
+        .init(path: "sourceAutomaticMixBarCount", category: .provenance),
+        .init(path: "automaticMix", category: .descriptive),
+        .init(path: "sourceKickSyntaxBarCount", category: .provenance),
+        .init(path: "kickSyntax", category: .descriptive),
+        .init(path: "sourceFoundationRhythmBarCount", category: .provenance),
+        .init(path: "foundationRhythm", category: .descriptive),
+        .init(path: "climaxArc", category: .descriptive),
+        .init(path: "sourceGroovePulseBarCount", category: .provenance),
+        .init(path: "groovePulse", category: .descriptive),
+        .init(path: "sourceClosedHatBarCount", category: .provenance),
+        .init(path: "closedHat", category: .descriptive),
+        .init(path: "sourceUpperPercussionTailBarCount", category: .provenance),
+        .init(path: "upperPercussionTail", category: .descriptive),
+        .init(path: "sourceModalPercussionBarCount", category: .provenance),
+        .init(path: "modalPercussion", category: .descriptive),
+        .init(path: "sourceInstrumentBarCount", category: .provenance),
+        .init(path: "instruments", category: .descriptive),
+        .init(path: "sourcePercussionEchoTextureBarCount", category: .provenance),
+        .init(path: "percussionEchoTexture", category: .descriptive),
+        .init(path: "sourcePhraseCompositionBarCount", category: .provenance),
+        .init(path: "phraseComposition", category: .descriptive),
+        .init(path: "sourcePulseEchoDriveBarCount", category: .provenance),
+        .init(path: "pulseEchoDrive", category: .descriptive),
+        .init(path: "sourceSpatialFDNBarCount", category: .provenance),
+        .init(path: "spatialFDN", category: .descriptive),
+        .init(path: "sourceUpperTimingBarCount", category: .provenance),
+        .init(path: "upperTiming", category: .descriptive),
+        .init(path: "sourcePolymetricBarCount", category: .provenance),
+        .init(path: "polymetric", category: .descriptive),
+        .init(path: "sourceFocusedEffectBarCount", category: .provenance),
+        .init(path: "focusedEffect", category: .descriptive),
+        .init(path: "sourceSpatialDustBarCount", category: .provenance),
+        .init(path: "spatialDust", category: .descriptive),
+        .init(path: "graph", category: .descriptive),
+        .init(path: "routeContinuation", category: .provenance),
+        .init(path: "incomingLiveMasterRevision", category: .provenance),
+        .init(path: "outgoingLiveMasterRevision", category: .provenance),
+        .init(path: "incomingLiveMasterTrimDB", category: .descriptive),
+        .init(path: "incomingLiveMasterCleanWindowCount", category: .provenance),
+        .init(path: "outgoingLiveMasterCleanWindowCount", category: .provenance),
+        .init(path: "incomingLiveMasterStateFingerprint", category: .provenance),
+        .init(path: "outgoingLiveMasterStateFingerprint", category: .provenance),
+        .init(path: "liveObservationFingerprint", category: .provenance),
+        .init(path: "liveProposalFingerprint", category: .provenance),
+        .init(path: "liveProposalOutcome", category: .hardGate),
+        .init(path: "requestedLiveMasterTrimDB", category: .descriptive),
+        .init(path: "appliedLiveMasterTrimDB", category: .descriptive),
+        .init(path: "liveMasterGain", category: .descriptive),
+        .init(path: "preLiveMasterPCMFingerprint", category: .provenance),
+        .init(path: "postLiveMasterPCMFingerprint", category: .provenance),
+        .init(path: "liveMasterScalingMatches", category: .hardGate),
+        .init(path: "liveEarliestEligibleFutureSample", category: .provenance),
+        .init(path: "liveAppliedFutureSample", category: .provenance),
+        .init(path: "liveProposalBindingMatches", category: .hardGate),
+        .init(path: "preGraphUpperTimbreEvidence", category: .descriptive),
+        .init(path: "postGraphUpperTimbreEvidence", category: .descriptive),
+    ]
+
+    package static func evidenceCategoriesCoverStoredFields(
+        _ storedFields: [String]
+    ) -> Bool {
+        let classified = evidenceFieldClassifications.map(\.path)
+        return Set(classified).count == classified.count &&
+            Set(classified) == Set(storedFields) &&
+            classified.count == storedFields.count
+    }
 
     package let schemaVersion: Int
     package let planFingerprint: String
@@ -6837,6 +6990,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         routeGeneration: Int,
         routeFingerprint: String,
         incomingContinuationFingerprint: String,
+        incomingRenderDSPFingerprint: String? = nil,
         incomingQualityStateFingerprint: String,
         incomingKickCorrectionDB: Double,
         incomingTopologyRevision: Int,
@@ -6897,6 +7051,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             routeGeneration: routeGeneration,
             routeFingerprint: routeFingerprint,
             incomingContinuationFingerprint: incomingContinuationFingerprint,
+            incomingRenderDSPFingerprint: incomingRenderDSPFingerprint,
             incomingQualityStateFingerprint: incomingQualityStateFingerprint,
             incomingKickCorrectionDB: incomingKickCorrectionDB,
             incomingTopologyRevision: incomingTopologyRevision,
@@ -6930,6 +7085,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
         routeGeneration: Int,
         routeFingerprint: String,
         incomingContinuationFingerprint: String,
+        incomingRenderDSPFingerprint: String? = nil,
         incomingQualityStateFingerprint: String,
         incomingKickCorrectionDB: Double,
         incomingTopologyRevision: Int,
@@ -7363,6 +7519,7 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             routeGeneration: routeGeneration,
             routeFingerprint: routeFingerprint,
             incomingContinuationFingerprint: incomingContinuationFingerprint,
+            incomingRenderDSPFingerprint: incomingRenderDSPFingerprint,
             incomingQualityStateFingerprint: incomingQualityStateFingerprint,
             incomingKickCorrectionDB: incomingKickCorrectionDB,
             incomingTopologyRevision: incomingTopologyRevision,
@@ -7609,6 +7766,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
                     bodyRMS: evidence.bodyRMS,
                     tailRMS: evidence.tailRMS,
                     tailToBodyDB: evidence.tailToBodyDB,
+                    windowSupport: evidence.windowSupport,
+                    articulationFingerprint: AutonomousTypedFingerprint.modalArticulation(articulation),
                     spectralCentroidHz: evidence.spectralCentroidHz,
                     incomingVoiceStateFingerprint:
                         evidence.incomingVoiceStateFingerprint,
@@ -7636,7 +7795,8 @@ package struct AutonomousCandidateEvaluationVector: Codable, Equatable, Sendable
             continuationRendered: render.continuationRendered,
             renderPassesMatch: block.modalPercussionRenderPassesMatch,
             foundationRoutingValid: barBindingValid,
-            events: events
+            events: events,
+            continuousWindows: render.continuousWindows
         )
     }
 
@@ -10454,6 +10614,7 @@ private final class AutonomousCandidateEvaluationTransactionValidator {
             left.routeFingerprint == right.routeFingerprint &&
             left.incomingContinuationFingerprint ==
                 right.incomingContinuationFingerprint &&
+            left.incomingRenderDSPFingerprint == right.incomingRenderDSPFingerprint &&
             left.incomingQualityStateFingerprint ==
                 right.incomingQualityStateFingerprint &&
             left.incomingKickCorrectionDB == right.incomingKickCorrectionDB &&
@@ -10970,7 +11131,8 @@ package enum AutonomousCandidateFingerprint {
     }
 }
 
-private enum AutonomousCandidateCanonicalJSON {
+/// Shared canonical evidence encoding and identity; no PCM or policy work.
+enum AutonomousCandidateCanonicalJSON {
     static func data<T: Encodable>(_ value: T) throws -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]

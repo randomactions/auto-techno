@@ -1,0 +1,40 @@
+{
+  "bounds": "1 through 128 phrases; at most seven pending original checkpoints; invalid planning identities and successor bounds rejected before PCM",
+  "canonicalOwner": "ProfessionalQualityCalibrationIntegrationTests.renderJourney; shared executeJourney producer",
+  "capability": "Persistent execution across intervening phrases, original report membership and actual immediate prepared successors including final checkpoint closure",
+  "consolidation": "Legacy wrapper and fresh gated driver use one persistent producer",
+  "continuation": "Actual quality, live, renderer, DSP and graph persist; frozen planning quality remains separate",
+  "engineVersion": "autotechno-canonical-engine.v48",
+  "fallback": "Missing support stays unavailable; v32 remains offline; installed v21/v30/v16 retained",
+  "freshCohortRendered": false,
+  "qualityDeficit": "Late modal support requires actual successor PCM",
+  "replacementQualification": "unavailable-not-activated",
+  "schema": "autotechno-continuous-modal-execution-foundation.v1",
+  "sourceHead": "a2804ca071f69606ebab1bf9928c70d14fe06a52",
+  "validation": {
+    "aggregateChecks": 19,
+    "changedSamples": 0,
+    "contractBaselineFingerprint": "e28802cff820bf5aab0ebdb0c6dbb16e5de81ad20ff6392e7a2cfeef3e0c2470",
+    "contractSnapshot": 66,
+    "exactComparedSamples": 340230030,
+    "existingRetiredSkips": 2,
+    "focusedReleaseTests": 34,
+    "gateFingerprint": "3550a7fd6754b88d80d1bf8c75860b102696ea167b78d7e60e7aa900cbd7232c",
+    "lifecycleFamilies": 15,
+    "liveTraceScope": "Retained bounded 2026-09-04 trace; no new app/route, listening or physical soak",
+    "metadataReplayCheckpoints": 322,
+    "metadataReplayJourneys": 46,
+    "nativeRates": [
+      44100,
+      48000
+    ],
+    "preservedAssets": 224,
+    "publicControl": "48300; disjoint study membership; initial and later checkpoint closure and original report equality",
+    "refreshStages": 42,
+    "releaseAppTests": 59,
+    "releaseCoreTests": 681,
+    "retainedTraceRestoration": "Five byte-identical exports restored; first failed attempt receipt and log retained",
+    "toolingTests": 274,
+    "xctestChecks": 6
+  }
+}

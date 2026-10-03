@@ -1,0 +1,41 @@
+{
+  "caseCount": 96,
+  "cohortExecutionBoundary": {
+    "actualSuccessorReportJoin": "required-before-fresh-fitting",
+    "freshRootPCMRendered": false,
+    "historicalIncompleteEventRateRows": 22,
+    "internalBarRows": 2,
+    "phraseFinalBarRows": 20,
+    "sourceGeometryOnly": true
+  },
+  "completePhysicalWindows": 96,
+  "fixedConstructionEvidenceOnly": true,
+  "freshCohortRendered": false,
+  "freshCohortSha256": "bb5b9f5eb1ac332aa20acaa05ead459ad9a4f7372c408ae3de33fa2c9980044c",
+  "legacyMetricsChanged": false,
+  "maximumRMSError": 0,
+  "positiveBodyCases": 48,
+  "protocolSha256": "7ba33b3de6ced3a6d8aac5f7bdbedbf019e5e861e7ac5c9e79c3830729449dd9",
+  "replacementQualification": "unavailable-not-activated",
+  "runtimeEvidence": {
+    "aggregateCheckCount": 19,
+    "changedSamples": 0,
+    "contractBaselineFingerprint": "0cd65e28a312ba09ce30a5bb04680f545d9b3eefc8bb74667d261a217005a235",
+    "contractSnapshot": 60,
+    "exactComparedSamples": 340230030,
+    "existingRetiredSkips": 2,
+    "exporterHead": "ef19f6beffb6859cdbf3bb93609bcd253fc8fbc6",
+    "gateFingerprint": "33980a9c4799ce6ff332ff6271b87fe867ef8cae322bf9576a8d9356c342d6c0",
+    "lifecycleFamilyCount": 15,
+    "liveTraceScope": "retained bounded 2026-09-04 macOS trace; no new app/route or physical soak",
+    "preservedAssets": 224,
+    "refreshStageCount": 42,
+    "releaseAppTests": 59,
+    "releaseCoreTests": 674,
+    "toolingTests": 272,
+    "xctestChecks": 6
+  },
+  "schema": "autotechno-modal-continuity-summary.v1",
+  "sourceHead": "ef19f6beffb6859cdbf3bb93609bcd253fc8fbc6",
+  "undefinedSilentBodyCases": 48
+}

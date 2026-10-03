@@ -27,16 +27,24 @@ score/graph snapshots without using loudness or density alone as proof.
 Graph evidence binds the world fingerprint, requested five-coordinate target,
 realized graph vector, distance, protected routing, and at most one changed node
 per phrase. Existing transition-tail and route-recovery contracts remain.
-The exact engine-v48 primary-v29 and long-horizon-v16 development, adversarial,
-and disjoint-holdout artifacts now pass and replace the ineligible v38 set.
-Listening, real app/route QA, latency observation, and physical-output soak
-remain separate unverified gates.
+The engine-v48 primary-v30 development, adversarial, and disjoint-holdout
+artifacts now pass: 504 development observations, 34 adversarial cases, and
+56/56 holdout observations with no relationship failures. Profile schema 22
+records unsupported conditional trajectory comparisons explicitly rather than
+fitting absent measurements. The installed primary set fails closed on any
+identity mismatch. The matching long-horizon-v16 artifacts now bind this exact primary policy;
+all seven development journeys, ten adversarial cases, and two disjoint holdouts
+pass. Their bounded sparse-checkpoint evidence is separate from continuous
+playback and physical-output soak.
+Listening, real app/route QA, latency observation, and physical-output soak remain
+separate unverified gates.
 
-The current qualified offline implementation is
+The current primary-qualified offline implementation is
 `autotechno-canonical-engine.v48` under quality-contract schema 49,
 candidate-vector schema 43, candidate-transaction schema 14, and Professional
-Evidence v29. Primary profile/evaluator v29 and long-horizon policy v16 are the
-required exact identities; their artifact loaders fail closed on any mismatch.
+Evidence v29. Primary profile/evaluator v30, adversarial v23, and holdout v20
+are the current primary artifact identities. The current combined primary-v30/long-horizon-v16 artifact set is qualified
+within those exact offline evidence domains.
 
 The Phase-1 measurement corpus is separate from those calibration and holdout
 populations. Its seven roots are fixed by an outcome-blind integer derivation
@@ -517,14 +525,19 @@ remain explicit rather than being hidden behind a blanket master crossfade.
 Tonal Motion patch boundaries separately retain comb/all-pass/echo memory while
 their patch-owned coefficients crossfade for 500 ms.
 
-`ProfessionalEvidenceReportBank` v25 accepts a bank only when every canonical
+`ProfessionalEvidenceReportBank` v29 accepts a bank only when every canonical
 journey checkpoint is present for every included rate and every report carries
 complete phrase, role-masking, and role-stem evidence. The app installs the
-exact-engine primary evaluator v29 from the v29 profile, v22 adversarial suite,
-and v15 disjoint holdout only after all three exact artifacts replay. It judges every
+exact-engine primary evaluator v30 from the v30 profile, v23 adversarial suite,
+and v20 disjoint holdout only after all three exact artifacts replay. It judges every
 applicable checkpoint independently and never averages dimensions. The profile
 derives from 36 complete 44.1/48 kHz journeys; four replacement holdout journeys
 passed 56/56 local verdicts and every phrase/rate relationship.
+The offline corpus v3 bounds support to 48 complete trajectories. Four-bar
+major-break coverage uses separately frozen score-only development and holdout
+windows, exact candidate identity checks on fresh/cache replay, and the same
+automatic fitter and promotion gates; the installed 36-root profile remains
+current until a replacement passes those gates.
 EBU-style short-program loudness range stays descriptive because its gated
 percentile can change discontinuously when one short-term block crosses the
 gate. Integrated, momentary, short-term, and true-peak evidence remain policy
@@ -597,9 +610,9 @@ at 44.1/48 kHz. The immutable v16 artifact set rejects ten independent
 adversarial attacks and accepts two fresh disjoint holdout roots. Generated-
 graph evidence additionally bounds realized material-world count and requested-
 to-realized effect-world distance. It retains only reduced irreversible
-evidence and binds the exact engine-v48/primary-v29 identity. The pinned
+evidence and binds the exact engine-v48/primary-v30 identity. The pinned
 long-horizon profile, adversarial, and holdout fingerprints are
-`836ac66b68470cd4`, `5950762cf2dc2635`, and `0e00df369ce54e50`.
+`5110688cc8620d7a`, `fded455207d0919c`, and `768388d21859dfdc`.
 
 Phase 7 consumes that policy only during detached preparation. A fixed-capacity
 active-rate observation requires at least 7,200 bars, twelve signal observations,
@@ -1035,3 +1048,84 @@ verification, publication/CI, runtime, listening-observation, and soak gates.
 Its professional-release claim remains `unverified` when any objective gate is
 not `passed`; a listening observation is optional hypothesis evidence and never
 an approval substitute.
+
+Modal-window support is an additive detached evidence foundation. The existing
+modal event accumulator now persists onset and actual attack/body/tail sample
+counts in nested support schema1. Complete support covers 0...10ms,
+20...80ms and 120...240ms respectively, with exclusive upper endpoints.
+The complete bank exposes a descriptive projection with explicit measured and
+excluded-event counts and nullable attack/body and tail/body means. Missing
+and partial windows cannot become measured silence; a completely measured zero
+tail with a nonzero body remains a measured -120dB ratio. Legacy banks lacking
+support cannot produce this diagnostic. Installed v29 observation extraction
+and v30/v23/v20 policy identities retain their original semantics. This
+foundation does not qualify new applicability, replace profiles, waive failed
+holdouts, alter PCM/continuation, or add callback work. Replacement promotion
+still requires a unified versioned extraction/fitting/relationship contract,
+qualified support coverage, fresh independent holdouts and all existing gates.
+
+
+## Shared modal measurement applicability foundation
+
+The explicit offline `windowSupportedObservations` and `windowSupportedBanks`
+projections use observation v22 and profile v31 identities in the existing
+observation, corpus, fitter and evaluators. Schema2 modal evidence retains
+per-ratio measured, missing-window, partial-window and undefined-body event
+counts. No score-owned events means the ratio is not required. If events exist,
+every event must have complete paired windows and a finite positive body before
+the ratio is a qualification measurement. A measured zero numerator remains
+-120dB; unsupported values are omitted, never replaced with zero or a floor.
+
+One shared status owner controls extraction, fitting, local and relationship
+assessment. Fitting refuses any unsupported required dimension or asymmetric
+native-rate applicability. Local verdicts reason-code unavailable dimensions.
+Relationship assessment keeps required coverage unavailable and retains other
+numeric failures. Score absence may omit a conditional comparison, but a later
+active comparison with no trained support remains unavailable. Mixed observation
+contracts are rejected. Diagnostic subset means remain descriptive and cannot
+waive an excluded event.
+
+This is a qualification foundation, not activation of replacement applicability.
+The current v21/v30 extraction and installed v30/v16 resources remain unchanged;
+the production primary evaluator still requires v30 and rejects v31. No score,
+PCM, callback, continuation or future musical decision changes. Independent
+fixture labels, uncertainty, preregistered coverage and fresh disjoint holdouts,
+plus complete matching primary and long-horizon qualification, remain required
+before any replacement. This extends the existing canonical evidence owner and
+avoids separate extraction/fitting/evaluation eligibility rules.
+
+## Continuous modal observation and fitting scope
+
+The explicit offline continuous projection uses observation v23 and profile v32
+under the existing observation, trajectory, corpus, fitter and evaluators. Its
+construction requires the full canonical original report and an optional
+validated actual-successor receipt. A source-only unfinished suffix remains
+required-unavailable. Diagnostic subset means, decoded numeric observations and
+invented successor/checkpoint labels cannot supply construction provenance.
+Canonical-byte reconstruction requires the same typed source inputs; ordinary
+observation decoding continues to reject every scope.
+
+Only the two existing modal ratios change measurement scope. All other candidate
+metrics, original event counts, hard gates and live-master provenance remain
+under their existing owners. Shared applicability preserves measured zero,
+not-required score absence, undefined body and missing/partial physical windows.
+Fitting refuses required unavailable support and native-rate applicability
+mismatch, while local and relationship assessment retain independent failures.
+Metric/live-master challenge replacement retains source provenance and cannot
+create independent journey membership.
+
+Trajectory membership remains the original report-bank fingerprint. Successor
+receipt coverage changes measurement/corpus identity but cannot disguise a
+repeated original bank as another source. Continuous trajectories require that
+actual bank; arbitrary numeric source labels are insufficient. Seven checkpoint
+identities at both native rates, the 48-source bound and disjoint development/
+holdout membership remain required. The reduced one-bank fitting seam delegates
+to the existing corpus fitter and remains insufficient for diverse calibration.
+
+A single scope owner binds observation/profile schema and versions, expected
+metrics, applicability and conditional comparison coverage. Installed v21/v30
+and bar-local v22/v31 identities retain their semantics. Continuous v23/v32 is an
+unqualified, unactivated foundation: fixed mechanical construction controls do
+not provide independent musical labels, confidence, fresh-cohort evidence or
+replacement qualification. Installed primary v30/long-horizon v16 resources,
+score, PCM, callback and future musical decisions remain unchanged.

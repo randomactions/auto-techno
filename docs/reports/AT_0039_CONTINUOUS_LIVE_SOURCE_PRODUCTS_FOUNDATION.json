@@ -1,0 +1,32 @@
+{
+  "bounds": "Fixed seed42/rate44.1kHz/director/fixture policy; one home/attenuation/hold/recovery chain and one immediate extra successor; no fixture reselection",
+  "canonicalOwner": "LiveFeedbackTestSupport shared prepared live chain; CanonicalJourneyQualificationHarness; existing modal successor and continuous observation constructors",
+  "capability": "Retain actual attenuation/clean-hold/recovery products, all applicable canonical source labels and one actual immediate recovery successor",
+  "consolidation": "Legacy vector wrapper and continuous fixture share the same prepared-product producer",
+  "continuation": "Existing actual quality/render/DSP/graph/live states; source reports and immutable commits remain bound; wrong successors are rejected",
+  "fallback": "Preparation or source-binding failure remains refusal; missing support stays unavailable; installed v21/v30/v16 retained",
+  "nativeStudyScope": "Prior successful 40-development/6-holdout fit remains source 9fd02fc/snapshot 66; no new 46-root fitting/qualification is claimed at this source",
+  "qualityDeficit": "Live candidate vectors alone cannot supply original report/immutable commit and actual successor required by continuous qualification",
+  "replacementQualification": "unavailable-not-activated",
+  "schema": "autotechno-continuous-live-source-products-foundation.v1",
+  "sourceHead": "5fe0c50db3c906b9132a07797febf19f843ec451",
+  "validation": {
+    "aggregateChecks": 19,
+    "appReleaseTests": 59,
+    "changedSamples": 0,
+    "coreReleaseTests": 682,
+    "exactComparedSamples": 340230030,
+    "existingRetiredSkips": 2,
+    "focusedReleaseSeconds": 173.909,
+    "focusedReleaseTests": 8,
+    "gateFingerprint": "992da37a4bdedab3f3cb86f462a3db813f7fcd4773708dba266261cd5b83f14f",
+    "lifecycleFamilies": 15,
+    "liveTraceScope": "Retained bounded 2026-09-04 trace; no new listening/app/route or physical soak",
+    "preservedAssets": 224,
+    "refreshStages": 42,
+    "snapshotFingerprint": "10e3a47511428bd7492ea572556adfb5af23380aac5764d08d8ee5e02edb2208",
+    "snapshotVersion": 67,
+    "toolingTests": 274,
+    "xctestChecks": 6
+  }
+}

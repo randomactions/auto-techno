@@ -474,6 +474,10 @@ struct PercussionEchoTextureTests {
         #expect(prepared.commitEligible)
         let record = prepared.selectedCandidateEvidence
             .percussionEchoTexture[fixture.secondWithheld]
+        let textureBars = prepared.selectedCandidateEvidence.percussionEchoTexture
+        let activeSwellBarCount = textureBars.filter {
+            $0.relation == PercussionEchoTextureRelation.anticipationSwell.rawValue
+        }.count
         #expect(record.active)
         #expect(record.relation ==
                 PercussionEchoTextureRelation.anticipationSwell.rawValue)
@@ -487,9 +491,14 @@ struct PercussionEchoTextureTests {
             engineVersion: QualityQualificationContract.engineVersion,
             checkpoint: .release
         )
+        #expect(textureBars.count == fixture.plan.barCount)
+        #expect(activeSwellBarCount == 1)
+        #expect(textureBars.filter {
+            $0.relation != PercussionEchoTextureRelation.anticipationSwell.rawValue
+        }.count == fixture.plan.barCount - activeSwellBarCount)
         #expect(observation[
             .percussionAnticipationSwellActiveBarRatio
-        ] == 1.0 / Double(fixture.plan.barCount))
+        ] == Double(activeSwellBarCount) / Double(max(1, textureBars.count)))
         #expect(observation[
             .percussionAnticipationSwellLateToEarlyDBMean
         ] == record.lateToEarlyDB)

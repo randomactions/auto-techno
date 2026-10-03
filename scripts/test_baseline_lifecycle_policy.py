@@ -106,6 +106,14 @@ class BaselineLifecyclePolicyTests(unittest.TestCase):
         self.assertLess(first.index("whole-mix-render"), first.index("signal-baseline"))
         self.assertLess(first.index("signal-baseline"), first.index("deficit-register"))
 
+    def test_rhythmic_export_waits_for_paired_capture_provenance(self) -> None:
+        policy = self.policy()
+        nodes = {node["id"]: node for node in policy["nodes"]}
+        self.assertIn("role-stem-capture", nodes["rhythmic-baseline"]["dependencies"])
+        order = lifecycle.topological_order(policy["nodes"])
+        self.assertLess(order.index("role-stem-capture"), order.index("rhythmic-baseline"))
+        self.assertLess(order.index("whole-mix-render"), order.index("role-stem-capture"))
+
     def test_unknown_missing_and_duplicate_nodes_fail(self) -> None:
         for mutate in ("missing", "duplicate", "unknown"):
             policy = self.policy()

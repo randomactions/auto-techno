@@ -260,7 +260,9 @@ NODES = (
         "rhythmic-baseline", "Whole-mix rhythmic baseline",
         "docs/local/reports/rhythmic-baseline-v1/manifest.json", "local-ignored",
         "autotechno-rhythmic-baseline-report.v1", "reportVersion",
-        "reportFingerprint", ("whole-mix-render",),
+        # The exporter reduces only whole PCM, but its shared input loader
+        # first validates paired whole/stem source and capture provenance.
+        "reportFingerprint", ("whole-mix-render", "role-stem-capture"),
         "python3 scripts/rhythmic_baseline_report.py generate",
         "python3 scripts/rhythmic_baseline_report.py check",
     ),
