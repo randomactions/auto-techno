@@ -17,9 +17,9 @@ package enum QualityQualificationContract {
     /// additionally binds source-local terminal release evidence while keeping
     /// intentional attack samples exact, alongside material-world/effect-target
     /// lineage and the retained cross-phrase consequences.
-    package static let schemaVersion = 49
+    package static let schemaVersion = 50
     package static let reasonCodeVersion = 1
-    package static let engineVersion = "autotechno-canonical-engine.v48"
+    package static let engineVersion = "autotechno-canonical-engine.v49"
     package static let uncalibratedEvaluatorVersion =
         "autotechno-candidate-evaluator.uncalibrated.v1"
     package static let maximumCorrectionRenders = 1

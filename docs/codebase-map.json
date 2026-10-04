@@ -270,7 +270,8 @@
         "material-bound coupled modal foundation plan"
       ],
       "evidence": [
-        "score-owned assignment, pitch, automation, modal material, and coupling provenance"
+        "score-owned assignment, pitch, automation, modal material, and coupling provenance",
+        "Final authored anchor selection after canonical composition, timing and held polymetric relocation; source-index lineage, late/legato home fallback, authored home-correction eligibility and both-native same-pass tonal tail regression. Core owns relation placement; DSP windows and bounds remain unchanged, with no continuing-journey qualification."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/FoundationPitchResolver.swift",
@@ -281,7 +282,8 @@
       "testPaths": [
         "Tests/AutoTechnoCoreTests/InstrumentPaletteTests.swift",
         "Tests/AutoTechnoCoreTests/ModalPercussionPlanningTests.swift",
-        "Tests/AutoTechnoCoreTests/UpperTimbrePlanningTests.swift"
+        "Tests/AutoTechnoCoreTests/UpperTimbrePlanningTests.swift",
+        "Tests/AutoTechnoCoreTests/TonalEnvelopeBoundaryTests.swift"
       ],
       "contracts": [
         "docs/INSTRUMENT_PALETTE.md",
@@ -419,7 +421,8 @@
         "source-bound prevalence, severity, confidence, ownership, and roadmap-link facts with uncalibrated observations quarantined",
         "schema-, contract-, corpus-, engine-, route-, build-, and dependency-bound evidence lifecycle metadata",
         "fifteen current artifact bindings, subordinate validation, exact whole/role PCM, and deficit-source traceability without a musical-quality claim",
-        "offline process-local independent stereo analysis reuse with live input hashes, unchanged per-asset comparisons, bounded memory, cold fallback and all nineteen aggregate subordinate validators"
+        "offline process-local independent stereo analysis reuse with live input hashes, unchanged per-asset comparisons, bounded memory, cold fallback and all nineteen aggregate subordinate validators",
+        "Engine v49 and quality-contract schema50 bind post-relocation tonal ownership; candidate-vector43/transaction14 unchanged and all current primary seals unset pending complete fresh native qualification."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/LiveFeedback.swift",
@@ -496,7 +499,8 @@
         "modal material, coupling, stability, decay, and pitch evidence",
         "spatial-dust channel, cadence, low-band exclusion, and clearing evidence",
         "actual modal attack/body/tail sample support, with missing/partial/complete window geometry",
-        "same-pass continuous modal windows with explicit pending, interruption and overflow; legacy bar-local metrics and PCM preserved"
+        "same-pass continuous modal windows with explicit pending, interruption and overflow; legacy bar-local metrics and PCM preserved",
+        "Final authored anchor selection after canonical composition, timing and held polymetric relocation; source-index lineage, late/legato home fallback, authored home-correction eligibility and both-native same-pass tonal tail regression. Core owns relation placement; DSP windows and bounds remain unchanged, with no continuing-journey qualification."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AlienAnalogVoice.swift",
@@ -522,7 +526,8 @@
         "Tests/AutoTechnoCoreTests/SpatialDustTests.swift",
         "Tests/AutoTechnoCoreTests/UpperPercussionTailDSPTests.swift",
         "Tests/AutoTechnoCoreTests/UpperSpectralRevealDSPTests.swift",
-        "Tests/AutoTechnoCoreTests/UpperTimbreDSPTests.swift"
+        "Tests/AutoTechnoCoreTests/UpperTimbreDSPTests.swift",
+        "Tests/AutoTechnoCoreTests/TonalEnvelopeBoundaryTests.swift"
       ],
       "contracts": [
         "docs/SYNTH_TRACK_RENDERING_MATRIX.md",
@@ -756,7 +761,7 @@
         "report-bound descriptive cross-phrase modal ratios without retargeted score ownership",
         "version-bound continuous observations and offline profile reductions; canonical-byte source reconstruction and required unavailable support, no policy activation",
         "continuous full-journey original reports and actual-successor receipts without importing legacy caches or adding successor checkpoint membership",
-        "fresh typed 40/6 native corpora and completed v33 primary/adversarial/holdout offline qualification; exact registered primary seals bind the pending full native long-horizon study, with production resources and full runtime qualification unavailable",
+        "fresh typed 40/6 native corpora and completed v33 primary/adversarial/holdout offline qualification; retained engine-v48 seals are historical; engine v49 has no registered primary seals and requires complete fresh native qualification, with production resources and full runtime qualification unavailable",
         "scope-bound detached continuous adversarial and disjoint holdout reports from complete typed corpora and actual fixed live-chain source products; no installed authority or runtime activation",
         "prospective protocol-bound fresh typed continuous adversarial/holdout reduction, per-stage refusals and explicit offline-only qualification summary"
       ],
@@ -786,7 +791,8 @@
         "all-label actual live-source binding and fixed preserved-profile acceptance diagnostics; mixed-scope metadata and historical primary-authority rejection controls; unchanged installed artifact fingerprints",
         "mechanical three-rate private prepared admission and exact replay; missing/foreign proof, unfinished suffix, quality rebinding, cancellation and adjusted-transaction refusal/acceptance controls; not runtime qualification",
         "explicit retained-model native-rate calibrated admission mechanics; mixed-scope artifact, vector-only, legacy observation, altered metric, unsupported-rate and missing/unfinished proof refusal; no current artifact qualification",
-        "Default-off post-study actual attenuation/recovery rerender verifies both current frozen-study live baseline fingerprints and constructs its exact offline primary artifacts; no corpus import, installed activation, long-horizon or final-source qualification. Historical scope-attack fixtures cannot load as current primary artifacts; capture checkpoints and adjacent context refuse ineligible products before canonical advancement or PCM export."
+        "Default-off post-study actual attenuation/recovery rerender verifies both current frozen-study live baseline fingerprints and constructs its exact offline primary artifacts; no corpus import, installed activation, long-horizon or final-source qualification. Historical scope-attack fixtures cannot load as current primary artifacts; capture checkpoints and adjacent context refuse ineligible products before canonical advancement or PCM export.",
+        "One canonical preparationBoundaryRejection preserves ordered transaction identity and candidate hard-gate refusal before terminal route/prospective checks; independently testable without installed artifacts, nil never grants calibrated acceptance or prepared admission."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AudioQualityReport.swift",

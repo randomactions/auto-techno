@@ -159,6 +159,17 @@ package struct ResolvedUpperNote: Equatable, Sendable {
         )
     }
 
+    package func withEnvelopeRelation(_ relation: UpperEnvelopeRelation) -> ResolvedUpperNote {
+        ResolvedUpperNote(
+            role: role, onsetStep: onsetStep, durationInSteps: durationInSteps,
+            startFrequencyRatio: startFrequencyRatio,
+            endFrequencyRatio: endFrequencyRatio, velocity: velocity,
+            gate: gate, timbreIntent: timbreIntent, envelopeRelation: relation,
+            spectralReveal: spectralReveal, timingOffsetInSteps: timingOffsetInSteps,
+            instrument: instrument
+        )
+    }
+
     package func withSpectralReveal(
         _ articulation: UpperSpectralRevealArticulation
     ) -> ResolvedUpperNote {
@@ -622,7 +633,8 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     grammar: materialWorld.polymetricGrammar,
                     absoluteBar: performanceBar.bar
                 )
-            let upperNotes = polymetric.notes
+            var upperNotes = polymetric.notes
+            var sourceUpperNotes = upperResolution.notes
             let eligibilityNotes: [ResolvedUpperNote]
             if forceHomeUpperTimbre {
                 let authoredComposition = authoredCompositionBars.indices.contains(index)
@@ -642,6 +654,24 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 ).notes
             } else {
                 eligibilityNotes = upperNotes
+            }
+            // Select against the final authored geometry. Relocation can put a
+            // source-earlier retrigger after the old last motif note; selecting
+            // before relocation would let that retrigger cut off the wash.
+            let authoredEnvelopeNotes = forceHomeUpperTimbre
+                ? LongHorizonPolymetricGrammarResolver.relocateUpperNotes(
+                    eligibilityNotes, grammar: materialWorld.polymetricGrammar,
+                    absoluteBar: performanceBar.bar).notes
+                : upperNotes
+            let expansionIndex = Self.tonalEnvelopeExpansionIndex(
+                notes: authoredEnvelopeNotes, kind: kind,
+                performance: performanceBar,
+                arrangementGesture: resolved.arrangementGesture)
+            if !forceHomeUpperTimbre, let expansionIndex {
+                upperNotes[expansionIndex] = upperNotes[expansionIndex]
+                    .withEnvelopeRelation(.sustainedWash)
+                sourceUpperNotes[expansionIndex] = sourceUpperNotes[expansionIndex]
+                    .withEnvelopeRelation(.sustainedWash)
             }
             let spectralRevealEligible = eligibilityNotes.contains { note in
                 note.role == .anchor &&
@@ -677,7 +707,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                         resolved.foundationRhythmicRelation
                 ),
                 relationalSteps: relationalSteps,
-                sourceUpperNotes: upperResolution.notes,
+                sourceUpperNotes: sourceUpperNotes,
                 upperNotes: upperNotes,
                 polymetricEvidence: polymetric.evidence,
                 composition: composition,
@@ -688,7 +718,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                     earliestPulseEchoOnsetStep: earliestPulseEchoOnsetStep
                 ),
                 tonalEnvelopeExpansionEligible:
-                    upperResolution.tonalEnvelopeExpansionEligible,
+                    expansionIndex != nil,
                 spectralRevealEligible: spectralRevealEligible,
                 forceHomeUpperTimbre: forceHomeUpperTimbre
             )
@@ -770,8 +800,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         forceHomeUpperTimbre: Bool,
         relationalSteps: [RelationalArticulation],
         composition: PhraseCompositionBar
-    ) -> (notes: [ResolvedUpperNote], tonalEnvelopeExpansionEligible: Bool,
-          timingRelation: UpperTimingRelation) {
+    ) -> (notes: [ResolvedUpperNote], timingRelation: UpperTimingRelation) {
         let performance = resolved.performance
         func instrument(_ role: SynthRole) -> InstrumentAssignment {
             InstrumentPalette.resolveUpper(
@@ -824,25 +853,6 @@ package struct SynthPerformancePlan: Equatable, Sendable {
         }
 
         let anchorInstrument = instrument(.anchor)
-        let expansionCandidateIndex: Int? = {
-            guard kind == .energyRelease,
-                  performance.signatureEvent == .displacedKickRecovery,
-                  ((performance.bar % 16) + 16) % 16 == 15,
-                  resolved.arrangementGesture == .structuralMarker,
-                  anchorInstrument.architecture == .tonalMotion else {
-                return nil
-            }
-            // Leave at least one sixteenth of this bar for the longer release
-            // to become observable; slide notes retain their legato contract.
-            guard let index = orderedMotif.indices.last,
-                  index != slideIndex,
-                  orderedMotif[index].event.step <= 12 else {
-                return nil
-            }
-            return index
-        }()
-        let tonalEnvelopeExpansionEligible = expansionCandidateIndex != nil
-
         let baseMotifDuration = performance.transformations.contains(.extend) ? 2.5 : 1.5
         var notes = orderedMotif.enumerated().map { index, pitch in
             let articulation = relationalSteps[pitch.event.step]
@@ -867,8 +877,7 @@ package struct SynthPerformancePlan: Equatable, Sendable {
                 ),
                 gate: isSlide ? .slide : .retrigger,
                 timbreIntent: resonantIntent,
-                envelopeRelation: index == expansionCandidateIndex &&
-                    !forceHomeUpperTimbre ? .sustainedWash : .home,
+                envelopeRelation: .home,
                 spectralReveal: UpperSpectralRevealResolver.articulation(
                     role: .anchor,
                     narrative: resolved.narrative,
@@ -1065,7 +1074,32 @@ package struct SynthPerformancePlan: Equatable, Sendable {
             let lhsRole = SynthRole.allCases.firstIndex(of: $0.role) ?? 0
             let rhsRole = SynthRole.allCases.firstIndex(of: $1.role) ?? 0
             return lhsRole < rhsRole
-        }, tonalEnvelopeExpansionEligible, timingRelation)
+        }, timingRelation)
+    }
+
+    /// The final audible anchor owns the bounded wash. Do not search backward
+    /// for an eligible note when the actual last anchor is late or legato.
+    /// The index preserves source-to-applied lineage through relocation.
+    package static func tonalEnvelopeExpansionIndex(
+        notes: [ResolvedUpperNote], kind: AutonomousPhraseKind,
+        performance: PerformanceBar, arrangementGesture: ArrangementGesture
+    ) -> Int? {
+        guard kind == .energyRelease,
+              performance.signatureEvent == .displacedKickRecovery,
+              ((performance.bar % 16) + 16) % 16 == 15,
+              arrangementGesture == .structuralMarker,
+              let index = notes.indices.filter({ notes[$0].role == .anchor })
+                .max(by: {
+                    let lhs = Double(notes[$0].onsetStep) + notes[$0].timingOffsetInSteps
+                    let rhs = Double(notes[$1].onsetStep) + notes[$1].timingOffsetInSteps
+                    return lhs == rhs ? $0 < $1 : lhs < rhs
+                }),
+              notes[index].instrument.architecture == .tonalMotion,
+              notes[index].gate == .retrigger,
+              Double(notes[index].onsetStep) + notes[index].timingOffsetInSteps <= 12 else {
+            return nil
+        }
+        return index
     }
 
     package static let minimumLeadPerformanceOffsetInSteps = 0.018

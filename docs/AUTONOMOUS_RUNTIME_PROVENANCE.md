@@ -64,9 +64,9 @@ mistaken for a completed feedback system.
 3. `DSPGraphGenerator` produces the deterministic upper-voice topology and its
    bounded mutation from the prior graph.
 4. `AutonomousPhrasePreparer` renders immutable attempts into one versioned
-   primary-evaluation transaction under quality-contract schema 49, candidate-
+   primary-evaluation transaction under quality-contract schema 50, candidate-
    vector schema 43, candidate-transaction schema 14, and canonical engine
-   identity `autotechno-canonical-engine.v48`. Each
+   identity `autotechno-canonical-engine.v49`. Each
    attempt carries the complete bounded vector of symbolic, hard-gate, full-mix,
    per-bar masking, role-stem, automatic-mix, score-owned kick-syntax and
    paid-debt climax-arc,
@@ -495,7 +495,7 @@ mistaken for a completed feedback system.
    the captured source. Core rotates through only
    the qualified families and exact accepted PCM remains the fallback when none
    qualify. The selected primary plan, blocks, candidate
-   evidence, render/graph continuation, quality decision, and engine-v48
+   evidence, render/graph continuation, quality decision, and engine-v49
    artifacts remain unchanged. App and Windows transports merely choose the
    immutable family at a phrase boundary, and a ready successor always advances. The
    macOS scheduler does not register sidecar occurrences as canonical live-
@@ -582,7 +582,8 @@ development profile.
 ## Implemented tonal-envelope expansion slice
 
 `SynthPerformancePlan` owns one durable `sustainedWash` relation on the final
-eligible Tonal Motion anchor at a canonical energy-release marker. Eligibility
+eligible Tonal Motion anchor after composition, timing, and held polymetric
+relocation at a canonical energy-release marker. Eligibility
 requires a nonconservative release plan, the existing displaced-kick recovery
 signature at macro bar 15, a retriggered motif onset no later than step 12, and
 the existing Tonal Motion architecture. The relation changes no onset, pitch,
@@ -1973,11 +1974,13 @@ previous interpretation; retired continuous profile v32 is not current authority
 No parameter, score, PCM, callback or automatic retry changes.
 
 Profile schema 25/version v33 and primary policy/evaluator v32 invalidate prior
-qualification. The completed d1259f3 fresh native study supplies exact primary
+qualification. The completed d1259f3 engine-v48 native study supplied historical primary
 seals: profile eb1eba16cde88415, adversarial b76d744054bfa22f and
-holdout 19742f5c60933b29. The long-horizon dependency now binds that exact
-primary evaluator identity. Qualified Long Horizon v18 seals and paired production
-resources remain absent.
+holdout 19742f5c60933b29. Engine v49 changes canonical final-anchor ownership, so those seals
+are no longer current authority. Current primary seals are unset and the
+long-horizon dependency remains unqualified pending fresh complete native primary
+qualification. Qualified Long Horizon v18 seals and paired production resources
+remain absent.
 Synthetic reduction/replay controls have no activation authority. The live-target
 artifact gate uses the same continuous observation/profile scope owner and exact
 qualified seals, rather than legacy schema defaults. Target/occurrence controller
@@ -1991,3 +1994,40 @@ ownership, full development relationship, independent adversarial/live-baseline
 and complete disjoint holdout gates remain required. Retained archives and old
 output identities cannot supply qualification. Refused outputs stay reason-coded
 local diagnostics; installing matching seals requires actual completed evidence.
+
+
+## Post-relocation tonal boundary ownership
+
+The engine-v49/quality-schema50 repair extends `SynthPerformancePlan`, not the
+renderer. Exact score-only reconstruction of root 48291, phase 153/start 1652,
+recovery contexts at phases 33 and 87, and the native plan fingerprint
+b35405a7d3f63299 identifies canonical bar 1663. Source motif step 4 relocates to
+11 while source step 8 stays at 8. The old pre-relocation selection placed a wash
+at 8; the later home retrigger cut off its active tail. Cold actual rendering at
+both native rates provides a regression without importing accepted runtime state,
+PCM, a corpus, or model authority.
+
+Final-anchor selection now runs after composition and timing relocation. The
+source and applied arrays retain the same indices, and only the selected existing
+envelope relation changes. The final anchor must retain the existing structural
+marker, energy-release, displaced-kick, macro-15, Tonal Motion, retrigger, and
+step-at-most-12 conditions. Failure falls back home rather than selecting an
+earlier anchor. Attempt-local home correction computes eligibility from fully
+relocated authored notes and applies no wash. All planning stays in Core and off
+the callback; no new continuation state, retry, renderer branch or DSP window is
+introduced. Candidate-vector schema43, transaction14, primary mathematical family
+v32/profilev33 and all signal bounds remain unchanged. Engine-v48 artifacts are
+retained as historical evidence; current seals are nil until fresh complete
+native development/adversarial/holdout qualification. The bounded regression is
+not continuing-journey, full-corpus, resource or physical-output qualification.
+
+
+The primary evaluator retains one canonical transaction/candidate rejection
+boundary in `preparationBoundaryRejection`. `terminalVerdict` invokes it before
+route or prospective acceptance checks. This pure boundary preserves the same
+ordered identity diagnostics and hard-gate reasons independently of installed
+artifacts, so tests can exercise rejection while current resources are
+unavailable. A nil rejection proves only passage through these checks; it never
+establishes quality acceptance, calibration or prepared-source admission. The
+actual evaluator still requires current fully qualified artifacts and exact
+prepared validation. No numeric policy or artifact-loading condition is relaxed.

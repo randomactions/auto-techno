@@ -11,11 +11,12 @@ package struct ProfessionalQualityPrimaryArtifacts: Sendable {
         "professional-quality-primary-adversarial-suite-v33"
     package static let holdoutResource =
         "professional-quality-primary-holdout-v33"
-    // Frozen d1259f3 native 40/6 study: 34 adversarial cases, 84/84 holdout.
-    // These offline seals bind qualification; missing paired resources still refuse loading.
-    package static let expectedProfileFingerprint: String? = "eb1eba16cde88415"
-    package static let expectedAdversarialSuiteFingerprint: String? = "b76d744054bfa22f"
-    package static let expectedHoldoutQualificationFingerprint: String? = "19742f5c60933b29"
+    // Engine v49 changes canonical post-relocation wash ownership. The retained
+    // d1259f3 engine-v48 study remains historical evidence, never a current seal.
+    // Fresh complete native development/adversarial/holdout qualification is required.
+    package static let expectedProfileFingerprint: String? = nil
+    package static let expectedAdversarialSuiteFingerprint: String? = nil
+    package static let expectedHoldoutQualificationFingerprint: String? = nil
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport

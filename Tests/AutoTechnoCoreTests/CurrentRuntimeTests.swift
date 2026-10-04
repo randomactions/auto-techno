@@ -81,9 +81,9 @@ struct CurrentRuntimeTests {
 
     @Test("Long-cycle groove and effect-world identities advance as one exact contract")
     func longCycleWorldPrimaryIdentityContract() {
-        #expect(QualityQualificationContract.schemaVersion == 49)
+        #expect(QualityQualificationContract.schemaVersion == 50)
         #expect(QualityQualificationContract.engineVersion ==
-                "autotechno-canonical-engine.v48")
+                "autotechno-canonical-engine.v49")
         #expect(AutonomousCandidateEvaluationVector.schemaVersion == 43)
         #expect(ProfessionalQualityObservation.schemaVersion == 21)
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
@@ -728,8 +728,8 @@ struct RepositorySurfaceTests {
         }.joined(separator: "\n").lowercased()
 
         for required in [
-            "autotechno-canonical-engine.v48",
-            "quality-contract schema 49",
+            "autotechno-canonical-engine.v49",
+            "quality-contract schema 50",
             "candidate-vector schema 43",
             "candidate-transaction schema 14",
             "professional evidence v29",

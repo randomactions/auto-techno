@@ -23,12 +23,13 @@ are retired qualification identities for current policy v32/profile v33.
 The fresh d1259f36c68740d55f5b72bd63424e03cc0732af study completed the same
 40 development and six disjoint holdout trajectories at both native rates,
 644 original reports and actual successor receipts, all 34 adversarial cases,
-and 84/84 accepted holdout observations under contract snapshot 93. Current
-v33 primary seals are profile eb1eba16cde88415, adversarial
-b76d744054bfa22f and holdout 19742f5c60933b29. These bind explicit offline
-construction and the required primary dependency of the full native long-horizon
-study. Qualified long-horizon v18 seals, matching paired resources and full
-runtime gates remain pending; the paired production loader stays unavailable.
+and 84/84 accepted holdout observations under contract snapshot 93. Those
+engine-v48 v33 seals were profile eb1eba16cde88415, adversarial
+b76d744054bfa22f and holdout 19742f5c60933b29. They remain historical offline
+evidence. Engine v49 changes wash ownership after final canonical timing and
+polymetric relocation; all three current primary seals are unset until fresh
+complete native qualification. Qualified long-horizon v18 seals, matching paired
+resources and full runtime gates remain pending; production loading stays unavailable.
 
 The native long-horizon producer follows the existing Core finite recovery
 continuation after measured retryable rejection, retaining actual accepted PCM
@@ -221,9 +222,9 @@ The current runtime already supplies deterministic planning, detached rendering,
 role evidence (including exact-tap onset-local anchor-expression diagnostics),
 signal-safety reports, masking analysis, one bounded automatic mix correction,
 and a versioned candidate-evaluation transaction. The current implementation
-candidate uses quality-contract schema 49, candidate-vector schema 43,
+candidate uses quality-contract schema 50, candidate-vector schema 43,
 candidate-transaction schema 14, and canonical engine identity
-`autotechno-canonical-engine.v48`. Its explicit modal, tuned-inharmonic,
+`autotechno-canonical-engine.v49`. Its explicit modal, tuned-inharmonic,
 deliberate-dissonance, and indefinite-pitch rules are defined in
 [`PITCH_IDENTITY_CONTRACT.md`](PITCH_IDENTITY_CONTRACT.md). It preserves
 complete symbolic, full-mix, masking, role-stem, score-owned kick-syntax,
@@ -342,7 +343,8 @@ The present fixed curve is a bounded realization, not a permanent kick target.
 
 The existing Tonal Motion architecture also carries one durable
 `sustainedWash` envelope relation. It is eligible only for the final retriggered
-motif anchor at a nonconservative energy-release macro marker, and only when at
+anchor after composition, timing, and held polymetric relocation at a
+nonconservative energy-release macro marker, and only when at
 least one sixteenth remains for its consequence to become observable. The score
 does not add a note or change pitch, duration, gate, velocity, instrument,
 effects, or transport. Renderer realization v1 raises the same patch envelope
@@ -1015,8 +1017,8 @@ The evaluator may select internal instruments, graphs, or strategies through the
 canonical score. It may not switch to another top-level engine or retain a
 parallel runtime.
 
-Under quality-contract schema 49, candidate-vector schema 43,
-candidate-transaction schema 14, and canonical engine v48, the versioned
+Under quality-contract schema 50, candidate-vector schema 43,
+candidate-transaction schema 14, and canonical engine v49, the versioned
 transaction implements the bounded evidence and atomic commit foundation for
 this loop. It retains one initial attempt and at most one
 same-plan home-timbre correction, with no more than two render passes total.
@@ -1206,3 +1208,28 @@ and bar-local v22/v31 identities retain their semantics. Continuous v23/v33 has 
 mechanical construction controls alone do not provide independent musical labels,
 confidence, fresh-cohort evidence or replacement qualification. Installed primary v30/long-horizon v16 resources,
 score, PCM, callback and future musical decisions remain unchanged.
+
+
+The engine-v49 tonal boundary repair retains the existing Core owner and
+`sustainedWash` capability. The measurable deficit was missing active tail
+support on native bar 1663: relocation placed a home retrigger at step 11 after
+the wash selected at step 8. Core now selects the actual last anchor after all
+canonical timing resolution and mirrors its relation on the corresponding source
+index. A late, legato, or incompatible final anchor falls back home; it never
+searches backward for another eligible note. Home correction evaluates eligibility
+on the fully resolved authored geometry and applies only home relations. The DSP
+realization, measurement windows, positive-tail requirement and 160 dB bound are
+unchanged. This consolidates selection into the existing resolved score rather
+than adding a renderer exception. New engine-v49/quality-schema50 qualification is
+required; a bounded native regression alone carries no activation authority.
+
+
+The primary evaluator retains one canonical transaction/candidate rejection
+boundary in `preparationBoundaryRejection`. `terminalVerdict` invokes it before
+route or prospective acceptance checks. This pure boundary preserves the same
+ordered identity diagnostics and hard-gate reasons independently of installed
+artifacts, so tests can exercise rejection while current resources are
+unavailable. A nil rejection proves only passage through these checks; it never
+establishes quality acceptance, calibration or prepared-source admission. The
+actual evaluator still requires current fully qualified artifacts and exact
+prepared validation. No numeric policy or artifact-loading condition is relaxed.

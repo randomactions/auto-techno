@@ -726,13 +726,37 @@ package struct ProfessionalQualityPrimaryEvaluator:
         selected: AutonomousCandidateEvaluationVector,
         transaction: AutonomousCandidateEvaluationTransaction
     ) -> AutonomousCandidatePolicyVerdict {
+        if let rejection = Self.preparationBoundaryRejection(
+            selected: selected, transaction: transaction,
+            policyVersion: policyVersion, evaluatorVersion: evaluatorVersion) {
+            return rejection
+        }
+        guard profile.sampleRates.contains(selected.routeContinuation.sampleRate) else {
+            return AutonomousCandidatePolicyVerdict(
+                outcome: .qualificationUnavailable, decisionBasis: .unavailable,
+                reasonCodes: [.evaluatorUnavailableV1],
+                diagnosticDetails: ["assessment=unsupported-sample-rate"])
+        }
+        // This verdict creates the private prospective continuation only.
+        // Required prepared validation prevents it from admitting source PCM.
+        return prospectiveAcceptance(transaction)
+    }
+
+    /// The canonical transaction and candidate rejection boundary, independent
+    /// of installed calibration. Nil means only that these rejection checks
+    /// passed; it never supplies quality acceptance or prepared admission.
+    package static func preparationBoundaryRejection(
+        selected: AutonomousCandidateEvaluationVector,
+        transaction: AutonomousCandidateEvaluationTransaction,
+        policyVersion: String, evaluatorVersion: String
+    ) -> AutonomousCandidatePolicyVerdict? {
         let selectedAttemptMatches = transaction.selectedAttemptIndex.flatMap {
             transaction.attempts.indices.contains($0)
                 ? transaction.attempts[$0].vector == selected : nil
         } == true
         let transactionFailures = [
             transaction.isComplete ? nil : "transaction-incomplete",
-            transaction.engineVersion == profile.engineVersion
+            transaction.engineVersion == QualityQualificationContract.engineVersion
                 ? nil : "engine-version",
             transaction.policyVersion == policyVersion
                 ? nil : "policy-version",
@@ -756,15 +780,7 @@ package struct ProfessionalQualityPrimaryEvaluator:
         guard selected.hardGatesPassed else {
             return Self.hardGateRejectionVerdict(for: selected)
         }
-        guard profile.sampleRates.contains(selected.routeContinuation.sampleRate) else {
-            return AutonomousCandidatePolicyVerdict(
-                outcome: .qualificationUnavailable, decisionBasis: .unavailable,
-                reasonCodes: [.evaluatorUnavailableV1],
-                diagnosticDetails: ["assessment=unsupported-sample-rate"])
-        }
-        // This verdict creates the private prospective continuation only.
-        // Required prepared validation prevents it from admitting source PCM.
-        return prospectiveAcceptance(transaction)
+        return nil
     }
 
     private func prospectiveAcceptance(
