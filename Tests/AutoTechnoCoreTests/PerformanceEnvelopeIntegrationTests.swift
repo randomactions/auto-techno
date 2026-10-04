@@ -147,6 +147,171 @@ struct PerformanceEnvelopeIntegrationTests {
         let request: PhrasePreparationRequest
     }
 
+    // This is a diagnostic of the normal shared owner using an explicit
+    // retained model. It is neither installed-artifact qualification nor a
+    // substitute for full journey, long-horizon, callback or output evidence.
+    @MainActor
+    @Test("Export frozen calibrated continuation-chain resource observations",
+        .enabled(if: ProcessInfo.processInfo.environment["AUTOTECHNO_RUN_CONTINUOUS_PREPARATION_ENVELOPE"] == "1"))
+    func exportContinuousPreparationEnvelope() async throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["AUTOTECHNO_PERFORMANCE_BUILD_CONFIGURATION"] == "release" else {
+            throw EnvelopeError.releaseBuildRequired
+        }
+        let root = repositoryRoot
+        let acceptedHead = try #require(environment["AUTOTECHNO_CONTINUOUS_ENVELOPE_ACCEPTED_HEAD"])
+        let actualHead = try gitHead(root)
+        guard acceptedHead == actualHead,
+              try gitOutput(root, arguments: ["status", "--porcelain", "--untracked-files=all"]).isEmpty else {
+            throw EnvelopeError.invalidObservation
+        }
+        let sourceBefore = try sourceFingerprint(root)
+        let contractData = try Data(contentsOf: root.appendingPathComponent("docs/ROADMAP_EXECUTION_BASELINE.json"))
+        let contract = try #require(JSONSerialization.jsonObject(with: contractData) as? [String: Any])
+        let contractFingerprint = try #require(contract["snapshotFingerprint"] as? String)
+        let retained = root.appendingPathComponent("docs/local/reports/rms-trajectory-floor/fresh-qualification-7ef30ff")
+        let artifactNames = ["offline-profile.json", "continuous-adversarial-suite.json", "continuous-holdout-qualification.json"]
+        let artifactData = try artifactNames.map { try Data(contentsOf: retained.appendingPathComponent($0)) }
+        let artifacts = try ProfessionalQualityPrimaryArtifacts(profileData: artifactData[0],
+            adversarialSuiteData: artifactData[1], holdoutQualificationData: artifactData[2])
+        guard artifacts.profile.fingerprint == "4fb209bfb248d46b",
+              artifacts.evaluator.requiresPreparedValidation else { throw EnvelopeError.invalidObservation }
+        struct Entry: Decodable {
+            struct Planning: Decodable { let rootSeed: UInt64 }
+            let frozenPlanningEntry: Planning
+        }
+        let entryData = try Data(contentsOf: retained.appendingPathComponent("development-ordinal-777.json"))
+        let entry = try JSONDecoder().decode(Entry.self, from: entryData)
+        let output = root.appendingPathComponent("docs/local/reports/rms-trajectory-floor/continuous-preparation-envelope-" + acceptedHead.prefix(7))
+        guard !FileManager.default.fileExists(atPath: output.path) else { throw EnvelopeError.invalidObservation }
+        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        var observations: [[String: Any]] = []
+        let identity: [String: Any] = [
+            "schema": "autotechno-continuous-preparation-envelope-observations.v1",
+            "gitHead": acceptedHead, "sourceFingerprint": sourceBefore,
+            "contractBaselineFingerprint": contractFingerprint,
+            "buildConfiguration": "release", "engineVersion": QualityQualificationContract.engineVersion,
+            "modelScope": "retained-7ef30ff-mechanical-only", "profileFingerprint": artifacts.profile.fingerprint,
+            "artifactSha256": Dictionary(uniqueKeysWithValues: zip(artifactNames, artifactData.map(digest))),
+            "initialFixtureSha256": digest(entryData),
+            "clock": try JSONSerialization.jsonObject(with: JSONEncoder().encode(ClockIdentity())),
+            "memory": try JSONSerialization.jsonObject(with: JSONEncoder().encode(MemoryIdentity())),
+            "machine": try JSONSerialization.jsonObject(with: JSONEncoder().encode(machineIdentity())),
+            "trialPolicy": ["warmupCount": Self.warmupCount, "timedTrialCount": Self.timedTrialCount,
+                "sampleRates": [44_100, 48_000], "caseOrdering": ["development-ordinal-777-initial", "public-48300-planning-21"],
+                "selectionRule": "existing-positive-initial-and-required-child-mechanical-controls",
+                "warmupObservationsRetained": true],
+            "maximumReservedNumericBytes": AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount,
+            "runtimeActivation": false, "installedArtifactQualification": false,
+            "fullJourneyQualification": false, "longHorizonQualification": false,
+            "callbackOrPhysicalOutputQualification": false,
+        ]
+        func writeObservations(complete: Bool) throws {
+            var document = identity
+            document["executionComplete"] = complete
+            document["observations"] = observations
+            try JSONSerialization.data(withJSONObject: document, options: [.sortedKeys, .prettyPrinted])
+                .write(to: output.appendingPathComponent("raw-observations.json"), options: .atomic)
+        }
+        try writeObservations(complete: false)
+        for caseId in ["development-ordinal-777-initial", "public-48300-planning-21"] {
+            for rate in [44_100.0, 48_000.0] {
+                let request: PhrasePreparationRequest
+                if caseId == "public-48300-planning-21" {
+                    // This fixture is a planning-only checkpoint with empty DSP
+                    // history. Record refusal rather than claiming a full journey.
+                    request = IterativeSuccessorPreparationTests.sourceRequest(rate: rate)
+                } else {
+                    let state = AutonomousSessionDirector(rootSeed: entry.frozenPlanningEntry.rootSeed).initialState()
+                    let key = PhrasePreparationKey(sessionSeed: state.rootSeed, phraseIndex: state.phraseIndex,
+                        sampleRate: rate, channelCount: 2, routeRecovery: false,
+                        qualityRevision: state.quality.revision, qualityPolicyVersion: state.quality.policyVersion,
+                        qualityControllerFingerprint: state.quality.observedControllerStateFingerprint ?? state.quality.acceptedControllerStateFingerprint,
+                        routeGeneration: 0, incomingLiveMasterRevision: state.liveMasterHeadroom.revision,
+                        incomingLiveMasterStateFingerprint: state.liveMasterHeadroom.fingerprint,
+                        pendingLiveMasterProposalFingerprint: nil, liveEarliestEligibleFutureSample: nil, liveTargetStartSample: nil)
+                    request = PhrasePreparationRequest(key: key, sourceState: state, incomingLongHorizonState: nil,
+                        incomingRenderState: RenderState(), incomingGraphState: GeneratedDSPContinuationState(),
+                        previousGraph: nil, pendingLiveMasterBinding: nil)
+                }
+                for trial in -Self.warmupCount..<Self.timedTrialCount {
+                    guard try gitHead(root) == acceptedHead,
+                          try sourceFingerprint(root) == sourceBefore,
+                          try gitOutput(root, arguments: ["status", "--porcelain", "--untracked-files=all"]).isEmpty else {
+                        throw EnvelopeError.invalidObservation
+                    }
+                    let before = try processHighWaterBytes()
+                    let measured = await Task.detached(priority: .userInitiated) {
+                        let began = DispatchTime.now().uptimeNanoseconds
+                        let outcome = AutonomousPerformancePreparer.prepareDiagnosing(request: request,
+                            director: AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed),
+                            artifacts: artifacts, longHorizonArtifacts: nil)
+                        return (outcome, DispatchTime.now().uptimeNanoseconds - began)
+                    }.value
+                    let after = try processHighWaterBytes()
+                    var row: [String: Any] = ["caseId": caseId, "sampleRate": rate, "channelCount": 2,
+                        "trialIndex": trial, "isWarmup": trial < 0,
+                        "sourcePhraseIndex": request.sourceState.phraseIndex,
+                        "replayFingerprint": request.replayIdentity.fingerprint,
+                        "completePreparationNanoseconds": measured.1,
+                        "processHighWaterBytesBefore": before, "processHighWaterBytesAfter": after]
+                    if let phrase = measured.0.preparedPhrase {
+                        let nodes = [phrase] + phrase.retainedContinuations
+                        let budget = phrase.preparationChainResourceBudget
+                        let frames = phrase.prepared.audioPreflight.quality.analyzedFrameCount
+                        let duration = UInt64(Double(frames) / rate * 1_000_000_000)
+                        row["outcome"] = phrase.prepared.commitEligible ? "commit-eligible" : "calibrated-rejection"
+                        row["requiresQualifiedSuccessor"] = phrase.requiresQualifiedContinuation
+                        row["ownershipValid"] = phrase.continuationOwnershipIsValid
+                        row["audioDurationNanoseconds"] = duration
+                        row["preparationShorterThanRootDuration"] = measured.1 < duration
+                        row["renderedProductsRetained"] = nodes.count
+                        row["reservedPeakWorkingBytes"] = budget?.reservedPeakWorkingByteCount ?? NSNull() as Any
+                        row["retainedNumericBytes"] = budget?.retainedNumericByteCount ?? NSNull() as Any
+                        row["reservedSourceCount"] = budget?.sourceCount ?? NSNull() as Any
+                        row["reservedMaximumRenderPassCount"] = budget?.maximumRenderPassCount ?? NSNull() as Any
+                        row["qualityOutcome"] = String(describing: phrase.prepared.qualityDecision.outcome)
+                        row["qualityReasonCodes"] = phrase.prepared.qualityDecision.reasonCodes.map { String(describing: $0) }
+                        row["nodes"] = nodes.map { node -> [String: Any] in [
+                            "phraseIndex": node.request.sourceState.phraseIndex,
+                            "barCount": node.prepared.plan.barCount,
+                            "frameCount": node.prepared.audioPreflight.quality.analyzedFrameCount,
+                            "commitEligible": node.prepared.commitEligible,
+                            "requiresQualifiedSuccessor": node.requiresQualifiedContinuation,
+                            "sampleHash": node.prepared.audioPreflight.quality.sampleHash,
+                            "replayFingerprint": node.request.replayIdentity.fingerprint,
+                            "preparedOriginMatches": node.prepared.preparationReplayFingerprint == node.request.replayIdentity.fingerprint,
+                        ] }
+                        if phrase.prepared.commitEligible {
+                            guard phrase.continuationOwnershipIsValid, let budget,
+                                  budget.sourceCount == nodes.count,
+                                  budget.reservedPeakWorkingByteCount <= AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount,
+                                  !nodes.last!.requiresQualifiedContinuation else { throw EnvelopeError.invalidObservation }
+                        }
+                    } else {
+                        let failure = try #require(measured.0.failure)
+                        row["outcome"] = "preparation-refused"
+                        row["failureStage"] = failure.stage
+                        row["failureCode"] = failure.code
+                        row["failureDetails"] = failure.details
+                        // Refusal has no playable product or published budget;
+                        // do not invent rendered counts, PCM or reserved peaks.
+                    }
+                    observations.append(row)
+                    try writeObservations(complete: false)
+                    print("continuous preparation envelope \(caseId) \(Int(rate)) trial \(trial): \(row["outcome"]!)")
+                }
+            }
+        }
+        guard try gitHead(root) == acceptedHead, try sourceFingerprint(root) == sourceBefore,
+              try Data(contentsOf: root.appendingPathComponent("docs/ROADMAP_EXECUTION_BASELINE.json")) == contractData,
+              try artifactNames.map({ try Data(contentsOf: retained.appendingPathComponent($0)) }) == artifactData,
+              try Data(contentsOf: retained.appendingPathComponent("development-ordinal-777.json")) == entryData else {
+            throw EnvelopeError.invalidObservation
+        }
+        try writeObservations(complete: true)
+    }
+
     @MainActor
     @Test("Export a release-only bounded performance envelope")
     func exportEnvelope() throws {

@@ -860,7 +860,7 @@ struct IterativeSuccessorPreparationTests {
         #expect(root.prepared.preparedValidation?.hasRequiredMeasurements == true)
     }
 
-    private static func sourceRequest(rate: Double) -> PhrasePreparationRequest {
+    static func sourceRequest(rate: Double) -> PhrasePreparationRequest {
         let director = AutonomousSessionDirector(rootSeed: 48_300)
         var state = director.initialState()
         for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
