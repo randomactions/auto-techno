@@ -106,6 +106,8 @@ package final class PreparationWorkingStorageProbe: @unchecked Sendable {
     private var maxima: [String: NumericStorageSnapshot] = [:]
     package private(set) var valid = true
     package private(set) var observationCount = 0
+    /// Physical observations only; conditional maxima do not increment this map.
+    package private(set) var phaseObservationCounts: [String: Int] = [:]
     package var snapshots: [NumericStorageSnapshot] {
         maxima.keys.sorted().compactMap { maxima[$0] }
     }
@@ -123,8 +125,10 @@ package final class PreparationWorkingStorageProbe: @unchecked Sendable {
         let snapshot = inventory.snapshot(phase: phase, bar: bar)
         guard snapshot.valid else { valid = false; return }
         let observations = observationCount.addingReportingOverflow(1)
-        guard !observations.overflow else { valid = false; return }
+        let phaseCount = (phaseObservationCounts[phase] ?? 0).addingReportingOverflow(1)
+        guard !observations.overflow, !phaseCount.overflow else { valid = false; return }
         observationCount = observations.partialValue
+        phaseObservationCounts[phase] = phaseCount.partialValue
         for name in names {
             let value = name == phase ? snapshot : NumericStorageSnapshot(
                 phase: name, observedPhase: phase, bar: snapshot.bar,
@@ -219,6 +223,17 @@ package struct PreparationStorageObservation {
     package func retainingMaximum(_ phase: String?) -> PreparationStorageObservation {
         PreparationStorageObservation(probe: probe, prefix: prefix, bar: bar,
             additionalMaximumPhase: phase, registerOuter: registerOuter)
+    }
+
+    /// Joins live owners without consuming a new phase namespace. The closure
+    /// must exclude mutable buffers borrowed by the observed helper.
+    package func joiningOwners(
+        _ register: @escaping (NumericStorageInventory) -> Void) -> PreparationStorageObservation {
+        PreparationStorageObservation(probe: probe, prefix: prefix, bar: bar,
+            additionalMaximumPhase: additionalMaximumPhase) { inventory in
+            self.registerOuter(inventory)
+            register(inventory)
+        }
     }
 
     package func extending(_ component: String,

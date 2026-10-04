@@ -972,9 +972,10 @@ struct IterativeSuccessorPreparationTests {
                     } })
                     #expect(!probe.snapshots.contains { $0.phase == "chain.reduced" })
                 }
-                let report: [String: Any] = ["schema": "autotechno-chain-storage-control.v1",
+                let report: [String: Any] = ["schema": "autotechno-chain-storage-control.v2",
                     "sampleRate": rate, "sources": sourceIdentities.count, "admitted": outcome.preparedPhrase != nil,
                     "selectedCorrection": mode == .forceCorrection, "observations": probe.observationCount,
+                    "phaseObservationCounts": probe.phaseObservationCounts,
                     "snapshots": try JSONSerialization.jsonObject(with: JSONEncoder().encode(probe.snapshots)),
                     "exactOutcomeProductsStateAndReservation": exact,
                     "failureStage": outcome.failure?.stage ?? "none", "failureCode": outcome.failure?.code ?? "none",

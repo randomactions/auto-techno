@@ -197,8 +197,14 @@ package enum PercussionEchoTextureVoice {
         returnStem: inout [Float],
         articulation: PercussionEchoTextureArticulation?,
         bpm: Double,
-        sampleRate: Double
+        sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil
     ) -> PercussionEchoTextureRenderEvidence {
+        storageObservation?.observe("helper-working") { inventory in
+            inventory.register(source, owner: "echo.source")
+            inventory.register(returnStem, owner: "echo.return")
+            withExtendedLifetime((source, returnStem)) {}
+        }
         let frameCount = min(source.count, returnStem.count)
         let neutralInputHash = ExactPCMFingerprint.mono([])
         guard let articulation,
@@ -310,6 +316,12 @@ package enum PercussionEchoTextureVoice {
         }
 
         if articulation.relation == .gatedEcho {
+            storageObservation?.observe("helper-working") { inventory in
+                inventory.register(source, owner: "echo.source")
+                inventory.register(returnStem, owner: "echo.return")
+                inventory.register(delay, owner: "echo.delay")
+                withExtendedLifetime((source, returnStem, delay)) {}
+            }
             for index in 0..<frameCount {
                 let read = delay[delayIndex]
                 let admittedInput = geometryValid &&
@@ -347,6 +359,13 @@ package enum PercussionEchoTextureVoice {
             }
         } else {
             var forwardWet = [Float](repeating: 0, count: frameCount)
+            storageObservation?.observe("helper-working") { inventory in
+                inventory.register(source, owner: "echo.source")
+                inventory.register(returnStem, owner: "echo.return")
+                inventory.register(delay, owner: "echo.delay")
+                inventory.register(forwardWet, owner: "echo.forwardWet")
+                withExtendedLifetime((source, returnStem, delay, forwardWet)) {}
+            }
             for index in 0..<frameCount {
                 let read = delay[delayIndex]
                 let admittedInput = geometryValid &&
@@ -478,8 +497,15 @@ package enum PercussionEchoTextureVoice {
         leftReturn: inout [Float],
         rightReturn: inout [Float],
         articulation: PercussionEchoTextureArticulation?,
-        sampleRate: Double
+        sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil
     ) -> SpatialDustRenderEvidence {
+        storageObservation?.observe("helper-working") { inventory in
+            inventory.register(source, owner: "dust.source")
+            inventory.register(leftReturn, owner: "dust.leftReturn")
+            inventory.register(rightReturn, owner: "dust.rightReturn")
+            withExtendedLifetime((source, leftReturn, rightReturn)) {}
+        }
         let frameCount = min(source.count, leftReturn.count, rightReturn.count)
         guard let articulation,
               articulation.relation == .spatialDust,
@@ -556,6 +582,14 @@ package enum PercussionEchoTextureVoice {
         var finite = highPassCoefficient.isFinite &&
             lowPassCoefficient.isFinite && lowBandCoefficient.isFinite
 
+        storageObservation?.observe("helper-working") { inventory in
+            inventory.register(source, owner: "dust.source")
+            inventory.register(leftReturn, owner: "dust.leftReturn")
+            inventory.register(rightReturn, owner: "dust.rightReturn")
+            inventory.register(leftDelay, owner: "dust.leftDelay")
+            inventory.register(rightDelay, owner: "dust.rightDelay")
+            withExtendedLifetime((source, leftReturn, rightReturn, leftDelay, rightDelay)) {}
+        }
         for frame in 0..<frameCount {
             let sourceSample = source[frame]
             let leftSource = sourceSample * Float(leftDrive)
@@ -793,6 +827,27 @@ package enum PulseEchoReturnDriveContract {
 }
 
 package enum VoiceRenderer {
+    /// Synchronous diagnostic owners, released before the next mutable stage.
+    /// Mutable helper outputs are excluded before borrowing them as inout.
+    private final class StorageOwners {
+        struct Buffer { let name: String; let samples: [Float] }
+        let buffers: [Buffer]
+        let checkedOut: RenderBuffers
+        let state: RenderState
+        let bassStarts: [Int]
+        init(buffers: [Buffer], checkedOut: RenderBuffers, state: RenderState, bassStarts: [Int]) {
+            self.buffers = buffers; self.checkedOut = checkedOut
+            self.state = state; self.bassStarts = bassStarts
+        }
+        @inline(never) func register(_ inventory: NumericStorageInventory) {
+            checkedOut.registerStorage(inventory: inventory, owner: "voice.checked-out")
+            for buffer in buffers { inventory.register(buffer.samples, owner: "voice." + buffer.name) }
+            inventory.register(bassStarts, owner: "voice.renderedBassStartFrames")
+            AutonomousTypedFingerprint.registerRenderStorage(state, inventory: inventory, owner: "voice.state")
+            withExtendedLifetime(self) {}
+        }
+    }
+
     package static func timingOffsetInSteps(for voice: EnsembleVoice, step: Int,
                                             dna: SceneDNA) -> Double {
         let swings = voice == .bass || voice == .percussion || voice == .openHat ||
@@ -1249,22 +1304,73 @@ package enum VoiceRenderer {
             modalPercussionRenderEvidence.events.allSatisfy {
                 $0.articulation.use == .foundationCompanion
             }
-        let percussionEchoTextureRenderEvidence =
+        // Prepare large value projections before descending into the helper.
+        // Its caller retains only this reference while visiting outer owners.
+        @inline(never)
+        func storageOwners(excluding: Set<String> = []) -> StorageOwners {
+            var buffers: [StorageOwners.Buffer] = []
+            func add(_ samples: [Float], name: String) {
+                if !excluding.contains(name) { buffers.append(.init(name: name, samples: samples)) }
+            }
+            add(output, name: "output")
+            add(kickBus, name: "kickBus")
+            add(kickDetectorBus, name: "kickDetectorBus")
+            add(foundationStem, name: "foundationStem")
+            add(modalPercussionStem, name: "modalPercussionStem")
+            add(percussionStem, name: "percussionStem")
+            add(percussionTextureStem, name: "percussionTextureStem")
+            add(spatialDustLeftStem, name: "spatialDustLeftStem")
+            add(spatialDustRightStem, name: "spatialDustRightStem")
+            add(audioSliceStem, name: "audioSliceStem")
+            add(polyphonicPadStem, name: "polyphonicPadStem")
+            add(upperTonalStem, name: "upperTonalStem")
+            add(atmosphereStem, name: "atmosphereStem")
+            add(transitionStem, name: "transitionStem")
+            add(resonantAnchorStem, name: "resonantAnchorStem")
+            add(detunedCompanionStem, name: "detunedCompanionStem")
+            add(shadowTimingStem, name: "shadowTimingStem")
+            add(responseTimingStem, name: "responseTimingStem")
+            add(resonantMonoInstrumentStem, name: "resonantMonoInstrumentStem")
+            add(resonantMonoModulationStem, name: "resonantMonoModulationStem")
+            add(tonalMotionInstrumentStem, name: "tonalMotionInstrumentStem")
+            add(tonalEnvelopeExpansionStem, name: "tonalEnvelopeExpansionStem")
+            add(spectralTextureInstrumentStem, name: "spectralTextureInstrumentStem")
+            add(spectralTextureClusterStem, name: "spectralTextureClusterStem")
+            add(spectralTextureHarmonicTailStem, name: "spectralTextureHarmonicTailStem")
+            add(spectralTextureIndefinitePitchStem, name: "spectralTextureIndefinitePitchStem")
+            add(maskingFoundationBus, name: "maskingFoundationBus")
+            add(synthBus, name: "synthBus")
+            add(pulseEchoSendBus, name: "pulseEchoSendBus")
+            add(spatialReverbSendBus, name: "spatialReverbSendBus")
+            return StorageOwners(buffers: buffers, checkedOut: checkedOut,
+                state: state, bassStarts: renderedBassStartFrames)
+        }
+        func observingHelper<Result>(excluding: Set<String>,
+            _ body: (PreparationStorageObservation?) -> Result) -> Result {
+            guard let storageObservation else { return body(nil) }
+            let owners = storageOwners(excluding: excluding)
+            return body(storageObservation.joiningOwners { owners.register($0) })
+        }
+        let percussionEchoTextureRenderEvidence = observingHelper(excluding: ["percussionTextureStem"]) { observation in
             PercussionEchoTextureVoice.render(
                 source: percussionStem,
                 returnStem: &percussionTextureStem,
                 articulation: resolved.percussionEchoTexture,
                 bpm: scene.bpm,
-                sampleRate: sampleRate
+                sampleRate: sampleRate,
+                storageObservation: observation
             )
-        let spatialDustRenderEvidence =
+        }
+        let spatialDustRenderEvidence = observingHelper(excluding: ["spatialDustLeftStem", "spatialDustRightStem"]) { observation in
             PercussionEchoTextureVoice.renderSpatialDust(
                 source: percussionStem,
                 leftReturn: &spatialDustLeftStem,
                 rightReturn: &spatialDustRightStem,
                 articulation: resolved.percussionEchoTexture,
-                sampleRate: sampleRate
+                sampleRate: sampleRate,
+                storageObservation: observation
             )
+        }
         let audioSlicePlan = synthPerformance.composition.audioSlice
         let audioSliceRenderEvidence: AudioSliceRenderEvidence
         if let memorySource = audioSlicePlan?.resampledMemorySource {
@@ -1284,6 +1390,12 @@ package enum VoiceRenderer {
                 morphology: memorySource.kickMorphology,
                 sourceDynamics: &memoryDynamics
             )
+            storageObservation?.observe("helper-working") { inventory in
+                let owners = storageOwners()
+                owners.register(inventory)
+                inventory.register(regeneratedMemory, owner: "memory.regenerated")
+                withExtendedLifetime((owners, regeneratedMemory)) {}
+            }
             audioSliceRenderEvidence = AudioSliceRenderer.render(
                 source: regeneratedMemory,
                 output: &audioSliceStem,
@@ -2246,56 +2358,13 @@ package enum VoiceRenderer {
                                    detunedCompanionSamples: detunedCompanionStem,
                                    diagnosticRoleStemCapture: roleStemCapture)
         storageObservation?.observe("product") { inventory in
-            checkedOut.registerStorage(inventory: inventory, owner: "voice.checked-out")
+            let owners = storageOwners()
+            owners.register(inventory)
             inventory.register(rendered, owner: "voice.product")
-            inventory.register(output, owner: "voice.output")
-            inventory.register(kickBus, owner: "voice.kickBus")
-            inventory.register(kickDetectorBus, owner: "voice.kickDetectorBus")
-            inventory.register(foundationStem, owner: "voice.foundationStem")
-            inventory.register(modalPercussionStem, owner: "voice.modalPercussionStem")
-            inventory.register(percussionStem, owner: "voice.percussionStem")
-            inventory.register(percussionTextureStem, owner: "voice.percussionTextureStem")
-            inventory.register(spatialDustLeftStem, owner: "voice.spatialDustLeftStem")
-            inventory.register(spatialDustRightStem, owner: "voice.spatialDustRightStem")
-            inventory.register(audioSliceStem, owner: "voice.audioSliceStem")
-            inventory.register(polyphonicPadStem, owner: "voice.polyphonicPadStem")
-            inventory.register(upperTonalStem, owner: "voice.upperTonalStem")
-            inventory.register(atmosphereStem, owner: "voice.atmosphereStem")
-            inventory.register(transitionStem, owner: "voice.transitionStem")
-            inventory.register(resonantAnchorStem, owner: "voice.resonantAnchorStem")
-            inventory.register(detunedCompanionStem, owner: "voice.detunedCompanionStem")
-            inventory.register(shadowTimingStem, owner: "voice.shadowTimingStem")
-            inventory.register(responseTimingStem, owner: "voice.responseTimingStem")
-            inventory.register(resonantMonoInstrumentStem, owner: "voice.resonantMonoInstrumentStem")
-            inventory.register(resonantMonoModulationStem, owner: "voice.resonantMonoModulationStem")
-            inventory.register(tonalMotionInstrumentStem, owner: "voice.tonalMotionInstrumentStem")
-            inventory.register(tonalEnvelopeExpansionStem, owner: "voice.tonalEnvelopeExpansionStem")
-            inventory.register(spectralTextureInstrumentStem, owner: "voice.spectralTextureInstrumentStem")
-            inventory.register(spectralTextureClusterStem, owner: "voice.spectralTextureClusterStem")
-            inventory.register(spectralTextureHarmonicTailStem, owner: "voice.spectralTextureHarmonicTailStem")
-            inventory.register(spectralTextureIndefinitePitchStem, owner: "voice.spectralTextureIndefinitePitchStem")
-            inventory.register(maskingFoundationBus, owner: "voice.maskingFoundationBus")
-            inventory.register(synthBus, owner: "voice.synthBus")
-            inventory.register(pulseEchoSendBus, owner: "voice.pulseEchoSendBus")
-            inventory.register(spatialReverbSendBus, owner: "voice.spatialReverbSendBus")
             inventory.register(spatialFDNScratch, owner: "voice.spatialFDNScratch")
-            inventory.register(renderedBassStartFrames, owner: "voice.renderedBassStartFrames")
             inventory.register(kickOnsets, owner: "voice.kickOnsets")
             inventory.register(upperTonalOnsets, owner: "voice.upperTonalOnsets")
-            AutonomousTypedFingerprint.registerRenderStorage(state,
-                inventory: inventory, owner: "voice.state")
-            // Explicit last uses keep all observed locals alive for the snapshot.
-            withExtendedLifetime((
-                output, kickBus, kickDetectorBus, foundationStem,
-                modalPercussionStem, percussionStem, percussionTextureStem, spatialDustLeftStem,
-                spatialDustRightStem, audioSliceStem, polyphonicPadStem, upperTonalStem,
-                atmosphereStem, transitionStem, resonantAnchorStem, detunedCompanionStem,
-                shadowTimingStem, responseTimingStem, resonantMonoInstrumentStem, resonantMonoModulationStem,
-                tonalMotionInstrumentStem, tonalEnvelopeExpansionStem, spectralTextureInstrumentStem, spectralTextureClusterStem,
-                spectralTextureHarmonicTailStem, spectralTextureIndefinitePitchStem, maskingFoundationBus, synthBus,
-                pulseEchoSendBus, spatialReverbSendBus, spatialFDNScratch, renderedBassStartFrames,
-                checkedOut, rendered, state, kickOnsets, upperTonalOnsets
-            )) {}
+            withExtendedLifetime((owners, rendered, spatialFDNScratch, kickOnsets, upperTonalOnsets)) {}
         }
         swap(&output, &checkedOut.output)
         swap(&kickBus, &checkedOut.kick)

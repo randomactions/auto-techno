@@ -2298,3 +2298,42 @@ ceiling, extra corrective pass, production seal, activation or completed native
 selected-root/exact-child32-tap capacity follows. Every existing primary, actual
 Long18, Phase1, lifecycle, shared-envelope, deadline/RAM and physical-output gate
 continues to apply before roadmap completion and publication.
+
+
+## Synchronous echo, dust and memory helper storage
+
+The existing detached VoiceRenderer observer joins the actual caller's local
+buses, checked-out workspace, rendered bass starts and canonical typed RenderState
+with live PercussionEchoTextureVoice owners. Gated echo registers its delay;
+anticipation swell registers that delay and its full-frame reverse source;
+spatial dust registers both independent delay arrays. Regenerated memory-source
+PCM is observed after the existing canonical kick render and before AudioSlice
+consumption. These are the existing helpers and actual arrays, with unchanged
+PCM arithmetic and evidence. No musical parameter or alternate renderer is added.
+
+One private synchronous owner uses the same caller inventory for helper and
+product boundaries. It excludes mutable helper return buffers before their inout
+borrow; the callee registers those actual buffers. Owner scopes expire before the
+next mutable stage. The default nil path builds no inventory or owner sidecar.
+The canonical typed visitor remains the only continuation-field inventory.
+
+Helper lifetimes share one named helper-working maximum in each protected/full
+voice namespace. Bounded per-phase physical observation counts retain coverage
+when a larger helper snapshot replaces a smaller one; a conditional corrective
+maximum reuses the same physical snapshot and does not double-count it. The
+existing32-phase and4096-owner bounds remain unchanged. Exhaustion invalidates
+the diagnostic before any owner registration and preserves exact PCM/evidence.
+Native direct controls independently cover neutral, gated echo, anticipation
+swell and spatial dust, including delay/reverse geometry, caller/source aliases
+and exhausted fallback. Native whole-render controls retain exact original phase
+counts and compare ordinary PCM, hold products and typed ending continuation.
+
+These observations remain partial: kick dry-event scratch, AudioSlice internal
+work, other helper/analyzer/node and standard-library transients, reference-owner
+metadata, heap/allocator overhead, waveform envelopes, encoding/writer buffers,
+whole-process RSS and deadlines are not a complete bound. Instrumentation may
+extend observed lifetimes. No capture charge,128MiB ceiling, two-pass limit,
+native selected-root/exact-child admission, runtime activation or quality
+promotion is changed or proved by these observations. AT-0039's full native
+primary, actual Long18, all lifecycle/Phase1/aggregate, capacity/deadline and
+physical-output requirements remain incomplete until independently qualified.

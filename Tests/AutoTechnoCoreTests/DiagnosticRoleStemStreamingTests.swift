@@ -160,6 +160,93 @@ struct DiagnosticRoleStemStreamingTests {
             })
     }
 
+    @Test("Native echo and dust helper observations preserve PCM, evidence and exhausted fallback",
+          arguments: [44_100.0, 48_000.0])
+    func nativeHelperStorage(sampleRate: Double) throws {
+        let frames = Int((240 / AutonomousSessionDirector.bpm * sampleRate).rounded())
+        let source: [Float] = (0..<frames).map { index in
+            Float(sin(Double(index) * 0.031) * exp(-Double(index % 4096) / 420) * 0.14)
+        }
+        let retained: [Float] = [0.3, 0.2, 0.1]
+        let cases: [PercussionEchoTextureArticulation?] = [nil,
+            .init(relation: .gatedEcho, inputStep: 3, outputStartStep: 7, outputEndStep: 11),
+            .init(relation: .anticipationSwell, inputStep: 3, outputStartStep: 4, outputEndStep: 12),
+            .init(relation: .spatialDust, inputStep: 1, outputStartStep: 0, outputEndStep: 16,
+                worldID: 91, cadencePhase: 1, gapPhase: 3, dominantSide: .left)]
+        for (index, articulation) in cases.enumerated() {
+            var ordinary = [Float](repeating: 0, count: frames)
+            var ordinaryLeft = ordinary, ordinaryRight = ordinary
+            let ordinaryEcho = PercussionEchoTextureVoice.render(source: source, returnStem: &ordinary,
+                articulation: articulation, bpm: AutonomousSessionDirector.bpm, sampleRate: sampleRate)
+            let ordinaryDust = PercussionEchoTextureVoice.renderSpatialDust(source: source,
+                leftReturn: &ordinaryLeft, rightReturn: &ordinaryRight,
+                articulation: articulation, sampleRate: sampleRate)
+            var observed = [Float](repeating: 0, count: frames)
+            var observedLeft = observed, observedRight = observed
+            let probe = PreparationWorkingStorageProbe()
+            let scope = PreparationStorageObservation(probe: probe, prefix: "helper", bar: index,
+                additionalMaximumPhase: "corrective-overlap") { inventory in
+                inventory.register(source, owner: "outer.source")
+                inventory.register(retained, owner: "outer.retained")
+                withExtendedLifetime((source, retained)) {}
+            }
+            let echo = PercussionEchoTextureVoice.render(source: source, returnStem: &observed,
+                articulation: articulation, bpm: AutonomousSessionDirector.bpm,
+                sampleRate: sampleRate, storageObservation: scope)
+            let dust = PercussionEchoTextureVoice.renderSpatialDust(source: source,
+                leftReturn: &observedLeft, rightReturn: &observedRight,
+                articulation: articulation, sampleRate: sampleRate, storageObservation: scope)
+            #expect(observed == ordinary && observedLeft == ordinaryLeft && observedRight == ordinaryRight)
+            #expect(echo == ordinaryEcho && dust == ordinaryDust)
+            let active = echo.active || dust.active
+            #expect(active == (index != 0))
+            #expect(probe.valid && probe.observationCount == (active ? 3 : 2))
+            #expect(probe.phaseObservationCounts == ["helper.helper-working": active ? 3 : 2])
+            let snapshot = try #require(probe.snapshots.first { $0.phase == "helper.helper-working" })
+            #expect(snapshot.ownerRecords.contains { $0.owner == "outer.retained" && $0.elementCount == 3 })
+            let expectedTemps: [String: Int]
+            if index == 1 { expectedTemps = ["echo.delay": max(1, Int((Double(frames) / 16).rounded()))] }
+            else if index == 2 { expectedTemps = ["echo.delay": max(1, Int((Double(frames) / 16).rounded())), "echo.forwardWet": frames] }
+            else if index == 3 { expectedTemps = ["dust.leftDelay": max(1, Int((Double(frames) / 16).rounded())),
+                "dust.rightDelay": max(1, Int((Double(frames) / 16 * 1.375).rounded()))] }
+            else { expectedTemps = [:] }
+            for (owner, count) in expectedTemps {
+                let record = try #require(snapshot.ownerRecords.first { $0.owner == owner })
+                #expect(record.elementCount == count && record.elementCapacity >= count && record.elementStride == 4)
+                #expect(record.capacityBytes == record.elementCapacity * 4 && record.aliasOf == nil)
+            }
+            let innerSource = try #require(snapshot.ownerRecords.first { $0.owner == "echo.source" || $0.owner == "dust.source" })
+            #expect(innerSource.aliasOf == "outer.source")
+            let exhausted = PreparationWorkingStorageProbe()
+            for slot in 0..<PreparationWorkingStorageProbe.maximumPhaseCount {
+                exhausted.observe(phase: "occupied-\(slot)", bar: slot) { _ in }
+            }
+            let beforeCounts = exhausted.phaseObservationCounts
+            var outerVisits = 0
+            let exhaustedScope = PreparationStorageObservation(probe: exhausted, prefix: "overflow", bar: index) { _ in outerVisits += 1 }
+            var refused = [Float](repeating: 0, count: frames), refusedLeft = refused, refusedRight = refused
+            let refusedEcho = PercussionEchoTextureVoice.render(source: source, returnStem: &refused,
+                articulation: articulation, bpm: AutonomousSessionDirector.bpm,
+                sampleRate: sampleRate, storageObservation: exhaustedScope)
+            let refusedDust = PercussionEchoTextureVoice.renderSpatialDust(source: source,
+                leftReturn: &refusedLeft, rightReturn: &refusedRight,
+                articulation: articulation, sampleRate: sampleRate, storageObservation: exhaustedScope)
+            #expect(!exhausted.valid && outerVisits == 0 && exhausted.observationCount == 32)
+            #expect(exhausted.phaseObservationCounts == beforeCounts)
+            #expect(refused == ordinary && refusedLeft == ordinaryLeft && refusedRight == ordinaryRight)
+            #expect(refusedEcho == ordinaryEcho && refusedDust == ordinaryDust)
+            let report: [String: Any] = ["schema": "autotechno-helper-storage-control.v1",
+                "sampleRate": sampleRate, "caseIndex": index, "frames": frames,
+                "observations": probe.observationCount, "phaseObservationCounts": probe.phaseObservationCounts,
+                "expectedTemporaryCounts": expectedTemps,
+                "exactPCMAndEvidence": true, "exhaustedObserverPreservesOutput": true,
+                "snapshots": try JSONSerialization.jsonObject(with: JSONEncoder().encode(probe.snapshots)),
+                "completeWorkingSetQualification": false, "instrumentationMayExtendObservedLifetimes": true]
+            print("AUTOTECHNO_HELPER_STORAGE_CONTROL " + String(decoding:
+                try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]), as: UTF8.self))
+        }
+    }
+
     @Test("Sixteen native bars retain bounded capture storage while exporting every tap",
           arguments: [44_100.0, 48_000.0])
     func nativeBoundedCapture(sampleRate: Double) throws {
@@ -184,12 +271,31 @@ struct DiagnosticRoleStemStreamingTests {
             candidate.blocks.map { ExactPCMFingerprint.stereo(left: $0.left, right: $0.right) }
         } == reference.variants)
         let nodeCount = DSPGraphGenerator.safePlan(sessionSeed: 42).nodes.count
-        #expect(storageProbe.valid && storageProbe.observationCount == plan.barCount * (9 + 2 * nodeCount))
+        let activeHelperBars = result.blocks.filter {
+            $0.percussionEchoTextureRenderEvidence.active || $0.spatialDustRenderEvidence.active
+        }.count
+        let memoryBars = result.blocks.filter {
+            $0.synthPerformance.composition.audioSlice?.resampledMemorySource != nil
+        }.count
+        let helperObservations = plan.barCount * 4 + (activeHelperBars + memoryBars) * 2
+        #expect(storageProbe.valid && storageProbe.observationCount ==
+            plan.barCount * (9 + 2 * nodeCount) + helperObservations)
+        var expectedCounts: [String: Int] = [:]
+        for phase in ["bar-delivery", "full-voice-return", "full-voice.product",
+            "generated-graph.current.mixed", "generated-graph.output", "generated-graph.split",
+            "graph-pump-return", "protected-voice-return", "protected-voice.product"] {
+            expectedCounts[phase] = plan.barCount
+        }
+        expectedCounts["generated-graph.current.branches"] = plan.barCount * nodeCount
+        expectedCounts["generated-graph.current.node-return"] = plan.barCount * nodeCount
+        expectedCounts["full-voice.helper-working"] = plan.barCount * 2 + activeHelperBars + memoryBars
+        expectedCounts["protected-voice.helper-working"] = plan.barCount * 2 + activeHelperBars + memoryBars
+        #expect(storageProbe.phaseObservationCounts == expectedCounts)
         let snapshots = storageProbe.snapshots
-        #expect(snapshots.map(\.phase) == ["bar-delivery", "full-voice-return", "full-voice.product",
+        #expect(snapshots.map(\.phase) == ["bar-delivery", "full-voice-return", "full-voice.helper-working", "full-voice.product",
             "generated-graph.current.branches", "generated-graph.current.mixed",
             "generated-graph.current.node-return", "generated-graph.output", "generated-graph.split",
-            "graph-pump-return", "protected-voice-return", "protected-voice.product"])
+            "graph-pump-return", "protected-voice-return", "protected-voice.helper-working", "protected-voice.product"])
         #expect(snapshots.allSatisfy { $0.valid && $0.uniqueBufferCapacityBytes > 0 &&
             $0.typedMetadataHeadroomBytes > 0 && $0.ownerRecords.contains { $0.aliasOf != nil } })
         for snapshot in snapshots {
@@ -198,6 +304,13 @@ struct DiagnosticRoleStemStreamingTests {
                     $0.elementStride == 8 && $0.elementCount > 0 })
                 #expect(snapshot.ownerRecords.contains { $0.owner == "voice.spatialDustLeftStem" })
                 #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("outer.continuation.") })
+            } else if snapshot.phase.hasSuffix(".helper-working") {
+                #expect(snapshot.ownerRecords.contains { $0.owner == "voice.checked-out.output" })
+                #expect(snapshot.ownerRecords.contains { $0.owner == "voice.output" })
+                #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("voice.state.") })
+                #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("outer.continuation.") })
+                #expect(!snapshot.ownerRecords.contains { $0.owner == "voice.percussionTextureStem" } ||
+                    snapshot.ownerRecords.contains { $0.owner.hasPrefix("dust.") || $0.owner == "memory.regenerated" })
             } else if snapshot.phase.hasPrefix("generated-graph.") {
                 #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("outer.workspace.") })
                 #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("outer.state.") })
@@ -211,9 +324,13 @@ struct DiagnosticRoleStemStreamingTests {
         #expect(delivery.ownerRecords.contains { $0.owner.hasPrefix("hold.") })
         let snapshotJSON = try JSONEncoder().encode(snapshots)
         let storageControl: [String: Any] = [
-            "schema": "autotechno-render-inner-storage-control.v1",
+            "schema": "autotechno-render-inner-storage-control.v2",
             "sampleRate": sampleRate, "barCount": plan.barCount,
             "observations": storageProbe.observationCount,
+            "phaseObservationCounts": storageProbe.phaseObservationCounts,
+            "expectedOriginalPhaseCounts": expectedCounts.filter { !$0.key.hasSuffix(".helper-working") },
+            "expectedHelperObservations": helperObservations,
+            "activeHelperBars": activeHelperBars, "memorySourceBars": memoryBars,
             "snapshots": try JSONSerialization.jsonObject(with: snapshotJSON),
             "exactPCMStateAndHoldProducts": true,
             "completeWorkingSetQualification": false,
@@ -410,6 +527,7 @@ struct DiagnosticRoleStemStreamingTests {
             inventory.addTypedMetadataHeadroom(10)
         }
         #expect(probe.valid && probe.observationCount == 3)
+        #expect(probe.phaseObservationCounts == ["first": 2, "second": 1])
         #expect(probe.snapshots.count == 2)
         #expect(probe.snapshots.allSatisfy { $0.uniqueBufferCapacityBytes == samples.capacity * 4 })
         #expect(probe.snapshots.first { $0.phase == "first" }?.bar == 2)
@@ -426,6 +544,7 @@ struct DiagnosticRoleStemStreamingTests {
         let larger = [Float](repeating: 0, count: 64)
         grouped.observe(phase: "render", bar: 1) { $0.register(larger, owner: "later-child") }
         #expect(grouped.valid && grouped.observationCount == 2 && grouped.snapshots.count == 2)
+        #expect(grouped.phaseObservationCounts == ["render": 2])
         let conditional = try #require(grouped.snapshots.first { $0.phase == "correction" })
         #expect(conditional.observedPhase == "render" && conditional.bar == 0 &&
             conditional.ownerRecords.first?.owner == "corrective-owner")
