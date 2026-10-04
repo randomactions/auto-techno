@@ -881,6 +881,8 @@ package final class PreparedAutonomousPhrase: Sendable {
     package let qualityDiagnosticDetails: [String]
     /// Detached validation is mandatory only for evaluators that request it.
     /// A prospective product with no proof cannot enter transport.
+    /// Exact shared request origin; omitted by callers outside that owner.
+    package let preparationReplayFingerprint: String?
     package let preparedValidationRequired: Bool
     package let preparedValidation: AutonomousCandidatePreparedValidation?
     /// Cached once by the private initializer. The legacy path incurs no new
@@ -925,6 +927,7 @@ package final class PreparedAutonomousPhrase: Sendable {
         liveTargetStartSample: Int64?,
         correctionRenderCount: Int,
         usedHomeTimbreCorrection: Bool,
+        preparationReplayFingerprint: String? = nil,
         preparedValidationRequired: Bool = false,
         preparedValidation: AutonomousCandidatePreparedValidation? = nil
     ) {
@@ -955,13 +958,15 @@ package final class PreparedAutonomousPhrase: Sendable {
         self.liveTargetStartSample = liveTargetStartSample
         self.correctionRenderCount = correctionRenderCount
         self.usedHomeTimbreCorrection = usedHomeTimbreCorrection
+        self.preparationReplayFingerprint = preparationReplayFingerprint
         self.preparedValidationRequired = preparedValidationRequired
         self.preparedValidation = preparedValidation
         preparedValidationSourceIdentityFingerprint = preparedValidationRequired
             ? ProfessionalQualityModalSuccessorEvidence.preparedValidationIdentity(
                 planFingerprint: selectedCandidateEvidence.planFingerprint,
                 transaction: boundCandidateEvaluation.transaction, commit: commitProvenance,
-                incomingQuality: incomingQualityState, outgoingQuality: qualityContinuationState)
+                incomingQuality: incomingQualityState, outgoingQuality: qualityContinuationState,
+                preparationReplayFingerprint: preparationReplayFingerprint)
             : nil
     }
 
@@ -1359,6 +1364,7 @@ package protocol AutonomousCandidateEvaluating: Sendable {
     var policyVersion: String { get }
     var evaluatorVersion: String { get }
     var requiresPreparedValidation: Bool { get }
+    var preparationReplayFingerprint: String? { get }
 
     /// Invoked once off the callback, before a required-validation source can
     /// escape preparation. Nil preserves unavailable qualification.
@@ -1379,6 +1385,7 @@ package protocol AutonomousCandidateEvaluating: Sendable {
 }
 
 package extension AutonomousCandidateEvaluating {
+    var preparationReplayFingerprint: String? { nil }
     var requiresPreparedValidation: Bool { false }
 
     func preparedValidation(
@@ -1405,6 +1412,8 @@ package final class AutonomousCandidatePreparedPreview: Sendable {
         source.selectedCandidateEvidence
     }
     package var transaction: AutonomousCandidateEvaluationTransaction { source.candidateEvaluation }
+    package var liveTargetStartSample: Int64? { source.liveTargetStartSample }
+    package var preparationReplayFingerprint: String? { source.preparationReplayFingerprint }
     package var candidateEvaluationFingerprint: String { source.candidateEvaluationFingerprint }
     package var audioPreflight: PhraseAudioPreflight { source.audioPreflight }
     package var longHorizonEffectDoseEvidence: LongHorizonEffectDosePhraseEvidence? {
@@ -3162,6 +3171,11 @@ package enum AutonomousPhrasePreparer {
         evaluator: E,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhrasePreparationOutcome {
+        let replayFingerprint = evaluator.preparationReplayFingerprint
+        guard replayFingerprint.map(fingerprintIsCanonical) ?? true else {
+            return .failed(.init(stage: .finalization, code: .invalidInput,
+                details: ["preparation-replay-fingerprint"]))
+        }
         let prospectiveVerdict = evaluator.terminalVerdict(
             selected: selected.vector, transaction: transaction)
         let required = evaluator.requiresPreparedValidation
@@ -3171,7 +3185,7 @@ package enum AutonomousPhrasePreparer {
             incomingLiveMasterState: incomingLiveMasterState,
             outgoingLiveMasterState: outgoingLiveMasterState,
             policyVersion: evaluator.policyVersion, verdict: prospectiveVerdict,
-            preparedValidationRequired: required)
+            preparedValidationRequired: required, preparationReplayFingerprint: replayFingerprint)
         guard required, let source = prospective.preparedPhrase,
               source.qualityDecision.isAcceptanceOutcome,
               source.hardGatesPassed, transaction.isComplete else { return prospective }
@@ -3202,7 +3216,7 @@ package enum AutonomousPhrasePreparer {
             incomingLiveMasterState: incomingLiveMasterState,
             outgoingLiveMasterState: outgoingLiveMasterState,
             policyVersion: evaluator.policyVersion, verdict: verdict,
-            preparedValidationRequired: true, preparedValidation: boundProof,
+            preparedValidationRequired: true, preparationReplayFingerprint: replayFingerprint, preparedValidation: boundProof,
             presentation: source)
         if let prepared = final.preparedPhrase,
            prepared.qualityDecision.isAcceptanceOutcome,
@@ -3222,6 +3236,7 @@ package enum AutonomousPhrasePreparer {
         policyVersion: String,
         verdict: AutonomousCandidatePolicyVerdict,
         preparedValidationRequired: Bool,
+        preparationReplayFingerprint: String? = nil,
         preparedValidation: AutonomousCandidatePreparedValidation? = nil,
         presentation: PreparedAutonomousPhrase? = nil
     ) -> AutonomousPhrasePreparationOutcome {
@@ -3311,6 +3326,7 @@ package enum AutonomousPhrasePreparer {
             liveTargetStartSample: selected.vector.liveAppliedFutureSample,
             correctionRenderCount: transaction.correctionCount,
             usedHomeTimbreCorrection: selected.attempt.forceHomeUpperTimbre,
+            preparationReplayFingerprint: preparationReplayFingerprint,
             preparedValidationRequired: preparedValidationRequired,
             preparedValidation: preparedValidation
         ))

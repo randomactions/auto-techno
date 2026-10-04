@@ -16,12 +16,15 @@ package struct ProfessionalQualityPreparationEvaluator:
     package let availability: ProfessionalQualityPreparationAvailability
     package let policyVersion: String
     package let evaluatorVersion: String
+    package let preparationReplayFingerprint: String?
     private let calibrated: ProfessionalQualityPrimaryEvaluator?
 
     package init(
         sampleRate: Double,
-        artifacts: ProfessionalQualityPrimaryArtifacts?
+        artifacts: ProfessionalQualityPrimaryArtifacts?,
+        preparationReplayFingerprint: String? = nil
     ) {
+        self.preparationReplayFingerprint = preparationReplayFingerprint
         if let artifacts {
             if sampleRate.isFinite,
                artifacts.profile.sampleRates.contains(sampleRate) {

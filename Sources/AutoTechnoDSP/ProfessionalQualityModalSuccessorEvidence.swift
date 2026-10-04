@@ -98,7 +98,8 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
     }
 
     private struct PreparedIdentity: Encodable {
-        let scope = "actual-prepared-modal-successor.v1"
+        let scope: String
+        let preparationReplayFingerprint: String?
         let planFingerprint: String
         let transaction: AutonomousCandidateEvaluationTransaction
         let commit: AutonomousPreparedCommitProvenance
@@ -112,11 +113,15 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
             self.init(planFingerprint: prepared.selectedCandidateEvidence.planFingerprint,
                 transaction: prepared.candidateEvaluation, commit: prepared.commitProvenance,
                 incomingQuality: prepared.incomingQualityState, outgoingQuality: prepared.qualityContinuationState,
-                preparedValidationRequired: prepared.preparedValidationRequired)
+                preparedValidationRequired: prepared.preparedValidationRequired,
+                preparationReplayFingerprint: prepared.preparationReplayFingerprint)
         }
         init(planFingerprint: String, transaction: AutonomousCandidateEvaluationTransaction,
             commit: AutonomousPreparedCommitProvenance, incomingQuality: QualityContinuationState,
-            outgoingQuality: QualityContinuationState, preparedValidationRequired: Bool) {
+            outgoingQuality: QualityContinuationState, preparedValidationRequired: Bool,
+            preparationReplayFingerprint: String? = nil) {
+            scope = preparationReplayFingerprint == nil ? "actual-prepared-modal-successor.v1" : "actual-prepared-modal-successor.v2"
+            self.preparationReplayFingerprint = preparationReplayFingerprint
             self.planFingerprint = planFingerprint; self.transaction = transaction; self.commit = commit
             self.incomingQuality = incomingQuality; self.outgoingQuality = outgoingQuality
             self.preparedValidationRequired = preparedValidationRequired ? true : nil
@@ -220,11 +225,11 @@ package struct ProfessionalQualityModalSuccessorEvidence: Encodable, Equatable, 
     package static func preparedValidationIdentity(planFingerprint: String,
         transaction: AutonomousCandidateEvaluationTransaction,
         commit: AutonomousPreparedCommitProvenance, incomingQuality: QualityContinuationState,
-        outgoingQuality: QualityContinuationState) -> String {
+        outgoingQuality: QualityContinuationState, preparationReplayFingerprint: String? = nil) -> String {
         AutonomousCandidateCanonicalJSON.fingerprint(PreparedIdentity(
             planFingerprint: planFingerprint, transaction: transaction, commit: commit,
             incomingQuality: incomingQuality, outgoingQuality: outgoingQuality,
-            preparedValidationRequired: true))
+            preparedValidationRequired: true, preparationReplayFingerprint: preparationReplayFingerprint))
     }
 
     package func matches(_ source: PreparedAutonomousPhrase) -> Bool {

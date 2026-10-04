@@ -1,6 +1,7 @@
 import AutoTechnoCore
 @testable import AutoTechnoDSP
 import Testing
+import Foundation
 
 @Suite("Autonomous phrase preparation diagnostics")
 struct AutonomousPhrasePreparationDiagnosticsTests {
@@ -179,7 +180,7 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
                 baseline.longHorizonEnergyCoordination)
     }
 
-    @Test("Final coherence retry satisfies the calibrated late-phrase crest-span envelope")
+    @Test("Final retry retains the historical crest-span comparison without activating legacy policy")
     func finalRetryBoundsLatePhraseCrestSpan() throws {
         let director = AutonomousSessionDirector(rootSeed: 48_291)
         var state = director.initialState()
@@ -207,7 +208,19 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
             cancellationRequested: neverCancelled
         )
         let prepared = try #require(preparedResult)
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        // Read only the retained comparison bounds. This historical profile
+        // cannot authorize the corrected evidence or continuous primary policy.
+        let repository = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let historicalProfile = try JSONDecoder().decode(ProfessionalQualityCalibrationProfile.self,
+            from: Data(contentsOf: repository.appendingPathComponent(
+                "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json")))
+        #expect(historicalProfile.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
+        #expect(historicalProfile.evidenceVersion == "autotechno-professional-evidence.v29")
+        #expect(!historicalProfile.isComplete)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts.load()
+        }
         let observation = try ProfessionalQualityObservation(
             candidate: prepared.selectedCandidateEvidence,
             engineVersion: QualityQualificationContract.engineVersion,
@@ -215,7 +228,7 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
         )
         let value = try #require(observation[.barCrestFactorSpan])
         let bounds = try #require(
-            artifacts.evaluator.profile[.longContinuation]?[.barCrestFactorSpan]
+            historicalProfile[.longContinuation]?[.barCrestFactorSpan]
         )
 
         #expect(plan.barCount == 4)

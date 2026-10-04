@@ -1665,3 +1665,47 @@ historical model, install resources, qualify the current source or activate
 playback. Production bounded successor preparation, protected retained-continuation
 consumption, future live/route context, resource qualification, matching current
 primary/long-horizon artifacts and full source/PCM/lifecycle gates remain pending.
+
+
+## Canonical prospective successor request and replay origin
+
+AutonomousPerformancePreparer owns one detached prospective continuation builder
+under the existing PhrasePreparationRequest and replay identity. It accepts only
+an otherwise bound private source preview and the exact request that produced it.
+The shared route evaluator passes that request's complete replay fingerprint into
+the canonical finalizer. The immutable prepared identity records this origin under
+actual-prepared-modal-successor.v2; callers without a shared origin retain exact
+v1 bytes. The optional origin is operational provenance, not a score parameter,
+quality verdict or source of musical variation. It is captured once before
+prospective/final assembly and cannot change after measurement.
+
+The builder requires the source origin, canonical recovery-aware plan, raw input
+continuation, route/rate/generation, proposal and live target boundary to match.
+A present long-horizon policy must bind the exact primary policy and produce a
+projection through the existing reducer. A missing policy with incoming adaptation
+is unavailable, never a silent context reset. The canonical Core advance applies
+that projected decision, prospective quality and live state exactly once. The
+resulting successor request retains source ending render/graph and long-horizon
+state, uses the same route generation, clears source-only recovery/retry and live
+proposal ownership, and leaves accepted state unchanged. Known live target end
+samples use the actual analyzed frame count with checked integer arithmetic; an
+ordinary source with no app-owned absolute boundary makes no position claim.
+
+ProspectivePerformanceContinuation is constructed only by this builder and holds
+no source PCM. It seals source identity and the complete originating request. Its
+admittedRequest releases future request ownership only for the exact accepted
+source and original context, with the same admitted long-horizon projection. A
+request alone never authorizes scheduling, successor acceptance or early state
+advancement. Cancellation, altered input, missing replay origin or unmatched
+policy preserves refusal and discards tentative work.
+
+Controls use the inherited fixed public root/phrase at 8k, 44.1k and 48k, actual
+source and successor PCM through the canonical renderer, synthetic long-horizon
+policy mechanics, and an actual applied live proposal. They compare the sealed
+request and rendered successor against ordinary accepted Core advance and
+long-horizon reduction, require child qualification and original-window closure,
+refuse foreign inputs before successor PCM, and prevent a proposal from being
+applied twice. They remain mechanical controls, not current artifact qualification
+or runtime activation. Production chain preparation, protected transport
+consumption and the full lookahead memory/time envelope remain pending; the
+existing single-source resource bound is not a bound for multiple retained sources.
