@@ -333,16 +333,37 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
         } catch let refused as PhrasePreparationFailure {
           failure = refused.stage + ":" + refused.code; details = Array(refused.details.prefix(24)); break
         } catch { failure = "continuation-refused"; break }
+        guard source.prepared.commitEligible else {
+          failure = "prepared-source-quality:" + source.prepared.qualityDecision.outcome.rawValue
+          details = Array((source.prepared.commitFailureDiagnostics +
+            source.prepared.qualityDiagnosticDetails +
+            source.prepared.qualityDecision.reasonCodes.map { "quality=" + $0.rawValue }).prefix(24))
+          break
+        }
         var nextSemantic = semantic, nextSignal = signal, nextEffects = effects
-        guard source.prepared.commitEligible, source.continuationOwnershipIsValid,
+        let semanticStatus = nextSemantic.observe(plan: source.prepared.plan, incomingState: state)
+        let signalStatus = source.prepared.longHorizonSignalTrajectoryEvidence.map { nextSignal.observe($0) }
+        let effectStatus = source.prepared.longHorizonEffectDoseEvidence.map { nextEffects.observe($0) }
+        guard source.continuationOwnershipIsValid,
           source.request.replayIdentity.sourceStateFingerprint == AutonomousCandidateFingerprint.sessionState(state),
           let budget = source.preparationChainResourceBudget, budget.reservedPeakWorkingByteCount <= AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount,
           let actualSignal = source.prepared.longHorizonSignalTrajectoryEvidence,
-          let actualEffects = source.prepared.longHorizonEffectDoseEvidence,
-          nextSemantic.observe(plan: source.prepared.plan, incomingState: state) == .accepted,
-          nextSignal.observe(actualSignal) == .accepted, nextEffects.observe(actualEffects) == .accepted,
+          source.prepared.longHorizonEffectDoseEvidence != nil,
+          semanticStatus == .accepted, signalStatus == .accepted, effectStatus == .accepted,
           let frames = Int64(exactly: source.prepared.audioPreflight.quality.analyzedFrameCount), frames > 0
-        else { failure = "ineligible-or-inconsistent-prepared-source"; break }
+        else {
+          failure = "ineligible-or-inconsistent-prepared-source"
+          details = [
+            "ownership=" + String(source.continuationOwnershipIsValid),
+            "replay-core-match=" + String(source.request.replayIdentity.sourceStateFingerprint == AutonomousCandidateFingerprint.sessionState(state)),
+            "resource-budget-present=" + String(source.preparationChainResourceBudget != nil),
+            "reserved-bytes=" + String(source.preparationChainResourceBudget?.reservedPeakWorkingByteCount ?? -1),
+            "semantic=" + String(describing: semanticStatus),
+            "signal=" + String(describing: signalStatus),
+            "effects=" + String(describing: effectStatus),
+          ]
+          break
+        }
         let end = samples.addingReportingOverflow(frames)
         guard !end.overflow else { failure = "sample-boundary-overflow"; break }
         semantic = nextSemantic; signal = nextSignal; effects = nextEffects

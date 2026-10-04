@@ -1861,3 +1861,10 @@ than remaining underneath the large preparation stack. Cancellation forwards to
 the awaited job. Exact owned-child consumption, source/model checks, evidence
 accumulation and quality gates remain unchanged; no enlarged worker stack or
 main-thread preparation supplies qualification evidence.
+
+Full-journey refusal metadata distinguishes a rejected or unavailable prepared
+source from ownership, replay, numeric reservation and semantic/signal/effect
+accumulator refusal. It retains the existing bounded prepared quality and commit
+diagnostics. Rejected products never enter the three committed accumulators or
+advance canonical state, and diagnostic detail does not authorize a retry,
+repeat, changed threshold or qualification artifact.
