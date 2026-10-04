@@ -139,19 +139,28 @@ def prepare_exporter(root: Path, scratch: Path, environment: dict[str, str], *, 
     swift = developer / 'Toolchains/XcodeDefault.xctoolchain/usr/bin/swift'
     if not swift.is_file():
         raise ProducerWitnessError('missing explicit Xcode compiler')
+    operation = 0
     def run(argv):
-        result = subprocess.run(argv, cwd=root, env=environment, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT, check=False)
+        nonlocal operation
+        operation += 1
+        logs = scratch / 'producer-driver-logs'
+        logs.mkdir(parents=True, exist_ok=True)
+        path = logs / f'{operation:02d}.log'
+        with path.open('xb') as output:
+            result = subprocess.run(argv, cwd=root, env=environment, stdout=output,
+                                    stderr=subprocess.STDOUT, check=False)
+        if path.stat().st_size > 16 * 1024 * 1024:
+            raise ProducerWitnessError('registered invocation diagnostic exceeds byte bound')
         if result.returncode != 0:
-            raise ProducerWitnessError('registered build/probe invocation failed')
-        return result.stdout
+            raise ProducerWitnessError('registered invocation failed; local diagnostic: ' + str(path))
+        return path.read_bytes()
     sdk_path = Path(run(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-path']).decode().strip())
     sdk_version = run(['/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-version']).decode().strip()
     sdk_identity = dependency.digest({'path': str(sdk_path), 'version': sdk_version,
         'settingsSha256': file_hash(sdk_path / 'SDKSettings.json', dependency.MAX_METADATA_BYTES)})
     target = json.loads(run([str(swift), '-print-target-info']))['target']['triple']
     options = ['--build-path', str(scratch), '-c', configuration, '--jobs', '2',
-               '--triple', target, '--sdk', str(sdk_path)]
+               '--triple', target, '--sdk', str(sdk_path), '-Xswiftc', '-enable-testing']
     argv = [str(swift), 'build', '--build-tests', *options]
     run(argv)
     require_same_source(root, before)
