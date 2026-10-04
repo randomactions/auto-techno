@@ -472,6 +472,10 @@
         {
           "symbol": "ModalPercussionMeasurementState",
           "path": "Sources/AutoTechnoDSP/ModalPercussionMeasurementContinuity.swift"
+        },
+        {
+          "symbol": "DiagnosticRoleStemCaptureSpool",
+          "path": "Sources/AutoTechnoDSP/DiagnosticRoleStemCapture.swift"
         }
       ],
       "state": [
@@ -488,7 +492,8 @@
       "outputs": [
         "RenderBlock",
         "transient role taps and opt-in local diagnostic captures",
-        "ending render state"
+        "ending render state",
+        "Opt-in detached synchronous bar sink and attempt-owned local 32-channel f32 diagnostic drafts; no accepted-source or successor authority."
       ],
       "evidence": [
         "role-local render evidence",
@@ -500,7 +505,8 @@
         "spatial-dust channel, cadence, low-band exclusion, and clearing evidence",
         "actual modal attack/body/tail sample support, with missing/partial/complete window geometry",
         "same-pass continuous modal windows with explicit pending, interruption and overflow; legacy bar-local metrics and PCM preserved",
-        "Final authored anchor selection after canonical composition, timing and held polymetric relocation; source-index lineage, late/legato home fallback, authored home-correction eligibility and both-native same-pass tonal tail regression. Core owns relation placement; DSP windows and bounds remain unchanged, with no continuing-journey qualification."
+        "Final authored anchor selection after canonical composition, timing and held polymetric relocation; source-index lineage, late/legato home fallback, authored home-correction eligibility and both-native same-pass tonal tail regression. Core owns relation placement; DSP windows and bounds remain unchanged, with no continuing-journey qualification.",
+        "Every full11/protected11/stage10 tap streams from the same canonical pass with exact channel and final-block fingerprints. Bounded per-bar borrowed array-capacity inventory and 64KiB write chunks; order/rate/geometry/finite/capacity mismatch, cancellation, incomplete capture and I/O failure discard attempt-owned files. Ordinary PCM, repeat candidates and ending render/graph state remain exact. Full preparation selection, root/exact-child binding and combined allocation/RSS/deadline accounting remain pending."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AlienAnalogVoice.swift",
@@ -516,7 +522,8 @@
         "Sources/AutoTechnoDSP/UpperPercussionTailDSP.swift",
         "Sources/AutoTechnoDSP/UpperSpectralRevealDSP.swift",
         "Sources/AutoTechnoDSP/VoiceRenderer.swift",
-        "Sources/AutoTechnoDSP/ModalPercussionMeasurementContinuity.swift"
+        "Sources/AutoTechnoDSP/ModalPercussionMeasurementContinuity.swift",
+        "Sources/AutoTechnoDSP/DiagnosticRoleStemCapture.swift"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/KickSourceDynamicsTests.swift",
@@ -527,7 +534,8 @@
         "Tests/AutoTechnoCoreTests/UpperPercussionTailDSPTests.swift",
         "Tests/AutoTechnoCoreTests/UpperSpectralRevealDSPTests.swift",
         "Tests/AutoTechnoCoreTests/UpperTimbreDSPTests.swift",
-        "Tests/AutoTechnoCoreTests/TonalEnvelopeBoundaryTests.swift"
+        "Tests/AutoTechnoCoreTests/TonalEnvelopeBoundaryTests.swift",
+        "Tests/AutoTechnoCoreTests/DiagnosticRoleStemStreamingTests.swift"
       ],
       "contracts": [
         "docs/SYNTH_TRACK_RENDERING_MATRIX.md",

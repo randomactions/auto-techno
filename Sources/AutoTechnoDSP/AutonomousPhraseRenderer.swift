@@ -2060,9 +2060,12 @@ package enum AutonomousPhraseRenderer {
         graphState: inout GeneratedDSPContinuationState,
         forceHomeUpperTimbre: Bool = false,
         diagnosticRoleStemCapture: Bool = false,
+        diagnosticRoleStemSink: (@Sendable (AutonomousBarRoleStemCapture, RenderBlock) -> Bool)? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhraseRenderProduct? {
-        guard !cancellationRequested() else { return nil }
+        guard !cancellationRequested(),
+            !(diagnosticRoleStemCapture && diagnosticRoleStemSink != nil) else { return nil }
+        let captureRequested = diagnosticRoleStemCapture || diagnosticRoleStemSink != nil
         let synthPlan = SynthPerformancePlan(
             scene: plan.scene, dna: plan.dna, kind: plan.kind,
             resolvedBars: plan.resolvedBars,
@@ -2111,7 +2114,7 @@ package enum AutonomousPhraseRenderer {
                 workspace: &workspace,
                 layer: .protectedRhythm,
                 phraseKind: plan.kind,
-                diagnosticRoleStemCapture: diagnosticRoleStemCapture
+                diagnosticRoleStemCapture: captureRequested
             )
             guard !cancellationRequested() else { return nil }
             let rendered = VoiceRenderer.renderBar(
@@ -2127,7 +2130,7 @@ package enum AutonomousPhraseRenderer {
                 effectCarrierRole: plan.effectCarrier.active
                     ? plan.effectCarrier.state.role : nil,
                 phraseKind: plan.kind,
-                diagnosticRoleStemCapture: diagnosticRoleStemCapture
+                diagnosticRoleStemCapture: captureRequested
             )
             guard !cancellationRequested() else { return nil }
             let events = resolved.ensemble.events.map { event in
@@ -2444,7 +2447,8 @@ package enum AutonomousPhraseRenderer {
             )
             let outputLeft = terminalOutput.left
             let outputRight = terminalOutput.right
-            if diagnosticRoleStemCapture {
+            var streamedCapture: AutonomousBarRoleStemCapture?
+            if captureRequested {
                 guard let fullCapture = rendered.diagnosticRoleStemCapture,
                       let protectedCapture =
                         protectedRhythm.diagnosticRoleStemCapture,
@@ -2486,8 +2490,7 @@ package enum AutonomousPhraseRenderer {
                     terminalProcessingResidualRight[frame] =
                         outputRight[frame] - preLiveFeedbackRight[frame]
                 }
-                diagnosticRoleStemCaptures.append(
-                    AutonomousBarRoleStemCapture(
+                let capture = AutonomousBarRoleStemCapture(
                         bar: performance.bar,
                         sampleRate: sampleRate,
                         full: fullCapture,
@@ -2505,7 +2508,8 @@ package enum AutonomousPhraseRenderer {
                         terminalProcessingResidualRight:
                             terminalProcessingResidualRight
                     )
-                )
+                if diagnosticRoleStemSink != nil { streamedCapture = capture }
+                else { diagnosticRoleStemCaptures.append(capture) }
             }
             let protectedRhythmSampleHash = ExactPCMFingerprint.stereo(
                 left: protectedRhythm.leftSamples,
@@ -2715,6 +2719,11 @@ package enum AutonomousPhraseRenderer {
                         rendered.spatialFDNRenderEvidence.terminalWetRMS,
                     authoredTerminalSilence: climaxOutput.evidence.active
                 )
+            }
+            if let streamedCapture, let diagnosticRoleStemSink {
+                guard let block = blocks.last, !cancellationRequested(),
+                    diagnosticRoleStemSink(streamedCapture, block),
+                    !cancellationRequested() else { return nil }
             }
             state.barIndex = performance.bar + 1
         }

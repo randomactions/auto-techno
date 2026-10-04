@@ -116,6 +116,9 @@ struct RoleStemCaptureTests {
                 let source = try String(contentsOf: file, encoding: .utf8)
                 #expect(!source.contains("diagnosticRoleStemCapture"))
                 #expect(!source.contains("diagnosticRoleStemCaptures"))
+                #expect(!source.contains("diagnosticRoleStemSink"))
+                #expect(!source.contains("DiagnosticRoleStemCaptureSpool"))
+                #expect(!source.contains("DiagnosticRoleStemCaptureDraft"))
             }
         }
     }

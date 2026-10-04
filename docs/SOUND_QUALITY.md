@@ -1233,3 +1233,36 @@ unavailable. A nil rejection proves only passage through these checks; it never
 establishes quality acceptance, calibration or prepared-source admission. The
 actual evaluator still requires current fully qualified artifacts and exact
 prepared validation. No numeric policy or artifact-loading condition is relaxed.
+
+
+## Bounded same-pass diagnostic bar streaming
+
+`AutonomousPhraseRenderer` retains its one canonical rendering path. An optional
+synchronous detached sink receives one exact `AutonomousBarRoleStemCapture` and
+its final immutable `RenderBlock` before the next bar is rendered. The existing
+small-fixture retained-array capture remains supported; requesting both delivery
+forms refuses before rendering. Normal rendering leaves both absent. Sink failure
+or cancellation returns no render product, and the preparer must discard its
+private attempted state rather than advancing accepted continuation.
+
+`DiagnosticRoleStemCaptureSpool` writes all 32 existing taps: full11, protected11
+and stage/residual10, including silent channels. Each local bar file contains
+aligned little-endian Float32 channels in a fixed versioned enum order. The spool
+checks authored bar order, native geometry, sample rate, finite PCM and bounded
+actual unique captured array capacity. It writes at most one 64KiB byte chunk at
+a time, retaining only fixed per-bar fingerprints and geometry after synchronous
+delivery. Incomplete, malformed, cancelled and failed attempts remove their owned
+files; a finished draft owns its files until released. Readers load at most one
+channel of one bar and verify payload size and the original exact fingerprint.
+
+These are diagnostic drafts, not accepted-source evidence or policy authority.
+The stream does not change Core intent, PCM, DSP math, signal bounds, quality
+schema50, canonical engine49 or primary mathematical family32/profile33. Same-pass
+capture must still be integrated into canonical attempt selection and reverse
+child-chain finalization so only the actually selected source and exact accepted
+immediate child survive. The shared production capture flag remains its existing
+retained-array path until that integration is implemented. Captured-array capacity
+and byte-chunk measurements are only those owners' storage; they do not cover the
+complete workspace, COW/state/analyzer/source/child working set, process RSS,
+deadlines or physical output. The existing128MiB/two-pass gates remain unchanged
+and no streaming draft can substitute for those required checks.
