@@ -179,3 +179,24 @@ bytes. A fixed mixed-case/numeric-suffix golden hash detects Foundation
 JSONSerialization sorted-key drift. Informational witness/probe JSON may use
 Foundation ordering; it is hashed as actual file bytes and parsed independently,
 never substituted for the canonical producer identity.
+
+## Independent completed-capture reading
+
+`scripts/baseline_capture_scope.py` independently reads a completed registered
+whole/role capture-and-parity operation. It verifies the original source objects,
+build, probe, loaded image, private initialization, declarations, fresh complete
+upstream bindings, successful registered native and cold commands, diagnostic
+bytes, reference output coverage and exact WAV/typed/foundation parity again.
+An active job, incomplete receipt, changed output or promotional flag refuses.
+The returned source fingerprint is reconstructed from the original Git bytes,
+including the original execution snapshot; neither artifacts nor provenance are
+rewritten to the current source.
+
+This reader is a prerequisite for later validator adoption. It does not establish
+current dependency scope, skip content checks, change the lifecycle or aggregate
+gates, or authorize currency, qualification or promotion. All fifteen lifecycle
+families retain their existing rules until coordinated integration is validated.
+
+```sh
+python3 -m unittest discover -s scripts -p test_baseline_capture_scope.py
+```
