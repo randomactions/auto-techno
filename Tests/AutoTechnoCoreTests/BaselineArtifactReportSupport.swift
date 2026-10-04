@@ -503,7 +503,8 @@ final class BaselineProducerCaptureWitness {
         let navigation = Set(["docs/codebase-map.json", "docs/CODEBASE_MAP.md"])
         var expected = Set(["AGENTS.md", "LICENSE", "docs/BASELINE_DEPENDENCY_CONTRACT.md",
             "docs/BASELINE_LIFECYCLE_POLICY.json", "scripts/baseline_dependency_contract.py",
-            "scripts/baseline_capture_transaction.py", "scripts/baseline_producer_witness.py", "scripts/baseline_lifecycle_policy.py"])
+            "scripts/baseline_capture_transaction.py", "scripts/baseline_producer_witness.py",
+            "scripts/baseline_producer_capture_driver.py", "scripts/baseline_lifecycle_policy.py"])
         for document in documents {
             guard let path = document["path"] as? String else { throw WitnessError.invalidDeclaration }
             if !navigation.contains(path) { expected.insert(path) }

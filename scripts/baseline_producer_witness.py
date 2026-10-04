@@ -26,6 +26,7 @@ DECLARATION_SCHEMA = 'autotechno-baseline-producer-declaration.v1'
 WITNESS_SCHEMA = 'autotechno-baseline-producer-witness.v1'
 PROBE_SCHEMA = 'autotechno-baseline-producer-probe.v1'
 BUILD_SCHEMA = 'autotechno-baseline-producer-build.v1'
+PROBE_FILTER = 'BaselineProducerWitnessTests'
 FAMILIES = {'whole-mix-render': 'BaselineRenderIntegrationTests',
             'role-stem-capture': 'StemCaptureIntegrationTests'}
 CONTROLS = {'AUTOTECHNO_BASELINE_DEPENDENCY_DECLARATION',
@@ -140,14 +141,14 @@ def prepare_exporter(root: Path, scratch: Path, environment: dict[str, str], *, 
     if not swift.is_file():
         raise ProducerWitnessError('missing explicit Xcode compiler')
     operation = 0
-    def run(argv):
+    def run(argv, *, process_environment=None):
         nonlocal operation
         operation += 1
         logs = scratch / 'producer-driver-logs'
         logs.mkdir(parents=True, exist_ok=True)
         path = logs / f'{operation:02d}.log'
         with path.open('xb') as output:
-            result = subprocess.run(argv, cwd=root, env=environment, stdout=output,
+            result = subprocess.run(argv, cwd=root, env=environment if process_environment is None else process_environment, stdout=output,
                                     stderr=subprocess.STDOUT, check=False)
         if path.stat().st_size > 16 * 1024 * 1024:
             raise ProducerWitnessError('registered invocation diagnostic exceeds byte bound')
@@ -175,10 +176,9 @@ def prepare_exporter(root: Path, scratch: Path, environment: dict[str, str], *, 
     probe_environment = dict(environment, AUTOTECHNO_RUN_PRODUCER_WITNESS_PROBE='1',
                              AUTOTECHNO_PRODUCER_WITNESS_PROBE_OUTPUT=name)
     probe_argv = [str(swift), 'test', '--skip-build', '--no-parallel', *options,
-                  '--filter', 'BaselineProducerWitnessTests/probeActualProducerInputs']
-    process = subprocess.run(probe_argv, cwd=root, env=probe_environment, check=False,
-                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    if process.returncode != 0 or not output.is_file():
+                  '--filter', PROBE_FILTER]
+    run(probe_argv, process_environment=probe_environment)
+    if not output.is_file():
         raise ProducerWitnessError('actual native probe did not complete')
     probe = dependency.read_json(output)
     corpus_name = environment.get('AUTOTECHNO_CAPTURE_CORPUS', 'docs/BASELINE_CORPUS.json')

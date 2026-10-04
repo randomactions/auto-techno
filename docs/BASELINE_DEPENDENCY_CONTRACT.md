@@ -154,3 +154,20 @@ initialization probe are not whole/role capture parity, lifecycle currency,
 capacity qualification, musical qualification or runtime promotion. Adoption in
 existing family validators and complete native PCM/verdict comparison remain
 required before dependency-scoped currency is enabled.
+
+The registered `scripts/baseline_producer_capture_driver.py` operates only on
+absent canonical whole/role output directories in its isolated checkout. It
+executes real native producer subprocesses with an exact actual-image witness,
+then the original standalone cold family validators, and records fresh upstream
+transaction bindings. It separately renders witness-disabled reference banks in
+a fresh namespace, runs the same cold validators, and compares every WAV byte
+and typed state/replay/route/reconstruction fact. Only namespace paths and their
+independently checked manifest-reference hashes are normalized. Foundation
+behavior coverage and all frozen inputs are checked again before a receipt.
+The driver and all three supporting modules are conservative producer inputs.
+
+Release builds explicitly enable testable imports; native initialization probes
+do not by themselves prove the Release build or capture. Driver diagnostics stay
+in the isolated local scratch/output trees. Failure retains outputs and never
+produces a successful validation receipt. This driver still establishes no
+scoped lifecycle, aggregate, capacity or musical qualification authority.

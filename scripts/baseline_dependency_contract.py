@@ -41,7 +41,7 @@ EXECUTION = {p for _, p in contracts.AUTHORITATIVE_DOCUMENTS} | {
     "docs/ROADMAP_EXECUTION_BASELINE.json"
 }
 COMMON = {"AGENTS.md", "LICENSE", "docs/BASELINE_DEPENDENCY_CONTRACT.md", "docs/BASELINE_LIFECYCLE_POLICY.json",
-          "scripts/baseline_dependency_contract.py", "scripts/baseline_capture_transaction.py", "scripts/baseline_producer_witness.py", "scripts/baseline_lifecycle_policy.py"}
+          "scripts/baseline_dependency_contract.py", "scripts/baseline_capture_transaction.py", "scripts/baseline_producer_witness.py", "scripts/baseline_producer_capture_driver.py", "scripts/baseline_lifecycle_policy.py"}
 # Every compiled test file remains conservatively capture-bound. Narrowing that
 # closure requires producer proof; neither names nor unchanged PCM confer reuse.
 PRODUCERS = {"whole-mix-render", "role-stem-capture", "long-horizon-session",
