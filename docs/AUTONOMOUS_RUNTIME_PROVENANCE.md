@@ -1853,3 +1853,11 @@ codes. The identical helper validates each prospective child as well. This keeps
 invalid inputs out of the Debug frame that previously exceeded a test-worker
 stack guard; valid request preparation still uses the canonical detached owner.
 No validation, planning, analysis or new work is moved onto an audio callback.
+
+The test-only full-journey driver awaits a separate detached preparation task at
+each fresh leaf, matching the host's shared preparation scheduling boundary.
+Its route/controller temporaries survive suspension in the async context rather
+than remaining underneath the large preparation stack. Cancellation forwards to
+the awaited job. Exact owned-child consumption, source/model checks, evidence
+accumulation and quality gates remain unchanged; no enlarged worker stack or
+main-thread preparation supplies qualification evidence.

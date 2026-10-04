@@ -263,9 +263,20 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       }
   }
 
+  /// Check the executing synchronous preparation boundary, not an async actor.
+  private static func prepareBootstrapSource(request: PhrasePreparationRequest,
+    director: AutonomousSessionDirector, primary: ProfessionalQualityPrimaryArtifacts
+  ) -> PerformancePreparationOutcome {
+    guard !Thread.isMainThread else {
+      return .failed(PhrasePreparationFailure(stage: "long-journey", code: "preparation-not-detached"))
+    }
+    return AutonomousPerformancePreparer.prepareDiagnosing(request: request,
+      director: director, artifacts: primary, longHorizonArtifacts: nil)
+  }
+
   private static func renderPreparedRoute(rootSeed: UInt64, sampleRate: Double,
     primary: ProfessionalQualityPrimaryArtifacts, prefixPhraseCount: Int? = nil
-  ) -> PreparedRouteJourney {
+  ) async -> PreparedRouteJourney {
     let director = AutonomousSessionDirector(rootSeed: rootSeed)
     var state = director.initialState(), renderState = RenderState()
     var graphState = GeneratedDSPContinuationState()
@@ -279,8 +290,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     var closedLeaf = false, complete = false, failure: String?
     var details: [String] = []
     var sink = StreamingFNV1a(); sink.domain("long-horizon-actual-prepared-traversal.v1")
-    if Thread.isMainThread { failure = "preparation-not-detached" }
-    else {
+    do {
       // Fixed upper bound even if coverage or a naturally closed leaf is unavailable.
       for _ in 0..<10_416 {
         if Task.isCancelled { failure = "cancelled"; break }
@@ -304,8 +314,18 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
           if let owned { source = owned; ownedChildren += 1 }
           else {
             newPreparations += 1
-            switch AutonomousPerformancePreparer.prepareDiagnosing(request: request,
-              director: director, artifacts: primary, longHorizonArtifacts: nil) {
+            // Suspend the journey driver before entering the shared owner.
+            // This matches the host's detached preparation boundary and keeps
+            // route/controller temporaries out of its bounded worker stack.
+            let preparation = Task.detached(priority: .userInitiated) {
+              Self.prepareBootstrapSource(request: request, director: director, primary: primary)
+            }
+            let outcome = await withTaskCancellationHandler {
+              await preparation.value
+            } onCancel: {
+              preparation.cancel()
+            }
+            switch outcome {
             case .prepared(let prepared): source = prepared
             case .failed(let refused): throw refused
             }
@@ -368,7 +388,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     var routes: [LongHorizonRuntimePolicyObservation] = []
     for rate in [44_100.0, 48_000.0] {
       let journey = await Task.detached(priority: .userInitiated) {
-        Self.renderPreparedRoute(rootSeed: rootSeed, sampleRate: rate, primary: primary)
+        await Self.renderPreparedRoute(rootSeed: rootSeed, sampleRate: rate, primary: primary)
       }.value
       try writeJourney(journey, binding: binding)
       guard try executionBinding() == binding, journey.completedRequestedScope,
@@ -401,7 +421,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     try prepareOutputNamespace()
     for rate in [44_100.0, 48_000.0] {
       let journey = await Task.detached(priority: .userInitiated) {
-        Self.renderPreparedRoute(rootSeed: 48_291, sampleRate: rate, primary: primary, prefixPhraseCount: 4)
+        await Self.renderPreparedRoute(rootSeed: 48_291, sampleRate: rate, primary: primary, prefixPhraseCount: 4)
       }.value
       try writeJourney(journey, binding: binding)
       #expect(journey.completedRequestedScope && journey.failureCode == nil)
