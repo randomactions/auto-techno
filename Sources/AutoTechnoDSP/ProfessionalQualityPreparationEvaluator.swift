@@ -60,6 +60,11 @@ package struct ProfessionalQualityPreparationEvaluator:
         calibrated?.preparedValidation(for: preview)
     }
 
+    package func preparedValidation(for preview: AutonomousCandidatePreparedPreview,
+        successor: PreparedAutonomousPhrase?) -> AutonomousCandidatePreparedValidation? {
+        calibrated?.preparedValidation(for: preview, successor: successor)
+    }
+
     package func requestsHomeUpperTimbreCorrection(
         for candidate: AutonomousCandidateEvaluationVector
     ) -> Bool {

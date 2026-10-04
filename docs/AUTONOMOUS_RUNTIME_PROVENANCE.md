@@ -1709,3 +1709,66 @@ applied twice. They remain mechanical controls, not current artifact qualificati
 or runtime activation. Production chain preparation, protected transport
 consumption and the full lookahead memory/time envelope remain pending; the
 existing single-source resource bound is not a bound for multiple retained sources.
+
+
+## Iterative detached successor preparation
+
+The shared AutonomousPerformancePreparer uses one iterative chain transaction
+under the same canonical director, request, route evaluator and DSP finalizer.
+The finalizer may privately suspend an otherwise bound prospective source as
+AutonomousPendingPreparedValidation. That pending value exposes only its sealed
+preview and a canonical resolution operation; preparedPhrase remains absent,
+no accepted state changes, and no pending product can enter playback. Normal
+synchronous DSP callers retain their existing terminal protocol.
+
+Before suspension, the immutable source owns qualified repeat sidecars and
+optional diagnostic captures. Render-only candidate references are released;
+resolution reuses the same source presentation and exact selected PCM, transaction,
+quality/live input and replay origin through the original finalizer. No second
+render or admission policy is introduced. A missing, foreign or cancelled proof
+preserves refusal. Cancellation is checked before reassembly and before the
+shared owner releases any complete result.
+
+The owner prepares actual children only when the existing physical-window
+classifier requires them. Each child uses the sealed canonical successor request
+and must pass its own hard gates, measurement completeness and calibrated policy.
+Rendering calls unwind before another phrase is prepared, rather than nesting
+phrase preparation on the cooperative worker stack. A naturally locally complete
+last source is resolved first; parents then resolve in reverse order using their
+exact accepted immediate children. The source seal must release that exact child's
+request, and the parent's proof must retain that exact immutable child. A rejected,
+unavailable or mismatched descendant discards every tentative parent. A root
+rejection, including one measured with a child, keeps the existing reason-coded
+recovery result but releases no retained child transport ownership.
+
+AutonomousPreparationChainResourceBudget reserves aggregate numeric storage under
+the existing 128 MiB ceiling before every render pass, including a requested
+corrective pass. Each active source uses the unchanged full per-pass workspace
+bound; suspended parents retain selected immutable PCM, ending continuation and
+reduced evidence. The existing complete typed continuation inventory counts actual
+retained numeric storage, including Float array capacity rather than merely
+occupied frames, with checked arithmetic and cancellation. Counting adds typed
+field/scalar metadata and uses no whole-state byte buffer; default replay hashes
+remain exact. Unknown/overflowing storage or values beyond the original conservative
+continuation ceiling refuse admission. Scratch, analyzer and looper workspaces are
+released before suspension. Source/preview/resolved PCM and ending arrays are immutable aliases;
+none is mutated after publication. A parent requiring a measured child drops its
+repeat variants, since protected transport must consume that exact child instead.
+Only a naturally closed leaf retains ordinary qualified repeat fallback variants.
+Optional diagnostic capture separately reserves two eleven-channel role captures
+plus ten stage/residual channels for each active pass and selected retained source.
+Exhaustion refuses before another source's or corrective pass's PCM; no larger
+ceiling, relaxed physical window or easier fixture is substituted. This
+numeric reservation is not process-high-water, deadline, sustained playback or
+physical-output qualification; those remain required evidence.
+
+PreparedPerformancePhrase retains a flat ordered list of admitted child products
+with exact requests, quality/live/render/graph and long-horizon continuation and
+read-only waveforms. The DSP proof independently retains the same immediate child
+by identity. Child list entries do not recursively duplicate that presentation
+list. Neither this detached ownership nor a commitEligible source proves that a
+host scheduled the measured continuation. Protected macOS/Windows consumption,
+replacement and coherent-repeat consequences, future live/route sample-boundary
+admission, full resource/deadline qualification and matching current primary and
+long-horizon artifacts remain required before installation or activation. Historical
+bundled resources remain ineligible. Mechanical controls cannot promote policy.

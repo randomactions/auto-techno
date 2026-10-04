@@ -464,3 +464,327 @@ struct ProspectiveSuccessorRequestTests {
         }
     }
 }
+
+@Suite("Iterative canonical successor preparation", .serialized)
+struct IterativeSuccessorPreparationTests {
+    @Test("Aggregate reservations keep the existing ceiling and refuse before another render")
+    func aggregateResourceReservations() throws {
+        for rate in [8_000.0, 44_100.0, 48_000.0] {
+            var budget = AutonomousPreparationChainResourceBudget()
+            var expectedPeak = 0
+            var expectedRetained = 0
+            let single = try #require(AutonomousPreparationResourceBudget(sampleRate: rate,
+                barCount: 4, renderPassCount: 2))
+            let selected = try #require(AutonomousPreparationResourceBudget(sampleRate: rate,
+                barCount: 4, renderPassCount: 1))
+            while let next = budget.reserving(sampleRate: rate, barCount: 4) {
+                expectedPeak = max(expectedPeak, expectedRetained + single.peakWorkingByteCount)
+                #expect(next.reservedPeakWorkingByteCount == expectedPeak)
+                #expect(next.sourceCount == budget.sourceCount + 1)
+                #expect(next.maximumRenderPassCount == 2 * next.sourceCount)
+                #expect(next.reservedPeakWorkingByteCount <=
+                    AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount)
+                let retained = try #require(next.retainingCompletedSource(sampleRate: rate, barCount: 4,
+                    requiresQualifiedSuccessor: true))
+                expectedRetained += selected.phraseFrameCount * 2 * MemoryLayout<Float>.stride +
+                    selected.continuationPCMByteCount + selected.reducedEvidenceByteCount
+                #expect(retained.retainedNumericByteCount == expectedRetained)
+                #expect(retained.retainingCompletedSource(sampleRate: rate, barCount: 4,
+                    requiresQualifiedSuccessor: true) == nil)
+                budget = retained
+            }
+            #expect(budget.sourceCount > 1)
+            #expect(expectedRetained + single.peakWorkingByteCount >
+                AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount)
+            #expect(budget.reserving(sampleRate: rate, barCount: 4) == nil)
+        }
+        let empty = AutonomousPreparationChainResourceBudget()
+        #expect(empty.reserving(sampleRate: .nan, barCount: 4) == nil)
+        #expect(empty.reserving(sampleRate: 48_000, barCount: 17) == nil)
+        let normal = try #require(empty.reserving(sampleRate: 8_000, barCount: 4))
+        let diagnostic = try #require(empty.reserving(sampleRate: 8_000, barCount: 4,
+            diagnosticRoleStemCapture: true))
+        let single = try #require(AutonomousPreparationResourceBudget(sampleRate: 8_000,
+            barCount: 4, renderPassCount: 2))
+        #expect(diagnostic.reservedPeakWorkingByteCount - normal.reservedPeakWorkingByteCount ==
+            single.phraseFrameCount * 32 * MemoryLayout<Float>.stride * 2)
+    }
+
+    @Test("Retained numeric storage shares the canonical typed inventory and counts buffer capacity")
+    func typedRetainedStorageInventory() throws {
+        let base = RenderState()
+        let graph = GeneratedDSPContinuationState()
+        let beforeCount = AutonomousTypedFingerprint.retainedContinuationNumericByteCount(
+            renderState: base, generatedDSPState: graph, cancellationRequested: { false })
+        let before = try #require(beforeCount)
+        let fingerprint = AutonomousTypedFingerprint.renderDSPContinuation(renderState: base, generatedDSPState: graph)
+        var buffer = [Float](); buffer.reserveCapacity(4_096); buffer.append(contentsOf: repeatElement(0, count: 1_024))
+        var changed = base; changed.delayBuffer = buffer
+        let afterCount = AutonomousTypedFingerprint.retainedContinuationNumericByteCount(
+            renderState: changed, generatedDSPState: graph, cancellationRequested: { false })
+        let after = try #require(afterCount)
+        #expect(after - before == (buffer.capacity - base.delayBuffer.capacity) * MemoryLayout<Float>.stride)
+        #expect(after >= buffer.capacity * MemoryLayout<Float>.stride)
+        #expect(AutonomousTypedFingerprint.renderDSPContinuation(renderState: base, generatedDSPState: graph) == fingerprint)
+        let cancelledCount = AutonomousTypedFingerprint.retainedContinuationNumericByteCount(renderState: changed,
+            generatedDSPState: graph, cancellationRequested: { true })
+        #expect(cancelledCount == nil)
+        var overflow = StreamingFNV1a(countingStorageOnly: true)
+        overflow.floatStorage(capacity: Int.max)
+        #expect(overflow.storageOverflow)
+        let budget = try #require(AutonomousPreparationChainResourceBudget().reserving(sampleRate: 8_000, barCount: 4))
+        #expect(budget.retainingCompletedSource(sampleRate: 8_000, barCount: 4,
+            requiresQualifiedSuccessor: true, retainedContinuationNumericByteCount: -1) == nil)
+        #expect(budget.retainingCompletedSource(sampleRate: 8_000, barCount: 4,
+            requiresQualifiedSuccessor: true, retainedContinuationNumericByteCount: Int.max) == nil)
+    }
+
+    @Test("Pending validation retains exact PCM and diagnostic capture without playable authority")
+    @MainActor
+    func deferredFinalizerParity() throws {
+        let request = Self.sourceRequest(rate: 8_000)
+        let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
+        let plan = director.plan(from: request.sourceState)
+        let evaluator = Evaluator(request: request, control: Control(mode: .dropProof))
+        let awaiting = Self.render(request, plan: plan, evaluator: evaluator, deferred: true, capture: true)
+        guard case let .awaitingPreparedValidation(pending) = awaiting else {
+            Issue.record("Canonical finalizer did not suspend"); return
+        }
+        #expect(awaiting.preparedPhrase == nil)
+        #expect(pending.preview.hasProspectiveAcceptanceBinding)
+        let before = pending.preview.sourceIdentityFingerprint
+        let resumed = try #require(pending.resolving(nil, cancellationRequested: { false }).preparedPhrase)
+        let ordinary = try #require(Self.render(request, plan: plan, evaluator: evaluator,
+            deferred: false, capture: true).preparedPhrase)
+        #expect(!resumed.commitEligible && !ordinary.commitEligible)
+        #expect(resumed.blocks == ordinary.blocks)
+        #expect(resumed.candidateEvaluationFingerprint == ordinary.candidateEvaluationFingerprint)
+        #expect(resumed.qualityContinuationState == ordinary.qualityContinuationState)
+        #expect(ProfessionalQualityModalSuccessorEvidence.identity(resumed) ==
+            ProfessionalQualityModalSuccessorEvidence.identity(ordinary))
+        #expect(resumed.diagnosticRoleStemCaptures == ordinary.diagnosticRoleStemCaptures)
+        #expect(resumed.diagnosticRoleStemCaptures.count == plan.barCount)
+        #expect(resumed.diagnosticRoleStemCaptures.allSatisfy { $0.frameCountsAreAligned })
+        #expect(resumed.repeatHoldEvolutionEvidence == ordinary.repeatHoldEvolutionEvidence)
+        #expect(resumed.repeatHoldEvolutions.isEmpty) // exact measured child is mandatory
+        #expect(pending.preview.sourceIdentityFingerprint == before)
+        let cancelled = pending.resolving(nil, cancellationRequested: { true })
+        #expect(cancelled.failure?.code == .cancelled && cancelled.preparedPhrase == nil)
+    }
+
+    @Test("Actual three-rate chains render iteratively on the detached preparation thread")
+    func actualIterativeChain() async throws {
+        var rows: [[String: Any]] = []
+        for rate in [8_000.0, 44_100.0, 48_000.0] {
+            let request = Self.sourceRequest(rate: rate)
+            let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
+            let original = AutonomousCandidateFingerprint.sessionState(request.sourceState)
+            let control = Control()
+            let outcome = await Task.detached {
+                AutonomousPerformancePreparer.prepareChainDiagnosing(request: request, director: director,
+                    longHorizonPolicy: nil,
+                    makeEvaluator: { Evaluator(request: $0, control: control) },
+                    cancellationRequested: { control.cancelled })
+            }.value
+            let result = try #require(outcome.preparedPhrase,
+                "Chain failed at \(rate): \(String(describing: outcome.failure))")
+            let nodes = [result] + result.retainedContinuations
+            #expect(nodes.count > 1)
+            #expect(nodes.allSatisfy { $0.prepared.commitEligible })
+            #expect(result.retainedContinuations.allSatisfy { $0.retainedContinuations.isEmpty })
+            let resource = try #require(result.preparationChainResourceBudget)
+            #expect(resource.sourceCount == nodes.count)
+            #expect(control.terminals == nodes.map { $0.request.key.phraseIndex })
+            var expected = AutonomousPreparationChainResourceBudget()
+            for (index, node) in nodes.enumerated() {
+                expected = try #require(expected.reserving(sampleRate: rate, barCount: node.prepared.plan.barCount,
+                    renderPassCount: node.prepared.correctionRenderCount + 1))
+                let storageCount = AutonomousTypedFingerprint.retainedContinuationNumericByteCount(
+                    renderState: node.prepared.endingRenderState,
+                    generatedDSPState: node.prepared.endingGraphState, cancellationRequested: { false })
+                let storage = try #require(storageCount)
+                expected = try #require(expected.retainingCompletedSource(sampleRate: rate,
+                    barCount: node.prepared.plan.barCount,
+                    requiresQualifiedSuccessor: node.prepared.preparedValidation?.requiresQualifiedSuccessor == true,
+                    retainedContinuationNumericByteCount: storage))
+                #expect(node.prepared.preparationReplayFingerprint == node.request.replayIdentity.fingerprint)
+                #expect(node.prepared.preparedValidation?.hasRequiredMeasurements == true)
+                #expect(node.prepared.preparedValidation?.hasQualifiedContinuation == true)
+                if index + 1 < nodes.count {
+                    let child = nodes[index + 1]
+                    let next = node.request.sourceState.advance(using: node.prepared.plan,
+                        quality: node.prepared.qualityContinuationState,
+                        liveMasterHeadroom: node.prepared.liveMasterHeadroomContinuationState)
+                    #expect(AutonomousCandidateFingerprint.sessionState(next) ==
+                        AutonomousCandidateFingerprint.sessionState(child.request.sourceState))
+                    #expect(director.plan(from: next) == child.prepared.plan)
+                    #expect(node.prepared.preparedValidation?.qualifiedSuccessor === child.prepared)
+                    #expect(node.prepared.repeatHoldEvolutions.isEmpty)
+                } else {
+                    #expect(node.prepared.preparedValidation?.requiresQualifiedSuccessor == false)
+                    #expect(node.prepared.preparedValidation?.qualifiedSuccessor == nil)
+                }
+            }
+            #expect(expected == resource)
+            let leaf = try #require(nodes.last)
+            let ordinaryLeaf = try #require(Self.render(leaf.request, plan: leaf.prepared.plan,
+                evaluator: Evaluator(request: leaf.request, control: Control()), deferred: false).preparedPhrase)
+            #expect(ordinaryLeaf.blocks == leaf.prepared.blocks)
+            #expect(ordinaryLeaf.repeatHoldEvolutions == leaf.prepared.repeatHoldEvolutions)
+            #expect(AutonomousCandidateFingerprint.sessionState(request.sourceState) == original)
+            rows.append(["sampleRate": rate, "sources": nodes.count,
+                "barCounts": nodes.map { $0.prepared.plan.barCount },
+                "sourceIdentities": nodes.map { ProfessionalQualityModalSuccessorEvidence.identity($0.prepared) },
+                "sampleHashes": nodes.map { $0.prepared.audioPreflight.quality.sampleHash },
+                "reservedPeakWorkingBytes": resource.reservedPeakWorkingByteCount,
+                "maximumRenderPasses": resource.maximumRenderPassCount,
+                "allCommitEligible": true, "qualifiedImmediateChildrenRetained": true])
+        }
+        let wire: [String: Any] = ["fixture": "iterative-canonical-successor-chain.v1", "rows": rows,
+            "detachedThread": true, "qualification": "mechanical-only-not-installed",
+            "runtimeActivation": false, "resourceSoakQualified": false]
+        print(String(decoding: try JSONSerialization.data(withJSONObject: wire, options: [.sortedKeys]), as: UTF8.self))
+    }
+
+    @Test("Rejected or missing child proof and cancellation discard the entire tentative chain")
+    func childRefusalAndCancellation() async throws {
+        let request = Self.sourceRequest(rate: 8_000)
+        let original = AutonomousCandidateFingerprint.sessionState(request.sourceState)
+        for mode in [Control.Mode.rejectChild, .dropChildProof, .cancelOnValidation] {
+            let control = Control(mode: mode)
+            let outcome = await Task.detached {
+                AutonomousPerformancePreparer.prepareChainDiagnosing(request: request,
+                    director: AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed),
+                    longHorizonPolicy: nil, makeEvaluator: { Evaluator(request: $0, control: control) },
+                    cancellationRequested: { control.cancelled })
+            }.value
+            #expect(outcome.preparedPhrase == nil)
+            #expect(outcome.failure?.code == (mode == .cancelOnValidation ? "cancelled" : "successor-rejected"))
+            #expect(control.terminals.count > 1)
+            #expect(AutonomousCandidateFingerprint.sessionState(request.sourceState) == original)
+        }
+        let control = Control()
+        let large = Self.sourceRequest(rate: 192_000)
+        let outcome = AutonomousPerformancePreparer.prepareChainDiagnosing(request: large,
+            director: AutonomousSessionDirector(rootSeed: large.sourceState.rootSeed), longHorizonPolicy: nil,
+            makeEvaluator: { Evaluator(request: $0, control: control) }, cancellationRequested: { false })
+        #expect(outcome.preparedPhrase == nil && outcome.failure?.code == "resource-bound")
+        #expect(control.terminals.isEmpty)
+    }
+
+    @Test("A corrective render cannot allocate before the aggregate owner grants its second pass")
+    @MainActor
+    func correctionReservationPrecedesPCM() throws {
+        let request = Self.sourceRequest(rate: 8_000)
+        let plan = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed).plan(from: request.sourceState)
+        let control = Control(mode: .forceCorrection)
+        let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(plan: plan,
+            sessionSeed: request.sourceState.rootSeed, memory: request.sourceState.memory,
+            sampleRate: request.key.sampleRate, incomingRenderState: request.incomingRenderState,
+            incomingGraphState: request.incomingGraphState, previousGraph: request.previousGraph,
+            incomingQualityState: request.sourceState.quality, routeGeneration: request.key.routeGeneration,
+            evaluator: Evaluator(request: request, control: control), deferPreparedValidation: true,
+            renderPassReservation: { count in control.reserve(count) }, cancellationRequested: { false })
+        #expect(outcome.preparedPhrase == nil)
+        #expect(outcome.failure?.code == .renderBudgetUnavailable)
+        #expect(control.claims == [1, 2])
+        #expect(control.terminals.isEmpty)
+        #expect(request.sourceState.quality.revision == 0)
+    }
+
+    @Test("A measured root rejection preserves canonical recovery without releasing child ownership")
+    func rootRejectionPreservesRecovery() async throws {
+        let request = Self.sourceRequest(rate: 8_000)
+        let control = Control(mode: .rejectRoot)
+        let outcome = await Task.detached {
+            AutonomousPerformancePreparer.prepareChainDiagnosing(request: request,
+                director: AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed),
+                longHorizonPolicy: nil, makeEvaluator: { Evaluator(request: $0, control: control) },
+                cancellationRequested: { false })
+        }.value
+        let root = try #require(outcome.preparedPhrase)
+        #expect(!root.prepared.commitEligible)
+        #expect(root.prepared.qualityDecision.outcome == .rejected)
+        #expect(root.prepared.qualityDecision.reasonCodes.contains(.guardrailRegressionV1))
+        #expect(root.prepared.qualityContinuationState.acceptedEvidenceFingerprint ==
+            request.sourceState.quality.acceptedEvidenceFingerprint)
+        #expect(root.retainedContinuations.isEmpty)
+        #expect(control.terminals.count > 1)
+        #expect(root.prepared.preparedValidation?.hasRequiredMeasurements == true)
+    }
+
+    private static func sourceRequest(rate: Double) -> PhrasePreparationRequest {
+        let director = AutonomousSessionDirector(rootSeed: 48_300)
+        var state = director.initialState()
+        for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
+        var render = RenderState(); render.barIndex = state.memory.totalBars
+        let key = PhrasePreparationKey(sessionSeed: state.rootSeed, phraseIndex: state.phraseIndex,
+            sampleRate: rate, channelCount: 2, routeRecovery: false,
+            qualityRevision: state.quality.revision, qualityPolicyVersion: state.quality.policyVersion,
+            qualityControllerFingerprint: state.quality.observedControllerStateFingerprint ?? state.quality.acceptedControllerStateFingerprint,
+            routeGeneration: 7, incomingLiveMasterRevision: state.liveMasterHeadroom.revision,
+            incomingLiveMasterStateFingerprint: state.liveMasterHeadroom.fingerprint,
+            pendingLiveMasterProposalFingerprint: nil, liveEarliestEligibleFutureSample: nil, liveTargetStartSample: nil)
+        return PhrasePreparationRequest(key: key, sourceState: state, incomingLongHorizonState: nil,
+            incomingRenderState: render, incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil, pendingLiveMasterBinding: nil)
+    }
+
+    private static func render(_ request: PhrasePreparationRequest, plan: AutonomousPhrasePlan,
+        evaluator: Evaluator, deferred: Bool, capture: Bool = false) -> AutonomousPhrasePreparationOutcome {
+        AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(plan: plan,
+            sessionSeed: request.sourceState.rootSeed, memory: request.sourceState.memory,
+            sampleRate: request.key.sampleRate, incomingRenderState: request.incomingRenderState,
+            incomingGraphState: request.incomingGraphState, previousGraph: request.previousGraph,
+            incomingQualityState: request.sourceState.quality, routeGeneration: request.key.routeGeneration,
+            diagnosticRoleStemCapture: capture, evaluator: evaluator,
+            deferPreparedValidation: deferred, cancellationRequested: { false })
+    }
+
+    private final class Control: @unchecked Sendable {
+        enum Mode: Sendable { case accept, dropProof, rejectRoot, rejectChild, dropChildProof, cancelOnValidation, forceCorrection }
+        let mode: Mode
+        private let lock = NSLock()
+        private var sourcePhrases: [Int] = []
+        private var cancellation = false
+        private var renderClaims: [Int] = []
+        init(mode: Mode = .accept) { self.mode = mode }
+        var terminals: [Int] { lock.lock(); defer { lock.unlock() }; return sourcePhrases }
+        var cancelled: Bool { lock.lock(); defer { lock.unlock() }; return cancellation }
+        func terminal(_ phrase: Int) { lock.lock(); defer { lock.unlock() }; sourcePhrases.append(phrase) }
+        func cancel() { lock.lock(); defer { lock.unlock() }; cancellation = true }
+        var claims: [Int] { lock.lock(); defer { lock.unlock() }; return renderClaims }
+        func reserve(_ count: Int) -> Bool { lock.lock(); defer { lock.unlock() }; renderClaims.append(count); return count == 1 }
+    }
+
+    private struct Evaluator: AutonomousCandidateEvaluating {
+        let request: PhrasePreparationRequest
+        let control: Control
+        let policyVersion = "autotechno-quality.iterative-mechanical.v1"
+        let evaluatorVersion = ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier
+        var preparationReplayFingerprint: String? { request.replayIdentity.fingerprint }
+        var requiresPreparedValidation: Bool { true }
+        func requestsHomeUpperTimbreCorrection(for candidate: AutonomousCandidateEvaluationVector) -> Bool { control.mode == .forceCorrection }
+        func terminalVerdict(selected: AutonomousCandidateEvaluationVector,
+            transaction: AutonomousCandidateEvaluationTransaction) -> AutonomousCandidatePolicyVerdict {
+            control.terminal(request.key.phraseIndex)
+            return .init(outcome: .qualified, decisionBasis: .calibratedQuality, reasonCodes: [.candidateQualifiedV1])
+        }
+        func preparedValidation(for preview: AutonomousCandidatePreparedPreview) -> AutonomousCandidatePreparedValidation? {
+            preparedValidation(for: preview, successor: nil)
+        }
+        func preparedValidation(for preview: AutonomousCandidatePreparedPreview,
+            successor: PreparedAutonomousPhrase?) -> AutonomousCandidatePreparedValidation? {
+            if control.mode == .cancelOnValidation { control.cancel() }
+            if control.mode == .dropProof || (control.mode == .dropChildProof && request.key.phraseIndex > 21) { return nil }
+            return try? preview.assessingContinuous(successor: successor) { _ in
+                if (control.mode == .rejectChild && request.key.phraseIndex > 21) ||
+                    (control.mode == .rejectRoot && request.key.phraseIndex == 21) {
+                    return .init(outcome: .rejected, decisionBasis: .calibratedQuality,
+                        reasonCodes: [.guardrailRegressionV1], diagnosticDetails: ["mechanical-child-rejection"])
+                }
+                return .init(outcome: .qualified, decisionBasis: .calibratedQuality, reasonCodes: [.candidateQualifiedV1])
+            }
+        }
+    }
+}

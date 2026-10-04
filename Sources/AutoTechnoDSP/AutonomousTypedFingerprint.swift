@@ -385,6 +385,22 @@ package enum AutonomousTypedFingerprint {
         }
     }
 
+    /// Numeric retained-storage accounting through the same complete typed
+    /// continuation inventory as replay. Float buffers count allocated capacity;
+    /// typed field/scalar encoding adds conservative metadata headroom. This
+    /// mode creates no byte buffer, changes no fingerprint, and runs detached.
+    package static func retainedContinuationNumericByteCount(
+        renderState: RenderState, generatedDSPState: GeneratedDSPContinuationState,
+        cancellationRequested: @Sendable () -> Bool
+    ) -> Int? {
+        guard !cancellationRequested() else { return nil }
+        var sink = StreamingFNV1a(countingStorageOnly: true)
+        guard encode(renderState, into: &sink, cancellationRequested: cancellationRequested),
+            encode(generatedDSPState, into: &sink, cancellationRequested: cancellationRequested),
+            !cancellationRequested(), !sink.storageOverflow else { return nil }
+        return sink.storageByteCount
+    }
+
     package static func renderDSPContinuation(
         renderState: RenderState,
         generatedDSPState: GeneratedDSPContinuationState
@@ -2092,7 +2108,11 @@ private extension AutonomousTypedFingerprint {
 
     static func encode(_ value: [Float], into sink: inout StreamingFNV1a) {
         sink.collection(value.count)
-        for sample in value { sink.float(sample) }
+        if sink.countingStorageOnly {
+            sink.floatStorage(capacity: value.capacity)
+        } else {
+            for sample in value { sink.float(sample) }
+        }
     }
 
     static func encode(
@@ -2100,8 +2120,13 @@ private extension AutonomousTypedFingerprint {
         into sink: inout StreamingFNV1a,
         cancellationRequested: @Sendable () -> Bool
     ) -> Bool {
+        guard !cancellationRequested() else { return false }
         let cancellationChunkSampleCount = 1_024
         sink.collection(value.count)
+        if sink.countingStorageOnly {
+            sink.floatStorage(capacity: value.capacity)
+            return !sink.storageOverflow && !cancellationRequested()
+        }
         var index = 0
         while index < value.count {
             guard !cancellationRequested() else { return false }
@@ -2546,6 +2571,23 @@ private extension AutonomousTypedFingerprint {
 /// fingerprints do not depend on native memory layout or host endianness.
 struct StreamingFNV1a {
     private(set) var value: UInt64 = 0xcbf29ce484222325
+    let countingStorageOnly: Bool
+    private(set) var storageByteCount = 0
+    private(set) var storageOverflow = false
+
+    init(countingStorageOnly: Bool = false) { self.countingStorageOnly = countingStorageOnly }
+
+    mutating func floatStorage(capacity: Int) {
+        let bytes = capacity.multipliedReportingOverflow(by: MemoryLayout<Float>.stride)
+        guard capacity >= 0, !bytes.overflow else { storageOverflow = true; return }
+        countStorage(bytes.partialValue)
+    }
+
+    private mutating func countStorage(_ bytes: Int) {
+        let next = storageByteCount.addingReportingOverflow(bytes)
+        guard bytes >= 0, !next.overflow else { storageOverflow = true; return }
+        storageByteCount = next.partialValue
+    }
 
     mutating func domain(_ value: String) {
         marker(0xd0)
@@ -2613,6 +2655,11 @@ struct StreamingFNV1a {
     }
 
     mutating func string(_ value: String) {
+        if countingStorageOnly {
+            countStorage(MemoryLayout<UInt64>.stride + 1)
+            countStorage(value.utf8.count)
+            return
+        }
         marker(0x73)
         fixed(UInt64(value.utf8.count))
         for byte in value.utf8 { append(byte) }
@@ -2623,6 +2670,7 @@ struct StreamingFNV1a {
     }
 
     private mutating func append(_ byte: UInt8) {
+        if countingStorageOnly { countStorage(1); return }
         value ^= UInt64(byte)
         value &*= 0x100000001b3
     }

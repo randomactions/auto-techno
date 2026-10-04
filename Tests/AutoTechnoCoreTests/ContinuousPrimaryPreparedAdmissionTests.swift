@@ -1,4 +1,5 @@
 import AutoTechnoCore
+@testable import AutoTechnoTransport
 @testable import AutoTechnoDSP
 import Foundation
 import Testing
@@ -55,6 +56,30 @@ struct ContinuousPrimaryPreparedAdmissionTests {
             let prepared = try #require(prepare(state: state, plan: plan, rate: rate,
                 evaluator: ModelControlEvaluator(primary: artifacts.evaluator, state: state)).preparedPhrase)
             #expect(prepared.commitEligible)
+            // Exercise the installed shared owner with the same retained model,
+            // rather than only the evaluator's direct test wrapper. Operational
+            // replay origin changes prepared identity, while PCM stays exact.
+            let key = PhrasePreparationKey(sessionSeed: state.rootSeed, phraseIndex: state.phraseIndex,
+                sampleRate: rate, channelCount: 2, routeRecovery: false,
+                qualityRevision: state.quality.revision, qualityPolicyVersion: state.quality.policyVersion,
+                qualityControllerFingerprint: state.quality.observedControllerStateFingerprint ?? state.quality.acceptedControllerStateFingerprint,
+                routeGeneration: 0, incomingLiveMasterRevision: state.liveMasterHeadroom.revision,
+                incomingLiveMasterStateFingerprint: state.liveMasterHeadroom.fingerprint,
+                pendingLiveMasterProposalFingerprint: nil, liveEarliestEligibleFutureSample: nil,
+                liveTargetStartSample: nil)
+            let request = PhrasePreparationRequest(key: key, sourceState: state, incomingLongHorizonState: nil,
+                incomingRenderState: RenderState(), incomingGraphState: GeneratedDSPContinuationState(),
+                previousGraph: nil, pendingLiveMasterBinding: nil)
+            let shared = try #require(AutonomousPerformancePreparer.prepareDiagnosing(request: request,
+                director: director, artifacts: artifacts, longHorizonArtifacts: nil).preparedPhrase)
+            #expect(shared.prepared.commitEligible)
+            #expect(shared.prepared.blocks == prepared.blocks)
+            #expect(shared.prepared.audioPreflight.quality.sampleHash == prepared.audioPreflight.quality.sampleHash)
+            #expect(shared.prepared.preparationReplayFingerprint == request.replayIdentity.fingerprint)
+            #expect(shared.preparationChainResourceBudget?.sourceCount == 1)
+            #expect(shared.retainedContinuations.isEmpty)
+            let sharedProof = try #require(shared.prepared.preparedValidation)
+            #expect(artifacts.evaluator.assessment(of: [sharedProof.observation]).accepted)
             let proof = try #require(prepared.preparedValidation)
             #expect(proof.hasRequiredMeasurements && proof.hasQualifiedContinuation)
             #expect(artifacts.evaluator.assessment(of: [proof.observation]).accepted)
@@ -92,7 +117,7 @@ struct ContinuousPrimaryPreparedAdmissionTests {
         let wire: [String: Any] = ["fixture": "continuous-primary-prepared-admission.v1", "rows": rows,
             "missingProofRefused": true, "unsupportedRateRefused": true, "unfinishedWindowsRefused": true,
             "legacyAndVectorOnlyAssessmentRefused": true, "metricAttackRefused": true, "mixedScopeArtifactsRefused": true,
-            "modelSource": "retained-7ef30ff-mechanical-only", "runtimeActivation": false]
+            "sharedInstalledOwnerAdmissionExercised": true, "modelSource": "retained-7ef30ff-mechanical-only", "runtimeActivation": false]
         print(String(decoding: try JSONSerialization.data(withJSONObject: wire, options: [.sortedKeys]), as: UTF8.self))
     }
 

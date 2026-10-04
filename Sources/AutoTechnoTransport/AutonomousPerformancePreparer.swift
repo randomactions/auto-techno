@@ -361,19 +361,27 @@ package struct PreparedPerformancePhrase: Sendable {
     package let outgoingLongHorizonState: LongHorizonFutureAdaptationState?
     package let longHorizonDecision: LongHorizonTrajectoryDecision?
     package let waveforms: [[Float]]
+    /// Flat ordered continuation ownership. Child entries contain no nested
+    /// list; their exact DSP proof still retains the measured immediate child.
+    package let retainedContinuations: [PreparedPerformancePhrase]
+    package let preparationChainResourceBudget: AutonomousPreparationChainResourceBudget?
 
     package init(
         request: PhrasePreparationRequest,
         prepared: PreparedAutonomousPhrase,
         outgoingLongHorizonState: LongHorizonFutureAdaptationState?,
         longHorizonDecision: LongHorizonTrajectoryDecision?,
-        waveforms: [[Float]]
+        waveforms: [[Float]],
+        retainedContinuations: [PreparedPerformancePhrase] = [],
+        preparationChainResourceBudget: AutonomousPreparationChainResourceBudget? = nil
     ) {
         self.request = request
         self.prepared = prepared
         self.outgoingLongHorizonState = outgoingLongHorizonState
         self.longHorizonDecision = longHorizonDecision
         self.waveforms = waveforms
+        self.retainedContinuations = retainedContinuations
+        self.preparationChainResourceBudget = preparationChainResourceBudget
     }
 }
 
@@ -575,115 +583,217 @@ package enum AutonomousPerformancePreparer {
         longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?,
         diagnosticRoleStemCapture: Bool = false
     ) -> PerformancePreparationOutcome {
-        let requestFailures = [
-            request.replayIdentity.isComplete
-                ? nil : "request-replay-identity",
-            request.replayIdentity.matches(request)
-                ? nil : "request-replay-mismatch",
-            request.key.sessionSeed == request.sourceState.rootSeed
-                ? nil : "request-source-root",
-            director.rootSeed == request.sourceState.rootSeed
-                ? nil : "director-source-root",
-        ].compactMap { $0 }
-        guard requestFailures.isEmpty else {
-            return .failed(PhrasePreparationFailure(
-                stage: "request-validation",
-                code: "identity-mismatch",
-                details: requestFailures
-            ))
-        }
-        let plan = director.plan(
-            from: request.sourceState,
-            qualityRecoveryContext: request.key.routeRecovery
-                ? .neutral : request.key.qualityRecoveryContext
-        )
-        let evaluator = ProfessionalQualityPreparationEvaluator(
-            sampleRate: request.key.sampleRate,
-            artifacts: artifacts,
-            preparationReplayFingerprint: request.replayIdentity.fingerprint
-        )
-        let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
-            plan: plan,
-            sessionSeed: request.sourceState.rootSeed,
-            memory: request.sourceState.memory,
-            sampleRate: request.key.sampleRate,
-            incomingRenderState: request.incomingRenderState,
-            incomingGraphState: request.incomingGraphState,
-            previousGraph: request.previousGraph,
-            incomingQualityState: request.sourceState.quality,
-            routeRecovery: request.key.routeRecovery,
-            routeChannelCount: request.key.channelCount,
-            routeGeneration: request.key.routeGeneration,
-            pendingLiveMasterBinding: request.pendingLiveMasterBinding,
-            liveTargetStartSample: request.key.liveTargetStartSample,
+        prepareChainDiagnosing(request: request, director: director,
+            longHorizonPolicy: longHorizonArtifacts?.policy,
             diagnosticRoleStemCapture: diagnosticRoleStemCapture,
-            evaluator: evaluator,
-            cancellationRequested: { Task.isCancelled }
-        )
-        guard case let .prepared(prepared) = outcome else {
-            let failure = outcome.failure.map {
-                PhrasePreparationFailure(
-                    stage: $0.stage.rawValue,
-                    code: $0.code.rawValue,
-                    details: $0.details
-                )
-            } ?? PhrasePreparationFailure(
-                stage: "transaction",
-                code: "unknown-failure"
-            )
-            return .failed(failure)
-        }
-        guard !Task.isCancelled else {
-            return .failed(PhrasePreparationFailure(
-                stage: "transaction",
-                code: "cancelled"
-            ))
-        }
+            makeEvaluator: { request in
+                ProfessionalQualityPreparationEvaluator(sampleRate: request.key.sampleRate,
+                    artifacts: artifacts, preparationReplayFingerprint: request.replayIdentity.fingerprint)
+            }, cancellationRequested: { Task.isCancelled })
+    }
 
-        let incomingLongHorizon = request.incomingLongHorizonState ??
-            longHorizonArtifacts.flatMap {
-                LongHorizonFutureAdaptationState(
-                    startingState: request.sourceState,
-                    policy: $0.policy
-                )
+    private struct PendingFrame: Sendable {
+        let request: PhrasePreparationRequest
+        let pending: AutonomousPendingPreparedValidation
+        let continuation: ProspectivePerformanceContinuation?
+    }
+
+    /// Single-writer synchronous reservation, confined to one render call.
+    /// It is never used by callbacks or shared concurrently between tasks.
+    private final class RenderReservation: @unchecked Sendable {
+        let incoming: AutonomousPreparationChainResourceBudget
+        let sampleRate: Double
+        let bars: Int
+        let capture: Bool
+        private(set) var value: AutonomousPreparationChainResourceBudget
+        private(set) var refused = false
+        init(incoming: AutonomousPreparationChainResourceBudget, sampleRate: Double, bars: Int, capture: Bool) {
+            self.incoming = incoming; self.sampleRate = sampleRate; self.bars = bars; self.capture = capture
+            value = incoming
+        }
+        func claim(_ count: Int) -> Bool {
+            guard let next = incoming.reserving(sampleRate: sampleRate, barCount: bars,
+                renderPassCount: count, diagnosticRoleStemCapture: capture) else { refused = true; return false }
+            value = next
+            return true
+        }
+    }
+
+    /// One iterative transaction used by the installed route evaluator and
+    /// deterministic evaluator controls. No child bypasses its own validation.
+    /// Neither pending source nor a partially reduced chain can escape.
+    package static func prepareChainDiagnosing<E: AutonomousCandidateEvaluating>(
+        request: PhrasePreparationRequest, director: AutonomousSessionDirector,
+        longHorizonPolicy: LongHorizonProfessionalPolicy?,
+        diagnosticRoleStemCapture: Bool = false,
+        makeEvaluator: @Sendable (PhrasePreparationRequest) -> E,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> PerformancePreparationOutcome {
+        func fail(_ code: String, _ details: [String] = []) -> PerformancePreparationOutcome {
+            .failed(PhrasePreparationFailure(stage: "successor-chain", code: code, details: details))
+        }
+        var current = request
+        var frames: [PendingFrame] = []
+        var resource = AutonomousPreparationChainResourceBudget()
+        while true {
+            guard !cancellationRequested() else { return fail("cancelled") }
+            let requestFailures = [
+                current.replayIdentity.isComplete ? nil : "request-replay-identity",
+                current.replayIdentity.matches(current) ? nil : "request-replay-mismatch",
+                current.key.sessionSeed == current.sourceState.rootSeed ? nil : "request-source-root",
+                director.rootSeed == current.sourceState.rootSeed ? nil : "director-source-root",
+            ].compactMap { $0 }
+            guard requestFailures.isEmpty else {
+                return .failed(PhrasePreparationFailure(stage: "request-validation",
+                    code: "identity-mismatch", details: requestFailures))
             }
-        let longHorizonUpdate: LongHorizonFutureAdaptationUpdate? =
-          if let incomingLongHorizon, let longHorizonArtifacts {
-            incomingLongHorizon.observing(
-                prepared: prepared,
-                incomingState: request.sourceState,
-                policy: longHorizonArtifacts.policy
-            )
-        } else {
-            nil
+            let plan = director.plan(from: current.sourceState,
+                qualityRecoveryContext: current.key.routeRecovery ? .neutral : current.key.qualityRecoveryContext)
+            let evaluator = makeEvaluator(current)
+            let capture = frames.isEmpty && diagnosticRoleStemCapture
+            let reservation = RenderReservation(incoming: resource, sampleRate: current.key.sampleRate,
+                bars: plan.barCount, capture: capture)
+            if evaluator.requiresPreparedValidation && !reservation.claim(1) {
+                return fail("resource-bound", ["sources=\(resource.sourceCount)",
+                    "reserved-bytes=\(resource.reservedPeakWorkingByteCount)", "next-bars=\(plan.barCount)"])
+            }
+            let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
+                plan: plan, sessionSeed: current.sourceState.rootSeed, memory: current.sourceState.memory,
+                sampleRate: current.key.sampleRate, incomingRenderState: current.incomingRenderState,
+                incomingGraphState: current.incomingGraphState, previousGraph: current.previousGraph,
+                incomingQualityState: current.sourceState.quality, routeRecovery: current.key.routeRecovery,
+                routeChannelCount: current.key.channelCount, routeGeneration: current.key.routeGeneration,
+                pendingLiveMasterBinding: current.pendingLiveMasterBinding,
+                liveTargetStartSample: current.key.liveTargetStartSample,
+                diagnosticRoleStemCapture: capture, evaluator: evaluator,
+                deferPreparedValidation: true,
+                renderPassReservation: { count in
+                    !evaluator.requiresPreparedValidation || reservation.claim(count)
+                }, cancellationRequested: cancellationRequested)
+            guard !cancellationRequested() else { return fail("cancelled") }
+            guard !reservation.refused else { return fail("resource-bound") }
+            resource = reservation.value
+            guard case let .awaitingPreparedValidation(pending) = outcome else {
+                if let failure = outcome.failure {
+                    return .failed(PhrasePreparationFailure(stage: failure.stage.rawValue,
+                        code: failure.code.rawValue, details: failure.details))
+                }
+                guard let prepared = outcome.preparedPhrase, frames.isEmpty else {
+                    return fail("successor-unavailable")
+                }
+                return packagePerformance(request: current, prepared: prepared,
+                    longHorizonPolicy: longHorizonPolicy, cancellationRequested: cancellationRequested)
+            }
+            guard pending.preview.preparationReplayFingerprint == current.replayIdentity.fingerprint,
+                pending.preview.hasProspectiveAcceptanceBinding else { return fail("source-mismatch") }
+            let needsChild: Bool
+            do { needsChild = try pending.preview.requiresQualifiedSuccessorSupport() }
+            catch { return fail("physical-support-unavailable") }
+            guard let numericStorage = AutonomousTypedFingerprint.retainedContinuationNumericByteCount(
+                renderState: pending.preview.endingRenderState,
+                generatedDSPState: pending.preview.endingGraphState,
+                cancellationRequested: cancellationRequested),
+                let retained = resource.retainingCompletedSource(sampleRate: current.key.sampleRate,
+                    barCount: plan.barCount, requiresQualifiedSuccessor: needsChild,
+                    diagnosticRoleStemCapture: capture,
+                    retainedContinuationNumericByteCount: numericStorage)
+            else { return fail(cancellationRequested() ? "cancelled" : "resource-retention-mismatch") }
+            resource = retained
+            if needsChild {
+                let continuation: ProspectivePerformanceContinuation
+                switch prospectiveContinuation(for: pending.preview, request: current,
+                    director: director, longHorizonPolicy: longHorizonPolicy,
+                    cancellationRequested: cancellationRequested) {
+                case let .success(value): continuation = value
+                case let .failure(failure): return .failed(failure)
+                }
+                frames.append(PendingFrame(request: current, pending: pending, continuation: continuation))
+                current = continuation.request
+            } else {
+                frames.append(PendingFrame(request: current, pending: pending, continuation: nil))
+                break
+            }
         }
+        var successor: PreparedAutonomousPhrase?
+        var reduced: [PreparedPerformancePhrase] = []
+        reduced.reserveCapacity(frames.count)
+        for frame in frames.reversed() {
+            guard !cancellationRequested() else { return fail("cancelled") }
+            let proof = makeEvaluator(frame.request).preparedValidation(for: frame.pending.preview,
+                successor: successor)
+            let outcome = frame.pending.resolving(proof, cancellationRequested: cancellationRequested)
+            guard !cancellationRequested() else { return fail("cancelled") }
+            if let failure = outcome.failure {
+                return .failed(PhrasePreparationFailure(stage: failure.stage.rawValue,
+                    code: failure.code.rawValue, details: failure.details))
+            }
+            guard let prepared = outcome.preparedPhrase else { return fail("validation-unavailable") }
+            guard prepared.commitEligible else {
+                // Preserve the ordinary root rejection for existing recovery,
+                // including a source measured with a child. A rejected child
+                // cannot produce any root or retained transport continuation.
+                if frame.request.replayIdentity.fingerprint == request.replayIdentity.fingerprint {
+                    return packagePerformance(request: frame.request, prepared: prepared,
+                        longHorizonPolicy: longHorizonPolicy, cancellationRequested: cancellationRequested)
+                }
+                return fail("successor-rejected", ["phrase=\(frame.request.key.phraseIndex)"] +
+                    prepared.qualityDiagnosticDetails)
+            }
+            if let continuation = frame.continuation {
+                guard let childRequest = continuation.admittedRequest(for: prepared,
+                    sourceRequest: frame.request, longHorizonPolicy: longHorizonPolicy),
+                    let child = reduced.last,
+                    childRequest.replayIdentity.fingerprint == child.request.replayIdentity.fingerprint,
+                    prepared.preparedValidation?.qualifiedSuccessor === child.prepared
+                else { return fail("continuation-mismatch") }
+            }
+            let packed = packagePerformance(request: frame.request, prepared: prepared,
+                longHorizonPolicy: longHorizonPolicy, cancellationRequested: cancellationRequested)
+            guard let node = packed.preparedPhrase else { return packed }
+            reduced.append(node)
+            successor = prepared
+        }
+        guard let root = reduced.popLast(), !cancellationRequested() else { return fail("cancelled") }
+        return .prepared(PreparedPerformancePhrase(request: root.request, prepared: root.prepared,
+            outgoingLongHorizonState: root.outgoingLongHorizonState,
+            longHorizonDecision: root.longHorizonDecision, waveforms: root.waveforms,
+            retainedContinuations: Array(reduced.reversed()), preparationChainResourceBudget: resource))
+    }
 
+    private static func packagePerformance(
+        request: PhrasePreparationRequest, prepared: PreparedAutonomousPhrase,
+        longHorizonPolicy: LongHorizonProfessionalPolicy?,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> PerformancePreparationOutcome {
+        let incomingLongHorizon = request.incomingLongHorizonState ?? longHorizonPolicy.flatMap {
+            LongHorizonFutureAdaptationState(startingState: request.sourceState, policy: $0)
+        }
+        let longHorizonUpdate: LongHorizonFutureAdaptationUpdate?
+        if let incomingLongHorizon, let longHorizonPolicy {
+            longHorizonUpdate = incomingLongHorizon.observing(prepared: prepared,
+                incomingState: request.sourceState, policy: longHorizonPolicy)
+            guard !prepared.commitEligible || longHorizonUpdate != nil else {
+                return .failed(PhrasePreparationFailure(stage: "successor-chain", code: "long-horizon-unavailable"))
+            }
+        } else {
+            guard request.incomingLongHorizonState == nil || !prepared.commitEligible else {
+                return .failed(PhrasePreparationFailure(stage: "successor-chain", code: "long-horizon-unavailable"))
+            }
+            longHorizonUpdate = nil
+        }
         var waveforms: [[Float]] = []
         waveforms.reserveCapacity(prepared.blocks.count)
         for block in prepared.blocks {
-            guard !Task.isCancelled else {
-                return .failed(PhrasePreparationFailure(
-                    stage: "presentation",
-                    code: "cancelled"
-                ))
+            guard !cancellationRequested() else {
+                return .failed(PhrasePreparationFailure(stage: "presentation", code: "cancelled"))
             }
-            waveforms.append(WaveformEnvelope.fixedDB(
-                left: block.left,
-                right: block.right
-            ))
+            waveforms.append(WaveformEnvelope.fixedDB(left: block.left, right: block.right))
         }
-        guard !Task.isCancelled else {
-            return .failed(PhrasePreparationFailure(
-                stage: "presentation",
-                code: "cancelled"
-            ))
+        guard !cancellationRequested() else {
+            return .failed(PhrasePreparationFailure(stage: "presentation", code: "cancelled"))
         }
-        return .prepared(PreparedPerformancePhrase(
-            request: request,
-            prepared: prepared,
+        return .prepared(PreparedPerformancePhrase(request: request, prepared: prepared,
             outgoingLongHorizonState: longHorizonUpdate?.state,
-            longHorizonDecision: longHorizonUpdate?.decision,
-            waveforms: waveforms
-        ))
+            longHorizonDecision: longHorizonUpdate?.decision, waveforms: waveforms))
     }
 }

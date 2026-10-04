@@ -1137,6 +1137,7 @@ package struct AutonomousPhrasePreparationFailure: Error, Equatable, Sendable {
 
 package enum AutonomousPhrasePreparationOutcome: Sendable {
     case prepared(PreparedAutonomousPhrase)
+    case awaitingPreparedValidation(AutonomousPendingPreparedValidation)
     case failed(AutonomousPhrasePreparationFailure)
 
     package var preparedPhrase: PreparedAutonomousPhrase? {
@@ -1366,6 +1367,11 @@ package protocol AutonomousCandidateEvaluating: Sendable {
     var requiresPreparedValidation: Bool { get }
     var preparationReplayFingerprint: String? { get }
 
+    /// Iterative detached preparation supplies an actual admitted child.
+    /// Implementations without successor ownership must refuse that context.
+    func preparedValidation(for preview: AutonomousCandidatePreparedPreview,
+        successor: PreparedAutonomousPhrase?) -> AutonomousCandidatePreparedValidation?
+
     /// Invoked once off the callback, before a required-validation source can
     /// escape preparation. Nil preserves unavailable qualification.
     func preparedValidation(
@@ -1387,6 +1393,12 @@ package protocol AutonomousCandidateEvaluating: Sendable {
 package extension AutonomousCandidateEvaluating {
     var preparationReplayFingerprint: String? { nil }
     var requiresPreparedValidation: Bool { false }
+
+    func preparedValidation(for preview: AutonomousCandidatePreparedPreview,
+        successor: PreparedAutonomousPhrase?) -> AutonomousCandidatePreparedValidation? {
+        guard successor == nil else { return nil }
+        return preparedValidation(for: preview)
+    }
 
     func preparedValidation(
         for preview: AutonomousCandidatePreparedPreview
@@ -1518,6 +1530,28 @@ package final class AutonomousCandidatePreparedValidation: Sendable {
             ProfessionalQualityMeasurementContract.modalMetrics.allSatisfy {
                 observation.measurementApplicability($0) != .unavailable
             }
+    }
+}
+
+/// Private detached source awaiting physical continuation. Construction and
+/// resolution remain inside the canonical finalizer; this is never a playable
+/// phrase, a permissive evaluator, or authority to advance accepted state.
+package final class AutonomousPendingPreparedValidation: Sendable {
+    package let preview: AutonomousCandidatePreparedPreview
+    private let resolve: @Sendable (AutonomousCandidatePreparedValidation?,
+        @escaping @Sendable () -> Bool) -> AutonomousPhrasePreparationOutcome
+
+    fileprivate init(preview: AutonomousCandidatePreparedPreview,
+        resolve: @escaping @Sendable (AutonomousCandidatePreparedValidation?,
+            @escaping @Sendable () -> Bool) -> AutonomousPhrasePreparationOutcome) {
+        self.preview = preview
+        self.resolve = resolve
+    }
+
+    package func resolving(_ proof: AutonomousCandidatePreparedValidation?,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> AutonomousPhrasePreparationOutcome {
+        resolve(proof, cancellationRequested)
     }
 }
 
@@ -1664,6 +1698,7 @@ package enum AutonomousPhrasePreparer {
             liveTargetStartSample: liveTargetStartSample,
             diagnosticRoleStemCapture: false,
             evaluator: evaluator,
+            deferPreparedValidation: false,
             cancellationRequested: { false }
         ).preparedPhrase else {
             preconditionFailure("Non-cancellable preparation stopped unexpectedly")
@@ -1727,6 +1762,8 @@ package enum AutonomousPhrasePreparer {
         liveTargetStartSample: Int64? = nil,
         diagnosticRoleStemCapture: Bool = false,
         evaluator: E,
+        deferPreparedValidation: Bool = false,
+        renderPassReservation: @escaping @Sendable (Int) -> Bool = { _ in true },
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhrasePreparationOutcome {
         prepareTransaction(
@@ -1745,6 +1782,8 @@ package enum AutonomousPhrasePreparer {
             liveTargetStartSample: liveTargetStartSample,
             diagnosticRoleStemCapture: diagnosticRoleStemCapture,
             evaluator: evaluator,
+            deferPreparedValidation: deferPreparedValidation,
+            renderPassReservation: renderPassReservation,
             cancellationRequested: cancellationRequested
         )
     }
@@ -1765,6 +1804,8 @@ package enum AutonomousPhrasePreparer {
         liveTargetStartSample: Int64?,
         diagnosticRoleStemCapture: Bool,
         evaluator: E,
+        deferPreparedValidation: Bool,
+        renderPassReservation: @escaping @Sendable (Int) -> Bool = { _ in true },
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhrasePreparationOutcome {
         let incomingControllerFingerprint = combinedControllerFingerprint(
@@ -1917,7 +1958,7 @@ package enum AutonomousPhrasePreparer {
             guard !renderContext.cancellationRequested() else {
                 return .failure(.init(stage: stage, code: .cancelled))
             }
-            guard renderPassBudget.claim() else {
+            guard renderPassReservation(renderPassBudget.used + 1), renderPassBudget.claim() else {
                 return .failure(.init(
                     stage: stage,
                     code: .renderBudgetUnavailable
@@ -2031,6 +2072,7 @@ package enum AutonomousPhrasePreparer {
             incomingLiveMasterState: liveBinding.incoming,
             outgoingLiveMasterState: liveBinding.outgoing,
             evaluator: evaluator,
+            deferPreparedValidation: deferPreparedValidation,
             cancellationRequested: cancellationRequested
         )
     }
@@ -2707,9 +2749,9 @@ package enum AutonomousPhrasePreparer {
             graphsBelongToSession && graphBoundaryIsCoherent
     }
 
-    /// Confined to one detached preparation transaction. The only mutation
-    /// releases a superseded sidecar before a corrective render; no instance
-    /// is shared across tasks or crosses the commit boundary.
+    /// Confined to detached preparation. Sidecars are released before a
+    /// corrective render or pending-validation publication; after publication
+    /// all reads are immutable and no product crosses the commit boundary.
     private final class CandidateRenderProduct: @unchecked Sendable {
         let plan: AutonomousPhrasePlan
         let graph: DSPGraphPlan
@@ -3169,6 +3211,7 @@ package enum AutonomousPhrasePreparer {
         incomingLiveMasterState: LiveMasterHeadroomContinuationState,
         outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
         evaluator: E,
+        deferPreparedValidation: Bool,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhrasePreparationOutcome {
         let replayFingerprint = evaluator.preparationReplayFingerprint
@@ -3193,7 +3236,53 @@ package enum AutonomousPhrasePreparer {
             return .failed(.init(stage: .finalization, code: .cancelled))
         }
         let preview = AutonomousCandidatePreparedPreview(source)
-        let proof = evaluator.preparedValidation(for: preview)
+        if deferPreparedValidation {
+            let pendingSource: PreparedAutonomousPhrase
+            if (try? preview.requiresQualifiedSuccessorSupport()) == true {
+                guard let protectedSource = assemblePrepared(selected: selected, transaction: transaction,
+                    incomingQualityState: incomingQualityState,
+                    incomingLiveMasterState: incomingLiveMasterState,
+                    outgoingLiveMasterState: outgoingLiveMasterState,
+                    policyVersion: evaluator.policyVersion, verdict: prospectiveVerdict,
+                    preparedValidationRequired: true, preparationReplayFingerprint: replayFingerprint,
+                    presentation: source, retainRepeatHoldVariants: false).preparedPhrase else { return prospective }
+                pendingSource = protectedSource
+            } else { pendingSource = source }
+            // After publication only selected immutable source storage survives.
+            // A parent must consume its measured child; only a closed leaf owns
+            // coherent repeat variants. No selected scheduled PCM is changed.
+            selected.releaseRepeatHoldEvolution()
+            selected.releaseDiagnosticRoleStemCaptures()
+            return .awaitingPreparedValidation(AutonomousPendingPreparedValidation(
+                preview: AutonomousCandidatePreparedPreview(pendingSource)) { proof, cancelled in
+                completePreparedValidation(selected: selected, transaction: transaction,
+                    incomingQualityState: incomingQualityState,
+                    incomingLiveMasterState: incomingLiveMasterState,
+                    outgoingLiveMasterState: outgoingLiveMasterState,
+                    policyVersion: evaluator.policyVersion, replayFingerprint: replayFingerprint,
+                    source: pendingSource, proof: proof, cancellationRequested: cancelled)
+            })
+        }
+        return completePreparedValidation(selected: selected, transaction: transaction,
+            incomingQualityState: incomingQualityState,
+            incomingLiveMasterState: incomingLiveMasterState,
+            outgoingLiveMasterState: outgoingLiveMasterState,
+            policyVersion: evaluator.policyVersion, replayFingerprint: replayFingerprint,
+            source: source, proof: evaluator.preparedValidation(for: preview),
+            cancellationRequested: cancellationRequested)
+    }
+
+    private static func completePreparedValidation(
+        selected: CandidateRenderProduct,
+        transaction: AutonomousCandidateEvaluationTransaction,
+        incomingQualityState: QualityContinuationState,
+        incomingLiveMasterState: LiveMasterHeadroomContinuationState,
+        outgoingLiveMasterState: LiveMasterHeadroomContinuationState,
+        policyVersion: String, replayFingerprint: String?,
+        source: PreparedAutonomousPhrase, proof: AutonomousCandidatePreparedValidation?,
+        cancellationRequested: @escaping @Sendable () -> Bool
+    ) -> AutonomousPhrasePreparationOutcome {
+        let preview = AutonomousCandidatePreparedPreview(source)
         guard !cancellationRequested() else {
             return .failed(.init(stage: .finalization, code: .cancelled))
         }
@@ -3215,7 +3304,7 @@ package enum AutonomousPhrasePreparer {
             incomingQualityState: incomingQualityState,
             incomingLiveMasterState: incomingLiveMasterState,
             outgoingLiveMasterState: outgoingLiveMasterState,
-            policyVersion: evaluator.policyVersion, verdict: verdict,
+            policyVersion: policyVersion, verdict: verdict,
             preparedValidationRequired: true, preparationReplayFingerprint: replayFingerprint, preparedValidation: boundProof,
             presentation: source)
         if let prepared = final.preparedPhrase,
@@ -3238,7 +3327,8 @@ package enum AutonomousPhrasePreparer {
         preparedValidationRequired: Bool,
         preparationReplayFingerprint: String? = nil,
         preparedValidation: AutonomousCandidatePreparedValidation? = nil,
-        presentation: PreparedAutonomousPhrase? = nil
+        presentation: PreparedAutonomousPhrase? = nil,
+        retainRepeatHoldVariants: Bool = true
     ) -> AutonomousPhrasePreparationOutcome {
         var reasonCodes = verdict.reasonCodes + selected.attempt.reasonCodes
         if selected.vector.routeContinuation.routeRecovery {
@@ -3305,9 +3395,9 @@ package enum AutonomousPhrasePreparer {
             graph: selected.graph,
             blocks: selected.blocks,
             diagnosticRoleStemCaptures:
-                selected.diagnosticRoleStemCaptures,
-            repeatHoldEvolutions: presentation?.repeatHoldEvolutions ??
-                repeatHoldEvolutionOutcomes.compactMap { $0.prepared },
+                presentation?.diagnosticRoleStemCaptures ?? selected.diagnosticRoleStemCaptures,
+            repeatHoldEvolutions: retainRepeatHoldVariants
+                ? (presentation?.repeatHoldEvolutions ?? repeatHoldEvolutionOutcomes.compactMap { $0.prepared }) : [],
             repeatHoldEvolutionEvidence: presentation?.repeatHoldEvolutionEvidence ??
                 repeatHoldEvolutionOutcomes.map { $0.evidence },
             endingRenderState: selected.endingRenderState,
