@@ -1912,6 +1912,17 @@ fallback/resume and completed-ID/operator controls are structural synthetic
 fixtures; actual two-native recovered traversal and the complete7/2 native
 corpus, capacity, deadlines and physical-output gates remain required.
 
+The fresh full native v18 study on f5dfce0 passed153 accepted phrases and1652
+canonical bars, then stopped on the first44.1k route with candidate-incomplete,
+evidence-missing and hard-gate refusal. Score interest was valid with no overdue
+debt; the actual Core decision was non-retryable/failClosed. No complete native
+route, full corpus, v18 model or activation resulted. Source and model bytes and
+the failed route output remain exact in the terminal receipt.
+The native journey now reports the existing typed candidate completeness failure
+count and at most eight named codes inside the existing24-detail limit. This
+adds no completeness rule, retry eligibility, state, render, PCM or authority;
+the full required evidence must be repaired and freshly qualified.
+
 Malformed request identity validation now precedes the large generic shared
 preparation frame, preserving the same cancellation priority and request failure
 codes. The identical helper validates each prospective child as well. This keeps

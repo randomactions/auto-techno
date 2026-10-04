@@ -415,6 +415,7 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
             details = Array((source.prepared.commitFailureDiagnostics +
               source.prepared.qualityDiagnosticDetails +
               decision.reasonCodes.map { "quality=" + $0.rawValue } +
+              Self.candidateCompletenessDiagnostics(source.prepared.selectedCandidateEvidence) +
               Self.refusalRecoveryDiagnostics(request: source.request,
                 rejected: source.prepared, director: director)).prefix(24))
             break
@@ -612,6 +613,17 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     else { return nil }
     return RepeatSelection(selection: selection,
       pcmFingerprint: fixedWidthFingerprintHex(sink.value), frameCount: frameCount, barCount: bars)
+  }
+
+  /// Existing typed completeness predicates identify the measured deficit;
+  /// diagnostics cannot make a refused candidate eligible for another retry.
+  private static func candidateCompletenessDiagnostics(
+    _ candidate: AutonomousCandidateEvaluationVector
+  ) -> [String] {
+    let failures = candidate.completenessFailures
+    guard !failures.isEmpty else { return [] }
+    return ["candidate-completeness-count=" + String(failures.count)] +
+      failures.prefix(8).map { "candidate-completeness=" + $0.rawValue }
   }
 
   /// Inspect the existing Core transition from this actual refusal only.
