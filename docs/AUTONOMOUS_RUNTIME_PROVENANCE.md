@@ -1848,6 +1848,41 @@ and the default-off four-phrase probe retain no qualification or activation
 claim. Historical v16 resources remain historical fixtures. Current v17 seals
 are absent until qualified resources are installed together.
 
+The same native producer now retains the accepted closed leaf across fresh
+preparation refusals and uses Core's AutonomousQualityRetryContinuation and
+AutonomousQualityRecoverySchedulingPolicy for serial future requests. Only an
+actual retryable measured rejection advances that ephemeral context. The first
+successor retry waits for an offline coherent repeat selection; an exhausted
+wave requires another repeat boundary. Startup has no accepted source and uses
+the host's finite-wave/yield rule. A protected measured child is consumed through
+the existing boundary API and never supplies repeat material or a replacement
+proposal. Accepted advancement resets ephemeral recovery.
+
+Offline repeat selection reads the retained accepted blocks or the exact
+qualified variant selected by RepeatHoldEvolutionBoundaryPolicy. It validates
+source/Core/render/graph/route origin, checks complete native frame/bar geometry,
+and fingerprints the selected PCM without generating a substitute render.
+Presentation frames and repeat bars are accounted separately. Rejected and
+repeated products never enter accepted semantic/signal/effect accumulators;
+accepted state advances once per newly admitted phrase. Each serial request
+checks the frozen incoming Core/render/graph origin while its recovery context
+and presentation sample index may progress. Cancellation, missing variants,
+foreign origin, non-retryable rejection or overflow refuses the study.
+
+Shared-journey receipt v2 records actual rejected preparation identities,
+repeat selections and boundaries, accepted frame count and the exact accepted
+traversal before the first refusal. The study remains bounded to10416 combined
+accepted/recovery steps,10400 repeat bars and the existing10400 canonical-bar
+coverage refusal. Each preparation retains the unchanged two-pass/128MiB
+preparation-chain reservation. The held playback source is additional live
+storage; combined process memory, deadlines and physical device scheduling are
+unqualified until separately measured. Offline selected PCM is not a device
+presentation receipt. A36-phrase two-native recovery probe is diagnostic
+traversal proof only; the full7/2 corpus still requires7800 canonical bars,
+dense accepted evidence, complete operator transitions and a closed leaf.
+Windows currently uses neutral retry defaults and retains accepted repeats;
+shared runtime recovery convergence remains a separate required validation.
+
 Malformed request identity validation now precedes the large generic shared
 preparation frame, preserving the same cancellation priority and request failure
 codes. The identical helper validates each prospective child as well. This keeps

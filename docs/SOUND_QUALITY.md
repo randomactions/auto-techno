@@ -30,6 +30,13 @@ construction and the required primary dependency of the full native long-horizon
 study. Qualified long-horizon v17 seals, matching paired resources and full
 runtime gates remain pending; the paired production loader stays unavailable.
 
+The native long-horizon producer follows the existing Core finite recovery
+continuation after measured retryable rejection, retaining actual accepted PCM
+for coherent repeat selection. Repeat presentation and rejected attempts have
+separate provenance and contribute no accepted score/signal/effect observations.
+The unchanged gates still admit the actual recovered product. A short recovery
+probe is not full native Long Horizon or combined-memory/device qualification.
+
 Current long-horizon calibration consumes every accepted phrase through the
 existing detached AutonomousPerformancePreparer and its protected measured-child
 boundary. Each of the seven development and two disjoint holdout roots must
