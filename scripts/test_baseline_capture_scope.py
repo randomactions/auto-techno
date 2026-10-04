@@ -1,6 +1,7 @@
 """Independent origin preservation and incomplete/promotion rejection controls."""
 import copy
 import hashlib
+import json
 import tempfile
 from pathlib import Path
 import unittest
@@ -79,6 +80,23 @@ class CaptureScopeTests(unittest.TestCase):
             (root/'docs/local/reports/arbitrary').mkdir(parents=True)
             with self.assertRaisesRegex(scope.CaptureScopeError, 'directory'):
                 scope.read_completed_capture(root, 'docs/local/reports/arbitrary')
+
+    def test_resealed_embedded_probe_cannot_replace_actual_probe_file(self):
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            relative = 'docs/local/reports/probe.json'
+            path = root/relative
+            path.parent.mkdir(parents=True)
+            actual = {'initialStates': [{'sessionStateFingerprint': 'a' * 16}]}
+            path.write_text(json.dumps(actual))
+            build = {'probePath': relative, 'probeSha256': hashlib.sha256(path.read_bytes()).hexdigest(), 'probe': actual}
+            self.assertEqual(scope.verify_probe_file(root, build), actual)
+            altered = copy.deepcopy(build)
+            altered['probe']['initialStates'][0]['sessionStateFingerprint'] = 'b' * 16
+            altered['receiptFingerprint'] = dependency.digest(altered)
+            with self.assertRaisesRegex(scope.CaptureScopeError, 'embedded initialization probe'):
+                scope.verify_probe_file(root, altered)
+            self.assertEqual(json.loads(path.read_text()), actual)
 
 
 if __name__ == '__main__':

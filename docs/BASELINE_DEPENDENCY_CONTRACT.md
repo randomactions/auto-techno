@@ -200,3 +200,26 @@ families retain their existing rules until coordinated integration is validated.
 ```sh
 python3 -m unittest discover -s scripts -p test_baseline_capture_scope.py
 ```
+
+## Isolated retained whole/role validator integration
+
+The whole/role validators can explicitly select a completed registered capture
+with `AUTOTECHNO_BASELINE_CAPTURE_PROOF`. There is no implicit search or fallback
+from a rejected proof. The original canonical namespace and corpus are required.
+The retained adapter independently verifies completed native parity, derives the
+original broad source identity from original Git bytes, assesses current exact
+producer dependencies, and runs a new registered initialization probe against the
+unchanged actual image. Compiler, SDK, target, private initialization, corpus and
+semantic producer environment must match the original declared context. Missing,
+unknown, changed or unavailable producer inputs require a new capture. The actual
+probe file must equal the embedded probe, including after receipt resealing.
+
+Accepted original envelopes remain unchanged. Every whole/role content, geometry,
+route, replay, WAV hash, accepted PCM and reconstruction check still executes.
+The fresh capture driver rejects an inherited retained-proof selector. Other
+lifecycle families keep their existing provenance and cohort guards; this adapter
+does not grant them whole/role authority. All fifteen families, nineteen
+subordinate checks, both aggregate passes, holdouts, rejection and promotion
+gates remain required. Coordinated downstream lifecycle/cohort/aggregate adoption
+and map-only-versus-regeneration parity are still required before programme-wide
+scoped currency can be claimed.

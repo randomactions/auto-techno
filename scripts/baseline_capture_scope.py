@@ -57,6 +57,16 @@ def original_source_fingerprint(root: Path, snapshot: dict[str, Any]) -> str:
     return digest.hexdigest()
 
 
+def verify_probe_file(root: Path, build: dict[str, Any]) -> dict[str, Any]:
+    path = transaction.local_path(root, build['probePath'])
+    if producer.file_hash(path, dependency.MAX_METADATA_BYTES) != build['probeSha256']:
+        raise CaptureScopeError('actual initialization probe changed')
+    actual = dependency.read_json(path)
+    if actual != build['probe']:
+        raise CaptureScopeError('embedded initialization probe differs from actual probe file')
+    return actual
+
+
 def read_completed_capture(root: Path, directory: str) -> dict[str, Any]:
     """Verify the registered driver's whole/role witnesses, outputs and parity.
 
@@ -81,10 +91,8 @@ def read_completed_capture(root: Path, directory: str) -> dict[str, Any]:
         raise CaptureScopeError('completed validation has a different build')
     if build['source']['gitHead'] != snapshot['gitHead'] or build['source']['files'] != {n: r['sha256'] for n, r in snapshot['files'].items()}:
         raise CaptureScopeError('actual build source differs from dependency origin')
-    probe = build['probe']
+    probe = verify_probe_file(root, build)
     producer.validate_probe(root, probe, image=Path(probe['compiledImagePath']), corpus_name=probe['captureCorpusPath'])
-    if producer.file_hash(transaction.local_path(root, build['probePath']), dependency.MAX_METADATA_BYTES) != build['probeSha256']:
-        raise CaptureScopeError('actual initialization probe changed')
     if read('context.json') != snapshot['context'] or producer.capture_context(root, build) != snapshot['context']:
         raise CaptureScopeError('native context differs from original dependency context')
     if validation.get('captureCorpusPath') != probe['captureCorpusPath'] or validation.get('initialStateCount') != len(probe['initialStates']):

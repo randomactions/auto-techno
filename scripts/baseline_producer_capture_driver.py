@@ -118,6 +118,8 @@ def execute(root: Path, scratch: Path, corpus_name: str) -> dict:
             if transaction.local_path(root, base + kind + '-v1').exists():
                 raise producer.ProducerWitnessError('canonical isolated output already exists')
     environment = dict(os.environ)
+    if 'AUTOTECHNO_BASELINE_CAPTURE_PROOF' in environment:
+        raise producer.ProducerWitnessError('fresh driver cannot inherit retained-capture authority')
     if producer.CONTROLS & environment.keys():
         raise producer.ProducerWitnessError('driver owns metadata controls')
     environment.update(AUTOTECHNO_RUN_BASELINE_RENDER='1', AUTOTECHNO_RUN_STEM_CAPTURE='1',
