@@ -90,3 +90,44 @@ state/toolchain/Python changes, unknown and dynamic imports, stale contracts,
 unsafe paths, incomplete/resealed/promotional snapshots and independent origin
 verification. These controls validate assessment behavior; full artifact currency
 and qualification remain unproved until producer integration is complete.
+
+## Fresh operation binding
+
+`scripts/baseline_capture_transaction.py` supplies the driver-owned transaction
+primitive. The snapshot is now version2 because its producer closure must also
+bind the transaction implementation. Version1 foundation snapshots require a
+fresh freeze; no metadata-only upgrade is registered.
+
+The driver supplies the actual producer and independent validator actions and
+their exact argument vectors, environment fingerprints and compiled-input
+fingerprints. The transaction requires a clean committed freeze, every exact
+transitive upstream binding at that same source/context, and absent output paths
+before invoking the producer. It refuses existing outputs instead of backfilling
+metadata. The canonical family manifest and every declared whole/role WAV must
+be covered by exact streaming file hashes. Source and output bytes are checked
+after independent validation, and upstream captures are rechecked before return.
+Failed operations retain their outputs without yielding a successful binding.
+Historical artifact fields are never modified.
+
+Reading a binding checks its original source objects/ancestry, immutable output
+bytes, schema/coverage and full referenced upstream graph. Git object replacement
+is disabled. Every context, snapshot and output retains its original identity.
+A changed ancestor, missing WAV, resealed omission or altered parent refuses.
+
+The library does not authenticate arbitrary callbacks or a claimed invocation
+fingerprint. The adopting driver must prove those actions are the real registered
+producer/checker commands and that process environment, compiled/loaded inputs,
+private initial state and route match the recorded invocation. Independent family
+validators must then validate the actual typed content and accepted PCM before
+any scoped currency claim. A callback returning zero and metadata hashes alone
+are insufficient. The transaction remains a non-authoritative foundation until
+that coordinated integration and complete native parity comparison pass.
+
+```sh
+python3 -m unittest scripts/test_baseline_dependency_contract.py scripts/test_baseline_capture_transaction.py
+```
+
+The transaction controls use explicit synthetic producers to test ordering,
+no-overwrite, failure retention, exact file coverage, committed and dirty source
+changes, validator tampering, missing/altered parents and full dependency graph
+bindings. They do not establish native capture or musical qualification.

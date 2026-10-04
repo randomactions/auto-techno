@@ -207,6 +207,15 @@ class DependencyContractTests(unittest.TestCase):
         with self.assertRaisesRegex(dependency.DependencyContractError, "origin dependency bytes"):
             self.assess(bad, before)
 
+    def test_same_bytes_without_capture_ancestry_refuse(self):
+        before = self.capture()
+        self.run_git("checkout", "-q", "--orphan", "unrelated-fixture")
+        self.run_git("add", ".")
+        self.run_git("commit", "-qm", "unrelated capture lineage")
+        after = self.capture()
+        with self.assertRaisesRegex(dependency.DependencyContractError, "available ancestor"):
+            self.assess(before, after)
+
     def test_duplicate_json_keys_refuse(self):
         self.write("duplicate.json", '{"schema":1,"schema":2}')
         with self.assertRaisesRegex(dependency.DependencyContractError, "duplicate"):
