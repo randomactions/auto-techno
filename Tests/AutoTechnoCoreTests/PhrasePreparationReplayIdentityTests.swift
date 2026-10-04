@@ -626,6 +626,31 @@ struct IterativeSuccessorPreparationTests {
                 }
             }
             #expect(expected == resource)
+            var consumed = result
+            var boundarySample: Int64 = 0
+            for expectedChild in nodes.dropFirst() {
+                #expect(consumed.requiresQualifiedContinuation && consumed.continuationOwnershipIsValid)
+                let advanced = consumed.request.sourceState.advance(using: consumed.prepared.plan,
+                    quality: consumed.prepared.qualityContinuationState,
+                    liveMasterHeadroom: consumed.prepared.liveMasterHeadroomContinuationState,
+                    longHorizonDecision: consumed.longHorizonDecision)
+                boundarySample += Int64(consumed.prepared.audioPreflight.quality.analyzedFrameCount)
+                let child = try #require(try consumed.continuationAtBoundary(sessionState: advanced,
+                    longHorizonState: consumed.outgoingLongHorizonState, sampleRate: rate,
+                    channelCount: 2, routeGeneration: 7, actualStartSample: boundarySample).get())
+                #expect(child.prepared === expectedChild.prepared)
+                #expect(child.request.replayIdentity == expectedChild.request.replayIdentity)
+                #expect(child.waveforms == expectedChild.waveforms)
+                #expect(child.prepared.blocks == expectedChild.prepared.blocks)
+                #expect(child.continuationOwnershipIsValid)
+                #expect(child.preparationChainResourceBudget == resource)
+                consumed = child
+            }
+            #expect(!consumed.requiresQualifiedContinuation && consumed.retainedContinuations.isEmpty)
+            let leafBoundary = try consumed.continuationAtBoundary(sessionState: consumed.request.sourceState,
+                longHorizonState: consumed.outgoingLongHorizonState, sampleRate: rate,
+                channelCount: 2, routeGeneration: 7, actualStartSample: boundarySample).get()
+            #expect(leafBoundary == nil)
             let leaf = try #require(nodes.last)
             let ordinaryLeaf = try #require(Self.render(leaf.request, plan: leaf.prepared.plan,
                 evaluator: Evaluator(request: leaf.request, control: Control()), deferred: false).preparedPhrase)
@@ -644,6 +669,128 @@ struct IterativeSuccessorPreparationTests {
             "detachedThread": true, "qualification": "mechanical-only-not-installed",
             "runtimeActivation": false, "resourceSoakQualified": false]
         print(String(decoding: try JSONSerialization.data(withJSONObject: wire, options: [.sortedKeys]), as: UTF8.self))
+    }
+
+    @Test("Protected continuation refuses missing ownership, stale state and routes without replacing its child")
+    func protectedBoundaryRefusal() async throws {
+        let request = Self.sourceRequest(rate: 8_000)
+        let control = Control()
+        let result = await Task.detached {
+            AutonomousPerformancePreparer.prepareChainDiagnosing(request: request,
+                director: AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed), longHorizonPolicy: nil,
+                makeEvaluator: { Evaluator(request: $0, control: control) }, cancellationRequested: { false })
+        }.value
+        let root = try #require(result.preparedPhrase)
+        let child = try #require(root.retainedContinuations.first)
+        #expect(root.continuationOwnershipIsValid)
+        let advanced = request.sourceState.advance(using: root.prepared.plan,
+            quality: root.prepared.qualityContinuationState,
+            liveMasterHeadroom: root.prepared.liveMasterHeadroomContinuationState)
+        let artifacts = try qualifiedArtifacts()
+        let policy = try LongHorizonProfessionalPolicy(profile: artifacts.profile,
+            adversarial: artifacts.adversarial, holdout: artifacts.holdout)
+        let foreignLong = try #require(LongHorizonFutureAdaptationState(startingState: advanced, policy: policy))
+        for (state, horizon, rate, channels, generation, expected) in [
+            (request.sourceState, nil, 8_000.0, 2, 7, "state-mismatch"),
+            (advanced, foreignLong, 8_000.0, 2, 7, "state-mismatch"),
+            (advanced, nil, 8_001.0, 2, 7, "route-mismatch"),
+            (advanced, nil, 8_000.0, 1, 7, "route-mismatch"),
+            (advanced, nil, 8_000.0, 2, 8, "route-mismatch"),
+        ] {
+            let outcome = root.continuationAtBoundary(sessionState: state,
+                longHorizonState: horizon, sampleRate: rate, channelCount: channels,
+                routeGeneration: generation, actualStartSample: 1_000_000)
+            guard case let .failure(failure) = outcome else {
+                Issue.record("Foreign continuation boundary was admitted"); continue
+            }
+            #expect(failure.code == expected)
+        }
+        let stripped = PreparedPerformancePhrase(request: root.request, prepared: root.prepared,
+            outgoingLongHorizonState: root.outgoingLongHorizonState, longHorizonDecision: root.longHorizonDecision,
+            waveforms: root.waveforms)
+        #expect(!stripped.continuationOwnershipIsValid && stripped.requiresQualifiedContinuation)
+        let malformed = PreparedPerformancePhrase(request: root.request, prepared: root.prepared,
+            outgoingLongHorizonState: root.outgoingLongHorizonState, longHorizonDecision: root.longHorizonDecision,
+            waveforms: root.waveforms, retainedContinuations: [root])
+        #expect(!malformed.continuationOwnershipIsValid)
+        let first = try #require(try root.continuationAtBoundary(sessionState: advanced,
+            longHorizonState: nil, sampleRate: 8_000, channelCount: 2, routeGeneration: 7,
+            actualStartSample: 1_000_000).get())
+        let second = try #require(try root.continuationAtBoundary(sessionState: advanced,
+            longHorizonState: nil, sampleRate: 8_000, channelCount: 2, routeGeneration: 7,
+            actualStartSample: 1_000_000).get())
+        #expect(first.prepared === child.prepared && second.prepared === child.prepared)
+        #expect(root.retainedContinuations.first?.prepared === child.prepared)
+        #expect(control.terminals == [21, 22]) // no transport rendering or substitute
+        print("{\"fixture\":\"protected-continuation-boundary.v1\",\"missingOwnershipRefused\":true,\"staleCoreLongAndRouteRefused\":true,\"exactChildRetained\":true,\"repeatCannotReplaceChild\":true,\"runtimeActivation\":false}")
+    }
+
+    @Test("Applied live source protects its exact child at the known future sample boundary")
+    func protectedAppliedLiveBoundary() async throws {
+        let base = Self.sourceRequest(rate: 48_000)
+        let director = AutonomousSessionDirector(rootSeed: base.sourceState.rootSeed)
+        var previous = director.initialState()
+        for _ in 0..<20 { previous.advancePlanning(using: director.plan(from: previous)) }
+        let previousPlan = director.plan(from: previous)
+        let frames = try #require(LiveOutputWindowAnalyzer.frameCount(sampleRate: 48_000))
+        let signal = (0..<frames).map { Float(0.2 * sin(2 * Double.pi * 997 * Double($0) / 48_000)) }
+        let analyzed = LiveFeedbackTestSupport.analyze(signal: signal, plan: previousPlan,
+            sampleRate: 48_000, routeGeneration: 7, controllerRevision: base.sourceState.liveMasterHeadroom.revision,
+            qualityPolicyVersion: LiveFeedbackTestSupport.fingerprintQualifiedPolicyVersion)
+        let evidence = try #require(analyzed)
+        let target = try #require(LiveFeedbackTestSupport.target(evidence: evidence,
+            loudnessUpperLUFS: evidence.maximumShortTermLoudnessLUFS - 1,
+            truePeakUpperDBTP: evidence.truePeakDBTP - 1,
+            profileFingerprint: LiveFeedbackTestSupport.profileFingerprint))
+        let start = evidence.playerSampleRange.upperBound + 10_000
+        let proposal = LiveMasterHeadroomController.propose(evidence: evidence, target: target,
+            incoming: base.sourceState.liveMasterHeadroom, earliestEligibleFutureSample: start)
+        #expect(proposal.outcome == .attenuate)
+        let binding = PendingLiveMasterHeadroomBinding(sourceIdentity: LiveOutputPlanSourceIdentity(plan: previousPlan),
+            evidence: evidence, target: target, proposal: proposal,
+            eligibleTarget: LiveMasterHeadroomEligibleTarget(plan: director.plan(from: base.sourceState),
+                routeGeneration: 7, sampleRate: 48_000, earliestEligibleFutureSample: start,
+                qualityPolicyVersion: evidence.qualityPolicyVersion, evaluatorVersion: evidence.evaluatorVersion,
+                controllerPolicyVersion: evidence.controllerPolicyVersion))
+        let key = PhrasePreparationKey(sessionSeed: base.key.sessionSeed, phraseIndex: base.key.phraseIndex,
+            sampleRate: 48_000, channelCount: 2, routeRecovery: false,
+            qualityRevision: base.key.qualityRevision, qualityPolicyVersion: base.key.qualityPolicyVersion,
+            qualityControllerFingerprint: base.key.qualityControllerFingerprint, routeGeneration: 7,
+            incomingLiveMasterRevision: base.key.incomingLiveMasterRevision,
+            incomingLiveMasterStateFingerprint: base.key.incomingLiveMasterStateFingerprint,
+            pendingLiveMasterProposalFingerprint: proposal.fingerprint,
+            liveEarliestEligibleFutureSample: start, liveTargetStartSample: start)
+        let request = PhrasePreparationRequest(key: key, sourceState: base.sourceState,
+            incomingLongHorizonState: nil, incomingRenderState: base.incomingRenderState,
+            incomingGraphState: base.incomingGraphState, previousGraph: base.previousGraph,
+            pendingLiveMasterBinding: binding)
+        let control = Control()
+        let result = await Task.detached {
+            AutonomousPerformancePreparer.prepareChainDiagnosing(request: request, director: director,
+                longHorizonPolicy: nil, makeEvaluator: { Evaluator(request: $0, control: control,
+                    policyVersion: LiveFeedbackTestSupport.fingerprintQualifiedPolicyVersion) },
+                cancellationRequested: { false })
+        }.value
+        let root = try #require(result.preparedPhrase)
+        #expect(root.continuationOwnershipIsValid && root.requiresQualifiedContinuation)
+        #expect(root.prepared.liveMasterHeadroomContinuationState.committedTrimDB == -0.25)
+        let advanced = request.sourceState.advance(using: root.prepared.plan,
+            quality: root.prepared.qualityContinuationState,
+            liveMasterHeadroom: root.prepared.liveMasterHeadroomContinuationState)
+        let end = start + Int64(root.prepared.audioPreflight.quality.analyzedFrameCount)
+        for actual in [end - 1, end + 1, 0] {
+            guard case let .failure(failure) = root.continuationAtBoundary(sessionState: advanced,
+                longHorizonState: nil, sampleRate: 48_000, channelCount: 2, routeGeneration: 7,
+                actualStartSample: actual) else { Issue.record("Shifted live boundary admitted"); continue }
+            #expect(failure.code == "sample-boundary")
+        }
+        let child = try #require(try root.continuationAtBoundary(sessionState: advanced,
+            longHorizonState: nil, sampleRate: 48_000, channelCount: 2, routeGeneration: 7,
+            actualStartSample: end).get())
+        #expect(child.prepared === root.prepared.preparedValidation?.qualifiedSuccessor)
+        #expect(child.request.pendingLiveMasterBinding == nil && child.prepared.liveTargetStartSample == nil)
+        #expect(child.prepared.incomingLiveMasterHeadroomState == root.prepared.liveMasterHeadroomContinuationState)
+        #expect(child.prepared.liveMasterHeadroomContinuationState == root.prepared.liveMasterHeadroomContinuationState)
     }
 
     @Test("Rejected or missing child proof and cancellation discard the entire tentative chain")
@@ -760,7 +907,11 @@ struct IterativeSuccessorPreparationTests {
     private struct Evaluator: AutonomousCandidateEvaluating {
         let request: PhrasePreparationRequest
         let control: Control
-        let policyVersion = "autotechno-quality.iterative-mechanical.v1"
+        let policyVersion: String
+        init(request: PhrasePreparationRequest, control: Control,
+            policyVersion: String = "autotechno-quality.iterative-mechanical.v1") {
+            self.request = request; self.control = control; self.policyVersion = policyVersion
+        }
         let evaluatorVersion = ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier
         var preparationReplayFingerprint: String? { request.replayIdentity.fingerprint }
         var requiresPreparedValidation: Bool { true }

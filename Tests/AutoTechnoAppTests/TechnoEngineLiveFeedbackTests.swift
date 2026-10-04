@@ -1,5 +1,6 @@
 import AutoTechnoApp
 import AutoTechnoCore
+import AutoTechnoTransport
 @testable import AutoTechnoDSP
 import Foundation
 import Testing
@@ -286,45 +287,39 @@ struct TechnoEngineLiveFeedbackTests {
         let admission = try #require(source.range(of:
             "let correctedBoundaryDecision = LiveCorrectedSuccessorBoundaryPolicy.decide("
         ))
-        let stateCommit = try #require(source.range(of:
-            "currentPhrase = next"
+        let ordinaryRepeat = try #require(source.range(of:
+            "} else if boundaryDecision == .repeatCurrentWithFrozenTopology"
         ))
-        let cacheCommit = try #require(source.range(of:
+        let ordinaryCommit = source[admission.lowerBound..<ordinaryRepeat.lowerBound]
+        let liveBoundaryCheck = try #require(ordinaryCommit.range(of:
+            "if boundaryDecision == .advance &&"
+        ))
+        let sharedAdvanceCall = try #require(ordinaryCommit.range(of:
+            "guard advancePreparedPhrase(next, sourcePhraseIndex: sourcePhraseIndex,"
+        ))
+        let cacheCommit = try #require(ordinaryCommit.range(of:
             "liveFeedbackPreparation.removeCachedValue(forKey: nextKey)"
         ))
-        let purgeCommit = try #require(source.range(of:
-            "if correctedBoundaryDecision == .advance,\n" +
-                "               nextKey.pendingLiveMasterProposalFingerprint != nil,\n" +
-                "               !untrimmedPreparationAllowed {\n" +
-                "                purgeUntrimmedSuccessor("
+        let purgeCommit = try #require(ordinaryCommit.range(of:
+            "purgeUntrimmedSuccessor(targetPhraseIndex: targetPhraseIndex)"
         ))
-        let commitSearchRange = admission.lowerBound..<source.endIndex
-        let sessionCommit = try #require(source.range(
-            of: "sessionState = advancedState",
-            range: commitSearchRange
-        ))
-        let longHorizonCommit = try #require(source.range(
-            of: "longHorizonState = next.outgoingLongHorizonState",
-            range: commitSearchRange
-        ))
-        let proposalCommit = try #require(source.range(of:
-            "if next.request.pendingLiveMasterBinding != nil {\n" +
-                "                    pendingLiveMasterBinding = nil"
-        ))
-        let successorCommit = try #require(source.range(of:
-            "requestSuccessor(after: next)"
-        ))
-        for commit in [
-            cacheCommit,
-            purgeCommit,
-            stateCommit,
-            sessionCommit,
-            longHorizonCommit,
-            proposalCommit,
-            successorCommit,
-        ] {
-            #expect(admission.lowerBound < commit.lowerBound)
-        }
+        #expect(purgeCommit.lowerBound < cacheCommit.lowerBound)
+        #expect(cacheCommit.lowerBound < sharedAdvanceCall.lowerBound)
+        #expect(liveBoundaryCheck.lowerBound < sharedAdvanceCall.lowerBound)
+        #expect(ordinaryCommit.contains("untrimmedPreparationAllowed || runtimeAllowsAdvance"))
+        let helperStart = try #require(source.range(of: "private func advancePreparedPhrase("))
+        let helper = source[helperStart.lowerBound..<barScheduling.lowerBound]
+        let ownershipGuard = try #require(helper.range(of: "guard next.performance.continuationOwnershipIsValid,"))
+        let stateCommit = try #require(helper.range(of: "currentPhrase = next"))
+        let sessionCommit = try #require(helper.range(of: "sessionState = advancedState"))
+        let longHorizonCommit = try #require(helper.range(of: "longHorizonState = next.outgoingLongHorizonState"))
+        let proposalCommit = try #require(helper.range(of: "expirePendingLiveFeedbackAtBoundary()"))
+        let successorCommit = try #require(helper.range(of: "requestSuccessor(after: next)"))
+        #expect(ownershipGuard.lowerBound < stateCommit.lowerBound)
+        #expect(stateCommit.lowerBound < sessionCommit.lowerBound)
+        #expect(sessionCommit.lowerBound < longHorizonCommit.lowerBound)
+        #expect(longHorizonCommit.lowerBound < proposalCommit.lowerBound)
+        #expect(proposalCommit.lowerBound < successorCommit.lowerBound)
     }
 
     @MainActor
@@ -1246,5 +1241,98 @@ struct TechnoEngineLiveFeedbackTests {
             targetPlan: context.targetPlan,
             incoming: context.incomingState
         ) ? binding : nil
+    }
+}
+
+
+@Suite("Protected prepared continuation presentation", .serialized)
+struct ProtectedPreparedContinuationPresentationTests {
+    @Test("Detached inspector projection preserves the exact admitted child through host promotion")
+    func exactChildProjectionAndPromotion() async throws {
+        let director = AutonomousSessionDirector(rootSeed: 48_300)
+        var state = director.initialState()
+        for _ in 0..<21 { state.advancePlanning(using: director.plan(from: state)) }
+        var render = RenderState(); render.barIndex = state.memory.totalBars
+        let key = PhrasePreparationKey(sessionSeed: state.rootSeed, phraseIndex: state.phraseIndex,
+            sampleRate: 8_000, channelCount: 2, routeRecovery: false,
+            qualityRevision: state.quality.revision, qualityPolicyVersion: state.quality.policyVersion,
+            qualityControllerFingerprint: state.quality.observedControllerStateFingerprint ?? state.quality.acceptedControllerStateFingerprint,
+            routeGeneration: 7, incomingLiveMasterRevision: state.liveMasterHeadroom.revision,
+            incomingLiveMasterStateFingerprint: state.liveMasterHeadroom.fingerprint,
+            pendingLiveMasterProposalFingerprint: nil, liveEarliestEligibleFutureSample: nil, liveTargetStartSample: nil)
+        let request = PhrasePreparationRequest(key: key, sourceState: state, incomingLongHorizonState: nil,
+            incomingRenderState: render, incomingGraphState: GeneratedDSPContinuationState(),
+            previousGraph: nil, pendingLiveMasterBinding: nil)
+        let projection = await Task.detached {
+            let outcome = AutonomousPerformancePreparer.prepareChainDiagnosing(request: request,
+                director: director, longHorizonPolicy: nil,
+                makeEvaluator: { ProjectionEvaluator(request: $0) }, cancellationRequested: { false })
+            guard let shared = outcome.preparedPhrase else { return Optional<PreparedPhrase>.none }
+            return AppPerformancePreparer.projecting(shared).prepared
+        }.value
+        let root = try #require(projection)
+        let witness = try #require(root.prepared.preparedValidation?.qualifiedSuccessor)
+        #expect(root.performance.continuationOwnershipIsValid)
+        #expect(root.inspectorSnapshots.count == root.prepared.blocks.count)
+        let advanced = request.sourceState.advance(using: root.prepared.plan,
+            quality: root.prepared.qualityContinuationState,
+            liveMasterHeadroom: root.prepared.liveMasterHeadroomContinuationState)
+        let child = try #require(try root.continuationAtBoundary(sessionState: advanced,
+            longHorizonState: root.outgoingLongHorizonState, sampleRate: 8_000, channelCount: 2,
+            routeGeneration: 7, actualStartSample: Int64(root.prepared.audioPreflight.quality.analyzedFrameCount)).get())
+        #expect(child.prepared === witness)
+        #expect(child.performance.retainedContinuations.isEmpty)
+        #expect(child.performance.continuationOwnershipIsValid && !child.performance.requiresQualifiedContinuation)
+        #expect(child.inspectorSnapshots == LiveRenderSnapshot.make(prepared: witness, sampleRate: 8_000, channelCount: 2))
+        #expect(child.waveforms == root.performance.retainedContinuations.first?.waveforms)
+        #expect(child.prepared.blocks == witness.blocks)
+        #expect(root.performance.retainedContinuations.first?.prepared === witness)
+    }
+
+    @Test("Both production hosts protect child consumption before ordinary cache, live and repeat paths")
+    func productionHostOwnershipPaths() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        for rel in ["Sources/AutoTechnoApp/TechnoEngine.swift", "Sources/AutoTechnoWindows/main.swift"] {
+            let source = try String(contentsOf: root.appendingPathComponent(rel), encoding: .utf8)
+            let boundary = try #require(source.range(of: "private func " +
+                (rel.contains("App/") ? "scheduleNextBar(first: Bool)" : "queueNextBar()")))
+            let body = source[boundary.lowerBound...]
+            let protected = try #require(body.range(of: "continuationAtBoundary(sessionState:"))
+            let ordinary = try #require(body.range(of: "let cachedSuccessor"))
+            #expect(protected.lowerBound < ordinary.lowerBound)
+            #expect(body.contains("continuationOwnershipIsValid"))
+            #expect(source.contains("requiresQualifiedContinuation"))
+            if rel.contains("App/") {
+                let handler = try #require(source.range(of: "private func handleLiveFeedbackResult("))
+                let end = try #require(source.range(of: "private func expirePendingLiveFeedbackAtBoundary("))
+                let live = source[handler.lowerBound..<end.lowerBound]
+                let protectLive = try #require(live.range(of: "!source.performance.requiresQualifiedContinuation"))
+                let authorize = try #require(live.range(of: "liveFeedbackOrchestrator.authorize("))
+                #expect(protectLive.lowerBound < authorize.lowerBound)
+                #expect(body.contains("handleAudioConfigurationChange(); return false"))
+            } else {
+                #expect(body.contains("beginRecovery(shouldResume: true); return false"))
+            }
+        }
+    }
+
+    private struct ProjectionEvaluator: AutonomousCandidateEvaluating {
+        let request: PhrasePreparationRequest
+        let policyVersion = "autotechno-quality.iterative-mechanical.v1"
+        let evaluatorVersion = ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier
+        var preparationReplayFingerprint: String? { request.replayIdentity.fingerprint }
+        var requiresPreparedValidation: Bool { true }
+        func requestsHomeUpperTimbreCorrection(for candidate: AutonomousCandidateEvaluationVector) -> Bool { false }
+        func terminalVerdict(selected: AutonomousCandidateEvaluationVector,
+            transaction: AutonomousCandidateEvaluationTransaction) -> AutonomousCandidatePolicyVerdict {
+            .init(outcome: .qualified, decisionBasis: .calibratedQuality, reasonCodes: [.candidateQualifiedV1])
+        }
+        func preparedValidation(for preview: AutonomousCandidatePreparedPreview,
+            successor: PreparedAutonomousPhrase?) -> AutonomousCandidatePreparedValidation? {
+            try? preview.assessingContinuous(successor: successor) { _ in
+                .init(outcome: .qualified, decisionBasis: .calibratedQuality, reasonCodes: [.candidateQualifiedV1])
+            }
+        }
     }
 }

@@ -959,7 +959,7 @@
     {
       "id": "shared-detached-preparation",
       "name": "Shared detached preparation",
-      "responsibility": "Own the platform-neutral request, cancellation, candidate preparation, immutable waveform derivation, success/failure envelope used by both hosts, and the default-off selected-candidate diagnostic capture requested only by local evidence exporters. Derive one source-bound prospective successor request from the exact replay origin, canonical Core advance and long-horizon projection; no early scheduling or accepted-state mutation. Prepare actual successors iteratively, resolve all children before parents, enforce exact request/proof child ownership, and discard the entire tentative chain on child refusal or resource/cancellation failure. Preserve canonical root calibrated recovery, including a rejected source measured with a child; release no retained transport list.",
+      "responsibility": "Own the platform-neutral request, cancellation, candidate preparation, immutable waveform derivation, success/failure envelope used by both hosts, and the default-off selected-candidate diagnostic capture requested only by local evidence exporters. Derive one source-bound prospective successor request from the exact replay origin, canonical Core advance and long-horizon projection; no early scheduling or accepted-state mutation. Prepare actual successors iteratively, resolve all children before parents, enforce exact request/proof child ownership, and discard the entire tentative chain on child refusal or resource/cancellation failure. Preserve canonical root calibrated recovery, including a rejected source measured with a child; release no retained transport list. Own the shared protected continuation boundary, exact accepted-state/route/live sample admission and flat remaining-child promotion; a missing measured child cannot become repeat or replacement authority.",
       "targets": [
         "AutoTechnoTransport"
       ],
@@ -975,6 +975,10 @@
         {
           "symbol": "ProspectivePerformanceContinuation",
           "path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift"
+        },
+        {
+          "symbol": "PreparedPerformancePhrase",
+          "path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift"
         }
       ],
       "state": [
@@ -983,7 +987,7 @@
         "incoming render, graph, quality, live-master, and long-horizon state",
         "transient exact-source/request prospective continuation seal and optional known live successor sample boundary",
         "bounded transient pending source frames under aggregate resource reservation",
-        "flat ordered admitted child products; protected host consumption still pending"
+        "flat ordered admitted child products consumed through the same protected host boundary"
       ],
       "inputs": [
         "PhrasePreparationRequest",
@@ -1008,7 +1012,8 @@
         "commit-eligible prepared transaction",
         "resolved foundation-behavior bar counts tied to exact whole-mix, role-stem, and replay manifests",
         "fixed three-rate actual rendered successor context, replay-origin refusal and live proposal applied once; synthetic mechanics, not runtime/resource qualification",
-        "actual detached-thread iterative preparation, deferred-finalizer exact PCM/capture parity, aggregate reservation and child refusal/cancellation controls; no runtime/resource qualification"
+        "actual detached-thread iterative preparation, deferred-finalizer exact PCM/capture parity, aggregate reservation and child refusal/cancellation controls; no runtime/resource qualification",
+        "exact measured-child consumption at three rates; stale Core/long-horizon/route and applied live target boundary refusal; no physical-output or sustained resource qualification"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift"
@@ -1019,7 +1024,8 @@
         "Tests/AutoTechnoCoreTests/PerformanceEnvelopeIntegrationTests.swift",
         "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift",
         "Tests/AutoTechnoCoreTests/StemCaptureIntegrationTests.swift",
-        "Tests/AutoTechnoCoreTests/ContinuousPrimaryPreparedAdmissionTests.swift"
+        "Tests/AutoTechnoCoreTests/ContinuousPrimaryPreparedAdmissionTests.swift",
+        "Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift"
       ],
       "contracts": [
         "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
@@ -1095,7 +1101,7 @@
     {
       "id": "macos-transport-and-session-lifecycle",
       "name": "macOS transport and session lifecycle",
-      "responsibility": "Own the active session seed, detached preparation tasks, stale-work epochs, commit-eligible AVAudioPlayerNode buffer admission and AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, persistent finite-wave successor recovery, accepted-PCM hold behavior, and boundary-only repeat-hold pattern-family playback.",
+      "responsibility": "Own the active session seed, detached preparation tasks, stale-work epochs, commit-eligible AVAudioPlayerNode buffer admission and AVAudioEngine scheduling, pause/resume, route recovery, New Set, atomic continuation commit, persistent finite-wave successor recovery, accepted-PCM hold behavior, and boundary-only repeat-hold pattern-family playback. Preserve detached flat inspector projections and promote the exact measured child before cache/live/repeat policy, with shared ownership admission and existing route rebuild on refusal. Protect already owned future children from live proposal authorization.",
       "targets": [
         "AutoTechnoApp"
       ],
@@ -1111,6 +1117,14 @@
         {
           "symbol": "AppOwnedPCMBufferScheduleAdmission",
           "path": "Sources/AutoTechnoApp/TechnoEngine.swift"
+        },
+        {
+          "symbol": "PreparedPhrase",
+          "path": "Sources/AutoTechnoApp/TechnoEngine.swift"
+        },
+        {
+          "symbol": "AppPerformancePreparer",
+          "path": "Sources/AutoTechnoApp/TechnoEngine.swift"
         }
       ],
       "state": [
@@ -1119,7 +1133,8 @@
         "NextPhraseProgress",
         "RepeatHoldEvolutionPlaybackMode",
         "AutonomousQualityRecoveryContext",
-        "playing-time sample clock"
+        "playing-time sample clock",
+        "flat shared measured-child ownership and aligned detached inspector projections"
       ],
       "inputs": [
         "user transport action",
@@ -1138,7 +1153,8 @@
         "route/preparation generations",
         "recovery wave, ordinal, presented-repeat bars, and fixed-domain recovery intent",
         "hold pattern-family or exact-fallback status and successor-preparation logs",
-        "playing-time state"
+        "playing-time state",
+        "exact shared child/presentation promotion; protected targets excluded before live authorization"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoApp/AutonomousSessionSeedSource.swift",
@@ -1300,7 +1316,7 @@
     {
       "id": "windows-transport-and-waveout",
       "name": "Windows transport and waveOut output",
-      "responsibility": "Reuse canonical detached preparation and immutable primary or qualified repeat-hold pattern-family PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting.",
+      "responsibility": "Reuse canonical detached preparation and immutable primary or qualified repeat-hold pattern-family PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting. Consume the same exact measured child before ordinary cache/repeat policy, suppress independent successor replacement while required, and recover the route on shared boundary refusal.",
       "targets": [
         "AutoTechnoWindows",
         "AutoTechnoWindowsPlatform"
@@ -1319,7 +1335,8 @@
         "WindowsAutoTechnoController transport state",
         "WindowsRecoveryContext",
         "RepeatHoldEvolutionPlaybackMode",
-        "waveOut queue and completion counters"
+        "waveOut queue and completion counters",
+        "flat shared measured-child ownership preserved across pause and discarded on route recovery"
       ],
       "inputs": [
         "PreparedPerformancePhrase",
@@ -1341,7 +1358,9 @@
         "Sources/AutoTechnoWindowsPlatform/include/AutoTechnoWindowsPlatform.h"
       ],
       "testPaths": [
-        "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift"
+        "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift",
+        "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift",
+        "Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift"
       ],
       "contracts": [
         "docs/WINDOWS_DISTRIBUTION.md",
@@ -1532,6 +1551,15 @@
       "path": "Sources/AutoTechnoDSP/ModalPercussionMeasurementContinuity.swift",
       "scope": "canonical-phrase",
       "pcmRelationship": "Carries at most eight actual source-separated observation accumulators under RenderState; no retained PCM or changed synthesis. Missing successor, gap, reset or overflow remains unavailable; only accepted prepared state advances."
+    },
+    {
+      "id": "prepared-performance-child-ownership",
+      "name": "Protected immutable measured-child ownership",
+      "ownerComponent": "shared-detached-preparation",
+      "symbol": "PreparedPerformancePhrase",
+      "path": "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift",
+      "scope": "host-control",
+      "pcmRelationship": "Flat transient admitted PCM/request ownership; each physical-window source retains its exact measured child and hosts consume the same object before replacement or repeat. Pause preserves it; route rebuilding or New Set discards it. No serialized or new Core musical state."
     }
   ],
   "transitions": [
@@ -1681,11 +1709,12 @@
         "graph-state",
         "quality-continuation",
         "live-master-continuation",
-        "long-horizon-adaptation-state"
+        "long-horizon-adaptation-state",
+        "prepared-performance-child-ownership"
       ],
       "artifact": "PreparedPerformancePhrase with immutable qualified PCM; iterative pending source reduction, exact flat admitted child ownership and aggregate numeric reservation",
       "pcmConsequence": "qualifies-without-changing-pcm",
-      "failureBehavior": "Return no commit-eligible product when any identity or evidence binding fails. Child rejection, required unavailable support, reservation refusal or cancellation discards every tentative parent; protected host consumption remains a separate required activation gate."
+      "failureBehavior": "Return no commit-eligible product when any identity or evidence binding fails. Child rejection, required unavailable support, reservation refusal or cancellation discards every tentative parent; shared protected host consumption requires exact state/route/live-boundary ownership; physical output and full resource/deadline qualification remain separate activation gates."
     },
     {
       "id": "prepared-product-to-macos-commit",
@@ -1701,7 +1730,8 @@
         "graph-state",
         "quality-continuation",
         "live-master-continuation",
-        "long-horizon-adaptation-state"
+        "long-horizon-adaptation-state",
+        "prepared-performance-child-ownership"
       ],
       "producesState": [
         "autonomous-session-state",
@@ -1713,9 +1743,9 @@
         "repeat-hold-playback-state",
         "next-phrase-progress"
       ],
-      "artifact": "accepted PreparedPerformancePhrase and advanced canonical state",
+      "artifact": "accepted immutable prepared source with exact flat measured-child ownership, advanced canonical state and protected child promotion before ordinary cache/live/repeat",
       "pcmConsequence": "commits-immutable-pcm",
-      "failureBehavior": "Discard stale or unqualified work and preserve accepted PCM/fallback state."
+      "failureBehavior": "Discard stale/unqualified work. Missing or stale measured-child ownership stops/rebuilds through the existing route recovery owner; it cannot authorize a substitute or incomplete-source repeat. A naturally complete leaf retains ordinary accepted PCM/fallback policy."
     },
     {
       "id": "prepared-product-to-windows-commit",
@@ -1731,7 +1761,8 @@
         "graph-state",
         "quality-continuation",
         "live-master-continuation",
-        "long-horizon-adaptation-state"
+        "long-horizon-adaptation-state",
+        "prepared-performance-child-ownership"
       ],
       "producesState": [
         "autonomous-session-state",
@@ -1742,9 +1773,9 @@
         "long-horizon-adaptation-state",
         "repeat-hold-playback-state"
       ],
-      "artifact": "accepted PreparedPerformancePhrase and advanced canonical state",
+      "artifact": "accepted immutable prepared source with exact flat measured-child ownership, advanced canonical state and protected child promotion before ordinary cache/live/repeat",
       "pcmConsequence": "commits-immutable-pcm",
-      "failureBehavior": "Discard stale or unqualified work and keep the last accepted host state."
+      "failureBehavior": "Discard stale/unqualified work. Missing or stale measured-child ownership stops/rebuilds through the existing route recovery owner; it cannot authorize a substitute or incomplete-source repeat. A naturally complete leaf retains ordinary accepted PCM/fallback policy."
     },
     {
       "id": "macos-schedule-to-realtime-capture",

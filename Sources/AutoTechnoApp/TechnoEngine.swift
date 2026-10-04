@@ -6,18 +6,45 @@ import Combine
 import Foundation
 import OSLog
 
-private struct PreparedPhrase: Sendable {
-    let request: PhrasePreparationRequest
-    let prepared: PreparedAutonomousPhrase
-    let outgoingLongHorizonState: LongHorizonFutureAdaptationState?
-    let longHorizonDecision: LongHorizonTrajectoryDecision?
-    let waveforms: [[Float]]
-    let inspectorSnapshots: [LiveRenderSnapshot]
+package struct PreparedPhrase: Sendable {
+    package let performance: PreparedPerformancePhrase
+    /// Flat projections follow the exact shared root and ordered children.
+    /// Inspector work happens detached, before any phrase reaches scheduling.
+    private let projections: [[LiveRenderSnapshot]]
+    package var request: PhrasePreparationRequest { performance.request }
+    package var prepared: PreparedAutonomousPhrase { performance.prepared }
+    package var outgoingLongHorizonState: LongHorizonFutureAdaptationState? { performance.outgoingLongHorizonState }
+    package var longHorizonDecision: LongHorizonTrajectoryDecision? { performance.longHorizonDecision }
+    package var waveforms: [[Float]] { performance.waveforms }
+    package var inspectorSnapshots: [LiveRenderSnapshot] { projections.first ?? [] }
+
+    fileprivate init(performance: PreparedPerformancePhrase, projections: [[LiveRenderSnapshot]]) {
+        self.performance = performance; self.projections = projections
+    }
+
+    package func continuationAtBoundary(sessionState: AutonomousSessionState,
+        longHorizonState: LongHorizonFutureAdaptationState?, sampleRate: Double,
+        channelCount: Int, routeGeneration: Int, actualStartSample: Int64
+    ) -> Result<Self?, PhrasePreparationFailure> {
+        switch performance.continuationAtBoundary(sessionState: sessionState,
+            longHorizonState: longHorizonState, sampleRate: sampleRate, channelCount: channelCount,
+            routeGeneration: routeGeneration, actualStartSample: actualStartSample) {
+        case let .failure(failure): return .failure(failure)
+        case .success(nil): return .success(nil)
+        case let .success(child?):
+            let remaining = Array(projections.dropFirst())
+            guard remaining.count == child.retainedContinuations.count + 1,
+                remaining.first?.count == child.prepared.blocks.count else {
+                return .failure(.init(stage: "presentation", code: "snapshot-count"))
+            }
+            return .success(Self(performance: child, projections: remaining))
+        }
+    }
 }
 
-private struct PhrasePreparationResult: Sendable {
-    let prepared: PreparedPhrase?
-    let failure: NextPhraseFailure?
+package struct PhrasePreparationResult: Sendable {
+    package let prepared: PreparedPhrase?
+    package let failure: NextPhraseFailure?
 
     static func success(_ prepared: PreparedPhrase) -> Self {
         Self(prepared: prepared, failure: nil)
@@ -58,7 +85,7 @@ package enum AppOwnedPCMBufferScheduleAdmission {
 /// immutable inspector projection consumed by the macOS presentation layer;
 /// planning, rendering, quality evaluation, and waveform preparation remain in
 /// the shared platform-neutral transport owner.
-private enum AppPerformancePreparer {
+package enum AppPerformancePreparer {
     static func prepare(request: PhrasePreparationRequest,
                         director: AutonomousSessionDirector,
                         artifacts: ProfessionalQualityPrimaryArtifacts?,
@@ -82,35 +109,26 @@ private enum AppPerformancePreparer {
                 details: failure.details
             ))
         }
-        let inspectorSnapshots = LiveRenderSnapshot.make(
-            prepared: shared.prepared,
-            sampleRate: request.key.sampleRate,
-            channelCount: request.key.channelCount
-        )
-        guard inspectorSnapshots.count == shared.prepared.blocks.count else {
-            return .failed(NextPhraseFailure(
-                stage: "presentation",
-                code: "snapshot-count",
-                details: [
-                    "blocks=\(shared.prepared.blocks.count)",
-                    "snapshots=\(inspectorSnapshots.count)",
-                ]
-            ))
+        return projecting(shared)
+    }
+
+    package static func projecting(_ shared: PreparedPerformancePhrase) -> PhrasePreparationResult {
+        var projections: [[LiveRenderSnapshot]] = []
+        for node in [shared] + shared.retainedContinuations {
+            guard !Task.isCancelled else {
+                return .failed(NextPhraseFailure(stage: "presentation", code: "cancelled"))
+            }
+            let snapshots = LiveRenderSnapshot.make(prepared: node.prepared,
+                sampleRate: node.request.key.sampleRate, channelCount: node.request.key.channelCount)
+            guard snapshots.count == node.prepared.blocks.count else {
+                return .failed(NextPhraseFailure(stage: "presentation", code: "snapshot-count"))
+            }
+            projections.append(snapshots)
         }
         guard !Task.isCancelled else {
-            return .failed(NextPhraseFailure(
-                stage: "presentation",
-                code: "cancelled"
-            ))
+            return .failed(NextPhraseFailure(stage: "presentation", code: "cancelled"))
         }
-        return .success(PreparedPhrase(
-            request: request,
-            prepared: shared.prepared,
-            outgoingLongHorizonState: shared.outgoingLongHorizonState,
-            longHorizonDecision: shared.longHorizonDecision,
-            waveforms: shared.waveforms,
-            inspectorSnapshots: inspectorSnapshots
-        ))
+        return .success(PreparedPhrase(performance: shared, projections: projections))
     }
 }
 
@@ -613,7 +631,13 @@ package final class TechnoEngine: ObservableObject {
                 details: details
             )
         }
+        guard phrase.performance.continuationOwnershipIsValid else {
+            return NextPhraseFailure(stage: "commit", code: "continuation-ownership")
+        }
         guard currentPhrase == nil else {
+            guard currentPhrase?.performance.requiresQualifiedContinuation != true else {
+                return NextPhraseFailure(stage: "commit", code: "protected-continuation")
+            }
             if phrase.request.sourceState.phraseIndex == sessionState.phraseIndex {
                 liveFeedbackPreparation.insertCachedValue(
                     phrase,
@@ -713,6 +737,14 @@ package final class TechnoEngine: ObservableObject {
         after phrase: PreparedPhrase,
         pendingBinding: PendingLiveMasterHeadroomBinding? = nil
     ) {
+        if phrase.performance.requiresQualifiedContinuation {
+            // This target is already an admission witness, even before it is
+            // queued. No retry, live correction or ordinary hold may replace it.
+            if let child = phrase.performance.retainedContinuations.first {
+                markNextPhraseReady(for: child.request)
+            }
+            return
+        }
         let request = makeSuccessorRequest(
             after: phrase,
             pendingBinding: pendingBinding
@@ -1510,6 +1542,7 @@ package final class TechnoEngine: ObservableObject {
         if let sourceRange = liveScheduledLedger.playing,
            liveScheduledLedger.scheduledSuccessor == nil,
            let source = liveScheduledPhrases[sourceRange],
+           !source.performance.requiresQualifiedContinuation,
            let context = liveFeedbackPreparation.analysisContext(
                 sourceRange: sourceRange,
                 sourcePlan: source.prepared.plan,
@@ -1547,6 +1580,8 @@ package final class TechnoEngine: ObservableObject {
                 sessionState.liveMasterHeadroom.revision,
               result.binding.proposal.incomingStateFingerprint ==
                 sessionState.liveMasterHeadroom.fingerprint else { return }
+        guard let source = liveScheduledPhrases[result.sourceRange],
+            !source.performance.requiresQualifiedContinuation else { return }
         let targetPhraseIndex = result.sourceRange.phraseIndex + 1
         guard let baseRequest = liveFeedbackPreparation.correctionPayload(
             sourceRange: result.sourceRange,
@@ -1658,201 +1693,228 @@ package final class TechnoEngine: ObservableObject {
         )
     }
 
+    private func advancePreparedPhrase(_ next: PreparedPhrase,
+        sourcePhraseIndex: Int, targetPhraseIndex: Int
+    ) -> Bool {
+        guard next.performance.continuationOwnershipIsValid,
+            next.request.sourceState == sessionState,
+            next.request.incomingLongHorizonState?.fingerprint == longHorizonState?.fingerprint
+        else { return false }
+        let advancedState = next.request.sourceState.advance(
+            using: next.prepared.plan,
+            quality: next.prepared.qualityContinuationState,
+            liveMasterHeadroom:
+                next.prepared.liveMasterHeadroomContinuationState,
+            longHorizonDecision: next.longHorizonDecision
+        )
+        guard next.longHorizonDecision.map({
+            advancedState.memory.longHorizon.lastTrajectoryDecision == $0
+        }) ?? true else { return false }
+        currentPhrase = next
+        repeatHoldEvolutionPlaybackMode = .exactAcceptedPCM
+        nextPhraseProgress = nextPhraseProgress
+            .settingHoldEvolution(.inactive)
+        sessionState = advancedState
+        longHorizonState = next.outgoingLongHorizonState
+        qualityRetryContinuation =
+            AutonomousQualityRetryContinuation()
+        liveFeedbackRuntime.retainRecentSources(
+            currentPhraseIndex: sessionState.phraseIndex
+        )
+        liveFeedbackPreparation.completeSourceAdvance(
+            sourcePhraseIndex: sourcePhraseIndex
+        )
+        liveFeedbackOrchestrator.completeSourceAdvance(
+            sourcePhraseIndex: sourcePhraseIndex,
+            targetPhraseIndex: targetPhraseIndex
+        )
+        if pendingLiveMasterBinding != nil { expirePendingLiveFeedbackAtBoundary() }
+        nextBlockIndex = 0
+        requestSuccessor(after: next)
+        return true
+    }
+
     @discardableResult
     private func scheduleNextBar(first: Bool) -> Bool {
         guard var phrase = currentPhrase else { return false }
+        guard phrase.performance.continuationOwnershipIsValid else {
+            handleAudioConfigurationChange(); return false
+        }
         if nextBlockIndex >= phrase.prepared.blocks.count {
-            let nextKey = PhrasePreparationKey(
-                sessionSeed: sessionState.rootSeed,
-                phraseIndex: sessionState.phraseIndex,
-                sampleRate: phrase.request.key.sampleRate,
-                channelCount: phrase.request.key.channelCount,
-                routeRecovery: false,
-                qualityRevision: sessionState.quality.revision,
-                qualityPolicyVersion: sessionState.quality.policyVersion,
-                qualityControllerFingerprint:
-                    sessionState.quality.observedControllerStateFingerprint ??
-                    sessionState.quality.acceptedControllerStateFingerprint,
-                routeGeneration: preparationEpoch.value,
-                incomingLiveMasterRevision:
-                    sessionState.liveMasterHeadroom.revision,
-                incomingLiveMasterStateFingerprint:
-                    sessionState.liveMasterHeadroom.fingerprint,
-                pendingLiveMasterProposalFingerprint:
-                    pendingLiveMasterBinding?.proposal.fingerprint,
-                liveEarliestEligibleFutureSample:
-                    pendingLiveMasterBinding?.proposal
-                        .earliestEligibleFutureSample,
-                liveTargetStartSample:
-                    pendingLiveMasterBinding == nil
-                        ? nil
-                        : Int64(nextScheduleSample),
-                qualityRetryOrdinal: qualityRetryOrdinal(
-                    for: sessionState.phraseIndex
-                ),
-                qualityRecoveryContext: qualityRecoveryContext(
-                    for: sessionState.phraseIndex
-                )
-            )
-            let sourcePhraseIndex = phrase.prepared.plan.phraseIndex
-            let targetPhraseIndex = sourcePhraseIndex + 1
-            let untrimmedPreparationAllowed = liveFeedbackOrchestrator
-                .allowsUntrimmedPreparation(
-                    sourcePhraseIndex: sourcePhraseIndex,
-                    targetPhraseIndex: targetPhraseIndex
-                )
-            let cachedEntry = untrimmedPreparationAllowed ||
-                nextKey.pendingLiveMasterProposalFingerprint != nil
-                ? liveFeedbackPreparation.firstCached { key, _ in
-                    key == nextKey
+            if phrase.performance.requiresQualifiedContinuation {
+                let route = audioEngine.mainMixerNode.outputFormat(forBus: 0)
+                let outcome = phrase.continuationAtBoundary(sessionState: sessionState,
+                    longHorizonState: longHorizonState, sampleRate: route.sampleRate,
+                    channelCount: Int(route.channelCount), routeGeneration: preparationEpoch.value,
+                    actualStartSample: nextScheduleSample)
+                guard case let .success(next?) = outcome,
+                    advancePreparedPhrase(next, sourcePhraseIndex: phrase.prepared.plan.phraseIndex,
+                        targetPhraseIndex: next.request.key.phraseIndex) else {
+                    handleAudioConfigurationChange(); return false
                 }
-                : nil
-            let correctedBoundaryDecision = LiveCorrectedSuccessorBoundaryPolicy.decide(
-                hasLiveProposal:
-                    nextKey.pendingLiveMasterProposalFingerprint != nil,
-                preparedTargetStartSample:
-                    cachedEntry?.value.prepared.liveTargetStartSample,
-                earliestEligibleFutureSample:
-                    nextKey.liveEarliestEligibleFutureSample,
-                actualStartSample: Int64(nextScheduleSample)
-            )
-            if correctedBoundaryDecision == .advance,
-               nextKey.pendingLiveMasterProposalFingerprint != nil,
-               !untrimmedPreparationAllowed {
-                purgeUntrimmedSuccessor(targetPhraseIndex: targetPhraseIndex)
-            }
-            let cachedSuccessor = correctedBoundaryDecision == .advance
-                ? liveFeedbackPreparation.removeCachedValue(forKey: nextKey)
-                : nil
-            let boundaryDecision = AutonomousPhraseBoundaryPolicy.decide(
-                successorPrepared: cachedSuccessor != nil
-            )
-            var runtimeAllowsAdvance = false
-            var runtimeRequiresRepeat = false
-            if pendingLiveMasterBinding != nil || !untrimmedPreparationAllowed {
-                liveFeedbackOrchestrator.performBoundary(
-                    sourcePhraseIndex: sourcePhraseIndex,
-                    targetPhraseIndex: targetPhraseIndex,
-                    correctedSuccessorAvailable: cachedSuccessor != nil,
-                    expireCorrectedSuccessor: {
-                        self.expirePendingLiveFeedbackAtBoundary()
-                    },
-                    advanceCorrectedSuccessor: {
-                        runtimeAllowsAdvance = true
-                    },
-                    repeatAcceptedPCM: {
-                        runtimeRequiresRepeat = true
-                    }
-                )
-            }
-            if boundaryDecision == .advance &&
-                (pendingLiveMasterBinding == nil &&
-                    untrimmedPreparationAllowed || runtimeAllowsAdvance) {
-                guard let next = cachedSuccessor,
-                      next.request.incomingLongHorizonState?.fingerprint ==
-                        longHorizonState?.fingerprint else { return false }
-                let advancedState = next.request.sourceState.advance(
-                    using: next.prepared.plan,
-                    quality: next.prepared.qualityContinuationState,
-                    liveMasterHeadroom:
-                        next.prepared.liveMasterHeadroomContinuationState,
-                    longHorizonDecision: next.longHorizonDecision
-                )
-                guard next.longHorizonDecision.map({
-                    advancedState.memory.longHorizon.lastTrajectoryDecision == $0
-                }) ?? true else { return false }
-                currentPhrase = next
                 phrase = next
-                repeatHoldEvolutionPlaybackMode = .exactAcceptedPCM
-                nextPhraseProgress = nextPhraseProgress
-                    .settingHoldEvolution(.inactive)
-                sessionState = advancedState
-                longHorizonState = next.outgoingLongHorizonState
-                qualityRetryContinuation =
-                    AutonomousQualityRetryContinuation()
-                liveFeedbackRuntime.retainRecentSources(
-                    currentPhraseIndex: sessionState.phraseIndex
-                )
-                liveFeedbackPreparation.completeSourceAdvance(
-                    sourcePhraseIndex: sourcePhraseIndex
-                )
-                liveFeedbackOrchestrator.completeSourceAdvance(
-                    sourcePhraseIndex: sourcePhraseIndex,
-                    targetPhraseIndex: targetPhraseIndex
-                )
-                if next.request.pendingLiveMasterBinding != nil {
-                    pendingLiveMasterBinding = nil
-                }
-                nextBlockIndex = 0
-                requestSuccessor(after: next)
-            } else if boundaryDecision == .repeatCurrentWithFrozenTopology ||
-                runtimeRequiresRepeat {
-                // Never leave the player without a queued bar. Repeating the
-                // coherent current phrase freezes topology and avoids any
-                // rendering or blocking while the successor finishes.
-                nextBlockIndex = 0
-                nextPhraseProgress = nextPhraseProgress.repeated(
-                    targetPhraseNumber: targetPhraseIndex + 1
-                )
-                qualityRetryContinuation = qualityRetryContinuation
-                    .recordingPresentedRepeat(
-                        targetPhraseIndex: targetPhraseIndex,
-                        barCount: phrase.prepared.plan.barCount
-                    )
-                if qualityRetryContinuation.isExhausted(
-                    for: targetPhraseIndex
-                ) {
-                    qualityRetryContinuation = qualityRetryContinuation
-                        .beginningNextWave(
-                            targetPhraseIndex: targetPhraseIndex
-                        )
-                    Self.successorPreparationLogger.notice(
-                        "Successor recovery wave opened phrase=\(targetPhraseIndex + 1, privacy: .public) wave=\(self.qualityRetryContinuation.wave, privacy: .public) presented-repeat-bars=\(self.qualityRetryContinuation.presentedRepeatBars, privacy: .public)"
-                    )
-                }
-                repeatHoldEvolutionPlaybackMode =
-                    RepeatHoldEvolutionBoundaryPolicy.decide(
-                        coherentRepeatCount:
-                            nextPhraseProgress.repeatCount,
-                        successorPrepared: false,
-                        qualifiedPatternFamilies:
-                            phrase.prepared
-                                .qualifiedRepeatHoldPatternFamilies,
-                        exactAcceptedPCMRequired:
-                            runtimeRequiresRepeat ||
-                            pendingLiveMasterBinding != nil ||
-                            !untrimmedPreparationAllowed
-                    )
-                let holdEvolutionPatternFamily =
-                    repeatHoldEvolutionPlaybackMode.patternFamily
-                let holdEvolutionPresentation:
-                    NextPhraseProgress.HoldEvolution
-                if let holdEvolutionPatternFamily {
-                    holdEvolutionPresentation = .pattern(
-                        holdEvolutionPatternFamily.rawValue
-                            .replacingOccurrences(of: "-", with: " ")
-                    )
-                } else {
-                    holdEvolutionPresentation = .exactFallback
-                }
-                nextPhraseProgress = nextPhraseProgress.settingHoldEvolution(
-                    holdEvolutionPresentation
-                )
-                if let holdEvolutionPatternFamily,
-                   let variant = phrase.prepared.repeatHoldEvolution(
-                    for: holdEvolutionPatternFamily
-                   ) {
-                    let evidence = variant.evidence
-                    Self.successorPreparationLogger.notice(
-                        "Hold evolution active source-phrase=\(sourcePhraseIndex + 1, privacy: .public) target-phrase=\(targetPhraseIndex + 1, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) version=\(evidence.version, privacy: .public) family=\(holdEvolutionPatternFamily.rawValue, privacy: .public) variant=\(evidence.variantSampleHash, privacy: .public) canonical-live-feedback=false"
-                    )
-                }
-                if pendingLiveMasterBinding == nil,
-                   nextPhraseProgress.stage != .blocked {
-                    requestSuccessor(after: phrase)
-                }
             } else {
-                return false
+                let nextKey = PhrasePreparationKey(
+                    sessionSeed: sessionState.rootSeed,
+                    phraseIndex: sessionState.phraseIndex,
+                    sampleRate: phrase.request.key.sampleRate,
+                    channelCount: phrase.request.key.channelCount,
+                    routeRecovery: false,
+                    qualityRevision: sessionState.quality.revision,
+                    qualityPolicyVersion: sessionState.quality.policyVersion,
+                    qualityControllerFingerprint:
+                        sessionState.quality.observedControllerStateFingerprint ??
+                        sessionState.quality.acceptedControllerStateFingerprint,
+                    routeGeneration: preparationEpoch.value,
+                    incomingLiveMasterRevision:
+                        sessionState.liveMasterHeadroom.revision,
+                    incomingLiveMasterStateFingerprint:
+                        sessionState.liveMasterHeadroom.fingerprint,
+                    pendingLiveMasterProposalFingerprint:
+                        pendingLiveMasterBinding?.proposal.fingerprint,
+                    liveEarliestEligibleFutureSample:
+                        pendingLiveMasterBinding?.proposal
+                            .earliestEligibleFutureSample,
+                    liveTargetStartSample:
+                        pendingLiveMasterBinding == nil
+                            ? nil
+                            : Int64(nextScheduleSample),
+                    qualityRetryOrdinal: qualityRetryOrdinal(
+                        for: sessionState.phraseIndex
+                    ),
+                    qualityRecoveryContext: qualityRecoveryContext(
+                        for: sessionState.phraseIndex
+                    )
+                )
+                let sourcePhraseIndex = phrase.prepared.plan.phraseIndex
+                let targetPhraseIndex = sourcePhraseIndex + 1
+                let untrimmedPreparationAllowed = liveFeedbackOrchestrator
+                    .allowsUntrimmedPreparation(
+                        sourcePhraseIndex: sourcePhraseIndex,
+                        targetPhraseIndex: targetPhraseIndex
+                    )
+                let cachedEntry = untrimmedPreparationAllowed ||
+                    nextKey.pendingLiveMasterProposalFingerprint != nil
+                    ? liveFeedbackPreparation.firstCached { key, _ in
+                        key == nextKey
+                    }
+                    : nil
+                let correctedBoundaryDecision = LiveCorrectedSuccessorBoundaryPolicy.decide(
+                    hasLiveProposal:
+                        nextKey.pendingLiveMasterProposalFingerprint != nil,
+                    preparedTargetStartSample:
+                        cachedEntry?.value.prepared.liveTargetStartSample,
+                    earliestEligibleFutureSample:
+                        nextKey.liveEarliestEligibleFutureSample,
+                    actualStartSample: Int64(nextScheduleSample)
+                )
+                if correctedBoundaryDecision == .advance,
+                   nextKey.pendingLiveMasterProposalFingerprint != nil,
+                   !untrimmedPreparationAllowed {
+                    purgeUntrimmedSuccessor(targetPhraseIndex: targetPhraseIndex)
+                }
+                let cachedSuccessor = correctedBoundaryDecision == .advance
+                    ? liveFeedbackPreparation.removeCachedValue(forKey: nextKey)
+                    : nil
+                let boundaryDecision = AutonomousPhraseBoundaryPolicy.decide(
+                    successorPrepared: cachedSuccessor != nil
+                )
+                var runtimeAllowsAdvance = false
+                var runtimeRequiresRepeat = false
+                if pendingLiveMasterBinding != nil || !untrimmedPreparationAllowed {
+                    liveFeedbackOrchestrator.performBoundary(
+                        sourcePhraseIndex: sourcePhraseIndex,
+                        targetPhraseIndex: targetPhraseIndex,
+                        correctedSuccessorAvailable: cachedSuccessor != nil,
+                        expireCorrectedSuccessor: {
+                            self.expirePendingLiveFeedbackAtBoundary()
+                        },
+                        advanceCorrectedSuccessor: {
+                            runtimeAllowsAdvance = true
+                        },
+                        repeatAcceptedPCM: {
+                            runtimeRequiresRepeat = true
+                        }
+                    )
+                }
+                if boundaryDecision == .advance &&
+                    (pendingLiveMasterBinding == nil &&
+                        untrimmedPreparationAllowed || runtimeAllowsAdvance) {
+                    guard let next = cachedSuccessor,
+                          next.request.incomingLongHorizonState?.fingerprint ==
+                            longHorizonState?.fingerprint else { return false }
+                    guard advancePreparedPhrase(next, sourcePhraseIndex: sourcePhraseIndex,
+                        targetPhraseIndex: targetPhraseIndex) else { return false }
+                    phrase = next
+                } else if boundaryDecision == .repeatCurrentWithFrozenTopology ||
+                    runtimeRequiresRepeat {
+                    // Never leave the player without a queued bar. Repeating the
+                    // coherent current phrase freezes topology and avoids any
+                    // rendering or blocking while the successor finishes.
+                    nextBlockIndex = 0
+                    nextPhraseProgress = nextPhraseProgress.repeated(
+                        targetPhraseNumber: targetPhraseIndex + 1
+                    )
+                    qualityRetryContinuation = qualityRetryContinuation
+                        .recordingPresentedRepeat(
+                            targetPhraseIndex: targetPhraseIndex,
+                            barCount: phrase.prepared.plan.barCount
+                        )
+                    if qualityRetryContinuation.isExhausted(
+                        for: targetPhraseIndex
+                    ) {
+                        qualityRetryContinuation = qualityRetryContinuation
+                            .beginningNextWave(
+                                targetPhraseIndex: targetPhraseIndex
+                            )
+                        Self.successorPreparationLogger.notice(
+                            "Successor recovery wave opened phrase=\(targetPhraseIndex + 1, privacy: .public) wave=\(self.qualityRetryContinuation.wave, privacy: .public) presented-repeat-bars=\(self.qualityRetryContinuation.presentedRepeatBars, privacy: .public)"
+                        )
+                    }
+                    repeatHoldEvolutionPlaybackMode =
+                        RepeatHoldEvolutionBoundaryPolicy.decide(
+                            coherentRepeatCount:
+                                nextPhraseProgress.repeatCount,
+                            successorPrepared: false,
+                            qualifiedPatternFamilies:
+                                phrase.prepared
+                                    .qualifiedRepeatHoldPatternFamilies,
+                            exactAcceptedPCMRequired:
+                                runtimeRequiresRepeat ||
+                                pendingLiveMasterBinding != nil ||
+                                !untrimmedPreparationAllowed
+                        )
+                    let holdEvolutionPatternFamily =
+                        repeatHoldEvolutionPlaybackMode.patternFamily
+                    let holdEvolutionPresentation:
+                        NextPhraseProgress.HoldEvolution
+                    if let holdEvolutionPatternFamily {
+                        holdEvolutionPresentation = .pattern(
+                            holdEvolutionPatternFamily.rawValue
+                                .replacingOccurrences(of: "-", with: " ")
+                        )
+                    } else {
+                        holdEvolutionPresentation = .exactFallback
+                    }
+                    nextPhraseProgress = nextPhraseProgress.settingHoldEvolution(
+                        holdEvolutionPresentation
+                    )
+                    if let holdEvolutionPatternFamily,
+                       let variant = phrase.prepared.repeatHoldEvolution(
+                        for: holdEvolutionPatternFamily
+                       ) {
+                        let evidence = variant.evidence
+                        Self.successorPreparationLogger.notice(
+                            "Hold evolution active source-phrase=\(sourcePhraseIndex + 1, privacy: .public) target-phrase=\(targetPhraseIndex + 1, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) version=\(evidence.version, privacy: .public) family=\(holdEvolutionPatternFamily.rawValue, privacy: .public) variant=\(evidence.variantSampleHash, privacy: .public) canonical-live-feedback=false"
+                        )
+                    }
+                    if pendingLiveMasterBinding == nil,
+                       nextPhraseProgress.stage != .blocked {
+                        requestSuccessor(after: phrase)
+                    }
+                } else {
+                    return false
+                }
             }
         }
 

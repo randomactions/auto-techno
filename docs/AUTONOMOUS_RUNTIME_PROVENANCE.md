@@ -1772,3 +1772,52 @@ replacement and coherent-repeat consequences, future live/route sample-boundary
 admission, full resource/deadline qualification and matching current primary and
 long-horizon artifacts remain required before installation or activation. Historical
 bundled resources remain ineligible. Mechanical controls cannot promote policy.
+
+
+## Protected measured-child scheduling
+
+The same PreparedPerformancePhrase now supplies the transport boundary contract
+for both hosts. Its flat continuation list is an admission dependency, even
+before a child is placed in an output queue. continuationOwnershipIsValid checks
+commit eligibility, exact proof/child object ownership, canonical accepted Core
+advance including the long-horizon decision, outgoing/incoming long-horizon
+identity, request replay origin, route and neutral successor recovery context
+through every bounded link. No live proposal is applied again to a retained child.
+The naturally complete leaf has no required child or retained continuation list.
+
+continuationAtBoundary checks the actual host Core/long-horizon state and route
+rate, channels and generation. A source with an applied live target additionally
+requires the original known end sample with checked arithmetic. Success promotes
+the exact child, carrying the remaining flat list and original reservation; it
+never rerenders or selects a replacement. Failure returns a reason-coded refusal
+and the host stops/rebuilds through its existing route recovery owner. Missing
+ownership cannot turn into accepted-source repeats. An unbound ordinary source
+retains relative phrase continuity; it does not invent an absolute player sample.
+
+macOS preserves root and child inspector projections in one flat detached
+presentation product. Promotion drops the consumed root projection and uses the
+exact precomputed child snapshots and shared PCM/waveforms. Windows uses that
+same shared boundary product directly. Each host performs its existing canonical
+accepted state advance through one boundary helper, suppresses fresh preparation
+and cache replacement while a child is required, and selects protected promotion
+before ordinary caches or repeat policy. Once the naturally closed leaf is current,
+ordinary calibrated preparation, coherent repeat variants, recovery waves and
+future live-feedback eligibility resume unchanged.
+
+A required measured child is already owned future audio. macOS excludes it from
+live correction target contexts and checks that protection again before proposal
+authorization, including results delivered after the analysis context changed.
+The existing feedback owner completes source advancement normally; a proposal
+cannot invalidate the witness or force an incomplete source into a hold. Pause
+preserves immutable ownership. Route rebuilding, stale preparation epochs and
+New Set discard old ownership and require fresh qualification on the new route
+or root; an old occurrence is never counted as a new completed measurement.
+
+All inventory checks, Core reduction, inspector work, cache operations, buffer
+creation and boundary decisions run on detached preparation, the macOS main
+actor, or the Windows state queue. The AVAudioEngine PCM handoff and waveOut
+completion callback are unchanged. Mechanical three-rate consumption, exact
+presentation, missing/foreign ownership, stale Core/long-horizon/route and applied
+live-boundary controls do not prove physical output or sustained deadline/resource
+qualification. Those gates, matching current calibrated artifacts and full source,
+PCM and lifecycle qualification remain required before activation or publication.

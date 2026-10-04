@@ -366,6 +366,84 @@ package struct PreparedPerformancePhrase: Sendable {
     package let retainedContinuations: [PreparedPerformancePhrase]
     package let preparationChainResourceBudget: AutonomousPreparationChainResourceBudget?
 
+    package var requiresQualifiedContinuation: Bool {
+        prepared.preparedValidation?.requiresQualifiedSuccessor == true
+    }
+
+    /// Bounded immutable ownership checks on the transport owner, never the
+    /// render callback. Physical demand cannot fall back to a replacement or
+    /// repeat; every link must retain the exact child measured by its proof.
+    package var continuationOwnershipIsValid: Bool {
+        let nodes = [self] + retainedContinuations
+        for (index, node) in nodes.enumerated() {
+            guard node.prepared.commitEligible else { return false }
+            if node.prepared.preparedValidationRequired {
+                guard node.request.replayIdentity.isComplete,
+                    node.prepared.preparationReplayFingerprint == node.request.replayIdentity.fingerprint
+                else { return false }
+            }
+            if index > 0 && !node.retainedContinuations.isEmpty { return false }
+            if node.requiresQualifiedContinuation {
+                guard index + 1 < nodes.count else { return false }
+                let child = nodes[index + 1]
+                let advanced = node.request.sourceState.advance(using: node.prepared.plan,
+                    quality: node.prepared.qualityContinuationState,
+                    liveMasterHeadroom: node.prepared.liveMasterHeadroomContinuationState,
+                    longHorizonDecision: node.longHorizonDecision)
+                guard node.prepared.preparedValidation?.qualifiedSuccessor === child.prepared,
+                    child.request.sourceState == advanced,
+                    child.request.incomingLongHorizonState?.fingerprint == node.outgoingLongHorizonState?.fingerprint,
+                    child.prepared.preparationReplayFingerprint == child.request.replayIdentity.fingerprint,
+                    child.request.key.sampleRate == node.request.key.sampleRate,
+                    child.request.key.channelCount == node.request.key.channelCount,
+                    child.request.key.routeGeneration == node.request.key.routeGeneration,
+                    !child.request.key.routeRecovery,
+                    child.request.key.qualityRecoveryContext == .neutral,
+                    child.request.pendingLiveMasterBinding == nil,
+                    child.request.key.pendingLiveMasterProposalFingerprint == nil,
+                    child.request.key.liveTargetStartSample == nil
+                else { return false }
+            } else if index != nodes.count - 1 { return false }
+        }
+        return true
+    }
+
+    /// Nil means the naturally complete leaf may use ordinary preparation and
+    /// coherent-repeat policy. Failure means stop/rebuild; it never authorizes
+    /// repeating an incomplete source or substituting an independently rendered
+    /// child. Remaining children keep flat ownership after each promotion.
+    package func continuationAtBoundary(
+        sessionState: AutonomousSessionState,
+        longHorizonState: LongHorizonFutureAdaptationState?,
+        sampleRate: Double, channelCount: Int, routeGeneration: Int,
+        actualStartSample: Int64
+    ) -> Result<Self?, PhrasePreparationFailure> {
+        func refuse(_ code: String) -> Result<Self?, PhrasePreparationFailure> {
+            .failure(.init(stage: "continuation-boundary", code: code))
+        }
+        guard continuationOwnershipIsValid else { return refuse("ownership-mismatch") }
+        guard sampleRate == request.key.sampleRate, channelCount == request.key.channelCount,
+            routeGeneration == request.key.routeGeneration, actualStartSample >= 0
+        else { return refuse("route-mismatch") }
+        guard requiresQualifiedContinuation else { return .success(nil) }
+        guard let child = retainedContinuations.first,
+            child.request.sourceState == sessionState,
+            child.request.incomingLongHorizonState?.fingerprint == longHorizonState?.fingerprint
+        else { return refuse("state-mismatch") }
+        if let sourceStart = prepared.liveTargetStartSample {
+            guard let frames = Int64(exactly: prepared.audioPreflight.quality.analyzedFrameCount), frames > 0
+            else { return refuse("sample-boundary") }
+            let end = sourceStart.addingReportingOverflow(frames)
+            guard !end.overflow, end.partialValue == actualStartSample
+            else { return refuse("sample-boundary") }
+        }
+        return .success(Self(request: child.request, prepared: child.prepared,
+            outgoingLongHorizonState: child.outgoingLongHorizonState,
+            longHorizonDecision: child.longHorizonDecision, waveforms: child.waveforms,
+            retainedContinuations: Array(retainedContinuations.dropFirst()),
+            preparationChainResourceBudget: preparationChainResourceBudget))
+    }
+
     package init(
         request: PhrasePreparationRequest,
         prepared: PreparedAutonomousPhrase,

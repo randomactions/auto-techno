@@ -213,6 +213,7 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
               phrase.request.incomingLongHorizonState?.fingerprint ==
                 longHorizonState?.fingerprint,
               phrase.prepared.commitEligible,
+              phrase.continuationOwnershipIsValid,
               phrase.prepared.incomingLiveMasterHeadroomState ==
                 phrase.request.sourceState.liveMasterHeadroom else {
             if currentPhrase == nil {
@@ -222,6 +223,7 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
         }
 
         guard currentPhrase == nil else {
+            guard currentPhrase?.requiresQualifiedContinuation != true else { return }
             if phrase.request.sourceState.phraseIndex == sessionState.phraseIndex {
                 preparedCache[phrase.request.key] = phrase
                 trimPreparedCache()
@@ -256,6 +258,7 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
     }
 
     private func requestSuccessor(after phrase: PreparedPerformancePhrase) {
+        guard !phrase.requiresQualifiedContinuation else { return }
         requestPreparation(PhrasePreparationRequest(
             key: preparationKey(
                 phraseIndex: sessionState.phraseIndex,
@@ -299,48 +302,70 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
         }
     }
 
+    private func advancePreparedPhrase(_ next: PreparedPerformancePhrase) -> Bool {
+        guard next.continuationOwnershipIsValid, next.request.sourceState == sessionState,
+            next.request.incomingLongHorizonState?.fingerprint == longHorizonState?.fingerprint
+        else { return false }
+        currentPhrase = next
+        sessionState = next.request.sourceState.advance(
+            using: next.prepared.plan,
+            quality: next.prepared.qualityContinuationState,
+            liveMasterHeadroom:
+                next.prepared.liveMasterHeadroomContinuationState,
+            longHorizonDecision: next.longHorizonDecision
+        )
+        longHorizonState = next.outgoingLongHorizonState
+        nextBlockIndex = 0
+        coherentRepeatCount = 0
+        repeatHoldEvolutionPlaybackMode = .exactAcceptedPCM
+        requestSuccessor(after: next)
+        return true
+    }
+
     @discardableResult
     private func queueNextBar() -> Bool {
         guard var phrase = currentPhrase else { return false }
+        guard phrase.continuationOwnershipIsValid else {
+            beginRecovery(shouldResume: true); return false
+        }
         if nextBlockIndex >= phrase.prepared.blocks.count {
-            let nextKey = preparationKey(
-                phraseIndex: sessionState.phraseIndex,
-                routeRecovery: false
-            )
-            let cachedSuccessor = preparedCache.removeValue(forKey: nextKey)
-            switch AutonomousPhraseBoundaryPolicy.decide(
-                successorPrepared: cachedSuccessor != nil
-            ) {
-            case .advance:
-                guard let next = cachedSuccessor else { return false }
-                currentPhrase = next
+            if phrase.requiresQualifiedContinuation {
+                guard let start = Int64(exactly: nextScheduleSample),
+                    case let .success(next?) = phrase.continuationAtBoundary(sessionState: sessionState,
+                        longHorizonState: longHorizonState, sampleRate: sampleRate, channelCount: 2,
+                        routeGeneration: routeGeneration, actualStartSample: start),
+                    advancePreparedPhrase(next) else {
+                    beginRecovery(shouldResume: true); return false
+                }
                 phrase = next
-                sessionState = next.request.sourceState.advance(
-                    using: next.prepared.plan,
-                    quality: next.prepared.qualityContinuationState,
-                    liveMasterHeadroom:
-                        next.prepared.liveMasterHeadroomContinuationState,
-                    longHorizonDecision: next.longHorizonDecision
+            } else {
+                let nextKey = preparationKey(
+                    phraseIndex: sessionState.phraseIndex,
+                    routeRecovery: false
                 )
-                longHorizonState = next.outgoingLongHorizonState
-                nextBlockIndex = 0
-                coherentRepeatCount = 0
-                repeatHoldEvolutionPlaybackMode = .exactAcceptedPCM
-                requestSuccessor(after: next)
-            case .repeatCurrentWithFrozenTopology:
-                // Keep the device fed with already-qualified immutable audio;
-                // do not prepare, block, or mutate topology in an audio callback.
-                nextBlockIndex = 0
-                coherentRepeatCount += 1
-                repeatHoldEvolutionPlaybackMode =
-                    RepeatHoldEvolutionBoundaryPolicy.decide(
-                        coherentRepeatCount: coherentRepeatCount,
-                        successorPrepared: false,
-                        qualifiedPatternFamilies:
-                            phrase.prepared
-                                .qualifiedRepeatHoldPatternFamilies
-                    )
-                requestSuccessor(after: phrase)
+                let cachedSuccessor = preparedCache.removeValue(forKey: nextKey)
+                switch AutonomousPhraseBoundaryPolicy.decide(
+                    successorPrepared: cachedSuccessor != nil
+                ) {
+                case .advance:
+                    guard let next = cachedSuccessor else { return false }
+                    guard advancePreparedPhrase(next) else { return false }
+                    phrase = next
+                case .repeatCurrentWithFrozenTopology:
+                    // Keep the device fed with already-qualified immutable audio;
+                    // do not prepare, block, or mutate topology in an audio callback.
+                    nextBlockIndex = 0
+                    coherentRepeatCount += 1
+                    repeatHoldEvolutionPlaybackMode =
+                        RepeatHoldEvolutionBoundaryPolicy.decide(
+                            coherentRepeatCount: coherentRepeatCount,
+                            successorPrepared: false,
+                            qualifiedPatternFamilies:
+                                phrase.prepared
+                                    .qualifiedRepeatHoldPatternFamilies
+                        )
+                    requestSuccessor(after: phrase)
+                }
             }
         }
 

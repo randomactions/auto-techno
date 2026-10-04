@@ -779,6 +779,16 @@ hashes with finite peak and RMS. A normal eligible attempt must contain the
 displacement; forced-home and every ineligible path must be neutral. This
 evidence adds no audio-callback work or persistent timing state.
 
+Prepared continuous-window evidence may require an actual qualified child.
+The automated deficit is a source admitted using that child while a host later
+plays a different successor or repeats the incomplete source. The canonical
+shared prepared product now owns and validates the exact child through both
+transport boundaries; three-rate actual PCM/pointer promotion and stale
+state/route/live-boundary refusal controls evaluate that ownership consequence.
+A naturally complete leaf keeps the existing repeat fallback. This adds no
+musical parameter, renderer or controller, and mechanical ownership controls do
+not replace matching calibrated artifacts, output, deadline or resource gates.
+
 ## Development qualification loop
 
 The exact-engine primary evaluator is preloaded at app construction and created
