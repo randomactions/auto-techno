@@ -101,11 +101,26 @@ struct BaselineRenderIntegrationTests {
         var renderState = RenderState(), graphState = GeneratedDSPContinuationState()
         var previousGraph: DSPGraphPlan?, horizon: LongHorizonFutureAdaptationState?
         var previousChapter: InterlockChapter?
+        var predecessor: PreparedPerformancePhrase?
+        var boundarySample: Int64 = 0
         for _ in 0..<limit {
             let request = PhrasePreparationRequest(
                 key: PhrasePreparationKey(sessionSeed: state.rootSeed, phraseIndex: state.phraseIndex, sampleRate: Double(route.sampleRate), channelCount: route.channelCount, routeRecovery: route.routeRecovery, qualityRevision: state.quality.revision, qualityPolicyVersion: state.quality.policyVersion, qualityControllerFingerprint: state.quality.observedControllerStateFingerprint ?? state.quality.acceptedControllerStateFingerprint, routeGeneration: route.routeGeneration, incomingLiveMasterRevision: state.liveMasterHeadroom.revision, incomingLiveMasterStateFingerprint: state.liveMasterHeadroom.fingerprint, pendingLiveMasterProposalFingerprint: nil, liveEarliestEligibleFutureSample: nil, liveTargetStartSample: nil),
                 sourceState: state, incomingLongHorizonState: horizon, incomingRenderState: renderState, incomingGraphState: graphState, previousGraph: previousGraph, pendingLiveMasterBinding: nil)
-            let prepared = try #require(AutonomousPerformancePreparer.prepare(request: request, director: director, artifacts: primary, longHorizonArtifacts: longHorizon))
+            let owned: PreparedPerformancePhrase?
+            if let predecessor {
+                owned = try predecessor.continuationAtBoundary(
+                    sessionState: state, longHorizonState: horizon,
+                    sampleRate: Double(route.sampleRate),
+                    channelCount: route.channelCount,
+                    routeGeneration: route.routeGeneration,
+                    actualStartSample: boundarySample
+                ).get()
+            } else { owned = nil }
+            predecessor = nil
+            let prepared = try #require(owned ?? AutonomousPerformancePreparer.prepare(request: request, director: director, artifacts: primary, longHorizonArtifacts: longHorizon))
+            guard prepared.prepared.commitEligible, prepared.continuationOwnershipIsValid
+            else { throw RenderError.ineligiblePreparation }
             let plan = prepared.prepared.plan
             let targetPhraseMatches = fixture.targetPhraseIndex == nil ||
                 fixture.targetPhraseIndex == plan.phraseIndex
@@ -134,6 +149,14 @@ struct BaselineRenderIntegrationTests {
                CanonicalJourneyCheckpoint.applicable(phraseIndex: plan.phraseIndex, phraseKind: plan.kind, chapterChanged: changed).contains(fixture.checkpoint) {
                 return try write(prepared, fixture: fixture, route: route, namespace: namespace, output: output)
             }
+            let phraseFrames = try #require(Int64(exactly:
+                prepared.prepared.audioPreflight.quality.analyzedFrameCount
+            ))
+            try #require(phraseFrames > 0)
+            let nextBoundary = boundarySample.addingReportingOverflow(phraseFrames)
+            try #require(!nextBoundary.overflow)
+            boundarySample = nextBoundary.partialValue
+            predecessor = prepared
             previousChapter = chapters.last ?? previousChapter
             state = state.advance(using: plan, quality: prepared.prepared.qualityContinuationState, liveMasterHeadroom: prepared.prepared.liveMasterHeadroomContinuationState, longHorizonDecision: prepared.longHorizonDecision)
             renderState = prepared.prepared.endingRenderState
@@ -235,6 +258,6 @@ struct BaselineRenderIntegrationTests {
     private var repositoryRoot: URL { URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent() }
     private func gitHead(_ root: URL) throws -> String { let p = Process(); let pipe = Pipe(); p.executableURL = URL(fileURLWithPath: "/usr/bin/git"); p.arguments = ["-C", root.path, "rev-parse", "HEAD"]; p.standardOutput = pipe; try p.run(); p.waitUntilExit(); guard p.terminationStatus == 0 else { throw RenderError.git }; return String(decoding: pipe.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines) }
     private func sourceFingerprint(_ root: URL) throws -> String { let fm = FileManager.default; let roots = ["Package.swift", "Sources", "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"]; var paths: [String] = []; for item in roots { let url = root.appendingPathComponent(item); var directory: ObjCBool = false; if fm.fileExists(atPath: url.path, isDirectory: &directory), directory.boolValue { paths += (fm.enumerator(at: url, includingPropertiesForKeys: [.isRegularFileKey])?.allObjects as? [URL] ?? []).filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }.map { $0.path.replacingOccurrences(of: root.path + "/", with: "") } } else { paths.append(item) } }; var data = Data(); for path in paths.sorted() { data.append(Data(path.utf8)); data.append(0); data.append(try Data(contentsOf: root.appendingPathComponent(path))) }; return digest(data) }
-    private enum RenderError: Error { case missingCheckpoint, invalidPCM, invalidNamespace, namespaceAlreadyExists, invalidCorpusPath, planMismatch, frozenScoreMismatch, unacceptedCohortInputs, invalidFrozenCohort, git }
+    private enum RenderError: Error { case ineligiblePreparation, missingCheckpoint, invalidPCM, invalidNamespace, namespaceAlreadyExists, invalidCorpusPath, planMismatch, frozenScoreMismatch, unacceptedCohortInputs, invalidFrozenCohort, git }
 }
 #endif

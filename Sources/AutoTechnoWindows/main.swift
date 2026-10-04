@@ -43,9 +43,13 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
         qos: .userInitiated
     )
     private let director: AutonomousSessionDirector
-    private let qualityArtifacts = try? ProfessionalQualityPrimaryArtifacts.load()
-    private let longHorizonArtifacts =
-        try? LongHorizonProfessionalPolicyArtifacts.load()
+    private let performanceArtifacts = try? AutonomousPerformanceArtifactSet.load()
+    private var qualityArtifacts: ProfessionalQualityPrimaryArtifacts? {
+        performanceArtifacts?.primary
+    }
+    private var longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts? {
+        performanceArtifacts?.longHorizon
+    }
 
     // Every mutable property below is confined to stateQueue. Preparation uses
     // immutable Sendable request snapshots and returns on stateQueue.

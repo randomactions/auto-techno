@@ -5,6 +5,48 @@ import Testing
 
 @Suite("Modal successor report join", .serialized)
 struct ModalSuccessorReportJoinTests {
+    @Test("Reproduce current frozen-study live baselines and construct its offline primary model",
+        .enabled(if: ProcessInfo.processInfo.environment["AUTOTECHNO_VERIFY_EA5_NATIVE_LIVE_BASELINES"] == "1"))
+    func verifyFreshNativePrimaryAndLiveReproducibility() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let study = root.appendingPathComponent("docs/local/reports/rms-trajectory-floor/fresh-qualification-ea5ea53")
+        let artifacts = try ProfessionalQualityPrimaryArtifacts(
+            profileData: Data(contentsOf: study.appendingPathComponent("offline-profile.json")),
+            adversarialSuiteData: Data(contentsOf: study.appendingPathComponent("continuous-adversarial-suite.json")),
+            holdoutQualificationData: Data(contentsOf: study.appendingPathComponent("continuous-holdout-qualification.json")))
+        #expect(artifacts.profile.fingerprint == "4fb209bfb248d46b")
+        #expect(artifacts.adversarialSuite.fingerprint == "e347aea9623bba24")
+        #expect(artifacts.holdoutQualification.fingerprint == "57fc2efd43375934")
+        let products = try LiveFeedbackTestSupport.renderContinuousLiveSourceProducts()
+        let bound = try products.chain.continuousSourceObservations(
+            attenuationReports: products.attenuationReports, attenuationSuccessor: products.attenuationSuccessor,
+            recoveryReports: products.recoveryReports, recoverySuccessor: products.recoverySuccessor)
+        let all = bound.attenuation + bound.recovery
+        #expect(all.allSatisfy { $0.isComplete &&
+            ProfessionalQualityProfileEvaluator.evaluate($0, against: artifacts.profile).accepted })
+        let observations = [try #require(bound.attenuation.first), try #require(bound.recovery.first)]
+        let fingerprints = try observations.map { observation in
+            var sink = StreamingFNV1a()
+            sink.domain("professional-quality-live-baseline.v1")
+            sink.string(String(decoding: try observation.deterministicJSON(), as: UTF8.self))
+            return fixedWidthFingerprintHex(sink.value)
+        }
+        #expect(fingerprints == artifacts.adversarialSuite.liveBaselineObservationFingerprints)
+        #expect(Set(fingerprints).count == 2)
+        let result: [String: Any] = ["schema": "autotechno-current-native-live-reproduction.v1",
+            "qualifiedStudyHead": "ea5ea537a9359da47c6e9e7e75758cf9eddd74ba",
+            "sourceScope": "post-study-working-tree-control-not-final-source-qualification",
+            "primaryPolicyVersion": artifacts.evaluator.policyVersion,
+            "liveBaselineFingerprints": fingerprints, "allFixedLabelsAccepted": all.allSatisfy {
+                ProfessionalQualityProfileEvaluator.evaluate($0, against: artifacts.profile).accepted },
+            "matchesQualifiedStudy": fingerprints == artifacts.adversarialSuite.liveBaselineObservationFingerprints,
+            "archiveImport": false, "runtimeActivation": false, "fullRuntimeQualification": false]
+        try JSONSerialization.data(withJSONObject: result, options: [.sortedKeys, .prettyPrinted])
+            .write(to: study.deletingLastPathComponent().appendingPathComponent("fresh-native-live-reproduction.json"), options: .atomic)
+        print("current native live baselines: \(fingerprints); offline model construction succeeded; activation=false")
+    }
+
     @Test("Continuous live challenge sources bind actual attenuation/recovery products and immediate successors")
     func continuousLiveAdversarialSourceBinding() throws {
         let products = try LiveFeedbackTestSupport.renderContinuousLiveSourceProducts()
@@ -72,15 +114,51 @@ struct ModalSuccessorReportJoinTests {
         }
     }
 
-    @Test("Continuous qualification metadata cannot change installed legacy authority")
+    private func historicalLegacyArtifacts() throws -> (
+        profile: ProfessionalQualityCalibrationProfile,
+        adversarialSuite: ProfessionalQualityAdversarialSuiteReport,
+        holdoutQualification: ProfessionalQualityHoldoutQualification
+    ) {
+        let directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
+        func data(_ name: String) throws -> Data {
+            let resource = try Data(contentsOf: directory.appendingPathComponent(name + ".json"))
+            return resource.last == 0x0A ? Data(resource.dropLast()) : resource
+        }
+        let profileData = try data("professional-quality-primary-profile-v30")
+        let suiteData = try data("professional-quality-primary-adversarial-suite-v30")
+        let holdoutData = try data("professional-quality-primary-holdout-v30")
+        // Explicit historical fixtures remain readable for attacks on scope
+        // bindings, but cannot become a current primary evaluator.
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts(profileData: profileData,
+                adversarialSuiteData: suiteData, holdoutQualificationData: holdoutData)
+        }
+        let profile = try JSONDecoder().decode(ProfessionalQualityCalibrationProfile.self, from: profileData)
+        let suite = try JSONDecoder().decode(ProfessionalQualityAdversarialSuiteReport.self, from: suiteData)
+        let holdout = try JSONDecoder().decode(ProfessionalQualityHoldoutQualification.self, from: holdoutData)
+        #expect(profile.fingerprint == "45d94400c298892e")
+        #expect(profile.measurementScope == .legacy && !profile.isComplete)
+        #expect(!holdout.qualified)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityCalibrationProfile.decodeDeterministicJSON(profileData)
+        }
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityHoldoutQualification.decodeDeterministicJSON(holdoutData)
+        }
+        return (profile, suite, holdout)
+    }
+
+    @Test("Continuous metadata cannot relabel rejected historical legacy artifacts")
     func continuousQualificationScopeControls() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        let artifacts = try historicalLegacyArtifacts()
         let suite = artifacts.adversarialSuite
         let holdout = artifacts.holdoutQualification
         #expect(suite.measurementScope == .legacy && suite.sourceObservationVersion == nil)
         #expect(holdout.measurementScope == .legacy && holdout.sourceObservationVersion == nil)
-        #expect(suite.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint)
-        #expect(holdout.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint)
+        #expect(suite.fingerprint == "a5070b55dd992655")
+        #expect(holdout.fingerprint == "7169407cd746c0b6")
         #expect(suite.isBound(to: artifacts.profile))
 
         func changed(_ data: Data, values: [String: Any]) throws -> Data {
@@ -108,7 +186,7 @@ struct ModalSuccessorReportJoinTests {
             try ProfessionalQualityHoldoutQualification.decodeDeterministicJSON(mixedHoldoutData)
         }
 
-        // A coherent diagnostic envelope still cannot bind to the installed
+        // A coherent diagnostic envelope still cannot bind to the historical
         // legacy profile or authorize the primary runtime evaluator.
         let retiredSuiteData = try changed(suite.deterministicJSON(), values: [
             "sourceObservationVersion": continuousVersion, "schemaVersion": 23,
@@ -133,9 +211,9 @@ struct ModalSuccessorReportJoinTests {
         }
     }
 
-    @Test("Continuous holdout diagnostics cannot enter the installed primary evaluator")
+    @Test("Continuous holdout metadata cannot authorize a historical legacy profile")
     func continuousHoldoutPrimaryScopeRejection() throws {
-        let artifacts = try ProfessionalQualityPrimaryArtifacts.load()
+        let artifacts = try historicalLegacyArtifacts()
         var object = try #require(JSONSerialization.jsonObject(
             with: artifacts.holdoutQualification.deterministicJSON()) as? [String: Any])
         object["schemaVersion"] = 21
@@ -144,8 +222,11 @@ struct ModalSuccessorReportJoinTests {
         object["sourceObservationVersion"] = ProfessionalQualityMeasurementScope.continuousModalWindow.observationVersion
         let data = try JSONSerialization.data(withJSONObject: object,
             options: [.sortedKeys, .withoutEscapingSlashes])
-        let diagnostic = try ProfessionalQualityHoldoutQualification.decodeDeterministicJSON(data)
-        #expect(diagnostic.measurementScope == .continuousModalWindow && diagnostic.qualified)
+        let diagnostic = try JSONDecoder().decode(ProfessionalQualityHoldoutQualification.self, from: data)
+        #expect(diagnostic.measurementScope == .continuousModalWindow && !diagnostic.qualified)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityHoldoutQualification.decodeDeterministicJSON(data)
+        }
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
             try ProfessionalQualityPrimaryEvaluator(profile: artifacts.profile,
                 adversarialSuite: artifacts.adversarialSuite, holdoutQualification: diagnostic)

@@ -547,6 +547,32 @@ package enum PerformancePreparationOutcome: Sendable {
     }
 }
 
+/// Immutable production artifact pair. Both hosts load it once off the callback;
+/// neither policy becomes available when its companion or exact binding fails.
+/// Explicit offline primary-only preparation remains the existing test contract.
+package struct AutonomousPerformanceArtifactSet: Sendable {
+    package let primary: ProfessionalQualityPrimaryArtifacts
+    package let longHorizon: LongHorizonProfessionalPolicyArtifacts
+
+    package init(
+        primary: ProfessionalQualityPrimaryArtifacts,
+        longHorizon: LongHorizonProfessionalPolicyArtifacts
+    ) throws {
+        guard longHorizon.profile.engineVersion == primary.profile.engineVersion,
+            longHorizon.profile.primaryPolicyVersion == primary.evaluator.policyVersion,
+            longHorizon.profile.sampleRates == primary.profile.sampleRates
+        else { throw LongHorizonProfessionalPolicyError.profileMismatch }
+        self.primary = primary
+        self.longHorizon = longHorizon
+    }
+
+    package static func load() throws -> Self {
+        let primary = try ProfessionalQualityPrimaryArtifacts.load()
+        let longHorizon = try LongHorizonProfessionalPolicyArtifacts.load()
+        return try Self(primary: primary, longHorizon: longHorizon)
+    }
+}
+
 /// The single platform-neutral preparation path. It never executes on an audio
 /// callback: it plans, renders immutable future audio, applies the installed
 /// deterministic quality policy, and derives cheap read-only waveform

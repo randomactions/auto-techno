@@ -68,9 +68,13 @@ struct PhrasePreparationReplayIdentityTests {
         changedRenderState.barIndex = 1
         var changedGraphState = GeneratedDSPContinuationState()
         changedGraphState.graph = DSPGraphGenerator.safePlan(sessionSeed: 42)
+        // Boundary serialization uses the shared qualified mechanical fixture,
+        // independent of obsolete installed production artifacts.
+        let artifacts = try qualifiedArtifacts()
+        let policy = try LongHorizonProfessionalPolicy(profile: artifacts.profile,
+            adversarial: artifacts.adversarial, holdout: artifacts.holdout)
         let longHorizon = try #require(LongHorizonFutureAdaptationState(
-            startingState: state,
-            policy: LongHorizonProfessionalPolicyArtifacts.load().policy
+            startingState: state, policy: policy
         ))
         let changedRequests: [PhrasePreparationRequest] = [
             request(state: AutonomousSessionState(rootSeed: 43)),

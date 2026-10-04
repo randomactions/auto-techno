@@ -145,6 +145,7 @@ struct PerformanceEnvelopeIntegrationTests {
         let route: Corpus.Route
         let director: AutonomousSessionDirector
         let request: PhrasePreparationRequest
+        let reference: PreparedPerformancePhrase
     }
 
     // This is a diagnostic of the normal shared owner using an explicit
@@ -313,6 +314,226 @@ struct PerformanceEnvelopeIntegrationTests {
     }
 
     @MainActor
+    @Test("Export current shared preparation with exact owned-child replay",
+        .enabled(if: ProcessInfo.processInfo.environment["AUTOTECHNO_RUN_CURRENT_SHARED_PREPARATION_ENVELOPE"] == "1"))
+    func exportCurrentSharedPreparationEnvelope() async throws {
+        let environment = ProcessInfo.processInfo.environment
+        #if DEBUG
+        let optimizedBuild = false
+        #else
+        let optimizedBuild = true
+        #endif
+        guard optimizedBuild, environment["AUTOTECHNO_PERFORMANCE_BUILD_CONFIGURATION"] == "release" else {
+            throw EnvelopeError.releaseBuildRequired
+        }
+        let root = repositoryRoot
+        let acceptedHead = try #require(environment["AUTOTECHNO_CURRENT_SHARED_ENVELOPE_ACCEPTED_HEAD"])
+        guard try gitHead(root) == acceptedHead,
+            try gitOutput(root, arguments: ["status", "--porcelain", "--untracked-files=all"]).isEmpty
+        else { throw EnvelopeError.invalidObservation }
+        let sourceBefore = try sourceFingerprint(root)
+        let contractData = try Data(contentsOf: root.appendingPathComponent("docs/ROADMAP_EXECUTION_BASELINE.json"))
+        let contract = try #require(JSONSerialization.jsonObject(with: contractData) as? [String: Any])
+        let corpusData = try Data(contentsOf: root.appendingPathComponent("docs/BASELINE_CORPUS.json"))
+        let corpus = try JSONDecoder().decode(Corpus.self, from: corpusData)
+        guard corpus.schema == "autotechno-baseline-corpus.v1", corpus.corpusVersion == 1,
+            corpus.cases.count == 7, Set(corpus.cases.map(\.id)).count == 7,
+            corpus.routes.map(\.sampleRate).sorted() == [44_100, 48_000],
+            corpus.routes.allSatisfy({ $0.channelCount == 2 })
+        else { throw EnvelopeError.unsupportedCorpus }
+        let artifacts = try AutonomousPerformanceArtifactSet.load()
+        let output = root.appendingPathComponent("docs/local/reports/current-shared-preparation-envelope-" + acceptedHead.prefix(7))
+        guard !FileManager.default.fileExists(atPath: output.path) else {
+            throw EnvelopeError.invalidObservation
+        }
+        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        var observations: [[String: Any]] = []
+        let identity: [String: Any] = [
+            "schema": "autotechno-current-shared-preparation-envelope-observations.v1",
+            "gitHead": acceptedHead, "sourceFingerprint": sourceBefore,
+            "contractBaselineFingerprint": try #require(contract["snapshotFingerprint"] as? String),
+            "corpusSha256": digest(corpusData), "engineVersion": QualityQualificationContract.engineVersion,
+            "buildConfiguration": "release", "primaryPolicyVersion": artifacts.primary.evaluator.policyVersion,
+            "longHorizonPolicyVersion": artifacts.longHorizon.policy.policyVersion,
+            "clock": try JSONSerialization.jsonObject(with: JSONEncoder().encode(ClockIdentity())),
+            "memory": try JSONSerialization.jsonObject(with: JSONEncoder().encode(MemoryIdentity())),
+            "machine": try JSONSerialization.jsonObject(with: JSONEncoder().encode(machineIdentity())),
+            "trialPolicy": ["warmupCount": Self.warmupCount, "timedTrialCount": Self.timedTrialCount,
+                "caseIds": corpus.cases.map(\.id), "sampleRates": [44_100, 48_000],
+                "ordering": "frozen-corpus-case-route-trial", "warmupObservationsRetained": true],
+            "measurementScope": "all-baseline-checkpoints-through-current-shared-owner",
+            "phaseTimingAvailability": "not-instrumented-shared-owner",
+            "referenceStorageScope": "exact-journey-product-held-outside-timed-preparation",
+            "maximumReservedNumericBytes": AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount,
+            "capacityQualification": false, "runtimeActivation": false,
+            "minMaxTwoPassRebuildQualification": false, "lifecycleQualification": false,
+            "callbackOrPhysicalOutputQualification": false,
+        ]
+        func writeObservations(complete: Bool, producer: [ProducerObservation] = []) throws {
+            var document = identity
+            document["executionComplete"] = complete
+            document["observations"] = observations
+            document["producerObservations"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(producer))
+            try JSONSerialization.data(withJSONObject: document, options: [.sortedKeys, .prettyPrinted])
+                .write(to: output.appendingPathComponent("raw-observations.json"), options: .atomic)
+        }
+        try writeObservations(complete: false)
+        for fixture in corpus.cases {
+            for route in corpus.routes {
+                let context: TargetContext
+                do {
+                    context = try targetContext(fixture: fixture, route: route,
+                        limit: corpus.checkpointPolicy.maximumPhrases,
+                        primary: artifacts.primary, longHorizon: artifacts.longHorizon)
+                } catch {
+                    for trial in -Self.warmupCount..<Self.timedTrialCount {
+                        var row: [String: Any] = ["caseId": fixture.id, "routeId": route.id,
+                            "sampleRate": route.sampleRate, "channelCount": route.channelCount,
+                            "trialIndex": trial, "isWarmup": trial < 0,
+                            "outcome": "target-journey-unavailable"]
+                        if let failure = error as? PhrasePreparationFailure {
+                            row["failureStage"] = failure.stage; row["failureCode"] = failure.code
+                            row["failureDetails"] = failure.details
+                        } else { row["failureCode"] = String(describing: error) }
+                        observations.append(row)
+                    }
+                    try writeObservations(complete: false)
+                    continue
+                }
+                let reference = context.reference
+                for trial in -Self.warmupCount..<Self.timedTrialCount {
+                    guard try gitHead(root) == acceptedHead,
+                        try sourceFingerprint(root) == sourceBefore,
+                        try gitOutput(root, arguments: ["status", "--porcelain", "--untracked-files=all"]).isEmpty
+                    else { throw EnvelopeError.invalidObservation }
+                    let request = context.request
+                    let before = try processHighWaterBytes()
+                    let measured = await Task.detached(priority: .userInitiated) {
+                        let began = DispatchTime.now().uptimeNanoseconds
+                        let result = AutonomousPerformancePreparer.prepareDiagnosing(request: request,
+                            director: AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed),
+                            artifacts: artifacts.primary, longHorizonArtifacts: artifacts.longHorizon)
+                        return (result, DispatchTime.now().uptimeNanoseconds - began)
+                    }.value
+                    let after = try processHighWaterBytes()
+                    guard after >= before else { throw EnvelopeError.invalidObservation }
+                    var row: [String: Any] = ["caseId": fixture.id, "routeId": route.id,
+                        "rootSeed": fixture.rootSeed, "checkpoint": fixture.checkpoint.rawValue,
+                        "sampleRate": route.sampleRate, "channelCount": route.channelCount,
+                        "trialIndex": trial, "isWarmup": trial < 0,
+                        "sourcePhraseIndex": request.sourceState.phraseIndex,
+                        "replayFingerprint": request.replayIdentity.fingerprint,
+                        "completePreparationNanoseconds": measured.1,
+                        "processHighWaterBytesBefore": before, "processHighWaterBytesAfter": after,
+                        "referenceNodes": currentEnvelopeNodes(reference)]
+                    if let product = measured.0.preparedPhrase {
+                        let exact = currentEnvelopeProductsMatch(reference, product)
+                        let frames = product.prepared.audioPreflight.quality.analyzedFrameCount
+                        row["outcome"] = product.prepared.commitEligible ? "commit-eligible" : "calibrated-rejection"
+                        row["exactJourneyIdentityMatch"] = exact
+                        row["ownershipValid"] = product.continuationOwnershipIsValid
+                        row["audioDurationNanoseconds"] = UInt64(Double(frames) / request.key.sampleRate * 1_000_000_000)
+                        row["nodes"] = currentEnvelopeNodes(product)
+                        row["qualityOutcome"] = String(describing: product.prepared.qualityDecision.outcome)
+                        row["qualityReasonCodes"] = product.prepared.qualityDecision.reasonCodes.map { String(describing: $0) }
+                        if let budget = product.preparationChainResourceBudget {
+                            row["reservedPeakWorkingBytes"] = budget.reservedPeakWorkingByteCount
+                            row["retainedNumericBytes"] = budget.retainedNumericByteCount
+                            row["reservedSourceCount"] = budget.sourceCount
+                            row["reservedMaximumRenderPassCount"] = budget.maximumRenderPassCount
+                        }
+                        if product.prepared.commitEligible {
+                            guard exact, product.continuationOwnershipIsValid,
+                                let budget = product.preparationChainResourceBudget,
+                                budget.sourceCount == 1 + product.retainedContinuations.count,
+                                budget.reservedPeakWorkingByteCount <= AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount
+                            else {
+                                row["outcome"] = "identity-or-resource-refused"
+                                row["failureStage"] = "performance-envelope"
+                                row["failureCode"] = "current-shared-identity-or-resource"
+                                observations.append(row)
+                                try writeObservations(complete: false)
+                                throw EnvelopeError.invalidObservation
+                            }
+                        }
+                    } else {
+                        let failure = try #require(measured.0.failure)
+                        row["outcome"] = "preparation-refused"
+                        row["failureStage"] = failure.stage; row["failureCode"] = failure.code
+                        row["failureDetails"] = failure.details
+                    }
+                    observations.append(row)
+                    try writeObservations(complete: false)
+                }
+            }
+        }
+        guard try gitHead(root) == acceptedHead, try sourceFingerprint(root) == sourceBefore,
+            try Data(contentsOf: root.appendingPathComponent("docs/ROADMAP_EXECUTION_BASELINE.json")) == contractData,
+            try Data(contentsOf: root.appendingPathComponent("docs/BASELINE_CORPUS.json")) == corpusData
+        else { throw EnvelopeError.invalidObservation }
+        let producer = try producerBenchmark()
+        try writeObservations(complete: true, producer: producer)
+        #expect(observations.count == corpus.cases.count * corpus.routes.count * (Self.warmupCount + Self.timedTrialCount))
+        #expect(observations.allSatisfy { $0["outcome"] as? String == "commit-eligible" })
+        #expect(producer.count == 36 && producer.allSatisfy { $0.exactRoundTrip && $0.droppedPacketDelta == 0 && $0.rejectedPacketDelta == 0 })
+    }
+
+    private func currentEnvelopeNodes(_ product: PreparedPerformancePhrase) -> [[String: Any]] {
+        ([product] + product.retainedContinuations).map { node in
+            let advanced = node.request.sourceState.advance(using: node.prepared.plan,
+                quality: node.prepared.qualityContinuationState,
+                liveMasterHeadroom: node.prepared.liveMasterHeadroomContinuationState,
+                longHorizonDecision: node.longHorizonDecision)
+            return ["phraseIndex": node.prepared.plan.phraseIndex, "barCount": node.prepared.plan.barCount,
+                "frameCount": node.prepared.audioPreflight.quality.analyzedFrameCount,
+                "renderPassCount": node.prepared.correctionRenderCount + 1,
+                "sampleHash": node.prepared.audioPreflight.quality.sampleHash,
+                "planFingerprint": AutonomousCandidateFingerprint.plan(node.prepared.plan),
+                "candidateEvaluationFingerprint": node.prepared.candidateEvaluationFingerprint,
+                "replayFingerprint": node.request.replayIdentity.fingerprint,
+                "incomingCoreFingerprint": AutonomousTypedFingerprint.sessionState(node.request.sourceState),
+                "incomingRenderFingerprint": AutonomousTypedFingerprint.renderState(node.request.incomingRenderState),
+                "incomingGraphFingerprint": AutonomousTypedFingerprint.generatedDSPState(node.request.incomingGraphState),
+                "incomingLongHorizonFingerprint": node.request.incomingLongHorizonState?.fingerprint ?? "none",
+                "preparedOriginMatches": node.prepared.preparationReplayFingerprint == node.request.replayIdentity.fingerprint,
+                "outgoingCoreFingerprint": AutonomousTypedFingerprint.sessionState(advanced),
+                "outgoingRenderFingerprint": AutonomousTypedFingerprint.renderState(node.prepared.endingRenderState),
+                "outgoingGraphFingerprint": AutonomousTypedFingerprint.generatedDSPState(node.prepared.endingGraphState),
+                "outgoingLongHorizonFingerprint": node.outgoingLongHorizonState?.fingerprint ?? "none",
+                "commitEligible": node.prepared.commitEligible,
+                "requiresQualifiedSuccessor": node.requiresQualifiedContinuation]
+        }
+    }
+
+    private func currentEnvelopeProductsMatch(_ reference: PreparedPerformancePhrase,
+        _ measured: PreparedPerformancePhrase) -> Bool {
+        let expected = [reference] + reference.retainedContinuations
+        let actual = [measured] + measured.retainedContinuations
+        guard reference.continuationOwnershipIsValid, measured.continuationOwnershipIsValid,
+            expected.count == actual.count else { return false }
+        func advancedCoreFingerprint(_ node: PreparedPerformancePhrase) -> String {
+            AutonomousTypedFingerprint.sessionState(node.request.sourceState.advance(
+                using: node.prepared.plan, quality: node.prepared.qualityContinuationState,
+                liveMasterHeadroom: node.prepared.liveMasterHeadroomContinuationState,
+                longHorizonDecision: node.longHorizonDecision))
+        }
+        return zip(expected, actual).allSatisfy { pair in
+            let (lhs, rhs) = pair
+            return lhs.request.replayIdentity == rhs.request.replayIdentity &&
+            advancedCoreFingerprint(lhs) == advancedCoreFingerprint(rhs) &&
+            lhs.prepared.plan == rhs.prepared.plan && lhs.prepared.blocks == rhs.prepared.blocks &&
+            lhs.prepared.repeatHoldEvolutions == rhs.prepared.repeatHoldEvolutions && lhs.waveforms == rhs.waveforms &&
+            lhs.prepared.candidateEvaluationFingerprint == rhs.prepared.candidateEvaluationFingerprint &&
+            lhs.prepared.preparationReplayFingerprint == rhs.prepared.preparationReplayFingerprint &&
+            AutonomousTypedFingerprint.renderState(lhs.prepared.endingRenderState) == AutonomousTypedFingerprint.renderState(rhs.prepared.endingRenderState) &&
+            AutonomousTypedFingerprint.generatedDSPState(lhs.prepared.endingGraphState) == AutonomousTypedFingerprint.generatedDSPState(rhs.prepared.endingGraphState) &&
+            lhs.prepared.qualityContinuationState == rhs.prepared.qualityContinuationState &&
+            lhs.prepared.liveMasterHeadroomContinuationState == rhs.prepared.liveMasterHeadroomContinuationState &&
+            lhs.outgoingLongHorizonState?.fingerprint == rhs.outgoingLongHorizonState?.fingerprint
+        }
+    }
+
+    @MainActor
     @Test("Export a release-only bounded performance envelope")
     func exportEnvelope() throws {
         let environment = ProcessInfo.processInfo.environment
@@ -346,6 +567,9 @@ struct PerformanceEnvelopeIntegrationTests {
             baseline?["snapshotFingerprint"] as? String
         )
         let primary = try ProfessionalQualityPrimaryArtifacts.load()
+        guard !primary.evaluator.requiresPreparedValidation else {
+            throw EnvelopeError.legacyIsolatedEnvelopeUnsupported
+        }
         let longHorizon = try LongHorizonProfessionalPolicyArtifacts.load()
 
         var preparation: [PreparationObservation] = []
@@ -461,72 +685,57 @@ struct PerformanceEnvelopeIntegrationTests {
         var previousGraph: DSPGraphPlan?
         var horizon: LongHorizonFutureAdaptationState?
         var previousChapter: InterlockChapter?
-
+        var predecessor: PreparedPerformancePhrase?
+        var boundarySample: Int64 = 0
         for _ in 0..<limit {
-            let plan = director.plan(from: state)
-            let chapters = plan.resolvedBars.map(\.interlockChapter)
-            let changedWithinPhrase = zip(
-                chapters, chapters.dropFirst()
-            ).contains { $0.0 != $0.1 }
-            let changedAtBoundary = previousChapter.flatMap { prior in
-                chapters.first.map { $0 != prior }
-            } ?? false
-            let applies = CanonicalJourneyCheckpoint.applicable(
-                phraseIndex: plan.phraseIndex,
-                phraseKind: plan.kind,
-                chapterChanged: changedWithinPhrase || changedAtBoundary
-            ).contains(fixture.checkpoint)
             let request = PhrasePreparationRequest(
-                key: PhrasePreparationKey(
-                    sessionSeed: state.rootSeed,
-                    phraseIndex: state.phraseIndex,
-                    sampleRate: Double(route.sampleRate),
-                    channelCount: route.channelCount,
-                    routeRecovery: route.routeRecovery,
-                    qualityRevision: state.quality.revision,
+                key: PhrasePreparationKey(sessionSeed: state.rootSeed, phraseIndex: state.phraseIndex,
+                    sampleRate: Double(route.sampleRate), channelCount: route.channelCount,
+                    routeRecovery: route.routeRecovery, qualityRevision: state.quality.revision,
                     qualityPolicyVersion: state.quality.policyVersion,
-                    qualityControllerFingerprint:
-                        state.quality.observedControllerStateFingerprint ??
-                        state.quality.acceptedControllerStateFingerprint,
-                    routeGeneration: route.routeGeneration,
-                    incomingLiveMasterRevision:
-                        state.liveMasterHeadroom.revision,
-                    incomingLiveMasterStateFingerprint:
-                        state.liveMasterHeadroom.fingerprint,
-                    pendingLiveMasterProposalFingerprint: nil,
-                    liveEarliestEligibleFutureSample: nil,
-                    liveTargetStartSample: nil
-                ),
-                sourceState: state,
-                incomingLongHorizonState: horizon,
-                incomingRenderState: renderState,
-                incomingGraphState: graphState,
-                previousGraph: previousGraph,
-                pendingLiveMasterBinding: nil
-            )
-            if applies {
-                return TargetContext(
-                    fixture: fixture,
-                    route: route,
-                    director: director,
-                    request: request
-                )
+                    qualityControllerFingerprint: state.quality.observedControllerStateFingerprint ?? state.quality.acceptedControllerStateFingerprint,
+                    routeGeneration: route.routeGeneration, incomingLiveMasterRevision: state.liveMasterHeadroom.revision,
+                    incomingLiveMasterStateFingerprint: state.liveMasterHeadroom.fingerprint,
+                    pendingLiveMasterProposalFingerprint: nil, liveEarliestEligibleFutureSample: nil, liveTargetStartSample: nil),
+                sourceState: state, incomingLongHorizonState: horizon, incomingRenderState: renderState,
+                incomingGraphState: graphState, previousGraph: previousGraph, pendingLiveMasterBinding: nil)
+            let owned: PreparedPerformancePhrase?
+            if let predecessor {
+                owned = try predecessor.continuationAtBoundary(sessionState: state, longHorizonState: horizon,
+                    sampleRate: Double(route.sampleRate), channelCount: route.channelCount,
+                    routeGeneration: route.routeGeneration, actualStartSample: boundarySample).get()
+            } else { owned = nil }
+            predecessor = nil
+            let prepared: PreparedPerformancePhrase
+            if let owned { prepared = owned }
+            else {
+                switch AutonomousPerformancePreparer.prepareDiagnosing(request: request, director: director,
+                    artifacts: primary, longHorizonArtifacts: longHorizon) {
+                case .prepared(let product): prepared = product
+                case .failed(let failure): throw failure
+                }
             }
-
-            let prepared = try #require(AutonomousPerformancePreparer.prepare(
-                request: request,
-                director: director,
-                artifacts: primary,
-                longHorizonArtifacts: longHorizon
-            ))
+            guard prepared.prepared.commitEligible, prepared.continuationOwnershipIsValid
+            else { throw EnvelopeError.unqualifiedProduct }
+            let plan = prepared.prepared.plan
+            let chapters = plan.resolvedBars.map(\.interlockChapter)
+            let within = zip(chapters, chapters.dropFirst()).contains { $0.0 != $0.1 }
+            let boundary = previousChapter.flatMap { prior in chapters.first.map { $0 != prior } } ?? false
+            if CanonicalJourneyCheckpoint.applicable(phraseIndex: plan.phraseIndex,
+                phraseKind: plan.kind, chapterChanged: within || boundary).contains(fixture.checkpoint) {
+                return TargetContext(fixture: fixture, route: route, director: director,
+                    request: prepared.request, reference: prepared)
+            }
+            let frames = try #require(Int64(exactly: prepared.prepared.audioPreflight.quality.analyzedFrameCount))
+            try #require(frames > 0)
+            let next = boundarySample.addingReportingOverflow(frames)
+            try #require(!next.overflow)
+            boundarySample = next.partialValue
+            predecessor = prepared
             previousChapter = chapters.last ?? previousChapter
-            state = state.advance(
-                using: prepared.prepared.plan,
-                quality: prepared.prepared.qualityContinuationState,
-                liveMasterHeadroom:
-                    prepared.prepared.liveMasterHeadroomContinuationState,
-                longHorizonDecision: prepared.longHorizonDecision
-            )
+            state = state.advance(using: plan, quality: prepared.prepared.qualityContinuationState,
+                liveMasterHeadroom: prepared.prepared.liveMasterHeadroomContinuationState,
+                longHorizonDecision: prepared.longHorizonDecision)
             renderState = prepared.prepared.endingRenderState
             graphState = prepared.prepared.endingGraphState
             previousGraph = prepared.prepared.graph
@@ -864,6 +1073,8 @@ struct PerformanceEnvelopeIntegrationTests {
         case unsupportedCorpus
         case missingCheckpoint
         case invalidObservation
+        case unqualifiedProduct
+        case legacyIsolatedEnvelopeUnsupported
         case invalidProducerObservation
         case memoryUnavailable
         case git

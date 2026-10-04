@@ -232,12 +232,15 @@ package final class TechnoEngine: ObservableObject {
     /// task is cancelling, so the interrupted phrase remains the recovery
     /// source instead of being replaced by a stale successor request.
     private var routeRecoveryRequest: PhrasePreparationRequest?
-    /// Loaded once outside detached preparation and never touched by the audio
-    /// callback. A failed load leaves professional qualification unavailable.
-    private let qualityArtifacts: ProfessionalQualityPrimaryArtifacts?
-    /// Immutable Stage 6 policy identity. Mutable accumulation remains in
-    /// detached preparation and is committed only with its exact phrase.
-    private let longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?
+    /// The matched primary/long-horizon pair is loaded once outside preparation.
+    /// Either failed load keeps the complete production policy unavailable.
+    private let performanceArtifacts: AutonomousPerformanceArtifactSet?
+    private var qualityArtifacts: ProfessionalQualityPrimaryArtifacts? {
+        performanceArtifacts?.primary
+    }
+    private var longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts? {
+        performanceArtifacts?.longHorizon
+    }
     private var longHorizonState: LongHorizonFutureAdaptationState?
 
     private var nextBlockIndex = 0
@@ -277,8 +280,7 @@ package final class TechnoEngine: ObservableObject {
         let director = AutonomousSessionDirector(
             rootSeed: sessionSeedSource.nextSeed()
         )
-        qualityArtifacts = try? ProfessionalQualityPrimaryArtifacts.load()
-        longHorizonArtifacts = try? LongHorizonProfessionalPolicyArtifacts.load()
+        performanceArtifacts = try? AutonomousPerformanceArtifactSet.load()
         self.sessionSeedSource = sessionSeedSource
         self.director = director
         sessionState = director.initialState()
