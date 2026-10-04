@@ -1,5 +1,6 @@
 import AutoTechnoCore
 @testable import AutoTechnoDSP
+@testable import AutoTechnoTransport
 import Testing
 
 @Suite("Single primary evaluator readiness", .serialized)
@@ -44,11 +45,23 @@ struct PrimaryEvaluatorReadinessTests {
     @Test("Historical bundled artifacts cannot activate any route under the current continuous policy")
     func bundledV30ArtifactsAreIneligible() {
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            try ProfessionalQualityPrimaryArtifacts.load()
+            try historicalV30PrimaryArtifacts()
         }
         for sampleRate in [8_000.0, 12_000.0, 44_100.0, 48_000.0] {
             #expect(ProfessionalQualityPreparationEvaluator(
                 sampleRate: sampleRate, artifacts: nil).availability == .artifactsUnavailable)
+        }
+    }
+
+    @Test("Pending matching current resources cannot leave a partially ready production host")
+    func pendingCurrentPairStaysUnavailable() {
+        #expect(ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint == "4fb209bfb248d46b")
+        #expect(ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint == "e347aea9623bba24")
+        #expect(ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint == "57fc2efd43375934")
+        #expect(LongHorizonProfessionalPolicySchema.requiredPrimaryPolicyVersion ==
+            "autotechno-quality.primary-calibrated.v31.profile-4fb209bfb248d46b.adversarial-e347aea9623bba24.holdout-57fc2efd43375934")
+        #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
+            try AutonomousPerformanceArtifactSet.load()
         }
     }
 

@@ -1,20 +1,21 @@
 import Foundation
 
-/// Immutable qualification artifacts for the last calibrated canonical
-/// engine. Loading validates their identities and then rejects them when their
-/// engine no longer matches `QualityQualificationContract.engineVersion`.
+/// Sole current continuous qualification identity. The declared v32 bundle is
+/// intentionally unavailable until the complete matched artifact set is installed.
+/// Explicit offline construction validates the same profile/adversarial/holdout
+/// contract without activating transport or importing calibration banks.
 package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     package static let profileResource =
-        "professional-quality-primary-profile-v30"
+        "professional-quality-primary-profile-v32"
     package static let adversarialResource =
-        "professional-quality-primary-adversarial-suite-v30"
+        "professional-quality-primary-adversarial-suite-v32"
     package static let holdoutResource =
-        "professional-quality-primary-holdout-v30"
-    package static let expectedProfileFingerprint = "45d94400c298892e"
+        "professional-quality-primary-holdout-v32"
+    package static let expectedProfileFingerprint = "4fb209bfb248d46b"
     package static let expectedAdversarialSuiteFingerprint =
-        "a5070b55dd992655"
+        "e347aea9623bba24"
     package static let expectedHoldoutQualificationFingerprint =
-        "7169407cd746c0b6"
+        "57fc2efd43375934"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport

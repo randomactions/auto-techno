@@ -4,7 +4,37 @@ The current corrected-source primary contract is v31 and requires actual prepare
 continuous observation v23/profile v32 validation. Historical engine-v48 primary
 v30/Evidence-v29 and long-horizon-v16 results below retain their original scope;
 they cannot qualify current Evidence-v30 source or activate the new policy.
-Current-source artifact regeneration and full qualification remain pending.
+The corrected-source native continuous study completed its offline primary
+qualification on frozen source ea5ea537a9359da47c6e9e7e75758cf9eddd74ba:
+40 development and six disjoint holdout trajectories, 644 original reports and
+actual successor receipts, 34 independent adversarial cases and 84 accepted
+holdout observations. The resulting primary identities are profile
+4fb209bfb248d46b, adversarial e347aea9623bba24 and holdout 57fc2efd43375934.
+Those are the declared v32 resource targets; matching resources are not installed
+and later source changes require their own qualification. Long-horizon v17 has
+no qualified fingerprint seals yet, so the paired production loader remains
+unavailable. Full current-source qualification and activation remain pending.
+
+Current long-horizon calibration consumes every accepted phrase through the
+existing detached AutonomousPerformancePreparer and its protected measured-child
+boundary. Each of the seven development and two disjoint holdout roots must
+complete independently at 44.1 and 48 kHz. Semantic, signal and effect-dose
+accumulators observe the same immutable accepted products; sparse checkpoint
+signals or sampled effect doses cannot satisfy observation/corpus v3. Native
+routes must agree on semantic and effect geometry. Physical effect maxima and
+minimum realized material diversity are non-compensable; the reduction never
+averages a failing route into acceptance. The full evidence counts and route
+identities are bound into the observation fingerprint.
+
+The offline bootstrap uses the exact qualified primary model with no active
+long-horizon policy, allowing the existing shared owner to produce the evidence
+needed to fit that policy. It changes no musical parameter or callback path.
+It must finish a naturally closed measured-child chain after at least 7,800 bars
+and all required operator coverage; the bounded 10,400-bar ceiling refuses
+incomplete coverage. Exact clean-source and primary identity checks bracket
+each native route. A short prefix probe verifies traversal only. Partial or
+refused journeys remain local diagnostics and cannot create qualified resources,
+activate runtime or replace full runtime, capacity or physical-output gates.
 
 ## Engine-v43 episode-bound kick checkpoint
 

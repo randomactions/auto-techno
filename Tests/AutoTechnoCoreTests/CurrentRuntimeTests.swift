@@ -106,10 +106,10 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalEvidenceReportBank.schemaVersion == 30)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v30")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v30"))
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v32"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v30"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v30"))
+            .hasSuffix("-v32"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v32"))
     }
 
     @Test("Historical v30 resources remain present but cannot activate the current policy")
@@ -131,7 +131,7 @@ struct CurrentRuntimeTests {
                 .containsBundledResource(named: "\(prefix)-v30"))
         }
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            try ProfessionalQualityPrimaryArtifacts.load()
+            try historicalV30PrimaryArtifacts()
         }
     }
 

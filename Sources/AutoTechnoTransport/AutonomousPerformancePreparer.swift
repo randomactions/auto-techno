@@ -687,13 +687,35 @@ package enum AutonomousPerformancePreparer {
         longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?,
         diagnosticRoleStemCapture: Bool = false
     ) -> PerformancePreparationOutcome {
-        prepareChainDiagnosing(request: request, director: director,
+        // Reject malformed initial requests before entering the large detached
+        // candidate frame. This preserves child validation and failure priority
+        // while avoiding a Debug worker-stack allocation for known stale work.
+        guard !Task.isCancelled else {
+            return .failed(PhrasePreparationFailure(stage: "successor-chain", code: "cancelled"))
+        }
+        if let failure = requestValidationFailure(request, director: director) {
+            return .failed(failure)
+        }
+        return prepareChainDiagnosing(request: request, director: director,
             longHorizonPolicy: longHorizonArtifacts?.policy,
             diagnosticRoleStemCapture: diagnosticRoleStemCapture,
             makeEvaluator: { request in
                 ProfessionalQualityPreparationEvaluator(sampleRate: request.key.sampleRate,
                     artifacts: artifacts, preparationReplayFingerprint: request.replayIdentity.fingerprint)
             }, cancellationRequested: { Task.isCancelled })
+    }
+
+    private static func requestValidationFailure(
+        _ request: PhrasePreparationRequest, director: AutonomousSessionDirector
+    ) -> PhrasePreparationFailure? {
+        let failures = [
+            request.replayIdentity.isComplete ? nil : "request-replay-identity",
+            request.replayIdentity.matches(request) ? nil : "request-replay-mismatch",
+            request.key.sessionSeed == request.sourceState.rootSeed ? nil : "request-source-root",
+            director.rootSeed == request.sourceState.rootSeed ? nil : "director-source-root",
+        ].compactMap { $0 }
+        guard !failures.isEmpty else { return nil }
+        return PhrasePreparationFailure(stage: "request-validation", code: "identity-mismatch", details: failures)
     }
 
     private struct PendingFrame: Sendable {
@@ -741,15 +763,8 @@ package enum AutonomousPerformancePreparer {
         var resource = AutonomousPreparationChainResourceBudget()
         while true {
             guard !cancellationRequested() else { return fail("cancelled") }
-            let requestFailures = [
-                current.replayIdentity.isComplete ? nil : "request-replay-identity",
-                current.replayIdentity.matches(current) ? nil : "request-replay-mismatch",
-                current.key.sessionSeed == current.sourceState.rootSeed ? nil : "request-source-root",
-                director.rootSeed == current.sourceState.rootSeed ? nil : "director-source-root",
-            ].compactMap { $0 }
-            guard requestFailures.isEmpty else {
-                return .failed(PhrasePreparationFailure(stage: "request-validation",
-                    code: "identity-mismatch", details: requestFailures))
+            if let failure = requestValidationFailure(current, director: director) {
+                return .failed(failure)
             }
             let plan = director.plan(from: current.sourceState,
                 qualityRecoveryContext: current.key.routeRecovery ? .neutral : current.key.qualityRecoveryContext)

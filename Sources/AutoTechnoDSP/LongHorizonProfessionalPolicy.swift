@@ -7,17 +7,17 @@ import Foundation
 /// cross-episode relationships.
 package enum LongHorizonProfessionalPolicySchema {
   package static let observationVersion =
-    "autotechno-long-horizon-policy-observation.v2"
+    "autotechno-long-horizon-policy-observation.v3"
   package static let corpusVersion =
-    "autotechno-long-horizon-policy-corpus.v2"
+    "autotechno-long-horizon-policy-corpus.v3"
   package static let profileVersion =
-    "autotechno-long-horizon-professional-profile.v16"
+    "autotechno-long-horizon-professional-profile.v17"
   package static let adversarialVersion =
-    "autotechno-long-horizon-adversarial.v16"
+    "autotechno-long-horizon-adversarial.v17"
   package static let holdoutVersion =
-    "autotechno-long-horizon-holdout.v16"
+    "autotechno-long-horizon-holdout.v17"
   package static let policyFamilyVersion =
-    "autotechno-long-horizon.primary-calibrated.v16"
+    "autotechno-long-horizon.primary-calibrated.v17"
   package static let minimumDevelopmentJourneyCount = 7
   package static let minimumHoldoutJourneyCount = 2
   package static let minimumJourneyBars = 7_200
@@ -130,7 +130,7 @@ package struct LongHorizonPolicyEffectBound: Codable, Equatable, Sendable {
 }
 
 /// Non-reconstructable reduction of one canonical long journey. Raw PCM and
-/// score events are deliberately absent. Every signal checkpoint is matched to
+/// score events are deliberately absent. Every accepted signal phrase is matched to
 /// its exact effect-dose phrase by root, phrase, bar, and plan fingerprint.
 package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
   package let schemaVersion: String
@@ -149,114 +149,69 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
   package let effects: [LongHorizonPolicyEffectObservation]
   package let sourceFingerprint: String
 
-  package init(
-    semanticReport: LongHorizonSemanticTrajectoryReport,
-    signalReports: [LongHorizonSignalTrajectoryReport],
-    effectPhrases: [LongHorizonEffectDosePhraseEvidence],
-    primaryPolicyVersion: String
-  ) throws {
-    guard semanticReport.availability == .available,
-      semanticReport.schemaVersion
-        == LongHorizonSemanticTrajectorySchema.schemaVersion,
-      semanticReport.schemaIdentifier
-        == LongHorizonSemanticTrajectorySchema.schemaIdentifier,
-      semanticReport.engineVersion == QualityQualificationContract.engineVersion,
-      semanticReport.observedPhraseCount > 0,
-      semanticReport.observedBarCount > 0,
-      !semanticReport.trajectoryFingerprint.isEmpty,
-      primaryPolicyVersion
-        == LongHorizonProfessionalPolicySchema.requiredPrimaryPolicyVersion,
-      !signalReports.isEmpty,
-      Set(signalReports.map(\.sampleRate)).count == signalReports.count,
-      signalReports.allSatisfy({ report in
-        report.availability == .available
-          && report.schemaVersion
-            == LongHorizonSignalTrajectorySchema.schemaVersion
-          && report.schemaIdentifier
-            == LongHorizonSignalTrajectorySchema.schemaIdentifier
-          && report.rootSeed == semanticReport.rootSeed
-          && report.observationCount > 0
-          && report.operatorCounts.allSatisfy { $0.observationCount > 0 }
-          && report.operatorTransitions.allSatisfy {
-            $0.transitionCount
-              >= LongHorizonProfessionalPolicySchema.minimumOperatorTransitionCount
-              && $0.metricDeltas.count == LongHorizonSignalMetric.allCases.count
-          }
-          && report.metrics.count == LongHorizonSignalMetric.allCases.count
-          && !report.trajectoryFingerprint.isEmpty
-      }),
-      !effectPhrases.isEmpty,
-      effectPhrases.allSatisfy({ $0.isComplete && $0.rootSeed == semanticReport.rootSeed })
-    else {
-      throw LongHorizonProfessionalPolicyError.invalidEvidence
-    }
-
-    let signalPhrases = signalReports.flatMap(\.recentPhrases)
-    guard
-      effectPhrases.allSatisfy({ effect in
-        signalPhrases.contains { signal in
-          signal.rootSeed == effect.rootSeed
-            && signal.phraseIndex == effect.phraseIndex
-            && signal.startBar == effect.startBar
-            && signal.barCount == effect.barCount
-            && signal.planFingerprint == effect.planFingerprint
-        }
+  /// Merge independently accepted native routes without averaging away a bad
+  /// route. Semantic/count geometry must agree; physical effect maxima and the
+  /// minimum realized material diversity remain separately non-compensable.
+  /// Each route uses the existing full semantic/signal/effect runtime reduction.
+  package init(routeObservations: [LongHorizonRuntimePolicyObservation]) throws {
+    let routes = routeObservations.sorted { $0.sampleRate < $1.sampleRate }
+    guard routes.map(\.sampleRate) == [44_100, 48_000],
+      let first = routes.first,
+      routes.allSatisfy({ $0.hasMinimumDecisionEvidence &&
+        $0.rootSeed == first.rootSeed && $0.engineVersion == first.engineVersion &&
+        $0.primaryPolicyVersion == first.primaryPolicyVersion &&
+        $0.observedPhraseCount == first.observedPhraseCount &&
+        $0.observedBarCount == first.observedBarCount &&
+        $0.signalObservationCount == $0.observedPhraseCount &&
+        $0.signalOmittedPhraseCount == 0 &&
+        $0.semanticValues == first.semanticValues &&
+        $0.effects.allSatisfy { $0.observedBarCount == first.observedBarCount }
       })
-    else {
-      throw LongHorizonProfessionalPolicyError.incompatibleJourney
-    }
-
-    let semanticValues = try Self.semanticValues(from: semanticReport)
-    let sortedSignals = signalReports.sorted { $0.sampleRate < $1.sampleRate }
-    let operatorDeltas = sortedSignals.flatMap { report in
-      report.operatorTransitions.flatMap { transition in
-        transition.metricDeltas.map { summary in
-          LongHorizonPolicyOperatorDelta(
-            sampleRate: report.sampleRate,
-            operatorKind: transition.operatorKind,
-            metric: summary.metric,
-            transitionCount: summary.observationCount,
-            meanDelta: summary.mean)
-        }
+    else { throw LongHorizonProfessionalPolicyError.incompatibleJourney }
+    let effects = try LongHorizonEffectFamily.allCases.map { family in
+      let values = try routes.map { route in
+        guard let value = route.effects.first(where: { $0.family == family })
+        else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
+        return value
       }
-    }.sorted(by: Self.operatorDeltaOrder)
-    guard
-      operatorDeltas.count
-        == sortedSignals.count * LongHorizonEpisodeOperator.allCases.count
-        * LongHorizonSignalMetric.allCases.count,
-      operatorDeltas.allSatisfy({
-        $0.sampleRate.isFinite && $0.sampleRate > 0
-          && $0.transitionCount
-            >= LongHorizonProfessionalPolicySchema.minimumOperatorTransitionCount
-          && $0.meanDelta.isFinite
-      })
-    else {
-      throw LongHorizonProfessionalPolicyError.invalidEvidence
+      let a = values[0], b = values[1]
+      guard a.eligibleBarCount == b.eligibleBarCount,
+        a.activeBarCount == b.activeBarCount,
+        a.tailOnlyBarCount == b.tailOnlyBarCount,
+        a.recoveryCount == b.recoveryCount,
+        a.maximumActiveRunBars == b.maximumActiveRunBars,
+        a.wetBarOccupancy == b.wetBarOccupancy,
+        (a.maximumReturnToSourceDB == nil) == (b.maximumReturnToSourceDB == nil)
+      else { throw LongHorizonProfessionalPolicyError.incompatibleJourney }
+      return LongHorizonPolicyEffectObservation(family: family,
+        observedBarCount: first.observedBarCount,
+        eligibleBarCount: a.eligibleBarCount, activeBarCount: a.activeBarCount,
+        tailOnlyBarCount: a.tailOnlyBarCount, recoveryCount: a.recoveryCount,
+        maximumActiveRunBars: a.maximumActiveRunBars,
+        wetBarOccupancy: a.wetBarOccupancy,
+        maximumReturnToSourceDB: values.compactMap(\.maximumReturnToSourceDB).max(),
+        materialWorldCount: values.compactMap(\.materialWorldCount).min(),
+        meanEffectWorldDistance: values.compactMap(\.meanEffectWorldDistance).max(),
+        maximumEffectWorldDistance: values.compactMap(\.maximumEffectWorldDistance).max())
     }
-
-    let effects = try Self.effectObservations(from: effectPhrases)
-    schemaVersion = LongHorizonProfessionalPolicySchema.observationVersion
-    engineVersion = semanticReport.engineVersion
-    self.primaryPolicyVersion = primaryPolicyVersion
-    rootSeed = semanticReport.rootSeed
-    semanticFingerprint = semanticReport.trajectoryFingerprint
-    observedPhraseCount = semanticReport.observedPhraseCount
-    observedBarCount = semanticReport.observedBarCount
-    self.semanticValues = semanticValues
-    sampleRates = sortedSignals.map(\.sampleRate)
-    signalFingerprints = sortedSignals.map(\.trajectoryFingerprint)
-    signalObservationCounts = sortedSignals.map(\.observationCount)
-    signalOmittedPhraseCounts = sortedSignals.map(\.omittedPhraseCount)
-    self.operatorDeltas = operatorDeltas
-    self.effects = effects
-    sourceFingerprint = Self.fingerprint(
-      rootSeed: rootSeed,
-      semanticFingerprint: semanticFingerprint,
-      signalFingerprints: signalFingerprints,
-      primaryPolicyVersion: primaryPolicyVersion,
-      semanticValues: semanticValues,
-      operatorDeltas: operatorDeltas,
+    var semanticSink = StreamingFNV1a()
+    semanticSink.domain("long-horizon-accepted-native-semantics.v1")
+    for route in routes {
+      semanticSink.string(String(route.sampleRate))
+      semanticSink.string(route.semanticFingerprint)
+      semanticSink.string(route.sourceFingerprint)
+    }
+    self.init(engineVersion: first.engineVersion,
+      primaryPolicyVersion: first.primaryPolicyVersion, rootSeed: first.rootSeed,
+      semanticFingerprint: fixedWidthFingerprintHex(semanticSink.value),
+      observedPhraseCount: first.observedPhraseCount,
+      observedBarCount: first.observedBarCount, semanticValues: first.semanticValues,
+      sampleRates: routes.map(\.sampleRate), signalFingerprints: routes.map(\.signalFingerprint),
+      signalObservationCounts: routes.map(\.signalObservationCount),
+      signalOmittedPhraseCounts: routes.map(\.signalOmittedPhraseCount),
+      operatorDeltas: routes.flatMap(\.operatorDeltas).sorted(by: Self.operatorDeltaOrder),
       effects: effects)
+    guard isComplete else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
   }
 
   package init(
@@ -294,6 +249,10 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
       ?? Self.fingerprint(
         rootSeed: rootSeed,
         semanticFingerprint: semanticFingerprint,
+        observedPhraseCount: observedPhraseCount, observedBarCount: observedBarCount,
+        sampleRates: sampleRates,
+        signalObservationCounts: signalObservationCounts,
+        signalOmittedPhraseCounts: signalOmittedPhraseCounts,
         signalFingerprints: signalFingerprints,
         primaryPolicyVersion: primaryPolicyVersion,
         semanticValues: semanticValues,
@@ -317,8 +276,10 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
       && signalObservationCounts.count == sampleRates.count
       && signalOmittedPhraseCounts.count == sampleRates.count
       && signalObservationCounts.allSatisfy {
-        $0 >= LongHorizonProfessionalPolicySchema.minimumSignalObservationCount
+        $0 == observedPhraseCount &&
+          $0 >= LongHorizonProfessionalPolicySchema.minimumSignalObservationCount
       }
+      && signalOmittedPhraseCounts.allSatisfy { $0 == 0 }
       && operatorDeltas.count
         == sampleRates.count * LongHorizonEpisodeOperator.allCases.count
         * LongHorizonSignalMetric.allCases.count
@@ -330,7 +291,7 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
       }
       && effects.map(\.family) == LongHorizonEffectFamily.allCases
       && effects.allSatisfy {
-        $0.observedBarCount > 0 && $0.eligibleBarCount >= 0
+        $0.observedBarCount == observedBarCount && $0.eligibleBarCount >= 0
           && $0.activeBarCount >= 0 && $0.tailOnlyBarCount >= 0
           && $0.recoveryCount >= 0 && $0.maximumActiveRunBars >= 0
           && $0.wetBarOccupancy.isFinite
@@ -352,6 +313,10 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
         == Self.fingerprint(
           rootSeed: rootSeed,
           semanticFingerprint: semanticFingerprint,
+          observedPhraseCount: observedPhraseCount, observedBarCount: observedBarCount,
+          sampleRates: sampleRates,
+          signalObservationCounts: signalObservationCounts,
+          signalOmittedPhraseCounts: signalOmittedPhraseCounts,
           signalFingerprints: signalFingerprints,
           primaryPolicyVersion: primaryPolicyVersion,
           semanticValues: semanticValues,
@@ -427,50 +392,6 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
     return values
   }
 
-  private static func effectObservations(
-    from phrases: [LongHorizonEffectDosePhraseEvidence]
-  ) throws -> [LongHorizonPolicyEffectObservation] {
-    let observedBars = phrases.reduce(0) { $0 + $1.barCount }
-    guard observedBars > 0 else {
-      throw LongHorizonProfessionalPolicyError.invalidEvidence
-    }
-    return try LongHorizonEffectFamily.allCases.map { family in
-      let doses = try phrases.map { phrase in
-        guard let dose = phrase.families.first(where: { $0.family == family })
-        else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
-        return dose
-      }
-      let active = doses.reduce(0) { $0 + $1.activeBarCount }
-      let maximumReturn = doses.compactMap(\.maximumReturnToSourceDB).max()
-      let observation = LongHorizonPolicyEffectObservation(
-        family: family,
-        observedBarCount: observedBars,
-        eligibleBarCount: doses.reduce(0) { $0 + $1.eligibleBarCount },
-        activeBarCount: active,
-        tailOnlyBarCount: doses.reduce(0) { $0 + $1.tailOnlyBarCount },
-        recoveryCount: doses.reduce(0) { $0 + $1.recoveryCount },
-        maximumActiveRunBars: doses.map(\.maximumActiveRunBars).max() ?? 0,
-        wetBarOccupancy: Double(active) / Double(observedBars),
-        maximumReturnToSourceDB: maximumReturn,
-        materialWorldCount: family == .generatedGraph
-          ? phrases.enumerated().reduce(0) { count, entry in
-            let previous = entry.offset == 0
-              ? nil : phrases[entry.offset - 1].materialWorldFingerprint
-            return count + (previous != entry.element.materialWorldFingerprint ? 1 : 0)
-          } : nil,
-        meanEffectWorldDistance: family == .generatedGraph
-          ? phrases.map(\.effectWorldDistance).reduce(0, +)
-            / Double(phrases.count) : nil,
-        maximumEffectWorldDistance: family == .generatedGraph
-          ? phrases.map(\.effectWorldDistance).max() : nil)
-      guard observation.wetBarOccupancy.isFinite,
-        (0...1).contains(observation.wetBarOccupancy),
-        maximumReturn?.isFinite ?? true
-      else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
-      return observation
-    }
-  }
-
   private static func operatorDeltaOrder(
     _ lhs: LongHorizonPolicyOperatorDelta,
     _ rhs: LongHorizonPolicyOperatorDelta
@@ -491,6 +412,9 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
   private static func fingerprint(
     rootSeed: UInt64,
     semanticFingerprint: String,
+    observedPhraseCount: Int, observedBarCount: Int,
+    sampleRates: [Double], signalObservationCounts: [Int],
+    signalOmittedPhraseCounts: [Int],
     signalFingerprints: [String],
     primaryPolicyVersion: String,
     semanticValues: [LongHorizonPolicyNamedValue],
@@ -502,6 +426,10 @@ package struct LongHorizonPolicyObservation: Codable, Equatable, Sendable {
     hasher.mix(rootSeed)
     hasher.mix(semanticFingerprint)
     hasher.mix(primaryPolicyVersion)
+    hasher.mix(observedPhraseCount); hasher.mix(observedBarCount)
+    for rate in sampleRates { hasher.mix(rate) }
+    for count in signalObservationCounts { hasher.mix(count) }
+    for count in signalOmittedPhraseCounts { hasher.mix(count) }
     for fingerprint in signalFingerprints { hasher.mix(fingerprint) }
     for value in semanticValues {
       hasher.mix(value.metric.rawValue)

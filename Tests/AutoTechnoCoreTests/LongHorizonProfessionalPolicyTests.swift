@@ -197,68 +197,109 @@ struct LongHorizonProfessionalPolicyTests {
         == first.development.observations[0])
   }
 
-  @Test("Bundled v16 long-horizon artifacts activate the exact engine v48 policy")
+  @Test("Complete native route reduction retains worst physical effects without averaging")
+  func fullNativeRouteReduction() throws {
+    let base = makeObservation(rootSeed: 99, sampleRates: [44_100, 48_000])
+    let changedEffects = base.effects.map { value in
+      LongHorizonPolicyEffectObservation(family: value.family,
+        observedBarCount: value.observedBarCount,
+        eligibleBarCount: value.eligibleBarCount, activeBarCount: value.activeBarCount,
+        tailOnlyBarCount: value.tailOnlyBarCount, recoveryCount: value.recoveryCount,
+        maximumActiveRunBars: value.maximumActiveRunBars,
+        wetBarOccupancy: value.wetBarOccupancy, maximumReturnToSourceDB: -2,
+        materialWorldCount: value.family == .generatedGraph ? 4 : nil,
+        meanEffectWorldDistance: value.family == .generatedGraph ? 0.7 : nil,
+        maximumEffectWorldDistance: value.family == .generatedGraph ? 0.9 : nil)
+    }
+    let changed = LongHorizonPolicyObservation(engineVersion: base.engineVersion,
+      primaryPolicyVersion: base.primaryPolicyVersion, rootSeed: base.rootSeed,
+      semanticFingerprint: base.semanticFingerprint,
+      observedPhraseCount: base.observedPhraseCount, observedBarCount: base.observedBarCount,
+      semanticValues: base.semanticValues, sampleRates: base.sampleRates,
+      signalFingerprints: base.signalFingerprints, signalObservationCounts: base.signalObservationCounts,
+      signalOmittedPhraseCounts: base.signalOmittedPhraseCounts,
+      operatorDeltas: base.operatorDeltas, effects: changedEffects)
+    let a = try LongHorizonRuntimePolicyObservation(calibrationObservation: base, sampleRate: 44_100)
+    let b = try LongHorizonRuntimePolicyObservation(calibrationObservation: changed, sampleRate: 48_000)
+    let merged = try LongHorizonPolicyObservation(routeObservations: [b, a])
+    #expect(merged.isComplete && merged.sampleRates == [44_100, 48_000])
+    #expect(merged.effects.allSatisfy { $0.observedBarCount == base.observedBarCount && $0.maximumReturnToSourceDB == -2 })
+    let world = try #require(merged.effects.first { $0.family == .generatedGraph })
+    #expect(world.materialWorldCount == 4 && world.meanEffectWorldDistance == 0.7 && world.maximumEffectWorldDistance == 0.9)
+    let repeated = try LongHorizonPolicyObservation(routeObservations: [a, b])
+    #expect(try merged.deterministicJSON() == repeated.deterministicJSON())
+    #expect(try LongHorizonPolicyObservation.decodeDeterministicJSON(merged.deterministicJSON()) == merged)
+  }
+
+  @Test("Missing duplicate nonnative or semantically incompatible routes cannot qualify")
+  func nativeRouteReductionRejectsForeignInputs() throws {
+    let base = makeObservation(rootSeed: 99, sampleRates: [44_100, 48_000])
+    let a = try LongHorizonRuntimePolicyObservation(calibrationObservation: base, sampleRate: 44_100)
+    let b = try LongHorizonRuntimePolicyObservation(calibrationObservation: base, sampleRate: 48_000)
+    let other = makeObservation(rootSeed: 99, sampleRates: [44_100, 48_000], variation: 10)
+    let foreign = try LongHorizonRuntimePolicyObservation(calibrationObservation: other, sampleRate: 48_000)
+    for values in [[a], [a, a], [a, foreign], [b, b]] {
+      #expect(throws: LongHorizonProfessionalPolicyError.incompatibleJourney) {
+        try LongHorizonPolicyObservation(routeObservations: values)
+      }
+    }
+    let mechanical = makeObservation(rootSeed: 99)
+    #expect(throws: LongHorizonProfessionalPolicyError.incompatibleJourney) {
+      try LongHorizonPolicyObservation(routeObservations: [
+        LongHorizonRuntimePolicyObservation(calibrationObservation: mechanical, sampleRate: 8_000),
+        LongHorizonRuntimePolicyObservation(calibrationObservation: mechanical, sampleRate: 12_000)])
+    }
+    var object = try #require(JSONSerialization.jsonObject(with: base.deterministicJSON()) as? [String: Any])
+    var effects = try #require(object["effects"] as? [[String: Any]])
+    effects[0]["observedBarCount"] = 96; object["effects"] = effects
+    let incomplete = try JSONDecoder().decode(LongHorizonPolicyObservation.self,
+      from: JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
+    #expect(!incomplete.isComplete)
+    #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) {
+      try LongHorizonRuntimePolicyObservation(calibrationObservation: incomplete, sampleRate: 48_000)
+    }
+    object["effects"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(base.effects))
+    // Counts cannot be retagged while retaining the accepted source identity;
+    // sparse checkpoints cannot become a full accepted-phrase observation.
+    for change: [String: Any] in [
+      ["observedPhraseCount": base.observedPhraseCount + 1,
+        "signalObservationCounts": [base.observedPhraseCount + 1, base.observedPhraseCount + 1]],
+      ["signalObservationCounts": [12, 12], "signalOmittedPhraseCounts": [702, 702]],
+      ["signalOmittedPhraseCounts": [0, 1]],
+    ] {
+      var changed = object
+      for (key, value) in change { changed[key] = value }
+      let retagged = try JSONDecoder().decode(LongHorizonPolicyObservation.self,
+        from: JSONSerialization.data(withJSONObject: changed, options: [.sortedKeys]))
+      #expect(!retagged.isComplete)
+    }
+    object["schemaVersion"] = "autotechno-long-horizon-policy-observation.v2"
+    #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
+      try LongHorizonPolicyObservation.decodeDeterministicJSON(
+        JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
+    }
+  }
+
+  @Test("Historical v16 bytes cannot activate the unqualified current Long Horizon family")
   func bundledArtifacts() throws {
-    for name in [
-      LongHorizonProfessionalPolicyArtifacts.profileResource,
-      LongHorizonProfessionalPolicyArtifacts.adversarialResource,
-      LongHorizonProfessionalPolicyArtifacts.holdoutResource,
-    ] {
-      #expect(
-        LongHorizonProfessionalPolicyArtifacts
-          .containsBundledResource(named: name))
+    for name in ["long-horizon-professional-profile-v16", "long-horizon-adversarial-suite-v16", "long-horizon-holdout-v16"] {
+      #expect(LongHorizonProfessionalPolicyArtifacts.containsBundledResource(named: name))
     }
-    for obsoleteName in [
-      "long-horizon-professional-profile-v1",
-      "long-horizon-adversarial-suite-v1",
-      "long-horizon-holdout-v1",
-      "long-horizon-professional-profile-v6",
-      "long-horizon-adversarial-suite-v6",
-      "long-horizon-holdout-v6",
-      "long-horizon-professional-profile-v7",
-      "long-horizon-adversarial-suite-v7",
-      "long-horizon-holdout-v7",
-      "long-horizon-professional-profile-v8",
-      "long-horizon-adversarial-suite-v8",
-      "long-horizon-holdout-v8",
-      "long-horizon-professional-profile-v9",
-      "long-horizon-adversarial-suite-v9",
-      "long-horizon-holdout-v9",
-      "long-horizon-professional-profile-v10",
-      "long-horizon-adversarial-suite-v10",
-      "long-horizon-holdout-v10",
-      "long-horizon-professional-profile-v11",
-      "long-horizon-adversarial-suite-v11",
-      "long-horizon-holdout-v11",
-      "long-horizon-professional-profile-v12",
-      "long-horizon-adversarial-suite-v12",
-      "long-horizon-holdout-v12",
-      "long-horizon-professional-profile-v13",
-      "long-horizon-adversarial-suite-v13",
-      "long-horizon-holdout-v13",
-      "long-horizon-professional-profile-v14",
-      "long-horizon-adversarial-suite-v14",
-      "long-horizon-holdout-v14",
-      "long-horizon-professional-profile-v15",
-      "long-horizon-adversarial-suite-v15",
-      "long-horizon-holdout-v15",
-    ] {
-      #expect(
-        !LongHorizonProfessionalPolicyArtifacts
-          .containsBundledResource(named: obsoleteName))
+    #expect(LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint == nil)
+    #expect(LongHorizonProfessionalPolicyArtifacts.expectedAdversarialFingerprint == nil)
+    #expect(LongHorizonProfessionalPolicyArtifacts.expectedHoldoutFingerprint == nil)
+    #expect(throws: LongHorizonProfessionalPolicyError.invalidEvidence) {
+      try LongHorizonProfessionalPolicyArtifacts.load()
     }
-    let artifacts = try LongHorizonProfessionalPolicyArtifacts.load()
-    #expect(
-      artifacts.profile.fingerprint
-        == LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint)
-    #expect(
-      artifacts.adversarial.fingerprint
-        == LongHorizonProfessionalPolicyArtifacts.expectedAdversarialFingerprint)
-    #expect(
-      artifacts.holdout.fingerprint
-        == LongHorizonProfessionalPolicyArtifacts.expectedHoldoutFingerprint)
-    #expect(artifacts.adversarial.passed)
-    #expect(artifacts.holdout.qualified)
+    let directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+      .deletingLastPathComponent().deletingLastPathComponent()
+      .appendingPathComponent("Sources/AutoTechnoDSP/Resources")
+    #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
+      try LongHorizonProfessionalPolicyArtifacts(
+        profileData: Data(contentsOf: directory.appendingPathComponent("long-horizon-professional-profile-v16.json")),
+        adversarialData: Data(contentsOf: directory.appendingPathComponent("long-horizon-adversarial-suite-v16.json")),
+        holdoutData: Data(contentsOf: directory.appendingPathComponent("long-horizon-holdout-v16.json")))
+    }
   }
 
   @Test("Current policy resources are reduced, canonical, and fail closed")
@@ -566,13 +607,13 @@ private func makeObservation(
   let effects = LongHorizonEffectFamily.allCases.enumerated().map { index, family in
     LongHorizonPolicyEffectObservation(
       family: family,
-      observedBarCount: 96,
+      observedBarCount: observedBarCount,
       eligibleBarCount: 24 + index,
       activeBarCount: 12 + index,
       tailOnlyBarCount: 2,
       recoveryCount: 3,
       maximumActiveRunBars: 5 + index,
-      wetBarOccupancy: Double(12 + index) / 96,
+      wetBarOccupancy: Double(12 + index) / Double(observedBarCount),
       maximumReturnToSourceDB: -12 + Double(index),
       materialWorldCount: family == .generatedGraph ? 8 : nil,
       meanEffectWorldDistance: family == .generatedGraph ? 0.18 : nil,
@@ -591,8 +632,8 @@ private func makeObservation(
     signalFingerprints: sampleRates.enumerated().map {
       fixedPolicyHex(rootSeed &* 31 &+ UInt64($0.offset))
     },
-    signalObservationCounts: sampleRates.map { _ in 12 },
-    signalOmittedPhraseCounts: sampleRates.map { _ in 702 },
+    signalObservationCounts: sampleRates.map { _ in 714 },
+    signalOmittedPhraseCounts: sampleRates.map { _ in 0 },
     operatorDeltas: deltas,
     effects: effects)
 }

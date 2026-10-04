@@ -1,18 +1,18 @@
 import Foundation
 
-/// Immutable calibration artifacts for the last calibrated canonical engine's
-/// hour-scale professional policy. Loading validates exact identities and then
-/// rejects them when their engine no longer matches the current contract.
+/// Current hour-scale artifact target. Missing v17 resources remain unavailable;
+/// historical v16 bytes cannot activate this policy. Exact qualification identities
+/// are installed together only after the fresh native study passes.
 package struct LongHorizonProfessionalPolicyArtifacts: Sendable {
   package static let profileResource =
-    "long-horizon-professional-profile-v16"
+    "long-horizon-professional-profile-v17"
   package static let adversarialResource =
-    "long-horizon-adversarial-suite-v16"
+    "long-horizon-adversarial-suite-v17"
   package static let holdoutResource =
-    "long-horizon-holdout-v16"
-  package static let expectedProfileFingerprint = "5110688cc8620d7a"
-  package static let expectedAdversarialFingerprint = "fded455207d0919c"
-  package static let expectedHoldoutFingerprint = "768388d21859dfdc"
+    "long-horizon-holdout-v17"
+  package static let expectedProfileFingerprint: String? = nil
+  package static let expectedAdversarialFingerprint: String? = nil
+  package static let expectedHoldoutFingerprint: String? = nil
 
   package let profile: LongHorizonProfessionalProfile
   package let adversarial: LongHorizonAdversarialSuiteReport
@@ -43,6 +43,11 @@ package struct LongHorizonProfessionalPolicyArtifacts: Sendable {
   }
 
   package static func load() throws -> Self {
+    // An unqualified new family cannot inherit historical fingerprint authority,
+    // even if files with the new target names appear in the resource bundle.
+    guard let expectedProfileFingerprint,
+      let expectedAdversarialFingerprint, let expectedHoldoutFingerprint
+    else { throw LongHorizonProfessionalPolicyError.invalidEvidence }
     guard
       let profileURL = PackagedResourceBundle.current.url(
         forResource: profileResource,

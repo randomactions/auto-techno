@@ -46,9 +46,9 @@ def require(condition: bool, message: str) -> None:
         raise Error(message)
 
 def swift_string(root: Path, relative: str, name: str) -> str:
-    matches = re.findall(r'package\s+static\s+let\s+' + re.escape(name) + r'\s*=\s*"([^"]+)"',
+    matches = re.findall(r'package\s+static\s+let\s+' + re.escape(name) + r'(?:\s*:\s*String\?)?\s*=\s*"([^"]+)"',
                          (root / relative).read_text())
-    require(len(matches) == 1, f'ambiguous/missing Swift identity {relative}:{name}')
+    require(len(matches) == 1, f'ambiguous/missing or unqualified Swift identity {relative}:{name}')
     return matches[0]
 
 def expected_identity(root: Path) -> dict[str, str]:

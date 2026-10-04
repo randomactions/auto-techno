@@ -1,8 +1,28 @@
 # Long-Horizon Performance Map
 
-Current engine v48 binds material-world/effect-target lineage, pitch identity,
-and transition-tail continuity to the primary-v29 and long-horizon-v16
-qualification sets.
+Engine v48 binds material-world/effect-target lineage, pitch identity and
+transition-tail continuity to the canonical score. The current corrected-source
+primary family v31 requires continuous profile v32. Its completed frozen offline
+study is recorded in SOUND_QUALITY.md; matching long-horizon v17 qualification
+and production resources remain pending. Primary-v30/long-horizon-v16 results
+below describe their historical source and sparse-checkpoint evidence scope.
+
+The current v17 calibration harness uses AutonomousPerformancePreparer for the
+full seven development and two disjoint holdout journeys at both native rates.
+It consumes each exact measured child at its checked cumulative sample boundary,
+advances canonical Core/render/graph/live state once, and reduces every accepted
+phrase into semantic, signal and full effect-dose accumulators. Primary-only
+bootstrap stays detached and does not activate Long Horizon adaptation. The v3
+native-route reduction rejects missing, sparse, foreign or incompatible evidence
+and preserves worst physical effect bounds rather than averaging routes. Its
+source fingerprint includes full evidence geometry. Qualification requires a
+naturally closed chain, unchanged clean source/model bindings and complete
+operator coverage; a four-phrase probe has no qualification authority.
+
+New resource names carry no approval by themselves. The v17 fingerprint seals
+remain absent until complete actual native qualification supplies them. The
+paired production loader therefore remains unavailable, and historical bytes
+cannot be relabelled into the current family.
 
 ## Status and verdict
 
@@ -22,7 +42,7 @@ resolved-score owners with bounded, versioned provenance. Phase 5 supplies the
 effect-dose/recovery and phrase-sentence foundation from the current palette
 without changing audio. Phase 6A supplies compatible realized signal
 trajectories while keeping semantic targets and physical consequences separate.
-Phase 6B now binds those dimensions to one exact engine-v48/primary-v29
+The historical Phase 6B study bound those dimensions to one exact engine-v48/primary-v30
 development profile, passes ten independent adversarial attacks, and accepts two
 disjoint four-hour holdout journeys. Phase 7 now reduces each accepted prepared
 phrase into one bounded active-rate observation during detached preparation,

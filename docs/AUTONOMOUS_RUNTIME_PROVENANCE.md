@@ -1821,3 +1821,35 @@ presentation, missing/foreign ownership, stale Core/long-horizon/route and appli
 live-boundary controls do not prove physical output or sustained deadline/resource
 qualification. Those gates, matching current calibrated artifacts and full source,
 PCM and lifecycle qualification remain required before activation or publication.
+
+
+## Current Long Horizon calibration provenance
+
+The existing test-only LongHorizonPolicyCalibrationIntegrationTests now obtains
+its full evidence through AutonomousPerformancePreparer. It retains the actual
+accepted product until the protected continuation boundary consumes its exact
+measured child at the cumulative sample index. Fresh preparation occurs only at
+a closed leaf; a missing, stale or refused child cannot be replaced. Core,
+render, graph, quality and live-master state advance once per accepted phrase.
+The semantic, signal and effect-dose accumulators commit together only after
+source eligibility, replay identity, ownership, numeric reservation and all
+three observations pass. No musical state is reconstructed from diagnostic files.
+
+This offline bootstrap uses the qualified corrected-source primary model and
+nil Long Horizon state/policy in the existing shared owner. It is not a production
+artifact pair or an adaptation decision. Exact clean execution source and model
+identities are checked before and after each full native route. Every accepted
+phrase contributes signal and effect-dose evidence; observation v3 binds those
+counts and rejects sparse or incompatible routes. The seven development and two
+disjoint holdout roots remain separate and fixed. A naturally closed child chain
+and complete operator coverage are required before fitting; refusal diagnostics
+and the default-off four-phrase probe retain no qualification or activation
+claim. Historical v16 resources remain historical fixtures. Current v17 seals
+are absent until qualified resources are installed together.
+
+Malformed request identity validation now precedes the large generic shared
+preparation frame, preserving the same cancellation priority and request failure
+codes. The identical helper validates each prospective child as well. This keeps
+invalid inputs out of the Debug frame that previously exceeded a test-worker
+stack guard; valid request preparation still uses the canonical detached owner.
+No validation, planning, analysis or new work is moved onto an audio callback.

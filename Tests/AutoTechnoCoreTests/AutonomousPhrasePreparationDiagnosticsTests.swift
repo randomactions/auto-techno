@@ -215,7 +215,7 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
         let historicalProfile = try JSONDecoder().decode(ProfessionalQualityCalibrationProfile.self,
             from: Data(contentsOf: repository.appendingPathComponent(
                 "Sources/AutoTechnoDSP/Resources/professional-quality-primary-profile-v30.json")))
-        #expect(historicalProfile.fingerprint == ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
+        #expect(historicalProfile.fingerprint == "45d94400c298892e")
         #expect(historicalProfile.evidenceVersion == "autotechno-professional-evidence.v29")
         #expect(!historicalProfile.isComplete)
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {

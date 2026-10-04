@@ -28,7 +28,7 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v30")
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            _ = try ProfessionalQualityPrimaryArtifacts.load()
+            _ = try historicalV30PrimaryArtifacts()
         }
     }
 
@@ -3155,7 +3155,7 @@ struct ProfessionalQualityCalibrationTests {
     @Test("Historical bundled primary artifacts are ineligible under the continuous policy")
     func legacyPrimaryArtifactsAreIneligible() {
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            try ProfessionalQualityPrimaryArtifacts.load()
+            try historicalV30PrimaryArtifacts()
         }
     }
 

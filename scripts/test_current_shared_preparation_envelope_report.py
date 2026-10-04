@@ -2,9 +2,24 @@
 from __future__ import annotations
 import copy
 import unittest
+import tempfile
+from pathlib import Path
 import current_shared_preparation_envelope_report as report
 
 class CurrentSharedEnvelopeTests(unittest.TestCase):
+    def test_qualification_seal_is_required_for_identity(self):
+        with tempfile.TemporaryDirectory() as path:
+            root = Path(path)
+            source = root / 'artifact.swift'
+            source.write_text('package static let fingerprint: String? = nil')
+            with self.assertRaisesRegex(report.Error, 'unqualified Swift identity'):
+                report.swift_string(root, 'artifact.swift', 'fingerprint')
+            source.write_text('package static let fingerprint: String? = "qualified-identity"')
+            self.assertEqual(report.swift_string(root, 'artifact.swift', 'fingerprint'), 'qualified-identity')
+            source.write_text(source.read_text() + '\npackage static let fingerprint = "foreign"')
+            with self.assertRaises(report.Error):
+                report.swift_string(root, 'artifact.swift', 'fingerprint')
+
     def fixture(self):
         corpus = {'schema': 'autotechno-baseline-corpus.v1', 'corpusVersion': 1,
             'cases': [{'id': f'case-{i}', 'rootSeed': i + 1, 'checkpoint': f'checkpoint-{i}'} for i in range(7)],
