@@ -480,6 +480,10 @@
         {
           "symbol": "DiagnosticRoleStemCaptureSession",
           "path": "Sources/AutoTechnoDSP/DiagnosticRoleStemCapture.swift"
+        },
+        {
+          "symbol": "PreparationWorkingStorageProbe",
+          "path": "Sources/AutoTechnoDSP/PreparationNumericStorage.swift"
         }
       ],
       "state": [
@@ -487,7 +491,8 @@
         "voice and phrase-composition continuation",
         "four-slot modal material, coupling, and eight-mode continuation",
         "eight bounded event-observation records; origin identity, actual samples, retired-slot zero contribution, and expected successor bar",
-        "Detached diagnostic session/file lifecycle and reduced source bindings; shared transport supplies exact admitted root/child objects after reverse validation. No capture ownership enters musical continuation or scheduled playback."
+        "Detached diagnostic session/file lifecycle and reduced source bindings; shared transport supplies exact admitted root/child objects after reverse validation. No capture ownership enters musical continuation or scheduled playback.",
+        "Diagnostic PreparationWorkingStorageProbe owns at most32 phase maxima with at most4096 owner records each, single-writer and detached; no musical continuation, prepared-source, callback or policy authority."
       ],
       "inputs": [
         "AutonomousPhrasePlan",
@@ -511,7 +516,8 @@
         "actual modal attack/body/tail sample support, with missing/partial/complete window geometry",
         "same-pass continuous modal windows with explicit pending, interruption and overflow; legacy bar-local metrics and PCM preserved",
         "Final authored anchor selection after canonical composition, timing and held polymetric relocation; source-index lineage, late/legato home fallback, authored home-correction eligibility and both-native same-pass tonal tail regression. Core owns relation placement; DSP windows and bounds remain unchanged, with no continuing-journey qualification.",
-        "Every full11/protected11/stage10 tap streams from the same canonical pass with exact channel and final-block fingerprints. Bounded per-bar borrowed array-capacity inventory and 64KiB write chunks; order/rate/geometry/finite/capacity mismatch, cancellation, incomplete capture and I/O failure discard attempt-owned files. Ordinary PCM, repeat candidates and ending render/graph state remain exact. Canonical private selected-attempt/root-exact-child session binding is implemented through reverse admission; full native capture capacity and combined allocation/RSS/deadline accounting remain pending."
+        "Every full11/protected11/stage10 tap streams from the same canonical pass with exact channel and final-block fingerprints. Bounded per-bar borrowed array-capacity inventory and 64KiB write chunks; order/rate/geometry/finite/capacity mismatch, cancellation, incomplete capture and I/O failure discard attempt-owned files. Ordinary PCM, repeat candidates and ending render/graph state remain exact. Canonical private selected-attempt/root-exact-child session binding is implemented through reverse admission; full native capture capacity and combined allocation/RSS/deadline accounting remain pending.",
+        "Default-off detached renderer observations at protected-voice return, full-voice return, graph/pump return and bar delivery register live primitive array capacities with per-snapshot alias deduplication. The existing typed replay visitor supplies continuation buffers and separately labelled encoded scalar/field headroom; hold accumulators supply retained variants and looper buffers. Metadata maxima retain no PCM or addresses and have finite owner/phase bounds. Instrumentation can extend observed lifetimes. Inner transients, analysis, parent/child and corrective overlap, heap metadata, writer chunks, RSS and deadlines remain uncovered; these observations cannot reduce admission charges or qualify native capture capacity."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AlienAnalogVoice.swift",
@@ -528,7 +534,8 @@
         "Sources/AutoTechnoDSP/UpperSpectralRevealDSP.swift",
         "Sources/AutoTechnoDSP/VoiceRenderer.swift",
         "Sources/AutoTechnoDSP/ModalPercussionMeasurementContinuity.swift",
-        "Sources/AutoTechnoDSP/DiagnosticRoleStemCapture.swift"
+        "Sources/AutoTechnoDSP/DiagnosticRoleStemCapture.swift",
+        "Sources/AutoTechnoDSP/PreparationNumericStorage.swift"
       ],
       "testPaths": [
         "Tests/AutoTechnoCoreTests/KickSourceDynamicsTests.swift",

@@ -130,11 +130,13 @@ struct DiagnosticRoleStemStreamingTests {
         let parent = try temporaryParent(); defer { try? FileManager.default.removeItem(at: parent) }
         let spool = try DiagnosticRoleStemCaptureSpool(parentDirectory: parent, plan: plan,
             sampleRate: sampleRate)
+        let storageProbe = PreparationWorkingStorageProbe()
         var state = RenderState(); var graph = GeneratedDSPContinuationState()
         let result = try #require(AutonomousPhraseRenderer.renderProductIfNotCancelled(
             plan: plan, graph: DSPGraphGenerator.safePlan(sessionSeed: 42), sampleRate: sampleRate,
             state: &state, graphState: &graph,
             diagnosticRoleStemSink: { spool.append($0, block: $1) },
+            workingStorageProbe: storageProbe,
             cancellationRequested: { false }))
         #expect(result.blocks.map { ExactPCMFingerprint.stereo(left: $0.left, right: $0.right) }
             == reference.blocks)
@@ -143,6 +145,33 @@ struct DiagnosticRoleStemStreamingTests {
         #expect(result.repeatHoldEvolutionCandidates.map { candidate in
             candidate.blocks.map { ExactPCMFingerprint.stereo(left: $0.left, right: $0.right) }
         } == reference.variants)
+        #expect(storageProbe.valid && storageProbe.observationCount == plan.barCount * 4)
+        let snapshots = storageProbe.snapshots
+        #expect(snapshots.map(\.phase) == ["bar-delivery", "full-voice-return",
+            "graph-pump-return", "protected-voice-return"])
+        #expect(snapshots.allSatisfy { $0.valid && $0.uniqueBufferCapacityBytes > 0 &&
+            $0.typedMetadataHeadroomBytes > 0 &&
+            $0.ownerRecords.contains { $0.owner.hasPrefix("workspace.") } &&
+            $0.ownerRecords.contains { $0.owner.hasPrefix("current.") } &&
+            $0.ownerRecords.contains { $0.aliasOf != nil } })
+        let delivery = try #require(snapshots.first { $0.phase == "bar-delivery" })
+        #expect(delivery.ownerRecords.filter { $0.owner.hasPrefix("capture.") }.count == 32)
+        #expect(delivery.ownerRecords.contains { $0.owner.hasPrefix("hold.") })
+        let snapshotJSON = try JSONEncoder().encode(snapshots)
+        let storageControl: [String: Any] = [
+            "schema": "autotechno-render-boundary-storage-control.v1",
+            "sampleRate": sampleRate, "barCount": plan.barCount,
+            "observations": storageProbe.observationCount,
+            "snapshots": try JSONSerialization.jsonObject(with: snapshotJSON),
+            "exactPCMStateAndHoldProducts": true,
+            "completeWorkingSetQualification": false,
+            "instrumentationMayExtendObservedLifetimes": true,
+            "uncovered": ["inner-voice-and-graph-transients", "analysis",
+                "encoding-and-heap-metadata", "initial-corrected-overlap",
+                "incoming-parent-child-storage", "writer-chunk", "process-RSS", "deadlines"],
+        ]
+        let storageJSON = try JSONSerialization.data(withJSONObject: storageControl, options: [.sortedKeys])
+        print("AUTOTECHNO_RENDER_STORAGE_CONTROL " + String(decoding: storageJSON, as: UTF8.self))
         var draft: DiagnosticRoleStemCaptureDraft? = try #require(spool.finish())
         let records = try #require(draft?.records)
         #expect(result.diagnosticRoleStemCaptures.isEmpty && records.count == 16)
@@ -243,4 +272,114 @@ struct DiagnosticRoleStemStreamingTests {
         #expect(missingDirectory == nil && failed.failureCode == "file-create-failed")
         #expect(!FileManager.default.fileExists(atPath: failed.directory.path))
     }
+    @Test("Numeric inventory counts unused capacity and COW while deduplicating live aliases")
+    func numericStorageAliases() throws {
+        var original: [Float] = [1, 2, 3]
+        original.reserveCapacity(128)
+        let alias = original
+        var changed = alias
+        changed[0] = 4
+        var reservedEmpty: [Float] = []
+        reservedEmpty.reserveCapacity(64)
+        let doubles: [Double] = [5, 6]
+        let bytes: [UInt8] = [7, 8]
+        let inventory = NumericStorageInventory()
+        inventory.register(original, owner: "original")
+        inventory.register(alias, owner: "alias")
+        inventory.register(changed, owner: "COW")
+        inventory.register(reservedEmpty, owner: "reserved-empty")
+        inventory.register(doubles, owner: "double")
+        inventory.register(bytes, owner: "byte")
+        let snapshot = inventory.snapshot(phase: "live", bar: 0)
+        withExtendedLifetime((original, alias, changed, reservedEmpty, doubles, bytes)) {
+            #expect(snapshot.valid)
+            #expect(snapshot.ownerRecords[1].aliasOf == "original")
+            #expect(snapshot.ownerRecords[2].aliasOf == nil)
+            #expect(snapshot.ownerRecords[3].elementCount == 0 &&
+                snapshot.ownerRecords[3].capacityBytes >= 64 * 4)
+            #expect(snapshot.ownerRecords[4].elementStride == 8)
+            #expect(snapshot.ownerRecords[5].elementStride == 1)
+            #expect(snapshot.uniqueBufferCapacityBytes ==
+                (original.capacity + changed.capacity + reservedEmpty.capacity) * 4 +
+                doubles.capacity * 8 + bytes.capacity)
+        }
+    }
+
+    @Test("Probe maxima reset pointer identities per phase and fail closed at finite bounds")
+    func numericStorageBounds() throws {
+        let samples: [Float] = [1, 2, 3]
+        let probe = PreparationWorkingStorageProbe()
+        probe.observe(phase: "first", bar: 0) { $0.register(samples, owner: "samples") }
+        probe.observe(phase: "second", bar: 1) { $0.register(samples, owner: "samples") }
+        probe.observe(phase: "first", bar: 2) { inventory in
+            inventory.register(samples, owner: "samples")
+            inventory.addTypedMetadataHeadroom(10)
+        }
+        #expect(probe.valid && probe.observationCount == 3)
+        #expect(probe.snapshots.count == 2)
+        #expect(probe.snapshots.allSatisfy { $0.uniqueBufferCapacityBytes == samples.capacity * 4 })
+        #expect(probe.snapshots.first { $0.phase == "first" }?.bar == 2)
+        for index in 2..<PreparationWorkingStorageProbe.maximumPhaseCount {
+            probe.observe(phase: "phase-\(index)", bar: index) { _ in }
+        }
+        #expect(probe.valid && probe.snapshots.count == PreparationWorkingStorageProbe.maximumPhaseCount)
+        probe.observe(phase: "overflow", bar: 33) { _ in Issue.record("Phase overflow must refuse") }
+        #expect(!probe.valid && probe.snapshots.count == PreparationWorkingStorageProbe.maximumPhaseCount)
+        let inventory = NumericStorageInventory()
+        for index in 0..<NumericStorageInventory.maximumOwnerCount {
+            inventory.register([Float](), owner: "empty-\(index)")
+        }
+        #expect(inventory.valid)
+        inventory.register(samples, owner: "overflow")
+        #expect(!inventory.valid)
+        let negative = NumericStorageInventory()
+        negative.addTypedMetadataHeadroom(-1)
+        #expect(!negative.valid)
+        let overflow = NumericStorageInventory()
+        overflow.addTypedMetadataHeadroom(Int.max)
+        overflow.addTypedMetadataHeadroom(1)
+        #expect(!overflow.valid)
+        let invalidName = PreparationWorkingStorageProbe()
+        invalidName.observe(phase: "", bar: 0) { _ in Issue.record("Empty phase must refuse") }
+        #expect(!invalidName.valid && invalidName.snapshots.isEmpty)
+    }
+
+    @Test("Continuation measurement shares the typed inventory without changing hashes or state")
+    func typedStorageIdentity() throws {
+        var state = RenderState()
+        state.delayBuffer = [1, 2, 3]
+        state.delayBuffer.reserveCapacity(128)
+        state.pulseEchoBuffer = state.delayBuffer
+        state.spatialFDNState.lineOffsets = [0, 2]
+        state.spatialFDNState.lineOffsets.reserveCapacity(32)
+        state.spatialFDNState.dampingStates = [0.1, 0.2]
+        state.spatialFDNState.dampingStates.reserveCapacity(32)
+        let graph = GeneratedDSPContinuationState()
+        let before = AutonomousTypedFingerprint.renderDSPContinuation(renderState: state,
+            generatedDSPState: graph)
+        let retainedBytes = AutonomousTypedFingerprint.retainedContinuationNumericByteCount(
+            renderState: state, generatedDSPState: graph, cancellationRequested: { false })
+        let counted = try #require(retainedBytes)
+        let inventory = NumericStorageInventory()
+        AutonomousTypedFingerprint.registerContinuationStorage(renderState: state,
+            generatedDSPState: graph, inventory: inventory, owner: "first")
+        let first = inventory.snapshot(phase: "first", bar: 0)
+        let rawFloatCapacity = first.ownerRecords.filter { $0.elementStride == 4 }
+            .reduce(0) { $0 + $1.capacityBytes }
+        #expect(first.valid && rawFloatCapacity + first.typedMetadataHeadroomBytes == counted)
+        #expect(first.ownerRecords.contains { $0.owner.hasSuffix(".pulseEchoBuffer") && $0.aliasOf != nil })
+        #expect(first.ownerRecords.contains { $0.owner.hasSuffix(".spatialFDNLineOffsets") &&
+            $0.capacityBytes >= 32 * 8 })
+        #expect(first.ownerRecords.contains { $0.owner.hasSuffix(".spatialFDNDampingStates") &&
+            $0.capacityBytes >= 32 * 8 })
+        AutonomousTypedFingerprint.registerContinuationStorage(renderState: state,
+            generatedDSPState: graph, inventory: inventory, owner: "alias")
+        let second = inventory.snapshot(phase: "second", bar: 0)
+        #expect(second.valid && second.uniqueBufferCapacityBytes == first.uniqueBufferCapacityBytes)
+        #expect(second.typedMetadataHeadroomBytes == first.typedMetadataHeadroomBytes * 2)
+        #expect(AutonomousTypedFingerprint.renderDSPContinuation(renderState: state,
+            generatedDSPState: graph) == before)
+        withExtendedLifetime((state, graph)) {}
+    }
+
 }

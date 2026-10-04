@@ -401,6 +401,21 @@ package enum AutonomousTypedFingerprint {
         return sink.storageByteCount
     }
 
+    /// Same typed inventory as replay/retention, now registering actual backing
+    /// identities into one phase's inventory. No PCM/serialization buffer is
+    /// created and accepted state is never mutated.
+    package static func registerContinuationStorage(
+        renderState: RenderState, generatedDSPState: GeneratedDSPContinuationState,
+        inventory: NumericStorageInventory, owner: String
+    ) {
+        var sink = StreamingFNV1a(countingStorageOnly: true,
+            numericStorageInventory: inventory, numericStorageOwner: owner)
+        guard encode(renderState, into: &sink, cancellationRequested: { false }),
+            encode(generatedDSPState, into: &sink, cancellationRequested: { false }),
+            !sink.storageOverflow else { inventory.addTypedMetadataHeadroom(-1); return }
+        inventory.addTypedMetadataHeadroom(sink.storageByteCount - sink.floatStorageByteCount)
+    }
+
     package static func renderDSPContinuation(
         renderState: RenderState,
         generatedDSPState: GeneratedDSPContinuationState
@@ -1788,24 +1803,31 @@ private extension AutonomousTypedFingerprint {
         sink.aggregate("FeedbackDelayNetworkState")
         sink.field("storage"); encode(value.storage, into: &sink)
         sink.field("lineOffsets"); sink.collection(value.lineOffsets.count)
+        sink.primitiveStorage(value.lineOffsets)
         for offset in value.lineOffsets { sink.int(offset) }
         sink.field("lineLengths"); sink.collection(value.lineLengths.count)
+        sink.primitiveStorage(value.lineLengths)
         for length in value.lineLengths { sink.int(length) }
         sink.field("writeIndices"); sink.collection(value.writeIndices.count)
+        sink.primitiveStorage(value.writeIndices)
         for index in value.writeIndices { sink.int(index) }
         sink.field("dampingStates")
         sink.collection(value.dampingStates.count)
+        sink.primitiveStorage(value.dampingStates)
         for state in value.dampingStates { sink.double(state) }
         sink.field("routeSampleRate"); sink.double(value.routeSampleRate)
         sink.field("geometryRoomScale"); sink.double(value.geometryRoomScale)
         sink.field("appliedFeedbackGains")
         sink.collection(value.appliedFeedbackGains.count)
+        sink.primitiveStorage(value.appliedFeedbackGains)
         for gain in value.appliedFeedbackGains { sink.double(gain) }
         sink.field("targetFeedbackGains")
         sink.collection(value.targetFeedbackGains.count)
+        sink.primitiveStorage(value.targetFeedbackGains)
         for gain in value.targetFeedbackGains { sink.double(gain) }
         sink.field("feedbackGainSteps")
         sink.collection(value.feedbackGainSteps.count)
+        sink.primitiveStorage(value.feedbackGainSteps)
         for step in value.feedbackGainSteps { sink.double(step) }
         sink.field("appliedDampingCoefficient")
         sink.double(value.appliedDampingCoefficient)
@@ -1888,15 +1910,19 @@ private extension AutonomousTypedFingerprint {
         ) else { return false }
         sink.field("spatialFDNLineOffsets")
         sink.collection(value.spatialFDNState.lineOffsets.count)
+        sink.primitiveStorage(value.spatialFDNState.lineOffsets)
         for offset in value.spatialFDNState.lineOffsets { sink.int(offset) }
         sink.field("spatialFDNLineLengths")
         sink.collection(value.spatialFDNState.lineLengths.count)
+        sink.primitiveStorage(value.spatialFDNState.lineLengths)
         for length in value.spatialFDNState.lineLengths { sink.int(length) }
         sink.field("spatialFDNWriteIndices")
         sink.collection(value.spatialFDNState.writeIndices.count)
+        sink.primitiveStorage(value.spatialFDNState.writeIndices)
         for index in value.spatialFDNState.writeIndices { sink.int(index) }
         sink.field("spatialFDNDampingStates")
         sink.collection(value.spatialFDNState.dampingStates.count)
+        sink.primitiveStorage(value.spatialFDNState.dampingStates)
         for state in value.spatialFDNState.dampingStates { sink.double(state) }
         sink.field("spatialFDNRouteSampleRate")
         sink.double(value.spatialFDNState.routeSampleRate)
@@ -1904,16 +1930,19 @@ private extension AutonomousTypedFingerprint {
         sink.double(value.spatialFDNState.geometryRoomScale)
         sink.field("spatialFDNAppliedFeedbackGains")
         sink.collection(value.spatialFDNState.appliedFeedbackGains.count)
+        sink.primitiveStorage(value.spatialFDNState.appliedFeedbackGains)
         for gain in value.spatialFDNState.appliedFeedbackGains {
             sink.double(gain)
         }
         sink.field("spatialFDNTargetFeedbackGains")
         sink.collection(value.spatialFDNState.targetFeedbackGains.count)
+        sink.primitiveStorage(value.spatialFDNState.targetFeedbackGains)
         for gain in value.spatialFDNState.targetFeedbackGains {
             sink.double(gain)
         }
         sink.field("spatialFDNFeedbackGainSteps")
         sink.collection(value.spatialFDNState.feedbackGainSteps.count)
+        sink.primitiveStorage(value.spatialFDNState.feedbackGainSteps)
         for step in value.spatialFDNState.feedbackGainSteps {
             sink.double(step)
         }
@@ -2109,7 +2138,7 @@ private extension AutonomousTypedFingerprint {
     static func encode(_ value: [Float], into sink: inout StreamingFNV1a) {
         sink.collection(value.count)
         if sink.countingStorageOnly {
-            sink.floatStorage(capacity: value.capacity)
+            sink.floatStorage(value)
         } else {
             for sample in value { sink.float(sample) }
         }
@@ -2124,7 +2153,7 @@ private extension AutonomousTypedFingerprint {
         let cancellationChunkSampleCount = 1_024
         sink.collection(value.count)
         if sink.countingStorageOnly {
-            sink.floatStorage(capacity: value.capacity)
+            sink.floatStorage(value)
             return !sink.storageOverflow && !cancellationRequested()
         }
         var index = 0
@@ -2148,10 +2177,13 @@ private extension AutonomousTypedFingerprint {
     static func encode(_ value: PolyphonicPadState, into sink: inout StreamingFNV1a) {
         sink.aggregate("PolyphonicPadState")
         sink.field("phases"); sink.collection(value.phases.count)
+        sink.primitiveStorage(value.phases)
         for phase in value.phases { sink.double(phase) }
         sink.field("lowPass"); sink.collection(value.lowPass.count)
+        sink.primitiveStorage(value.lowPass)
         for sample in value.lowPass { sink.double(sample) }
         sink.field("envelope"); sink.collection(value.envelope.count)
+        sink.primitiveStorage(value.envelope)
         for sample in value.envelope { sink.double(sample) }
     }
 
@@ -2575,11 +2607,47 @@ struct StreamingFNV1a {
     private(set) var storageByteCount = 0
     private(set) var storageOverflow = false
 
-    init(countingStorageOnly: Bool = false) { self.countingStorageOnly = countingStorageOnly }
+    private let numericStorageInventory: NumericStorageInventory?
+    private let numericStorageOwner: String
+    private var numericStorageOrdinal = 0
+    private var numericStorageField = "unknown"
+    private(set) var floatStorageByteCount = 0
+
+    init(countingStorageOnly: Bool = false,
+        numericStorageInventory: NumericStorageInventory? = nil,
+        numericStorageOwner: String = "continuation") {
+        self.countingStorageOnly = countingStorageOnly
+        self.numericStorageInventory = numericStorageInventory
+        self.numericStorageOwner = numericStorageOwner
+    }
+
+    mutating func primitiveStorage(_ value: [Int]) {
+        guard let numericStorageInventory else { return }
+        numericStorageInventory.register(value,
+            owner: "\(numericStorageOwner).\(numericStorageOrdinal).\(numericStorageField)")
+        numericStorageOrdinal += 1
+    }
+
+    mutating func primitiveStorage(_ value: [Double]) {
+        guard let numericStorageInventory else { return }
+        numericStorageInventory.register(value,
+            owner: "\(numericStorageOwner).\(numericStorageOrdinal).\(numericStorageField)")
+        numericStorageOrdinal += 1
+    }
+
+    mutating func floatStorage(_ value: [Float]) {
+        numericStorageInventory?.register(value,
+            owner: "\(numericStorageOwner).\(numericStorageOrdinal).\(numericStorageField)")
+        numericStorageOrdinal += 1
+        floatStorage(capacity: value.capacity)
+    }
 
     mutating func floatStorage(capacity: Int) {
         let bytes = capacity.multipliedReportingOverflow(by: MemoryLayout<Float>.stride)
         guard capacity >= 0, !bytes.overflow else { storageOverflow = true; return }
+        let count = floatStorageByteCount.addingReportingOverflow(bytes.partialValue)
+        guard !count.overflow else { storageOverflow = true; return }
+        floatStorageByteCount = count.partialValue
         countStorage(bytes.partialValue)
     }
 
@@ -2600,6 +2668,7 @@ struct StreamingFNV1a {
     }
 
     mutating func field(_ value: String) {
+        if numericStorageInventory != nil { numericStorageField = value }
         marker(0xf0)
         string(value)
     }

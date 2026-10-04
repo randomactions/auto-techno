@@ -1292,3 +1292,46 @@ and byte-chunk measurements do not cover total workspace/COW/state/analyzer/sour
 child allocations, combined process RSS, deadlines, full native capture capacity
 or physical output. Those gates and fresh current-engine qualification remain
 required before completion or promotion.
+
+
+## Detached renderer storage boundary observations
+
+A default-off `PreparationWorkingStorageProbe` observes the existing canonical
+`AutonomousPhraseRenderer` at protected-voice return, full-voice return, graph/pump
+return and bar delivery. `NumericStorageInventory` registers the allocated
+capacity of primitive numeric arrays through synchronous nonescaping borrows.
+Within one snapshot it counts shared backing storage once and independent COW
+storage separately, including reserved unused capacity. Backing identities are
+private and discarded after that snapshot; addresses can be reused across
+lifetimes, so each observation starts a fresh inventory. Owners must remain alive
+for the complete observation. Instrumentation may extend the observed temporary
+lifetimes and therefore does not claim an uninstrumented peak measurement.
+
+The inventory includes the current render workspace, both returned voice
+products, previously retained primary and repeat-hold blocks, repeat deck buffers,
+visible outer graph/mix products and all32 delivered capture channels. Continuation
+buffers come from the existing canonical typed replay/retention visitor rather
+than a second state-field inventory. Its existing encoded scalar/field headroom
+is reported separately from actual array capacity; that headroom is not a measure
+of dictionary, object, serialization or allocator heap overhead. Repeated typed
+views conservatively retain their own scalar headroom while shared numeric buffers
+are deduplicated. Int/Double collection capacities are registered at their existing
+typed field visits; their encoded scalar values remain in conservative headroom. This observation does not change the existing reservation's
+retained-continuation accounting.
+
+The single-writer detached probe keeps only the largest numeric-plus-headroom
+snapshot for each of at most32 named phases, with at most4096 bounded owner records
+per snapshot. Invalid names, owner/phase exhaustion or arithmetic overflow mark
+the diagnostic invalid. It retains no PCM or raw pointers, makes no admission
+or quality decision, and is absent from host/callback paths. The normal nil path
+performs no inventory work. Both-native16-bar controls compare full output,
+repeat-hold variants and ending typed state with ordinary rendering before
+reporting the observations.
+
+These four boundaries leave inner voice/graph transients, analyzer storage,
+encoding and actual heap metadata, incoming and parent/child ownership,
+initial/corrected overlap, writer chunks, whole-process RSS and deadlines
+unmeasured. They do not establish complete preparation storage, native admitted
+root/child capture capacity, resource qualification or quality promotion. Every
+existing full-capture charge,128MiB ceiling, two-pass limit and unavailable
+production seal remains in force until complete evidence establishes a bound.

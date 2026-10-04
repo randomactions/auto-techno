@@ -269,6 +269,14 @@ struct RepeatHoldEvolutionRenderAccumulator: Sendable {
         blocks.reserveCapacity(barCapacity)
     }
 
+    func registerStorage(inventory: NumericStorageInventory, owner: String) {
+        transformState.registerStorage(inventory: inventory, owner: owner + ".deck")
+        for (ordinal, block) in blocks.enumerated() {
+            inventory.register(block.left, owner: "\(owner).\(ordinal).left")
+            inventory.register(block.right, owner: "\(owner).\(ordinal).right")
+        }
+    }
+
     mutating func process(
         input: RepeatHoldEvolutionTransformInput,
         cancellationRequested: @escaping @Sendable () -> Bool
@@ -311,6 +319,11 @@ struct RepeatHoldEvolutionDeckState: Sendable {
     private var gestureCursor = 0
     private var sourceEvidenceLowPass = 0.0
     private var transformedEvidenceLowPass = 0.0
+
+    func registerStorage(inventory: NumericStorageInventory, owner: String) {
+        inventory.register(captureLeft, owner: owner + ".captureLeft")
+        inventory.register(captureRight, owner: owner + ".captureRight")
+    }
 
     init(
         patternFamily: RepeatHoldEvolutionPatternFamily,
