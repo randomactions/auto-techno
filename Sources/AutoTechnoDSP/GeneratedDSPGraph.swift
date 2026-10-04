@@ -1615,6 +1615,7 @@ package enum AutonomousPhrasePreparer {
         let routeGeneration: Int
         let liveTargetStartSample: Int64?
         let diagnosticRoleStemCapture: Bool
+        let diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession?
         let cancellationRequested: @Sendable () -> Bool
 
         init(
@@ -1639,6 +1640,7 @@ package enum AutonomousPhrasePreparer {
             routeGeneration: Int,
             liveTargetStartSample: Int64?,
             diagnosticRoleStemCapture: Bool,
+            diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession?,
             cancellationRequested: @escaping @Sendable () -> Bool
         ) {
             self.sessionSeed = sessionSeed
@@ -1662,6 +1664,7 @@ package enum AutonomousPhrasePreparer {
             self.routeGeneration = routeGeneration
             self.liveTargetStartSample = liveTargetStartSample
             self.diagnosticRoleStemCapture = diagnosticRoleStemCapture
+            self.diagnosticRoleStemSession = diagnosticRoleStemSession
             self.cancellationRequested = cancellationRequested
         }
     }
@@ -1761,6 +1764,7 @@ package enum AutonomousPhrasePreparer {
         pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding? = nil,
         liveTargetStartSample: Int64? = nil,
         diagnosticRoleStemCapture: Bool = false,
+        diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil,
         evaluator: E,
         deferPreparedValidation: Bool = false,
         renderPassReservation: @escaping @Sendable (Int) -> Bool = { _ in true },
@@ -1781,6 +1785,7 @@ package enum AutonomousPhrasePreparer {
             pendingLiveMasterBinding: pendingLiveMasterBinding,
             liveTargetStartSample: liveTargetStartSample,
             diagnosticRoleStemCapture: diagnosticRoleStemCapture,
+            diagnosticRoleStemSession: diagnosticRoleStemSession,
             evaluator: evaluator,
             deferPreparedValidation: deferPreparedValidation,
             renderPassReservation: renderPassReservation,
@@ -1803,11 +1808,16 @@ package enum AutonomousPhrasePreparer {
         pendingLiveMasterBinding: PendingLiveMasterHeadroomBinding?,
         liveTargetStartSample: Int64?,
         diagnosticRoleStemCapture: Bool,
+        diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil,
         evaluator: E,
         deferPreparedValidation: Bool,
         renderPassReservation: @escaping @Sendable (Int) -> Bool = { _ in true },
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhrasePreparationOutcome {
+        guard !(diagnosticRoleStemCapture && diagnosticRoleStemSession != nil) else {
+            return .failed(.init(stage: .inputValidation, code: .invalidInput,
+                details: ["conflicting-diagnostic-capture-delivery"]))
+        }
         let incomingControllerFingerprint = combinedControllerFingerprint(
             incomingRenderState,
             liveMasterHeadroomState:
@@ -1945,6 +1955,7 @@ package enum AutonomousPhrasePreparer {
             routeGeneration: routeGeneration,
             liveTargetStartSample: liveTargetStartSample,
             diagnosticRoleStemCapture: diagnosticRoleStemCapture,
+            diagnosticRoleStemSession: diagnosticRoleStemSession,
             cancellationRequested: cancellationRequested
         )
 
@@ -1999,6 +2010,7 @@ package enum AutonomousPhrasePreparer {
                 forceHomeUpperTimbre: forceHomeUpperTimbre,
                 diagnosticRoleStemCapture:
                     renderContext.diagnosticRoleStemCapture,
+                diagnosticRoleStemSession: renderContext.diagnosticRoleStemSession,
                 cancellationRequested: renderContext.cancellationRequested
             )
             guard !renderContext.cancellationRequested() else {
@@ -2026,7 +2038,10 @@ package enum AutonomousPhrasePreparer {
             // Release the superseded initial sidecar before the corrective
             // render claims its bounded PCM storage.
             initialPrimary.releaseRepeatHoldEvolution()
-            initialPrimary.releaseDiagnosticRoleStemCaptures()
+            guard initialPrimary.releaseDiagnosticRoleStemCaptures() else {
+                return .failed(.init(stage: .correctionRender, code: .invalidInput,
+                    details: ["diagnostic-superseded-capture-cleanup-failed"]))
+            }
             let correctedResult = product(
                 plan: plan,
                 kind: .correctionRender,
@@ -2760,6 +2775,8 @@ package enum AutonomousPhrasePreparer {
             [RepeatHoldEvolutionRenderCandidate]
         private(set) var diagnosticRoleStemCaptures:
             [AutonomousBarRoleStemCapture]
+        private(set) var diagnosticRoleStemDraft: DiagnosticRoleStemCaptureDraft?
+        let diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession?
         let sampleRate: Double
         let endingRenderState: RenderState
         let endingGraphState: GeneratedDSPContinuationState
@@ -2774,6 +2791,8 @@ package enum AutonomousPhrasePreparer {
             repeatHoldEvolutionCandidates:
                 [RepeatHoldEvolutionRenderCandidate],
             diagnosticRoleStemCaptures: [AutonomousBarRoleStemCapture],
+            diagnosticRoleStemDraft: DiagnosticRoleStemCaptureDraft?,
+            diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession?,
             sampleRate: Double,
             endingRenderState: RenderState,
             endingGraphState: GeneratedDSPContinuationState,
@@ -2787,6 +2806,8 @@ package enum AutonomousPhrasePreparer {
             self.repeatHoldEvolutionCandidates =
                 repeatHoldEvolutionCandidates
             self.diagnosticRoleStemCaptures = diagnosticRoleStemCaptures
+            self.diagnosticRoleStemDraft = diagnosticRoleStemDraft
+            self.diagnosticRoleStemSession = diagnosticRoleStemSession
             self.sampleRate = sampleRate
             self.endingRenderState = endingRenderState
             self.endingGraphState = endingGraphState
@@ -2799,8 +2820,20 @@ package enum AutonomousPhrasePreparer {
             repeatHoldEvolutionCandidates.removeAll(keepingCapacity: false)
         }
 
-        func releaseDiagnosticRoleStemCaptures() {
+        @discardableResult func releaseDiagnosticRoleStemCaptures(keepStreamDraft: Bool = false) -> Bool {
             diagnosticRoleStemCaptures.removeAll(keepingCapacity: false)
+            if !keepStreamDraft, let draft = diagnosticRoleStemDraft {
+                guard diagnosticRoleStemSession?.discardDraft(draft) == true else { return false }
+                diagnosticRoleStemDraft = nil
+            }
+            return true
+        }
+
+        func stageSelectedDraft(for source: PreparedAutonomousPhrase) -> Bool {
+            guard let session = diagnosticRoleStemSession else { return true }
+            guard let draft = diagnosticRoleStemDraft, session.stage(draft, source: source) else { return false }
+            diagnosticRoleStemDraft = nil
+            return true
         }
     }
 
@@ -2831,6 +2864,7 @@ package enum AutonomousPhrasePreparer {
         liveTargetStartSample: Int64?,
         forceHomeUpperTimbre: Bool = false,
         diagnosticRoleStemCapture: Bool = false,
+        diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> Result<CandidateRenderProduct, AutonomousPhrasePreparationFailure> {
         let stage: AutonomousPhrasePreparationFailure.Stage =
@@ -2856,12 +2890,27 @@ package enum AutonomousPhrasePreparer {
         var renderState = incomingRenderState
         renderState.liveMasterHeadroomState = outgoingLiveMasterState
         var graphState = incomingGraphState
+        let spool: DiagnosticRoleStemCaptureSpool?
+        do { spool = try diagnosticRoleStemSession?.makeSpool(plan: plan, sampleRate: sampleRate) }
+        catch {
+            return .failure(.init(stage: stage, code: .rendererUnavailable,
+                details: ["diagnostic-capture-spool-unavailable"]))
+        }
+        var draftTransferred = false
+        defer { if !draftTransferred { spool?.discard() } }
+        let sink: (@Sendable (AutonomousBarRoleStemCapture, RenderBlock) -> Bool)?
+        if let spool {
+            sink = { capture, block in
+                spool.append(capture, block: block, cancellationRequested: cancellationRequested)
+            }
+        } else { sink = nil }
         guard let renderProduct = AutonomousPhraseRenderer
             .renderProductIfNotCancelled(
             plan: plan, graph: graph, sampleRate: sampleRate,
             state: &renderState, graphState: &graphState,
             forceHomeUpperTimbre: forceHomeUpperTimbre,
             diagnosticRoleStemCapture: diagnosticRoleStemCapture,
+            diagnosticRoleStemSink: sink,
             cancellationRequested: cancellationRequested
         ) else {
             return .failure(.init(
@@ -2977,6 +3026,12 @@ package enum AutonomousPhrasePreparer {
             ),
             vector: vector
         )
+        let draft = spool?.finish()
+        guard spool == nil || draft != nil else {
+            return .failure(.init(stage: stage, code: .rendererUnavailable,
+                details: ["diagnostic-capture-incomplete"]))
+        }
+        draftTransferred = true
         return .success(CandidateRenderProduct(
             plan: plan,
             graph: graph,
@@ -2985,6 +3040,8 @@ package enum AutonomousPhrasePreparer {
                 renderProduct.repeatHoldEvolutionCandidates,
             diagnosticRoleStemCaptures:
                 renderProduct.diagnosticRoleStemCaptures,
+            diagnosticRoleStemDraft: draft,
+            diagnosticRoleStemSession: diagnosticRoleStemSession,
             sampleRate: sampleRate,
             endingRenderState: renderState,
             endingGraphState: graphState,
@@ -3252,7 +3309,7 @@ package enum AutonomousPhrasePreparer {
             // A parent must consume its measured child; only a closed leaf owns
             // coherent repeat variants. No selected scheduled PCM is changed.
             selected.releaseRepeatHoldEvolution()
-            selected.releaseDiagnosticRoleStemCaptures()
+            selected.releaseDiagnosticRoleStemCaptures(keepStreamDraft: true)
             return .awaitingPreparedValidation(AutonomousPendingPreparedValidation(
                 preview: AutonomousCandidatePreparedPreview(pendingSource)) { proof, cancelled in
                 completePreparedValidation(selected: selected, transaction: transaction,
@@ -3312,6 +3369,11 @@ package enum AutonomousPhrasePreparer {
            !prepared.commitEligible {
             return .failed(.init(stage: .finalization, code: .preparedValidationMismatch,
                 details: prepared.commitFailureDiagnostics))
+        }
+        if let prepared = final.preparedPhrase, prepared.commitEligible,
+           !selected.stageSelectedDraft(for: prepared) {
+            return .failed(.init(stage: .finalization, code: .invalidInput,
+                details: ["diagnostic-selected-capture-mismatch"]))
         }
         return final
     }

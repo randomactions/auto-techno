@@ -476,13 +476,18 @@
         {
           "symbol": "DiagnosticRoleStemCaptureSpool",
           "path": "Sources/AutoTechnoDSP/DiagnosticRoleStemCapture.swift"
+        },
+        {
+          "symbol": "DiagnosticRoleStemCaptureSession",
+          "path": "Sources/AutoTechnoDSP/DiagnosticRoleStemCapture.swift"
         }
       ],
       "state": [
         "RenderState",
         "voice and phrase-composition continuation",
         "four-slot modal material, coupling, and eight-mode continuation",
-        "eight bounded event-observation records; origin identity, actual samples, retired-slot zero contribution, and expected successor bar"
+        "eight bounded event-observation records; origin identity, actual samples, retired-slot zero contribution, and expected successor bar",
+        "Detached diagnostic session/file lifecycle and reduced source bindings; shared transport supplies exact admitted root/child objects after reverse validation. No capture ownership enters musical continuation or scheduled playback."
       ],
       "inputs": [
         "AutonomousPhrasePlan",
@@ -506,7 +511,7 @@
         "actual modal attack/body/tail sample support, with missing/partial/complete window geometry",
         "same-pass continuous modal windows with explicit pending, interruption and overflow; legacy bar-local metrics and PCM preserved",
         "Final authored anchor selection after canonical composition, timing and held polymetric relocation; source-index lineage, late/legato home fallback, authored home-correction eligibility and both-native same-pass tonal tail regression. Core owns relation placement; DSP windows and bounds remain unchanged, with no continuing-journey qualification.",
-        "Every full11/protected11/stage10 tap streams from the same canonical pass with exact channel and final-block fingerprints. Bounded per-bar borrowed array-capacity inventory and 64KiB write chunks; order/rate/geometry/finite/capacity mismatch, cancellation, incomplete capture and I/O failure discard attempt-owned files. Ordinary PCM, repeat candidates and ending render/graph state remain exact. Full preparation selection, root/exact-child binding and combined allocation/RSS/deadline accounting remain pending."
+        "Every full11/protected11/stage10 tap streams from the same canonical pass with exact channel and final-block fingerprints. Bounded per-bar borrowed array-capacity inventory and 64KiB write chunks; order/rate/geometry/finite/capacity mismatch, cancellation, incomplete capture and I/O failure discard attempt-owned files. Ordinary PCM, repeat candidates and ending render/graph state remain exact. Canonical private selected-attempt/root-exact-child session binding is implemented through reverse admission; full native capture capacity and combined allocation/RSS/deadline accounting remain pending."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AlienAnalogVoice.swift",
@@ -594,7 +599,8 @@
         "AutomaticMixState",
         "FeedbackDelayNetworkState",
         "private prospective prepared candidate, typed continuous validation proof with retained qualified successor for unfinished source windows and cached admission binding; no persistent policy state",
-        "immutable pending prepared-validation closure and private prospective source; no accepted-state advancement"
+        "immutable pending prepared-validation closure and private prospective source; no accepted-state advancement",
+        "Opt-in attempt-owned streamed diagnostic draft on the private candidate; superseded initial cleanup before correction, selected draft retained through pending proof, staged only for the actual final commit-eligible object. No mutable capture owner enters scheduled products."
       ],
       "inputs": [
         "resolved phrase",
@@ -614,7 +620,8 @@
         "requested and realized effect-world evidence",
         "protected routing reconstruction",
         "RepeatHoldEvolutionEvidence including full-mix routing, spectral consequence, target-specific capture, shortest grid slice, and exact replay provenance",
-        "mix and spatial evidence"
+        "mix and spatial evidence",
+        "Selected streamed drafts bind actual attempt and exact finalized object under unchanged PCM/vector/transaction/continuation; rejection and failure leave no publishable capture. Full capture reservation and runtime qualification remain separate."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift",
@@ -1018,7 +1025,8 @@
         "transient exact-source/request prospective continuation seal and optional known live successor sample boundary",
         "bounded transient pending source frames under aggregate resource reservation",
         "flat ordered admitted child products consumed through the same protected host boundary",
-        "one immutable matched production primary/long-horizon artifact pair; no partial production readiness"
+        "one immutable matched production primary/long-horizon artifact pair; no partial production readiness",
+        "Opt-in single-writer diagnostic session: fresh/collecting/sealed/discarded; private draft directories and staged actual source aliases, then only reduced selected-source/child bindings and independently owned files after whole-chain admission."
       ],
       "inputs": [
         "PhrasePreparationRequest",
@@ -1034,7 +1042,8 @@
         "score-behavior coverage sidecar bound to the exact accepted plan and whole-mix PCM",
         "explicit one-shot versioned local capture namespaces with the Phase-1 v1 default preserved",
         "prospective successor request released only after exact source and long-horizon admission",
-        "one admitted root with exact flat retained continuation ownership or bounded chain refusal"
+        "one admitted root with exact flat retained continuation ownership or bounded chain refusal",
+        "Optional sealed same-pass 32-channel root/owned-child diagnostic bindings, absent from normal hosts and callback paths."
       ],
       "evidence": [
         "preparation diagnostics",
@@ -1052,7 +1061,8 @@
         "The test-only full-journey driver suspends before each fresh detached shared preparation and forwards cancellation, matching host scheduling without retaining route/controller temporaries beneath the preparation stack; exact owned children still bypass fresh preparation.",
         "Full-journey refusal records separate prepared quality/commit rejection from protected ownership, replay, numeric-budget and semantic/signal/effect accumulator failures; rejected products never advance accepted state or supply calibration evidence.",
         "Rejected full native journey inspection binds the actual request/Core and score-interest fields to the existing Core retry transition, zero-repeat scheduling and one score-only next proposal; no new preparation, accepted PCM, presented repeat, opened wave or canonical advance is authorized.",
-        "The test-only full native producer retains accepted closed-leaf PCM through actual rejection, applies the existing Core finite recovery/scheduling and qualified repeat-selection policies, and records receipt-v2 rejected identities, selected PCM/sample boundaries and accepted frames separately. Frozen Core/render/graph origin, protected-child consumption, combined step/repeat-bar bounds and per-preparation reservation remain required; combined held-source memory and device scheduling remain unqualified. Actual repeat-selection/foreign-origin controls and default-off36-phrase two-native recovery traversal retain full7/2 corpus qualification gates."
+        "The test-only full native producer retains accepted closed-leaf PCM through actual rejection, applies the existing Core finite recovery/scheduling and qualified repeat-selection policies, and records receipt-v2 rejected identities, selected PCM/sample boundaries and accepted frames separately. Frozen Core/render/graph origin, protected-child consumption, combined step/repeat-bar bounds and per-preparation reservation remain required; combined held-source memory and device scheduling remain unqualified. Actual repeat-selection/foreign-origin controls and default-off36-phrase two-native recovery traversal retain full7/2 corpus qualification gates.",
+        "Leaf-to-root proof and exact child-object ownership gate streamed publication after complete packaging; all rejected/cancelled/unavailable/resource-refused chains clean private files. Initial/corrected mechanical controls preserve ordinary PCM/evidence/state, while native16 full-capture charge still refuses and capacity/RSS/deadlines remain unqualified."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoTransport/AutonomousPerformancePreparer.swift"

@@ -277,3 +277,193 @@ package final class DiagnosticRoleStemCaptureSpool: @unchecked Sendable {
             maximumWriteChunkByteCount: maximumWriteChunkByteCount)
     }
 }
+
+
+/// Reduced association made only after the normal detached chain admits the
+/// actual source and its exact child. It is not live-playback/callback evidence.
+package struct DiagnosticRoleStemSelectedBinding: Sendable {
+    package let draft: DiagnosticRoleStemCaptureDraft
+    package let sourceIdentityFingerprint: String
+    package let planFingerprint: String
+    package let candidateFingerprint: String
+    package let transactionFingerprint: String
+    package let replayFingerprint: String?
+    package let graphFingerprint: String
+    package let routeFingerprint: String
+    package let endingRenderStateFingerprint: String
+    package let endingGraphStateFingerprint: String
+    package let selectedAttemptKind: AutonomousCandidateAttemptKind
+    package let forceHomeUpperTimbre: Bool
+    package let qualifiedChildIdentityFingerprint: String?
+}
+
+/// One opt-in detached preparation transaction. Normal hosts never instantiate
+/// this owner. It retains files/private immutable aliases during reverse proof
+/// finalization and exposes only reduced bindings after the entire chain passes.
+/// Single writer: not safe for concurrent prepares/resolutions or export reads
+/// before sealing. No mutable file owner enters scheduled playback products.
+package final class DiagnosticRoleStemCaptureSession: @unchecked Sendable {
+    private struct Selected {
+        let source: PreparedAutonomousPhrase
+        let draft: DiagnosticRoleStemCaptureDraft
+    }
+    private enum State { case fresh, collecting, sealed, discarded }
+    // More than the maximum two attempts per source admitted by the unchanged
+    // full-capture reservations, even at minimum rate and one authored bar.
+    private static let maximumAttemptDirectoryCount = 256
+    package let parentDirectory: URL
+    private var state: State = .fresh
+    private var ownedDirectories: [URL] = []
+    private var selected: [Selected] = []
+    package private(set) var bindings: [DiagnosticRoleStemSelectedBinding] = []
+    package private(set) var discardedSupersededDraftCount = 0
+    package private(set) var failureCode: String?
+
+    package init(parentDirectory: URL) {
+        self.parentDirectory = parentDirectory
+    }
+
+    deinit { removeOwnedFiles() }
+
+    package var isSealed: Bool { state == .sealed }
+
+    /// Only the shared chain owner begins this session. Reuse refuses without
+    /// modifying an earlier sealed export; this is a single-use transaction.
+    package func begin() -> Bool {
+        guard state == .fresh else { return false }
+        state = .collecting
+        return true
+    }
+
+    package func makeSpool(plan: AutonomousPhrasePlan, sampleRate: Double) throws
+        -> DiagnosticRoleStemCaptureSpool {
+        guard state == .collecting,
+            ownedDirectories.count < Self.maximumAttemptDirectoryCount else {
+            failureCode = "capture-session-unavailable"
+            throw DiagnosticRoleStemCaptureError.invalidInput
+        }
+        let spool = try DiagnosticRoleStemCaptureSpool(parentDirectory: parentDirectory,
+            plan: plan, sampleRate: sampleRate)
+        ownedDirectories.append(spool.directory)
+        return spool
+    }
+
+    package func discardDraft(_ draft: DiagnosticRoleStemCaptureDraft) -> Bool {
+        do {
+            if FileManager.default.fileExists(atPath: draft.directory.path) {
+                try FileManager.default.removeItem(at: draft.directory)
+            }
+            ownedDirectories.removeAll { $0 == draft.directory }
+            discardedSupersededDraftCount += 1
+            return true
+        } catch { failureCode = "capture-cleanup-failed"; return false }
+    }
+
+    /// Called by the canonical finalizer for its actual final object, never a
+    /// prospective preview or reconstructed lookalike. Other private aliases
+    /// may exist until this call unwinds but own no distinct mutable PCM.
+    package func stage(_ draft: DiagnosticRoleStemCaptureDraft,
+        source: PreparedAutonomousPhrase) -> Bool {
+        guard state == .collecting, source.commitEligible,
+            source.preparedValidationRequired, source.preparedValidation != nil,
+            ownedDirectories.contains(draft.directory),
+            !selected.contains(where: { $0.source === source || $0.draft === draft }),
+            draft.planFingerprint == AutonomousCandidateFingerprint.plan(source.plan),
+            draft.sampleRate == source.selectedCandidateEvidence.routeContinuation.sampleRate,
+            draft.records.count == source.blocks.count,
+            let index = source.candidateEvaluation.selectedAttemptIndex,
+            source.candidateEvaluation.attempts.indices.contains(index),
+            source.candidateEvaluation.attempts[index].vector == source.selectedCandidateEvidence,
+            source.candidateEvaluation.attempts[index].forceHomeUpperTimbre == source.usedHomeTimbreCorrection
+        else { failureCode = "capture-selected-source-mismatch"; return false }
+        for (record, block) in zip(draft.records, source.blocks) {
+            guard record.bar == block.bar, record.frameCount == block.left.count,
+                record.channelFingerprints.count == DiagnosticRoleStemChannel.allCases.count,
+                record.outputFingerprint == ExactPCMFingerprint.stereo(left: block.left, right: block.right)
+            else { failureCode = "capture-selected-pcm-mismatch"; return false }
+        }
+        selected.append(Selected(source: source, draft: draft))
+        return true
+    }
+
+    /// The shared owner supplies the actual root and its flat retained chain,
+    /// after every reverse validation and long-horizon/presentation package.
+    /// Object identity prevents a bit-identical replacement from claiming the
+    /// selected pass. Required children must be these exact admitted objects.
+    package func seal(admittedSources: [PreparedAutonomousPhrase],
+        cancellationRequested: @Sendable () -> Bool = { false }) -> Bool {
+        guard !cancellationRequested(), state == .collecting, !admittedSources.isEmpty,
+            admittedSources.count == selected.count else {
+            failureCode = "capture-chain-incomplete"; return false
+        }
+        var result: [DiagnosticRoleStemSelectedBinding] = []
+        result.reserveCapacity(admittedSources.count)
+        for (ordinal, source) in admittedSources.enumerated() {
+            guard !cancellationRequested(), source.commitEligible, source.preparedValidationRequired,
+                let entry = selected.first(where: { $0.source === source }),
+                let proof = source.preparedValidation,
+                let attemptIndex = source.candidateEvaluation.selectedAttemptIndex,
+                source.candidateEvaluation.attempts.indices.contains(attemptIndex) else {
+                failureCode = "capture-chain-source-mismatch"; return false
+            }
+            let child = ordinal + 1 < admittedSources.count ? admittedSources[ordinal + 1] : nil
+            if proof.requiresQualifiedSuccessor {
+                guard let child, proof.qualifiedSuccessor === child else {
+                    failureCode = "capture-chain-child-mismatch"; return false
+                }
+            } else {
+                guard child == nil, proof.qualifiedSuccessor == nil else {
+                    failureCode = "capture-chain-leaf-mismatch"; return false
+                }
+            }
+            guard !result.contains(where: { $0.sourceIdentityFingerprint ==
+                source.preparedValidationSourceIdentityFingerprint }),
+                let identity = source.preparedValidationSourceIdentityFingerprint else {
+                failureCode = "capture-chain-identity-mismatch"; return false
+            }
+            let attempt = source.candidateEvaluation.attempts[attemptIndex]
+            result.append(DiagnosticRoleStemSelectedBinding(draft: entry.draft,
+                sourceIdentityFingerprint: identity,
+                planFingerprint: entry.draft.planFingerprint,
+                candidateFingerprint: source.selectedCandidateEvidence.fullMix.sampleHash,
+                transactionFingerprint: source.candidateEvaluationFingerprint,
+                replayFingerprint: source.preparationReplayFingerprint,
+                graphFingerprint: AutonomousCandidateFingerprint.graph(source.graph),
+                routeFingerprint: source.selectedCandidateEvidence.routeContinuation.routeFingerprint,
+                endingRenderStateFingerprint: AutonomousCandidateFingerprint.renderState(source.endingRenderState),
+                endingGraphStateFingerprint: AutonomousCandidateFingerprint.generatedDSPState(source.endingGraphState),
+                selectedAttemptKind: attempt.kind, forceHomeUpperTimbre: attempt.forceHomeUpperTimbre,
+                qualifiedChildIdentityFingerprint: child?.preparedValidationSourceIdentityFingerprint))
+        }
+        guard !cancellationRequested() else { failureCode = "capture-cancelled"; return false }
+        bindings = result
+        selected.removeAll(keepingCapacity: false)
+        // Each sealed draft owns its files independently of session lifetime.
+        // Never delete them when a reader retains a binding after this session.
+        ownedDirectories.removeAll(keepingCapacity: false)
+        state = .sealed
+        return true
+    }
+
+    package func discard() {
+        // Explicit failed-chain cleanup applies even while another private
+        // pending finalizer still holds a draft alias. No partial export escapes.
+        guard state != .sealed else { return }
+        state = .discarded
+        selected.removeAll(keepingCapacity: false)
+        bindings.removeAll(keepingCapacity: false)
+        removeOwnedFiles()
+    }
+
+    private func removeOwnedFiles() {
+        var remaining: [URL] = []
+        for directory in ownedDirectories {
+            do {
+                if FileManager.default.fileExists(atPath: directory.path) {
+                    try FileManager.default.removeItem(at: directory)
+                }
+            } catch { remaining.append(directory); failureCode = "capture-cleanup-failed" }
+        }
+        ownedDirectories = remaining
+    }
+}

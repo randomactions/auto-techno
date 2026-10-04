@@ -669,14 +669,16 @@ package enum AutonomousPerformancePreparer {
         director: AutonomousSessionDirector,
         artifacts: ProfessionalQualityPrimaryArtifacts?,
         longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?,
-        diagnosticRoleStemCapture: Bool = false
+        diagnosticRoleStemCapture: Bool = false,
+        diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil
     ) -> PreparedPerformancePhrase? {
         prepareDiagnosing(
             request: request,
             director: director,
             artifacts: artifacts,
             longHorizonArtifacts: longHorizonArtifacts,
-            diagnosticRoleStemCapture: diagnosticRoleStemCapture
+            diagnosticRoleStemCapture: diagnosticRoleStemCapture,
+            diagnosticRoleStemSession: diagnosticRoleStemSession
         ).preparedPhrase
     }
 
@@ -685,7 +687,8 @@ package enum AutonomousPerformancePreparer {
         director: AutonomousSessionDirector,
         artifacts: ProfessionalQualityPrimaryArtifacts?,
         longHorizonArtifacts: LongHorizonProfessionalPolicyArtifacts?,
-        diagnosticRoleStemCapture: Bool = false
+        diagnosticRoleStemCapture: Bool = false,
+        diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil
     ) -> PerformancePreparationOutcome {
         // Reject malformed initial requests before entering the large detached
         // candidate frame. This preserves child validation and failure priority
@@ -699,6 +702,7 @@ package enum AutonomousPerformancePreparer {
         return prepareChainDiagnosing(request: request, director: director,
             longHorizonPolicy: longHorizonArtifacts?.policy,
             diagnosticRoleStemCapture: diagnosticRoleStemCapture,
+            diagnosticRoleStemSession: diagnosticRoleStemSession,
             makeEvaluator: { request in
                 ProfessionalQualityPreparationEvaluator(sampleRate: request.key.sampleRate,
                     artifacts: artifacts, preparationReplayFingerprint: request.replayIdentity.fingerprint)
@@ -752,12 +756,19 @@ package enum AutonomousPerformancePreparer {
         request: PhrasePreparationRequest, director: AutonomousSessionDirector,
         longHorizonPolicy: LongHorizonProfessionalPolicy?,
         diagnosticRoleStemCapture: Bool = false,
+        diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil,
         makeEvaluator: @Sendable (PhrasePreparationRequest) -> E,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> PerformancePreparationOutcome {
         func fail(_ code: String, _ details: [String] = []) -> PerformancePreparationOutcome {
             .failed(PhrasePreparationFailure(stage: "successor-chain", code: code, details: details))
         }
+        if let session = diagnosticRoleStemSession {
+            guard !diagnosticRoleStemCapture, session.begin() else {
+                return fail("diagnostic-session-unavailable")
+            }
+        }
+        defer { if diagnosticRoleStemSession?.isSealed == false { diagnosticRoleStemSession?.discard() } }
         var current = request
         var frames: [PendingFrame] = []
         var resource = AutonomousPreparationChainResourceBudget()
@@ -770,8 +781,15 @@ package enum AutonomousPerformancePreparer {
                 qualityRecoveryContext: current.key.routeRecovery ? .neutral : current.key.qualityRecoveryContext)
             let evaluator = makeEvaluator(current)
             let capture = frames.isEmpty && diagnosticRoleStemCapture
+            if diagnosticRoleStemSession != nil && !evaluator.requiresPreparedValidation {
+                return fail("diagnostic-prepared-validation-required")
+            }
+            // Streaming charges the existing full-capture reservation for
+            // every actual source/attempt until unique working-set accounting
+            // is proved. Files do not justify a zero-cost charge or larger cap.
+            let reservedCapture = capture || diagnosticRoleStemSession != nil
             let reservation = RenderReservation(incoming: resource, sampleRate: current.key.sampleRate,
-                bars: plan.barCount, capture: capture)
+                bars: plan.barCount, capture: reservedCapture)
             if evaluator.requiresPreparedValidation && !reservation.claim(1) {
                 return fail("resource-bound", ["sources=\(resource.sourceCount)",
                     "reserved-bytes=\(resource.reservedPeakWorkingByteCount)", "next-bars=\(plan.barCount)"])
@@ -784,7 +802,8 @@ package enum AutonomousPerformancePreparer {
                 routeChannelCount: current.key.channelCount, routeGeneration: current.key.routeGeneration,
                 pendingLiveMasterBinding: current.pendingLiveMasterBinding,
                 liveTargetStartSample: current.key.liveTargetStartSample,
-                diagnosticRoleStemCapture: capture, evaluator: evaluator,
+                diagnosticRoleStemCapture: capture,
+                diagnosticRoleStemSession: diagnosticRoleStemSession, evaluator: evaluator,
                 deferPreparedValidation: true,
                 renderPassReservation: { count in
                     !evaluator.requiresPreparedValidation || reservation.claim(count)
@@ -814,7 +833,7 @@ package enum AutonomousPerformancePreparer {
                 cancellationRequested: cancellationRequested),
                 let retained = resource.retainingCompletedSource(sampleRate: current.key.sampleRate,
                     barCount: plan.barCount, requiresQualifiedSuccessor: needsChild,
-                    diagnosticRoleStemCapture: capture,
+                    diagnosticRoleStemCapture: reservedCapture,
                     retainedContinuationNumericByteCount: numericStorage)
             else { return fail(cancellationRequested() ? "cancelled" : "resource-retention-mismatch") }
             resource = retained
@@ -873,6 +892,12 @@ package enum AutonomousPerformancePreparer {
             successor = prepared
         }
         guard let root = reduced.popLast(), !cancellationRequested() else { return fail("cancelled") }
+        if let session = diagnosticRoleStemSession {
+            guard session.seal(admittedSources: [root.prepared] + reduced.reversed().map(\.prepared),
+                cancellationRequested: cancellationRequested) else {
+                return fail("diagnostic-chain-capture-mismatch", [session.failureCode ?? "capture-unavailable"])
+            }
+        }
         return .prepared(PreparedPerformancePhrase(request: root.request, prepared: root.prepared,
             outgoingLongHorizonState: root.outgoingLongHorizonState,
             longHorizonDecision: root.longHorizonDecision, waveforms: root.waveforms,

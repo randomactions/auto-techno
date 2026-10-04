@@ -119,6 +119,8 @@ struct RoleStemCaptureTests {
                 #expect(!source.contains("diagnosticRoleStemSink"))
                 #expect(!source.contains("DiagnosticRoleStemCaptureSpool"))
                 #expect(!source.contains("DiagnosticRoleStemCaptureDraft"))
+                #expect(!source.contains("DiagnosticRoleStemCaptureSession"))
+                #expect(!source.contains("diagnosticRoleStemSession"))
             }
         }
     }

@@ -2053,14 +2053,40 @@ delivery. Incomplete, malformed, cancelled and failed attempts remove their owne
 files; a finished draft owns its files until released. Readers load at most one
 channel of one bar and verify payload size and the original exact fingerprint.
 
-These are diagnostic drafts, not accepted-source evidence or policy authority.
-The stream does not change Core intent, PCM, DSP math, signal bounds, quality
-schema50, canonical engine49 or primary mathematical family32/profile33. Same-pass
-capture must still be integrated into canonical attempt selection and reverse
-child-chain finalization so only the actually selected source and exact accepted
-immediate child survive. The shared production capture flag remains its existing
-retained-array path until that integration is implemented. Captured-array capacity
-and byte-chunk measurements are only those owners' storage; they do not cover the
-complete workspace, COW/state/analyzer/source/child working set, process RSS,
-deadlines or physical output. The existing128MiB/two-pass gates remain unchanged
-and no streaming draft can substitute for those required checks.
+An opt-in `DiagnosticRoleStemCaptureSession` now belongs to one detached shared
+preparation transaction. It has single-writer fresh, collecting, sealed and
+discarded states; every normal host leaves this owner absent. Each actual render
+attempt creates its private spool only after the existing render reservation.
+Its draft stays on the private `CandidateRenderProduct`; a superseded initial
+draft is removed before a corrective render, and cleanup failure refuses that
+correction. The selected draft survives pending validation privately. Only the
+canonical finalizer can stage its actual proof-bound, commit-eligible prepared
+source object. No file handle or mutable capture owner enters playback products.
+
+The shared iterative owner captures every required source and child, then seals
+only after leaf-to-root proof validation, exact child-object checks, and complete
+long-horizon/presentation packaging. Sealing requires the exact staged objects in
+admitted order and the actual `qualifiedSuccessor` object at every protected
+boundary; a closed leaf terminates the chain. Reduced bindings retain the selected
+attempt/home-correction, canonical plan, candidate, transaction, request replay,
+graph, route, ending-state and exact child identities alongside all 32 channel
+files. Rejected, cancelled, unavailable or partially packaged chains publish no
+bindings and discard all private files. Reusing a sealed session refuses without
+changing its earlier export. Finished drafts own their files independently of the
+session so an existing diagnostic reader can outlive its metadata owner.
+
+These associations identify actual detached prepared products; they are not
+live scheduled/callback PCM, independently calibrated policy authority, or a
+quality promotion. Core intent, PCM, DSP math, signal bounds, quality schema50,
+canonical engine49 and primary mathematical family32/profile33 are unchanged.
+Current production artifact seals remain unavailable. The legacy retained-array
+capture flag still has its existing small-fixture/root-only form; it is mutually
+exclusive with the streamed session. Every streamed source/attempt conservatively
+retains the existing full-capture resource charge until actual complete working
+storage is proved. Native 16-bar captures therefore still refuse before rendering
+under that unchanged charge. The existing128MiB/two-pass gates remain unchanged;
+no zero-cost stream or larger ceiling is inferred from file storage. Captured-array
+and byte-chunk measurements do not cover total workspace/COW/state/analyzer/source/
+child allocations, combined process RSS, deadlines, full native capture capacity
+or physical output. Those gates and fresh current-engine qualification remain
+required before completion or promotion.

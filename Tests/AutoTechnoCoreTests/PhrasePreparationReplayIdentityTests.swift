@@ -884,6 +884,179 @@ struct IterativeSuccessorPreparationTests {
         #expect(root.prepared.preparedValidation?.hasRequiredMeasurements == true)
     }
 
+
+    private struct StreamedChainControl: Equatable {
+        let sampleHashes: [String]
+        let transactionHashes: [String]
+        let sourceIdentities: [String?]
+        let outgoingRender: [String]
+        let outgoingGraph: [String]
+        let quality: [QualityContinuationState]
+    }
+
+    private static func reducedControl(_ result: PreparedPerformancePhrase) -> StreamedChainControl {
+        let sources = ([result] + result.retainedContinuations).map(\.prepared)
+        return StreamedChainControl(sampleHashes: sources.map { $0.selectedCandidateEvidence.fullMix.sampleHash },
+            transactionHashes: sources.map(\.candidateEvaluationFingerprint),
+            sourceIdentities: sources.map(\.preparedValidationSourceIdentityFingerprint),
+            outgoingRender: sources.map { AutonomousCandidateFingerprint.renderState($0.endingRenderState) },
+            outgoingGraph: sources.map { AutonomousCandidateFingerprint.generatedDSPState($0.endingGraphState) },
+            quality: sources.map(\.qualityContinuationState))
+    }
+
+    private static func captureParent() throws -> URL {
+        let parent = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "autotechno-selected-stream-test-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false)
+        return parent
+    }
+
+    @Test("Selected initial and corrected drafts bind exact root-child objects and unchanged products")
+    func selectedStreamedChain() async throws {
+        for mode in [Control.Mode.accept, .forceCorrection] {
+            let request = Self.sourceRequest(rate: 8_000)
+            let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
+            let original = AutonomousCandidateFingerprint.sessionState(request.sourceState)
+            let reference: StreamedChainControl = try await Task.detached {
+                let control = Control(mode: mode)
+                let result = try #require(AutonomousPerformancePreparer.prepareChainDiagnosing(
+                    request: request, director: director, longHorizonPolicy: nil,
+                    makeEvaluator: { Evaluator(request: $0, control: control) },
+                    cancellationRequested: { false }).preparedPhrase)
+                return Self.reducedControl(result)
+            }.value
+            // The ordinary reference retains only reduced identities. Its PCM
+            // and continuation arrays leave scope before the streamed prepare.
+            let parent = try Self.captureParent(); defer { try? FileManager.default.removeItem(at: parent) }
+            let session = DiagnosticRoleStemCaptureSession(parentDirectory: parent)
+            let control = Control(mode: mode)
+            let outcome = await Task.detached {
+                AutonomousPerformancePreparer.prepareChainDiagnosing(request: request, director: director,
+                    longHorizonPolicy: nil, diagnosticRoleStemSession: session,
+                    makeEvaluator: { Evaluator(request: $0, control: control) },
+                    cancellationRequested: { false })
+            }.value
+            let result = try #require(outcome.preparedPhrase, "Streamed chain: \(String(describing: outcome.failure))")
+            let sources = ([result] + result.retainedContinuations).map(\.prepared)
+            #expect(sources.count == 2 && session.isSealed)
+            #expect(Self.reducedControl(result) == reference)
+            #expect(sources.allSatisfy { $0.diagnosticRoleStemCaptures.isEmpty && $0.commitEligible })
+            #expect(session.bindings.count == sources.count)
+            #expect(try FileManager.default.contentsOfDirectory(atPath: parent.path).count == sources.count)
+            #expect(session.discardedSupersededDraftCount == (mode == .forceCorrection ? sources.count : 0))
+            #expect(sources[0].preparedValidation?.qualifiedSuccessor === sources[1])
+            for (index, binding) in session.bindings.enumerated() {
+                let source = sources[index]
+                #expect(binding.sourceIdentityFingerprint == source.preparedValidationSourceIdentityFingerprint)
+                #expect(binding.transactionFingerprint == source.candidateEvaluationFingerprint)
+                #expect(binding.candidateFingerprint == source.selectedCandidateEvidence.fullMix.sampleHash)
+                #expect(binding.planFingerprint == AutonomousCandidateFingerprint.plan(source.plan))
+                #expect(binding.replayFingerprint == source.preparationReplayFingerprint)
+                #expect(binding.graphFingerprint == AutonomousCandidateFingerprint.graph(source.graph))
+                #expect(binding.routeFingerprint == source.selectedCandidateEvidence.routeContinuation.routeFingerprint)
+                #expect(binding.endingRenderStateFingerprint == reference.outgoingRender[index])
+                #expect(binding.endingGraphStateFingerprint == reference.outgoingGraph[index])
+                #expect(binding.selectedAttemptKind == (mode == .forceCorrection ? .correctionRender : .initialRender))
+                #expect(binding.forceHomeUpperTimbre == (mode == .forceCorrection))
+                #expect(binding.qualifiedChildIdentityFingerprint == (index == 0 ? sources[1].preparedValidationSourceIdentityFingerprint : nil))
+                #expect(binding.draft.records.count == source.blocks.count)
+                for (ordinal, record) in binding.draft.records.enumerated() {
+                    #expect(record.channelFingerprints.count == 32)
+                    #expect(record.outputFingerprint == ExactPCMFingerprint.stereo(
+                        left: source.blocks[ordinal].left, right: source.blocks[ordinal].right))
+                    // Every channel is readable/hash-checked on the selected
+                    // actual pass, including silent protected and residual taps.
+                    for channel in DiagnosticRoleStemChannel.allCases {
+                        #expect(try binding.draft.readChannel(barIndex: ordinal, channel: channel).count == record.frameCount)
+                    }
+                }
+            }
+            let before = control.terminals
+            let reused = AutonomousPerformancePreparer.prepareChainDiagnosing(request: request, director: director,
+                longHorizonPolicy: nil, diagnosticRoleStemSession: session,
+                makeEvaluator: { Evaluator(request: $0, control: control) }, cancellationRequested: { false })
+            #expect(reused.failure?.code == "diagnostic-session-unavailable")
+            #expect(control.terminals == before && session.bindings.count == 2 && session.isSealed)
+            #expect(try FileManager.default.contentsOfDirectory(atPath: parent.path).count == 2)
+            #expect(AutonomousCandidateFingerprint.sessionState(request.sourceState) == original)
+            let report: [String: Any] = ["schema": "autotechno-selected-stream-control.v1",
+                "sampleRate": request.key.sampleRate, "sources": sources.count,
+                "selectedCorrection": mode == .forceCorrection,
+                "discardedSupersededDraftCount": session.discardedSupersededDraftCount,
+                "exactProductsAndState": Self.reducedControl(result) == reference,
+                "sourceIdentities": session.bindings.map(\.sourceIdentityFingerprint),
+                "transactionFingerprints": session.bindings.map(\.transactionFingerprint),
+                "qualifiedChildIdentity": session.bindings.first?.qualifiedChildIdentityFingerprint ?? "none",
+                "qualification": "mechanical-only-not-installed", "nativeCaptureCapacityQualified": false]
+            print("AUTOTECHNO_SELECTED_STREAM_CONTROL " + String(decoding:
+                try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]), as: UTF8.self))
+        }
+    }
+
+    @Test("Rejected unavailable and cancelled chains discard every private capture")
+    func rejectedStreamedChains() async throws {
+        let request = Self.sourceRequest(rate: 8_000)
+        let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
+        for mode in [Control.Mode.dropProof, .rejectChild, .dropChildProof, .cancelOnValidation, .rejectRoot] {
+            let parent = try Self.captureParent(); defer { try? FileManager.default.removeItem(at: parent) }
+            let marker = parent.appendingPathComponent("unrelated-marker")
+            try Data([42]).write(to: marker)
+            let session = DiagnosticRoleStemCaptureSession(parentDirectory: parent)
+            let control = Control(mode: mode)
+            let outcome = await Task.detached {
+                AutonomousPerformancePreparer.prepareChainDiagnosing(request: request, director: director,
+                    longHorizonPolicy: nil, diagnosticRoleStemSession: session,
+                    makeEvaluator: { Evaluator(request: $0, control: control) },
+                    cancellationRequested: { control.cancelled })
+            }.value
+            #expect(outcome.preparedPhrase?.prepared.commitEligible != true)
+            #expect(!session.isSealed && session.bindings.isEmpty)
+            #expect(try FileManager.default.contentsOfDirectory(atPath: parent.path) == ["unrelated-marker"])
+            #expect(try Data(contentsOf: marker) == Data([42]))
+        }
+    }
+
+    @Test("Native full-capture reservations refuse streaming before any attempted file or PCM")
+    func nativeStreamResourceRefusal() throws {
+        for rate in [44_100.0, 48_000.0] {
+            let request = Self.sourceRequest(rate: rate)
+            let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
+            let parent = try Self.captureParent(); defer { try? FileManager.default.removeItem(at: parent) }
+            let session = DiagnosticRoleStemCaptureSession(parentDirectory: parent)
+            let control = Control()
+            let result = AutonomousPerformancePreparer.prepareChainDiagnosing(request: request, director: director,
+                longHorizonPolicy: nil, diagnosticRoleStemSession: session,
+                makeEvaluator: { Evaluator(request: $0, control: control) }, cancellationRequested: { false })
+            #expect(result.failure?.code == "resource-bound")
+            #expect(control.terminals.isEmpty && session.bindings.isEmpty && !session.isSealed)
+            #expect(try FileManager.default.contentsOfDirectory(atPath: parent.path).isEmpty)
+            #expect(AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount == 128 * 1_024 * 1_024)
+        }
+    }
+
+    @Test("Sealed diagnostic drafts outlive session metadata without retaining scheduled ownership")
+    func sealedStreamFileLifetime() async throws {
+        let parent = try Self.captureParent(); defer { try? FileManager.default.removeItem(at: parent) }
+        let bindings: [DiagnosticRoleStemSelectedBinding] = try await Task.detached {
+            let request = Self.sourceRequest(rate: 8_000)
+            let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
+            let session = DiagnosticRoleStemCaptureSession(parentDirectory: parent)
+            let control = Control()
+            let outcome = AutonomousPerformancePreparer.prepareChainDiagnosing(request: request, director: director,
+                longHorizonPolicy: nil, diagnosticRoleStemSession: session,
+                makeEvaluator: { Evaluator(request: $0, control: control) }, cancellationRequested: { false })
+            let prepared = try #require(outcome.preparedPhrase)
+            #expect(prepared.prepared.commitEligible)
+            #expect(session.isSealed)
+            return session.bindings
+        }.value
+        #expect(bindings.count == 2)
+        for binding in bindings {
+            #expect(FileManager.default.fileExists(atPath: binding.draft.directory.path))
+            #expect(try binding.draft.readChannel(barIndex: 0, channel: .fullKick).count > 0)
+        }
+    }
+
     static func sourceRequest(rate: Double) -> PhrasePreparationRequest {
         let director = AutonomousSessionDirector(rootSeed: 48_300)
         var state = director.initialState()
