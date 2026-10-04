@@ -131,3 +131,26 @@ The transaction controls use explicit synthetic producers to test ordering,
 no-overwrite, failure retention, exact file coverage, committed and dirty source
 changes, validator tampering, missing/altered parents and full dependency graph
 bindings. They do not establish native capture or musical qualification.
+
+
+The opt-in Swift whole/role exporters now observe actual initial session, render
+and graph fingerprints, exact route/seed coverage, loaded test-image bytes,
+process environment, and final typed manifest. Existing exporter schemas and
+PCM behavior remain unchanged. Witness controls reject pre-existing output
+directories, changed source/corpus/image, incomplete initialization coverage,
+and existing receipt files. Receipt writes use exclusive creation; partial failed
+receipts confer no authority.
+
+`scripts/baseline_producer_witness.py` executes a new build in absent scratch
+storage and a fresh native initialization probe. It binds actual build arguments,
+compiler, SDK settings, target, capture corpus, routes, initialization ledger and
+loaded image. Dependency snapshot v3 adds capture corpus path/hash, image hash
+and environment fingerprint. Previous scope snapshots require a fresh freeze;
+there is no relabel or upgrade path. Non-ASCII canonical input and unknown native
+image layouts currently fail closed. The driver retains environment hashes only.
+
+The probe does not render audio. Independent witness metadata controls and an
+initialization probe are not whole/role capture parity, lifecycle currency,
+capacity qualification, musical qualification or runtime promotion. Adoption in
+existing family validators and complete native PCM/verdict comparison remain
+required before dependency-scoped currency is enabled.
