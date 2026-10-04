@@ -1455,3 +1455,48 @@ second inventory or observation-count increment and shares only immutable owner
 metadata. Both names reserve their slots before registration under the unchanged
 32-phase ceiling; exhausted diagnostics fail closed. Initial and corrective phase
 histories remain bounded and no additional PCM is retained.
+
+
+## Canonical preflight analyzer storage observations
+
+The existing default-off synchronous preparation observer now follows the real
+PhraseAudioPreflight, AudioQualityReport and MusicalQualityMetrics calls. The
+canonical private preparer holds its actual render product and ending typed
+continuation behind one synchronous reference owner during preflight; every
+analyzer snapshot joins those owners with the already-live incoming request,
+suspended parents and remaining initial candidate during correction. This owner
+expires after preflight and never enters a pending finalizer, prepared playback
+product, callback or accepted continuation. No parallel analyzer, evidence cache,
+quality state, musical parameter or additional render is introduced.
+
+BS.1770 observations register the actual momentary and short-term Double rings,
+fixed emitted-energy capacities, returned energy collections, gate populations,
+loudness arrays, and separate filtered/sorted range owners. The sorted operation
+and all numeric arithmetic remain the existing implementation. FIR true-peak
+observations register the two actual fixed histories after consuming the same
+immutable chunks. Perceptual observations register the actual ring, FFT real and
+imaginary arrays, previous normalized magnitudes, and finite-check evidence
+values. FFT mutation stays in place. Per-bar metrics reuse the same phase names
+with the actual source bar, and preflight registers its four movement arrays.
+These actual primitive capacities use the existing per-snapshot live alias
+inventory, including unused capacity and independently stored COW arrays.
+
+The same scope and conditional corrective maximum retain all incoming/parent/
+initial owners during each physical analyzer observation. Native controls require
+exact ordinary/observed preflight reports, original PCM/hold products, typed
+ending state, source/transaction identity, child ownership and reservation or
+refusal outcome. Diagnostic phase exhaustion leaves the ordinary report exact,
+performs no outer registration and confers no quality or admission authority.
+Cancellation remains the original boundary. Nil observers perform no inventory
+work. All scope captures are synchronous; the observer retains only bounded
+metadata maxima and may extend observed owner lifetimes while measuring them.
+
+This is partial allocation evidence. Standard-library sorting/filtering internal
+scratch, other nested analyzer/voice/node transients, immutable coefficient and
+heap/Core metadata, waveform envelopes, encoding and writer temporary storage,
+whole-process RSS and deadlines remain unqualified. Named-owner observations are
+not a complete peak bound. No smaller capture or scratch charge, larger128MiB
+ceiling, extra corrective pass, production seal, activation or completed native
+selected-root/exact-child32-tap capacity follows. Every existing primary, actual
+Long18, Phase1, lifecycle, shared-envelope, deadline/RAM and physical-output gate
+continues to apply before roadmap completion and publication.

@@ -45,6 +45,7 @@ package struct AudioQualityReport: Equatable, Sendable,
         blocks: [RenderBlock],
         sampleRate: Double,
         precedingFrame: UpperTimbreStereoFrame? = nil,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) {
         guard !cancellationRequested() else { return nil }
@@ -130,6 +131,7 @@ package struct AudioQualityReport: Equatable, Sendable,
         peak = computedPeak
         guard let stereoTruePeak = BS1770AudioEvidence.stereoTruePeak(
             blocks: blocks,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         ) else { return nil }
         let computedTruePeak = max(stereoTruePeak.left, stereoTruePeak.right)
@@ -157,6 +159,7 @@ package struct AudioQualityReport: Equatable, Sendable,
         ), let computedMusical = MusicalQualityMetrics(
             blocks: blocks,
             sampleRate: sampleRate,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         ) else { return nil }
         sampleHash = computedHash

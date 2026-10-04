@@ -949,6 +949,11 @@ struct IterativeSuccessorPreparationTests {
                     AutonomousCandidateFingerprint.sessionState(request.sourceState) == original
                 #expect(exact)
                 #expect(probe.valid && probe.observationCount > 0 && probe.snapshots.allSatisfy { $0.valid })
+                try DiagnosticRoleStemStreamingTests.checkAnalyzerStorage(probe,
+                    prefix: "chain.render.analysis", sampleRate: rate)
+                #expect(probe.snapshots.filter { $0.phase.hasPrefix("chain.render.analysis.") }.allSatisfy {
+                    $0.ownerRecords.contains { $0.owner.hasPrefix("attempt.analysis-product.primary") && $0.capacityBytes > 0 }
+                })
                 var sourceIdentities: [String] = []
                 if mode == .accept {
                     let result = try #require(outcome.preparedPhrase)

@@ -147,11 +147,13 @@ package enum StreamingPerceptualEvidenceAnalyzer {
         left: [Float],
         right: [Float],
         sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool = { false }
     ) -> StreamingPerceptualEvidence? {
         analyze(
             chunks: [(left, right)],
             sampleRate: sampleRate,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         )
     }
@@ -159,11 +161,13 @@ package enum StreamingPerceptualEvidenceAnalyzer {
     package static func analyze(
         blocks: [RenderBlock],
         sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool = { false }
     ) -> StreamingPerceptualEvidence? {
         analyze(
             chunks: blocks.map { ($0.left, $0.right) },
             sampleRate: sampleRate,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         )
     }
@@ -172,12 +176,14 @@ package enum StreamingPerceptualEvidenceAnalyzer {
         leftChunks: [[Float]],
         rightChunks: [[Float]],
         sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool = { false }
     ) -> StreamingPerceptualEvidence? {
         guard leftChunks.count == rightChunks.count else { return nil }
         return analyze(
             chunks: zip(leftChunks, rightChunks).map { ($0, $1) },
             sampleRate: sampleRate,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         )
     }
@@ -185,10 +191,14 @@ package enum StreamingPerceptualEvidenceAnalyzer {
     private static func analyze(
         chunks: [([Float], [Float])],
         sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> StreamingPerceptualEvidence? {
         guard !cancellationRequested() else { return nil }
         var accumulator = Accumulator(sampleRate: sampleRate)
+        storageObservation?.observe("perceptual.workspace") { inventory in
+            accumulator.registerStorage(inventory)
+        }
         for (left, right) in chunks {
             guard accumulator.consume(
                 left: left,
@@ -196,7 +206,7 @@ package enum StreamingPerceptualEvidenceAnalyzer {
                 cancellationRequested: cancellationRequested
             ) else { return nil }
         }
-        return accumulator.evidence
+        return accumulator.evidence(storageObservation: storageObservation)
     }
 
     private struct Accumulator {
@@ -382,7 +392,15 @@ package enum StreamingPerceptualEvidenceAnalyzer {
             return true
         }
 
-        var evidence: StreamingPerceptualEvidence {
+        func registerStorage(_ inventory: NumericStorageInventory) {
+            inventory.register(ring, owner: "perceptual.ring")
+            inventory.register(real, owner: "perceptual.real")
+            inventory.register(imaginary, owner: "perceptual.imaginary")
+            inventory.register(previousNormalizedMagnitude, owner: "perceptual.previous-magnitude")
+            withExtendedLifetime(self) {}
+        }
+
+        func evidence(storageObservation: PreparationStorageObservation?) -> StreamingPerceptualEvidence {
             let activeDivisor = Double(max(1, activeWindowCount))
             let centroidMean = activeWindowCount > 0
                 ? centroidSum / activeDivisor : 0
@@ -399,6 +417,10 @@ package enum StreamingPerceptualEvidenceAnalyzer {
                     ? trajectoryDeltaSum / Double(trajectoryTransitionCount) : 0,
                 trajectoryDeltaPeak,
             ]
+            storageObservation?.observe("perceptual.evidence") { inventory in
+                registerStorage(inventory)
+                inventory.register(values, owner: "perceptual.evidence-values")
+            }
             let scalarCount = analysisSize + fftSize * 2 +
                 (fftSize / 2 + 1)
             return StreamingPerceptualEvidence(

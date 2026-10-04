@@ -106,6 +106,44 @@ struct DiagnosticRoleStemStreamingTests {
         #expect(!FileManager.default.fileExists(atPath: wrongRate.directory.path))
     }
 
+    static func checkAnalyzerStorage(_ probe: PreparationWorkingStorageProbe,
+        prefix: String, sampleRate: Double) throws {
+        #expect(probe.valid && probe.snapshots.allSatisfy { $0.valid })
+        let expected: [String: [String]] = [
+            "true-peak": ["true-peak.left.history", "true-peak.right.history"],
+            "loudness.rings": ["loudness.momentary.ring", "loudness.short-term.ring",
+                "loudness.momentary.emitted", "loudness.short-term.emitted"],
+            "loudness.values": ["loudness.momentary-values", "loudness.short-term-values"],
+            "loudness.gates": ["loudness.momentary-loudness", "loudness.absolute-gated",
+                "loudness.relative-gated", "loudness.short-term-loudness",
+                "loudness.range-candidates", "loudness.range-population"],
+            "perceptual.workspace": ["perceptual.ring", "perceptual.real", "perceptual.imaginary",
+                "perceptual.previous-magnitude"],
+            "perceptual.evidence": ["perceptual.evidence-values"],
+            "preflight.movement": ["preflight.loudness-values", "preflight.spectral-values",
+                "preflight.transient-values", "preflight.crest-values"]]
+        for (phase, owners) in expected {
+            let snapshot = try #require(probe.snapshots.first { $0.phase == prefix + "." + phase })
+            for owner in owners {
+                let record = try #require(snapshot.ownerRecords.first { $0.owner == owner })
+                #expect(record.elementStride == 8 && record.elementCapacity >= record.elementCount)
+                #expect(record.capacityBytes == record.elementCapacity * record.elementStride)
+            }
+        }
+        let peak = try #require(probe.snapshots.first { $0.phase == prefix + ".true-peak" })
+        #expect(peak.ownerRecords.filter { $0.owner.hasPrefix("true-peak.") }.allSatisfy { $0.elementCount == 12 })
+        let rings = try #require(probe.snapshots.first { $0.phase == prefix + ".loudness.rings" })
+        #expect(rings.ownerRecords.first { $0.owner == "loudness.momentary.ring" }?.elementCount == Int((sampleRate * 0.4).rounded()))
+        #expect(rings.ownerRecords.first { $0.owner == "loudness.short-term.ring" }?.elementCount == Int((sampleRate * 3).rounded()))
+        #expect(rings.ownerRecords.first { $0.owner == "loudness.momentary.emitted" }?.elementCount == 320)
+        #expect(rings.ownerRecords.first { $0.owner == "loudness.short-term.emitted" }?.elementCount == 32)
+        let spectrum = try #require(probe.snapshots.first { $0.phase == prefix + ".perceptual.workspace" })
+        #expect(spectrum.ownerRecords.first { $0.owner == "perceptual.ring" }?.elementCount ==
+            StreamingPerceptualEvidenceAnalyzer.analysisFrameCount(sampleRate: sampleRate))
+        #expect(spectrum.ownerRecords.first { $0.owner == "perceptual.real" }?.elementCount ==
+            StreamingPerceptualEvidenceAnalyzer.fftFrameCount(sampleRate: sampleRate))
+    }
+
     private func nativeReference(_ plan: AutonomousPhrasePlan, rate: Double) throws
         -> (blocks: [String], render: String, graph: String, variants: [[String]]) {
         var state = RenderState(); var graph = GeneratedDSPContinuationState()
@@ -186,6 +224,48 @@ struct DiagnosticRoleStemStreamingTests {
         ]
         let storageJSON = try JSONSerialization.data(withJSONObject: storageControl, options: [.sortedKeys])
         print("AUTOTECHNO_RENDER_STORAGE_CONTROL " + String(decoding: storageJSON, as: UTF8.self))
+        let ordinaryPreflightValue = PhraseAudioPreflight(blocks: result.blocks,
+            sampleRate: sampleRate, cancellationRequested: { false })
+        let ordinaryPreflight = try #require(ordinaryPreflightValue)
+        let analysisProbe = PreparationWorkingStorageProbe()
+        let analysisScope = PreparationStorageObservation(probe: analysisProbe,
+            prefix: "analysis", bar: plan.startBar) { inventory in
+            inventory.register(result, owner: "actual.render-product")
+            AutonomousTypedFingerprint.registerContinuationStorage(renderState: state,
+                generatedDSPState: graph, inventory: inventory, owner: "actual.ending")
+        }
+        let observedPreflightValue = PhraseAudioPreflight(blocks: result.blocks,
+            sampleRate: sampleRate, storageObservation: analysisScope, cancellationRequested: { false })
+        let observedPreflight = try #require(observedPreflightValue)
+        #expect(observedPreflight == ordinaryPreflight)
+        try Self.checkAnalyzerStorage(analysisProbe, prefix: "analysis", sampleRate: sampleRate)
+        #expect(analysisProbe.observationCount == plan.barCount * 5 + 7)
+        #expect(analysisProbe.snapshots.allSatisfy { snapshot in snapshot.ownerRecords.contains {
+            $0.owner.hasPrefix("actual.render-product.primary") && $0.capacityBytes > 0 } })
+        let exhaustedProbe = PreparationWorkingStorageProbe()
+        for index in 0..<PreparationWorkingStorageProbe.maximumPhaseCount {
+            exhaustedProbe.observe(phase: "occupied.\(index)", bar: 0) { _ in }
+        }
+        var exhaustedOuterVisits = 0
+        let exhaustedScope = PreparationStorageObservation(probe: exhaustedProbe,
+            prefix: "analysis", bar: plan.startBar) { _ in exhaustedOuterVisits += 1 }
+        let exhaustedPreflightValue = PhraseAudioPreflight(blocks: result.blocks,
+            sampleRate: sampleRate, storageObservation: exhaustedScope, cancellationRequested: { false })
+        let exhaustedPreflight = try #require(exhaustedPreflightValue)
+        #expect(exhaustedPreflight == ordinaryPreflight && !exhaustedProbe.valid)
+        #expect(exhaustedOuterVisits == 0 && exhaustedProbe.observationCount == 32)
+        let cancelledPreflight = PhraseAudioPreflight(blocks: result.blocks, sampleRate: sampleRate,
+            storageObservation: analysisScope, cancellationRequested: { true })
+        #expect(cancelledPreflight == nil)
+        let analysisControl: [String: Any] = ["schema": "autotechno-analyzer-storage-control.v1",
+            "sampleRate": sampleRate, "barCount": plan.barCount, "observations": analysisProbe.observationCount,
+            "snapshots": try JSONSerialization.jsonObject(with: JSONEncoder().encode(analysisProbe.snapshots)),
+            "exactPreflightReports": observedPreflight == ordinaryPreflight,
+            "exhaustedObserverPreservesReport": exhaustedPreflight == ordinaryPreflight && exhaustedOuterVisits == 0,
+            "qualification": "mechanical-only-not-installed", "completeWorkingSetQualification": false,
+            "instrumentationMayExtendObservedLifetimes": true]
+        print("AUTOTECHNO_ANALYZER_STORAGE_CONTROL " + String(decoding:
+            try JSONSerialization.data(withJSONObject: analysisControl, options: [.sortedKeys]), as: UTF8.self))
         var draft: DiagnosticRoleStemCaptureDraft? = try #require(spool.finish())
         let records = try #require(draft?.records)
         #expect(result.diagnosticRoleStemCaptures.isEmpty && records.count == 16)

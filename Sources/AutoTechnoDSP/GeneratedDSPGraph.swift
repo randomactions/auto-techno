@@ -879,21 +879,25 @@ package struct PhraseAudioPreflight: Equatable, Sendable {
         blocks: [RenderBlock],
         sampleRate: Double,
         precedingFrame: UpperTimbreStereoFrame? = nil,
+        storageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) {
         guard let report = AudioQualityReport(
             blocks: blocks,
             sampleRate: sampleRate,
             precedingFrame: precedingFrame,
+            storageObservation: storageObservation,
             cancellationRequested: cancellationRequested
         ) else { return nil }
         var barEvidence: [PhraseBarAudioEvidence] = []
         barEvidence.reserveCapacity(blocks.count)
         for block in blocks {
+            let barObservation = storageObservation?.atBar(block.bar)
             guard !cancellationRequested(), let barMetrics = MusicalQualityMetrics(
                 left: block.left,
                 right: block.right,
                 sampleRate: sampleRate,
+                storageObservation: barObservation,
                 cancellationRequested: cancellationRequested
             ) else { return nil }
             let count = min(block.left.count, block.right.count)
@@ -926,6 +930,12 @@ package struct PhraseAudioPreflight: Equatable, Sendable {
         let spectralValues = barEvidence.map { $0.spectralCentroid }
         let transientValues = barEvidence.map { $0.transientDensity }
         let crestValues = barEvidence.map { $0.crestFactor }
+        storageObservation?.observe("preflight.movement") { inventory in
+            inventory.register(loudnessValues, owner: "preflight.loudness-values")
+            inventory.register(spectralValues, owner: "preflight.spectral-values")
+            inventory.register(transientValues, owner: "preflight.transient-values")
+            inventory.register(crestValues, owner: "preflight.crest-values")
+        }
         let loudnessMovement = min(1, ((loudnessValues.max() ?? -120) - (loudnessValues.min() ?? -120)) / 8)
         let spectralMovement = min(1, ((spectralValues.max() ?? 0) - (spectralValues.min() ?? 0)) / 800)
         let transientMovement = min(1, ((transientValues.max() ?? 0) - (transientValues.min() ?? 0)) / 2.5)
@@ -2907,6 +2917,22 @@ package enum AutonomousPhrasePreparer {
     /// Confined to detached preparation. Sidecars are released before a
     /// corrective render or pending-validation publication; after publication
     /// all reads are immutable and no product crosses the commit boundary.
+    private final class AnalysisStorageOwners {
+        let product: AutonomousPhraseRenderProduct
+        let renderState: RenderState
+        let graphState: GeneratedDSPContinuationState
+        init(product: AutonomousPhraseRenderProduct, renderState: RenderState,
+            graphState: GeneratedDSPContinuationState) {
+            self.product = product; self.renderState = renderState; self.graphState = graphState
+        }
+        @inline(never) func register(_ inventory: NumericStorageInventory) {
+            inventory.register(product, owner: "attempt.analysis-product")
+            AutonomousTypedFingerprint.registerContinuationStorage(renderState: renderState,
+                generatedDSPState: graphState, inventory: inventory, owner: "attempt.analysis-ending")
+            withExtendedLifetime(self) {}
+        }
+    }
+
     private final class CandidateRenderProduct: @unchecked Sendable {
         let plan: AutonomousPhrasePlan
         let graph: DSPGraphPlan
@@ -3098,10 +3124,15 @@ package enum AutonomousPhrasePreparer {
                 right: incomingOutputTransition.terminalRight
             )
         }()
+        let analysisObservation = workingStorageObservation.map { outer in
+            let owners = AnalysisStorageOwners(product: renderProduct, renderState: renderState, graphState: graphState)
+            return outer.extending("analysis") { inventory in owners.register(inventory) }
+        }
         guard let audioPreflight = PhraseAudioPreflight(
             blocks: blocks,
             sampleRate: sampleRate,
             precedingFrame: precedingFrame,
+            storageObservation: analysisObservation,
             cancellationRequested: cancellationRequested
         ) else {
             return .failure(.init(
