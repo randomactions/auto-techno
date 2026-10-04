@@ -219,7 +219,7 @@ struct AutonomousPhrasePreparationDiagnosticsTests {
         #expect(historicalProfile.evidenceVersion == "autotechno-professional-evidence.v29")
         #expect(!historicalProfile.isComplete)
         #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
-            try ProfessionalQualityPrimaryArtifacts.load()
+            try historicalV30PrimaryArtifacts()
         }
         let observation = try ProfessionalQualityObservation(
             candidate: prepared.selectedCandidateEvidence,

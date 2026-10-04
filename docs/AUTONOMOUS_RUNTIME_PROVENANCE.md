@@ -1869,6 +1869,12 @@ accumulator refusal. It retains the existing bounded prepared quality and commit
 diagnostics. Rejected products never enter the three committed accumulators or
 advance canonical state, and diagnostic detail does not authorize a retry,
 repeat, changed threshold or qualification artifact.
+The same refusal records its actual request/Core identity and score-interest
+components, the existing Core retry continuation after that single observed
+rejection, the zero-repeat scheduling decision, and one score-only next proposal.
+This bounded inspection supplies no preparation, accepted PCM, presented repeat,
+new recovery wave or state advance. A symbolically valid hypothetical score is
+not evidence that a recovered product would pass calibrated preparation.
 
 
 ## Conditional dotted-foundation calibration contract

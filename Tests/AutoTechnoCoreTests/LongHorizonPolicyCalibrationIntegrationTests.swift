@@ -337,7 +337,9 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
           failure = "prepared-source-quality:" + source.prepared.qualityDecision.outcome.rawValue
           details = Array((source.prepared.commitFailureDiagnostics +
             source.prepared.qualityDiagnosticDetails +
-            source.prepared.qualityDecision.reasonCodes.map { "quality=" + $0.rawValue }).prefix(24))
+            source.prepared.qualityDecision.reasonCodes.map { "quality=" + $0.rawValue } +
+            Self.refusalRecoveryDiagnostics(request: request, rejected: source.prepared,
+              director: director)).prefix(24))
           break
         }
         var nextSemantic = semantic, nextSignal = signal, nextEffects = effects
@@ -400,6 +402,39 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
       requestedMinimumBars: prefixPhraseCount == nil ? 7_800 : 0,
       semantic: semantic.report(), signal: signal.report,
       effects: effects.report)
+  }
+
+  /// Inspect the existing Core transition from this actual refusal only.
+  /// The score-only next proposal has no rendered/accepted evidence. In
+  /// particular, this inspection never presents a repeat, opens a wave, retries
+  /// preparation, changes accepted continuation or bypasses the original gate.
+  private static func refusalRecoveryDiagnostics(request: PhrasePreparationRequest,
+    rejected: PreparedAutonomousPhrase, director: AutonomousSessionDirector
+  ) -> [String] {
+    let context = request.key.qualityRecoveryContext
+    let decision = rejected.qualityDecision
+    let retry = AutonomousQualityRetryContinuation(
+      targetPhraseIndex: request.key.phraseIndex, ordinal: context.ordinal,
+      wave: context.wave, presentedRepeatBars: context.presentedRepeatBars,
+      recoveryIntent: context.intent)
+      .recordingCalibratedRejection(decision: decision,
+        targetPhraseIndex: request.key.phraseIndex)
+    let nextContext = retry.context(for: request.key.phraseIndex)
+    let scheduling = AutonomousQualityRecoverySchedulingPolicy.decide(
+      retryable: decision.isRetryableCandidateRejection,
+      waveExhausted: retry.isExhausted(for: request.key.phraseIndex),
+      coherentRepeatCount: 0)
+    let nextPlan = director.plan(from: request.sourceState,
+      qualityRecoveryContext: nextContext)
+    return [
+      "recovery-inspection=core-score-only-not-rendered-not-authorized",
+      "refused-request=" + request.replayIdentity.fingerprint,
+      "refused-core=" + AutonomousCandidateFingerprint.sessionState(request.sourceState),
+      "refused-plan-interest=\(rejected.plan.interest.score),valid=\(rejected.plan.interest.valid),space=\(rejected.plan.interest.intentionalSpace),overactivity=\(rejected.plan.interest.overactivityPenalty),overdue=\(rejected.plan.interest.overdueDebtCount)",
+      "recovery-retryable=\(decision.isRetryableCandidateRejection),scheduling=\(scheduling)",
+      "recovery-context=wave-\(nextContext.wave),ordinal-\(nextContext.ordinal),presented-bars-\(nextContext.presentedRepeatBars),density-\(nextContext.intent.symbolicDensity.rawValue),spectral-\(nextContext.intent.spectralMovement.rawValue),crest-\(nextContext.intent.kickCrestReduction.rawValue)",
+      "next-score-only-interest=\(nextPlan.interest.score),valid=\(nextPlan.interest.valid),space=\(nextPlan.interest.intentionalSpace),overactivity=\(nextPlan.interest.overactivityPenalty),overdue=\(nextPlan.interest.overdueDebtCount)",
+    ]
   }
 
   private func renderObservation(rootSeed: UInt64,
