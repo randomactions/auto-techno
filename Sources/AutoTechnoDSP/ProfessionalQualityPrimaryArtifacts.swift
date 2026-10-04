@@ -11,9 +11,11 @@ package struct ProfessionalQualityPrimaryArtifacts: Sendable {
         "professional-quality-primary-adversarial-suite-v33"
     package static let holdoutResource =
         "professional-quality-primary-holdout-v33"
-    package static let expectedProfileFingerprint: String? = nil
-    package static let expectedAdversarialSuiteFingerprint: String? = nil
-    package static let expectedHoldoutQualificationFingerprint: String? = nil
+    // Frozen d1259f3 native 40/6 study: 34 adversarial cases, 84/84 holdout.
+    // These offline seals bind qualification; missing paired resources still refuse loading.
+    package static let expectedProfileFingerprint: String? = "eb1eba16cde88415"
+    package static let expectedAdversarialSuiteFingerprint: String? = "b76d744054bfa22f"
+    package static let expectedHoldoutQualificationFingerprint: String? = "19742f5c60933b29"
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport

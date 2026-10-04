@@ -1472,7 +1472,8 @@ version consistency, duplicate rejection and required-unavailable measurements.
 A reduced one-bank analysis uses the same corpus fitter and remains below the
 minimum diverse source count. The existing evaluator and activation authority are retained. Historical v21/v30/v16 artifacts retain their original contract and are ineligible
 under current evidence. The sole primary v32 requires continuous v23/v33 prepared
-validation; current artifact qualification and activation remain pending. No renderer,
+validation; fresh native current primary offline qualification is complete,
+while paired artifact installation and full runtime activation remain pending. No renderer,
 Core continuation, callback operation, future decision or PCM algorithm changes.
 
 ## Prepared-product continuous observation seam
@@ -1884,8 +1885,11 @@ previous interpretation; retired continuous profile v32 is not current authority
 No parameter, score, PCM, callback or automatic retry changes.
 
 Profile schema 25/version v33 and primary policy/evaluator v32 invalidate prior
-qualification. Primary and Long Horizon seals remain absent; the pending primary
-dependency token cannot match an actual evaluator's sealed policy identity.
+qualification. The completed d1259f3 fresh native study supplies exact primary
+seals: profile eb1eba16cde88415, adversarial b76d744054bfa22f and
+holdout 19742f5c60933b29. The long-horizon dependency now binds that exact
+primary evaluator identity. Qualified Long Horizon v17 seals and paired production
+resources remain absent.
 Synthetic reduction/replay controls have no activation authority. The live-target
 artifact gate uses the same continuous observation/profile scope owner and exact
 qualified seals, rather than legacy schema defaults. Target/occurrence controller

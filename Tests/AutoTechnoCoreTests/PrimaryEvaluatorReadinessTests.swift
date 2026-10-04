@@ -55,11 +55,14 @@ struct PrimaryEvaluatorReadinessTests {
 
     @Test("Pending matching current resources cannot leave a partially ready production host")
     func pendingCurrentPairStaysUnavailable() {
-        #expect(ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint == nil)
-        #expect(ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint == nil)
-        #expect(ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint == nil)
+        #expect(ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint == "eb1eba16cde88415")
+        #expect(ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint == "b76d744054bfa22f")
+        #expect(ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint == "19742f5c60933b29")
         #expect(LongHorizonProfessionalPolicySchema.requiredPrimaryPolicyVersion ==
-            "autotechno-quality.primary-calibrated.v32.unqualified")
+            "autotechno-quality.primary-calibrated.v32.profile-eb1eba16cde88415.adversarial-b76d744054bfa22f.holdout-19742f5c60933b29")
+        #expect(!ProfessionalQualityPrimaryArtifacts.containsBundledResource(
+            named: ProfessionalQualityPrimaryArtifacts.profileResource))
+        #expect(LongHorizonProfessionalPolicyArtifacts.expectedProfileFingerprint == nil)
         #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
             try AutonomousPerformanceArtifactSet.load()
         }

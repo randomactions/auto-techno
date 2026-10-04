@@ -20,9 +20,15 @@ disjoint holdout trajectories, 644 original reports/actual successor receipts,
 34 adversarial cases and 84 accepted holdout observations. Its profile
 4fb209bfb248d46b, adversarial e347aea9623bba24 and holdout 57fc2efd43375934
 are retired qualification identities for current policy v32/profile v33.
-Current v33 primary seals are absent, as are qualified long-horizon v17 seals.
-Matching resources, fresh independent qualification and full runtime gates
-remain pending; the paired production loader stays unavailable.
+The fresh d1259f36c68740d55f5b72bd63424e03cc0732af study completed the same
+40 development and six disjoint holdout trajectories at both native rates,
+644 original reports and actual successor receipts, all 34 adversarial cases,
+and 84/84 accepted holdout observations under contract snapshot 93. Current
+v33 primary seals are profile eb1eba16cde88415, adversarial
+b76d744054bfa22f and holdout 19742f5c60933b29. These bind explicit offline
+construction and the required primary dependency of the full native long-horizon
+study. Qualified long-horizon v17 seals, matching paired resources and full
+runtime gates remain pending; the paired production loader stays unavailable.
 
 Current long-horizon calibration consumes every accepted phrase through the
 existing detached AutonomousPerformancePreparer and its protected measured-child
@@ -1179,8 +1185,8 @@ to the existing corpus fitter and remains insufficient for diverse calibration.
 
 A single scope owner binds observation/profile schema and versions, expected
 metrics, applicability and conditional comparison coverage. Installed v21/v30
-and bar-local v22/v31 identities retain their semantics. Continuous v23/v33 is an
-unqualified, unactivated foundation: fixed mechanical construction controls do
-not provide independent musical labels, confidence, fresh-cohort evidence or
-replacement qualification. Installed primary v30/long-horizon v16 resources,
+and bar-local v22/v31 identities retain their semantics. Continuous v23/v33 has completed the fresh
+40/6 native offline qualification described above and remains unactivated. Fixed
+mechanical construction controls alone do not provide independent musical labels,
+confidence, fresh-cohort evidence or replacement qualification. Installed primary v30/long-horizon v16 resources,
 score, PCM, callback and future musical decisions remain unchanged.
