@@ -534,7 +534,8 @@ package struct GeneratedDSPContinuationState: Equatable, Sendable {
 package enum GeneratedDSPGraphRenderer {
     package static func process(left: [Float], right: [Float], sampleRate: Double,
                                plan: DSPGraphPlan,
-                               state: inout GeneratedDSPContinuationState) -> ([Float], [Float]) {
+                               state: inout GeneratedDSPContinuationState,
+                               storageObservation: PreparationStorageObservation? = nil) -> ([Float], [Float]) {
         let count = min(left.count, right.count)
         guard count > 0, sampleRate > 0 else { return (left, right) }
         if let old = state.graph, !old.hasSameTopology(as: plan) {
@@ -563,16 +564,65 @@ package enum GeneratedDSPGraphRenderer {
             upperRight[index] = right[index] - lowRight[index]
         }
 
+        storageObservation?.observe("split") { inventory in
+            inventory.register(left, owner: "graph.input-left")
+            inventory.register(right, owner: "graph.input-right")
+            inventory.register(lowLeft, owner: "graph.low-left")
+            inventory.register(lowRight, owner: "graph.low-right")
+            inventory.register(upperLeft, owner: "graph.upper-left")
+            inventory.register(upperRight, owner: "graph.upper-right")
+            AutonomousTypedFingerprint.registerGeneratedDSPStorage(state,
+                inventory: inventory, owner: "graph.state")
+            withExtendedLifetime((left, right, lowLeft, lowRight, upperLeft, upperRight, state)) {}
+        }
         var currentLeft = upperLeft
         var currentRight = upperRight
-        processUpper(left: &currentLeft, right: &currentRight, sampleRate: sampleRate,
-                     plan: plan, states: &state.nodeStates)
+        do {
+            let observation = storageObservation.map { observation in
+                let otherStates = state.retiringStates
+                return observation.extending("current") { inventory in
+                    inventory.register(left, owner: "graph.input-left")
+                    inventory.register(right, owner: "graph.input-right")
+                    inventory.register(lowLeft, owner: "graph.low-left")
+                    inventory.register(lowRight, owner: "graph.low-right")
+                    inventory.register(upperLeft, owner: "graph.upper-left")
+                    inventory.register(upperRight, owner: "graph.upper-right")
+                    AutonomousTypedFingerprint.registerGraphNodeStorage(otherStates,
+                        inventory: inventory, owner: "graph.retiring-state")
+                    withExtendedLifetime((left, right, lowLeft, lowRight,
+                        upperLeft, upperRight, otherStates)) {}
+                }
+            }
+            processUpper(left: &currentLeft, right: &currentRight, sampleRate: sampleRate,
+                plan: plan, states: &state.nodeStates, storageObservation: observation)
+        }
 
         if let retiring = state.retiringGraph, state.retiringBarsRemaining > 0 {
             var oldLeft = state.retiringBarsRemaining == 2 ? upperLeft : [Float](repeating: 0, count: count)
             var oldRight = state.retiringBarsRemaining == 2 ? upperRight : [Float](repeating: 0, count: count)
-            processUpper(left: &oldLeft, right: &oldRight, sampleRate: sampleRate,
-                         plan: retiring, states: &state.retiringStates)
+            do {
+                let observation = storageObservation.map { observation in
+                    let otherStates = state.nodeStates
+                    let currentOutputLeft = currentLeft
+                    let currentOutputRight = currentRight
+                    return observation.extending("retiring") { inventory in
+                        inventory.register(left, owner: "graph.input-left")
+                        inventory.register(right, owner: "graph.input-right")
+                        inventory.register(lowLeft, owner: "graph.low-left")
+                        inventory.register(lowRight, owner: "graph.low-right")
+                        inventory.register(upperLeft, owner: "graph.upper-left")
+                        inventory.register(upperRight, owner: "graph.upper-right")
+                        inventory.register(currentOutputLeft, owner: "graph.current-left")
+                        inventory.register(currentOutputRight, owner: "graph.current-right")
+                        AutonomousTypedFingerprint.registerGraphNodeStorage(otherStates,
+                            inventory: inventory, owner: "graph.current-state")
+                        withExtendedLifetime((left, right, lowLeft, lowRight,
+                            upperLeft, upperRight, currentOutputLeft, currentOutputRight, otherStates)) {}
+                    }
+                }
+                processUpper(left: &oldLeft, right: &oldRight, sampleRate: sampleRate,
+                    plan: retiring, states: &state.retiringStates, storageObservation: observation)
+            }
             if state.retiringBarsRemaining == 2 {
                 for index in 0..<count {
                     let progress = Double(index) / Double(max(1, count - 1))
@@ -602,12 +652,29 @@ package enum GeneratedDSPGraphRenderer {
             outputLeft[index] = Float(tanh(Double(lowLeft[index] + currentLeft[index]) * 1.08) / normalizer * 0.90)
             outputRight[index] = Float(tanh(Double(lowRight[index] + currentRight[index]) * 1.08) / normalizer * 0.90)
         }
+        storageObservation?.observe("output") { inventory in
+            inventory.register(left, owner: "graph.input-left")
+            inventory.register(right, owner: "graph.input-right")
+            inventory.register(lowLeft, owner: "graph.low-left")
+            inventory.register(lowRight, owner: "graph.low-right")
+            inventory.register(upperLeft, owner: "graph.upper-left")
+            inventory.register(upperRight, owner: "graph.upper-right")
+            inventory.register(currentLeft, owner: "graph.current-left")
+            inventory.register(currentRight, owner: "graph.current-right")
+            inventory.register(outputLeft, owner: "graph.output-left")
+            inventory.register(outputRight, owner: "graph.output-right")
+            AutonomousTypedFingerprint.registerGeneratedDSPStorage(state,
+                inventory: inventory, owner: "graph.state")
+            withExtendedLifetime((left, right, lowLeft, lowRight, upperLeft, upperRight,
+                currentLeft, currentRight, outputLeft, outputRight, state)) {}
+        }
         return (outputLeft, outputRight)
     }
 
     private static func processUpper(left: inout [Float], right: inout [Float],
                                      sampleRate: Double, plan: DSPGraphPlan,
-                                     states: inout [Int: DSPGraphNodeState]) {
+                                     states: inout [Int: DSPGraphNodeState],
+                                     storageObservation: PreparationStorageObservation? = nil) {
         let count = min(left.count, right.count)
         let branchCount = max(1, plan.branchCount)
         var branchLeft = Array(repeating: left, count: branchCount)
@@ -617,12 +684,53 @@ package enum GeneratedDSPGraphRenderer {
             var nodeState = states[node.id] ?? DSPGraphNodeState()
             processNode(left: &branchLeft[node.branch], right: &branchRight[node.branch],
                         sampleRate: sampleRate, node: node, state: &nodeState)
+            storageObservation?.observe("node-return") { inventory in
+                inventory.register(left, owner: "branch.input-left")
+                inventory.register(right, owner: "branch.input-right")
+                for (ordinal, samples) in branchLeft.enumerated() {
+                    inventory.register(samples, owner: "branch.left.\(ordinal)")
+                }
+                for (ordinal, samples) in branchRight.enumerated() {
+                    inventory.register(samples, owner: "branch.right.\(ordinal)")
+                }
+                AutonomousTypedFingerprint.registerGraphNodeStorage(states,
+                    inventory: inventory, owner: "branch.states")
+                AutonomousTypedFingerprint.registerGraphNodeStorage(nodeState,
+                    inventory: inventory, owner: "branch.node-\(node.id)")
+                withExtendedLifetime((left, right, branchLeft, branchRight, states, nodeState)) {}
+            }
             states[node.id] = nodeState
+            storageObservation?.observe("branches") { inventory in
+                inventory.register(left, owner: "branch.input-left")
+                inventory.register(right, owner: "branch.input-right")
+                for (ordinal, samples) in branchLeft.enumerated() {
+                    inventory.register(samples, owner: "branch.left.\(ordinal)")
+                }
+                for (ordinal, samples) in branchRight.enumerated() {
+                    inventory.register(samples, owner: "branch.right.\(ordinal)")
+                }
+                AutonomousTypedFingerprint.registerGraphNodeStorage(states,
+                    inventory: inventory, owner: "branch.states")
+                withExtendedLifetime((left, right, branchLeft, branchRight, states)) {}
+            }
         }
         let gain = 1.0 / Double(branchCount)
         for index in 0..<count {
             left[index] = Float(branchLeft.reduce(0.0) { $0 + Double($1[index]) } * gain)
             right[index] = Float(branchRight.reduce(0.0) { $0 + Double($1[index]) } * gain)
+        }
+        storageObservation?.observe("mixed") { inventory in
+            inventory.register(left, owner: "branch.output-left")
+            inventory.register(right, owner: "branch.output-right")
+            for (ordinal, samples) in branchLeft.enumerated() {
+                inventory.register(samples, owner: "branch.left.\(ordinal)")
+            }
+            for (ordinal, samples) in branchRight.enumerated() {
+                inventory.register(samples, owner: "branch.right.\(ordinal)")
+            }
+            AutonomousTypedFingerprint.registerGraphNodeStorage(states,
+                inventory: inventory, owner: "branch.states")
+            withExtendedLifetime((left, right, branchLeft, branchRight, states)) {}
         }
     }
 

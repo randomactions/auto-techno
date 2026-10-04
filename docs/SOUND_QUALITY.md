@@ -1298,7 +1298,8 @@ required before completion or promotion.
 
 A default-off `PreparationWorkingStorageProbe` observes the existing canonical
 `AutonomousPhraseRenderer` at protected-voice return, full-voice return, graph/pump
-return and bar delivery. `NumericStorageInventory` registers the allocated
+return and bar delivery, plus synchronous inner voice and graph observations.
+`NumericStorageInventory` registers the allocated
 capacity of primitive numeric arrays through synchronous nonescaping borrows.
 Within one snapshot it counts shared backing storage once and independent COW
 storage separately, including reserved unused capacity. Backing identities are
@@ -1328,10 +1329,57 @@ performs no inventory work. Both-native16-bar controls compare full output,
 repeat-hold variants and ending typed state with ordinary rendering before
 reporting the observations.
 
-These four boundaries leave inner voice/graph transients, analyzer storage,
-encoding and actual heap metadata, incoming and parent/child ownership,
+The outer boundaries and implemented inner observations still leave nested voice
+helper/internal processing transients, analyzer storage, encoding and actual heap
+metadata, incoming and parent/child ownership,
 initial/corrected overlap, writer chunks, whole-process RSS and deadlines
 unmeasured. They do not establish complete preparation storage, native admitted
 root/child capture capacity, resource qualification or quality promotion. Every
 existing full-capture charge,128MiB ceiling, two-pass limit and unavailable
 production seal remains in force until complete evidence establishes a bound.
+
+
+## Synchronous inner renderer storage scopes
+
+`PreparationStorageObservation` extends the diagnostic probe through one
+synchronous inner render call. Its closure holds only immutable outer owners that
+remain live during that call. The callee registers its own mutable state and
+workspace; no closure captures the inout owner currently being modified. Complete
+observation lifetimes include every outer scope. Neither inventory nor probe
+retains the scope, PCM or addresses; the call scope ends before later mutations,
+so diagnostic aliases do not force COW storage in a following stage. The normal
+nil path creates no observation scopes.
+
+The existing voice renderer observes its returned product while all swapped
+workspace buses are still local, before recycling them. It includes visible
+spatial-dust, audio-slice and polyphonic-pad buffers, FDN Double scratch, bass and
+kick/tonal onset Int buffers, current render continuation, and outer original or
+protected state, graph continuation, primary/hold blocks and prior diagnostic
+captures. This product observation deliberately extends diagnostic local lifetimes;
+it does not implicitly observe allocations inside earlier voice helpers.
+
+The generated graph observes split channels, both current and retiring graph
+branches, node return before dictionary replacement, completed branches, mixed
+channels and output. Node-return registration includes the original dictionary
+node and actual updated local node together, exposing old/new delay COW storage.
+Canonical typed component visitors supply render, graph, node dictionaries and
+individual nodes rather than duplicated state-field inventories. Outer phrase
+workspace, both voice products, graph input/carrier/residual/dose arrays,
+primary/hold/capture owners and non-mutating continuation are joined in the same
+inventory. Inner graph scopes expire before the retiring mix or later bar work.
+Component metadata headroom remains separately labelled and conservative.
+
+Both-native direct graph controls traverse real topology replacement and both
+retirement bars, require exact ordinary PCM/ending state, register both active and
+retiring state, and expose independent old/new delay storage. A weak-owner control
+proves nested scopes release their outer owners at return. Native16-bar controls
+require all eleven applicable phase maxima and every actual node observation,
+while preserving ordinary PCM, hold variants and ending fingerprints. All owners
+remain bounded by the existing32-phase/4096-record diagnostic limits.
+
+These observations still establish neither complete allocation/RSS/deadline bounds
+nor native admitted selected-root/exact-child capture capacity. Nested helper and
+internal processing transients, analysis, encoded/heap storage, incoming/parent/
+child ownership, initial/corrected overlap and writer chunks remain separate
+obligations. Fullcapture charges,128MiB/two-pass limits, current production
+unavailability and every original qualification/promotion gate remain unchanged.

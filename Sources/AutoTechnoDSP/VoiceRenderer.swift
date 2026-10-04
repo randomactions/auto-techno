@@ -827,7 +827,8 @@ package enum VoiceRenderer {
                           workspace: inout RenderWorkspace, layer: RenderLayer,
                           effectCarrierRole: SynthRole? = nil,
                           phraseKind: AutonomousPhraseKind = .lock,
-                          diagnosticRoleStemCapture: Bool = false) -> RenderedBar {
+                          diagnosticRoleStemCapture: Bool = false,
+                          storageObservation: PreparationStorageObservation? = nil) -> RenderedBar {
         let performance = resolved.performance
         let section = performance.section
         let frames = max(1, Int((240.0 / scene.bpm * sampleRate).rounded()))
@@ -2244,6 +2245,58 @@ package enum VoiceRenderer {
                                    resonantAnchorSamples: resonantAnchorStem,
                                    detunedCompanionSamples: detunedCompanionStem,
                                    diagnosticRoleStemCapture: roleStemCapture)
+        storageObservation?.observe("product") { inventory in
+            checkedOut.registerStorage(inventory: inventory, owner: "voice.checked-out")
+            inventory.register(rendered, owner: "voice.product")
+            inventory.register(output, owner: "voice.output")
+            inventory.register(kickBus, owner: "voice.kickBus")
+            inventory.register(kickDetectorBus, owner: "voice.kickDetectorBus")
+            inventory.register(foundationStem, owner: "voice.foundationStem")
+            inventory.register(modalPercussionStem, owner: "voice.modalPercussionStem")
+            inventory.register(percussionStem, owner: "voice.percussionStem")
+            inventory.register(percussionTextureStem, owner: "voice.percussionTextureStem")
+            inventory.register(spatialDustLeftStem, owner: "voice.spatialDustLeftStem")
+            inventory.register(spatialDustRightStem, owner: "voice.spatialDustRightStem")
+            inventory.register(audioSliceStem, owner: "voice.audioSliceStem")
+            inventory.register(polyphonicPadStem, owner: "voice.polyphonicPadStem")
+            inventory.register(upperTonalStem, owner: "voice.upperTonalStem")
+            inventory.register(atmosphereStem, owner: "voice.atmosphereStem")
+            inventory.register(transitionStem, owner: "voice.transitionStem")
+            inventory.register(resonantAnchorStem, owner: "voice.resonantAnchorStem")
+            inventory.register(detunedCompanionStem, owner: "voice.detunedCompanionStem")
+            inventory.register(shadowTimingStem, owner: "voice.shadowTimingStem")
+            inventory.register(responseTimingStem, owner: "voice.responseTimingStem")
+            inventory.register(resonantMonoInstrumentStem, owner: "voice.resonantMonoInstrumentStem")
+            inventory.register(resonantMonoModulationStem, owner: "voice.resonantMonoModulationStem")
+            inventory.register(tonalMotionInstrumentStem, owner: "voice.tonalMotionInstrumentStem")
+            inventory.register(tonalEnvelopeExpansionStem, owner: "voice.tonalEnvelopeExpansionStem")
+            inventory.register(spectralTextureInstrumentStem, owner: "voice.spectralTextureInstrumentStem")
+            inventory.register(spectralTextureClusterStem, owner: "voice.spectralTextureClusterStem")
+            inventory.register(spectralTextureHarmonicTailStem, owner: "voice.spectralTextureHarmonicTailStem")
+            inventory.register(spectralTextureIndefinitePitchStem, owner: "voice.spectralTextureIndefinitePitchStem")
+            inventory.register(maskingFoundationBus, owner: "voice.maskingFoundationBus")
+            inventory.register(synthBus, owner: "voice.synthBus")
+            inventory.register(pulseEchoSendBus, owner: "voice.pulseEchoSendBus")
+            inventory.register(spatialReverbSendBus, owner: "voice.spatialReverbSendBus")
+            inventory.register(spatialFDNScratch, owner: "voice.spatialFDNScratch")
+            inventory.register(renderedBassStartFrames, owner: "voice.renderedBassStartFrames")
+            inventory.register(kickOnsets, owner: "voice.kickOnsets")
+            inventory.register(upperTonalOnsets, owner: "voice.upperTonalOnsets")
+            AutonomousTypedFingerprint.registerRenderStorage(state,
+                inventory: inventory, owner: "voice.state")
+            // Explicit last uses keep all observed locals alive for the snapshot.
+            withExtendedLifetime((
+                output, kickBus, kickDetectorBus, foundationStem,
+                modalPercussionStem, percussionStem, percussionTextureStem, spatialDustLeftStem,
+                spatialDustRightStem, audioSliceStem, polyphonicPadStem, upperTonalStem,
+                atmosphereStem, transitionStem, resonantAnchorStem, detunedCompanionStem,
+                shadowTimingStem, responseTimingStem, resonantMonoInstrumentStem, resonantMonoModulationStem,
+                tonalMotionInstrumentStem, tonalEnvelopeExpansionStem, spectralTextureInstrumentStem, spectralTextureClusterStem,
+                spectralTextureHarmonicTailStem, spectralTextureIndefinitePitchStem, maskingFoundationBus, synthBus,
+                pulseEchoSendBus, spatialReverbSendBus, spatialFDNScratch, renderedBassStartFrames,
+                checkedOut, rendered, state, kickOnsets, upperTonalOnsets
+            )) {}
+        }
         swap(&output, &checkedOut.output)
         swap(&kickBus, &checkedOut.kick)
         swap(&kickDetectorBus, &checkedOut.kickDetector)

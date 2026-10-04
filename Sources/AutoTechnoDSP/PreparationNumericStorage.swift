@@ -169,3 +169,38 @@ extension NumericStorageInventory {
         }
     }
 }
+
+
+/// Synchronous nested observation scope. Captured immutable outer owners live
+/// only for this call; neither the probe nor the inventory retains this scope.
+/// Never capture an inout owner being modified by the observed callee. That
+/// callee registers its own live state and workspace at the observation point.
+package struct PreparationStorageObservation {
+    package let probe: PreparationWorkingStorageProbe
+    package let prefix: String
+    package let bar: Int
+    private let registerOuter: (NumericStorageInventory) -> Void
+
+    package init(probe: PreparationWorkingStorageProbe, prefix: String, bar: Int,
+        registerOuter: @escaping (NumericStorageInventory) -> Void = { _ in }) {
+        self.probe = probe; self.prefix = prefix; self.bar = bar
+        self.registerOuter = registerOuter
+    }
+
+    package func observe(_ phase: String, register: (NumericStorageInventory) -> Void) {
+        probe.observe(phase: prefix + "." + phase, bar: bar) { inventory in
+            registerOuter(inventory)
+            register(inventory)
+            withExtendedLifetime(self) {}
+        }
+    }
+
+    package func extending(_ component: String,
+        registerOuter: @escaping (NumericStorageInventory) -> Void) -> PreparationStorageObservation {
+        PreparationStorageObservation(probe: probe, prefix: prefix + "." + component, bar: bar) {
+            inventory in
+            self.registerOuter(inventory)
+            registerOuter(inventory)
+        }
+    }
+}

@@ -145,28 +145,42 @@ struct DiagnosticRoleStemStreamingTests {
         #expect(result.repeatHoldEvolutionCandidates.map { candidate in
             candidate.blocks.map { ExactPCMFingerprint.stereo(left: $0.left, right: $0.right) }
         } == reference.variants)
-        #expect(storageProbe.valid && storageProbe.observationCount == plan.barCount * 4)
+        let nodeCount = DSPGraphGenerator.safePlan(sessionSeed: 42).nodes.count
+        #expect(storageProbe.valid && storageProbe.observationCount == plan.barCount * (9 + 2 * nodeCount))
         let snapshots = storageProbe.snapshots
-        #expect(snapshots.map(\.phase) == ["bar-delivery", "full-voice-return",
-            "graph-pump-return", "protected-voice-return"])
+        #expect(snapshots.map(\.phase) == ["bar-delivery", "full-voice-return", "full-voice.product",
+            "generated-graph.current.branches", "generated-graph.current.mixed",
+            "generated-graph.current.node-return", "generated-graph.output", "generated-graph.split",
+            "graph-pump-return", "protected-voice-return", "protected-voice.product"])
         #expect(snapshots.allSatisfy { $0.valid && $0.uniqueBufferCapacityBytes > 0 &&
-            $0.typedMetadataHeadroomBytes > 0 &&
-            $0.ownerRecords.contains { $0.owner.hasPrefix("workspace.") } &&
-            $0.ownerRecords.contains { $0.owner.hasPrefix("current.") } &&
-            $0.ownerRecords.contains { $0.aliasOf != nil } })
+            $0.typedMetadataHeadroomBytes > 0 && $0.ownerRecords.contains { $0.aliasOf != nil } })
+        for snapshot in snapshots {
+            if snapshot.phase.contains(".product") {
+                #expect(snapshot.ownerRecords.contains { $0.owner == "voice.spatialFDNScratch" &&
+                    $0.elementStride == 8 && $0.elementCount > 0 })
+                #expect(snapshot.ownerRecords.contains { $0.owner == "voice.spatialDustLeftStem" })
+                #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("outer.continuation.") })
+            } else if snapshot.phase.hasPrefix("generated-graph.") {
+                #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("outer.workspace.") })
+                #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("outer.state.") })
+            } else {
+                #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("workspace.") })
+                #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("current.") })
+            }
+        }
         let delivery = try #require(snapshots.first { $0.phase == "bar-delivery" })
         #expect(delivery.ownerRecords.filter { $0.owner.hasPrefix("capture.") }.count == 32)
         #expect(delivery.ownerRecords.contains { $0.owner.hasPrefix("hold.") })
         let snapshotJSON = try JSONEncoder().encode(snapshots)
         let storageControl: [String: Any] = [
-            "schema": "autotechno-render-boundary-storage-control.v1",
+            "schema": "autotechno-render-inner-storage-control.v1",
             "sampleRate": sampleRate, "barCount": plan.barCount,
             "observations": storageProbe.observationCount,
             "snapshots": try JSONSerialization.jsonObject(with: snapshotJSON),
             "exactPCMStateAndHoldProducts": true,
             "completeWorkingSetQualification": false,
             "instrumentationMayExtendObservedLifetimes": true,
-            "uncovered": ["inner-voice-and-graph-transients", "analysis",
+            "uncovered": ["nested-voice-helper-and-internal-node-transients", "analysis",
                 "encoding-and-heap-metadata", "initial-corrected-overlap",
                 "incoming-parent-child-storage", "writer-chunk", "process-RSS", "deadlines"],
         ]
@@ -380,6 +394,97 @@ struct DiagnosticRoleStemStreamingTests {
         #expect(AutonomousTypedFingerprint.renderDSPContinuation(renderState: state,
             generatedDSPState: graph) == before)
         withExtendedLifetime((state, graph)) {}
+    }
+
+    private final class ObservationLifetimeOwner {
+        let samples: [Float] = [1, 2, 3, 4]
+    }
+
+    @Test("Nested observation scopes release all outer owners after the synchronous call")
+    func nestedObservationLifetime() throws {
+        weak var observedOwner: ObservationLifetimeOwner?
+        let probe = PreparationWorkingStorageProbe()
+        var capacity = 0
+        func call() {
+            let owner = ObservationLifetimeOwner()
+            observedOwner = owner
+            capacity = owner.samples.capacity * 4
+            let outer = PreparationStorageObservation(probe: probe, prefix: "outer", bar: 0) { inventory in
+                inventory.register(owner.samples, owner: "outer.samples")
+            }
+            let nested = outer.extending("inner") { _ in #expect(observedOwner != nil) }
+            nested.observe("borrow") { inventory in
+                #expect(observedOwner != nil)
+                inventory.register(owner.samples, owner: "inner.alias")
+            }
+        }
+        call()
+        #expect(observedOwner == nil && probe.valid && probe.observationCount == 1)
+        let snapshot = try #require(probe.snapshots.first)
+        #expect(snapshot.phase == "outer.inner.borrow" && snapshot.uniqueBufferCapacityBytes == capacity)
+        #expect(snapshot.ownerRecords.last?.aliasOf == "outer.samples")
+    }
+
+    @Test("Graph branch, node COW and retiring observations preserve exact products and continuation",
+        arguments: [44_100.0, 48_000.0])
+    func innerGraphRetirement(sampleRate: Double) throws {
+        let safe = DSPGraphGenerator.safePlan(sessionSeed: 42)
+        let changed = DSPGraphPlan(sessionSeed: 42, revision: 1,
+            nodes: safe.nodes + [DSPGraphNode(id: 8, kind: .echo, branch: 0, order: 2,
+                amount: 0.42, mix: 0.2, feedback: 0.3, delaySeconds: 0.125)],
+            mutation: DSPGraphMutation(kind: .insert, phraseIndex: 1, affectedNodeIDs: [8]))
+        #expect(DSPGraphValidator.validate(changed).valid)
+        let left = (0..<256).map { Float(sin(Double($0) * 0.1) * 0.1) }
+        let right = left.map { $0 * 0.9 }
+        let outer: [Double] = [Double](repeating: 0, count: 80)
+        var ordinary = GeneratedDSPContinuationState()
+        var observed = GeneratedDSPContinuationState()
+        let probe = PreparationWorkingStorageProbe()
+        var ordinaryFingerprints: [String] = []
+        var observedFingerprints: [String] = []
+        for (bar, plan) in [safe, changed, changed, changed].enumerated() {
+            let reference = GeneratedDSPGraphRenderer.process(left: left, right: right,
+                sampleRate: sampleRate, plan: plan, state: &ordinary)
+            let scope = PreparationStorageObservation(probe: probe, prefix: "graph", bar: bar) { inventory in
+                inventory.register(outer, owner: "outer.borrow")
+                withExtendedLifetime(outer) {}
+            }
+            let actual = GeneratedDSPGraphRenderer.process(left: left, right: right,
+                sampleRate: sampleRate, plan: plan, state: &observed, storageObservation: scope)
+            #expect(actual.0 == reference.0 && actual.1 == reference.1 && observed == ordinary)
+            ordinaryFingerprints.append(ExactPCMFingerprint.stereo(left: reference.0, right: reference.1))
+            observedFingerprints.append(ExactPCMFingerprint.stereo(left: actual.0, right: actual.1))
+            #expect(observed.retiringBarsRemaining == (bar == 1 ? 1 : 0))
+        }
+        #expect(probe.valid && observed.retiringGraph == nil && observed.retiringStates.isEmpty)
+        let phases = probe.snapshots.map(\.phase)
+        #expect(phases == ["graph.current.branches", "graph.current.mixed", "graph.current.node-return",
+            "graph.output", "graph.retiring.branches", "graph.retiring.mixed", "graph.retiring.node-return", "graph.split"])
+        #expect(probe.snapshots.allSatisfy { $0.ownerRecords.contains { $0.owner == "outer.borrow" } })
+        let retiring = try #require(probe.snapshots.first { $0.phase == "graph.retiring.node-return" })
+        #expect(retiring.ownerRecords.contains { $0.owner.hasPrefix("graph.current-state.") && $0.capacityBytes > 0 })
+        #expect(retiring.ownerRecords.contains { $0.owner.hasPrefix("branch.states.") && $0.capacityBytes > 0 })
+        let node = try #require(probe.snapshots.first { $0.phase == "graph.current.node-return" })
+        let newDelay = node.ownerRecords.filter { $0.owner.hasPrefix("branch.node-8.") &&
+            $0.owner.hasSuffix(".delayLeft") && $0.capacityBytes > 0 }
+        let oldDelay = node.ownerRecords.filter { $0.owner == "branch.states.8.delayLeft" && $0.capacityBytes > 0 }
+        #expect(newDelay.count == 1 && oldDelay.count == 1)
+        #expect(newDelay.first?.aliasOf == nil && oldDelay.first?.aliasOf == nil)
+        let control: [String: Any] = [
+            "schema": "autotechno-inner-graph-retirement-control.v1",
+            "sampleRate": sampleRate, "framesPerCall": left.count, "calls": 4,
+            "observations": probe.observationCount,
+            "snapshots": try JSONSerialization.jsonObject(with: JSONEncoder().encode(probe.snapshots)),
+            "ordinaryFingerprints": ordinaryFingerprints, "observedFingerprints": observedFingerprints,
+            "ordinaryEndingState": AutonomousCandidateFingerprint.generatedDSPState(ordinary),
+            "observedEndingState": AutonomousCandidateFingerprint.generatedDSPState(observed),
+            "newAndOldDelayStorageIndependent": newDelay.first?.aliasOf == nil && oldDelay.first?.aliasOf == nil,
+            "retirementClosed": observed.retiringGraph == nil && observed.retiringStates.isEmpty,
+            "qualification": "mechanical-only-not-installed", "completeWorkingSetQualification": false,
+        ]
+        let controlJSON = try JSONSerialization.data(withJSONObject: control, options: [.sortedKeys])
+        print("AUTOTECHNO_GRAPH_INNER_STORAGE_CONTROL " + String(decoding: controlJSON, as: UTF8.self))
+        withExtendedLifetime((outer, left, right, ordinary, observed)) {}
     }
 
 }

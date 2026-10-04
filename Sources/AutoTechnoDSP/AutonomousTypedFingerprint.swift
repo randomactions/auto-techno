@@ -408,11 +408,45 @@ package enum AutonomousTypedFingerprint {
         renderState: RenderState, generatedDSPState: GeneratedDSPContinuationState,
         inventory: NumericStorageInventory, owner: String
     ) {
+        registerRenderStorage(renderState, inventory: inventory, owner: owner + ".render")
+        registerGeneratedDSPStorage(generatedDSPState, inventory: inventory, owner: owner + ".graph")
+    }
+
+    package static func registerRenderStorage(_ state: RenderState,
+        inventory: NumericStorageInventory, owner: String) {
+        registerNumericStorage(inventory: inventory, owner: owner) { sink in
+            encode(state, into: &sink, cancellationRequested: { false })
+        }
+    }
+
+    package static func registerGeneratedDSPStorage(_ state: GeneratedDSPContinuationState,
+        inventory: NumericStorageInventory, owner: String) {
+        registerNumericStorage(inventory: inventory, owner: owner) { sink in
+            encode(state, into: &sink, cancellationRequested: { false })
+        }
+    }
+
+    package static func registerGraphNodeStorage(_ states: [Int: DSPGraphNodeState],
+        inventory: NumericStorageInventory, owner: String) {
+        registerNumericStorage(inventory: inventory, owner: owner) { sink in
+            encode(states, into: &sink, cancellationRequested: { false })
+        }
+    }
+
+    package static func registerGraphNodeStorage(_ state: DSPGraphNodeState,
+        inventory: NumericStorageInventory, owner: String) {
+        registerNumericStorage(inventory: inventory, owner: owner) { sink in
+            encode(state, into: &sink, cancellationRequested: { false })
+        }
+    }
+
+    private static func registerNumericStorage(inventory: NumericStorageInventory, owner: String,
+        encode: (inout StreamingFNV1a) -> Bool) {
         var sink = StreamingFNV1a(countingStorageOnly: true,
             numericStorageInventory: inventory, numericStorageOwner: owner)
-        guard encode(renderState, into: &sink, cancellationRequested: { false }),
-            encode(generatedDSPState, into: &sink, cancellationRequested: { false }),
-            !sink.storageOverflow else { inventory.addTypedMetadataHeadroom(-1); return }
+        guard encode(&sink), !sink.storageOverflow else {
+            inventory.addTypedMetadataHeadroom(-1); return
+        }
         inventory.addTypedMetadataHeadroom(sink.storageByteCount - sink.floatStorageByteCount)
     }
 

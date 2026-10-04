@@ -484,6 +484,10 @@
         {
           "symbol": "PreparationWorkingStorageProbe",
           "path": "Sources/AutoTechnoDSP/PreparationNumericStorage.swift"
+        },
+        {
+          "symbol": "PreparationStorageObservation",
+          "path": "Sources/AutoTechnoDSP/PreparationNumericStorage.swift"
         }
       ],
       "state": [
@@ -517,7 +521,8 @@
         "same-pass continuous modal windows with explicit pending, interruption and overflow; legacy bar-local metrics and PCM preserved",
         "Final authored anchor selection after canonical composition, timing and held polymetric relocation; source-index lineage, late/legato home fallback, authored home-correction eligibility and both-native same-pass tonal tail regression. Core owns relation placement; DSP windows and bounds remain unchanged, with no continuing-journey qualification.",
         "Every full11/protected11/stage10 tap streams from the same canonical pass with exact channel and final-block fingerprints. Bounded per-bar borrowed array-capacity inventory and 64KiB write chunks; order/rate/geometry/finite/capacity mismatch, cancellation, incomplete capture and I/O failure discard attempt-owned files. Ordinary PCM, repeat candidates and ending render/graph state remain exact. Canonical private selected-attempt/root-exact-child session binding is implemented through reverse admission; full native capture capacity and combined allocation/RSS/deadline accounting remain pending.",
-        "Default-off detached renderer observations at protected-voice return, full-voice return, graph/pump return and bar delivery register live primitive array capacities with per-snapshot alias deduplication. The existing typed replay visitor supplies continuation buffers and separately labelled encoded scalar/field headroom; hold accumulators supply retained variants and looper buffers. Metadata maxima retain no PCM or addresses and have finite owner/phase bounds. Instrumentation can extend observed lifetimes. Inner transients, analysis, parent/child and corrective overlap, heap metadata, writer chunks, RSS and deadlines remain uncovered; these observations cannot reduce admission charges or qualify native capture capacity."
+        "Default-off detached renderer observations at protected-voice return, full-voice return, graph/pump return and bar delivery register live primitive array capacities with per-snapshot alias deduplication. The existing typed replay visitor supplies continuation buffers and separately labelled encoded scalar/field headroom; hold accumulators supply retained variants and looper buffers. Metadata maxima retain no PCM or addresses and have finite owner/phase bounds. Instrumentation can extend observed lifetimes. Inner transients, analysis, parent/child and corrective overlap, heap metadata, writer chunks, RSS and deadlines remain uncovered; these observations cannot reduce admission charges or qualify native capture capacity.",
+        "Nested synchronous storage scopes join immutable outer phrase/hold/capture owners with actual inner voice product/local buses/FDN scratch and generated-graph split, node-return old/new COW, branch and mixed/output buffers. Canonical component typed visitors supply active, retiring and temporary node state without shadow state-field inventories. Scope closures and captured owners die before later mutations; explicit complete-observation lifetimes prevent stale-address aliasing. Native graph retirement and scope-release controls preserve exact PCM/continuation. Observations remain partial and cannot qualify resource capacity or reduce any charge."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AlienAnalogVoice.swift",
@@ -628,7 +633,8 @@
         "protected routing reconstruction",
         "RepeatHoldEvolutionEvidence including full-mix routing, spectral consequence, target-specific capture, shortest grid slice, and exact replay provenance",
         "mix and spatial evidence",
-        "Selected streamed drafts bind actual attempt and exact finalized object under unchanged PCM/vector/transaction/continuation; rejection and failure leave no publishable capture. Full capture reservation and runtime qualification remain separate."
+        "Selected streamed drafts bind actual attempt and exact finalized object under unchanged PCM/vector/transaction/continuation; rejection and failure leave no publishable capture. Full capture reservation and runtime qualification remain separate.",
+        "Default-off detached nested graph storage observations include both current and retiring branch paths, old dictionary/new local node delay-buffer COW before replacement, mixed branches and output. Outer phrase owners are supplied synchronously; no observer reaches hosts, callback, admission or policy."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AutomaticMixBalancer.swift",
@@ -647,7 +653,8 @@
         "Tests/AutoTechnoCoreTests/SpatialProtectedRoutingRegressionTests.swift",
         "Tests/AutoTechnoCoreTests/TPTAntialiasedNonlinearCoreTests.swift",
         "Tests/AutoTechnoCoreTests/ModalSuccessorReportJoinTests.swift",
-        "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift"
+        "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift",
+        "Tests/AutoTechnoCoreTests/DiagnosticRoleStemStreamingTests.swift"
       ],
       "contracts": [
         "docs/SPATIAL_ENGINE.md",

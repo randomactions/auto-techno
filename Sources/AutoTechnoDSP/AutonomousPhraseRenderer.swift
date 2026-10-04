@@ -2133,19 +2133,42 @@ package enum AutonomousPhraseRenderer {
                 synthPerformance: synthPerformance
             )
             var protectedRhythmState = state
-            let protectedRhythm = VoiceRenderer.renderBar(
-                scene: plan.scene,
-                sampleRate: sampleRate,
-                state: &protectedRhythmState,
-                dna: plan.dna,
-                resolved: resolved,
-                synthWorld: synthPlan.world,
-                synthPerformance: synthPerformance,
-                workspace: &workspace,
-                layer: .protectedRhythm,
-                phraseKind: plan.kind,
-                diagnosticRoleStemCapture: captureRequested
-            )
+            let protectedRhythm = {
+                let observation = workingStorageProbe.map { probe in
+                    let outerState = state
+                    let outerGraph = graphState
+                    let outerBlocks = blocks
+                    let outerHolds = holdEvolutionAccumulators
+                    let outerCaptures = diagnosticRoleStemCaptures
+                    return PreparationStorageObservation(probe: probe,
+                        prefix: "protected-voice", bar: performance.bar) { inventory in
+                        inventory.registerBlocks(outerBlocks, owner: "outer.primary")
+                        for (ordinal, hold) in outerHolds.enumerated() {
+                            hold.registerStorage(inventory: inventory, owner: "outer.hold.\(ordinal)")
+                        }
+                        for (ordinal, capture) in outerCaptures.enumerated() {
+                            inventory.register(capture, owner: "outer.capture.\(ordinal)")
+                        }
+                        AutonomousTypedFingerprint.registerContinuationStorage(renderState: outerState,
+                            generatedDSPState: outerGraph, inventory: inventory, owner: "outer.continuation")
+                        withExtendedLifetime((outerState, outerGraph, outerBlocks, outerHolds, outerCaptures)) {}
+                    }
+                }
+                return VoiceRenderer.renderBar(
+                    scene: plan.scene,
+                    sampleRate: sampleRate,
+                    state: &protectedRhythmState,
+                    dna: plan.dna,
+                    resolved: resolved,
+                    synthWorld: synthPlan.world,
+                    synthPerformance: synthPerformance,
+                    workspace: &workspace,
+                    layer: .protectedRhythm,
+                    phraseKind: plan.kind,
+                    diagnosticRoleStemCapture: captureRequested,
+                    storageObservation: observation
+                )
+            }()
             workingStorageProbe?.observe(phase: "protected-voice-return", bar: performance.bar) { inventory in
                 workspace.buffers.registerStorage(inventory: inventory, owner: "workspace")
                 inventory.register(protectedRhythm, owner: "protected")
@@ -2165,21 +2188,46 @@ package enum AutonomousPhraseRenderer {
                 )) {}
             }
             guard !cancellationRequested() else { return nil }
-            let rendered = VoiceRenderer.renderBar(
-                scene: plan.scene,
-                sampleRate: sampleRate,
-                state: &state,
-                dna: plan.dna,
-                resolved: resolved,
-                synthWorld: synthPlan.world,
-                synthPerformance: synthPerformance,
-                workspace: &workspace,
-                layer: .full,
-                effectCarrierRole: plan.effectCarrier.active
-                    ? plan.effectCarrier.state.role : nil,
-                phraseKind: plan.kind,
-                diagnosticRoleStemCapture: captureRequested
-            )
+            let rendered = {
+                let observation = workingStorageProbe.map { probe in
+                    let outerState = protectedRhythmState
+                    let outerGraph = graphState
+                    let outerBlocks = blocks
+                    let outerHolds = holdEvolutionAccumulators
+                    let outerCaptures = diagnosticRoleStemCaptures
+                    let outerProtected = protectedRhythm
+                    return PreparationStorageObservation(probe: probe,
+                        prefix: "full-voice", bar: performance.bar) { inventory in
+                        inventory.registerBlocks(outerBlocks, owner: "outer.primary")
+                        for (ordinal, hold) in outerHolds.enumerated() {
+                            hold.registerStorage(inventory: inventory, owner: "outer.hold.\(ordinal)")
+                        }
+                        for (ordinal, capture) in outerCaptures.enumerated() {
+                            inventory.register(capture, owner: "outer.capture.\(ordinal)")
+                        }
+                        AutonomousTypedFingerprint.registerContinuationStorage(renderState: outerState,
+                            generatedDSPState: outerGraph, inventory: inventory, owner: "outer.continuation")
+                        inventory.register(outerProtected, owner: "outer.protected")
+                        withExtendedLifetime((outerState, outerGraph, outerBlocks, outerHolds, outerCaptures, outerProtected)) {}
+                    }
+                }
+                return VoiceRenderer.renderBar(
+                    scene: plan.scene,
+                    sampleRate: sampleRate,
+                    state: &state,
+                    dna: plan.dna,
+                    resolved: resolved,
+                    synthWorld: synthPlan.world,
+                    synthPerformance: synthPerformance,
+                    workspace: &workspace,
+                    layer: .full,
+                    effectCarrierRole: plan.effectCarrier.active
+                        ? plan.effectCarrier.state.role : nil,
+                    phraseKind: plan.kind,
+                    diagnosticRoleStemCapture: captureRequested,
+                    storageObservation: observation
+                )
+            }()
             workingStorageProbe?.observe(phase: "full-voice-return", bar: performance.bar) { inventory in
                 workspace.buffers.registerStorage(inventory: inventory, owner: "workspace")
                 inventory.register(protectedRhythm, owner: "protected")
@@ -2313,10 +2361,52 @@ package enum AutonomousPhraseRenderer {
                 graphDoseInputLeft = graphInputLeft
                 graphDoseInputRight = graphInputRight
             }
-            let generated = GeneratedDSPGraphRenderer.process(
-                left: graphDoseInputLeft, right: graphDoseInputRight,
-                sampleRate: sampleRate, plan: graph, state: &graphState
-            )
+            let generated = {
+                let observation = workingStorageProbe.map { probe in
+                    let outerWorkspace = workspace
+                    let outerState = state
+                    let outerProtectedState = protectedRhythmState
+                    let outerBlocks = blocks
+                    let outerHolds = holdEvolutionAccumulators
+                    let outerCaptures = diagnosticRoleStemCaptures
+                    return PreparationStorageObservation(probe: probe,
+                        prefix: "generated-graph", bar: performance.bar) { inventory in
+                        outerWorkspace.buffers.registerStorage(inventory: inventory, owner: "outer.workspace")
+                        inventory.register(protectedRhythm, owner: "outer.protected")
+                        inventory.register(rendered, owner: "outer.full")
+                        inventory.registerBlocks(outerBlocks, owner: "outer.primary")
+                        for (ordinal, hold) in outerHolds.enumerated() {
+                            hold.registerStorage(inventory: inventory, owner: "outer.hold.\(ordinal)")
+                        }
+                        for (ordinal, capture) in outerCaptures.enumerated() {
+                            inventory.register(capture, owner: "outer.capture.\(ordinal)")
+                        }
+                        inventory.register(graphInputLeft, owner: "outer.graphInputLeft")
+                        inventory.register(graphInputRight, owner: "outer.graphInputRight")
+                        inventory.register(requestedCarrier, owner: "outer.requestedCarrier")
+                        inventory.register(carrierLeft, owner: "outer.carrierLeft")
+                        inventory.register(carrierRight, owner: "outer.carrierRight")
+                        inventory.register(residualLeft, owner: "outer.residualLeft")
+                        inventory.register(residualRight, owner: "outer.residualRight")
+                        inventory.register(graphDoseInputLeft, owner: "outer.graphDoseInputLeft")
+                        inventory.register(graphDoseInputRight, owner: "outer.graphDoseInputRight")
+                        AutonomousTypedFingerprint.registerRenderStorage(outerState,
+                            inventory: inventory, owner: "outer.state")
+                        AutonomousTypedFingerprint.registerRenderStorage(outerProtectedState,
+                            inventory: inventory, owner: "outer.protected-state")
+                        withExtendedLifetime((outerWorkspace, outerState, outerProtectedState,
+                            outerBlocks, outerHolds, outerCaptures, protectedRhythm, rendered,
+                            graphInputLeft, graphInputRight, requestedCarrier, carrierLeft,
+                            carrierRight, residualLeft, residualRight, graphDoseInputLeft,
+                            graphDoseInputRight)) {}
+                    }
+                }
+                return GeneratedDSPGraphRenderer.process(
+                    left: graphDoseInputLeft, right: graphDoseInputRight,
+                    sampleRate: sampleRate, plan: graph, state: &graphState,
+                    storageObservation: observation
+                )
+            }()
             let postCarrierLeft: [Float]
             let postCarrierRight: [Float]
             if plan.effectCarrier.active {
