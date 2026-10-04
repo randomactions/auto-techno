@@ -27,7 +27,7 @@ and 84/84 accepted holdout observations under contract snapshot 93. Current
 v33 primary seals are profile eb1eba16cde88415, adversarial
 b76d744054bfa22f and holdout 19742f5c60933b29. These bind explicit offline
 construction and the required primary dependency of the full native long-horizon
-study. Qualified long-horizon v17 seals, matching paired resources and full
+study. Qualified long-horizon v18 seals, matching paired resources and full
 runtime gates remain pending; the paired production loader stays unavailable.
 
 The native long-horizon producer follows the existing Core finite recovery
@@ -37,12 +37,21 @@ separate provenance and contribute no accepted score/signal/effect observations.
 The unchanged gates still admit the actual recovered product. A short recovery
 probe is not full native Long Horizon or combined-memory/device qualification.
 
+Signal report interpretation v2 keeps the pending bound episode across complete
+neutral conservative debt fallback. Such a phrase is counted in global signal
+geometry but has no episode/operator attribution and no completion authority.
+Only a different bound episode closes the prior signal episode. Returning to a
+closed ID or changing the pending operator still refuses without partial update.
+Same-pass phrase evidence stays v1 and PCM is unchanged. Report identity, runtime
+observation/adaptation v3 and Long observation/corpus v4/profile v18 separate this
+interpretation from older reports/models; current v18 seals remain absent.
+
 Current long-horizon calibration consumes every accepted phrase through the
 existing detached AutonomousPerformancePreparer and its protected measured-child
 boundary. Each of the seven development and two disjoint holdout roots must
 complete independently at 44.1 and 48 kHz. Semantic, signal and effect-dose
 accumulators observe the same immutable accepted products; sparse checkpoint
-signals or sampled effect doses cannot satisfy observation/corpus v3. Native
+signals or sampled effect doses cannot satisfy observation/corpus v4. Native
 routes must agree on semantic and effect geometry. Physical effect maxima and
 minimum realized material diversity are non-compensable; the reduction never
 averages a failing route into acceptance. The full evidence counts and route

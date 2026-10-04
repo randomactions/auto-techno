@@ -14,6 +14,15 @@ package enum LongHorizonSignalTrajectorySchema {
     "no-calibrated-long-horizon-policy"
 }
 
+/// Report interpretation is independent of unchanged same-pass phrase evidence.
+/// A neutral fallback has no episode-completion authority; the next bound
+/// episode either resumes the pending identity or closes it by replacement.
+package enum LongHorizonSignalTrajectoryReportSchema {
+  package static let schemaVersion = 2
+  package static let schemaIdentifier =
+    "autotechno-long-horizon-signal-trajectory-report.v2"
+}
+
 package enum LongHorizonSignalTrajectoryAvailability: String, Codable,
   Sendable
 {
@@ -668,6 +677,7 @@ package struct LongHorizonSignalTrajectoryAccumulator: Sendable {
     )
     self.rootSeed = rootSeed
     self.sampleRate = sampleRate
+    trajectoryHasher.combine(LongHorizonSignalTrajectoryReportSchema.schemaIdentifier)
   }
 
   package mutating func observe(
@@ -697,8 +707,8 @@ package struct LongHorizonSignalTrajectoryAccumulator: Sendable {
       )
     }
     return LongHorizonSignalTrajectoryReport(
-      schemaVersion: LongHorizonSignalTrajectorySchema.schemaVersion,
-      schemaIdentifier: LongHorizonSignalTrajectorySchema.schemaIdentifier,
+      schemaVersion: LongHorizonSignalTrajectoryReportSchema.schemaVersion,
+      schemaIdentifier: LongHorizonSignalTrajectoryReportSchema.schemaIdentifier,
       availability: reason == nil ? .available : .unavailable,
       unavailableReason: reason,
       qualificationStatus: "unavailable",
@@ -882,7 +892,9 @@ package struct LongHorizonSignalTrajectoryAccumulator: Sendable {
     guard let episodeID = evidence.coordination.episodeID,
       let operatorKind = evidence.coordination.operatorKind
     else {
-      finalizeCurrentEpisode()
+      // A complete conservative fallback is counted globally, without an
+      // invented operator attribution. It cannot prove Core completed the
+      // last bound episode. Only a different bound identity closes it.
       return
     }
     if currentEpisode?.id != episodeID {

@@ -6,9 +6,9 @@ import Foundation
 /// runtime verdict uses only the exact current route rate.
 package enum LongHorizonRuntimePolicySchema {
   package static let observationVersion =
-    "autotechno-long-horizon-runtime-observation.v2"
+    "autotechno-long-horizon-runtime-observation.v3"
   package static let adaptationVersion =
-    "autotechno-long-horizon-future-adaptation.v2"
+    "autotechno-long-horizon-future-adaptation.v3"
   package static let minimumDecisionIntervalBars = 256
 }
 
@@ -50,9 +50,9 @@ package struct LongHorizonRuntimePolicyObservation: Codable, Equatable,
       semanticReport.observedPhraseCount > 0,
       semanticReport.observedBarCount > 0,
       signalReport.availability == .available,
-      signalReport.schemaVersion == LongHorizonSignalTrajectorySchema.schemaVersion,
+      signalReport.schemaVersion == LongHorizonSignalTrajectoryReportSchema.schemaVersion,
       signalReport.schemaIdentifier
-        == LongHorizonSignalTrajectorySchema.schemaIdentifier,
+        == LongHorizonSignalTrajectoryReportSchema.schemaIdentifier,
       signalReport.sampleRate.isFinite,
       signalReport.sampleRate > 0,
       signalReport.observationCount > 0,

@@ -45,6 +45,108 @@ struct LongHorizonSignalTrajectoryTests {
     #expect(!json.contains("samples"))
   }
 
+  @Test("Neutral debt fallback does not complete Core's still-pending episode")
+  func neutralFallbackKeepsPendingEpisode() throws {
+    let director = AutonomousSessionDirector(rootSeed: 48_291)
+    var state = director.initialState()
+    var accumulator = LongHorizonSignalTrajectoryAccumulator(rootSeed: state.rootSeed, sampleRate: 8_000)
+    var previousEpisodeID: UInt64?
+    for _ in 0..<256 {
+      let plan = director.plan(from: state)
+      let recovery = director.plan(from: state,
+        qualityRecoveryContext: AutonomousQualityRecoveryContext(ordinal: 1, presentedRepeatBars: 6))
+      var recoveredState = state
+      recoveredState.advancePlanning(using: recovery)
+      let resumed = director.plan(from: recoveredState)
+      if let episodeID = plan.longHorizonEnergyCoordination.episodeID,
+        previousEpisodeID == episodeID,
+        recovery.longHorizonEnergyCoordination.reason == .conservativeFallback,
+        recovery.longHorizonEnergyCoordination.episodeID == nil,
+        recovery.interest.valid,
+        recoveredState.memory.longHorizon.isBound,
+        recoveredState.memory.longHorizon.currentEpisode.id == episodeID,
+        resumed.longHorizonEnergyCoordination.episodeID == episodeID {
+        let before = accumulator.report
+        #expect(accumulator.observe(syntheticEvidence(plan: recovery, rootSeed: state.rootSeed)) == .accepted)
+        let held = accumulator.report
+        #expect(held.observationCount == before.observationCount + 1)
+        #expect(held.renderedBarCount == before.renderedBarCount + recovery.barCount)
+        #expect(held.operatorCounts == before.operatorCounts)
+        #expect(held.recentEpisodes == before.recentEpisodes)
+        #expect(accumulator.observe(syntheticEvidence(plan: resumed, rootSeed: state.rootSeed)) == .accepted)
+        let after = accumulator.report
+        #expect(after.availability == .available)
+        #expect(after.observationCount == before.observationCount + 2)
+        #expect(after.omittedPhraseCount == 0 && after.omittedBarCount == 0)
+        let episode = try #require(after.recentEpisodes.last)
+        #expect(episode.episodeID == episodeID)
+        #expect(episode.observationCount == before.recentEpisodes.last.map { $0.observationCount + 1 })
+        print("LONG_HORIZON_NEUTRAL_FALLBACK phrase=\(recovery.phraseIndex) episode=\(episodeID) bars=\(recovery.barCount) core-retained=true")
+        return
+      }
+      #expect(accumulator.observe(syntheticEvidence(plan: plan, rootSeed: state.rootSeed)) == .accepted)
+      previousEpisodeID = plan.longHorizonEnergyCoordination.episodeID
+      state.advancePlanning(using: plan)
+    }
+    Issue.record("No debt-safe neutral fallback retaining the pending episode in the bounded canonical journey")
+  }
+
+  @Test("Neutral fallback cannot reopen an episode completed by a different bound episode")
+  func completedEpisodeCannotResumeAcrossNeutralFallback() throws {
+    let director = AutonomousSessionDirector(rootSeed: 48_291)
+    var state = director.initialState()
+    var accumulator = LongHorizonSignalTrajectoryAccumulator(rootSeed: state.rootSeed, sampleRate: 8_000)
+    let first = director.plan(from: state)
+    let episodeID = try #require(first.longHorizonEnergyCoordination.episodeID)
+    #expect(accumulator.observe(syntheticEvidence(plan: first, rootSeed: state.rootSeed)) == .accepted)
+    state.advancePlanning(using: first)
+    let second = director.plan(from: state)
+    let other = try changingEpisodeID(in: second.longHorizonEnergyCoordination, to: episodeID &+ 1)
+    #expect(accumulator.observe(syntheticEvidence(plan: second, rootSeed: state.rootSeed, coordination: other)) == .accepted)
+    state.advancePlanning(using: second)
+    let fallbackPlan = director.plan(from: state)
+    let neutral = LongHorizonEnergyCoordination.neutral(phraseIndex: fallbackPlan.phraseIndex,
+      startBar: fallbackPlan.startBar, phraseKind: fallbackPlan.kind)
+    #expect(accumulator.observe(syntheticEvidence(plan: fallbackPlan, rootSeed: state.rootSeed, coordination: neutral)) == .accepted)
+    state.advancePlanning(using: fallbackPlan)
+    let returnPlan = director.plan(from: state)
+    let before = accumulator.report
+    #expect(accumulator.observe(syntheticEvidence(plan: returnPlan, rootSeed: state.rootSeed)) == .unavailable(.episodeReentry))
+    let after = accumulator.report
+    #expect(after.observationCount == before.observationCount)
+    #expect(after.renderedBarCount == before.renderedBarCount)
+    #expect(after.metrics == before.metrics && after.recentEpisodes == before.recentEpisodes)
+    #expect(after.operatorCounts == before.operatorCounts && after.operatorTransitions == before.operatorTransitions)
+  }
+
+  @Test("Pending episode operator cannot change across neutral fallback")
+  func neutralFallbackCannotChangePendingOperator() throws {
+    let director = AutonomousSessionDirector(rootSeed: 48_291)
+    var state = director.initialState()
+    var accumulator = LongHorizonSignalTrajectoryAccumulator(rootSeed: state.rootSeed, sampleRate: 8_000)
+    let first = director.plan(from: state)
+    #expect(accumulator.observe(syntheticEvidence(plan: first, rootSeed: state.rootSeed)) == .accepted)
+    state.advancePlanning(using: first)
+    let fallbackPlan = director.plan(from: state)
+    let neutral = LongHorizonEnergyCoordination.neutral(phraseIndex: fallbackPlan.phraseIndex,
+      startBar: fallbackPlan.startBar, phraseKind: fallbackPlan.kind)
+    #expect(accumulator.observe(syntheticEvidence(plan: fallbackPlan, rootSeed: state.rootSeed, coordination: neutral)) == .accepted)
+    state.advancePlanning(using: fallbackPlan)
+    let next = director.plan(from: state)
+    let before = accumulator.report
+    var object = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(next.longHorizonEnergyCoordination)) as? [String: Any])
+    object["operatorKind"] = LongHorizonEpisodeOperator.rise.rawValue
+    object["target"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode(LongHorizonContinuationState.target(for: .rise)))
+    let foreign = try JSONDecoder().decode(LongHorizonEnergyCoordination.self,
+      from: JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
+    let evidence = syntheticEvidence(plan: next, rootSeed: state.rootSeed, coordination: foreign)
+    #expect(evidence.isComplete)
+    #expect(accumulator.observe(evidence) == .unavailable(.inconsistentEvidence))
+    let after = accumulator.report
+    #expect(after.observationCount == before.observationCount && after.metrics == before.metrics)
+    #expect(after.recentEpisodes == before.recentEpisodes && after.operatorCounts == before.operatorCounts)
+  }
+
   @Test("Eight-hour checkpoints retain fixed-capacity signal and episode state")
   func eightHourTrajectoryIsBounded() throws {
     let director = AutonomousSessionDirector(rootSeed: 48_291)
@@ -92,8 +194,11 @@ struct LongHorizonSignalTrajectoryTests {
     #expect(
       report.qualificationReason
         == "no-calibrated-long-horizon-policy")
+    #expect(report.schemaVersion == LongHorizonSignalTrajectoryReportSchema.schemaVersion)
+    #expect(report.schemaIdentifier == LongHorizonSignalTrajectoryReportSchema.schemaIdentifier)
+    #expect(report.recentPhrases.allSatisfy { $0.schemaVersion == 1 && $0.schemaIdentifier == "autotechno-long-horizon-signal-trajectory.v1" })
     #expect(report.trajectoryFingerprint.count == 16)
-    #expect(report.trajectoryFingerprint == "571eb657d7754172")
+    #expect(report.trajectoryFingerprint == "3ec4be3485e7455a")
     #expect(encoded.count < 500_000)
     print(
       "LONG_HORIZON_SIGNAL_8H observations=\(report.observationCount) "
@@ -302,7 +407,8 @@ private func syntheticEvidence(
   plan: AutonomousPhrasePlan,
   rootSeed: UInt64,
   sampleRate: Double = 8_000,
-  signalOffset: Double = 0
+  signalOffset: Double = 0,
+  coordination: LongHorizonEnergyCoordination? = nil
 ) -> LongHorizonSignalPhraseEvidence {
   let barEvidence = plan.resolvedBars.map { resolved in
     LongHorizonSignalBarEvidence(
@@ -339,7 +445,7 @@ private func syntheticEvidence(
     phraseIndex: plan.phraseIndex,
     startBar: plan.startBar,
     phraseKind: plan.kind,
-    coordination: plan.longHorizonEnergyCoordination,
+    coordination: coordination ?? plan.longHorizonEnergyCoordination,
     sampleRate: sampleRate,
     planFingerprint: AutonomousTypedFingerprint.plan(plan),
     candidateEvidenceFingerprint: fixedHex(base &* 17),
@@ -352,4 +458,11 @@ private func syntheticEvidence(
 private func fixedHex(_ value: UInt64) -> String {
   let raw = String(value, radix: 16)
   return String(repeating: "0", count: 16 - raw.count) + raw
+}
+
+private func changingEpisodeID(in coordination: LongHorizonEnergyCoordination, to id: UInt64) throws -> LongHorizonEnergyCoordination {
+  var object = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(coordination)) as? [String: Any])
+  object["episodeID"] = id
+  return try JSONDecoder().decode(LongHorizonEnergyCoordination.self,
+    from: JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
 }

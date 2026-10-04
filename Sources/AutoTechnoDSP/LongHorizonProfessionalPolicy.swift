@@ -7,17 +7,17 @@ import Foundation
 /// cross-episode relationships.
 package enum LongHorizonProfessionalPolicySchema {
   package static let observationVersion =
-    "autotechno-long-horizon-policy-observation.v3"
+    "autotechno-long-horizon-policy-observation.v4"
   package static let corpusVersion =
-    "autotechno-long-horizon-policy-corpus.v3"
+    "autotechno-long-horizon-policy-corpus.v4"
   package static let profileVersion =
-    "autotechno-long-horizon-professional-profile.v17"
+    "autotechno-long-horizon-professional-profile.v18"
   package static let adversarialVersion =
-    "autotechno-long-horizon-adversarial.v17"
+    "autotechno-long-horizon-adversarial.v18"
   package static let holdoutVersion =
-    "autotechno-long-horizon-holdout.v17"
+    "autotechno-long-horizon-holdout.v18"
   package static let policyFamilyVersion =
-    "autotechno-long-horizon.primary-calibrated.v17"
+    "autotechno-long-horizon.primary-calibrated.v18"
   package static let minimumDevelopmentJourneyCount = 7
   package static let minimumHoldoutJourneyCount = 2
   package static let minimumJourneyBars = 7_200

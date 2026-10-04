@@ -1,15 +1,15 @@
 import Foundation
 
-/// Current hour-scale artifact target. Missing v17 resources remain unavailable;
-/// historical v16 bytes cannot activate this policy. Exact qualification identities
+/// Current hour-scale artifact target. Missing v18 resources remain unavailable;
+/// historical v16/v17 bytes cannot activate this policy. Exact qualification identities
 /// are installed together only after the fresh native study passes.
 package struct LongHorizonProfessionalPolicyArtifacts: Sendable {
   package static let profileResource =
-    "long-horizon-professional-profile-v17"
+    "long-horizon-professional-profile-v18"
   package static let adversarialResource =
-    "long-horizon-adversarial-suite-v17"
+    "long-horizon-adversarial-suite-v18"
   package static let holdoutResource =
-    "long-horizon-holdout-v17"
+    "long-horizon-holdout-v18"
   package static let expectedProfileFingerprint: String? = nil
   package static let expectedAdversarialFingerprint: String? = nil
   package static let expectedHoldoutFingerprint: String? = nil

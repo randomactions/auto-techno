@@ -273,10 +273,13 @@ struct LongHorizonProfessionalPolicyTests {
         from: JSONSerialization.data(withJSONObject: changed, options: [.sortedKeys]))
       #expect(!retagged.isComplete)
     }
-    object["schemaVersion"] = "autotechno-long-horizon-policy-observation.v2"
-    #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
-      try LongHorizonPolicyObservation.decodeDeterministicJSON(
-        JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
+    for retired in ["autotechno-long-horizon-policy-observation.v2",
+      "autotechno-long-horizon-policy-observation.v3"] {
+      object["schemaVersion"] = retired
+      #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
+        try LongHorizonPolicyObservation.decodeDeterministicJSON(
+          JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]))
+      }
     }
   }
 
@@ -408,6 +411,25 @@ struct LongHorizonProfessionalPolicyTests {
     #expect(!text.contains(#"\"sampleData\":"#))
     #expect(!text.contains(#"\"waveform\":"#))
     #expect(observation.sourceFingerprint.count == 16)
+  }
+
+  @Test("Retired neutral-closure model and runtime schemas cannot acquire current authority")
+  func retiredNeutralClosureSchemasAreRefused() throws {
+    let artifacts = try qualifiedArtifacts()
+    let current = try LongHorizonRuntimePolicyObservation(
+      calibrationObservation: artifacts.holdoutCorpus.observations[0], sampleRate: 8_000)
+    #expect(current.isStructurallyComplete)
+    var runtime = try #require(JSONSerialization.jsonObject(with: current.deterministicJSON()) as? [String: Any])
+    runtime["schemaVersion"] = "autotechno-long-horizon-runtime-observation.v2"
+    let retired = try JSONDecoder().decode(LongHorizonRuntimePolicyObservation.self,
+      from: JSONSerialization.data(withJSONObject: runtime, options: [.sortedKeys]))
+    #expect(!retired.isStructurallyComplete)
+    var profile = try #require(JSONSerialization.jsonObject(with: artifacts.profile.deterministicJSON()) as? [String: Any])
+    profile["profileVersion"] = "autotechno-long-horizon-professional-profile.v17"
+    #expect(throws: LongHorizonProfessionalPolicyError.nonCanonicalJSON) {
+      try LongHorizonProfessionalProfile.decodeDeterministicJSON(
+        JSONSerialization.data(withJSONObject: profile, options: [.sortedKeys]))
+    }
   }
 
   @Test("Every failed dimension maps to one bounded future decision reason")

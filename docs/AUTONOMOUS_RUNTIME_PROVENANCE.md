@@ -1283,7 +1283,7 @@ artifacts. Raw PCM remains outside the artifacts and runtime observation.
 
 ## Implemented bounded long-horizon future adaptation
 
-`AutoTechnoDSP` owns `autotechno-long-horizon-runtime-observation.v2` and a
+`AutoTechnoDSP` owns `autotechno-long-horizon-runtime-observation.v3` and a
 fixed-capacity `LongHorizonFutureAdaptationState`. Detached preparation reduces
 only an accepted prepared phrase into semantic, operator/signal, and effect
 evidence. The runtime state validates exact root, phrase/bar continuity, route
@@ -1840,12 +1840,12 @@ This offline bootstrap uses the qualified corrected-source primary model and
 nil Long Horizon state/policy in the existing shared owner. It is not a production
 artifact pair or an adaptation decision. Exact clean execution source and model
 identities are checked before and after each full native route. Every accepted
-phrase contributes signal and effect-dose evidence; observation v3 binds those
+phrase contributes signal and effect-dose evidence; observation v4 binds those
 counts and rejects sparse or incompatible routes. The seven development and two
 disjoint holdout roots remain separate and fixed. A naturally closed child chain
 and complete operator coverage are required before fitting; refusal diagnostics
 and the default-off four-phrase probe retain no qualification or activation
-claim. Historical v16 resources remain historical fixtures. Current v17 seals
+claim. Historical v16 resources remain historical fixtures. Current v18 seals
 are absent until qualified resources are installed together.
 
 The same native producer now retains the accepted closed leaf across fresh
@@ -1882,6 +1882,35 @@ traversal proof only; the full7/2 corpus still requires7800 canonical bars,
 dense accepted evidence, complete operator transitions and a closed leaf.
 Windows currently uses neutral retry defaults and retains accepted repeats;
 shared runtime recovery convergence remains a separate required validation.
+
+The fresh e3c3741 two-native recovery probe accepted the debt-safe release after
+one six-bar exact retained repeat and two measured rejected proposals. Both
+routes then refused signal evidence for phrase34 as episode-reentry after34
+accepted phrases/368 canonical bars. The accepted phrase33 coordination was
+neutral conservative fallback. The bounded Core/DSP control independently
+reproduces that Core retains payoff episode3243899275292625950 while the prior
+signal accumulator incorrectly closed it on that neutral record. These local
+failed reports are diagnostics, not full native Long Horizon qualification.
+
+Signal trajectory report interpretation v2 now treats a complete neutral
+conservative fallback as globally observed signal without inventing episode or
+operator attribution. The pending episode and its counters remain unchanged;
+only a different bound episode identity completes it. A subsequent observation
+with the same pending identity must preserve the operator and all existing rate,
+order, evidence, overflow and cancellation contracts. A completed identity
+still cannot re-enter, including through an intervening neutral fallback. No
+Core score, musical state, renderer, PCM, primary calibration or callback changes.
+The report retains the existing32 phrase/transition and16 episode capacities.
+
+Report v2 has a separate schema owner and hashes its interpretation identifier.
+Same-pass phrase evidence stays signal-trajectory v1. Current runtime reduction
+requires report v2; observation/adaptation v3, Long observation/corpus v4 and
+profile/adversarial/holdout/policy v18 refuse prior interpretation authority.
+Historical reports/resources keep their bytes and meaning; new version names
+cannot qualify them. No v18 seals or paired resources are installed. The neutral
+fallback/resume and completed-ID/operator controls are structural synthetic
+fixtures; actual two-native recovered traversal and the complete7/2 native
+corpus, capacity, deadlines and physical-output gates remain required.
 
 Malformed request identity validation now precedes the large generic shared
 preparation frame, preserving the same cancellation priority and request failure
@@ -1929,7 +1958,7 @@ Profile schema 25/version v33 and primary policy/evaluator v32 invalidate prior
 qualification. The completed d1259f3 fresh native study supplies exact primary
 seals: profile eb1eba16cde88415, adversarial b76d744054bfa22f and
 holdout 19742f5c60933b29. The long-horizon dependency now binds that exact
-primary evaluator identity. Qualified Long Horizon v17 seals and paired production
+primary evaluator identity. Qualified Long Horizon v18 seals and paired production
 resources remain absent.
 Synthetic reduction/replay controls have no activation authority. The live-target
 artifact gate uses the same continuous observation/profile scope owner and exact
