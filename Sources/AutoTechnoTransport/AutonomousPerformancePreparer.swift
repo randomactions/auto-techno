@@ -728,6 +728,30 @@ package enum AutonomousPerformancePreparer {
         let continuation: ProspectivePerformanceContinuation?
     }
 
+    /// Immutable diagnostic borrows are held behind one reference. Keeping
+    /// large request values in a nested registration closure would copy them
+    /// onto the already-deep cooperative render stack. This owner expires when
+    /// the synchronous prepare call returns; it is never stored by the probe.
+    private final class ChainStorageOwners {
+        let root: PhrasePreparationRequest
+        let active: PhrasePreparationRequest
+        let frames: [PendingFrame]
+        init(root: PhrasePreparationRequest, active: PhrasePreparationRequest, frames: [PendingFrame]) {
+            self.root = root; self.active = active; self.frames = frames
+        }
+        @inline(never) func register(_ inventory: NumericStorageInventory) {
+            registerRequestStorage(root, inventory: inventory, owner: "chain.root-request")
+            registerRequestStorage(active, inventory: inventory, owner: "chain.active-request")
+            for ordinal in frames.indices {
+                registerRequestStorage(frames[ordinal].request, inventory: inventory,
+                    owner: "chain.parent-request.\(ordinal)")
+                frames[ordinal].pending.preview.registerWorkingStorage(inventory: inventory,
+                    owner: "chain.parent.\(ordinal)")
+            }
+            withExtendedLifetime(self) {}
+        }
+    }
+
     /// Single-writer synchronous reservation, confined to one render call.
     /// It is never used by callbacks or shared concurrently between tasks.
     private final class RenderReservation: @unchecked Sendable {
@@ -757,6 +781,7 @@ package enum AutonomousPerformancePreparer {
         longHorizonPolicy: LongHorizonProfessionalPolicy?,
         diagnosticRoleStemCapture: Bool = false,
         diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil,
+        workingStorageProbe: PreparationWorkingStorageProbe? = nil,
         makeEvaluator: @Sendable (PhrasePreparationRequest) -> E,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> PerformancePreparationOutcome {
@@ -794,7 +819,14 @@ package enum AutonomousPerformancePreparer {
                 return fail("resource-bound", ["sources=\(resource.sourceCount)",
                     "reserved-bytes=\(resource.reservedPeakWorkingByteCount)", "next-bars=\(plan.barCount)"])
             }
-            let outcome = AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
+            let outcome = {
+                let observation = workingStorageProbe.map { probe in
+                    let owners = ChainStorageOwners(root: request, active: current, frames: frames)
+                    return PreparationStorageObservation(probe: probe, prefix: "chain",
+                        bar: plan.startBar) { inventory in owners.register(inventory) }
+                }
+                observation?.observe("incoming") { _ in }
+                return AutonomousPhrasePreparer.prepareDiagnosingIfNotCancelled(
                 plan: plan, sessionSeed: current.sourceState.rootSeed, memory: current.sourceState.memory,
                 sampleRate: current.key.sampleRate, incomingRenderState: current.incomingRenderState,
                 incomingGraphState: current.incomingGraphState, previousGraph: current.previousGraph,
@@ -803,11 +835,13 @@ package enum AutonomousPerformancePreparer {
                 pendingLiveMasterBinding: current.pendingLiveMasterBinding,
                 liveTargetStartSample: current.key.liveTargetStartSample,
                 diagnosticRoleStemCapture: capture,
-                diagnosticRoleStemSession: diagnosticRoleStemSession, evaluator: evaluator,
+                diagnosticRoleStemSession: diagnosticRoleStemSession,
+                workingStorageObservation: observation, evaluator: evaluator,
                 deferPreparedValidation: true,
                 renderPassReservation: { count in
                     !evaluator.requiresPreparedValidation || reservation.claim(count)
                 }, cancellationRequested: cancellationRequested)
+            }()
             guard !cancellationRequested() else { return fail("cancelled") }
             guard !reservation.refused else { return fail("resource-bound") }
             resource = reservation.value
@@ -852,6 +886,15 @@ package enum AutonomousPerformancePreparer {
                 break
             }
         }
+        workingStorageProbe?.observe(phase: "chain.suspended", bar: request.sourceState.memory.totalBars) { inventory in
+            registerRequestStorage(request, inventory: inventory, owner: "chain.root-request")
+            registerRequestStorage(current, inventory: inventory, owner: "chain.active-request")
+            for (ordinal, frame) in frames.enumerated() {
+                registerRequestStorage(frame.request, inventory: inventory, owner: "chain.frame-request.\(ordinal)")
+                frame.pending.preview.registerWorkingStorage(inventory: inventory, owner: "chain.frame.\(ordinal)")
+            }
+            withExtendedLifetime((request, current, frames)) {}
+        }
         var successor: PreparedAutonomousPhrase?
         var reduced: [PreparedPerformancePhrase] = []
         reduced.reserveCapacity(frames.count)
@@ -890,6 +933,20 @@ package enum AutonomousPerformancePreparer {
             guard let node = packed.preparedPhrase else { return packed }
             reduced.append(node)
             successor = prepared
+            workingStorageProbe?.observe(phase: "chain.reduced", bar: prepared.plan.startBar) { inventory in
+                registerRequestStorage(request, inventory: inventory, owner: "chain.root-request")
+                registerRequestStorage(current, inventory: inventory, owner: "chain.active-request")
+                for (ordinal, suspended) in frames.enumerated() {
+                    registerRequestStorage(suspended.request, inventory: inventory,
+                        owner: "chain.frame-request.\(ordinal)")
+                    suspended.pending.preview.registerWorkingStorage(inventory: inventory,
+                        owner: "chain.frame.\(ordinal)")
+                }
+                for (ordinal, node) in reduced.enumerated() {
+                    inventory.register(node.prepared, owner: "chain.reduced.\(ordinal)")
+                }
+                withExtendedLifetime((request, current, frames, reduced, prepared)) {}
+            }
         }
         guard let root = reduced.popLast(), !cancellationRequested() else { return fail("cancelled") }
         if let session = diagnosticRoleStemSession {
@@ -902,6 +959,15 @@ package enum AutonomousPerformancePreparer {
             outgoingLongHorizonState: root.outgoingLongHorizonState,
             longHorizonDecision: root.longHorizonDecision, waveforms: root.waveforms,
             retainedContinuations: Array(reduced.reversed()), preparationChainResourceBudget: resource))
+    }
+
+    /// Only primitive numeric owners; Core score/metadata and analysis heaps
+    /// remain separate unqualified allocations. No musical or admission choice.
+    @inline(never) private static func registerRequestStorage(_ request: borrowing PhrasePreparationRequest,
+        inventory: NumericStorageInventory, owner: String) {
+        AutonomousTypedFingerprint.registerContinuationStorage(renderState: request.incomingRenderState,
+            generatedDSPState: request.incomingGraphState, inventory: inventory, owner: owner + ".incoming")
+        withExtendedLifetime(request) {}
     }
 
     private static func packagePerformance(

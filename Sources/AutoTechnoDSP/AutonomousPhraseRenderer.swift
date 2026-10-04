@@ -2091,10 +2091,12 @@ package enum AutonomousPhraseRenderer {
         diagnosticRoleStemCapture: Bool = false,
         diagnosticRoleStemSink: (@Sendable (AutonomousBarRoleStemCapture, RenderBlock) -> Bool)? = nil,
         workingStorageProbe: PreparationWorkingStorageProbe? = nil,
+        workingStorageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> AutonomousPhraseRenderProduct? {
         guard !cancellationRequested(),
-            !(diagnosticRoleStemCapture && diagnosticRoleStemSink != nil) else { return nil }
+            !(diagnosticRoleStemCapture && diagnosticRoleStemSink != nil),
+            workingStorageProbe == nil || workingStorageObservation == nil else { return nil }
         let captureRequested = diagnosticRoleStemCapture || diagnosticRoleStemSink != nil
         let synthPlan = SynthPerformancePlan(
             scene: plan.scene, dna: plan.dna, kind: plan.kind,
@@ -2132,16 +2134,18 @@ package enum AutonomousPhraseRenderer {
                 scene: plan.scene,
                 synthPerformance: synthPerformance
             )
+            let barObservation = workingStorageObservation?.atBar(performance.bar) ??
+                workingStorageProbe.map { PreparationStorageObservation(probe: $0,
+                    prefix: "", bar: performance.bar) }
             var protectedRhythmState = state
             let protectedRhythm = {
-                let observation = workingStorageProbe.map { probe in
+                let observation = barObservation.map { outer in
                     let outerState = state
                     let outerGraph = graphState
                     let outerBlocks = blocks
                     let outerHolds = holdEvolutionAccumulators
                     let outerCaptures = diagnosticRoleStemCaptures
-                    return PreparationStorageObservation(probe: probe,
-                        prefix: "protected-voice", bar: performance.bar) { inventory in
+                    return outer.extending("protected-voice") { inventory in
                         inventory.registerBlocks(outerBlocks, owner: "outer.primary")
                         for (ordinal, hold) in outerHolds.enumerated() {
                             hold.registerStorage(inventory: inventory, owner: "outer.hold.\(ordinal)")
@@ -2169,7 +2173,7 @@ package enum AutonomousPhraseRenderer {
                     storageObservation: observation
                 )
             }()
-            workingStorageProbe?.observe(phase: "protected-voice-return", bar: performance.bar) { inventory in
+            barObservation?.observe("protected-voice-return") { inventory in
                 workspace.buffers.registerStorage(inventory: inventory, owner: "workspace")
                 inventory.register(protectedRhythm, owner: "protected")
                 inventory.registerBlocks(blocks, owner: "primary")
@@ -2189,15 +2193,14 @@ package enum AutonomousPhraseRenderer {
             }
             guard !cancellationRequested() else { return nil }
             let rendered = {
-                let observation = workingStorageProbe.map { probe in
+                let observation = barObservation.map { outer in
                     let outerState = protectedRhythmState
                     let outerGraph = graphState
                     let outerBlocks = blocks
                     let outerHolds = holdEvolutionAccumulators
                     let outerCaptures = diagnosticRoleStemCaptures
                     let outerProtected = protectedRhythm
-                    return PreparationStorageObservation(probe: probe,
-                        prefix: "full-voice", bar: performance.bar) { inventory in
+                    return outer.extending("full-voice") { inventory in
                         inventory.registerBlocks(outerBlocks, owner: "outer.primary")
                         for (ordinal, hold) in outerHolds.enumerated() {
                             hold.registerStorage(inventory: inventory, owner: "outer.hold.\(ordinal)")
@@ -2228,7 +2231,7 @@ package enum AutonomousPhraseRenderer {
                     storageObservation: observation
                 )
             }()
-            workingStorageProbe?.observe(phase: "full-voice-return", bar: performance.bar) { inventory in
+            barObservation?.observe("full-voice-return") { inventory in
                 workspace.buffers.registerStorage(inventory: inventory, owner: "workspace")
                 inventory.register(protectedRhythm, owner: "protected")
                 inventory.register(rendered, owner: "full")
@@ -2362,15 +2365,14 @@ package enum AutonomousPhraseRenderer {
                 graphDoseInputRight = graphInputRight
             }
             let generated = {
-                let observation = workingStorageProbe.map { probe in
+                let observation = barObservation.map { outer in
                     let outerWorkspace = workspace
                     let outerState = state
                     let outerProtectedState = protectedRhythmState
                     let outerBlocks = blocks
                     let outerHolds = holdEvolutionAccumulators
                     let outerCaptures = diagnosticRoleStemCaptures
-                    return PreparationStorageObservation(probe: probe,
-                        prefix: "generated-graph", bar: performance.bar) { inventory in
+                    return outer.extending("generated-graph") { inventory in
                         outerWorkspace.buffers.registerStorage(inventory: inventory, owner: "outer.workspace")
                         inventory.register(protectedRhythm, owner: "outer.protected")
                         inventory.register(rendered, owner: "outer.full")
@@ -2450,7 +2452,7 @@ package enum AutonomousPhraseRenderer {
                     generated.1.count == graphFrameCount
             )
             guard !cancellationRequested() else { return nil }
-            workingStorageProbe?.observe(phase: "graph-pump-return", bar: performance.bar) { inventory in
+            barObservation?.observe("graph-pump-return") { inventory in
                 workspace.buffers.registerStorage(inventory: inventory, owner: "workspace")
                 inventory.register(protectedRhythm, owner: "protected")
                 inventory.register(rendered, owner: "full")
@@ -2915,7 +2917,7 @@ package enum AutonomousPhraseRenderer {
                     authoredTerminalSilence: climaxOutput.evidence.active
                 )
             }
-            workingStorageProbe?.observe(phase: "bar-delivery", bar: performance.bar) { inventory in
+            barObservation?.observe("bar-delivery") { inventory in
                 workspace.buffers.registerStorage(inventory: inventory, owner: "workspace")
                 inventory.register(protectedRhythm, owner: "protected")
                 inventory.register(rendered, owner: "full")

@@ -14,6 +14,8 @@ package struct NumericStorageOwnerRecord: Codable, Equatable, Sendable {
 
 package struct NumericStorageSnapshot: Codable, Equatable, Sendable {
     package let phase: String
+    /// Set only for a conditional group maximum of this physical phase.
+    package let observedPhase: String?
     package let bar: Int
     package let uniqueBufferCapacityBytes: Int
     /// Existing typed scalar/field encoding headroom, separate from actual
@@ -88,7 +90,7 @@ package final class NumericStorageInventory {
     }
 
     package func snapshot(phase: String, bar: Int) -> NumericStorageSnapshot {
-        NumericStorageSnapshot(phase: phase, bar: bar,
+        NumericStorageSnapshot(phase: phase, observedPhase: nil, bar: bar,
             uniqueBufferCapacityBytes: uniqueBufferCapacityBytes,
             typedMetadataHeadroomBytes: typedMetadataHeadroomBytes,
             ownerRecords: records, valid: valid &&
@@ -110,11 +112,12 @@ package final class PreparationWorkingStorageProbe: @unchecked Sendable {
     package static let maximumPhaseCount = 32
 
     package func observe(phase: String, bar: Int,
+        additionalMaximumPhase: String? = nil,
         register: (NumericStorageInventory) -> Void) {
-        guard valid, !phase.isEmpty, phase.utf8.count <= 128,
-            maxima[phase] != nil || maxima.count < Self.maximumPhaseCount else {
-            valid = false; return
-        }
+        let names = Set([phase] + (additionalMaximumPhase.map { [$0] } ?? []))
+        let missing = names.filter { maxima[$0] == nil }.count
+        guard valid, names.allSatisfy({ !$0.isEmpty && $0.utf8.count <= 128 }),
+            maxima.count + missing <= Self.maximumPhaseCount else { valid = false; return }
         let inventory = NumericStorageInventory()
         register(inventory)
         let snapshot = inventory.snapshot(phase: phase, bar: bar)
@@ -122,9 +125,16 @@ package final class PreparationWorkingStorageProbe: @unchecked Sendable {
         let observations = observationCount.addingReportingOverflow(1)
         guard !observations.overflow else { valid = false; return }
         observationCount = observations.partialValue
-        let current = maxima[phase]
-        if current == nil || snapshot.numericPlusTypedHeadroomBytes > current!.numericPlusTypedHeadroomBytes {
-            maxima[phase] = snapshot
+        for name in names {
+            let value = name == phase ? snapshot : NumericStorageSnapshot(
+                phase: name, observedPhase: phase, bar: snapshot.bar,
+                uniqueBufferCapacityBytes: snapshot.uniqueBufferCapacityBytes,
+                typedMetadataHeadroomBytes: snapshot.typedMetadataHeadroomBytes,
+                ownerRecords: snapshot.ownerRecords, valid: snapshot.valid)
+            let current = maxima[name]
+            if current == nil || value.numericPlusTypedHeadroomBytes > current!.numericPlusTypedHeadroomBytes {
+                maxima[name] = value
+            }
         }
     }
 }
@@ -180,27 +190,79 @@ package struct PreparationStorageObservation {
     package let prefix: String
     package let bar: Int
     private let registerOuter: (NumericStorageInventory) -> Void
+    private let additionalMaximumPhase: String?
 
     package init(probe: PreparationWorkingStorageProbe, prefix: String, bar: Int,
-        registerOuter: @escaping (NumericStorageInventory) -> Void = { _ in }) {
+        additionalMaximumPhase: String? = nil, registerOuter: @escaping (NumericStorageInventory) -> Void = { _ in }) {
         self.probe = probe; self.prefix = prefix; self.bar = bar
         self.registerOuter = registerOuter
+        self.additionalMaximumPhase = additionalMaximumPhase
     }
 
     package func observe(_ phase: String, register: (NumericStorageInventory) -> Void) {
-        probe.observe(phase: prefix + "." + phase, bar: bar) { inventory in
+        probe.observe(phase: prefix.isEmpty ? phase : prefix + "." + phase, bar: bar,
+            additionalMaximumPhase: additionalMaximumPhase) { inventory in
             registerOuter(inventory)
             register(inventory)
             withExtendedLifetime(self) {}
         }
     }
 
+    /// Reuses the same immutable outer owners for this synchronous bar only.
+    package func atBar(_ bar: Int) -> PreparationStorageObservation {
+        PreparationStorageObservation(probe: probe, prefix: prefix, bar: bar,
+            additionalMaximumPhase: additionalMaximumPhase, registerOuter: registerOuter)
+    }
+
+    /// One conditional maximum of the same physical snapshots, not another
+    /// inventory, PCM owner, render, or increment of the observation count.
+    package func retainingMaximum(_ phase: String?) -> PreparationStorageObservation {
+        PreparationStorageObservation(probe: probe, prefix: prefix, bar: bar,
+            additionalMaximumPhase: phase, registerOuter: registerOuter)
+    }
+
     package func extending(_ component: String,
         registerOuter: @escaping (NumericStorageInventory) -> Void) -> PreparationStorageObservation {
-        PreparationStorageObservation(probe: probe, prefix: prefix + "." + component, bar: bar) {
+        PreparationStorageObservation(probe: probe, prefix: prefix.isEmpty ? component : prefix + "." + component, bar: bar,
+            additionalMaximumPhase: additionalMaximumPhase) {
             inventory in
             self.registerOuter(inventory)
             registerOuter(inventory)
+        }
+    }
+}
+
+
+extension NumericStorageInventory {
+    package func register(_ product: AutonomousPhraseRenderProduct, owner: String) {
+        registerBlocks(product.blocks, owner: owner + ".primary")
+        for (ordinal, hold) in product.repeatHoldEvolutionCandidates.enumerated() {
+            registerHoldBlocks(hold.blocks, owner: "\(owner).hold.\(ordinal)")
+        }
+        for (ordinal, capture) in product.diagnosticRoleStemCaptures.enumerated() {
+            register(capture, owner: "\(owner).capture.\(ordinal)")
+        }
+        withExtendedLifetime(product) {}
+    }
+
+    package func register(_ source: PreparedAutonomousPhrase, owner: String) {
+        registerBlocks(source.blocks, owner: owner + ".primary")
+        for (ordinal, hold) in source.repeatHoldEvolutions.enumerated() {
+            registerHoldBlocks(hold.blocks, owner: "\(owner).hold.\(ordinal)")
+        }
+        for (ordinal, capture) in source.diagnosticRoleStemCaptures.enumerated() {
+            register(capture, owner: "\(owner).capture.\(ordinal)")
+        }
+        AutonomousTypedFingerprint.registerContinuationStorage(
+            renderState: source.endingRenderState, generatedDSPState: source.endingGraphState,
+            inventory: self, owner: owner + ".continuation")
+        withExtendedLifetime(source) {}
+    }
+
+    package func registerHoldBlocks(_ blocks: [RepeatHoldEvolutionRenderBlock], owner: String) {
+        for (ordinal, block) in blocks.enumerated() {
+            register(block.left, owner: "\(owner).\(ordinal).left")
+            register(block.right, owner: "\(owner).\(ordinal).right")
         }
     }
 }

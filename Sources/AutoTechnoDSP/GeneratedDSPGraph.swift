@@ -1520,6 +1520,13 @@ package final class AutonomousCandidatePreparedPreview: Sendable {
     fileprivate let source: PreparedAutonomousPhrase
     fileprivate init(_ source: PreparedAutonomousPhrase) { self.source = source }
 
+    /// Numeric owners only, through the same inventory as finalized products.
+    /// Does not expose PCM or make this prospective source playable.
+    package func registerWorkingStorage(inventory: NumericStorageInventory, owner: String) {
+        inventory.register(source, owner: owner)
+        withExtendedLifetime(source) {}
+    }
+
     package var plan: AutonomousPhrasePlan { source.plan }
     package var graph: DSPGraphPlan { source.graph }
     package var endingRenderState: RenderState { source.endingRenderState }
@@ -1873,6 +1880,7 @@ package enum AutonomousPhrasePreparer {
         liveTargetStartSample: Int64? = nil,
         diagnosticRoleStemCapture: Bool = false,
         diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil,
+        workingStorageObservation: PreparationStorageObservation? = nil,
         evaluator: E,
         deferPreparedValidation: Bool = false,
         renderPassReservation: @escaping @Sendable (Int) -> Bool = { _ in true },
@@ -1894,6 +1902,7 @@ package enum AutonomousPhrasePreparer {
             liveTargetStartSample: liveTargetStartSample,
             diagnosticRoleStemCapture: diagnosticRoleStemCapture,
             diagnosticRoleStemSession: diagnosticRoleStemSession,
+            workingStorageObservation: workingStorageObservation,
             evaluator: evaluator,
             deferPreparedValidation: deferPreparedValidation,
             renderPassReservation: renderPassReservation,
@@ -1917,6 +1926,7 @@ package enum AutonomousPhrasePreparer {
         liveTargetStartSample: Int64?,
         diagnosticRoleStemCapture: Bool,
         diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil,
+        workingStorageObservation: PreparationStorageObservation? = nil,
         evaluator: E,
         deferPreparedValidation: Bool,
         renderPassReservation: @escaping @Sendable (Int) -> Bool = { _ in true },
@@ -2070,7 +2080,8 @@ package enum AutonomousPhrasePreparer {
         func product(
             plan: AutonomousPhrasePlan,
             kind: AutonomousCandidateAttemptKind = .initialRender,
-            forceHomeUpperTimbre: Bool = false
+            forceHomeUpperTimbre: Bool = false,
+            retainedInitial: CandidateRenderProduct? = nil
         ) -> Result<CandidateRenderProduct, AutonomousPhrasePreparationFailure> {
             let stage: AutonomousPhrasePreparationFailure.Stage =
                 kind == .initialRender ? .initialRender : .correctionRender
@@ -2082,6 +2093,16 @@ package enum AutonomousPhrasePreparer {
                     stage: stage,
                     code: .renderBudgetUnavailable
                 ))
+            }
+            let observation = workingStorageObservation.map { outer in
+                outer.extending("render") { inventory in
+                    AutonomousTypedFingerprint.registerContinuationStorage(
+                        renderState: renderContext.incomingRenderState,
+                        generatedDSPState: renderContext.incomingGraphState,
+                        inventory: inventory, owner: "attempt.incoming")
+                    retainedInitial?.registerWorkingStorage(inventory, owner: "attempt.retained-initial")
+                    withExtendedLifetime((renderContext, retainedInitial)) {}
+                }.retainingMaximum(retainedInitial == nil ? nil : outer.prefix + ".corrective-overlap")
             }
             let result = renderAttempt(
                 plan: plan,
@@ -2119,6 +2140,7 @@ package enum AutonomousPhrasePreparer {
                 diagnosticRoleStemCapture:
                     renderContext.diagnosticRoleStemCapture,
                 diagnosticRoleStemSession: renderContext.diagnosticRoleStemSession,
+                workingStorageObservation: observation,
                 cancellationRequested: renderContext.cancellationRequested
             )
             guard !renderContext.cancellationRequested() else {
@@ -2150,10 +2172,15 @@ package enum AutonomousPhrasePreparer {
                 return .failed(.init(stage: .correctionRender, code: .invalidInput,
                     details: ["diagnostic-superseded-capture-cleanup-failed"]))
             }
+            workingStorageObservation?.observe("before-correction") { inventory in
+                initialPrimary.registerWorkingStorage(inventory, owner: "attempt.retained-initial")
+                withExtendedLifetime(initialPrimary) {}
+            }
             let correctedResult = product(
                 plan: plan,
                 kind: .correctionRender,
-                forceHomeUpperTimbre: true
+                forceHomeUpperTimbre: true,
+                retainedInitial: initialPrimary
             )
             guard case let .success(corrected) = correctedResult else {
                 guard case let .failure(failure) = correctedResult else {
@@ -2188,6 +2215,11 @@ package enum AutonomousPhrasePreparer {
             selectedAttemptIndex: selectedAttemptIndex,
             correctionCount: correctionBudget.used
         )
+        workingStorageObservation?.observe("selected") { inventory in
+            initialPrimary.registerWorkingStorage(inventory, owner: "attempt.initial")
+            selected.registerWorkingStorage(inventory, owner: "attempt.selected")
+            withExtendedLifetime((initialPrimary, selected)) {}
+        }
         return finalize(
             selected: selected,
             transaction: transaction,
@@ -2924,6 +2956,19 @@ package enum AutonomousPhrasePreparer {
             self.attempt = attempt
         }
 
+        func registerWorkingStorage(_ inventory: NumericStorageInventory, owner: String) {
+            inventory.registerBlocks(blocks, owner: owner + ".primary")
+            for (ordinal, hold) in repeatHoldEvolutionCandidates.enumerated() {
+                inventory.registerHoldBlocks(hold.blocks, owner: "\(owner).hold.\(ordinal)")
+            }
+            for (ordinal, capture) in diagnosticRoleStemCaptures.enumerated() {
+                inventory.register(capture, owner: "\(owner).capture.\(ordinal)")
+            }
+            AutonomousTypedFingerprint.registerContinuationStorage(renderState: endingRenderState,
+                generatedDSPState: endingGraphState, inventory: inventory, owner: owner + ".continuation")
+            withExtendedLifetime(self) {}
+        }
+
         func releaseRepeatHoldEvolution() {
             repeatHoldEvolutionCandidates.removeAll(keepingCapacity: false)
         }
@@ -2973,6 +3018,7 @@ package enum AutonomousPhrasePreparer {
         forceHomeUpperTimbre: Bool = false,
         diagnosticRoleStemCapture: Bool = false,
         diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession? = nil,
+        workingStorageObservation: PreparationStorageObservation? = nil,
         cancellationRequested: @escaping @Sendable () -> Bool
     ) -> Result<CandidateRenderProduct, AutonomousPhrasePreparationFailure> {
         let stage: AutonomousPhrasePreparationFailure.Stage =
@@ -3019,12 +3065,19 @@ package enum AutonomousPhrasePreparer {
             forceHomeUpperTimbre: forceHomeUpperTimbre,
             diagnosticRoleStemCapture: diagnosticRoleStemCapture,
             diagnosticRoleStemSink: sink,
+            workingStorageObservation: workingStorageObservation,
             cancellationRequested: cancellationRequested
         ) else {
             return .failure(.init(
                 stage: stage,
                 code: cancellationRequested() ? .cancelled : .rendererUnavailable
             ))
+        }
+        workingStorageObservation?.observe("analysis-input") { inventory in
+            inventory.register(renderProduct, owner: "attempt.product")
+            AutonomousTypedFingerprint.registerContinuationStorage(renderState: renderState,
+                generatedDSPState: graphState, inventory: inventory, owner: "attempt.ending")
+            withExtendedLifetime((renderProduct, renderState, graphState)) {}
         }
         let blocks = renderProduct.blocks
         guard !cancellationRequested() else {

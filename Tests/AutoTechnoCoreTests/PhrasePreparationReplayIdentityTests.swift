@@ -892,6 +892,8 @@ struct IterativeSuccessorPreparationTests {
         let outgoingRender: [String]
         let outgoingGraph: [String]
         let quality: [QualityContinuationState]
+        let blockFingerprints: [[String]]
+        let holdFingerprints: [[[String]]]
     }
 
     private static func reducedControl(_ result: PreparedPerformancePhrase) -> StreamedChainControl {
@@ -901,7 +903,11 @@ struct IterativeSuccessorPreparationTests {
             sourceIdentities: sources.map(\.preparedValidationSourceIdentityFingerprint),
             outgoingRender: sources.map { AutonomousCandidateFingerprint.renderState($0.endingRenderState) },
             outgoingGraph: sources.map { AutonomousCandidateFingerprint.generatedDSPState($0.endingGraphState) },
-            quality: sources.map(\.qualityContinuationState))
+            quality: sources.map(\.qualityContinuationState),
+            blockFingerprints: sources.map { $0.blocks.map { ExactPCMFingerprint.stereo(left: $0.left, right: $0.right) } },
+            holdFingerprints: sources.map { $0.repeatHoldEvolutions.map { $0.blocks.map {
+                ExactPCMFingerprint.stereo(left: $0.left, right: $0.right)
+            } } })
     }
 
     private static func captureParent() throws -> URL {
@@ -909,6 +915,100 @@ struct IterativeSuccessorPreparationTests {
             "autotechno-selected-stream-test-" + UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false)
         return parent
+    }
+
+    @Test("Native chain observations preserve exact admission and bounded corrective refusal")
+    func nativeChainStorageObservations() async throws {
+        for rate in [44_100.0, 48_000.0] {
+            for mode in [Control.Mode.accept, .forceCorrection] {
+                let request = Self.sourceRequest(rate: rate)
+                let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
+                let original = AutonomousCandidateFingerprint.sessionState(request.sourceState)
+                let reference = await Task.detached {
+                    let control = Control(mode: mode)
+                    let outcome = AutonomousPerformancePreparer.prepareChainDiagnosing(
+                        request: request, director: director, longHorizonPolicy: nil,
+                        makeEvaluator: { Evaluator(request: $0, control: control) }, cancellationRequested: { false })
+                    return (products: outcome.preparedPhrase.map(Self.reducedControl),
+                        reservation: outcome.preparedPhrase?.preparationChainResourceBudget,
+                        stage: outcome.failure?.stage, code: outcome.failure?.code,
+                        details: outcome.failure?.details, terminals: control.terminals)
+                }.value
+                // Only reduced evidence crosses into the observed call; the
+                // ordinary arrays and continuation leave scope beforehand.
+                let probe = PreparationWorkingStorageProbe(), control = Control(mode: mode)
+                let outcome = await Task.detached {
+                    AutonomousPerformancePreparer.prepareChainDiagnosing(
+                        request: request, director: director, longHorizonPolicy: nil, workingStorageProbe: probe,
+                        makeEvaluator: { Evaluator(request: $0, control: control) }, cancellationRequested: { false })
+                }.value
+                let exact = outcome.preparedPhrase.map(Self.reducedControl) == reference.products &&
+                    outcome.preparedPhrase?.preparationChainResourceBudget == reference.reservation &&
+                    outcome.failure?.stage == reference.stage && outcome.failure?.code == reference.code &&
+                    outcome.failure?.details == reference.details && control.terminals == reference.terminals &&
+                    AutonomousCandidateFingerprint.sessionState(request.sourceState) == original
+                #expect(exact)
+                #expect(probe.valid && probe.observationCount > 0 && probe.snapshots.allSatisfy { $0.valid })
+                var sourceIdentities: [String] = []
+                if mode == .accept {
+                    let result = try #require(outcome.preparedPhrase)
+                    try Self.checkChainStorage(probe, correction: false)
+                    let sources = [result] + result.retainedContinuations
+                    #expect(sources.count == 2 && result.prepared.preparedValidation?.qualifiedSuccessor === sources[1].prepared)
+                    #expect(sources.allSatisfy { $0.prepared.commitEligible && $0.prepared.diagnosticRoleStemCaptures.isEmpty })
+                    sourceIdentities = sources.map { $0.prepared.preparedValidationSourceIdentityFingerprint ?? "none" }
+                } else {
+                    #expect(outcome.preparedPhrase == nil)
+                    #expect(outcome.failure?.stage == "successor-chain" && outcome.failure?.code == "resource-bound")
+                    #expect(probe.snapshots.contains { $0.phase == "chain.before-correction" })
+                    #expect(probe.snapshots.contains { $0.phase == "chain.corrective-overlap" &&
+                        $0.observedPhase?.hasPrefix("chain.render.") == true && $0.ownerRecords.contains {
+                        $0.owner.hasPrefix("attempt.retained-initial.primary") && $0.capacityBytes > 0
+                    } })
+                    #expect(!probe.snapshots.contains { $0.phase == "chain.reduced" })
+                }
+                let report: [String: Any] = ["schema": "autotechno-chain-storage-control.v1",
+                    "sampleRate": rate, "sources": sourceIdentities.count, "admitted": outcome.preparedPhrase != nil,
+                    "selectedCorrection": mode == .forceCorrection, "observations": probe.observationCount,
+                    "snapshots": try JSONSerialization.jsonObject(with: JSONEncoder().encode(probe.snapshots)),
+                    "exactOutcomeProductsStateAndReservation": exact,
+                    "failureStage": outcome.failure?.stage ?? "none", "failureCode": outcome.failure?.code ?? "none",
+                    "failureDetails": outcome.failure?.details ?? [],
+                    "actualQualifiedChildIdentity": sourceIdentities.last ?? "none", "sourceIdentities": sourceIdentities,
+                    "qualification": "mechanical-only-not-installed", "samePassRoleCapture": false,
+                    "completeWorkingSetQualification": false, "nativeSelectedStreamCaptureCapacityQualified": false,
+                    "instrumentationMayExtendObservedLifetimes": true]
+                print("AUTOTECHNO_CHAIN_STORAGE_CONTROL " + String(decoding:
+                    try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]), as: UTF8.self))
+            }
+        }
+    }
+
+    private static func checkChainStorage(_ probe: PreparationWorkingStorageProbe, correction: Bool) throws {
+        #expect(probe.valid && probe.observationCount > 0)
+        #expect(probe.snapshots.allSatisfy { $0.valid && $0.typedMetadataHeadroomBytes > 0 })
+        let phases = Set(probe.snapshots.map(\.phase))
+        for name in ["chain.incoming", "chain.selected", "chain.suspended", "chain.reduced",
+            "chain.render.analysis-input", "chain.render.bar-delivery", "chain.render.full-voice.product",
+            "chain.render.generated-graph.current.node-return"] {
+            #expect(phases.contains(name))
+        }
+        #expect(phases.contains("chain.before-correction") == correction)
+        let incoming = try #require(probe.snapshots.first { $0.phase == "chain.incoming" })
+        #expect(incoming.ownerRecords.contains { $0.owner.hasPrefix("chain.parent.0.primary") && $0.capacityBytes > 0 })
+        let suspended = try #require(probe.snapshots.first { $0.phase == "chain.suspended" })
+        #expect(suspended.ownerRecords.contains { $0.owner.hasPrefix("chain.frame.0.primary") && $0.capacityBytes > 0 })
+        #expect(suspended.ownerRecords.contains { $0.owner.hasPrefix("chain.frame.1.primary") && $0.capacityBytes > 0 })
+        let reduced = try #require(probe.snapshots.first { $0.phase == "chain.reduced" })
+        #expect(reduced.ownerRecords.contains { $0.owner.hasPrefix("chain.reduced.0.primary") && $0.capacityBytes > 0 && $0.aliasOf != nil })
+        if correction {
+            let before = try #require(probe.snapshots.first { $0.phase == "chain.before-correction" })
+            #expect(before.ownerRecords.contains { $0.owner.hasPrefix("attempt.retained-initial.primary") && $0.capacityBytes > 0 })
+            #expect(!before.ownerRecords.contains { $0.owner.hasPrefix("attempt.retained-initial.hold") || $0.owner.hasPrefix("attempt.retained-initial.capture") })
+            #expect(probe.snapshots.contains { snapshot in snapshot.phase == "chain.corrective-overlap" &&
+                snapshot.observedPhase?.hasPrefix("chain.render.") == true &&
+                snapshot.ownerRecords.contains { $0.owner.hasPrefix("attempt.retained-initial.primary") && $0.capacityBytes > 0 } })
+        }
     }
 
     @Test("Selected initial and corrected drafts bind exact root-child objects and unchanged products")
@@ -930,15 +1030,17 @@ struct IterativeSuccessorPreparationTests {
             let parent = try Self.captureParent(); defer { try? FileManager.default.removeItem(at: parent) }
             let session = DiagnosticRoleStemCaptureSession(parentDirectory: parent)
             let control = Control(mode: mode)
+            let probe = PreparationWorkingStorageProbe()
             let outcome = await Task.detached {
                 AutonomousPerformancePreparer.prepareChainDiagnosing(request: request, director: director,
-                    longHorizonPolicy: nil, diagnosticRoleStemSession: session,
+                    longHorizonPolicy: nil, diagnosticRoleStemSession: session, workingStorageProbe: probe,
                     makeEvaluator: { Evaluator(request: $0, control: control) },
                     cancellationRequested: { false })
             }.value
             let result = try #require(outcome.preparedPhrase, "Streamed chain: \(String(describing: outcome.failure))")
             let sources = ([result] + result.retainedContinuations).map(\.prepared)
             #expect(sources.count == 2 && session.isSealed)
+            try Self.checkChainStorage(probe, correction: mode == .forceCorrection)
             #expect(Self.reducedControl(result) == reference)
             #expect(sources.allSatisfy { $0.diagnosticRoleStemCaptures.isEmpty && $0.commitEligible })
             #expect(session.bindings.count == sources.count)

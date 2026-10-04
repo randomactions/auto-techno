@@ -2181,3 +2181,75 @@ internal processing transients, analysis, encoded/heap storage, incoming/parent/
 child ownership, initial/corrected overlap and writer chunks remain separate
 obligations. Fullcapture charges,128MiB/two-pass limits, current production
 unavailability and every original qualification/promotion gate remain unchanged.
+
+
+## Shared preparation ownership observations
+
+The default-off numeric probe now traverses the same diagnosed canonical
+preparer and iterative shared chain. A synchronous scope joins the original root
+request, active request and suspended parents with the renderer's actual current
+owners. Both primitive capacity and conservative typed continuation headroom use
+the existing canonical visitor. Prepared previews register their private source
+through this inventory without exposing PCM or creating playable authority.
+Finalized primary and hold blocks use the same registration helper. Shared
+request/preview/child buffers are deduplicated only while all actual owners live
+in that snapshot.
+
+Before a corrective render, the existing preparer releases superseded hold
+variants and diagnostic captures. Observation records the remaining initial
+primary blocks and ending state, then retains those actual initial owners beside
+the new render for its synchronous duration. The selected snapshot includes
+initial and selected products together. Initial and corrective renders share
+phase names, so maxima remain bounded across the transaction rather than
+retaining an unbounded per-attempt history. Existing selected-attempt and
+transaction identities continue to identify which pass was accepted.
+
+After rendering, analysis-input observation includes the actual render product
+and ending continuation. It measures that input ownership, not analyzer internals.
+The iterative owner observes suspended requests/previews and then every retained
+preview alongside the actual leaf-to-root reduced products. Reduction still
+requires exact qualified-child object identity and the existing admission proof;
+observation never substitutes for it. Scopes are not retained by pending
+finalizers, prepared playback products or the probe. The normal absent observer
+runs the existing path without inventory work. Numeric observer exhaustion or
+invalid input makes diagnostics unavailable without changing a musical verdict.
+
+Native initial-chain controls compare ordinary and observed whole blocks, hold
+variants, quality, transaction/source identities, ending render/graph state and
+resource reservations, with ordinary arrays leaving scope first. The same native
+forced-correction chain fixture reaches the existing aggregate resource refusal;
+controls require identical ordinary/observed failure details and render trace,
+unchanged incoming state and no admitted product. Its actual partial initial/
+corrective overlap is observed, but a fully admitted native corrective chain
+remains a separate unsatisfied resource obligation. Streamed and capture-off
+reservations intentionally differ under the unchanged fullcapture charge; their
+PCM/state parity comparison does not assert equal resource charges.
+The existing 8kHz streamed selected-root/child controls also observe actual chain
+owners while exporting all32 same-pass channels. These remain mechanical fixture
+checks under an independently declared test evaluator; they do not install policy
+resources, prove native capture admission or confer promotion.
+
+Coverage is still partial: nested voice and node internal transients, analyzer
+windows, encoding and actual heap/Core metadata, waveform envelopes, byte writer
+chunks, combined RSS and deadlines remain separately unqualified. Observed
+lifetimes may be extended by instrumentation. The fullcapture resource charge,
+128MiB ceiling, two-pass bound, current production unavailability and all original
+primary/Long18/Phase1/lifecycle/physical-output requirements remain unchanged.
+
+The shared-chain observation scope holds immutable root/active requests and
+suspended frames behind one detached reference owner. Registration borrows those
+requests through a non-inlined helper. This avoids copying large request tuples
+onto the already-deep cooperative render stack while keeping every numeric owner
+in the same snapshot. It does not increase worker stack size, move rendering to a
+different worker or weaken any observation or test. The first direct native
+observer attempt hit a stack guard in that nested registration closure; its
+negative result remains local until the repaired exact-source controls pass.
+
+A render carrying an actual retained initial candidate also contributes the same
+physical snapshot to one conditional corrective-overlap maximum. The recorded
+observedPhase identifies its original inner phase. This preserves that overlap
+when a larger later child replaces the ordinary phase maximum. It creates no
+second inventory or observation-count increment and shares only immutable owner
+metadata. Both names reserve their slots before registration under the unchanged
+32-phase ceiling; exhausted diagnostics fail closed. Initial and corrective phase
+histories remain bounded and no additional PCM is retained.

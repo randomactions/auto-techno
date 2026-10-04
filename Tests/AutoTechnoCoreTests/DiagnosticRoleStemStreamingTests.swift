@@ -339,6 +339,25 @@ struct DiagnosticRoleStemStreamingTests {
         #expect(probe.valid && probe.snapshots.count == PreparationWorkingStorageProbe.maximumPhaseCount)
         probe.observe(phase: "overflow", bar: 33) { _ in Issue.record("Phase overflow must refuse") }
         #expect(!probe.valid && probe.snapshots.count == PreparationWorkingStorageProbe.maximumPhaseCount)
+        let grouped = PreparationWorkingStorageProbe()
+        grouped.observe(phase: "render", bar: 0, additionalMaximumPhase: "correction") {
+            $0.register(samples, owner: "corrective-owner")
+        }
+        let larger = [Float](repeating: 0, count: 64)
+        grouped.observe(phase: "render", bar: 1) { $0.register(larger, owner: "later-child") }
+        #expect(grouped.valid && grouped.observationCount == 2 && grouped.snapshots.count == 2)
+        let conditional = try #require(grouped.snapshots.first { $0.phase == "correction" })
+        #expect(conditional.observedPhase == "render" && conditional.bar == 0 &&
+            conditional.ownerRecords.first?.owner == "corrective-owner")
+        #expect(grouped.snapshots.first { $0.phase == "render" }?.bar == 1)
+        for index in 2..<PreparationWorkingStorageProbe.maximumPhaseCount - 1 {
+            grouped.observe(phase: "group-\(index)", bar: index) { _ in }
+        }
+        let countBefore = grouped.observationCount
+        grouped.observe(phase: "last", bar: 32, additionalMaximumPhase: "would-overflow") {
+            _ in Issue.record("All maximum slots must be reserved before registering any owner")
+        }
+        #expect(!grouped.valid && grouped.snapshots.count == 31 && grouped.observationCount == countBefore)
         let inventory = NumericStorageInventory()
         for index in 0..<NumericStorageInventory.maximumOwnerCount {
             inventory.register([Float](), owner: "empty-\(index)")
