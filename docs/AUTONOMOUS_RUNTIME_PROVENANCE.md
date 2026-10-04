@@ -1920,8 +1920,15 @@ route, full corpus, v18 model or activation resulted. Source and model bytes and
 the failed route output remain exact in the terminal receipt.
 The native journey now reports the existing typed candidate completeness failure
 count and at most eight named codes inside the existing24-detail limit. This
-adds no completeness rule, retry eligibility, state, render, PCM or authority;
-the full required evidence must be repaired and freshly qualified.
+adds no completeness rule, retry eligibility, state, render, PCM or authority.
+A fresh replay at e05312e reproduced every accepted journey field and original
+refusal detail exactly, identifying one instrument-evidence completeness failure.
+The exact selected refused instrument vector is retained as local-only canonical
+JSON, without overwriting an existing witness. A missing output binding or failed
+write carries a fixed failure detail and cannot be reported as a successful
+witness. The vector is diagnostic evidence only and cannot supply accepted PCM,
+imported continuation or qualification. The required evidence must be repaired
+and freshly qualified.
 
 Malformed request identity validation now precedes the large generic shared
 preparation frame, preserving the same cancellation priority and request failure

@@ -416,6 +416,8 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
               source.prepared.qualityDiagnosticDetails +
               decision.reasonCodes.map { "quality=" + $0.rawValue } +
               Self.candidateCompletenessDiagnostics(source.prepared.selectedCandidateEvidence) +
+              Self.writeRefusedInstrumentCandidate(source.prepared.selectedCandidateEvidence,
+                rootSeed: rootSeed, sampleRate: sampleRate, phraseIndex: state.phraseIndex) +
               Self.refusalRecoveryDiagnostics(request: source.request,
                 rejected: source.prepared, director: director)).prefix(24))
             break
@@ -624,6 +626,24 @@ struct LongHorizonPolicyCalibrationIntegrationTests {
     guard !failures.isEmpty else { return [] }
     return ["candidate-completeness-count=" + String(failures.count)] +
       failures.prefix(8).map { "candidate-completeness=" + $0.rawValue }
+  }
+
+  /// Keep the exact selected, refused vector local for a binding diagnosis.
+  /// No PCM or continuation is imported, and the existing refusal is preserved.
+  private static func writeRefusedInstrumentCandidate(
+    _ candidate: AutonomousCandidateEvaluationVector,
+    rootSeed: UInt64, sampleRate: Double, phraseIndex: Int
+  ) -> [String] {
+    guard candidate.completenessFailures.contains(.instrumentEvidence) else { return [] }
+    guard let directory = ProcessInfo.processInfo.environment[
+      "AUTOTECHNO_LONG_HORIZON_RESOURCE_DIRECTORY"
+    ] else { return ["refused-instrument-witness-output-unavailable"] }
+    let url = URL(fileURLWithPath: directory, isDirectory: true)
+      .appendingPathComponent("refused-candidate-\(rootSeed)-\(Int(sampleRate))-\(phraseIndex).json")
+    do {
+      try candidate.deterministicJSON().write(to: url, options: .withoutOverwriting)
+      return []
+    } catch { return ["refused-instrument-witness-write-failed"] }
   }
 
   /// Inspect the existing Core transition from this actual refusal only.
