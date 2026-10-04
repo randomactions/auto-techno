@@ -419,7 +419,8 @@
         "source-bound prevalence, severity, confidence, ownership, and roadmap-link facts with uncalibrated observations quarantined",
         "schema-, contract-, corpus-, engine-, route-, build-, and dependency-bound evidence lifecycle metadata",
         "fifteen current artifact bindings, subordinate validation, exact whole/role PCM, and deficit-source traceability without a musical-quality claim",
-        "offline process-local independent stereo analysis reuse with live input hashes, unchanged per-asset comparisons, bounded memory, cold fallback and all nineteen aggregate subordinate validators"
+        "offline process-local independent stereo analysis reuse with live input hashes, unchanged per-asset comparisons, bounded memory, cold fallback and all nineteen aggregate subordinate validators",
+        "detached committed-origin dependency snapshots and conservative producer/analyzer/execution impact assessment for all fifteen baseline families; no artifact currency or promotion authority before fresh producer integration"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/LiveFeedback.swift",
@@ -439,7 +440,8 @@
         "docs/LIVE_FEEDBACK.md",
         "docs/PRIMARY_EVALUATOR.md",
         "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
-        "docs/BASELINE_VALIDATION_THROUGHPUT.md"
+        "docs/BASELINE_VALIDATION_THROUGHPUT.md",
+        "docs/BASELINE_DEPENDENCY_CONTRACT.md"
       ],
       "dependsOn": [
         "session-director-and-score"
