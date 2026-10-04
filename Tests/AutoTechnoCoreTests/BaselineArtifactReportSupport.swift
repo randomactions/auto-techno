@@ -326,6 +326,11 @@ final class BaselineProducerCaptureWitness {
         let renderStateFingerprint: String
         let graphStateFingerprint: String
     }
+    struct ProducerIdentity: Encodable {
+        let files: [String: String]
+        let context: [String: String]
+        let upstream: [String: String]
+    }
     struct Declaration: Decodable {
         let schema: String
         let familyId: String
@@ -355,6 +360,7 @@ final class BaselineProducerCaptureWitness {
     enum WitnessError: Error {
         case invalidDeclaration, invalidPath, sourceChanged, compiledImageChanged
         case existingOutput, stateMismatch, incompleteCapture, unavailableImage
+        case captureEnvironmentMismatch, producerFingerprintMismatch
     }
 
     static func canonical<T: Encodable>(_ value: T) throws -> Data {
@@ -362,7 +368,10 @@ final class BaselineProducerCaptureWitness {
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         return try encoder.encode(value)
     }
-    static func canonicalObject(_ value: Any) throws -> Data {
+    // Informational JSON only. JSONSerialization's sortedKeys uses numeric,
+    // case-insensitive collation; dependency identity needs JSONEncoder's exact
+    // lexical ordering, matching the independently implemented Python contract.
+    static func objectJSON(_ value: Any) throws -> Data {
         try JSONSerialization.data(withJSONObject: value,
             options: [.sortedKeys, .withoutEscapingSlashes])
     }
@@ -461,7 +470,6 @@ final class BaselineProducerCaptureWitness {
               declaration.initialStates.count <= 256,
               declaration.initialStates.map(\.id) == declaration.initialStates.map(\.id).sorted(),
               Set(declaration.initialStates.map(\.id)).count == declaration.initialStates.count,
-              declaration.captureEnvironmentSha256 == (try captureEnvironment(environment)),
               try localURL(declaration.captureCorpusPath, root: root) == corpusURL,
               declaration.captureCorpusSha256 == (try fileDigest(corpusURL)),
               declaration.producerContext["captureCorpusPath"] == declaration.captureCorpusPath,
@@ -470,10 +478,13 @@ final class BaselineProducerCaptureWitness {
               declaration.producerContext["captureEnvironmentFingerprint"] == declaration.captureEnvironmentSha256,
               declaration.producerContext["initialStateFingerprint"] ==
                 digest(try canonical(declaration.initialStates)) else { throw WitnessError.invalidDeclaration }
-        let identity: [String: Any] = ["files": declaration.producerInputs,
-            "context": declaration.producerContext, "upstream": declaration.upstreamProducerFingerprints]
-        guard digest(try canonicalObject(identity)) == declaration.producerFingerprint else {
-            throw WitnessError.invalidDeclaration
+        guard declaration.captureEnvironmentSha256 == (try captureEnvironment(environment)) else {
+            throw WitnessError.captureEnvironmentMismatch
+        }
+        let identity = ProducerIdentity(files: declaration.producerInputs,
+            context: declaration.producerContext, upstream: declaration.upstreamProducerFingerprints)
+        guard digest(try canonical(identity)) == declaration.producerFingerprint else {
+            throw WitnessError.producerFingerprintMismatch
         }
         for directory in outputDirectories {
             guard !FileManager.default.fileExists(atPath: directory.path) else { throw WitnessError.existingOutput }
@@ -573,7 +584,7 @@ final class BaselineProducerCaptureWitness {
             "actualArguments": arguments, "initialStates": try JSONSerialization.jsonObject(with: Self.canonical(declaration.initialStates)),
             "artifactSha256": Self.digest(artifactData),
             "qualification": ["artifactCurrencyEstablished": false, "promotionAuthorized": false, "runtimeInput": false]]
-        let data = try Self.canonicalObject(value)
+        let data = try Self.objectJSON(value)
         try Self.writeFresh(data, to: sidecar)
     }
 }

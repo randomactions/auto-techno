@@ -171,3 +171,11 @@ do not by themselves prove the Release build or capture. Driver diagnostics stay
 in the isolated local scratch/output trees. Failure retains outputs and never
 produces a successful validation receipt. This driver still establishes no
 scoped lifecycle, aggregate, capacity or musical qualification authority.
+
+Identity bytes use exact lexical key order, not locale-, case-insensitive or
+numeric-aware JSON collation. The Swift producer identity uses a typed
+JSONEncoder record with sorted keys, independently matched to Python canonical
+bytes. A fixed mixed-case/numeric-suffix golden hash detects Foundation
+JSONSerialization sorted-key drift. Informational witness/probe JSON may use
+Foundation ordering; it is hashed as actual file bytes and parsed independently,
+never substituted for the canonical producer identity.

@@ -18,10 +18,18 @@ struct BaselineProducerWitnessTests {
     @MainActor
     @Test("Producer canonical JSON is independently known and route changes bind state")
     func canonicalAndInitialState() throws {
-        let data = try BaselineProducerCaptureWitness.canonicalObject(
+        let data = try BaselineProducerCaptureWitness.objectJSON(
             ["upstream": [String: String](), "files": ["a/b": "x"], "context": ["sdk": "a"]])
         #expect(String(decoding: data, as: UTF8.self) ==
             "{\"context\":{\"sdk\":\"a\"},\"files\":{\"a/b\":\"x\"},\"upstream\":{}}")
+        let identity = BaselineProducerCaptureWitness.ProducerIdentity(
+            files: ["Z": "last", "a": "first", "X2": "two", "X10": "ten"],
+            context: ["sdk": "a"], upstream: [:])
+        // Independently frozen Python canonical bytes/hash: mixed case and
+        // numeric suffixes expose Foundation JSONSerialization collation drift.
+        #expect(try BaselineProducerCaptureWitness.digest(
+            BaselineProducerCaptureWitness.canonical(identity)) ==
+            "91fea5c81533ba30f42e0cde07edf9275e4ecff30eb6a969c846652ed39da991")
         let director = AutonomousSessionDirector(rootSeed: 42)
         let state = director.initialState(), render = RenderState()
         let graph = GeneratedDSPContinuationState()
@@ -127,7 +135,7 @@ struct BaselineProducerWitnessTests {
         }
         let path = try BaselineProducerCaptureWitness.localURL(output, root: root, localOnly: true)
         try FileManager.default.createDirectory(at: path.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try BaselineProducerCaptureWitness.writeFresh(try BaselineProducerCaptureWitness.canonicalObject(value), to: path)
+        try BaselineProducerCaptureWitness.writeFresh(try BaselineProducerCaptureWitness.objectJSON(value), to: path)
     }
 }
 #endif
