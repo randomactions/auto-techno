@@ -90,14 +90,14 @@ package enum ProfessionalQualityMeasurementScope: String, Sendable {
         switch self {
         case .legacy: 22
         case .barLocalModalWindow: 23
-        case .continuousModalWindow: 24
+        case .continuousModalWindow: 25
         }
     }
     package var profileVersion: String {
         switch self {
         case .legacy: "autotechno-professional-quality-profile.v30"
         case .barLocalModalWindow: "autotechno-professional-quality-profile.v31"
-        case .continuousModalWindow: "autotechno-professional-quality-profile.v32"
+        case .continuousModalWindow: "autotechno-professional-quality-profile.v33"
         }
     }
 

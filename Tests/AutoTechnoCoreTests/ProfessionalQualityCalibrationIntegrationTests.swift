@@ -351,17 +351,27 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         let qualificationRequested = environment["AUTOTECHNO_RUN_CONTINUOUS_ADVERSARIAL_QUALIFICATION"] == "1"
         let correctedQualification = qualificationRequested &&
             ProfessionalEvidenceReportBank.evidenceVersion == "autotechno-professional-evidence.v30"
-        let qualificationProtocolPath = correctedQualification
-            ? "docs/local/reports/AT-0039-corrected-measurements-v1/qualification-protocol.json"
-            : "docs/local/reports/AT-0039-measured-challenge-v1/qualification-protocol.json"
-        let expectedQualificationProtocolBlob = correctedQualification
-            ? "b866703efaec06c7cedd11c63d5b8bee683c9774"
-            : "151f8453481bdc454284279f5df4517e89bf44b0"
+        let dottedQualification = correctedQualification &&
+            ProfessionalQualityPrimaryEvaluator.requiredProfileVersion == "autotechno-professional-quality-profile.v33"
+        let qualificationProtocolPath = dottedQualification
+            ? "docs/local/reports/AT-0039-dotted-measurements-v1/qualification-protocol.json"
+            : (correctedQualification
+                ? "docs/local/reports/AT-0039-corrected-measurements-v1/qualification-protocol.json"
+                : "docs/local/reports/AT-0039-measured-challenge-v1/qualification-protocol.json")
+        let expectedQualificationProtocolBlob = dottedQualification
+            ? "353bc6e24f646c1cb03aefe18047e67f375571a7"
+            : (correctedQualification
+                ? "b866703efaec06c7cedd11c63d5b8bee683c9774"
+                : "151f8453481bdc454284279f5df4517e89bf44b0")
         let qualificationProtocolBlob = qualificationRequested
             ? try git(["hash-object", qualificationProtocolPath]) : nil
         if qualificationRequested {
             guard qualificationProtocolBlob == expectedQualificationProtocolBlob else {
                 throw ProfessionalQualityCalibrationError.invalidIdentity
+            }
+            if dottedQualification {
+                _ = try git(["merge-base", "--is-ancestor",
+                    "158c612f1496a1bcb53754fbce2a46d709a04376", acceptedHead])
             }
             if correctedQualification {
                 _ = try git(["merge-base", "--is-ancestor",
@@ -470,7 +480,8 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             if qualificationRequested {
                 manifest["offlineContinuousQualification"] = try qualifyFreshContinuousCorpora(
                     profile: profile, development: developmentCorpus,
-                    holdout: holdoutCorpus, correctedMeasurements: correctedQualification, output: output)
+                    holdout: holdoutCorpus, correctedMeasurements: correctedQualification,
+                    dottedMeasurements: dottedQualification, output: output)
             }
         } catch let error as ProfessionalQualityCalibrationError {
             // A coverage/fit failure is preserved, not a license to replace a
@@ -497,6 +508,7 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         development: ProfessionalQualityCalibrationCorpus,
         holdout: ProfessionalQualityCalibrationCorpus,
         correctedMeasurements: Bool,
+        dottedMeasurements: Bool,
         output: URL
     ) throws -> [String: Any] {
         var result: [String: Any] = ["schema": "autotechno-offline-continuous-qualification.v1",
@@ -509,9 +521,17 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             try canonicalCacheJSON(result).write(to: output.appendingPathComponent(
                 "offline-continuous-qualification.json"), options: .atomic)
         }
-        guard profile.measurementScope == .continuousModalWindow,
-              profile.fingerprint == (correctedMeasurements ? "4fb209bfb248d46b" : "5fedcae807b0ce09"),
-              development.fingerprint == (correctedMeasurements ? "5e3b02a21cace240" : "39f157e5cbf2ba2a"),
+        // The new protocol freezes inputs, geometry and producers before PCM.
+        // Its outputs are derived from these fresh typed products, never from
+        // a prior archive or a retagged expected output fingerprint.
+        let outputIdentityMatches = dottedMeasurements
+            ? (profile.profileVersion == ProfessionalQualityPrimaryEvaluator.requiredProfileVersion &&
+                profile.sourceBankFingerprint == development.fingerprint &&
+                profile.sourceTrajectoryCount == development.sourceTrajectoryCount &&
+                profile.isComplete && profile.usesDiverseCalibration)
+            : (profile.fingerprint == (correctedMeasurements ? "4fb209bfb248d46b" : "5fedcae807b0ce09") &&
+                development.fingerprint == (correctedMeasurements ? "5e3b02a21cace240" : "39f157e5cbf2ba2a"))
+        guard profile.measurementScope == .continuousModalWindow, outputIdentityMatches,
               development.sourceTrajectoryCount == 40, holdout.sourceTrajectoryCount == 6,
               development.isComplete, holdout.isComplete,
               development.sourceBankFingerprints.isDisjoint(with: holdout.sourceBankFingerprints) else {

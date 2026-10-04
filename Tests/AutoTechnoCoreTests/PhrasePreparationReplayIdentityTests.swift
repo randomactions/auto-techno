@@ -240,6 +240,20 @@ struct ProspectiveSuccessorRequestTests {
     @Test("Actual successor PCM uses the exact sealed canonical request at all fixed rates")
     @MainActor
     func canonicalPreparedSuccessorContext() throws {
+        try proveCanonicalPreparedSuccessorContext(includeLiveProposal: false)
+    }
+
+    @Test("Combined live/long-horizon successor proof requires sealed current primary identity",
+        .enabled(if: ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint != nil &&
+            ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint != nil &&
+            ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint != nil))
+    @MainActor
+    func canonicalPreparedLiveSuccessorContext() throws {
+        try proveCanonicalPreparedSuccessorContext(includeLiveProposal: true)
+    }
+
+    @MainActor
+    private func proveCanonicalPreparedSuccessorContext(includeLiveProposal: Bool) throws {
         let artifacts = try qualifiedArtifacts(sampleRates: [8_000, 44_100, 48_000])
         let policy = try LongHorizonProfessionalPolicy(profile: artifacts.profile,
             adversarial: artifacts.adversarial, holdout: artifacts.holdout)
@@ -287,50 +301,56 @@ struct ProspectiveSuccessorRequestTests {
                 "canonicalStateAndPlanMatch": true, "sourceCommitEligible": source.commitEligible,
                 "refusedBeforeSuccessorPCM": control.snapshot.refused])
         }
-        // A genuinely applied proposal belongs only to the source. The
-        // actual successor inherits its committed live state without applying
-        // the same proposal a second time, and keeps the known sample boundary.
-        var previousState = director.initialState()
-        for _ in 0..<20 { previousState.advancePlanning(using: director.plan(from: previousState)) }
-        let previousPlan = director.plan(from: previousState)
-        let liveRate = 48_000.0
-        let frameCount = try #require(LiveOutputWindowAnalyzer.frameCount(sampleRate: liveRate))
-        let signal = (0..<frameCount).map { Float(0.2 * sin(2 * Double.pi * 997 * Double($0) / liveRate)) }
-        let evidence = try #require(LiveFeedbackTestSupport.analyze(signal: signal,
-            plan: previousPlan, sampleRate: liveRate, routeGeneration: 7,
-            controllerRevision: state.liveMasterHeadroom.revision,
-            qualityPolicyVersion: policy.profile.primaryPolicyVersion))
-        let target = try #require(LiveFeedbackTestSupport.target(evidence: evidence,
-            loudnessUpperLUFS: evidence.maximumShortTermLoudnessLUFS - 1,
-            truePeakUpperDBTP: evidence.truePeakDBTP - 1,
-            profileFingerprint: ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint))
-        let start = evidence.playerSampleRange.upperBound + 10_000
-        let proposal = LiveMasterHeadroomController.propose(evidence: evidence, target: target,
-            incoming: state.liveMasterHeadroom, earliestEligibleFutureSample: start)
-        #expect(proposal.outcome == .attenuate)
-        let binding = PendingLiveMasterHeadroomBinding(
-            sourceIdentity: LiveOutputPlanSourceIdentity(plan: previousPlan), evidence: evidence,
-            target: target, proposal: proposal,
-            eligibleTarget: LiveMasterHeadroomEligibleTarget(plan: director.plan(from: state),
-                routeGeneration: 7, sampleRate: liveRate, earliestEligibleFutureSample: start,
-                qualityPolicyVersion: evidence.qualityPolicyVersion, evaluatorVersion: evidence.evaluatorVersion,
-                controllerPolicyVersion: evidence.controllerPolicyVersion))
-        let liveRequest = Self.request(state: state, rate: liveRate, horizon: incoming,
-            binding: binding, targetStart: start)
-        let liveControl = ContextControl()
-        let liveSource = try #require(Self.prepare(liveRequest,
-            evaluator: ContextEvaluator(request: liveRequest, policy: policy, control: liveControl)))
-        #expect(liveSource.commitEligible && liveSource.liveMasterHeadroomContinuationState.committedTrimDB == -0.25)
-        let liveSeal = try #require(liveControl.snapshot.seal)
-        let liveNext = try #require(liveSeal.admittedRequest(for: liveSource,
-            sourceRequest: liveRequest, longHorizonPolicy: policy))
-        let liveSuccessor = try #require(liveSource.preparedValidation?.qualifiedSuccessor)
-        #expect(liveSuccessor.commitEligible)
-        #expect(liveNext.sourceState.liveMasterHeadroom == liveSource.liveMasterHeadroomContinuationState)
-        #expect(liveSuccessor.incomingLiveMasterHeadroomState == liveSource.liveMasterHeadroomContinuationState)
-        #expect(liveSuccessor.liveMasterHeadroomContinuationState == liveSource.liveMasterHeadroomContinuationState)
-        #expect(liveNext.pendingLiveMasterBinding == nil && liveSuccessor.liveTargetStartSample == nil)
-        #expect(liveSeal.knownSuccessorStartSample == start + Int64(liveSource.audioPreflight.quality.analyzedFrameCount))
+        // Pending production seals cannot supply a current live policy. The
+        // mechanical context proof above and independent live child-inheritance
+        // controls remain available; this combined proof needs real seals.
+        if includeLiveProposal {
+            // A genuinely applied proposal belongs only to the source. The
+            // actual successor inherits its committed live state without applying
+            // the same proposal a second time, and keeps the known sample boundary.
+            var previousState = director.initialState()
+            for _ in 0..<20 { previousState.advancePlanning(using: director.plan(from: previousState)) }
+            let previousPlan = director.plan(from: previousState)
+            let liveRate = 48_000.0
+            let frameCount = try #require(LiveOutputWindowAnalyzer.frameCount(sampleRate: liveRate))
+            let signal = (0..<frameCount).map { Float(0.2 * sin(2 * Double.pi * 997 * Double($0) / liveRate)) }
+            let evidence = try #require(LiveFeedbackTestSupport.analyze(signal: signal,
+                plan: previousPlan, sampleRate: liveRate, routeGeneration: 7,
+                controllerRevision: state.liveMasterHeadroom.revision,
+                qualityPolicyVersion: policy.profile.primaryPolicyVersion))
+            let profileFingerprint = try #require(ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)
+            let target = try #require(LiveFeedbackTestSupport.target(evidence: evidence,
+                loudnessUpperLUFS: evidence.maximumShortTermLoudnessLUFS - 1,
+                truePeakUpperDBTP: evidence.truePeakDBTP - 1,
+                profileFingerprint: profileFingerprint))
+            let start = evidence.playerSampleRange.upperBound + 10_000
+            let proposal = LiveMasterHeadroomController.propose(evidence: evidence, target: target,
+                incoming: state.liveMasterHeadroom, earliestEligibleFutureSample: start)
+            #expect(proposal.outcome == .attenuate)
+            let binding = PendingLiveMasterHeadroomBinding(
+                sourceIdentity: LiveOutputPlanSourceIdentity(plan: previousPlan), evidence: evidence,
+                target: target, proposal: proposal,
+                eligibleTarget: LiveMasterHeadroomEligibleTarget(plan: director.plan(from: state),
+                    routeGeneration: 7, sampleRate: liveRate, earliestEligibleFutureSample: start,
+                    qualityPolicyVersion: evidence.qualityPolicyVersion, evaluatorVersion: evidence.evaluatorVersion,
+                    controllerPolicyVersion: evidence.controllerPolicyVersion))
+            let liveRequest = Self.request(state: state, rate: liveRate, horizon: incoming,
+                binding: binding, targetStart: start)
+            let liveControl = ContextControl()
+            let liveSource = try #require(Self.prepare(liveRequest,
+                evaluator: ContextEvaluator(request: liveRequest, policy: policy, control: liveControl)))
+            #expect(liveSource.commitEligible && liveSource.liveMasterHeadroomContinuationState.committedTrimDB == -0.25)
+            let liveSeal = try #require(liveControl.snapshot.seal)
+            let liveNext = try #require(liveSeal.admittedRequest(for: liveSource,
+                sourceRequest: liveRequest, longHorizonPolicy: policy))
+            let liveSuccessor = try #require(liveSource.preparedValidation?.qualifiedSuccessor)
+            #expect(liveSuccessor.commitEligible)
+            #expect(liveNext.sourceState.liveMasterHeadroom == liveSource.liveMasterHeadroomContinuationState)
+            #expect(liveSuccessor.incomingLiveMasterHeadroomState == liveSource.liveMasterHeadroomContinuationState)
+            #expect(liveSuccessor.liveMasterHeadroomContinuationState == liveSource.liveMasterHeadroomContinuationState)
+            #expect(liveNext.pendingLiveMasterBinding == nil && liveSuccessor.liveTargetStartSample == nil)
+            #expect(liveSeal.knownSuccessorStartSample == start + Int64(liveSource.audioPreflight.quality.analyzedFrameCount))
+        }
         #expect(AutonomousCandidateFingerprint.sessionState(state) == stateFingerprint)
         let request = Self.request(state: state, rate: 8_000, horizon: incoming)
         let deniedControl = ContextControl()
@@ -346,7 +366,7 @@ struct ProspectiveSuccessorRequestTests {
         print(String(decoding: try JSONSerialization.data(withJSONObject: [
             "fixture": "canonical-prospective-successor-request.v1", "rows": rows,
             "unadmittedSourceRefused": true, "unboundReplayOriginRefused": true, "incomingStateUnchanged": true,
-            "liveProposalAppliedOnce": true, "knownLiveBoundaryPreserved": true,
+            "liveProposalAppliedOnce": includeLiveProposal, "knownLiveBoundaryPreserved": includeLiveProposal,
             "qualification": "mechanical-only-not-installed", "runtimeActivation": false
         ], options: [.sortedKeys]), as: UTF8.self))
     }

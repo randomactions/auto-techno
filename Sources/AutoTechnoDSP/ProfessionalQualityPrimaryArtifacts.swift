@@ -1,21 +1,19 @@
 import Foundation
 
-/// Sole current continuous qualification identity. The declared v32 bundle is
+/// Sole current continuous qualification identity. The declared v33 bundle is
 /// intentionally unavailable until the complete matched artifact set is installed.
 /// Explicit offline construction validates the same profile/adversarial/holdout
 /// contract without activating transport or importing calibration banks.
 package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     package static let profileResource =
-        "professional-quality-primary-profile-v32"
+        "professional-quality-primary-profile-v33"
     package static let adversarialResource =
-        "professional-quality-primary-adversarial-suite-v32"
+        "professional-quality-primary-adversarial-suite-v33"
     package static let holdoutResource =
-        "professional-quality-primary-holdout-v32"
-    package static let expectedProfileFingerprint = "4fb209bfb248d46b"
-    package static let expectedAdversarialSuiteFingerprint =
-        "e347aea9623bba24"
-    package static let expectedHoldoutQualificationFingerprint =
-        "57fc2efd43375934"
+        "professional-quality-primary-holdout-v33"
+    package static let expectedProfileFingerprint: String? = nil
+    package static let expectedAdversarialSuiteFingerprint: String? = nil
+    package static let expectedHoldoutQualificationFingerprint: String? = nil
 
     package let profile: ProfessionalQualityCalibrationProfile
     package let adversarialSuite: ProfessionalQualityAdversarialSuiteReport
@@ -49,7 +47,10 @@ package struct ProfessionalQualityPrimaryArtifacts: Sendable {
     }
 
     package static func load() throws -> Self {
-        guard let profileURL = PackagedResourceBundle.current.url(
+        guard let expectedProfileFingerprint,
+              let expectedAdversarialSuiteFingerprint,
+              let expectedHoldoutQualificationFingerprint,
+              let profileURL = PackagedResourceBundle.current.url(
             forResource: profileResource,
             withExtension: "json"
         ), let adversarialURL = PackagedResourceBundle.current.url(

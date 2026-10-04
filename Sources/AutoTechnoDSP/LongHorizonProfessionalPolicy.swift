@@ -24,12 +24,16 @@ package enum LongHorizonProfessionalPolicySchema {
   package static let minimumSignalObservationCount = 12
   package static let minimumOperatorTransitionCount = 2
   package static let minimumSignalRateCount = 2
-  package static let requiredPrimaryPolicyVersion = [
-    ProfessionalQualityPrimaryEvaluator.policyFamilyVersion,
-    "profile-\(ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint)",
-    "adversarial-\(ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint)",
-    "holdout-\(ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint)",
-  ].joined(separator: ".")
+  /// A pending token cannot match an actual evaluator's sealed identity.
+  /// Local policy fixtures can exercise reduction without manufacturing seals.
+  package static var requiredPrimaryPolicyVersion: String {
+    guard let profile = ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint,
+      let adversarial = ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint,
+      let holdout = ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint
+    else { return ProfessionalQualityPrimaryEvaluator.policyFamilyVersion + ".unqualified" }
+    return [ProfessionalQualityPrimaryEvaluator.policyFamilyVersion,
+      "profile-\(profile)", "adversarial-\(adversarial)", "holdout-\(holdout)"].joined(separator: ".")
+  }
 }
 
 package enum LongHorizonProfessionalPolicyError: Error, Equatable, Sendable {

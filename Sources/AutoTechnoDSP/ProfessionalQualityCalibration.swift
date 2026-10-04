@@ -224,6 +224,23 @@ package enum ProfessionalQualityMetric: String, CaseIterable, Codable, Sendable 
         }
     }
 
+    /// Dotted-rhythm absence has a zero ratio and crest mean. Only the current
+    /// continuous profile contract may interpret its exact neutral envelopes
+    /// through the shared calibrated-active union; historical fits keep their
+    /// original verdict semantics.
+    package func conditionalNeutralCalibrationEnvelope(
+        for scope: ProfessionalQualityMeasurementScope?
+    ) -> ClosedRange<Double>? {
+        switch self {
+        case .foundationDottedRhythmActiveBarRatio:
+            return scope == .continuousModalWindow ? 0...0.04 : nil
+        case .foundationDottedRhythmCrestFactorDBMean:
+            return scope == .continuousModalWindow ? 0...0.75 : nil
+        default:
+            return conditionalNeutralCalibrationEnvelope
+        }
+    }
+
     package func isConditionalNeutral(_ value: Double) -> Bool {
         guard let sentinel = conditionalNeutralSentinel else { return false }
         return abs(value - sentinel) <= 1e-12
@@ -2246,7 +2263,7 @@ package struct ProfessionalQualityCalibrationProfile: Codable, Equatable, Sendab
     ) -> ProfessionalQualityMetricBounds? {
         guard let local = self[checkpoint]?[metric],
               let neutralEnvelope =
-                metric.conditionalNeutralCalibrationEnvelope,
+                metric.conditionalNeutralCalibrationEnvelope(for: measurementScope),
               abs(observedValue) > 1e-12,
               local.lower == neutralEnvelope.lowerBound,
               local.upper == neutralEnvelope.upperBound else {

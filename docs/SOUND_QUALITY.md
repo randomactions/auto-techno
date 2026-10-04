@@ -1,19 +1,28 @@
 # Sound Quality Contract
 
-The current corrected-source primary contract is v31 and requires actual prepared
-continuous observation v23/profile v32 validation. Historical engine-v48 primary
-v30/Evidence-v29 and long-horizon-v16 results below retain their original scope;
-they cannot qualify current Evidence-v30 source or activate the new policy.
-The corrected-source native continuous study completed its offline primary
-qualification on frozen source ea5ea537a9359da47c6e9e7e75758cf9eddd74ba:
-40 development and six disjoint holdout trajectories, 644 original reports and
-actual successor receipts, 34 independent adversarial cases and 84 accepted
-holdout observations. The resulting primary identities are profile
-4fb209bfb248d46b, adversarial e347aea9623bba24 and holdout 57fc2efd43375934.
-Those are the declared v32 resource targets; matching resources are not installed
-and later source changes require their own qualification. Long-horizon v17 has
-no qualified fingerprint seals yet, so the paired production loader remains
-unavailable. Full current-source qualification and activation remain pending.
+The current primary contract is v32 and requires actual prepared continuous
+observation v23/profile v33 validation. A reproduced full native long-horizon
+journey activated a score-owned dotted foundation rhythm after 37 accepted bars;
+the long-continuation calibration examples had only zero activity and crest
+means. The existing effectiveBounds owner now reuses its other calibrated
+active checkpoint bounds for this pair only when the local v33 continuous
+checkpoint is exactly the all-zero guard envelope. Zero observations retain
+local bounds; measured local populations and missing active calibration do not
+fall through to an inferred range. Extreme values remain non-compensable.
+Historical v30/v31/v32 profiles retain their previous interpretation or refuse
+current construction; neither old artifacts nor changed version labels qualify
+the new policy. This changes detached assessment only, with no PCM, score,
+continuation, callback, musical parameter or renderer change.
+
+The prior frozen-source primary v31/profile v32 study on
+ea5ea537a9359da47c6e9e7e75758cf9eddd74ba completed 40 development and six
+disjoint holdout trajectories, 644 original reports/actual successor receipts,
+34 adversarial cases and 84 accepted holdout observations. Its profile
+4fb209bfb248d46b, adversarial e347aea9623bba24 and holdout 57fc2efd43375934
+are retired qualification identities for current policy v32/profile v33.
+Current v33 primary seals are absent, as are qualified long-horizon v17 seals.
+Matching resources, fresh independent qualification and full runtime gates
+remain pending; the paired production loader stays unavailable.
 
 Current long-horizon calibration consumes every accepted phrase through the
 existing detached AutonomousPerformancePreparer and its protected measured-child
@@ -1142,7 +1151,7 @@ avoids separate extraction/fitting/evaluation eligibility rules.
 
 ## Continuous modal observation and fitting scope
 
-The explicit offline continuous projection uses observation v23 and profile v32
+The explicit offline continuous projection uses observation v23 and profile v33
 under the existing observation, trajectory, corpus, fitter and evaluators. Its
 construction requires the full canonical original report and an optional
 validated actual-successor receipt. A source-only unfinished suffix remains
@@ -1170,7 +1179,7 @@ to the existing corpus fitter and remains insufficient for diverse calibration.
 
 A single scope owner binds observation/profile schema and versions, expected
 metrics, applicability and conditional comparison coverage. Installed v21/v30
-and bar-local v22/v31 identities retain their semantics. Continuous v23/v32 is an
+and bar-local v22/v31 identities retain their semantics. Continuous v23/v33 is an
 unqualified, unactivated foundation: fixed mechanical construction controls do
 not provide independent musical labels, confidence, fresh-cohort evidence or
 replacement qualification. Installed primary v30/long-horizon v16 resources,

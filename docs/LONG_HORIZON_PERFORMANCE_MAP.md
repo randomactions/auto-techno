@@ -2,9 +2,10 @@
 
 Engine v48 binds material-world/effect-target lineage, pitch identity and
 transition-tail continuity to the canonical score. The current corrected-source
-primary family v31 requires continuous profile v32. Its completed frozen offline
-study is recorded in SOUND_QUALITY.md; matching long-horizon v17 qualification
-and production resources remain pending. Primary-v30/long-horizon-v16 results
+primary family v32 requires continuous profile v33. The earlier frozen offline
+v31/profile v32 study is recorded in SOUND_QUALITY.md and is ineligible under
+the new rule. Primary v33 and long-horizon v17 seals, qualification and production
+resources remain pending. Primary-v30/long-horizon-v16 results
 below describe their historical source and sparse-checkpoint evidence scope.
 
 The current v17 calibration harness uses AutonomousPerformancePreparer for the

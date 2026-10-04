@@ -1454,7 +1454,7 @@ re-enter the product architecture.
 
 ## Explicit continuous modal observation provenance
 
-Detached continuous observation v23/profile v32 extends the existing report,
+Detached continuous observation v23/profile v33 extends the existing report,
 observation, trajectory/corpus and fitting owners. Construction derives the two
 modal ratios from the canonical original report and its optional validated
 actual prepared-successor receipt through the existing ledger/support owner.
@@ -1471,7 +1471,7 @@ relationship validation retain complete native-rate/checkpoint coverage,
 version consistency, duplicate rejection and required-unavailable measurements.
 A reduced one-bank analysis uses the same corpus fitter and remains below the
 minimum diverse source count. The existing evaluator and activation authority are retained. Historical v21/v30/v16 artifacts retain their original contract and are ineligible
-under current evidence. The sole primary v31 requires continuous v23/v32 prepared
+under current evidence. The sole primary v32 requires continuous v23/v33 prepared
 validation; current artifact qualification and activation remain pending. No renderer,
 Core continuation, callback operation, future decision or PCM algorithm changes.
 
@@ -1576,7 +1576,7 @@ budgets and the callback remain unchanged.
 
 This implements an unactivated admission foundation, not a production successor
 probe or calibrated policy. The historical primary v30 requested no prepared validation; the current sole
-primary v31 requires it and the route-local wrapper delegates the same seam. Test-only controls
+primary v32 requires it and the route-local wrapper delegates the same seam. Test-only controls
 use the canonical Core director and renderer to prepare one qualified successor
 under the exact prospective continuation. That successor uses the same sealed
 validation seam and must complete its own windows locally; it cannot recursively
@@ -1868,3 +1868,34 @@ accumulator refusal. It retains the existing bounded prepared quality and commit
 diagnostics. Rejected products never enter the three committed accumulators or
 advance canonical state, and diagnostic detail does not authorize a retry,
 repeat, changed threshold or qualification artifact.
+
+
+## Conditional dotted-foundation calibration contract
+
+Primary v32/profile v33 extends the existing detached effectiveBounds owner,
+with observation v23 and original/successor ownership unchanged. The measured
+full-journey rejection after 37 bars identifies two optional score-owned metrics:
+dotted foundation activity ratio and its rendered crest mean. When their local
+checkpoint is exactly the all-zero calibration guard envelope and an observed
+value is nonzero, use the union of this same profile's other active checkpoint
+bounds. Preserve local zero, local measured populations, absent active calibration,
+finite-domain and non-compensable rejection. Legacy/bar-local scopes retain
+previous interpretation; retired continuous profile v32 is not current authority.
+No parameter, score, PCM, callback or automatic retry changes.
+
+Profile schema 25/version v33 and primary policy/evaluator v32 invalidate prior
+qualification. Primary and Long Horizon seals remain absent; the pending primary
+dependency token cannot match an actual evaluator's sealed policy identity.
+Synthetic reduction/replay controls have no activation authority. The live-target
+artifact gate uses the same continuous observation/profile scope owner and exact
+qualified seals, rather than legacy schema defaults. Target/occurrence controller
+binding, future-boundary eligibility and fail-closed fallback remain unchanged.
+
+The existing cold native cohort executor freezes a separate dotted-rule protocol
+before PCM and authenticates its exact blob, unchanged cohort and score geometry,
+source ancestry, clean accepted source/test/script objects and normative snapshot.
+The same freshly completed typed 40/6 corpora derive the output identities; fit
+ownership, full development relationship, independent adversarial/live-baseline
+and complete disjoint holdout gates remain required. Retained archives and old
+output identities cannot supply qualification. Refused outputs stay reason-coded
+local diagnostics; installing matching seals requires actual completed evidence.

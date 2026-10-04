@@ -90,9 +90,9 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
                 "autotechno-professional-quality-profile.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v31")
+                "autotechno-candidate-evaluator.primary-calibrated.v32")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v31")
+                "autotechno-quality.primary-calibrated.v32")
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 22)
         #expect(ProfessionalQualityAdversarialSuiteReport.suiteVersion ==
                 "autotechno-professional-quality-adversarial.v23")
@@ -106,10 +106,10 @@ struct CurrentRuntimeTests {
         #expect(ProfessionalEvidenceReportBank.schemaVersion == 30)
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v30")
-        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v32"))
+        #expect(ProfessionalQualityPrimaryArtifacts.profileResource.hasSuffix("-v33"))
         #expect(ProfessionalQualityPrimaryArtifacts.adversarialResource
-            .hasSuffix("-v32"))
-        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v32"))
+            .hasSuffix("-v33"))
+        #expect(ProfessionalQualityPrimaryArtifacts.holdoutResource.hasSuffix("-v33"))
     }
 
     @Test("Historical v30 resources remain present but cannot activate the current policy")
@@ -138,7 +138,7 @@ struct CurrentRuntimeTests {
     @Test("The continuous candidate identity and live controller remain canonical")
     func primaryEvaluatorAndLiveControllerAreCanonical() {
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v31")
+                "autotechno-candidate-evaluator.primary-calibrated.v32")
         #expect(LiveMasterHeadroomController.version ==
                 "autotechno-live-master-headroom-controller.v2")
         #expect(LiveMasterHeadroomController.minimumTrimDB == -3)

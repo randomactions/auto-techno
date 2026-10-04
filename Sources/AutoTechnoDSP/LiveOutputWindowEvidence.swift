@@ -621,12 +621,13 @@ package enum LiveOutputWindowAnalyzer {
     ) -> Bool {
         let profile = artifacts.profile
         return profile.isComplete && profile.usesDiverseCalibration &&
+            profile.measurementScope == .continuousModalWindow &&
             profile.schemaVersion ==
-                ProfessionalQualityCalibrationProfile.schemaVersion &&
+                ProfessionalQualityMeasurementScope.continuousModalWindow.profileSchema &&
             profile.profileVersion ==
                 ProfessionalQualityPrimaryEvaluator.requiredProfileVersion &&
             profile.observationVersion ==
-                ProfessionalQualityObservation.observationVersion &&
+                ProfessionalQualityMeasurementScope.continuousModalWindow.observationVersion &&
             profile.evidenceVersion ==
                 ProfessionalEvidenceReportBank.evidenceVersion &&
             profile.engineVersion == QualityQualificationContract.engineVersion &&

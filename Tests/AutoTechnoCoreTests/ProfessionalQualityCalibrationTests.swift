@@ -1818,11 +1818,11 @@ struct ProfessionalQualityCalibrationTests {
         #expect(ProfessionalEvidenceReportBank.evidenceVersion ==
                 "autotechno-professional-evidence.v30")
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v31")
+                "autotechno-quality.primary-calibrated.v32")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v31")
+                "autotechno-candidate-evaluator.primary-calibrated.v32")
         #expect(ProfessionalQualityPrimaryEvaluator.requiredProfileVersion ==
-                "autotechno-professional-quality-profile.v32")
+                "autotechno-professional-quality-profile.v33")
         #expect(ProfessionalQualityCalibrationProfile.schemaVersion == 22)
         #expect(ProfessionalQualityCalibrationProfile.profileVersion ==
                 "autotechno-professional-quality-profile.v30")
@@ -2490,6 +2490,93 @@ struct ProfessionalQualityCalibrationTests {
             observedValue: 100
         ))
         #expect(!extreme.contains(100))
+    }
+
+    @Test("Dotted-rhythm activation reuses measured checkpoint bounds only in the new continuous contract")
+    func conditionalDottedRhythmBounds() throws {
+        let metrics: [(ProfessionalQualityMetric, Double)] = [
+            (.foundationDottedRhythmActiveBarRatio, 0.4),
+            (.foundationDottedRhythmCrestFactorDBMean, 18.199913326947108),
+        ]
+        func fitted(active: Bool, localRatio: Double = 0) throws -> ProfessionalQualityCalibrationProfile {
+            let observations = try representativeObservations().map { observation in
+                let measured = active && [.establishment, .chapterChange].contains(observation.checkpoint)
+                return try observation
+                    .replacing(.foundationDottedRhythmActiveBarRatio,
+                        with: measured ? 0.4 : (observation.checkpoint == .longContinuation ? localRatio : 0))
+                    .replacing(.foundationDottedRhythmCrestFactorDBMean,
+                        with: measured ? 18.199913326947108 : 0)
+            }
+            return try ProfessionalQualityCalibrationProfile(
+                engineVersion: QualityQualificationContract.engineVersion,
+                sourceBankFingerprint: "synthetic-dotted-bounds-control",
+                sampleRates: ProfessionalQualityCalibrationProfile.requiredSampleRates,
+                observations: observations)
+        }
+        // A diagnostic scope fixture exercises the bounds owner; it is neither
+        // a typed continuous corpus nor a diverse/qualified primary artifact.
+        func scoped(_ profile: ProfessionalQualityCalibrationProfile,
+                    scope: ProfessionalQualityMeasurementScope) throws -> ProfessionalQualityCalibrationProfile {
+            var wire = try #require(JSONSerialization.jsonObject(
+                with: profile.deterministicJSON()) as? [String: Any])
+            wire["schemaVersion"] = scope.profileSchema
+            wire["profileVersion"] = scope.profileVersion
+            wire["observationVersion"] = scope.observationVersion
+            return try JSONDecoder().decode(ProfessionalQualityCalibrationProfile.self,
+                from: JSONSerialization.data(withJSONObject: wire))
+        }
+        let legacy = try fitted(active: true)
+        let profile = try scoped(legacy, scope: .continuousModalWindow)
+        #expect(profile.isComplete && !profile.usesDiverseCalibration)
+        #expect(profile.profileVersion == "autotechno-professional-quality-profile.v33")
+        #expect(profile.schemaVersion == 25)
+        for (metric, value) in metrics {
+            let local = try #require(profile[.longContinuation]?[metric])
+            let envelope = try #require(metric.conditionalNeutralCalibrationEnvelope(for: .continuousModalWindow))
+            #expect(local.lower == envelope.lowerBound && local.upper == envelope.upperBound)
+            #expect(!local.contains(value))
+            let active = profile.checkpoints.compactMap { checkpoint -> ProfessionalQualityMetricBounds? in
+                guard let bounds = checkpoint[metric], bounds != local else { return nil }
+                return bounds
+            }
+            let effective = try #require(profile.effectiveBounds(for: metric,
+                at: .longContinuation, observedValue: value))
+            #expect(effective.lower == active.map(\.lower).min())
+            #expect(effective.upper == active.map(\.upper).max())
+            #expect(effective.contains(value))
+            #expect(profile.effectiveBounds(for: metric, at: .longContinuation, observedValue: 0) == local)
+            for extreme in [-1.0, effective.upper + 1] {
+                #expect(profile.effectiveBounds(for: metric, at: .longContinuation,
+                    observedValue: extreme)?.contains(extreme) == false)
+            }
+            #expect(profile.effectiveBounds(for: metric, at: .establishment,
+                observedValue: value) == profile[.establishment]?[metric])
+            for scope in [ProfessionalQualityMeasurementScope.legacy, .barLocalModalWindow] {
+                let historical = try scoped(legacy, scope: scope)
+                #expect(historical.effectiveBounds(for: metric, at: .longContinuation,
+                    observedValue: value) == historical[.longContinuation]?[metric])
+            }
+            let unseen = try scoped(fitted(active: false), scope: .continuousModalWindow)
+            #expect(unseen.effectiveBounds(for: metric, at: .longContinuation,
+                observedValue: value) == unseen[.longContinuation]?[metric])
+            #expect(unseen.effectiveBounds(for: metric, at: .longContinuation,
+                observedValue: value)?.contains(value) == false)
+        }
+        let locallyMeasured = try scoped(fitted(active: true, localRatio: 0.01), scope: .continuousModalWindow)
+        #expect(locallyMeasured.effectiveBounds(for: .foundationDottedRhythmActiveBarRatio,
+            at: .longContinuation, observedValue: 0.4) ==
+            locallyMeasured[.longContinuation]?[.foundationDottedRhythmActiveBarRatio])
+        var retired = try #require(JSONSerialization.jsonObject(
+            with: profile.deterministicJSON()) as? [String: Any])
+        retired["schemaVersion"] = 24
+        retired["profileVersion"] = "autotechno-professional-quality-profile.v32"
+        let retiredData = try JSONSerialization.data(withJSONObject: retired,
+            options: [.sortedKeys, .withoutEscapingSlashes])
+        let diagnostic = try JSONDecoder().decode(ProfessionalQualityCalibrationProfile.self, from: retiredData)
+        #expect(diagnostic.measurementScope == nil && !diagnostic.isComplete)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityCalibrationProfile.decodeDeterministicJSON(retiredData)
+        }
     }
 
     @Test("One failed dimension cannot be compensated by centered peers")

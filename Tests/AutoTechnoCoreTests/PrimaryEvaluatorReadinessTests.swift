@@ -16,9 +16,9 @@ struct PrimaryEvaluatorReadinessTests {
         #expect(ProfessionalQualityAdversarialSuiteReport.schemaVersion == 22)
         #expect(ProfessionalQualityHoldoutQualification.schemaVersion == 20)
         #expect(ProfessionalQualityPrimaryEvaluator.policyFamilyVersion ==
-                "autotechno-quality.primary-calibrated.v31")
+                "autotechno-quality.primary-calibrated.v32")
         #expect(ProfessionalQualityPrimaryEvaluator.evaluatorVersionIdentifier ==
-                "autotechno-candidate-evaluator.primary-calibrated.v31")
+                "autotechno-candidate-evaluator.primary-calibrated.v32")
         #expect(AutonomousCandidateCompletenessFailure.upperPercussionTailEvidence
             .rawValue == "upper-percussion-tail-evidence")
         #expect(AutonomousCandidateCompletenessFailure.modalPercussionEvidence
@@ -55,11 +55,11 @@ struct PrimaryEvaluatorReadinessTests {
 
     @Test("Pending matching current resources cannot leave a partially ready production host")
     func pendingCurrentPairStaysUnavailable() {
-        #expect(ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint == "4fb209bfb248d46b")
-        #expect(ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint == "e347aea9623bba24")
-        #expect(ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint == "57fc2efd43375934")
+        #expect(ProfessionalQualityPrimaryArtifacts.expectedProfileFingerprint == nil)
+        #expect(ProfessionalQualityPrimaryArtifacts.expectedAdversarialSuiteFingerprint == nil)
+        #expect(ProfessionalQualityPrimaryArtifacts.expectedHoldoutQualificationFingerprint == nil)
         #expect(LongHorizonProfessionalPolicySchema.requiredPrimaryPolicyVersion ==
-            "autotechno-quality.primary-calibrated.v31.profile-4fb209bfb248d46b.adversarial-e347aea9623bba24.holdout-57fc2efd43375934")
+            "autotechno-quality.primary-calibrated.v32.unqualified")
         #expect(throws: ProfessionalQualityCalibrationError.invalidIdentity) {
             try AutonomousPerformanceArtifactSet.load()
         }

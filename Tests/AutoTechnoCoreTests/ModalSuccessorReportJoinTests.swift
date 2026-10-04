@@ -5,46 +5,18 @@ import Testing
 
 @Suite("Modal successor report join", .serialized)
 struct ModalSuccessorReportJoinTests {
-    @Test("Reproduce current frozen-study live baselines and construct its offline primary model",
+    @Test("Previous v32 native study cannot authorize the new dotted-rhythm policy",
         .enabled(if: ProcessInfo.processInfo.environment["AUTOTECHNO_VERIFY_EA5_NATIVE_LIVE_BASELINES"] == "1"))
     func verifyFreshNativePrimaryAndLiveReproducibility() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .deletingLastPathComponent().deletingLastPathComponent()
         let study = root.appendingPathComponent("docs/local/reports/rms-trajectory-floor/fresh-qualification-ea5ea53")
-        let artifacts = try ProfessionalQualityPrimaryArtifacts(
-            profileData: Data(contentsOf: study.appendingPathComponent("offline-profile.json")),
-            adversarialSuiteData: Data(contentsOf: study.appendingPathComponent("continuous-adversarial-suite.json")),
-            holdoutQualificationData: Data(contentsOf: study.appendingPathComponent("continuous-holdout-qualification.json")))
-        #expect(artifacts.profile.fingerprint == "4fb209bfb248d46b")
-        #expect(artifacts.adversarialSuite.fingerprint == "e347aea9623bba24")
-        #expect(artifacts.holdoutQualification.fingerprint == "57fc2efd43375934")
-        let products = try LiveFeedbackTestSupport.renderContinuousLiveSourceProducts()
-        let bound = try products.chain.continuousSourceObservations(
-            attenuationReports: products.attenuationReports, attenuationSuccessor: products.attenuationSuccessor,
-            recoveryReports: products.recoveryReports, recoverySuccessor: products.recoverySuccessor)
-        let all = bound.attenuation + bound.recovery
-        #expect(all.allSatisfy { $0.isComplete &&
-            ProfessionalQualityProfileEvaluator.evaluate($0, against: artifacts.profile).accepted })
-        let observations = [try #require(bound.attenuation.first), try #require(bound.recovery.first)]
-        let fingerprints = try observations.map { observation in
-            var sink = StreamingFNV1a()
-            sink.domain("professional-quality-live-baseline.v1")
-            sink.string(String(decoding: try observation.deterministicJSON(), as: UTF8.self))
-            return fixedWidthFingerprintHex(sink.value)
+        #expect(throws: ProfessionalQualityCalibrationError.profileMismatch) {
+            try ProfessionalQualityPrimaryArtifacts(
+                profileData: Data(contentsOf: study.appendingPathComponent("offline-profile.json")),
+                adversarialSuiteData: Data(contentsOf: study.appendingPathComponent("continuous-adversarial-suite.json")),
+                holdoutQualificationData: Data(contentsOf: study.appendingPathComponent("continuous-holdout-qualification.json")))
         }
-        #expect(fingerprints == artifacts.adversarialSuite.liveBaselineObservationFingerprints)
-        #expect(Set(fingerprints).count == 2)
-        let result: [String: Any] = ["schema": "autotechno-current-native-live-reproduction.v1",
-            "qualifiedStudyHead": "ea5ea537a9359da47c6e9e7e75758cf9eddd74ba",
-            "sourceScope": "post-study-working-tree-control-not-final-source-qualification",
-            "primaryPolicyVersion": artifacts.evaluator.policyVersion,
-            "liveBaselineFingerprints": fingerprints, "allFixedLabelsAccepted": all.allSatisfy {
-                ProfessionalQualityProfileEvaluator.evaluate($0, against: artifacts.profile).accepted },
-            "matchesQualifiedStudy": fingerprints == artifacts.adversarialSuite.liveBaselineObservationFingerprints,
-            "archiveImport": false, "runtimeActivation": false, "fullRuntimeQualification": false]
-        try JSONSerialization.data(withJSONObject: result, options: [.sortedKeys, .prettyPrinted])
-            .write(to: study.deletingLastPathComponent().appendingPathComponent("fresh-native-live-reproduction.json"), options: .atomic)
-        print("current native live baselines: \(fingerprints); offline model construction succeeded; activation=false")
     }
 
     @Test("Continuous live challenge sources bind actual attenuation/recovery products and immediate successors")
@@ -1034,7 +1006,7 @@ struct ModalSuccessorReportJoinTests {
             continuousBank: fixture.supportedBank, successors: fixture.supportedReceipts)
         #expect(profile.isComplete && !profile.usesDiverseCalibration)
         #expect(profile.measurementScope == .continuousModalWindow)
-        #expect(profile.schemaVersion == 24 && profile.profileVersion ==
+        #expect(profile.schemaVersion == ProfessionalQualityMeasurementScope.continuousModalWindow.profileSchema && profile.profileVersion ==
             ProfessionalQualityMeasurementContract.continuousModalProfileVersion)
         #expect(profile.sourceTrajectoryCount == 1)
         let profileRebuilt = try ProfessionalQualityCalibrationProfile.decodeDeterministicJSON(profile.deterministicJSON())
