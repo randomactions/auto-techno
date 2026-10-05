@@ -249,3 +249,40 @@ Native/component parity is not programme-wide adoption: actual shared-cohort and
 complete fifteen-family/nineteen-check/two-aggregate parity against regeneration
 remain required at the coordinated current engine boundary. Holdouts, rejection,
 replay, routes, resources, memory/deadline and promotion gates remain unchanged.
+
+
+## Tracked derived output transactions
+
+The deficit register is the sole registered tracked-derived family. Its exact
+outputs are `docs/DEFICIT_REGISTER.json` and `docs/DEFICIT_REGISTER.md`; raw/local
+captures retain their existing absent-output rule and local path restriction.
+Merely allowing a tracked path never permits an existing report to be backfilled.
+
+`record_fresh_capture` requires an explicit separate `candidate_root` for this
+family. The driver prepares a clean candidate at the same original committed
+source/context with complete exact upstream captures and private corpus inputs,
+then binds actual producer/validator callbacks to that candidate's working
+directory. Both tracked output slots must initially match original Git bytes and
+must not alias original files. Production and independent validation run in their
+existing serial order there; the original checkout/register remains unchanged.
+
+The versioned tracked binding preserves the complete original snapshot and records
+original output bytes separately from newly generated output bytes. HEAD, index,
+inventory and every other tracked byte remain exact. Only these registered
+nonexecutable output slots may differ, and neither may also be a declared frozen
+producer/analyzer input. Extra paths, staged changes, source drift, symlinks,
+missing/mutated upstream captures, validator mutation, failed exits and resealed
+original-output substitutions refuse. Metadata fixtures establish these mechanics,
+not native, content, quality or complete Phase-1 qualification.
+
+`publish_tracked_capture` is a separate driver operation after candidate validation.
+It rechecks the original clean source/context, original output bytes, candidate
+and upstream bindings; installs only the bounded checked JSON/Markdown bytes; and
+runs the independent validator again in the original checkout. Failed validation
+restores the original registered outputs and preserves the failed candidate.
+Changed parent directories prevent safe restoration and fail closed with the
+candidate preserved. Successful publication leaves only those derived output
+slots dirty; it does not commit, retag an envelope or grant artifact currency,
+quality, promotion or runtime authority. All flags remain typed false. Subsequent
+source commits and full graph adoption must use the existing conservative
+dependency/currentness checks; this output transaction does not waive them.
