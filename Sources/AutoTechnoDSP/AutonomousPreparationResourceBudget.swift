@@ -111,9 +111,13 @@ package struct AutonomousPreparationResourceBudget: Equatable, Sendable {
 /// analyzer and looper workspaces die when each render call unwinds. No qualified
 /// child or physical support requirement is removed to fit this bound.
 package struct AutonomousPreparationChainResourceBudget: Equatable, Sendable {
-    package static let version = "autotechno-preparation-chain-resource.v1"
+    package static let version = "autotechno-preparation-chain-resource.v2"
     package let reservedPeakWorkingByteCount: Int
     package let retainedNumericByteCount: Int
+    /// The root request stays alive across the entire chain, even after each
+    /// source is suspended. Charge its allocated numeric capacity once; child
+    /// incoming state already belongs to a retained completed source.
+    package let retainedIncomingContinuationNumericByteCount: Int
     package let sourceCount: Int
     package let maximumRenderPassCount: Int
     private let completedSourceCount: Int
@@ -121,13 +125,28 @@ package struct AutonomousPreparationChainResourceBudget: Equatable, Sendable {
 
     package init() {
         reservedPeakWorkingByteCount = 0; retainedNumericByteCount = 0
+        retainedIncomingContinuationNumericByteCount = 0
         sourceCount = 0; maximumRenderPassCount = 0
         completedSourceCount = 0; completedRenderPassCount = 0
     }
 
-    private init(peak: Int, retained: Int, count: Int, passes: Int,
+    /// Measured through the complete canonical typed inventory before PCM
+    /// rendering. Unused capacity is retained storage, not an empty input.
+    /// This supplements the existing conservative render/capture charges.
+    package init?(incomingContinuationNumericByteCount: Int) {
+        guard (0...AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount)
+            .contains(incomingContinuationNumericByteCount) else { return nil }
+        reservedPeakWorkingByteCount = incomingContinuationNumericByteCount
+        retainedNumericByteCount = incomingContinuationNumericByteCount
+        retainedIncomingContinuationNumericByteCount = incomingContinuationNumericByteCount
+        sourceCount = 0; maximumRenderPassCount = 0
+        completedSourceCount = 0; completedRenderPassCount = 0
+    }
+
+    private init(peak: Int, retained: Int, incoming: Int, count: Int, passes: Int,
         completedCount: Int, completedPasses: Int) {
         reservedPeakWorkingByteCount = peak; retainedNumericByteCount = retained
+        retainedIncomingContinuationNumericByteCount = incoming
         sourceCount = count; maximumRenderPassCount = passes
         completedSourceCount = completedCount; completedRenderPassCount = completedPasses
     }
@@ -148,7 +167,9 @@ package struct AutonomousPreparationChainResourceBudget: Equatable, Sendable {
             total.partialValue <= AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount
         else { return nil }
         return Self(peak: max(reservedPeakWorkingByteCount, total.partialValue),
-            retained: retainedNumericByteCount, count: count.partialValue, passes: passes.partialValue,
+            retained: retainedNumericByteCount,
+            incoming: retainedIncomingContinuationNumericByteCount,
+            count: count.partialValue, passes: passes.partialValue,
             completedCount: completedSourceCount, completedPasses: completedRenderPassCount)
     }
 
@@ -174,6 +195,7 @@ package struct AutonomousPreparationChainResourceBudget: Equatable, Sendable {
         guard !retained.overflow,
             retained.partialValue <= reservedPeakWorkingByteCount else { return nil }
         return Self(peak: reservedPeakWorkingByteCount, retained: retained.partialValue,
+            incoming: retainedIncomingContinuationNumericByteCount,
             count: sourceCount, passes: maximumRenderPassCount,
             completedCount: sourceCount, completedPasses: maximumRenderPassCount)
     }

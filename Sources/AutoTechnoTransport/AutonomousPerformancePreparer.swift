@@ -804,6 +804,35 @@ package enum AutonomousPerformancePreparer {
             }
             let plan = director.plan(from: current.sourceState,
                 qualityRecoveryContext: current.key.routeRecovery ? .neutral : current.key.qualityRecoveryContext)
+            if frames.isEmpty {
+                // Reuse the renderer's canonical structural guard before the
+                // typed inventory can visit arbitrary continuation collections.
+                guard AutonomousPhrasePreparer.continuationInputsAreBounded(
+                    renderState: current.incomingRenderState,
+                    graphState: current.incomingGraphState,
+                    previousGraph: current.previousGraph,
+                    sessionSeed: current.sourceState.rootSeed,
+                    routeRecovery: current.key.routeRecovery,
+                    phraseIndex: plan.phraseIndex) else {
+                    return .failed(PhrasePreparationFailure(
+                        stage: AutonomousPhrasePreparationFailure.Stage.inputValidation.rawValue,
+                        code: AutonomousPhrasePreparationFailure.Code.invalidInput.rawValue,
+                        details: ["continuation-inputs"]))
+                }
+                guard let incomingBytes = AutonomousTypedFingerprint.retainedContinuationNumericByteCount(
+                    renderState: current.incomingRenderState,
+                    generatedDSPState: current.incomingGraphState,
+                    cancellationRequested: cancellationRequested) else {
+                    return fail(cancellationRequested() ? "cancelled" : "resource-bound",
+                        ["scope=incoming-continuation"])
+                }
+                guard let incomingReservation = AutonomousPreparationChainResourceBudget(
+                    incomingContinuationNumericByteCount: incomingBytes) else {
+                    return fail("resource-bound", ["scope=incoming-continuation",
+                        "incoming-bytes=\(incomingBytes)"])
+                }
+                resource = incomingReservation
+            }
             let evaluator = makeEvaluator(current)
             let capture = frames.isEmpty && diagnosticRoleStemCapture
             if diagnosticRoleStemSession != nil && !evaluator.requiresPreparedValidation {

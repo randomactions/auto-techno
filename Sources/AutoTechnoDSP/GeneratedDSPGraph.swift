@@ -2628,7 +2628,7 @@ package enum AutonomousPhrasePreparer {
     /// Every continuation collection is owned by a fixed-delay DSP primitive.
     /// Reject package callers that bypass those owners before typed hashing or
     /// rendering can turn an arbitrary collection into unbounded work.
-    private static func continuationInputsAreBounded(
+    package static func continuationInputsAreBounded(
         renderState: RenderState,
         graphState: GeneratedDSPContinuationState,
         previousGraph: DSPGraphPlan?,

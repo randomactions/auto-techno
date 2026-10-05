@@ -1574,3 +1574,28 @@ native selected-root/exact-child admission, runtime activation or quality
 promotion is changed or proved by these observations. AT-0039's full native
 primary, actual Long18, all lifecycle/Phase1/aggregate, capacity/deadline and
 physical-output requirements remain incomplete until independently qualified.
+
+The shared detached chain reservation v2 charges the root request's complete
+typed numeric continuation inventory before creating its evaluator or rendering
+PCM. Float buffers contribute allocated capacity, including unused elements;
+bounded structural validation reuses the canonical DSP input guard first. The
+root remains charged once across all actual passes and suspended sources.
+Child incoming state is already retained by its completed parent and does not
+create a second root charge. Invalid, cancelled or over-ceiling input refuses
+without a render, selected capture, state advance or playable result.
+
+This closes an incoming-owner omission while retaining every existing active
+render, full-capture, completed-source, analyzer and evidence charge. The 128MiB
+ceiling and two-pass limit remain unchanged. Admission with different unused
+capacity may differ because physical storage differs, while identical admitted
+semantic inputs preserve PCM, replay, evidence and exact child ownership.
+Complete allocation/metadata/chunk lifetime bounds, native corrected selected
+root/child capture, RSS/deadlines and full qualification remain outstanding.
+
+Native detached controls record whole-test-process RSS and the sum of high-water
+statistics across currently registered malloc zones directly in the validator
+process. These diagnostics include runtime/instrumentation overhead, retain no
+PCM or addresses, never run in the callback, and do not feed admission or musical
+decisions. Zone peaks may be noncoincident; destroyed zones and non-malloc VM are
+excluded from that allocator measure. They supplement the named-buffer inventory
+without claiming complete numeric attribution or a qualified capacity bound.

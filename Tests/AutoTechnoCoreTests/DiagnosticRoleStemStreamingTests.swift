@@ -2,9 +2,34 @@ import AutoTechnoCore
 @testable import AutoTechnoDSP
 import Foundation
 import Testing
+#if canImport(Darwin)
+import Darwin
+#endif
 
 @Suite("Bounded same-pass diagnostic stem streaming", .serialized)
 struct DiagnosticRoleStemStreamingTests {
+    /// Test-process diagnostic only, outside the renderer and callback. All
+    /// current malloc zones contribute their own (possibly noncoincident) peak;
+    /// destroyed zones and non-malloc VM are outside this allocator measure.
+    /// RSS remains a separate whole-process monotonic high-water observation.
+    static func nativeProcessMemoryObservation() throws -> [String: UInt64] {
+        #if canImport(Darwin)
+        var allocation = malloc_statistics_t()
+        malloc_zone_statistics(nil, &allocation)
+        var usage = rusage()
+        guard getrusage(RUSAGE_SELF, &usage) == 0, usage.ru_maxrss >= 0 else {
+            throw DiagnosticRoleStemCaptureError.invalidInput
+        }
+        return ["mallocBlocksInUse": UInt64(allocation.blocks_in_use),
+            "mallocBytesInUse": UInt64(allocation.size_in_use),
+            "currentMallocZoneHighWaterSumBytes": UInt64(allocation.max_size_in_use),
+            "mallocReservedBytes": UInt64(allocation.size_allocated),
+            "wholeProcessHighWaterBytes": UInt64(usage.ru_maxrss)]
+        #else
+        return [:]
+        #endif
+    }
+
     private func planWithSixteenBars() throws -> AutonomousPhrasePlan {
         let director = AutonomousSessionDirector(rootSeed: 42)
         var state = director.initialState()
@@ -250,6 +275,7 @@ struct DiagnosticRoleStemStreamingTests {
     @Test("Sixteen native bars retain bounded capture storage while exporting every tap",
           arguments: [44_100.0, 48_000.0])
     func nativeBoundedCapture(sampleRate: Double) throws {
+        let processMemoryBefore = try Self.nativeProcessMemoryObservation()
         let plan = try planWithSixteenBars()
         let reference = try nativeReference(plan, rate: sampleRate)
         let parent = try temporaryParent(); defer { try? FileManager.default.removeItem(at: parent) }
@@ -404,6 +430,12 @@ struct DiagnosticRoleStemStreamingTests {
         let control: [String: Any] = [
             "schema": "autotechno-native-bar-stream-control.v1",
             "sampleRate": sampleRate, "barCount": records.count, "channelCount": 32,
+            "processMemoryBefore": processMemoryBefore,
+            "processMemoryAfter": try Self.nativeProcessMemoryObservation(),
+            "processMemoryAvailable": !processMemoryBefore.isEmpty,
+            "allocatorScope": "currently-registered-all-malloc-zone-high-water-sum-not-phase-exclusive",
+            "allocatorExcludes": ["destroyed-zones", "non-malloc-virtual-memory"],
+            "allocatorCompleteNumericAttribution": false,
             "framesPerBar": expectedFrames,
             "totalFilePayloadByteCount": records.reduce(0) { $0 + $1.payloadByteCount },
             "maximumBorrowedCaptureCapacityByteCount": try #require(draft?.maximumBorrowedNumericCapacityByteCount),

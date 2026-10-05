@@ -534,6 +534,141 @@ struct IterativeSuccessorPreparationTests {
             single.phraseFrameCount * 32 * MemoryLayout<Float>.stride * 2)
     }
 
+    @Test("Root allocated continuation remains reserved exactly once across passes and suspended sources")
+    func incomingCapacityReservation() throws {
+        let incoming = 3 * 1_024 * 1_024
+        var budget = try #require(AutonomousPreparationChainResourceBudget(
+            incomingContinuationNumericByteCount: incoming))
+        var empty = AutonomousPreparationChainResourceBudget()
+        #expect(budget.sourceCount == 0 && budget.maximumRenderPassCount == 0)
+        for _ in 0..<3 {
+            budget = try #require(budget.reserving(sampleRate: 8_000, barCount: 4, renderPassCount: 2))
+            empty = try #require(empty.reserving(sampleRate: 8_000, barCount: 4, renderPassCount: 2))
+            #expect(budget.reservedPeakWorkingByteCount - empty.reservedPeakWorkingByteCount == incoming)
+            #expect(budget.retainedNumericByteCount - empty.retainedNumericByteCount == incoming)
+            #expect(budget.retainedIncomingContinuationNumericByteCount == incoming)
+            budget = try #require(budget.retainingCompletedSource(sampleRate: 8_000, barCount: 4,
+                requiresQualifiedSuccessor: true))
+            empty = try #require(empty.retainingCompletedSource(sampleRate: 8_000, barCount: 4,
+                requiresQualifiedSuccessor: true))
+        }
+        let ceiling = AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount
+        #expect(AutonomousPreparationChainResourceBudget(incomingContinuationNumericByteCount: -1) == nil)
+        #expect(AutonomousPreparationChainResourceBudget(incomingContinuationNumericByteCount: Int.max) == nil)
+        let occupied = try #require(AutonomousPreparationChainResourceBudget(
+            incomingContinuationNumericByteCount: ceiling))
+        #expect(occupied.reserving(sampleRate: 8_000, barCount: 4, renderPassCount: 1) == nil)
+        #expect(AutonomousPreparationChainResourceBudget.version == "autotechno-preparation-chain-resource.v2")
+    }
+
+    @Test("Unused incoming capacity refuses before PCM, observation or evaluator creation")
+    func oversizedIncomingCapacityRefuses() async throws {
+        let original = Self.sourceRequest(rate: 48_000)
+        var render = original.incomingRenderState
+        render.delayBuffer.reserveCapacity(AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount /
+            MemoryLayout<Float>.stride + 1)
+        #expect(render.delayBuffer.isEmpty)
+        let request = PhrasePreparationRequest(key: original.key, sourceState: original.sourceState,
+            incomingLongHorizonState: original.incomingLongHorizonState,
+            incomingRenderState: render, incomingGraphState: original.incomingGraphState,
+            previousGraph: original.previousGraph, pendingLiveMasterBinding: original.pendingLiveMasterBinding)
+        #expect(request.replayIdentity == original.replayIdentity)
+        let countValue = AutonomousTypedFingerprint.retainedContinuationNumericByteCount(
+            renderState: render, generatedDSPState: request.incomingGraphState,
+            cancellationRequested: { false })
+        let count = try #require(countValue)
+        #expect(count > AutonomousPreparationResourceBudget.maximumPeakWorkingByteCount)
+        let control = Control()
+        let probe = PreparationWorkingStorageProbe()
+        let result = await Task.detached {
+            AutonomousPerformancePreparer.prepareChainDiagnosing(request: request,
+                director: AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed),
+                longHorizonPolicy: nil, workingStorageProbe: probe,
+                makeEvaluator: { input in
+                    control.terminal(input.key.phraseIndex)
+                    return Evaluator(request: input, control: control)
+                }, cancellationRequested: { false })
+        }.value
+        #expect(result.preparedPhrase == nil && result.failure?.stage == "successor-chain")
+        #expect(result.failure?.code == "resource-bound")
+        #expect(result.failure?.details.contains("scope=incoming-continuation") == true)
+        #expect(control.terminals.isEmpty && probe.observationCount == 0)
+        #expect(render.delayBuffer.isEmpty && request.replayIdentity == original.replayIdentity)
+    }
+
+    @Test("Charged unused root capacity preserves native PCM, proof, continuation and child ownership")
+    func chargedIncomingCapacityPreservesNativeProducts() async throws {
+        for rate in [44_100.0, 48_000.0] {
+            let original = Self.sourceRequest(rate: rate)
+            var render = original.incomingRenderState
+            render.delayBuffer.reserveCapacity(16_384)
+            let request = PhrasePreparationRequest(key: original.key, sourceState: original.sourceState,
+                incomingLongHorizonState: original.incomingLongHorizonState,
+                incomingRenderState: render, incomingGraphState: original.incomingGraphState,
+                previousGraph: original.previousGraph, pendingLiveMasterBinding: original.pendingLiveMasterBinding)
+            #expect(request.replayIdentity == original.replayIdentity)
+            func prepare(_ input: PhrasePreparationRequest) async -> PerformancePreparationOutcome {
+                await Task.detached {
+                    AutonomousPerformancePreparer.prepareChainDiagnosing(request: input,
+                        director: AutonomousSessionDirector(rootSeed: input.sourceState.rootSeed),
+                        longHorizonPolicy: nil, makeEvaluator: { Evaluator(request: $0, control: Control()) },
+                        cancellationRequested: { false })
+                }.value
+            }
+            let ordinaryOutcome = await prepare(original)
+            let ordinary = try #require(ordinaryOutcome.preparedPhrase)
+            let chargedOutcome = await prepare(request)
+            let charged = try #require(chargedOutcome.preparedPhrase)
+            let referenceNodes = [ordinary] + ordinary.retainedContinuations
+            let actualNodes = [charged] + charged.retainedContinuations
+            #expect(actualNodes.count == referenceNodes.count && actualNodes.count > 1)
+            #expect(actualNodes.allSatisfy { $0.prepared.commitEligible && $0.continuationOwnershipIsValid })
+            for (actual, reference) in zip(actualNodes, referenceNodes) {
+                #expect(actual.prepared.blocks == reference.prepared.blocks)
+                #expect(actual.prepared.repeatHoldEvolutions == reference.prepared.repeatHoldEvolutions)
+                #expect(actual.prepared.candidateEvaluationFingerprint == reference.prepared.candidateEvaluationFingerprint)
+                #expect(actual.prepared.preparationReplayFingerprint == reference.prepared.preparationReplayFingerprint)
+                #expect(actual.prepared.endingRenderState == reference.prepared.endingRenderState)
+                #expect(actual.prepared.endingGraphState == reference.prepared.endingGraphState)
+                #expect(actual.request.replayIdentity == reference.request.replayIdentity)
+            }
+            let expectedIncomingValue = AutonomousTypedFingerprint.retainedContinuationNumericByteCount(
+                renderState: render, generatedDSPState: request.incomingGraphState,
+                cancellationRequested: { false })
+            let expectedIncoming = try #require(expectedIncomingValue)
+            let ordinaryBudget = try #require(ordinary.preparationChainResourceBudget)
+            let chargedBudget = try #require(charged.preparationChainResourceBudget)
+            let delta = expectedIncoming - ordinaryBudget.retainedIncomingContinuationNumericByteCount
+            #expect(delta == render.delayBuffer.capacity * MemoryLayout<Float>.stride)
+            #expect(chargedBudget.retainedIncomingContinuationNumericByteCount == expectedIncoming)
+            #expect(chargedBudget.reservedPeakWorkingByteCount - ordinaryBudget.reservedPeakWorkingByteCount == delta)
+            #expect(chargedBudget.retainedNumericByteCount - ordinaryBudget.retainedNumericByteCount == delta)
+            #expect(chargedBudget.sourceCount == ordinaryBudget.sourceCount)
+            #expect(chargedBudget.maximumRenderPassCount == ordinaryBudget.maximumRenderPassCount)
+            let exact = actualNodes.count == referenceNodes.count && zip(actualNodes, referenceNodes).allSatisfy { actual, reference in
+                actual.prepared.blocks == reference.prepared.blocks &&
+                actual.prepared.repeatHoldEvolutions == reference.prepared.repeatHoldEvolutions &&
+                actual.prepared.candidateEvaluationFingerprint == reference.prepared.candidateEvaluationFingerprint &&
+                actual.prepared.preparationReplayFingerprint == reference.prepared.preparationReplayFingerprint &&
+                actual.prepared.endingRenderState == reference.prepared.endingRenderState &&
+                actual.prepared.endingGraphState == reference.prepared.endingGraphState &&
+                actual.request.replayIdentity == reference.request.replayIdentity &&
+                actual.prepared.commitEligible && actual.continuationOwnershipIsValid
+            }
+            let report: [String: Any] = ["schema": "autotechno-incoming-storage-control.v1",
+                "sampleRate": rate, "sources": actualNodes.count,
+                "rootAllocatedContinuationChargeBytes": expectedIncoming,
+                "unusedRootCapacityBytes": render.delayBuffer.capacity * MemoryLayout<Float>.stride,
+                "peakReservationDeltaBytes": chargedBudget.reservedPeakWorkingByteCount - ordinaryBudget.reservedPeakWorkingByteCount,
+                "retainedReservationDeltaBytes": chargedBudget.retainedNumericByteCount - ordinaryBudget.retainedNumericByteCount,
+                "exactProductsProofStateReplayAndOwnership": exact,
+                "sourceIdentities": actualNodes.map { $0.prepared.preparedValidationSourceIdentityFingerprint ?? "none" },
+                "completeWorkingSetQualification": false, "runtimeActivation": false]
+            print("AUTOTECHNO_INCOMING_STORAGE_CONTROL " + String(decoding:
+                try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]), as: UTF8.self))
+        }
+    }
+
     @Test("Retained numeric storage shares the canonical typed inventory and counts buffer capacity")
     func typedRetainedStorageInventory() throws {
         let base = RenderState()
@@ -619,7 +754,13 @@ struct IterativeSuccessorPreparationTests {
             let resource = try #require(result.preparationChainResourceBudget)
             #expect(resource.sourceCount == nodes.count)
             #expect(control.terminals == nodes.map { $0.request.key.phraseIndex })
-            var expected = AutonomousPreparationChainResourceBudget()
+            let incomingCountValue = AutonomousTypedFingerprint.retainedContinuationNumericByteCount(
+                renderState: request.incomingRenderState, generatedDSPState: request.incomingGraphState,
+                cancellationRequested: { false })
+            let incomingCount = try #require(incomingCountValue)
+            var expected = try #require(AutonomousPreparationChainResourceBudget(
+                incomingContinuationNumericByteCount: incomingCount))
+            #expect(resource.retainedIncomingContinuationNumericByteCount == incomingCount)
             for (index, node) in nodes.enumerated() {
                 expected = try #require(expected.reserving(sampleRate: rate, barCount: node.prepared.plan.barCount,
                     renderPassCount: node.prepared.correctionRenderCount + 1))
@@ -924,6 +1065,7 @@ struct IterativeSuccessorPreparationTests {
                 let request = Self.sourceRequest(rate: rate)
                 let director = AutonomousSessionDirector(rootSeed: request.sourceState.rootSeed)
                 let original = AutonomousCandidateFingerprint.sessionState(request.sourceState)
+                let processMemoryBefore = try DiagnosticRoleStemStreamingTests.nativeProcessMemoryObservation()
                 let reference = await Task.detached {
                     let control = Control(mode: mode)
                     let outcome = AutonomousPerformancePreparer.prepareChainDiagnosing(
@@ -974,6 +1116,12 @@ struct IterativeSuccessorPreparationTests {
                 }
                 let report: [String: Any] = ["schema": "autotechno-chain-storage-control.v2",
                     "sampleRate": rate, "sources": sourceIdentities.count, "admitted": outcome.preparedPhrase != nil,
+                    "processMemoryBefore": processMemoryBefore,
+                    "processMemoryAfter": try DiagnosticRoleStemStreamingTests.nativeProcessMemoryObservation(),
+                    "processMemoryAvailable": !processMemoryBefore.isEmpty,
+                    "allocatorScope": "currently-registered-all-malloc-zone-high-water-sum-not-phase-exclusive",
+                    "allocatorExcludes": ["destroyed-zones", "non-malloc-virtual-memory"],
+                    "allocatorCompleteNumericAttribution": false,
                     "selectedCorrection": mode == .forceCorrection, "observations": probe.observationCount,
                     "phaseObservationCounts": probe.phaseObservationCounts,
                     "snapshots": try JSONSerialization.jsonObject(with: JSONEncoder().encode(probe.snapshots)),
