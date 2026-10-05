@@ -902,13 +902,12 @@ package final class TechnoEngine: ObservableObject {
             return
         }
         guard let phraseNumber = nextPhraseNumber(for: request) else { return }
-        if let qualityDecision {
-            qualityRetryContinuation = qualityRetryContinuation
-                .recordingCalibratedRejection(
-                    decision: qualityDecision,
-                    targetPhraseIndex: request.key.phraseIndex
-                )
+        let recovery = qualityDecision.map {
+            qualityRetryContinuation.recoveringAfterRejection(decision: $0,
+                targetPhraseIndex: request.key.phraseIndex, initialPreparation: false,
+                coherentRepeatCount: nextPhraseProgress.repeatCount)
         }
+        if let recovery { qualityRetryContinuation = recovery.continuation }
         let retriesExhausted = qualityRetryContinuation.isExhausted(
             for: request.key.phraseIndex
         )
@@ -942,12 +941,7 @@ package final class TechnoEngine: ObservableObject {
         Self.successorPreparationLogger.error(
             "Successor failed phrase=\(phraseNumber, privacy: .public) attempt=\(self.nextPhraseProgress.attemptCount, privacy: .public) repeats=\(self.nextPhraseProgress.repeatCount, privacy: .public) presented-repeat-bars=\(request.key.qualityRecoveryContext.presentedRepeatBars, privacy: .public) recovery-wave=\(request.key.qualityRecoveryContext.wave, privacy: .public) retry-variant=\(request.key.qualityRetryOrdinal, privacy: .public) blocked=\(preparationBlocked, privacy: .public) wave-exhausted=\(retriesExhausted, privacy: .public) recovery-symbolic=\(request.key.qualityRecoveryContext.intent.symbolicDensity.rawValue, privacy: .public) recovery-spectral=\(request.key.qualityRecoveryContext.intent.spectralMovement.rawValue, privacy: .public) recovery-kick-crest=\(request.key.qualityRecoveryContext.intent.kickCrestReduction.rawValue, privacy: .public) stage=\(failure.stage, privacy: .public) code=\(failure.code, privacy: .public) details=\(failure.logDetails, privacy: .public)"
         )
-        let recoveryScheduling =
-            AutonomousQualityRecoverySchedulingPolicy.decide(
-                retryable: retryableQualityFailure,
-                waveExhausted: retriesExhausted,
-                coherentRepeatCount: nextPhraseProgress.repeatCount
-            )
+        let recoveryScheduling = recovery?.scheduling ?? .failClosed
         if recoveryScheduling == .continueSerially,
            let currentPhrase {
             // Once one coherent repeat has authorized recovery, finish the
@@ -976,28 +970,16 @@ package final class TechnoEngine: ObservableObject {
         qualityDecision: QualityDecision? = nil
     ) {
         guard let phraseNumber = initialPhraseNumber(for: request) else { return }
-        if let qualityDecision {
-            qualityRetryContinuation = qualityRetryContinuation
-                .recordingCalibratedRejection(
-                    decision: qualityDecision,
-                    targetPhraseIndex: request.key.phraseIndex
-                )
+        let recovery = qualityDecision.map {
+            qualityRetryContinuation.recoveringAfterRejection(decision: $0,
+                targetPhraseIndex: request.key.phraseIndex, initialPreparation: true,
+                coherentRepeatCount: 0)
         }
+        if let recovery { qualityRetryContinuation = recovery.continuation }
         let retryableQualityFailure = qualityDecision?
             .isRetryableCandidateRejection == true
-        let exhaustedWave = qualityRetryContinuation.isExhausted(
-            for: request.key.phraseIndex
-        )
-        if retryableQualityFailure && exhaustedWave {
-            // There is no accepted phrase to authorize a coherent boundary
-            // while establishing P1. Yield between detached tasks, but open
-            // the next finite wave immediately so startup cannot become a
-            // permanent retryable-quality block.
-            qualityRetryContinuation = qualityRetryContinuation
-                .beginningNextWave(
-                    targetPhraseIndex: request.key.phraseIndex
-                )
-        }
+        let exhaustedWave = recovery?.waveExhausted ??
+            qualityRetryContinuation.isExhausted(for: request.key.phraseIndex)
         let nextRecoveryContext = qualityRetryContinuation.context(
             for: request.key.phraseIndex
         )

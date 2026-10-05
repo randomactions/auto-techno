@@ -2433,3 +2433,32 @@ physical overlap reduction, not a complete working-set proof. Existing numeric
 reservations, 128 MiB ceiling, two-pass bound and all final qualification gates
 remain unchanged until complete active-path allocation bounds are established.
 No score, musical parameter, callback, host, policy or renderer is added.
+
+## Shared desktop recovery transition
+
+Both desktop hosts now use the existing Core retry continuation through one
+`recoveringAfterRejection` transition. It retains calibrated rejection reasons,
+fixed ordinals, directional intent, finite waves and presented-repeat bars.
+Initial preparation opens another finite wave through the next detached task;
+successors wait for their first coherent repeat and yield at an exhausted wave.
+Accepted session state and PCM never advance from rejected evidence.
+
+Windows consumes diagnosed prepared rejection decisions and binds the resulting
+context into its exact preparation/replay key. It retains accepted immutable PCM
+while recovering, commits only an eligible exact product, and preserves required
+measured-child priority. Stale results do not change recovery. Unsafe, missing,
+unavailable or route-recovery failures remain fail-closed. Route recovery resets
+ephemeral retries and uses neutral route semantics; accepted phrase commit resets
+the retry target. The macOS orchestration reuses the same Core transition without
+changing its existing recovery sequence. No callback work, alternate renderer,
+new musical parameter, extra pass or relaxed admission is introduced.
+
+Rejected Windows PCM is released on the serial preparation queue before its
+next render; the asynchronous host handoff carries only a bounded rejection
+decision or an eligible immutable accepted product. This removes rejected-audio
+ownership from host retry scheduling without lowering any resource reservation.
+
+The shared policy and request/score binding have deterministic controls. Building
+the Windows host against macOS platform stubs is source validation only; native
+Windows execution, physical-device recovery, fresh engine-v49 qualification,
+complete working storage/deadlines and final runtime gates remain separate.

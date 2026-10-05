@@ -681,7 +681,7 @@ Members:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoWindows/main.swift`](../Sources/AutoTechnoWindows/main.swift): `AutonomousPerformancePreparer.prepare(`
+- [`Sources/AutoTechnoWindows/main.swift`](../Sources/AutoTechnoWindows/main.swift): `AutonomousPerformancePreparer.prepareDiagnosing(`
 
 Evidence anchors:
 

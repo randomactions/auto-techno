@@ -560,7 +560,7 @@
         {"path": "Sources/AutoTechnoWindows/main.swift", "symbol": "WindowsAutoTechnoController", "kind": "class"}
       ],
       "convergenceAnchors": [
-        {"path": "Sources/AutoTechnoWindows/main.swift", "fragment": "AutonomousPerformancePreparer.prepare("}
+        {"path": "Sources/AutoTechnoWindows/main.swift", "fragment": "AutonomousPerformancePreparer.prepareDiagnosing("}
       ],
       "evidenceAnchors": [
         {"path": "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift", "fragment": "func desktopHostsUseSharedPreparation()"}

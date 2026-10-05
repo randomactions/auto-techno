@@ -65,6 +65,8 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
     private var queuedPreparationRequest: PhrasePreparationRequest?
     private var nextBlockIndex = 0
     private var coherentRepeatCount = 0
+    private var qualityRetryContinuation = AutonomousQualityRetryContinuation()
+    private var preparationBlocked = false
     private var repeatHoldEvolutionPlaybackMode:
         RepeatHoldEvolutionPlaybackMode = .exactAcceptedPCM
     private var nextScheduleSample: UInt64 = 0
@@ -167,11 +169,14 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
                 sessionState.liveMasterHeadroom.fingerprint,
             pendingLiveMasterProposalFingerprint: nil,
             liveEarliestEligibleFutureSample: nil,
-            liveTargetStartSample: nil
+            liveTargetStartSample: nil,
+            qualityRecoveryContext: routeRecovery ? .neutral :
+                qualityRetryContinuation.context(for: phraseIndex)
         )
     }
 
     private func requestPreparation(_ request: PhrasePreparationRequest) {
+        guard !preparationBlocked || request.key.routeRecovery else { return }
         if preparingKey == request.key {
             return
         }
@@ -185,26 +190,66 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
         let qualityArtifacts = qualityArtifacts
         let longHorizonArtifacts = longHorizonArtifacts
         preparationQueue.async { [weak self] in
-            let result = AutonomousPerformancePreparer.prepare(
+            let outcome = AutonomousPerformancePreparer.prepareDiagnosing(
                 request: request,
                 director: director,
                 artifacts: qualityArtifacts,
                 longHorizonArtifacts: longHorizonArtifacts
             )
-            self?.stateQueue.async { [weak self] in
+            // Rejected PCM stays on this serial preparation queue and dies
+            // before its next render. Host control receives only the bounded
+            // decision; accepted PCM alone crosses the asynchronous handoff.
+            let product = outcome.preparedPhrase
+            let accepted = product?.prepared.commitEligible == true ? product : nil
+            let rejection = accepted == nil ? product?.prepared.qualityDecision : nil
+            self?.stateQueue.async { [weak self, accepted, rejection] in
                 guard let self else { return }
                 guard self.preparingKey == request.key else { return }
                 self.preparingKey = nil
-                if let result {
-                    self.acceptPreparedPhrase(result)
-                } else if self.currentPhrase == nil {
-                    self.setPlaybackState(.unavailable)
+                if let accepted {
+                    self.acceptPreparedPhrase(accepted)
+                } else {
+                    self.recordPreparationFailure(for: request, decision: rejection)
                 }
                 if let queued = self.queuedPreparationRequest {
                     self.queuedPreparationRequest = nil
                     self.requestPreparation(queued)
                 }
             }
+        }
+    }
+
+    /// State-queue control only. Rejected audio never enters the cache or
+    /// device queue, and an unrelated/stale request cannot change recovery.
+    private func recordPreparationFailure(for request: PhrasePreparationRequest,
+        decision: QualityDecision?) {
+        guard request.key.routeGeneration == routeGeneration,
+            request.key.sessionSeed == sessionState.rootSeed,
+            request.sourceState == sessionState else { return }
+        guard !request.key.routeRecovery, let decision else {
+            preparationBlocked = true
+            queuedPreparationRequest = nil
+            if currentPhrase == nil { setPlaybackState(.unavailable) }
+            return
+        }
+        let recovery = qualityRetryContinuation.recoveringAfterRejection(
+            decision: decision, targetPhraseIndex: request.key.phraseIndex,
+            initialPreparation: currentPhrase == nil,
+            coherentRepeatCount: coherentRepeatCount)
+        qualityRetryContinuation = recovery.continuation
+        preparationBlocked = recovery.scheduling == .failClosed
+        queuedPreparationRequest = nil
+        if recovery.scheduling == .continueSerially {
+            requestPreparation(PhrasePreparationRequest(
+                key: preparationKey(phraseIndex: request.key.phraseIndex,
+                    routeRecovery: false), sourceState: request.sourceState,
+                incomingLongHorizonState: request.incomingLongHorizonState,
+                incomingRenderState: request.incomingRenderState,
+                incomingGraphState: request.incomingGraphState,
+                previousGraph: request.previousGraph,
+                pendingLiveMasterBinding: request.pendingLiveMasterBinding))
+        } else if preparationBlocked && currentPhrase == nil {
+            setPlaybackState(.unavailable)
         }
     }
 
@@ -239,6 +284,8 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
         }
 
         currentPhrase = phrase
+        qualityRetryContinuation = AutonomousQualityRetryContinuation()
+        preparationBlocked = false
         sessionState = phrase.request.sourceState.advance(
             using: phrase.prepared.plan,
             quality: phrase.prepared.qualityContinuationState,
@@ -311,6 +358,8 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
             next.request.incomingLongHorizonState?.fingerprint == longHorizonState?.fingerprint
         else { return false }
         currentPhrase = next
+        qualityRetryContinuation = AutonomousQualityRetryContinuation()
+        preparationBlocked = false
         sessionState = next.request.sourceState.advance(
             using: next.prepared.plan,
             quality: next.prepared.qualityContinuationState,
@@ -360,6 +409,10 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
                     // do not prepare, block, or mutate topology in an audio callback.
                     nextBlockIndex = 0
                     coherentRepeatCount += 1
+                    qualityRetryContinuation = qualityRetryContinuation
+                        .recordingPresentedRepeat(targetPhraseIndex: sessionState.phraseIndex,
+                            barCount: phrase.prepared.plan.barCount)
+                        .beginningNextWave(targetPhraseIndex: sessionState.phraseIndex)
                     repeatHoldEvolutionPlaybackMode =
                         RepeatHoldEvolutionBoundaryPolicy.decide(
                             coherentRepeatCount: coherentRepeatCount,
@@ -484,6 +537,8 @@ private final class WindowsAutoTechnoController: @unchecked Sendable {
             )
         }
         requestedPlaybackAfterPreparation = shouldResume
+        qualityRetryContinuation = AutonomousQualityRetryContinuation()
+        preparationBlocked = false
         routeGeneration += 1
         preparingKey = nil
         queuedPreparationRequest = nil

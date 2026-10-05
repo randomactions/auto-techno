@@ -337,6 +337,48 @@ package struct AutonomousQualityRetryContinuation: Codable, Equatable, Sendable 
     }
 }
 
+/// One host-independent transition after a measured rejection. Accepted
+/// musical state and PCM remain outside this ephemeral recovery continuation.
+package struct AutonomousQualityRecoveryStep: Equatable, Sendable {
+    package let continuation: AutonomousQualityRetryContinuation
+    package let scheduling: AutonomousQualityRecoverySchedulingDecision
+    package let waveExhausted: Bool
+}
+
+extension AutonomousQualityRetryContinuation {
+    /// Reuses the existing finite ordinal/wave and calibrated-reason policy for
+    /// both hosts. Startup has no accepted PCM boundary, so it yields to the next
+    /// detached task and opens the next finite wave immediately. A successor
+    /// waits for its first coherent repeat and yields at an exhausted wave.
+    package func recoveringAfterRejection(
+        decision: QualityDecision,
+        targetPhraseIndex: Int,
+        initialPreparation: Bool,
+        coherentRepeatCount: Int
+    ) -> AutonomousQualityRecoveryStep {
+        guard targetPhraseIndex >= 0, decision.isRetryableCandidateRejection else {
+            return AutonomousQualityRecoveryStep(continuation: self,
+                scheduling: .failClosed, waveExhausted: isExhausted(for: targetPhraseIndex))
+        }
+        let recorded = recordingCalibratedRejection(decision: decision,
+            targetPhraseIndex: targetPhraseIndex)
+        let exhausted = recorded.isExhausted(for: targetPhraseIndex)
+        if initialPreparation {
+            let next = exhausted ? recorded.beginningNextWave(
+                targetPhraseIndex: targetPhraseIndex) : recorded
+            return AutonomousQualityRecoveryStep(continuation: next,
+                scheduling: next.context(for: targetPhraseIndex) != context(for: targetPhraseIndex)
+                    ? .continueSerially : .failClosed,
+                waveExhausted: exhausted)
+        }
+        return AutonomousQualityRecoveryStep(continuation: recorded,
+            scheduling: AutonomousQualityRecoverySchedulingPolicy.decide(
+                retryable: true, waveExhausted: exhausted,
+                coherentRepeatCount: coherentRepeatCount),
+            waveExhausted: exhausted)
+    }
+}
+
 /// Versioned, durable reason identifiers. Raw values are report wire values;
 /// adding a materially different meaning requires a new suffixed case rather
 /// than silently reinterpreting an existing one.

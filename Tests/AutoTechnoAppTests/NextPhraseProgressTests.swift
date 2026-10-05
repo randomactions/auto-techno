@@ -214,7 +214,17 @@ struct NextPhraseProgressTests {
         let recovery = engine[recoveryStart.lowerBound..<recoveryEnd.lowerBound]
 
         #expect(recovery.contains("continueSerially"))
-        #expect(recovery.contains("beginningNextWave"))
+        #expect(recovery.contains("recoveringAfterRejection"))
+        let core = try String(contentsOf: repositoryRoot.appendingPathComponent(
+            "Sources/AutoTechnoCore/QualityQualification.swift"), encoding: .utf8)
+        let sharedStart = try #require(core.range(of: "extension AutonomousQualityRetryContinuation"))
+        let sharedEnd = try #require(core.range(of: "/// Versioned, durable reason identifiers",
+            range: sharedStart.upperBound..<core.endIndex))
+        let shared = core[sharedStart.lowerBound..<sharedEnd.lowerBound]
+        #expect(shared.contains("beginningNextWave"))
+        let windows = try String(contentsOf: repositoryRoot.appendingPathComponent(
+            "Sources/AutoTechnoWindows/main.swift"), encoding: .utf8)
+        #expect(windows.contains("recoveringAfterRejection"))
         #expect(recovery.contains("if canRetry { prepare() }"))
         #expect(!recovery.contains("player.pause"))
         #expect(!recovery.contains("newSet"))

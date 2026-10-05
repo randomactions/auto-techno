@@ -394,6 +394,10 @@
         {
           "symbol": "LiveMasterHeadroomContinuationState",
           "path": "Sources/AutoTechnoCore/LiveFeedback.swift"
+        },
+        {
+          "symbol": "AutonomousQualityRecoveryStep",
+          "path": "Sources/AutoTechnoCore/QualityQualification.swift"
         }
       ],
       "state": [
@@ -424,7 +428,8 @@
         "offline process-local independent stereo analysis reuse with live input hashes, unchanged per-asset comparisons, bounded memory, cold fallback and all nineteen aggregate subordinate validators",
         "Engine v49 and quality-contract schema50 bind post-relocation tonal ownership; candidate-vector43/transaction14 unchanged and all current primary seals unset pending complete fresh native qualification.",
         "driver-owned fresh capture transaction binding with exact output/PCM coverage, original source ancestry, conservative frozen dependencies and exact transitive upstream captures; actual producer invocation accounting and scoped artifact currency remain required adoption work; lifecycle assessment v2 and Phase-1 v2 retain original whole/role envelopes with separate current source/context/probe verification, enforce paired origin/current bindings and post-cold byte/source checks, and keep unsupported families conservative",
-        "Registered tracked-derived deficit output is generated and independently checked in a separate same-origin candidate checkout. Original source, HEAD, index, inventory and complete upstream captures remain frozen; only the exact JSON/Markdown output slots may differ. Checked publication revalidates immutable inputs and restores original output bytes on validation failure; no currency or promotion authority."
+        "Registered tracked-derived deficit output is generated and independently checked in a separate same-origin candidate checkout. Original source, HEAD, index, inventory and complete upstream captures remain frozen; only the exact JSON/Markdown output slots may differ. Checked publication revalidates immutable inputs and restores original output bytes on validation failure; no currency or promotion authority.",
+        "One host-independent calibrated rejection transition preserves finite startup/successor recovery scheduling, target isolation and exact request/score binding for macOS and Windows."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/LiveFeedback.swift",
@@ -433,7 +438,8 @@
       "testPaths": [
         "Tests/AutoTechnoCoreTests/LiveFeedbackCoreTests.swift",
         "Tests/AutoTechnoCoreTests/LiveFeedbackTestSupport.swift",
-        "Tests/AutoTechnoCoreTests/QualityQualificationFoundationTests.swift"
+        "Tests/AutoTechnoCoreTests/QualityQualificationFoundationTests.swift",
+        "Tests/AutoTechnoCoreTests/AutonomousQualityRecoveryHostPolicyTests.swift"
       ],
       "contracts": [
         "docs/SOUND_QUALITY.md",
@@ -1421,7 +1427,7 @@
     {
       "id": "windows-transport-and-waveout",
       "name": "Windows transport and waveOut output",
-      "responsibility": "Reuse canonical detached preparation and immutable primary or qualified repeat-hold pattern-family PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting. Consume the same exact measured child before ordinary cache/repeat policy, suppress independent successor replacement while required, and recover the route on shared boundary refusal.",
+      "responsibility": "Reuse canonical detached preparation and immutable primary or qualified repeat-hold pattern-family PCM while owning Win32 presentation, lookahead scheduling, waveOut conversion/queueing, device recovery, and fixed-work completion accounting. Consume the same exact measured child before ordinary cache/repeat policy, suppress independent successor replacement while required, and recover the route on shared boundary refusal. Consume diagnosed rejection decisions through the shared Core retry/wave transition, bind recovery context into exact requests, retain accepted PCM and fail closed for safety or unavailable provenance.",
       "targets": [
         "AutoTechnoWindows",
         "AutoTechnoWindowsPlatform"
@@ -1441,7 +1447,8 @@
         "WindowsRecoveryContext",
         "RepeatHoldEvolutionPlaybackMode",
         "waveOut queue and completion counters",
-        "flat shared measured-child ownership preserved across pause and discarded on route recovery"
+        "flat shared measured-child ownership preserved across pause and discarded on route recovery",
+        "AutonomousQualityRetryContinuation and fail-closed preparation status confined to the Windows state queue"
       ],
       "inputs": [
         "PreparedPerformancePhrase",
@@ -1455,7 +1462,9 @@
       ],
       "evidence": [
         "atomic completion counters",
-        "prepared-key and route-generation checks"
+        "prepared-key and route-generation checks",
+        "Core-owned ordinal/wave/direction/presented-repeat context bound into preparation replay identity",
+        "Serial preparation releases rejected PCM before the next render; asynchronous host control receives a bounded rejection decision or eligible immutable accepted product only."
       ],
       "sourcePaths": [
         "Sources/AutoTechnoWindows/main.swift",
@@ -1465,7 +1474,8 @@
       "testPaths": [
         "Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift",
         "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift",
-        "Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift"
+        "Tests/AutoTechnoAppTests/TechnoEngineLiveFeedbackTests.swift",
+        "Tests/AutoTechnoCoreTests/AutonomousQualityRecoveryHostPolicyTests.swift"
       ],
       "contracts": [
         "docs/WINDOWS_DISTRIBUTION.md",
@@ -1474,7 +1484,8 @@
       ],
       "dependsOn": [
         "session-director-and-score",
-        "shared-detached-preparation"
+        "shared-detached-preparation",
+        "quality-and-feedback-contracts"
       ],
       "boundaries": [
         "detached-preparation",
@@ -1538,7 +1549,7 @@
       "symbol": "AutonomousQualityRetryContinuation",
       "path": "Sources/AutoTechnoCore/QualityQualification.swift",
       "scope": "host-control",
-      "pcmRelationship": "Coordinates bounded detached retries while rejected PCM remains uncommitted."
+      "pcmRelationship": "Both hosts reuse the same finite calibrated rejection transition for detached future proposals; rejected PCM never commits, and accepted presentation alone opens successor waves."
     },
     {
       "id": "long-horizon-adaptation-state",
