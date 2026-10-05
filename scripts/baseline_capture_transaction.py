@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
 from typing import Any, Callable
 
 SCRIPT_DIRECTORY = str(Path(__file__).resolve().parent)
@@ -18,6 +20,9 @@ if SCRIPT_DIRECTORY not in sys.path:
 import baseline_dependency_contract as dependency
 
 SCHEMA = "autotechno-fresh-baseline-capture-binding.v1"
+TRACKED_SCHEMA = "autotechno-tracked-derived-capture-binding.v1"
+TRACKED_OUTPUTS = {"deficit-register": {
+    "docs/DEFICIT_REGISTER.json", "docs/DEFICIT_REGISTER.md"}}
 MAX_OUTPUT_FILES = 1024
 MAX_OUTPUT_FILE_BYTES = 64 * 1024 * 1024
 MAX_TOTAL_OUTPUT_BYTES = 4 * 1024 * 1024 * 1024
@@ -25,6 +30,7 @@ OUTPUT_FIELDS = {"path", "byteCount", "sha256"}
 BINDING_KEYS = {"schema", "familyId", "originSnapshot", "producerInvocation",
                 "validatorInvocation", "outputs", "upstreamBindings",
                 "qualification", "bindingFingerprint"}
+TRACKED_BINDING_KEYS = BINDING_KEYS | {"sourceOutputInputs"}
 
 
 class CaptureTransactionError(RuntimeError):
@@ -43,19 +49,32 @@ def local_path(root: Path, name: str) -> Path:
     return current
 
 
-def output_record(root: Path, name: str) -> dict[str, Any]:
-    path = local_path(root, name)
+def output_path(root: Path, name: str, family_id: str | None = None) -> Path:
+    name = dependency.path_name(name)
+    if name not in TRACKED_OUTPUTS.get(family_id, set()):
+        return local_path(root, name)
+    current = root
+    for part in name.split("/"):
+        current = current / part
+        if current.is_symlink():
+            raise CaptureTransactionError("tracked output cannot traverse a symlink")
+    return current
+
+
+def output_record(root: Path, name: str, family_id: str | None = None) -> dict[str, Any]:
+    path = output_path(root, name, family_id)
     if not path.is_file():
         raise CaptureTransactionError("fresh output missing or not regular: " + name)
     count = path.stat().st_size
-    if count > MAX_OUTPUT_FILE_BYTES:
+    limit = dependency.MAX_METADATA_BYTES if name in TRACKED_OUTPUTS.get(family_id, set()) else MAX_OUTPUT_FILE_BYTES
+    if count > limit:
         raise CaptureTransactionError("fresh output exceeds byte bound")
     h = hashlib.sha256()
     observed = 0
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             observed += len(chunk)
-            if observed > MAX_OUTPUT_FILE_BYTES:
+            if observed > limit:
                 raise CaptureTransactionError("fresh output grew beyond byte bound")
             h.update(chunk)
     if observed != count:
@@ -66,7 +85,7 @@ def output_record(root: Path, name: str) -> dict[str, Any]:
 def required_output_paths(root: Path, family_id: str) -> set[str]:
     node = next(n for n in dependency.lifecycle.NODES if n["id"] == family_id)
     name = node["artifactPath"]
-    path = local_path(root, name)
+    path = output_path(root, name, family_id)
     if path.stat().st_size > dependency.MAX_METADATA_BYTES:
         raise CaptureTransactionError("fresh manifest exceeds metadata bound")
     document = dependency.read_json(path)
@@ -119,11 +138,43 @@ def require_success(code: object, label: str) -> None:
         raise CaptureTransactionError(label + " did not complete successfully")
 
 
+def require_frozen_inputs(root: Path, before: dict[str, Any], outputs: set[str]) -> None:
+    """Permit only registered derived output bytes to differ in a candidate.
+
+    This does not edit or recapture the origin snapshot. HEAD, index, inventory,
+    and every other committed byte must stay exact. Output slots may not also
+    be declared producer/analyzer inputs.
+    """
+    if dependency.git(root, "rev-parse", "HEAD").decode().strip() != before["gitHead"]:
+        raise CaptureTransactionError("tracked candidate HEAD changed")
+    if dependency.git(root, "diff", "--cached", "--name-only", "-z"):
+        raise CaptureTransactionError("tracked candidate index changed")
+    if set(dependency.inventory(root)) != set(before["files"]):
+        raise CaptureTransactionError("tracked candidate inventory changed")
+    corpus_path = before["context"]["captureCorpusPath"]
+    if hashlib.sha256(dependency.regular_bytes(root, corpus_path)).hexdigest() != before["context"]["captureCorpusSha256"]:
+        raise CaptureTransactionError("tracked candidate private corpus changed")
+    for entry in dependency.git(root, "status", "--porcelain=v1", "-z", "--untracked-files=all").split(b"\0"):
+        if entry and (entry[:3] != b" M " or entry[3:].decode() not in outputs):
+            raise CaptureTransactionError("tracked candidate changed an undeclared input")
+    for family in before["families"].values():
+        if outputs & (set(family["producerInputs"]) | set(family["analyzerInputs"])):
+            raise CaptureTransactionError("tracked output is also a frozen producer/analyzer input")
+    for name, record in before["files"].items():
+        data = dependency.regular_bytes(root, name)
+        if name not in outputs and hashlib.sha256(data).hexdigest() != record["sha256"]:
+            raise CaptureTransactionError("tracked candidate immutable input changed: " + name)
+    for name in outputs:
+        if name not in before["files"] or output_path(root, name, "deficit-register").stat().st_mode & 0o111:
+            raise CaptureTransactionError("tracked output must retain a nonexecutable committed slot")
+
+
 def record_fresh_capture(
     root: Path, family_id: str, context: dict[str, str], output_paths: list[str],
     producer_invocation: dict[str, Any], validator_invocation: dict[str, Any],
     producer: Callable[[], int], validator: Callable[[], int],
     *, upstream_bindings: list[dict[str, Any]] | None = None,
+    candidate_root: Path | None = None,
 ) -> dict[str, Any]:
     """Run one producer and validator in the driver's existing serial order.
 
@@ -135,6 +186,15 @@ def record_fresh_capture(
     nodes = {n["id"]: n for n in dependency.lifecycle.NODES}
     if family_id not in nodes:
         raise CaptureTransactionError("unknown baseline family")
+    tracked = nodes[family_id]["artifactClass"] == "tracked-derived"
+    if tracked and (family_id not in TRACKED_OUTPUTS or candidate_root is None):
+        raise CaptureTransactionError("tracked derived capture requires an isolated candidate root")
+    if not tracked and candidate_root is not None:
+        raise CaptureTransactionError("local capture cannot select a tracked candidate root")
+    target = candidate_root if tracked else root
+    if tracked and (not isinstance(target, Path) or target.resolve() == root.resolve()
+        or root.resolve() in target.resolve().parents or target.resolve() in root.resolve().parents):
+        raise CaptureTransactionError("tracked candidate must be separate from the source root")
     if not isinstance(output_paths, list) or not output_paths or len(output_paths) > MAX_OUTPUT_FILES:
         raise CaptureTransactionError("fresh output coverage requires a bounded nonempty path list")
     if any(not isinstance(name, str) for name in output_paths):
@@ -143,14 +203,26 @@ def record_fresh_capture(
         raise CaptureTransactionError("canonical fresh manifest must be declared before production")
     if len(set(output_paths)) != len(output_paths):
         raise CaptureTransactionError("fresh output paths must be unique")
+    if tracked and set(output_paths) != TRACKED_OUTPUTS[family_id]:
+        raise CaptureTransactionError("tracked capture requires the exact registered JSON and Markdown outputs")
     producer_info, validator_info = invocation(producer_invocation), invocation(validator_invocation)
     before = dependency.capture(root, context)
     dependency.validate_snapshot(before, root)
+    source_outputs = []
+    if tracked:
+        if dependency.capture(target, context) != before:
+            raise CaptureTransactionError("tracked candidate source/context differs from frozen origin")
+        require_frozen_inputs(target, before, set(output_paths))
+        if any(output_path(root, n, family_id).samefile(output_path(target, n, family_id)) for n in output_paths):
+            raise CaptureTransactionError("tracked candidate outputs alias original files")
+        source_outputs = sorted((output_record(root, n, family_id) for n in output_paths), key=lambda x: x["path"])
     upstream_bindings = upstream_bindings or []
     parents = {}
     pool = {b["familyId"]: b for b in upstream_bindings}
     for binding in upstream_bindings:
         validate_binding(binding, root, bindings=pool)
+        if tracked:
+            validate_binding(binding, target, bindings=pool)
         name = binding["familyId"]
         if name in parents:
             raise CaptureTransactionError("duplicate upstream binding")
@@ -168,43 +240,65 @@ def record_fresh_capture(
         raise CaptureTransactionError("fresh capture must bind every exact upstream family")
     parents = {name: parents[name] for name in nodes[family_id]["dependencies"]}
     for name in output_paths:
-        if local_path(root, name).exists():
+        if not tracked and local_path(root, name).exists():
             raise CaptureTransactionError("cannot backfill or overwrite an existing capture: " + name)
     require_success(producer(), "producer")
-    first = sorted((output_record(root, n) for n in output_paths), key=lambda x: x["path"])
-    if not required_output_paths(root, family_id) <= set(output_paths):
+    first = sorted((output_record(target, n, family_id if tracked else None) for n in output_paths), key=lambda x: x["path"])
+    if not required_output_paths(target, family_id) <= set(output_paths):
         raise CaptureTransactionError("fresh output coverage omits manifest or PCM")
     if sum(x["byteCount"] for x in first) > MAX_TOTAL_OUTPUT_BYTES:
         raise CaptureTransactionError("fresh output set exceeds aggregate byte bound")
     require_success(validator(), "independent validator")
-    second = sorted((output_record(root, n) for n in output_paths), key=lambda x: x["path"])
+    second = sorted((output_record(target, n, family_id if tracked else None) for n in output_paths), key=lambda x: x["path"])
     if second != first:
         raise CaptureTransactionError("independent validation changed capture bytes")
     after = dependency.capture(root, context)
     if after != before:
         raise CaptureTransactionError("producer dependencies changed during capture or validation")
+    if tracked:
+        require_frozen_inputs(target, before, set(output_paths))
     for binding in upstream_bindings:
         validate_binding(binding, root, bindings=pool)
-    value = {"schema": SCHEMA, "familyId": family_id,
+        if tracked:
+            validate_binding(binding, target, bindings=pool)
+    value = {"schema": TRACKED_SCHEMA if tracked else SCHEMA, "familyId": family_id,
         "originSnapshot": before, "producerInvocation": producer_info,
         "validatorInvocation": validator_info, "outputs": second,
         "upstreamBindings": parents, "qualification": dict(dependency.QUALIFICATION)}
+    if tracked:
+        value["sourceOutputInputs"] = source_outputs
     value["bindingFingerprint"] = dependency.digest(value)
     return value
 
 
 def validate_binding(value: object, root: Path, *, bindings: dict[str, Any] | None = None,
                      active: set[str] | None = None) -> None:
-    if not isinstance(value, dict) or set(value) != BINDING_KEYS or value.get("schema") != SCHEMA:
+    tracked = isinstance(value, dict) and value.get("schema") == TRACKED_SCHEMA
+    if not isinstance(value, dict) or set(value) != (TRACKED_BINDING_KEYS if tracked else BINDING_KEYS) or value.get("schema") not in {SCHEMA, TRACKED_SCHEMA}:
         raise CaptureTransactionError("unsupported or incomplete fresh capture binding")
     if value["bindingFingerprint"] != dependency.digest({k: v for k, v in value.items() if k != "bindingFingerprint"}):
         raise CaptureTransactionError("fresh capture binding fingerprint mismatch")
     nodes = {n["id"]: n for n in dependency.lifecycle.NODES}
-    if value["familyId"] not in nodes:
+    if not isinstance(value["familyId"], str) or value["familyId"] not in nodes:
         raise CaptureTransactionError("unknown baseline family")
-    if value["qualification"] != dependency.QUALIFICATION:
+    if tracked != (nodes[value["familyId"]]["artifactClass"] == "tracked-derived"):
+        raise CaptureTransactionError("capture schema does not match local/tracked artifact ownership")
+    if value["qualification"] != dependency.QUALIFICATION or any(flag is not False for flag in value["qualification"].values()):
         raise CaptureTransactionError("fresh capture binding cannot establish qualification")
     dependency.validate_snapshot(value["originSnapshot"], root)
+    if tracked:
+        family_id = value["familyId"]
+        allowed = TRACKED_OUTPUTS.get(family_id)
+        inputs = value["sourceOutputInputs"]
+        if allowed is None or not isinstance(inputs, list) or [x.get("path") for x in inputs if isinstance(x, dict)] != sorted(allowed):
+            raise CaptureTransactionError("tracked capture origin output coverage differs")
+        for item in inputs:
+            if not isinstance(item, dict) or set(item) != OUTPUT_FIELDS:
+                raise CaptureTransactionError("invalid tracked origin output record")
+            data = dependency.git(root, "cat-file", "blob", value["originSnapshot"]["gitHead"] + ":" + item["path"])
+            if len(data) > dependency.MAX_METADATA_BYTES or type(item["byteCount"]) is not int or item["byteCount"] != len(data) or item["sha256"] != hashlib.sha256(data).hexdigest():
+                raise CaptureTransactionError("tracked origin output does not match original Git bytes")
+        require_frozen_inputs(root, value["originSnapshot"], allowed)
     invocation(value["producerInvocation"])
     invocation(value["validatorInvocation"])
     parents = value["upstreamBindings"]
@@ -234,11 +328,70 @@ def validate_binding(value: object, root: Path, *, bindings: dict[str, Any] | No
         name = output["path"]
         if not isinstance(output["byteCount"], int) or isinstance(output["byteCount"], bool):
             raise CaptureTransactionError("invalid fresh output byte count")
-        if output != output_record(root, name):
+        if output != output_record(root, name, value["familyId"] if tracked else None):
             raise CaptureTransactionError("fresh output hash/size mismatch: " + name)
         names.append(name)
         total += output["byteCount"]
     if not required_output_paths(root, value["familyId"]) <= set(names):
         raise CaptureTransactionError("fresh output coverage omits manifest or PCM")
+    if tracked and set(names) != TRACKED_OUTPUTS[value["familyId"]]:
+        raise CaptureTransactionError("tracked capture output coverage differs")
     if names != sorted(set(names)) or total > MAX_TOTAL_OUTPUT_BYTES:
         raise CaptureTransactionError("fresh output coverage/order/aggregate bound mismatch")
+
+
+def replace_tracked_bytes(root: Path, name: str, data: bytes) -> None:
+    path = output_path(root, name, "deficit-register")
+    if name not in TRACKED_OUTPUTS["deficit-register"] or len(data) > dependency.MAX_METADATA_BYTES:
+        raise CaptureTransactionError("unregistered or oversized tracked publication")
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=path.name + ".candidate-", delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(data)
+        os.chmod(temporary, 0o644)
+        os.replace(temporary, path)
+        temporary = None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def publish_tracked_capture(value: dict[str, Any], root: Path, candidate_root: Path,
+    validator: Callable[[], int], *, bindings: dict[str, Any]) -> None:
+    """Install only an independently validated tracked candidate.
+
+    The driver owns serial publication. Failures preserve the candidate and
+    restore the original registered outputs. Publication never commits source,
+    changes an origin envelope, or grants currency/promotion authority.
+    """
+    if value.get("schema") != TRACKED_SCHEMA or root.resolve() == candidate_root.resolve():
+        raise CaptureTransactionError("publication requires a separate tracked candidate")
+    validate_binding(value, candidate_root, bindings=bindings)
+    before = dependency.capture(root, value["originSnapshot"]["context"])
+    if before != value["originSnapshot"]:
+        raise CaptureTransactionError("publication source/context moved from frozen origin")
+    for parent in bindings.values():
+        validate_binding(parent, root, bindings=bindings)
+    names = sorted(TRACKED_OUTPUTS[value["familyId"]])
+    if [output_record(root, n, value["familyId"]) for n in names] != value["sourceOutputInputs"]:
+        raise CaptureTransactionError("publication original tracked outputs changed")
+    originals = {n: dependency.regular_bytes(root, n) for n in names}
+    candidate = {n: dependency.regular_bytes(candidate_root, n) for n in names}
+    try:
+        for name in names:
+            replace_tracked_bytes(root, name, candidate[name])
+        require_success(validator(), "published tracked independent validator")
+        validate_binding(value, root, bindings=bindings)
+    except BaseException:
+        for name in names:
+            # A validator must not change outputs. Remove a substituted leaf
+            # symlink without following it before restoring the registered slot.
+            parent = output_path(root, name, "deficit-register").parent if not (root / name).is_symlink() else root / "docs"
+            if parent.is_symlink() or not parent.is_dir():
+                raise CaptureTransactionError("tracked publication parent changed; candidate preserved")
+            leaf = parent / Path(name).name
+            if leaf.is_symlink():
+                leaf.unlink()
+            replace_tracked_bytes(root, name, originals[name])
+        raise
