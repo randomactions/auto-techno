@@ -33,6 +33,55 @@ jobs:
       - name: Show Swift toolchain
         run: swift --version
 
+      - name: Verify fresh and retained capture provenance
+        if: matrix.bank == 'foundation'
+        working-directory: scripts
+        run: >-
+          python3 -m unittest
+          test_baseline_capture_scope
+          test_baseline_capture_transaction
+          test_baseline_dependency_contract
+          test_baseline_producer_capture_driver
+          test_baseline_producer_witness
+          test_baseline_retained_capture
+          test_baseline_validation_session
+          test_lifecycle_retained_scope
+          test_phase_one_gate
+          test_tracked_derived_capture
+          test_baseline_lifecycle_policy
+          test_baseline_render_manifest
+          test_stem_capture_manifest
+          test_authority_surface_inventory
+
+      - name: Verify Release producer witness and actual initialization
+        if: matrix.bank == 'foundation'
+        env:
+          AUTOTECHNO_RUN_PRODUCER_WITNESS_PROBE: '1'
+          AUTOTECHNO_PRODUCER_WITNESS_PROBE_OUTPUT: docs/local/reports/ci-producer-probe.json
+        run: |
+          swift test -c release --no-parallel \
+            --build-path "$RUNNER_TEMP/auto-techno-provenance-release" \
+            --filter BaselineProducerWitnessTests
+          python3 - <<'PY'
+          import json
+          import re
+          import sys
+          from pathlib import Path
+
+          sys.path.insert(0, str(Path("scripts").resolve()))
+          import baseline_producer_witness as witness
+
+          root = Path.cwd()
+          probe = json.loads((root / "docs/local/reports/ci-producer-probe.json").read_text())
+          witness.validate_probe(root, probe,
+              image=Path(probe["compiledImagePath"]), corpus_name="docs/BASELINE_CORPUS.json")
+          source = (root / "Sources/AutoTechnoCore/QualityQualification.swift").read_text()
+          version = re.search(r'engineVersion\s*=\s*"([^"]+)"', source)
+          if version is None or probe["engineVersion"] != version.group(1):
+              raise SystemExit("actual producer engine differs from the source contract")
+          print("Actual Release image and complete public initialization ledger verified; no capture currency or promotion.")
+          PY
+
       # Swift Testing retains substantial render fixtures for the lifetime of
       # one test process on the hosted macOS runner. Keep execution serial and
       # restart the process at every prepared-product boundary so the complete
