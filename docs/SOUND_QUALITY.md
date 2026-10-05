@@ -1510,8 +1510,13 @@ with live PercussionEchoTextureVoice owners. Gated echo registers its delay;
 anticipation swell registers that delay and its full-frame reverse source;
 spatial dust registers both independent delay arrays. Regenerated memory-source
 PCM is observed after the existing canonical kick render and before AudioSlice
-consumption. These are the existing helpers and actual arrays, with unchanged
-PCM arithmetic and evidence. No musical parameter or alternate renderer is added.
+consumption. AudioSliceRenderer also observes its actual copied source window
+alongside the live source and borrowed destination before processing triggers.
+It joins the same caller inventory, excluding the mutable AudioSlice destination
+before borrowing it. Invalid or absent slice plans allocate no source window and
+make no slice observation. These are existing helpers and actual arrays, with
+unchanged PCM arithmetic and evidence. No musical parameter or alternate renderer
+is added.
 
 One private synchronous owner uses the same caller inventory for helper and
 product boundaries. It excludes mutable helper return buffers before their inout
@@ -1530,8 +1535,17 @@ swell and spatial dust, including delay/reverse geometry, caller/source aliases
 and exhausted fallback. Native whole-render controls retain exact original phase
 counts and compare ordinary PCM, hold products and typed ending continuation.
 
-These observations remain partial: kick dry-event scratch, AudioSlice internal
-work, other helper/analyzer/node and standard-library transients, reference-owner
+The existing canonical cross-phrase memory fixture now covers cut and granular
+recall at8k,44100 and48000. It compares the entire RenderedBar and typed ending
+RenderState for ordinary, replay, observed and exhausted paths. Its actual
+regenerated source, independent copied window and borrowed output capacities,
+caller workspace/state, and physical helper counts are required evidence.
+Original whole-render per-phase counts remain exact with added active slice
+visits. A retained maximum is a phase sample, not every helper allocation.
+
+These observations remain partial: GroovePulse dry-event Float scratch, kick
+accumulator arrays, further AudioSlice metadata/trigger work, other
+helper/analyzer/node and standard-library transients, reference-owner
 metadata, heap/allocator overhead, waveform envelopes, encoding/writer buffers,
 whole-process RSS and deadlines are not a complete bound. Instrumentation may
 extend observed lifetimes. No capture charge,128MiB ceiling, two-pass limit,

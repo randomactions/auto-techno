@@ -1396,29 +1396,38 @@ package enum VoiceRenderer {
                 inventory.register(regeneratedMemory, owner: "memory.regenerated")
                 withExtendedLifetime((owners, regeneratedMemory)) {}
             }
-            audioSliceRenderEvidence = AudioSliceRenderer.render(
-                source: regeneratedMemory,
-                output: &audioSliceStem,
-                plan: audioSlicePlan,
-                stepFrames: stepFrames,
-                sampleRate: sampleRate
-            )
+            audioSliceRenderEvidence = observingHelper(excluding: ["audioSliceStem"]) { observation in
+                AudioSliceRenderer.render(
+                    source: regeneratedMemory,
+                    output: &audioSliceStem,
+                    plan: audioSlicePlan,
+                    stepFrames: stepFrames,
+                    sampleRate: sampleRate,
+                    storageObservation: observation
+                )
+            }
         } else if audioSlicePlan?.sourceKind == .kick {
-            audioSliceRenderEvidence = AudioSliceRenderer.render(
-                source: kickDetectorBus,
-                output: &audioSliceStem,
-                plan: audioSlicePlan,
-                stepFrames: stepFrames,
-                sampleRate: sampleRate
-            )
+            audioSliceRenderEvidence = observingHelper(excluding: ["audioSliceStem"]) { observation in
+                AudioSliceRenderer.render(
+                    source: kickDetectorBus,
+                    output: &audioSliceStem,
+                    plan: audioSlicePlan,
+                    stepFrames: stepFrames,
+                    sampleRate: sampleRate,
+                    storageObservation: observation
+                )
+            }
         } else {
-            audioSliceRenderEvidence = AudioSliceRenderer.render(
-                source: percussionStem,
-                output: &audioSliceStem,
-                plan: audioSlicePlan,
-                stepFrames: stepFrames,
-                sampleRate: sampleRate
-            )
+            audioSliceRenderEvidence = observingHelper(excluding: ["audioSliceStem"]) { observation in
+                AudioSliceRenderer.render(
+                    source: percussionStem,
+                    output: &audioSliceStem,
+                    plan: audioSlicePlan,
+                    stepFrames: stepFrames,
+                    sampleRate: sampleRate,
+                    storageObservation: observation
+                )
+            }
         }
         // Preserve the dry tap for its existing fingerprint and reverb send;
         // the reused texture buffer becomes the complete audible percussion

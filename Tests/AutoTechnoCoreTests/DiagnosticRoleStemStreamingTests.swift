@@ -277,7 +277,10 @@ struct DiagnosticRoleStemStreamingTests {
         let memoryBars = result.blocks.filter {
             $0.synthPerformance.composition.audioSlice?.resampledMemorySource != nil
         }.count
-        let helperObservations = plan.barCount * 4 + (activeHelperBars + memoryBars) * 2
+        let sliceBars = result.blocks.filter {
+            $0.synthPerformance.composition.audioSlice != nil
+        }.count
+        let helperObservations = plan.barCount * 4 + (activeHelperBars + memoryBars + sliceBars) * 2
         #expect(storageProbe.valid && storageProbe.observationCount ==
             plan.barCount * (9 + 2 * nodeCount) + helperObservations)
         var expectedCounts: [String: Int] = [:]
@@ -288,8 +291,8 @@ struct DiagnosticRoleStemStreamingTests {
         }
         expectedCounts["generated-graph.current.branches"] = plan.barCount * nodeCount
         expectedCounts["generated-graph.current.node-return"] = plan.barCount * nodeCount
-        expectedCounts["full-voice.helper-working"] = plan.barCount * 2 + activeHelperBars + memoryBars
-        expectedCounts["protected-voice.helper-working"] = plan.barCount * 2 + activeHelperBars + memoryBars
+        expectedCounts["full-voice.helper-working"] = plan.barCount * 2 + activeHelperBars + memoryBars + sliceBars
+        expectedCounts["protected-voice.helper-working"] = plan.barCount * 2 + activeHelperBars + memoryBars + sliceBars
         #expect(storageProbe.phaseObservationCounts == expectedCounts)
         let snapshots = storageProbe.snapshots
         #expect(snapshots.map(\.phase) == ["bar-delivery", "full-voice-return", "full-voice.helper-working", "full-voice.product",
@@ -310,7 +313,7 @@ struct DiagnosticRoleStemStreamingTests {
                 #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("voice.state.") })
                 #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("outer.continuation.") })
                 #expect(!snapshot.ownerRecords.contains { $0.owner == "voice.percussionTextureStem" } ||
-                    snapshot.ownerRecords.contains { $0.owner.hasPrefix("dust.") || $0.owner == "memory.regenerated" })
+                    snapshot.ownerRecords.contains { $0.owner.hasPrefix("dust.") || $0.owner == "memory.regenerated" || $0.owner == "slice.sourceWindow" })
             } else if snapshot.phase.hasPrefix("generated-graph.") {
                 #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("outer.workspace.") })
                 #expect(snapshot.ownerRecords.contains { $0.owner.hasPrefix("outer.state.") })
@@ -324,13 +327,13 @@ struct DiagnosticRoleStemStreamingTests {
         #expect(delivery.ownerRecords.contains { $0.owner.hasPrefix("hold.") })
         let snapshotJSON = try JSONEncoder().encode(snapshots)
         let storageControl: [String: Any] = [
-            "schema": "autotechno-render-inner-storage-control.v2",
+            "schema": "autotechno-render-inner-storage-control.v3",
             "sampleRate": sampleRate, "barCount": plan.barCount,
             "observations": storageProbe.observationCount,
             "phaseObservationCounts": storageProbe.phaseObservationCounts,
             "expectedOriginalPhaseCounts": expectedCounts.filter { !$0.key.hasSuffix(".helper-working") },
             "expectedHelperObservations": helperObservations,
-            "activeHelperBars": activeHelperBars, "memorySourceBars": memoryBars,
+            "activeHelperBars": activeHelperBars, "memorySourceBars": memoryBars, "audioSliceBars": sliceBars,
             "snapshots": try JSONSerialization.jsonObject(with: snapshotJSON),
             "exactPCMStateAndHoldProducts": true,
             "completeWorkingSetQualification": false,

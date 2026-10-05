@@ -62,7 +62,8 @@ package enum AudioSliceRenderer {
         output: inout [Float],
         plan: AudioSlicePlan?,
         stepFrames: Double,
-        sampleRate: Double
+        sampleRate: Double,
+        storageObservation: PreparationStorageObservation? = nil
     ) -> AudioSliceRenderEvidence {
         guard let plan,
               !source.isEmpty,
@@ -85,6 +86,14 @@ package enum AudioSliceRenderer {
         guard sourceCount >= 2 else { return .neutral }
         let sourceEnd = sourceStart + sourceCount
         let sourceWindow = Array(source[sourceStart..<sourceEnd])
+        // The real copy and mutable destination coexist here; no synthetic
+        // scratch or retained destination alias is added by the caller.
+        storageObservation?.observe("helper-working") { inventory in
+            inventory.register(source, owner: "slice.source")
+            inventory.register(output, owner: "slice.output")
+            inventory.register(sourceWindow, owner: "slice.sourceWindow")
+            withExtendedLifetime((source, output, sourceWindow)) {}
+        }
         let fadeFrames = max(1, Int((sampleRate * edgeFadeSeconds).rounded()))
         var renderedFrames = 0
         var finite = sourceWindow.allSatisfy(\.isFinite)
