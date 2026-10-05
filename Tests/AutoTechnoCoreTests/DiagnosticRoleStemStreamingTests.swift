@@ -663,16 +663,29 @@ struct DiagnosticRoleStemStreamingTests {
         let probe = PreparationWorkingStorageProbe()
         var ordinaryFingerprints: [String] = []
         var observedFingerprints: [String] = []
+        var retainedInputDetachments = 0
         for (bar, plan) in [safe, changed, changed, changed].enumerated() {
             let reference = GeneratedDSPGraphRenderer.process(left: left, right: right,
                 sampleRate: sampleRate, plan: plan, state: &ordinary)
+            let incoming = observed
+            let incomingFingerprint = AutonomousCandidateFingerprint.generatedDSPState(incoming)
             let scope = PreparationStorageObservation(probe: probe, prefix: "graph", bar: bar) { inventory in
                 inventory.register(outer, owner: "outer.borrow")
-                withExtendedLifetime(outer) {}
+                AutonomousTypedFingerprint.registerGeneratedDSPStorage(incoming,
+                    inventory: inventory, owner: "outer.incoming")
+                withExtendedLifetime((outer, incoming)) {}
             }
             let actual = GeneratedDSPGraphRenderer.process(left: left, right: right,
                 sampleRate: sampleRate, plan: plan, state: &observed, storageObservation: scope)
             #expect(actual.0 == reference.0 && actual.1 == reference.1 && observed == ordinary)
+            #expect(AutonomousCandidateFingerprint.generatedDSPState(incoming) == incomingFingerprint)
+            if bar >= 2 {
+                let before = try Self.delayBufferIdentities(incoming, id: 8)
+                let after = try Self.delayBufferIdentities(observed, id: 8)
+                #expect(before.0 != after.0 && before.1 != after.1)
+                retainedInputDetachments += 1
+            }
+            withExtendedLifetime(incoming) {}
             ordinaryFingerprints.append(ExactPCMFingerprint.stereo(left: reference.0, right: reference.1))
             observedFingerprints.append(ExactPCMFingerprint.stereo(left: actual.0, right: actual.1))
             #expect(observed.retiringBarsRemaining == (bar == 1 ? 1 : 0))
@@ -686,26 +699,101 @@ struct DiagnosticRoleStemStreamingTests {
         #expect(retiring.ownerRecords.contains { $0.owner.hasPrefix("graph.current-state.") && $0.capacityBytes > 0 })
         #expect(retiring.ownerRecords.contains { $0.owner.hasPrefix("branch.states.") && $0.capacityBytes > 0 })
         let node = try #require(probe.snapshots.first { $0.phase == "graph.current.node-return" })
-        let newDelay = node.ownerRecords.filter { $0.owner.hasPrefix("branch.node-8.") &&
-            $0.owner.hasSuffix(".delayLeft") && $0.capacityBytes > 0 }
-        let oldDelay = node.ownerRecords.filter { $0.owner == "branch.states.8.delayLeft" && $0.capacityBytes > 0 }
-        #expect(newDelay.count == 1 && oldDelay.count == 1)
-        #expect(newDelay.first?.aliasOf == nil && oldDelay.first?.aliasOf == nil)
+        // The maximum can belong to any node: it need not retain node8's
+        // projection. Check that actual maximum's completed node aliases its
+        // canonical dictionary, and check node8's real incoming/current owners.
+        let nodeProjection = node.ownerRecords.filter {
+            $0.owner.hasPrefix("branch.node-") && $0.capacityBytes > 0 }
+        let projectionAliasesCanonical = !nodeProjection.isEmpty && nodeProjection.allSatisfy { record in
+            guard let alias = record.aliasOf, alias.hasPrefix("branch.states.") else { return false }
+            return node.ownerRecords.contains { $0.owner == alias &&
+                $0.capacityBytes == record.capacityBytes && $0.elementCount == record.elementCount }
+        }
+        let incomingDelay = node.ownerRecords.filter {
+            $0.owner == "outer.incoming.8.delayLeft" && $0.capacityBytes > 0 }
+        let currentDelay = node.ownerRecords.filter {
+            $0.owner == "branch.states.8.delayLeft" && $0.capacityBytes > 0 }
+        #expect(incomingDelay.count == 1 && currentDelay.count == 1)
+        #expect(incomingDelay.first?.aliasOf == nil && currentDelay.first?.aliasOf == nil)
+        #expect(projectionAliasesCanonical && retainedInputDetachments == 2)
         let control: [String: Any] = [
-            "schema": "autotechno-inner-graph-retirement-control.v1",
+            "schema": "autotechno-inner-graph-retirement-control.v2",
             "sampleRate": sampleRate, "framesPerCall": left.count, "calls": 4,
             "observations": probe.observationCount,
             "snapshots": try JSONSerialization.jsonObject(with: JSONEncoder().encode(probe.snapshots)),
             "ordinaryFingerprints": ordinaryFingerprints, "observedFingerprints": observedFingerprints,
             "ordinaryEndingState": AutonomousCandidateFingerprint.generatedDSPState(ordinary),
             "observedEndingState": AutonomousCandidateFingerprint.generatedDSPState(observed),
-            "newAndOldDelayStorageIndependent": newDelay.first?.aliasOf == nil && oldDelay.first?.aliasOf == nil,
+            "nodeProjectionAliasesCanonicalStorage": projectionAliasesCanonical,
+            "retainedIncomingStateUnchanged": true,
+            "retainedIncomingDelayDetachments": retainedInputDetachments,
+            "newAndOldDelayStorageIndependent": retainedInputDetachments == 2,
             "retirementClosed": observed.retiringGraph == nil && observed.retiringStates.isEmpty,
             "qualification": "mechanical-only-not-installed", "completeWorkingSetQualification": false,
         ]
         let controlJSON = try JSONSerialization.data(withJSONObject: control, options: [.sortedKeys])
         print("AUTOTECHNO_GRAPH_INNER_STORAGE_CONTROL " + String(decoding: controlJSON, as: UTF8.self))
         withExtendedLifetime((outer, left, right, ordinary, observed)) {}
+    }
+
+    // Pointer values are transient test comparisons only, never dereferenced
+    // after a borrow or emitted in evidence. The owning continuation stays live.
+    private static func delayBufferIdentities(_ state: GeneratedDSPContinuationState,
+        id: Int) throws -> (UInt, UInt) {
+        let node = try #require(state.nodeStates[id])
+        let left = try node.delayLeft.withUnsafeBufferPointer { buffer in
+            UInt(bitPattern: try #require(buffer.baseAddress))
+        }
+        let right = try node.delayRight.withUnsafeBufferPointer { buffer in
+            UInt(bitPattern: try #require(buffer.baseAddress))
+        }
+        return (left, right)
+    }
+
+    @Test("Graph node borrow reuses owned delays and detaches retained continuation",
+          arguments: [44_100.0, 48_000.0])
+    func graphNodeOwnedDelayReuse(sampleRate: Double) throws {
+        let plan = DSPGraphPlan(sessionSeed: 42, revision: 0,
+            nodes: [DSPGraphNode(id: 8, kind: .echo, branch: 0, order: 0,
+                amount: 0.42, mix: 0.2, feedback: 0.3, delaySeconds: 0.125)],
+            mutation: nil)
+        #expect(DSPGraphValidator.validate(plan).valid)
+        let left = (0..<256).map { Float(sin(Double($0) * 0.1) * 0.1) }
+        let right = left.map { $0 * 0.9 }
+        var owned = GeneratedDSPContinuationState()
+        _ = GeneratedDSPGraphRenderer.process(left: left, right: right,
+            sampleRate: sampleRate, plan: plan, state: &owned)
+        let originalBuffers = try Self.delayBufferIdentities(owned, id: 8)
+        for _ in 0..<3 {
+            _ = GeneratedDSPGraphRenderer.process(left: left, right: right,
+                sampleRate: sampleRate, plan: plan, state: &owned)
+            let after = try Self.delayBufferIdentities(owned, id: 8)
+            #expect(after.0 == originalBuffers.0 && after.1 == originalBuffers.1)
+        }
+        let incoming = owned
+        let incomingFingerprint = AutonomousCandidateFingerprint.generatedDSPState(incoming)
+        var reference = incoming
+        let actual = GeneratedDSPGraphRenderer.process(left: left, right: right,
+            sampleRate: sampleRate, plan: plan, state: &owned)
+        let replay = GeneratedDSPGraphRenderer.process(left: left, right: right,
+            sampleRate: sampleRate, plan: plan, state: &reference)
+        #expect(actual.0 == replay.0 && actual.1 == replay.1 && owned == reference)
+        #expect(AutonomousCandidateFingerprint.generatedDSPState(incoming) == incomingFingerprint)
+        let detached = try Self.delayBufferIdentities(owned, id: 8)
+        let retained = try Self.delayBufferIdentities(incoming, id: 8)
+        #expect(detached.0 != retained.0 && detached.1 != retained.1)
+        let control: [String: Any] = [
+            "schema": "autotechno-graph-owned-delay-reuse-control.v1",
+            "sampleRate": sampleRate, "warmupCalls": 1, "ownedReuseCalls": 3,
+            "ownedDelayBuffersReused": true, "retainedInputPreservedAndDetached": true,
+            "exactPCMAndTypedContinuation": true,
+            "endingStateFingerprint": AutonomousCandidateFingerprint.generatedDSPState(owned),
+            "outputFingerprint": ExactPCMFingerprint.stereo(left: actual.0, right: actual.1),
+            "completeWorkingSetQualification": false
+        ]
+        print("AUTOTECHNO_GRAPH_OWNED_DELAY_REUSE_CONTROL " + String(decoding:
+            try JSONSerialization.data(withJSONObject: control, options: [.sortedKeys]), as: UTF8.self))
+        withExtendedLifetime((incoming, owned, reference)) {}
     }
 
 }

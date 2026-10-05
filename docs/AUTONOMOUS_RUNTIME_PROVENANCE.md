@@ -2157,9 +2157,30 @@ captures. This product observation deliberately extends diagnostic local lifetim
 it does not implicitly observe allocations inside earlier voice helpers.
 
 The generated graph observes split channels, both current and retiring graph
-branches, node return before dictionary replacement, completed branches, mixed
-channels and output. Node-return registration includes the original dictionary
-node and actual updated local node together, exposing old/new delay COW storage.
+branches, node return after the canonical dictionary-slot borrow, completed
+branches, mixed channels and output. The existing GeneratedDSPContinuationState
+node dictionary is the mutable owner: processUpper borrows its slot directly,
+avoiding the temporary node copy that retained the old delay buffers and forced
+COW on every bar. The readonly node-return projection aliases that same updated
+entry and expires before subsequent mutation. An actually retained incoming
+continuation or retiring graph still preserves its independent state through COW.
+
+At44100 and48000, nil-observer controls require both delay buffers to keep their
+backing identities through three same-topology calls after one initialization;
+retaining an incoming continuation must then detach both buffers while preserving
+its typed fingerprint. Existing four-call topology/retirement controls also hold
+actual incoming state, require two real delay detachments and exact PCM/ending
+state against ordinary rendering, and retain all68 physical observations/eight
+phases. Pointer comparisons are private, transient test facts; no address is
+emitted or used after an owning lifetime. Frozen pre-change native PCM, hold and
+continuation controls provide a separate exact source comparison.
+
+This consolidates mutation into the existing current and retiring node slots,
+without a second renderer, new state, musical parameter, decision or callback work.
+Topology limits, two-bar retirement, fallback and future-boundary application
+remain unchanged. Buffer reuse removes an actual allocation cause; it does not
+establish complete peak storage, justify a smaller reservation, or qualify native
+selected-root/child capture, RSS, deadlines or quality promotion.
 Canonical typed component visitors supply render, graph, node dictionaries and
 individual nodes rather than duplicated state-field inventories. Outer phrase
 workspace, both voice products, graph input/carrier/residual/dose arrays,

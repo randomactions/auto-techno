@@ -681,9 +681,12 @@ package enum GeneratedDSPGraphRenderer {
         var branchRight = Array(repeating: right, count: branchCount)
         for node in plan.nodes {
             guard branchLeft.indices.contains(node.branch) else { continue }
-            var nodeState = states[node.id] ?? DSPGraphNodeState()
+            // Borrow the canonical slot. A temporary value copy retained by
+            // the dictionary would otherwise force both delay arrays to COW
+            // on every bar, even when the continuation is uniquely owned.
             processNode(left: &branchLeft[node.branch], right: &branchRight[node.branch],
-                        sampleRate: sampleRate, node: node, state: &nodeState)
+                        sampleRate: sampleRate, node: node,
+                        state: &states[node.id, default: DSPGraphNodeState()])
             storageObservation?.observe("node-return") { inventory in
                 inventory.register(left, owner: "branch.input-left")
                 inventory.register(right, owner: "branch.input-right")
@@ -695,11 +698,15 @@ package enum GeneratedDSPGraphRenderer {
                 }
                 AutonomousTypedFingerprint.registerGraphNodeStorage(states,
                     inventory: inventory, owner: "branch.states")
-                AutonomousTypedFingerprint.registerGraphNodeStorage(nodeState,
-                    inventory: inventory, owner: "branch.node-\(node.id)")
-                withExtendedLifetime((left, right, branchLeft, branchRight, states, nodeState)) {}
+                // The borrow is complete. This readonly projection aliases
+                // the canonical dictionary entry and expires before mutation.
+                if let nodeState = states[node.id] {
+                    AutonomousTypedFingerprint.registerGraphNodeStorage(nodeState,
+                        inventory: inventory, owner: "branch.node-\(node.id)")
+                    withExtendedLifetime(nodeState) {}
+                }
+                withExtendedLifetime((left, right, branchLeft, branchRight, states)) {}
             }
-            states[node.id] = nodeState
             storageObservation?.observe("branches") { inventory in
                 inventory.register(left, owner: "branch.input-left")
                 inventory.register(right, owner: "branch.input-right")
