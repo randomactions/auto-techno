@@ -1663,3 +1663,16 @@ The shared policy and request/score binding have deterministic controls. Buildin
 the Windows host against macOS platform stubs is source validation only; native
 Windows execution, physical-device recovery, fresh engine-v49 qualification,
 complete working storage/deadlines and final runtime gates remain separate.
+
+
+Upper-timbre analysis retains its existing canonical evidence owner, schema3,
+frame/metadata/FFT bounds and exact arithmetic. Single-channel, mono and side
+samples are read through bounded immutable views of the existing Float PCM;
+five full-bar Double arrays and copied onset windows are no longer allocated.
+Only reduced evidence leaves the call, with no change to score, continuation,
+quality thresholds, accepted PCM or future decisions. A private test-only frozen
+actual-source array analyzer verifies every field, fingerprint and encoded report
+on native bars, bounded/invalid inputs and metadata controls. Capacity removal is
+component evidence: the original64-channel scratch charge,128MiB ceiling and
+two-pass admission remain unchanged. Complete allocation/metadata/lifetime,
+parent/child capture, RSS/deadline and runtime qualification remain separate.

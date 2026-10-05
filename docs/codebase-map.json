@@ -857,7 +857,8 @@
         "opt-in local exporter witness observes actual loaded test image, initialization, process inputs and immutable manifest; driver-controlled fresh build and probe receipts are non-authoritative until cold family validation and native PCM parity adoption; trusted local-root aliases normalize before per-component symlink refusal and corpus identity comparison",
         "registered offline whole/role producer driver requires absent isolated outputs, real native image witnesses, original cold family validation, exact transitive fresh bindings and separate witness-disabled whole/role PCM and typed-evidence parity; no artifact-currency or qualification authority",
         "Independent detached completed-capture reader rechecks original Git source envelopes, actual loaded-image and private-initialization witnesses, registered successful producer/cold-validator logs, complete fresh upstream bindings, and exact witness-disabled whole/role PCM and foundation behavior; no current currency or promotion authority.",
-        "Explicit retained whole/role proof revalidates immutable original envelopes through current dependency assessment, live compiler/SDK/image checks and a fresh registered native initialization probe, then preserves cold PCM/content checks; unknown or changed producers recapture and other lifecycle families retain their guards. Original capture identities and current verification identities remain separate."
+        "Explicit retained whole/role proof revalidates immutable original envelopes through current dependency assessment, live compiler/SDK/image checks and a fresh registered native initialization probe, then preserves cold PCM/content checks; unknown or changed producers recapture and other lifecycle families retain their guards. Original capture identities and current verification identities remain separate.",
+        "UpperTimbreEvidenceAnalyzer reads sanitized single/mono/side Double values from bounded immutable Float PCM views; exact actual-source array oracle covers all reduced fields/fingerprint/JSON, invalid inputs and native bar capacity removal without lower resource reservations"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoDSP/AudioQualityReport.swift",
@@ -930,7 +931,8 @@
         "Tests/AutoTechnoCoreTests/ContinuousPrimaryPreparedAdmissionTests.swift",
         "Tests/AutoTechnoCoreTests/DiagnosticRoleStemStreamingTests.swift",
         "Tests/AutoTechnoCoreTests/PhrasePreparationReplayIdentityTests.swift",
-        "Tests/AutoTechnoCoreTests/BaselineProducerWitnessTests.swift"
+        "Tests/AutoTechnoCoreTests/BaselineProducerWitnessTests.swift",
+        "Tests/AutoTechnoCoreTests/UpperTimbreBorrowedAnalysisTests.swift"
       ],
       "contracts": [
         "docs/SOUND_QUALITY.md",

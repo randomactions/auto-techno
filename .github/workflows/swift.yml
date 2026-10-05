@@ -173,6 +173,13 @@ jobs:
           --build-path "$RUNNER_TEMP/auto-techno-tests"
           --filter '(AutonomousQualityRecoveryHostPolicyTests|AutonomousPhrasePreparationDiagnosticsTests.(retryContinuationRejectsInvalidAdaptationInputs|recoveryWavesYieldWithoutBecomingTerminal|recoveryContextIsDeterministicAndDirectional)|PhrasePreparationReplayIdentityTests.(canonicalSessionFingerprint|deterministicReplayIdentity|restoredBoundaryReplay)|desktopHostsUseSharedPreparation)'
 
+      - name: Verify borrowed upper analysis exact evidence
+        if: matrix.bank == 'foundation'
+        run: >-
+          swift test --no-parallel --skip-build
+          --build-path "$RUNNER_TEMP/auto-techno-tests"
+          --filter UpperTimbreBorrowedAnalysisTests
+
       - name: Verify semantic codebase map
         if: matrix.bank == 'foundation'
         run: |
