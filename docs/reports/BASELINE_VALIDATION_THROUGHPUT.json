@@ -12,6 +12,116 @@
   "contractSnapshotFingerprint": "10e3a47511428bd7492ea572556adfb5af23380aac5764d08d8ee5e02edb2208",
   "independentComputations": 188,
   "maximumRetainedBytes": 134217728,
+  "pairedStereoExperiment": {
+    "acceptedPCMSource": "5fe0c50db3c906b9132a07797febf19f843ec451",
+    "allReportsByteExact": true,
+    "assets": 224,
+    "currentProducerCurrencyEstablished": false,
+    "experimentDateUTC": "2026-10-05",
+    "experimentDriverSha256": "71ea05d5f181dee9ec6286303390e583cdacdb28e623e2b1c2cc6fbc7877214d",
+    "experimentReceiptSha256": "0d148d8bfcdd856bb0a4f4a902242549888453af66a997327f8eb2bdda54efb7",
+    "frozenInputCount": 310,
+    "frozenInputsSha256": "3f528bc195b5f7f244335f0b1236c39d8337ba390fe151d0476713680e224800",
+    "fullProductionRefreshBenchmarked": false,
+    "independentComputations": 188,
+    "method": "Serial alternating cold subprocess and one process-local ValidationSessionRunner: generate, then three check pairs; frozen inputs and exact report bytes checked before and after each stage.",
+    "originalBankUnchanged": true,
+    "originalContractFingerprint": "10e3a47511428bd7492ea572556adfb5af23380aac5764d08d8ee5e02edb2208",
+    "promotionAuthorized": false,
+    "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]",
+    "referenceReportSha256": "b05fc92378bc0b345d6e20171970ebc57fb6987d63a59c6f8bddac4dacbd76fc",
+    "repeatedThreePassColdSeconds": 1632.9900871259742,
+    "repeatedThreePassObservedSavingSeconds": 1588.3811242089141,
+    "repeatedThreePassSessionSeconds": 44.608962917060126,
+    "retainedBytes": 10428192,
+    "reuses": 708,
+    "runtimeActivation": false,
+    "schema": "autotechno-paired-stereo-throughput.v1",
+    "scope": "Matched stereo validator bank only; no whole-refresh or quality qualification.",
+    "stages": [
+      {
+        "exitCode": 0,
+        "index": 0,
+        "logSha256": "795c614dac24d90a648557733b31c4e7892ab07107b6f76a726c0e0bdb5967b9",
+        "mode": "cold",
+        "reportSha256": "b05fc92378bc0b345d6e20171970ebc57fb6987d63a59c6f8bddac4dacbd76fc",
+        "seconds": 539.5595593750477,
+        "verb": "generate"
+      },
+      {
+        "exitCode": 0,
+        "index": 0,
+        "logSha256": "795c614dac24d90a648557733b31c4e7892ab07107b6f76a726c0e0bdb5967b9",
+        "mode": "session",
+        "reportSha256": "b05fc92378bc0b345d6e20171970ebc57fb6987d63a59c6f8bddac4dacbd76fc",
+        "seconds": 443.5433504579705,
+        "verb": "generate"
+      },
+      {
+        "exitCode": 0,
+        "index": 1,
+        "logSha256": "9a182e0eb74f82df3af482a99d5ac239ac5950451484f0816798c3f7b8702e8f",
+        "mode": "cold",
+        "reportSha256": "b05fc92378bc0b345d6e20171970ebc57fb6987d63a59c6f8bddac4dacbd76fc",
+        "seconds": 579.6871279999614,
+        "verb": "check"
+      },
+      {
+        "exitCode": 0,
+        "index": 1,
+        "logSha256": "39d7c4e9845f519ce13432dd1134e311422556347cd7970b13ccf707a3eea208",
+        "mode": "session",
+        "reportSha256": "b05fc92378bc0b345d6e20171970ebc57fb6987d63a59c6f8bddac4dacbd76fc",
+        "seconds": 15.263845542038325,
+        "verb": "check"
+      },
+      {
+        "exitCode": 0,
+        "index": 2,
+        "logSha256": "9a182e0eb74f82df3af482a99d5ac239ac5950451484f0816798c3f7b8702e8f",
+        "mode": "cold",
+        "reportSha256": "b05fc92378bc0b345d6e20171970ebc57fb6987d63a59c6f8bddac4dacbd76fc",
+        "seconds": 528.0627280839835,
+        "verb": "check"
+      },
+      {
+        "exitCode": 0,
+        "index": 2,
+        "logSha256": "39d7c4e9845f519ce13432dd1134e311422556347cd7970b13ccf707a3eea208",
+        "mode": "session",
+        "reportSha256": "b05fc92378bc0b345d6e20171970ebc57fb6987d63a59c6f8bddac4dacbd76fc",
+        "seconds": 14.654058624990284,
+        "verb": "check"
+      },
+      {
+        "exitCode": 0,
+        "index": 3,
+        "logSha256": "9a182e0eb74f82df3af482a99d5ac239ac5950451484f0816798c3f7b8702e8f",
+        "mode": "cold",
+        "reportSha256": "b05fc92378bc0b345d6e20171970ebc57fb6987d63a59c6f8bddac4dacbd76fc",
+        "seconds": 525.2402310420293,
+        "verb": "check"
+      },
+      {
+        "exitCode": 0,
+        "index": 3,
+        "logSha256": "39d7c4e9845f519ce13432dd1134e311422556347cd7970b13ccf707a3eea208",
+        "mode": "session",
+        "reportSha256": "b05fc92378bc0b345d6e20171970ebc57fb6987d63a59c6f8bddac4dacbd76fc",
+        "seconds": 14.691058750031516,
+        "verb": "check"
+      }
+    ],
+    "status": "passed",
+    "toolingSources": {
+      "baseline_validation_session.py": "6e0510b1192c35a876835e4531f1d73d8b5f755bc8e21b2bbe627206515b7d69",
+      "pcm_comparison_report.py": "5ea4761dc9343e4bc4fb12473091cc44dad6b4961e5809064a4e5dce1692c00d",
+      "signal_baseline_report.py": "31ff38275b34e51f7100007fc766c98fefea3ac7121ce4d9a86a3ed1496b1984",
+      "stereo_compatibility_baseline_report.py": "61d043350b59c2ef99d6aba58350b30cb6fe8f980ea6ea122f2dea2689db85bd"
+    },
+    "wholeRefreshSavingObserved": false,
+    "wholeRefreshSpeedMultiplierEstablished": false
+  },
   "reportSha256": "b05fc92378bc0b345d6e20171970ebc57fb6987d63a59c6f8bddac4dacbd76fc",
   "retainedBytes": 10428192,
   "reuses": 708,
