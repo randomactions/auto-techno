@@ -11,7 +11,7 @@ Phase 0 structural governance and provenance only; no app, route, listening, or 
 | Authority | Schema/version | Surfaces | Unresolved | Artifact SHA-256 |
 |---|---|---:|---:|---|
 | `parameter-reachability` | `autotechno-parameter-reachability-audit.v1` v2 | 543 | 0 | `838fd0736e83579a43473dcaf63ff5c94d47785cc509ba95fcf79dbdcdaac238` |
-| `authority-convergence` | `autotechno-authority-surface-inventory.v1` v1 | 45 | 0 | `9968d9a87abcadeb188c3d6531be6037c4b123eaa69635d9dd66976cfc3aa0f3` |
+| `authority-convergence` | `autotechno-authority-surface-inventory.v1` v1 | 45 | 0 | `d7f02c87cb50c363ab3aba9ba880eb8670b70d7d124b9cbc3c1be08c3c233877` |
 | `component-provenance` | `autotechno-component-license-asset-manifest.v1` v1 | 9 | 0 | `25a3497c5dae2b8e2950c41dea19f8890713217fc86fc229c2db9fb181858f2b` |
 | `roadmap-integrity` | `autotechno-evolution.v1` v1 | 390 | 0 | `local-revision-bound-by-active-citation` |
 
