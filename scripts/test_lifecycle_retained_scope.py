@@ -3,6 +3,8 @@ import copy
 import io
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -14,8 +16,10 @@ import baseline_retained_capture as retained
 import baseline_producer_witness as producer
 import baseline_dependency_contract as dependency
 
-lifecycle = fixtures.lifecycle
 gate = gate_fixtures.gate
+# Fixture loaders can replace sys.modules after the gate imports lifecycle.
+# Patch the actual module invoked by the gate, independent of test load order.
+lifecycle = gate.lifecycle
 
 
 class RetainedLifecycleScopeTests(unittest.TestCase):
@@ -277,6 +281,53 @@ class RetainedLifecycleScopeTests(unittest.TestCase):
                     v['verificationFingerprint'] = lifecycle.fingerprint(v, 'verificationFingerprint')
             changed['gateFingerprint'] = gate.fingerprint(changed, 'gateFingerprint')
             self.assertFalse(gate.same_verified_basis(before, changed), key)
+
+
+class RetainedGateFixtureImportOrderTests(unittest.TestCase):
+    def check_order(self, modules):
+        # A fresh interpreter preserves the problematic import ordering. Run
+        # the existing behavior controls, including both saved receipt-byte
+        # checks, rather than asserting only that module aliases match.
+        script = """
+import importlib, importlib.util, sys, unittest
+sys.path.insert(0, sys.argv[1])
+for name in sys.argv[3].split(','):
+    if name == 'test_lifecycle_retained_scope':
+        spec = importlib.util.spec_from_file_location(name, sys.argv[2])
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    else:
+        importlib.import_module(name)
+module = sys.modules['test_lifecycle_retained_scope']
+suite = unittest.defaultTestLoader.loadTestsFromTestCase(
+    module.RetainedLifecycleScopeTests)
+result = unittest.TextTestRunner().run(suite)
+raise SystemExit(0 if result.wasSuccessful() else 1)
+"""
+        result = subprocess.run([
+            sys.executable, '-c', script,
+            str(Path(fixtures.__file__).resolve().parent),
+            str(Path(__file__).resolve()), ','.join(modules),
+        ], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_gate_loaded_before_fixture_replacement(self):
+        self.check_order([
+            'test_phase_one_gate', 'test_baseline_lifecycle_policy',
+            'test_lifecycle_retained_scope',
+        ])
+
+    def test_affected_tooling_bank_import_order(self):
+        self.check_order([
+            'test_baseline_capture_scope', 'test_baseline_capture_transaction',
+            'test_baseline_dependency_contract', 'test_baseline_producer_capture_driver',
+            'test_baseline_producer_witness', 'test_baseline_retained_capture',
+            'test_baseline_validation_session', 'test_lifecycle_retained_scope',
+            'test_phase_one_gate', 'test_tracked_derived_capture',
+            'test_baseline_lifecycle_policy', 'test_baseline_render_manifest',
+            'test_stem_capture_manifest', 'test_authority_surface_inventory',
+        ])
 
 
 if __name__ == '__main__': unittest.main()
