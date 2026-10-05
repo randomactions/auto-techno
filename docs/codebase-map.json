@@ -382,7 +382,7 @@
     {
       "id": "quality-and-feedback-contracts",
       "name": "Quality and feedback contracts",
-      "responsibility": "Define reason-coded quality decisions, accepted and observed provenance, live-feedback observations/proposals, revision rules, fail-closed future-boundary state, the non-promotional boundary for optional local listening hypotheses, the detached evidence-ranked deficit register, the offline baseline lifecycle and schema-migration policy, and the aggregate Phase-1 reproducible-evidence gate; none can independently authorize or enter runtime decisions. Rhythmic export regeneration waits for the existing shared whole/stem source-cohort provenance check. Its shared live test fixture preserves the legacy causal vector chain while retaining actual prepared products for continuous source construction; fixture calibration is not a replacement-profile qualification claim.",
+      "responsibility": "Define reason-coded quality decisions, accepted and observed provenance, live-feedback observations/proposals, revision rules, fail-closed future-boundary state, the non-promotional boundary for optional local listening hypotheses, the detached evidence-ranked deficit register, the offline baseline lifecycle and schema-migration policy, and the aggregate Phase-1 reproducible-evidence gate; none can independently authorize or enter runtime decisions. Rhythmic export regeneration waits for the existing shared whole/stem source-cohort provenance check. Its shared live test fixture preserves the legacy causal vector chain while retaining actual prepared products for continuous source construction; fixture calibration is not a replacement-profile qualification claim. Offline roadmap/result validators bind no-change dependency satisfaction to complete current exact-source receipts; passed full verification or automated qualification cannot name a mutable working tree.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -429,7 +429,8 @@
         "Engine v49 and quality-contract schema50 bind post-relocation tonal ownership; candidate-vector43/transaction14 unchanged and all current primary seals unset pending complete fresh native qualification.",
         "driver-owned fresh capture transaction binding with exact output/PCM coverage, original source ancestry, conservative frozen dependencies and exact transitive upstream captures; actual producer invocation accounting and scoped artifact currency remain required adoption work; lifecycle assessment v2 and Phase-1 v2 retain original whole/role envelopes with separate current source/context/probe verification, enforce paired origin/current bindings and post-cold byte/source checks, and keep unsupported families conservative",
         "Registered tracked-derived deficit output is generated and independently checked in a separate same-origin candidate checkout. Original source, HEAD, index, inventory and complete upstream captures remain frozen; only the exact JSON/Markdown output slots may differ. Checked publication revalidates immutable inputs and restores original output bytes on validation failure; no currency or promotion authority.",
-        "One host-independent calibrated rejection transition preserves finite startup/successor recovery scheduling, target isolation and exact request/score binding for macOS and Windows."
+        "One host-independent calibrated rejection transition preserves finite startup/successor recovery scheduling, target isolation and exact request/score binding for macOS and Windows.",
+        "scripts/roadmap_integrity.py and scripts/result_status_vocabulary.py validate current no-change receipts and immutable qualification revisions, covered by scripts/test_roadmap_integrity.py and scripts/test_result_status_vocabulary.py; no runtime authority or listening approval; private outcome, dependency and acceptance-plan scope is hash-bound alongside measured verification evidence; validated no-change chains retain their own prerequisite eligibility and cannot unlock descendants through incomplete rows"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/LiveFeedback.swift",
@@ -451,7 +452,8 @@
         "docs/PRIMARY_EVALUATOR.md",
         "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
         "docs/BASELINE_VALIDATION_THROUGHPUT.md",
-        "docs/BASELINE_DEPENDENCY_CONTRACT.md"
+        "docs/BASELINE_DEPENDENCY_CONTRACT.md",
+        "docs/RESULT_STATUS_VOCABULARY.md"
       ],
       "dependsOn": [
         "session-director-and-score"
