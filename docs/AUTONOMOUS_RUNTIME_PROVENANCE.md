@@ -819,12 +819,26 @@ Dependency reuse requires independently validated installed bindings; unknown or
 legacy evidence remains conservatively stale and original envelopes are immutable.
 Existing phase boundaries define nearer product milestone views. They never add
 another queue, permit out-of-order work, or turn later research into a release
-prerequisite. An eligible row may use verified-no-change only with current evidence
-for its complete measured outcome and every applicable gate. Its evidence cell
+prerequisite. The verified-no-change state remains reserved for an existing
+capability whose
+complete measured outcome and every applicable gate have authoritative current
+evidence. Its admission is presently unavailable: the installed result vocabulary
+validates reporting, but no installed item-specific machine verifier establishes
+all required implementation, focused/full verification and automated quality
+evidence. The integrity checker reports that missing foundation and cannot use
+such a row to satisfy a dependency. Passed labels, free text, scope hashes, file
+hashes, generic execution receipts or a Phase-1 passed flag cannot provide the
+missing authority. Phase-1 retains its bounded baseline claims and cannot invent
+item-specific musical qualification. A future verifier must substantiate the
+complete existing acceptance matrix through the canonical quality/evidence owners
+before positive no-change admission becomes available; no new quality owner or
+generic success schema is installed. Ordinary focused development reporting and
+the existing result vocabulary remain usable. The reserved row's evidence cell
 must link `docs/local/result-records/AT-xxxx.json` using the existing result-record
-schema. A no-change row must also have all its own prerequisites satisfied;
-validated chains resolve independently of ID order, while an unfinished or invalid
-prerequisite cannot unlock descendants. Its focused-verification evidence includes
+schema. A no-change row must also have all its own prerequisites satisfied.
+The prerequisite-chain algorithm remains independent of ID order, while an
+unavailable, unfinished or invalid prerequisite cannot unlock descendants.
+Its focused-verification evidence includes
 a `roadmap-scope-sha256:`
 marker for the SHA-256 of canonical JSON with sorted keys, compact separators and
 ASCII escaping: item ID, exact outcome cell, ordered dependencies, and SHA-256 of

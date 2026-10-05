@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib.util
 import copy
+import hashlib
 import json
 import subprocess
 import sys
@@ -178,6 +179,7 @@ fixture
         return document
 
     def qualified_receipt(self) -> dict[str, object]:
+        # Synthetic reporting fixture, not authenticated item qualification.
         vocabulary = self.root / "docs/RESULT_STATUS_VOCABULARY.json"
         vocabulary.parent.mkdir(parents=True, exist_ok=True)
         vocabulary.write_bytes((MODULE_PATH.parents[1] / vocabulary.relative_to(self.root)).read_bytes())
@@ -225,15 +227,17 @@ fixture
     def test_missing_receipt_cannot_satisfy_dependency(self) -> None:
         self.assertTrue(any("cannot read" in error for error in self.errors(self.no_change_document())))
 
-    def test_valid_current_no_change_receipt_satisfies_dependency(self) -> None:
+    def test_synthetic_current_receipt_is_unavailable_and_cannot_satisfy_dependency(self) -> None:
         self.qualified_receipt()
-        self.assertEqual(self.errors(self.no_change_document()), [])
+        errors = self.errors(self.no_change_document())
+        self.assertTrue(any("authoritative item-specific machine qualification is unavailable" in e for e in errors))
+        self.assertTrue(any("active item AT-0003 has unsatisfied dependencies" in e for e in errors))
 
-    def test_valid_no_change_receipt_also_passes_required_artifact_layout_gate(self) -> None:
+    def test_synthetic_receipt_keeps_layout_valid_without_admission_authority(self) -> None:
         self.qualified_receipt()
         for directory in doctor.REQUIRED_DIRECTORIES:
             (self.root / doctor.LOCAL_ROOT / directory).mkdir(exist_ok=True)
-        self.assertEqual(self.errors(self.no_change_document()), [])
+        self.assertTrue(any("machine qualification is unavailable" in e for e in self.errors(self.no_change_document())))
         self.assertEqual(doctor.compare_to_repository(self.root), [])
 
     def test_incomplete_required_qualification_cannot_satisfy_dependency(self) -> None:
@@ -256,14 +260,14 @@ fixture
         self.assertTrue(any("requires passed implementation" in error for error in errors))
         self.assertTrue(any("AT-0003" in error and "unsatisfied dependencies" in error for error in errors))
 
-    def test_explicit_release_only_exceptions_preserve_eligible_no_change(self) -> None:
+    def test_release_only_exceptions_cannot_supply_missing_qualification_authority(self) -> None:
         record = self.qualified_receipt()
         statuses = {gate["id"]: gate["status"] for gate in record["gates"]}
         self.assertEqual(statuses["implementation"], "passed")
         for identifier in ("published-exact-sha", "exact-head-ci", "release-app-launched",
                            "app-route-qa", "physical-output-soak"):
             self.assertEqual(statuses[identifier], "not-applicable")
-        self.assertEqual(self.errors(self.no_change_document()), [])
+        self.assertTrue(any("machine qualification is unavailable" in e for e in self.errors(self.no_change_document())))
 
     def test_unmet_other_applicable_gate_cannot_satisfy_dependency(self) -> None:
         record = self.qualified_receipt()
@@ -324,14 +328,16 @@ fixture
             receipt.symlink_to(external)
             self.assertTrue(any("inside the repository" in e for e in self.errors(self.no_change_document())))
 
-    def test_no_change_receipt_does_not_waive_lowest_eligible_selection(self) -> None:
+    def test_unavailable_no_change_does_not_make_a_lower_queued_row_eligible(self) -> None:
         self.qualified_receipt()
         self.write_plan("AT-0004")
         document = self.no_change_document().replace("active_item: AT-0003", "active_item: AT-0004").replace(
             "active_plan: docs/local/roadmap-plans/AT-0003.md", "active_plan: docs/local/roadmap-plans/AT-0004.md"
         ).replace("AT-0003 | `researching`", "AT-0003 | `queued`")
         document += "| AT-0004 | `researching` | AT-0002 | outcome | evidence |\n"
-        self.assertTrue(any("skips lower eligible item AT-0003" in e for e in self.errors(document)))
+        errors = self.errors(document)
+        self.assertFalse(any("skips lower eligible" in e for e in errors))
+        self.assertTrue(any("active item AT-0004 has unsatisfied dependencies" in e for e in errors))
 
     def test_unqualified_no_change_does_not_make_queued_row_eligible(self) -> None:
         self.qualified_receipt()
@@ -351,7 +357,7 @@ fixture
     def test_changed_measured_requirement_invalidates_no_change_receipt(self) -> None:
         self.qualified_receipt()
         document = self.no_change_document()
-        self.assertEqual(self.errors(document), [])
+        self.assertTrue(any("machine qualification is unavailable" in e for e in self.errors(document)))
         changed = document.replace(
             "`verified-no-change` | AT-0001 | outcome |",
             "`verified-no-change` | AT-0001 | newly required outcome with no measured proof |",
@@ -416,7 +422,7 @@ fixture
                 self.assertTrue(any("AT-0003 verified-no-change has unsatisfied prerequisites: AT-0002" in e for e in errors))
                 self.assertTrue(any("active item AT-0004 has unsatisfied dependencies: AT-0003" in e for e in errors))
 
-    def test_valid_no_change_chain_satisfies_dependencies_in_any_id_order(self) -> None:
+    def test_synthetic_no_change_chain_cannot_satisfy_dependencies_in_any_id_order(self) -> None:
         template = self.qualified_receipt()
         self.write_plan("AT-0004")
         for dependencies in (("AT-0001", "AT-0002", "AT-0003"),
@@ -430,7 +436,52 @@ fixture
                 ], active="AT-0004")
                 document = self.bind_no_change_row(document, "AT-0002", template)
                 document = self.bind_no_change_row(document, "AT-0003", template)
-                self.assertEqual(self.errors(document), [])
+                errors = self.errors(document)
+                self.assertTrue(any("AT-0002" in e and "machine qualification is unavailable" in e for e in errors))
+                dependent = "AT-0002" if dependencies[0] == "AT-0003" else "AT-0003"
+                self.assertTrue(any(dependent + " verified-no-change has unsatisfied prerequisites" in e for e in errors))
+                self.assertTrue(any("active item AT-0004 has unsatisfied dependencies" in e for e in errors))
+
+    def test_execution_record_or_hashed_file_cannot_supply_qualification_authority(self) -> None:
+        record = self.qualified_receipt()
+        report = self.root / 'docs/local/reports/execution.json'
+        report.parent.mkdir(parents=True, exist_ok=True)
+        report.write_text(json.dumps({'status': 'passed', 'exitCode': 0,
+            'revision': record['revision'], 'checks': [{'status': 'passed'}]}))
+        digest = hashlib.sha256(report.read_bytes()).hexdigest()
+        for evidence in ('current measured outcome',
+                         'docs/local/reports/execution.json#sha256=' + digest,
+                         'roadmap-verification:docs/local/reports/execution.json#sha256=' + digest):
+            with self.subTest(evidence=evidence):
+                altered = copy.deepcopy(record)
+                for gate in altered['gates'][:4]:
+                    gate['evidence'] = [evidence] + [v for v in gate['evidence'] if v.startswith('roadmap-scope-sha256:')]
+                self.write_receipt(altered)
+                errors = self.errors(self.no_change_document())
+                self.assertTrue(any('machine qualification is unavailable' in e for e in errors))
+                self.assertTrue(any('unsatisfied dependencies' in e for e in errors))
+
+    def test_unavailable_no_change_does_not_unlock_queued_work_alongside_independent_work(self) -> None:
+        self.qualified_receipt()
+        self.write_plan('AT-0004')
+        document = self.no_change_document().replace('active_item: AT-0003', 'active_item: AT-0004').replace(
+            'active_plan: docs/local/roadmap-plans/AT-0003.md', 'active_plan: docs/local/roadmap-plans/AT-0004.md').replace(
+            '| AT-0003 | `researching` | AT-0002 |', '| AT-0003 | `queued` | AT-0001 |')
+        document += '| AT-0004 | `researching` | AT-0001 | outcome | evidence |\n'
+        errors = self.errors(document)
+        self.assertTrue(any('machine qualification is unavailable' in e for e in errors))
+        self.assertTrue(any('AT-0002 verified-no-change' in e for e in errors))
+        self.assertTrue(any('skips lower eligible item AT-0003' in e for e in errors))
+
+    def test_development_result_records_remain_usable_with_unrun_full_gates(self) -> None:
+        self.qualified_receipt()
+        record = integrity.results.new_record('AT-0002 development slice')
+        record['gates'][0].update(status='passed', evidence=['implemented focused slice'], limitation='')
+        record['gates'][1].update(status='passed', evidence=['focused command output'], limitation='')
+        record['claim']['missingGates'] = [g['id'] for g in record['gates']
+            if g['id'] in integrity.results.RELEASE_REQUIRED_GATES and g['status'] != 'passed']
+        vocabulary = integrity.results.load_json(integrity.results.vocabulary_path(self.root))
+        self.assertEqual(integrity.results.validate_record(record, vocabulary), [])
 
     def test_invalid_receipt_in_chain_cannot_unlock_descendants(self) -> None:
         template = self.qualified_receipt()
