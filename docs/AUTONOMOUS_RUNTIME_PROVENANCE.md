@@ -785,10 +785,12 @@ licence, notice, version, hash, and REDIST re-entry gate in
 `docs/WINDOWS_DISTRIBUTION.md`. Research audio, video evidence, transcripts,
 renders, and the autonomous roadmap remain local and untracked.
 
-The local-only artifact doctor assigns new private evidence to five explicit
-classes under `docs/local/`: `roadmap-plans/`, `reports/`, `audio/`, `profiles/`,
-and `transcripts/`. The roadmap and local layout guide are the only permitted
-root files. `python3 scripts/local_artifact_doctor.py check` fails on a missing
+The local-only artifact doctor requires five explicit classes under `docs/local/`:
+`roadmap-plans/`, `reports/`, `audio/`, `profiles/`, and `transcripts/`.
+`result-records/` is an optional sixth real-directory class for private result
+receipts; a verified-no-change row still requires its current receipt there.
+The roadmap and local layout guide are the only permitted root files.
+`python3 scripts/local_artifact_doctor.py check` fails on a missing required
 class directory or blanket ignore rule, an unexpected root entry, any symlink,
 or any Git-tracked local path. The doctor reads names and Git metadata only; it
 does not open, classify, transform, copy, publish, or infer permission from the
@@ -818,12 +820,26 @@ Dependency reuse requires independently validated installed bindings; unknown or
 legacy evidence remains conservatively stale and original envelopes are immutable.
 Existing phase boundaries define nearer product milestone views. They never add
 another queue, permit out-of-order work, or turn later research into a release
-prerequisite. An eligible row may use verified-no-change only with current evidence
-for its complete measured outcome and every applicable gate. Its evidence cell
+prerequisite. The verified-no-change state remains reserved for an existing
+capability whose
+complete measured outcome and every applicable gate have authoritative current
+evidence. Its admission is presently unavailable: the installed result vocabulary
+validates reporting, but no installed item-specific machine verifier establishes
+all required implementation, focused/full verification and automated quality
+evidence. The integrity checker reports that missing foundation and cannot use
+such a row to satisfy a dependency. Passed labels, free text, scope hashes, file
+hashes, generic execution receipts or a Phase-1 passed flag cannot provide the
+missing authority. Phase-1 retains its bounded baseline claims and cannot invent
+item-specific musical qualification. A future verifier must substantiate the
+complete existing acceptance matrix through the canonical quality/evidence owners
+before positive no-change admission becomes available; no new quality owner or
+generic success schema is installed. Ordinary focused development reporting and
+the existing result vocabulary remain usable. The reserved row's evidence cell
 must link `docs/local/result-records/AT-xxxx.json` using the existing result-record
-schema. A no-change row must also have all its own prerequisites satisfied;
-validated chains resolve independently of ID order, while an unfinished or invalid
-prerequisite cannot unlock descendants. Its focused-verification evidence includes
+schema. A no-change row must also have all its own prerequisites satisfied.
+The prerequisite-chain algorithm remains independent of ID order, while an
+unavailable, unfinished or invalid prerequisite cannot unlock descendants.
+Its focused-verification evidence includes
 a `roadmap-scope-sha256:`
 marker for the SHA-256 of canonical JSON with sorted keys, compact separators and
 ASCII escaping: item ID, exact outcome cell, ordered dependencies, and SHA-256 of
@@ -831,10 +847,13 @@ that item's private acceptance plan bytes. The marker accompanies measured
 evidence; it cannot replace it. A changed outcome, dependency or plan invalidates
 the receipt even when tracked source is unchanged. The integrity checker validates
 the receipt and vocabulary, matching item
-subject and clean current 40-digit source revision, passed focused/full local and
-automated qualification, and every other applicable objective gate. Release-only
-gates may be explicitly not-applicable with their required scope limitation;
-listening remains optional. Opaque text, missing or invalid receipts, mutable or
+subject and clean current 40-digit source revision, passed implementation,
+focused/full local verification and automated qualification, and every other
+applicable objective gate. Only publication, exact-head CI, release app launch,
+app/route QA and physical-output soak may be explicitly not-applicable with
+their required scope limitation. An existing capability must still have positive
+implementation evidence; verified-no-change cannot exempt that gate.
+Listening remains optional. Opaque text, missing or invalid receipts, mutable or
 stale source, and incomplete applicable gates cannot satisfy a dependency or make
 a later row eligible. No cross-revision no-change reuse contract is installed.
 A passed full-local or automated qualification result independently requires an

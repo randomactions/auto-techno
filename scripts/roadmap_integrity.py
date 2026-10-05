@@ -262,14 +262,28 @@ def no_change_receipt_errors(
         for gate in record.get("gates", [])
         if isinstance(gate, dict)
     } if isinstance(record.get("gates"), list) else {}
-    for gate in ("focused-local-verification", "full-local-verification",
+    for gate in ("implementation", "focused-local-verification", "full-local-verification",
                  "automated-quality-qualification"):
         if statuses.get(gate) != "passed":
             errors.append(f"receipt requires passed {gate}")
     for gate in results.RELEASE_REQUIRED_GATES:
-        if statuses.get(gate) not in ("passed", "not-applicable"):
+        release_only = gate in (
+            "published-exact-sha", "exact-head-ci", "release-app-launched",
+            "app-route-qa", "physical-output-soak",
+        )
+        if statuses.get(gate) != "passed" and not (
+                release_only and statuses.get(gate) == "not-applicable"):
             errors.append(f"receipt has an unmet applicable gate: {gate}")
     # Listening stays optional hypothesis evidence; it never authorizes completion.
+    if not errors:
+        # The vocabulary validates reporting, not measured item outcomes. There
+        # is no installed authoritative verifier for all four required objective
+        # gates. Phase-1 has bounded baseline claims; logs, generic JSON and
+        # scope hashes cannot supply missing implementation/quality authority.
+        # Preserve this state until a separately implemented and validated
+        # item-specific verifier can authenticate the complete acceptance matrix.
+        errors.append("authoritative item-specific machine qualification is unavailable; "
+                      "verified-no-change cannot satisfy a dependency")
     return [f"{prefix}: {error}" for error in errors]
 
 
@@ -361,6 +375,15 @@ def validate_roadmap(text: str, root: Path) -> list[str]:
         for identifier in eligible_no_change:
             satisfied.add(identifier)
             del qualified_no_change[identifier]
+
+    # Unavailable or malformed receipts must also retain prerequisite diagnostics;
+    # rejecting their authority does not hide the row's unfinished dependencies.
+    for item in no_change_items:
+        if item.identifier not in satisfied and item.identifier not in qualified_no_change:
+            missing = [d for d in item.dependencies if d not in satisfied]
+            if missing:
+                errors.append(f"{item.identifier} verified-no-change has unsatisfied prerequisites: "
+                              + ", ".join(missing))
 
     active_items = [item for item in items if item.status in ACTIVE_STATUSES]
     if len(active_items) != 1:
