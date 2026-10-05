@@ -784,10 +784,12 @@ licence, notice, version, hash, and REDIST re-entry gate in
 `docs/WINDOWS_DISTRIBUTION.md`. Research audio, video evidence, transcripts,
 renders, and the autonomous roadmap remain local and untracked.
 
-The local-only artifact doctor assigns new private evidence to five explicit
-classes under `docs/local/`: `roadmap-plans/`, `reports/`, `audio/`, `profiles/`,
-and `transcripts/`. The roadmap and local layout guide are the only permitted
-root files. `python3 scripts/local_artifact_doctor.py check` fails on a missing
+The local-only artifact doctor requires five explicit classes under `docs/local/`:
+`roadmap-plans/`, `reports/`, `audio/`, `profiles/`, and `transcripts/`.
+`result-records/` is an optional sixth real-directory class for private result
+receipts; a verified-no-change row still requires its current receipt there.
+The roadmap and local layout guide are the only permitted root files.
+`python3 scripts/local_artifact_doctor.py check` fails on a missing required
 class directory or blanket ignore rule, an unexpected root entry, any symlink,
 or any Git-tracked local path. The doctor reads names and Git metadata only; it
 does not open, classify, transform, copy, publish, or infer permission from the

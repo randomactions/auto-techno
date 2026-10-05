@@ -20,6 +20,7 @@ REQUIRED_DIRECTORIES = (
     "roadmap-plans",
     "transcripts",
 )
+OPTIONAL_DIRECTORIES = ("result-records",)
 ALLOWED_ROOT_FILES = (
     "README.md",
     "SYNTH_FX_DSP_RESEARCH_STUDY.md",
@@ -94,15 +95,18 @@ def compare_to_repository(root: Path) -> list[str]:
     if REQUIRED_IGNORE_RULE not in ignore_lines:
         errors.append(f"required ignore rule is missing: {REQUIRED_IGNORE_RULE}")
 
-    for directory in REQUIRED_DIRECTORIES:
+    for directory in (*REQUIRED_DIRECTORIES, *OPTIONAL_DIRECTORIES):
         path = local_root / directory
         if not path.exists():
-            errors.append(f"required local artifact directory is missing: {directory}/")
+            if directory in REQUIRED_DIRECTORIES:
+                errors.append(f"required local artifact directory is missing: {directory}/")
         elif path.is_symlink() or not path.is_dir():
             errors.append(f"local artifact class must be a real directory: {directory}/")
 
     root_entry_names = sorted(path.name for path in local_root.iterdir())
-    allowed_root_names = set(REQUIRED_DIRECTORIES) | set(ALLOWED_ROOT_FILES)
+    allowed_root_names = (
+        set(REQUIRED_DIRECTORIES) | set(OPTIONAL_DIRECTORIES) | set(ALLOWED_ROOT_FILES)
+    )
     unexpected = sorted(set(root_entry_names) - allowed_root_names)
     if unexpected:
         errors.append("unexpected local artifact root entries: " + ", ".join(unexpected))
@@ -133,7 +137,8 @@ def run_check(root: Path, output: TextIO) -> int:
     )
     print(
         "local artifact layout is healthy: "
-        f"{len(REQUIRED_DIRECTORIES)} classes, {file_count} local files",
+        f"{len(REQUIRED_DIRECTORIES) + sum((root / LOCAL_ROOT / name).is_dir() for name in OPTIONAL_DIRECTORIES)} "
+        f"classes, {file_count} local files",
         file=output,
     )
     return 0

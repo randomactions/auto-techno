@@ -20,6 +20,13 @@ integrity = importlib.util.module_from_spec(SPEC)
 sys.modules[SPEC.name] = integrity
 SPEC.loader.exec_module(integrity)
 
+DOCTOR_SPEC = importlib.util.spec_from_file_location(
+    "local_artifact_doctor", MODULE_PATH.with_name("local_artifact_doctor.py")
+)
+assert DOCTOR_SPEC is not None and DOCTOR_SPEC.loader is not None
+doctor = importlib.util.module_from_spec(DOCTOR_SPEC)
+DOCTOR_SPEC.loader.exec_module(doctor)
+
 
 class RoadmapIntegrityTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -221,6 +228,13 @@ fixture
     def test_valid_current_no_change_receipt_satisfies_dependency(self) -> None:
         self.qualified_receipt()
         self.assertEqual(self.errors(self.no_change_document()), [])
+
+    def test_valid_no_change_receipt_also_passes_required_artifact_layout_gate(self) -> None:
+        self.qualified_receipt()
+        for directory in doctor.REQUIRED_DIRECTORIES:
+            (self.root / doctor.LOCAL_ROOT / directory).mkdir(exist_ok=True)
+        self.assertEqual(self.errors(self.no_change_document()), [])
+        self.assertEqual(doctor.compare_to_repository(self.root), [])
 
     def test_incomplete_required_qualification_cannot_satisfy_dependency(self) -> None:
         record = self.qualified_receipt()
