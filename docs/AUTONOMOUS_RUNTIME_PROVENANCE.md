@@ -804,6 +804,22 @@ cannot be verified without all nine objective gates passing for one 40-digit
 revision. Listening is the only `observed` gate and cannot be marked passed or
 used to override automated evidence.
 
+The private roadmap distinguishes focused development slices from complete
+qualification at the active item's named frozen boundary. Each receipt uses the
+existing result vocabulary, exact source and explicit missing gates. A frozen
+boundary records implementation, fixture/evaluator/policy/resource/contract state,
+private initialization and continuation context, toolchain, routes, corpus,
+disjoint holdouts and every required command. Development or failed states cannot
+authorize promotion, item completion or qualified resource replacement. Required
+lifecycle families, subordinate/aggregate checks, shared cohorts, safety,
+rejection, replay, deadline/capacity and promotion gates remain unchanged.
+Dependency reuse requires independently validated installed bindings; unknown or
+legacy evidence remains conservatively stale and original envelopes are immutable.
+Existing phase boundaries define nearer product milestone views. They never add
+another queue, permit out-of-order work, or turn later research into a release
+prerequisite. An eligible row may use verified-no-change only with current evidence
+for its complete measured outcome and every applicable gate.
+
 The private roadmap remains a single Markdown authority. Its offline integrity
 checker parses the exact Control C YAML subset, Control D states, and 390
 machine-searchable `AT-xxxx` rows without a Markdown/YAML dependency. It rejects
