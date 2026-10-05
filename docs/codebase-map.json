@@ -380,7 +380,7 @@
     {
       "id": "quality-and-feedback-contracts",
       "name": "Quality and feedback contracts",
-      "responsibility": "Define reason-coded quality decisions, accepted and observed provenance, live-feedback observations/proposals, revision rules, fail-closed future-boundary state, the non-promotional boundary for optional local listening hypotheses, the detached evidence-ranked deficit register, the offline baseline lifecycle and schema-migration policy, and the aggregate Phase-1 reproducible-evidence gate; none can independently authorize or enter runtime decisions. Rhythmic export regeneration waits for the existing shared whole/stem source-cohort provenance check. Its shared live test fixture preserves the legacy causal vector chain while retaining actual prepared products for continuous source construction; fixture calibration is not a replacement-profile qualification claim.",
+      "responsibility": "Define reason-coded quality decisions, accepted and observed provenance, live-feedback observations/proposals, revision rules, fail-closed future-boundary state, the non-promotional boundary for optional local listening hypotheses, the detached evidence-ranked deficit register, the offline baseline lifecycle and schema-migration policy, and the aggregate Phase-1 reproducible-evidence gate; none can independently authorize or enter runtime decisions. Rhythmic export regeneration waits for the existing shared whole/stem source-cohort provenance check. Its shared live test fixture preserves the legacy causal vector chain while retaining actual prepared products for continuous source construction; fixture calibration is not a replacement-profile qualification claim. Offline roadmap/result validators bind no-change dependency satisfaction to complete current exact-source receipts; passed full verification or automated qualification cannot name a mutable working tree.",
       "targets": [
         "AutoTechnoCore"
       ],
@@ -420,7 +420,8 @@
         "schema-, contract-, corpus-, engine-, route-, build-, and dependency-bound evidence lifecycle metadata",
         "fifteen current artifact bindings, subordinate validation, exact whole/role PCM, and deficit-source traceability without a musical-quality claim",
         "offline process-local independent stereo analysis reuse with live input hashes, unchanged per-asset comparisons, bounded memory, cold fallback and all nineteen aggregate subordinate validators",
-        "detached committed-origin dependency snapshots and conservative producer/analyzer/execution impact assessment for all fifteen baseline families; no artifact currency or promotion authority before fresh producer integration"
+        "detached committed-origin dependency snapshots and conservative producer/analyzer/execution impact assessment for all fifteen baseline families; no artifact currency or promotion authority before fresh producer integration",
+        "scripts/roadmap_integrity.py and scripts/result_status_vocabulary.py validate current no-change receipts and immutable qualification revisions, covered by scripts/test_roadmap_integrity.py and scripts/test_result_status_vocabulary.py; no runtime authority or listening approval; private outcome, dependency and acceptance-plan scope is hash-bound alongside measured verification evidence; validated no-change chains retain their own prerequisite eligibility and cannot unlock descendants through incomplete rows"
       ],
       "sourcePaths": [
         "Sources/AutoTechnoCore/LiveFeedback.swift",
@@ -441,7 +442,8 @@
         "docs/PRIMARY_EVALUATOR.md",
         "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
         "docs/BASELINE_VALIDATION_THROUGHPUT.md",
-        "docs/BASELINE_DEPENDENCY_CONTRACT.md"
+        "docs/BASELINE_DEPENDENCY_CONTRACT.md",
+        "docs/RESULT_STATUS_VOCABULARY.md"
       ],
       "dependsOn": [
         "session-director-and-score"

@@ -818,7 +818,27 @@ legacy evidence remains conservatively stale and original envelopes are immutabl
 Existing phase boundaries define nearer product milestone views. They never add
 another queue, permit out-of-order work, or turn later research into a release
 prerequisite. An eligible row may use verified-no-change only with current evidence
-for its complete measured outcome and every applicable gate.
+for its complete measured outcome and every applicable gate. Its evidence cell
+must link `docs/local/result-records/AT-xxxx.json` using the existing result-record
+schema. A no-change row must also have all its own prerequisites satisfied;
+validated chains resolve independently of ID order, while an unfinished or invalid
+prerequisite cannot unlock descendants. Its focused-verification evidence includes
+a `roadmap-scope-sha256:`
+marker for the SHA-256 of canonical JSON with sorted keys, compact separators and
+ASCII escaping: item ID, exact outcome cell, ordered dependencies, and SHA-256 of
+that item's private acceptance plan bytes. The marker accompanies measured
+evidence; it cannot replace it. A changed outcome, dependency or plan invalidates
+the receipt even when tracked source is unchanged. The integrity checker validates
+the receipt and vocabulary, matching item
+subject and clean current 40-digit source revision, passed focused/full local and
+automated qualification, and every other applicable objective gate. Release-only
+gates may be explicitly not-applicable with their required scope limitation;
+listening remains optional. Opaque text, missing or invalid receipts, mutable or
+stale source, and incomplete applicable gates cannot satisfy a dependency or make
+a later row eligible. No cross-revision no-change reuse contract is installed.
+A passed full-local or automated qualification result independently requires an
+immutable revision, even while publication, app QA, soak and the release claim
+remain unverified. Focused development templates may retain `working-tree`.
 
 The private roadmap remains a single Markdown authority. Its offline integrity
 checker parses the exact Control C YAML subset, Control D states, and 390

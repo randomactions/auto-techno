@@ -4,11 +4,19 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Optional, Sequence, TextIO
+
+SCRIPT_DIRECTORY = str(Path(__file__).resolve().parent)
+if SCRIPT_DIRECTORY not in sys.path:
+    sys.path.insert(0, SCRIPT_DIRECTORY)
+import result_status_vocabulary as results  # noqa: E402
 
 
 ROADMAP_PATH = Path("docs/local/SYNTH_FX_DSP_RESEARCH_STUDY.md")
@@ -39,7 +47,6 @@ ALLOWED_STATUSES = (
     "superseded",
 )
 ACTIVE_STATUSES = {"researching", "planning", "implementing", "qualifying"}
-DEPENDENCY_SATISFIED_STATUSES = {"completed", "verified-no-change"}
 ITEM_ID_PATTERN = re.compile(r"AT-([0-9]{4})")
 
 
@@ -173,6 +180,99 @@ def _cycle_errors(items: Mapping[str, RoadmapItem]) -> list[str]:
     return errors
 
 
+def current_clean_revision(root: Path) -> Optional[str]:
+    """No reuse authority exists for no-change receipts: require the clean exact source."""
+    try:
+        command = ["git", "-c", "core.fsmonitor=false", "-C", str(root)]
+        revision = subprocess.check_output(
+            command + ["rev-parse", "HEAD"], text=True,
+            stderr=subprocess.DEVNULL, timeout=10,
+        ).strip()
+        dirty = subprocess.check_output(
+            command + ["status", "--porcelain", "--untracked-files=normal"],
+            text=True, stderr=subprocess.DEVNULL, timeout=10,
+        ).strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return revision if not dirty and re.fullmatch(r"[0-9a-f]{40}", revision) else None
+
+
+def no_change_scope_fingerprint(item: RoadmapItem, root: Path) -> str:
+    """Bind ignored acceptance scope as well as immutable tracked source."""
+    plan = root / f"docs/local/roadmap-plans/{item.identifier}.md"
+    if not plan.resolve().is_relative_to(root.resolve()):
+        raise RoadmapIntegrityError("no-change acceptance plan must remain inside the repository")
+    try:
+        plan_digest = hashlib.sha256(plan.read_bytes()).hexdigest()
+    except OSError as exc:
+        raise RoadmapIntegrityError("cannot read no-change acceptance plan") from exc
+    scope = {
+        "item": item.identifier,
+        "outcome": item.outcome,
+        "dependencies": list(item.dependencies),
+        "planSha256": plan_digest,
+    }
+    encoded = json.dumps(scope, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def no_change_receipt_errors(
+    item: RoadmapItem, root: Path, revision: Optional[str]
+) -> list[str]:
+    """Validate complete current evidence before a no-change row satisfies a dependency."""
+    path = f"docs/local/result-records/{item.identifier}.json"
+    prefix = f"{item.identifier} verified-no-change"
+    if re.search(r"\[[^\]\n]+\]\(" + re.escape(path) + r"\)", item.evidence) is None:
+        return [f"{prefix} must link its result receipt {path}"]
+    # Receipts are private, but neither a symlink nor a missing file may bind
+    # another repository's qualification to this row.
+    destination = root / path
+    if not destination.resolve().is_relative_to(root.resolve()):
+        return [f"{prefix} receipt must remain inside the repository"]
+    try:
+        record = results.load_json(destination)
+        vocabulary = results.load_json(results.vocabulary_path(root))
+    except results.ResultVocabularyError as exc:
+        return [f"{prefix}: {exc}"]
+    try:
+        errors = results.validate_vocabulary(vocabulary)
+        if not errors:
+            errors.extend(results.validate_record(record, vocabulary))
+    except (TypeError, ValueError):
+        return [f"{prefix}: malformed receipt or vocabulary"]
+    if errors:
+        return [f"{prefix}: {error}" for error in errors]
+    if record.get("subject") != item.identifier:
+        errors.append("receipt subject must match the roadmap item")
+    if revision is None or record.get("revision") != revision:
+        errors.append("receipt must match the current clean exact source revision; stale reuse is unavailable")
+    try:
+        scope_marker = "roadmap-scope-sha256:" + no_change_scope_fingerprint(item, root)
+    except RoadmapIntegrityError as exc:
+        errors.append(str(exc))
+    else:
+        focused = next(gate for gate in record["gates"] if gate["id"] == "focused-local-verification")
+        evidence = focused["evidence"]
+        if scope_marker not in evidence:
+            errors.append("receipt must bind the current outcome, dependencies and acceptance plan scope")
+        if not any(not value.startswith("roadmap-scope-sha256:") for value in evidence):
+            errors.append("receipt scope binding is not measured verification evidence")
+    statuses = {
+        gate.get("id"): gate.get("status")
+        for gate in record.get("gates", [])
+        if isinstance(gate, dict)
+    } if isinstance(record.get("gates"), list) else {}
+    for gate in ("focused-local-verification", "full-local-verification",
+                 "automated-quality-qualification"):
+        if statuses.get(gate) != "passed":
+            errors.append(f"receipt requires passed {gate}")
+    for gate in results.RELEASE_REQUIRED_GATES:
+        if statuses.get(gate) not in ("passed", "not-applicable"):
+            errors.append(f"receipt has an unmet applicable gate: {gate}")
+    # Listening stays optional hypothesis evidence; it never authorizes completion.
+    return [f"{prefix}: {error}" for error in errors]
+
+
 def validate_roadmap(text: str, root: Path) -> list[str]:
     errors: list[str] = []
     try:
@@ -234,6 +334,34 @@ def validate_roadmap(text: str, root: Path) -> list[str]:
                 errors.append(f"{item.identifier} depends on missing item {dependency}")
     errors.extend(_cycle_errors(item_map))
 
+    satisfied = {item.identifier for item in items if item.status == "completed"}
+    no_change_items = [item for item in items if item.status == "verified-no-change"]
+    revision = current_clean_revision(root) if no_change_items else None
+    qualified_no_change: dict[str, RoadmapItem] = {}
+    for item in no_change_items:
+        receipt_errors = no_change_receipt_errors(item, root, revision)
+        errors.extend(receipt_errors)
+        if not receipt_errors:
+            qualified_no_change[item.identifier] = item
+    # Resolve eligible chains to a fixed point: ID order need not be topological.
+    # A current receipt cannot waive that row's own unfinished prerequisites.
+    while qualified_no_change:
+        eligible_no_change = [
+            identifier for identifier, item in qualified_no_change.items()
+            if all(dependency in satisfied for dependency in item.dependencies)
+        ]
+        if not eligible_no_change:
+            for identifier, item in qualified_no_change.items():
+                missing = [d for d in item.dependencies if d not in satisfied]
+                errors.append(
+                    f"{identifier} verified-no-change has unsatisfied prerequisites: "
+                    + ", ".join(missing)
+                )
+            break
+        for identifier in eligible_no_change:
+            satisfied.add(identifier)
+            del qualified_no_change[identifier]
+
     active_items = [item for item in items if item.status in ACTIVE_STATUSES]
     if len(active_items) != 1:
         errors.append(
@@ -282,7 +410,7 @@ def validate_roadmap(text: str, root: Path) -> list[str]:
             dependency
             for dependency in active_item.dependencies
             if item_map.get(dependency) is None
-            or item_map[dependency].status not in DEPENDENCY_SATISFIED_STATUSES
+            or dependency not in satisfied
         ]
         if unsatisfied:
             errors.append(
@@ -313,7 +441,7 @@ def validate_roadmap(text: str, root: Path) -> list[str]:
         if item.status == "queued"
         and all(
             item_map.get(dependency) is not None
-            and item_map[dependency].status in DEPENDENCY_SATISFIED_STATUSES
+            and dependency in satisfied
             for dependency in item.dependencies
         )
     )
