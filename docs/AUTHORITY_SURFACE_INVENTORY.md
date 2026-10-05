@@ -349,7 +349,7 @@ Members:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `let rendered = VoiceRenderer.renderBar(`
+- [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `return VoiceRenderer.renderBar(`
 
 Evidence anchors:
 
@@ -372,7 +372,7 @@ Members:
 Convergence anchors:
 
 - [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `let climaxOutput = ClimaxHangRenderer.render(`
-- [`Sources/AutoTechnoDSP/VoiceRenderer.swift`](../Sources/AutoTechnoDSP/VoiceRenderer.swift): `audioSliceRenderEvidence = AudioSliceRenderer.render(`
+- [`Sources/AutoTechnoDSP/VoiceRenderer.swift`](../Sources/AutoTechnoDSP/VoiceRenderer.swift): `AudioSliceRenderer.render(`
 
 Evidence anchors:
 
@@ -395,7 +395,7 @@ Members:
 Convergence anchors:
 
 - [`Sources/AutoTechnoDSP/VoiceRenderer.swift`](../Sources/AutoTechnoDSP/VoiceRenderer.swift): `let automaticMix = AutomaticMixBalancer.resolve(`
-- [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `let generated = GeneratedDSPGraphRenderer.process(`
+- [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `return GeneratedDSPGraphRenderer.process(`
 
 Evidence anchors:
 
@@ -815,7 +815,7 @@ Evidence anchors:
 
 Limitation: The historical identifier names a private bounded axis vocabulary, not factory presets, a browser, a selectable profile, or an alternate graph.
 
-## Installed long-horizon calibration profile
+## Retained long-horizon calibration profile and unavailable current target
 <a id="long-horizon-installed-profile"></a>
 
 Classification: `installed-calibration-artifact`  
@@ -832,15 +832,16 @@ Members:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `"long-horizon-professional-profile-v16"`
+- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `"long-horizon-professional-profile-v18"`
+- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `guard let expectedProfileFingerprint,`
 
 Evidence anchors:
 
 - [`Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift`](../Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift): `func bundledArtifacts()`
 
-Limitation: One exact packaged profile is fingerprint-bound to the current engine and primary policy; no selector is exposed.
+Limitation: The bundled v16 profile is historical. The sole current loader targets v18 with all expected fingerprints unset and refuses load; the retained resource grants no current qualification or activation. No profile selector is exposed.
 
-## Long-horizon adversarial and holdout support
+## Historical long-horizon adversarial and holdout support
 <a id="long-horizon-profile-support"></a>
 
 Classification: `qualification-support-artifact`  
@@ -854,14 +855,15 @@ Members:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `"long-horizon-adversarial-suite-v16"`
-- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `"long-horizon-holdout-v16"`
+- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `"long-horizon-adversarial-suite-v18"`
+- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `"long-horizon-holdout-v18"`
+- [`Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift`](../Sources/AutoTechnoDSP/LongHorizonProfessionalPolicyArtifacts.swift): `guard let expectedProfileFingerprint,`
 
 Evidence anchors:
 
 - [`Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift`](../Tests/AutoTechnoCoreTests/LongHorizonProfessionalPolicyTests.swift): `func currentPolicyResourcesFailClosed()`
 
-Limitation: These artifacts qualify the one installed profile and cannot be selected as runtime policies.
+Limitation: The bundled v16 adversarial and holdout resources are historical evidence. The sole current v18 loader requires all three exact fingerprints before loading; unset seals keep it unavailable. These resources do not qualify or activate the current policy.
 
 ## Offline modal-window profile contract identities
 <a id="modal-window-profile-contract"></a>
@@ -886,7 +888,7 @@ Evidence anchors:
 
 Limitation: Unqualified bar-local v31 and continuous v32 identities extend the existing profile type and fitter through one scope owner. Neither is installed; production activation requires v30. Continuous observations require actual report-bank membership and typed original/successor provenance; one-bank analysis cannot satisfy diverse calibration.
 
-## Installed primary calibration profile
+## Retained primary calibration profile and unavailable current target
 <a id="primary-installed-profile"></a>
 
 Classification: `installed-calibration-artifact`  
@@ -905,15 +907,16 @@ Members:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-profile-v30"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-profile-v33"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `guard let expectedProfileFingerprint,`
 
 Evidence anchors:
 
 - [`Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift`](../Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift): `func primaryResourcesAreV30FailClosed()`
 
-Limitation: Checkpoint profiles are parts of one exact installed calibration profile; neither is a runtime style or engine profile.
+Limitation: Checkpoint profiles belong to one calibration contract. The bundled v30 profile is historical and rejected by current construction. The sole v33 loader has unset seals and remains unavailable until fresh complete current-engine qualification; no runtime style or engine selector is exposed.
 
-## Primary adversarial and holdout support
+## Historical primary adversarial and holdout support
 <a id="primary-profile-support"></a>
 
 Classification: `qualification-support-artifact`  
@@ -927,14 +930,15 @@ Members:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-adversarial-suite-v30"`
-- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-holdout-v30"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-adversarial-suite-v33"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `"professional-quality-primary-holdout-v33"`
+- [`Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift`](../Sources/AutoTechnoDSP/ProfessionalQualityPrimaryArtifacts.swift): `guard let expectedProfileFingerprint,`
 
 Evidence anchors:
 
 - [`Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift`](../Tests/AutoTechnoCoreTests/CurrentRuntimeTests.swift): `func primaryResourcesAreV30FailClosed()`
 
-Limitation: These exact resources gate construction of the primary evaluator and expose no parallel runtime evaluator path.
+Limitation: The bundled v30 adversarial and holdout resources are historical evidence rejected by current construction. The sole current v33 loader requires the complete exact fingerprint set; unset seals keep it unavailable. These resources grant no current evaluator qualification or activation.
 
 ## Automatic mix planning inside voice rendering
 <a id="automatic-mix-path"></a>
@@ -1017,7 +1021,7 @@ Entry anchors:
 
 Convergence anchors:
 
-- [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `let generated = GeneratedDSPGraphRenderer.process(`
+- [`Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift`](../Sources/AutoTechnoDSP/AutonomousPhraseRenderer.swift): `return GeneratedDSPGraphRenderer.process(`
 
 Evidence anchors:
 

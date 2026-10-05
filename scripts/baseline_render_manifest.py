@@ -230,13 +230,30 @@ def validate(
         errors.append("manifestVersion must be 1")
     if manifest.get("corpusSha256") != sha256(corpus_path):
         errors.append("corpusSha256 does not match the tracked corpus or selected local corpus")
-    if manifest.get("contractBaselineFingerprint") != baseline.get("snapshotFingerprint"):
+    expected_contract = baseline.get("snapshotFingerprint")
+    retained = None
+    if proof_directory := os.environ.get('AUTOTECHNO_BASELINE_CAPTURE_PROOF'):
+        if namespace != 'v1':
+            return ['retained capture proof requires its original canonical namespace']
+        try:
+            import baseline_retained_capture as retained_capture
+            retained = retained_capture.origin_for_validator(root, proof_directory, 'whole-mix-render')
+            if manifest != retained['manifests']['whole-mix-render']:
+                return ['loaded whole manifest differs from the independently verified original']
+            if corpus_path.relative_to(root.resolve()).as_posix() != retained['captureCorpusPath'] or sha256(corpus_path) != retained['captureCorpusSha256']:
+                return ['retained capture proof belongs to a different actual corpus']
+            expected_contract = retained['contractBaselineFingerprint']
+            if manifest.get('gitHead') != retained['gitHead']:
+                return ['retained manifest changed its original capture Git revision']
+        except Exception as exc:
+            return ['retained capture proof rejected: ' + str(exc)]
+    if manifest.get("contractBaselineFingerprint") != expected_contract:
         errors.append("contractBaselineFingerprint does not match the current baseline")
     for field, length in (("sourceFingerprint", 64), ("gitHead", 40)):
         if not is_hex(manifest.get(field), length):
             errors.append(f"{field} must be {length} lowercase hexadecimal digits")
     try:
-        current_source_fingerprint = source_fingerprint(root)
+        current_source_fingerprint = retained['sourceFingerprint'] if retained else source_fingerprint(root)
         if manifest.get("sourceFingerprint") != current_source_fingerprint:
             errors.append("sourceFingerprint does not match the current source")
     except (OSError, BaselineRenderManifestError) as exc:
@@ -245,7 +262,7 @@ def validate(
     if corpus.get("schema") == "autotechno-at0039-foundation-cohort.v1":
         if corpus.get("sourceFingerprint") != current_source_fingerprint:
             errors.append("AT-0039 cohort sourceFingerprint does not match current source")
-        if corpus.get("contractBaselineFingerprint") != baseline.get("snapshotFingerprint"):
+        if corpus.get("contractBaselineFingerprint") != expected_contract:
             errors.append("AT-0039 cohort contract baseline does not match current baseline")
     if not isinstance(manifest.get("engineVersion"), str) or not manifest.get("engineVersion"):
         errors.append("engineVersion must be non-empty")

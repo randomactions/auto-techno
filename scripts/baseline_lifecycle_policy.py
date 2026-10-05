@@ -17,7 +17,20 @@ from typing import Any, Mapping, Optional, Sequence
 SCHEMA = "autotechno-baseline-lifecycle-policy.v1"
 POLICY_VERSION = 1
 ENVELOPE_SCHEMA = "autotechno-baseline-identity-envelope.v1"
-ASSESSMENT_SCHEMA = "autotechno-baseline-lifecycle-assessment.v1"
+ASSESSMENT_SCHEMA = "autotechno-baseline-lifecycle-assessment.v2"
+VERIFICATION_SCHEMA = "autotechno-baseline-current-verification.v1"
+VERIFICATION_KEYS = {
+    "schema", "familyId", "originGitHead", "originSnapshotFingerprint",
+    "originContractBaselineFingerprint", "originSourceFingerprint",
+    "validationFingerprint", "currentGitHead", "currentSnapshotFingerprint",
+    "currentContractBaselineFingerprint", "artifactSha256", "action",
+    "currentCaptureContextFingerprint", "currentSourceFreezeFingerprint",
+    "currentProbePath", "currentProbeSha256", "currentProbeDiagnosticSha256",
+    "currentProbeInvocationFingerprint",
+    "currentProbeActualArgumentsFingerprint",
+    "qualification", "verificationFingerprint",
+}
+RETAINED_FAMILIES = {"whole-mix-render", "role-stem-capture"}
 POLICY_PATH = Path("docs/BASELINE_LIFECYCLE_POLICY.json")
 MARKDOWN_PATH = Path("docs/BASELINE_LIFECYCLE_POLICY.md")
 BASELINE_PATH = Path("docs/ROADMAP_EXECUTION_BASELINE.json")
@@ -769,6 +782,131 @@ def classify_pair(
             "reason": "same schema and immutable context; differences remain explicit"}
 
 
+def validate_current_verification(value: object, family: object,
+    envelope: Mapping[str, Any], contract: object,
+    artifact_sha: str | None = None) -> list[str]:
+    """Check metadata structure only; live adapter execution remains mandatory."""
+    errors: list[str] = []
+    if not isinstance(value, dict):
+        return ["current verification must be an object"]
+    exact_keys(value, VERIFICATION_KEYS, "current verification", errors)
+    if value.get("schema") != VERIFICATION_SCHEMA:
+        errors.append("unsupported current verification schema")
+    if not isinstance(family, str) or family not in RETAINED_FAMILIES or value.get("familyId") != family:
+        errors.append("current verification has no registered family")
+    for key in ("originGitHead", "currentGitHead"):
+        if not isinstance(value.get(key), str) or not re.fullmatch("[0-9a-f]{40}", value[key]):
+            errors.append(f"current verification {key} must be a commit identity")
+    for key in ("originSnapshotFingerprint", "originContractBaselineFingerprint",
+        "originSourceFingerprint", "validationFingerprint", "currentSnapshotFingerprint",
+        "currentContractBaselineFingerprint", "artifactSha256", "verificationFingerprint",
+        "currentCaptureContextFingerprint", "currentSourceFreezeFingerprint",
+        "currentProbeSha256", "currentProbeDiagnosticSha256", "currentProbeInvocationFingerprint",
+        "currentProbeActualArgumentsFingerprint"):
+        if not isinstance(value.get(key), str) or not HEX64.fullmatch(value[key]):
+            errors.append(f"current verification {key} must be a sha256")
+    probe_path = value.get("currentProbePath")
+    if not isinstance(probe_path, str) or not re.fullmatch(
+        r"docs/local/reports/retained-capture-probe-[0-9a-f]{32}/probe\.json", probe_path):
+        errors.append("current verification requires a registered local native probe path")
+    if value.get("originContractBaselineFingerprint") != envelope.get("contractBaselineFingerprint") or value.get("originSourceFingerprint") != envelope.get("sourceFingerprint"):
+        errors.append("current verification changed the original envelope")
+    if value.get("currentContractBaselineFingerprint") != contract:
+        errors.append("current verification execution contract is stale")
+    if artifact_sha is not None and value.get("artifactSha256") != artifact_sha:
+        errors.append("current verification belongs to different artifact bytes")
+    if not isinstance(value.get("action"), str) or value["action"] not in {"dependencies-unchanged", "reanalysis-required", "revalidation-required"}:
+        errors.append("current verification requires recapture or has unknown action")
+    qualification = value.get("qualification")
+    if not isinstance(qualification, dict) or set(qualification) != {
+        "runtimeInput", "promotionAuthorized", "artifactCurrencyEstablished"} or any(
+        flag is not False for flag in qualification.values()):
+        errors.append("current verification cannot authorize qualification")
+    if value.get("verificationFingerprint") != fingerprint(value, "verificationFingerprint"):
+        errors.append("current verification fingerprint differs")
+    return errors
+
+
+def retained_current_verification(root: Path, directory: str, family: str,
+    document: Mapping[str, Any], envelope: Mapping[str, Any], contract: str) -> dict[str, object]:
+    # A caller-supplied success receipt never replaces this independent live path.
+    import baseline_retained_capture as retained
+    origin = retained.origin_for_validator(root, directory, family)
+    if document != origin["manifests"][family] or document.get("gitHead") != origin["gitHead"]:
+        raise BaselineLifecycleError("lifecycle artifact differs from verified original capture")
+    node = next(n for n in NODES if n["id"] == family)
+    value: dict[str, object] = {
+        "schema": VERIFICATION_SCHEMA, "familyId": family,
+        "originGitHead": origin["gitHead"],
+        "originSnapshotFingerprint": origin["originSnapshotFingerprint"],
+        "originContractBaselineFingerprint": origin["contractBaselineFingerprint"],
+        "originSourceFingerprint": origin["sourceFingerprint"],
+        "validationFingerprint": origin["validationFingerprint"],
+        "currentGitHead": origin["currentGitHead"],
+        "currentSnapshotFingerprint": origin["currentSnapshotFingerprint"],
+        "currentContractBaselineFingerprint": origin["currentContractBaselineFingerprint"],
+        "currentCaptureContextFingerprint": origin["currentCaptureContextFingerprint"],
+        "currentSourceFreezeFingerprint": origin["currentSourceFreezeFingerprint"],
+        "currentProbePath": origin["currentProbeVerification"]["probePath"],
+        "currentProbeSha256": origin["currentProbeVerification"]["probeSha256"],
+        "currentProbeDiagnosticSha256": origin["currentProbeVerification"]["diagnosticSha256"],
+        "currentProbeInvocationFingerprint": origin["currentProbeVerification"]["invocationFingerprint"],
+        "currentProbeActualArgumentsFingerprint": origin["currentProbeVerification"]["actualArgumentsFingerprint"],
+        "artifactSha256": file_digest(root / str(node["artifactPath"])),
+        "action": origin["action"],
+        "qualification": dict(origin["qualification"]),
+    }
+    value["verificationFingerprint"] = fingerprint(value)
+    errors = validate_current_verification(value, family, envelope, contract)
+    if errors:
+        raise BaselineLifecycleError("; ".join(errors))
+    return value
+
+
+def validate_verification_graph(nodes: Sequence[Mapping[str, Any]]) -> list[str]:
+    """Preserve the registered capture pair's exact origin and current context."""
+    by_id = {n.get("id"): n.get("currentVerification") for n in nodes
+        if isinstance(n.get("id"), str)}
+    child = by_id.get("role-stem-capture")
+    if not isinstance(child, dict):
+        return []
+    parent = by_id.get("whole-mix-render")
+    if not isinstance(parent, dict):
+        return ["retained role capture requires registered current whole verification"]
+    fields = ("originGitHead", "originSnapshotFingerprint",
+        "originContractBaselineFingerprint", "originSourceFingerprint",
+        "validationFingerprint", "currentGitHead", "currentSnapshotFingerprint",
+        "currentContractBaselineFingerprint", "currentCaptureContextFingerprint",
+        "currentSourceFreezeFingerprint", "currentProbeInvocationFingerprint",
+        "currentProbeActualArgumentsFingerprint")
+    if any(child.get(k) != parent.get(k) for k in fields):
+        return ["retained whole/role verification mixes original or current contexts"]
+    return []
+
+
+def require_current_verification_bytes(root: Path, value: Mapping[str, Any]) -> None:
+    """Recheck the actual metadata/probe after all cold gates, before reporting."""
+    import baseline_dependency_contract as dependency
+    import baseline_capture_transaction as transaction
+    import baseline_producer_witness as producer
+    try:
+        before = producer.source_freeze(root)
+        if dependency.digest(before) != value["currentSourceFreezeFingerprint"] or before["gitHead"] != value["currentGitHead"]:
+            raise BaselineLifecycleError("source moved since registered current verification")
+        path = transaction.local_path(root, str(value["currentProbePath"]))
+        if producer.file_hash(path, dependency.MAX_METADATA_BYTES) != value["currentProbeSha256"] or producer.file_hash(
+            path.with_name('native.log'), 16 * 1024 * 1024) != value["currentProbeDiagnosticSha256"]:
+            raise BaselineLifecycleError("actual current probe or diagnostic bytes changed")
+        probe = dependency.read_json(path)
+        producer.validate_probe(root, probe, image=Path(probe["compiledImagePath"]),
+            corpus_name=probe["captureCorpusPath"])
+        if dependency.digest(probe["actualArguments"]) != value["currentProbeActualArgumentsFingerprint"]:
+            raise BaselineLifecycleError("actual current probe invocation differs")
+        producer.require_same_source(root, before)
+    except (OSError, ValueError, RuntimeError, KeyError) as exc:
+        raise BaselineLifecycleError("current verification bytes rejected: " + str(exc)) from exc
+
+
 def assess(root: Path, policy: Mapping[str, Any]) -> dict[str, object]:
     baseline = load_json(root / BASELINE_PATH, "roadmap execution baseline")
     contract_fingerprint = baseline.get("snapshotFingerprint")
@@ -789,19 +927,27 @@ def assess(root: Path, policy: Mapping[str, Any]) -> dict[str, object]:
             "state": "unavailable",
             "reasons": [],
             "identityEnvelope": None,
+            "currentVerification": None,
             "validatorRequired": current["validatorCommand"],
         }
         try:
             document = load_json(artifact_path, f"{identifier} artifact")
             envelope = envelope_from_artifact(root, current, document)
             result["identityEnvelope"] = envelope
+            selector = os.environ.get("AUTOTECHNO_BASELINE_CAPTURE_PROOF")
+            if selector is not None and identifier in RETAINED_FAMILIES:
+                try:
+                    result["currentVerification"] = retained_current_verification(
+                        root, selector, identifier, document, envelope, contract_fingerprint)
+                except (OSError, ValueError, RuntimeError) as exc:
+                    raise BaselineLifecycleError("retained lifecycle proof rejected: " + str(exc)) from exc
             reasons: list[str] = []
             if envelope["artifactSchema"] != current["schema"] or envelope["artifactVersion"] != current["version"]:
                 result["state"] = "incompatible"
                 reasons.append("artifact schema/version differs from policy")
             elif envelope["contractBaselineFingerprint"] not in {
                 contract_fingerprint, "not-applicable"
-            }:
+            } and result["currentVerification"] is None:
                 result["state"] = "regeneration-required"
                 reasons.append("contract baseline fingerprint is stale")
             elif envelope["corpusSha256"] not in {corpus_sha, "not-applicable"}:
@@ -850,6 +996,9 @@ def validate_assessment(assessment: Mapping[str, Any]) -> list[str]:
     exact_keys(assessment, ASSESSMENT_KEYS, "assessment", errors)
     if assessment.get("schema") != ASSESSMENT_SCHEMA:
         errors.append(f"assessment.schema must be {ASSESSMENT_SCHEMA}")
+    for key in ("policyFingerprint", "contractBaselineFingerprint", "corpusSha256"):
+        if not isinstance(assessment.get(key), str) or not HEX64.fullmatch(assessment[key]):
+            errors.append(f"assessment {key} must be a sha256")
     recorded = assessment.get("assessmentFingerprint")
     if not isinstance(recorded, str) or not HEX64.fullmatch(recorded):
         errors.append("assessmentFingerprint must be a sha256")
@@ -860,8 +1009,67 @@ def validate_assessment(assessment: Mapping[str, Any]) -> list[str]:
         errors.append("assessment.nodes must be an array")
     else:
         ids = [item.get("id") for item in nodes if isinstance(item, dict)]
-        if ids != assessment.get("regenerationOrder"):
-            errors.append("assessment nodes must follow regenerationOrder")
+        order = topological_order(NODES)
+        if ids != order or assessment.get("regenerationOrder") != order:
+            errors.append("assessment nodes must follow the complete canonical regenerationOrder")
+        by_id = {n["id"]: n for n in NODES}
+        counts = {state: 0 for state in STATES}
+        states_by_id: dict[str, str] = {}
+        for item in nodes:
+            if not isinstance(item, dict):
+                errors.append("assessment node must be an object")
+                continue
+            exact_keys(item, {"id", "artifactPath", "state", "reasons",
+                "identityEnvelope", "currentVerification", "validatorRequired"},
+                "assessment node", errors)
+            identifier = item.get("id")
+            if not isinstance(identifier, str) or identifier not in by_id:
+                errors.append("assessment node has unknown identity")
+                continue
+            node = by_id[identifier]
+            if item.get("artifactPath") != node["artifactPath"] or item.get("validatorRequired") != node["validatorCommand"]:
+                errors.append("assessment node path or required validator differs")
+            state = item.get("state")
+            if not isinstance(state, str) or state not in STATES:
+                errors.append("assessment node has unknown state")
+            else:
+                counts[state] += 1
+                if state == "current-metadata" and any(states_by_id.get(p) != "current-metadata" for p in node["dependencies"]):
+                    errors.append("current assessment node has a noncurrent prerequisite")
+                states_by_id[identifier] = state
+            reasons = item.get("reasons")
+            if not isinstance(reasons, list) or not reasons or any(not bounded_text(r, 4096) for r in reasons):
+                errors.append("assessment node reasons must be bounded nonempty strings")
+            envelope = item.get("identityEnvelope")
+            if isinstance(envelope, dict):
+                errors.extend(validate_envelope(envelope))
+                if envelope.get("familyId") != identifier:
+                    errors.append("assessment envelope belongs to another family")
+            elif envelope is not None or state != "unavailable":
+                errors.append("available assessment node requires an identity envelope")
+            verification = item.get("currentVerification")
+            if verification is not None:
+                if not isinstance(envelope, dict):
+                    errors.append("current verification requires an original envelope")
+                else:
+                    errors.extend(validate_current_verification(verification, identifier,
+                        envelope, assessment.get("contractBaselineFingerprint")))
+            if state == "current-metadata" and isinstance(envelope, dict) and verification is None:
+                contract = envelope.get("contractBaselineFingerprint")
+                if not isinstance(contract, str) or contract not in (
+                    assessment.get("contractBaselineFingerprint"), "not-applicable"):
+                    errors.append("stale original contract requires registered current verification")
+            if state == "current-metadata" and isinstance(envelope, dict) and envelope.get("corpusSha256") not in (
+                assessment.get("corpusSha256"), "not-applicable"):
+                errors.append("current assessment node has stale corpus identity")
+        if assessment.get("summary") != counts:
+            errors.append("assessment summary differs from node states")
+        errors.extend(validate_verification_graph([n for n in nodes if isinstance(n, dict)]))
+    qualification = assessment.get("qualification")
+    if qualification != {"contentValidatorsExecuted": False, "runtimeInput": False,
+        "promotionAuthorized": False, "claim": "metadata-lifecycle-only-not-artifact-content-validation"} or any(
+        qualification.get(k) is not False for k in ("contentValidatorsExecuted", "runtimeInput", "promotionAuthorized")):
+        errors.append("assessment cannot authorize content validation or promotion")
     return sorted(set(errors))
 
 

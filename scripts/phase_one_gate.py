@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -21,8 +22,8 @@ if SCRIPT_DIRECTORY not in sys.path:
 import baseline_lifecycle_policy as lifecycle  # noqa: E402
 
 
-SCHEMA = "autotechno-phase-one-gate.v1"
-GATE_VERSION = 1
+SCHEMA = "autotechno-phase-one-gate.v2"
+GATE_VERSION = 2
 REPORT_PATH = Path("docs/PHASE_ONE_GATE.json")
 MARKDOWN_PATH = Path("docs/PHASE_ONE_GATE.md")
 ASSESSMENT_PATH = Path(
@@ -87,6 +88,7 @@ ARTIFACT_KEYS = {
     "corpusSha256", "engineVersion", "nativeBuildConfiguration",
     "gateBuildConfiguration", "configurationBinding", "routeIdentity",
     "validator",
+    "currentVerification",
 }
 CHECK_KEYS = {"id", "command", "status"}
 PCM_KEYS = {
@@ -373,6 +375,12 @@ def build_report(root: Path, runner: Runner = subprocess.run) -> dict[str, Any]:
             raise PhaseOneGateError("lifecycle node identity/path is invalid")
         artifact_path = root / str(path)
         document = load_json(artifact_path, f"{node_id} artifact")
+        verification = item.get("currentVerification")
+        if isinstance(verification, Mapping):
+            try:
+                lifecycle.require_current_verification_bytes(root, verification)
+            except lifecycle.BaselineLifecycleError as exc:
+                raise PhaseOneGateError(str(exc)) from exc
         native_build = envelope.get("buildConfiguration")
         if native_build not in {"not-applicable", "release"}:
             raise PhaseOneGateError(
@@ -405,6 +413,7 @@ def build_report(root: Path, runner: Runner = subprocess.run) -> dict[str, Any]:
             ),
             "routeIdentity": envelope.get("routeIdentity"),
             "validator": item.get("validatorRequired"),
+            "currentVerification": item.get("currentVerification"),
         })
     if not source_fingerprints or not engine_versions or not git_heads:
         raise PhaseOneGateError("source, engine, or Git provenance is unavailable")
@@ -512,6 +521,21 @@ def validate_report(
             errors.append(f"{location} must be an object")
             continue
         exact_keys(artifact, ARTIFACT_KEYS, location, errors)
+        verification = artifact.get("currentVerification")
+        if verification is not None:
+            errors.extend(lifecycle.validate_current_verification(verification,
+                artifact.get("id"), artifact,
+                context.get("contractBaselineFingerprint") if isinstance(context, dict) else None,
+                artifact.get("fileSha256")))
+            if isinstance(verification, dict) and isinstance(context, dict):
+                for origin_key, context_key in (("originGitHead", "gitHeads"),
+                    ("originSourceFingerprint", "sourceFingerprints")):
+                    recorded = context.get(context_key)
+                    if isinstance(recorded, list) and verification.get(origin_key) not in recorded:
+                        errors.append("scoped artifact origin is omitted from aggregate context")
+        elif isinstance(context, dict) and artifact.get("contractBaselineFingerprint") not in (
+            context.get("contractBaselineFingerprint"), "not-applicable"):
+            errors.append("stale aggregate artifact has no registered current verification")
         artifact_ids.append(artifact.get("id"))
         if not is_relative_path(artifact.get("path")):
             errors.append(f"{location}.path must be repository-relative")
@@ -536,6 +560,7 @@ def validate_report(
             errors.append(f"{location}.validator must be non-empty")
     if artifact_ids != expected_order:
         errors.append("artifacts must follow the exact lifecycle regeneration order")
+    errors.extend(lifecycle.validate_verification_graph([a for a in artifacts if isinstance(a, dict)]))
 
     checks = report.get("checks")
     if not isinstance(checks, list):
@@ -661,13 +686,20 @@ def render_markdown(report: Mapping[str, Any]) -> str:
         "",
         "## Artifact bindings",
         "",
-        "| # | Family | Schema | Configuration binding | Validator |",
-        "|---:|---|---|---|---|",
+        "Original artifact envelopes remain capture facts. Registered current",
+        "verification is recorded separately; unsupported families retain the",
+        "legacy current-contract requirement. Every content gate remains required.",
+        "",
+        "| # | Family | Schema | Configuration binding | Current verification | Validator |",
+        "|---:|---|---|---|---|---|",
     ]
     for index, artifact in enumerate(report["artifacts"], 1):
+        verification = artifact.get("currentVerification")
+        basis = (verification['verificationFingerprint']
+            if isinstance(verification, Mapping) else 'legacy-current-contract')
         lines.append(
             f"| {index} | `{artifact['id']}` | `{artifact['schema']}` | "
-            f"`{artifact['configurationBinding']}` | `{artifact['validator']}` |"
+            f"`{artifact['configurationBinding']}` | `{basis}` | `{artifact['validator']}` |"
         )
     lines.extend([
         "",
@@ -728,13 +760,40 @@ def run_validate(root: Path, output: TextIO) -> int:
     return 0
 
 
+def same_verified_basis(before: Mapping[str, Any], after: Mapping[str, Any]) -> bool:
+    """Compare only after strict structure and actual receipt-byte verification.
+
+    Fresh registered probes have new local paths and process/log hashes. These
+    are separate executed receipts for the same exact source/context, not changes
+    to capture envelopes. No other identity or result dimension is normalized.
+    """
+    values = [copy.deepcopy(dict(v)) for v in (before, after)]
+    for value in values:
+        value.pop('gateFingerprint', None)
+        for artifact in value['artifacts']:
+            verification = artifact.get('currentVerification')
+            if isinstance(verification, dict):
+                for key in ('currentProbePath', 'currentProbeSha256',
+                    'currentProbeDiagnosticSha256', 'verificationFingerprint'):
+                    verification.pop(key)
+    return values[0] == values[1]
+
+
 def run_check(root: Path, output: TextIO, runner: Runner = subprocess.run) -> int:
     expected = build_report(root, runner)
     actual = load_json(root / REPORT_PATH, "Phase-1 gate")
-    if actual != expected:
+    policy = lifecycle.load_json(root / lifecycle.POLICY_PATH, "lifecycle policy")
+    errors = validate_report(actual, policy)
+    if errors:
+        raise PhaseOneGateError("stored Phase-1 gate is invalid: " + "; ".join(errors))
+    for artifact in actual['artifacts']:
+        verification = artifact.get('currentVerification')
+        if isinstance(verification, Mapping):
+            lifecycle.require_current_verification_bytes(root, verification)
+    if not same_verified_basis(actual, expected):
         print("phase-1 gate is stale; run generate", file=output)
         return 1
-    if (root / MARKDOWN_PATH).read_text(encoding="utf-8") != render_markdown(expected):
+    if (root / MARKDOWN_PATH).read_text(encoding="utf-8") != render_markdown(actual):
         print("phase-1 gate Markdown is stale; run generate", file=output)
         return 1
     print(
