@@ -262,12 +262,17 @@ def no_change_receipt_errors(
         for gate in record.get("gates", [])
         if isinstance(gate, dict)
     } if isinstance(record.get("gates"), list) else {}
-    for gate in ("focused-local-verification", "full-local-verification",
+    for gate in ("implementation", "focused-local-verification", "full-local-verification",
                  "automated-quality-qualification"):
         if statuses.get(gate) != "passed":
             errors.append(f"receipt requires passed {gate}")
     for gate in results.RELEASE_REQUIRED_GATES:
-        if statuses.get(gate) not in ("passed", "not-applicable"):
+        release_only = gate in (
+            "published-exact-sha", "exact-head-ci", "release-app-launched",
+            "app-route-qa", "physical-output-soak",
+        )
+        if statuses.get(gate) != "passed" and not (
+                release_only and statuses.get(gate) == "not-applicable"):
             errors.append(f"receipt has an unmet applicable gate: {gate}")
     # Listening stays optional hypothesis evidence; it never authorizes completion.
     return [f"{prefix}: {error}" for error in errors]

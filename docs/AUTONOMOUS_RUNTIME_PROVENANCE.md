@@ -832,10 +832,13 @@ that item's private acceptance plan bytes. The marker accompanies measured
 evidence; it cannot replace it. A changed outcome, dependency or plan invalidates
 the receipt even when tracked source is unchanged. The integrity checker validates
 the receipt and vocabulary, matching item
-subject and clean current 40-digit source revision, passed focused/full local and
-automated qualification, and every other applicable objective gate. Release-only
-gates may be explicitly not-applicable with their required scope limitation;
-listening remains optional. Opaque text, missing or invalid receipts, mutable or
+subject and clean current 40-digit source revision, passed implementation,
+focused/full local verification and automated qualification, and every other
+applicable objective gate. Only publication, exact-head CI, release app launch,
+app/route QA and physical-output soak may be explicitly not-applicable with
+their required scope limitation. An existing capability must still have positive
+implementation evidence; verified-no-change cannot exempt that gate.
+Listening remains optional. Opaque text, missing or invalid receipts, mutable or
 stale source, and incomplete applicable gates cannot satisfy a dependency or make
 a later row eligible. No cross-revision no-change reuse contract is installed.
 A passed full-local or automated qualification result independently requires an

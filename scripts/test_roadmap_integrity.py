@@ -246,6 +246,25 @@ fixture
                 self.assertTrue(any("requires passed automated-quality-qualification" in e for e in errors))
                 self.assertTrue(any("unsatisfied dependencies" in e for e in errors))
 
+    def test_not_applicable_implementation_cannot_unlock_dependent(self) -> None:
+        record = self.qualified_receipt()
+        implementation = next(gate for gate in record["gates"] if gate["id"] == "implementation")
+        implementation.update(status="not-applicable", evidence=[],
+                              limitation="No implementation evidence is supplied.")
+        self.write_receipt(record)
+        errors = self.errors(self.no_change_document())
+        self.assertTrue(any("requires passed implementation" in error for error in errors))
+        self.assertTrue(any("AT-0003" in error and "unsatisfied dependencies" in error for error in errors))
+
+    def test_explicit_release_only_exceptions_preserve_eligible_no_change(self) -> None:
+        record = self.qualified_receipt()
+        statuses = {gate["id"]: gate["status"] for gate in record["gates"]}
+        self.assertEqual(statuses["implementation"], "passed")
+        for identifier in ("published-exact-sha", "exact-head-ci", "release-app-launched",
+                           "app-route-qa", "physical-output-soak"):
+            self.assertEqual(statuses[identifier], "not-applicable")
+        self.assertEqual(self.errors(self.no_change_document()), [])
+
     def test_unmet_other_applicable_gate_cannot_satisfy_dependency(self) -> None:
         record = self.qualified_receipt()
         for gate in record["gates"]:
