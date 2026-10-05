@@ -2193,6 +2193,11 @@ package enum AutonomousPhrasePreparer {
                 initialPrimary.registerWorkingStorage(inventory, owner: "attempt.retained-initial")
                 withExtendedLifetime(initialPrimary) {}
             }
+            initialPrimary.releaseSupersededSynthesisStorage()
+            workingStorageObservation?.observe("superseded-release") { inventory in
+                initialPrimary.registerWorkingStorage(inventory, owner: "attempt.retained-initial")
+                withExtendedLifetime(initialPrimary) {}
+            }
             let correctedResult = product(
                 plan: plan,
                 kind: .correctionRender,
@@ -2940,10 +2945,35 @@ package enum AutonomousPhrasePreparer {
         }
     }
 
+    /// The initial attempt's immutable evidence remains in the transaction,
+    /// while its superseded audio leaves ownership before corrective rendering.
+    /// Accessing released audio is an internal ownership error, never a fallback.
+    /// Reference ownership keeps getters and observation scopes from copying the
+    /// complete large state aggregate onto a cooperative worker stack.
+    private final class CandidateSynthesisStorage {
+        let blocks: [RenderBlock]
+        let endingRenderState: RenderState
+        let endingGraphState: GeneratedDSPContinuationState
+
+        init(blocks: [RenderBlock], endingRenderState: RenderState,
+            endingGraphState: GeneratedDSPContinuationState) {
+            self.blocks = blocks
+            self.endingRenderState = endingRenderState
+            self.endingGraphState = endingGraphState
+        }
+    }
+
     private final class CandidateRenderProduct: @unchecked Sendable {
         let plan: AutonomousPhrasePlan
         let graph: DSPGraphPlan
-        let blocks: [RenderBlock]
+        private var synthesisStorage: CandidateSynthesisStorage?
+        private var ownedSynthesisStorage: CandidateSynthesisStorage {
+            guard let storage = synthesisStorage else {
+                preconditionFailure("Superseded candidate has no audio ownership")
+            }
+            return storage
+        }
+        var blocks: [RenderBlock] { ownedSynthesisStorage.blocks }
         private(set) var repeatHoldEvolutionCandidates:
             [RepeatHoldEvolutionRenderCandidate]
         private(set) var diagnosticRoleStemCaptures:
@@ -2951,8 +2981,8 @@ package enum AutonomousPhrasePreparer {
         private(set) var diagnosticRoleStemDraft: DiagnosticRoleStemCaptureDraft?
         let diagnosticRoleStemSession: DiagnosticRoleStemCaptureSession?
         let sampleRate: Double
-        let endingRenderState: RenderState
-        let endingGraphState: GeneratedDSPContinuationState
+        var endingRenderState: RenderState { ownedSynthesisStorage.endingRenderState }
+        var endingGraphState: GeneratedDSPContinuationState { ownedSynthesisStorage.endingGraphState }
         let audioPreflight: PhraseAudioPreflight
         let vector: AutonomousCandidateEvaluationVector
         let attempt: AutonomousCandidateAttempt
@@ -2975,31 +3005,45 @@ package enum AutonomousPhrasePreparer {
         ) {
             self.plan = plan
             self.graph = graph
-            self.blocks = blocks
+            self.synthesisStorage = CandidateSynthesisStorage(blocks: blocks,
+                endingRenderState: endingRenderState, endingGraphState: endingGraphState)
             self.repeatHoldEvolutionCandidates =
                 repeatHoldEvolutionCandidates
             self.diagnosticRoleStemCaptures = diagnosticRoleStemCaptures
             self.diagnosticRoleStemDraft = diagnosticRoleStemDraft
             self.diagnosticRoleStemSession = diagnosticRoleStemSession
             self.sampleRate = sampleRate
-            self.endingRenderState = endingRenderState
-            self.endingGraphState = endingGraphState
             self.audioPreflight = audioPreflight
             self.vector = vector
             self.attempt = attempt
         }
 
         func registerWorkingStorage(_ inventory: NumericStorageInventory, owner: String) {
-            inventory.registerBlocks(blocks, owner: owner + ".primary")
+            if let storage = synthesisStorage {
+                inventory.registerBlocks(storage.blocks, owner: owner + ".primary")
+                AutonomousTypedFingerprint.registerContinuationStorage(
+                    renderState: storage.endingRenderState,
+                    generatedDSPState: storage.endingGraphState,
+                    inventory: inventory, owner: owner + ".continuation")
+                withExtendedLifetime(storage) {}
+            }
             for (ordinal, hold) in repeatHoldEvolutionCandidates.enumerated() {
                 inventory.registerHoldBlocks(hold.blocks, owner: "\(owner).hold.\(ordinal)")
             }
             for (ordinal, capture) in diagnosticRoleStemCaptures.enumerated() {
                 inventory.register(capture, owner: "\(owner).capture.\(ordinal)")
             }
-            AutonomousTypedFingerprint.registerContinuationStorage(renderState: endingRenderState,
-                generatedDSPState: endingGraphState, inventory: inventory, owner: owner + ".continuation")
             withExtendedLifetime(self) {}
+        }
+
+        /// Called only after correction has been selected and its diagnostic
+        /// draft has been discarded. No initial PCM/state is read afterwards;
+        /// failure or cancellation refuses the transaction instead of replaying
+        /// a released candidate. Evidence, plan and graph identity remain exact.
+        func releaseSupersededSynthesisStorage() {
+            precondition(repeatHoldEvolutionCandidates.isEmpty &&
+                diagnosticRoleStemCaptures.isEmpty && diagnosticRoleStemDraft == nil)
+            synthesisStorage = nil
         }
 
         func releaseRepeatHoldEvolution() {

@@ -805,6 +805,22 @@ cannot be verified without all nine objective gates passing for one 40-digit
 revision. Listening is the only `observed` gate and cannot be marked passed or
 used to override automated evidence.
 
+The private roadmap distinguishes focused development slices from complete
+qualification at the active item's named frozen boundary. Each receipt uses the
+existing result vocabulary, exact source and explicit missing gates. A frozen
+boundary records implementation, fixture/evaluator/policy/resource/contract state,
+private initialization and continuation context, toolchain, routes, corpus,
+disjoint holdouts and every required command. Development or failed states cannot
+authorize promotion, item completion or qualified resource replacement. Required
+lifecycle families, subordinate/aggregate checks, shared cohorts, safety,
+rejection, replay, deadline/capacity and promotion gates remain unchanged.
+Dependency reuse requires independently validated installed bindings; unknown or
+legacy evidence remains conservatively stale and original envelopes are immutable.
+Existing phase boundaries define nearer product milestone views. They never add
+another queue, permit out-of-order work, or turn later research into a release
+prerequisite. An eligible row may use verified-no-change only with current evidence
+for its complete measured outcome and every applicable gate.
+
 The private roadmap remains a single Markdown authority. Its offline integrity
 checker parses the exact Control C YAML subset, Control D states, and 390
 machine-searchable `AT-xxxx` rows without a Markdown/YAML dependency. It rejects
@@ -2397,3 +2413,23 @@ PCM or addresses, never run in the callback, and do not feed admission or musica
 decisions. Zone peaks may be noncoincident; destroyed zones and non-malloc VM are
 excluded from that allocator measure. They supplement the named-buffer inventory
 without claiming complete numeric attribution or a qualified capacity bound.
+
+## Superseded corrective-render storage lifetime
+
+The existing detached `AutonomousPhrasePreparer` retains the exact initial
+attempt vector in the canonical transaction. Once the evaluator requests the
+same-plan home correction, it releases the initial hold/capture sidecars and
+initial PCM/ending DSP storage before the corrective render. The original
+incoming continuation remains immutable and supplies that render. Released
+storage cannot supply finalization or fallback: internal access fails, and a
+failed or cancelled correction refuses the transaction through the existing
+path. Only the selected product retains audio for pending proof and ownership.
+
+The reusable capability is explicit `CandidateSynthesisStorage` ownership in
+the existing private candidate, avoiding duplicated initial/corrective audio
+lifetimes. Actual source/owned-child controls verify the release boundary and
+unchanged PCM, hold families, attempts, replay/proof and continuation. This is a
+physical overlap reduction, not a complete working-set proof. Existing numeric
+reservations, 128 MiB ceiling, two-pass bound and all final qualification gates
+remain unchanged until complete active-path allocation bounds are established.
+No score, musical parameter, callback, host, policy or renderer is added.

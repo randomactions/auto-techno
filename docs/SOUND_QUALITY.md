@@ -854,6 +854,21 @@ not replace matching calibrated artifacts, output, deadline or resource gates.
 
 ## Development qualification loop
 
+Complete qualification runs at a coherent frozen candidate boundary within the
+existing active roadmap item. During development, run focused checks and every
+applicable hard safety, continuation, replay, rejection, route, callback, resource
+and deadline control; record intermediate code as unqualified. Freeze stable
+implementation, fixtures, evaluator, policy/resources and contracts before this
+complete loop, naming exact source/context, corpus, disjoint holdouts, routes and
+all required gates. No known implementation defect may be hidden by starting a
+full refresh. Every required gate remains mandatory before promotion, including
+all 15 lifecycle families, all 19 subordinate checks and both aggregate passes when
+Phase-1 is required. Evidence reuse requires the installed validated dependency
+contract; unknown dependencies retain conservative invalidation. Preserve failed
+evidence, repair the cause, freeze a new candidate and rerun required affected
+gates. Development cadence never makes stale evidence current or changes a
+threshold, holdout, rejection, activation or promotion rule.
+
 The exact-engine primary evaluator is preloaded at app construction and created
 per covered 44.1/48 kHz route. Missing artifacts and unsupported rates are
 truthfully unavailable and cannot commit. The initial single-journey profile
@@ -1599,3 +1614,23 @@ PCM or addresses, never run in the callback, and do not feed admission or musica
 decisions. Zone peaks may be noncoincident; destroyed zones and non-malloc VM are
 excluded from that allocator measure. They supplement the named-buffer inventory
 without claiming complete numeric attribution or a qualified capacity bound.
+
+## Superseded corrective-render storage lifetime
+
+The existing detached `AutonomousPhrasePreparer` retains the exact initial
+attempt vector in the canonical transaction. Once the evaluator requests the
+same-plan home correction, it releases the initial hold/capture sidecars and
+initial PCM/ending DSP storage before the corrective render. The original
+incoming continuation remains immutable and supplies that render. Released
+storage cannot supply finalization or fallback: internal access fails, and a
+failed or cancelled correction refuses the transaction through the existing
+path. Only the selected product retains audio for pending proof and ownership.
+
+The reusable capability is explicit `CandidateSynthesisStorage` ownership in
+the existing private candidate, avoiding duplicated initial/corrective audio
+lifetimes. Actual source/owned-child controls verify the release boundary and
+unchanged PCM, hold families, attempts, replay/proof and continuation. This is a
+physical overlap reduction, not a complete working-set proof. Existing numeric
+reservations, 128 MiB ceiling, two-pass bound and all final qualification gates
+remain unchanged until complete active-path allocation bounds are established.
+No score, musical parameter, callback, host, policy or renderer is added.

@@ -1110,8 +1110,13 @@ struct IterativeSuccessorPreparationTests {
                     #expect(probe.snapshots.contains { $0.phase == "chain.before-correction" })
                     #expect(probe.snapshots.contains { $0.phase == "chain.corrective-overlap" &&
                         $0.observedPhase?.hasPrefix("chain.render.") == true && $0.ownerRecords.contains {
-                        $0.owner.hasPrefix("attempt.retained-initial.primary") && $0.capacityBytes > 0
+                        $0.owner.hasPrefix("attempt.incoming")
+                    } && !$0.ownerRecords.contains {
+                        $0.owner.hasPrefix("attempt.retained-initial.primary") ||
+                            $0.owner.hasPrefix("attempt.retained-initial.continuation")
                     } })
+                    let released = try #require(probe.snapshots.first { $0.phase == "chain.superseded-release" })
+                    #expect(!released.ownerRecords.contains { $0.owner.hasPrefix("attempt.retained-initial") })
                     #expect(!probe.snapshots.contains { $0.phase == "chain.reduced" })
                 }
                 let report: [String: Any] = ["schema": "autotechno-chain-storage-control.v2",
@@ -1159,9 +1164,13 @@ struct IterativeSuccessorPreparationTests {
             let before = try #require(probe.snapshots.first { $0.phase == "chain.before-correction" })
             #expect(before.ownerRecords.contains { $0.owner.hasPrefix("attempt.retained-initial.primary") && $0.capacityBytes > 0 })
             #expect(!before.ownerRecords.contains { $0.owner.hasPrefix("attempt.retained-initial.hold") || $0.owner.hasPrefix("attempt.retained-initial.capture") })
+            let released = try #require(probe.snapshots.first { $0.phase == "chain.superseded-release" })
+            #expect(!released.ownerRecords.contains { $0.owner.hasPrefix("attempt.retained-initial") })
             #expect(probe.snapshots.contains { snapshot in snapshot.phase == "chain.corrective-overlap" &&
                 snapshot.observedPhase?.hasPrefix("chain.render.") == true &&
-                snapshot.ownerRecords.contains { $0.owner.hasPrefix("attempt.retained-initial.primary") && $0.capacityBytes > 0 } })
+                snapshot.ownerRecords.contains { $0.owner.hasPrefix("attempt.incoming") } &&
+                !snapshot.ownerRecords.contains { $0.owner.hasPrefix("attempt.retained-initial.primary") ||
+                    $0.owner.hasPrefix("attempt.retained-initial.continuation") } })
         }
     }
 
