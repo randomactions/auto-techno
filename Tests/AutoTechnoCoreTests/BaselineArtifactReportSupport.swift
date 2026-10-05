@@ -435,7 +435,10 @@ final class BaselineProducerCaptureWitness {
               !parts.contains(where: { $0.isEmpty || $0 == "." || $0 == ".." }),
               !name.unicodeScalars.contains(where: { $0.value < 32 }),
               !localOnly || name.hasPrefix("docs/local/") else { throw WitnessError.invalidPath }
-        var result = root
+        // Foundation resolves macOS's /private/tmp alias to /tmp. Compare the
+        // same trusted root identity used by the corpus loader, while retaining
+        // the symlink refusal for every caller-supplied path component below it.
+        var result = root.standardizedFileURL.resolvingSymlinksInPath()
         for part in parts {
             result.appendPathComponent(String(part))
             guard (try? result.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {

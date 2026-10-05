@@ -72,6 +72,21 @@ struct BaselineProducerWitnessTests {
         #expect(try BaselineProducerCaptureWitness.fileDigest(file) ==
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
         #expect(throws: (any Error).self) { try BaselineProducerCaptureWitness.fileDigest(file, maximumBytes: 2) }
+        let aliasRoot = URL(fileURLWithPath: "/private/tmp")
+            .appendingPathComponent("producer-path-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: aliasRoot, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: aliasRoot) }
+        let aliasFile = aliasRoot.appendingPathComponent("data")
+        try Data("abc".utf8).write(to: aliasFile)
+        #expect(try BaselineProducerCaptureWitness.localURL("data", root: aliasRoot) ==
+            aliasFile.standardizedFileURL.resolvingSymlinksInPath())
+        let aliasTarget = aliasRoot.appendingPathComponent("target")
+        try FileManager.default.createDirectory(at: aliasTarget, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: aliasRoot.appendingPathComponent("link"),
+            withDestinationURL: aliasTarget)
+        #expect(throws: (any Error).self) {
+            try BaselineProducerCaptureWitness.localURL("link/data", root: aliasRoot)
+        }
     }
     @Test("Fresh receipts refuse overwriting and preserve existing bytes")
     func exclusiveReceiptCreation() throws {
