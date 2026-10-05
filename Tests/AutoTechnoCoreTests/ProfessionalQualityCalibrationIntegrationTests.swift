@@ -579,6 +579,237 @@ struct ProfessionalQualityCalibrationIntegrationTests {
         return result
     }
 
+    /// This is a planning protocol, never measured quality or admission evidence.
+    /// Exact source and the inherited outcome-blind quotas are frozen before PCM.
+    private func currentCoverageSelectionProtocol(
+        head: String, inputObjects: [String], contractFingerprint: String
+    ) -> [String: Any] {
+        ["schema": "autotechno-score-only-coverage-selection-protocol.v2",
+         "engineVersion": QualityQualificationContract.engineVersion,
+         "gitHead": head, "acceptedInputObjects": inputObjects,
+         "contractBaselineFingerprint": contractFingerprint,
+         "selectionRule": "ascending-ordinal-complete-score-then-remaining-four-bar.v1",
+         "developmentOrdinals": [775, 1031], "holdoutOrdinals": [1031, 1287],
+         "excludedOrdinalUpperBound": 775,
+         "developmentGeneralCount": 36, "developmentFourBarCount": 4,
+         "holdoutGeneralCount": 4, "holdoutFourBarCount": 2,
+         "maximumPhrases": 128,
+         "sampleRates": ProfessionalQualityCalibrationProfile.requiredSampleRates,
+         "routeFingerprint": "score-only-coverage-selection", "routeGeneration": 0,
+         "originalCheckpointCount": 322, "qualityRevision": 0,
+         "pcmRendered": false, "runtimeActivation": false,
+         "replacementQualification": "unavailable-not-activated"]
+    }
+
+    private func requireCurrentCoverageSelectionProtocol(
+        _ object: [String: Any], head: String, inputObjects: [String],
+        contractFingerprint: String
+    ) throws {
+        guard head.count == 40, head.allSatisfy({ $0.isHexDigit && !$0.isUppercase }),
+              inputObjects.count == 6,
+              inputObjects.allSatisfy({ $0.count == 40 && $0.allSatisfy({ $0.isHexDigit && !$0.isUppercase }) }),
+              contractFingerprint.count == 64,
+              contractFingerprint.allSatisfy({ $0.isHexDigit && !$0.isUppercase }),
+              try canonicalCacheJSON(object) == canonicalCacheJSON(
+                currentCoverageSelectionProtocol(head: head, inputObjects: inputObjects,
+                    contractFingerprint: contractFingerprint)) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+    }
+
+    @Test("Current score-only freeze refuses historical identities, changed quotas and quality claims")
+    func currentCoverageSelectionProtocolRefusesMutation() throws {
+        let head = String(repeating: "a", count: 40)
+        let objects = (0..<6).map { String(repeating: String($0), count: 40) }
+        let contract = String(repeating: "b", count: 64)
+        let expected = currentCoverageSelectionProtocol(head: head,
+            inputObjects: objects, contractFingerprint: contract)
+        try requireCurrentCoverageSelectionProtocol(expected, head: head,
+            inputObjects: objects, contractFingerprint: contract)
+        let mutations: [(String, Any)] = [
+            ("engineVersion", "autotechno-canonical-engine.v48"),
+            ("schema", "autotechno-score-only-coverage-selection-protocol.v1"),
+            ("gitHead", String(repeating: "c", count: 40)),
+            ("acceptedInputObjects", Array(objects.reversed())),
+            ("contractBaselineFingerprint", String(repeating: "c", count: 64)),
+            ("developmentOrdinals", [774, 1031]), ("holdoutOrdinals", [1030, 1287]),
+            ("excludedOrdinalUpperBound", 774), ("developmentGeneralCount", 35),
+            ("developmentFourBarCount", 5), ("holdoutGeneralCount", 5),
+            ("holdoutFourBarCount", 1), ("maximumPhrases", 129),
+            ("sampleRates", [8_000]), ("routeFingerprint", "other-route"),
+            ("routeGeneration", 1), ("originalCheckpointCount", 321),
+            ("qualityRevision", 1), ("pcmRendered", true), ("runtimeActivation", true),
+            ("replacementQualification", "passed"), ("unknownAuthority", "passed")]
+        for (key, value) in mutations {
+            var changed = expected
+            changed[key] = value
+            #expect(throws: ProfessionalQualityCalibrationError.self) {
+                try requireCurrentCoverageSelectionProtocol(changed, head: head,
+                    inputObjects: objects, contractFingerprint: contract)
+            }
+        }
+        for (badHead, badObjects, badContract) in [
+            ("HEAD", objects, contract), (head, Array(objects.prefix(5)), contract),
+            (head, objects, "current")
+        ] {
+            #expect(throws: ProfessionalQualityCalibrationError.self) {
+                try requireCurrentCoverageSelectionProtocol(expected, head: badHead,
+                    inputObjects: badObjects, contractFingerprint: badContract)
+            }
+        }
+    }
+
+    private func requireCoverageGitBlob(_ data: Data, expected: String) throws {
+        guard data.count <= 8 * 1_024 * 1_024,
+              expected.count == 40,
+              expected.allSatisfy({ $0.isHexDigit && !$0.isUppercase }),
+              try git(["hash-object", "--stdin"], input: data) == expected else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+    }
+
+    @Test("Coverage identities bind parsed bytes even when their path changes and is restored")
+    func currentCoverageParsedByteBindingRejectsPathMutation() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent("protocol.json")
+        let first = Data("{\"version\":1}".utf8)
+        let second = Data("{\"version\":2}".utf8)
+        try first.write(to: file)
+        let capturedFirst = try Data(contentsOf: file)
+        let firstBlob = try git(["hash-object", file.path])
+        try second.write(to: file)
+        let capturedSecond = try Data(contentsOf: file)
+        let secondBlob = try git(["hash-object", file.path])
+        #expect(firstBlob != secondBlob)
+        try requireCoverageGitBlob(capturedFirst, expected: firstBlob)
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try requireCoverageGitBlob(capturedFirst, expected: secondBlob)
+        }
+        try first.write(to: file)
+        #expect(try git(["hash-object", file.path]) == firstBlob)
+        try requireCoverageGitBlob(capturedSecond, expected: secondBlob)
+        #expect(throws: ProfessionalQualityCalibrationError.self) {
+            try requireCoverageGitBlob(capturedSecond, expected: firstBlob)
+        }
+    }
+
+    private func currentCoverageSelectionContext() throws -> (
+        head: String, objects: [String], baselineData: Data, contract: String,
+        protocolURL: URL, protocolBlob: String
+    ) {
+        guard try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let head = try git(["rev-parse", "HEAD"])
+        let objects = try git(["rev-parse"] + ["Package.swift", "Sources", "Tests", "scripts",
+            "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"].map { "HEAD:\($0)" })
+            .split(separator: "\n").map(String.init)
+        let baselineURL = repositoryRoot.appendingPathComponent("docs/ROADMAP_EXECUTION_BASELINE.json")
+        let baselineData = try Data(contentsOf: baselineURL)
+        let baseline = try #require(JSONSerialization.jsonObject(with: baselineData) as? [String: Any])
+        let contract = try #require(baseline["snapshotFingerprint"] as? String)
+        let environment = ProcessInfo.processInfo.environment
+        guard let protocolPath = environment["AUTOTECHNO_CALIBRATION_COVERAGE_PROTOCOL"],
+              let expectedProtocolBlob = environment["AUTOTECHNO_CALIBRATION_COVERAGE_PROTOCOL_BLOB"],
+              expectedProtocolBlob.count == 40,
+              expectedProtocolBlob.allSatisfy({ $0.isHexDigit && !$0.isUppercase }) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let protocolURL = URL(fileURLWithPath: protocolPath).standardizedFileURL
+        let reportPrefix = repositoryRoot.appendingPathComponent("docs/local/reports/").path + "/"
+        guard protocolURL.path.hasPrefix(reportPrefix),
+              protocolURL.resolvingSymlinksInPath() == protocolURL,
+              FileManager.default.fileExists(atPath: protocolURL.path) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let protocolData = try Data(contentsOf: protocolURL)
+        guard protocolData.count <= 64 * 1_024,
+              try git(["hash-object", protocolURL.path]) == expectedProtocolBlob else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        try requireCoverageGitBlob(protocolData, expected: expectedProtocolBlob)
+        let selectionProtocol = try #require(JSONSerialization.jsonObject(with: protocolData) as? [String: Any])
+        try requireCurrentCoverageSelectionProtocol(selectionProtocol, head: head,
+            inputObjects: objects, contractFingerprint: contract)
+        return (head, objects, baselineData, contract, protocolURL, expectedProtocolBlob)
+    }
+
+    @Test("Replay immutable current-source score cohort and every native modal geometry without rendering")
+    func validateFrozenCurrentCoverageExecutionInputs() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["AUTOTECHNO_VALIDATE_CURRENT_CALIBRATION_COVERAGE"] == "1" else { return }
+        let context = try currentCoverageSelectionContext()
+        guard let path = environment["AUTOTECHNO_CALIBRATION_COVERAGE_COHORT"],
+              let blob = environment["AUTOTECHNO_CALIBRATION_COVERAGE_COHORT_BLOB"],
+              blob.count == 40, blob.allSatisfy({ $0.isHexDigit && !$0.isUppercase }) else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let url = URL(fileURLWithPath: path).standardizedFileURL
+        guard url.path.hasPrefix(repositoryRoot.appendingPathComponent("docs/local/reports/").path + "/"),
+              url.resolvingSymlinksInPath() == url,
+              try git(["hash-object", url.path]) == blob else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        let data = try Data(contentsOf: url)
+        guard data.count <= 8 * 1_024 * 1_024 else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        try requireCoverageGitBlob(data, expected: blob)
+        let original = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let frozen = try JSONDecoder().decode(FrozenCoverageCohort.self, from: data)
+        let fixtures = try freshCoverageFixtures()
+        guard frozen.schema == "autotechno-frozen-calibration-coverage-cohort.v2",
+              frozen.engineVersion == QualityQualificationContract.engineVersion,
+              frozen.gitHead == context.head, frozen.acceptedInputObjects == context.objects,
+              frozen.maximumPhrases == 128,
+              frozen.sampleRates == ProfessionalQualityCalibrationProfile.requiredSampleRates,
+              frozen.development == fixtures.development, frozen.holdout == fixtures.holdout,
+              original["protocolBlob"] as? String == context.protocolBlob,
+              original["contractBaselineFingerprint"] as? String == context.contract,
+              original["pcmRendered"] as? Bool == false,
+              original["runtimeActivation"] as? Bool == false,
+              original["historicalCohortsRetagged"] as? Bool == false,
+              original["replacementQualification"] as? String == "unavailable-not-activated",
+              original["selectionRule"] as? String == "ascending-ordinal-complete-score-then-remaining-four-bar.v1",
+              Set(original.keys) == Set(["schema", "engineVersion", "gitHead", "acceptedInputObjects",
+                "maximumPhrases", "protocolBlob", "contractBaselineFingerprint", "pcmRendered",
+                "runtimeActivation", "historicalCohortsRetagged", "selectionRule", "sampleRates",
+                "replacementQualification", "development", "holdout"]) else {
+            throw ProfessionalQualityCalibrationError.profileMismatch
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        var cache: [String: [[String: Any]]] = [:]
+        var count = 0
+        for (name, entries) in [("development", fixtures.development), ("holdout", fixtures.holdout)] {
+            let originals = try #require(original[name] as? [[String: Any]])
+            guard originals.count == entries.count else {
+                throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage
+            }
+            for (fixture, originalEntry) in zip(entries, originals) {
+                var replay = try #require(JSONSerialization.jsonObject(with: encoder.encode(fixture)) as? [String: Any])
+                replay["modalScoreGeometry"] = try modalScoreGeometry(fixture: fixture, timingCache: &cache)
+                guard try canonicalCacheJSON(replay) == canonicalCacheJSON(originalEntry),
+                      fixture.checkpoints.count == CanonicalJourneyCheckpoint.allCases.count,
+                      fixture.checkpoints.allSatisfy({ $0.phraseIndex < 127 && $0.qualityRevision == 0 }) else {
+                    throw ProfessionalQualityCalibrationError.profileMismatch
+                }
+                count += fixture.checkpoints.count
+            }
+        }
+        guard count == 322, try git(["hash-object", url.path]) == blob,
+              try git(["hash-object", context.protocolURL.path]) == context.protocolBlob,
+              try git(["rev-parse", "HEAD"]) == context.head,
+              try Data(contentsOf: repositoryRoot.appendingPathComponent(
+                "docs/ROADMAP_EXECUTION_BASELINE.json")) == context.baselineData,
+              try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
+        progress("current-coverage-replayed head=\(context.head) checkpoints=\(count) no-PCM=true")
+    }
+
     @Test("Freeze fresh complete score coverage on accepted clean source before any new-root PCM")
     func freezeFreshCoverageCohort() throws {
         guard ProcessInfo.processInfo.environment["AUTOTECHNO_FREEZE_CALIBRATION_COVERAGE"] == "1"
@@ -591,11 +822,19 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             "docs/local/reports/", isDirectory: true).path + "/"),
               !FileManager.default.fileExists(atPath: destination.path)
         else { throw ProfessionalQualityCalibrationError.invalidIdentity }
-        let head = try git(["rev-parse", "HEAD"])
-        let objects = try git(["rev-parse"] + ["Package.swift", "Sources", "Tests", "scripts",
-            "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"].map { "HEAD:\($0)" })
-            .split(separator: "\n").map(String.init)
+        let context = try currentCoverageSelectionContext()
+        let head = context.head, objects = context.objects
+        let baselineURL = repositoryRoot.appendingPathComponent("docs/ROADMAP_EXECUTION_BASELINE.json")
+        let baselineData = context.baselineData, contract = context.contract
+        let protocolURL = context.protocolURL, expectedProtocolBlob = context.protocolBlob
+        guard destination.resolvingSymlinksInPath() == destination, protocolURL != destination else {
+            throw ProfessionalQualityCalibrationError.invalidIdentity
+        }
         let fixtures = try freshCoverageFixtures()
+        guard (fixtures.development + fixtures.holdout).allSatisfy({
+            $0.checkpoints.count == CanonicalJourneyCheckpoint.allCases.count &&
+                $0.checkpoints.allSatisfy({ $0.phraseIndex < 127 && $0.qualityRevision == 0 })
+        }) else { throw ProfessionalQualityCalibrationError.incompleteCheckpointCoverage }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         var cache: [String: [[String: Any]]] = [:]
@@ -607,18 +846,24 @@ struct ProfessionalQualityCalibrationIntegrationTests {
                 return object
             }
         }
-        let object: [String: Any] = ["schema": "autotechno-frozen-calibration-coverage-cohort.v1",
+        let object: [String: Any] = ["schema": "autotechno-frozen-calibration-coverage-cohort.v2",
             "engineVersion": QualityQualificationContract.engineVersion,
             "gitHead": head, "acceptedInputObjects": objects, "maximumPhrases": 128,
-            "protocolSha256": "1b10f7880d27d044a41d00b2d2f23af9d1e71226534ace0fd018645a38090877",
-            "originalCohortBlob": try git(["hash-object", "docs/local/reports/AT-0039-foundation-cohort-v1/corpus.json"]),
-            "failedFourBarCohortBlob": try git(["hash-object", "docs/local/reports/AT-0039-four-bar-calibration-cohort-v1/cohort.json"]),
+            "protocolBlob": expectedProtocolBlob,
+            "contractBaselineFingerprint": contract,
+            "pcmRendered": false, "runtimeActivation": false,
+            "historicalCohortsRetagged": false,
             "selectionRule": "ascending-ordinal-complete-score-then-remaining-four-bar.v1",
             "sampleRates": ProfessionalQualityCalibrationProfile.requiredSampleRates,
             "replacementQualification": "unavailable-not-activated",
             "development": try entries(fixtures.development), "holdout": try entries(fixtures.holdout)]
         let data = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes])
         guard data.count <= 8 * 1024 * 1024,
+              try git(["hash-object", protocolURL.path]) == expectedProtocolBlob,
+              try git(["rev-parse"] + ["Package.swift", "Sources", "Tests", "scripts",
+                "docs/BASELINE_CORPUS.json", "docs/ROADMAP_EXECUTION_BASELINE.json"].map { "HEAD:\($0)" })
+                .split(separator: "\n").map(String.init) == objects,
+              try Data(contentsOf: baselineURL) == baselineData,
               try git(["rev-parse", "HEAD"]) == head,
               try git(["status", "--porcelain", "--untracked-files=all"]).isEmpty
         else { throw ProfessionalQualityCalibrationError.invalidIdentity }
@@ -708,13 +953,19 @@ struct ProfessionalQualityCalibrationIntegrationTests {
             .deletingLastPathComponent().deletingLastPathComponent()
     }
 
-    private func git(_ arguments: [String]) throws -> String {
+    private func git(_ arguments: [String], input: Data? = nil) throws -> String {
         let process = Process()
         let output = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
         process.arguments = ["-C", repositoryRoot.path] + arguments
         process.standardOutput = output
+        let inputPipe = input.map { _ in Pipe() }
+        if let inputPipe { process.standardInput = inputPipe }
         try process.run()
+        if let input, let inputPipe {
+            try inputPipe.fileHandleForWriting.write(contentsOf: input)
+            try inputPipe.fileHandleForWriting.close()
+        }
         let data = output.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
         guard process.terminationStatus == 0 else {

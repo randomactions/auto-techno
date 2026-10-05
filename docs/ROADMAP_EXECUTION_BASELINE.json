@@ -1,8 +1,8 @@
 {
   "schema": "autotechno-roadmap-contract-baseline.v1",
-  "snapshotVersion": 126,
+  "snapshotVersion": 128,
   "digestAlgorithm": "sha256",
-  "snapshotFingerprint": "4229980094510735f928157e6c6c1fff565112c764feb46363acea1eddf10513",
+  "snapshotFingerprint": "1b910a7c17a174abe27dfae9b2ebc4ff1b2b93f70866cfca91a1b1ef974572c5",
   "documents": [
     {
       "role": "repository-guidance",
@@ -31,8 +31,8 @@
     {
       "role": "runtime-provenance-contract",
       "path": "docs/AUTONOMOUS_RUNTIME_PROVENANCE.md",
-      "byteCount": 169356,
-      "sha256": "9b68ecb75830191ac6ba9b3298def80165be07da0f596ded893b9c89cb171468"
+      "byteCount": 170981,
+      "sha256": "18d6a23504cfa72f58c5f9ea940aaf31a8937460f3974d64338ecb0c2bb10f42"
     },
     {
       "role": "component-license-asset-manifest-source",
@@ -163,14 +163,14 @@
     {
       "role": "semantic-codebase-map-source",
       "path": "docs/codebase-map.json",
-      "byteCount": 152833,
-      "sha256": "f309dae9908ce1b5c29e83ed39fbcb6ec85e4969eb341d587e2865d0f6651417"
+      "byteCount": 153659,
+      "sha256": "c979e8b07ea7d0a174ac6dd158447d72414939c40c2b40f30eec59d24e71aaf8"
     },
     {
       "role": "semantic-codebase-map-rendering",
       "path": "docs/CODEBASE_MAP.md",
-      "byteCount": 338781,
-      "sha256": "ca156d772662b5c37aa58e74014cd09151f0702153ea7c27ea4168b0282050f0"
+      "byteCount": 339601,
+      "sha256": "cf12af6a75238b44db9ca2cad7cfa58997810e79a75d09a5431af8871be22e91"
     }
   ]
 }

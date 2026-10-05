@@ -2535,3 +2535,27 @@ that process; physical footprint is not complete allocated-storage attribution.
 Neither process is production activation, musical qualification, a per-phase
 peak, a deadline proof or selected native root/child capture admission. Existing
 reservations, 128 MiB ceiling, two-pass bound and all full gates are unchanged.
+
+
+## Current-source score-only coverage preparation
+
+The existing offline calibration test owner requires a private v2 score-selection
+protocol before freezing a new cohort. Exact clean Git head, the six existing
+Package/Sources/Tests/scripts/corpus/contract objects, coherent contract fingerprint,
+current engine, original outcome-blind ordinal domains, fixed 36+4 development and
+4+2 holdout quotas, all seven checkpoints and both native rates must match.
+Unknown fields, historical engine identities, altered quotas or positive quality/
+activation claims refuse before planning. Protocol file and destination must be
+private real paths; protocol and cohort blobs authenticate their actual parsed
+Data through test-owned Git stdin hashing, so path changes/restoration cannot
+substitute other parsed bytes. Protocol paths and source bindings are rechecked before the
+absent destination is written. The resulting immutable v2 cohort binds that actual
+protocol blob and current score/modal geometry. A separate opt-in current-cohort
+replay reauthenticates source/protocol/cohort identities, all322 quality-r0
+checkpoints and complete native modal geometry, retaining room for the actual
+final successor. Historical cohorts and seals remain
+unchanged. This is score-only preparation: no PCM, measured quality, independent
+labels, resource qualification, profile installation or runtime activation follows.
+The historical continuous executor remains bound to its old cohort and cannot
+consume v2 as qualified evidence until a separate current execution foundation is
+implemented and validated through the same canonical owners.
