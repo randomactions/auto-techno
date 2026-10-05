@@ -2556,6 +2556,28 @@ checkpoints and complete native modal geometry, retaining room for the actual
 final successor. Historical cohorts and seals remain
 unchanged. This is score-only preparation: no PCM, measured quality, independent
 labels, resource qualification, profile installation or runtime activation follows.
-The historical continuous executor remains bound to its old cohort and cannot
-consume v2 as qualified evidence until a separate current execution foundation is
-implemented and validated through the same canonical owners.
+The existing continuous executor consumes this authenticated v2 cohort through
+the same complete score replay. A separate private v2 execution protocol binds
+current engine, source objects, contract, selection/cohort blobs and the exact
+externally fresh-fetched published runtime ref before new-root PCM. It fixes the
+40/6 matrix at both native rates, all322 checkpoints,644 original reports and
+actual successor receipts, complete continuous observation/profile scope, and
+requested full adversarial/holdout qualification. Unknown fields, partial counts,
+stale source/publication, archive import or activation/installation claims refuse.
+An opt-in launch control authenticates those inputs without creating output or
+rendering. The one existing executeJourney producer still advances actual accepted
+Core/quality/live/render/DSP/graph state and closes each original with its immediate
+actual successor; no alternate renderer, cache import or cold checkpoint substitute
+is introduced. Source, contract and private file identities are rechecked around
+each native route. Fresh typed corpora alone derive profile/output fingerprints;
+historical artifacts and expected seals cannot supply current qualification.
+Full development relationships, all34 adversarial cases, two distinct accepted
+live baselines and all84 disjoint holdout observations remain required. Offline
+results do not install resources, activate playback or replace full runtime,
+allocation/capture/deadline/Windows/physical-output gates.
+
+The current offline executor claims its absent private output leaf with one
+exclusive OS directory-creation operation after input validation. A competing
+writer causes a pre-PCM refusal; its directory and manifest are preserved.
+The no-PCM filesystem control covers competing creation and repeated claims.
+This test-owned output claim performs no callback work or runtime activation.
